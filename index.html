@@ -161,6 +161,7 @@ tr:last-child td{border-bottom:none}
 .tag.long{background:var(--teal-dim);color:var(--teal)}
 .tag.short{background:var(--red-dim);color:var(--red)}
 .tag.plan{background:rgba(108,168,240,.14);color:var(--blue)}
+.tag.submitted{background:var(--teal-dim);color:var(--teal)}
 .tag.open{background:var(--amber-dim);color:var(--amber)}
 .tag.closed{background:var(--surface2);color:var(--muted)}
 .tag.win{background:var(--teal-dim);color:var(--teal)}
@@ -365,14 +366,14 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
 </header>
 
 <div class="tabs">
-  <button type="button" class="tabbtn on" id="tabBtnWatch" onclick="switchTab('watch')">Watchlist <span class="kbdhint">1</span></button>
-  <button type="button" class="tabbtn" id="tabBtnPlan" onclick="switchTab('plan')">แผนเทรด &amp; Risk <span class="kbdhint">2</span></button>
-  <button type="button" class="tabbtn" id="tabBtnJournal" onclick="switchTab('journal')">Trading Journal <span class="kbdhint">3</span></button>
-  <button type="button" class="tabbtn" id="tabBtnMix" onclick="switchTab('mix')">Portfolio Mix <span class="kbdhint">4</span></button>
+  <button type="button" class="tabbtn on" id="tabBtnMix" onclick="switchTab('mix')">Portfolio Mix <span class="kbdhint">1</span></button>
+  <button type="button" class="tabbtn" id="tabBtnWatch" onclick="switchTab('watch')">Watchlist <span class="kbdhint">2</span></button>
+  <button type="button" class="tabbtn" id="tabBtnPlan" onclick="switchTab('plan')">แผนเทรด &amp; Risk <span class="kbdhint">3</span></button>
+  <button type="button" class="tabbtn" id="tabBtnJournal" onclick="switchTab('journal')">Trading Journal <span class="kbdhint">4</span></button>
 </div>
 
 <!-- ---- TAB 0: Watchlist ---- -->
-<div id="tabWatch">
+<div id="tabWatch" style="display:none">
   <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
     <button class="small" onclick="openIndustryManager()">🏷 จัดการ Industry</button>
   </div>
@@ -442,10 +443,23 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
     </div>
     <div class="cards" id="jCards"></div>
   </div>
+  <div class="panel" id="missedPanel" style="display:none">
+    <div class="panel-head"><h2>Missed Trades <span id="missedCount" class="hint" style="display:inline"></span></h2></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Port</th><th>Symbol</th><th>Bias</th>
+          <th>Entry</th><th>SL</th><th>TP</th><th>เหตุผล</th><th></th><th></th>
+        </tr></thead>
+        <tbody id="missedTbody"></tbody>
+      </table>
+    </div>
+    <div class="cards" id="missedCards"></div>
+  </div>
 </div>
 
 <!-- ---- TAB 3: Portfolio Mix ---- -->
-<div id="tabMix" style="display:none">
+<div id="tabMix">
   <div class="hint" style="margin-bottom:14px">สัดส่วนเทียบกับ<b>ทุนทั้งหมดของ Port</b> (รวม Cash ที่ยังไม่ได้ลงทุน) คำนวณจากไม้ที่ status = Open เท่านั้น เฉพาะ Core Port และ Satellite.A — Sat.B (Swing) ไม่รวมในหน้านี้ · Industry มาจากที่กรอกไว้ใน Watchlist ของแต่ละ Symbol</div>
   <div class="panel">
     <h2 style="margin-bottom:12px">Core Port</h2>
@@ -599,6 +613,7 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
       <div class="f"><label>Satellite.A — RS — ดอลลาร์ ($)</label><input type="number" step="any" inputmode="decimal" id="sSatA"></div>
       <div class="f"><label>Satellite.B — Swing — ดอลลาร์ ($)</label><input type="number" step="any" inputmode="decimal" id="sSatB"></div>
     </div>
+    <div class="f"><label>Strategic Cash Reserve — บาท (฿) <span style="font-weight:400;color:var(--muted)">(เงินสดสำรองนอก 3 Port รวมเข้าทุนรวมด้วย)</span></label><input type="number" step="any" inputmode="decimal" id="sStrategicCash" oninput="updTotal()"></div>
     <div class="f"><label>อัตราแลกเปลี่ยน USD/THB</label>
       <div class="frow" style="gap:8px">
         <input type="number" step="any" inputmode="decimal" id="sFx" oninput="updTotal()">
@@ -699,6 +714,23 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
   </div>
 </div>
 
+<!-- ===== Missed Trade modal ===== -->
+<div class="overlay" id="missedOverlay">
+  <div class="modal">
+    <h3>บันทึกเป็น Missed Trade</h3>
+    <div class="hint" id="missedSymHint" style="margin-top:-8px;margin-bottom:12px"></div>
+    <div class="f"><label>เหตุผลที่ไม่ได้ Order ตามแผน</label><textarea id="missedReason" rows="3" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น ราคาวิ่งเร็วไม่ทัน Entry, เปลี่ยนใจเพราะข่าว, ลืม..."></textarea></div>
+    <div class="f"><label>รูปภาพ Chart (ลิงก์ Google Drive, ถ้ามี)</label>
+      <input type="url" id="missedImageUrl" placeholder="https://drive.google.com/file/d/.../view" oninput="updateMissedImagePreview()">
+      <div class="hint" id="missedImgHint"></div>
+    </div>
+    <div class="btns">
+      <button onclick="document.getElementById('missedOverlay').classList.remove('show')">ยกเลิก</button>
+      <button class="danger" onclick="confirmMissed()">บันทึก Missed Trade</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ================= Firebase init ================= */
 const firebaseConfig = {
@@ -723,6 +755,7 @@ const PORTS = {
 };
 const DEFAULTS = {
   capital:{core:500000,satA:10000,satB:10000},
+  strategicCash:0,
   fx:36,
   fxAuto:true,
   fxUpdatedAt:null,
@@ -741,7 +774,7 @@ let curSel = 'THB';
 let posTier = 'std';
 let filter = 'all';
 let jFilter = 'all';
-let activeTab = 'watch';
+let activeTab = 'mix';
 let sortKey = 'date';
 let sortDir = 'desc';
 function setSort(key){
@@ -894,10 +927,10 @@ document.addEventListener('keydown', (e)=>{
   if(tag==='input' || tag==='select' || tag==='textarea') return;
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   if(document.querySelector('.overlay.show')) return; // อย่าสลับแท็บขณะเปิด modal อยู่
-  if(e.key==='1') switchTab('watch');
-  else if(e.key==='2') switchTab('plan');
-  else if(e.key==='3') switchTab('journal');
-  else if(e.key==='4') switchTab('mix');
+  if(e.key==='1') switchTab('mix');
+  else if(e.key==='2') switchTab('watch');
+  else if(e.key==='3') switchTab('plan');
+  else if(e.key==='4') switchTab('journal');
 });
 
 /* ================= currency helpers ================= */
@@ -909,7 +942,7 @@ function portHeatLimit(k){
   if(p && typeof p==='object') return p[k] ?? 3;
   return p || 3;
 }
-function totalTHB(){ return Object.keys(PORTS).reduce((a,k)=>a+portCapTHB(k),0); }
+function totalTHB(){ return Object.keys(PORTS).reduce((a,k)=>a+portCapTHB(k),0) + (state.settings.strategicCash||0); }
 
 /* ================= planned-risk calc ================= */
 function riskOf(t){ return Math.abs(t.entry - t.sl) * t.qty * (t.mult||1); }
@@ -1024,7 +1057,7 @@ function render(){
   document.getElementById('strip').innerHTML = `
     <div class="stat"><div class="lbl">ทุนรวม (เทียบ THB)</div>
       <div class="val">฿${fmt0(cap)}</div>
-      <div class="sub" style="font-family:var(--mono)">฿${fmt0(state.settings.capital.core)} + $${fmt0(usdCap)} @ ${fmt2(fx)}</div></div>
+      <div class="sub" style="font-family:var(--mono)">฿${fmt0(state.settings.capital.core)} + $${fmt0(usdCap)} @ ${fmt2(fx)}${state.settings.strategicCash?` + Strategic Cash ฿${fmt0(state.settings.strategicCash)}`:''}</div></div>
     <div class="stat ${totOver?'bad':''}">
       <div class="cornerbadge" style="color:${remain<=0?'var(--red)':'var(--muted)'}">Budget เหลือ<br><b>${fmt2(remain)}%</b></div>
       <div class="lbl" style="padding-right:60px">Risk รวมทั้งหมด (Open + Plan + Loss สะสม)</div>
@@ -1087,8 +1120,8 @@ function render(){
   document.getElementById('filters').innerHTML = fdefs.map(([k,l])=>
     `<span class="chip ${filter===k?'on':''}" onclick="setFilter('${k}')">${l}</span>`).join('');
 
-  /* เฉพาะ Plan/Open — Closed ย้ายไปแท็บ Journal อัตโนมัติ */
-  let rows = state.trades.filter(t=>t.status!=='closed').slice().sort((a,b)=>{
+  /* เฉพาะ Plan/Open — Closed/Missed ย้ายไปแท็บ Journal อัตโนมัติ */
+  let rows = state.trades.filter(t=>t.status!=='closed' && t.status!=='missed').slice().sort((a,b)=>{
     let av, bv;
     if(sortKey==='port'){ av = PORTS[a.port] ? PORTS[a.port].name : a.port; bv = PORTS[b.port] ? PORTS[b.port].name : b.port; }
     else { av = a.date||''; bv = b.date||''; }
@@ -1137,10 +1170,11 @@ function render(){
       <td class="riskcell ${hot?'hot':''}">${symC}${fmt0(risk)}</td>
       <td class="riskcell ${hot?'hot':''}">${fmt2(rPct)}%${hot?' ⚠':''}</td>
       <td class="${rr===null?'':rr>=2?'rr-good':rr<1.5?'rr-bad':''}">${rr===null?'—':fmt2(rr)}</td>
-      <td class="sans"><span class="tag ${t.status}">${t.status.toUpperCase()}</span></td>
+      <td class="sans"><span class="tag ${(t.status==='plan'&&t.submitted)?'submitted':t.status}" ${t.status==='plan'?`onclick="toggleSubmitted('${t.id}')" style="cursor:pointer" title="กดเพื่อสลับ Plan/Submit"`:''}>${(t.status==='plan'&&t.submitted)?'SUBMIT':t.status.toUpperCase()}</span></td>
       <td class="sans">${t.imageUrl ? (imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')" title="เปิดรูป">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 รูป</a>`) : ''}</td>
       <td class="sans"><div class="rowbtns">
         ${t.status==='plan'?`<button class="small" onclick="quickOpen('${t.id}')">→Open</button>`:''}
+        ${t.status==='plan'?`<button class="small" onclick="openMissedModal('${t.id}')" title="ไม่ได้ Order ตามแผน">Missed</button>`:''}
         ${t.status==='open'?`<button class="small" onclick="quickClose('${t.id}')">Close</button>`:''}
         <button class="small" onclick="editTrade('${t.id}')">✎</button>
         <button class="small danger" onclick="delTrade('${t.id}')">✕</button>
@@ -1194,7 +1228,7 @@ function render(){
     return `<div class="tcard">
       <div class="r1">
         <span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span></span>
-        <span class="tag ${t.status}">${t.status.toUpperCase()}</span>
+        <span class="tag ${(t.status==='plan'&&t.submitted)?'submitted':t.status}" ${t.status==='plan'?`onclick="toggleSubmitted('${t.id}')" style="cursor:pointer"`:''}>${(t.status==='plan'&&t.submitted)?'SUBMIT':t.status.toUpperCase()}</span>
       </div>
       <div class="sub" style="margin-bottom:6px">${t.date||''} · ${PORTS[t.port].name} · Risk ${tradeCur(t)}</div>
       <div class="grid">
@@ -1209,6 +1243,7 @@ function render(){
       <div class="foot">
         <div class="rowbtns">
           ${t.status==='plan'?`<button class="small" onclick="quickOpen('${t.id}')">→ Open</button>`:''}
+          ${t.status==='plan'?`<button class="small" onclick="openMissedModal('${t.id}')">Missed</button>`:''}
           ${t.status==='open'?`<button class="small" onclick="quickClose('${t.id}')">Close</button>`:''}
         </div>
         <div class="rowbtns">
@@ -1343,6 +1378,43 @@ function renderJournal(){
       </div>
     </div>`;
   }).join('') : `<div class="empty">ยังไม่มีรายการที่ปิดไม้ — พอกด Closed ในแท็บแผนเทรด รายการจะมาโผล่ที่นี่</div>`;
+
+  const missed = state.trades.filter(t=>t.status==='missed').slice().sort((a,b)=>(b.missedDate||'').localeCompare(a.missedDate||''));
+  const missedPanel = document.getElementById('missedPanel');
+  missedPanel.style.display = missed.length ? 'block' : 'none';
+  document.getElementById('missedCount').textContent = missed.length ? `(${missed.length})` : '';
+  document.getElementById('missedTbody').innerHTML = missed.map(t=>{
+    const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
+    return `<tr>
+      <td>${t.missedDate||'—'}</td>
+      <td class="sans"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PORTS[t.port].color};margin-right:5px"></span>${t.port==='core'?'Core':t.port==='satA'?'Sat.A':'Sat.B'}</td>
+      <td style="font-weight:600">${t.sym}</td>
+      <td class="sans"><span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span></td>
+      <td>${fmt2(t.entry)}</td><td>${fmt2(t.sl)}</td><td>${t.tp?fmt2(t.tp):'—'}</td>
+      <td style="max-width:260px;white-space:normal;font-family:var(--sans);font-size:.78rem">${escHtml(t.missedReason||'')}</td>
+      <td class="sans">${t.imageUrl ? (imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')" title="เปิดรูป">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 รูป</a>`) : ''}</td>
+      <td class="sans"><div class="rowbtns">
+        <button class="small" onclick="restoreMissed('${t.id}')" title="ย้ายกลับไป Plan">↩ Restore</button>
+        <button class="small danger" onclick="delTrade('${t.id}')">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('missedCards').innerHTML = missed.map(t=>{
+    const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
+    return `<div class="tcard">
+      <div class="r1"><span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span></span><span class="sub">${t.missedDate||''}</span></div>
+      <div class="sub" style="margin-bottom:6px">${PORTS[t.port].name} · Entry ${fmt2(t.entry)} / SL ${fmt2(t.sl)}</div>
+      <div style="font-size:.8rem;margin-bottom:8px">${escHtml(t.missedReason||'')}</div>
+      ${t.imageUrl ? `<div style="margin-bottom:8px">${imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 เปิดรูป</a>`}</div>` : ''}
+      <div class="foot">
+        <div></div>
+        <div class="rowbtns">
+          <button class="small" onclick="restoreMissed('${t.id}')">↩ Restore</button>
+          <button class="small danger" onclick="delTrade('${t.id}')">ลบ</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ================= Watchlist ================= */
@@ -1886,6 +1958,7 @@ function saveTrade(){
     mult: parseFloat(document.getElementById('tMult').value)||1,
     cur: curSel,
     imageUrl: document.getElementById('tImageUrl').value.trim() || null,
+    submitted: prevTrade ? !!prevTrade.submitted : false,
     status
   };
   if(!t.sym || !(t.entry>0) || !(t.sl>0) || !(t.qty>0) || t.entry===t.sl){
@@ -1915,6 +1988,12 @@ function saveTrade(){
 function quick(id,st){
   const t = state.trades.find(x=>x.id===id); if(t){t.status=st;render();schedulePersist();}
 }
+function toggleSubmitted(id){
+  const t = state.trades.find(x=>x.id===id); if(!t) return;
+  t.submitted = !t.submitted;
+  render();
+  schedulePersist();
+}
 function quickOpen(id){
   editTrade(id);
   document.getElementById('tStatus').value='open';
@@ -1928,6 +2007,45 @@ function quickClose(id){
 function delTrade(id){
   if(confirm('ลบรายการนี้?')){ state.trades = state.trades.filter(t=>t.id!==id); render(); schedulePersist(); }
 }
+let missedTradeId = null;
+function openMissedModal(id){
+  const t = state.trades.find(x=>x.id===id); if(!t) return;
+  missedTradeId = id;
+  document.getElementById('missedSymHint').textContent = `${t.sym} · ${PORTS[t.port].name} · Entry ${fmt2(t.entry)} / SL ${fmt2(t.sl)}`;
+  document.getElementById('missedReason').value = '';
+  document.getElementById('missedImageUrl').value = t.imageUrl || '';
+  updateMissedImagePreview();
+  document.getElementById('missedOverlay').classList.add('show');
+}
+function updateMissedImagePreview(){
+  const url = document.getElementById('missedImageUrl').value.trim();
+  const h = document.getElementById('missedImgHint');
+  if(!url){ h.textContent=''; return; }
+  h.textContent = driveImgSrc(url)
+    ? 'ตรวจพบ Google Drive link — จะแสดง thumbnail (ไฟล์ต้องแชร์เป็น "Anyone with the link")'
+    : 'ไม่ใช่ Google Drive link ที่รู้จัก — จะแสดงเป็นลิงก์เปิดรูปแทน';
+}
+function confirmMissed(){
+  const reason = document.getElementById('missedReason').value.trim();
+  if(!reason){ alert('กรอกเหตุผลที่พลาดก่อน'); return; }
+  const t = state.trades.find(x=>x.id===missedTradeId); if(!t) return;
+  t.status = 'missed';
+  t.missedReason = reason;
+  t.missedDate = new Date().toISOString().slice(0,10);
+  t.imageUrl = document.getElementById('missedImageUrl').value.trim() || null;
+  document.getElementById('missedOverlay').classList.remove('show');
+  render();
+  schedulePersist();
+}
+function restoreMissed(id){
+  const t = state.trades.find(x=>x.id===id); if(!t) return;
+  if(!confirm(`ย้าย ${t.sym} กลับไปที่ Plan เหมือนเดิม?`)) return;
+  t.status = 'plan';
+  t.missedReason = null;
+  t.missedDate = null;
+  render();
+  schedulePersist();
+}
 
 /* ================= settings ================= */
 function openSettings(){
@@ -1935,6 +2053,7 @@ function openSettings(){
   document.getElementById('sCore').value=s.capital.core;
   document.getElementById('sSatA').value=s.capital.satA;
   document.getElementById('sSatB').value=s.capital.satB;
+  document.getElementById('sStrategicCash').value=s.strategicCash||0;
   document.getElementById('sFx').value=s.fx;
   document.getElementById('sFxAuto').checked = s.fxAuto !== false;
   document.getElementById('sTrade').value=s.limits.trade;
@@ -2002,9 +2121,10 @@ function updTotal(){
   const a = parseFloat(document.getElementById('sSatA').value)||0;
   const b = parseFloat(document.getElementById('sSatB').value)||0;
   const fx = parseFloat(document.getElementById('sFx').value)||0;
-  const tot = core + (a+b)*fx;
+  const strat = parseFloat(document.getElementById('sStrategicCash').value)||0;
+  const tot = core + (a+b)*fx + strat;
   document.getElementById('totalHint').innerHTML =
-    `ทุนรวม ≈ <b>฿${fmt0(tot)}</b> (฿${fmt0(core)} + $${fmt0(a+b)} × ${fmt2(fx)})`;
+    `ทุนรวม ≈ <b>฿${fmt0(tot)}</b> (฿${fmt0(core)} + $${fmt0(a+b)} × ${fmt2(fx)} + Strategic Cash ฿${fmt0(strat)})`;
 }
 function saveSettings(){
   const fxVal = parseFloat(document.getElementById('sFx').value)||36;
@@ -2015,6 +2135,7 @@ function saveSettings(){
       satA: parseFloat(document.getElementById('sSatA').value)||0,
       satB: parseFloat(document.getElementById('sSatB').value)||0
     },
+    strategicCash: parseFloat(document.getElementById('sStrategicCash').value)||0,
     fx: fxVal,
     fxAuto: document.getElementById('sFxAuto').checked,
     fxUpdatedAt: fxChanged ? new Date().toISOString() : state.settings.fxUpdatedAt,
