@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trading">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#F3F5F8">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%231B2430'/%3E%3Crect x='40' y='95' width='16' height='50' rx='3' fill='%230E9C86'/%3E%3Crect x='82' y='60' width='16' height='85' rx='3' fill='%23EAC13A'/%3E%3Crect x='124' y='35' width='16' height='110' rx='3' fill='%233467C7'/%3E%3C/svg%3E">
 <title>Trading Dashboard — Risk & Journal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -397,7 +401,7 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
           <th class="sortable" onclick="setSort('port')">Port <span id="sortIconPort"></span></th>
           <th>Symbol</th><th>Bias</th>
           <th>Entry</th><th>SL</th><th>TP</th><th>Qty</th>
-          <th>Risk</th><th>Risk %Total</th><th>R:R</th><th>Status</th><th></th><th></th>
+          <th>Risk</th><th>Risk % Port</th><th>R:R</th><th>Status</th><th></th><th></th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -628,7 +632,7 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
     </div>
     <div class="divlbl">Risk Limits (% ของทุนรวมเทียบเป็น THB)</div>
     <div class="frow3">
-      <div class="f"><label>Max Risk / Trade %</label><input type="number" step="any" inputmode="decimal" id="sTrade"></div>
+      <div class="f"><label>Max Risk / Trade % <span style="font-weight:400;color:var(--muted)">(เทียบกับทุนของ Port นั้นๆ)</span></label><input type="number" step="any" inputmode="decimal" id="sTrade"></div>
       <div class="f"><label>Max Heat รวม %</label><input type="number" step="any" inputmode="decimal" id="sTotal"></div>
       <div></div>
     </div>
@@ -1153,9 +1157,10 @@ function render(){
   });
 
   function legRowHtml(t, indent, gcolor, isLast){
-    const risk = riskOf(t), rPct = pct(riskTHBOf(t),cap), rr = rrOf(t);
+    const risk = riskOf(t), rr = rrOf(t);
+    const rPctPort = pct(riskTHBOf(t), portCapTHB(t.port));
     const symC = tradeSym(t);
-    const hot = rPct > L.trade;
+    const hot = rPctPort > L.trade;
     const hasSlippage = t.plannedEntry!=null && t.plannedEntry!==t.entry;
     const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
     const cls = [indent?'legrow':'', gcolor?'gbox':'', (gcolor&&isLast)?'gbox-last':''].filter(Boolean).join(' ');
@@ -1168,7 +1173,7 @@ function render(){
       <td>${fmt2(t.entry)}${hasSlippage?`<br><span style="color:var(--muted);font-size:.68rem;font-weight:400">แผน ${fmt2(t.plannedEntry)}</span>`:''}</td><td>${fmt2(t.sl)}</td><td>${t.tp?fmt2(t.tp):'—'}</td>
       <td>${fmt2(t.qty)}${(t.mult||1)!==1?`<span style="color:var(--muted)"> ×${fmt2(t.mult)}</span>`:''}</td>
       <td class="riskcell ${hot?'hot':''}">${symC}${fmt0(risk)}</td>
-      <td class="riskcell ${hot?'hot':''}">${fmt2(rPct)}%${hot?' ⚠':''}</td>
+      <td class="riskcell ${hot?'hot':''}">${fmt2(rPctPort)}%${hot?' ⚠':''}</td>
       <td class="${rr===null?'':rr>=2?'rr-good':rr<1.5?'rr-bad':''}">${rr===null?'—':fmt2(rr)}</td>
       <td class="sans"><span class="tag ${(t.status==='plan'&&t.submitted)?'submitted':t.status}" ${t.status==='plan'?`onclick="toggleSubmitted('${t.id}')" style="cursor:pointer" title="กดเพื่อสลับ Plan/Submit"`:''}>${(t.status==='plan'&&t.submitted)?'SUBMIT':t.status.toUpperCase()}</span></td>
       <td class="sans">${t.imageUrl ? (imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')" title="เปิดรูป">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 รูป</a>`) : ''}</td>
@@ -1220,9 +1225,10 @@ function render(){
   }).join('');
 
   function legCardHtml(t){
-    const risk = riskOf(t), rPct = pct(riskTHBOf(t),cap), rr = rrOf(t);
+    const risk = riskOf(t), rr = rrOf(t);
+    const rPctPort = pct(riskTHBOf(t), portCapTHB(t.port));
     const symC = tradeSym(t);
-    const hot = rPct > L.trade;
+    const hot = rPctPort > L.trade;
     const hasSlippage = t.plannedEntry!=null && t.plannedEntry!==t.entry;
     const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
     return `<div class="tcard">
@@ -1237,7 +1243,7 @@ function render(){
         <div><span class="k">TP</span>${t.tp?fmt2(t.tp):'—'}</div>
         <div><span class="k">Qty ${(t.mult||1)!==1?`×${fmt2(t.mult)}`:''}</span>${fmt2(t.qty)}</div>
         <div><span class="k">Risk</span><span class="${hot?'riskcell hot':''}">${symC}${fmt0(risk)}</span></div>
-        <div><span class="k">Risk %</span><span class="${hot?'riskcell hot':''}">${fmt2(rPct)}%${hot?' ⚠':''}</span></div>
+        <div><span class="k">Risk % Port</span><span class="${hot?'riskcell hot':''}">${fmt2(rPctPort)}%${hot?' ⚠':''}</span></div>
       </div>
       ${t.imageUrl ? `<div style="margin-top:8px">${imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 เปิดรูป</a>`}</div>` : ''}
       <div class="foot">
@@ -1863,11 +1869,21 @@ function calcHint(){
     if(q>0){
       const r = dist*q*m;
       const rTHB = r*(isUSD?fx:1);
-      const rp = rTHB/cap*100;
-      msg = `Risk = ${sym}${fmt0(r)}${isUSD?` ≈ ฿${fmt0(rTHB)}`:''} (${fmt2(rp)}% ของทุนรวม)`;
-      if(rp>L.trade) msg += ` ⚠ เกิน ${L.trade}%/trade`;
+      const rpPort = rTHB/portCapTHB(port)*100;
+      const rpTotal = rTHB/cap*100;
+      msg = `Risk = ${sym}${fmt0(r)}${isUSD?` ≈ ฿${fmt0(rTHB)}`:''} (${fmt2(rpPort)}% ของ ${PORTS[port].name} · ${fmt2(rpTotal)}% ของทุนรวม)`;
+      if(rpPort>L.trade) msg += ` ⚠ เกิน ${L.trade}%/trade`;
     }
-    if(tp>0){ const rr = Math.abs(tp-e)/dist; msg += (msg?' · ':'')+`R:R = ${fmt2(rr)}`; }
+    if(tp>0){
+      const rr = Math.abs(tp-e)/dist;
+      let tpMsg = `ถ้าถึง TP = <b style="color:var(--teal)">+${fmt2(rr)}R</b>`;
+      if(q>0){
+        const profitNative = Math.abs(tp-e)*q*m;
+        const profitTHB = profitNative*(isUSD?fx:1);
+        tpMsg += ` (≈ ${sym}${fmt0(profitNative)}${isUSD?` ≈ ฿${fmt0(profitTHB)}`:''})`;
+      }
+      msg += (msg?' · ':'')+tpMsg;
+    }
     rh.innerHTML = msg;
     if((bias==='Long'&&sl>e)||(bias==='Short'&&sl<e))
       rh.innerHTML += ` <span style="color:var(--amber)">⚠ SL อยู่ผิดฝั่งของ ${bias}</span>`;
@@ -1909,14 +1925,12 @@ function calcHint(){
       /* กฎ: เช็ค risk ของไม้ 2xBase กับเพดาน — ถ้าเกิน บังคับลดเป็น Standard */
       const suggestedTier = riskPct2x <= ceiling ? '2x' : 'std';
       const suggestedLabel = suggestedTier==='2x' ? '2xBase' : 'Standard';
-      let msg = suggestedTier==='2x'
-        ? `2xBase ${fmt2(pctStd*2)}% ของ ${PORTS[port].name}: qty ≈ <b>${qty2x.toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย (Portfolio Risk ${fmt2(riskPct2x)}%)`
-        : `Standard (1x) ${pctStd}% ของ ${PORTS[port].name}: qty ≈ <b>${baseQty.toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย (Portfolio Risk ${fmt2(baseRiskPct)}%)`;
-      msg += `<br>→ แนะนำ <b style="color:${suggestedTier==='2x'?'var(--teal)':'var(--blue)'}">${suggestedLabel}</b> (เพดาน ${ceiling}% เช็คที่ 2xBase)`;
+      let msg = `แนะนำ <b style="color:${suggestedTier==='2x'?'var(--teal)':'var(--blue)'}">${suggestedLabel}</b> — qty ≈ <b>${(suggestedTier==='2x'?qty2x:baseQty).toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย (risk ${fmt2(suggestedTier==='2x'?riskPct2x:baseRiskPct)}%)`;
       if(posTier==='2x' && suggestedTier==='std'){
-        msg += `<br><span style="color:var(--amber);font-weight:700">⚠ Cautious</span> — ฝืนใช้ 2xBase ทั้งที่ risk 2xBase เกินเพดานแล้ว · qty ≈ <b>${qty2x.toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย · Risk = ${sym}${fmt0(riskNativeAt2x)} (${fmt2(riskPct2x)}% ของ ${PORTS[port].name})`;
+        msg += `<br><span style="color:var(--amber);font-weight:700">⚠ Cautious</span> — 2xBase risk ${fmt2(riskPct2x)}% เกินเพดาน ${ceiling}% · Risk = ${sym}${fmt0(riskNativeAt2x)}`;
       }
       pth.innerHTML = msg;
+      pth.title = `เพดาน ${ceiling}% เช็คที่ขนาด 2xBase (${pctStd}% Standard × 2)`;
     } else {
       pth.textContent = 'กรอก Entry/SL ให้ครบเพื่อดูขนาดที่แนะนำ (2xBase/Standard)';
     }
