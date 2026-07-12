@@ -452,7 +452,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
           <th class="sortable" onclick="setSort('port')">Port <span id="sortIconPort"></span></th>
           <th>Symbol</th><th>Bias</th>
           <th>Entry</th><th>SL</th><th>TP</th><th>Qty</th>
-          <th>Risk</th><th>Risk % Port</th><th>R:R</th><th>Status</th><th></th><th></th>
+          <th>Risk</th><th>Risk%</th><th>R:R</th><th>Status</th><th></th><th></th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -1301,19 +1301,21 @@ function render(){
     const hot = rPctPort > L.trade;
     const hasSlippage = t.plannedEntry!=null && t.plannedEntry!==t.entry;
     const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
+    const rrCls = rr===null?'':rr>=2?'rr-good':rr<1.5?'rr-bad':'';
+    const rrBadge = `<span class="${rrCls}" style="font-family:var(--mono);font-size:.72rem;font-weight:600;margin-left:5px">R:R ${rr===null?'—':fmt2(rr)}</span>`;
     return `<div class="tcard">
       <div class="r1">
-        <span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span></span>
+        <span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>${rrBadge}</span>
         <span class="tag ${(t.status==='plan'&&t.submitted)?'submitted':t.status}" ${t.status==='plan'?`onclick="toggleSubmitted('${t.id}')" style="cursor:pointer"`:''}>${(t.status==='plan'&&t.submitted)?'SUBMIT':t.status.toUpperCase()}</span>
       </div>
       <div class="sub" style="margin-bottom:6px">${t.date||''} · ${PORTS[t.port].name} · Risk ${tradeCur(t)}</div>
       <div class="grid">
-        <div><span class="k">Entry</span>${fmt2(t.entry)}${hasSlippage?`<br><span style="color:var(--muted);font-size:.68rem">แผน ${fmt2(t.plannedEntry)}</span>`:''}</div>
-        <div><span class="k">SL</span>${fmt2(t.sl)}</div>
-        <div><span class="k">TP</span>${t.tp?fmt2(t.tp):'—'}</div>
-        <div><span class="k">Qty ${(t.mult||1)!==1?`×${fmt2(t.mult)}`:''}</span>${fmt2(t.qty)}</div>
-        <div><span class="k">Risk</span><span class="${hot?'riskcell hot':''}">${symC}${fmt0(risk)}</span></div>
-        <div><span class="k">Risk % Port</span><span class="${hot?'riskcell hot':''}">${fmt2(rPctPort)}%${hot?' ⚠':''}</span></div>
+        <div><span class="k">🔵 Entry</span>${fmt2(t.entry)}${hasSlippage?`<br><span style="color:var(--muted);font-size:.68rem">แผน ${fmt2(t.plannedEntry)}</span>`:''}</div>
+        <div><span class="k">🛑 SL</span>${fmt2(t.sl)}</div>
+        <div><span class="k">🎯 TP</span>${t.tp?fmt2(t.tp):'—'}</div>
+        <div><span class="k">🔢 Qty ${(t.mult||1)!==1?`×${fmt2(t.mult)}`:''}</span>${fmt2(t.qty)}</div>
+        <div><span class="k">💸 Risk</span><span class="${hot?'riskcell hot':''}">${symC}${fmt0(risk)}</span></div>
+        <div><span class="k">⚠️ Risk%</span><span class="${hot?'riskcell hot':''}">${fmt2(rPctPort)}%${hot?' ⚠':''}</span></div>
       </div>
       ${t.imageUrl ? `<div style="margin-top:8px">${imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 เปิดรูป</a>`}</div>` : ''}
       <div class="foot">
