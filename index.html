@@ -35,6 +35,7 @@
   --blue:#3467C7;
   --mono:'IBM Plex Mono',ui-monospace,monospace;
   --sans:'IBM Plex Sans Thai',-apple-system,'Segoe UI',sans-serif;
+  --wlnote-size:.84rem;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%;font-size:17px}
@@ -253,7 +254,7 @@ tr:last-child td{border-bottom:none}
 .wlhead h2{font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:6px}
 .wllinkbtn{background:none;border:none;color:var(--blue);cursor:pointer;font-size:.9rem;padding:2px 4px}
 .wllinkbtn:hover{text-decoration:underline}
-.wlnote{color:var(--text);white-space:normal;font-family:var(--sans);max-width:320px;font-size:.78rem;line-height:1.4;word-break:break-word;overflow-wrap:anywhere}
+.wlnote{color:var(--text);white-space:normal;font-family:var(--sans);max-width:320px;font-size:var(--wlnote-size);line-height:1.45;word-break:break-word;overflow-wrap:anywhere}
 .imgthumb{
   width:36px;height:36px;border-radius:6px;object-fit:cover;border:1px solid var(--border);
   cursor:pointer;display:block;
@@ -422,7 +423,11 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 
 <!-- ---- TAB 0: Watchlist ---- -->
 <div id="tabWatch" style="display:none">
-  <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span class="hint" style="margin:0">ขนาดตัวหนังสือ Technical/Fundamental/Sentiment</span>
+      <div class="filters" id="wlFontSizeChips"></div>
+    </div>
     <button class="small" onclick="openIndustryManager()">🏷 จัดการ Industry</button>
   </div>
   <div id="watchGroups"></div>
@@ -800,7 +805,8 @@ const DEFAULTS = {
 };
 const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
 const defaultWatchSortMode = () => ({core:'date',satA:'date',satB:'date'});
-const DEFAULT_SCORE_CRITERIA = 'ตัวอย่าง (แก้ไขเป็นเกณฑ์ของคุณเองได้):\n★★★★★ = Setup สมบูรณ์แบบ ตรงทุกเงื่อนไข\n★★★★ = ดี มีจุดต้องระวังเล็กน้อย\n★★★ = พอใช้ได้ ยังไม่มั่นใจเต็มที่\n★★ = อ่อน มีข้อกังขาเยอะ\n★ = ไม่ควรเข้า แต่ยังอยากติดตามไว้';
+const WL_FONT_SIZES = {sm:'.78rem', md:'.84rem', lg:'.9rem'};
+const DEFAULT_SCORE_CRITERIA = 'ตัวอย่าง (แก้ไขเป็นเกณฑ์ของคุณเองได้):\n★★★ = Setup สมบูรณ์แบบ ตรงทุกเงื่อนไข มั่นใจสูง\n★★ = ดี ใช้ได้ แต่มีจุดต้องระวัง\n★ = อ่อน ยังไม่มั่นใจ แต่อยากติดตามไว้';
 
 let state = null;
 let uid = null;
@@ -891,9 +897,10 @@ function startListening(){
     if(snap.exists){
       const d = snap.data() || {};
       state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
-        watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA};
+        watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
+        watchNoteFontSize: d.watchNoteFontSize || 'md'};
     } else {
-      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA};
+      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, watchNoteFontSize:'md'};
     }
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('errorScreen').style.display='none';
@@ -940,7 +947,7 @@ function setSyncBadge(st){
 }
 function resetAll(){
   if(!confirm('ล้างข้อมูลทั้งหมด (Trades + การตั้งค่า) ทุกอุปกรณ์? ทำย้อนกลับไม่ได้')) return;
-  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA};
+  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, watchNoteFontSize:'md'};
   document.getElementById('setOverlay').classList.remove('show');
   render();
   schedulePersist();
@@ -1553,6 +1560,8 @@ function renderWatchlist(){
   if(!Array.isArray(state.watchlist)) state.watchlist = normalizeWatchlist(state.watchlist);
   if(!state.watchSortMode) state.watchSortMode = defaultWatchSortMode();
   if(state.scoreCriteria==null) state.scoreCriteria = DEFAULT_SCORE_CRITERIA;
+  if(!state.watchNoteFontSize) state.watchNoteFontSize = 'md';
+  renderWlFontSizeChips();
   const container = document.getElementById('watchGroups');
   container.innerHTML = `<div class="wlports">${Object.entries(PORTS).map(([k,p])=>{
     const mode = state.watchSortMode[k] || 'date';
@@ -1601,7 +1610,7 @@ function renderWatchPort(port){
 
   function starsHtml(w){
     const sc = w.score||0;
-    return `<div class="starRow">${[1,2,3,4,5].map(n=>`<span class="star ${n<=sc?'on':''}" onclick="setScore('${w.id}',${n})">★</span>`).join('')}</div>`;
+    return `<div class="starRow">${[1,2,3].map(n=>`<span class="star ${n<=sc?'on':''}" onclick="setScore('${w.id}',${n})">★</span>`).join('')}</div>`;
   }
   function noteTd(w, field){
     const val = w[field]||'';
@@ -1610,8 +1619,8 @@ function renderWatchPort(port){
   }
   function noteInline(w, field, label){
     const val = w[field]||'';
-    if(!scored) return val ? `<div style="font-size:.8rem;margin-bottom:4px"><b>${label}:</b> ${escHtml(val)}</div>` : '';
-    return `<div style="font-size:.8rem;margin-bottom:4px"><b>${label}:</b> <span class="wlnote${val?'':' placeholder'}" contenteditable="true" data-wid="${w.id}" data-field="${field}" onfocus="clearPlaceholder(this)" onblur="saveInlineField(this)">${escHtml(val)||'เพิ่มข้อความ…'}</span></div>`;
+    if(!scored) return val ? `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> ${escHtml(val)}</div>` : '';
+    return `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> <span class="wlnote${val?'':' placeholder'}" contenteditable="true" data-wid="${w.id}" data-field="${field}" onfocus="clearPlaceholder(this)" onblur="saveInlineField(this)">${escHtml(val)||'เพิ่มข้อความ…'}</span></div>`;
   }
 
   document.getElementById(`wlBody_${port}`).innerHTML = list.map(w=>{
@@ -1694,6 +1703,23 @@ function setWatchSortMode(port, mode){
   state.watchSortMode[port] = mode;
   renderWatchPort(port);
   schedulePersist();
+}
+function renderWlFontSizeChips(){
+  const el = document.getElementById('wlFontSizeChips');
+  applyWlFontSize();
+  if(!el) return;
+  const cur = state.watchNoteFontSize || 'md';
+  const defs = [['sm','เล็ก'],['md','ปกติ'],['lg','ใหญ่']];
+  el.innerHTML = defs.map(([k,l])=>`<span class="chip ${cur===k?'on':''}" onclick="setWlFontSize('${k}')">${l}</span>`).join('');
+}
+function setWlFontSize(size){
+  state.watchNoteFontSize = size;
+  renderWlFontSizeChips();
+  schedulePersist();
+}
+function applyWlFontSize(){
+  const size = WL_FONT_SIZES[state.watchNoteFontSize || 'md'] || WL_FONT_SIZES.md;
+  document.documentElement.style.setProperty('--wlnote-size', size);
 }
 function clearPlaceholder(el){
   if(el.classList.contains('placeholder')){ el.textContent=''; el.classList.remove('placeholder'); }
