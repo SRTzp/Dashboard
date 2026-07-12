@@ -16,7 +16,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#F3F5F8;
@@ -361,19 +360,16 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
   </div>
   <div class="hbtns">
     <button onclick="openSettings()">⚙︎ ตั้งค่า Port</button>
-    <button onclick="exportData()">↓ Export</button>
-    <button onclick="document.getElementById('importFile').click()">↑ Import</button>
-    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
     <button onclick="doSignOut()">ออกจากระบบ</button>
     <button class="primary" onclick="openTrade()">+ เพิ่ม Trade</button>
   </div>
 </header>
 
 <div class="tabs">
-  <button type="button" class="tabbtn on" id="tabBtnMix" onclick="switchTab('mix')">Portfolio Mix <span class="kbdhint">1</span></button>
+  <button type="button" class="tabbtn on" id="tabBtnMix" onclick="switchTab('mix')">Portfolio <span class="kbdhint">1</span></button>
   <button type="button" class="tabbtn" id="tabBtnWatch" onclick="switchTab('watch')">Watchlist <span class="kbdhint">2</span></button>
-  <button type="button" class="tabbtn" id="tabBtnPlan" onclick="switchTab('plan')">แผนเทรด &amp; Risk <span class="kbdhint">3</span></button>
-  <button type="button" class="tabbtn" id="tabBtnJournal" onclick="switchTab('journal')">Trading Journal <span class="kbdhint">4</span></button>
+  <button type="button" class="tabbtn" id="tabBtnPlan" onclick="switchTab('plan')">แผนเทรด <span class="kbdhint">3</span></button>
+  <button type="button" class="tabbtn" id="tabBtnJournal" onclick="switchTab('journal')">Journal <span class="kbdhint">4</span></button>
 </div>
 
 <!-- ---- TAB 0: Watchlist ---- -->
@@ -421,18 +417,6 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
     <div class="panel-head">
       <h2>Closed Trades</h2>
       <div class="filters" id="jFilters"></div>
-    </div>
-    <div class="panel-head" style="margin-top:-4px;margin-bottom:14px">
-      <div class="hint" style="margin:0">Export สำหรับเปิดใน Excel / Google Sheets</div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <select id="jExportRange" style="width:auto;padding:6px 10px;font-size:.78rem">
-          <option value="all">ทั้งหมด</option>
-          <option value="1m">1 เดือนล่าสุด</option>
-          <option value="1q">1 ไตรมาสล่าสุด</option>
-          <option value="1y">1 ปีล่าสุด</option>
-        </select>
-        <button class="small" onclick="exportJournalXlsx()">↓ Export .xlsx</button>
-      </div>
     </div>
     <div class="tablewrap">
       <table>
@@ -2174,82 +2158,6 @@ function saveSettings(){
   document.getElementById('setOverlay').classList.remove('show');
   render();
   schedulePersist();
-}
-
-/* ================= export / import ================= */
-function exportJournalXlsx(){
-  if(typeof XLSX === 'undefined'){
-    alert('โหลดไลบรารี Export ไม่สำเร็จ (เช็คอินเทอร์เน็ต หรือ ad-blocker) ลองรีเฟรชหน้าแล้วลองใหม่');
-    return;
-  }
-  const range = document.getElementById('jExportRange').value;
-  const now = new Date();
-  let cutoff = null;
-  if(range==='1m'){ cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth()-1); }
-  else if(range==='1q'){ cutoff = new Date(now); cutoff.setMonth(cutoff.getMonth()-3); }
-  else if(range==='1y'){ cutoff = new Date(now); cutoff.setFullYear(cutoff.getFullYear()-1); }
-
-  let closed = journalStats().closed;
-  if(cutoff){
-    const cutoffStr = cutoff.toISOString().slice(0,10);
-    closed = closed.filter(t=>(t.exitDate||t.date||'') >= cutoffStr);
-  }
-  closed = closed.slice().sort((a,b)=>(a.exitDate||a.date||'').localeCompare(b.exitDate||b.date||''));
-
-  if(!closed.length){ alert('ไม่มีรายการที่ปิดไม้ในช่วงที่เลือก'); return; }
-
-  const rows = closed.map(t=>{
-    const pnl = realizedPnlOf(t), pnlTHB = realizedPnlTHBOf(t), r = realizedROf(t);
-    return {
-      'Closed Date': t.exitDate||'',
-      'Opened Date': t.date||'',
-      'Port': PORTS[t.port].name,
-      'Symbol': t.sym,
-      'Bias': t.bias,
-      'Planned Entry': t.plannedEntry!=null ? t.plannedEntry : t.entry,
-      'Actual Entry': t.entry,
-      'SL': t.sl,
-      'Exit': t.exitPrice,
-      'Qty': t.qty,
-      'Multiplier': t.mult||1,
-      'Currency': tradeCur(t),
-      'Realized P&L (native)': Math.round(pnl*100)/100,
-      'Realized P&L (THB)': Math.round(pnlTHB*100)/100,
-      'R-Multiple': r!==null ? Math.round(r*100)/100 : '',
-      'Result': pnl>0 ? 'WIN' : 'LOSS'
-    };
-  });
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = Object.keys(rows[0]).map(k=>({wch: Math.max(k.length, 12)}));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Trading Journal');
-  const rangeLabel = {all:'all',['1m']:'1month',['1q']:'1quarter',['1y']:'1year'}[range] || 'all';
-  XLSX.writeFile(wb, `trading-journal-${rangeLabel}-${new Date().toISOString().slice(0,10)}.xlsx`);
-}
-
-function exportData(){
-  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `trading-dashboard-${new Date().toISOString().slice(0,10)}.json`;
-  a.click(); URL.revokeObjectURL(a.href);
-}
-function importData(ev){
-  const f = ev.target.files[0]; if(!f)return;
-  const r = new FileReader();
-  r.onload = () => {
-    try{
-      const s = JSON.parse(r.result);
-      if(s.settings && Array.isArray(s.trades)){
-        state = {settings:{...cloneDefaults(),...s.settings},trades:s.trades,watchlist:normalizeWatchlist(s.watchlist),industries:s.industries||[]};
-        render();
-        schedulePersist();
-      }
-      else alert('ไฟล์ไม่ถูกต้อง');
-    }catch(e){ alert('อ่านไฟล์ไม่ได้'); }
-    ev.target.value='';
-  };
-  r.readAsText(f);
 }
 
 /* close overlay on backdrop click */
