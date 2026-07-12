@@ -249,7 +249,7 @@ tr:last-child td{border-bottom:none}
 .tabbtn.on .kbdhint{border-color:var(--teal);color:var(--teal)}
 
 .wlports{display:flex;flex-direction:column;gap:14px}
-.wlhead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.wlhead{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
 .wlhead h2{font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:6px}
 .wllinkbtn{background:none;border:none;color:var(--blue);cursor:pointer;font-size:.9rem;padding:2px 4px}
 .wllinkbtn:hover{text-decoration:underline}
@@ -302,6 +302,54 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
 .authhint{font-size:.75rem;margin-top:8px;min-height:1.2em;font-family:var(--sans)}
 .authhint.err{color:var(--red)}
 .authhint.ok{color:var(--teal)}
+
+/* ---------- watchlist: sort chips / drag reorder / score / inline edit ---------- */
+.wlsortchips{display:flex;gap:6px;flex-wrap:wrap}
+.dragCol{width:22px}
+.dragHandle{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;color:var(--muted);cursor:grab;user-select:none;
+  touch-action:none;font-size:.9rem;border-radius:5px;
+}
+.dragHandle:hover{background:var(--surface2);color:var(--text)}
+.dragHandle.disabled{opacity:.25;cursor:default;pointer-events:none}
+tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
+.tcard.wdragging{opacity:.4}
+.wlnote[contenteditable="true"]{
+  cursor:text;border-radius:6px;padding:3px 5px;margin:-3px -5px;
+  transition:background .12s;
+}
+.wlnote[contenteditable="true"]:hover{background:var(--surface2)}
+.wlnote[contenteditable="true"]:focus{outline:2px solid var(--teal);outline-offset:0;background:var(--surface)}
+.wlnote.placeholder{color:var(--muted);font-style:italic}
+.starRow{display:flex;gap:1px}
+.starRow .star{
+  cursor:pointer;font-size:1rem;color:var(--border);line-height:1;
+  transition:color .1s,transform .1s;
+}
+.starRow .star:hover{transform:scale(1.15)}
+.starRow .star.on{color:var(--yellow)}
+.scoreHeadWrap{display:inline-flex;align-items:center;gap:4px;position:relative}
+.scoreInfo{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:14px;height:14px;border-radius:50%;border:1px solid var(--muted);
+  color:var(--muted);font-size:.62rem;cursor:pointer;font-family:var(--sans);
+  text-transform:none;letter-spacing:0;flex-shrink:0;
+}
+.scoreInfo:hover{border-color:var(--teal);color:var(--teal)}
+.scorePop{
+  display:none;position:absolute;top:20px;right:0;z-index:30;
+  width:min(260px,80vw);background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);padding:12px;text-align:left;
+  font-family:var(--sans);font-weight:400;text-transform:none;letter-spacing:0;
+}
+.scorePop.show{display:block}
+.scorePop .txt{white-space:pre-wrap;font-size:.75rem;color:var(--text);line-height:1.5;max-height:220px;overflow-y:auto}
+.scorePop textarea{
+  width:100%;min-height:140px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);padding:8px;font-size:.75rem;font-family:var(--sans);resize:vertical;
+}
+.scorePop .btns{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
 
 /* ---------- responsive ---------- */
 @media(max-width:900px){
@@ -448,7 +496,6 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
 
 <!-- ---- TAB 3: Portfolio Mix ---- -->
 <div id="tabMix">
-  <div class="hint" style="margin-bottom:14px">สัดส่วนเทียบกับ<b>ทุนทั้งหมดของ Port</b> (รวม Cash ที่ยังไม่ได้ลงทุน) คำนวณจากไม้ที่ status = Open เท่านั้น เฉพาะ Core Port และ Satellite.A — Sat.B (Swing) ไม่รวมในหน้านี้ · Industry มาจากที่กรอกไว้ใน Watchlist ของแต่ละ Symbol</div>
   <div class="panel">
     <h2 style="margin-bottom:12px">Core Port</h2>
     <div class="pierow">
@@ -752,6 +799,8 @@ const DEFAULTS = {
   limits:{trade:1,port:{core:3,satA:3,satB:3},total:6}
 };
 const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
+const defaultWatchSortMode = () => ({core:'date',satA:'date',satB:'date'});
+const DEFAULT_SCORE_CRITERIA = 'ตัวอย่าง (แก้ไขเป็นเกณฑ์ของคุณเองได้):\n★★★★★ = Setup สมบูรณ์แบบ ตรงทุกเงื่อนไข\n★★★★ = ดี มีจุดต้องระวังเล็กน้อย\n★★★ = พอใช้ได้ ยังไม่มั่นใจเต็มที่\n★★ = อ่อน มีข้อกังขาเยอะ\n★ = ไม่ควรเข้า แต่ยังอยากติดตามไว้';
 
 let state = null;
 let uid = null;
@@ -841,9 +890,10 @@ function startListening(){
   unsubDoc = ref.onSnapshot(snap=>{
     if(snap.exists){
       const d = snap.data() || {};
-      state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[]};
+      state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
+        watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA};
     } else {
-      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[]};
+      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA};
     }
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('errorScreen').style.display='none';
@@ -890,7 +940,7 @@ function setSyncBadge(st){
 }
 function resetAll(){
   if(!confirm('ล้างข้อมูลทั้งหมด (Trades + การตั้งค่า) ทุกอุปกรณ์? ทำย้อนกลับไม่ได้')) return;
-  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[]};
+  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA};
   document.getElementById('setOverlay').classList.remove('show');
   render();
   schedulePersist();
@@ -1501,36 +1551,79 @@ function renderPortfolioMix(){
 function renderWatchlist(){
   if(!state) return;
   if(!Array.isArray(state.watchlist)) state.watchlist = normalizeWatchlist(state.watchlist);
+  if(!state.watchSortMode) state.watchSortMode = defaultWatchSortMode();
+  if(state.scoreCriteria==null) state.scoreCriteria = DEFAULT_SCORE_CRITERIA;
   const container = document.getElementById('watchGroups');
-  container.innerHTML = `<div class="wlports">${Object.entries(PORTS).map(([k,p])=>`
+  container.innerHTML = `<div class="wlports">${Object.entries(PORTS).map(([k,p])=>{
+    const mode = state.watchSortMode[k] || 'date';
+    const scored = k!=='satB';
+    return `
     <div class="panel" id="wlPanel_${k}">
       <div class="wlhead">
         <h2><span class="dot" style="background:${p.color};display:inline-block;width:9px;height:9px;border-radius:50%"></span>${p.name}</h2>
-        <button class="small primary" style="margin-left:auto" onclick="openWatch('${k}')">+ เพิ่ม</button>
+        <div class="wlsortchips" style="margin-left:auto">
+          <span class="chip ${mode==='date'?'on':''}" onclick="setWatchSortMode('${k}','date')">เรียงวันที่</span>
+          <span class="chip ${mode==='manual'?'on':''}" onclick="setWatchSortMode('${k}','manual')">ลากจัดเรียงเอง</span>
+          ${scored?`<span class="chip ${mode==='score'?'on':''}" onclick="setWatchSortMode('${k}','score')">เรียงคะแนน</span>
+          <span class="scoreHeadWrap"><span class="scoreInfo" onclick="toggleScoreInfo(event,'${k}')" title="เกณฑ์การให้คะแนน">i</span><div class="scorePop" id="scorePop_${k}"></div></span>`:''}
+        </div>
+        <button class="small primary" onclick="openWatch('${k}')">+ เพิ่ม</button>
       </div>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>Date</th><th>Symbol</th>${k==='satB'?'<th>Bias</th>':''}<th>Technical</th><th>${k==='satB'?'Sentiment':'Fundamental'}</th><th></th><th></th></tr></thead>
+          <thead><tr>
+            <th class="dragCol"></th>
+            <th>Date</th><th>Symbol</th>${k==='satB'?'<th>Bias</th>':''}<th>Technical</th><th>${k==='satB'?'Sentiment':'Fundamental'}</th>${scored?'<th>Score</th>':''}<th></th><th></th>
+          </tr></thead>
           <tbody id="wlBody_${k}"></tbody>
         </table>
         <div class="empty" id="wlEmpty_${k}" style="display:none">ยังไม่มีรายการ</div>
       </div>
       <div class="cards" id="wlCards_${k}"></div>
-    </div>`).join('')}</div>`;
+    </div>`;
+  }).join('')}</div>`;
   Object.keys(PORTS).forEach(renderWatchPort);
 }
 function renderWatchPort(port){
-  const list = state.watchlist.filter(w=>w.port===port).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(!state.watchSortMode) state.watchSortMode = defaultWatchSortMode();
+  const mode = state.watchSortMode[port] || 'date';
+  const scored = port!=='satB';
+  let list = state.watchlist.filter(w=>w.port===port);
+  if(mode==='manual'){
+    list = list.slice().sort((a,b)=>(a.order??0)-(b.order??0));
+  } else if(mode==='score' && scored){
+    list = list.slice().sort((a,b)=>((b.score||0)-(a.score||0)) || (b.date||'').localeCompare(a.date||''));
+  } else {
+    list = list.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  }
   document.getElementById(`wlEmpty_${port}`).style.display = list.length ? 'none' : 'block';
+  const dragOn = mode==='manual';
+
+  function starsHtml(w){
+    const sc = w.score||0;
+    return `<div class="starRow">${[1,2,3,4,5].map(n=>`<span class="star ${n<=sc?'on':''}" onclick="setScore('${w.id}',${n})">★</span>`).join('')}</div>`;
+  }
+  function noteTd(w, field){
+    const val = w[field]||'';
+    if(!scored) return `<td class="wlnote">${escHtml(val)||'—'}</td>`;
+    return `<td class="wlnote${val?'':' placeholder'}" contenteditable="true" data-wid="${w.id}" data-field="${field}" onfocus="clearPlaceholder(this)" onblur="saveInlineField(this)">${escHtml(val)||'เพิ่มข้อความ…'}</td>`;
+  }
+  function noteInline(w, field, label){
+    const val = w[field]||'';
+    if(!scored) return val ? `<div style="font-size:.8rem;margin-bottom:4px"><b>${label}:</b> ${escHtml(val)}</div>` : '';
+    return `<div style="font-size:.8rem;margin-bottom:4px"><b>${label}:</b> <span class="wlnote${val?'':' placeholder'}" contenteditable="true" data-wid="${w.id}" data-field="${field}" onfocus="clearPlaceholder(this)" onblur="saveInlineField(this)">${escHtml(val)||'เพิ่มข้อความ…'}</span></div>`;
+  }
 
   document.getElementById(`wlBody_${port}`).innerHTML = list.map(w=>{
     const eligible = watchEligible(w);
-    return `<tr style="${eligible?'':'opacity:.55'}">
+    return `<tr data-wid="${w.id}" style="${eligible?'':'opacity:.55'}">
+      <td class="dragCol"><span class="dragHandle ${dragOn?'':'disabled'}" title="ลากเพื่อจัดเรียง">⠿</span></td>
       <td>${w.date||'—'}</td>
       <td style="font-weight:600">${escHtml(w.sym)}${w.industry?` <span class="hint" style="display:inline;color:var(--muted)">🏷 ${escHtml(w.industry)}</span>`:''}${eligible?'':' <span class="hint" style="display:inline;color:var(--amber)">⚠ ยังไม่ครบเงื่อนไข</span>'}</td>
       ${port==='satB'?`<td class="sans">${w.bias?`<span class="tag ${w.bias==='Long'?'long':'short'}">${w.bias}</span>`:'—'}</td>`:''}
-      <td class="wlnote">${escHtml(w.technical)||'—'}</td>
-      <td class="wlnote">${escHtml(w.fundamental)||'—'}</td>
+      ${noteTd(w,'technical')}
+      ${noteTd(w,'fundamental')}
+      ${scored?`<td class="sans">${starsHtml(w)}</td>`:''}
       <td class="sans">${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')" title="เปิดลิงก์">🔗</button>`:''}</td>
       <td class="sans"><div class="rowbtns">
         <button class="small" onclick="editWatch('${w.id}')">✎</button>
@@ -1541,18 +1634,119 @@ function renderWatchPort(port){
 
   document.getElementById(`wlCards_${port}`).innerHTML = list.length ? list.map(w=>{
     const eligible = watchEligible(w);
-    return `<div class="tcard" style="${eligible?'':'opacity:.6'}">
-      <div class="r1"><span class="sym">${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${w.bias==='Long'?'long':'short'}">${w.bias}</span>`:''} ${w.industry?`<span class="hint" style="display:inline;color:var(--muted)">🏷 ${escHtml(w.industry)}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
+    return `<div class="tcard" data-wid="${w.id}" style="${eligible?'':'opacity:.6'}">
+      <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${w.bias==='Long'?'long':'short'}">${w.bias}</span>`:''} ${w.industry?`<span class="hint" style="display:inline;color:var(--muted)">🏷 ${escHtml(w.industry)}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
       ${!eligible?`<div class="hint" style="color:var(--amber)">⚠ ต้องมี Technical หรือ ${port==='satB'?'Sentiment':'Fundamental'} อย่างน้อย 1 อย่าง</div>`:''}
-      ${w.technical?`<div style="font-size:.8rem;margin-bottom:4px"><b>Technical:</b> ${escHtml(w.technical)}</div>`:''}
-      ${w.fundamental?`<div style="font-size:.8rem">${port==='satB'?'Sentiment':'Fundamental'}: ${escHtml(w.fundamental)}</div>`:''}
+      ${noteInline(w,'technical','Technical')}
+      ${noteInline(w,'fundamental',port==='satB'?'Sentiment':'Fundamental')}
+      ${scored?`<div style="margin-top:2px;margin-bottom:6px">${starsHtml(w)}</div>`:''}
       <div class="foot"><div></div><div class="rowbtns">
         <button class="small" onclick="editWatch('${w.id}')">แก้ไข</button>
         <button class="small danger" onclick="delWatch('${w.id}')">ลบ</button>
       </div></div>
     </div>`;
   }).join('') : `<div class="empty">ยังไม่มีรายการ</div>`;
+
+  enableDragReorder(document.getElementById(`wlBody_${port}`), false, dragOn);
+  enableDragReorder(document.getElementById(`wlCards_${port}`), true, dragOn);
 }
+
+/* ---- drag-to-reorder (pointer events: works for mouse + touch) ---- */
+function enableDragReorder(containerEl, isCard, active){
+  if(!containerEl) return;
+  const itemSel = isCard ? '.tcard[data-wid]' : 'tr[data-wid]';
+  containerEl.querySelectorAll('.dragHandle').forEach(handle=>{
+    handle.onpointerdown = active ? (e)=>{
+      e.preventDefault();
+      const item = handle.closest(isCard ? '.tcard' : 'tr');
+      if(!item) return;
+      item.classList.add('wdragging');
+      const move = (ev)=>{
+        const y = ev.clientY;
+        const items = Array.from(containerEl.querySelectorAll(itemSel)).filter(i=>i!==item);
+        let placed = false;
+        for(const it of items){
+          const rect = it.getBoundingClientRect();
+          if(y < rect.top + rect.height/2){ containerEl.insertBefore(item, it); placed = true; break; }
+        }
+        if(!placed) containerEl.appendChild(item);
+      };
+      const up = ()=>{
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        item.classList.remove('wdragging');
+        const ids = Array.from(containerEl.querySelectorAll(itemSel)).map(i=>i.dataset.wid);
+        ids.forEach((id,i)=>{ const w = state.watchlist.find(x=>x.id===id); if(w) w.order = i; });
+        schedulePersist();
+      };
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+    } : null;
+  });
+}
+function setWatchSortMode(port, mode){
+  if(!state.watchSortMode) state.watchSortMode = defaultWatchSortMode();
+  if(mode==='manual' && state.watchSortMode[port]!=='manual'){
+    /* seed order values from whatever is currently on screen so the switch feels seamless */
+    const current = state.watchlist.filter(w=>w.port===port).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    current.forEach((w,i)=>{ w.order = i; });
+  }
+  state.watchSortMode[port] = mode;
+  renderWatchPort(port);
+  schedulePersist();
+}
+function clearPlaceholder(el){
+  if(el.classList.contains('placeholder')){ el.textContent=''; el.classList.remove('placeholder'); }
+}
+function saveInlineField(el){
+  const id = el.dataset.wid, field = el.dataset.field;
+  const w = state.watchlist.find(x=>x.id===id); if(!w) return;
+  const val = el.textContent.replace(/\u00a0/g,' ').trim();
+  const changed = (w[field]||'') !== val;
+  w[field] = val;
+  render();
+  if(changed) schedulePersist();
+}
+function setScore(id, value){
+  const w = state.watchlist.find(x=>x.id===id); if(!w) return;
+  w.score = (w.score===value) ? 0 : value;
+  render();
+  schedulePersist();
+}
+function toggleScoreInfo(e, port){
+  e.stopPropagation();
+  document.querySelectorAll('.scorePop').forEach(p=>{ if(p.id!==`scorePop_${port}`) p.classList.remove('show'); });
+  const pop = document.getElementById(`scorePop_${port}`); if(!pop) return;
+  const willShow = !pop.classList.contains('show');
+  if(willShow) renderScorePop(port, false);
+  pop.classList.toggle('show', willShow);
+}
+function renderScorePop(port, editing){
+  const pop = document.getElementById(`scorePop_${port}`); if(!pop) return;
+  const txt = state.scoreCriteria || DEFAULT_SCORE_CRITERIA;
+  if(editing){
+    pop.innerHTML = `<textarea id="scoreCriteriaEdit_${port}">${escHtml(txt)}</textarea>
+      <div class="btns">
+        <button class="small" onclick="renderScorePop('${port}',false)">ยกเลิก</button>
+        <button class="small primary" onclick="saveScoreCriteria('${port}')">บันทึก</button>
+      </div>`;
+    const ta = document.getElementById(`scoreCriteriaEdit_${port}`);
+    if(ta) ta.onclick = (e)=>e.stopPropagation();
+  } else {
+    pop.innerHTML = `<div class="txt">${escHtml(txt)}</div>
+      <div class="btns"><button class="small" onclick="renderScorePop('${port}',true)">แก้ไขเกณฑ์</button></div>`;
+  }
+  pop.onclick = (e)=>e.stopPropagation();
+}
+function saveScoreCriteria(port){
+  const ta = document.getElementById(`scoreCriteriaEdit_${port}`);
+  state.scoreCriteria = ta ? ta.value : state.scoreCriteria;
+  renderScorePop(port, false);
+  schedulePersist();
+}
+document.addEventListener('click', ()=>{
+  document.querySelectorAll('.scorePop.show').forEach(p=>p.classList.remove('show'));
+});
 let watchEditId = null;
 let wBias = 'Long';
 function setWBias(v){
@@ -1615,6 +1809,9 @@ function saveWatch(){
     const proceed = confirm(`⚠ Symbol "${sym}" มีอยู่ใน Watchlist ของ ${dupPortName} อยู่แล้ว\n\nSymbol เดียวกันในหลาย Port อาจทำให้ระบบ auto-link Port/Bias ตอนเพิ่ม Trade เลือกผิด Port ได้\n\nยืนยันจะเพิ่ม/บันทึกต่อหรือไม่?`);
     if(!proceed) return;
   }
+  const prevEntry = watchEditId ? (state.watchlist||[]).find(x=>x.id===watchEditId) : null;
+  const sameportOrders = (state.watchlist||[]).filter(w=>w.port===port && w.id!==watchEditId).map(w=>w.order||0);
+  const nextOrder = sameportOrders.length ? Math.max(...sameportOrders)+1 : 0;
   const entry = {
     id: watchEditId || 'w'+Date.now(),
     date: document.getElementById('wDate').value,
@@ -1624,7 +1821,9 @@ function saveWatch(){
     technical: document.getElementById('wTech').value.trim(),
     fundamental: document.getElementById('wFund').value.trim(),
     industry: port==='satB' ? '' : document.getElementById('wIndustry').value.trim(),
-    link: document.getElementById('wLink').value.trim()
+    link: document.getElementById('wLink').value.trim(),
+    order: prevEntry && prevEntry.order!=null ? prevEntry.order : nextOrder,
+    score: prevEntry ? (prevEntry.score||0) : 0
   };
   if(!Array.isArray(state.watchlist)) state.watchlist = [];
   if(watchEditId){
