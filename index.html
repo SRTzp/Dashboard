@@ -811,6 +811,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('auth persistence:', e.code));
 const db = firebase.firestore();
 try{ db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn('persistence:',e.code)); }catch(e){}
 
@@ -1163,7 +1164,8 @@ function render(){
     const lossPct = pct(lossTH,capTH);
     const lossW = Math.min(100, lossPct/lim*100);
     const oW = Math.min(100-lossW, oPct/lim*100), plW = Math.min(100-lossW-oW, plPct/lim*100);
-    const over = lossPct+oPct+plPct > lim;
+    const totalHeatPct = lossPct+oPct+plPct;
+    const over = totalHeatPct > lim;
     const barColor = over ? 'var(--red)' : 'var(--yellow)';
     const nOpen = state.trades.filter(t=>t.port===k&&t.status==='open').length;
     const nPlan = state.trades.filter(t=>t.port===k&&t.status==='plan').length;
@@ -1180,7 +1182,7 @@ function render(){
         <div class="cell"><span class="k">Positions</span><span class="v">${nOpen} / ${nPlan}</span><span class="v2">open / plan</span></div>
       </div>
       <div class="heatwrap">
-        <div class="heatlbl"><span>Heat (% ของทุน Port นี้) — รวม Loss สะสม</span><span>limit ${lim}%</span></div>
+        <div class="heatlbl"><span style="${over?'color:var(--red);font-weight:700':''}">Heat รวมของ Port = ${fmt2(totalHeatPct)}%</span><span>limit ${lim}%</span></div>
         <div class="heatbar">
           <div class="loss" style="left:0;width:${lossW}%"></div>
           <div class="open" style="left:${lossW}%;width:${oW}%;background:${barColor}"></div>
