@@ -450,6 +450,8 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   <div class="strip" id="strip"></div>
   <div class="ports" id="ports"></div>
 
+  <div class="panel" id="checklistDraftsPanel" style="display:none"></div>
+
   <div class="panel">
     <div class="panel-head">
       <h2>Trading Plan &amp; Positions</h2>
@@ -666,6 +668,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <div id="clStatus" style="margin:12px 0 4px"></div>
     <div class="btns">
       <button onclick="closeChecklist()">ยกเลิก</button>
+      <button id="clSaveBtn" style="display:none" onclick="clSaveDraft()">บันทึกไว้ก่อน (ยังไม่ครบ)</button>
       <button class="primary" id="clContinueBtn" disabled onclick="clContinue()">ผ่านแล้ว → ไป Add Trade</button>
     </div>
   </div>
@@ -953,9 +956,9 @@ function startListening(){
       const d = snap.data() || {};
       state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
         watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
-        fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}};
+        fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[]};
     } else {
-      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}};
+      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[]};
     }
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('errorScreen').style.display='none';
@@ -1002,7 +1005,7 @@ function setSyncBadge(st){
 }
 function resetAll(){
   if(!confirm('ล้างข้อมูลทั้งหมด (Trades + การตั้งค่า) ทุกอุปกรณ์? ทำย้อนกลับไม่ได้')) return;
-  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}};
+  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[]};
   document.getElementById('setOverlay').classList.remove('show');
   render();
   schedulePersist();
@@ -1396,6 +1399,7 @@ function render(){
   renderJournal();
   renderWatchlist();
   renderPortfolioMix();
+  renderChecklistDrafts();
 }
 
 /* ================= render: Tab 2 (Journal) ================= */
@@ -2043,6 +2047,7 @@ function applySymbolWatchLink(sym){
 }
 /* ================= pre-trade system checklist ================= */
 let clState = {sym:'', port:null, bias:null, tier:'std', subtype:null, trend:null, checks:{}};
+let editingDraftId = null;
 function clItem(id, label){
   const checked = !!clState.checks[id];
   return `<label class="clItem ${checked?'on':''}">
@@ -2067,16 +2072,24 @@ function clSegSubtype(){
 function clSetSubtype(s){ clState.subtype=s; clState.checks={}; renderChecklistBody(); updateChecklistUI(); }
 function clSetTrend(t){ clState.trend=t; renderChecklistBody(); updateChecklistUI(); }
 
+function twoXGatePass(prefix){
+  const c = clState.checks;
+  return !!(c[prefix+'Gate1'] && c[prefix+'Gate2'] && c[prefix+'Gate3']);
+}
+function twoXPass(prefix){
+  const c = clState.checks;
+  return twoXGatePass(prefix) && !!(c[prefix+'Entry1'] && c[prefix+'Entry2']);
+}
 function checklistCorePass(){
   const c = clState.checks;
-  if(clState.tier==='2x') return !!(c.core2x1 && c.core2x2 && c.core2x3);
+  if(clState.tier==='2x') return twoXPass('core2x');
   if(clState.subtype==='รับ') return !!(c.coreRub1 && c.coreRub2);
   if(clState.subtype==='เติม') return !!(c.coreTerm1 && c.coreTerm2);
   return false;
 }
 function checklistSatAPass(){
   const c = clState.checks;
-  if(clState.tier==='2x') return !!(c.satA2x1 && c.satA2x2 && c.satA2x3 && c.satA2x4);
+  if(clState.tier==='2x') return twoXPass('satA2x');
   if(clState.subtype==='รับ') return !!(c.satARub1 && c.satARub2);
   if(clState.subtype==='เติม') return !!(c.satATerm1 && c.satATerm2);
   return false;
@@ -2100,6 +2113,18 @@ function checklistPass(){
   if(clState.port==='satB') return checklistSatBPass();
   return false;
 }
+function clReachedEntryStage(){
+  if(!clState.port) return false;
+  if(clState.port==='core' || clState.port==='satA'){
+    if(clState.tier==='2x'){
+      const prefix = clState.port==='core' ? 'core2x' : 'satA2x';
+      return twoXGatePass(prefix);
+    }
+    return !!clState.subtype;
+  }
+  if(clState.port==='satB') return satBGatePass();
+  return false;
+}
 function renderChecklistBody(){
   const body = document.getElementById('clBody');
   if(!body) return;
@@ -2109,23 +2134,26 @@ function renderChecklistBody(){
     html += `<div class="f"><label>ขนาดไม้</label>${clSegTier()}
       <div class="hint" style="margin-top:5px">2xBase = Price &gt; EMA.50 &amp; Signal เกิดตรง Key PoC</div></div>`;
     if(clState.tier==='2x'){
-      if(clState.port==='core'){
-        html += `<div class="hint" style="margin-bottom:6px">ต้องผ่านครบทั้ง 3 ข้อ</div>`
-          + clItem('core2x1','Price [Week] &gt; EMA.50 [Week]')
-          + clItem('core2x2','Buy signal มี RS line support [Week]')
-          + clItem('core2x3','PoC เกิดที่ฐานของ Signal [Week]');
+      const prefix = clState.port==='core' ? 'core2x' : 'satA2x';
+      const tf = clState.port==='core' ? '[Week]' : '[Day]';
+      const gateTf = clState.port==='core' ? '' : ' [Day]';
+      html += `<div class="divlbl" style="margin-top:0;padding-top:0;border:none">Gate Context</div>`;
+      html += clItem(prefix+'Gate1', `EMA 50 &gt;= 200${gateTf}`)
+            + clItem(prefix+'Gate2', `Price &gt; EMA50${gateTf}`)
+            + clItem(prefix+'Gate3', `EMA 50 เป็น Slope Up${gateTf}`);
+      if(!twoXGatePass(prefix)){
+        html += `<div class="hint" style="color:var(--amber)">⚠ ต้องผ่าน Gate Context ทั้ง 3 ข้อก่อน ถึงจะกรอก Entry Criteria ต่อได้</div>`;
       } else {
-        html += `<div class="hint" style="margin-bottom:6px">ต้องผ่านครบทั้ง 4 ข้อ</div>`
-          + clItem('satA2x1','Trend เรียงตัว 50&gt;200')
-          + clItem('satA2x2','Price &gt; EMA.50')
-          + clItem('satA2x3','Buy signal มี RS line support')
-          + clItem('satA2x4','PoC เกิดที่ฐานของ Signal');
+        html += `<div class="hint" style="color:var(--teal);margin-bottom:8px">✓ ผ่าน Gate Context แล้ว</div>`;
+        html += `<div class="divlbl">Entry Criteria</div>`;
+        html += clItem(prefix+'Entry1', `Buy signal มี RS line support ${tf}`)
+              + clItem(prefix+'Entry2', `PoC เกิดที่ฐานของ Signal ${tf}`);
       }
     } else {
       html += `<div class="f"><label>ประเภทไม้ย่อย</label>${clSegSubtype()}</div>`;
       html += `<div class="hint" style="margin-bottom:6px">${clState.subtype?'ต้องผ่านครบทั้ง 2 ข้อของประเภทที่เลือก':'เลือกประเภทไม้ก่อน'}</div>`;
       if(clState.port==='core'){
-        if(clState.subtype==='รับ') html += clItem('coreRub1','Dip - Support High Volume Node [Week]') + clItem('coreRub2','Dip - Support EMA50/200 [Week]');
+        if(clState.subtype==='รับ') html += clItem('coreRub1','Dip - Support High Volume Node [Week]') + clItem('coreRub2','Dip - Support EMA50/200');
         if(clState.subtype==='เติม') html += clItem('coreTerm1','Momentum - Break High Volume Node / RS line new high [Week]') + clItem('coreTerm2','Momentum - มี Pattern Continuation/Break Blocker [Week]');
       } else {
         if(clState.subtype==='รับ') html += clItem('satARub1','Dip - Support High Volume Node') + clItem('satARub2','Dip - Support EMA50/200');
@@ -2149,12 +2177,12 @@ function renderChecklistBody(){
         <button type="button" onclick="clSetTrend('with')" style="background:${clState.trend==='with'?withBg:'var(--surface2)'};color:${withColor};font-weight:${clState.trend==='with'?700:600}">${withLabel}</button>
         <button type="button" onclick="clSetTrend('against')" style="background:${clState.trend==='against'?againstBg:'var(--surface2)'};color:${againstColor};font-weight:${clState.trend==='against'?700:600}">${againstLabel}</button>
       </div></div>`;
-    html += `<div class="f"><label>Week Bar มี Reversal Signal ชัด</label>
+    html += `<div class="f"><label>Weekly Chart มี Reversal Signal ชัด</label>
       <div class="seg">
         <button type="button" class="${c.weekBar===true?'on-cur':''}" onclick="clSetCheck('weekBar',true)">มี</button>
         <button type="button" class="${c.weekBar===false?'on-cur':''}" onclick="clSetCheck('weekBar',false)">ไม่มี</button>
       </div></div>`;
-    html += `<div class="f"><label>Too Extend</label>
+    html += `<div class="f"><label>Too Extend from EMA (Daily TF)</label>
       <div class="seg">
         <button type="button" class="${c.tooExtend===true?'on-cur':''}" onclick="clSetCheck('tooExtend',true)">Yes</button>
         <button type="button" class="${c.tooExtend===false?'on-cur':''}" onclick="clSetCheck('tooExtend',false)">No</button>
@@ -2164,12 +2192,12 @@ function renderChecklistBody(){
     } else {
       html += `<div class="hint" style="color:var(--teal);margin-bottom:8px">✓ ผ่าน Gate แล้ว</div>`;
       html += `<div class="divlbl">Entry Checklist</div>`;
-      html += `<div class="f"><label>Key level align High Volume Node <span style="font-weight:400;color:var(--muted)">(Advantage ของทุน)</span></label>
+      html += `<div class="f"><label>Key level align with High Volume Node <span style="font-weight:400;color:var(--muted)">(Edge ของทุน)</span></label>
         <div class="seg">
           <button type="button" class="${c.keyLevel===true?'on-cur':''}" onclick="clSetCheck('keyLevel',true)">มี</button>
           <button type="button" class="${c.keyLevel===false?'on-cur':''}" onclick="clSetCheck('keyLevel',false)">ไม่มี</button>
         </div></div>`;
-      html += `<div class="f"><label>Continuation/Break Blocker <span style="font-weight:400;color:var(--muted)">(ต้องมีเพื่อกำหนดจุดคุม Risk ได้)</span></label>
+      html += `<div class="f"><label>Continuation Pattern/Break Blocker <span style="font-weight:400;color:var(--muted)">(จุดคุม Risk)</span></label>
         <div class="seg">
           <button type="button" class="${c.contBlocker===true?'on-cur':''}" onclick="clSetCheck('contBlocker',true)">มี</button>
           <button type="button" class="${c.contBlocker===false?'on-cur':''}" onclick="clSetCheck('contBlocker',false)">ไม่มี</button>
@@ -2186,6 +2214,8 @@ function updateChecklistUI(){
   const pass = checklistPass();
   const btn = document.getElementById('clContinueBtn');
   if(btn) btn.disabled = !pass;
+  const saveBtn = document.getElementById('clSaveBtn');
+  if(saveBtn) saveBtn.style.display = (clReachedEntryStage() && !pass) ? 'inline-block' : 'none';
   const status = document.getElementById('clStatus');
   if(status) status.innerHTML = !clState.sym ? '' : (pass ? '<span style="color:var(--teal);font-weight:700">✓ ผ่านเงื่อนไขระบบครบแล้ว พร้อมไปต่อ</span>' : '<span style="color:var(--amber);font-weight:700">⚠ ยังไม่ผ่านเงื่อนไขระบบครบ</span>');
 }
@@ -2215,6 +2245,7 @@ function clOnSymChange(){
 }
 function openChecklist(){
   clState = {sym:'', port:null, bias:null, tier:'std', subtype:null, trend:null, checks:{}};
+  editingDraftId = null;
   populateChecklistSymbolSelect();
   document.getElementById('clBody').innerHTML = '<div class="hint">เลือก Symbol จาก Watchlist ก่อน ระบบจะดึง Port ให้อัตโนมัติ</div>';
   updateChecklistUI();
@@ -2226,10 +2257,116 @@ function closeChecklist(){
 function clContinue(){
   if(!checklistPass()) return;
   closeChecklist();
+  if(editingDraftId){
+    state.checklistDrafts = (state.checklistDrafts||[]).filter(x=>x.id!==editingDraftId);
+    editingDraftId = null;
+    schedulePersist();
+  }
   const tier = (clState.port==='core'||clState.port==='satA') ? clState.tier : null;
-  openTrade(clState.sym, tier);
+  let presetBias = null;
+  if(clState.port==='satB'){
+    presetBias = clState.trend==='against' ? (clState.bias==='Short' ? 'Long' : 'Short') : clState.bias;
+  }
+  openTrade(clState.sym, tier, presetBias);
 }
-function openTrade(presetSym, presetTier){
+function clSaveDraft(){
+  if(!clState.sym || !clState.port) return;
+  if(!Array.isArray(state.checklistDrafts)) state.checklistDrafts = [];
+  const snapshot = JSON.parse(JSON.stringify(clState));
+  if(editingDraftId){
+    const idx = state.checklistDrafts.findIndex(x=>x.id===editingDraftId);
+    const keepDate = idx>=0 ? state.checklistDrafts[idx].date : new Date().toISOString().slice(0,10);
+    const draft = {id:editingDraftId, date:keepDate, clState:snapshot};
+    if(idx>=0) state.checklistDrafts[idx] = draft; else state.checklistDrafts.push(draft);
+  } else {
+    state.checklistDrafts.push({id:'cld'+Date.now(), date:new Date().toISOString().slice(0,10), clState:snapshot});
+  }
+  editingDraftId = null;
+  closeChecklist();
+  render();
+  schedulePersist();
+}
+function clEditDraft(id){
+  const d = (state.checklistDrafts||[]).find(x=>x.id===id);
+  if(!d) return;
+  clState = JSON.parse(JSON.stringify(d.clState));
+  editingDraftId = id;
+  populateChecklistSymbolSelect();
+  document.getElementById('clSym').value = clState.sym || '';
+  renderChecklistBody();
+  updateChecklistUI();
+  document.getElementById('checklistOverlay').classList.add('show');
+}
+function clDeleteDraft(id){
+  if(!confirm('ลบ Checklist ที่ค้างไว้นี้?')) return;
+  state.checklistDrafts = (state.checklistDrafts||[]).filter(x=>x.id!==id);
+  render();
+  schedulePersist();
+}
+function clMissingList(cs){
+  const c = cs.checks || {};
+  const missing = [];
+  if(cs.port==='core' || cs.port==='satA'){
+    if(!cs.tier){ missing.push('เลือกขนาดไม้'); return missing; }
+    if(cs.tier==='2x'){
+      const prefix = cs.port==='core' ? 'core2x' : 'satA2x';
+      if(!c[prefix+'Gate1']) missing.push('EMA50>=200');
+      if(!c[prefix+'Gate2']) missing.push('Price>EMA50');
+      if(!c[prefix+'Gate3']) missing.push('EMA50 Slope Up');
+      if(missing.length) return missing;
+      if(!c[prefix+'Entry1']) missing.push('RS line support');
+      if(!c[prefix+'Entry2']) missing.push('PoC ที่ฐาน Signal');
+    } else {
+      if(!cs.subtype){ missing.push('เลือกประเภทไม้ย่อย'); return missing; }
+      if(cs.subtype==='รับ'){
+        const p = cs.port==='core' ? 'coreRub' : 'satARub';
+        if(!c[p+'1']) missing.push('Support High Volume Node');
+        if(!c[p+'2']) missing.push('Support EMA50/200');
+      } else {
+        const p = cs.port==='core' ? 'coreTerm' : 'satATerm';
+        if(!c[p+'1']) missing.push('Break HVN/RS line new high');
+        if(!c[p+'2']) missing.push('Continuation/Break Blocker');
+      }
+    }
+  } else if(cs.port==='satB'){
+    if(!cs.trend) missing.push('เลือกทิศทาง Trend/Counter');
+    if(c.weekBar===undefined) missing.push('Weekly Reversal');
+    if(c.tooExtend===undefined) missing.push('Too Extend');
+    if(missing.length) return missing;
+    const gateOk = cs.trend==='against' ? (c.tooExtend===true || c.weekBar===true) : (c.weekBar===false && c.tooExtend===false);
+    if(!gateOk){ missing.push('Trend/Reversal/Extend ยังไม่ตรงกัน'); return missing; }
+    if(c.keyLevel!==true) missing.push('Key level align');
+    if(c.contBlocker!==true) missing.push('Continuation Blocker');
+  }
+  return missing;
+}
+function renderChecklistDrafts(){
+  const panel = document.getElementById('checklistDraftsPanel');
+  if(!panel || !state) return;
+  const drafts = Array.isArray(state.checklistDrafts) ? state.checklistDrafts : [];
+  if(!drafts.length){ panel.style.display = 'none'; panel.innerHTML=''; return; }
+  panel.style.display = 'block';
+  panel.innerHTML = `<h2 style="font-size:.95rem;font-weight:700;margin-bottom:10px">Checklist ค้างไว้ (ยังไม่ครบ)</h2>` +
+    drafts.map(d=>{
+      const cs = d.clState || {};
+      const portName = PORTS[cs.port] ? PORTS[cs.port].name : (cs.port||'—');
+      const biasColor = cs.bias==='Short' ? 'var(--red)' : 'var(--teal)';
+      const biasBg = cs.bias==='Short' ? 'var(--red-dim)' : 'var(--teal-dim)';
+      const missing = clMissingList(cs);
+      return `<div style="display:flex;align-items:center;gap:9px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;flex-wrap:wrap;font-size:.78rem">
+        <span style="color:var(--muted);font-family:var(--mono);flex-shrink:0">${d.date||''}</span>
+        <span style="font-weight:700;flex-shrink:0">${escHtml(cs.sym||'—')}</span>
+        ${cs.bias?`<span class="tag" style="background:${biasBg};color:${biasColor};flex-shrink:0">${cs.bias}</span>`:''}
+        <span style="color:var(--muted);flex-shrink:0">${escHtml(portName)}</span>
+        <span style="color:var(--amber);flex:1;min-width:140px">ขาด: ${missing.map(escHtml).join(', ')||'—'}</span>
+        <div class="rowbtns" style="flex-shrink:0">
+          <button class="small" onclick="clEditDraft('${d.id}')">แก้ไข</button>
+          <button class="small danger" onclick="clDeleteDraft('${d.id}')">ลบ</button>
+        </div>
+      </div>`;
+    }).join('');
+}
+function openTrade(presetSym, presetTier, presetBias){
   editId = null;
   document.getElementById('tradeTitle').textContent='เพิ่ม Trade';
   document.getElementById('tDate').value = new Date().toISOString().slice(0,10);
@@ -2244,6 +2381,9 @@ function openTrade(presetSym, presetTier){
   if(presetSym){
     document.getElementById('tSym').value = presetSym;
     applySymbolWatchLink(presetSym);
+  }
+  if(presetBias){
+    setBias(presetBias);
   }
   if(presetTier){
     setPosTier(presetTier);
