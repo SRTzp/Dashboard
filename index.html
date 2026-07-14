@@ -71,7 +71,7 @@ button.small{padding:4px 10px;font-size:.75rem}
 button.ghost{background:transparent}
 
 /* ---------- tabs ---------- */
-.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:0;position:sticky;top:0;background:var(--bg);z-index:30}
 .tabbtn{
   background:transparent;border:none;border-radius:0;
   padding:9px 4px;margin-right:18px;color:var(--muted);font-weight:700;font-size:.88rem;
@@ -253,8 +253,20 @@ tr:last-child td{border-bottom:none}
 .tabbtn.on .kbdhint{border-color:var(--teal);color:var(--teal)}
 
 .wlports{display:flex;flex-direction:column;gap:14px}
-.wlhead{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.wlhead{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;position:sticky;top:42px;background:var(--surface);z-index:20;padding:4px 0}
 .wlhead h2{font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:6px}
+.wlCollapseBtn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:2px 4px;line-height:1;transition:transform .15s}
+.wlCollapseBtn:hover{color:var(--text)}
+.wlCollapseBtn.collapsed{transform:rotate(-90deg)}
+.scrollTopBtn{
+  position:fixed;right:16px;bottom:20px;width:40px;height:40px;border-radius:50%;
+  background:var(--surface);border:1px solid var(--border);color:var(--muted);
+  font-size:1.1rem;cursor:pointer;display:none;align-items:center;justify-content:center;
+  box-shadow:0 2px 10px rgba(0,0,0,.25);z-index:40;opacity:0;transition:opacity .15s;
+}
+.scrollTopBtn.show{display:flex;opacity:1}
+.scrollTopBtn:hover{color:var(--text);border-color:var(--teal)}
+@media (min-width:769px){ .scrollTopBtn{display:none !important} }
 .wllinkbtn{background:none;border:none;color:var(--blue);cursor:pointer;font-size:.9rem;padding:2px 4px}
 .wllinkbtn:hover{text-decoration:underline}
 .wlnote{color:var(--text);white-space:normal;font-family:var(--sans);max-width:320px;font-size:var(--wlnote-size);line-height:1.45;word-break:break-word;overflow-wrap:anywhere}
@@ -1625,13 +1637,16 @@ function renderWatchlist(){
   if(!state.watchSortMode) state.watchSortMode = defaultWatchSortMode();
   if(state.scoreCriteria==null) state.scoreCriteria = DEFAULT_SCORE_CRITERIA;
   if(!state.fontSizes) state.fontSizes = {...DEFAULT_FONT_SIZES};
+  if(!state.watchCollapsed) state.watchCollapsed = {};
   const container = document.getElementById('watchGroups');
   container.innerHTML = `<div class="wlports">${Object.entries(PORTS).map(([k,p])=>{
     const mode = state.watchSortMode[k] || 'date';
     const scored = k!=='satB';
+    const collapsed = !!state.watchCollapsed[k];
     return `
     <div class="panel" id="wlPanel_${k}">
       <div class="wlhead">
+        <button class="wlCollapseBtn ${collapsed?'collapsed':''}" id="wlCollapseBtn_${k}" onclick="toggleWatchCollapse('${k}')" title="เปิด/ปิด">▾</button>
         <h2><span class="dot" style="background:${p.color};display:inline-block;width:9px;height:9px;border-radius:50%"></span>${p.name}</h2>
         <div class="wlsortchips" style="margin-left:auto">
           <span class="chip ${mode==='date'?'on':''}" onclick="setWatchSortMode('${k}','date')">เรียงวันที่</span>
@@ -1641,20 +1656,31 @@ function renderWatchlist(){
         </div>
         <button class="small primary" onclick="openWatch('${k}')">+ เพิ่ม</button>
       </div>
-      <div class="tablewrap">
-        <table>
-          <thead><tr>
-            <th class="dragCol"></th>
-            <th>Date</th><th>Symbol</th>${k==='satB'?'<th>Bias</th>':''}<th>Technical</th><th>${k==='satB'?'Sentiment':'Fundamental'}</th>${scored?'<th>Score</th>':''}<th></th><th></th>
-          </tr></thead>
-          <tbody id="wlBody_${k}"></tbody>
-        </table>
-        <div class="empty" id="wlEmpty_${k}" style="display:none">ยังไม่มีรายการ</div>
+      <div id="wlContent_${k}" style="${collapsed?'display:none':''}">
+        <div class="tablewrap">
+          <table>
+            <thead><tr>
+              <th class="dragCol"></th>
+              <th>Date</th><th>Symbol</th>${k==='satB'?'<th>Bias</th>':''}<th>Technical</th><th>${k==='satB'?'Sentiment':'Fundamental'}</th>${scored?'<th>Score</th>':''}<th></th><th></th>
+            </tr></thead>
+            <tbody id="wlBody_${k}"></tbody>
+          </table>
+          <div class="empty" id="wlEmpty_${k}" style="display:none">ยังไม่มีรายการ</div>
+        </div>
+        <div class="cards" id="wlCards_${k}"></div>
       </div>
-      <div class="cards" id="wlCards_${k}"></div>
     </div>`;
   }).join('')}</div>`;
   Object.keys(PORTS).forEach(renderWatchPort);
+}
+function toggleWatchCollapse(port){
+  if(!state.watchCollapsed) state.watchCollapsed = {};
+  state.watchCollapsed[port] = !state.watchCollapsed[port];
+  const content = document.getElementById(`wlContent_${port}`);
+  const btn = document.getElementById(`wlCollapseBtn_${port}`);
+  if(content) content.style.display = state.watchCollapsed[port] ? 'none' : '';
+  if(btn) btn.classList.toggle('collapsed', !!state.watchCollapsed[port]);
+  schedulePersist();
 }
 function renderWatchPort(port){
   if(!state.watchSortMode) state.watchSortMode = defaultWatchSortMode();
@@ -2818,6 +2844,6 @@ document.querySelectorAll('.overlay').forEach(o=>{
 });
 
 setAuthMode('in');
-</script>
+</script><button id="scrollTopBtn" class="scrollTopBtn" onclick="scrollToTop()" title="ขึ้นบนสุด">↑</button>
 </body>
 </html>
