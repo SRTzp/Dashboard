@@ -71,7 +71,7 @@ button.small{padding:4px 10px;font-size:.75rem}
 button.ghost{background:transparent}
 
 /* ---------- tabs ---------- */
-.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:0;position:sticky;top:calc(max(env(safe-area-inset-top,0px),44px) + 10px);background:var(--bg);z-index:30}
+.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:0;position:sticky;top:var(--tabs-offset,0px);background:var(--bg);z-index:30}
 .tabbtn{
   background:transparent;border:none;border-radius:0;
   padding:9px 4px;margin-right:18px;color:var(--muted);font-weight:700;font-size:.88rem;
@@ -264,7 +264,7 @@ tr:last-child td{border-bottom:none}
 }
 
 .wlports{display:flex;flex-direction:column;gap:14px}
-.wlhead{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;position:sticky;top:calc(max(env(safe-area-inset-top,0px),44px) + 62px);background:var(--surface);z-index:20;padding:4px 0}
+.wlhead{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;position:sticky;top:calc(var(--tabs-offset,0px) + 42px);background:var(--surface);z-index:20;padding:4px 0}
 .wlhead h2{font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:6px}
 .wlCollapseBtn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:2px 4px;line-height:1;transition:transform .15s}
 .wlCollapseBtn:hover{color:var(--text)}
@@ -807,6 +807,10 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <div class="f"><label>Closed Trade &amp; เหตุผลใน Missed Trade</label>
       <input type="number" step="0.02" min="0.6" max="1.4" inputmode="decimal" id="sizeClosed"></div>
 
+    <div class="divlbl">แถบ Tab บนสุด</div>
+    <div class="f"><label>เลื่อนแถบ Portfolio/Watchlist/... ลงจากขอบบนสุด (px)</label>
+      <input type="number" step="1" min="0" max="80" inputmode="numeric" id="tabsOffset"></div>
+
     <div class="btns" style="justify-content:space-between">
       <button onclick="resetFontSizes()">ค่าเริ่มต้น</button>
       <div style="display:flex;gap:8px">
@@ -886,6 +890,7 @@ const DEFAULTS = {
 const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
 const defaultWatchSortMode = () => ({core:'date',satA:'date',satB:'date'});
 const DEFAULT_FONT_SIZES = {wl:0.84, plan:0.8, closed:0.8};
+const DEFAULT_TABS_OFFSET = 0;
 const DEFAULT_SCORE_CRITERIA = 'ตัวอย่าง (แก้ไขเป็นเกณฑ์ของคุณเองได้):\n★★★ = Setup สมบูรณ์แบบ ตรงทุกเงื่อนไข มั่นใจสูง\n★★ = ดี ใช้ได้ แต่มีจุดต้องระวัง\n★ = อ่อน ยังไม่มั่นใจ แต่อยากติดตามไว้';
 
 let state = null;
@@ -979,9 +984,9 @@ function startListening(){
       const d = snap.data() || {};
       state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
         watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
-        fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[], watchCollapsed:d.watchCollapsed||{}};
+        fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[], watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAULT_TABS_OFFSET};
     } else {
-      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}};
+      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET};
     }
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('errorScreen').style.display='none';
@@ -1028,7 +1033,7 @@ function setSyncBadge(st){
 }
 function resetAll(){
   if(!confirm('ล้างข้อมูลทั้งหมด (Trades + การตั้งค่า) ทุกอุปกรณ์? ทำย้อนกลับไม่ได้')) return;
-  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}};
+  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET};
   document.getElementById('setOverlay').classList.remove('show');
   render();
   schedulePersist();
@@ -1841,16 +1846,20 @@ function setWatchSortMode(port, mode){
 }
 function openSystemSettings(){
   if(!state.fontSizes) state.fontSizes = {...DEFAULT_FONT_SIZES};
+  if(state.tabsOffset==null) state.tabsOffset = DEFAULT_TABS_OFFSET;
   document.getElementById('sizeWl').value = state.fontSizes.wl;
   document.getElementById('sizePlan').value = state.fontSizes.plan;
   document.getElementById('sizeClosed').value = state.fontSizes.closed;
+  document.getElementById('tabsOffset').value = state.tabsOffset;
   document.getElementById('sysOverlay').classList.add('show');
 }
 function saveSystemSettings(){
   const wl = parseFloat(document.getElementById('sizeWl').value)||DEFAULT_FONT_SIZES.wl;
   const plan = parseFloat(document.getElementById('sizePlan').value)||DEFAULT_FONT_SIZES.plan;
   const closed = parseFloat(document.getElementById('sizeClosed').value)||DEFAULT_FONT_SIZES.closed;
+  const tabsOffset = parseFloat(document.getElementById('tabsOffset').value);
   state.fontSizes = {wl, plan, closed};
+  state.tabsOffset = isNaN(tabsOffset) ? DEFAULT_TABS_OFFSET : Math.max(0, tabsOffset);
   applyFontSizes();
   document.getElementById('sysOverlay').classList.remove('show');
   schedulePersist();
@@ -1859,12 +1868,15 @@ function resetFontSizes(){
   document.getElementById('sizeWl').value = DEFAULT_FONT_SIZES.wl;
   document.getElementById('sizePlan').value = DEFAULT_FONT_SIZES.plan;
   document.getElementById('sizeClosed').value = DEFAULT_FONT_SIZES.closed;
+  document.getElementById('tabsOffset').value = DEFAULT_TABS_OFFSET;
 }
 function applyFontSizes(){
   const f = (state && state.fontSizes) || DEFAULT_FONT_SIZES;
   document.documentElement.style.setProperty('--wlnote-size', f.wl+'rem');
   document.documentElement.style.setProperty('--plan-size', f.plan+'rem');
   document.documentElement.style.setProperty('--closed-size', f.closed+'rem');
+  const off = (state && state.tabsOffset!=null) ? state.tabsOffset : DEFAULT_TABS_OFFSET;
+  document.documentElement.style.setProperty('--tabs-offset', off+'px');
 }
 function clearPlaceholder(el){
   if(el.classList.contains('placeholder')){ el.textContent=''; el.classList.remove('placeholder'); }
