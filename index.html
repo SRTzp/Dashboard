@@ -66,6 +66,8 @@ button:disabled:hover{border-color:var(--border)}
 button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 button.primary{background:var(--teal);border-color:var(--teal);color:#08221C}
 button.primary:hover{filter:brightness(1.08)}
+button.warn{background:var(--yellow);border-color:var(--yellow);color:#3A2E05}
+button.warn:hover{filter:brightness(1.05)}
 button.danger{color:var(--red)}
 button.small{padding:4px 10px;font-size:.75rem}
 button.ghost{background:transparent}
@@ -167,6 +169,7 @@ tr:last-child td{border-bottom:none}
 .tag{font-size:.66rem;padding:2px 8px;border-radius:20px;font-weight:600;font-family:var(--sans)}
 .tag.long{background:var(--teal-dim);color:var(--teal)}
 .tag.short{background:var(--red-dim);color:var(--red)}
+.tag.unclear{background:#FFFFFF;color:var(--muted);border:1px solid var(--border)}
 .tag.plan{background:rgba(108,168,240,.14);color:var(--blue)}
 .tag.submitted{background:var(--teal-dim);color:var(--teal)}
 .tag.open{background:var(--amber-dim);color:var(--amber)}
@@ -212,7 +215,7 @@ tr:last-child td{border-bottom:none}
 
 /* ---------- modal ---------- */
 .overlay{
-  position:fixed;inset:0;background:rgba(5,8,12,.7);backdrop-filter:blur(3px);
+  position:fixed;inset:0;background:rgba(5,8,12,.7);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
   display:none;align-items:flex-start;justify-content:center;padding:24px 14px;z-index:50;overflow-y:auto;
 }
 .overlay.show{display:flex}
@@ -238,6 +241,7 @@ tr:last-child td{border-bottom:none}
 .seg button{border:none;border-radius:0;flex:1;background:var(--surface2)}
 .seg button.on-long{background:var(--teal-dim);color:var(--teal)}
 .seg button.on-short{background:var(--red-dim);color:var(--red)}
+.seg button.on-unclear{background:#FFFFFF;color:var(--muted);box-shadow:inset 0 0 0 1px var(--border)}
 .seg button.on-cur{background:var(--teal-dim);color:var(--teal);font-weight:700}
 .divlbl{font-size:.7rem;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:14px 0 8px;border-top:1px solid var(--border);padding-top:12px}
 .exitbox{background:var(--teal-dim);border:1px solid var(--teal);border-radius:10px;padding:12px;margin-bottom:12px}
@@ -450,8 +454,9 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   </div>
   <div class="hbtns">
     <button onclick="openSystemSettings()">🛠</button>
-    <button onclick="openSettings()">⚙︎ Portfolio</button>
-    <button onclick="openIndustryManager()">🏷 Industry</button>
+    <button onclick="openSettings()" title="Portfolio Setting"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="11" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><path d="M18 18 L18 7 A11 11 0 0 1 27.5 13 Z" fill="#F0397A" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L27.5 13 A11 11 0 0 1 28.9 21 Z" fill="#C084F5" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L18 7 A11 11 0 0 0 9 12.5 Z" fill="#8BD450" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="6" fill="#FFDD66" stroke="#111" stroke-width="1.6"/><text x="8" y="11" font-size="8" text-anchor="middle" font-weight="800" fill="#111" font-family="Arial">$</text></svg></button>
+    <button onclick="openIndustryManager()" title="Industry"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.4"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="16" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="20" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="24" y="23" width="3.5" height="6" fill="#8FD6EE"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="2.6" stroke-linecap="round"/></svg></button>
+    <button class="warn" onclick="openChecklist()">📋 Checklist</button>
     <button class="primary" onclick="openChecklist()">+ Add Trade</button>
   </div>
 </header>
@@ -773,6 +778,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       <div class="seg">
         <button type="button" id="wbLong" onclick="setWBias('Long')">Long</button>
         <button type="button" id="wbShort" onclick="setWBias('Short')">Short</button>
+        <button type="button" id="wbUnclear" onclick="setWBias('Unclear')">Unclear</button>
       </div>
     </div>
     <div class="f"><label>Technical Reason</label><textarea id="wTech" rows="3" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)"></textarea></div>
@@ -872,9 +878,10 @@ const db = firebase.firestore();
 try{ db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn('persistence:',e.code)); }catch(e){}
 
 /* ================= state ================= */
+const ICON_INDUSTRY_MINI = '<svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="16" width="24" height="13" fill="#3A5568" stroke="#111" stroke-width="1.6"/><polygon points="6,16 18,9 30,16" fill="#2C4256" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/><rect x="9" y="5" width="3.5" height="11" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="16" y="2" width="3.5" height="14" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="10" y="20" width="3" height="3" fill="#8FD6EE"/><rect x="15" y="20" width="3" height="3" fill="#8FD6EE"/><rect x="22" y="22" width="4" height="7" fill="#8FD6EE"/></svg>';
 const PORTS = {
-  core:{name:'Core Port',color:'#6CA8F0',cur:'THB',sym:'฿'},
-  satA:{name:'Satellite.A — RS',color:'#46C8AC',cur:'USD',sym:'$'},
+  core:{name:'Core Port',color:'#46C8AC',cur:'THB',sym:'฿'},
+  satA:{name:'Satellite.A — RS',color:'#6CA8F0',cur:'USD',sym:'$'},
   satB:{name:'Satellite.B — Swing',color:'#E6B45A',cur:'USD',sym:'$'}
 };
 const DEFAULTS = {
@@ -988,6 +995,7 @@ function startListening(){
     } else {
       state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET};
     }
+    if(ensureSatBDefaults()) schedulePersist();
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('errorScreen').style.display='none';
     document.getElementById('mainWrap').style.display='block';
@@ -1034,6 +1042,7 @@ function setSyncBadge(st){
 function resetAll(){
   if(!confirm('ล้างข้อมูลทั้งหมด (Trades + การตั้งค่า) ทุกอุปกรณ์? ทำย้อนกลับไม่ได้')) return;
   state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET};
+  ensureSatBDefaults();
   document.getElementById('setOverlay').classList.remove('show');
   render();
   schedulePersist();
@@ -1091,6 +1100,7 @@ const TAB_ORDER = ['mix','watch','plan','journal'];
 document.addEventListener('keydown', (e)=>{
   const tag = (e.target && e.target.tagName || '').toLowerCase();
   if(tag==='input' || tag==='select' || tag==='textarea') return;
+  if(e.target && e.target.isContentEditable) return;
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   if(document.querySelector('.overlay.show')) return; // อย่าสลับแท็บขณะเปิด modal อยู่
   if(e.key==='1') switchTab('mix');
@@ -1610,8 +1620,33 @@ function normalizeWatchlist(wl){
   }
   return [];
 }
+const SATB_DEFAULT_SYMBOLS = ['S50','XAUUSD','BTCUSD'];
+function ensureSatBDefaults(){
+  if(!state) return false;
+  if(!Array.isArray(state.watchlist)) state.watchlist = [];
+  const existing = new Set(state.watchlist.filter(w=>w.port==='satB').map(w=>w.sym));
+  let changed = false;
+  SATB_DEFAULT_SYMBOLS.forEach((sym,i)=>{
+    if(!existing.has(sym)){
+      state.watchlist.push({
+        id: 'w'+Date.now()+Math.random().toString(36).slice(2,7),
+        date: new Date().toISOString().slice(0,10),
+        sym, port:'satB', bias:'Unclear',
+        technical:'', fundamental:'', industry:'', link:'', order:i
+      });
+      changed = true;
+    }
+  });
+  return changed;
+}
 function watchEligible(w){
   return !!((w.technical && w.technical.trim()) || (w.fundamental && w.fundamental.trim()));
+}
+function watchEligibleForTrade(w){
+  return watchEligible(w) && !(w.port==='satB' && w.bias==='Unclear');
+}
+function biasTagClass(bias){
+  return bias==='Long' ? 'long' : bias==='Short' ? 'short' : 'unclear';
 }
 const PIE_COLORS = ['#3467C7','#0E9C86','#EAC13A','#D64545','#8E5FD1','#E6873C','#4FA8D8','#B85C9E','#6FBF73','#C9A227','#5B7DB1','#D48CB0'];
 const CASH_COLOR = '#B7BEC9';
@@ -1705,7 +1740,6 @@ function renderWatchlist(){
           ${scored?`<span class="chip ${mode==='score'?'on':''}" onclick="setWatchSortMode('${k}','score')">เรียงคะแนน</span>
           <span class="scoreHeadWrap"><span class="scoreInfo" onclick="toggleScoreInfo(event,'${k}')" title="เกณฑ์การให้คะแนน">i</span><div class="scorePop" id="scorePop_${k}"></div></span>`:''}
         </div>
-        <button class="small primary" onclick="openWatch('${k}')">+ เพิ่ม</button>
       </div>
       <div id="wlContent_${k}" style="${collapsed?'display:none':''}">
         <div class="tablewrap">
@@ -1768,8 +1802,8 @@ function renderWatchPort(port){
     return `<tr data-wid="${w.id}" style="${eligible?'':'opacity:.55'}">
       <td class="dragCol"><span class="dragHandle ${dragOn?'':'disabled'}" title="ลากเพื่อจัดเรียง">⠿</span></td>
       <td>${w.date||'—'}</td>
-      <td style="font-weight:600">${escHtml(w.sym)}${w.industry?` <span class="hint" style="display:inline;color:var(--muted)">🏷 ${escHtml(w.industry)}</span>`:''}${eligible?'':' <span class="hint" style="display:inline;color:var(--amber)">⚠ ยังไม่ครบเงื่อนไข</span>'}</td>
-      ${port==='satB'?`<td class="sans">${w.bias?`<span class="tag ${w.bias==='Long'?'long':'short'}">${w.bias}</span>`:'—'}</td>`:''}
+      <td style="font-weight:600">${escHtml(w.sym)}${w.industry?` <span class="hint" style="display:inline;color:var(--muted)">${ICON_INDUSTRY_MINI} ${escHtml(w.industry)}</span>`:''}${eligible?'':' <span class="hint" style="display:inline;color:var(--amber)">⚠ ยังไม่ครบเงื่อนไข</span>'}</td>
+      ${port==='satB'?`<td class="sans">${w.bias?`<span class="tag ${biasTagClass(w.bias)}">${w.bias}</span>`:'—'}</td>`:''}
       ${noteTd(w,'technical')}
       ${noteTd(w,'fundamental')}
       ${scored?`<td class="sans">${starsHtml(w)}</td>`:''}
@@ -1784,7 +1818,7 @@ function renderWatchPort(port){
   document.getElementById(`wlCards_${port}`).innerHTML = list.length ? list.map(w=>{
     const eligible = watchEligible(w);
     return `<div class="tcard" data-wid="${w.id}" style="${eligible?'':'opacity:.6'}">
-      <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${w.bias==='Long'?'long':'short'}">${w.bias}</span>`:''} ${w.industry?`<span class="hint" style="display:inline;color:var(--muted)">🏷 ${escHtml(w.industry)}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
+      <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${biasTagClass(w.bias)}">${w.bias}</span>`:''} ${w.industry?`<span class="hint" style="display:inline;color:var(--muted)"><svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.8"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.8" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.4"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="2"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="3" stroke-linecap="round"/></svg> ${escHtml(w.industry)}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
       ${!eligible?`<div class="hint" style="color:var(--amber)">⚠ ต้องมี Technical หรือ ${port==='satB'?'Sentiment':'Fundamental'} อย่างน้อย 1 อย่าง</div>`:''}
       ${noteInline(w,'technical','Technical')}
       ${noteInline(w,'fundamental',port==='satB'?'Sentiment':'Fundamental')}
@@ -1936,6 +1970,7 @@ function setWBias(v){
   wBias = v;
   document.getElementById('wbLong').className = v==='Long' ? 'on-long' : '';
   document.getElementById('wbShort').className = v==='Short' ? 'on-short' : '';
+  document.getElementById('wbUnclear').className = v==='Unclear' ? 'on-unclear' : '';
 }
 function toggleWBiasField(){
   const port = document.getElementById('wPort').value;
@@ -2067,7 +2102,7 @@ function setJFilter(f){ jFilter=f; renderJournal(); }
 /* ================= trade CRUD ================= */
 function populateSymbolSelect(selected){
   const sel = document.getElementById('tSym');
-  const eligible = (state && Array.isArray(state.watchlist) ? state.watchlist : []).filter(watchEligible);
+  const eligible = (state && Array.isArray(state.watchlist) ? state.watchlist : []).filter(watchEligibleForTrade);
   const all = new Set(eligible.map(w=>w.sym));
   let html = '<option value="">— เลือก Symbol —</option>';
   Object.entries(PORTS).forEach(([k,p])=>{
@@ -2305,7 +2340,7 @@ function updateChecklistUI(){
 }
 function populateChecklistSymbolSelect(){
   const sel = document.getElementById('clSym');
-  const eligible = (state && Array.isArray(state.watchlist) ? state.watchlist : []).filter(watchEligible);
+  const eligible = (state && Array.isArray(state.watchlist) ? state.watchlist : []).filter(watchEligibleForTrade);
   let html = '<option value="">— เลือก Symbol —</option>';
   Object.entries(PORTS).forEach(([k,p])=>{
     const syms = eligible.filter(w=>w.port===k).map(w=>w.sym);
