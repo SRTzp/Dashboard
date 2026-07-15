@@ -71,7 +71,7 @@ button.small{padding:4px 10px;font-size:.75rem}
 button.ghost{background:transparent}
 
 /* ---------- tabs ---------- */
-.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:0;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:30}
+.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:0;position:sticky;top:calc(env(safe-area-inset-top,0px) + 10px);background:var(--bg);z-index:30}
 .tabbtn{
   background:transparent;border:none;border-radius:0;
   padding:9px 4px;margin-right:18px;color:var(--muted);font-weight:700;font-size:.88rem;
@@ -254,9 +254,17 @@ tr:last-child td{border-bottom:none}
 @media (display-mode: standalone){
   .kbdhint{display:none}
 }
+@keyframes tabSlideIn{
+  from{ transform:translateX(var(--slideFrom,18px)); opacity:0 }
+  to{ transform:translateX(0); opacity:1 }
+}
+.tabSlideIn{ animation:tabSlideIn .22s ease-out }
+@media (prefers-reduced-motion: reduce){
+  .tabSlideIn{ animation:none }
+}
 
 .wlports{display:flex;flex-direction:column;gap:14px}
-.wlhead{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;position:sticky;top:calc(env(safe-area-inset-top,0px) + 42px);background:var(--surface);z-index:20;padding:4px 0}
+.wlhead{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;position:sticky;top:calc(env(safe-area-inset-top,0px) + 52px);background:var(--surface);z-index:20;padding:4px 0}
 .wlhead h2{font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:6px}
 .wlCollapseBtn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:2px 4px;line-height:1;transition:transform .15s}
 .wlCollapseBtn:hover{color:var(--text)}
@@ -1028,6 +1036,9 @@ function resetAll(){
 
 /* ================= tabs ================= */
 function switchTab(t){
+  const order = ['mix','watch','plan','journal'];
+  const fromI = order.indexOf(activeTab), toI = order.indexOf(t);
+  const dir = toI > fromI ? 1 : toI < fromI ? -1 : 0; // 1 = ไปข้างหน้า (ปัดซ้าย), -1 = ย้อนกลับ (ปัดขวา)
   activeTab = t;
   document.getElementById('tabWatch').style.display = t==='watch' ? 'block' : 'none';
   document.getElementById('tabPlan').style.display = t==='plan' ? 'block' : 'none';
@@ -1039,6 +1050,16 @@ function switchTab(t){
   document.getElementById('tabBtnMix').classList.toggle('on', t==='mix');
   if(t==='watch') renderWatchlist();
   if(t==='mix') renderPortfolioMix();
+  if(dir!==0){
+    const ids = {mix:'tabMix',watch:'tabWatch',plan:'tabPlan',journal:'tabJournal'};
+    const el = document.getElementById(ids[t]);
+    if(el){
+      el.classList.remove('tabSlideIn');
+      void el.offsetWidth; // restart animation
+      el.style.setProperty('--slideFrom', dir>0 ? '18px' : '-18px');
+      el.classList.add('tabSlideIn');
+    }
+  }
 }
 
 /* ---- swipe ซ้าย/ขวาเปลี่ยน tab (มือถือ) ---- */
