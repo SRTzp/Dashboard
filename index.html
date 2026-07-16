@@ -407,6 +407,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   .tablewrap{display:none}
   .cards{display:block}
   .frow3{grid-template-columns:1fr}
+  .hbtns .btnIcon{display:none}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -456,8 +457,8 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <button onclick="openSystemSettings()">🛠</button>
     <button onclick="openSettings()" title="Portfolio Setting"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="11" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><path d="M18 18 L18 7 A11 11 0 0 1 27.5 13 Z" fill="#F0397A" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L27.5 13 A11 11 0 0 1 28.9 21 Z" fill="#C084F5" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L18 7 A11 11 0 0 0 9 12.5 Z" fill="#8BD450" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="6" fill="#FFDD66" stroke="#111" stroke-width="1.6"/><text x="8" y="11" font-size="8" text-anchor="middle" font-weight="800" fill="#111" font-family="Arial">$</text></svg></button>
     <button onclick="openIndustryManager()" title="Industry"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.4"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="16" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="20" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="24" y="23" width="3.5" height="6" fill="#8FD6EE"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="2.6" stroke-linecap="round"/></svg></button>
-    <button class="warn" onclick="openChecklist()">📋 Checklist</button>
-    <button class="primary" onclick="openChecklist()">+ Add Trade</button>
+    <button class="warn" onclick="openChecklist()"><span class="btnIcon">📋 </span>Checklist</button>
+    <button class="primary" onclick="openChecklist()"><span class="btnIcon">+ </span>Add Trade</button>
   </div>
 </header>
 
@@ -2223,7 +2224,15 @@ function satBGatePass(){
 function checklistSatBPass(){
   if(!satBGatePass()) return false;
   const c = clState.checks;
-  return c.keyLevel===true && c.contBlocker===true;
+  if(clState.subtype==='aegis') return !!(c.aegisPoc && c.aegisSwing && c.aegisOB);
+  if(clState.subtype==='javelin') return !!(c.javelinHVN && c.javelinBreak);
+  return false;
+}
+function clSetSatBPath(p){
+  clState.subtype = p;
+  delete clState.checks.aegisPoc; delete clState.checks.aegisSwing; delete clState.checks.aegisOB;
+  delete clState.checks.javelinHVN; delete clState.checks.javelinBreak;
+  renderChecklistBody(); updateChecklistUI();
 }
 function checklistPass(){
   if(!clState.sym || !clState.port) return false;
@@ -2310,18 +2319,25 @@ function renderChecklistBody(){
       html += `<div class="hint" style="color:var(--amber)">⚠ ต้องผ่าน Gate นี้ก่อน ถึงจะกรอก Entry checklist ต่อได้</div>`;
     } else {
       html += `<div class="hint" style="color:var(--teal);margin-bottom:8px">✓ ผ่าน Gate แล้ว</div>`;
-      html += `<div class="divlbl">Entry Checklist</div>`;
-      html += `<div class="f"><label>Key level align with High Volume Node <span style="font-weight:400;color:var(--muted)">(Edge ของทุน)</span></label>
+      html += `<div class="divlbl">Entry Checklist — เลือกแนวทาง</div>`;
+      html += `<div class="f"><label>แนวทาง Entry</label>
         <div class="seg">
-          <button type="button" class="${c.keyLevel===true?'on-cur':''}" onclick="clSetCheck('keyLevel',true)">มี</button>
-          <button type="button" class="${c.keyLevel===false?'on-cur':''}" onclick="clSetCheck('keyLevel',false)">ไม่มี</button>
+          <button type="button" class="${clState.subtype==='aegis'?'on-cur':''}" onclick="clSetSatBPath('aegis')">Shield of Aegis</button>
+          <button type="button" class="${clState.subtype==='javelin'?'on-cur':''}" onclick="clSetSatBPath('javelin')">Javelin Launch</button>
         </div></div>`;
-      html += `<div class="f"><label>Continuation Pattern/Break Blocker <span style="font-weight:400;color:var(--muted)">(จุดคุม Risk)</span></label>
-        <div class="seg">
-          <button type="button" class="${c.contBlocker===true?'on-cur':''}" onclick="clSetCheck('contBlocker',true)">มี</button>
-          <button type="button" class="${c.contBlocker===false?'on-cur':''}" onclick="clSetCheck('contBlocker',false)">ไม่มี</button>
-        </div></div>`;
-      if(c.keyLevel!==undefined && c.contBlocker!==undefined){
+      if(clState.subtype==='aegis'){
+        html += `<div class="hint" style="margin-bottom:6px">PoC + Orderblock — ต้องผ่านครบทั้ง 3 ข้อ</div>`;
+        html += clItem('aegisPoc','Key PoC located')
+              + clItem('aegisSwing','50% of Swing leg')
+              + clItem('aegisOB','มี Order block support');
+      } else if(clState.subtype==='javelin'){
+        html += `<div class="hint" style="margin-bottom:6px">Break Blocker + HVN — ต้องผ่านครบทั้ง 2 ข้อ</div>`;
+        html += clItem('javelinHVN','High Volume Node located')
+              + clItem('javelinBreak','Break Blocker/OrderBlock');
+      } else {
+        html += `<div class="hint">เลือกแนวทาง Entry ก่อน</div>`;
+      }
+      if(clState.subtype){
         const pass = checklistSatBPass();
         html += `<div class="hint" style="color:${pass?'var(--teal)':'var(--amber)'}">${pass?'✓ ผ่านเงื่อนไข Entry checklist':'⚠ Entry checklist ยังไม่ผ่านตามเงื่อนไข'}</div>`;
       }
@@ -2454,8 +2470,15 @@ function clMissingList(cs){
     if(missing.length) return missing;
     const gateOk = cs.trend==='against' ? (c.tooExtend===true || c.weekBar===true) : (c.weekBar===false && c.tooExtend===false);
     if(!gateOk){ missing.push('Trend/Reversal/Extend ยังไม่ตรงกัน'); return missing; }
-    if(c.keyLevel!==true) missing.push('Key level + HVN');
-    if(c.contBlocker!==true) missing.push('Continuation/Break Blocker');
+    if(!cs.subtype){ missing.push('เลือกแนวทาง Entry (Shield of Aegis / Javelin Launch)'); return missing; }
+    if(cs.subtype==='aegis'){
+      if(!c.aegisPoc) missing.push('Key PoC located');
+      if(!c.aegisSwing) missing.push('50% of Swing leg');
+      if(!c.aegisOB) missing.push('Order block support');
+    } else if(cs.subtype==='javelin'){
+      if(!c.javelinHVN) missing.push('High Volume Node located');
+      if(!c.javelinBreak) missing.push('Break Blocker/OrderBlock');
+    }
   }
   return missing;
 }
