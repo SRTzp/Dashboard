@@ -698,6 +698,32 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   </div>
 </div>
 
+<!-- ===== Close Position (partial / scale-out) modal ===== -->
+<div class="overlay" id="closePosOverlay">
+  <div class="modal">
+    <h3>ปิด Position — เลือกจำนวน</h3>
+    <div class="hint" id="cpInfo" style="margin-bottom:12px"></div>
+    <div class="frow">
+      <div class="f"><label>Exit Price</label><input type="number" step="any" inputmode="decimal" id="cpExitPrice" oninput="cpRefresh()"></div>
+      <div class="f"><label>Exit Date</label><input type="date" id="cpExitDate"></div>
+    </div>
+    <div class="f"><label>Qty ที่จะปิด (สูงสุด <span id="cpMaxQty"></span>)</label>
+      <input type="number" step="any" inputmode="decimal" id="cpQty" oninput="cpRefresh()">
+    </div>
+    <div class="seg" style="margin-top:6px">
+      <button type="button" onclick="cpSetFraction(0.25)">25%</button>
+      <button type="button" onclick="cpSetFraction(0.5)">50%</button>
+      <button type="button" onclick="cpSetFraction(0.75)">75%</button>
+      <button type="button" onclick="cpSetFraction(1)">ทั้งหมด</button>
+    </div>
+    <div class="hint" id="cpPreview" style="margin-top:12px"></div>
+    <div class="btns">
+      <button onclick="document.getElementById('closePosOverlay').classList.remove('show')">ยกเลิก</button>
+      <button class="primary" id="cpConfirmBtn" onclick="confirmClosePos()">ยืนยันปิด</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Pre-trade Checklist (gate before Add Trade) / Fundamental Checklist (gate before Watchlist) modal ===== -->
 <div class="overlay" id="checklistOverlay">
   <div class="modal">
@@ -1418,7 +1444,7 @@ function render(){
       <td class="sans"><div class="rowbtns">
         ${t.status==='plan'?`<button class="small" onclick="quickOpen('${t.id}')">→Open</button>`:''}
         ${t.status==='plan'?`<button class="small" onclick="openMissedModal('${t.id}')" title="ไม่ได้ Order ตามแผน">Missed</button>`:''}
-        ${t.status==='open'?`<button class="small" onclick="quickClose('${t.id}')">Close</button>`:''}
+        ${t.status==='open'?`<button class="small" onclick="openClosePos('${t.id}')">Close</button>`:''}
         <button class="small" onclick="editTrade('${t.id}')">✎</button>
         <button class="small danger" onclick="delTrade('${t.id}')">✕</button>
       </div></td>
@@ -1490,7 +1516,7 @@ function render(){
         <div class="rowbtns">
           ${t.status==='plan'?`<button class="small" onclick="quickOpen('${t.id}')">→ Open</button>`:''}
           ${t.status==='plan'?`<button class="small" onclick="openMissedModal('${t.id}')">Missed</button>`:''}
-          ${t.status==='open'?`<button class="small" onclick="quickClose('${t.id}')">Close</button>`:''}
+          ${t.status==='open'?`<button class="small" onclick="openClosePos('${t.id}')">Close</button>`:''}
         </div>
         <div class="rowbtns">
           <button class="small" onclick="editTrade('${t.id}')">แก้ไข</button>
@@ -1580,14 +1606,25 @@ function renderJournal(){
   const jCards = document.getElementById('jCards');
   document.getElementById('jEmpty').style.display = rows.length ? 'none' : 'block';
 
-  jBody.innerHTML = rows.map(t=>{
+  /* จัดกลุ่ม scale-out (partial close) ของ Position เดียวกันด้วย posGroup */
+  const jGroupOrder = []; const jGroupMap = new Map();
+  rows.forEach(t=>{ const key = t.posGroup || t.id; if(!jGroupMap.has(key)){ jGroupMap.set(key,[]); jGroupOrder.push(key); } jGroupMap.get(key).push(t); });
+  function jAgg(legs){
+    let sumQty=0,sumExitQty=0,sumEntryQty=0,totalPnl=0,sumR=0,qR=0;
+    legs.forEach(t=>{ const qy=t.qty||0; sumQty+=qy; sumExitQty+=(t.exitPrice||0)*qy; sumEntryQty+=(t.entry||0)*qy; totalPnl+=realizedPnlOf(t)||0; const r=realizedROf(t); if(r!==null){ sumR+=r*qy; qR+=qy; } });
+    return { sumQty, avgExit:sumQty?sumExitQty/sumQty:0, avgEntry:sumQty?sumEntryQty/sumQty:0, totalPnl, blendR: qR?sumR/qR:null };
+  }
+  function jPortShort(p){ return p==='core'?'Core':p==='satA'?'Sat.A':'Sat.B'; }
+  function jLegRow(t, indent, gcolor, isLast){
     const pnl = realizedPnlOf(t), r = realizedROf(t), sym = tradeSym(t);
     const win = pnl>0;
-    return `<tr>
-      <td>${t.exitDate||'—'}</td>
-      <td class="sans"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PORTS[t.port].color};margin-right:5px"></span>${t.port==='core'?'Core':t.port==='satA'?'Sat.A':'Sat.B'}</td>
-      <td style="font-weight:600">${t.sym}</td>
-      <td class="sans"><span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span></td>
+    const cls=[indent?'legrow':'', gcolor?'gbox':'', (gcolor&&isLast)?'gbox-last':''].filter(Boolean).join(' ');
+    const style = gcolor?` style="--gcolor:${gcolor}"`:'';
+    return `<tr class="${cls}"${style}>
+      <td class="${indent?'legdate':''}">${t.exitDate||'—'}</td>
+      <td class="sans">${indent?'':`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PORTS[t.port].color};margin-right:5px"></span>${jPortShort(t.port)}`}</td>
+      <td style="font-weight:600">${indent?'':t.sym}</td>
+      <td class="sans">${indent?'':`<span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>`}</td>
       <td>${fmt2(t.entry)}</td><td>${fmt2(t.exitPrice)}</td>
       <td>${fmt2(t.qty)}${(t.mult||1)!==1?`<span style="color:var(--muted)"> ×${fmt2(t.mult)}</span>`:''}</td>
       <td class="${pnl>=0?'pnl-pos':'pnl-neg'}">${sym}${fmt0(pnl)}</td>
@@ -1598,9 +1635,28 @@ function renderJournal(){
         <button class="small danger" onclick="delTrade('${t.id}')">✕</button>
       </div></td>
     </tr>`;
+  }
+  jBody.innerHTML = jGroupOrder.map(key=>{
+    const legs = jGroupMap.get(key).slice().sort((a,b)=>(a.exitDate||'').localeCompare(b.exitDate||''));
+    if(legs.length===1) return jLegRow(legs[0], false);
+    const port=legs[0].port, symG=legs[0].sym, portColor=PORTS[port].color, gcolor=hexToRgba(portColor,0.5);
+    const a=jAgg(legs); const symC=tradeSym(legs[0]);
+    const header=`<tr class="grouprow gbox gbox-first" style="--gcolor:${gcolor}"><td colspan="11" style="background:${hexToRgba(portColor,0.1)}"><div class="ghead">
+      <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${portColor};flex-shrink:0"></span>
+      <span class="gsym">${symG}</span>
+      <span class="gmeta">${jPortShort(port)}</span>
+      <span class="tag ${legs[0].bias==='Long'?'long':'short'}">${legs[0].bias}</span>
+      <span class="gmeta">${legs.length} scale-out</span>
+      <span class="gmeta">avg in <b>${fmt2(a.avgEntry)}</b></span>
+      <span class="gmeta">avg out <b>${fmt2(a.avgExit)}</b></span>
+      <span class="gmeta">qty <b>${fmt2(a.sumQty)}</b></span>
+      <span class="gmeta">P&amp;L <b class="${a.totalPnl>=0?'pnl-pos':'pnl-neg'}">${symC}${fmt0(a.totalPnl)}</b></span>
+      ${a.blendR===null?'':`<span class="gmeta">R <b>${fmt2(a.blendR)}</b></span>`}
+    </div></td></tr>`;
+    return header + legs.map((t,i)=>jLegRow(t,true,gcolor,i===legs.length-1)).join('');
   }).join('');
 
-  jCards.innerHTML = rows.length ? rows.map(t=>{
+  function jCardHtml(t){
     const pnl = realizedPnlOf(t), r = realizedROf(t), sym = tradeSym(t);
     const win = pnl>0;
     return `<div class="tcard">
@@ -1623,6 +1679,22 @@ function renderJournal(){
           <button class="small danger" onclick="delTrade('${t.id}')">ลบ</button>
         </div>
       </div>
+    </div>`;
+  }
+  jCards.innerHTML = rows.length ? jGroupOrder.map(key=>{
+    const legs = jGroupMap.get(key).slice().sort((a,b)=>(a.exitDate||'').localeCompare(b.exitDate||''));
+    if(legs.length===1) return jCardHtml(legs[0]);
+    const port=legs[0].port, symG=legs[0].sym, portColor=PORTS[port].color;
+    const a=jAgg(legs); const symC=tradeSym(legs[0]);
+    return `<div style="border:1.5px solid ${hexToRgba(portColor,0.5)};border-radius:12px;padding:8px;margin-bottom:8px">
+      <div class="sub" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;padding:0 2px;font-weight:500">
+        <span><b>${symG}</b> · ${jPortShort(port)} · ${legs.length} scale-out</span>
+        <span>qty ${fmt2(a.sumQty)}</span>
+        <span>avg out ${fmt2(a.avgExit)}</span>
+        <span>P&amp;L <span class="${a.totalPnl>=0?'pnl-pos':'pnl-neg'}">${symC}${fmt0(a.totalPnl)}</span></span>
+        ${a.blendR===null?'':`<span>${fmt2(a.blendR)}R</span>`}
+      </div>
+      ${legs.map(jCardHtml).join('')}
     </div>`;
   }).join('') : `<div class="empty">ยังไม่มีรายการที่ปิดไม้ — พอกด Closed ในแท็บแผนเทรด รายการจะมาโผล่ที่นี่</div>`;
 
@@ -2773,15 +2845,15 @@ const FUND_CRITERIA = {
       {id:'g1', auto:true, label:'Market Cap ≥ $2B'},
       {id:'g2', label:'$Volume &gt; $20M/วัน (สภาพคล่องพอ)'},
       {id:'g3', label:'Price &gt; EMA50 และ &gt; EMA200 (Stage 2 ขาขึ้น)'},
-      {id:'g4', label:'ห่างจาก 52-Week High ไม่เกิน −20%'},
-      {id:'g5', label:'Revenue Growth &gt; 20% YoY (Growth Floor)'}
+      {id:'g4', label:'ห่างจาก 52-Week High ไม่เกิน −25%'},
+      {id:'g5', label:'Gross Margin ≥ 35%'}
     ],
     scores: [
-      {id:'s1', label:'Revenue Growth (ไตรมาสล่าสุด YoY)', opts:['&gt;40% (Hyper)','25-40%','15-24.9%','&lt;15%']},
+      {id:'s1', label:'Revenue Growth (ไตรมาสล่าสุด YoY)', opts:['&gt;40%','25-40%','15-24.9%','&lt;15%']},
       {id:'s2', label:'Rule of 40 (%Rev Growth + %FCF Margin)', opts:['&gt;50%','40-50%','20-39%','&lt;20%']},
-      {id:'s3', label:'Comparative RS Line (เทียบ SPY/QQQ)', opts:['ชันสวนดัชนี / RS new high ล่วงหน้า','ยก Low สูงขึ้นชัด','วิ่งออกข้าง','ปักหัวลง Lower Low']},
-      {id:'s4', label:'RVOL (เทียบวอลุ่มเฉลี่ย 50 วัน) — แรงซื้อสถาบันวันเบรคเอาท์/พักตัว', opts:['RVOL &gt;2.0 (แท่งเขียว)','RVOL 1.5-2.0 (แท่งเขียว)','RVOL 1.0-1.4','RVOL &gt;1.5 (แท่งแดง)']},
-      {id:'s5', label:'Valuation (P/S หรือ Fwd PEG)', opts:['P/S&lt;10 หรือ PEG&lt;1.5','P/S 10-20 หรือ PEG 1.5-2.5','P/S 20-30','P/S&gt;30 (ฟองสบู่)']}
+      {id:'s3', label:'Comparative RS Line — TF Week (เทียบ SPY/QQQ)', opts:['RS new high ล่วงหน้า','ยก Low สูงขึ้นชัด','วิ่งออกข้าง','ปักหัวลง Lower Low']},
+      {id:'s4', label:'RVOL — TF Week (แรงซื้อสถาบันช่วงเบรคเอาท์/พักตัว)', opts:['RVOL &gt;2.0 (แท่งเขียว)','RVOL 1.5-2.0 (แท่งเขียว)','RVOL 1.0-1.4','RVOL &gt;1.5 (แท่งแดง)']},
+      {id:'s5', label:'Valuation (P/S หรือ Fwd PEG)', opts:['P/S&lt;10 / PEG&lt;1.5','P/S 10-20 / PEG 1.5-2.5','P/S 20-30','P/S&gt;30 (ฟองสบู่)']}
     ],
     notes: [
       {id:'biz', label:'① ธุรกิจ + Moat/Position ใน Value Chain'},
@@ -2951,11 +3023,12 @@ function fcRefreshSaveState(){
   const port = fcState && fcState.port;
   const editId = (fcState && fcState.editId) || null;
   const gatePass = (fcState && type) ? fundGatePass(fcState) : false;
-  const dup = !!(sym && port && (state.watchlist||[]).some(w=>w.sym===sym && w.port===port && w.id!==editId));
+  const dupPorts = (port==='core'||port==='satA') ? ['core','satA'] : [port];
+  const dup = !!(sym && port && (state.watchlist||[]).some(w=>w.sym===sym && dupPorts.includes(w.port) && w.id!==editId));
   let msg = '';
   if(!type) msg = '⚠ เลือกประเภทหุ้นก่อน';
   else if(!sym) msg = '⚠ กรอก Symbol';
-  else if(dup) msg = '⚠ มีแล้วใน Watchlist';
+  else if(dup) msg = '⚠ มีแล้วใน Watchlist (Core/Sat.A)';
   else if(!gatePass) msg = '⚠ ต้องผ่าน GATE (Market Cap & เงื่อนไข) ให้ครบก่อน';
   const ok = !!(sym && type && gatePass && !dup);
   btn.disabled = !ok;
@@ -2988,7 +3061,8 @@ function fcSaveToWatchlist(){
   if(!sym){ alert('กรอก Symbol'); return; }
   if(!fcState.type){ alert('เลือกประเภทหุ้นก่อน'); return; }
   if(!fundGatePass(fcState)){ alert('ต้องผ่าน GATE (Market Cap & เงื่อนไข) ให้ครบก่อน'); return; }
-  if(!fcState.editId && (state.watchlist||[]).some(w=>w.sym===sym && w.port===fcState.port)){ alert('Symbol นี้มีอยู่ใน Watchlist แล้ว'); return; }
+  const dupPortsSave = (fcState.port==='core'||fcState.port==='satA') ? ['core','satA'] : [fcState.port];
+  if(!fcState.editId && (state.watchlist||[]).some(w=>w.sym===sym && dupPortsSave.includes(w.port))){ alert('Symbol นี้มีอยู่ใน Watchlist (Core/Sat.A) แล้ว'); return; }
   fcState.sym = sym;
   fcState.date = document.getElementById('fcDate').value || new Date().toISOString().slice(0,10);
   fcState.industry = document.getElementById('fcIndustry').value.trim();
@@ -3406,6 +3480,71 @@ function quickClose(id){
   editTrade(id);
   document.getElementById('tStatus').value='closed';
   toggleExitFields();
+}
+/* ===== Partial close (scale-out) ===== */
+let closePosId = null;
+function openClosePos(id){
+  const t = state.trades.find(x=>x.id===id); if(!t) return;
+  closePosId = id;
+  document.getElementById('cpInfo').innerHTML = `<b>${escHtml(t.sym)}</b> · ${PORTS[t.port].name} · <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span> · Entry ${fmt2(t.entry)} · Qty คงเหลือ <b>${fmt2(t.qty)}</b>`;
+  document.getElementById('cpMaxQty').textContent = fmt2(t.qty);
+  document.getElementById('cpExitPrice').value = '';
+  document.getElementById('cpExitDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('cpQty').value = t.qty;
+  cpRefresh();
+  document.getElementById('closePosOverlay').classList.add('show');
+}
+function cpSetFraction(f){
+  const t = state.trades.find(x=>x.id===closePosId); if(!t) return;
+  document.getElementById('cpQty').value = (f>=1) ? t.qty : Math.round(t.qty*f*1e6)/1e6;
+  cpRefresh();
+}
+function cpRefresh(){
+  const t = state.trades.find(x=>x.id===closePosId); if(!t) return;
+  const ex = parseFloat(document.getElementById('cpExitPrice').value);
+  const q = parseFloat(document.getElementById('cpQty').value);
+  const prev = document.getElementById('cpPreview');
+  const btn = document.getElementById('cpConfirmBtn');
+  let valid = true, msg = '';
+  if(!(q>0) || q>t.qty+1e-9){ valid=false; msg = `<span style="color:var(--amber)">⚠ Qty ต้องอยู่ระหว่าง 0–${fmt2(t.qty)}</span>`; }
+  else if(!(ex>0)){ valid=false; msg = '<span style="color:var(--amber)">⚠ กรอก Exit Price</span>'; }
+  else {
+    const dir = t.bias==='Short' ? -1 : 1;
+    const pnl = (ex - t.entry) * q * (t.mult||1) * dir;
+    const remain = t.qty - q;
+    const sym = tradeSym(t);
+    msg = `ปิด <b>${fmt2(q)}</b> @ ${fmt2(ex)} → P&amp;L <b class="${pnl>=0?'pnl-pos':'pnl-neg'}">${sym}${fmt0(pnl)}</b> · คงเหลือใน Plan <b>${fmt2(remain)}</b>${remain<=1e-9?' <span style="color:var(--muted)">(ปิดทั้งหมด)</span>':' <span style="color:var(--muted)">(บางส่วน)</span>'}`;
+  }
+  prev.innerHTML = msg;
+  btn.disabled = !valid; btn.style.opacity = valid?'':'.45'; btn.style.cursor = valid?'':'not-allowed';
+}
+function confirmClosePos(){
+  const t = state.trades.find(x=>x.id===closePosId); if(!t) return;
+  const ex = parseFloat(document.getElementById('cpExitPrice').value);
+  const q = parseFloat(document.getElementById('cpQty').value);
+  const exitDate = document.getElementById('cpExitDate').value || new Date().toISOString().slice(0,10);
+  if(!(ex>0)){ alert('กรอก Exit Price'); return; }
+  if(!(q>0) || q>t.qty+1e-9){ alert('Qty ที่จะปิดไม่ถูกต้อง'); return; }
+  const full = q >= t.qty - 1e-9;
+  if(full){
+    t.status = 'closed';
+    t.exitPrice = ex;
+    t.exitDate = exitDate;
+  } else {
+    if(!t.posGroup) t.posGroup = t.id;
+    const leg = JSON.parse(JSON.stringify(t));
+    leg.id = 't'+Date.now()+Math.floor(Math.random()*1000);
+    leg.qty = q;
+    leg.status = 'closed';
+    leg.exitPrice = ex;
+    leg.exitDate = exitDate;
+    leg.posGroup = t.posGroup;
+    t.qty = t.qty - q;
+    state.trades.push(leg);
+  }
+  document.getElementById('closePosOverlay').classList.remove('show');
+  render();
+  schedulePersist();
 }
 function delTrade(id){
   if(confirm('ลบรายการนี้?')){ state.trades = state.trades.filter(t=>t.id!==id); render(); schedulePersist(); }
