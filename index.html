@@ -34,6 +34,10 @@
   --amber-dim:rgba(200,134,10,.14);
   --yellow:#EAC13A;
   --blue:#3467C7;
+  --green:#2FA36B;
+  --green-dim:rgba(47,163,107,.13);
+  --purple:#8A63D2;
+  --purple-dim:rgba(138,99,210,.14);
   --mono:'IBM Plex Mono',ui-monospace,monospace;
   --sans:'IBM Plex Sans Thai',-apple-system,'Segoe UI',sans-serif;
   --wlnote-size:.84rem;
@@ -243,6 +247,13 @@ tr:last-child td{border-bottom:none}
 .seg button.on-short{background:var(--red-dim);color:var(--red)}
 .seg button.on-unclear{background:#FFFFFF;color:var(--muted);box-shadow:inset 0 0 0 1px var(--border)}
 .seg button.on-cur{background:var(--teal-dim);color:var(--teal);font-weight:700}
+.seg button.on-accum{background:var(--purple-dim);color:var(--purple);font-weight:700}
+.seg button.on-markup{background:var(--green-dim);color:var(--green);font-weight:700}
+.seg button.on-distrib{background:var(--amber-dim);color:var(--amber);font-weight:700}
+.seg button.on-markdown{background:var(--red-dim);color:var(--red);font-weight:700}
+.seg button.on-risklow{background:var(--green-dim);color:var(--green);font-weight:700}
+.seg button.on-riskmed{background:var(--amber-dim);color:var(--amber);font-weight:700}
+.seg button.on-riskhigh{background:var(--red-dim);color:var(--red);font-weight:700}
 .divlbl{font-size:.7rem;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:14px 0 8px;border-top:1px solid var(--border);padding-top:12px}
 .exitbox{background:var(--teal-dim);border:1px solid var(--teal);border-radius:10px;padding:12px;margin-bottom:12px}
 .exitbox .divlbl{border:none;margin:0 0 8px;padding:0;color:var(--teal)}
@@ -341,6 +352,7 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
 
 /* ---------- watchlist: sort chips / drag reorder / score / inline edit ---------- */
 .wlsortchips{display:flex;gap:6px;flex-wrap:wrap}
+table.wltable td,table.wltable th{padding:8px 6px}
 .dragCol{width:22px}
 .dragHandle{
   display:inline-flex;align-items:center;justify-content:center;
@@ -457,8 +469,8 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <button onclick="openSystemSettings()">🛠</button>
     <button onclick="openSettings()" title="Portfolio Setting"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="11" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><path d="M18 18 L18 7 A11 11 0 0 1 27.5 13 Z" fill="#F0397A" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L27.5 13 A11 11 0 0 1 28.9 21 Z" fill="#C084F5" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L18 7 A11 11 0 0 0 9 12.5 Z" fill="#8BD450" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="6" fill="#FFDD66" stroke="#111" stroke-width="1.6"/><text x="8" y="11" font-size="8" text-anchor="middle" font-weight="800" fill="#111" font-family="Arial">$</text></svg></button>
     <button onclick="openIndustryManager()" title="Industry"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.4"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="16" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="20" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="24" y="23" width="3.5" height="6" fill="#8FD6EE"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="2.6" stroke-linecap="round"/></svg></button>
-    <button class="warn" onclick="openChecklist()"><span class="btnIcon">📋 </span>Checklist</button>
-    <button class="primary" onclick="openChecklist()"><span class="btnIcon">+ </span>Add Trade</button>
+    <button class="warn" onclick="openChecklist('fund')"><span class="btnIcon">📋 </span>Checklist</button>
+    <button class="primary" onclick="openChecklist('trade')"><span class="btnIcon">+ </span>Add Trade</button>
   </div>
 </header>
 
@@ -686,19 +698,50 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   </div>
 </div>
 
-<!-- ===== System Checklist (gate before Add Trade) modal ===== -->
+<!-- ===== Pre-trade Checklist (gate before Add Trade) / Fundamental Checklist (gate before Watchlist) modal ===== -->
 <div class="overlay" id="checklistOverlay">
   <div class="modal">
-    <h3>System Checklist ก่อนเข้า Trade</h3>
-    <div class="f"><label>Symbol <span style="font-weight:400;color:var(--muted)">(จาก Watchlist เท่านั้น — ระบบจะดึง Port + Bias ให้อัตโนมัติ)</span></label>
-      <select id="clSym" onchange="clOnSymChange()"></select>
+    <h3 id="checklistTitle">Pre-trade Checklist — ก่อนเข้า Trade</h3>
+    <div id="clTradeView">
+      <div class="f"><label>Symbol <span style="font-weight:400;color:var(--muted)">(จาก Watchlist เท่านั้น — ระบบจะดึง Port + Bias ให้อัตโนมัติ)</span></label>
+        <select id="clSym" onchange="clOnSymChange()"></select>
+      </div>
+      <div id="clBody"></div>
+      <div id="clStatus" style="margin:12px 0 4px"></div>
     </div>
-    <div id="clBody"></div>
-    <div id="clStatus" style="margin:12px 0 4px"></div>
-    <div class="btns">
+    <div id="clFundView" style="display:none">
+      <div class="frow">
+        <div class="f"><label>Symbol</label><input type="text" id="fcSym" style="text-transform:uppercase" placeholder="เช่น PTT, AAPL" oninput="fcRefreshSaveState()"></div>
+        <div class="f"><label>วันที่</label><input type="date" id="fcDate"></div>
+      </div>
+      <div class="f"><label>Industry</label>
+        <select id="fcIndustry" onchange="fcOnIndustryChange(this.value)"></select>
+      </div>
+      <div class="divlbl" style="margin-top:0;padding-top:0;border:none">ประเภทของหุ้น</div>
+      <div id="fcTypeRow" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+      <div id="fcBody"></div>
+      <div id="fcStatus" style="margin:12px 0 4px"></div>
+    </div>
+    <div class="btns" id="clTradeFooter">
       <button onclick="closeChecklist()">ยกเลิก</button>
       <button id="clSaveBtn" style="display:none" onclick="clSaveDraft()">บันทึกไว้ก่อน (ยังไม่ครบ)</button>
       <button class="primary" id="clContinueBtn" disabled onclick="clContinue()">ผ่านแล้ว → ไป Add Trade</button>
+    </div>
+    <div class="hint" id="fcSaveWarn" style="margin:2px 0 0;text-align:right"></div>
+    <div class="btns" id="clFundFooter" style="display:none">
+      <button onclick="closeChecklist()">ยกเลิก</button>
+      <button class="primary" id="fcSaveBtn" onclick="fcSaveToWatchlist()">เพิ่มเข้า Watchlist</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Fundamental Checklist Detail (read-only) modal ===== -->
+<div class="overlay" id="fcDetailOverlay">
+  <div class="modal">
+    <h3 id="fcDetailTitle">Fundamental Checklist Detail</h3>
+    <div id="fcDetailBody"></div>
+    <div class="btns">
+      <button onclick="closeFcDetail()">ปิด</button>
     </div>
   </div>
 </div>
@@ -782,7 +825,26 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
         <button type="button" id="wbUnclear" onclick="setWBias('Unclear')">Unclear</button>
       </div>
     </div>
-    <div class="f"><label>Technical Reason</label><textarea id="wTech" rows="3" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)"></textarea></div>
+    <div class="f" id="wTechField"><label>Technical — Wyckoff Stage</label>
+      <div class="seg" id="wyckStageSeg">
+        <button type="button" id="wyStAccum" onclick="setWyckStage('accum')">Accumulation</button>
+        <button type="button" id="wyStMarkup" onclick="setWyckStage('markup')">Mark Up</button>
+        <button type="button" id="wyStDistrib" onclick="setWyckStage('distrib')">Distribution</button>
+        <button type="button" id="wyStMarkdown" onclick="setWyckStage('markdown')">Mark Down</button>
+      </div>
+      <div id="wyckBaseWrap" style="display:none;margin-top:8px">
+        <label style="display:block;margin-bottom:4px">Base (Re-accumulation)</label>
+        <div class="seg" id="wyckBaseSeg">
+          <button type="button" id="wyBase1" onclick="setWyckBase(1)">Base 1</button>
+          <button type="button" id="wyBase2" onclick="setWyckBase(2)">Base 2</button>
+          <button type="button" id="wyBase3" onclick="setWyckBase(3)">Base 3</button>
+          <button type="button" id="wyBase4" onclick="setWyckBase(4)">Base 4</button>
+          <button type="button" id="wyBase5" onclick="setWyckBase(5)">Base 5</button>
+        </div>
+        <div class="hint" id="wyckBaseHint" style="margin-top:5px"></div>
+      </div>
+      <textarea id="wTech" rows="2" readonly placeholder="เลือก Stage เพื่อสร้างโน้ตอัตโนมัติ" style="width:100%;margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)"></textarea>
+    </div>
     <div class="f"><label id="wFundLabel">Fundamental Reason</label><textarea id="wFund" rows="3" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)"></textarea></div>
     <div class="hint" id="wEligHint" style="margin-top:-6px;margin-bottom:12px">ต้องมี Technical หรือ Fundamental อย่างน้อย 1 อย่าง ถึงจะเลือก Symbol นี้ตอนเพิ่ม Trade ได้</div>
     <div class="f" id="wIndustryField"><label>Industry <span style="font-weight:400;color:var(--muted)">(เฉพาะ Core/Sat.A — ใช้ทำ pie chart ที่แท็บ Portfolio Mix)</span></label>
@@ -1744,10 +1806,10 @@ function renderWatchlist(){
       </div>
       <div id="wlContent_${k}" style="${collapsed?'display:none':''}">
         <div class="tablewrap">
-          <table>
+          <table class="wltable">
             <thead><tr>
               <th class="dragCol"></th>
-              <th>Date</th><th>Symbol</th>${k==='satB'?'<th>Bias</th>':''}<th>Technical</th><th>${k==='satB'?'Sentiment':'Fundamental'}</th>${scored?'<th>Score</th>':''}<th></th><th></th>
+              <th style="width:88px">Date</th><th style="width:${k==='satB'?'90px':'84px'}">Symbol</th>${k==='satB'?'<th style="width:70px">Bias</th>':''}${k==='satB'?'<th style="width:28%">Technical</th>':''}${scored?'<th style="width:96px">Industry</th>':''}<th>${k==='satB'?'Sentiment':(k==='core'?'Business':'Fundamental')}</th>${scored?'<th style="width:1%;padding-left:2px;padding-right:2px"></th><th style="width:64px">Score</th>':''}<th style="width:32px"></th><th style="width:64px"></th>
             </tr></thead>
             <tbody id="wlBody_${k}"></tbody>
           </table>
@@ -1783,34 +1845,51 @@ function renderWatchPort(port){
   document.getElementById(`wlEmpty_${port}`).style.display = list.length ? 'none' : 'block';
   const dragOn = mode==='manual';
 
-  function starsHtml(w){
-    const sc = w.score||0;
-    return `<div class="starRow">${[1,2,3].map(n=>`<span class="star ${n<=sc?'on':''}" onclick="setScore('${w.id}',${n})">★</span>`).join('')}</div>`;
+  function scoreBadge(w){
+    if(w.fundCheck && w.fundCheck.tier){
+      const fc = w.fundCheck;
+      return `<span class="tag" style="background:${fundTierColor(fc.tier)};color:#fff;font-weight:700">${fc.tier}</span> <span class="hint" style="margin:0">${fc.total||0}/15</span>`;
+    }
+    return `<span class="hint" style="margin:0">—</span>`;
+  }
+  function fundBizText(w){
+    const biz = w.fundCheck && w.fundCheck.note && w.fundCheck.note.biz || '';
+    return `<div class="wlnote" style="max-width:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${biz?escHtml(biz):'<span class="placeholder">—</span>'}</div>`;
+  }
+  function fundExpandIcon(w){
+    if(!w.fundCheck) return '';
+    return `<button class="small ghost" style="padding:2px 4px" onclick="openFundDetail('${w.id}')" title="ดูรายละเอียด Fundamental Checklist">⤢</button>`;
   }
   function noteTd(w, field){
     const val = w[field]||'';
+    if(field==='fundamental' && w.fundCheck) return `<td>${fundBizText(w)}</td>`;
+    if(field==='technical' && port==='satB' && w.wyckoff) return `<td class="wlnote">${wyckTechHtml(w)}</td>`;
     if(!scored) return `<td class="wlnote">${escHtml(val)||'—'}</td>`;
     return `<td class="wlnote${val?'':' placeholder'}" contenteditable="true" data-wid="${w.id}" data-field="${field}" onfocus="clearPlaceholder(this)" onblur="saveInlineField(this)">${escHtml(val)||'เพิ่มข้อความ…'}</td>`;
   }
   function noteInline(w, field, label){
     const val = w[field]||'';
+    if(field==='fundamental' && w.fundCheck) return `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> ${fundBizText(w)}</div>`;
+    if(field==='technical' && port==='satB' && w.wyckoff) return `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> ${wyckTechHtml(w)}</div>`;
     if(!scored) return val ? `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> ${escHtml(val)}</div>` : '';
     return `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> <span class="wlnote${val?'':' placeholder'}" contenteditable="true" data-wid="${w.id}" data-field="${field}" onfocus="clearPlaceholder(this)" onblur="saveInlineField(this)">${escHtml(val)||'เพิ่มข้อความ…'}</span></div>`;
   }
+  function editBtnAction(w){ return w.fundCheck ? `openFundEdit('${w.id}')` : `editWatch('${w.id}')`; }
 
   document.getElementById(`wlBody_${port}`).innerHTML = list.map(w=>{
     const eligible = watchEligible(w);
     return `<tr data-wid="${w.id}" style="${eligible?'':'opacity:.55'}">
       <td class="dragCol"><span class="dragHandle ${dragOn?'':'disabled'}" title="ลากเพื่อจัดเรียง">⠿</span></td>
       <td>${w.date||'—'}</td>
-      <td style="font-weight:600">${escHtml(w.sym)}${w.industry?` <span class="hint" style="display:inline;color:var(--muted)">${ICON_INDUSTRY_MINI} ${escHtml(w.industry)}</span>`:''}${eligible?'':' <span class="hint" style="display:inline;color:var(--amber)">⚠ ยังไม่ครบเงื่อนไข</span>'}</td>
+      <td style="font-weight:600">${escHtml(w.sym)}${eligible?'':' <span class="hint" style="display:inline;color:var(--amber)">⚠ ยังไม่ครบเงื่อนไข</span>'}</td>
       ${port==='satB'?`<td class="sans">${w.bias?`<span class="tag ${biasTagClass(w.bias)}">${w.bias}</span>`:'—'}</td>`:''}
-      ${noteTd(w,'technical')}
+      ${port==='satB'?noteTd(w,'technical'):''}
+      ${scored?`<td class="sans" style="color:var(--muted)">${w.industry?`${ICON_INDUSTRY_MINI} ${escHtml(w.industry)}`:'—'}</td>`:''}
       ${noteTd(w,'fundamental')}
-      ${scored?`<td class="sans">${starsHtml(w)}</td>`:''}
+      ${scored?`<td class="sans" style="padding-left:2px;padding-right:2px;text-align:center">${fundExpandIcon(w)}</td><td class="sans">${scoreBadge(w)}</td>`:''}
       <td class="sans">${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')" title="เปิดลิงก์">🔗</button>`:''}</td>
       <td class="sans"><div class="rowbtns">
-        <button class="small" onclick="editWatch('${w.id}')">✎</button>
+        <button class="small" onclick="${editBtnAction(w)}" title="${w.fundCheck?'แก้ไข Fundamental Checklist':'แก้ไข Watchlist'}">✎</button>
         <button class="small danger" onclick="delWatch('${w.id}')">✕</button>
       </div></td>
     </tr>`;
@@ -1820,12 +1899,12 @@ function renderWatchPort(port){
     const eligible = watchEligible(w);
     return `<div class="tcard" data-wid="${w.id}" style="${eligible?'':'opacity:.6'}">
       <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${biasTagClass(w.bias)}">${w.bias}</span>`:''} ${w.industry?`<span class="hint" style="display:inline;color:var(--muted)"><svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.8"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.8" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.4"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="2"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="3" stroke-linecap="round"/></svg> ${escHtml(w.industry)}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
-      ${!eligible?`<div class="hint" style="color:var(--amber)">⚠ ต้องมี Technical หรือ ${port==='satB'?'Sentiment':'Fundamental'} อย่างน้อย 1 อย่าง</div>`:''}
-      ${noteInline(w,'technical','Technical')}
-      ${noteInline(w,'fundamental',port==='satB'?'Sentiment':'Fundamental')}
-      ${scored?`<div style="margin-top:2px;margin-bottom:6px">${starsHtml(w)}</div>`:''}
+      ${!eligible?`<div class="hint" style="color:var(--amber)">⚠ ${port==='satB'?'ต้องมี Technical หรือ Sentiment อย่างน้อย 1 อย่าง':`ต้องมี ${port==='core'?'Business':'Fundamental'}`}</div>`:''}
+      ${port==='satB'?noteInline(w,'technical','Technical'):''}
+      ${noteInline(w,'fundamental',port==='satB'?'Sentiment':(port==='core'?'Business':'Fundamental'))}
+      ${scored?`<div style="margin-top:2px;margin-bottom:6px;display:flex;align-items:center;gap:4px">${scoreBadge(w)}${fundExpandIcon(w)}</div>`:''}
       <div class="foot"><div></div><div class="rowbtns">
-        <button class="small" onclick="editWatch('${w.id}')">แก้ไข</button>
+        <button class="small" onclick="${editBtnAction(w)}">แก้ไข</button>
         <button class="small danger" onclick="delWatch('${w.id}')">ลบ</button>
       </div></div>
     </div>`;
@@ -1978,17 +2057,135 @@ function toggleWBiasField(){
   const isSwing = port === 'satB';
   document.getElementById('wBiasField').style.display = isSwing ? '' : 'none';
   document.getElementById('wIndustryField').style.display = isSwing ? 'none' : '';
+  document.getElementById('wTechField').style.display = isSwing ? '' : 'none';
   const word = isSwing ? 'Sentiment' : 'Fundamental';
   document.getElementById('wFundLabel').textContent = word + ' Reason';
-  document.getElementById('wEligHint').textContent = `ต้องมี Technical หรือ ${word} อย่างน้อย 1 อย่าง ถึงจะเลือก Symbol นี้ตอนเพิ่ม Trade ได้`;
+  document.getElementById('wEligHint').textContent = isSwing
+    ? `ต้องมี Technical หรือ ${word} อย่างน้อย 1 อย่าง ถึงจะเลือก Symbol นี้ตอนเพิ่ม Trade ได้`
+    : `ต้องมี ${word} ถึงจะเลือก Symbol นี้ตอนเพิ่ม Trade ได้`;
   if(!isSwing) populateIndustrySelect();
 }
+/* ===== Wyckoff Stage checklist (Sat.B Technical) ===== */
+const WYCKOFF_STAGES = {
+  accum:    {n:1, name:'Accumulation', cls:'on-accum',    hasBase:false, bias:null},
+  markup:   {n:2, name:'Mark Up',      cls:'on-markup',   hasBase:true,  bias:'Long'},
+  distrib:  {n:3, name:'Distribution', cls:'on-distrib',  hasBase:false, bias:null},
+  markdown: {n:4, name:'Mark Down',    cls:'on-markdown', hasBase:true,  bias:'Short'}
+};
+let wWyckStage = null, wWyckBase = null;
+function wyckBaseInfo(b){
+  if(b<=2) return {phase:'ต้น Trend', risk:'ต่ำ', riskCls:'on-risklow', clr:'--green', detail:'ปลอดภัยที่สุด — รายใหญ่ยังดึงของกลับ โครงสร้างแน่นตึง'};
+  if(b===3) return {phase:'กลาง Trend', risk:'ปานกลาง', riskCls:'on-riskmed', clr:'--amber', detail:'เทรนด์ชัดในสายตารายย่อย ราคาเริ่มวิ่งชัน — ยังเทรดได้ แต่ต้องรัดกุม'};
+  return {phase:'ปลาย Trend', risk:'สูงมาก', riskCls:'on-riskhigh', clr:'--red', detail:'Late Stage / Climax Run — เสี่ยง False Breakout จุดเริ่ม Distribution'};
+}
+function wyckNote(){
+  if(!wWyckStage) return '';
+  const s = WYCKOFF_STAGES[wWyckStage];
+  let note = `Stage ${s.n} - ${s.name}`;
+  if(s.hasBase && wWyckBase){
+    const bi = wyckBaseInfo(wWyckBase);
+    note += ` : Base#${wWyckBase} ${bi.phase} - ความเสี่ยง${bi.risk}`;
+  }
+  return note;
+}
+function setWyckStage(k){
+  wWyckStage = k;
+  if(!WYCKOFF_STAGES[k].hasBase) wWyckBase = null;
+  renderWyckUI();
+}
+function setWyckBase(b){ wWyckBase = b; renderWyckUI(); }
+function wyckStageColor(stage){ return ({accum:'--purple',markup:'--green',distrib:'--amber',markdown:'--red'})[stage] || '--text'; }
+function wyckTechHtml(w){
+  const wy = w.wyckoff;
+  if(!wy || !WYCKOFF_STAGES[wy.stage]) return escHtml(w.technical||'') || '—';
+  const s = WYCKOFF_STAGES[wy.stage];
+  let html = `Stage ${s.n} - <b style="color:var(${wyckStageColor(wy.stage)})">${s.name}</b>`;
+  if(s.hasBase && wy.base){
+    const bi = wyckBaseInfo(wy.base);
+    html += ` : <b style="color:var(${bi.clr})">Base#${wy.base}</b> ${bi.phase} - <b style="color:var(${bi.clr})">ความเสี่ยง${bi.risk}</b>`;
+  }
+  return html;
+}
+function renderWyckUI(){
+  Object.entries(WYCKOFF_STAGES).forEach(([k,s])=>{
+    const btn = document.getElementById('wySt'+k.charAt(0).toUpperCase()+k.slice(1));
+    if(btn) btn.className = (wWyckStage===k) ? s.cls : '';
+  });
+  const stage = wWyckStage ? WYCKOFF_STAGES[wWyckStage] : null;
+  const wrap = document.getElementById('wyckBaseWrap');
+  if(wrap) wrap.style.display = (stage && stage.hasBase) ? '' : 'none';
+  for(let b=1;b<=5;b++){
+    const btn = document.getElementById('wyBase'+b);
+    if(btn) btn.className = (wWyckBase===b) ? wyckBaseInfo(b).riskCls : '';
+  }
+  const hint = document.getElementById('wyckBaseHint');
+  if(hint){
+    if(stage && stage.hasBase && wWyckBase){
+      const bi = wyckBaseInfo(wWyckBase);
+      hint.innerHTML = `Base#${wWyckBase} · ${bi.phase} · <b style="color:var(${bi.clr})">ความเสี่ยง${bi.risk}</b> — ${bi.detail}`;
+    } else if(stage && stage.hasBase){
+      hint.textContent = 'เลือก Base (1–5)';
+    } else hint.textContent = '';
+  }
+  const tech = document.getElementById('wTech');
+  if(tech && wWyckStage) tech.value = wyckNote();
+  applyWyckBiasConstraint();
+}
+function applyWyckBiasConstraint(){
+  const stage = wWyckStage ? WYCKOFF_STAGES[wWyckStage] : null;
+  const forced = stage ? stage.bias : null;
+  const longBtn = document.getElementById('wbLong');
+  const shortBtn = document.getElementById('wbShort');
+  const unclearBtn = document.getElementById('wbUnclear');
+  if(!longBtn || !shortBtn || !unclearBtn) return;
+  const lock = (btn, msg)=>{ btn.disabled=true; btn.style.opacity='.35'; btn.style.cursor='not-allowed'; btn.title=msg; };
+  [longBtn,shortBtn,unclearBtn].forEach(b=>{ b.disabled=false; b.style.opacity=''; b.style.cursor=''; b.title=''; });
+  if(forced==='Long'){
+    if(wBias!=='Long') setWBias('Long');
+    lock(shortBtn,'Mark Up = ขาขึ้น Bias ต้องเป็น Long');
+    lock(unclearBtn,'Mark Up ต้องระบุ Bias = Long');
+  } else if(forced==='Short'){
+    if(wBias!=='Short') setWBias('Short');
+    lock(longBtn,'Mark Down = ขาลง Bias ต้องเป็น Short');
+    lock(unclearBtn,'Mark Down ต้องระบุ Bias = Short');
+  }
+}
 function populateIndustrySelect(selected){
-  const sel = document.getElementById('wIndustry');
+  populateIndustrySelectInto('wIndustry', selected);
+}
+function populateIndustrySelectInto(selId, selected){
+  const sel = document.getElementById(selId); if(!sel) return;
   const cur = selected!==undefined ? selected : sel.value;
   const list = Array.isArray(state.industries) ? state.industries.slice().sort((a,b)=>a.localeCompare(b)) : [];
   sel.innerHTML = '<option value="">— ไม่ระบุ —</option>' + list.map(ind=>`<option value="${escHtml(ind)}">${escHtml(ind)}</option>`).join('');
   if(cur && list.includes(cur)) sel.value = cur;
+}
+function populateFcIndustrySelect(selected){
+  const sel = document.getElementById('fcIndustry'); if(!sel) return;
+  const list = Array.isArray(state.industries) ? state.industries.slice().sort((a,b)=>a.localeCompare(b)) : [];
+  sel.innerHTML = '<option value="">— ไม่ระบุ —</option>'
+    + list.map(ind=>`<option value="${escHtml(ind)}">${escHtml(ind)}</option>`).join('')
+    + '<option value="__add__">+ เพิ่ม Industry ใหม่…</option>';
+  sel.value = (selected && list.includes(selected)) ? selected : '';
+}
+function fcOnIndustryChange(val){
+  if(val!=='__add__') return;
+  const name = prompt('ชื่อ Industry ใหม่:');
+  const trimmed = name ? name.trim() : '';
+  if(trimmed){
+    ensureIndustryExists(trimmed);
+    populateFcIndustrySelect(trimmed);
+    schedulePersist();
+  } else {
+    populateFcIndustrySelect(fcState ? fcState.industry||'' : '');
+  }
+}
+function ensureIndustryExists(name){
+  if(!name) return;
+  if(!Array.isArray(state.industries)) state.industries = [];
+  if(!state.industries.some(x=>x.toLowerCase()===name.toLowerCase())){
+    state.industries.push(name);
+  }
 }
 function openWatch(port){
   watchEditId = null;
@@ -1999,8 +2196,10 @@ function openWatch(port){
   document.getElementById('wTech').value = '';
   document.getElementById('wFund').value = '';
   document.getElementById('wLink').value = '';
+  wWyckStage = null; wWyckBase = null;
   setWBias('Long');
   toggleWBiasField();
+  renderWyckUI();
   document.getElementById('watchOverlay').classList.add('show');
 }
 function editWatch(id){
@@ -2013,8 +2212,11 @@ function editWatch(id){
   document.getElementById('wTech').value = w.technical||'';
   document.getElementById('wFund').value = w.fundamental||'';
   document.getElementById('wLink').value = w.link||'';
+  wWyckStage = w.wyckoff ? w.wyckoff.stage : null;
+  wWyckBase = w.wyckoff ? w.wyckoff.base : null;
   setWBias(w.bias || 'Long');
   toggleWBiasField();
+  renderWyckUI();
   populateIndustrySelect(w.industry||'');
   document.getElementById('watchOverlay').classList.add('show');
 }
@@ -2038,6 +2240,7 @@ function saveWatch(){
     port,
     bias: port==='satB' ? wBias : null,
     technical: document.getElementById('wTech').value.trim(),
+    wyckoff: (port==='satB' && wWyckStage) ? {stage:wWyckStage, base:wWyckBase} : null,
     fundamental: document.getElementById('wFund').value.trim(),
     industry: port==='satB' ? '' : document.getElementById('wIndustry').value.trim(),
     link: document.getElementById('wLink').value.trim(),
@@ -2322,17 +2525,17 @@ function renderChecklistBody(){
       html += `<div class="divlbl">Entry Checklist — เลือกแนวทาง</div>`;
       html += `<div class="f"><label>แนวทาง Entry</label>
         <div class="seg">
-          <button type="button" class="${clState.subtype==='aegis'?'on-cur':''}" onclick="clSetSatBPath('aegis')">Shield of Agis</button>
+          <button type="button" class="${clState.subtype==='aegis'?'on-cur':''}" onclick="clSetSatBPath('aegis')">Shield of Aegis</button>
           <button type="button" class="${clState.subtype==='javelin'?'on-cur':''}" onclick="clSetSatBPath('javelin')">Javelin Launch</button>
         </div></div>`;
       if(clState.subtype==='aegis'){
         html += `<div class="hint" style="margin-bottom:6px">PoC + Orderblock — ต้องผ่านครบทั้ง 3 ข้อ</div>`;
         html += clItem('aegisPoc','Key PoC located')
-              + clItem('aegisSwing','@ least 50% of Swing leg')
+              + clItem('aegisSwing','50% of Swing leg')
               + clItem('aegisOB','มี Order block support');
       } else if(clState.subtype==='javelin'){
-        html += `<div class="hint" style="margin-bottom:6px">Break Blocker on HVN — ต้องผ่านครบทั้ง 2 ข้อ</div>`;
-        html += clItem('javelinHVN','Blocker located at HVN')
+        html += `<div class="hint" style="margin-bottom:6px">Break Blocker + HVN — ต้องผ่านครบทั้ง 2 ข้อ</div>`;
+        html += clItem('javelinHVN','High Volume Node located')
               + clItem('javelinBreak','Break Blocker/OrderBlock');
       } else {
         html += `<div class="hint">เลือกแนวทาง Entry ก่อน</div>`;
@@ -2378,7 +2581,17 @@ function clOnSymChange(){
   renderChecklistBody();
   updateChecklistUI();
 }
-function openChecklist(){
+function openChecklist(stage){
+  if(stage==='fund'){ openFundChecklist(); return; }
+  openTradeChecklist();
+}
+function openTradeChecklist(){
+  document.getElementById('checklistTitle').textContent = 'Pre-trade Checklist — ก่อนเข้า Trade';
+  document.getElementById('clTradeView').style.display = '';
+  document.getElementById('clFundView').style.display = 'none';
+  document.getElementById('clTradeFooter').style.display = '';
+  document.getElementById('clFundFooter').style.display = 'none';
+  { const w = document.getElementById('fcSaveWarn'); if(w) w.textContent = ''; }
   clState = {sym:'', port:null, bias:null, tier:'std', subtype:null, trend:null, checks:{}};
   editingDraftId = null;
   populateChecklistSymbolSelect();
@@ -2424,6 +2637,11 @@ function clSaveDraft(){
 function clEditDraft(id){
   const d = (state.checklistDrafts||[]).find(x=>x.id===id);
   if(!d) return;
+  document.getElementById('checklistTitle').textContent = 'Pre-trade Checklist — ก่อนเข้า Trade';
+  document.getElementById('clTradeView').style.display = '';
+  document.getElementById('clFundView').style.display = 'none';
+  document.getElementById('clTradeFooter').style.display = '';
+  document.getElementById('clFundFooter').style.display = 'none';
   clState = JSON.parse(JSON.stringify(d.clState));
   editingDraftId = id;
   populateChecklistSymbolSelect();
@@ -2470,18 +2688,411 @@ function clMissingList(cs){
     if(missing.length) return missing;
     const gateOk = cs.trend==='against' ? (c.tooExtend===true || c.weekBar===true) : (c.weekBar===false && c.tooExtend===false);
     if(!gateOk){ missing.push('Trend/Reversal/Extend ยังไม่ตรงกัน'); return missing; }
-    if(!cs.subtype){ missing.push('เลือกแนวทาง Entry (Shield of Agis / Javelin Launch)'); return missing; }
+    if(!cs.subtype){ missing.push('เลือกแนวทาง Entry (Shield of Aegis / Javelin Launch)'); return missing; }
     if(cs.subtype==='aegis'){
       if(!c.aegisPoc) missing.push('Key PoC located');
-      if(!c.aegisSwing) missing.push('@ least 50% of Swing leg');
+      if(!c.aegisSwing) missing.push('50% of Swing leg');
       if(!c.aegisOB) missing.push('Order block support');
     } else if(cs.subtype==='javelin'){
-      if(!c.javelinHVN) missing.push('Blocker located at HVN');
+      if(!c.javelinHVN) missing.push('High Volume Node located');
       if(!c.javelinBreak) missing.push('Break Blocker/OrderBlock');
     }
   }
   return missing;
 }
+
+/* ================= Fundamental Checklist (gate before Watchlist) ================= */
+const FUND_CRITERIA = {
+  th: {
+    label: '🇹🇭 หุ้นไทยตั้งรับ ปันผลเด่น เน้นกึ่งผูกขาด',
+    port: 'core',
+    capUnit: 'พันล้านบาท',
+    capGateMin: 50,
+    capGateLabel: 'Large ขึ้นไป',
+    capTiers: [[300,'Mega Cap'],[50,'Large Cap'],[10,'Mid Cap'],[0,'Small Cap']],
+    hasCG: true,
+    gates: [
+      {id:'g1', auto:true, label:'Market Cap ≥ 50 พันล้านบาท (Large ขึ้นไป)'},
+      {id:'g2', label:'Trading Value &gt; 100 ลบ./วัน'},
+      {id:'g3', label:'Net Profit บวกต่อเนื่อง 3 ปี (ไม่มีปีไหนขาดทุน)'},
+      {id:'g4', label:'D/E &lt; 1.5', bankSkip:true},
+      {id:'cg', label:'SET CG Score ≥ 4 ดาว'}
+    ],
+    scores: [
+      {id:'s1', label:'ROE', opts:['&gt;15%','10-15%','8-9.9%','&lt;8%']},
+      {id:'s2', label:'P/E', opts:['&lt;15','15-20','20-30','&gt;30']},
+      {id:'s3', label:'Dividend Yield', opts:['&gt;5%','3-5%','1.5-2.9%','&lt;1.5%']},
+      {id:'s4', label:'Net Profit Growth (เฉลี่ย 3 ปี)', opts:['&gt;10%','5-10%','ทรงตัว','หดตัวต่อเนื่อง']},
+      {id:'s5', label:'Net Profit Margin', opts:['&gt;15% คงที่','5-15% นิ่ง','เริ่มแคบ','&lt;5% หรือแกว่งตามโภคภัณฑ์']}
+    ],
+    notes: [
+      {id:'biz', label:'① ธุรกิจ (ทำเงินจากอะไร / ลูกค้าใคร)'},
+      {id:'n2', label:'② ยังจำเป็น + รายได้สม่ำเสมอ ใน 10-20 ปีไหม'},
+      {id:'n3', label:'③ Moat: คู่แข่งโค่นยากตรงไหน + ขึ้นราคาได้ไหม'},
+      {id:'n4', label:'④ ความเสี่ยงล้มหาย 1 ข้อ'}
+    ]
+  },
+  us_q: {
+    label: '🇺🇸 Quality Growth &amp; Global Compounder',
+    port: 'core',
+    capUnit: '$ พันล้าน (USD Billion)',
+    capGateMin: 10,
+    capGateLabel: 'Large ขึ้นไป',
+    capTiers: [[200,'Mega Cap'],[10,'Large Cap'],[2,'Mid Cap'],[0,'Small Cap']],
+    hasCG: false,
+    gates: [
+      {id:'g1', auto:true, label:'Market Cap ≥ $10B (Large ขึ้นไป)'},
+      {id:'g2', label:'Trading Value &gt; $50M/วัน'},
+      {id:'g3', label:'Net Profit OR FCF &gt; 0 ต่อเนื่อง 3 ปี'},
+      {id:'g4', label:'Interest Coverage &gt; 5x', debtFreeSkip:true}
+    ],
+    scores: [
+      {id:'s1', label:'ROIC', opts:['&gt;20%','12-20%','8-11.9%','&lt;8%']},
+      {id:'s2', label:'Forward P/E', opts:['&lt;20','20-28','28-35','&gt;35']},
+      {id:'s3', label:'Total Shareholder Yield (Div+Buyback)', opts:['&gt;4%','2-4%','0-1.9%','ติดลบ']},
+      {id:'s4', label:'FCF Growth (เฉลี่ย 3 ปี)', opts:['&gt;10%','5-10%','ทรงตัว','หดตัวต่อเนื่อง']},
+      {id:'s5', label:'Operating Margin', opts:['&gt;20% คงที่/ขยาย','10-20% คงที่','เริ่มหด','&lt;10% หรือแกว่งรุนแรง']}
+    ],
+    notes: [
+      {id:'biz', label:'① ธุรกิจ (ทำอะไร / ลูกค้าใคร)'},
+      {id:'n2', label:'② ยังจำเป็นใน 10-20 ปีไหม'},
+      {id:'n3', label:'③ Moat: คู่แข่งโค่นยาก + pricing power'},
+      {id:'n4', label:'④ ความเสี่ยงหลัก 1 ข้อ'}
+    ]
+  },
+  us_g: {
+    label: '🇺🇸 High Growth, Innovation &amp; Market Theme',
+    port: 'satA',
+    capUnit: '$ พันล้าน (USD Billion)',
+    capGateMin: 2,
+    capGateLabel: 'Mid Cap ($2B) ขึ้นไป',
+    capTiers: [[200,'Mega Cap'],[10,'Large Cap'],[2,'Mid Cap'],[0,'Small Cap']],
+    hasCG: false,
+    tierBands: [[12,'S'],[8,'A'],[0,'C']],
+    gates: [
+      {id:'g1', auto:true, label:'Market Cap ≥ $2B'},
+      {id:'g2', label:'$Volume &gt; $20M/วัน (สภาพคล่องพอ)'},
+      {id:'g3', label:'Price &gt; EMA50 และ &gt; EMA200 (Stage 2 ขาขึ้น)'},
+      {id:'g4', label:'ห่างจาก 52-Week High ไม่เกิน −20%'},
+      {id:'g5', label:'Revenue Growth &gt; 20% YoY (Growth Floor)'}
+    ],
+    scores: [
+      {id:'s1', label:'Revenue Growth (ไตรมาสล่าสุด YoY)', opts:['&gt;40% (Hyper)','25-40%','15-24.9%','&lt;15%']},
+      {id:'s2', label:'Rule of 40 (%Rev Growth + %FCF Margin)', opts:['&gt;50%','40-50%','20-39%','&lt;20%']},
+      {id:'s3', label:'Comparative RS Line (เทียบ SPY/QQQ)', opts:['ชันสวนดัชนี / RS new high ล่วงหน้า','ยก Low สูงขึ้นชัด','วิ่งออกข้าง','ปักหัวลง Lower Low']},
+      {id:'s4', label:'RVOL (เทียบวอลุ่มเฉลี่ย 50 วัน) — แรงซื้อสถาบันวันเบรคเอาท์/พักตัว', opts:['RVOL &gt;2.0 (แท่งเขียว)','RVOL 1.5-2.0 (แท่งเขียว)','RVOL 1.0-1.4','RVOL &gt;1.5 (แท่งแดง)']},
+      {id:'s5', label:'Valuation (P/S หรือ Fwd PEG)', opts:['P/S&lt;10 หรือ PEG&lt;1.5','P/S 10-20 หรือ PEG 1.5-2.5','P/S 20-30','P/S&gt;30 (ฟองสบู่)']}
+    ],
+    notes: [
+      {id:'biz', label:'① ธุรกิจ + Moat/Position ใน Value Chain'},
+      {id:'n2', label:'② Theme fit: อยู่ใน theme ที่ตลาดสนใจตอนนี้ไหม'},
+      {id:'n3', label:'③ Catalyst (New): สินค้าใหม่ / ผู้บริหารใหม่ / Earnings Surprise'},
+      {id:'n4', label:'④ Sponsorship: กองทุนชั้นนำ / Big Tech เข้าถือเพิ่มมีนัยไหม'}
+    ]
+  }
+};
+let fcState = null;
+function capTier(type, value){
+  const cfg = FUND_CRITERIA[type]; if(!cfg || value==null || isNaN(value)) return null;
+  for(const [min,name] of cfg.capTiers){ if(value>=min) return name; }
+  return 'Small Cap';
+}
+function capGatePass(type, value){
+  const cfg = FUND_CRITERIA[type]; if(!cfg || value==null || value==='' || isNaN(value)) return false;
+  return Number(value) >= cfg.capGateMin;
+}
+const DEFAULT_TIER_BANDS = [[13,'S'],[10,'A'],[6,'B'],[0,'C']];
+function tierBandsFor(type){
+  const cfg = FUND_CRITERIA[type];
+  return (cfg && cfg.tierBands) ? cfg.tierBands : DEFAULT_TIER_BANDS;
+}
+function fundTier(total, type){
+  for(const [min,letter] of tierBandsFor(type)){ if(total>=min) return letter; }
+  return 'C';
+}
+function fundPassMin(type){
+  const bands = tierBandsFor(type);
+  return bands.length>=2 ? bands[bands.length-2][0] : 0;
+}
+function fundTierColor(t){
+  return t==='S' ? 'var(--teal)' : t==='A' ? 'var(--blue)' : t==='B' ? 'var(--yellow)' : 'var(--red)';
+}
+function fundScoreTotal(fc){
+  const cfg = FUND_CRITERIA[fc.type]; if(!cfg) return 0;
+  return cfg.scores.reduce((sum,s)=>sum + (fc.score && fc.score[s.id]!=null ? fc.score[s.id] : 0), 0);
+}
+function fundScoreDone(fc){
+  const cfg = FUND_CRITERIA[fc.type]; if(!cfg) return false;
+  return cfg.scores.every(s=>fc.score && fc.score[s.id]!=null);
+}
+function fundGateItemPass(fc, g){
+  if(g.auto) return capGatePass(fc.type, fc.mktcap);
+  if(g.bankSkip && fc.bank) return true;
+  if(g.debtFreeSkip && fc.debtFree) return true;
+  return !!(fc.gate && fc.gate[g.id]);
+}
+function fundGatePass(fc){
+  const cfg = FUND_CRITERIA[fc.type]; if(!cfg) return false;
+  return cfg.gates.every(g=>fundGateItemPass(fc, g));
+}
+function buildFundSummary(fc){
+  if(!fc) return '';
+  const total = fc.total!=null ? fc.total : fundScoreTotal(fc);
+  const tier = fc.tier || fundTier(total, fc.type);
+  const biz = (fc.note && fc.note.biz) || '';
+  return `${tier} · ${total}/15${biz?` — ${biz}`:''}`;
+}
+function fcSetType(type){
+  fcState.type = type;
+  fcState.port = FUND_CRITERIA[type].port;
+  fcState.bank = false; fcState.debtFree = false; fcState.mktcap = null;
+  fcState.gate = {}; fcState.score = {};
+  renderFundTypeRow();
+  renderFundChecklistBody();
+}
+function renderFundTypeRow(){
+  const row = document.getElementById('fcTypeRow'); if(!row) return;
+  const opt = (t, label) => `<button type="button" class="${fcState.type===t?'primary':''}" style="text-align:left;justify-content:flex-start" onclick="fcSetType('${t}')">${label}</button>`;
+  row.innerHTML = `
+    ${opt('th','🇹🇭 หุ้นไทยตั้งรับ ปันผลเด่น เน้นกึ่งผูกขาด')}
+    ${opt('us_q','🇺🇸 Quality Growth &amp; Global Compounder')}
+    ${opt('us_g','🇺🇸 High Growth, Innovation &amp; Market Theme')}`;
+}
+function fcOnMktcapInput(val){
+  fcState.mktcap = val===''?null:Number(val);
+  const el = document.getElementById('fcMktcap');
+  const pos = el ? el.selectionStart : null;
+  renderFundChecklistBody();
+  const el2 = document.getElementById('fcMktcap');
+  if(el2){
+    el2.focus();
+    if(pos!=null){ try{ el2.setSelectionRange(pos,pos); }catch(e){} }
+  }
+}
+function fcSetGate(id, val){ fcState.gate[id] = val; renderFundChecklistBody(); }
+function fcSetScore(id, val){ fcState.score[id] = val; renderFundChecklistBody(); }
+function fcSetNote(id, val){ fcState.note[id] = val; }
+function renderFundChecklistBody(){
+  const body = document.getElementById('fcBody'); if(!body || !fcState) return;
+  const status = document.getElementById('fcStatus');
+  if(!fcState.type){
+    body.innerHTML = '<div class="hint">เลือกประเภทหุ้นก่อน</div>';
+    if(status) status.innerHTML = '';
+    fcRefreshSaveState();
+    return;
+  }
+  const cfg = FUND_CRITERIA[fcState.type];
+  const gatePass = fundGatePass(fcState);
+  const tierNow = capTier(fcState.type, fcState.mktcap);
+
+  let html = `<div class="divlbl" style="margin-top:0;padding-top:0;border:none">GATE — ตกข้อเดียว = ตัดทิ้งทันที</div>`;
+  html += `<div class="f"><label>Market Cap (${cfg.capUnit})</label>
+    <input type="text" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" id="fcMktcap" value="${fcState.mktcap??''}" oninput="fcOnMktcapInput(this.value)">
+    <div class="hint" style="margin-top:4px" id="fcMktcapHint">${tierNow?`<span class="tag" style="background:var(--surface2)">${tierNow}</span> `:''}${capGatePass(fcState.type, fcState.mktcap)?`<span style="color:var(--teal)">✓ ผ่าน ${cfg.capGateLabel}</span>`:`<span style="color:var(--amber)">⚠ ต้อง ${cfg.capGateLabel}</span>`}</div>
+  </div>`;
+  if(cfg.gates.some(g=>g.bankSkip)){
+    html += `<label class="clItem ${fcState.bank?'on':''}" style="margin-bottom:8px"><input type="checkbox" ${fcState.bank?'checked':''} onchange="fcState.bank=this.checked;renderFundChecklistBody()"><span>กลุ่มแบงก์/ไฟแนนซ์ (ข้าม D/E)</span></label>`;
+  }
+  if(cfg.gates.some(g=>g.debtFreeSkip)){
+    html += `<label class="clItem ${fcState.debtFree?'on':''}" style="margin-bottom:8px"><input type="checkbox" ${fcState.debtFree?'checked':''} onchange="fcState.debtFree=this.checked;renderFundChecklistBody()"><span>ไม่มีหนี้ (ข้าม Interest Coverage)</span></label>`;
+  }
+  cfg.gates.forEach(g=>{
+    if(g.auto) return;
+    if(g.bankSkip && fcState.bank) return;
+    if(g.debtFreeSkip && fcState.debtFree) return;
+    const checked = !!fcState.gate[g.id];
+    html += `<label class="clItem ${checked?'on':''}"><input type="checkbox" ${checked?'checked':''} onchange="fcSetGate('${g.id}',this.checked)"><span>${g.label}</span></label>`;
+  });
+  html += gatePass
+    ? `<div class="hint" style="color:var(--teal);margin:8px 0">✓ ผ่าน GATE ครบแล้ว — กรอก Score ต่อได้</div>`
+    : `<div class="hint" style="color:var(--amber);margin:8px 0">⚠ ต้องผ่าน GATE ครบทุกข้อก่อน ถึงจะกรอก Score ได้</div>`;
+
+  if(gatePass){
+    const total = fundScoreTotal(fcState);
+    const scoreDone = fundScoreDone(fcState);
+    const tier = fundTier(total, fcState.type);
+    fcState.total = total; fcState.tier = tier;
+
+    html += `<div class="divlbl">SCORE (เต็ม 15)</div>`;
+    cfg.scores.forEach(s=>{
+      const cur = fcState.score[s.id];
+      html += `<div class="f"><label>${s.label}</label><div class="seg">${s.opts.map((o,i)=>{
+        const v = 3-i;
+        return `<button type="button" class="${cur===v?'on-cur':''}" onclick="fcSetScore('${s.id}',${v})">${o}</button>`;
+      }).join('')}</div></div>`;
+    });
+    const passMin = fundPassMin(fcState.type);
+    html += `<div class="hint" style="margin:4px 0 12px">รวม <b>${total}/15</b> — <span style="color:${fundTierColor(tier)};font-weight:700">Tier ${tier}</span>${total<passMin?` <span style="color:var(--red);font-weight:700">⚠ คะแนนต่ำกว่า ${passMin}</span>`:''}</div>`;
+
+    if(scoreDone){
+      html += `<div class="divlbl">NOTE</div>`;
+      cfg.notes.forEach(n=>{
+        const val = (fcState.note && fcState.note[n.id]) || '';
+        html += `<div class="f"><label>${n.label}</label><textarea rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" oninput="fcSetNote('${n.id}',this.value)">${escHtml(val)}</textarea></div>`;
+      });
+    }
+  } else {
+    fcState.total = 0; fcState.tier = null;
+  }
+
+  body.innerHTML = html;
+  if(status) status.innerHTML = !gatePass
+    ? `<span style="color:var(--amber);font-weight:700">⚠ ยังไม่ผ่าน GATE</span>`
+    : `<span style="color:var(--teal);font-weight:700">✓ ผ่าน GATE — Tier ${fcState.tier} (${fcState.total}/15)</span>`;
+  fcRefreshSaveState();
+}
+function fcRefreshSaveState(){
+  const btn = document.getElementById('fcSaveBtn');
+  const warn = document.getElementById('fcSaveWarn');
+  if(!btn) return;
+  const symEl = document.getElementById('fcSym');
+  const sym = symEl ? (symEl.value||'').trim().toUpperCase() : '';
+  const type = fcState && fcState.type;
+  const port = fcState && fcState.port;
+  const editId = (fcState && fcState.editId) || null;
+  const gatePass = (fcState && type) ? fundGatePass(fcState) : false;
+  const dup = !!(sym && port && (state.watchlist||[]).some(w=>w.sym===sym && w.port===port && w.id!==editId));
+  let msg = '';
+  if(!type) msg = '⚠ เลือกประเภทหุ้นก่อน';
+  else if(!sym) msg = '⚠ กรอก Symbol';
+  else if(dup) msg = '⚠ มีแล้วใน Watchlist';
+  else if(!gatePass) msg = '⚠ ต้องผ่าน GATE (Market Cap & เงื่อนไข) ให้ครบก่อน';
+  const ok = !!(sym && type && gatePass && !dup);
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '' : '.45';
+  btn.style.cursor = ok ? '' : 'not-allowed';
+  if(warn){ warn.textContent = ok ? '' : msg; warn.style.color = dup ? 'var(--red)' : 'var(--amber)'; }
+}
+function openFundChecklist(){
+  fcState = {
+    port:null, type:null, editId:null,
+    sym:'', date:new Date().toISOString().slice(0,10), industry:'',
+    bank:false, debtFree:false, mktcap:null,
+    gate:{}, score:{}, note:{biz:'',n2:'',n3:'',n4:''},
+    total:0, tier:null
+  };
+  document.getElementById('checklistTitle').textContent = 'Fundamental Checklist — คัดกรองก่อนเข้า Watchlist';
+  document.getElementById('clTradeView').style.display = 'none';
+  document.getElementById('clFundView').style.display = '';
+  document.getElementById('clTradeFooter').style.display = 'none';
+  document.getElementById('clFundFooter').style.display = '';
+  document.getElementById('fcSym').value = '';
+  document.getElementById('fcDate').value = fcState.date;
+  populateFcIndustrySelect('');
+  renderFundTypeRow();
+  renderFundChecklistBody();
+  document.getElementById('checklistOverlay').classList.add('show');
+}
+function fcSaveToWatchlist(){
+  const sym = document.getElementById('fcSym').value.trim().toUpperCase();
+  if(!sym){ alert('กรอก Symbol'); return; }
+  if(!fcState.type){ alert('เลือกประเภทหุ้นก่อน'); return; }
+  if(!fundGatePass(fcState)){ alert('ต้องผ่าน GATE (Market Cap & เงื่อนไข) ให้ครบก่อน'); return; }
+  if(!fcState.editId && (state.watchlist||[]).some(w=>w.sym===sym && w.port===fcState.port)){ alert('Symbol นี้มีอยู่ใน Watchlist แล้ว'); return; }
+  fcState.sym = sym;
+  fcState.date = document.getElementById('fcDate').value || new Date().toISOString().slice(0,10);
+  fcState.industry = document.getElementById('fcIndustry').value.trim();
+  ensureIndustryExists(fcState.industry);
+  fcState.total = fundScoreTotal(fcState);
+  fcState.tier = fundGatePass(fcState) ? fundTier(fcState.total, fcState.type) : null;
+  const port = fcState.port;
+  const editId = fcState.editId || null;
+  const dup = (state.watchlist||[]).find(w=>w.sym===sym && w.port!==port && w.id!==editId);
+  if(dup){
+    const dupPortName = PORTS[dup.port] ? PORTS[dup.port].name : dup.port;
+    const proceed = confirm(`⚠ Symbol "${sym}" มีอยู่ใน Watchlist ของ ${dupPortName} อยู่แล้ว\n\nยืนยันจะเพิ่มต่อหรือไม่?`);
+    if(!proceed) return;
+  }
+  const existing = editId ? (state.watchlist||[]).find(w=>w.id===editId) : (state.watchlist||[]).find(w=>w.sym===sym && w.port===port);
+  const fundCheck = JSON.parse(JSON.stringify(fcState));
+  delete fundCheck.editId;
+  const summary = buildFundSummary(fundCheck);
+  if(!Array.isArray(state.watchlist)) state.watchlist = [];
+  if(existing){
+    existing.sym = sym; existing.port = port;
+    existing.industry = fcState.industry;
+    existing.fundCheck = fundCheck;
+    existing.fundamental = summary;
+    existing.score = fundCheck.total;
+  } else {
+    const sameportOrders = state.watchlist.filter(w=>w.port===port).map(w=>w.order||0);
+    const nextOrder = sameportOrders.length ? Math.max(...sameportOrders)+1 : 0;
+    state.watchlist.push({
+      id: 'w'+Date.now(),
+      date: fundCheck.date, sym, port,
+      bias: null, technical: '',
+      fundamental: summary,
+      industry: fcState.industry, link: '',
+      order: nextOrder, score: fundCheck.total,
+      fundCheck
+    });
+  }
+  closeChecklist();
+  render();
+  schedulePersist();
+}
+function openFundEdit(id){
+  const w = state.watchlist.find(x=>x.id===id);
+  if(!w || !w.fundCheck) return;
+  fcState = JSON.parse(JSON.stringify(w.fundCheck));
+  fcState.editId = id;
+  if(fcState.industry==null) fcState.industry = w.industry||'';
+  document.getElementById('checklistTitle').textContent = 'Fundamental Checklist — คัดกรองก่อนเข้า Watchlist';
+  document.getElementById('clTradeView').style.display = 'none';
+  document.getElementById('clFundView').style.display = '';
+  document.getElementById('clTradeFooter').style.display = 'none';
+  document.getElementById('clFundFooter').style.display = '';
+  document.getElementById('fcSym').value = w.sym||'';
+  document.getElementById('fcDate').value = fcState.date || new Date().toISOString().slice(0,10);
+  populateFcIndustrySelect(fcState.industry||'');
+  renderFundTypeRow();
+  renderFundChecklistBody();
+  document.getElementById('checklistOverlay').classList.add('show');
+}
+function openFundDetail(id){
+  const w = state.watchlist.find(x=>x.id===id);
+  if(!w || !w.fundCheck) return;
+  const fc = w.fundCheck;
+  const cfg = FUND_CRITERIA[fc.type];
+  document.getElementById('fcDetailTitle').textContent = `${w.sym} — Fundamental Checklist`;
+  const tierCap = cfg ? capTier(fc.type, fc.mktcap) : null;
+  let html = `<div class="hint" style="font-size:.85rem;margin-bottom:2px">${cfg?cfg.label:''}${w.industry?` · ${escHtml(w.industry)}`:''}</div>`;
+  html += `<div class="hint" style="font-size:.85rem;margin-bottom:12px">${tierCap?`${tierCap} · `:''}Tier <b style="color:${fundTierColor(fc.tier)}">${fc.tier||'—'}</b> · ${fc.total||0}/15</div>`;
+  if(cfg){
+    const notable = cfg.scores
+      .filter(s=>{
+        const v = fc.score && fc.score[s.id]!=null ? fc.score[s.id] : null;
+        return v===3 || v===0;
+      })
+      .sort((a,b)=>fc.score[b.id]-fc.score[a.id]);
+    html += `<div class="divlbl" style="margin-top:0;padding-top:0;border:none">Score — จุดเด่น / จุดด้อย</div>`;
+    if(!notable.length){
+      html += `<div class="hint">ไม่มีข้อที่โดดเด่นเป็นพิเศษ (ทุกข้ออยู่ระดับกลาง)</div>`;
+    }
+    notable.forEach(s=>{
+      const v = fc.score[s.id];
+      const isHighlight = v===3;
+      const optLabel = s.opts[3-v];
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:.78rem">
+        <span>${s.label} <span class="tag" style="background:${isHighlight?'var(--teal)':'var(--red)'};color:#fff;font-weight:700;font-size:.68rem">${isHighlight?'จุดเด่น':'จุดด้อย'}</span> ${optLabel}</span>
+        <span class="sans" style="flex-shrink:0">${v}/3</span>
+      </div>`;
+    });
+    html += `<div class="divlbl">Note</div>`;
+    cfg.notes.forEach(n=>{
+      const val = (fc.note && fc.note[n.id]) || '—';
+      html += `<div class="f"><label>${n.label}</label><div style="width:100%;box-sizing:border-box;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font-family:var(--sans);font-size:.82rem;line-height:1.5;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px">${escHtml(val)}</div></div>`;
+    });
+  } else {
+    html += `<div class="hint">ไม่มีข้อมูล</div>`;
+  }
+  document.getElementById('fcDetailBody').innerHTML = html;
+  document.getElementById('fcDetailOverlay').classList.add('show');
+}
+function closeFcDetail(){
+  document.getElementById('fcDetailOverlay').classList.remove('show');
+}
+
 function renderChecklistDrafts(){
   const panel = document.getElementById('checklistDraftsPanel');
   if(!panel || !state) return;
