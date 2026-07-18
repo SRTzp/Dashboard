@@ -470,6 +470,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <button onclick="openSettings()" title="Portfolio Setting"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="11" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><path d="M18 18 L18 7 A11 11 0 0 1 27.5 13 Z" fill="#F0397A" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L27.5 13 A11 11 0 0 1 28.9 21 Z" fill="#C084F5" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L18 7 A11 11 0 0 0 9 12.5 Z" fill="#8BD450" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="6" fill="#FFDD66" stroke="#111" stroke-width="1.6"/><text x="8" y="11" font-size="8" text-anchor="middle" font-weight="800" fill="#111" font-family="Arial">$</text></svg></button>
     <button onclick="openIndustryManager()" title="Industry"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.4"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="16" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="20" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="24" y="23" width="3.5" height="6" fill="#8FD6EE"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="2.6" stroke-linecap="round"/></svg></button>
     <button class="warn" onclick="openChecklist('fund')"><span class="btnIcon">📋 </span>Checklist</button>
+    <button onclick="openImportCL()" title="Import จาก Claude Core Checklist (วาง JSON)"><span class="btnIcon">📥 </span>Import</button>
     <button class="primary" onclick="openChecklist('trade')"><span class="btnIcon">+ </span>Add Trade</button>
   </div>
 </header>
@@ -825,6 +826,22 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
         <button onclick="document.getElementById('setOverlay').classList.remove('show')">ยกเลิก</button>
         <button class="primary" onclick="saveSettings()">บันทึก</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Import from Claude Core Checklist modal ===== -->
+<div class="overlay" id="impOverlay">
+  <div class="modal">
+    <h3>Import จาก Claude — Core Checklist</h3>
+    <div class="hint" style="margin-top:-6px;margin-bottom:10px">วางก้อน JSON ที่ได้จากคำสั่ง <code>/core-checklist</code> แล้วกด Import — ระบบจะเพิ่ม/อัปเดตหุ้นใน Watchlist ตาม field <code>port</code> ให้อัตโนมัติ (รับทีละตัวหรือหลายตัวเป็น array ก็ได้)</div>
+    <div class="f"><label>JSON</label>
+      <textarea id="impText" rows="10" placeholder='{ "sym":"NVDA", "port":"satA", "industry":"Semiconductors / AI", "fundamental":"Moat Wide...", "technical":"Catalyst...", "risk":"...", "verdict":"PASS", "score":13 }' style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;min-height:150px"></textarea>
+    </div>
+    <div class="hint" id="impHint" style="min-height:18px"></div>
+    <div class="btns">
+      <button onclick="closeImportCL()">ยกเลิก</button>
+      <button class="primary" onclick="importChecklistJSON()"><span class="btnIcon">📥 </span>Import เข้า Watchlist</button>
     </div>
   </div>
 </div>
@@ -2258,6 +2275,69 @@ function ensureIndustryExists(name){
   if(!state.industries.some(x=>x.toLowerCase()===name.toLowerCase())){
     state.industries.push(name);
   }
+}
+
+/* ================= Import from Claude Core Checklist ================= */
+function openImportCL(){
+  if(!uid || !state){ alert('เข้าสู่ระบบก่อนจึงจะ Import ได้'); return; }
+  document.getElementById('impText').value = '';
+  const h = document.getElementById('impHint'); h.textContent = ''; h.style.color = '';
+  document.getElementById('impOverlay').classList.add('show');
+}
+function closeImportCL(){ document.getElementById('impOverlay').classList.remove('show'); }
+function importChecklistJSON(){
+  const hint = document.getElementById('impHint');
+  const setHint = (msg, ok) => { hint.textContent = msg; hint.style.color = ok ? 'var(--teal,#46C8AC)' : '#E6605A'; };
+  const raw = document.getElementById('impText').value.trim();
+  if(!raw){ setHint('วางข้อมูล JSON ก่อน', false); return; }
+  let items;
+  try{
+    const parsed = JSON.parse(raw);
+    items = Array.isArray(parsed) ? parsed : [parsed];
+  }catch(e){ setHint('JSON ไม่ถูกต้อง: ' + e.message, false); return; }
+  if(!Array.isArray(state.watchlist)) state.watchlist = [];
+  let added = 0, updated = 0, skipped = 0;
+  items.forEach(d => {
+    if(!d || !d.sym){ skipped++; return; }
+    const sym = String(d.sym).trim().toUpperCase();
+    const port = (d.port==='satA' || d.port==='satB' || d.port==='core') ? d.port : 'satA';
+    let fundamental = (d.fundamental || '').toString().trim();
+    if(d.verdict) fundamental = '[' + d.verdict + (d.score!=null ? ' ' + d.score + '/15' : '') + '] ' + fundamental;
+    if(d.risk) fundamental += (fundamental ? ' · ' : '') + '⚠ ' + d.risk;
+    if(d.industry) ensureIndustryExists(String(d.industry).trim());
+    const existing = state.watchlist.find(w => w.sym===sym && w.port===port);
+    if(existing){
+      existing.fundamental = fundamental || existing.fundamental;
+      if(d.technical!=null) existing.technical = String(d.technical);
+      if(d.industry!=null) existing.industry = String(d.industry);
+      if(d.link!=null) existing.link = String(d.link);
+      if(d.score!=null) existing.score = Number(d.score) || 0;
+      if(d.date) existing.date = String(d.date);
+      updated++;
+    } else {
+      const orders = state.watchlist.filter(w => w.port===port).map(w => w.order||0);
+      const nextOrder = orders.length ? Math.max(...orders)+1 : 0;
+      state.watchlist.push({
+        id: 'w' + Date.now() + Math.floor(Math.random()*1000),
+        date: d.date || new Date().toISOString().slice(0,10),
+        sym, port,
+        bias: d.bias || null,
+        technical: (d.technical || '').toString(),
+        wyckoff: null,
+        fundamental,
+        industry: (d.industry || '').toString(),
+        link: (d.link || '').toString(),
+        order: nextOrder,
+        score: (d.score!=null ? (Number(d.score)||0) : 0)
+      });
+      added++;
+    }
+  });
+  if(added===0 && updated===0){ setHint('ไม่พบรายการที่ import ได้ (ต้องมี field "sym")', false); return; }
+  render();
+  schedulePersist();
+  setHint('สำเร็จ — เพิ่ม ' + added + ' · อัปเดต ' + updated + (skipped ? ' · ข้าม ' + skipped : ''), true);
+  setTimeout(closeImportCL, 1100);
 }
 function openWatch(port){
   watchEditId = null;
