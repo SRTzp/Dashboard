@@ -1944,7 +1944,7 @@ function renderWatchPort(port){
   function scoreBadge(w){
     if(w.fundCheck && w.fundCheck.tier){
       const fc = w.fundCheck;
-      return `<span class="tag" style="background:${fundTierColor(fc.tier)};color:#fff;font-weight:700">${fc.tier}</span> <span class="hint" style="margin:0">${fc.total||0}/15</span>`;
+      return `<span class="tag" style="background:${fundTierColor(fc.tier)};color:#fff;font-weight:700">${fc.tier}</span> <span class="hint" style="margin:0">${fc.total||0}/${fundScoreMax(fc.type)}</span>`;
     }
     return `<span class="hint" style="margin:0">—</span>`;
   }
@@ -2362,7 +2362,7 @@ function importChecklistJSON(){
       mktcap: (cl.mktcap!=null && !isNaN(Number(cl.mktcap))) ? Number(cl.mktcap) : null,
       gate: Object.assign({}, gIn),
       score: Object.assign({}, sIn),
-      note: Object.assign({sum:'',biz:'',n2:'',n3:'',n4:'',n5:''}, nIn),
+      note: Object.assign({sum:'',biz:'',n2:'',n3:'',n4:'',n5:'',n6:''}, nIn),
       evidence: Object.assign({}, evIn),
       aiFilled, userOk: {},
       source: 'claude-checklist',
@@ -2410,7 +2410,7 @@ function importChecklistJSON(){
     const sym = String(d.sym).trim().toUpperCase();
     const port = (d.port==='satA' || d.port==='satB' || d.port==='core') ? d.port : 'satA';
     let fundamental = (d.fundamental || '').toString().trim();
-    if(d.verdict) fundamental = '[' + d.verdict + (typeof d.score==='number' ? ' ' + d.score + '/15' : '') + '] ' + fundamental;
+    if(d.verdict) fundamental = '[' + d.verdict + (typeof d.score==='number' ? ' ' + d.score + '/' + fundScoreMax(d.type) : '') + '] ' + fundamental;
     if(d.risk) fundamental += (fundamental ? ' · ' : '') + '⚠ ' + d.risk;
     if(d.industry) ensureIndustryExists(String(d.industry).trim());
     const existing = state.watchlist.find(w => w.sym===sym && w.port===port);
@@ -2983,14 +2983,18 @@ const FUND_CRITERIA = {
       {id:'s2', label:'P/E', opts:['&lt;15','15-20','20-30','&gt;30']},
       {id:'s3', label:'Dividend Yield', opts:['&gt;5%','3-5%','1.5-2.9%','&lt;1.5%']},
       {id:'s4', label:'Net Profit Growth (เฉลี่ย 3 ปี)', opts:['&gt;10%','5-10%','ทรงตัว','หดตัวต่อเนื่อง']},
-      {id:'s5', label:'Net Profit Margin', opts:['&gt;15% คงที่','5-15% นิ่ง','เริ่มแคบ','&lt;5% หรือแกว่งตามโภคภัณฑ์']}
+      {id:'s5', label:'Net Profit Margin', opts:['&gt;15% คงที่','5-15% นิ่ง','เริ่มแคบ','&lt;5% หรือแกว่งตามโภคภัณฑ์']},
+      {id:'s6', label:'Earnings Quality (CFO/NI เฉลี่ย 3 ปี)', opts:['&gt;1.1','0.9-1.1','0.7-0.9','&lt;0.7']},
+      {id:'s7', label:'ความสม่ำเสมอรายได้ (ปีที่โตใน 10 ปี)', opts:['≥8 ปี','6-7 ปี','4-5 ปี','&lt;4 ปี']},
+      {id:'s8', label:'Dividend CAGR 10y — InvestingPro (เคยงดจ่าย = 0)', opts:['≥5% ไม่เคยงด','0-5%','ติดลบเล็กน้อย','ติดลบแรง/เคยงดจ่าย']}
     ],
     notes: [
       {id:'sum', label:'📌 สรุปสั้น (อ่านแล้วเข้าใจทันที) — ทำธุรกิจอะไร / Moat คืออะไร / จำเป็นไหมใน 10-20 ปี'},
       {id:'biz', label:'① ธุรกิจ (ทำเงินจากอะไร / ลูกค้าใคร)'},
       {id:'n2', label:'② ยังจำเป็น + รายได้สม่ำเสมอ ใน 10-20 ปีไหม'},
       {id:'n3', label:'③ Moat: คู่แข่งโค่นยากตรงไหน + ขึ้นราคาได้ไหม'},
-      {id:'n4', label:'④ ความเสี่ยงล้มหาย 1 ข้อ'}
+      {id:'n4', label:'④ ความเสี่ยงล้มหาย 1 ข้อ'},
+      {id:'n5', label:'⑤ ความทนทานการเงิน: net cash/หนี้ · FCF · share count · earnings quality'}
     ]
   },
   us_q: {
@@ -3012,14 +3016,17 @@ const FUND_CRITERIA = {
       {id:'s2', label:'Forward P/E', opts:['&lt;20','20-28','28-35','&gt;35']},
       {id:'s3', label:'Total Shareholder Yield (Div+Buyback)', opts:['&gt;4%','2-4%','0-1.9%','ติดลบ']},
       {id:'s4', label:'FCF Growth (เฉลี่ย 3 ปี)', opts:['&gt;10%','5-10%','ทรงตัว','หดตัวต่อเนื่อง']},
-      {id:'s5', label:'Operating Margin', opts:['&gt;20% คงที่/ขยาย','10-20% คงที่','เริ่มหด','&lt;10% หรือแกว่งรุนแรง']}
+      {id:'s5', label:'Operating Margin', opts:['&gt;20% คงที่/ขยาย','10-20% คงที่','เริ่มหด','&lt;10% หรือแกว่งรุนแรง']},
+      {id:'s6', label:'Earnings Quality (CFO/NI เฉลี่ย 3 ปี)', opts:['&gt;1.1','0.9-1.1','0.7-0.9','&lt;0.7']},
+      {id:'s7', label:'ความสม่ำเสมอรายได้ (ปีที่โตใน 10 ปี)', opts:['≥8 ปี','6-7 ปี','4-5 ปี','&lt;4 ปี']}
     ],
     notes: [
       {id:'sum', label:'📌 สรุปสั้น (อ่านแล้วเข้าใจทันที) — ทำธุรกิจอะไร / Moat คืออะไร / จำเป็นไหมใน 10-20 ปี'},
       {id:'biz', label:'① ธุรกิจ (ทำอะไร / ลูกค้าใคร)'},
       {id:'n2', label:'② ยังจำเป็นใน 10-20 ปีไหม'},
       {id:'n3', label:'③ Moat: คู่แข่งโค่นยาก + pricing power'},
-      {id:'n4', label:'④ ความเสี่ยงหลัก 1 ข้อ'}
+      {id:'n4', label:'④ ความเสี่ยงหลัก 1 ข้อ'},
+      {id:'n5', label:'⑤ ความทนทานการเงิน: net cash/หนี้ · FCF · share count · earnings quality'}
     ]
   },
   us_g: {
@@ -3030,7 +3037,7 @@ const FUND_CRITERIA = {
     capGateLabel: 'Mid Cap ($2B) ขึ้นไป',
     capTiers: [[200,'Mega Cap'],[10,'Large Cap'],[2,'Mid Cap'],[0,'Small Cap']],
     hasCG: false,
-    tierBands: [[12,'S'],[8,'A'],[0,'C']],
+    tierBands: [[19,'S'],[13,'A'],[0,'C']],
     gates: [
       {id:'g1', auto:true, label:'Market Cap ≥ $2B'},
       {id:'g2', label:'$Volume &gt; $20M/วัน (สภาพคล่องพอ)'},
@@ -3043,7 +3050,10 @@ const FUND_CRITERIA = {
       {id:'s2', label:'Rule of 40 (%Rev Growth + %FCF Margin)', opts:['&gt;50%','40-50%','20-39%','&lt;20%']},
       {id:'s3', label:'Comparative RS Line — TF Week (เทียบ SPY/QQQ)', opts:['RS new high ล่วงหน้า','ยก Low สูงขึ้นชัด','วิ่งออกข้าง','ปักหัวลง Lower Low']},
       {id:'s4', label:'RVOL — TF Week (แรงซื้อสถาบันช่วงเบรคเอาท์/พักตัว)', opts:['RVOL &gt;2.0 (แท่งเขียว)','RVOL 1.5-2.0 (แท่งเขียว)','RVOL 1.0-1.4','RVOL &gt;1.5 (แท่งแดง)']},
-      {id:'s5', label:'Valuation (P/S หรือ Fwd PEG)', opts:['P/S&lt;10 / PEG&lt;1.5','P/S 10-20 / PEG 1.5-2.5','P/S 20-30','P/S&gt;30 (ฟองสบู่)']}
+      {id:'s5', label:'Valuation (P/S หรือ Fwd PEG)', opts:['P/S&lt;10 / PEG&lt;1.5','P/S 10-20 / PEG 1.5-2.5','P/S 20-30','P/S&gt;30 (ฟองสบู่)']},
+      {id:'s6', label:'Growth Acceleration (YoY 4 ไตรมาสล่าสุด)', opts:['เร่งขึ้นต่อเนื่อง','ทรงตัว','ชะลอเล็กน้อย','ชะลอแรง']},
+      {id:'s7', label:'Dilution (Share Count YoY)', opts:['ลด/&lt;+2%','2-5%','5-10%','&gt;10%']},
+      {id:'s8', label:'EPS Revisions up vs down — Yahoo Analysis/InvestingPro', opts:['Up ≥3× Down','Up &gt; Down','สูสี/ไม่มีข้อมูล','Down &gt; Up']}
     ],
     notes: [
       {id:'sum', label:'📌 สรุปสั้น (อ่านแล้วเข้าใจทันที) — บริษัททำอะไร / อยู่ธีมอะไร / catalyst ล่าสุด'},
@@ -3051,7 +3061,8 @@ const FUND_CRITERIA = {
       {id:'n2', label:'② Theme fit: อยู่ใน theme ที่ตลาดสนใจตอนนี้ไหม'},
       {id:'n3', label:'③ Catalyst (New): สินค้าใหม่ / ผู้บริหารใหม่ / Earnings Surprise'},
       {id:'n4', label:'④ Sponsorship: กองทุนชั้นนำ / Big Tech เข้าถือเพิ่มมีนัยไหม'},
-      {id:'n5', label:'⑤ Invalidation: อะไรจะบอกว่า thesis พัง'}
+      {id:'n5', label:'⑤ Invalidation: อะไรจะบอกว่า thesis พัง'},
+      {id:'n6', label:'⑥ Dilution & Runway: share count YoY · SBC · net cash · runway · offering'}
     ]
   }
 };
@@ -3065,10 +3076,17 @@ function capGatePass(type, value){
   const cfg = FUND_CRITERIA[type]; if(!cfg || value==null || value==='' || isNaN(value)) return false;
   return Number(value) >= cfg.capGateMin;
 }
-const DEFAULT_TIER_BANDS = [[13,'S'],[10,'A'],[6,'B'],[0,'C']];
+function fundScoreMax(type){
+  const cfg = FUND_CRITERIA[type];
+  return cfg && Array.isArray(cfg.scores) ? cfg.scores.length * 3 : 15;
+}
+/* Tier bands เป็นสัดส่วน % ของคะแนนเต็ม — ปรับตาม cfg.scores.length อัตโนมัติ */
+const DEFAULT_TIER_PCT = [[0.85,'S'],[0.70,'A'],[0.55,'B'],[0,'C']];
 function tierBandsFor(type){
   const cfg = FUND_CRITERIA[type];
-  return (cfg && cfg.tierBands) ? cfg.tierBands : DEFAULT_TIER_BANDS;
+  if(cfg && cfg.tierBands) return cfg.tierBands;
+  const max = fundScoreMax(type);
+  return DEFAULT_TIER_PCT.map(([p,letter])=>[Math.ceil(p*max), letter]);
 }
 function fundTier(total, type){
   for(const [min,letter] of tierBandsFor(type)){ if(total>=min) return letter; }
@@ -3104,7 +3122,7 @@ function buildFundSummary(fc){
   const total = fc.total!=null ? fc.total : fundScoreTotal(fc);
   const tier = fc.tier || fundTier(total, fc.type);
   const biz = (fc.note && (fc.note.sum || fc.note.biz)) || '';
-  return `${tier} · ${total}/15${biz?` — ${biz}`:''}`;
+  return `${tier} · ${total}/${fundScoreMax(fc.type)}${biz?` — ${biz}`:''}`;
 }
 function fcSetType(type){
   fcState.type = type;
@@ -3256,7 +3274,7 @@ function renderFundChecklistBody(){
     const tier = fundTier(total, fcState.type);
     fcState.total = total; fcState.tier = tier;
 
-    html += `<div class="divlbl">SCORE (เต็ม 15)</div>`;
+    html += `<div class="divlbl">SCORE (เต็ม ${fundScoreMax(fcState.type)})</div>`;
     cfg.scores.forEach(s=>{
       const cur = fcState.score[s.id];
       const pend = (cur===null || cur===undefined) ? ' ' + fcTag('รอคุณให้คะแนน','var(--amber)','#111') : '';
@@ -3266,7 +3284,7 @@ function renderFundChecklistBody(){
       }).join('')}</div>${fcEvidLine(s.id)}</div>`;
     });
     const passMin = fundPassMin(fcState.type);
-    html += `<div class="hint" style="margin:4px 0 12px">รวม <b>${total}/15</b> — <span style="color:${fundTierColor(tier)};font-weight:700">Tier ${tier}</span>${total<passMin?` <span style="color:var(--red);font-weight:700">⚠ คะแนนต่ำกว่า ${passMin}</span>`:''}</div>`;
+    html += `<div class="hint" style="margin:4px 0 12px">รวม <b>${total}/${fundScoreMax(fcState.type)}</b> — <span style="color:${fundTierColor(tier)};font-weight:700">Tier ${tier}</span>${total<passMin?` <span style="color:var(--red);font-weight:700">⚠ คะแนนต่ำกว่า ${passMin}</span>`:''}</div>`;
 
     if(scoreDone){
       html += `<div class="divlbl">NOTE</div>`;
@@ -3282,7 +3300,7 @@ function renderFundChecklistBody(){
   body.innerHTML = html;
   if(status) status.innerHTML = !gatePass
     ? `<span style="color:var(--amber);font-weight:700">⚠ ยังไม่ผ่าน GATE</span>`
-    : `<span style="color:var(--teal);font-weight:700">✓ ผ่าน GATE — Tier ${fcState.tier} (${fcState.total}/15)</span>`;
+    : `<span style="color:var(--teal);font-weight:700">✓ ผ่าน GATE — Tier ${fcState.tier} (${fcState.total}/${fundScoreMax(fcState.type)})</span>`;
   fcRefreshSaveState();
 }
 function fcRefreshSaveState(){
@@ -3313,7 +3331,7 @@ function openFundChecklist(){
     port:null, type:null, editId:null,
     sym:'', date:new Date().toISOString().slice(0,10), industry:'',
     bank:false, debtFree:false, mktcap:null,
-    gate:{}, score:{}, note:{sum:'',biz:'',n2:'',n3:'',n4:'',n5:''},
+    gate:{}, score:{}, note:{sum:'',biz:'',n2:'',n3:'',n4:'',n5:'',n6:''},
     total:0, tier:null
   };
   document.getElementById('checklistTitle').textContent = 'Fundamental Checklist — คัดกรองก่อนเข้า Watchlist';
@@ -3405,7 +3423,7 @@ function openFundDetail(id){
   document.getElementById('fcDetailTitle').textContent = `${w.sym} — Fundamental Checklist`;
   const tierCap = cfg ? capTier(fc.type, fc.mktcap) : null;
   let html = `<div class="hint" style="font-size:.85rem;margin-bottom:2px">${cfg?cfg.label:''}${w.industry?` · ${escHtml(w.industry)}`:''}</div>`;
-  html += `<div class="hint" style="font-size:.85rem;margin-bottom:12px">${tierCap?`${tierCap} · `:''}Tier <b style="color:${fundTierColor(fc.tier)}">${fc.tier||'—'}</b> · ${fc.total||0}/15</div>`;
+  html += `<div class="hint" style="font-size:.85rem;margin-bottom:12px">${tierCap?`${tierCap} · `:''}Tier <b style="color:${fundTierColor(fc.tier)}">${fc.tier||'—'}</b> · ${fc.total||0}/${fundScoreMax(fc.type)}</div>`;
   if(cfg){
     const notable = cfg.scores
       .filter(s=>{
