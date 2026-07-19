@@ -3443,7 +3443,10 @@ function openFundDetail(id){
         <span class="sans" style="flex-shrink:0">${v}/3</span>
       </div>`;
     });
-    html += `<div class="divlbl">Note</div>`;
+    html += `<div class="divlbl" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span>Note</span>
+      <button type="button" class="small" id="fcCopyNoteBtn" onclick="fcCopyNotes('${w.id}')" style="text-transform:none;letter-spacing:0">📋 คัดลอกทั้งหมด</button>
+    </div>`;
     cfg.notes.forEach(n=>{
       const val = (fc.note && fc.note[n.id]) || '—';
       html += `<div class="f"><label>${n.label}</label><div style="width:100%;box-sizing:border-box;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font-family:var(--sans);font-size:.82rem;line-height:1.5;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px">${escHtml(val)}</div></div>`;
@@ -3456,6 +3459,62 @@ function openFundDetail(id){
 }
 function closeFcDetail(){
   document.getElementById('fcDetailOverlay').classList.remove('show');
+}
+/* ---- คัดลอก Note ทั้งหมด (คำถาม + คำตอบ) จากหน้า Expand ---- */
+function decodeEnt(s){
+  const t = document.createElement('textarea');
+  t.innerHTML = String(s==null?'':s);
+  return t.value;
+}
+function buildNotesText(fc, cfg, sym){
+  const lines = [];
+  lines.push(`${sym} — Fundamental Checklist (${cfg.label ? decodeEnt(cfg.label) : fc.type})`);
+  const tierCap = capTier(fc.type, fc.mktcap);
+  lines.push(`${tierCap?tierCap+' · ':''}Tier ${fc.tier||'—'} · ${fc.total||0}/${fundScoreMax(fc.type)}${fc.date?' · '+fc.date:''}`);
+  lines.push('');
+  cfg.notes.forEach(n=>{
+    const val = (fc.note && fc.note[n.id] != null ? String(fc.note[n.id]) : '').trim();
+    lines.push(decodeEnt(n.label));
+    lines.push(val || '—');
+    lines.push('');
+  });
+  return lines.join('\n').trimEnd() + '\n';
+}
+function copyTextToClipboard(text){
+  const fallback = () => {
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly','');
+      ta.style.cssText = 'position:fixed;top:0;left:-9999px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e){ return false; }
+  };
+  if(navigator.clipboard && window.isSecureContext){
+    return navigator.clipboard.writeText(text).then(()=>true).catch(()=>fallback());
+  }
+  return Promise.resolve(fallback());
+}
+function fcCopyNotes(id){
+  const w = state.watchlist.find(x=>x.id===id);
+  if(!w || !w.fundCheck) return;
+  const fc = w.fundCheck;
+  const cfg = FUND_CRITERIA[fc.type];
+  if(!cfg) return;
+  const text = buildNotesText(fc, cfg, w.sym);
+  const btn = document.getElementById('fcCopyNoteBtn');
+  Promise.resolve(copyTextToClipboard(text)).then(ok=>{
+    if(!btn) return;
+    const orig = '📋 คัดลอกทั้งหมด';
+    btn.textContent = ok ? '✓ คัดลอกแล้ว' : '✕ คัดลอกไม่สำเร็จ';
+    btn.style.color = ok ? 'var(--teal)' : 'var(--red)';
+    setTimeout(()=>{ btn.textContent = orig; btn.style.color=''; }, 1600);
+  });
 }
 
 function renderChecklistDrafts(){
