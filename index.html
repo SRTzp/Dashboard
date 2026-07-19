@@ -4059,6 +4059,32 @@ document.querySelectorAll('.overlay').forEach(o=>{
   o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); });
 });
 
+/* ---- Esc = ปิด pop-up ที่เปิดอยู่บนสุด (ทำงานแม้เคอร์เซอร์อยู่ในช่องกรอก) ---- */
+document.addEventListener('keydown', (e)=>{
+  if(e.key !== 'Escape' && e.key !== 'Esc') return;
+  if(e.isComposing || e.keyCode === 229) return;   // กำลังพิมพ์ผ่าน IME — ปล่อยให้ IME จัดการ
+
+  // 1) ปิด popover เกณฑ์คะแนนก่อน ถ้าเปิดอยู่
+  const pops = document.querySelectorAll('.scorePop.show');
+  if(pops.length){
+    pops.forEach(p=>p.classList.remove('show'));
+    e.preventDefault();
+    return;
+  }
+
+  // 2) ปิด overlay ที่เปิดอยู่ — ถ้าซ้อนกันหลายชั้น ปิดเฉพาะชั้นบนสุด
+  const open = Array.from(document.querySelectorAll('.overlay.show'));
+  if(!open.length) return;
+  const topMost = open.reduce((a,b)=>{
+    const za = parseInt(getComputedStyle(a).zIndex,10) || 0;
+    const zb = parseInt(getComputedStyle(b).zIndex,10) || 0;
+    return zb >= za ? b : a;          // z-index เท่ากัน → เอาตัวที่อยู่หลังใน DOM
+  });
+  topMost.classList.remove('show');
+  if(document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
+  e.preventDefault();
+});
+
 setAuthMode('in');
 </script><button id="scrollTopBtn" class="scrollTopBtn" onclick="scrollToTop()" title="ขึ้นบนสุด">↑</button>
 </body>
