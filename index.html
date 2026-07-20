@@ -823,7 +823,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     </div>
     <div class="frow3">
       <div class="f"><label>Core/Sat.A — Portfolio Risk Ceiling % (เช็คที่ 2xBase)</label><input type="number" step="any" inputmode="decimal" id="sTierThreshold"></div>
-      <div></div>
+      <div class="f"><label>Sat.A — RS Benchmark (gate RS Line)</label><input type="text" id="sRsBench" placeholder="NASDAQ:IXIC"></div>
       <div></div>
     </div>
     <div class="hint" style="margin-top:-6px">Sat.B: risk ต่อไม้ (Entry–SL) ต้องไม่เกิน % ของทุน Swing เอง · Core/Sat.A: เช็ค Portfolio Risk ของขนาด 2xBase (double ของ Standard) กับเพดาน — ถ้าไม่เกินเพดาน ใช้ 2xBase ได้ ถ้าเกิน บังคับลดเหลือ Standard</div>
@@ -1005,6 +1005,7 @@ const DEFAULTS = {
   fxUpdatedAt:null,
   posSize:{core:4,satA:4,satB:15},
   posTier:{threshold:0.625},
+  rsBench:'NASDAQ:IXIC',
   limits:{trade:1,port:{core:3,satA:3,satB:3},total:6}
 };
 const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
@@ -2976,7 +2977,7 @@ const FUND_CRITERIA = {
       {id:'g2', label:'Trading Value &gt; 100 ลบ./วัน'},
       {id:'g3', label:'Net Profit บวกต่อเนื่อง 3 ปี (ไม่มีปีไหนขาดทุน)'},
       {id:'g4', label:'D/E &lt; 1.5', bankSkip:true},
-      {id:'g5', label:'Price &gt; EMA200 (ตัดหุ้นขาลง — ยอมซื้อแพงกว่าติดขาลง)'},
+      {id:'g5', label:'Price &gt; EMA200 (ตัดหุ้นขาลง - ยอมซื้อแพง)'},
       {id:'cg', label:'SET CG Score ≥ 4 ดาว'}
     ],
     scores: [
@@ -3011,7 +3012,7 @@ const FUND_CRITERIA = {
       {id:'g2', label:'Trading Value &gt; $50M/วัน'},
       {id:'g3', label:'Net Profit OR FCF &gt; 0 ต่อเนื่อง 3 ปี'},
       {id:'g4', label:'Interest Coverage &gt; 5x', debtFreeSkip:true},
-      {id:'g5', label:'Price &gt; EMA200 (ตัดหุ้นขาลง — ยอมซื้อแพงกว่าติดขาลง)'}
+      {id:'g5', label:'Price &gt; EMA200 (ตัดหุ้นขาลง - ยอมซื้อแพง)'}
     ],
     scores: [
       {id:'s1', label:'ROIC', opts:['&gt;20%','12-20%','8-11.9%','&lt;8%']},
@@ -3045,7 +3046,8 @@ const FUND_CRITERIA = {
       {id:'g3', label:'Price &gt; EMA200 (Stage 2 ขาขึ้น)'},
       {id:'g4', label:'ห่างจาก 52-Week High ไม่เกิน −25%'},
       {id:'g5', label:'Gross Margin ≥ 35%'},
-      {id:'g6', label:'RS Line &gt; RS MA50 (CANSLIM indicator · benchmark NASDAQ:IXIC)'}
+      {id:'g6', label:'RS Line &gt; RS MA50 (CANSLIM - {RS_BENCH})'},
+      {id:'g7', label:'Revenue TTM YoY ≥ 20% หรือ ยอดขายเร่งขึ้น 3 ไตรมาสติด'}
     ],
     scores: [
       {id:'s1', label:'Revenue Growth (ไตรมาสล่าสุด YoY)', opts:['&gt;40%','25-40%','15-24.9%','&lt;15%']},
@@ -3076,6 +3078,15 @@ function capTier(type, value){
 function capGatePass(type, value){
   const cfg = FUND_CRITERIA[type]; if(!cfg || value==null || value==='' || isNaN(value)) return false;
   return Number(value) >= cfg.capGateMin;
+}
+/* ---- RS benchmark: ตั้งใน Settings · default NASDAQ:IXIC ---- */
+function rsBenchName(){
+  const v = state && state.settings && state.settings.rsBench;
+  return (typeof v === 'string' && v.trim()) ? v.trim() : 'NASDAQ:IXIC';
+}
+/* แทน token ใน label ของ gate — ปัจจุบันมีตัวเดียวคือ {RS_BENCH} */
+function gateLabel(lbl){
+  return String(lbl == null ? '' : lbl).replace('{RS_BENCH}', escHtml(rsBenchName()));
 }
 function fundScoreMax(type){
   const cfg = FUND_CRITERIA[type];
@@ -3236,7 +3247,7 @@ function renderFundChecklistBody(){
   if(failedGates.length){
     html += `<div class="hint" style="background:var(--surface2);border:1px solid var(--red);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:.74rem;line-height:1.55">
       <b style="color:var(--red)">✕ ตก GATE — ตัดทิ้ง</b>
-      ${failedGates.map(g=>`<div>• ${g.label}${fcEvid(g.id)?` — ${escHtml(fcEvid(g.id))}`:''}</div>`).join('')}
+      ${failedGates.map(g=>`<div>• ${gateLabel(g.label)}${fcEvid(g.id)?` — ${escHtml(fcEvid(g.id))}`:''}</div>`).join('')}
       <div style="margin-top:4px;opacity:.85">ถ้าคุณเช็คแล้วไม่เห็นด้วย ติ๊กแก้ที่ช่องนั้นได้</div>
       <div style="margin-top:6px"><button type="button" class="small" onclick="fcSaveFailLog()">บันทึกลง Fail log</button></div>
     </div>`;
@@ -3263,7 +3274,7 @@ function renderFundChecklistBody(){
     const mark = unknown ? ' ' + fcTag('รอคุณเช็ค','var(--amber)','#111')
                : isFail ? ' ' + fcTag('ตก','var(--red)') : '';
     const bd = isFail ? 'border-color:var(--red)' : unknown ? 'border-color:var(--amber)' : '';
-    html += `<label class="clItem ${checked?'on':''}" style="${bd}"><input type="checkbox" ${checked?'checked':''} onchange="fcSetGate('${g.id}',this.checked)"><span>${g.label}${mark}${fcMarkFor(g.id)}${fcEvidLine(g.id)}</span></label>`;
+    html += `<label class="clItem ${checked?'on':''}" style="${bd}"><input type="checkbox" ${checked?'checked':''} onchange="fcSetGate('${g.id}',this.checked)"><span>${gateLabel(g.label)}${mark}${fcMarkFor(g.id)}${fcEvidLine(g.id)}</span></label>`;
   });
   html += gatePass
     ? `<div class="hint" style="color:var(--teal);margin:8px 0">✓ ผ่าน GATE ครบแล้ว — กรอก Score ต่อได้</div>`
@@ -3962,6 +3973,7 @@ function openSettings(){
   document.getElementById('sPosSatB').value=ps.satB;
   const pt = s.posTier || cloneDefaults().posTier;
   document.getElementById('sTierThreshold').value = pt.threshold ?? 0.625;
+  document.getElementById('sRsBench').value = s.rsBench || 'NASDAQ:IXIC';
   updTotal();
   updFxUpdatedHint(s.fxUpdatedAt);
   document.getElementById('setOverlay').classList.add('show');
@@ -4049,7 +4061,8 @@ function saveSettings(){
     },
     posTier:{
       threshold: parseFloat(document.getElementById('sTierThreshold').value)||0.625
-    }
+    },
+    rsBench: (document.getElementById('sRsBench').value||'').trim() || 'NASDAQ:IXIC'
   };
   document.getElementById('setOverlay').classList.remove('show');
   render();
