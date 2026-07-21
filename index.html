@@ -178,6 +178,8 @@ tr:last-child td{border-bottom:none}
 .tag.submitted{background:var(--teal-dim);color:var(--teal)}
 .tag.open{background:var(--amber-dim);color:var(--amber)}
 .tag.closed{background:var(--surface2);color:var(--muted)}
+.tag.missed{background:var(--amber-dim);color:var(--amber)}
+.tag.cancelled{background:var(--surface2);color:var(--muted);text-decoration:line-through}
 .tag.win{background:var(--teal-dim);color:var(--teal)}
 .tag.loss{background:var(--red-dim);color:var(--red)}
 .riskcell.hot{color:var(--red);font-weight:600}
@@ -513,7 +515,9 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
           <th class="sortable" onclick="setSort('port')">Port <span id="sortIconPort"></span></th>
           <th>Symbol</th><th>Bias</th>
           <th>Entry</th><th>SL</th><th>TP</th><th>Qty</th>
-          <th>Risk</th><th>Risk%</th><th>R:R</th><th>Status</th><th></th><th></th>
+          <th>Risk</th><th>Risk%</th><th>R:R</th>
+          <th title="อะไรจะบอกว่าไม้นี้ผิดทาง — เขียนไว้ตอนยังไม่มีเงินอยู่ในตลาด">Invalidation</th>
+          <th>Status</th><th></th><th></th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -560,6 +564,20 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       </table>
     </div>
     <div class="cards" id="missedCards"></div>
+  </div>
+  <div class="panel" id="cancelPanel" style="display:none">
+    <div class="panel-head"><h2>Cancelled Trades <span id="cancelCount" class="hint" style="display:inline"></span></h2></div>
+    <div class="hint" style="margin:-6px 0 10px">ไม้ที่ <b>ตัดสินใจไม่เข้า</b> — ต่างจาก Missed ตรงที่ Missed คือตั้งใจเข้าแล้วไม่ทัน ส่วน Cancel คือเปลี่ยนใจเอง แท็กที่ติ๊ก "หลุดวินัย" คือตัวที่ควรจับตา</div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Port</th><th>Symbol</th><th>Bias</th>
+          <th>Entry</th><th>SL</th><th>TP</th><th>เหตุผล</th><th></th><th></th>
+        </tr></thead>
+        <tbody id="cancelTbody"></tbody>
+      </table>
+    </div>
+    <div class="cards" id="cancelCards"></div>
   </div>
 </div>
 
@@ -673,6 +691,8 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
           <option value="plan">Plan — ยังไม่เข้า</option>
           <option value="open">Open — ถืออยู่</option>
           <option value="closed">Closed — ปิดแล้ว</option>
+          <option value="missed">Missed — ไม่ได้ Order ทัน</option>
+          <option value="cancelled">Cancelled — ตัดสินใจไม่เข้า</option>
         </select>
       </div>
     </div>
@@ -685,6 +705,11 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       <div class="hint" id="posTierHint"></div>
     </div>
     <div class="hint" id="posSizeHint"></div>
+
+    <div class="f" style="margin-top:12px"><label>Invalidation — อะไรจะบอกว่าไม้นี้ผิดทาง</label>
+      <textarea id="tInvalidation" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น ปิดต่ำกว่า EMA50 รายวัน, volume แห้งติดกัน 3 วัน, งบ Q ถัดไปรายได้โตต่ำกว่า 20%"></textarea>
+      <div class="hint">เขียนตอนนี้ ตอนที่ยังไม่มีเงินอยู่ในตลาดและยังคิดตรง — ไม่ใช่ตอนที่ราคาลงแล้วกำลังหาเหตุผลถือต่อ</div>
+    </div>
 
     <div class="f" style="margin-top:12px"><label>รูปภาพ Chart (ลิงก์ Google Drive, ถ้ามี)</label>
       <input type="url" id="tImageUrl" placeholder="https://drive.google.com/file/d/.../view" oninput="updateImagePreview()">
@@ -722,7 +747,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       <div class="f"><label>เหตุผลที่ออก</label>
         <div style="display:flex;gap:8px;align-items:center">
           <select id="tExitReason" style="flex:1"></select>
-          <button type="button" class="small" onclick="openExitReasonManager()" title="เพิ่ม/แก้ไขแท็กเหตุผล" style="flex-shrink:0">⚙</button>
+          <button type="button" class="small" onclick="openReasonManager('exit')" title="เพิ่ม/แก้ไขแท็กเหตุผล" style="flex-shrink:0">⚙</button>
         </div></div>
       <div class="f"><label>บันทึกเพิ่ม (ถ้ามี)</label><textarea id="tExitNote" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น ออกเร็วไป 2 วัน ถ้าถือตามแผนได้ 2.4R, SL ตั้งชิดเกินโดนกวาด..."></textarea></div>
     </div>
@@ -984,21 +1009,43 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   </div>
 </div>
 
-<!-- ===== Exit Reason Manager modal ===== -->
-<div class="overlay" id="exitReasonOverlay">
+<!-- ===== Reason Tag Manager modal (ใช้ร่วม exit / cancel / missed) ===== -->
+<div class="overlay" id="reasonMgrOverlay">
   <div class="modal">
-    <h3>แท็กเหตุผลที่ออก</h3>
-    <div class="hint" style="margin-top:-8px;margin-bottom:12px">ติ๊ก <b>หลุดแผน</b> ให้แท็กที่แปลว่าคุณไม่ได้ออกตามแผน — แท็กพวกนี้จะขึ้นสีแดงในตาราง Journal ให้เห็นแพตเทิร์นตัวเองง่าย<br>เปลี่ยนชื่อแท็กได้ตลอด ไม้เก่าจะอัปเดตตามทันที · ลบแท็กแล้วไม้เก่ายังเก็บชื่อเดิมไว้ ไม่หาย</div>
+    <h3 id="reasonMgrTitle">แท็กเหตุผล</h3>
+    <div class="hint" id="reasonMgrHint" style="margin-top:-8px;margin-bottom:12px"></div>
     <div class="frow" style="gap:8px;align-items:flex-end">
-      <div class="f" style="flex:1"><label>แท็กใหม่</label><input type="text" id="newExitReason" placeholder="เช่น ปรับพอร์ต, ต้องใช้เงิน"></div>
+      <div class="f" style="flex:1"><label>แท็กใหม่</label><input type="text" id="newReasonTag" placeholder="เช่น ปรับพอร์ต, ต้องใช้เงิน"></div>
       <label style="display:flex;align-items:center;gap:5px;flex-shrink:0;padding-bottom:9px;font-size:.8rem;color:var(--muted)">
-        <input type="checkbox" id="newExitReasonOff" style="width:auto"> หลุดแผน</label>
-      <button class="primary" style="flex-shrink:0;margin-bottom:2px" onclick="addExitReason()">เพิ่ม</button>
+        <input type="checkbox" id="newReasonOff" style="width:auto"> <span id="newReasonOffLabel">หลุดแผน</span></label>
+      <button class="primary" style="flex-shrink:0;margin-bottom:2px" onclick="addReasonTag()">เพิ่ม</button>
     </div>
-    <div id="exitReasonList" style="margin-top:14px;display:flex;flex-direction:column;gap:6px"></div>
+    <div id="reasonMgrList" style="margin-top:14px;display:flex;flex-direction:column;gap:6px"></div>
     <div class="btns" style="justify-content:space-between">
-      <button onclick="resetExitReasons()">ค่าเริ่มต้น</button>
-      <button onclick="document.getElementById('exitReasonOverlay').classList.remove('show')">ปิด</button>
+      <button onclick="resetReasonTags()">ค่าเริ่มต้น</button>
+      <button onclick="document.getElementById('reasonMgrOverlay').classList.remove('show')">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Cancel Trade modal ===== -->
+<div class="overlay" id="cancelOverlay">
+  <div class="modal">
+    <h3 id="cancelTitle">ยกเลิกแผนเทรด</h3>
+    <div class="hint" id="cancelSymHint" style="margin-top:-8px;margin-bottom:12px"></div>
+    <div class="f"><label>เหตุผลที่ยกเลิก</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="cancelTag" style="flex:1"></select>
+        <button type="button" class="small" onclick="openReasonManager('cancel')" title="เพิ่ม/แก้ไขแท็ก" style="flex-shrink:0">⚙</button>
+      </div></div>
+    <div class="f"><label>บันทึกเพิ่ม (ถ้ามี)</label><textarea id="cancelNote" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น รอ breakout แต่แท่งปิดต่ำกว่าแนวรับ setup เสียแล้ว"></textarea></div>
+    <div class="f"><label>รูปภาพ Chart (ลิงก์ Google Drive, ถ้ามี)</label>
+      <input type="url" id="cancelImageUrl" placeholder="https://drive.google.com/file/d/.../view" oninput="updateCancelImagePreview()">
+      <div class="hint" id="cancelImgHint"></div>
+    </div>
+    <div class="btns">
+      <button onclick="document.getElementById('cancelOverlay').classList.remove('show')">ปิด</button>
+      <button class="danger" id="cancelSaveBtn" onclick="confirmCancel()">บันทึก Cancel</button>
     </div>
   </div>
 </div>
@@ -1006,16 +1053,21 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 <!-- ===== Missed Trade modal ===== -->
 <div class="overlay" id="missedOverlay">
   <div class="modal">
-    <h3>บันทึกเป็น Missed Trade</h3>
+    <h3 id="missedTitle">บันทึกเป็น Missed Trade</h3>
     <div class="hint" id="missedSymHint" style="margin-top:-8px;margin-bottom:12px"></div>
-    <div class="f"><label>เหตุผลที่ไม่ได้ Order ตามแผน</label><textarea id="missedReason" rows="3" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น ราคาวิ่งเร็วไม่ทัน Entry, เปลี่ยนใจเพราะข่าว, ลืม..."></textarea></div>
+    <div class="f"><label>เหตุผลที่ไม่ได้ Order ตามแผน</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="missedTag" style="flex:1"></select>
+        <button type="button" class="small" onclick="openReasonManager('missed')" title="เพิ่ม/แก้ไขแท็ก" style="flex-shrink:0">⚙</button>
+      </div></div>
+    <div class="f"><label>บันทึกเพิ่ม (ถ้ามี)</label><textarea id="missedReason" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น ตั้ง limit ต่ำไป 0.5% ราคาแตะไม่ถึงแล้ววิ่งขึ้น"></textarea></div>
     <div class="f"><label>รูปภาพ Chart (ลิงก์ Google Drive, ถ้ามี)</label>
       <input type="url" id="missedImageUrl" placeholder="https://drive.google.com/file/d/.../view" oninput="updateMissedImagePreview()">
       <div class="hint" id="missedImgHint"></div>
     </div>
     <div class="btns">
-      <button onclick="document.getElementById('missedOverlay').classList.remove('show')">ยกเลิก</button>
-      <button class="danger" onclick="confirmMissed()">บันทึก Missed Trade</button>
+      <button onclick="document.getElementById('missedOverlay').classList.remove('show')">ปิด</button>
+      <button class="danger" id="missedSaveBtn" onclick="confirmMissed()">บันทึก Missed Trade</button>
     </div>
   </div>
 </div>
@@ -1059,33 +1111,87 @@ const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
 const defaultWatchSortMode = () => ({core:'date',satA:'date',satB:'date'});
 const DEFAULT_FONT_SIZES = {wl:0.84, plan:0.8, closed:0.8};
 const DEFAULT_TABS_OFFSET = 0;
-/* ── แท็ก "เหตุผลที่ออก" ของ Closed Trade — ผู้ใช้แก้เองได้ที่ ⚙ ข้างช่องเลือก ──
-   id  = คีย์ถาวรที่ trade เก็บไว้ ห้ามเปลี่ยน (เปลี่ยนแล้วไม้เก่าจะกำพร้า)
-   label = ข้อความที่โชว์ แก้ได้ตลอด ไม้เก่าจะอัปเดตตามทันที
-   offPlan = true → นับเป็น "หลุดแผน" ขึ้นแท็กสีแดงในตาราง Journal
-   ตอนบันทึก trade จะ snapshot label ไว้ที่ exitReasonLabel ด้วย
-   เผื่อผู้ใช้ลบแท็กทิ้งทีหลัง ไม้เก่าจะยังอ่านออกว่าตอนนั้นหมายถึงอะไร */
-const DEFAULT_EXIT_REASONS = [
-  {id:'tp',      label:'ชน TP ตามแผน',        offPlan:false},
-  {id:'sl',      label:'ชน SL ตามแผน',        offPlan:false},
-  {id:'trail',   label:'Trailing / ล็อกกำไร', offPlan:false},
-  {id:'partial', label:'ทยอยออก',             offPlan:false},
-  {id:'early',   label:'ออกก่อนแผน',          offPlan:true },
-  {id:'thesis',  label:'Thesis เปลี่ยน/ผิด',  offPlan:true },
-  {id:'time',    label:'ตัดเวลาทิ้ง',         offPlan:false},
-  {id:'risk',    label:'ลดความเสี่ยง',        offPlan:true },
-  {id:'other',   label:'อื่น ๆ',              offPlan:false}
-];
-function cloneExitReasons(){ return DEFAULT_EXIT_REASONS.map(r=>({...r})); }
-/* กันพัง: state เก่าที่บันทึกไว้ก่อนมีฟีเจอร์นี้จะไม่มี exitReasons */
-function ensureExitReasons(){
-  if(!state) return [];
-  if(!Array.isArray(state.exitReasons) || !state.exitReasons.length) state.exitReasons = cloneExitReasons();
-  return state.exitReasons;
+/* ══════════ ระบบแท็กเหตุผล — ใช้ร่วมกัน 3 จุด: Closed / Cancelled / Missed ══════════
+   id      = คีย์ถาวรที่ trade เก็บไว้ ห้ามเปลี่ยน (เปลี่ยนแล้วไม้เก่าจะกำพร้า)
+   label   = ข้อความที่โชว์ แก้ได้ตลอด ไม้เก่าอัปเดตตามทันที
+   offPlan = ธงว่า "เป็นความผิดเรา ไม่ใช่ตลาด" → ขึ้นแท็กสีแดงใน Journal
+             ความหมายต่างกันตาม kind ดู REASON_KINDS[kind].offLabel
+   ตอนบันทึกจะ snapshot label ติดไปกับ trade ด้วย เผื่อผู้ใช้ลบแท็กทิ้งทีหลัง
+   ไม้เก่าจะยังอ่านออกว่าตอนนั้นหมายถึงอะไร                                        */
+const REASON_KINDS = {
+  exit:   {title:'แท็กเหตุผลที่ออก',       offLabel:'หลุดแผน', field:'exitReason',   labelField:'exitReasonLabel',   noteField:'exitNote',
+           offHint:'ติ๊กให้แท็กที่แปลว่าคุณไม่ได้ออกตามแผน'},
+  cancel: {title:'แท็กเหตุผลที่ยกเลิก',    offLabel:'หลุดวินัย', field:'cancelTag',   labelField:'cancelTagLabel',    noteField:'cancelNote',
+           offHint:'ติ๊กให้แท็กที่แปลว่ายกเลิกเพราะตัวเอง ไม่ใช่เพราะเงื่อนไขตลาดเปลี่ยนจริง'},
+  missed: {title:'แท็กเหตุผลที่พลาด',      offLabel:'พลาดเอง',  field:'missedTag',   labelField:'missedTagLabel',    noteField:'missedReason',
+           offHint:'ติ๊กให้แท็กที่แปลว่าพลาดเพราะตัวเอง (ลังเล/ลืม) ไม่ใช่เพราะราคาวิ่งหนีจริง ๆ'}
+};
+const DEFAULT_REASON_TAGS = {
+  exit: [
+    {id:'tp',      label:'ชน TP ตามแผน',        offPlan:false},
+    {id:'sl',      label:'ชน SL ตามแผน',        offPlan:false},
+    {id:'trail',   label:'Trailing / ล็อกกำไร', offPlan:false},
+    {id:'partial', label:'ทยอยออก',             offPlan:false},
+    {id:'early',   label:'ออกก่อนแผน',          offPlan:true },
+    {id:'thesis',  label:'Thesis เปลี่ยน/ผิด',  offPlan:true },
+    {id:'time',    label:'ตัดเวลาทิ้ง',         offPlan:false},
+    {id:'risk',    label:'ลดความเสี่ยง',        offPlan:true },
+    {id:'other',   label:'อื่น ๆ',              offPlan:false}
+  ],
+  cancel: [
+    {id:'setupgone', label:'Setup เสียก่อนเข้า',      offPlan:false},
+    {id:'ranaway',   label:'ราคาวิ่งหนีไปแล้ว',       offPlan:false},
+    {id:'better',    label:'มีไม้ที่ดีกว่า',          offPlan:false},
+    {id:'market',    label:'สภาพตลาดเปลี่ยน',         offPlan:false},
+    {id:'riskfull',  label:'Risk เต็มแล้ว',           offPlan:false},
+    {id:'mind',      label:'เปลี่ยนใจเฉย ๆ',          offPlan:true },
+    {id:'fear',      label:'กลัว / ไม่กล้าเข้า',      offPlan:true },
+    {id:'cother',    label:'อื่น ๆ',                  offPlan:false}
+  ],
+  missed: [
+    {id:'toofast',  label:'ราคาวิ่งเร็วไม่ทัน Entry', offPlan:false},
+    {id:'nowatch',  label:'ไม่ได้เฝ้าจอ',             offPlan:false},
+    {id:'nofill',   label:'ตั้ง order ไม่ติด',        offPlan:false},
+    {id:'hesitate', label:'ลังเล / ไม่กล้ากด',        offPlan:true },
+    {id:'forgot',   label:'ลืม',                      offPlan:true },
+    {id:'news',     label:'เปลี่ยนใจเพราะข่าว',       offPlan:true },
+    {id:'mother',   label:'อื่น ๆ',                   offPlan:false}
+  ]
+};
+function cloneReasonTags(kind){ return DEFAULT_REASON_TAGS[kind].map(r=>({...r})); }
+function cloneAllReasonTags(){
+  const o = {}; Object.keys(DEFAULT_REASON_TAGS).forEach(k=>o[k]=cloneReasonTags(k)); return o;
 }
-function exitReasonById(id){
+/* กันพัง + ย้ายข้อมูลเก่า: เวอร์ชันก่อนเก็บไว้ที่ state.exitReasons (แบน ไม่มี kind) */
+function ensureReasonTags(kind){
+  if(!state) return [];
+  if(!state.reasonTags || typeof state.reasonTags !== 'object') state.reasonTags = {};
+  if(Array.isArray(state.exitReasons) && state.exitReasons.length && !state.reasonTags.exit){
+    state.reasonTags.exit = state.exitReasons;   /* migrate ของเดิมมา ไม่ทิ้ง */
+  }
+  Object.keys(DEFAULT_REASON_TAGS).forEach(k=>{
+    if(!Array.isArray(state.reasonTags[k]) || !state.reasonTags[k].length) state.reasonTags[k] = cloneReasonTags(k);
+  });
+  return kind ? state.reasonTags[kind] : state.reasonTags;
+}
+function reasonTagById(kind, id){
   if(!id) return null;
-  return (Array.isArray(state && state.exitReasons) ? state.exitReasons : DEFAULT_EXIT_REASONS).find(r=>r.id===id) || null;
+  const list = (state && state.reasonTags && Array.isArray(state.reasonTags[kind])) ? state.reasonTags[kind] : DEFAULT_REASON_TAGS[kind];
+  return list.find(r=>r.id===id) || null;
+}
+/* คืน {label, offPlan, missing} สำหรับแสดงผล — ชื่อปัจจุบันมาก่อน snapshot เป็นตัวสำรอง */
+function reasonDisplay(kind, t){
+  const K = REASON_KINDS[kind];
+  const id = t[K.field];
+  if(!id) return null;
+  const meta = reasonTagById(kind, id);
+  return meta ? {label:meta.label, offPlan:!!meta.offPlan, missing:false}
+              : {label: t[K.labelField] || id, offPlan:false, missing:true};
+}
+function reasonTagHtml(kind, t){
+  const d = reasonDisplay(kind, t);
+  if(!d) return '';
+  return `<span class="tag${d.offPlan?' loss':''}"${d.missing?' title="แท็กนี้ถูกลบไปแล้ว"':''}>${escHtml(d.label)}${d.missing?' ·':''}</span>`;
 }
 const DEFAULT_SCORE_CRITERIA = 'ตัวอย่าง (แก้ไขเป็นเกณฑ์ของคุณเองได้):\n★★★ = Setup สมบูรณ์แบบ ตรงทุกเงื่อนไข มั่นใจสูง\n★★ = ดี ใช้ได้ แต่มีจุดต้องระวัง\n★ = อ่อน ยังไม่มั่นใจ แต่อยากติดตามไว้';
 
@@ -1181,9 +1287,10 @@ function startListening(){
       state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
         watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
         fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[], watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAULT_TABS_OFFSET,
-        exitReasons: Array.isArray(d.exitReasons)&&d.exitReasons.length ? d.exitReasons : cloneExitReasons()};
+        exitReasons: Array.isArray(d.exitReasons) ? d.exitReasons : null,   /* เก็บไว้ให้ ensureReasonTags ย้ายเข้า reasonTags.exit */
+        reasonTags: (d.reasonTags && typeof d.reasonTags==='object') ? d.reasonTags : null};
     } else {
-      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, exitReasons:cloneExitReasons()};
+      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags()};
     }
     if(ensureSatBDefaults()) schedulePersist();
     document.getElementById('loadingScreen').style.display='none';
@@ -1231,7 +1338,7 @@ function setSyncBadge(st){
 }
 function resetAll(){
   if(!confirm('ล้างข้อมูลทั้งหมด (Trades + การตั้งค่า) ทุกอุปกรณ์? ทำย้อนกลับไม่ได้')) return;
-  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, exitReasons:cloneExitReasons()};
+  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags()};
   ensureSatBDefaults();
   document.getElementById('setOverlay').classList.remove('show');
   render();
@@ -1499,8 +1606,8 @@ function render(){
   document.getElementById('filters').innerHTML = fdefs.map(([k,l])=>
     `<span class="chip ${filter===k?'on':''}" onclick="setFilter('${k}')">${l}</span>`).join('');
 
-  /* เฉพาะ Plan/Open — Closed/Missed ย้ายไปแท็บ Journal อัตโนมัติ */
-  let rows = state.trades.filter(t=>t.status!=='closed' && t.status!=='missed').slice().sort((a,b)=>{
+  /* เฉพาะ Plan/Open — Closed/Missed/Cancelled ย้ายไปแท็บ Journal อัตโนมัติ */
+  let rows = state.trades.filter(t=>t.status!=='closed' && t.status!=='missed' && t.status!=='cancelled').slice().sort((a,b)=>{
     let av, bv;
     if(sortKey==='port'){ av = PORTS[a.port] ? PORTS[a.port].name : a.port; bv = PORTS[b.port] ? PORTS[b.port].name : b.port; }
     else { av = a.date||''; bv = b.date||''; }
@@ -1550,12 +1657,14 @@ function render(){
       <td class="riskcell ${hot?'hot':''}">${symC}${fmt0(risk)}</td>
       <td class="riskcell ${hot?'hot':''}">${fmt2(rPctPort)}%${hot?' ⚠':''}</td>
       <td class="${rr===null?'':rr>=2?'rr-good':rr<1.5?'rr-bad':''}">${rr===null?'—':fmt2(rr)}</td>
+      <td class="sans" style="max-width:200px;white-space:normal;font-size:var(--plan-size)">${t.invalidation ? escHtml(t.invalidation) : `<span style="color:var(--muted)" title="ยังไม่ได้เขียน — กด ✎ เพิ่มได้">—</span>`}</td>
       <td class="sans"><span class="tag ${(t.status==='plan'&&t.submitted)?'submitted':t.status}" ${t.status==='plan'?`onclick="toggleSubmitted('${t.id}')" style="cursor:pointer" title="กดเพื่อสลับ Plan/Submit"`:''}>${(t.status==='plan'&&t.submitted)?'SUBMIT':t.status.toUpperCase()}</span></td>
       <td class="sans">${t.imageUrl ? (imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')" title="เปิดรูป">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 รูป</a>`) : ''}</td>
       <td class="sans"><div class="rowbtns">
         ${t.status==='plan'?`<button class="small" onclick="quickOpen('${t.id}')">→Open</button>`:''}
-        ${t.status==='plan'?`<button class="small" onclick="openMissedModal('${t.id}')" title="ไม่ได้ Order ตามแผน">Missed</button>`:''}
-        ${t.status==='open'?`<button class="small" onclick="openClosePos('${t.id}')">Close</button>`:''}
+        ${t.status==='open'?`<button class="small" onclick="openClosePos('${t.id}')" title="ปิดไม้ที่ถืออยู่">Close</button>`:''}
+        ${t.status==='plan'?`<button class="small" onclick="openMissedModal('${t.id}')" title="ตั้งใจเข้า แต่ไม่ได้ Order ทัน">Missed</button>`:''}
+        <button class="small" onclick="openCancelModal('${t.id}')" title="ตัดสินใจไม่เข้าไม้นี้แล้ว">Cancel</button>
         <button class="small" onclick="editTrade('${t.id}')">✎</button>
         <button class="small danger" onclick="delTrade('${t.id}')">✕</button>
       </div></td>
@@ -1585,7 +1694,7 @@ function render(){
     const holdPctPort = capTH>0 ? holdValueTHB/capTH*100 : 0;
     const holdWarn = holdPctPort > 16;
     const portName = port==='core'?'Core':port==='satA'?'Sat.A':'Sat.B';
-    const header = `<tr class="grouprow gbox gbox-first" style="--gcolor:${gcolor}"><td colspan="14" style="background:${hexToRgba(portColor,0.1)}"><div class="ghead">
+    const header = `<tr class="grouprow gbox gbox-first" style="--gcolor:${gcolor}"><td colspan="15" style="background:${hexToRgba(portColor,0.1)}"><div class="ghead">
       <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${portColor};flex-shrink:0"></span>
       <span class="gsym">${symG}</span>
       <span class="gmeta">${portName}</span>
@@ -1622,12 +1731,14 @@ function render(){
         <div><span class="k">💸 Risk</span><span class="${hot?'riskcell hot':''}">${symC}${fmt0(risk)}</span></div>
         <div><span class="k">⚠️ Risk%</span><span class="${hot?'riskcell hot':''}">${fmt2(rPctPort)}%${hot?' ⚠':''}</span></div>
       </div>
+      ${t.invalidation ? `<div style="margin-top:8px;font-size:var(--plan-size);border-left:2px solid var(--border);padding-left:8px"><span style="color:var(--muted)">Invalidation · </span>${escHtml(t.invalidation)}</div>` : ''}
       ${t.imageUrl ? `<div style="margin-top:8px">${imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 เปิดรูป</a>`}</div>` : ''}
       <div class="foot">
         <div class="rowbtns">
           ${t.status==='plan'?`<button class="small" onclick="quickOpen('${t.id}')">→ Open</button>`:''}
-          ${t.status==='plan'?`<button class="small" onclick="openMissedModal('${t.id}')">Missed</button>`:''}
           ${t.status==='open'?`<button class="small" onclick="openClosePos('${t.id}')">Close</button>`:''}
+          ${t.status==='plan'?`<button class="small" onclick="openMissedModal('${t.id}')">Missed</button>`:''}
+          <button class="small" onclick="openCancelModal('${t.id}')">Cancel</button>
         </div>
         <div class="rowbtns">
           <button class="small" onclick="editTrade('${t.id}')">แก้ไข</button>
@@ -1741,12 +1852,7 @@ function renderJournal(){
   }
   function jReasonCell(t){
     if(!t.exitReason && !t.exitNote) return `<span style="color:var(--muted)">—</span>`;
-    /* ชื่อปัจจุบันมาก่อน → เปลี่ยนชื่อแท็กแล้วไม้เก่าอัปเดตตาม
-       ถ้าแท็กถูกลบไปแล้ว ตกไปใช้ snapshot ที่เก็บไว้ตอนบันทึก */
-    const meta = exitReasonById(t.exitReason);
-    const lbl = meta ? meta.label : (t.exitReasonLabel || '');
-    const off = meta ? meta.offPlan : false;
-    const tag = lbl ? `<span class="tag${off?' loss':''}"${meta?'':' title="แท็กนี้ถูกลบไปแล้ว"'}>${escHtml(lbl)}${meta?'':' ·'}</span>` : '';
+    const tag = reasonTagHtml('exit', t);
     const note = t.exitNote ? `<div style="color:var(--muted);white-space:normal;margin-top:3px">${escHtml(t.exitNote)}</div>` : '';
     return tag + note;
   }
@@ -1837,42 +1943,61 @@ function renderJournal(){
     </div>`;
   }).join('') : `<div class="empty">ยังไม่มีรายการที่ปิดไม้ — พอกด Closed ในแท็บแผนเทรด รายการจะมาโผล่ที่นี่</div>`;
 
-  const missed = state.trades.filter(t=>t.status==='missed').slice().sort((a,b)=>(b.missedDate||'').localeCompare(a.missedDate||''));
-  const missedPanel = document.getElementById('missedPanel');
-  missedPanel.style.display = missed.length ? 'block' : 'none';
-  document.getElementById('missedCount').textContent = missed.length ? `(${missed.length})` : '';
-  document.getElementById('missedTbody').innerHTML = missed.map(t=>{
-    const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
-    return `<tr>
-      <td>${t.missedDate||'—'}</td>
-      <td class="sans"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PORTS[t.port].color};margin-right:5px"></span>${t.port==='core'?'Core':t.port==='satA'?'Sat.A':'Sat.B'}</td>
-      <td style="font-weight:600">${t.sym}</td>
-      <td class="sans"><span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span></td>
-      <td>${fmt2(t.entry)}</td><td>${fmt2(t.sl)}</td><td>${t.tp?fmt2(t.tp):'—'}</td>
-      <td style="max-width:260px;white-space:normal;font-family:var(--sans);font-size:var(--closed-size)">${escHtml(t.missedReason||'')}</td>
-      <td class="sans">${t.imageUrl ? (imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')" title="เปิดรูป">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 รูป</a>`) : ''}</td>
-      <td class="sans"><div class="rowbtns">
-        <button class="small" onclick="restoreMissed('${t.id}')" title="ย้ายกลับไป Plan">↩ Restore</button>
-        <button class="small danger" onclick="delTrade('${t.id}')">✕</button>
-      </div></td>
-    </tr>`;
-  }).join('');
-  document.getElementById('missedCards').innerHTML = missed.map(t=>{
-    const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
-    return `<div class="tcard">
-      <div class="r1"><span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span></span><span class="sub">${t.missedDate||''}</span></div>
-      <div class="sub" style="margin-bottom:6px">${PORTS[t.port].name} · Entry ${fmt2(t.entry)} / SL ${fmt2(t.sl)}</div>
-      <div style="font-size:var(--closed-size);margin-bottom:8px">${escHtml(t.missedReason||'')}</div>
-      ${t.imageUrl ? `<div style="margin-bottom:8px">${imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 เปิดรูป</a>`}</div>` : ''}
-      <div class="foot">
-        <div></div>
-        <div class="rowbtns">
-          <button class="small" onclick="restoreMissed('${t.id}')">↩ Restore</button>
-          <button class="small danger" onclick="delTrade('${t.id}')">ลบ</button>
+  /* ── Missed & Cancelled ใช้โครงเดียวกันเป๊ะ ต่างแค่ kind / ฟิลด์วันที่ / ปุ่มแก้ไข ──
+     เขียนเป็นตัวเดียวแล้วเรียกสองรอบ ดีกว่าก๊อปโค้ด 60 บรรทัดไว้สองที่แล้วลืมแก้ที่ใดที่หนึ่ง */
+  function renderPlanlessPanel(cfg){
+    const list = state.trades.filter(t=>t.status===cfg.status).slice()
+      .sort((a,b)=>(b[cfg.dateField]||'').localeCompare(a[cfg.dateField]||''));
+    const panel = document.getElementById(cfg.panelId);
+    panel.style.display = list.length ? 'block' : 'none';
+    document.getElementById(cfg.countId).textContent = list.length ? `(${list.length})` : '';
+    const reasonHtml = t => {
+      const tag = reasonTagHtml(cfg.kind, t);
+      const note = t[REASON_KINDS[cfg.kind].noteField];
+      return (tag || '') + (note ? `<div style="color:var(--muted);white-space:normal;margin-top:3px">${escHtml(note)}</div>` : '')
+             || `<span style="color:var(--muted)">—</span>`;
+    };
+    document.getElementById(cfg.tbodyId).innerHTML = list.map(t=>{
+      const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
+      return `<tr>
+        <td>${t[cfg.dateField]||'—'}</td>
+        <td class="sans"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PORTS[t.port].color};margin-right:5px"></span>${t.port==='core'?'Core':t.port==='satA'?'Sat.A':'Sat.B'}</td>
+        <td style="font-weight:600">${t.sym}</td>
+        <td class="sans"><span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span></td>
+        <td>${fmt2(t.entry)}</td><td>${fmt2(t.sl)}</td><td>${t.tp?fmt2(t.tp):'—'}</td>
+        <td class="sans" style="max-width:260px;white-space:normal;font-size:var(--closed-size)">${reasonHtml(t)}</td>
+        <td class="sans">${t.imageUrl ? (imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')" title="เปิดรูป">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 รูป</a>`) : ''}</td>
+        <td class="sans"><div class="rowbtns">
+          <button class="small" onclick="${cfg.editFn}('${t.id}')" title="แก้ไขเหตุผล / รูป">✎</button>
+          <button class="small" onclick="${cfg.restoreFn}('${t.id}')" title="ย้ายกลับไป Plan">↩</button>
+          <button class="small danger" onclick="delTrade('${t.id}')">✕</button>
+        </div></td>
+      </tr>`;
+    }).join('');
+    document.getElementById(cfg.cardsId).innerHTML = list.map(t=>{
+      const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
+      return `<div class="tcard">
+        <div class="r1"><span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span></span><span class="sub">${t[cfg.dateField]||''}</span></div>
+        <div class="sub" style="margin-bottom:6px">${PORTS[t.port].name} · Entry ${fmt2(t.entry)} / SL ${fmt2(t.sl)}</div>
+        <div style="font-size:var(--closed-size);margin-bottom:8px">${reasonHtml(t)}</div>
+        ${t.imageUrl ? `<div style="margin-bottom:8px">${imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 เปิดรูป</a>`}</div>` : ''}
+        <div class="foot">
+          <div></div>
+          <div class="rowbtns">
+            <button class="small" onclick="${cfg.editFn}('${t.id}')">แก้ไข</button>
+            <button class="small" onclick="${cfg.restoreFn}('${t.id}')">↩ Restore</button>
+            <button class="small danger" onclick="delTrade('${t.id}')">ลบ</button>
+          </div>
         </div>
-      </div>
-    </div>`;
-  }).join('');
+      </div>`;
+    }).join('');
+  }
+  renderPlanlessPanel({status:'missed', kind:'missed', dateField:'missedDate',
+    panelId:'missedPanel', countId:'missedCount', tbodyId:'missedTbody', cardsId:'missedCards',
+    editFn:'openMissedModal', restoreFn:'restoreMissed'});
+  renderPlanlessPanel({status:'cancelled', kind:'cancel', dateField:'cancelDate',
+    panelId:'cancelPanel', countId:'cancelCount', tbodyId:'cancelTbody', cardsId:'cancelCards',
+    editFn:'openCancelModal', restoreFn:'restoreCancelled'});
 }
 
 /* ================= Watchlist ================= */
@@ -2675,95 +2800,108 @@ function deleteIndustry(name){
   schedulePersist();
 }
 
-/* ================= Exit Reason tags (ผู้ใช้แก้เองได้) ================= */
-function populateExitReasonSelect(selected){
-  const sel = document.getElementById('tExitReason');
+/* ================= Reason tags — ตัวจัดการกลาง ใช้ได้ทั้ง exit / cancel / missed ================= */
+/* select แต่ละ kind ผูกกับ element id ของตัวเอง */
+const REASON_SELECT_ID = {exit:'tExitReason', cancel:'cancelTag', missed:'missedTag'};
+let reasonMgrKind = 'exit';
+
+function populateReasonSelect(kind, selected, tradeForFallback){
+  const sel = document.getElementById(REASON_SELECT_ID[kind]);
   if(!sel) return;
-  const list = ensureExitReasons();
+  const list = ensureReasonTags(kind);
   let html = '<option value="">— เลือก —</option>';
   html += list.map(r=>`<option value="${escHtml(r.id)}">${escHtml(r.label)}${r.offPlan?' ⚠':''}</option>`).join('');
   /* ไม้เก่าที่อ้างแท็กซึ่งถูกลบไปแล้ว — ใส่ option ชั่วคราวให้ ไม่งั้น select จะเด้งเป็นค่าว่าง
      แล้วพอกดบันทึกอีกที เหตุผลเดิมจะหายไปเงียบ ๆ โดยที่ผู้ใช้ไม่ได้ตั้งใจลบ */
   if(selected && !list.some(r=>r.id===selected)){
-    const t = editId ? state.trades.find(x=>x.id===editId) : null;
-    const lbl = (t && t.exitReasonLabel) || selected;
+    const lbl = (tradeForFallback && tradeForFallback[REASON_KINDS[kind].labelField]) || selected;
     html += `<option value="${escHtml(selected)}">${escHtml(lbl)} (แท็กถูกลบแล้ว)</option>`;
   }
   sel.innerHTML = html;
   sel.value = selected || '';
 }
-function openExitReasonManager(){
-  ensureExitReasons();
-  document.getElementById('newExitReason').value = '';
-  document.getElementById('newExitReasonOff').checked = false;
-  renderExitReasonList();
-  document.getElementById('exitReasonOverlay').classList.add('show');
+function currentReasonSel(kind){
+  const el = document.getElementById(REASON_SELECT_ID[kind]);
+  return el ? el.value : '';
 }
-function renderExitReasonList(){
-  const box = document.getElementById('exitReasonList');
-  const list = ensureExitReasons();
-  const used = id => state.trades.filter(t=>t.exitReason===id).length;
-  box.innerHTML = list.length ? list.map((r,i)=>{
-    const n = used(r.id);
-    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--surface2);border-radius:8px">
+function openReasonManager(kind){
+  reasonMgrKind = kind;
+  ensureReasonTags();
+  const K = REASON_KINDS[kind];
+  document.getElementById('reasonMgrTitle').textContent = K.title;
+  document.getElementById('reasonMgrHint').innerHTML =
+    `${K.offHint} — แท็กที่ติ๊ก <b>${K.offLabel}</b> จะขึ้นสีแดงใน Journal ให้เห็นแพตเทิร์นตัวเองง่าย<br>` +
+    `เปลี่ยนชื่อแท็กได้ตลอด ไม้เก่าจะอัปเดตตามทันที · ลบแท็กแล้วไม้เก่ายังเก็บชื่อเดิมไว้ ไม่หาย`;
+  document.getElementById('newReasonOffLabel').textContent = K.offLabel;
+  document.getElementById('newReasonTag').value = '';
+  document.getElementById('newReasonOff').checked = false;
+  renderReasonList();
+  document.getElementById('reasonMgrOverlay').classList.add('show');
+}
+function reasonUsedCount(kind, id){
+  const f = REASON_KINDS[kind].field;
+  return state.trades.filter(t=>t[f]===id).length;
+}
+function renderReasonList(){
+  const kind = reasonMgrKind, K = REASON_KINDS[kind];
+  const box = document.getElementById('reasonMgrList');
+  const list = ensureReasonTags(kind);
+  box.innerHTML = list.length ? list.map((r,i)=>`
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--surface2);border-radius:8px">
       <div style="display:flex;flex-direction:column;gap:1px;flex-shrink:0">
-        <button class="small" style="padding:0 5px;line-height:1.1" ${i===0?'disabled':''} onclick="moveExitReason(${i},-1)">▲</button>
-        <button class="small" style="padding:0 5px;line-height:1.1" ${i===list.length-1?'disabled':''} onclick="moveExitReason(${i},1)">▼</button>
+        <button class="small" style="padding:0 5px;line-height:1.1" ${i===0?'disabled':''} onclick="moveReasonTag(${i},-1)">▲</button>
+        <button class="small" style="padding:0 5px;line-height:1.1" ${i===list.length-1?'disabled':''} onclick="moveReasonTag(${i},1)">▼</button>
       </div>
-      <input type="text" value="${escHtml(r.label)}" onchange="renameExitReason(${i}, this.value)" style="flex:1;min-width:0">
-      <label style="display:flex;align-items:center;gap:4px;flex-shrink:0;font-size:.74rem;color:var(--muted)" title="นับเป็นการออกที่ไม่ตรงแผน">
-        <input type="checkbox" style="width:auto" ${r.offPlan?'checked':''} onchange="toggleExitReasonOff(${i}, this.checked)"> หลุดแผน</label>
-      <span style="flex-shrink:0;font-size:.7rem;color:var(--muted);font-family:var(--mono)" title="จำนวนไม้ที่ใช้แท็กนี้">${n}</span>
-      <button class="small danger" style="flex-shrink:0" onclick="deleteExitReason(${i})">✕</button>
-    </div>`;
-  }).join('') : '<div class="hint" style="margin:0">ยังไม่มีแท็ก — เพิ่มด้านบนได้เลย</div>';
+      <input type="text" value="${escHtml(r.label)}" onchange="renameReasonTag(${i}, this.value)" style="flex:1;min-width:0">
+      <label style="display:flex;align-items:center;gap:4px;flex-shrink:0;font-size:.74rem;color:var(--muted)">
+        <input type="checkbox" style="width:auto" ${r.offPlan?'checked':''} onchange="toggleReasonTagOff(${i}, this.checked)"> ${escHtml(K.offLabel)}</label>
+      <span style="flex-shrink:0;font-size:.7rem;color:var(--muted);font-family:var(--mono)" title="จำนวนไม้ที่ใช้แท็กนี้">${reasonUsedCount(kind, r.id)}</span>
+      <button class="small danger" style="flex-shrink:0" onclick="deleteReasonTag(${i})">✕</button>
+    </div>`).join('') : '<div class="hint" style="margin:0">ยังไม่มีแท็ก — เพิ่มด้านบนได้เลย</div>';
 }
-function addExitReason(){
-  const input = document.getElementById('newExitReason');
-  const label = input.value.trim();
-  if(!label){ alert('กรอกชื่อแท็ก'); return; }
-  const list = ensureExitReasons();
-  if(list.some(r=>r.label.toLowerCase()===label.toLowerCase())){ alert('มีแท็กชื่อนี้อยู่แล้ว'); return; }
-  /* id ต้องไม่ซ้ำของเดิมและไม่ซ้ำของที่เคยลบไปแล้ว — ใช้ timestamp กันชนถาวร */
-  list.push({id:'r'+Date.now().toString(36), label, offPlan: document.getElementById('newExitReasonOff').checked});
-  input.value = '';
-  document.getElementById('newExitReasonOff').checked = false;
-  renderExitReasonList(); populateExitReasonSelect(document.getElementById('tExitReason').value);
-  renderJournal(); schedulePersist();
-}
-function renameExitReason(i, val){
-  const list = ensureExitReasons(); const label = (val||'').trim();
-  if(!label){ renderExitReasonList(); return; }
-  list[i].label = label;
-  renderExitReasonList(); populateExitReasonSelect(document.getElementById('tExitReason').value);
-  renderJournal(); schedulePersist();
-}
-function toggleExitReasonOff(i, on){
-  ensureExitReasons()[i].offPlan = !!on;
-  populateExitReasonSelect(document.getElementById('tExitReason').value);
-  renderJournal(); schedulePersist();
-}
-function moveExitReason(i, dir){
-  const list = ensureExitReasons(); const j = i + dir;
-  if(j<0 || j>=list.length) return;
-  [list[i], list[j]] = [list[j], list[i]];
-  renderExitReasonList(); populateExitReasonSelect(document.getElementById('tExitReason').value);
+function afterReasonChange(){
+  const kind = reasonMgrKind;
+  renderReasonList();
+  populateReasonSelect(kind, currentReasonSel(kind));
+  render();
   schedulePersist();
 }
-function deleteExitReason(i){
-  const list = ensureExitReasons(); const r = list[i];
-  const n = state.trades.filter(t=>t.exitReason===r.id).length;
+function addReasonTag(){
+  const input = document.getElementById('newReasonTag');
+  const label = input.value.trim();
+  if(!label){ alert('กรอกชื่อแท็ก'); return; }
+  const list = ensureReasonTags(reasonMgrKind);
+  if(list.some(r=>r.label.toLowerCase()===label.toLowerCase())){ alert('มีแท็กชื่อนี้อยู่แล้ว'); return; }
+  /* id ต้องไม่ซ้ำของเดิมและไม่ซ้ำของที่เคยลบไปแล้ว — ใช้ timestamp กันชนถาวร */
+  list.push({id:'r'+Date.now().toString(36), label, offPlan: document.getElementById('newReasonOff').checked});
+  input.value = ''; document.getElementById('newReasonOff').checked = false;
+  afterReasonChange();
+}
+function renameReasonTag(i, val){
+  const list = ensureReasonTags(reasonMgrKind); const label = (val||'').trim();
+  if(!label){ renderReasonList(); return; }
+  list[i].label = label; afterReasonChange();
+}
+function toggleReasonTagOff(i, on){ ensureReasonTags(reasonMgrKind)[i].offPlan = !!on; afterReasonChange(); }
+function moveReasonTag(i, dir){
+  const list = ensureReasonTags(reasonMgrKind); const j = i + dir;
+  if(j<0 || j>=list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  afterReasonChange();
+}
+function deleteReasonTag(i){
+  const kind = reasonMgrKind;
+  const list = ensureReasonTags(kind); const r = list[i];
+  const n = reasonUsedCount(kind, r.id);
   const warn = n ? `\n\nมี ${n} ไม้ใช้แท็กนี้อยู่ — ไม้พวกนั้นจะยังโชว์ชื่อ "${r.label}" ต่อไป แต่จะเลือกแท็กนี้ใหม่ไม่ได้อีก` : '';
   if(!confirm(`ลบแท็ก "${r.label}"?${warn}`)) return;
-  list.splice(i,1);
-  renderExitReasonList(); populateExitReasonSelect(document.getElementById('tExitReason').value);
-  renderJournal(); schedulePersist();
+  list.splice(i,1); afterReasonChange();
 }
-function resetExitReasons(){
-  if(!confirm('คืนแท็กกลับเป็นชุดเริ่มต้น 9 แท็ก? แท็กที่เพิ่มเองจะหายไป (ไม้เก่ายังเก็บชื่อเดิมไว้)')) return;
-  state.exitReasons = cloneExitReasons();
-  renderExitReasonList(); populateExitReasonSelect(document.getElementById('tExitReason').value);
-  renderJournal(); schedulePersist();
+function resetReasonTags(){
+  const kind = reasonMgrKind;
+  if(!confirm(`คืน "${REASON_KINDS[kind].title}" กลับเป็นชุดเริ่มต้น? แท็กที่เพิ่มเองจะหายไป (ไม้เก่ายังเก็บชื่อเดิมไว้)`)) return;
+  ensureReasonTags(); state.reasonTags[kind] = cloneReasonTags(kind);
+  afterReasonChange();
 }
 
 function setFilter(f){ filter=f; render(); }
@@ -3766,8 +3904,8 @@ function openTrade(presetSym, presetTier, presetBias){
   document.getElementById('tradeTitle').textContent='เพิ่ม Trade';
   document.getElementById('tDate').value = new Date().toISOString().slice(0,10);
   populateSymbolSelect(presetSym||'');
-  ['tEntry','tSL','tTP','tQty','tExitPrice','tExitDate','tImageUrl','tDiscScore','tSetupScore','tExitNote'].forEach(i=>document.getElementById(i).value='');
-  populateExitReasonSelect('');
+  ['tEntry','tSL','tTP','tQty','tExitPrice','tExitDate','tImageUrl','tDiscScore','tSetupScore','tExitNote','tInvalidation'].forEach(i=>document.getElementById(i).value='');
+  populateReasonSelect('exit', '');
   document.getElementById('imgHint').textContent='';
   document.getElementById('tMult').value = 1;
   document.getElementById('tPort').value='core';
@@ -3808,8 +3946,9 @@ function editTrade(id){
   document.getElementById('tExitDate').value=t.exitDate||'';
   document.getElementById('tDiscScore').value  = t.discScore==null  ? '' : String(t.discScore);
   document.getElementById('tSetupScore').value = t.setupScore==null ? '' : String(t.setupScore);
-  populateExitReasonSelect(t.exitReason || '');
+  populateReasonSelect('exit', t.exitReason || '', t);
   document.getElementById('tExitNote').value   = t.exitNote || '';
+  document.getElementById('tInvalidation').value = t.invalidation || '';
   document.getElementById('tImageUrl').value=t.imageUrl||'';
   document.getElementById('imgHint').textContent='';
   setBias(t.bias); setCur(tradeCur(t)); setPosTier(t.posTier||'std'); toggleExitFields();
@@ -4007,6 +4146,7 @@ function saveTrade(){
     qty: parseFloat(document.getElementById('tQty').value),
     mult: parseFloat(document.getElementById('tMult').value)||1,
     cur: curSel,
+    invalidation: document.getElementById('tInvalidation').value.trim() || null,
     imageUrl: document.getElementById('tImageUrl').value.trim() || null,
     submitted: prevTrade ? !!prevTrade.submitted : false,
     status
@@ -4027,12 +4167,16 @@ function saveTrade(){
     t.exitReason = document.getElementById('tExitReason').value || null;
     /* snapshot ชื่อแท็กไว้ด้วย — ถ้าผู้ใช้ลบแท็กทิ้งทีหลัง ไม้นี้จะยังอ่านออกว่าหมายถึงอะไร
        ตอนแสดงผลจะใช้ชื่อ "ปัจจุบัน" ก่อนเสมอ snapshot เป็นแค่ตัวสำรอง → เปลี่ยนชื่อแท็กแล้วไม้เก่าอัปเดตตาม */
-    const rMeta = exitReasonById(t.exitReason);
+    const rMeta = reasonTagById('exit', t.exitReason);
     t.exitReasonLabel = rMeta ? rMeta.label : (prevTrade ? prevTrade.exitReasonLabel || null : null);
     t.exitNote   = document.getElementById('tExitNote').value.trim() || null;
   } else {
     t.exitPrice = null;
     t.exitDate = null;
+    /* เลือก Missed / Cancelled จาก dropdown ตรง ๆ — ลงวันที่ให้ ไม่งั้นแถวจะไม่มีวันที่และเรียงลำดับเพี้ยน
+       (ปกติจะเข้าทางปุ่ม Missed/Cancel ซึ่งมีโมดัลให้กรอกเหตุผล ทางนี้เป็นทางลัดสำรอง) */
+    if(status==='missed' && !t.missedDate)    t.missedDate = new Date().toISOString().slice(0,10);
+    if(status==='cancelled' && !t.cancelDate) t.cancelDate = new Date().toISOString().slice(0,10);
     /* ย้ายกลับไป Plan/Open — เก็บรีวิวเดิมไว้ ไม่ล้างทิ้ง เผื่อกดผิดแล้วกดกลับ */
     if(prevTrade){
       t.discScore  = prevTrade.discScore  ?? null;
@@ -4146,8 +4290,12 @@ let missedTradeId = null;
 function openMissedModal(id){
   const t = state.trades.find(x=>x.id===id); if(!t) return;
   missedTradeId = id;
+  const editing = t.status === 'missed';
+  document.getElementById('missedTitle').textContent = editing ? 'แก้ไขเหตุผลที่พลาด' : 'บันทึกเป็น Missed Trade';
+  document.getElementById('missedSaveBtn').textContent = editing ? 'บันทึกการแก้ไข' : 'บันทึก Missed Trade';
   document.getElementById('missedSymHint').textContent = `${t.sym} · ${PORTS[t.port].name} · Entry ${fmt2(t.entry)} / SL ${fmt2(t.sl)}`;
-  document.getElementById('missedReason').value = '';
+  populateReasonSelect('missed', t.missedTag || '', t);
+  document.getElementById('missedReason').value = t.missedReason || '';
   document.getElementById('missedImageUrl').value = t.imageUrl || '';
   updateMissedImagePreview();
   document.getElementById('missedOverlay').classList.add('show');
@@ -4161,12 +4309,16 @@ function updateMissedImagePreview(){
     : 'ไม่ใช่ Google Drive link ที่รู้จัก — จะแสดงเป็นลิงก์เปิดรูปแทน';
 }
 function confirmMissed(){
-  const reason = document.getElementById('missedReason').value.trim();
-  if(!reason){ alert('กรอกเหตุผลที่พลาดก่อน'); return; }
   const t = state.trades.find(x=>x.id===missedTradeId); if(!t) return;
+  const tag = document.getElementById('missedTag').value;
+  const note = document.getElementById('missedReason').value.trim();
+  if(!tag && !note){ alert('เลือกแท็กหรือพิมพ์เหตุผลอย่างน้อยหนึ่งอย่าง'); return; }
   t.status = 'missed';
-  t.missedReason = reason;
-  t.missedDate = new Date().toISOString().slice(0,10);
+  t.missedTag = tag || null;
+  const meta = reasonTagById('missed', tag);
+  t.missedTagLabel = meta ? meta.label : (t.missedTagLabel || null);
+  t.missedReason = note || null;
+  if(!t.missedDate) t.missedDate = new Date().toISOString().slice(0,10);  /* แก้ทีหลังไม่รีเซ็ตวันที่เดิม */
   t.imageUrl = document.getElementById('missedImageUrl').value.trim() || null;
   document.getElementById('missedOverlay').classList.remove('show');
   render();
@@ -4176,8 +4328,58 @@ function restoreMissed(id){
   const t = state.trades.find(x=>x.id===id); if(!t) return;
   if(!confirm(`ย้าย ${t.sym} กลับไปที่ Plan เหมือนเดิม?`)) return;
   t.status = 'plan';
-  t.missedReason = null;
+  /* เก็บเหตุผลเดิมไว้ ไม่ล้าง — เผื่อกดผิดแล้วกด Missed ใหม่ จะได้ไม่ต้องพิมพ์ซ้ำ */
   t.missedDate = null;
+  render();
+  schedulePersist();
+}
+
+/* ================= Cancel Trade ================= */
+let cancelTradeId = null;
+function openCancelModal(id){
+  const t = state.trades.find(x=>x.id===id); if(!t) return;
+  cancelTradeId = id;
+  const editing = t.status === 'cancelled';
+  document.getElementById('cancelTitle').textContent = editing ? 'แก้ไขเหตุผลที่ยกเลิก' : 'ยกเลิกแผนเทรด';
+  document.getElementById('cancelSaveBtn').textContent = editing ? 'บันทึกการแก้ไข' : 'บันทึก Cancel';
+  document.getElementById('cancelSymHint').textContent =
+    `${t.sym} · ${PORTS[t.port].name} · Entry ${fmt2(t.entry)} / SL ${fmt2(t.sl)}`;
+  populateReasonSelect('cancel', t.cancelTag || '', t);
+  document.getElementById('cancelNote').value = t.cancelNote || '';
+  document.getElementById('cancelImageUrl').value = t.imageUrl || '';
+  updateCancelImagePreview();
+  document.getElementById('cancelOverlay').classList.add('show');
+}
+function updateCancelImagePreview(){
+  const url = document.getElementById('cancelImageUrl').value.trim();
+  const h = document.getElementById('cancelImgHint');
+  if(!h) return;
+  if(!url){ h.textContent=''; return; }
+  h.textContent = driveImgSrc(url)
+    ? 'ตรวจพบ Google Drive link — จะแสดง thumbnail (ไฟล์ต้องแชร์เป็น "Anyone with the link")'
+    : 'ไม่ใช่ Google Drive link ที่รู้จัก — จะแสดงเป็นลิงก์เปิดรูปแทน';
+}
+function confirmCancel(){
+  const t = state.trades.find(x=>x.id===cancelTradeId); if(!t) return;
+  const tag = document.getElementById('cancelTag').value;
+  const note = document.getElementById('cancelNote').value.trim();
+  if(!tag && !note){ alert('เลือกแท็กหรือพิมพ์เหตุผลอย่างน้อยหนึ่งอย่าง'); return; }
+  t.status = 'cancelled';
+  t.cancelTag = tag || null;
+  const meta = reasonTagById('cancel', tag);
+  t.cancelTagLabel = meta ? meta.label : (t.cancelTagLabel || null);
+  t.cancelNote = note || null;
+  if(!t.cancelDate) t.cancelDate = new Date().toISOString().slice(0,10);
+  t.imageUrl = document.getElementById('cancelImageUrl').value.trim() || null;
+  document.getElementById('cancelOverlay').classList.remove('show');
+  render();
+  schedulePersist();
+}
+function restoreCancelled(id){
+  const t = state.trades.find(x=>x.id===id); if(!t) return;
+  if(!confirm(`ย้าย ${t.sym} กลับไปที่ Plan เหมือนเดิม?`)) return;
+  t.status = 'plan';
+  t.cancelDate = null;
   render();
   schedulePersist();
 }
