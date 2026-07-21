@@ -539,7 +539,8 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
         <thead><tr>
           <th>Closed</th><th>Port</th><th>Symbol</th><th>Bias</th>
           <th>Entry</th><th>Exit</th><th>Qty</th>
-          <th>Realized P&amp;L</th><th>R</th><th>Result</th><th></th>
+          <th>Realized P&amp;L</th><th>R</th><th>Result</th>
+          <th title="วินัย / Setup — 0-3">รีวิว</th><th>เหตุผลที่ออก</th><th></th>
         </tr></thead>
         <tbody id="jTbody"></tbody>
       </table>
@@ -697,6 +698,33 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
         <div class="f"><label>Exit Date</label><input type="date" id="tExitDate"></div>
       </div>
       <div class="hint" id="exitHint"></div>
+
+      <div class="divlbl" style="margin-top:12px">รีวิวไม้นี้ — แยกกระบวนการออกจากผลลัพธ์</div>
+      <div class="hint" style="margin:-4px 0 8px">P&amp;L กับ R บอกผลไปแล้ว 2 ช่องนี้เก็บสิ่งที่ผลลัพธ์ไม่ได้บอก — ไม้ที่กำไรเพราะโชคกับไม้ที่ขาดทุนเพราะดวง ต้องแยกออกจากกันให้ได้</div>
+      <div class="frow">
+        <div class="f"><label>วินัย — ทำตามแผนไหม</label>
+          <select id="tDiscScore">
+            <option value="">— ยังไม่ให้คะแนน —</option>
+            <option value="3">3 · ทำตามแผนครบทุกจุด</option>
+            <option value="2">2 · เบี่ยงเล็กน้อย แต่มีเหตุผลรองรับ</option>
+            <option value="1">1 · เบี่ยงจากแผนชัดเจน</option>
+            <option value="0">0 · ไม่ได้ทำตามแผนเลย</option>
+          </select></div>
+        <div class="f"><label>Setup — คุณภาพไม้นี้</label>
+          <select id="tSetupScore">
+            <option value="">— ยังไม่ให้คะแนน —</option>
+            <option value="3">3 · ตรงเกณฑ์ครบ ไม้คุณภาพ</option>
+            <option value="2">2 · ดี แต่ขาดบางเงื่อนไข</option>
+            <option value="1">1 · ก้ำกึ่ง ไม่ควรขนาดเต็ม</option>
+            <option value="0">0 · ไม่ควรเข้าตั้งแต่แรก</option>
+          </select></div>
+      </div>
+      <div class="f"><label>เหตุผลที่ออก</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="tExitReason" style="flex:1"></select>
+          <button type="button" class="small" onclick="openExitReasonManager()" title="เพิ่ม/แก้ไขแท็กเหตุผล" style="flex-shrink:0">⚙</button>
+        </div></div>
+      <div class="f"><label>บันทึกเพิ่ม (ถ้ามี)</label><textarea id="tExitNote" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น ออกเร็วไป 2 วัน ถ้าถือตามแผนได้ 2.4R, SL ตั้งชิดเกินโดนกวาด..."></textarea></div>
     </div>
 
     <div class="btns">
@@ -956,6 +984,25 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   </div>
 </div>
 
+<!-- ===== Exit Reason Manager modal ===== -->
+<div class="overlay" id="exitReasonOverlay">
+  <div class="modal">
+    <h3>แท็กเหตุผลที่ออก</h3>
+    <div class="hint" style="margin-top:-8px;margin-bottom:12px">ติ๊ก <b>หลุดแผน</b> ให้แท็กที่แปลว่าคุณไม่ได้ออกตามแผน — แท็กพวกนี้จะขึ้นสีแดงในตาราง Journal ให้เห็นแพตเทิร์นตัวเองง่าย<br>เปลี่ยนชื่อแท็กได้ตลอด ไม้เก่าจะอัปเดตตามทันที · ลบแท็กแล้วไม้เก่ายังเก็บชื่อเดิมไว้ ไม่หาย</div>
+    <div class="frow" style="gap:8px;align-items:flex-end">
+      <div class="f" style="flex:1"><label>แท็กใหม่</label><input type="text" id="newExitReason" placeholder="เช่น ปรับพอร์ต, ต้องใช้เงิน"></div>
+      <label style="display:flex;align-items:center;gap:5px;flex-shrink:0;padding-bottom:9px;font-size:.8rem;color:var(--muted)">
+        <input type="checkbox" id="newExitReasonOff" style="width:auto"> หลุดแผน</label>
+      <button class="primary" style="flex-shrink:0;margin-bottom:2px" onclick="addExitReason()">เพิ่ม</button>
+    </div>
+    <div id="exitReasonList" style="margin-top:14px;display:flex;flex-direction:column;gap:6px"></div>
+    <div class="btns" style="justify-content:space-between">
+      <button onclick="resetExitReasons()">ค่าเริ่มต้น</button>
+      <button onclick="document.getElementById('exitReasonOverlay').classList.remove('show')">ปิด</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Missed Trade modal ===== -->
 <div class="overlay" id="missedOverlay">
   <div class="modal">
@@ -1012,6 +1059,34 @@ const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
 const defaultWatchSortMode = () => ({core:'date',satA:'date',satB:'date'});
 const DEFAULT_FONT_SIZES = {wl:0.84, plan:0.8, closed:0.8};
 const DEFAULT_TABS_OFFSET = 0;
+/* ── แท็ก "เหตุผลที่ออก" ของ Closed Trade — ผู้ใช้แก้เองได้ที่ ⚙ ข้างช่องเลือก ──
+   id  = คีย์ถาวรที่ trade เก็บไว้ ห้ามเปลี่ยน (เปลี่ยนแล้วไม้เก่าจะกำพร้า)
+   label = ข้อความที่โชว์ แก้ได้ตลอด ไม้เก่าจะอัปเดตตามทันที
+   offPlan = true → นับเป็น "หลุดแผน" ขึ้นแท็กสีแดงในตาราง Journal
+   ตอนบันทึก trade จะ snapshot label ไว้ที่ exitReasonLabel ด้วย
+   เผื่อผู้ใช้ลบแท็กทิ้งทีหลัง ไม้เก่าจะยังอ่านออกว่าตอนนั้นหมายถึงอะไร */
+const DEFAULT_EXIT_REASONS = [
+  {id:'tp',      label:'ชน TP ตามแผน',        offPlan:false},
+  {id:'sl',      label:'ชน SL ตามแผน',        offPlan:false},
+  {id:'trail',   label:'Trailing / ล็อกกำไร', offPlan:false},
+  {id:'partial', label:'ทยอยออก',             offPlan:false},
+  {id:'early',   label:'ออกก่อนแผน',          offPlan:true },
+  {id:'thesis',  label:'Thesis เปลี่ยน/ผิด',  offPlan:true },
+  {id:'time',    label:'ตัดเวลาทิ้ง',         offPlan:false},
+  {id:'risk',    label:'ลดความเสี่ยง',        offPlan:true },
+  {id:'other',   label:'อื่น ๆ',              offPlan:false}
+];
+function cloneExitReasons(){ return DEFAULT_EXIT_REASONS.map(r=>({...r})); }
+/* กันพัง: state เก่าที่บันทึกไว้ก่อนมีฟีเจอร์นี้จะไม่มี exitReasons */
+function ensureExitReasons(){
+  if(!state) return [];
+  if(!Array.isArray(state.exitReasons) || !state.exitReasons.length) state.exitReasons = cloneExitReasons();
+  return state.exitReasons;
+}
+function exitReasonById(id){
+  if(!id) return null;
+  return (Array.isArray(state && state.exitReasons) ? state.exitReasons : DEFAULT_EXIT_REASONS).find(r=>r.id===id) || null;
+}
 const DEFAULT_SCORE_CRITERIA = 'ตัวอย่าง (แก้ไขเป็นเกณฑ์ของคุณเองได้):\n★★★ = Setup สมบูรณ์แบบ ตรงทุกเงื่อนไข มั่นใจสูง\n★★ = ดี ใช้ได้ แต่มีจุดต้องระวัง\n★ = อ่อน ยังไม่มั่นใจ แต่อยากติดตามไว้';
 
 let state = null;
@@ -1105,9 +1180,10 @@ function startListening(){
       const d = snap.data() || {};
       state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
         watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
-        fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[], watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAULT_TABS_OFFSET};
+        fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[], watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAULT_TABS_OFFSET,
+        exitReasons: Array.isArray(d.exitReasons)&&d.exitReasons.length ? d.exitReasons : cloneExitReasons()};
     } else {
-      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET};
+      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, exitReasons:cloneExitReasons()};
     }
     if(ensureSatBDefaults()) schedulePersist();
     document.getElementById('loadingScreen').style.display='none';
@@ -1155,7 +1231,7 @@ function setSyncBadge(st){
 }
 function resetAll(){
   if(!confirm('ล้างข้อมูลทั้งหมด (Trades + การตั้งค่า) ทุกอุปกรณ์? ทำย้อนกลับไม่ได้')) return;
-  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET};
+  state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, exitReasons:cloneExitReasons()};
   ensureSatBDefaults();
   document.getElementById('setOverlay').classList.remove('show');
   render();
@@ -1303,7 +1379,17 @@ function journalStats(){
       if(dd>maxDD) maxDD=dd;
     });
     const maxDDPct = capTHB>0 ? maxDD/capTHB*100 : 0;
-    return {n, wins, winRate: n?wins/n*100:0, avgR, totalPnlTHB, avgHoldDays, maxDD, maxDDPct};
+    /* ── รีวิวไม้: เฉลี่ยเฉพาะไม้ที่ให้คะแนนแล้ว (null ไม่นับเป็น 0) ──
+       luckyWins  = กำไรทั้งที่วินัยหลุด → กำไรที่ไม่ควรเอาเป็นแบบอย่าง
+       goodLosses = ขาดทุนแต่วินัยดี   → ต้นทุนปกติของระบบ ไม่ใช่ความผิด
+       สองตัวนี้คือเหตุผลทั้งหมดที่ต้องแยกกระบวนการออกจากผลลัพธ์ */
+    const ds = list.map(t=>t.discScore).filter(v=>v!=null);
+    const ss = list.map(t=>t.setupScore).filter(v=>v!=null);
+    const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+    const luckyWins  = list.filter(t=>realizedPnlOf(t)>0  && t.discScore!=null && t.discScore<=1).length;
+    const goodLosses = list.filter(t=>realizedPnlOf(t)<=0 && t.discScore!=null && t.discScore>=3).length;
+    return {n, wins, winRate: n?wins/n*100:0, avgR, totalPnlTHB, avgHoldDays, maxDD, maxDDPct,
+            avgDisc: avg(ds), avgSetup: avg(ss), nReviewed: ds.length, luckyWins, goodLosses};
   }
   return {
     overall: statsFor(closed, totalTHB()),
@@ -1600,8 +1686,11 @@ function renderJournal(){
     <div class="stat ${j.overall.n? (j.overall.winRate>=50?'good':'warn') : ''}"><div class="lbl">Win Rate</div><div class="val">${j.overall.n?fmt2(j.overall.winRate)+'%':'—'}</div></div>
     <div class="stat ${rWinClass(j.overall.avgR)}"><div class="lbl">Avg R (Expectancy)</div><div class="val">${j.overall.avgR===null?'—':fmt2(j.overall.avgR)+'R'}</div></div>
     <div class="stat ${j.overall.n ? (j.overall.totalPnlTHB>=0?'good':'bad') : ''}"><div class="lbl">Total Realized P&amp;L</div><div class="val">฿${fmt0(j.overall.totalPnlTHB)}</div></div>
-    <div class="stat"><div class="lbl">Avg Holding Period</div><div class="val">${j.overall.avgHoldDays===null?'—':fmt2(j.overall.avgHoldDays)+' วัน'}</div></div>
-    <div class="stat ${j.overall.maxDD>0?'bad':''}"><div class="lbl">Max Drawdown (รวมทุก Port)</div><div class="val">${fmt2(j.overall.maxDDPct)}% <small>฿${fmt0(j.overall.maxDD)}</small></div></div>`;
+    <div class="stat ${j.overall.maxDD>0?'bad':''}"><div class="lbl">Max Drawdown (รวมทุก Port)</div><div class="val">${fmt2(j.overall.maxDDPct)}% <small>฿${fmt0(j.overall.maxDD)}</small></div></div>
+    <div class="stat ${j.overall.avgDisc===null?'':j.overall.avgDisc>=2.5?'good':j.overall.avgDisc>=1.5?'warn':'bad'}" title="วินัย = ทำตามแผนไหม (ไม่ใช่ผลลัพธ์)&#10;โชค = กำไรทั้งที่วินัยหลุด (≤1) — กำไรที่ไม่ควรเอาเป็นแบบอย่าง&#10;รับได้ = ขาดทุนทั้งที่ทำตามแผนเป๊ะ (3) — ต้นทุนปกติของระบบ">
+      <div class="cornerbadge">โชค <b class="${j.overall.luckyWins>0?'rr-bad':''}">${j.overall.luckyWins}</b><br>รับได้ <b>${j.overall.goodLosses}</b></div>
+      <div class="lbl">วินัยเฉลี่ย <small>(รีวิวแล้ว ${j.overall.nReviewed}/${j.overall.n})</small></div>
+      <div class="val">${j.overall.avgDisc===null?'—':fmt2(j.overall.avgDisc)+' / 3'}${j.overall.avgSetup===null?'':` <small>setup ${fmt2(j.overall.avgSetup)}</small>`}</div></div>`;
 
   document.getElementById('jPorts').innerHTML = Object.entries(PORTS).map(([k,p])=>{
     const st = j[k];
@@ -1640,6 +1729,27 @@ function renderJournal(){
     return { sumQty, avgExit:sumQty?sumExitQty/sumQty:0, avgEntry:sumQty?sumEntryQty/sumQty:0, totalPnl, blendR: qR?sumR/qR:null };
   }
   function jPortShort(p){ return p==='core'?'Core':p==='satA'?'Sat.A':'Sat.B'; }
+
+  /* ── รีวิวไม้: วินัย / Setup / เหตุผลที่ออก ───────────────────────────
+     null = ยังไม่ให้คะแนน (โชว์ —)  ต่างจาก 0 = ให้แล้วว่าแย่ (โชว์ 0 สีแดง) */
+  function scoreCls(v){ return v==null ? '' : v>=3 ? 'rr-good' : v>=2 ? '' : 'rr-bad'; }
+  function jReviewCell(t){
+    const d=t.discScore, s=t.setupScore;
+    if(d==null && s==null) return `<span style="color:var(--muted)">—</span>`;
+    const one=(v,lbl)=>`<span class="${scoreCls(v)}"${v==null?' style="color:var(--muted)"':''} title="${lbl}">${v==null?'—':v}</span>`;
+    return `${one(d,'วินัย')}<span style="color:var(--muted)"> / </span>${one(s,'Setup')}`;
+  }
+  function jReasonCell(t){
+    if(!t.exitReason && !t.exitNote) return `<span style="color:var(--muted)">—</span>`;
+    /* ชื่อปัจจุบันมาก่อน → เปลี่ยนชื่อแท็กแล้วไม้เก่าอัปเดตตาม
+       ถ้าแท็กถูกลบไปแล้ว ตกไปใช้ snapshot ที่เก็บไว้ตอนบันทึก */
+    const meta = exitReasonById(t.exitReason);
+    const lbl = meta ? meta.label : (t.exitReasonLabel || '');
+    const off = meta ? meta.offPlan : false;
+    const tag = lbl ? `<span class="tag${off?' loss':''}"${meta?'':' title="แท็กนี้ถูกลบไปแล้ว"'}>${escHtml(lbl)}${meta?'':' ·'}</span>` : '';
+    const note = t.exitNote ? `<div style="color:var(--muted);white-space:normal;margin-top:3px">${escHtml(t.exitNote)}</div>` : '';
+    return tag + note;
+  }
   function jLegRow(t, indent, gcolor, isLast){
     const pnl = realizedPnlOf(t), r = realizedROf(t), sym = tradeSym(t);
     const win = pnl>0;
@@ -1655,6 +1765,8 @@ function renderJournal(){
       <td class="${pnl>=0?'pnl-pos':'pnl-neg'}">${sym}${fmt0(pnl)}</td>
       <td class="${r===null?'':r>=0?'rr-good':'rr-bad'}">${r===null?'—':fmt2(r)+'R'}</td>
       <td class="sans"><span class="tag ${win?'win':'loss'}">${win?'WIN':'LOSS'}</span></td>
+      <td class="sans" style="white-space:nowrap">${jReviewCell(t)}</td>
+      <td class="sans" style="max-width:200px;white-space:normal;font-size:var(--closed-size)">${jReasonCell(t)}</td>
       <td class="sans"><div class="rowbtns">
         <button class="small" onclick="editTrade('${t.id}')">✎</button>
         <button class="small danger" onclick="delTrade('${t.id}')">✕</button>
@@ -1666,7 +1778,7 @@ function renderJournal(){
     if(legs.length===1) return jLegRow(legs[0], false);
     const port=legs[0].port, symG=legs[0].sym, portColor=PORTS[port].color, gcolor=hexToRgba(portColor,0.5);
     const a=jAgg(legs); const symC=tradeSym(legs[0]);
-    const header=`<tr class="grouprow gbox gbox-first" style="--gcolor:${gcolor}"><td colspan="11" style="background:${hexToRgba(portColor,0.1)}"><div class="ghead">
+    const header=`<tr class="grouprow gbox gbox-first" style="--gcolor:${gcolor}"><td colspan="13" style="background:${hexToRgba(portColor,0.1)}"><div class="ghead">
       <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${portColor};flex-shrink:0"></span>
       <span class="gsym">${symG}</span>
       <span class="gmeta">${jPortShort(port)}</span>
@@ -1696,7 +1808,9 @@ function renderJournal(){
         <div><span class="k">Qty</span>${fmt2(t.qty)}</div>
         <div><span class="k">P&amp;L</span><span class="${pnl>=0?'pnl-pos':'pnl-neg'}">${sym}${fmt0(pnl)}</span></div>
         <div><span class="k">R</span><span class="${r===null?'':r>=0?'rr-good':'rr-bad'}">${r===null?'—':fmt2(r)+'R'}</span></div>
+        <div><span class="k">วินัย / Setup</span>${jReviewCell(t)}</div>
       </div>
+      ${(t.exitReason||t.exitNote)?`<div style="margin-top:6px;font-size:var(--closed-size)">${jReasonCell(t)}</div>`:''}
       <div class="foot">
         <div></div>
         <div class="rowbtns">
@@ -2559,6 +2673,97 @@ function deleteIndustry(name){
   renderIndustryList();
   populateIndustrySelect();
   schedulePersist();
+}
+
+/* ================= Exit Reason tags (ผู้ใช้แก้เองได้) ================= */
+function populateExitReasonSelect(selected){
+  const sel = document.getElementById('tExitReason');
+  if(!sel) return;
+  const list = ensureExitReasons();
+  let html = '<option value="">— เลือก —</option>';
+  html += list.map(r=>`<option value="${escHtml(r.id)}">${escHtml(r.label)}${r.offPlan?' ⚠':''}</option>`).join('');
+  /* ไม้เก่าที่อ้างแท็กซึ่งถูกลบไปแล้ว — ใส่ option ชั่วคราวให้ ไม่งั้น select จะเด้งเป็นค่าว่าง
+     แล้วพอกดบันทึกอีกที เหตุผลเดิมจะหายไปเงียบ ๆ โดยที่ผู้ใช้ไม่ได้ตั้งใจลบ */
+  if(selected && !list.some(r=>r.id===selected)){
+    const t = editId ? state.trades.find(x=>x.id===editId) : null;
+    const lbl = (t && t.exitReasonLabel) || selected;
+    html += `<option value="${escHtml(selected)}">${escHtml(lbl)} (แท็กถูกลบแล้ว)</option>`;
+  }
+  sel.innerHTML = html;
+  sel.value = selected || '';
+}
+function openExitReasonManager(){
+  ensureExitReasons();
+  document.getElementById('newExitReason').value = '';
+  document.getElementById('newExitReasonOff').checked = false;
+  renderExitReasonList();
+  document.getElementById('exitReasonOverlay').classList.add('show');
+}
+function renderExitReasonList(){
+  const box = document.getElementById('exitReasonList');
+  const list = ensureExitReasons();
+  const used = id => state.trades.filter(t=>t.exitReason===id).length;
+  box.innerHTML = list.length ? list.map((r,i)=>{
+    const n = used(r.id);
+    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--surface2);border-radius:8px">
+      <div style="display:flex;flex-direction:column;gap:1px;flex-shrink:0">
+        <button class="small" style="padding:0 5px;line-height:1.1" ${i===0?'disabled':''} onclick="moveExitReason(${i},-1)">▲</button>
+        <button class="small" style="padding:0 5px;line-height:1.1" ${i===list.length-1?'disabled':''} onclick="moveExitReason(${i},1)">▼</button>
+      </div>
+      <input type="text" value="${escHtml(r.label)}" onchange="renameExitReason(${i}, this.value)" style="flex:1;min-width:0">
+      <label style="display:flex;align-items:center;gap:4px;flex-shrink:0;font-size:.74rem;color:var(--muted)" title="นับเป็นการออกที่ไม่ตรงแผน">
+        <input type="checkbox" style="width:auto" ${r.offPlan?'checked':''} onchange="toggleExitReasonOff(${i}, this.checked)"> หลุดแผน</label>
+      <span style="flex-shrink:0;font-size:.7rem;color:var(--muted);font-family:var(--mono)" title="จำนวนไม้ที่ใช้แท็กนี้">${n}</span>
+      <button class="small danger" style="flex-shrink:0" onclick="deleteExitReason(${i})">✕</button>
+    </div>`;
+  }).join('') : '<div class="hint" style="margin:0">ยังไม่มีแท็ก — เพิ่มด้านบนได้เลย</div>';
+}
+function addExitReason(){
+  const input = document.getElementById('newExitReason');
+  const label = input.value.trim();
+  if(!label){ alert('กรอกชื่อแท็ก'); return; }
+  const list = ensureExitReasons();
+  if(list.some(r=>r.label.toLowerCase()===label.toLowerCase())){ alert('มีแท็กชื่อนี้อยู่แล้ว'); return; }
+  /* id ต้องไม่ซ้ำของเดิมและไม่ซ้ำของที่เคยลบไปแล้ว — ใช้ timestamp กันชนถาวร */
+  list.push({id:'r'+Date.now().toString(36), label, offPlan: document.getElementById('newExitReasonOff').checked});
+  input.value = '';
+  document.getElementById('newExitReasonOff').checked = false;
+  renderExitReasonList(); populateExitReasonSelect(document.getElementById('tExitReason').value);
+  renderJournal(); schedulePersist();
+}
+function renameExitReason(i, val){
+  const list = ensureExitReasons(); const label = (val||'').trim();
+  if(!label){ renderExitReasonList(); return; }
+  list[i].label = label;
+  renderExitReasonList(); populateExitReasonSelect(document.getElementById('tExitReason').value);
+  renderJournal(); schedulePersist();
+}
+function toggleExitReasonOff(i, on){
+  ensureExitReasons()[i].offPlan = !!on;
+  populateExitReasonSelect(document.getElementById('tExitReason').value);
+  renderJournal(); schedulePersist();
+}
+function moveExitReason(i, dir){
+  const list = ensureExitReasons(); const j = i + dir;
+  if(j<0 || j>=list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  renderExitReasonList(); populateExitReasonSelect(document.getElementById('tExitReason').value);
+  schedulePersist();
+}
+function deleteExitReason(i){
+  const list = ensureExitReasons(); const r = list[i];
+  const n = state.trades.filter(t=>t.exitReason===r.id).length;
+  const warn = n ? `\n\nมี ${n} ไม้ใช้แท็กนี้อยู่ — ไม้พวกนั้นจะยังโชว์ชื่อ "${r.label}" ต่อไป แต่จะเลือกแท็กนี้ใหม่ไม่ได้อีก` : '';
+  if(!confirm(`ลบแท็ก "${r.label}"?${warn}`)) return;
+  list.splice(i,1);
+  renderExitReasonList(); populateExitReasonSelect(document.getElementById('tExitReason').value);
+  renderJournal(); schedulePersist();
+}
+function resetExitReasons(){
+  if(!confirm('คืนแท็กกลับเป็นชุดเริ่มต้น 9 แท็ก? แท็กที่เพิ่มเองจะหายไป (ไม้เก่ายังเก็บชื่อเดิมไว้)')) return;
+  state.exitReasons = cloneExitReasons();
+  renderExitReasonList(); populateExitReasonSelect(document.getElementById('tExitReason').value);
+  renderJournal(); schedulePersist();
 }
 
 function setFilter(f){ filter=f; render(); }
@@ -3561,7 +3766,8 @@ function openTrade(presetSym, presetTier, presetBias){
   document.getElementById('tradeTitle').textContent='เพิ่ม Trade';
   document.getElementById('tDate').value = new Date().toISOString().slice(0,10);
   populateSymbolSelect(presetSym||'');
-  ['tEntry','tSL','tTP','tQty','tExitPrice','tExitDate','tImageUrl'].forEach(i=>document.getElementById(i).value='');
+  ['tEntry','tSL','tTP','tQty','tExitPrice','tExitDate','tImageUrl','tDiscScore','tSetupScore','tExitNote'].forEach(i=>document.getElementById(i).value='');
+  populateExitReasonSelect('');
   document.getElementById('imgHint').textContent='';
   document.getElementById('tMult').value = 1;
   document.getElementById('tPort').value='core';
@@ -3600,6 +3806,10 @@ function editTrade(id){
   document.getElementById('tStatus').value=t.status;
   document.getElementById('tExitPrice').value=t.exitPrice||'';
   document.getElementById('tExitDate').value=t.exitDate||'';
+  document.getElementById('tDiscScore').value  = t.discScore==null  ? '' : String(t.discScore);
+  document.getElementById('tSetupScore').value = t.setupScore==null ? '' : String(t.setupScore);
+  populateExitReasonSelect(t.exitReason || '');
+  document.getElementById('tExitNote').value   = t.exitNote || '';
   document.getElementById('tImageUrl').value=t.imageUrl||'';
   document.getElementById('imgHint').textContent='';
   setBias(t.bias); setCur(tradeCur(t)); setPosTier(t.posTier||'std'); toggleExitFields();
@@ -3808,9 +4018,29 @@ function saveTrade(){
     t.exitPrice = parseFloat(document.getElementById('tExitPrice').value);
     t.exitDate = document.getElementById('tExitDate').value || t.date;
     if(!(t.exitPrice>0)){ alert('กรอก Exit Price ก่อนบันทึกเป็น Closed'); return; }
+    /* รีวิวไม้ — ปล่อยว่างได้ ไม่บังคับ เพราะบางทีปิดไม้เสร็จยังไม่พร้อมตัดสินตัวเอง
+       ค่าว่าง = null (ยังไม่ให้คะแนน) ต้องแยกจาก 0 (ให้คะแนนแล้วว่าแย่) ให้ขาด */
+    const dsRaw = document.getElementById('tDiscScore').value;
+    const ssRaw = document.getElementById('tSetupScore').value;
+    t.discScore  = dsRaw === '' ? null : Number(dsRaw);
+    t.setupScore = ssRaw === '' ? null : Number(ssRaw);
+    t.exitReason = document.getElementById('tExitReason').value || null;
+    /* snapshot ชื่อแท็กไว้ด้วย — ถ้าผู้ใช้ลบแท็กทิ้งทีหลัง ไม้นี้จะยังอ่านออกว่าหมายถึงอะไร
+       ตอนแสดงผลจะใช้ชื่อ "ปัจจุบัน" ก่อนเสมอ snapshot เป็นแค่ตัวสำรอง → เปลี่ยนชื่อแท็กแล้วไม้เก่าอัปเดตตาม */
+    const rMeta = exitReasonById(t.exitReason);
+    t.exitReasonLabel = rMeta ? rMeta.label : (prevTrade ? prevTrade.exitReasonLabel || null : null);
+    t.exitNote   = document.getElementById('tExitNote').value.trim() || null;
   } else {
     t.exitPrice = null;
     t.exitDate = null;
+    /* ย้ายกลับไป Plan/Open — เก็บรีวิวเดิมไว้ ไม่ล้างทิ้ง เผื่อกดผิดแล้วกดกลับ */
+    if(prevTrade){
+      t.discScore  = prevTrade.discScore  ?? null;
+      t.setupScore = prevTrade.setupScore ?? null;
+      t.exitReason = prevTrade.exitReason ?? null;
+      t.exitReasonLabel = prevTrade.exitReasonLabel ?? null;
+      t.exitNote   = prevTrade.exitNote   ?? null;
+    }
   }
   /* จับราคาที่วางแผนไว้เดิม ครั้งแรกที่ trade ออกจากสถานะ Plan */
   if(status!=='plan'){
