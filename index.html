@@ -3702,7 +3702,8 @@ function renderFundChecklistBody(){
       html += `<div class="divlbl">NOTE</div>`;
       cfg.notes.forEach(n=>{
         const val = (fcState.note && fcState.note[n.id]) || '';
-        html += `<div class="f"><label>${n.label}</label><textarea rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" oninput="fcSetNote('${n.id}',this.value)">${escHtml(val)}</textarea></div>`;
+        /* rows 2 เล็กไปสำหรับโน้ตที่ AI เติมมา (④ ยาวเป็นย่อหน้า) — ตั้ง 4 แถวแล้วลากขยายได้ */
+        html += `<div class="f"><label>${n.label}</label><textarea rows="4" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans);resize:vertical;min-height:56px" oninput="fcSetNote('${n.id}',this.value)">${escHtml(val)}</textarea></div>`;
       });
     }
   } else {
@@ -3869,7 +3870,11 @@ function openFundDetail(id){
     </div>`;
     cfg.notes.forEach(n=>{
       const val = (fc.note && fc.note[n.id]) || '—';
-      html += `<div class="f"><label>${n.label}</label><div style="width:100%;box-sizing:border-box;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font-family:var(--sans);font-size:.82rem;line-height:1.5;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px">${escHtml(val)}</div></div>`;
+      /* โน้ตยาว (เช่น ④ ที่มีความเสี่ยงรองต่อท้าย) จะกินจอทั้งหน้า → ตั้งความสูงเริ่มต้นไว้แล้วเลื่อนอ่าน
+         ลากมุมขวาล่างขยาย/ย่อได้ทุกช่อง · ห้ามใช้ max-height เพราะมันจะ clamp ความสูงที่ผู้ใช้ลาก */
+      const long = val.length > 220;
+      const box = `width:100%;box-sizing:border-box;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font-family:var(--sans);font-size:.82rem;line-height:1.5;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;overflow:auto;resize:vertical;min-height:40px;${long?'height:170px;':''}`;
+      html += `<div class="f"><label>${n.label}${long?` <span class="hint" style="margin:0;font-size:.62rem;opacity:.7">ลากมุมล่างขวาเพื่อขยาย</span>`:''}</label><div style="${box}">${escHtml(val)}</div></div>`;
     });
   } else {
     html += `<div class="hint">ไม่มีข้อมูล</div>`;
