@@ -707,7 +707,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <div class="hint" id="posSizeHint"></div>
 
     <div class="f" style="margin-top:12px"><label>Invalidation — อะไรจะบอกว่าไม้นี้ผิดทาง</label>
-      <textarea id="tInvalidation" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น ปิดต่ำกว่า EMA50 รายวัน, volume แห้งติดกัน 3 วัน, งบ Q ถัดไปรายได้โตต่ำกว่า 20%"></textarea>
+      <textarea id="tInvalidation" rows="2" oninput="toggleExitFields()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น ปิดต่ำกว่า EMA50 รายวัน, volume แห้งติดกัน 3 วัน, งบ Q ถัดไปรายได้โตต่ำกว่า 20%"></textarea>
       <div class="hint">เขียนตอนนี้ ตอนที่ยังไม่มีเงินอยู่ในตลาดและยังคิดตรง — ไม่ใช่ตอนที่ราคาลงแล้วกำลังหาเหตุผลถือต่อ</div>
     </div>
 
@@ -744,6 +744,15 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
             <option value="0">0 · ไม่ควรเข้าตั้งแต่แรก</option>
           </select></div>
       </div>
+      <div class="f" id="invalHitField"><label>Invalidation ที่เขียนไว้ — เกิดขึ้นจริงไหม</label>
+        <div class="hint" id="invalHitEcho" style="margin:-2px 0 6px;border-left:2px solid var(--border);padding-left:8px"></div>
+        <select id="tInvalHit">
+          <option value="">— ยังไม่ระบุ —</option>
+          <option value="hit">เกิดขึ้น → ออกตามนั้น</option>
+          <option value="ignored">เกิดขึ้น → แต่ไม่ได้ออก</option>
+          <option value="no">ไม่เกิด — ออกด้วยเหตุอื่น</option>
+        </select></div>
+
       <div class="f"><label>เหตุผลที่ออก</label>
         <div style="display:flex;gap:8px;align-items:center">
           <select id="tExitReason" style="flex:1"></select>
@@ -1495,8 +1504,13 @@ function journalStats(){
     const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
     const luckyWins  = list.filter(t=>realizedPnlOf(t)>0  && t.discScore!=null && t.discScore<=1).length;
     const goodLosses = list.filter(t=>realizedPnlOf(t)<=0 && t.discScore!=null && t.discScore>=3).length;
+    /* Invalidation follow-through: ในไม้ที่สัญญาณ "เกิดขึ้นจริง" ออกตามที่เขียนไว้กี่ครั้ง
+       หารด้วยเฉพาะ hit+ignored — ไม้ที่สัญญาณไม่เกิดไม่ได้วัดวินัยเรื่องนี้ ไม่ควรถ่วงค่า */
+    const invalHit  = list.filter(t=>t.invalHit==='hit').length;
+    const invalIgn  = list.filter(t=>t.invalHit==='ignored').length;
     return {n, wins, winRate: n?wins/n*100:0, avgR, totalPnlTHB, avgHoldDays, maxDD, maxDDPct,
-            avgDisc: avg(ds), avgSetup: avg(ss), nReviewed: ds.length, luckyWins, goodLosses};
+            avgDisc: avg(ds), avgSetup: avg(ss), nReviewed: ds.length, luckyWins, goodLosses,
+            invalHit, invalFired: invalHit + invalIgn};
   }
   return {
     overall: statsFor(closed, totalTHB()),
@@ -1801,7 +1815,7 @@ function renderJournal(){
     <div class="stat ${j.overall.avgDisc===null?'':j.overall.avgDisc>=2.5?'good':j.overall.avgDisc>=1.5?'warn':'bad'}" title="วินัย = ทำตามแผนไหม (ไม่ใช่ผลลัพธ์)&#10;โชค = กำไรทั้งที่วินัยหลุด (≤1) — กำไรที่ไม่ควรเอาเป็นแบบอย่าง&#10;รับได้ = ขาดทุนทั้งที่ทำตามแผนเป๊ะ (3) — ต้นทุนปกติของระบบ">
       <div class="cornerbadge">โชค <b class="${j.overall.luckyWins>0?'rr-bad':''}">${j.overall.luckyWins}</b><br>รับได้ <b>${j.overall.goodLosses}</b></div>
       <div class="lbl">วินัยเฉลี่ย <small>(รีวิวแล้ว ${j.overall.nReviewed}/${j.overall.n})</small></div>
-      <div class="val">${j.overall.avgDisc===null?'—':fmt2(j.overall.avgDisc)+' / 3'}${j.overall.avgSetup===null?'':` <small>setup ${fmt2(j.overall.avgSetup)}</small>`}</div></div>`;
+      <div class="val">${j.overall.avgDisc===null?'—':fmt2(j.overall.avgDisc)+' / 3'}${j.overall.avgSetup===null?'':` <small>setup ${fmt2(j.overall.avgSetup)}</small>`}${j.overall.invalFired?` <small title="ในไม้ที่สัญญาณ invalidation เกิดขึ้นจริง ออกตามที่เขียนไว้กี่ครั้ง">· inval ${j.overall.invalHit}/${j.overall.invalFired}</small>`:''}</div></div>`;
 
   document.getElementById('jPorts').innerHTML = Object.entries(PORTS).map(([k,p])=>{
     const st = j[k];
@@ -1844,11 +1858,18 @@ function renderJournal(){
   /* ── รีวิวไม้: วินัย / Setup / เหตุผลที่ออก ───────────────────────────
      null = ยังไม่ให้คะแนน (โชว์ —)  ต่างจาก 0 = ให้แล้วว่าแย่ (โชว์ 0 สีแดง) */
   function scoreCls(v){ return v==null ? '' : v>=3 ? 'rr-good' : v>=2 ? '' : 'rr-bad'; }
+  /* ✓ = invalidation ทำงานแล้วออกตามนั้น · ⚠ = ทำงานแต่ไม่ได้ออก (สัญญาณวินัยหลุด) · · = ไม่ทำงาน */
+  const INVAL_MARK = {
+    hit:    {icon:'✓', cls:'rr-good', tip:'Invalidation เกิดขึ้น → ออกตามนั้น'},
+    ignored:{icon:'⚠', cls:'rr-bad',  tip:'Invalidation เกิดขึ้น → แต่ไม่ได้ออก'},
+    no:     {icon:'·', cls:'',        tip:'Invalidation ไม่เกิด — ออกด้วยเหตุอื่น'}
+  };
   function jReviewCell(t){
-    const d=t.discScore, s=t.setupScore;
-    if(d==null && s==null) return `<span style="color:var(--muted)">—</span>`;
+    const d=t.discScore, s=t.setupScore, iv=INVAL_MARK[t.invalHit];
+    if(d==null && s==null && !iv) return `<span style="color:var(--muted)">—</span>`;
     const one=(v,lbl)=>`<span class="${scoreCls(v)}"${v==null?' style="color:var(--muted)"':''} title="${lbl}">${v==null?'—':v}</span>`;
-    return `${one(d,'วินัย')}<span style="color:var(--muted)"> / </span>${one(s,'Setup')}`;
+    const mark = iv ? ` <span class="${iv.cls}" title="${iv.tip}">${iv.icon}</span>` : '';
+    return `${one(d,'วินัย')}<span style="color:var(--muted)"> / </span>${one(s,'Setup')}${mark}`;
   }
   function jReasonCell(t){
     if(!t.exitReason && !t.exitNote) return `<span style="color:var(--muted)">—</span>`;
@@ -3339,7 +3360,8 @@ const FUND_CRITERIA = {
       {id:'n2', label:'② ยังจำเป็น + รายได้สม่ำเสมอ ใน 10-20 ปีไหม'},
       {id:'n3', label:'③ Moat: คู่แข่งโค่นยากตรงไหน + ขึ้นราคาได้ไหม'},
       {id:'n4', label:'④ ความเสี่ยงล้มหาย 1 ข้อ'},
-      {id:'n5', label:'⑤ ความทนทานการเงิน: net cash/หนี้ · FCF · share count · earnings quality'}
+      {id:'n5', label:'⑤ ความทนทานการเงิน: net cash/หนี้ · FCF · share count · earnings quality'},
+      {id:'n6', label:'⑥ Tripwire: ตัวเลขไหน เปลี่ยนถึงระดับไหน = thesis พัง ต้องกลับมาอ่านใหม่ (เขียนเป็นเส้นตายที่วัดได้ ไม่ใช่คำบรรยาย)'}
     ]
   },
   us_q: {
@@ -3372,7 +3394,8 @@ const FUND_CRITERIA = {
       {id:'n2', label:'② ยังจำเป็นใน 10-20 ปีไหม'},
       {id:'n3', label:'③ Moat: คู่แข่งโค่นยาก + pricing power'},
       {id:'n4', label:'④ ความเสี่ยงหลัก 1 ข้อ'},
-      {id:'n5', label:'⑤ ความทนทานการเงิน: net cash/หนี้ · FCF · share count · earnings quality'}
+      {id:'n5', label:'⑤ ความทนทานการเงิน: net cash/หนี้ · FCF · share count · earnings quality'},
+      {id:'n6', label:'⑥ Tripwire: ตัวเลขไหน เปลี่ยนถึงระดับไหน = thesis พัง ต้องกลับมาอ่านใหม่ (เขียนเป็นเส้นตายที่วัดได้ ไม่ใช่คำบรรยาย)'}
     ]
   },
   us_g: {
@@ -3462,6 +3485,13 @@ function fundScoreDone(fc){
   const cfg = FUND_CRITERIA[fc.type]; if(!cfg) return false;
   return cfg.scores.every(s=>fc.score && fc.score[s.id]!=null);
 }
+/* ข้อที่ยังไม่ได้ให้คะแนน — fundScoreTotal นับช่องว่างเป็น 0 ทำให้ Tier ต่ำกว่าจริงแบบเงียบๆ
+   (skill ปล่อย s8 = null ทุกครั้งโดยตั้งใจ) → บล็อก Save ไว้จนกว่าจะครบ
+   ถ้าหาข้อมูลไม่ได้จริง ทุก score มีตัวเลือกท้ายสุดที่ใช้แทน "ไม่มีข้อมูล" ได้อยู่แล้ว */
+function fundScoreMissing(fc){
+  const cfg = FUND_CRITERIA[fc && fc.type]; if(!cfg) return [];
+  return cfg.scores.filter(s=>!(fc.score && fc.score[s.id]!=null)).map(s=>s.id);
+}
 function fundGateItemPass(fc, g){
   if(g.auto) return capGatePass(fc.type, fc.mktcap);
   if(g.bankSkip && fc.bank) return true;
@@ -3529,9 +3559,34 @@ function fcDaysSince(d){
   const t = Date.parse(d); if(isNaN(t)) return null;
   return Math.floor((Date.now()-t)/86400000);
 }
+/* ช่องที่ค่าเพี้ยนได้เมื่อราคาขยับ — ต้องครอบทุกช่องที่ AI กรอกมาจากราคาได้จริงตาม output_template
+   (template ส่ง g4 พร้อม evidence "ราคา $67.62 vs 52wk high $151" → 52W/EMA ไม่ได้ "สดเสมอ" อย่างที่เคยเขียนไว้) */
+const PRICE_SENSITIVE = {
+  th:   ['mktcap','g2','g5','s2','s3'],
+  us_q: ['mktcap','g2','g5','s2'],
+  us_g: ['mktcap','g2','g3','g4','g6','s5']
+};
+/* เหลือเฉพาะช่องที่ยังเป็นค่าจาก AI — ช่องที่คุณแตะเองแล้วถือว่าสดแล้ว ไม่ต้องเตือนซ้ำ */
+function fcStaleFields(){
+  if(!fcState || !fcState.type) return [];
+  const cfg = FUND_CRITERIA[fcState.type]; if(!cfg) return [];
+  const ids = PRICE_SENSITIVE[fcState.type] || ['mktcap'];
+  return ids.filter(id=>fcIsAI(id)).map(id=>{
+    if(id==='mktcap') return {id, label:'Market Cap'};
+    const g = cfg.gates.find(x=>x.id===id);
+    if(g) return {id, label:id + ' · ' + gateLabel(g.label)};
+    const sc = cfg.scores.find(x=>x.id===id);
+    if(sc) return {id, label:id + ' · ' + sc.label};
+    return {id, label:id};
+  });
+}
 function fcConfirmPrice(){
   fcState.verifiedAt = new Date().toISOString().slice(0,10);
-  ['mktcap','s5'].forEach(k=>{ if(fcState.aiFilled && fcState.aiFilled[k]){ delete fcState.aiFilled[k]; if(!fcState.userOk) fcState.userOk={}; fcState.userOk[k]=true; } });
+  fcStaleFields().forEach(f=>{
+    if(fcState.aiFilled) delete fcState.aiFilled[f.id];
+    if(!fcState.userOk) fcState.userOk={};
+    fcState.userOk[f.id]=true;
+  });
   renderFundChecklistBody();
 }
 function fcEditPrice(){
@@ -3575,12 +3630,14 @@ function renderFundChecklistBody(){
     </div>`;
   }
   const ageDays = fcDaysSince(fcState.asOf || fcState.date);
-  if(fcState.source && ageDays!==null && ageDays>7 && !fcState.verifiedAt){
+  const staleFields = fcStaleFields();
+  if(fcState.source && ageDays!==null && ageDays>7 && !fcState.verifiedAt && staleFields.length){
     html += `<div class="hint" style="background:var(--surface2);border:1px solid var(--amber);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:.74rem;line-height:1.55">
       <b style="color:var(--amber)">⏱ ราคาที่ใช้คำนวณอายุ ${ageDays} วัน</b>
-      <div>กระทบ <b>Market Cap</b> และ <b>Valuation (P/S)</b> เท่านั้น — EMA/52W/RS/RVOL คุณติ๊กเองอยู่แล้ว จึงสดเสมอ</div>
+      <div style="margin-top:2px">ช่องข้างล่างนี้ AI กรอกจากราคาวันนั้น และ<b>คุณยังไม่ได้แตะ</b> — เปิดดูใหม่ให้ครบก่อนกดยืนยัน:</div>
+      ${staleFields.map(f=>`<div style="margin-left:6px">• ${f.label}</div>`).join('')}
       <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-        <button type="button" class="small" onclick="fcConfirmPrice()">ตรวจแล้ว — ยังใกล้เคียง</button>
+        <button type="button" class="small" onclick="fcConfirmPrice()">ตรวจครบทุกช่องแล้ว — ยังใกล้เคียง</button>
         <button type="button" class="small" onclick="fcEditPrice()">อัปเดตราคาเอง</button>
       </div>
     </div>`;
@@ -3675,7 +3732,9 @@ function fcRefreshSaveState(){
   else if(!sym) msg = '⚠ กรอก Symbol';
   else if(dup) msg = '⚠ มีแล้วใน Watchlist (Core/Sat.A)';
   else if(!gatePass) msg = '⚠ ต้องผ่าน GATE (Market Cap & เงื่อนไข) ให้ครบก่อน';
-  const ok = !!(sym && type && gatePass && !dup);
+  const missScore = (type && gatePass) ? fundScoreMissing(fcState) : [];
+  if(!msg && missScore.length) msg = '⚠ ยังไม่ได้ให้คะแนน ' + missScore.join(', ') + ' — ปล่อยว่างจะถูกนับเป็น 0 ทำให้ Tier ต่ำกว่าจริง';
+  const ok = !!(sym && type && gatePass && !dup && !missScore.length);
   btn.disabled = !ok;
   btn.style.opacity = ok ? '' : '.45';
   btn.style.cursor = ok ? '' : 'not-allowed';
@@ -3706,6 +3765,11 @@ function fcSaveToWatchlist(){
   if(!sym){ alert('กรอก Symbol'); return; }
   if(!fcState.type){ alert('เลือกประเภทหุ้นก่อน'); return; }
   if(!fundGatePass(fcState)){ alert('ต้องผ่าน GATE (Market Cap & เงื่อนไข) ให้ครบก่อน'); return; }
+  const missScore = fundScoreMissing(fcState);
+  if(missScore.length){
+    alert('ยังไม่ได้ให้คะแนน: ' + missScore.join(', ') + '\n\nถ้าบันทึกตอนนี้ ระบบจะนับข้อที่ว่างเป็น 0 คะแนน → Tier ต่ำกว่าความจริง\n\nกรอกให้ครบก่อน — ถ้าหาข้อมูลไม่ได้จริงๆ ให้เลือกตัวเลือกที่ตรงกับ "ไม่มีข้อมูล" ของข้อนั้น');
+    return;
+  }
   const dupPortsSave = (fcState.port==='core'||fcState.port==='satA') ? ['core','satA'] : [fcState.port];
   if(!fcState.editId && (state.watchlist||[]).some(w=>w.sym===sym && dupPortsSave.includes(w.port))){ alert('Symbol นี้มีอยู่ใน Watchlist (Core/Sat.A) แล้ว'); return; }
   fcState.sym = sym;
@@ -3904,7 +3968,7 @@ function openTrade(presetSym, presetTier, presetBias){
   document.getElementById('tradeTitle').textContent='เพิ่ม Trade';
   document.getElementById('tDate').value = new Date().toISOString().slice(0,10);
   populateSymbolSelect(presetSym||'');
-  ['tEntry','tSL','tTP','tQty','tExitPrice','tExitDate','tImageUrl','tDiscScore','tSetupScore','tExitNote','tInvalidation'].forEach(i=>document.getElementById(i).value='');
+  ['tEntry','tSL','tTP','tQty','tExitPrice','tExitDate','tImageUrl','tDiscScore','tSetupScore','tExitNote','tInvalidation','tInvalHit'].forEach(i=>document.getElementById(i).value='');
   populateReasonSelect('exit', '');
   document.getElementById('imgHint').textContent='';
   document.getElementById('tMult').value = 1;
@@ -3949,6 +4013,7 @@ function editTrade(id){
   populateReasonSelect('exit', t.exitReason || '', t);
   document.getElementById('tExitNote').value   = t.exitNote || '';
   document.getElementById('tInvalidation').value = t.invalidation || '';
+  document.getElementById('tInvalHit').value = t.invalHit || '';
   document.getElementById('tImageUrl').value=t.imageUrl||'';
   document.getElementById('imgHint').textContent='';
   setBias(t.bias); setCur(tradeCur(t)); setPosTier(t.posTier||'std'); toggleExitFields();
@@ -3988,6 +4053,14 @@ function toggleExitFields(){
   const status = document.getElementById('tStatus').value;
   const showExit = status==='closed';
   document.getElementById('exitFields').style.display = showExit?'block':'none';
+  /* ถามเรื่อง Invalidation เฉพาะไม้ที่เขียนไว้จริง — ไม่งั้นเป็นคำถามลอย ๆ ที่ตอบไม่ได้
+     อ่านจากช่องในฟอร์ม ไม่ใช่จาก trade ที่บันทึกแล้ว จะได้อัปเดตทันทีถ้าเพิ่งพิมพ์เพิ่ม */
+  const invalBox = document.getElementById('invalHitField');
+  if(invalBox){
+    const invalTxt = (document.getElementById('tInvalidation').value||'').trim();
+    invalBox.style.display = (showExit && invalTxt) ? 'block' : 'none';
+    if(invalTxt) document.getElementById('invalHitEcho').textContent = invalTxt;
+  }
   if(showExit && !document.getElementById('tExitDate').value){
     document.getElementById('tExitDate').value = new Date().toISOString().slice(0,10);
   }
@@ -4164,6 +4237,8 @@ function saveTrade(){
     const ssRaw = document.getElementById('tSetupScore').value;
     t.discScore  = dsRaw === '' ? null : Number(dsRaw);
     t.setupScore = ssRaw === '' ? null : Number(ssRaw);
+    /* เก็บเฉพาะไม้ที่เขียน invalidation ไว้ — ไม่งั้นค่าจะค้างจากไม้ก่อนหน้าโดยไม่มีความหมาย */
+    t.invalHit = t.invalidation ? (document.getElementById('tInvalHit').value || null) : null;
     t.exitReason = document.getElementById('tExitReason').value || null;
     /* snapshot ชื่อแท็กไว้ด้วย — ถ้าผู้ใช้ลบแท็กทิ้งทีหลัง ไม้นี้จะยังอ่านออกว่าหมายถึงอะไร
        ตอนแสดงผลจะใช้ชื่อ "ปัจจุบัน" ก่อนเสมอ snapshot เป็นแค่ตัวสำรอง → เปลี่ยนชื่อแท็กแล้วไม้เก่าอัปเดตตาม */
