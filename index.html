@@ -3953,6 +3953,18 @@ function fcCopyNotes(id){
 function renderChecklistDrafts(){
   const panel = document.getElementById('checklistDraftsPanel');
   if(!panel || !state) return;
+  const tag = (txt,dir)=>{ const clr=dir==='Short'?'var(--red)':dir==='Long'?'var(--teal)':'var(--amber)'; const bg=dir==='Short'?'var(--red-dim)':dir==='Long'?'var(--teal-dim)':'var(--surface2)'; return `<span class="tag" style="background:${bg};color:${clr};flex-shrink:0">${txt}</span>`; };
+  const draftDirTag = (cs)=>{
+    if(cs.port==='satB'){
+      if(cs.trend){
+        const dir = cs.trend==='against' ? (cs.bias==='Short'?'Long':'Short') : cs.bias;
+        const qual = cs.trend==='against' ? 'Counter' : 'Trend';
+        return tag(`${dir} (${qual})`, dir);
+      }
+      return cs.bias ? tag(`Trend: ${trendWord(cs.bias)}`, cs.bias) : '';
+    }
+    return cs.bias ? tag(cs.bias, cs.bias) : '';
+  };
   const drafts = Array.isArray(state.checklistDrafts) ? state.checklistDrafts : [];
   if(!drafts.length){ panel.style.display = 'none'; panel.innerHTML=''; return; }
   panel.style.display = 'block';
@@ -3960,13 +3972,11 @@ function renderChecklistDrafts(){
     drafts.map(d=>{
       const cs = d.clState || {};
       const portName = PORTS[cs.port] ? PORTS[cs.port].name : (cs.port||'—');
-      const biasColor = cs.bias==='Short' ? 'var(--red)' : 'var(--teal)';
-      const biasBg = cs.bias==='Short' ? 'var(--red-dim)' : 'var(--teal-dim)';
       const missing = clMissingList(cs);
       return `<div style="display:flex;align-items:center;gap:9px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;flex-wrap:wrap;font-size:.78rem">
         <span style="color:var(--muted);font-family:var(--mono);flex-shrink:0">${d.date||''}</span>
         <span style="font-weight:700;flex-shrink:0">${escHtml(cs.sym||'—')}</span>
-        ${cs.bias?`<span class="tag" style="background:${biasBg};color:${biasColor};flex-shrink:0">${cs.bias}</span>`:''}
+        ${draftDirTag(cs)}
         <span style="color:var(--muted);flex-shrink:0">${escHtml(portName)}</span>
         <span style="color:var(--amber);flex:1;min-width:140px">ขาด: ${missing.map(escHtml).join(', ')||'—'}</span>
         <div class="rowbtns" style="flex-shrink:0">
