@@ -930,12 +930,13 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
         <option value="satB">Satellite.B — Swing</option>
       </select>
     </div>
-    <div class="f" id="wBiasField" style="display:none"><label>Bias</label>
+    <div class="f" id="wBiasField" style="display:none"><label>Trend <span style="font-weight:400;color:var(--muted)">(by Trend = EMA10,20,50 TF.Day)</span></label>
       <div class="seg">
-        <button type="button" id="wbLong" onclick="setWBias('Long')">Long</button>
-        <button type="button" id="wbShort" onclick="setWBias('Short')">Short</button>
+        <button type="button" id="wbLong" onclick="setWBias('Long')">Bullish</button>
+        <button type="button" id="wbShort" onclick="setWBias('Short')">Bearish</button>
         <button type="button" id="wbUnclear" onclick="setWBias('Unclear')">Unclear</button>
       </div>
+      <div class="hint" id="wBiasWarn" style="display:none;color:var(--amber);margin-top:5px">⚠ Trend ยังไม่ชัด — ให้มองกรอบภาพใหญ่ (Higher TF) ก่อนตัดสินใจ · Symbol นี้จะยังเลือกเข้า Trade ไม่ได้จนกว่า Trend จะชัด</div>
     </div>
     <div class="f" id="wTechField"><label>Technical — Wyckoff Stage</label>
       <div class="seg" id="wyckStageSeg">
@@ -2068,6 +2069,10 @@ function watchEligibleForTrade(w){
 function biasTagClass(bias){
   return bias==='Long' ? 'long' : bias==='Short' ? 'short' : 'unclear';
 }
+/* Watchlist Sat.B stores Trend internally as Long/Short/Unclear; display as Bullish/Bearish/Unclear */
+function trendWord(bias){
+  return bias==='Long' ? 'Bullish' : bias==='Short' ? 'Bearish' : 'Unclear';
+}
 const PIE_COLORS = ['#3467C7','#0E9C86','#EAC13A','#D64545','#8E5FD1','#E6873C','#4FA8D8','#B85C9E','#6FBF73','#C9A227','#5B7DB1','#D48CB0'];
 const CASH_COLOR = '#B7BEC9';
 function getIndustryForSymbol(sym){
@@ -2166,7 +2171,7 @@ function renderWatchlist(){
           <table class="wltable">
             <thead><tr>
               <th class="dragCol"></th>
-              <th style="width:88px">Date</th><th style="width:${k==='satB'?'90px':'84px'}">Symbol</th>${k==='satB'?'<th style="width:70px">Bias</th>':''}${k==='satB'?'<th style="width:28%">Technical</th>':''}${scored?'<th style="width:96px">Industry</th>':''}<th>${k==='satB'?'Sentiment':(k==='core'?'Business':'Fundamental')}</th>${scored?'<th style="width:1%;padding-left:2px;padding-right:2px"></th><th style="width:64px">Score</th>':''}<th style="width:32px"></th><th style="width:64px"></th>
+              <th style="width:88px">Date</th><th style="width:${k==='satB'?'90px':'84px'}">Symbol</th>${k==='satB'?'<th style="width:70px">Trend</th>':''}${k==='satB'?'<th style="width:28%">Technical</th>':''}${scored?'<th style="width:96px">Industry</th>':''}<th>${k==='satB'?'Sentiment':(k==='core'?'Business':'Fundamental')}</th>${scored?'<th style="width:1%;padding-left:2px;padding-right:2px"></th><th style="width:64px">Score</th>':''}<th style="width:32px"></th><th style="width:64px"></th>
             </tr></thead>
             <tbody id="wlBody_${k}"></tbody>
           </table>
@@ -2250,7 +2255,7 @@ function renderWatchPort(port){
       <td class="dragCol"><span class="dragHandle ${dragOn?'':'disabled'}" title="ลากเพื่อจัดเรียง">⠿</span></td>
       <td>${w.date||'—'}</td>
       <td style="font-weight:600">${escHtml(w.sym)}${eligible?'':' <span class="hint" style="display:inline;color:var(--amber)">⚠ ยังไม่ครบเงื่อนไข</span>'}</td>
-      ${port==='satB'?`<td class="sans">${w.bias?`<span class="tag ${biasTagClass(w.bias)}">${w.bias}</span>`:'—'}</td>`:''}
+      ${port==='satB'?`<td class="sans">${w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:'—'}</td>`:''}
       ${port==='satB'?noteTd(w,'technical'):''}
       ${scored?`<td class="sans" style="color:var(--muted)">${w.industry?`${ICON_INDUSTRY_MINI} ${escHtml(w.industry)}`:'—'}</td>`:''}
       ${noteTd(w,'fundamental')}
@@ -2266,7 +2271,7 @@ function renderWatchPort(port){
   document.getElementById(`wlCards_${port}`).innerHTML = list.length ? list.map(w=>{
     const eligible = watchEligible(w);
     return `<div class="tcard" data-wid="${w.id}" style="${eligible?'':'opacity:.6'}">
-      <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${biasTagClass(w.bias)}">${w.bias}</span>`:''} ${w.industry?`<span class="hint" style="display:inline;color:var(--muted)"><svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.8"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.8" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.4"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="2"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="3" stroke-linecap="round"/></svg> ${escHtml(w.industry)}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
+      <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:''} ${w.industry?`<span class="hint" style="display:inline;color:var(--muted)"><svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.8"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.8" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.4"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="2"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="3" stroke-linecap="round"/></svg> ${escHtml(w.industry)}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
       ${!eligible?`<div class="hint" style="color:var(--amber)">⚠ ${port==='satB'?'ต้องมี Technical หรือ Sentiment อย่างน้อย 1 อย่าง':`ต้องมี ${port==='core'?'Business':'Fundamental'}`}</div>`:''}
       ${port==='satB'?noteInline(w,'technical','Technical'):''}
       ${noteInline(w,'fundamental',port==='satB'?'Sentiment':(port==='core'?'Business':'Fundamental'))}
@@ -2419,6 +2424,8 @@ function setWBias(v){
   document.getElementById('wbLong').className = v==='Long' ? 'on-long' : '';
   document.getElementById('wbShort').className = v==='Short' ? 'on-short' : '';
   document.getElementById('wbUnclear').className = v==='Unclear' ? 'on-unclear' : '';
+  const warn = document.getElementById('wBiasWarn');
+  if(warn) warn.style.display = v==='Unclear' ? '' : 'none';
 }
 function toggleWBiasField(){
   const port = document.getElementById('wPort').value;
@@ -2510,12 +2517,12 @@ function applyWyckBiasConstraint(){
   [longBtn,shortBtn,unclearBtn].forEach(b=>{ b.disabled=false; b.style.opacity=''; b.style.cursor=''; b.title=''; });
   if(forced==='Long'){
     if(wBias!=='Long') setWBias('Long');
-    lock(shortBtn,'Mark Up = ขาขึ้น Bias ต้องเป็น Long');
-    lock(unclearBtn,'Mark Up ต้องระบุ Bias = Long');
+    lock(shortBtn,'Mark Up = ขาขึ้น Trend ต้องเป็น Bullish');
+    lock(unclearBtn,'Mark Up ต้องระบุ Trend = Bullish');
   } else if(forced==='Short'){
     if(wBias!=='Short') setWBias('Short');
-    lock(longBtn,'Mark Down = ขาลง Bias ต้องเป็น Short');
-    lock(unclearBtn,'Mark Down ต้องระบุ Bias = Short');
+    lock(longBtn,'Mark Down = ขาลง Trend ต้องเป็น Bearish');
+    lock(unclearBtn,'Mark Down ต้องระบุ Trend = Bearish');
   }
 }
 function populateIndustrySelect(selected){
@@ -2748,7 +2755,7 @@ function saveWatch(){
   const dup = (state.watchlist||[]).find(w=>w.sym===sym && w.port!==port && w.id!==watchEditId);
   if(dup){
     const dupPortName = PORTS[dup.port] ? PORTS[dup.port].name : dup.port;
-    const proceed = confirm(`⚠ Symbol "${sym}" มีอยู่ใน Watchlist ของ ${dupPortName} อยู่แล้ว\n\nSymbol เดียวกันในหลาย Port อาจทำให้ระบบ auto-link Port/Bias ตอนเพิ่ม Trade เลือกผิด Port ได้\n\nยืนยันจะเพิ่ม/บันทึกต่อหรือไม่?`);
+    const proceed = confirm(`⚠ Symbol "${sym}" มีอยู่ใน Watchlist ของ ${dupPortName} อยู่แล้ว\n\nSymbol เดียวกันในหลาย Port อาจทำให้ระบบ auto-link Port/Trend ตอนเพิ่ม Trade เลือกผิด Port ได้\n\nยืนยันจะเพิ่ม/บันทึกต่อหรือไม่?`);
     if(!proceed) return;
   }
   const prevEntry = watchEditId ? (state.watchlist||[]).find(x=>x.id===watchEditId) : null;
@@ -3085,7 +3092,8 @@ function renderChecklistBody(){
   const body = document.getElementById('clBody');
   if(!body) return;
   if(!clState.port){ body.innerHTML = '<div class="hint">เลือก Symbol จาก Watchlist ก่อน ระบบจะดึง Port ให้อัตโนมัติ</div>'; return; }
-  let html = `<div class="hint" style="margin-bottom:12px">Port: <b>${PORTS[clState.port].name}</b>${clState.bias?` · Bias: <b style="color:${clState.bias==='Short'?'var(--red)':'var(--teal)'}">${clState.bias}</b>`:''}</div>`;
+  const trendClr = clState.bias==='Short'?'var(--red)':clState.bias==='Long'?'var(--teal)':'var(--amber)';
+  let html = `<div class="hint" style="margin-bottom:12px">Port: <b>${PORTS[clState.port].name}</b>${clState.bias?` · Trend: <b style="color:${trendClr}">${trendWord(clState.bias)}</b>`:''}</div>`;
   if(clState.port==='core' || clState.port==='satA'){
     html += `<div class="f"><label>ขนาดไม้</label>${clSegTier()}
       <div class="hint" style="margin-top:5px">2xBase = Price &gt; EMA.50 &amp; Signal เกิดตรง Key PoC</div></div>`;
@@ -3128,7 +3136,7 @@ function renderChecklistBody(){
     const againstColor = bias==='Short' ? 'var(--teal)' : 'var(--red)';
     const withBg = bias==='Short' ? 'var(--red-dim)' : 'var(--teal-dim)';
     const againstBg = bias==='Short' ? 'var(--teal-dim)' : 'var(--red-dim)';
-    html += `<div class="f"><label>ทิศทางเข้าเทียบกับ Trend หลัก <span style="font-weight:400;color:var(--muted)">(by Trend = EMA10,20,50 TF.Day)</span></label>
+    html += `<div class="f"><label>Bias เข้ากับ Trend หลัก <span style="font-weight:400;color:var(--muted)">(by Trend = EMA10,20,50 TF.Day)</span></label>
       <div class="seg">
         <button type="button" onclick="clSetTrend('with')" style="background:${clState.trend==='with'?withBg:'var(--surface2)'};color:${withColor};font-weight:${clState.trend==='with'?700:600}">${withLabel}</button>
         <button type="button" onclick="clSetTrend('against')" style="background:${clState.trend==='against'?againstBg:'var(--surface2)'};color:${againstColor};font-weight:${clState.trend==='against'?700:600}">${againstLabel}</button>
