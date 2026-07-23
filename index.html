@@ -531,7 +531,6 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       <h2>หุ้นที่สนใจ — รอทำการบ้าน</h2>
       <button class="small primary" onclick="openIdeaModal()" style="flex-shrink:0">＋ เพิ่มหุ้นที่สนใจ</button>
     </div>
-    <div class="hint" style="margin:-4px 0 10px">เก็บ Symbol ที่น่าสนใจไว้ก่อน — ยังไม่ต้องทำ Checklist · ใส่วันที่ · Port · เหตุผล · รูปประกอบได้</div>
     <div id="ideasBody"></div>
   </div>
 
@@ -3789,7 +3788,7 @@ function fcRefreshSaveState(){
   btn.style.cursor = ok ? '' : 'not-allowed';
   if(warn){ warn.textContent = ok ? '' : msg; warn.style.color = dup ? 'var(--red)' : 'var(--amber)'; }
 }
-function openFundChecklist(){
+function openFundChecklist(presetSym){
   fcState = {
     port:null, type:null, editId:null,
     sym:'', date:new Date().toISOString().slice(0,10), industry:'',
@@ -3802,7 +3801,7 @@ function openFundChecklist(){
   document.getElementById('clFundView').style.display = '';
   document.getElementById('clTradeFooter').style.display = 'none';
   document.getElementById('clFundFooter').style.display = '';
-  document.getElementById('fcSym').value = '';
+  document.getElementById('fcSym').value = presetSym ? String(presetSym).toUpperCase() : '';
   document.getElementById('fcDate').value = fcState.date;
   populateFcIndustrySelect('');
   renderFundTypeRow();
@@ -4077,26 +4076,53 @@ function delIdea(id){
   render();
   schedulePersist();
 }
+/* หุ้นที่สนใจนี้ "ทำการบ้านเสร็จ" แล้วหรือยัง — เข้า Watchlist + มี Score + Note ครบ */
+function ideaFulfilled(sym){
+  if(!state || !Array.isArray(state.watchlist)) return false;
+  const S = String(sym||'').toUpperCase();
+  return state.watchlist.some(w=>{
+    if(String(w.sym||'').toUpperCase() !== S) return false;
+    if(w.port==='satB'){
+      /* Sat.B ไม่มี Score — ถือว่าเสร็จเมื่อมี Note (Technical หรือ Sentiment) ครบเงื่อนไข */
+      return watchEligible(w);
+    }
+    /* Core / Sat.A — ต้องมี Score (fundCheck tier) + Note */
+    const hasScore = !!(w.fundCheck && w.fundCheck.tier);
+    const n = (w.fundCheck && w.fundCheck.note) || {};
+    const hasNote = !!((n.sum||n.biz||'').trim() || (w.fundamental||'').trim());
+    return hasScore && hasNote;
+  });
+}
 function renderIdeas(){
   const body = document.getElementById('ideasBody');
   if(!body || !state) return;
   if(!Array.isArray(state.ideas)) state.ideas = [];
+  /* auto-eject: เมื่อ Symbol เข้า Watchlist + ทำการบ้านครบแล้ว ให้เด้งออกอัตโนมัติ */
+  const before = state.ideas.length;
+  state.ideas = state.ideas.filter(it=>!ideaFulfilled(it.sym));
+  if(state.ideas.length !== before) schedulePersist();
   const list = state.ideas.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   if(!list.length){
     body.innerHTML = '<div class="empty">ยังไม่มีรายการ — กด “＋ เพิ่มหุ้นที่สนใจ” เพื่อเก็บไอเดียที่ยังไม่ได้ทำ Checklist</div>';
     return;
   }
-  const portTag = (p)=>{ const name = PORTS[p]?PORTS[p].name:(p||'—'); return `<span class="tag" style="background:var(--surface2);color:var(--muted)">${escHtml(name)}</span>`; };
+  const portTag = (p)=>{
+    const name = p==='core'?'Core':p==='satA'?'Sat.A':p==='satB'?'Sat.B':(p||'—');
+    const clr = PORTS[p] ? PORTS[p].color : 'var(--muted)';
+    return `<span class="tag" style="background:${hexToRgba(clr,0.16)};color:${clr};font-weight:700"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${clr};margin-right:5px;vertical-align:middle"></span>${name}</span>`;
+  };
   const imgCell = (it)=>{ if(!it.imageUrl) return ''; const s=driveImgSrc(it.imageUrl); return s?`<img src="${s}" class="imgthumb" onclick="window.open('${it.imageUrl}','_blank')" title="เปิดรูป">`:`<a href="${it.imageUrl}" target="_blank" class="imglink">📎 รูป</a>`; };
+  const doBtns = (it)=>`<button class="small" onclick="openFundChecklist('${it.sym}')" title="ทำ Fundamental Checklist">📋</button><button class="small" onclick="openImportCL()" title="Import จาก Claude Checklist">📥</button>`;
   body.innerHTML = `
     <div class="tablewrap"><table>
-      <thead><tr><th style="width:96px">วันที่</th><th style="width:90px">Symbol</th><th style="width:150px">Port</th><th>Reason</th><th style="width:60px">รูป</th><th style="width:96px"></th></tr></thead>
+      <thead><tr><th style="width:96px">วันที่</th><th style="width:90px">Symbol</th><th style="width:120px">Port</th><th>Reason</th><th style="width:60px">รูป</th><th style="width:76px">ทำต่อ</th><th style="width:80px"></th></tr></thead>
       <tbody>${list.map(it=>`<tr>
         <td class="sans" style="color:var(--muted)">${it.date||'—'}</td>
         <td style="font-weight:600">${escHtml(it.sym)}</td>
         <td class="sans">${portTag(it.port)}</td>
         <td class="wlnote">${it.reason?escHtml(it.reason):'<span class="placeholder">—</span>'}</td>
         <td class="sans">${imgCell(it)}</td>
+        <td class="sans"><div class="rowbtns">${doBtns(it)}</div></td>
         <td class="sans"><div class="rowbtns">
           <button class="small" onclick="openIdeaModal('${it.id}')" title="แก้ไข">✎</button>
           <button class="small danger" onclick="delIdea('${it.id}')" title="ลบ">✕</button>
@@ -4107,7 +4133,7 @@ function renderIdeas(){
       <div class="r1"><span class="sym">${escHtml(it.sym)} ${portTag(it.port)}</span><span class="sub">${it.date||''}</span></div>
       ${it.reason?`<div style="font-size:var(--wlnote-size);margin:4px 0"><b>Reason:</b> ${escHtml(it.reason)}</div>`:''}
       ${it.imageUrl?`<div style="margin:6px 0">${imgCell(it)}</div>`:''}
-      <div class="foot"><div></div><div class="rowbtns">
+      <div class="foot"><div class="rowbtns">${doBtns(it)}</div><div class="rowbtns">
         <button class="small" onclick="openIdeaModal('${it.id}')">แก้ไข</button>
         <button class="small danger" onclick="delIdea('${it.id}')">ลบ</button>
       </div></div>
