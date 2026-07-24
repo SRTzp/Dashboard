@@ -85,6 +85,12 @@ button.ghost{background:transparent}
 }
 .tabbtn.on{color:var(--text);border-bottom-color:var(--teal)}
 .tabbtn:hover{color:var(--text)}
+@media (max-width:480px){
+  .tabs{gap:0;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabbtn{flex:1 1 0;min-width:0;margin-right:0;padding:9px 2px;font-size:.72rem;text-align:center;white-space:nowrap}
+  .tabbtn .kbdhint{display:none}
+}
 
 /* ---------- summary strip ---------- */
 .strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
@@ -149,6 +155,40 @@ button.ghost{background:transparent}
 
 /* ---------- table section ---------- */
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px}
+/* ---- Portfolio Mix: Core + Satellite side by side ---- */
+.mixgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px}
+.mixgrid>.panel{margin-bottom:0}
+/* ---- Fund-flow tab ---- */
+.ffLbl{font-size:.7rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.ffGaugeTrack{position:relative;height:10px;margin-top:12px;border-radius:6px;background:linear-gradient(90deg,var(--red) 0%,var(--surface2) 50%,var(--teal) 100%)}
+.ffNeedle{position:absolute;top:-4px;left:50%;width:3px;height:18px;background:var(--text);border-radius:2px;transform:translateX(-50%);transition:left .25s ease}
+.ffGrp{font-size:.68rem;color:var(--muted);font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin:12px 0 2px}
+.ffRow{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border)}
+.ffRow .nm{flex:1;min-width:0}
+.ffRow .nm b{font-size:.88rem}
+.ffRow .nm i{display:block;font-size:.68rem;color:var(--muted);font-family:var(--mono);font-style:normal}
+.ffSeg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex-shrink:0}
+.ffSeg button{border:none;border-radius:0;background:var(--surface2);color:var(--muted);padding:5px 9px;font-size:.72rem;font-weight:700;cursor:pointer}
+.ffSeg button.on-on{background:var(--teal-dim);color:var(--teal)}
+.ffSeg button.on-neu{background:#fff;color:var(--text);box-shadow:inset 0 0 0 1px var(--border)}
+.ffSeg button.on-off{background:var(--red-dim);color:var(--red)}
+.ffW{display:inline-flex;gap:3px;align-items:center;cursor:pointer;flex-shrink:0;padding:4px 2px}
+.ffDot{width:6px;height:6px;border-radius:50%;background:var(--border)}
+.ffDot.on{background:var(--muted)}
+.ffx{color:var(--muted);cursor:pointer;font-size:.95rem;padding:0 2px;flex-shrink:0;line-height:1}
+.ffIdx{border-top:1px solid var(--border);padding:10px 0}
+.ffIdx .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ffIdxName{font-weight:700;font-size:.9rem;border:none;background:transparent;color:var(--text);width:96px;padding:2px 0}
+.ffIdxName:focus{outline:none;border-bottom:1px dashed var(--border)}
+.ffPill{font-size:.68rem;font-family:var(--mono);font-weight:700;padding:2px 8px;border-radius:6px}
+.ffPill.on{background:var(--teal-dim);color:var(--teal)}
+.ffPill.off{background:var(--red-dim);color:var(--red)}
+.ffLvl{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.ffLvl input.lvl{width:88px;font-family:var(--mono)}
+.ffLvl .ro{font-family:var(--mono);font-size:.74rem;color:var(--muted)}
+.ffLvl label{display:flex;align-items:center;gap:5px;font-size:.74rem;color:var(--muted)}
+.ffLvl input.basis{flex:1;min-width:120px;font-size:.76rem}
+.ffArrow{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
 .tablewrap{overflow-x:auto}
 .panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .panel-head h2{font-size:.95rem;font-weight:700}
@@ -489,6 +529,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   <button type="button" class="tabbtn" id="tabBtnWatch" onclick="switchTab('watch')">Watchlist <span class="kbdhint">2</span></button>
   <button type="button" class="tabbtn" id="tabBtnPlan" onclick="switchTab('plan')">แผนเทรด <span class="kbdhint">3</span></button>
   <button type="button" class="tabbtn" id="tabBtnJournal" onclick="switchTab('journal')">Journal <span class="kbdhint">4</span></button>
+  <button type="button" class="tabbtn" id="tabBtnFlow" onclick="switchTab('flow')">Fund-flow <span class="kbdhint">5</span></button>
 </div>
 
 <!-- ---- TAB 0: Watchlist ---- -->
@@ -592,6 +633,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 
 <!-- ---- TAB 3: Portfolio Mix ---- -->
 <div id="tabMix">
+  <div class="mixgrid">
   <div class="panel">
     <h2 style="margin-bottom:12px">Core Port</h2>
     <div class="pierow">
@@ -630,6 +672,47 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       </div>
     </div>
   </div>
+  </div>
+</div>
+
+<!-- ---- TAB 4: Fund-flow / Risk-on–Risk-off ---- -->
+<div id="tabFlow" style="display:none">
+
+  <div class="panel" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <div>
+        <div class="ffLbl">Fund-flow regime · composite</div>
+        <div id="ffScore" style="font-family:var(--mono);font-size:1.55rem;font-weight:600;margin-top:2px">—</div>
+      </div>
+      <div style="text-align:right">
+        <div class="ffLbl">อัปเดตล่าสุด</div>
+        <div id="ffUpdated" class="hint" style="margin-top:4px">—</div>
+      </div>
+    </div>
+    <div class="ffGaugeTrack"><div id="ffNeedle" class="ffNeedle"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--muted);margin-top:6px;font-family:var(--mono)">
+      <span>◀ RISK-OFF · เงินเข้าที่ปลอดภัย</span><span>NEUTRAL</span><span>RISK-ON · เข้าสินทรัพย์เสี่ยง ▶</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h2 style="margin:0">Fund-flow board</h2>
+      <button type="button" class="small ghost" onclick="ffAddSignal()">＋ ช่องทาง</button>
+    </div>
+    <div class="hint" style="margin:0 0 6px">แต่ละช่องทางตอบคำถามเดียวกัน — เงินเอียงไปทางไหน · แตะน้ำหนัก (จุด) เพื่อปรับความสำคัญ</div>
+    <div id="ffBoard"></div>
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h2 style="margin:0">Index confirmation</h2>
+      <button type="button" class="small ghost" onclick="ffAddIndex()">＋ index</button>
+    </div>
+    <div class="hint" style="margin:0 0 10px">ตั้ง Status ปัจจุบัน → กรอกเฉพาะ level ฝั่งตรงข้ามที่ต้องเฝ้า · ติ๊ก confirm เมื่อราคาแตะ = auto-flip Status แล้วสลับช่อง</div>
+    <div id="ffIndexWrap"></div>
+  </div>
+
 </div>
 
 </div>
@@ -1336,6 +1419,7 @@ function startListening(){
         watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
         fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[], ideas: Array.isArray(d.ideas)?d.ideas:[], watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAULT_TABS_OFFSET,
         exitReasons: Array.isArray(d.exitReasons) ? d.exitReasons : null,   /* เก็บไว้ให้ ensureReasonTags ย้ายเข้า reasonTags.exit */
+        fundflow: (d.fundflow && typeof d.fundflow==='object') ? d.fundflow : defaultFundflow(),
         reasonTags: (d.reasonTags && typeof d.reasonTags==='object') ? d.reasonTags : null};
     } else {
       state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags()};
@@ -1395,7 +1479,7 @@ function resetAll(){
 
 /* ================= tabs ================= */
 function switchTab(t){
-  const order = ['mix','watch','plan','journal'];
+  const order = ['mix','watch','plan','journal','flow'];
   const fromI = order.indexOf(activeTab), toI = order.indexOf(t);
   const dir = toI > fromI ? 1 : toI < fromI ? -1 : 0; // 1 = ไปข้างหน้า (ปัดซ้าย), -1 = ย้อนกลับ (ปัดขวา)
   activeTab = t;
@@ -1403,14 +1487,17 @@ function switchTab(t){
   document.getElementById('tabPlan').style.display = t==='plan' ? 'block' : 'none';
   document.getElementById('tabJournal').style.display = t==='journal' ? 'block' : 'none';
   document.getElementById('tabMix').style.display = t==='mix' ? 'block' : 'none';
+  document.getElementById('tabFlow').style.display = t==='flow' ? 'block' : 'none';
   document.getElementById('tabBtnWatch').classList.toggle('on', t==='watch');
   document.getElementById('tabBtnPlan').classList.toggle('on', t==='plan');
   document.getElementById('tabBtnJournal').classList.toggle('on', t==='journal');
   document.getElementById('tabBtnMix').classList.toggle('on', t==='mix');
+  document.getElementById('tabBtnFlow').classList.toggle('on', t==='flow');
   if(t==='watch') renderWatchlist();
   if(t==='mix') renderPortfolioMix();
+  if(t==='flow') renderFundflow();
   if(dir!==0){
-    const ids = {mix:'tabMix',watch:'tabWatch',plan:'tabPlan',journal:'tabJournal'};
+    const ids = {mix:'tabMix',watch:'tabWatch',plan:'tabPlan',journal:'tabJournal',flow:'tabFlow'};
     const el = document.getElementById(ids[t]);
     if(el){
       el.classList.remove('tabSlideIn');
@@ -1422,7 +1509,7 @@ function switchTab(t){
 }
 
 /* ---- swipe ซ้าย/ขวาเปลี่ยน tab (มือถือ) ---- */
-const TAB_ORDER = ['mix','watch','plan','journal'];
+const TAB_ORDER = ['mix','watch','plan','journal','flow'];
 (function(){
   let sx=0, sy=0, tracking=false;
   document.addEventListener('touchstart', (e)=>{
@@ -1452,6 +1539,7 @@ document.addEventListener('keydown', (e)=>{
   else if(e.key==='2') switchTab('watch');
   else if(e.key==='3') switchTab('plan');
   else if(e.key==='4') switchTab('journal');
+  else if(e.key==='5') switchTab('flow');
 });
 
 /* ================= currency helpers ================= */
@@ -4785,6 +4873,126 @@ document.addEventListener('keydown', (e)=>{
 });
 
 setAuthMode('in');
-</script><button id="scrollTopBtn" class="scrollTopBtn" onclick="scrollToTop()" title="ขึ้นบนสุด">↑</button>
+</script>
+<script>
+/* ================= Fund-flow / Risk-on–Risk-off ================= */
+function idFF(){ return 'ff'+Math.random().toString(36).slice(2,9); }
+function defaultFundflow(){
+  return {
+    signals:[
+      {id:idFF(), name:'Equities vs bonds', sub:'SPX / TLT', grp:'appetite', w:3, v:0},
+      {id:idFF(), name:'Credit appetite',   sub:'HY spread · HYG', grp:'appetite', w:3, v:0},
+      {id:idFF(), name:'Cyclicals vs defensives', sub:'Copper/Gold · semis', grp:'appetite', w:2, v:0},
+      {id:idFF(), name:'EM / high-beta',    sub:'EEM · BTC', grp:'appetite', w:1, v:0},
+      {id:idFF(), name:'US Dollar',         sub:'DXY · ขึ้น = off', grp:'haven', w:3, v:0},
+      {id:idFF(), name:'Gold / JPY',        sub:'มีคนซื้อ = off', grp:'haven', w:2, v:0},
+      {id:idFF(), name:'Volatility',        sub:'VIX · >20 = off', grp:'haven', w:2, v:0}
+    ],
+    indices:[
+      {id:idFF(), name:'S&P 500', status:'on', onLvl:'', offLvl:'', basis:'', changed:''},
+      {id:idFF(), name:'SET',     status:'on', onLvl:'', offLvl:'', basis:'', changed:''}
+    ],
+    updated:''
+  };
+}
+function ffState(){
+  if(!state) return defaultFundflow();
+  if(!state.fundflow || typeof state.fundflow!=='object') state.fundflow = defaultFundflow();
+  if(!Array.isArray(state.fundflow.signals)) state.fundflow.signals = defaultFundflow().signals;
+  if(!Array.isArray(state.fundflow.indices)) state.fundflow.indices = [];
+  return state.fundflow;
+}
+function ffToday(){ try{ return new Date().toLocaleDateString('th-TH',{day:'numeric',month:'short'}); }catch(e){ return new Date().toISOString().slice(0,10); } }
+function ffEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+const FF_GRP_LABEL = {appetite:'Risk-appetite channels · เงินเข้าเสี่ยง', haven:'Safe-haven channels · เงินเข้าปลอดภัย'};
+
+function ffComposite(){
+  const s=ffState().signals; let num=0,den=0;
+  s.forEach(x=>{ num+=(x.v|0)*(x.w||1); den+=(x.w||1); });
+  const pct = den? num/den : 0;
+  return {pct, score: Math.round(pct*10)};
+}
+function renderFundflow(){
+  const f=ffState(), c=ffComposite();
+  const scoreEl=document.getElementById('ffScore'); if(!scoreEl) return;
+  const label = c.score>2?'Risk-on':c.score<-2?'Risk-off':'Neutral';
+  scoreEl.textContent = (c.score>0?'+':'')+c.score+'  ·  '+label;
+  scoreEl.style.color = c.score>2?'var(--teal)':c.score<-2?'var(--red)':'var(--muted)';
+  document.getElementById('ffNeedle').style.left = Math.round((c.pct+1)/2*100)+'%';
+  document.getElementById('ffUpdated').textContent = f.updated||'ยังไม่ได้บันทึก';
+  renderFFBoard(); renderFFIndices();
+}
+function renderFFBoard(){
+  const f=ffState(), host=document.getElementById('ffBoard'); host.innerHTML='';
+  ['appetite','haven'].forEach(grp=>{
+    const items=f.signals.filter(s=>s.grp===grp); if(!items.length) return;
+    const h=document.createElement('div'); h.className='ffGrp'; h.textContent=FF_GRP_LABEL[grp]; host.appendChild(h);
+    items.forEach(s=>{
+      const gi=f.signals.indexOf(s);
+      const row=document.createElement('div'); row.className='ffRow';
+      row.innerHTML='<div class="nm"><b>'+ffEsc(s.name)+'</b><i>'+ffEsc(s.sub||'')+'</i></div>'
+        + ffWeightHtml(gi,s.w) + ffSegHtml(gi,s.v)
+        + '<span class="ffx" title="ลบ" onclick="ffDelSignal('+gi+')">×</span>';
+      host.appendChild(row);
+    });
+  });
+}
+function ffSegHtml(i,v){
+  const opt=[['-1','Off','off'],['0','–','neu'],['1','On','on']];
+  return '<div class="ffSeg">'+opt.map(o=>'<button class="'+(String(v)===o[0]?'on-'+o[2]:'')+'" onclick="ffSetSignal('+i+','+o[0]+')">'+o[1]+'</button>').join('')+'</div>';
+}
+function ffWeightHtml(i,w){ let d=''; for(let k=1;k<=3;k++) d+='<span class="ffDot'+(k<=w?' on':'')+'"></span>'; return '<span class="ffW" title="น้ำหนัก (แตะเพื่อปรับ)" onclick="ffCycleWeight('+i+')">'+d+'</span>'; }
+function ffSetSignal(i,v){ ffState().signals[i].v=v; ffState().updated=ffToday(); renderFundflow(); schedulePersist(); }
+function ffCycleWeight(i){ const s=ffState().signals[i]; s.w=(s.w%3)+1; ffState().updated=ffToday(); renderFundflow(); schedulePersist(); }
+function ffDelSignal(i){ if(!confirm('ลบช่องทางนี้?')) return; ffState().signals.splice(i,1); ffState().updated=ffToday(); renderFundflow(); schedulePersist(); }
+function ffAddSignal(){
+  const name=prompt('ชื่อช่องทาง (เช่น Oil / Semis):'); if(!name||!name.trim()) return;
+  const grp=confirm('เป็นช่องทาง Risk-appetite?\n\nOK = appetite (เงินเข้าสินทรัพย์เสี่ยง)\nCancel = safe-haven (เงินเข้าที่ปลอดภัย)')?'appetite':'haven';
+  ffState().signals.push({id:idFF(), name:name.trim(), sub:'', grp, w:2, v:0});
+  ffState().updated=ffToday(); renderFundflow(); schedulePersist();
+}
+function renderFFIndices(){
+  const f=ffState(), host=document.getElementById('ffIndexWrap'); host.innerHTML='';
+  if(!f.indices.length){ host.innerHTML='<div class="hint">ยังไม่มี index — กด ＋ index</div>'; return; }
+  f.indices.forEach((r,i)=>{
+    const on = r.status==='on';
+    const pill='<span class="ffPill '+(on?'on':'off')+'">'+(on?'Risk On':'Risk Off')+'</span>';
+    const arrow = on ? '▼ หลุดต่ำกว่า' : '▲ ยืนเหนือ';
+    const key = on ? 'offLvl' : 'onLvl';
+    const ph  = on ? 'Risk-off lvl' : 'Risk-on lvl';
+    const bph = on ? '50DMA / support' : '200DMA / resistance';
+    const lvlHtml='<div class="ffLvl">'
+      +'<span class="ffArrow">'+arrow+'</span>'
+      +'<input class="lvl" placeholder="'+ph+'" value="'+ffEsc(r[key])+'" oninput="ffIdxField('+i+',\''+key+'\',this.value)">'
+      +'<label><input type="checkbox" onchange="ffConfirm('+i+')"> confirm</label>'
+      +'<input class="basis" placeholder="'+bph+'" value="'+ffEsc(r.basis)+'" oninput="ffIdxField('+i+',\'basis\',this.value)">'
+      +'</div>';
+    const roVal = on ? r.onLvl : r.offLvl;
+    const roTxt = roVal ? ('ยืนยันแล้ว '+ffEsc(roVal)+(r.changed?(' · '+ffEsc(r.changed)):'')) : '';
+    const box=document.createElement('div'); box.className='ffIdx';
+    box.innerHTML='<div class="top">'
+      +'<input class="ffIdxName" value="'+ffEsc(r.name)+'" oninput="ffIdxField('+i+',\'name\',this.value)">'
+      +pill
+      +(roTxt?'<span class="ro">'+roTxt+'</span>':'')
+      +'<span class="ffx" title="ลบ" style="margin-left:auto" onclick="ffDelIndex('+i+')">×</span>'
+      +'</div>'+lvlHtml;
+    host.appendChild(box);
+  });
+}
+function ffIdxField(i,k,v){ ffState().indices[i][k]=v; ffState().updated=ffToday(); schedulePersist(); }
+function ffConfirm(i){
+  const r=ffState().indices[i];
+  r.status = (r.status==='on') ? 'off' : 'on';
+  r.changed=ffToday(); ffState().updated=ffToday();
+  renderFundflow(); schedulePersist();
+}
+function ffAddIndex(){
+  const name=prompt('ชื่อ Index (เช่น Nasdaq / DXY / VIX):'); if(!name||!name.trim()) return;
+  ffState().indices.push({id:idFF(), name:name.trim(), status:'on', onLvl:'', offLvl:'', basis:'', changed:''});
+  ffState().updated=ffToday(); renderFundflow(); schedulePersist();
+}
+function ffDelIndex(i){ if(!confirm('ลบ index นี้?')) return; ffState().indices.splice(i,1); ffState().updated=ffToday(); renderFundflow(); schedulePersist(); }
+</script>
+<button id="scrollTopBtn" class="scrollTopBtn" onclick="scrollToTop()" title="ขึ้นบนสุด">↑</button>
 </body>
 </html>
