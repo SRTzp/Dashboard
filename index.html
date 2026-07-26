@@ -214,6 +214,17 @@ button.ghost{background:transparent}
 .ffQ.weak .ffChip{color:var(--amber);border-color:var(--amber)}
 .ffQ.lag .ffChip{color:var(--red);border-color:var(--red)}
 .ffQ.imp .ffChip{color:var(--blue);border-color:var(--blue)}
+.ffAddOn{margin-top:7px;font-size:.7rem;font-weight:700;font-family:var(--mono);padding:3px 8px;border-radius:6px;display:inline-block}
+.ffAddOn.ok{background:var(--teal-dim);color:var(--teal)}
+.ffAddOn.no{background:var(--red-dim);color:var(--red)}
+.ffStale{background:var(--red-dim);border:1px solid var(--red);color:var(--red);border-radius:10px;padding:7px 12px;margin-bottom:12px;font-size:.74rem;font-weight:700}
+.ffCtx{border-top:1px solid var(--border);margin-top:8px;padding-top:8px}
+.ffCtxLine{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.ffCtxVerdict{margin-top:6px;font-size:.74rem;font-weight:700;padding:6px 10px;border-radius:8px}
+.ffCtxVerdict.best{background:var(--teal-dim);color:var(--teal)}
+.ffCtxVerdict.good{background:rgba(52,103,199,.10);color:var(--blue)}
+.ffCtxVerdict.warn{background:var(--amber-dim);color:var(--amber)}
+.ffCtxVerdict.bad{background:var(--red-dim);color:var(--red)}
 .ffFoot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 4px;font-size:.66rem;color:var(--muted);font-family:var(--mono)}
 .ffSetRow{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--border);flex-wrap:wrap}
 .ffSetRow input.r{flex:1;min-width:110px;font-family:var(--mono);font-size:.76rem}
@@ -717,16 +728,20 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <span class="ffQeEdit">แก้ไข ✎</span>
   </div>
 
+  <div class="ffStale" id="ffStale" style="display:none"></div>
+
   <div class="ffCaps">
     <div class="ffCap core">
-      <div class="ffCapLbl">เพดานลงเงิน · Core</div>
+      <div class="ffCapLbl">Core · เพดานเติมเงินใหม่</div>
       <div class="ffCapVal" id="ffCapCore">—</div>
       <div class="ffCapWhy" id="ffCapCoreWhy"></div>
+      <div class="ffCapWhy" style="margin-top:3px;opacity:.75">ของเดิมไม่ต้องแตะ — คุมแค่เงินที่จะเติมเข้าไป</div>
     </div>
     <div class="ffCap sat">
-      <div class="ffCapLbl">เพดานลงเงิน · Sat.A</div>
+      <div class="ffCapLbl">Sat.A · เพดานลงเงินรวม</div>
       <div class="ffCapVal" id="ffCapSat">—</div>
       <div class="ffCapWhy" id="ffCapSatWhy"></div>
+      <div id="ffAddOn" class="ffAddOn">—</div>
     </div>
   </div>
 
@@ -771,6 +786,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       <div class="ffQ weak"><div class="ffQt">WEAKENING</div><div class="ffQs">ยังแข็งแต่แผ่ว · เตือนของที่ถือ</div><div class="ffQbox" id="ffQweak"></div></div>
     </div>
     <div class="hint" style="margin:6px 0 2px">การหมุนปกติวนตามเข็ม: Improving → Leading → Weakening → Lagging</div>
+    <div id="ffCtx" class="ffCtx"></div>
     <div id="ffThemes" style="margin-top:4px"></div>
     <div class="hint" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">⚠ Semi · AI · Photonics เกาะกลุ่มเดียวกันเกือบหมด — นับ breadth ได้ แต่อย่าถือว่าเป็น 3 เสียงอิสระ</div>
   </div>
@@ -1618,6 +1634,13 @@ document.addEventListener('keydown', (e)=>{
 function tradeCur(t){ return t.cur || PORTS[t.port].cur; }
 function tradeSym(t){ return tradeCur(t)==='USD' ? '$' : '฿'; }
 function portCapTHB(k){ return PORTS[k].cur==='USD' ? state.settings.capital[k]*state.settings.fx : state.settings.capital[k]; }
+/* เพดานถือครองต่อ 1 สัญลักษณ์ = บันไดเต็มไม้ (base 2x + add-on 1x + 1x = Standard × 4)
+   ผูกกับ Standard Size % เพื่อให้เลื่อนตามอัตโนมัติเมื่อเปลี่ยนขนาดไม้ · Sat.B ใช้คนละกลไก จึงคงค่าเดิม */
+function holdLimitPct(port){
+  if(port==='satB') return 16;
+  const std = (state.settings.posSize && state.settings.posSize[port]) || 4;
+  return std * 4;
+}
 function portHeatLimit(k){
   const p = state.settings.limits.port;
   if(p && typeof p==='object') return p[k] ?? 3;
@@ -1905,7 +1928,8 @@ function render(){
     const riskPctTot = pct(totalRiskTHB, cap);
     const hotG = riskPctTot > L.total;
     const holdPctPort = capTH>0 ? holdValueTHB/capTH*100 : 0;
-    const holdWarn = holdPctPort > 16;
+    const holdLim = holdLimitPct(port);
+    const holdWarn = holdPctPort > holdLim;
     const portName = port==='core'?'Core':port==='satA'?'Sat.A':'Sat.B';
     const header = `<tr class="grouprow gbox gbox-first" style="--gcolor:${gcolor}"><td colspan="15" style="background:${hexToRgba(portColor,0.1)}"><div class="ghead">
       <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${portColor};flex-shrink:0"></span>
@@ -1916,7 +1940,7 @@ function render(){
       <span class="gmeta">avg <b>${fmt2(avgEntry)}</b></span>
       <span class="gmeta">qty <b>${fmt2(sumQty)}</b></span>
       <span class="gmeta ${hotG?'riskcell hot':''}" title="% ของทุน Port / % ของทุนรวม">Risk <b>฿${fmt0(totalRiskTHB)}</b> (${fmt2(riskPctPort)}%/${fmt2(riskPctTot)}%)${hotG?' ⚠':''}</span>
-      <span class="gmeta ${holdWarn?'riskcell hot':''}" title="% ถือครองของทุน Port">Hold <b>${fmt2(holdPctPort)}%</b>${holdWarn?' ⚠>16%':''}</span>
+      <span class="gmeta ${holdWarn?'riskcell hot':''}" title="% ถือครองของทุน Port (เพดานเต็มไม้ ${holdLim}%)">Hold <b>${fmt2(holdPctPort)}%</b>${holdWarn?` ⚠>${holdLim}%`:''}</span>
     </div></td></tr>`;
     return header + legs.map((t,i)=>legRowHtml(t, true, gcolor, i===legs.length-1)).join('');
   }).join('');
@@ -1980,12 +2004,13 @@ function render(){
     const avgEntry = sumQty>0 ? sumEntryQty/sumQty : 0;
     const riskPctPort = capTH>0 ? totalRiskTHB/capTH*100 : 0;
     const holdPctPort = capTH>0 ? holdValueTHB/capTH*100 : 0;
-    const holdWarn = holdPctPort > 16;
+    const holdLim = holdLimitPct(port);
+    const holdWarn = holdPctPort > holdLim;
     const groupCard = `<div class="tcard" style="background:${hexToRgba(PORTS[port].color,0.08)};border-left:2px solid ${gcolor};border-radius:10px">
       <div class="r1"><span class="sym">${symG} <span class="gmeta" style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">${portName}</span> <span class="tag ${legs[0].bias==='Long'?'long':'short'}">${legs[0].bias}</span></span><span class="sub">${legs.length} ไม้</span></div>
       <div class="sub">${nOpen} open / ${nPlan} plan · avg entry ${fmt2(avgEntry)} · qty รวม ${fmt2(sumQty)}</div>
       <div class="sub">รวม Risk ฿${fmt0(totalRiskTHB)} (${fmt2(riskPctPort)}% ของ ${PORTS[port].name})</div>
-      <div class="sub ${holdWarn?'riskcell hot':''}">ถือครอง ${fmt2(holdPctPort)}% ของ ${PORTS[port].name}${holdWarn?' ⚠ เกิน 16%':''}</div>
+      <div class="sub ${holdWarn?'riskcell hot':''}">ถือครอง ${fmt2(holdPctPort)}% ของ ${PORTS[port].name}${holdWarn?` ⚠ เกิน ${holdLim}%`:''}</div>
     </div>`;
     return groupCard + legs.map(legCardHtml).join('');
   }).join('') : `<div class="empty">ยังไม่มีรายการ — กด “+ เพิ่ม Trade” เพื่อเริ่ม</div>`;
@@ -4963,9 +4988,9 @@ function defaultFundflow(){
     ],
     l2:[
       {id:idFF(), r:'SPHB / SPLV', tf:'D', w:3, v:1, n:'ตลาดให้รางวัลคนกล้าเสี่ยงไหม', f:''},
-      {id:idFF(), r:'IWO / IWN',   tf:'D', w:2, v:1, n:'growth นอกเมกะแคป vs value', f:''},
-      {id:idFF(), r:'ARKK / QQQ',  tf:'D', w:1, v:1, n:'innovation ยังไม่กำไร — ผูกผู้จัดการคนเดียว', f:''}
+      {id:idFF(), r:'IWO / IWN',   tf:'D', w:2, v:1, n:'Small-cap growth vs value (Russell 2000)', f:''}
     ],
+    ctx:{rsp:1, f:''},   /* RSP/SPY — กว้าง(1)/แคบ(-1) · ไม่คิดคะแนน อ่านคู่กับ breadth */
     themes:[
       {id:idFF(), t:'Semi',      r:'SMH / SPY',  rs:1, mo:1, f:''},
       {id:idFF(), t:'Cybersec',  r:'CIBR / SPY', rs:1, mo:1, f:''},
@@ -4980,13 +5005,22 @@ function defaultFundflow(){
     ],
     qe:{mode:'QT', date:'', note:'', history:[]},
     log:[],
-    updated:''
+    updated:'',
+    updatedIso:'',
+    ver:2
   };
 }
+const FF_STALE_DAYS = 10;
 function ffState(){
   if(!state) return defaultFundflow();
   if(!state.fundflow || typeof state.fundflow!=='object') state.fundflow = defaultFundflow();
   const f=state.fundflow, d=defaultFundflow();
+  /* ver 2: ตัด ARKK/QQQ ออกจากชั้น 2 + เพิ่ม ctx (RSP/SPY) — รีเซ็ตชุด proxy ครั้งเดียว */
+  if((f.ver||1) < 2){ f.l1=d.l1; f.l2=d.l2; f.ctx=d.ctx; f.ver=2; }
+  /* แก้คำนิยาม IWO/IWN ให้ตรง — Russell 2000 = small-cap ล้วน ไม่ครอบ mid-cap */
+  (f.l2||[]).forEach(s=>{ if(s.r==='IWO / IWN' && /นอกเมกะแคป/.test(s.n||'')) s.n='Small-cap growth vs value (Russell 2000)'; });
+  if(!f.ctx || typeof f.ctx!=='object') f.ctx = d.ctx;
+  if(f.ctx.rsp!==1 && f.ctx.rsp!==-1) f.ctx.rsp = 1;
   /* ย้ายจากสคีมาเดิม (signals/indices) — ทิ้งของเก่า ใช้ชุดใหม่ */
   if(!Array.isArray(f.l1)     || !f.l1.length)     f.l1     = d.l1;
   if(!Array.isArray(f.l2)     || !f.l2.length)     f.l2     = d.l2;
@@ -5003,7 +5037,7 @@ function ffState(){
 }
 function ffToday(){ try{ return new Date().toLocaleDateString('th-TH',{day:'numeric',month:'short'}); }catch(e){ return new Date().toISOString().slice(0,10); } }
 function ffEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function ffTouch(){ ffState().updated=ffToday(); renderFundflow(); schedulePersist(); }
+function ffTouch(){ const f=ffState(); f.updated=ffToday(); f.updatedIso=new Date().toISOString().slice(0,10); renderFundflow(); schedulePersist(); }
 function ffLog(msg){ const f=ffState(); f.log.unshift({d:ffToday(), m:msg}); if(f.log.length>40) f.log.length=40; }
 const FF_TF={W:'weekly',D:'daily','4H':'4H'};
 
@@ -5035,6 +5069,21 @@ function renderFundflow(){
   document.getElementById('ffCapSatWhy').textContent = capA<capCore
     ? ('ชั้น 2 ('+(c2.score>0?'+':'')+c2.score+') กดลงจาก '+capCore+'%')
     : ('จากชั้น 1 ('+(c1.score>0?'+':'')+c1.score+')');
+
+  /* กฎ add-on: ชั้น 2 ติดลบ = หยุดกระจุก (ขนาดไม้ไม่เปลี่ยน 8/4/4 · ไม่บังคับขายของเดิม) */
+  const addOk = c2.score >= 0;
+  const ao=document.getElementById('ffAddOn');
+  ao.className='ffAddOn '+(addOk?'ok':'no');
+  ao.textContent = addOk ? 'add-on ได้ — เต็มไม้ 10+5+5 = 20%' : 'ห้าม add-on — เปิดไม้ใหม่ 10% ได้จนชนเพดาน';
+
+  /* เตือนข้อมูลเก่า */
+  const st=document.getElementById('ffStale');
+  const dd=ffDaysSince(f.updatedIso);
+  if(dd!=null && dd>FF_STALE_DAYS){
+    st.style.display=''; st.textContent='⚠ ข้อมูลเก่า '+dd+' วัน — ตัวเลขข้างล่างยังเป็นของรอบก่อน อย่าเพิ่งใช้สั่งการจนกว่าจะอัปเดตครบทุกแถว';
+  } else if(!f.updatedIso){
+    st.style.display=''; st.textContent='⚠ ยังไม่เคยอัปเดต — เปิดกราฟแล้วกดให้ตรงจริงก่อนใช้งาน';
+  } else st.style.display='none';
 
   ffRenderThemes();
   ffRenderDials();
@@ -5082,6 +5131,23 @@ function ffRenderThemes(){
   const b=document.getElementById('ffBreadth');
   b.textContent=up+'/'+f.themes.length+' ธีมนำ';
   b.style.color = up*2>f.themes.length ? 'var(--teal)' : up===0 ? 'var(--red)' : 'var(--muted)';
+
+  /* บริบท RSP/SPY — ตลาดกว้างหรือแคบ (ไม่คิดคะแนน) อ่านคู่กับ breadth */
+  const broad = f.ctx.rsp===1, mine = up*2 > f.themes.length;
+  const V = broad
+    ? (mine ? ['good','ตลาดกว้าง + ธีมคุณนำ — เลือกง่าย ผิดตัวก็ยังรอด']
+            : ['warn','ตลาดกว้างแต่ธีมคุณไม่ไป — ปัญหาอยู่ที่การเลือกธีม ไม่ใช่ที่ตลาด ทบทวนว่าธีมยังใช่ไหม'])
+    : (mine ? ['best','ตลาดแคบ + ผู้นำคือธีมคุณ — สภาพที่ดีที่สุดของ Sat.A โฟกัสหนักธีมที่นำ']
+            : ['bad','ตลาดแคบ + ผู้นำอยู่นอกสนาม — ดัชนีอาจเขียวแต่ของคุณไม่ไปไหน เบามือกับไม้ใหม่']);
+  document.getElementById('ffCtx').innerHTML=
+     '<div class="ffCtxLine"><span class="ffRatio">RSP / SPY</span>'+ffTf('D')
+    +'<span class="ffNote" style="display:inline;margin-left:4px">equal-weight vs cap-weight'+(f.ctx.f?(' · flip '+ffEsc(f.ctx.f)):'')+'</span>'
+    +'<span style="margin-left:auto"></span>'
+    +'<span class="ffSeg">'
+      +'<button class="'+(broad?'on-up':'')+'" onclick="ffSetCtx(1)">กว้าง</button>'
+      +'<button class="'+(!broad?'on-dn':'')+'" onclick="ffSetCtx(-1)">แคบ</button>'
+    +'</span></div>'
+    +'<div class="ffCtxVerdict '+V[0]+'">'+V[1]+'</div>';
   document.getElementById('ffThemes').innerHTML=f.themes.map((t,i)=>
     '<div class="ffRow"><div class="nm"><span class="ffRatio">'+ffEsc(t.t)+'</span>'+ffTf('D')
      +'<span class="ffNote">'+ffEsc(t.r)+(t.f?(' · flip '+ffEsc(t.f)):'')+'</span></div>'
@@ -5099,6 +5165,12 @@ function ffSetTheme(i,k,v){
   const t=ffState().themes[i];
   if(t[k]===v) return;
   t[k]=v; t.f=ffToday();
+  ffTouch();
+}
+function ffSetCtx(v){
+  const c=ffState().ctx;
+  if(c.rsp===v) return;
+  c.rsp=v; c.f=ffToday();
   ffTouch();
 }
 /* ---------- เข็มเดี่ยว ---------- */
