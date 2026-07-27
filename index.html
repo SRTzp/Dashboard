@@ -123,7 +123,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .port .nums{display:flex;gap:16px;margin:10px 0 8px;flex-wrap:wrap}
 .port .nums div{font-family:var(--mono);font-size:.8rem}
 .port .nums .k{display:block;font-family:var(--sans);font-size:.68rem;color:var(--muted)}
-.riskstats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:12px 0 10px;padding-top:10px;border-top:1px solid var(--border)}
+.riskstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(68px,1fr));gap:4px;margin:12px 0 10px;padding-top:10px;border-top:1px solid var(--border)}
 .riskstats .cell{display:flex;flex-direction:column;gap:2px}
 .riskstats .k{font-family:var(--sans);font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
 .riskstats .v{font-family:var(--mono);font-size:.85rem;font-weight:600}
@@ -173,6 +173,30 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .ffGaugeTrack.alt{background:linear-gradient(90deg,var(--blue) 0%,var(--surface2) 50%,var(--purple) 100%)}
 .ffNeedle{position:absolute;top:-4px;left:50%;width:3px;height:17px;background:var(--text);border-radius:2px;transform:translateX(-50%);transition:left .25s ease}
 .ffScale{display:flex;justify-content:space-between;font-size:.56rem;color:var(--muted);margin-top:5px;font-family:var(--mono)}
+/* ---------- Position sizing card (1R model) ---------- */
+.szCard{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;margin-top:10px}
+.szHero{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:2px}
+.szR{font-family:var(--mono);font-size:1.7rem;font-weight:700;line-height:1.1}
+.szR.full{color:var(--teal)} .szR.clip{color:var(--amber)} .szR.zero{color:var(--red)}
+.szRsub{font-family:var(--mono);font-size:.74rem;color:var(--muted)}
+.szBar{position:relative;height:7px;border-radius:5px;background:var(--border);margin:7px 0 3px;overflow:hidden}
+.szBar>i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--teal);transition:width .2s}
+.szBar>i.over{background:var(--red)}
+.szBar>u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text);opacity:.45}
+.szGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-top:9px}
+.szCell{background:var(--surface);border-radius:8px;padding:7px 9px}
+.szCell .k{font-size:.62rem;color:var(--muted);letter-spacing:.02em}
+.szCell .v{font-family:var(--mono);font-size:.94rem;font-weight:700;margin-top:1px}
+.szCell .s{font-family:var(--mono);font-size:.62rem;color:var(--muted)}
+.szTbl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.68rem;margin-top:9px}
+.szTbl th{text-align:right;color:var(--muted);font-weight:600;padding:3px 5px;border-bottom:1px solid var(--border)}
+.szTbl th:first-child,.szTbl td:first-child{text-align:left}
+.szTbl td{text-align:right;padding:3px 5px;border-bottom:1px solid var(--border)}
+.szTbl tr:last-child td{border-bottom:none}
+.szMsg{font-size:.72rem;font-weight:600;border-radius:7px;padding:5px 9px;margin-top:6px;line-height:1.45}
+.szMsg.red{background:var(--red-dim);color:var(--red-dark)}
+.szMsg.yellow{background:var(--amber-dim);color:var(--amber)}
+.szSec{font-size:.62rem;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin:11px 0 2px;font-weight:700}
 /* QE/QT bar */
 .ffQeBar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:var(--amber-dim);border:1px solid var(--amber);border-radius:10px;padding:7px 12px;margin-bottom:12px;cursor:pointer}
 .ffQeMode{font-family:var(--mono);font-weight:700;font-size:.82rem;color:var(--amber)}
@@ -330,6 +354,9 @@ tr:last-child td{border-bottom:none}
 .f select{font-family:var(--sans)}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+/* ช่องกรอกไหลต่อเนื่อง ไม่มีช่องว่างค้าง และไม่ชิดจนลายตา */
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px 12px}
+.fgrid+.hint{margin-top:8px}
 .hint{font-size:.7rem;color:var(--muted);margin-top:3px;font-family:var(--mono)}
 .hint b{color:var(--teal)}
 .modal .btns{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
@@ -592,6 +619,11 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   <div class="strip" id="strip"></div>
   <div class="ports" id="ports"></div>
 
+  <details class="panel" id="szHeatPanel" style="padding:10px 14px">
+    <summary style="cursor:pointer;font-weight:700;font-size:.9rem">Open Risk รายตัว &amp; รายธีม <span style="font-weight:400;color:var(--muted);font-size:.76rem">— กางดูเมื่อต้องการ</span></summary>
+    <div id="szHeatBody" style="margin-top:8px"></div>
+  </details>
+
   <div class="panel">
     <div class="panel-head">
       <h2>Trading Plan &amp; Positions</h2>
@@ -823,7 +855,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     </div>
     <div class="frow">
       <div class="f"><label>Port</label>
-        <select id="tPort" onchange="calcHint()">
+        <select id="tPort" onchange="szSyncLot();calcHint()">
           <option value="core">Core Port (THB ฿)</option>
           <option value="satA">Satellite.A — RS ($)</option>
           <option value="satB">Satellite.B — Swing ($)</option>
@@ -883,13 +915,24 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       </div>
     </div>
     <div class="hint" id="riskHint" style="margin-top:-4px"></div>
-    <div class="f" id="posTierField" style="margin-top:8px"><label>Position (Core / Sat.A)</label>
+    <div class="f" id="posTierField" style="margin-top:8px"><label>ไม้นี้คือ (Core / Sat.A)</label>
       <div class="seg">
-        <button type="button" id="posT2x" onclick="setPosTier('2x')">2xBase</button>
-        <button type="button" id="posTStd" onclick="setPosTier('std')">Standard</button>
+        <button type="button" id="posT2x" onclick="setPosTier('2x')">Base 70%</button>
+        <button type="button" id="posTStd" onclick="setPosTier('std')">Add-on 30%</button>
+      </div>
+      <div class="frow" style="gap:8px;margin-top:8px">
+        <div class="f"><label>Lot</label>
+          <select id="tLot" onchange="calcHint()">
+            <option value="1">1</option><option value="10">10</option><option value="100">100</option>
+          </select></div>
+        <div class="f"><label>ราคา add (คาด)</label>
+          <input type="number" step="any" inputmode="decimal" id="tAddPx" oninput="calcHint()" placeholder="เช่น 108"></div>
+        <div class="f"><label>&nbsp;</label>
+          <button type="button" class="small" onclick="szApplyQty()" title="ใส่จำนวนหุ้นที่คำนวณได้ลงช่อง Qty">↧ ใส่ Qty ให้</button></div>
       </div>
       <div class="hint" id="posTierHint"></div>
     </div>
+    <div id="szCard"></div>
     <div class="hint" id="posSizeHint"></div>
 
     <div class="f" style="margin-top:12px"><label>Invalidation — อะไรจะบอกว่าไม้นี้ผิดทาง</label>
@@ -1080,30 +1123,43 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       </label>
       <div class="hint" id="totalHint"></div>
     </div>
-    <div class="divlbl">Risk Limits (% ของทุนรวมเทียบเป็น THB)</div>
-    <div class="frow3">
-      <div class="f"><label>Max Risk / Trade % <span style="font-weight:400;color:var(--muted)">(เทียบกับทุนของ Port นั้นๆ)</span></label><input type="number" step="any" inputmode="decimal" id="sTrade"></div>
-      <div class="f"><label>Max Heat รวม %</label><input type="number" step="any" inputmode="decimal" id="sTotal"></div>
-      <div></div>
+    <div class="divlbl">Position Sizing — โมเดล 1R</div>
+    <div class="fgrid">
+      <div class="f"><label>Core — 1R %</label><input type="number" step="any" inputmode="decimal" id="sRCore"></div>
+      <div class="f"><label>Sat.A — 1R %</label><input type="number" step="any" inputmode="decimal" id="sRSatA"></div>
+      <div class="f"><label>Core — Max Cap ไม้ Base %</label><input type="number" step="any" inputmode="decimal" id="sCapCore"></div>
+      <div class="f"><label>Sat.A — Max Cap ไม้ Base %</label><input type="number" step="any" inputmode="decimal" id="sCapSatA"></div>
+      <div class="f"><label>Sat.B — RPT Risk %</label><input type="number" step="any" inputmode="decimal" id="sPosSatB"></div>
+      <div class="f"><label>Sat.A — RS Benchmark</label><input type="text" id="sRsBench" placeholder="NASDAQ:IXIC"></div>
     </div>
-    <div class="divlbl">Max Heat / Port — % ของทุน Port นั้นๆ (ปรับแยกแต่ละ Port ได้)</div>
-    <div class="frow3">
+    <div class="hint"><code>ไม้ base = MIN(Max Cap, 1R ÷ ระยะ stop%)</code> · add-on = หุ้น base × 0.4286 (70:30) · <b>ไม่ต้องมี Max Cap ของ add-on แยก</b> เพราะ add-on คิดจากจำนวนหุ้นไม้ base จึงล็อกที่ 42.86% เสมอ</div>
+
+    <div class="divlbl">Sat.B — Default Volatility (จุด/point)</div>
+    <div class="fgrid">
+      <div class="f"><label>XAUUSD</label><input type="number" step="any" inputmode="decimal" id="sVolXAU" placeholder="เช่น 30"></div>
+      <div class="f"><label>S50</label><input type="number" step="any" inputmode="decimal" id="sVolS50" placeholder="เช่น 5"></div>
+      <div class="f"><label>BTCUSD</label><input type="number" step="any" inputmode="decimal" id="sVolBTC" placeholder="เช่น 800"></div>
+    </div>
+    <div class="hint">ใช้เป็น<b>พื้นระยะขั้นต่ำ</b>ตอนคำนวณขนาดไม้: <code>ระยะที่ใช้ = MAX(ระยะ SL จริง, Default Volatility)</code><br>
+      SL กว้างกว่าค่านี้ → ใช้ SL จริง ไม้เล็กลงตามปกติ · SL <u>แคบกว่า</u>ค่านี้ → ยังใช้ค่านี้คำนวณ กันไม้ใหญ่เกินจากการตั้ง stop ชิดกว่าที่สินค้านั้นแกว่งจริง<br>
+      เช่น RPT 2% · XAUUSD 30p · ตั้ง SL 20p → ยังคิดที่ 30p (ไม้เล็กกว่าที่ 20p จะให้) แต่ถ้าตั้ง SL 40p → คิดที่ 40p</div>
+
+    <div class="divlbl">เพดาน Fund-flow — คุมขนาดไม้อัตโนมัติ</div>
+    <div class="fgrid">
+      <div class="f"><label>ใช้เพดานจากแท็บ Fund-flow ย่อ 1R</label>
+        <select id="sFfThrottle"><option value="1">ใช้ — ย่อขนาดไม้ตามเพดาน</option><option value="0">ไม่ใช้ — 1R เต็มเสมอ</option></select></div>
+      <div class="f"><label>สถานะตอนนี้</label><div class="hint" id="sFfNow" style="margin-top:6px">—</div></div>
+    </div>
+    <div class="hint">เพดาน Sat.A 40% → <b>1R เหลือ 0.40%</b> ของทุน Sat.A · ไม้ยังกระจายได้เท่าเดิมแต่เสี่ยงน้อยลงตามสัดส่วน · ถ้ายังไม่ได้กรอก Fund-flow เพดานจะเป็น 100% ไม่มีผลอะไร</div>
+
+    <div class="divlbl">Max Heat — Risk รวม (open + plan + loss)</div>
+    <div class="fgrid">
+      <div class="f"><label>รวมทุก Port %</label><input type="number" step="any" inputmode="decimal" id="sTotal"></div>
       <div class="f"><label>Core %</label><input type="number" step="any" inputmode="decimal" id="sPortCore"></div>
       <div class="f"><label>Sat.A %</label><input type="number" step="any" inputmode="decimal" id="sPortSatA"></div>
       <div class="f"><label>Sat.B %</label><input type="number" step="any" inputmode="decimal" id="sPortSatB"></div>
     </div>
-    <div class="divlbl">Position Sizing ต่อ Trade — Size ปกติ (Standard, 1x)</div>
-    <div class="frow3">
-      <div class="f"><label>Core — Standard Size %</label><input type="number" step="any" inputmode="decimal" id="sPosCore"></div>
-      <div class="f"><label>Sat.A — Standard Size %</label><input type="number" step="any" inputmode="decimal" id="sPosSatA"></div>
-      <div class="f"><label>Sat.B — RPT Risk %</label><input type="number" step="any" inputmode="decimal" id="sPosSatB"></div>
-    </div>
-    <div class="frow3">
-      <div class="f"><label>Core/Sat.A — Portfolio Risk Ceiling % (เช็คที่ 2xBase)</label><input type="number" step="any" inputmode="decimal" id="sTierThreshold"></div>
-      <div class="f"><label>Sat.A — RS Benchmark (gate RS Line)</label><input type="text" id="sRsBench" placeholder="NASDAQ:IXIC"></div>
-      <div></div>
-    </div>
-    <div class="hint" style="margin-top:-6px">Sat.B: risk ต่อไม้ (Entry–SL) ต้องไม่เกิน % ของทุน Swing เอง · Core/Sat.A: เช็ค Portfolio Risk ของขนาด 2xBase (double ของ Standard) กับเพดาน — ถ้าไม่เกินเพดาน ใช้ 2xBase ได้ ถ้าเกิน บังคับลดเหลือ Standard</div>
+    <div class="hint">คนละตัวกับ <b>Portfolio Heat 5R</b> ในการ์ด Add-trade ซึ่งนับเฉพาะ open risk ของไม้ที่ถืออยู่</div>
     <div class="btns" style="justify-content:space-between">
       <button class="danger" onclick="resetAll()">ล้างข้อมูลทั้งหมด</button>
       <div style="display:flex;gap:8px">
@@ -1330,7 +1386,10 @@ const DEFAULTS = {
   fxUpdatedAt:null,
   posSize:{core:4,satA:4,satB:15},
   posTier:{threshold:0.625},
+  sizing:{ r:{core:1, satA:1}, cap:{core:12.5, satA:12.5}, ffThrottle:true },
   rsBench:'NASDAQ:IXIC',
+  /* Sat.B — พื้นระยะขั้นต่ำตอนคำนวณขนาดไม้ (จุด) · 0 = ไม่ใช้ */
+  satBVol:{XAUUSD:0, S50:0, BTCUSD:0},
   limits:{trade:1,port:{core:3,satA:3,satB:3},total:6}
 };
 const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
@@ -1519,7 +1578,7 @@ function startListening(){
     } else {
       state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags()};
     }
-    { const a=ensureSatBDefaults(), b=ensureTabsOffsetV2(); if(a||b) schedulePersist(); }
+    { const a=ensureSatBDefaults(), b=ensureTabsOffsetV2(), c=ensure1RModel(); if(a||b||c) schedulePersist(); }
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('errorScreen').style.display='none';
     document.getElementById('mainWrap').style.display='block';
@@ -1641,12 +1700,24 @@ document.addEventListener('keydown', (e)=>{
 function tradeCur(t){ return t.cur || PORTS[t.port].cur; }
 function tradeSym(t){ return tradeCur(t)==='USD' ? '$' : '฿'; }
 function portCapTHB(k){ return PORTS[k].cur==='USD' ? state.settings.capital[k]*state.settings.fx : state.settings.capital[k]; }
+/* เพดานความเสี่ยงต่อไม้ของแต่ละ port — Core/Sat.A ใช้ 1R · Sat.B ใช้ RPT Risk */
+function szTradeLimit(port){
+  const s = state && state.settings; if(!s) return 1;
+  if(port==='satB') return (s.posSize && s.posSize.satB) || 2;
+  const r = s.sizing && s.sizing.r && s.sizing.r[port];
+  return (r>0) ? r : ((s.limits && s.limits.trade) || 1);
+}
 /* เพดานถือครองต่อ 1 สัญลักษณ์ = บันไดเต็มไม้ (base 2x + add-on 1x + 1x = Standard × 4)
-   ผูกกับ Standard Size % เพื่อให้เลื่อนตามอัตโนมัติเมื่อเปลี่ยนขนาดไม้ · Sat.B ใช้คนละกลไก จึงคงค่าเดิม */
+   Core/Sat.A ใช้โมเดล 1R · Sat.B ใช้คนละกลไก จึงคงค่าเดิม */
+/* เพดานถือครองต่อสัญลักษณ์ = ไม้เต็มตามสัดส่วนของ port นั้น
+   Core  : cap × (1 + 0.5 × 2)   = cap × 2       (Base 50% + Dip 25% ×2)
+   Sat.A : cap × (1 + 0.4286 × 1) = cap × 1.4286 (Base 70% + Add-on 30%)
+   SZ/szLeg อยู่ใน script block ถัดไป — ใส่ fallback กันลำดับโหลด */
 function holdLimitPct(port){
   if(port==='satB') return 16;
-  const std = (state.settings.posSize && state.settings.posSize[port]) || 4;
-  return std * 4;
+  if(typeof SZ==='undefined' || typeof szLeg!=='function' || typeof szBaseCap!=='function') return 17.86;
+  const lg = szLeg(port);
+  return +(szBaseCap(port) * (1 + lg.ratio * lg.maxAdd)).toFixed(2);
 }
 function portHeatLimit(k){
   const p = state.settings.limits.port;
@@ -1765,6 +1836,7 @@ function render(){
   if(!state) return;
   if(!state.fontSizes) state.fontSizes = {...DEFAULT_FONT_SIZES};
   applyFontSizes();
+  try{ renderHeatPanel(); }catch(err){ console.warn('heat panel:', err); }
   const s = summarize();
   const L = state.settings.limits;
   const cap = s.cap;
@@ -1833,6 +1905,13 @@ function render(){
         <div class="cell"><span class="k">Open Risk</span><span class="v" style="color:var(--amber)">${symP}${fmt0(oNat)}</span><span class="v2" style="color:var(--amber)">${fmt2(oPct)}%</span></div>
         <div class="cell"><span class="k">Planned</span><span class="v">${symP}${fmt0(plNat)}</span><span class="v2">${fmt2(plPct)}%</span></div>
         <div class="cell"><span class="k">Positions</span><span class="v">${nOpen} / ${nPlan}</span><span class="v2">open / plan</span></div>
+        ${(k==='core'||k==='satA') ? (()=>{ const hR=szHeat(k);
+            const bad=hR.totalR>SZ.MAX_HEAT_R || hR.nPos>SZ.MAX_POS;
+            const warn=!bad && hR.totalR>SZ.WARN_HEAT_R;
+            const c=bad?'var(--red)':warn?'var(--amber)':'var(--teal)';
+            const ff=ffDeployCap(k);
+            return `<div class="cell"><span class="k">Heat 1R</span><span class="v" style="color:${c}">${hR.totalR.toFixed(2)}<span style="font-size:.7em">/${SZ.MAX_HEAT_R}R</span></span><span class="v2" style="color:${c}">${hR.nPos}/${SZ.MAX_POS} ตัว${ff<100?` · เพดาน ${ff}%`:''}</span></div>`;
+          })() : ''}
       </div>
       <div class="heatwrap">
         <div class="heatlbl"><span style="${over?'color:var(--red);font-weight:700':''}">Heat รวมของ Port = ${fmt2(totalHeatPct)}%</span><span>limit ${lim}%</span></div>
@@ -1885,7 +1964,7 @@ function render(){
     const risk = riskOf(t), rr = rrOf(t);
     const rPctPort = pct(riskTHBOf(t), portCapTHB(t.port));
     const symC = tradeSym(t);
-    const hot = rPctPort > L.trade;
+    const hot = rPctPort > szTradeLimit(t.port);
     const hasSlippage = t.plannedEntry!=null && t.plannedEntry!==t.entry;
     const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
     const cls = [indent?'legrow':'', gcolor?'gbox':'', (gcolor&&isLast)?'gbox-last':''].filter(Boolean).join(' ');
@@ -1956,7 +2035,7 @@ function render(){
     const risk = riskOf(t), rr = rrOf(t);
     const rPctPort = pct(riskTHBOf(t), portCapTHB(t.port));
     const symC = tradeSym(t);
-    const hot = rPctPort > L.trade;
+    const hot = rPctPort > szTradeLimit(t.port);
     const hasSlippage = t.plannedEntry!=null && t.plannedEntry!==t.entry;
     const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
     const rrCls = rr===null?'':rr>=2?'rr-good':rr<1.5?'rr-bad':'';
@@ -2023,7 +2102,7 @@ function render(){
   }).join('') : `<div class="empty">ยังไม่มีรายการ — กด “+ เพิ่ม Trade” เพื่อเริ่ม</div>`;
 
   document.getElementById('foot').textContent =
-    `limits: ${L.trade}%/trade · heat/port: Core ${portHeatLimit('core')}% · Sat.A ${portHeatLimit('satA')}% · Sat.B ${portHeatLimit('satB')}% · ${L.total}% total (ฐาน THB @ ${fmt2(fx)}) — sync ผ่าน Firestore`;
+    `1R: Core ${szTradeLimit('core')}% · Sat.A ${szTradeLimit('satA')}% · heat/port: Core ${portHeatLimit('core')}% · Sat.A ${portHeatLimit('satA')}% · Sat.B ${portHeatLimit('satB')}% · ${L.total}% total (ฐาน THB @ ${fmt2(fx)}) — sync ผ่าน Firestore`;
 
   renderJournal();
   renderWatchlist();
@@ -2275,6 +2354,24 @@ function normalizeWatchlist(wl){
 const SATB_DEFAULT_SYMBOLS = ['S50','XAUUSD','BTCUSD'];
 /* ย้ายความหมายของ tabsOffset: เดิมเป็น padding ตายตัว (ต้องตั้งเองให้พ้นนาฬิกา)
    ตอนนี้ safe-area ถูกจัดการอัตโนมัติแล้ว ค่านี้เหลือเป็นตัวปรับละเอียด — รีเซ็ตเป็น 0 ครั้งเดียว */
+/* โมเดล 1R: Max Risk/Trade = 1R = 1% · เพดานไม้ base 12.5% · ตั้งค่าครั้งเดียว */
+function ensure1RModel(){
+  if(!state || !state.settings) return false;
+  const s = state.settings;
+  if(s.sz1Rv2) return false;
+  s.limits = s.limits || {};
+  s.limits.trade = 1.0;
+  const old = s.sizing || {};
+  s.sizing = {
+    r:{   core: (old.r&&old.r.core>0)?old.r.core:1,
+          satA: (old.r&&old.r.satA>0)?old.r.satA:1 },
+    cap:{ core: (old.cap&&old.cap.core>0)?old.cap.core:((s.posTier&&s.posTier.baseCap)||12.5),
+          satA: (old.cap&&old.cap.satA>0)?old.cap.satA:((s.posTier&&s.posTier.baseCap)||12.5) },
+    ffThrottle: old.ffThrottle!=null ? old.ffThrottle : true
+  };
+  s.sz1Rv2 = true;
+  return true;
+}
 function ensureTabsOffsetV2(){
   if(!state) return false;
   if(state.tabsOffsetV2) return false;
@@ -3251,16 +3348,19 @@ function clItem(id, label){
   </label>`;
 }
 function clSetCheck(id, val){ clState.checks[id]=val; renderChecklistBody(); updateChecklistUI(); }
+/* Sat.A → Base / Add-on   ·   Core → Base / Dip (Dip เข้าก่อน base ได้) */
+function clLegLabel(){ return clState.port==='core' ? 'Dip' : 'หยอด / Add-on'; }
 function clSegTier(){
   return `<div class="seg">
-    <button type="button" class="${clState.tier==='2x'?'on-cur':''}" onclick="clSetTier('2x')">2xBase</button>
-    <button type="button" class="${clState.tier==='std'?'on-cur':''}" onclick="clSetTier('std')">Standard</button>
+    <button type="button" class="${clState.tier==='2x'?'on-cur':''}" onclick="clSetTier('2x')">Base</button>
+    <button type="button" class="${clState.tier==='std'?'on-cur':''}" onclick="clSetTier('std')">${clLegLabel()}</button>
   </div>`;
 }
 function clSetTier(t){ clState.tier=t; clState.subtype=null; clState.checks={}; renderChecklistBody(); updateChecklistUI(); }
+/* ประเภทไม้ย่อย — ใช้เฉพาะ Sat.A */
 function clSegSubtype(){
   return `<div class="seg">
-    <button type="button" class="${clState.subtype==='รับ'?'on-cur':''}" onclick="clSetSubtype('รับ')">Dip</button>
+    <button type="button" class="${clState.subtype==='breakout'?'on-cur':''}" onclick="clSetSubtype('breakout')">Break out</button>
     <button type="button" class="${clState.subtype==='เติม'?'on-cur':''}" onclick="clSetSubtype('เติม')">Momentum</button>
   </div>`;
 }
@@ -3278,14 +3378,13 @@ function twoXPass(prefix){
 function checklistCorePass(){
   const c = clState.checks;
   if(clState.tier==='2x') return twoXPass('core2x');
-  if(clState.subtype==='รับ') return !!(c.coreRub1 && c.coreRub2);
-  if(clState.subtype==='เติม') return !!(c.coreTerm1 && c.coreTerm2);
-  return false;
+  /* Core Dip — ไม่มีประเภทไม้ย่อย · HVN ทับโซน EMA50/200 */
+  return !!(c.coreRub1 && c.coreRub2);
 }
 function checklistSatAPass(){
   const c = clState.checks;
   if(clState.tier==='2x') return twoXPass('satA2x');
-  if(clState.subtype==='รับ') return !!(c.satARub1 && c.satARub2);
+  if(clState.subtype==='breakout') return !!(c.satABo1 && c.satABo2);
   if(clState.subtype==='เติม') return !!(c.satATerm1 && c.satATerm2);
   return false;
 }
@@ -3323,6 +3422,7 @@ function clReachedEntryStage(){
       const prefix = clState.port==='core' ? 'core2x' : 'satA2x';
       return twoXGatePass(prefix);
     }
+    if(clState.port==='core') return true;   /* Core Dip ไม่มีประเภทไม้ย่อย */
     return !!clState.subtype;
   }
   if(clState.port==='satB') return satBGatePass();
@@ -3335,7 +3435,7 @@ function renderChecklistBody(){
   const trendClr = clState.bias==='Short'?'var(--red)':clState.bias==='Long'?'var(--teal)':'var(--amber)';
   let html = `<div class="hint" style="margin-bottom:12px">Port: <b>${PORTS[clState.port].name}</b>${clState.bias?` · Trend: <b style="color:${trendClr}">${trendWord(clState.bias)}</b>`:''}</div>`;
   if(clState.port==='core' || clState.port==='satA'){
-    html += `<div class="f"><label>ขนาดไม้</label>${clSegTier()}
+    html += `<div class="f"><label>Setup</label>${clSegTier()}
       <div class="hint" style="margin-top:5px">2xBase = Price &gt; EMA.50 &amp; Signal เกิดตรง Key PoC</div></div>`;
     if(clState.tier==='2x'){
       const prefix = clState.port==='core' ? 'core2x' : 'satA2x';
@@ -3353,16 +3453,20 @@ function renderChecklistBody(){
         html += clItem(prefix+'Entry1', `Buy signal มี RS line support ${tf}`)
               + clItem(prefix+'Entry2', `PoC เกิดที่ฐานของ Signal ${tf}`);
       }
+    } else if(clState.port==='core'){
+      /* Core — ไม้ Dip: ไม่มีประเภทไม้ย่อย · เข้าก่อนไม้ base ได้ · ยิงได้ 2 ไม้ วาง 2 zone */
+      html += `<div class="hint" style="margin-bottom:6px">Dip — ต้องผ่านครบทั้ง 2 ข้อ · <b>เข้าก่อนไม้ base ได้</b> · ยิงได้สูงสุด 2 ไม้ วางคนละ zone · ขนาดไม้ละ 25% (base 50%)</div>`;
+      html += clItem('coreRub1','Dip - High Volume Node [Week]')
+            + clItem('coreRub2','Dip - HVN ทับโซน support EMA50/200');
     } else {
       html += `<div class="f"><label>ประเภทไม้ย่อย</label>${clSegSubtype()}</div>`;
       html += `<div class="hint" style="margin-bottom:6px">${clState.subtype?'ต้องผ่านครบทั้ง 2 ข้อของประเภทที่เลือก':'เลือกประเภทไม้ก่อน'}</div>`;
-      if(clState.port==='core'){
-        if(clState.subtype==='รับ') html += clItem('coreRub1','Dip - Support High Volume Node [Week]') + clItem('coreRub2','Dip - Support EMA50/200');
-        if(clState.subtype==='เติม') html += clItem('coreTerm1','Momentum - Break High Volume Node / RS line new high [Week]') + clItem('coreTerm2','Momentum - มี Pattern Continuation/Break Blocker [Week]');
-      } else {
-        if(clState.subtype==='รับ') html += clItem('satARub1','Dip - Support High Volume Node') + clItem('satARub2','Dip - Support EMA50/200');
-        if(clState.subtype==='เติม') html += clItem('satATerm1','Momentum - Break High Volume Node / RS line new high') + clItem('satATerm2','Momentum - มี Pattern Continuation/Break Blocker');
-      }
+      if(clState.subtype==='breakout')
+        html += clItem('satABo1','Break out - กรอบกว้าง &lt; 25%')
+              + clItem('satABo2','Break out - ฐานกรอบอยู่บน EMA20/50');
+      if(clState.subtype==='เติม')
+        html += clItem('satATerm1','Momentum - Break High Volume Node / RS line new high')
+              + clItem('satATerm2','Momentum - มี Pattern Continuation/Break Blocker');
     }
   } else if(clState.port==='satB'){
     const c = clState.checks;
@@ -3533,7 +3637,7 @@ function clMissingList(cs){
   const c = cs.checks || {};
   const missing = [];
   if(cs.port==='core' || cs.port==='satA'){
-    if(!cs.tier){ missing.push('เลือกขนาดไม้'); return missing; }
+    if(!cs.tier){ missing.push('เลือก Setup (Base / หยอด)'); return missing; }
     if(cs.tier==='2x'){
       const prefix = cs.port==='core' ? 'core2x' : 'satA2x';
       if(!c[prefix+'Gate1']) missing.push('EMA50>=200');
@@ -3542,16 +3646,18 @@ function clMissingList(cs){
       if(missing.length) return missing;
       if(!c[prefix+'Entry1']) missing.push('RS line support');
       if(!c[prefix+'Entry2']) missing.push('PoC ที่ฐาน Signal');
+    } else if(cs.port==='core'){
+      /* Core Dip — ไม่มีประเภทไม้ย่อย */
+      if(!c.coreRub1) missing.push('Dip - High Volume Node');
+      if(!c.coreRub2) missing.push('Dip - HVN ทับโซน EMA50/200');
     } else {
-      if(!cs.subtype){ missing.push('เลือกประเภทไม้ย่อย'); return missing; }
-      if(cs.subtype==='รับ'){
-        const p = cs.port==='core' ? 'coreRub' : 'satARub';
-        if(!c[p+'1']) missing.push('Support High Volume Node');
-        if(!c[p+'2']) missing.push('Support EMA50/200');
+      if(!cs.subtype){ missing.push('เลือกประเภทไม้ย่อย (Break out / Momentum)'); return missing; }
+      if(cs.subtype==='breakout'){
+        if(!c.satABo1) missing.push('Break out - กรอบกว้าง < 25%');
+        if(!c.satABo2) missing.push('Break out - ฐานกรอบอยู่บน EMA20/50');
       } else {
-        const p = cs.port==='core' ? 'coreTerm' : 'satATerm';
-        if(!c[p+'1']) missing.push('Break HVN/RS line new high');
-        if(!c[p+'2']) missing.push('Continuation/Break Blocker');
+        if(!c.satATerm1) missing.push('Break HVN/RS line new high');
+        if(!c.satATerm2) missing.push('Continuation/Break Blocker');
       }
     }
   } else if(cs.port==='satB'){
@@ -4346,14 +4452,15 @@ function openTrade(presetSym, presetTier, presetBias){
   document.getElementById('tradeTitle').textContent='เพิ่ม Trade';
   document.getElementById('tDate').value = new Date().toISOString().slice(0,10);
   populateSymbolSelect(presetSym||'');
-  ['tEntry','tSL','tTP','tQty','tExitPrice','tExitDate','tImageUrl','tDiscScore','tSetupScore','tExitNote','tInvalidation','tInvalHit'].forEach(i=>document.getElementById(i).value='');
+  ['tEntry','tSL','tTP','tQty','tExitPrice','tExitDate','tImageUrl','tDiscScore','tSetupScore','tExitNote','tInvalidation','tInvalHit','tAddPx']
+    .forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
   populateReasonSelect('exit', '');
   document.getElementById('imgHint').textContent='';
   document.getElementById('tMult').value = 1;
   document.getElementById('tPort').value='core';
   document.getElementById('tStatus').value='plan';
   lockPortBiasFields(false);
-  setBias('Long'); setCur('THB'); setPosTier('std'); toggleExitFields();
+  setBias('Long'); setCur('THB'); setPosTier('2x'); toggleExitFields(); szSyncLot();
   if(presetSym){
     document.getElementById('tSym').value = presetSym;
     applySymbolWatchLink(presetSym);
@@ -4487,7 +4594,7 @@ function calcHint(){
       const rpPort = rTHB/portCapTHB(port)*100;
       const rpTotal = rTHB/cap*100;
       msg = `Risk = ${sym}${fmt0(r)}${isUSD?` ≈ ฿${fmt0(rTHB)}`:''} (${fmt2(rpPort)}% ของ ${PORTS[port].name} · ${fmt2(rpTotal)}% ของทุนรวม)`;
-      if(rpPort>L.trade) msg += ` ⚠ เกิน ${L.trade}%/trade`;
+      if(rpPort>szTradeLimit(port)) msg += ` ⚠ เกิน ${szTradeLimit(port)}%/trade`;
     }
     if(tp>0){
       const rr = Math.abs(tp-e)/dist;
@@ -4511,59 +4618,18 @@ function calcHint(){
   if(port==='satB'){
     ptf.style.display = 'none';
     pth.textContent = '';
-    if(psh && state.settings.posSize && e>0){
-      const pctSize = state.settings.posSize.satB;
-      const capTH = portCapTHB(port);
-      if(sl>0 && e!==sl){
-        const dist = Math.abs(e-sl);
-        const budgetNative = (capTH * pctSize/100) / (isUSD?fx:1);
-        const qtyForRisk = budgetNative/(dist*m);
-        psh.innerHTML = `RPT Risk ${pctSize}% ของ ${PORTS[port].name}: qty ≈ <b>${qtyForRisk.toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย (risk budget ${sym}${fmt0(budgetNative)}, ${sym}${fmt0(dist*m)}/หน่วย)`;
-      } else {
-        psh.innerHTML = `กรอก Entry และ SL เพื่อคำนวณขนาดไม้แบบ RPT Risk ${pctSize}%`;
-      }
-    } else if(psh){ psh.textContent=''; }
+    if(psh) psh.textContent='';
+    szRenderSatB({port, entry:e, stop:sl, mult:m, isUSD, sym,
+                  symName:(document.getElementById('tSym').value||'').trim().toUpperCase()});
   } else if(port==='core' || port==='satA'){
     if(psh) psh.textContent = '';
     ptf.style.display = '';
-    const capTierTH = portCapTHB(port);
-    const ceiling = (state.settings.posTier && state.settings.posTier.threshold) ?? 0.625;
-    const pctStd = (state.settings.posSize && state.settings.posSize[port]) || 4;
-    if(e>0 && sl>0 && e!==sl){
-      const distT = Math.abs(e-sl);
-      const posValNative = (capTierTH * pctStd/100) / (isUSD?fx:1);
-      const baseQty = posValNative / e / m;
-      const baseRiskNative = distT * baseQty * m;
-      const baseRiskTHB = baseRiskNative * (isUSD?fx:1);
-      const baseRiskPct = baseRiskTHB / capTierTH * 100;
-      const qty2x = baseQty*2, riskNativeAt2x = distT*qty2x*m, riskPct2x = baseRiskPct*2;
-      if(posTierLocked){
-        const qtyFixed = posTier==='2x' ? qty2x : baseQty;
-        const riskPctFixed = posTier==='2x' ? riskPct2x : baseRiskPct;
-        let msg = `<b style="color:var(--blue)">Fix: ${posTier==='2x'?'2xBase':'Standard'}</b> (เลือกไว้จาก Checklist) — qty ≈ <b>${qtyFixed.toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย (risk ${fmt2(riskPctFixed)}%)`;
-        if(posTier==='2x' && riskPct2x > ceiling){
-          msg += `<br><span style="color:var(--amber);font-weight:700">⚠ Cautious</span> — 2xBase risk ${fmt2(riskPct2x)}% เกินเพดาน ${ceiling}% · Risk = ${sym}${fmt0(riskNativeAt2x)}`;
-        }
-        pth.innerHTML = msg;
-        pth.title = `Fix จาก Checklist — เพดาน ${ceiling}% เช็คที่ขนาด 2xBase (${pctStd}% Standard × 2)`;
-      } else {
-        /* กฎ: เช็ค risk ของไม้ 2xBase กับเพดาน — ถ้าเกิน บังคับลดเป็น Standard */
-        const suggestedTier = riskPct2x <= ceiling ? '2x' : 'std';
-        const suggestedLabel = suggestedTier==='2x' ? '2xBase' : 'Standard';
-        let msg = `แนะนำ <b style="color:${suggestedTier==='2x'?'var(--teal)':'var(--blue)'}">${suggestedLabel}</b> — qty ≈ <b>${(suggestedTier==='2x'?qty2x:baseQty).toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย (risk ${fmt2(suggestedTier==='2x'?riskPct2x:baseRiskPct)}%)`;
-        if(posTier==='2x' && suggestedTier==='std'){
-          msg += `<br><span style="color:var(--amber);font-weight:700">⚠ Cautious</span> — 2xBase risk ${fmt2(riskPct2x)}% เกินเพดาน ${ceiling}% · Risk = ${sym}${fmt0(riskNativeAt2x)}`;
-        }
-        pth.innerHTML = msg;
-        pth.title = `เพดาน ${ceiling}% เช็คที่ขนาด 2xBase (${pctStd}% Standard × 2)`;
-      }
-    } else {
-      pth.textContent = posTierLocked ? `Fix: ${posTier==='2x'?'2xBase':'Standard'} (จาก Checklist) — กรอก Entry/SL ให้ครบเพื่อดูขนาด` : 'กรอก Entry/SL ให้ครบเพื่อดูขนาดที่แนะนำ (2xBase/Standard)';
-    }
+    szRenderCard({port, entry:e, stop:sl, mult:m, isUSD, sym, bias});
   } else {
     if(psh) psh.textContent = '';
     ptf.style.display = 'none';
     pth.textContent = '';
+    const sc=document.getElementById('szCard'); if(sc) sc.innerHTML='';
   }
 
   const eh = document.getElementById('exitHint');
@@ -4846,18 +4912,28 @@ function openSettings(){
   document.getElementById('sStrategicCash').value=s.strategicCash||0;
   document.getElementById('sFx').value=s.fx;
   document.getElementById('sFxAuto').checked = s.fxAuto !== false;
-  document.getElementById('sTrade').value=s.limits.trade;
   const portLim = s.limits.port && typeof s.limits.port==='object' ? s.limits.port : {core:s.limits.port||3,satA:s.limits.port||3,satB:s.limits.port||3};
   document.getElementById('sPortCore').value=portLim.core;
   document.getElementById('sPortSatA').value=portLim.satA;
   document.getElementById('sPortSatB').value=portLim.satB;
   document.getElementById('sTotal').value=s.limits.total;
   const ps = s.posSize || cloneDefaults().posSize;
-  document.getElementById('sPosCore').value=ps.core;
-  document.getElementById('sPosSatA').value=ps.satA;
   document.getElementById('sPosSatB').value=ps.satB;
-  const pt = s.posTier || cloneDefaults().posTier;
-  document.getElementById('sTierThreshold').value = pt.threshold ?? 0.625;
+  const vv = s.satBVol || {};
+  document.getElementById('sVolXAU').value = vv.XAUUSD || '';
+  document.getElementById('sVolS50').value = vv.S50 || '';
+  document.getElementById('sVolBTC').value = vv.BTCUSD || '';
+  const sz = s.sizing || cloneDefaults().sizing;
+  document.getElementById('sRCore').value   = sz.r.core;
+  document.getElementById('sRSatA').value   = sz.r.satA;
+  document.getElementById('sCapCore').value = sz.cap.core;
+  document.getElementById('sCapSatA').value = sz.cap.satA;
+  document.getElementById('sFfThrottle').value = sz.ffThrottle ? '1' : '0';
+  try{
+    const cc=ffDeployCap('core'), ca=ffDeployCap('satA');
+    document.getElementById('sFfNow').innerHTML =
+      `Core ${cc}% → 1R ${(sz.r.core*cc/100).toFixed(2)}% · Sat.A ${ca}% → 1R ${(sz.r.satA*ca/100).toFixed(2)}%`;
+  }catch(e){ document.getElementById('sFfNow').textContent='—'; }
   document.getElementById('sRsBench').value = s.rsBench || 'NASDAQ:IXIC';
   updTotal();
   updFxUpdatedHint(s.fxUpdatedAt);
@@ -4931,7 +5007,7 @@ function saveSettings(){
     fxAuto: document.getElementById('sFxAuto').checked,
     fxUpdatedAt: fxChanged ? new Date().toISOString() : state.settings.fxUpdatedAt,
     limits:{
-      trade: parseFloat(document.getElementById('sTrade').value)||1,
+      trade: (state.settings.limits && state.settings.limits.trade) || 1,   /* legacy — 1R ย้ายไป sizing.r แล้ว */
       port: {
         core: parseFloat(document.getElementById('sPortCore').value)||3,
         satA: parseFloat(document.getElementById('sPortSatA').value)||3,
@@ -4940,12 +5016,24 @@ function saveSettings(){
       total: parseFloat(document.getElementById('sTotal').value)||6
     },
     posSize:{
-      core: parseFloat(document.getElementById('sPosCore').value)||4,
-      satA: parseFloat(document.getElementById('sPosSatA').value)||4,
+      core: (state.settings.posSize&&state.settings.posSize.core)||1,   /* ไม่ใช้แล้วในโมเดล 1R — เก็บค่าเดิมไว้ */
+      satA: (state.settings.posSize&&state.settings.posSize.satA)||1,
       satB: parseFloat(document.getElementById('sPosSatB').value)||1
     },
     posTier:{
-      threshold: parseFloat(document.getElementById('sTierThreshold').value)||0.625
+      threshold: (state.settings.posTier&&state.settings.posTier.threshold)||0.625  /* legacy */
+    },
+    sizing:{
+      r:{   core: parseFloat(document.getElementById('sRCore').value)||1,
+            satA: parseFloat(document.getElementById('sRSatA').value)||1 },
+      cap:{ core: parseFloat(document.getElementById('sCapCore').value)||12.5,
+            satA: parseFloat(document.getElementById('sCapSatA').value)||12.5 },
+      ffThrottle: document.getElementById('sFfThrottle').value==='1'
+    },
+    satBVol:{
+      XAUUSD: parseFloat(document.getElementById('sVolXAU').value)||0,
+      S50:    parseFloat(document.getElementById('sVolS50').value)||0,
+      BTCUSD: parseFloat(document.getElementById('sVolBTC').value)||0
     },
     rsBench: (document.getElementById('sRsBench').value||'').trim() || 'NASDAQ:IXIC'
   };
@@ -4986,6 +5074,403 @@ document.addEventListener('keydown', (e)=>{
 });
 
 setAuthMode('in');
+</script>
+<script>
+/* ================= Position Sizing — 1R model (Core / Sat.A) =================
+   1R = 1% ของทุน Port · Cap ไม้ base = 12.5% · base:add = 70:30
+   สำคัญ: 1R ตกที่ "ไม้ base" เต็มจำนวน ไม่หารตามน้ำหนัก 70/30
+          เพราะถ้าเทรดพังก่อนได้ add ผู้ใช้จะถือแค่ไม้ base
+   Cap คุมเฉพาะไม้ base — position รวมหลัง add ขึ้นได้ถึง 17.86%
+============================================================================= */
+const SZ = {
+  R_PCT:1.00, BASE_CAP:12.50, ADD_RATIO:0.4286,
+  MAX_POS:5, MAX_HEAT_R:5, WARN_HEAT_R:4, MAX_PER_THEME:2,
+  TIGHT_STOP_PCT:8, WARN_TOTAL_PCT:15,
+  /* สัดส่วนไม้ต่อ แยกตาม port
+     Sat.A — Base 70% + Add-on 30%  → ไม้ต่อ = base × 30/70 · ต่อได้ 1 ไม้ · ต้องเข้าเหนือราคา base
+     Core  — Base 50% + Dip 25% × 2 → ไม้ต่อ = base × 25/50 · ต่อได้ 2 ไม้ · Dip เข้าต่ำกว่า/ก่อน base ได้ */
+  LEG:{
+    satA:{ ratio:30/70, maxAdd:1, label:'Add-on', mustBeAbove:true,  canPrecedeBase:false, split:'70 / 30' },
+    core:{ ratio:25/50, maxAdd:2, label:'Dip',    mustBeAbove:false, canPrecedeBase:true,  split:'50 / 25 × 2' }
+  }
+};
+function szLeg(port){ return SZ.LEG[port] || SZ.LEG.satA; }
+/* ---- อ่านค่าจากหน้าตั้งค่า (แยกราย port) ---- */
+function szCfg(){ return (state && state.settings && state.settings.sizing) || {r:{core:SZ.R_PCT,satA:SZ.R_PCT},cap:{core:SZ.BASE_CAP,satA:SZ.BASE_CAP},ffThrottle:true}; }
+/* 1R ตามที่ตั้งไว้ (ยังไม่คิดเพดาน Fund-flow) — ใช้เป็นหน่วยวัด R */
+function szRpct(port){ const v = szCfg().r && szCfg().r[port]; return (v>0)?v:SZ.R_PCT; }
+function szBaseCap(port){ const v = szCfg().cap && szCfg().cap[port]; return (v>0)?v:SZ.BASE_CAP; }
+/* เพดานลงเงินจากแท็บ Fund-flow (100 = ไม่ถูกคุม) */
+function ffDeployCap(port){
+  if(typeof ffState!=='function' || !state || !state.fundflow) return 100;
+  try{
+    const f=ffState(), c1=ffScoreOf(f.l1), c2=ffScoreOf(f.l2);
+    const capCore=ffCap1(c1.score), capA=ffCap2(c2.score);
+    return port==='satA' ? Math.min(capCore,capA) : capCore;
+  }catch(e){ return 100; }
+}
+/* ความเสี่ยงเป้าหมายต่อไม้หลังถูกเพดาน Fund-flow ย่อ — เพดาน 40% → 1R เหลือ 0.40% */
+function szTargetRisk(port){
+  const base = szRpct(port);
+  if(!szCfg().ffThrottle) return {pct:base, cap:100, throttled:false};
+  const cap = ffDeployCap(port);
+  return {pct: base*cap/100, cap, throttled: cap<100};
+}
+/* Fund-flow เก่ากี่วันแล้ว (null = ยังไม่เคยกรอก) */
+function szFfStaleDays(){
+  if(!state || !state.fundflow || !state.fundflow.updatedIso) return null;
+  const t=Date.parse(state.fundflow.updatedIso);
+  return isNaN(t)?null:Math.floor((Date.now()-t)/86400000);
+}
+function szFloorLot(v, lot){ return Math.floor(v/lot)*lot; }
+/* o = {capTHB, entry, stop, lot, mult, fx, isUSD, baseShOverride} */
+function szCalc(o){
+  const mult = o.mult||1, lot = o.lot||1;
+  /* rUnit = หน่วยวัด R (คงที่) · rTarget = ความเสี่ยงเป้าหมายจริงหลังเพดาน Fund-flow ย่อ */
+  const rUnit   = (o.rPct>0) ? o.rPct : szRpct(o.port);
+  const tgt     = (o.rTarget>0) ? {pct:o.rTarget, cap:o.ffCap??100, throttled:(o.ffCap??100)<100}
+                                : szTargetRisk(o.port);
+  const rTarget = tgt.pct;
+  const cap  = (o.baseCap>0) ? o.baseCap : szBaseCap(o.port);
+  const dist = Math.abs(o.entry - o.stop);
+  if(!(o.entry>0) || !(dist>0) || !(o.capTHB>0)) return null;
+  const distPct   = dist/o.entry*100;
+  const baseRawPct= rTarget/distPct*100;
+  const basePct   = Math.min(cap, baseRawPct);
+  const capNative = o.capTHB/(o.isUSD?o.fx:1);
+  const baseVal   = capNative*basePct/100;
+  const baseSh    = (o.baseShOverride!=null && o.baseShOverride>0)
+                    ? o.baseShOverride
+                    : szFloorLot(baseVal/(o.entry*mult), lot);
+  const leg       = szLeg(o.port);
+  const addSh     = szFloorLot(baseSh*leg.ratio, lot);
+  const riskNative= baseSh*dist*mult;
+  const riskTHB   = riskNative*(o.isUSD?o.fx:1);
+  const oneRTHB   = o.capTHB*rUnit/100;    /* R ยังวัดจาก 1R เต็มเสมอ จะได้เห็นว่าไม้นี้เหลือกี่ R */
+  const riskR     = oneRTHB>0 ? riskTHB/oneRTHB : 0;
+  const baseValAct= baseSh*o.entry*mult;
+  const addValAct = addSh*o.entry*mult;              /* ประเมินคร่าว ๆ ที่ราคาเข้า */
+  return {
+    dist, distPct, baseRawPct, basePct, baseSh, addSh,
+    baseValNative: baseValAct,
+    basePctActual: capNative>0 ? baseValAct/capNative*100 : 0,
+    addPctAtEntry: capNative>0 ? addValAct/capNative*100 : 0,
+    riskNative, riskTHB, riskR, oneRTHB, capNative, leg,
+    addPctTotal: capNative>0 ? addValAct*leg.maxAdd/capNative*100 : 0,   /* ต่อครบทุกไม้ */
+    rUnit, rTarget, ffCap: tgt.cap, throttled: tgt.throttled,
+    clipped: baseRawPct > cap + 1e-9,
+    atEdge: Math.abs(baseRawPct - cap) < 1e-9
+  };
+}
+/* เดินไม้: base → หลัง add ที่ราคา addPx แล้วยก stop ไป newStop */
+function szWalk(c, entry, addPx, mult, newStop, capTHB, fx, isUSD){
+  const totSh = c.baseSh + c.addSh;
+  if(totSh<=0) return null;
+  const cost  = c.baseSh*entry*mult + c.addSh*addPx*mult;
+  const avg   = cost/(totSh*mult);
+  const orNat = totSh*(avg-newStop)*mult;
+  const orTHB = orNat*(isUSD?fx:1);
+  return {totSh, cost, avg, openRiskNative:orNat, openRiskTHB:orTHB,
+          openRiskR: c.oneRTHB>0 ? orTHB/c.oneRTHB : 0,
+          totalPctOfPort: capTHB>0 ? (cost*(isUSD?fx:1))/capTHB*100 : 0};
+}
+/* R ladder: ราคาที่ระดับ R ต่าง ๆ (1R = ระยะ entry→stop ต่อหุ้น) */
+function szLadder(entry, dist, isLong){
+  const s = isLong?1:-1;
+  return [-1,0,1,2,3,5].map(r=>({r, price: entry + s*r*dist}));
+}
+/* ---- ปุ่มเลื่อนขึ้นบนสุด (มือถือ) — เดิมมีแต่ปุ่มกับ CSS ไม่มีฟังก์ชันและไม่มีตัวสั่งให้โผล่ ---- */
+function scrollToTop(){ try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); } }
+(function(){
+  /* ปุ่มอยู่ท้าย body — หา element ตอนถูกเรียก ไม่ใช่ตอน parse script */
+  const upd=()=>{
+    const btn=document.getElementById('scrollTopBtn');
+    if(btn) btn.classList.toggle('show', (window.pageYOffset||document.documentElement.scrollTop||0) > 320);
+  };
+  window.addEventListener('scroll', upd, {passive:true});
+  window.addEventListener('DOMContentLoaded', upd);
+  upd();
+})();
+
+function szNum(v,d){ return (v==null||isNaN(v))?'—':v.toLocaleString('en-US',{minimumFractionDigits:d||0,maximumFractionDigits:d||0}); }
+/* จำนวนหุ้นที่การ์ดคำนวณได้ล่าสุด — ใช้เติมช่อง Qty อัตโนมัติ */
+let szLastQty = 0;
+function szApplyQty(){
+  const q=document.getElementById('tQty');
+  if(!q || !(szLastQty>0)) return;
+  q.value = Number.isInteger(szLastQty) ? szLastQty : +szLastQty.toFixed(2);
+  calcHint();
+}
+/* เติม Qty ให้เองถ้าช่องยังว่าง หรือค่าเดิมมาจากการคำนวณรอบก่อน */
+function szAutoFillQty(){
+  const q=document.getElementById('tQty');
+  if(!q || !(szLastQty>0)) return;
+  /* Core/Sat.A เป็นจำนวนหุ้นเต็ม · Sat.B เป็นสัญญา/lot ทศนิยมได้ */
+  const v = Number.isInteger(szLastQty) ? szLastQty : +szLastQty.toFixed(2);
+  const cur=parseFloat(q.value);
+  if(!(cur>0) || cur===szPrevQty){ q.value = v; }
+  szPrevQty = v;
+}
+let szPrevQty = 0;
+/* lot ตามตลาดของ port — หุ้นไทย 100 · หุ้น US 1 */
+/* Core & Sat.A ใช้ lot = 1 (ซื้อเป็นหุ้นตรง ๆ) · Sat.B ค่อยว่ากันตามสัญญา */
+function szDefaultLot(port){ return (port==='core'||port==='satA') ? 1 : 1; }
+/* ป้ายปุ่มไม้ตามสัดส่วนจริงของ port นั้น — Core: Base 50% / Dip 25% · Sat.A: Base 70% / Add-on 30% */
+function szSyncLegLabels(port){
+  const b1=document.getElementById('posT2x'), b2=document.getElementById('posTStd');
+  if(!b1||!b2) return;
+  if(port==='core'){ b1.textContent='Base 50%'; b2.textContent='Dip 25% ×2'; }
+  else            { b1.textContent='Base 70%'; b2.textContent='Add-on 30%'; }
+}
+function szSyncLot(){
+  const el=document.getElementById('tLot'), p=document.getElementById('tPort');
+  if(p) szSyncLegLabels(p.value);
+  if(el&&p) el.value = String(szDefaultLot(p.value));
+}
+/* หาไม้ base ที่เปิดอยู่ของ symbol นี้ (ใช้ตอนกรอกไม้ add-on) */
+function szFindBaseLeg(port, sym){
+  if(!state||!Array.isArray(state.trades)||!sym) return null;
+  return state.trades.find(t=>t.port===port && t.sym===sym && t.posTier==='2x'
+           && (t.status==='open'||t.status==='plan') && t.id!==editId) || null;
+}
+function szRenderCard(o){
+  const host=document.getElementById('szCard'), pth=document.getElementById('posTierHint');
+  if(!host) return;
+  const lotEl=document.getElementById('tLot');
+  const lot=parseFloat(lotEl&&lotEl.value)||szDefaultLot(o.port);
+  const fx=state.settings.fx, capTHB=portCapTHB(o.port);
+  const isAdd = posTier==='std';
+  const tgt = szTargetRisk(o.port);
+  const LG = szLeg(o.port);
+  szSyncLegLabels(o.port);
+  pth.innerHTML = isAdd
+    ? `ไม้ <b>${LG.label}</b> — คิดจาก <b>จำนวนหุ้นไม้ base × ${LG.ratio.toFixed(4)}</b> ไม่ใช่จากงบเสี่ยงที่เหลือ · สัดส่วน ${LG.split}${LG.maxAdd>1?` · ต่อได้ ${LG.maxAdd} ไม้ (วางคนละ zone)`:''}${LG.canPrecedeBase?' · <b>เข้าก่อนไม้ base ได้</b>':''}`
+    : `ไม้ base · <b>1R = ${szRpct(o.port)}% ของทุน ${PORTS[o.port].name}</b> (${o.isUSD?'$':'฿'}${szNum(capTHB*szRpct(o.port)/100/(o.isUSD?fx:1))}) · cap ${szBaseCap(o.port)}% · สัดส่วน ${LG.split}`;
+
+  if(!(o.entry>0) || !(o.stop>0) || o.entry===o.stop){
+    host.innerHTML=''; return;
+  }
+  const baseLeg = isAdd ? szFindBaseLeg(o.port, (document.getElementById('tSym').value||'').trim().toUpperCase()) : null;
+  const c = szCalc({port:o.port, capTHB, entry:o.entry, stop:o.stop, lot, mult:o.mult, fx, isUSD:o.isUSD,
+                    baseShOverride: baseLeg ? baseLeg.qty : null});
+  if(!c){ host.innerHTML=''; return; }
+
+  const cur=o.sym, heat=szHeat(o.port), isLong=o.bias!=='Short';
+  const addPx=parseFloat(document.getElementById('tAddPx').value);
+
+  /* จำนวนหุ้นที่ไม้นี้ต้องใช้ — ปุ่ม "ใส่ Qty ให้" อ่านจากตรงนี้ */
+  szLastQty = isAdd ? c.addSh : c.baseSh;
+
+  /* ไม้ base → โชว์ความเสี่ยงของไม้ base · ไม้ add-on → โชว์ Open Risk รวมหลัง add */
+  let heroR = c.riskR, heroTxt = 'ความเสี่ยงจริงของไม้ base', heroMoney = c.riskNative;
+  if(isAdd && baseLeg){
+    const wNow = szWalk(c, baseLeg.entry, o.entry, o.mult, o.stop, capTHB, fx, o.isUSD);
+    if(wNow){ heroR = wNow.openRiskR; heroMoney = wNow.openRiskNative; heroTxt = 'Open Risk รวมหลัง add ที่ stop ใหม่'; }
+  }
+
+  /* ---- แถบความเสี่ยงเทียบ 1R (เต็มแถบ = 1.5R) ---- */
+  const pctBar=Math.min(100, Math.abs(heroR)/1.5*100);
+  const rCls = c.baseSh<=0 ? 'zero' : heroR<0 ? 'full' : c.clipped ? 'clip' : 'full';
+  let h=`<div class="szCard">
+    <div class="szHero">
+      <span class="szR ${rCls}">${heroR.toFixed(2)}R</span>
+      <span class="szRsub">= ${cur}${szNum(heroMoney)}${o.isUSD?` ≈ ฿${szNum(heroMoney*(o.isUSD?fx:1))}`:''} · ${heroTxt}</span>
+    </div>
+    <div class="szBar"><i class="${c.riskR>1?'over':''}" style="width:${pctBar}%"></i><u style="left:66.7%"></u></div>
+    <div class="szRsub">ขีด = 1R · เต็มแถบ = 1.5R</div>
+    <div class="szGrid">
+      <div class="szCell" style="${isAdd?'':'outline:2px solid var(--teal);outline-offset:-2px'}"><div class="k">ไม้ base</div><div class="v">${szNum(c.baseSh)}</div>
+        <div class="s">${cur}${szNum(c.baseValNative)} · ${c.basePctActual.toFixed(2)}%</div></div>
+      <div class="szCell" style="${isAdd?'outline:2px solid var(--purple);outline-offset:-2px':''}"><div class="k">add-on ${isAdd?'(ไม้นี้)':'ตั้งรอ'}</div><div class="v">${szNum(c.addSh)}</div>
+        <div class="s">${isAdd?'ใช้จำนวนนี้':'stop-buy ค้างไว้'}</div></div>
+      <div class="szCell"><div class="k">position รวมเต็ม</div><div class="v">${(c.basePctActual+c.addPctTotal).toFixed(2)}%</div>
+        <div class="s">${szNum(c.baseSh+c.addSh)} หุ้น</div></div>
+      <div class="szCell"><div class="k">Portfolio heat</div><div class="v">${heat.totalR.toFixed(2)}R</div>
+        <div class="s">${heat.nPos} ตัว · เพดาน ${SZ.MAX_HEAT_R}R</div></div>
+    </div>`;
+
+  /* แถบเพดาน Fund-flow */
+  if(c.throttled){
+    const stale=szFfStaleDays();
+    h+=`<div class="szMsg yellow">🔻 เพดาน Fund-flow <b>${c.ffCap}%</b> → 1R ถูกย่อเหลือ <b>${c.rTarget.toFixed(2)}%</b> (จาก ${c.rUnit}%) — ไม้นี้จึงเสี่ยง ${c.riskR.toFixed(2)}R แทนที่จะเป็น ~1R
+      ${stale!=null&&stale>10?`<br>⚠ ข้อมูล Fund-flow เก่า ${stale} วัน — ไปอัปเดตก่อนใช้ตัวเลขนี้`:''}
+      ${stale==null?'<br>⚠ ยังไม่เคยกรอก Fund-flow — เพดานอาจไม่ตรงจริง':''}</div>`;
+  }
+  if(isAdd){
+    h+=`<div class="szMsg yellow">ไม้นี้ตั้งเป็น <b>add-on</b> — ระบบใช้จำนวน <b>${szNum(c.addSh)}</b> หุ้น${baseLeg?` (คิดจากไม้ base ${szNum(baseLeg.qty)} หุ้นที่บันทึกไว้)`:' (ยังไม่พบไม้ base ของสัญลักษณ์นี้ — คิดจากขนาด base ตามสูตร)'}</div>`;
+  }
+
+  /* ---- R ladder ---- */
+  h+=`<div class="szSec">R ladder</div><table class="szTbl"><tr><th>ระดับ</th>${szLadder(o.entry,c.dist,isLong).map(x=>`<th>${x.r>0?'+':''}${x.r}R</th>`).join('')}</tr>
+      <tr><td>ราคา</td>${szLadder(o.entry,c.dist,isLong).map(x=>`<td>${szNum(x.price,2)}</td>`).join('')}</tr></table>`;
+
+  /* ---- ตารางเดินไม้ ---- */
+  if(addPx>0){
+    const stops=[o.entry, o.entry*1.02, o.entry*1.04];
+    const before=c.riskR;
+    h+=`<div class="szSec">ตารางเดินไม้ (add ที่ ${szNum(addPx,2)})</div>
+        <table class="szTbl"><tr><th>ยก stop ไป</th><th>หุ้นรวม</th><th>ต้นทุนเฉลี่ย</th><th>Open Risk</th><th>R</th></tr>`;
+    stops.forEach(ns=>{
+      const w=szWalk(c,o.entry,addPx,o.mult,ns,capTHB,fx,o.isUSD);
+      const good=w.openRiskR<before;
+      h+=`<tr><td>${szNum(ns,2)}</td><td>${szNum(w.totSh)}</td><td>${szNum(w.avg,2)}</td>
+          <td>${cur}${szNum(w.openRiskNative)}</td>
+          <td style="color:${w.openRiskR<0?'var(--teal)':good?'var(--text)':'var(--red)'}">${w.openRiskR.toFixed(2)}R</td></tr>`;
+    });
+    h+=`</table><div class="szRsub" style="margin-top:3px">ก่อน add = ${before.toFixed(2)}R · ต้องยก stop ให้ Open Risk ต่ำกว่านี้เสมอ</div>`;
+  }
+
+  /* ---- เงื่อนไขเตือน ---- */
+  const red=[], yellow=[];
+  if(c.baseSh<=0) red.push(`ไม้ base คำนวณได้ 0 หุ้น — ทุนน้อยเกินไปสำหรับ lot ${lot} ที่ราคานี้`);
+  /* Sat.A: add-on ต้องเข้าเหนือราคา base เสมอ · Core: Dip ตั้งใจเข้าต่ำกว่าอยู่แล้ว จึงไม่ใช้กฎนี้ */
+  if(isAdd && LG.mustBeAbove && baseLeg && addPx>0 && addPx<=baseLeg.entry)
+    red.push(`ราคา add (${szNum(addPx,2)}) ≤ ราคาเข้าไม้ base (${szNum(baseLeg.entry,2)}) — ห้าม add ตอนไม้ base ยังไม่กำไร`);
+  if(isAdd && LG.maxAdd>1){
+    const symU=(document.getElementById('tSym').value||'').trim().toUpperCase();
+    const nAdd=(state.trades||[]).filter(t=>t.port===o.port && t.sym===symU && t.posTier==='std'
+                 && (t.status==='open'||t.status==='plan') && t.id!==editId).length;
+    if(nAdd>=LG.maxAdd) red.push(`${LG.label} ของ ${symU} มีอยู่ ${nAdd} ไม้แล้ว — เกินเพดาน ${LG.maxAdd} ไม้`);
+  }
+  if(isAdd && baseLeg && o.stop<=baseLeg.sl) red.push(`stop ใหม่ (${szNum(o.stop,2)}) ≤ stop เดิม (${szNum(baseLeg.sl,2)}) — ต้องยก stop พร้อม add เสมอ`);
+  if(isAdd && baseLeg && addPx>0){
+    const w=szWalk(c,baseLeg.entry,addPx,o.mult,o.stop,capTHB,fx,o.isUSD);
+    const beforeR=Math.abs(baseLeg.entry-baseLeg.sl)*baseLeg.qty*(baseLeg.mult||1)*(o.isUSD?fx:1)/c.oneRTHB;
+    if(w && w.openRiskR>beforeR) red.push(`Open Risk หลัง add (${w.openRiskR.toFixed(2)}R) สูงกว่าก่อน add (${beforeR.toFixed(2)}R)`);
+  }
+  const willBeNew = !heat.rows.some(r=>r.sym===(document.getElementById('tSym').value||'').trim().toUpperCase());
+  if(willBeNew && heat.nPos>=SZ.MAX_POS) red.push(`ถืออยู่ ${heat.nPos} ตัวแล้ว — เกินเพดาน ${SZ.MAX_POS} ตัวพร้อมกัน`);
+  if(heat.totalR + (willBeNew?c.riskR:0) > SZ.MAX_HEAT_R) red.push(`Portfolio heat จะเป็น ${(heat.totalR+(willBeNew?c.riskR:0)).toFixed(2)}R — เกินเพดาน ${SZ.MAX_HEAT_R}R`);
+  const symNow=(document.getElementById('tSym').value||'').trim().toUpperCase();
+  const wl=Array.isArray(state.watchlist)?state.watchlist:[];
+  const wRow=wl.find(x=>x.sym===symNow && x.port===o.port);
+  const myTheme=(wRow&&wRow.industry)||null;
+  if(myTheme && heat.byTheme[myTheme] && willBeNew && heat.byTheme[myTheme].n>=SZ.MAX_PER_THEME)
+    red.push(`ธีม "${myTheme}" ถืออยู่ ${heat.byTheme[myTheme].n} ตัวแล้ว — เกินเพดาน ${SZ.MAX_PER_THEME} ตัวต่อธีม`);
+
+  if(c.clipped) yellow.push(`cap ${szBaseCap(o.port)}% กำลังลดขนาดไม้ให้ — ความเสี่ยงจริงเหลือ <b>${c.riskR.toFixed(2)}R</b> (stop แคบกว่า ${(c.rTarget/szBaseCap(o.port)*100).toFixed(1)}%)`);
+  if(c.basePctActual + c.addPctTotal > SZ.WARN_TOTAL_PCT) yellow.push(`position รวมเต็ม = ${(c.basePctActual+c.addPctTotal).toFixed(2)}% เกิน ${SZ.WARN_TOTAL_PCT}%`);
+  if(heat.totalR > SZ.WARN_HEAT_R && heat.totalR <= SZ.MAX_HEAT_R) yellow.push(`Portfolio heat ${heat.totalR.toFixed(2)}R เกิน ${SZ.WARN_HEAT_R}R แล้ว`);
+
+  red.forEach(x=>h+=`<div class="szMsg red">⛔ ${x}</div>`);
+  yellow.forEach(x=>h+=`<div class="szMsg yellow">⚠ ${x}</div>`);
+  h+=`</div>`;
+  host.innerHTML=h;
+  szAutoFillQty();
+}
+/* ================= Sat.B — RPT + พื้นระยะจาก Default Volatility =================
+   ระยะที่ใช้คำนวณ = MAX(ระยะ SL จริง, Default Volatility ของสินค้านั้น)
+   SL กว้างกว่า → ใช้ SL จริง (ไม้เล็กลงตาม RPT)
+   SL แคบกว่า  → ใช้ค่า volatility (กันไม้ใหญ่เกินจากการตั้ง stop ชิดกว่าที่สินค้าแกว่งจริง)
+============================================================================== */
+function szSatBVol(symName){
+  const v = state && state.settings && state.settings.satBVol;
+  if(!v || !symName) return 0;
+  const key = Object.keys(v).find(k=>k.toUpperCase()===symName.toUpperCase());
+  return key ? (parseFloat(v[key])||0) : 0;
+}
+function szSatBCalc(o){
+  const mult=o.mult||1;
+  const rpt = (state.settings.posSize && state.settings.posSize.satB) || 2;
+  const capTHB = portCapTHB('satB');
+  const budgetNative = (capTHB*rpt/100)/(o.isUSD?state.settings.fx:1);
+  const slDist = (o.entry>0 && o.stop>0 && o.entry!==o.stop) ? Math.abs(o.entry-o.stop) : 0;
+  const vol = szSatBVol(o.symName);
+  const useDist = Math.max(slDist, vol);
+  if(!(useDist>0)) return null;
+  const qty = budgetNative/(useDist*mult);
+  const qtyAtSL = slDist>0 ? budgetNative/(slDist*mult) : null;
+  return {rpt, budgetNative, slDist, vol, useDist, qty, qtyAtSL,
+          floored: vol>0 && slDist>0 && vol>slDist,      /* volatility เป็นตัวคุม */
+          riskAtSL: slDist>0 ? qty*slDist*mult : 0};     /* ถ้าโดน stop จริงจะเสียเท่านี้ */
+}
+function szRenderSatB(o){
+  const host=document.getElementById('szCard'); if(!host) return;
+  const c = szSatBCalc(o);
+  if(!c){ host.innerHTML=''; szLastQty=0; return; }
+  szLastQty = c.qty;
+  const cur=o.sym;
+  const qtyTxt=c.qty.toLocaleString('en-US',{maximumFractionDigits:2});
+  const volNote = c.vol>0 ? `เพดาน vol ${szNum(c.vol,2)}` : 'ยังไม่ตั้ง vol';
+  /* ไม่โชว์ตัวเลขซ้ำ — ช่อง "ระยะที่ใช้คำนวณ" จะแยกออกมาเฉพาะตอนที่มันต่างจาก SL จริงเท่านั้น */
+  let grid;
+  if(c.floored){
+    grid = `<div class="szCell" style="outline:2px solid var(--amber);outline-offset:-2px">
+        <div class="k">ระยะที่ใช้คำนวณ</div><div class="v">${szNum(c.vol,2)}</div><div class="s">Default Volatility</div></div>
+      <div class="szCell"><div class="k">ระยะ SL จริง</div><div class="v">${szNum(c.slDist,2)}</div><div class="s">แคบกว่า → ถูกยกขึ้น</div></div>
+      <div class="szCell"><div class="k">ถ้าโดน stop จริง</div><div class="v">${cur}${szNum(c.riskAtSL)}</div>
+        <div class="s">${(c.riskAtSL/c.budgetNative*100).toFixed(0)}% ของงบ ${cur}${szNum(c.budgetNative)}</div></div>`;
+  } else {
+    grid = `<div class="szCell"><div class="k">ระยะ SL</div><div class="v">${szNum(c.useDist,2)}</div>
+        <div class="s">${cur}${szNum(c.useDist*o.mult)}/หน่วย · ${volNote}</div></div>
+      <div class="szCell"><div class="k">งบเสี่ยง RPT ${c.rpt}%</div><div class="v">${cur}${szNum(c.budgetNative)}</div>
+        <div class="s">โดน stop = เสียเต็มงบ</div></div>`;
+  }
+  let h=`<div class="szCard">
+    <div class="szHero">
+      <span class="szR full">${qtyTxt}</span>
+      <span class="szRsub">หน่วย · Max Cap size ที่เข้าได้${c.floored?` · ถูกคุมด้วย volatility`:''}</span>
+    </div>
+    <div class="szGrid">${grid}</div>`;
+  if(c.floored){
+    h+=`<div class="szMsg yellow">⚠ SL แคบกว่าที่ ${o.symName||'สินค้านี้'} แกว่งปกติ${c.qtyAtSL?` — ถ้าคิดที่ SL จริงจะได้ <b>${c.qtyAtSL.toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย ซึ่งใหญ่เกินไป จึงใช้เพดาน volatility แทน`:''}</div>`;
+  } else if(c.vol<=0){
+    h+=`<div class="szMsg yellow">ยังไม่ได้ตั้ง Default Volatility ของ ${o.symName||'สินค้านี้'} — ตั้งได้ในหน้า 🛠 ตั้งค่า Port</div>`;
+  }
+  h+=`</div>`;
+  host.innerHTML=h;
+  szAutoFillQty();
+}
+/* ---- แผง Portfolio Heat ในแท็บแผนเทรด ---- */
+function renderHeatPanel(){
+  const host=document.getElementById('szHeatBody'); if(!host||!state) return;
+  let h='';
+  ['core','satA'].forEach(port=>{
+    const d=szHeat(port);
+    h+=`<div class="szSec" style="margin-top:12px">${PORTS[port].name} — ${d.totalR.toFixed(2)}R / ${SZ.MAX_HEAT_R}R · ${d.nPos}/${SZ.MAX_POS} ตัว</div>`;
+    if(!d.rows.length){ h+=`<div class="hint">ยังไม่มีไม้ที่เปิดอยู่</div>`; return; }
+    h+=`<table class="szTbl"><tr><th>Symbol</th><th>ธีม</th><th>ไม้</th><th>Open Risk</th><th>R</th></tr>`;
+    d.rows.forEach(r=>{
+      h+=`<tr><td><b>${r.sym}</b></td><td style="text-align:left;color:var(--muted)">${r.industry}</td>
+          <td>${r.legs}</td><td>฿${szNum(r.riskTHB)}</td>
+          <td style="color:${r.R>1.05?'var(--red)':'var(--text)'}">${r.R.toFixed(2)}R</td></tr>`;
+    });
+    h+=`</table>`;
+    const themes=Object.entries(d.byTheme).filter(([,v])=>v.n>0);
+    if(themes.length){
+      h+=`<table class="szTbl" style="margin-top:6px"><tr><th>รวมรายธีม</th><th>จำนวน</th><th>R</th></tr>`;
+      themes.sort((a,b)=>b[1].R-a[1].R).forEach(([k,v])=>{
+        const bad=v.n>SZ.MAX_PER_THEME;
+        h+=`<tr><td style="color:${bad?'var(--red)':'inherit'}">${k}${bad?' ⚠':''}</td>
+            <td style="color:${bad?'var(--red)':'inherit'}">${v.n}/${SZ.MAX_PER_THEME}</td><td>${v.R.toFixed(2)}R</td></tr>`;
+      });
+      h+=`</table>`;
+    }
+  });
+  host.innerHTML=h;
+}
+/* Portfolio heat: open risk ของไม้ที่ถืออยู่ใน port นั้น */
+function szHeat(port){
+  if(!state || !Array.isArray(state.trades)) return {rows:[],totalR:0,totalTHB:0,byTheme:{},nPos:0};
+  const fx = state.settings.fx, capTHB = portCapTHB(port);
+  const oneR = capTHB*szRpct(port)/100;
+  const wl = Array.isArray(state.watchlist)?state.watchlist:[];
+  const industryOf = sym => { const w = wl.find(x=>x.sym===sym && x.port===port); return (w&&w.industry)||'— ไม่ระบุ'; };
+  const bySym = {};
+  state.trades.filter(t=>t.status==='open' && t.port===port).forEach(t=>{
+    const d = Math.abs((t.entry||0)-(t.sl||0));
+    const rNat = d*(t.qty||0)*(t.mult||1);
+    const rTHB = rNat*((t.cur||PORTS[port].cur)==='USD'?fx:1);
+    if(!bySym[t.sym]) bySym[t.sym] = {sym:t.sym, industry:industryOf(t.sym), riskTHB:0, legs:0, qty:0};
+    bySym[t.sym].riskTHB += rTHB; bySym[t.sym].legs++; bySym[t.sym].qty += (t.qty||0);
+  });
+  const rows = Object.values(bySym).map(r=>({...r, R: oneR>0 ? r.riskTHB/oneR : 0}))
+                     .sort((a,b)=>b.R-a.R);
+  const byTheme = {};
+  rows.forEach(r=>{ if(!byTheme[r.industry]) byTheme[r.industry]={n:0,R:0}; byTheme[r.industry].n++; byTheme[r.industry].R+=r.R; });
+  const totalTHB = rows.reduce((s,r)=>s+r.riskTHB,0);
+  return {rows, totalR: oneR>0?totalTHB/oneR:0, totalTHB, byTheme, nPos: rows.length, oneR};
+}
 </script>
 <script>
 /* ================= Fund-flow / Risk-on–Risk-off =================
@@ -5090,7 +5575,7 @@ function renderFundflow(){
   const addOk = c2.score >= 0;
   const ao=document.getElementById('ffAddOn');
   ao.className='ffAddOn '+(addOk?'ok':'no');
-  ao.textContent = addOk ? 'add-on ได้ — เต็มไม้ 10+5+5 = 20%' : 'ห้าม add-on — เปิดไม้ใหม่ 10% ได้จนชนเพดาน';
+  ao.textContent = addOk ? 'add-on ได้ — เต็มไม้ base + 30% (สูงสุด 17.86%)' : 'ห้าม add-on — เปิดได้เฉพาะไม้ base จนชนเพดาน';
 
   /* เตือนข้อมูลเก่า */
   const st=document.getElementById('ffStale');
