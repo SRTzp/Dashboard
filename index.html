@@ -3393,8 +3393,11 @@ function checklistSatAPass(){
 function satBGatePass(){
   const c = clState.checks;
   if(!clState.trend || c.weekBar===undefined || c.tooExtend===undefined) return false;
-  if(clState.trend==='against') return c.tooExtend===true || c.weekBar===true;
-  if(clState.trend==='with') return c.weekBar===false && c.tooExtend===false;
+  if(clState.trend==='against'){
+    if(c.dayHold===undefined) return false;
+    return c.tooExtend===true || c.weekBar===true || c.dayHold===true;
+  }
+  if(clState.trend==='with') return c.weekBar===false || c.tooExtend===false;
   return false;
 }
 function checklistSatBPass(){
@@ -3474,7 +3477,7 @@ function renderChecklistBody(){
     const c = clState.checks;
     const bias = clState.bias;
     const gatePass = satBGatePass();
-    html += `<div class="hint" style="margin-bottom:10px">ต้องผ่านครบทุกข้อถึงจะไปต่อได้</div>`;
+    html += `<div class="hint" style="margin-bottom:10px">Gate: Trend = ผ่าน 1/2 · Counter = ผ่าน 1/3 · จากนั้น Entry ต้องครบทุกข้อของ Setup ที่เลือก</div>`;
     html += `<div class="divlbl" style="margin-top:0;padding-top:0;border:none">Gate — ต้องผ่านก่อนถึงจะกรอก Entry checklist ต่อได้</div>`;
     const withLabel = bias==='Short' ? 'Short (Trend)' : 'Long (Trend)';
     const againstLabel = bias==='Short' ? 'Long (Counter)' : 'Short (Counter)';
@@ -3497,6 +3500,20 @@ function renderChecklistBody(){
         <button type="button" class="${c.tooExtend===true?'on-cur':''}" onclick="clSetCheck('tooExtend',true)">Yes</button>
         <button type="button" class="${c.tooExtend===false?'on-cur':''}" onclick="clSetCheck('tooExtend',false)">No</button>
       </div></div>`;
+    if(clState.trend==='against'){
+      const counterLong = bias==='Short';
+      const holdLabel = counterLong
+        ? 'แนวรับ TF Day เริ่มยืนได้ (ไม่ทำ LL ต่อ)'
+        : 'แนวต้าน TF Day เริ่มยืนได้ (ไม่ทำ HH ต่อ)';
+      html += `<div class="f"><label>${holdLabel}</label>
+        <div class="seg">
+          <button type="button" class="${c.dayHold===true?'on-cur':''}" onclick="clSetCheck('dayHold',true)">Yes</button>
+          <button type="button" class="${c.dayHold===false?'on-cur':''}" onclick="clSetCheck('dayHold',false)">No</button>
+        </div></div>`;
+      html += `<div class="hint" style="margin-bottom:6px">Counter — ผ่านถ้าเข้าเงื่อนไขอย่างน้อย 1 ใน 3 ข้อ</div>`;
+    } else if(clState.trend==='with'){
+      html += `<div class="hint" style="margin-bottom:6px">Trend — ผ่านถ้าอยู่ในสถานะดีอย่างน้อย 1 ใน 2 ข้อ (Weekly = ไม่มี หรือ Too Extend = No)</div>`;
+    }
     if(!gatePass){
       html += `<div class="hint" style="color:var(--amber)">⚠ ต้องผ่าน Gate นี้ก่อน ถึงจะกรอก Entry checklist ต่อได้</div>`;
     } else {
@@ -3504,18 +3521,18 @@ function renderChecklistBody(){
       html += `<div class="divlbl">Entry Checklist — เลือกแนวทาง</div>`;
       html += `<div class="f"><label>แนวทาง Entry</label>
         <div class="seg">
-          <button type="button" class="${clState.subtype==='aegis'?'on-cur':''}" onclick="clSetSatBPath('aegis')">Shield of Aegis</button>
-          <button type="button" class="${clState.subtype==='javelin'?'on-cur':''}" onclick="clSetSatBPath('javelin')">Javelin Launch</button>
+          <button type="button" class="${clState.subtype==='javelin'?'on-cur':''}" onclick="clSetSatBPath('javelin')">Setup.A — Breakthrough HVN</button>
+          <button type="button" class="${clState.subtype==='aegis'?'on-cur':''}" onclick="clSetSatBPath('aegis')">Setup.B — Shield of Block</button>
         </div></div>`;
       if(clState.subtype==='aegis'){
-        html += `<div class="hint" style="margin-bottom:6px">PoC + Orderblock — ต้องผ่านครบทั้ง 3 ข้อ</div>`;
-        html += clItem('aegisPoc','Key PoC located')
-              + clItem('aegisSwing','50% of Swing leg')
-              + clItem('aegisOB','มี Order block support');
+        html += `<div class="hint" style="margin-bottom:6px">Original Swing OB — ต้องผ่านครบทั้ง 3 ข้อ</div>`;
+        html += clItem('aegisSwing','Post swing leg')
+              + clItem('aegisPoc','PoC located on Neckline')
+              + clItem('aegisOB','50% of Orderblock mitigate');
       } else if(clState.subtype==='javelin'){
-        html += `<div class="hint" style="margin-bottom:6px">Break Blocker + HVN — ต้องผ่านครบทั้ง 2 ข้อ</div>`;
-        html += clItem('javelinHVN','High Volume Node located')
-              + clItem('javelinBreak','Break Blocker/OrderBlock');
+        html += `<div class="hint" style="margin-bottom:6px">Break HVN — ต้องผ่านครบทั้ง 2 ข้อ</div>`;
+        html += clItem('javelinHVN','High Volume Node Located')
+              + clItem('javelinBreak','Line Pattern Break [4H]');
       } else {
         html += `<div class="hint">เลือกแนวทาง Entry ก่อน</div>`;
       }
@@ -3666,17 +3683,20 @@ function clMissingList(cs){
     if(!cs.trend) missing.push('เลือกทิศทาง Trend/Counter');
     if(c.weekBar===undefined) missing.push('Weekly Reversal');
     if(c.tooExtend===undefined) missing.push('Too Extend');
+    if(cs.trend==='against' && c.dayHold===undefined) missing.push('แนวรับ/แนวต้าน TF Day ยืนได้');
     if(missing.length) return missing;
-    const gateOk = cs.trend==='against' ? (c.tooExtend===true || c.weekBar===true) : (c.weekBar===false && c.tooExtend===false);
+    const gateOk = cs.trend==='against'
+      ? (c.tooExtend===true || c.weekBar===true || c.dayHold===true)
+      : (c.weekBar===false || c.tooExtend===false);
     if(!gateOk){ missing.push('Trend/Reversal/Extend ยังไม่ตรงกัน'); return missing; }
-    if(!cs.subtype){ missing.push('เลือกแนวทาง Entry (Shield of Aegis / Javelin Launch)'); return missing; }
+    if(!cs.subtype){ missing.push('เลือกแนวทาง Entry (Setup.A Breakthrough HVN / Setup.B Shield of Block)'); return missing; }
     if(cs.subtype==='aegis'){
-      if(!c.aegisPoc) missing.push('Key PoC located');
-      if(!c.aegisSwing) missing.push('50% of Swing leg');
-      if(!c.aegisOB) missing.push('Order block support');
+      if(!c.aegisSwing) missing.push('Post swing leg');
+      if(!c.aegisPoc) missing.push('PoC located on Neckline');
+      if(!c.aegisOB) missing.push('50% of Orderblock mitigate');
     } else if(cs.subtype==='javelin'){
-      if(!c.javelinHVN) missing.push('High Volume Node located');
-      if(!c.javelinBreak) missing.push('Break Blocker/OrderBlock');
+      if(!c.javelinHVN) missing.push('High Volume Node Located');
+      if(!c.javelinBreak) missing.push('Line Pattern Break [4H]');
     }
   }
   return missing;
