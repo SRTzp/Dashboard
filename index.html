@@ -296,6 +296,7 @@ tr:last-child td{border-bottom:none}
 .tag.cancelled{background:var(--surface2);color:var(--muted);text-decoration:line-through}
 .tag.win{background:var(--teal-dim);color:var(--teal)}
 .tag.loss{background:var(--red-dim);color:var(--red)}
+.tag.offplan{background:var(--red-dim);color:var(--red);border:1px dashed var(--red)}
 .riskcell.hot{color:var(--red);font-weight:600}
 .grouprow td{background:var(--surface2);padding:7px 8px;border-bottom:1px solid var(--border)}
 .grouprow .ghead{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow-x:auto;font-family:var(--sans);scrollbar-width:none}
@@ -669,6 +670,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <div class="panel-head">
       <h2>Closed Trades</h2>
       <div class="filters" id="jFilters"></div>
+      <button class="small" onclick="openUnplannedClosed()" title="บันทึกไม้ที่เทรดจบไปแล้ว โดยไม่ได้วางแผนไว้ใน Trade-Plan ก่อน">＋ Closed นอกแผน</button>
     </div>
     <div class="tablewrap">
       <table>
@@ -680,7 +682,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
         </tr></thead>
         <tbody id="jTbody"></tbody>
       </table>
-      <div class="empty" id="jEmpty" style="display:none">ยังไม่มีรายการที่ปิดไม้ — พอกด Closed ในแท็บแผนเทรด รายการจะมาโผล่ที่นี่</div>
+      <div class="empty" id="jEmpty" style="display:none">ยังไม่มีรายการที่ปิดไม้ — พอกด Closed ในแท็บแผนเทรด รายการจะมาโผล่ที่นี่ · ไม้ที่เทรดไปแล้วโดยไม่ได้วางแผน ใช้ปุ่ม “＋ Closed นอกแผน”</div>
     </div>
     <div class="cards" id="jCards"></div>
   </div>
@@ -849,10 +851,15 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 <div class="overlay" id="tradeOverlay">
   <div class="modal">
     <h3 id="tradeTitle">เพิ่ม Trade</h3>
+    <div class="hint" id="unplannedBanner" style="display:none;color:var(--red);border-left:2px solid var(--red);padding-left:9px;margin:-4px 0 10px">
+      <b>ไม้นอกแผน</b> — ไม่ได้ผ่าน Pre-trade Checklist · จะติดแท็ก <b>นอกแผน</b> ใน Journal · วินัยตั้งต้น 0 (แก้ได้)
+    </div>
     <div class="frow">
       <div class="f"><label>Date</label><input type="date" id="tDate"></div>
-      <div class="f"><label>Symbol <span style="font-weight:400;color:var(--muted)">(จาก Watchlist เท่านั้น)</span></label>
+      <div class="f"><label>Symbol <span id="tSymHint" style="font-weight:400;color:var(--muted)">(จาก Watchlist เท่านั้น)</span></label>
         <select id="tSym"></select>
+        <input type="text" id="tSymFree" list="tSymList" style="display:none" placeholder="พิมพ์ชื่อ Symbol" autocomplete="off">
+        <datalist id="tSymList"></datalist>
       </div>
     </div>
     <div class="frow">
@@ -1810,9 +1817,13 @@ function journalStats(){
        หารด้วยเฉพาะ hit+ignored — ไม้ที่สัญญาณไม่เกิดไม่ได้วัดวินัยเรื่องนี้ ไม่ควรถ่วงค่า */
     const invalHit  = list.filter(t=>t.invalHit==='hit').length;
     const invalIgn  = list.filter(t=>t.invalHit==='ignored').length;
+    /* ไม้นอกแผน — นับรวมใน P&L/Win Rate ตามปกติ แต่แยกตัวเลขให้เห็นว่าผลงานมาจากนอกระบบเท่าไหร่ */
+    const offList  = list.filter(t=>t.unplanned);
+    const nOffPlan = offList.length;
+    const offPnlTHB = offList.reduce((a,t)=>a+(realizedPnlTHBOf(t)||0),0);
     return {n, wins, winRate: n?wins/n*100:0, avgR, totalPnlTHB, avgHoldDays, maxDD, maxDDPct,
             avgDisc: avg(ds), avgSetup: avg(ss), nReviewed: ds.length, luckyWins, goodLosses,
-            invalHit, invalFired: invalHit + invalIgn};
+            invalHit, invalFired: invalHit + invalIgn, nOffPlan, offPnlTHB};
   }
   return {
     overall: statsFor(closed, totalTHB()),
@@ -2120,7 +2131,9 @@ function renderJournal(){
   const rWinClass = r => r===null ? '' : r>=0 ? 'good' : 'bad';
 
   document.getElementById('jStrip').innerHTML = `
-    <div class="stat"><div class="lbl">Closed Trades</div><div class="val">${j.overall.n}</div></div>
+    <div class="stat"${j.overall.nOffPlan?` title="ไม้นอกแผน ${j.overall.nOffPlan} ไม้ · P&L ฿${fmt0(j.overall.offPnlTHB)} — นับรวมในสถิติทั้งหมดแล้ว"`:''}>
+      ${j.overall.nOffPlan?`<div class="cornerbadge">นอกแผน <b class="rr-bad">${j.overall.nOffPlan}</b></div>`:''}
+      <div class="lbl">Closed Trades</div><div class="val">${j.overall.n}</div></div>
     <div class="stat ${j.overall.n? (j.overall.winRate>=50?'good':'warn') : ''}"><div class="lbl">Win Rate</div><div class="val">${j.overall.n?fmt2(j.overall.winRate)+'%':'—'}</div></div>
     <div class="stat ${rWinClass(j.overall.avgR)}"><div class="lbl">Avg R (Expectancy)</div><div class="val">${j.overall.avgR===null?'—':fmt2(j.overall.avgR)+'R'}</div></div>
     <div class="stat ${j.overall.n ? (j.overall.totalPnlTHB>=0?'good':'bad') : ''}"><div class="lbl">Total Realized P&amp;L</div><div class="val">฿${fmt0(j.overall.totalPnlTHB)}</div></div>
@@ -2145,13 +2158,14 @@ function renderJournal(){
     </div>`;
   }).join('');
 
-  const jfdefs = [['all','ทั้งหมด'],['core','Core'],['satA','Sat.A'],['satB','Sat.B'],['win','Win'],['loss','Loss']];
+  const jfdefs = [['all','ทั้งหมด'],['core','Core'],['satA','Sat.A'],['satB','Sat.B'],['win','Win'],['loss','Loss'],['offplan','นอกแผน']];
   document.getElementById('jFilters').innerHTML = jfdefs.map(([k,l])=>
     `<span class="chip ${jFilter===k?'on':''}" onclick="setJFilter('${k}')">${l}</span>`).join('');
 
   let rows = j.closed.slice().sort((a,b)=>(b.exitDate||b.date||'').localeCompare(a.exitDate||a.date||''));
   if(jFilter==='win') rows = rows.filter(t=>realizedPnlOf(t)>0);
   else if(jFilter==='loss') rows = rows.filter(t=>realizedPnlOf(t)<=0);
+  else if(jFilter==='offplan') rows = rows.filter(t=>!!t.unplanned);
   else if(jFilter!=='all') rows = rows.filter(t=>t.port===jFilter);
 
   const jBody = document.getElementById('jTbody');
@@ -2198,7 +2212,7 @@ function renderJournal(){
     return `<tr class="${cls}"${style}>
       <td class="${indent?'legdate':''}">${t.exitDate||'—'}</td>
       <td class="sans">${indent?'':`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PORTS[t.port].color};margin-right:5px"></span>${jPortShort(t.port)}`}</td>
-      <td style="font-weight:600">${indent?'':t.sym}</td>
+      <td style="font-weight:600">${indent?'':t.sym}${(!indent&&t.unplanned)?' <span class="tag offplan" title="ไม้นอกแผน — ไม่ได้วางแผนใน Trade-Plan ก่อนเข้า">นอกแผน</span>':''}</td>
       <td class="sans">${indent?'':`<span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>`}</td>
       <td>${fmt2(t.entry)}</td><td>${fmt2(t.exitPrice)}</td>
       <td>${fmt2(t.qty)}${(t.mult||1)!==1?`<span style="color:var(--muted)"> ×${fmt2(t.mult)}</span>`:''}</td>
@@ -2220,7 +2234,7 @@ function renderJournal(){
     const a=jAgg(legs); const symC=tradeSym(legs[0]);
     const header=`<tr class="grouprow gbox gbox-first" style="--gcolor:${gcolor}"><td colspan="13" style="background:${hexToRgba(portColor,0.1)}"><div class="ghead">
       <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${portColor};flex-shrink:0"></span>
-      <span class="gsym">${symG}</span>
+      <span class="gsym">${symG}</span>${legs[0].unplanned?'<span class="tag offplan">นอกแผน</span>':''}
       <span class="gmeta">${jPortShort(port)}</span>
       <span class="tag ${legs[0].bias==='Long'?'long':'short'}">${legs[0].bias}</span>
       <span class="gmeta">${legs.length} scale-out</span>
@@ -2238,7 +2252,7 @@ function renderJournal(){
     const win = pnl>0;
     return `<div class="tcard">
       <div class="r1">
-        <span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span></span>
+        <span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>${t.unplanned?' <span class="tag offplan">นอกแผน</span>':''}</span>
         <span class="tag ${win?'win':'loss'}">${win?'WIN':'LOSS'}</span>
       </div>
       <div class="sub" style="margin-bottom:6px">ปิด ${t.exitDate||''} · ${PORTS[t.port].name}</div>
@@ -4473,8 +4487,50 @@ function renderIdeas(){
     </div>`).join('')}</div>`;
 }
 
+/* ===== ไม้นอกแผน (unplanned) — บันทึกย้อนหลังจาก Journal โดยไม่ผ่าน Pre-trade Checklist =====
+   symFreeMode = สลับช่อง Symbol จาก dropdown (Watchlist เท่านั้น) เป็นช่องพิมพ์เอง + datalist
+   ทุกจุดที่อ่านค่า Symbol ต้องผ่าน curSymVal() ไม่ใช่อ่าน #tSym ตรง ๆ ไม่งั้นโหมดพิมพ์เองจะได้ค่าว่าง */
+let unplannedMode = false;
+let symFreeMode = false;
+function symInputEl(){ return document.getElementById(symFreeMode ? 'tSymFree' : 'tSym'); }
+function curSymVal(){ return (symInputEl().value || '').trim().toUpperCase(); }
+function buildSymDatalist(){
+  const syms = new Set();
+  (state && Array.isArray(state.watchlist) ? state.watchlist : []).forEach(w=>syms.add(w.sym));
+  (state && Array.isArray(state.trades) ? state.trades : []).forEach(t=>syms.add(t.sym));
+  document.getElementById('tSymList').innerHTML =
+    [...syms].filter(Boolean).sort().map(s=>`<option value="${escHtml(s)}"></option>`).join('');
+}
+function setSymFreeMode(on, val){
+  symFreeMode = !!on;
+  document.getElementById('tSym').style.display = on ? 'none' : '';
+  const fi = document.getElementById('tSymFree');
+  fi.style.display = on ? '' : 'none';
+  document.getElementById('tSymHint').textContent = on ? '(พิมพ์เองได้ / เลือกจากรายการ)' : '(จาก Watchlist เท่านั้น)';
+  if(on){ buildSymDatalist(); fi.value = val || ''; }
+}
+function setUnplannedMode(on){
+  unplannedMode = !!on;
+  document.getElementById('unplannedBanner').style.display = on ? '' : 'none';
+}
+/* เปิดฟอร์มบันทึกไม้ที่ปิดไปแล้วแต่ไม่ได้วางแผนไว้ก่อน — ข้าม Checklist โดยตั้งใจ */
+function openUnplannedClosed(){
+  openTrade();
+  setUnplannedMode(true);
+  setSymFreeMode(true, '');
+  lockPortBiasFields(false);
+  document.getElementById('tradeTitle').textContent = 'เพิ่ม Closed Trade — ไม้นอกแผน';
+  document.getElementById('tStatus').value = 'closed';
+  toggleExitFields();
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('tExitDate').value = today;
+  document.getElementById('tDiscScore').value = '0';
+  calcHint();
+}
 function openTrade(presetSym, presetTier, presetBias){
   editId = null;
+  setUnplannedMode(false);
+  setSymFreeMode(false);
   document.getElementById('tradeTitle').textContent='เพิ่ม Trade';
   document.getElementById('tDate').value = new Date().toISOString().slice(0,10);
   populateSymbolSelect(presetSym||'');
@@ -4507,7 +4563,9 @@ function openTrade(presetSym, presetTier, presetBias){
 function editTrade(id){
   const t = state.trades.find(x=>x.id===id); if(!t)return;
   editId = id;
-  document.getElementById('tradeTitle').textContent='แก้ไข Trade';
+  setUnplannedMode(!!t.unplanned);
+  setSymFreeMode(!!t.unplanned, t.sym);
+  document.getElementById('tradeTitle').textContent = t.unplanned ? 'แก้ไข Trade — ไม้นอกแผน' : 'แก้ไข Trade';
   document.getElementById('tDate').value=t.date;
   populateSymbolSelect(t.sym);
   document.getElementById('tPort').value=t.port;
@@ -4528,7 +4586,7 @@ function editTrade(id){
   document.getElementById('tImageUrl').value=t.imageUrl||'';
   document.getElementById('imgHint').textContent='';
   setBias(t.bias); setCur(tradeCur(t)); setPosTier(t.posTier||'std'); toggleExitFields();
-  lockPortBiasFields(!!findWatchForSymbol(t.sym));
+  lockPortBiasFields(!t.unplanned && !!findWatchForSymbol(t.sym));
   posTierLocked = false;
   lockPosTierField(false);
   calcHint();
@@ -4595,6 +4653,21 @@ document.getElementById('tSym').addEventListener('change',()=>{
   applySymbolWatchLink(sym);
   calcHint();
 });
+/* ช่องพิมพ์เอง (ไม้นอกแผน) — ถ้าชื่อตรงกับ Watchlist ก็ดึง Port/Bias ให้ แต่ไม่ล็อก ให้แก้เองได้เสมอ */
+document.getElementById('tSymFree').addEventListener('change',()=>{
+  const sym = curSymVal();
+  document.getElementById('tSymFree').value = sym;
+  if(sym && !editId){
+    const w = findWatchForSymbol(sym);
+    if(w){
+      document.getElementById('tPort').value = w.port;
+      setCur(PORTS[w.port].cur);
+      document.getElementById('tMult').value = w.port==='satB' ? swingDefaultMult(sym) : 1;
+    }
+  }
+  lockPortBiasFields(false);
+  calcHint();
+});
 document.getElementById('tPort').addEventListener('change',()=>{
   setCur(PORTS[document.getElementById('tPort').value].cur);
 });
@@ -4646,7 +4719,7 @@ function calcHint(){
     pth.textContent = '';
     if(psh) psh.textContent='';
     szRenderSatB({port, entry:e, stop:sl, mult:m, isUSD, sym,
-                  symName:(document.getElementById('tSym').value||'').trim().toUpperCase()});
+                  symName:curSymVal()});
   } else if(port==='core' || port==='satA'){
     if(psh) psh.textContent = '';
     ptf.style.display = '';
@@ -4679,7 +4752,7 @@ function saveTrade(){
   const t = {
     id: editId || 't'+Date.now(),
     date: document.getElementById('tDate').value,
-    sym: document.getElementById('tSym').value.trim().toUpperCase(),
+    sym: curSymVal(),
     port: tPortVal,
     bias,
     posTier: (tPortVal==='core'||tPortVal==='satA') ? posTier : null,
@@ -4692,6 +4765,8 @@ function saveTrade(){
     invalidation: document.getElementById('tInvalidation').value.trim() || null,
     imageUrl: document.getElementById('tImageUrl').value.trim() || null,
     submitted: prevTrade ? !!prevTrade.submitted : false,
+    /* ไม้นอกแผน — ไม่เคยผ่าน Pre-trade Checklist · ธงนี้ติดถาวรกับไม้ แก้ทีหลังไม่ได้จากฟอร์ม */
+    unplanned: unplannedMode || (prevTrade ? !!prevTrade.unplanned : false),
     status
   };
   if(!t.sym || !(t.entry>0) || !(t.sl>0) || !(t.qty>0) || t.entry===t.sl){
@@ -4732,7 +4807,9 @@ function saveTrade(){
     }
   }
   /* จับราคาที่วางแผนไว้เดิม ครั้งแรกที่ trade ออกจากสถานะ Plan */
-  if(status!=='plan'){
+  if(t.unplanned){
+    t.plannedEntry = null;   /* ไม่เคยมีแผน → ไม่มีราคาแผนให้เทียบ */
+  } else if(status!=='plan'){
     if(prevTrade && prevTrade.plannedEntry!=null) t.plannedEntry = prevTrade.plannedEntry;
     else if(prevTrade && prevTrade.status==='plan') t.plannedEntry = prevTrade.entry;
     else t.plannedEntry = prevTrade ? (prevTrade.plannedEntry!=null?prevTrade.plannedEntry:null) : null;
@@ -5276,7 +5353,7 @@ function szRenderCard(o){
   if(!(o.entry>0) || !(o.stop>0) || o.entry===o.stop){
     host.innerHTML=''; return;
   }
-  const baseLeg = isAdd ? szFindBaseLeg(o.port, (document.getElementById('tSym').value||'').trim().toUpperCase()) : null;
+  const baseLeg = isAdd ? szFindBaseLeg(o.port, curSymVal()) : null;
   const c = szCalc({port:o.port, capTHB, entry:o.entry, stop:o.stop, lot, mult:o.mult, fx, isUSD:o.isUSD,
                     baseShOverride: baseLeg ? baseLeg.qty : null});
   if(!c){ host.innerHTML=''; return; }
@@ -5353,7 +5430,7 @@ function szRenderCard(o){
   if(isAdd && LG.mustBeAbove && baseLeg && addPx>0 && addPx<=baseLeg.entry)
     red.push(`ราคา add (${szNum(addPx,2)}) ≤ ราคาเข้าไม้ base (${szNum(baseLeg.entry,2)}) — ห้าม add ตอนไม้ base ยังไม่กำไร`);
   if(isAdd && LG.maxAdd>1){
-    const symU=(document.getElementById('tSym').value||'').trim().toUpperCase();
+    const symU=curSymVal();
     const nAdd=(state.trades||[]).filter(t=>t.port===o.port && t.sym===symU && t.posTier==='std'
                  && (t.status==='open'||t.status==='plan') && t.id!==editId).length;
     if(nAdd>=LG.maxAdd) red.push(`${LG.label} ของ ${symU} มีอยู่ ${nAdd} ไม้แล้ว — เกินเพดาน ${LG.maxAdd} ไม้`);
@@ -5364,10 +5441,10 @@ function szRenderCard(o){
     const beforeR=Math.abs(baseLeg.entry-baseLeg.sl)*baseLeg.qty*(baseLeg.mult||1)*(o.isUSD?fx:1)/c.oneRTHB;
     if(w && w.openRiskR>beforeR) red.push(`Open Risk หลัง add (${w.openRiskR.toFixed(2)}R) สูงกว่าก่อน add (${beforeR.toFixed(2)}R)`);
   }
-  const willBeNew = !heat.rows.some(r=>r.sym===(document.getElementById('tSym').value||'').trim().toUpperCase());
+  const willBeNew = !heat.rows.some(r=>r.sym===curSymVal());
   if(willBeNew && heat.nPos>=SZ.MAX_POS) red.push(`ถืออยู่ ${heat.nPos} ตัวแล้ว — เกินเพดาน ${SZ.MAX_POS} ตัวพร้อมกัน`);
   if(heat.totalR + (willBeNew?c.riskR:0) > SZ.MAX_HEAT_R) red.push(`Portfolio heat จะเป็น ${(heat.totalR+(willBeNew?c.riskR:0)).toFixed(2)}R — เกินเพดาน ${SZ.MAX_HEAT_R}R`);
-  const symNow=(document.getElementById('tSym').value||'').trim().toUpperCase();
+  const symNow=curSymVal();
   const wl=Array.isArray(state.watchlist)?state.watchlist:[];
   const wRow=wl.find(x=>x.sym===symNow && x.port===o.port);
   const myTheme=(wRow&&wRow.industry)||null;
