@@ -3404,13 +3404,14 @@ function checklistSatBPass(){
   if(!satBGatePass()) return false;
   const c = clState.checks;
   if(clState.subtype==='aegis') return !!(c.aegisPoc && c.aegisSwing && c.aegisOB);
-  if(clState.subtype==='javelin') return !!(c.javelinHVN && c.javelinBreak);
+  if(clState.subtype==='javelin') return !!(c.javelinHVN && c.javelinBreak && (c.javelinRej || c.javelinPull));
   return false;
 }
 function clSetSatBPath(p){
   clState.subtype = p;
   delete clState.checks.aegisPoc; delete clState.checks.aegisSwing; delete clState.checks.aegisOB;
-  delete clState.checks.javelinHVN; delete clState.checks.javelinBreak;
+  delete clState.checks.javelinHVN; delete clState.checks.javelinRej;
+  delete clState.checks.javelinPull; delete clState.checks.javelinBreak;
   renderChecklistBody(); updateChecklistUI();
 }
 function checklistPass(){
@@ -3530,9 +3531,11 @@ function renderChecklistBody(){
               + clItem('aegisPoc','PoC located on Neckline')
               + clItem('aegisOB','50% of Orderblock mitigate');
       } else if(clState.subtype==='javelin'){
-        html += `<div class="hint" style="margin-bottom:6px">Break HVN — ต้องผ่านครบทั้ง 2 ข้อ</div>`;
+        html += `<div class="hint" style="margin-bottom:6px">Breakthrough HVN — ข้อ 1 &amp; 4 ต้องผ่าน · ข้อ 2 / 3 ผ่านข้อใดข้อหนึ่ง</div>`;
         html += clItem('javelinHVN','High Volume Node Located')
-              + clItem('javelinBreak','Line Pattern Break [4H]');
+              + clItem('javelinRej','มี Rejection on HVN')
+              + clItem('javelinPull','มี Pullback on HVN (if Breakthrough)')
+              + clItem('javelinBreak','Breakthrough on Line Chart [4H]');
       } else {
         html += `<div class="hint">เลือกแนวทาง Entry ก่อน</div>`;
       }
@@ -3696,7 +3699,8 @@ function clMissingList(cs){
       if(!c.aegisOB) missing.push('50% of Orderblock mitigate');
     } else if(cs.subtype==='javelin'){
       if(!c.javelinHVN) missing.push('High Volume Node Located');
-      if(!c.javelinBreak) missing.push('Line Pattern Break [4H]');
+      if(!c.javelinBreak) missing.push('Breakthrough on Line Chart [4H]');
+      if(!c.javelinRej && !c.javelinPull) missing.push('Rejection หรือ Pullback on HVN (อย่างน้อย 1)');
     }
   }
   return missing;
