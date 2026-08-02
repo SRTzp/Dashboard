@@ -404,6 +404,9 @@ tr:last-child td{border-bottom:none}
 .wlCollapseBtn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:2px 4px;line-height:1;transition:transform .15s}
 .wlCollapseBtn:hover{color:var(--text)}
 .wlCollapseBtn.collapsed{transform:rotate(-90deg)}
+.jvSel{font-size:.72rem;padding:3px 7px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--sans)}
+.jvSel:disabled{opacity:.45}
+.jvWrap{display:flex;gap:6px;align-items:center}
 .scrollTopBtn{
   position:fixed;right:16px;bottom:20px;width:40px;height:40px;border-radius:50%;
   background:var(--surface);border:1px solid var(--border);color:var(--muted);
@@ -668,10 +671,12 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 
   <div class="panel">
     <div class="panel-head">
-      <h2>Closed Trades</h2>
+      <h2 style="display:flex;align-items:center;gap:6px"><button class="wlCollapseBtn" id="jColBtn_closed" onclick="jvToggleCollapse('closed')" title="หุบ / ขยาย">▾</button>Closed Trades <span id="jCount_closed" class="hint" style="display:inline"></span></h2>
       <div class="filters" id="jFilters"></div>
+      <div id="jPeriod_closed"></div>
       <button class="small" onclick="openUnplannedClosed()" title="บันทึกไม้ที่เทรดจบไปแล้ว โดยไม่ได้วางแผนไว้ใน Trade-Plan ก่อน">＋ Closed นอกแผน</button>
     </div>
+    <div id="jContent_closed">
     <div class="tablewrap">
       <table>
         <thead><tr>
@@ -685,9 +690,14 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       <div class="empty" id="jEmpty" style="display:none">ยังไม่มีรายการที่ปิดไม้ — พอกด Closed ในแท็บแผนเทรด รายการจะมาโผล่ที่นี่ · ไม้ที่เทรดไปแล้วโดยไม่ได้วางแผน ใช้ปุ่ม “＋ Closed นอกแผน”</div>
     </div>
     <div class="cards" id="jCards"></div>
+    </div>
   </div>
   <div class="panel" id="missedPanel" style="display:none">
-    <div class="panel-head"><h2>Missed Trades <span id="missedCount" class="hint" style="display:inline"></span></h2></div>
+    <div class="panel-head">
+      <h2 style="display:flex;align-items:center;gap:6px"><button class="wlCollapseBtn" id="jColBtn_missed" onclick="jvToggleCollapse('missed')" title="หุบ / ขยาย">▾</button>Missed Trades <span id="missedCount" class="hint" style="display:inline"></span></h2>
+      <div id="jPeriod_missed"></div>
+    </div>
+    <div id="jContent_missed">
     <div class="tablewrap">
       <table>
         <thead><tr>
@@ -698,9 +708,14 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       </table>
     </div>
     <div class="cards" id="missedCards"></div>
+    </div>
   </div>
   <div class="panel" id="cancelPanel" style="display:none">
-    <div class="panel-head"><h2>Cancelled Trades <span id="cancelCount" class="hint" style="display:inline"></span></h2></div>
+    <div class="panel-head">
+      <h2 style="display:flex;align-items:center;gap:6px"><button class="wlCollapseBtn" id="jColBtn_cancel" onclick="jvToggleCollapse('cancel')" title="หุบ / ขยาย">▾</button>Cancelled Trades <span id="cancelCount" class="hint" style="display:inline"></span></h2>
+      <div id="jPeriod_cancel"></div>
+    </div>
+    <div id="jContent_cancel">
     <div class="hint" style="margin:-6px 0 10px">ไม้ที่ <b>ตัดสินใจไม่เข้า</b> — ต่างจาก Missed ตรงที่ Missed คือตั้งใจเข้าแล้วไม่ทัน ส่วน Cancel คือเปลี่ยนใจเอง แท็กที่ติ๊ก "หลุดวินัย" คือตัวที่ควรจับตา</div>
     <div class="tablewrap">
       <table>
@@ -712,6 +727,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       </table>
     </div>
     <div class="cards" id="cancelCards"></div>
+    </div>
   </div>
 </div>
 
@@ -1599,11 +1615,13 @@ function startListening(){
         exitReasons: Array.isArray(d.exitReasons) ? d.exitReasons : null,   /* เก็บไว้ให้ ensureReasonTags ย้ายเข้า reasonTags.exit */
         fundflow: (d.fundflow && typeof d.fundflow==='object') ? d.fundflow : defaultFundflow(),
         scoreLabels: (d.scoreLabels && typeof d.scoreLabels==='object') ? d.scoreLabels : null,
+        journalView: (d.journalView && typeof d.journalView==='object') ? d.journalView : null,
         reasonTags: (d.reasonTags && typeof d.reasonTags==='object') ? d.reasonTags : null};
     } else {
       state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags()};
     }
     ensureScoreLabels();
+    ensureJournalView();
     { const a=ensureSatBDefaults(), b=ensureTabsOffsetV2(), c=ensure1RModel(); if(a||b||c) schedulePersist(); }
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('errorScreen').style.display='none';
@@ -1801,7 +1819,8 @@ function holdingDaysOf(t){
   return (d2-d1)/86400000;
 }
 function journalStats(){
-  const closed = state.trades.filter(t=>t.status==='closed' && t.exitPrice>0);
+  /* ช่วงเวลาที่พาเนล Closed เลือกไว้ คุมทั้งตารางและสถิติด้านบน */
+  const closed = state.trades.filter(t=>t.status==='closed' && t.exitPrice>0 && jvTradeMatch('closed', t));
   const byPort = {core:[],satA:[],satB:[]};
   closed.forEach(t=>byPort[t.port].push(t));
   function statsFor(list, capTHB){
@@ -2141,9 +2160,101 @@ function render(){
   renderIdeas();
 }
 
+/* ══════════ Journal — หุบ/ขยาย + กรองเดือนของปี (แยกอิสระต่อพาเนล) ══════════
+   เก็บใน state.journalView → sync ข้ามเครื่อง
+   เลือกเดือนได้เฉพาะเมื่อระบุปีแล้ว (เดือนลอย ๆ ข้ามปีไม่มีความหมายในการรีวิว)
+   สถิติด้านบน (Win Rate / Avg R / P&L / DD) คิดตามช่วงของพาเนล Closed เท่านั้น          */
+const JV_KINDS = ['closed','missed','cancel'];
+const JV_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const JV_SRC = {
+  closed: {match:t=>t.status==='closed' && t.exitPrice>0, date:t=>t.exitDate||t.date},
+  missed: {match:t=>t.status==='missed',                  date:t=>t.missedDate||t.date},
+  cancel: {match:t=>t.status==='cancelled',               date:t=>t.cancelDate||t.date}
+};
+function ensureJournalView(kind){
+  if(!state) return {col:false,y:'all',m:'all'};
+  if(!state.journalView || typeof state.journalView!=='object') state.journalView = {};
+  JV_KINDS.forEach(k=>{
+    const v = state.journalView[k];
+    if(!v || typeof v!=='object') state.journalView[k] = {col:false, y:'all', m:'all'};
+    else {
+      if(typeof v.col!=='boolean') v.col = false;
+      if(typeof v.y!=='string') v.y = 'all';
+      if(typeof v.m!=='string') v.m = 'all';
+      if(v.y==='all') v.m = 'all';
+    }
+  });
+  return kind ? state.journalView[kind] : state.journalView;
+}
+function jvMatch(kind, dateStr){
+  const v = ensureJournalView(kind);
+  if(v.y==='all') return true;
+  const s = String(dateStr||'');
+  if(s.length<7 || s.slice(0,4)!==v.y) return false;
+  return v.m==='all' ? true : s.slice(5,7)===v.m;
+}
+function jvTradeMatch(kind, t){ return jvMatch(kind, JV_SRC[kind].date(t)); }
+function jvYears(kind){
+  const src = JV_SRC[kind];
+  const ys = new Set();
+  (state && Array.isArray(state.trades) ? state.trades : []).forEach(t=>{
+    if(!src.match(t)) return;
+    const d = String(src.date(t)||'');
+    if(d.length>=4) ys.add(d.slice(0,4));
+  });
+  return [...ys].sort().reverse();
+}
+function jvLabel(kind){
+  const v = ensureJournalView(kind);
+  if(v.y==='all') return 'ทุกช่วงเวลา';
+  return v.m==='all' ? `ปี ${v.y}` : `${JV_MONTHS[Number(v.m)-1]} ${v.y}`;
+}
+function jvSetYear(kind, y){
+  const v = ensureJournalView(kind);
+  /* เปลี่ยนปี = รีเซ็ตเดือนเป็นทั้งปีเสมอ — กันกรณีเดือนเดิมค้างอยู่แล้วปีใหม่ว่างเปล่าโดยไม่รู้ตัว */
+  if(v.y !== y) v.m = 'all';
+  v.y = y; if(y==='all') v.m = 'all';
+  render(); schedulePersist();
+}
+function jvSetMonth(kind, m){
+  ensureJournalView(kind).m = m;
+  render(); schedulePersist();
+}
+function jvToggleCollapse(kind){
+  const v = ensureJournalView(kind);
+  v.col = !v.col;
+  jvApplyCollapse(kind);
+  schedulePersist();
+}
+function jvApplyCollapse(kind){
+  const v = ensureJournalView(kind);
+  const c = document.getElementById('jContent_'+kind);
+  const b = document.getElementById('jColBtn_'+kind);
+  if(c) c.style.display = v.col ? 'none' : '';
+  if(b){ b.classList.toggle('collapsed', v.col); b.setAttribute('aria-expanded', v.col?'false':'true'); }
+}
+function jvRenderControls(kind){
+  const host = document.getElementById('jPeriod_'+kind);
+  if(!host) return;
+  const v = ensureJournalView(kind);
+  const years = jvYears(kind);
+  const yOpts = `<option value="all">ทุกปี</option>` +
+    years.map(y=>`<option value="${y}"${v.y===y?' selected':''}>${y}</option>`).join('') +
+    (v.y!=='all' && !years.includes(v.y) ? `<option value="${v.y}" selected>${v.y}</option>` : '');
+  const mOpts = `<option value="all">ทุกเดือน</option>` +
+    JV_MONTHS.map((n,i)=>{ const mm=String(i+1).padStart(2,'0');
+      return `<option value="${mm}"${v.m===mm?' selected':''}>${n}</option>`; }).join('');
+  host.innerHTML = `<div class="jvWrap">
+    <select class="jvSel" onchange="jvSetYear('${kind}',this.value)" title="เลือกปี">${yOpts}</select>
+    <select class="jvSel" onchange="jvSetMonth('${kind}',this.value)" title="${v.y==='all'?'เลือกปีก่อน ถึงจะเจาะเดือนได้':'เลือกเดือน'}" ${v.y==='all'?'disabled':''}>${mOpts}</select>
+  </div>`;
+  jvApplyCollapse(kind);
+}
 /* ================= render: Tab 2 (Journal) ================= */
 function renderJournal(){
   if(!state) return;
+  ensureJournalView();
+  JV_KINDS.forEach(jvRenderControls);
   const j = journalStats();
   const rWinClass = r => r===null ? '' : r>=0 ? 'good' : 'bad';
 
@@ -2187,7 +2298,20 @@ function renderJournal(){
 
   const jBody = document.getElementById('jTbody');
   const jCards = document.getElementById('jCards');
-  document.getElementById('jEmpty').style.display = rows.length ? 'none' : 'block';
+  {
+    const cnt = document.getElementById('jCount_closed');
+    const jvC = ensureJournalView('closed');
+    if(cnt) cnt.textContent = `(${rows.length})${jvC.y==='all'?'':` · ${jvLabel('closed')}`}`;
+    const emp = document.getElementById('jEmpty');
+    emp.style.display = rows.length ? 'none' : 'block';
+    if(!rows.length){
+      const anyClosed = state.trades.some(t=>t.status==='closed' && t.exitPrice>0);
+      emp.textContent = (anyClosed && jvC.y!=='all')
+        ? `ไม่มีไม้ที่ปิดใน ${jvLabel('closed')} — เปลี่ยนช่วงเวลาด้านบนเพื่อดูรายการอื่น`
+        : (anyClosed ? 'ไม่มีรายการที่ตรงกับตัวกรองนี้'
+                     : 'ยังไม่มีรายการที่ปิดไม้ — พอกด Closed ในแท็บแผนเทรด รายการจะมาโผล่ที่นี่ · ไม้ที่เทรดไปแล้วโดยไม่ได้วางแผน ใช้ปุ่ม “＋ Closed นอกแผน”');
+    }
+  }
 
   /* จัดกลุ่ม scale-out (partial close) ของ Position เดียวกันด้วย posGroup */
   const jGroupOrder = []; const jGroupMap = new Map();
@@ -2311,11 +2435,15 @@ function renderJournal(){
   /* ── Missed & Cancelled ใช้โครงเดียวกันเป๊ะ ต่างแค่ kind / ฟิลด์วันที่ / ปุ่มแก้ไข ──
      เขียนเป็นตัวเดียวแล้วเรียกสองรอบ ดีกว่าก๊อปโค้ด 60 บรรทัดไว้สองที่แล้วลืมแก้ที่ใดที่หนึ่ง */
   function renderPlanlessPanel(cfg){
-    const list = state.trades.filter(t=>t.status===cfg.status).slice()
+    const all = state.trades.filter(t=>t.status===cfg.status);
+    const list = all.filter(t=>jvTradeMatch(cfg.kind, t)).slice()
       .sort((a,b)=>(b[cfg.dateField]||'').localeCompare(a[cfg.dateField]||''));
     const panel = document.getElementById(cfg.panelId);
-    panel.style.display = list.length ? 'block' : 'none';
-    document.getElementById(cfg.countId).textContent = list.length ? `(${list.length})` : '';
+    /* ซ่อนพาเนลเฉพาะตอนไม่มีข้อมูลเลยจริง ๆ — ถ้าแค่กรองเดือนแล้วว่าง ต้องยังเห็นตัวกรองไว้กดกลับ */
+    panel.style.display = all.length ? 'block' : 'none';
+    const jvP = ensureJournalView(cfg.kind);
+    document.getElementById(cfg.countId).textContent =
+      all.length ? `(${list.length})${jvP.y==='all'?'':` · ${jvLabel(cfg.kind)}`}` : '';
     const reasonHtml = t => {
       const tag = reasonTagHtml(cfg.kind, t);
       const note = t[REASON_KINDS[cfg.kind].noteField];
@@ -2356,6 +2484,11 @@ function renderJournal(){
         </div>
       </div>`;
     }).join('');
+    if(all.length && !list.length){
+      const msg = `ไม่มีรายการใน ${jvLabel(cfg.kind)} — เปลี่ยนช่วงเวลาด้านบนเพื่อดูรายการอื่น`;
+      document.getElementById(cfg.tbodyId).innerHTML = `<tr><td colspan="10" class="empty" style="text-align:center">${msg}</td></tr>`;
+      document.getElementById(cfg.cardsId).innerHTML = `<div class="empty">${msg}</div>`;
+    }
   }
   renderPlanlessPanel({status:'missed', kind:'missed', dateField:'missedDate',
     panelId:'missedPanel', countId:'missedCount', tbodyId:'missedTbody', cardsId:'missedCards',
