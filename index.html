@@ -5918,7 +5918,12 @@ function ffState(){
   if(!Array.isArray(f.l2)     || !f.l2.length)     f.l2     = d.l2;
   /* ver 3: แผนที่ธีมเปลี่ยนจากติ๊กเองเป็น RRG อัตโนมัติ — ทิ้งชุด themes เดิมที่ไม่มีใครอ่านแล้ว */
   if((f.ver||1) < 3){ delete f.themes; f.ver = 3; }
-  if(!f.rrg || typeof f.rrg!=='object')            f.rrg = {rows:[], day:'', at:'', err:'', loading:false};
+  if(!f.rrg || typeof f.rrg!=='object')            f.rrg = {rowsD:[], rowsW:[], day:'', at:'', err:'', loading:false};
+  /* ver 4: แยกผลเป็น D/W — ของเดิมเก็บ rows เดียว ทิ้งแล้วให้ดึงใหม่ (ครั้งเดียว) */
+  if(f.rrg.rows){ delete f.rrg.rows; f.rrg.day = ''; }
+  if(!Array.isArray(f.rrg.rowsD)) f.rrg.rowsD = [];
+  if(!Array.isArray(f.rrg.rowsW)) f.rrg.rowsW = [];
+  if(f.rrgTf !== 'D' && f.rrgTf !== 'W') f.rrgTf = 'D';
   /* err/loading ถูกเซฟลง Firestore ไปด้วย — ถ้าไม่ล้างตอนโหลด จะค้างโชว์ error เก่าข้ามวัน
      และถ้าปิดหน้าตอนกำลังดึง loading:true จะค้าง ปุ่มรีเฟรชกดไม่ได้ตลอดกาล
      ต้องล้าง "ครั้งเดียวตอนโหลด" เท่านั้น — ffState() ถูกเรียกทุก render ถ้าล้างทุกครั้ง
@@ -6034,7 +6039,7 @@ function ffSet(list,i,v){
    ตัดกันที่ 100 -> Leading / Weakening / Lagging / Improving
    ตัวเลขจะไม่ตรงกับ RRG ของ StockCharts เป๊ะ แต่ลำดับการหมุนสอดคล้องกัน
 ============================================================================== */
-const RRG_BUILD = 2;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง */
+const RRG_BUILD = 4;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง */
 const RRG_BENCH = 'SPY';
 const RRG_SYMS = [
   {s:'XLU',  n:'Utilities'},      {s:'PAVE', n:'Infrastructure'}, {s:'XHB',  n:'Homebuilders'},
@@ -6047,7 +6052,30 @@ const RRG_SYMS = [
 /* batch = จำนวน symbol ต่อคำขอ · Twelve Data คิด 1 เครดิตต่อ 1 symbol (ไม่ใช่ต่อคำขอ)
    แพลนฟรี Basic 8 = 8 เครดิต/นาที → ยิงได้ 8 ตัวแล้วต้องรอครบนาทีก่อนยิงชุดถัดไป
    19 ตัว = 3 รอบ ~2 นาที · ทำวันละครั้งแล้วแคชไว้ จึงไม่กระทบการใช้งานจริง */
-const RRG_CFG = {fast:12, slow:26, zWin:252, momLag:5, bars:400, batch:8, cooldownMs:61000};
+const RRG_CFG = {fast:12, slow:26, bars:1200, batch:8, cooldownMs:61000};
+/* หน้าต่าง normalize ต่างกันตาม timeframe — 252 วัน กับ 52 สัปดาห์ คือ "1 ปี" เท่ากัน
+   momLag คือระยะที่ใช้วัดโมเมนตัมและใช้เป็นระยะเทียบของ Δ (5 วัน ≈ 1 สัปดาห์ · 4 สัปดาห์ ≈ 1 เดือน)
+   weekly ต้องการ 26+52+4 = 82 สัปดาห์ ≈ 574 วันทำการ → จึงดึง 1200 แท่ง (เครดิตคิดต่อ symbol ไม่ใช่ต่อแท่ง) */
+const RRG_TF = {
+  D:{zWin:252, momLag:5, label:'Daily',  unit:'วัน'},
+  W:{zWin:52,  momLag:4, label:'Weekly', unit:'สัปดาห์'}
+};
+/* รวมแท่งรายวันเป็นรายสัปดาห์: ปิดวันสุดท้ายของสัปดาห์ · high = สูงสุดในสัปดาห์ */
+function rrgWeekKey(ds){
+  const d = new Date(ds+'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay()+6)%7));   /* เลื่อนไปวันจันทร์ */
+  return d.toISOString().slice(0,10);
+}
+function rrgToWeekly(dates, closes, highs){
+  const wd=[], wc=[], wh=[];
+  let key=null;
+  for(let i=0;i<dates.length;i++){
+    const k = rrgWeekKey(dates[i]);
+    if(k!==key){ key=k; wd.push(k); wc.push(closes[i]); wh.push(highs[i]); }
+    else { wc[wc.length-1]=closes[i]; wh[wh.length-1]=Math.max(wh[wh.length-1], highs[i]); }
+  }
+  return {dates:wd, closes:wc, highs:wh};
+}
 function rrgQuadOf(ratio, mom){
   return ratio>=100 ? (mom>=100 ? 'lead' : 'weak') : (mom>=100 ? 'imp' : 'lag');
 }
@@ -6068,18 +6096,20 @@ function rrgZ(arr, i, win){
   if(!(sd>0)) return null;
   return (arr[i]-mean)/sd;
 }
-/* closes/highs เรียงเก่า->ใหม่ · bench ต้องยาวเท่ากันและจับวันตรงกันมาแล้ว */
-function rrgCompute(closes, highs, bench){
+/* closes/highs เรียงเก่า->ใหม่ · bench ต้องยาวเท่ากันและจับวันตรงกันมาแล้ว
+   tfKey = 'D' | 'W' — ต่างกันแค่หน้าต่าง normalize กับระยะโมเมนตัม สูตรเดียวกัน */
+function rrgCompute(closes, highs, bench, tfKey){
+  const TF = RRG_TF[tfKey] || RRG_TF.D;
   const n = closes.length;
-  const need = RRG_CFG.slow + RRG_CFG.zWin + RRG_CFG.momLag;
+  const need = RRG_CFG.slow + TF.zWin + TF.momLag;
   if(n < need) return {err:`ข้อมูลไม่พอ (มี ${n} แท่ง ต้องการ ${need})`};
   const rs = closes.map((c,i)=> bench[i]>0 ? c/bench[i] : 0);
   const fast = rrgEma(rs, RRG_CFG.fast), slow = rrgEma(rs, RRG_CFG.slow);
   const raw = rs.map((_,i)=> slow[i]>0 ? 100*(fast[i]-slow[i])/slow[i] : 0);
-  const momRaw = raw.map((v,i)=> i>=RRG_CFG.momLag ? v-raw[i-RRG_CFG.momLag] : 0);
+  const momRaw = raw.map((v,i)=> i>=TF.momLag ? v-raw[i-TF.momLag] : 0);
   const ratioS = [], momS = [];
   for(let i=0;i<n;i++){
-    const zr = rrgZ(raw, i, RRG_CFG.zWin), zm = rrgZ(momRaw, i, RRG_CFG.zWin);
+    const zr = rrgZ(raw, i, TF.zWin), zm = rrgZ(momRaw, i, TF.zWin);
     ratioS.push(zr===null?null:100+zr);
     momS.push(zm===null?null:100+zm);
   }
@@ -6093,14 +6123,30 @@ function rrgCompute(closes, highs, bench){
     if(rrgQuadOf(ratioS[i], momS[i]) !== quad) break;
     days++;
   }
-  const hi52 = Math.max.apply(null, highs.slice(Math.max(0, n-252)));
-  return {ratio:ratioS[last], mom:momS[last], quad, days,
+  /* Δ = ทิศและความเร็วที่กำลังเคลื่อน — คือข้อมูลที่ "หาง" ของ RRG ให้ แต่อ่านเป็นตัวเลข
+     จุดเดียวบอกได้แค่ว่าอยู่ตรงไหน Δ บอกว่ากำลังมุ่งไปทางไหน */
+  const back = last - TF.momLag;
+  const dRatio = (back>=0 && ratioS[back]!==null) ? ratioS[last]-ratioS[back] : null;
+  const dMom   = (back>=0 && momS[back]!==null)   ? momS[last]-momS[back]     : null;
+  const hi52 = Math.max.apply(null, highs.slice(Math.max(0, n - (tfKey==='W' ? 52 : 252))));
+  return {ratio:ratioS[last], mom:momS[last], quad, days, dRatio, dMom,
           off52: hi52>0 ? (closes[last]/hi52-1)*100 : 0, close:closes[last], bars:n};
 }
 
 /* ---------- ดึงราคาจาก Twelve Data ---------- */
 function rrgKey(){ return ((state && state.settings && state.settings.tdKey) || '').trim(); }
 function rrgToday(){ return new Date().toISOString().slice(0,10); }
+function rrgCacheFresh(f){
+  return !!(f && f.rrg && f.rrg.day === rrgToday() && (f.rrg.rowsD||[]).length);
+}
+function rrgTf(){ return ffState().rrgTf === 'W' ? 'W' : 'D'; }
+function rrgSetTf(tf){
+  const f = ffState();
+  if(f.rrgTf === tf) return;
+  f.rrgTf = (tf==='W' ? 'W' : 'D');
+  ffRenderThemes();     /* ข้อมูลคำนวณไว้ทั้งสองแบบแล้ว สลับดูไม่ต้องยิง API */
+  schedulePersist();
+}
 /* ตอบกลับมี 2 รูปแบบ: ขอตัวเดียว = {values:[]} · ขอหลายตัว = {SYM:{values:[]}} */
 function rrgUnpack(json, syms){
   const out = {};
@@ -6150,7 +6196,7 @@ async function rrgRefresh(force){
   const key = rrgKey();
   if(!key){ f.rrg = {err:'nokey', at:''}; renderFundflow(); return; }
   if(rrgBusy) return;
-  if(!force && f.rrg && f.rrg.day === rrgToday() && Array.isArray(f.rrg.rows) && f.rrg.rows.length) return;
+  if(!force && rrgCacheFresh(f)) return;
   rrgBusy = true;
   f.rrg = Object.assign({}, f.rrg, {loading:true, err:''});
   renderFundflow();
@@ -6172,16 +6218,29 @@ async function rrgRefresh(force){
     rrgSetProg(null);
     const benchMap = rrgSeries(got[RRG_BENCH]);
     if(!benchMap.size) throw new Error('ดึงราคา '+RRG_BENCH+' (ตัวหาร) ไม่ได้');
-    const rows = [];
+    /* คำนวณทั้ง D และ W ตอนดึงรอบเดียว — ปุ่มสลับจึงไม่กินเครดิตเพิ่ม
+       (เก็บเฉพาะผลลัพธ์ ไม่เก็บราคาดิบ ไม่งั้น state ใน Firestore บวมเกินขีดจำกัดเอกสาร) */
+    const rowsD = [], rowsW = [];
     RRG_SYMS.forEach(def=>{
       const map = rrgSeries(got[def.s]);
-      if(!map.size){ rows.push({sym:def.s, name:def.n, err:'ไม่มีข้อมูล'}); return; }
+      if(!map.size){
+        const e = {sym:def.s, name:def.n, err:'ไม่มีข้อมูล'};
+        rowsD.push(e); rowsW.push(Object.assign({}, e));
+        return;
+      }
       /* ใช้เฉพาะวันที่มีทั้งคู่ — วันหยุดไม่ตรงกันจะทำให้ ratio เพี้ยน */
-      const dates = [...map.keys()].filter(d=>benchMap.has(d)).sort();
-      const r = rrgCompute(dates.map(d=>map.get(d).c), dates.map(d=>map.get(d).h), dates.map(d=>benchMap.get(d).c));
-      rows.push(Object.assign({sym:def.s, name:def.n, date:dates[dates.length-1]}, r));
+      const dates  = [...map.keys()].filter(d=>benchMap.has(d)).sort();
+      const closes = dates.map(d=>map.get(d).c);
+      const highs  = dates.map(d=>map.get(d).h);
+      const bench  = dates.map(d=>benchMap.get(d).c);
+      const base   = {sym:def.s, name:def.n, date:dates[dates.length-1]};
+      rowsD.push(Object.assign({}, base, rrgCompute(closes, highs, bench, 'D')));
+      const wk  = rrgToWeekly(dates, closes, highs);
+      const wkB = rrgToWeekly(dates, bench, bench);
+      rowsW.push(Object.assign({}, base, {date:wk.dates[wk.dates.length-1]},
+                 rrgCompute(wk.closes, wk.highs, wkB.closes, 'W')));
     });
-    f.rrg = {rows, day:rrgToday(), at:new Date().toISOString(), loading:false, err:''};
+    f.rrg = {rowsD, rowsW, day:rrgToday(), at:new Date().toISOString(), loading:false, err:''};
   }catch(e){
     f.rrg = Object.assign({}, f.rrg, {loading:false, err:String((e && e.message) || e)});
   }finally{
@@ -6199,7 +6258,7 @@ function rrgAutoOnce(){
   if(rrgAutoDone || !state) return;
   const f = ffState();
   if(!rrgKey()) return;                                  /* ยังไม่ใส่ key — ไม่ต้องพยายาม */
-  if(f.rrg && f.rrg.day === rrgToday() && (f.rrg.rows||[]).length) return;
+  if(rrgCacheFresh(f)) return;
   rrgAutoDone = true;
   rrgRefresh(false);
 }
@@ -6230,7 +6289,8 @@ function ffRenderCtx(){
 function ffRenderThemes(){
   const f = ffState();
   const r = f.rrg || {};
-  const rows = Array.isArray(r.rows) ? r.rows : [];
+  const tf = rrgTf(), TF = RRG_TF[tf];
+  const rows = Array.isArray(tf==='W' ? r.rowsW : r.rowsD) ? (tf==='W' ? r.rowsW : r.rowsD) : [];
   const ok = rows.filter(x=>!x.err && x.quad);
 
   /* แถบสถานะ + ปุ่มรีเฟรช */
@@ -6254,7 +6314,7 @@ function ffRenderThemes(){
     else {
       const bad = rows.length - ok.length;
       const d = ok.length ? (ok[0].date || r.day) : r.day;
-      msg = 'ข้อมูลถึง ' + ffEsc(d) + ' · ' + ok.length + '/' + rows.length + ' ตัว'
+      msg = TF.label + ' · ข้อมูลถึง ' + ffEsc(d) + ' · ' + ok.length + '/' + rows.length + ' ตัว'
           + (bad ? ' · <b style="color:var(--amber)">' + bad + ' ตัวคำนวณไม่ได้</b>' : '');
       if(r.day !== rrgToday()) cls = 'amber';
     }
@@ -6263,6 +6323,10 @@ function ffRenderThemes(){
       + '<span class="ffNote" style="display:inline;color:'+color+'">' + msg + '</span>'
       + '<span style="margin-left:auto"></span>'
       + '<span class="ffMini" title="เลขรุ่นของโค้ดที่กำลังรันจริง — ใช้ยืนยันว่าโหลดไฟล์ใหม่แล้ว">rrg v' + RRG_BUILD + '</span>'
+      + '<span class="ffSeg" title="สลับได้ทันที ไม่กินเครดิต — คำนวณไว้ทั้งสองแบบตอนดึงรอบเดียว">'
+        + '<button class="' + (tf==='D'?'on-cur':'') + '" onclick="rrgSetTf(\'D\')">Daily</button>'
+        + '<button class="' + (tf==='W'?'on-cur':'') + '" onclick="rrgSetTf(\'W\')">Weekly</button>'
+      + '</span>'
       + '<button class="small" onclick="rrgManualRefresh()"' + (r.loading?' disabled':'') + '>'
       + (r.loading ? 'กำลังดึง…' : '🔄 รีเฟรชราคา') + '</button></div>';
   }
@@ -6272,7 +6336,7 @@ function ffRenderThemes(){
     const box = document.getElementById('ffQ'+x.quad);
     if(box) box.insertAdjacentHTML('beforeend',
       '<span class="ffChip" title="'+ffEsc(x.name)+' · RS-Ratio '+x.ratio.toFixed(1)
-      +' · RS-Mom '+x.mom.toFixed(1)+' · อยู่ควอดแรนต์นี้ '+x.days+' แท่ง">'+ffEsc(x.sym)+'</span>');
+      +' · RS-Mom '+x.mom.toFixed(1)+' · อยู่ควอดแรนต์นี้ '+x.days+' '+TF.unit+'">'+ffEsc(x.sym)+'</span>');
   });
 
   /* breadth = สัดส่วนที่แข็งกว่า SPY (RS-Ratio >= 100) ไม่ใช่แค่ Leading */
@@ -6291,23 +6355,36 @@ function ffRenderThemes(){
   if(host){
     if(!rows.length){ host.innerHTML = ''; }
     else {
+      /* ในกลุ่มเดียวกัน เรียงตาม Δmom — ตัวที่โมเมนตัมเร่งขึ้นแรงสุดอยู่บน
+         RS-Ratio ใช้จัดลำดับข้ามตัวไม่ได้ดีนัก (เป็น z-score เทียบประวัติของตัวเอง)
+         ส่วน Δmom บอกตรง ๆ ว่าใครกำลังมาและใครกำลังแผ่ว · เสมอกันค่อยตัดด้วย ratio */
       const sorted = rows.slice().sort((a,b)=>{
         if(a.err && !b.err) return 1;
         if(!a.err && b.err) return -1;
         if(a.err && b.err) return a.sym.localeCompare(b.sym);
-        return (ORDER[a.quad]-ORDER[b.quad]) || (b.ratio-a.ratio);
+        if(ORDER[a.quad] !== ORDER[b.quad]) return ORDER[a.quad]-ORDER[b.quad];
+        const da = a.dMom==null ? -Infinity : a.dMom, db = b.dMom==null ? -Infinity : b.dMom;
+        return (db-da) || (b.ratio-a.ratio);
       });
+      /* Δ = เคลื่อนไปเท่าไหร่ใน momLag แท่งล่าสุด — แทนหางของ RRG ในรูปตัวเลข
+         ▲ = กำลังมุ่งขึ้น/ขวา (เข้าหา Leading) · ▼ = กำลังถอย */
+      const delta = v => v==null ? '<div class="sub">—</div>'
+        : '<div class="sub" style="color:'+(v>=0?'var(--teal)':'var(--red)')+'">'
+          + (v>=0?'▲':'▼') + Math.abs(v).toFixed(1) + '</div>';
       host.innerHTML =
-        '<table class="rrgTbl"><thead><tr><th>SYM</th><th>ควอดแรนต์</th><th>RS-Ratio</th><th>RS-Mom</th>'
-        + '<th title="อยู่ควอดแรนต์นี้มากี่แท่งติดกัน">แท่ง</th><th title="ห่างจากจุดสูงสุด 52 สัปดาห์">OFF52W</th></tr></thead><tbody>'
+        '<table class="rrgTbl"><thead><tr><th>SYM</th><th>ควอดแรนต์</th>'
+        + '<th title="แข็ง/อ่อนกว่า SPY · ตัวเลขล่าง = เปลี่ยนไปเท่าไหร่ใน '+TF.momLag+' '+TF.unit+'ล่าสุด">RS-Ratio</th>'
+        + '<th title="โมเมนตัมของ RS · ตัวเลขล่าง = เปลี่ยนไปเท่าไหร่ใน '+TF.momLag+' '+TF.unit+'ล่าสุด · เรียงลำดับในกลุ่มด้วยค่านี้">RS-Mom ↓</th>'
+        + '<th title="อยู่ควอดแรนต์นี้มากี่'+TF.unit+'ติดกัน">'+TF.unit+'</th>'
+        + '<th title="ห่างจากจุดสูงสุด 1 ปี">OFF52W</th></tr></thead><tbody>'
         + sorted.map(x=>{
             if(x.err) return '<tr class="dim"><td><b>'+ffEsc(x.sym)+'</b><div class="sub">'+ffEsc(x.name)+'</div></td>'
                            + '<td colspan="5" style="color:var(--amber)">'+ffEsc(x.err)+'</td></tr>';
             const q = QLBL[x.quad];
             return '<tr><td><b>'+ffEsc(x.sym)+'</b><div class="sub">'+ffEsc(x.name)+'</div></td>'
               + '<td style="color:'+q[1]+';font-weight:700">'+q[0]+'</td>'
-              + '<td class="'+(x.ratio>=100?'up':'dn')+'">'+x.ratio.toFixed(1)+'</td>'
-              + '<td class="'+(x.mom>=100?'up':'dn')+'">'+x.mom.toFixed(1)+'</td>'
+              + '<td class="'+(x.ratio>=100?'up':'dn')+'">'+x.ratio.toFixed(1)+delta(x.dRatio)+'</td>'
+              + '<td class="'+(x.mom>=100?'up':'dn')+'">'+x.mom.toFixed(1)+delta(x.dMom)+'</td>'
               + '<td>'+x.days+'</td>'
               + '<td class="'+(x.off52>-5?'':'dn')+'">'+x.off52.toFixed(1)+'</td></tr>';
           }).join('')
