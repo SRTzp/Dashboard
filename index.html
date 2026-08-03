@@ -406,6 +406,17 @@ tr:last-child td{border-bottom:none}
 .wlCollapseBtn.collapsed{transform:rotate(-90deg)}
 .jvSel{font-size:.72rem;padding:3px 7px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--sans)}
 .jvSel:disabled{opacity:.45}
+.rrgTbl{width:100%;border-collapse:collapse;font-size:.76rem;margin-top:6px}
+.rrgTbl th{color:var(--muted);font-weight:600;font-size:.66rem;text-transform:uppercase;letter-spacing:.4px;
+           text-align:right;padding:5px 7px;border-bottom:1px solid var(--border);white-space:nowrap}
+.rrgTbl th:first-child,.rrgTbl th:nth-child(2){text-align:left}
+.rrgTbl td{padding:5px 7px;border-bottom:1px solid var(--border);text-align:right;
+           font-family:var(--mono);white-space:nowrap}
+.rrgTbl td:first-child,.rrgTbl td:nth-child(2){text-align:left;font-family:var(--sans)}
+.rrgTbl td .sub{color:var(--muted);font-size:.64rem;font-family:var(--sans);font-weight:400}
+.rrgTbl td.up{color:var(--teal)}
+.rrgTbl td.dn{color:var(--red)}
+.rrgTbl tr.dim td{opacity:.6}
 .jvWrap{display:flex;gap:6px;align-items:center}
 .scrollTopBtn{
   position:fixed;right:16px;bottom:20px;width:40px;height:40px;border-radius:50%;
@@ -825,16 +836,18 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <div class="ffGaugeTrack alt"><div id="ffNeedle2" class="ffNeedle"></div></div>
     <div class="ffScale"><span>◀ เข้าของมั่นคง</span><span>NEUTRAL</span><span>เข้าของเก็งกำไร ▶</span></div>
     <div id="ffBoard2" style="margin-top:8px"></div>
+    <div id="ffCtx" class="ffCtx"></div>
   </div>
 
   <div class="panel">
     <div class="ffHead" id="ffThemesHead" onclick="ffToggleThemes()" style="cursor:pointer" title="แตะเพื่อยุบ / ขยายแผนที่ธีม">
       <div>
-        <div class="ffLbl">แผนที่ธีม · daily · กรองไม้ใหม่ · ไม่คิดคะแนน</div>
+        <div class="ffLbl">แผนที่ธีม · RRG อัตโนมัติ · daily · กรองไม้ใหม่ · ไม่คิดคะแนน</div>
         <h2 style="margin:2px 0 0;display:flex;align-items:center;gap:6px"><button type="button" class="wlCollapseBtn" id="ffThemesBtn" tabindex="-1" aria-expanded="true">▾</button>เงินไหลเข้าธีมไหน</h2>
       </div>
       <div class="ffScore" id="ffBreadth">—</div>
     </div>
+    <div id="ffRrgBar" onclick="event.stopPropagation()"></div>
     <div id="ffThemesBody" style="display:none"><!-- ตั้งต้นซ่อนกันจอกระพริบ — ffApplyThemesCol() จะกางคืนถ้าสถานะที่บันทึกไว้คือเปิด -->
     <div class="ffQuad">
       <div class="ffQ imp"><div class="ffQt">IMPROVING</div><div class="ffQs">อ่อนแต่กำลังฟื้น · เฝ้าดู</div><div class="ffQbox" id="ffQimp"></div></div>
@@ -843,9 +856,8 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       <div class="ffQ weak"><div class="ffQt">WEAKENING</div><div class="ffQs">ยังแข็งแต่แผ่ว · เตือนของที่ถือ</div><div class="ffQbox" id="ffQweak"></div></div>
     </div>
     <div class="hint" style="margin:6px 0 2px">การหมุนปกติวนตามเข็ม: Improving → Leading → Weakening → Lagging</div>
-    <div id="ffCtx" class="ffCtx"></div>
     <div id="ffThemes" style="margin-top:4px"></div>
-    <div class="hint" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">⚠ Semi · AI · Photonics เกาะกลุ่มเดียวกันเกือบหมด — นับ breadth ได้ แต่อย่าถือว่าเป็น 3 เสียงอิสระ</div>
+    <div class="hint" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">⚠ SMH · IRBO · IGV · HACK เกาะกลุ่มเทคเดียวกันเกือบหมด — นับ breadth ได้ แต่อย่าถือว่าเป็นเสียงอิสระจากกัน</div>
     </div>
   </div>
 
@@ -1160,6 +1172,12 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       <div class="f"><label>Sat.A — RS Benchmark</label><input type="text" id="sRsBench" placeholder="NASDAQ:IXIC"></div>
     </div>
     <div class="hint"><code>ไม้ base = MIN(Max Cap, 1R ÷ ระยะ stop%)</code> · add-on = หุ้น base × 0.4286 (70:30) · <b>ไม่ต้องมี Max Cap ของ add-on แยก</b> เพราะ add-on คิดจากจำนวนหุ้นไม้ base จึงล็อกที่ 42.86% เสมอ</div>
+
+    <div class="divlbl">แผนที่ธีม (RRG) — แหล่งราคา</div>
+    <div class="f"><label>Twelve Data API key</label>
+      <input type="text" id="sTdKey" placeholder="วาง API key จาก twelvedata.com" autocomplete="off" spellcheck="false"></div>
+    <div class="hint">ใช้ดึงราคาปิดรายวันมาคำนวณ RRG ให้อัตโนมัติ · สมัครฟรีที่ <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener" style="color:var(--blue)">twelvedata.com</a> — ใช้วันละ ~19 เครดิตจากโควตาฟรี 800/วัน<br>
+      key ถูกเก็บใน Firestore ของคุณเอง ซิงก์ข้ามเครื่อง · ใครก็ตามที่เปิด dashboard นี้ได้จะเห็น key ได้ ถ้าหลุดให้ไป regenerate ใหม่</div>
 
     <div class="divlbl">Sat.B — Default Volatility (จุด/point)</div>
     <div class="fgrid">
@@ -5295,6 +5313,7 @@ function openSettings(){
       `Core ${cc}% → 1R ${(sz.r.core*cc/100).toFixed(2)}% · Sat.A ${ca}% → 1R ${(sz.r.satA*ca/100).toFixed(2)}%`;
   }catch(e){ document.getElementById('sFfNow').textContent='—'; }
   document.getElementById('sRsBench').value = s.rsBench || 'NASDAQ:IXIC';
+  document.getElementById('sTdKey').value = s.tdKey || '';
   updTotal();
   updFxUpdatedHint(s.fxUpdatedAt);
   document.getElementById('setOverlay').classList.add('show');
@@ -5395,7 +5414,8 @@ function saveSettings(){
       S50:    parseFloat(document.getElementById('sVolS50').value)||0,
       BTCUSD: parseFloat(document.getElementById('sVolBTC').value)||0
     },
-    rsBench: (document.getElementById('sRsBench').value||'').trim() || 'NASDAQ:IXIC'
+    rsBench: (document.getElementById('sRsBench').value||'').trim() || 'NASDAQ:IXIC',
+    tdKey: (document.getElementById('sTdKey').value||'').trim()
   };
   document.getElementById('setOverlay').classList.remove('show');
   render();
@@ -5867,14 +5887,8 @@ function defaultFundflow(){
       {id:idFF(), r:'IWO / IWN',   tf:'D', w:2, v:1, n:'Small-cap growth vs value (Russell 2000)', f:''}
     ],
     ctx:{rsp:1, f:''},   /* RSP/SPY — กว้าง(1)/แคบ(-1) · ไม่คิดคะแนน อ่านคู่กับ breadth */
-    themes:[
-      {id:idFF(), t:'Semi',      r:'SMH / SPY',  rs:1, mo:1, f:''},
-      {id:idFF(), t:'Cybersec',  r:'CIBR / SPY', rs:1, mo:1, f:''},
-      {id:idFF(), t:'Space',     r:'ARKX / SPY', rs:1, mo:1, f:''},
-      {id:idFF(), t:'Biotech',   r:'XBI / SPY',  rs:1, mo:1, f:''},
-      {id:idFF(), t:'Photonics', r:'(LITE+COHR+AAOI)/3 / SPY', rs:1, mo:1, f:''},
-      {id:idFF(), t:'AI',        r:'IRBO / SPY', rs:1, mo:1, f:''}
-    ],
+    /* แผนที่ธีม: คำนวณเองจากราคาจริง เก็บผลล่าสุดไว้ที่ rrg (ดู RRG_SYMS) */
+    rrg:{rows:[], day:'', at:'', err:'', loading:false},
     dials:[
       {id:idFF(), k:'set', r:'SET / SPX',        tf:'W',  v:1, q:'ไทย หรือ US ใน Core', s:'ชั้น 3 · weekly · Core',  up:'เอียงหุ้นไทย',       dn:'เอียง US quality'},
       {id:idFF(), k:'btc', r:'BTCUSD / XAUUSD',  tf:'4H', v:1, q:'BTC หรือทอง',        s:'ชั้น 4 · 4H · Sat.B',    up:'สัปดาห์นี้เอนไป BTC', dn:'สัปดาห์นี้เอนไปทอง'}
@@ -5884,10 +5898,11 @@ function defaultFundflow(){
     log:[],
     updated:'',
     updatedIso:'',
-    ver:2
+    ver:3
   };
 }
 const FF_STALE_DAYS = 10;
+let rrgHydrated = false;   /* ล้าง err/loading ที่ค้างมาจาก Firestore ครั้งเดียวตอนโหลด */
 function ffState(){
   if(!state) return defaultFundflow();
   if(!state.fundflow || typeof state.fundflow!=='object') state.fundflow = defaultFundflow();
@@ -5901,14 +5916,24 @@ function ffState(){
   /* ย้ายจากสคีมาเดิม (signals/indices) — ทิ้งของเก่า ใช้ชุดใหม่ */
   if(!Array.isArray(f.l1)     || !f.l1.length)     f.l1     = d.l1;
   if(!Array.isArray(f.l2)     || !f.l2.length)     f.l2     = d.l2;
-  if(!Array.isArray(f.themes))                     f.themes = d.themes;
+  /* ver 3: แผนที่ธีมเปลี่ยนจากติ๊กเองเป็น RRG อัตโนมัติ — ทิ้งชุด themes เดิมที่ไม่มีใครอ่านแล้ว */
+  if((f.ver||1) < 3){ delete f.themes; f.ver = 3; }
+  if(!f.rrg || typeof f.rrg!=='object')            f.rrg = {rows:[], day:'', at:'', err:'', loading:false};
+  /* err/loading ถูกเซฟลง Firestore ไปด้วย — ถ้าไม่ล้างตอนโหลด จะค้างโชว์ error เก่าข้ามวัน
+     และถ้าปิดหน้าตอนกำลังดึง loading:true จะค้าง ปุ่มรีเฟรชกดไม่ได้ตลอดกาล
+     ต้องล้าง "ครั้งเดียวตอนโหลด" เท่านั้น — ffState() ถูกเรียกทุก render ถ้าล้างทุกครั้ง
+     error ที่เพิ่งเกิดจะถูกลบก่อนผู้ใช้ทันเห็น */
+  if(!rrgHydrated){
+    rrgHydrated = true;
+    f.rrg.loading = false;
+    if(f.rrg.err && f.rrg.err !== 'nokey') f.rrg.err = '';
+  }
   if(!Array.isArray(f.dials)  || !f.dials.length)  f.dials  = d.dials;
   if(!Array.isArray(f.log))                        f.log    = [];
   if(typeof f.themesCol !== 'boolean')             f.themesCol = true;   /* ยังไม่เคยตั้ง → ยุบไว้ */
   if(!f.qe || typeof f.qe!=='object')              f.qe     = d.qe;
   if(!Array.isArray(f.qe.history))                 f.qe.history = [];
   [].concat(f.l1,f.l2).forEach(s=>{ if(s.v!==1&&s.v!==-1)s.v=1; if(!s.w)s.w=2; if(s.f==null)s.f=''; });
-  f.themes.forEach(t=>{ if(t.rs!==1&&t.rs!==-1)t.rs=1; if(t.mo!==1&&t.mo!==-1)t.mo=1; if(t.f==null)t.f=''; });
   f.dials.forEach(x=>{ if(x.v!==1&&x.v!==-1)x.v=1; });
   delete f.signals; delete f.indices;
   return f;
@@ -5963,7 +5988,9 @@ function renderFundflow(){
     st.style.display=''; st.textContent='⚠ ยังไม่เคยอัปเดต — เปิดกราฟแล้วกดให้ตรงจริงก่อนใช้งาน';
   } else st.style.display='none';
 
+  ffRenderCtx();
   ffRenderThemes();
+  rrgAutoOnce();
   ffRenderDials();
   ffRenderQe();
   const lg=f.log[0];
@@ -5996,29 +6023,201 @@ function ffSet(list,i,v){
   s.v=v; s.f=ffToday();
   ffTouch();
 }
-/* ---------- ธีม: ควอดแรนต์ ---------- */
-function ffQuadOf(t){ return t.rs===1 ? (t.mo===1?'lead':'weak') : (t.mo===1?'imp':'lag'); }
-function ffRenderThemes(){
-  const f=ffState();
-  ['imp','lead','lag','weak'].forEach(q=>{ document.getElementById('ffQ'+q).innerHTML=''; });
-  f.themes.forEach(t=>{
-    const box=document.getElementById('ffQ'+ffQuadOf(t));
-    box.insertAdjacentHTML('beforeend','<span class="ffChip">'+ffEsc(t.t)+'</span>');
-  });
-  const up=f.themes.filter(t=>t.rs===1).length;
-  const b=document.getElementById('ffBreadth');
-  b.textContent=up+'/'+f.themes.length+' ธีมนำ';
-  b.style.color = up*2>f.themes.length ? 'var(--teal)' : up===0 ? 'var(--red)' : 'var(--muted)';
+/* ══════════════════ แผนที่ธีม RRG — คำนวณอัตโนมัติจากราคาจริง ══════════════════
+   แทนที่ของเดิมที่ต้องติ๊ก rs/mo เอง · ดึง daily close จาก Twelve Data วันละครั้งแล้วแคชไว้
 
-  /* บริบท RSP/SPY — ตลาดกว้างหรือแคบ (ไม่คิดคะแนน) อ่านคู่กับ breadth */
-  const broad = f.ctx.rsp===1, mine = up*2 > f.themes.length;
+   สูตร (ประมาณ JdK RS-Ratio / RS-Momentum — สูตรจริงเป็นลิขสิทธิ์ ไม่เคยเปิดเผย):
+     rs    = close(ETF) / close(SPY)
+     raw   = 100 x (EMA12(rs) - EMA26(rs)) / EMA26(rs)
+     ratio = 100 + zscore(raw, 252)
+     mom   = 100 + zscore(raw - raw[5], 252)        <- โมเมนตัมนำ ratio ตามนิยาม RRG
+   ตัดกันที่ 100 -> Leading / Weakening / Lagging / Improving
+   ตัวเลขจะไม่ตรงกับ RRG ของ StockCharts เป๊ะ แต่ลำดับการหมุนสอดคล้องกัน
+============================================================================== */
+const RRG_BUILD = 2;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง */
+const RRG_BENCH = 'SPY';
+const RRG_SYMS = [
+  {s:'XLU',  n:'Utilities'},      {s:'PAVE', n:'Infrastructure'}, {s:'XHB',  n:'Homebuilders'},
+  {s:'XLB',  n:'Materials'},      {s:'XLC',  n:'Comm Services'},  {s:'XBI',  n:'Biotech'},
+  {s:'JETS', n:'Airlines'},       {s:'IGV',  n:'Software'},       {s:'XRT',  n:'Retail'},
+  {s:'HACK', n:'Cybersecurity'},  {s:'XLF',  n:'Financials'},     {s:'KRE',  n:'Regional Banks'},
+  {s:'XLE',  n:'Energy'},         {s:'XLV',  n:'Health Care'},    {s:'ITA',  n:'Aerospace/Defense'},
+  {s:'SMH',  n:'Semiconductors'}, {s:'ARKX', n:'Space'},          {s:'IRBO', n:'AI / Robotics'}
+];
+/* batch = จำนวน symbol ต่อคำขอ · Twelve Data คิด 1 เครดิตต่อ 1 symbol (ไม่ใช่ต่อคำขอ)
+   แพลนฟรี Basic 8 = 8 เครดิต/นาที → ยิงได้ 8 ตัวแล้วต้องรอครบนาทีก่อนยิงชุดถัดไป
+   19 ตัว = 3 รอบ ~2 นาที · ทำวันละครั้งแล้วแคชไว้ จึงไม่กระทบการใช้งานจริง */
+const RRG_CFG = {fast:12, slow:26, zWin:252, momLag:5, bars:400, batch:8, cooldownMs:61000};
+function rrgQuadOf(ratio, mom){
+  return ratio>=100 ? (mom>=100 ? 'lead' : 'weak') : (mom>=100 ? 'imp' : 'lag');
+}
+function rrgEma(arr, n){
+  const k = 2/(n+1), out = new Array(arr.length);
+  let e = arr[0];
+  for(let i=0;i<arr.length;i++){ e = i===0 ? arr[0] : arr[i]*k + e*(1-k); out[i]=e; }
+  return out;
+}
+/* z-score จากหน้าต่างท้ายสุด win แท่ง — คืน null ถ้าข้อมูลไม่พอหรือนิ่งสนิท (sd=0) */
+function rrgZ(arr, i, win){
+  const start = i-win+1;
+  if(start < 0) return null;
+  let sum=0; for(let k=start;k<=i;k++) sum += arr[k];
+  const mean = sum/win;
+  let ss=0; for(let k=start;k<=i;k++){ const d=arr[k]-mean; ss += d*d; }
+  const sd = Math.sqrt(ss/win);
+  if(!(sd>0)) return null;
+  return (arr[i]-mean)/sd;
+}
+/* closes/highs เรียงเก่า->ใหม่ · bench ต้องยาวเท่ากันและจับวันตรงกันมาแล้ว */
+function rrgCompute(closes, highs, bench){
+  const n = closes.length;
+  const need = RRG_CFG.slow + RRG_CFG.zWin + RRG_CFG.momLag;
+  if(n < need) return {err:`ข้อมูลไม่พอ (มี ${n} แท่ง ต้องการ ${need})`};
+  const rs = closes.map((c,i)=> bench[i]>0 ? c/bench[i] : 0);
+  const fast = rrgEma(rs, RRG_CFG.fast), slow = rrgEma(rs, RRG_CFG.slow);
+  const raw = rs.map((_,i)=> slow[i]>0 ? 100*(fast[i]-slow[i])/slow[i] : 0);
+  const momRaw = raw.map((v,i)=> i>=RRG_CFG.momLag ? v-raw[i-RRG_CFG.momLag] : 0);
+  const ratioS = [], momS = [];
+  for(let i=0;i<n;i++){
+    const zr = rrgZ(raw, i, RRG_CFG.zWin), zm = rrgZ(momRaw, i, RRG_CFG.zWin);
+    ratioS.push(zr===null?null:100+zr);
+    momS.push(zm===null?null:100+zm);
+  }
+  const last = n-1;
+  if(ratioS[last]===null || momS[last]===null) return {err:'คำนวณไม่ได้ — ข้อมูลนิ่งเกินไป'};
+  const quad = rrgQuadOf(ratioS[last], momS[last]);
+  /* อยู่ควอดแรนต์นี้มากี่แท่งติดกัน — บอกว่าเพิ่งหมุนเข้ามาหรืออยู่มานาน */
+  let days = 1;
+  for(let i=last-1;i>=0;i--){
+    if(ratioS[i]===null || momS[i]===null) break;
+    if(rrgQuadOf(ratioS[i], momS[i]) !== quad) break;
+    days++;
+  }
+  const hi52 = Math.max.apply(null, highs.slice(Math.max(0, n-252)));
+  return {ratio:ratioS[last], mom:momS[last], quad, days,
+          off52: hi52>0 ? (closes[last]/hi52-1)*100 : 0, close:closes[last], bars:n};
+}
+
+/* ---------- ดึงราคาจาก Twelve Data ---------- */
+function rrgKey(){ return ((state && state.settings && state.settings.tdKey) || '').trim(); }
+function rrgToday(){ return new Date().toISOString().slice(0,10); }
+/* ตอบกลับมี 2 รูปแบบ: ขอตัวเดียว = {values:[]} · ขอหลายตัว = {SYM:{values:[]}} */
+function rrgUnpack(json, syms){
+  const out = {};
+  if(syms.length===1){
+    if(json && Array.isArray(json.values)) out[syms[0]] = json.values;
+    return out;
+  }
+  syms.forEach(s=>{ if(json && json[s] && Array.isArray(json[s].values)) out[s] = json[s].values; });
+  return out;
+}
+async function rrgFetchBatch(syms, key){
+  const url = 'https://api.twelvedata.com/time_series?symbol=' + encodeURIComponent(syms.join(','))
+            + '&interval=1day&outputsize=' + RRG_CFG.bars + '&apikey=' + encodeURIComponent(key);
+  const res = await fetch(url, {cache:'no-store'});
+  const json = await res.json();
+  if(json && json.status === 'error') throw new Error(json.message || 'API error');
+  return rrgUnpack(json, syms);
+}
+/* Twelve Data ส่งใหม่->เก่า · เราต้องเก่า->ใหม่ และต้องจับวันให้ตรงกับ SPY ก่อนหาร */
+function rrgSeries(values){
+  const m = new Map();
+  (values||[]).forEach(v=>{
+    const c = parseFloat(v.close), h = parseFloat(v.high);
+    if(v.datetime && c>0) m.set(v.datetime, {c, h: h>0?h:c});
+  });
+  return m;
+}
+/* กันยิงซ้อน: rrgRefresh เรียก renderFundflow() เพื่อโชว์สถานะ "กำลังดึง"
+   ซึ่งไปกระตุ้น rrgAutoOnce() ต่อ — ถ้าไม่กันไว้จะยิง API เป็นสองเท่าโดยไม่รู้ตัว */
+let rrgBusy = false;
+/* ความคืบหน้าระหว่างทยอยดึง — {done, total, waitUntil} · วาดนับถอยหลังให้เห็นว่าไม่ได้ค้าง */
+let rrgProg = null, rrgTimer = null;
+function rrgSetProg(p){
+  rrgProg = p;
+  if(rrgTimer){ clearInterval(rrgTimer); rrgTimer = null; }
+  if(p && p.waitUntil){
+    rrgTimer = setInterval(()=>{
+      if(!rrgProg || !rrgProg.waitUntil || Date.now() >= rrgProg.waitUntil){ clearInterval(rrgTimer); rrgTimer = null; }
+      ffRenderThemes();   /* เรียกตรง ไม่ผ่าน renderFundflow() เพื่อไม่ไปกระตุ้น auto-fetch */
+    }, 1000);
+  }
+  ffRenderThemes();
+}
+function rrgSleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+async function rrgRefresh(force){
+  const f = ffState();
+  const key = rrgKey();
+  if(!key){ f.rrg = {err:'nokey', at:''}; renderFundflow(); return; }
+  if(rrgBusy) return;
+  if(!force && f.rrg && f.rrg.day === rrgToday() && Array.isArray(f.rrg.rows) && f.rrg.rows.length) return;
+  rrgBusy = true;
+  f.rrg = Object.assign({}, f.rrg, {loading:true, err:''});
+  renderFundflow();
+  try{
+    const all = [RRG_BENCH].concat(RRG_SYMS.map(x=>x.s));
+    const chunks = [];
+    for(let i=0;i<all.length;i+=RRG_CFG.batch) chunks.push(all.slice(i, i+RRG_CFG.batch));
+    const got = {};
+    for(let ci=0; ci<chunks.length; ci++){
+      const done = ci * RRG_CFG.batch;
+      if(ci > 0){
+        /* รอให้พ้นหน้าต่าง 1 นาที ก่อนใช้เครดิตชุดถัดไป ไม่งั้นโดนปฏิเสธทั้งชุด */
+        rrgSetProg({done, total:all.length, waitUntil: Date.now() + RRG_CFG.cooldownMs});
+        await rrgSleep(RRG_CFG.cooldownMs);
+      }
+      rrgSetProg({done, total:all.length, waitUntil:0});
+      Object.assign(got, await rrgFetchBatch(chunks[ci], key));
+    }
+    rrgSetProg(null);
+    const benchMap = rrgSeries(got[RRG_BENCH]);
+    if(!benchMap.size) throw new Error('ดึงราคา '+RRG_BENCH+' (ตัวหาร) ไม่ได้');
+    const rows = [];
+    RRG_SYMS.forEach(def=>{
+      const map = rrgSeries(got[def.s]);
+      if(!map.size){ rows.push({sym:def.s, name:def.n, err:'ไม่มีข้อมูล'}); return; }
+      /* ใช้เฉพาะวันที่มีทั้งคู่ — วันหยุดไม่ตรงกันจะทำให้ ratio เพี้ยน */
+      const dates = [...map.keys()].filter(d=>benchMap.has(d)).sort();
+      const r = rrgCompute(dates.map(d=>map.get(d).c), dates.map(d=>map.get(d).h), dates.map(d=>benchMap.get(d).c));
+      rows.push(Object.assign({sym:def.s, name:def.n, date:dates[dates.length-1]}, r));
+    });
+    f.rrg = {rows, day:rrgToday(), at:new Date().toISOString(), loading:false, err:''};
+  }catch(e){
+    f.rrg = Object.assign({}, f.rrg, {loading:false, err:String((e && e.message) || e)});
+  }finally{
+    rrgBusy = false;
+    rrgSetProg(null);
+  }
+  renderFundflow();
+  schedulePersist();
+}
+function rrgManualRefresh(){ rrgRefresh(true); }
+/* ดึงอัตโนมัติครั้งเดียวต่อการเปิดหน้า และเฉพาะเมื่อแคชไม่ใช่ของวันนี้
+   — renderFundflow() ถูกเรียกบ่อยมาก ถ้าไม่กันไว้จะยิง API รัวจนโควตาหมด */
+let rrgAutoDone = false;
+function rrgAutoOnce(){
+  if(rrgAutoDone || !state) return;
+  const f = ffState();
+  if(!rrgKey()) return;                                  /* ยังไม่ใส่ key — ไม่ต้องพยายาม */
+  if(f.rrg && f.rrg.day === rrgToday() && (f.rrg.rows||[]).length) return;
+  rrgAutoDone = true;
+  rrgRefresh(false);
+}
+
+/* ---------- บริบท RSP/SPY — อยู่ใต้ชั้น 2 · ไม่คิดคะแนน ----------
+   equal-weight vs cap-weight: EMA10 เหนือ = ตลาดกว้าง (ขึ้นทั้งกระดาน)
+   ย้ายมาจากกล่องแผนที่ธีม และตัดการไขว้กับ breadth ออก — อ่านจากปุ่มกว้าง/แคบล้วน ๆ */
+function ffRenderCtx(){
+  const host = document.getElementById('ffCtx');
+  if(!host) return;
+  const f = ffState();
+  const broad = f.ctx.rsp===1;
   const V = broad
-    ? (mine ? ['good','ตลาดกว้าง + ธีมคุณนำ — เลือกง่าย ผิดตัวก็ยังรอด']
-            : ['warn','ตลาดกว้างแต่ธีมคุณไม่ไป — ปัญหาอยู่ที่การเลือกธีม ไม่ใช่ที่ตลาด ทบทวนว่าธีมยังใช่ไหม'])
-    : (mine ? ['best','ตลาดแคบ + ผู้นำคือธีมคุณ — สภาพที่ดีที่สุดของ Sat.A โฟกัสหนักธีมที่นำ']
-            : ['bad','ตลาดแคบ + ผู้นำอยู่นอกสนาม — ดัชนีอาจเขียวแต่ของคุณไม่ไปไหน เบามือกับไม้ใหม่']);
-  document.getElementById('ffCtx').innerHTML=
-     '<div class="ffCtxLine"><span class="ffRatio">RSP / SPY</span>'+ffTf('D')
+    ? ['good','ตลาดกว้าง — แรงซื้อกระจายทั้งกระดาน ไม่ได้มาจากเมกะแคปไม่กี่ตัว เลือกผิดตัวยังพอมีที่ยืน']
+    : ['warn','ตลาดแคบ — แรงกระจุกอยู่ไม่กี่ตัว ดัชนีเขียวไม่ได้แปลว่าของที่ถืออยู่จะไปด้วย ต้องเลือกให้ตรงผู้นำจริง'];
+  host.innerHTML =
+     '<div class="ffLbl" style="margin-bottom:6px">บริบท · ไม่คิดคะแนน</div>'
+    +'<div class="ffCtxLine"><span class="ffRatio">RSP / SPY</span>'+ffTf('D')
     +'<span class="ffNote" style="display:inline;margin-left:4px">equal-weight vs cap-weight · <b>EMA10 เหนือ = กว้าง</b>'+(f.ctx.f?(' · flip '+ffEsc(f.ctx.f)):'')+'</span>'
     +'<span style="margin-left:auto"></span>'
     +'<span class="ffSeg">'
@@ -6026,12 +6225,95 @@ function ffRenderThemes(){
       +'<button class="'+(!broad?'on-dn':'')+'" onclick="ffSetCtx(-1)">แคบ</button>'
     +'</span></div>'
     +'<div class="ffCtxVerdict '+V[0]+'">'+V[1]+'</div>';
-  document.getElementById('ffThemes').innerHTML=f.themes.map((t,i)=>
-    '<div class="ffRow"><div class="nm"><span class="ffRatio">'+ffEsc(t.t)+'</span>'+ffTf('D')
-     +'<span class="ffNote">'+ffEsc(t.r)+(t.f?(' · flip '+ffEsc(t.f)):'')+'</span></div>'
-     +'<span class="ffMini">EMA10</span>'+ffThemeSeg(i,'rs',t.rs,'เหนือ','ใต้')
-     +'<span class="ffMini">ช่องว่าง</span>'+ffThemeSeg(i,'mo',t.mo,'ถ่าง','หุบ')
-     +'</div>').join('');
+}
+/* ---------- ธีม: ควอดแรนต์ ---------- */
+function ffRenderThemes(){
+  const f = ffState();
+  const r = f.rrg || {};
+  const rows = Array.isArray(r.rows) ? r.rows : [];
+  const ok = rows.filter(x=>!x.err && x.quad);
+
+  /* แถบสถานะ + ปุ่มรีเฟรช */
+  const bar = document.getElementById('ffRrgBar');
+  if(bar){
+    let msg, cls = 'muted';
+    if(r.err === 'nokey'){ msg = 'ยังไม่ได้ใส่ Twelve Data API key — ใส่ได้ในหน้า 🛠 ตั้งค่า Port'; cls = 'amber'; }
+    else if(r.loading){
+      const p = rrgProg;
+      if(p && p.waitUntil){
+        const sec = Math.max(0, Math.ceil((p.waitUntil - Date.now())/1000));
+        msg = `ดึงแล้ว ${p.done}/${p.total} · รออีก ${sec} วิ — แพลนฟรีจำกัด ${RRG_CFG.batch} เครดิต/นาที`;
+      } else if(p){
+        msg = `กำลังดึง ${p.done}/${p.total}…`;
+      } else {
+        msg = 'กำลังดึงราคา…';
+      }
+    }
+    else if(r.err){ msg = 'ดึงราคาไม่สำเร็จ: ' + ffEsc(r.err); cls = 'red'; }
+    else if(!rows.length){ msg = 'ยังไม่มีข้อมูล — กดรีเฟรช'; cls = 'amber'; }
+    else {
+      const bad = rows.length - ok.length;
+      const d = ok.length ? (ok[0].date || r.day) : r.day;
+      msg = 'ข้อมูลถึง ' + ffEsc(d) + ' · ' + ok.length + '/' + rows.length + ' ตัว'
+          + (bad ? ' · <b style="color:var(--amber)">' + bad + ' ตัวคำนวณไม่ได้</b>' : '');
+      if(r.day !== rrgToday()) cls = 'amber';
+    }
+    const color = cls==='amber' ? 'var(--amber)' : cls==='red' ? 'var(--red)' : 'var(--muted)';
+    bar.innerHTML = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 2px">'
+      + '<span class="ffNote" style="display:inline;color:'+color+'">' + msg + '</span>'
+      + '<span style="margin-left:auto"></span>'
+      + '<span class="ffMini" title="เลขรุ่นของโค้ดที่กำลังรันจริง — ใช้ยืนยันว่าโหลดไฟล์ใหม่แล้ว">rrg v' + RRG_BUILD + '</span>'
+      + '<button class="small" onclick="rrgManualRefresh()"' + (r.loading?' disabled':'') + '>'
+      + (r.loading ? 'กำลังดึง…' : '🔄 รีเฟรชราคา') + '</button></div>';
+  }
+
+  ['imp','lead','lag','weak'].forEach(q=>{ const el=document.getElementById('ffQ'+q); if(el) el.innerHTML=''; });
+  ok.slice().sort((a,b)=>b.ratio-a.ratio).forEach(x=>{
+    const box = document.getElementById('ffQ'+x.quad);
+    if(box) box.insertAdjacentHTML('beforeend',
+      '<span class="ffChip" title="'+ffEsc(x.name)+' · RS-Ratio '+x.ratio.toFixed(1)
+      +' · RS-Mom '+x.mom.toFixed(1)+' · อยู่ควอดแรนต์นี้ '+x.days+' แท่ง">'+ffEsc(x.sym)+'</span>');
+  });
+
+  /* breadth = สัดส่วนที่แข็งกว่า SPY (RS-Ratio >= 100) ไม่ใช่แค่ Leading */
+  const up = ok.filter(x=>x.ratio>=100).length;
+  const b = document.getElementById('ffBreadth');
+  if(b){
+    b.textContent = ok.length ? (up+'/'+ok.length+' นำตลาด') : '—';
+    b.style.color = !ok.length ? 'var(--muted)'
+                  : up*2>ok.length ? 'var(--teal)' : up===0 ? 'var(--red)' : 'var(--muted)';
+  }
+
+  const QLBL = {lead:['LEADING','var(--teal)'], weak:['WEAKENING','var(--amber)'],
+                lag:['LAGGING','var(--red)'],   imp:['IMPROVING','var(--blue)']};
+  const ORDER = {lead:0, imp:1, weak:2, lag:3};
+  const host = document.getElementById('ffThemes');
+  if(host){
+    if(!rows.length){ host.innerHTML = ''; }
+    else {
+      const sorted = rows.slice().sort((a,b)=>{
+        if(a.err && !b.err) return 1;
+        if(!a.err && b.err) return -1;
+        if(a.err && b.err) return a.sym.localeCompare(b.sym);
+        return (ORDER[a.quad]-ORDER[b.quad]) || (b.ratio-a.ratio);
+      });
+      host.innerHTML =
+        '<table class="rrgTbl"><thead><tr><th>SYM</th><th>ควอดแรนต์</th><th>RS-Ratio</th><th>RS-Mom</th>'
+        + '<th title="อยู่ควอดแรนต์นี้มากี่แท่งติดกัน">แท่ง</th><th title="ห่างจากจุดสูงสุด 52 สัปดาห์">OFF52W</th></tr></thead><tbody>'
+        + sorted.map(x=>{
+            if(x.err) return '<tr class="dim"><td><b>'+ffEsc(x.sym)+'</b><div class="sub">'+ffEsc(x.name)+'</div></td>'
+                           + '<td colspan="5" style="color:var(--amber)">'+ffEsc(x.err)+'</td></tr>';
+            const q = QLBL[x.quad];
+            return '<tr><td><b>'+ffEsc(x.sym)+'</b><div class="sub">'+ffEsc(x.name)+'</div></td>'
+              + '<td style="color:'+q[1]+';font-weight:700">'+q[0]+'</td>'
+              + '<td class="'+(x.ratio>=100?'up':'dn')+'">'+x.ratio.toFixed(1)+'</td>'
+              + '<td class="'+(x.mom>=100?'up':'dn')+'">'+x.mom.toFixed(1)+'</td>'
+              + '<td>'+x.days+'</td>'
+              + '<td class="'+(x.off52>-5?'':'dn')+'">'+x.off52.toFixed(1)+'</td></tr>';
+          }).join('')
+        + '</tbody></table>';
+    }
+  }
   ffApplyThemesCol();
 }
 /* ---------- ยุบ / ขยาย แผนที่ธีม (จำสถานะใน state.fundflow.themesCol) ---------- */
@@ -6047,18 +6329,6 @@ function ffToggleThemes(){
   f.themesCol = !f.themesCol;
   ffApplyThemesCol();
   schedulePersist();   /* ไม่ใช้ ffTouch — การยุบ/ขยายไม่ใช่การแก้บอร์ด ไม่ควรขยับวันที่อัปเดต */
-}
-function ffThemeSeg(i,k,v,upTxt,dnTxt){
-  return '<span class="ffSeg">'
-    +'<button class="'+(v===1?'on-up':'')+'" onclick="ffSetTheme('+i+',\''+k+'\',1)">'+upTxt+'</button>'
-    +'<button class="'+(v===-1?'on-dn':'')+'" onclick="ffSetTheme('+i+',\''+k+'\',-1)">'+dnTxt+'</button>'
-    +'</span>';
-}
-function ffSetTheme(i,k,v){
-  const t=ffState().themes[i];
-  if(t[k]===v) return;
-  t[k]=v; t.f=ffToday();
-  ffTouch();
 }
 function ffSetCtx(v){
   const c=ffState().ctx;
@@ -6137,23 +6407,18 @@ function ffRenderSettings(){
     return '<div class="divlbl">'+title+'</div><div class="hint" style="margin:-4px 0 4px">'+hint+'</div>'+rows
       +'<button type="button" class="small ghost" style="margin-top:8px" onclick="ffAddProxy(\''+list+'\')">＋ เพิ่ม proxy</button>';
   };
-  const themes=f.themes.map((t,i)=>
-    '<div class="ffSetRow">'
-    +'<input class="r" value="'+ffEsc(t.t)+'" oninput="ffEditTheme('+i+',\'t\',this.value)" placeholder="ชื่อธีม">'
-    +'<input class="n" value="'+ffEsc(t.r)+'" oninput="ffEditTheme('+i+',\'r\',this.value)" placeholder="ratio เช่น SMH / SPY">'
-    +'<button type="button" class="small danger ghost" onclick="ffDelTheme('+i+')">ลบ</button>'
-    +'</div>').join('');
   document.getElementById('ffSetBody').innerHTML=
      blk('l1','ชั้น 1 — เงินเข้าตลาดทุนไหม (weekly)','คุมเพดานทั้งสองพอร์ต · ห้ามเร่งให้เร็วกว่านี้')
     +blk('l2','ชั้น 2 — เงินเข้าหุ้นเก็งกำไรไหม (daily)','คุมเพดาน Sat.A เท่านั้น และลดได้อย่างเดียว')
-    +'<div class="divlbl">แผนที่ธีม (daily)</div><div class="hint" style="margin:-4px 0 4px">ควรมีเฉพาะธีมที่จะซื้อจริง 5–8 ธีม</div>'+themes
-    +'<button type="button" class="small ghost" style="margin-top:8px" onclick="ffAddTheme()">＋ เพิ่มธีม</button>'
+    +'<div class="divlbl">แผนที่ธีม (RRG)</div>'
+    +'<div class="hint" style="margin:-4px 0 4px">คำนวณอัตโนมัติจากราคาจริง ไม่ต้องตั้งเอง · ติดตาม '
+      + RRG_SYMS.length + ' ตัวเทียบ ' + RRG_BENCH + ' — ' + RRG_SYMS.map(x=>x.s).join(' · ')
+    +'</div>'
     +'<div class="divlbl">ประวัติการแก้บอร์ด</div>'
     +'<div class="hint" style="margin:-4px 0 4px">แก้บ่อย = กำลังจูนเข้าหาความอยาก ไม่ใช่ปรับปรุงระบบ</div>'
     +(f.log.length ? f.log.slice(0,12).map(l=>'<div class="ffMini" style="padding:2px 0">'+ffEsc(l.d)+' — '+ffEsc(l.m)+'</div>').join('') : '<div class="hint">ยังไม่มี</div>');
 }
 function ffEditField(list,i,k,v){ ffState()[list][i][k]=v; schedulePersist(); if(k==='w'){ ffLog('ปรับน้ำหนัก '+ffState()[list][i].r+' → '+v); renderFundflow(); } }
-function ffEditTheme(i,k,v){ ffState().themes[i][k]=v; schedulePersist(); renderFundflow(); }
 function ffAddProxy(list){
   ffState()[list].push({id:idFF(), r:'', tf:(list==='l1'?'W':'D'), w:2, v:1, n:'', f:''});
   ffLog('เพิ่ม proxy ใน '+(list==='l1'?'ชั้น 1':'ชั้น 2')); ffRenderSettings(); ffTouch();
@@ -6162,15 +6427,6 @@ function ffDelProxy(list,i){
   const s=ffState()[list][i];
   if(!confirm('ลบ '+(s.r||'proxy')+' ?')) return;
   ffState()[list].splice(i,1); ffLog('ลบ '+(s.r||'proxy')); ffRenderSettings(); ffTouch();
-}
-function ffAddTheme(){
-  ffState().themes.push({id:idFF(), t:'', r:'', rs:1, mo:1, f:''});
-  ffLog('เพิ่มธีม'); ffRenderSettings(); ffTouch();
-}
-function ffDelTheme(i){
-  const t=ffState().themes[i];
-  if(!confirm('ลบธีม '+(t.t||'')+' ?')) return;
-  ffState().themes.splice(i,1); ffLog('ลบธีม '+(t.t||'')); ffRenderSettings(); ffTouch();
 }
 
 </script>
