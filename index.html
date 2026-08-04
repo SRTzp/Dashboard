@@ -3668,7 +3668,7 @@ function checklistSatBPass(){
   if(!satBGatePass()) return false;
   const c = clState.checks;
   if(clState.subtype==='aegis') return !!(c.aegisSwing && c.aegisPoc && c.aegis3Swing && c.aegisOB);
-  if(clState.subtype==='javelin') return !!(c.javelinHVN && c.javelinBreak && (c.javelinRej || c.javelinPull));
+  if(clState.subtype==='javelin') return !!(c.javelinHVN && c.javelinBreak && c.javelinRS);
   return false;
 }
 /* Setup.A ข้อ 5 (1st Major Reversal Swing Point) — ไม่ใช่เงื่อนไขผ่าน แต่คุมขนาดไม้
@@ -3683,8 +3683,8 @@ function clSetSatBPath(p){
   clState.subtype = p;
   delete clState.checks.aegisPoc; delete clState.checks.aegisSwing;
   delete clState.checks.aegis3Swing; delete clState.checks.aegisOB;
-  delete clState.checks.javelinHVN; delete clState.checks.javelinRej;
-  delete clState.checks.javelinPull; delete clState.checks.javelinBreak;
+  delete clState.checks.javelinHVN; delete clState.checks.javelinRS;
+  delete clState.checks.javelinBreak;
   delete clState.checks.javelinSwing;
   renderChecklistBody(); updateChecklistUI();
 }
@@ -3806,11 +3806,11 @@ function renderChecklistBody(){
               + clItem('aegis3Swing','มีอย่างน้อย 3 Swing point')
               + clItem('aegisOB','50% of Orderblock mitigate');
       } else if(clState.subtype==='javelin'){
-        html += `<div class="hint" style="margin-bottom:6px">Breakthrough HVN — ข้อ 1 &amp; 4 ต้องผ่าน · ข้อ 2 / 3 ผ่านข้อใดข้อหนึ่ง</div>`;
+        const rsLabel = bias==='Short' ? 'Support become Resistance' : 'Resistance become Support';
+        html += `<div class="hint" style="margin-bottom:6px">Breakthrough HVN — ต้องผ่านครบทั้ง 3 ข้อ</div>`;
         html += clItem('javelinHVN','High Volume Node Located')
-              + clItem('javelinRej','มี Rejection on HVN')
-              + clItem('javelinPull','มี Pullback on HVN (if Breakthrough)')
-              + clItem('javelinBreak','Breakthrough on Line Chart [4H]');
+              + clItem('javelinBreak','Breakthrough on Line Chart [4H]')
+              + clItem('javelinRS', rsLabel);
         html += `<div class="divlbl">ขนาดไม้ — ไม่ใช่เงื่อนไขผ่าน</div>`;
         html += clItem('javelinSwing','1st Major Reversal Swing Point');
         const full = !!clState.checks.javelinSwing;
@@ -3982,7 +3982,7 @@ function clMissingList(cs){
     } else if(cs.subtype==='javelin'){
       if(!c.javelinHVN) missing.push('High Volume Node Located');
       if(!c.javelinBreak) missing.push('Breakthrough on Line Chart [4H]');
-      if(!c.javelinRej && !c.javelinPull) missing.push('Rejection หรือ Pullback on HVN (อย่างน้อย 1)');
+      if(!c.javelinRS) missing.push(cs.bias==='Short' ? 'Support become Resistance' : 'Resistance become Support');
     }
   }
   return missing;
