@@ -3672,11 +3672,11 @@ function checklistSatBPass(){
   return false;
 }
 /* Setup.A ข้อ 5 (1st Major Reversal Swing Point) — ไม่ใช่เงื่อนไขผ่าน แต่คุมขนาดไม้
-   มี = เข้าเต็ม 100% · ไม่มี = เข้าครึ่งไม้ 50% ของ Qty ที่การ์ด Sat.B คำนวณ
+   มี = เข้าเต็ม 100% · ไม่มี = เข้า 60% ของ Qty ที่การ์ด Sat.B คำนวณ
    Setup.B ไม่มีตัวปรับ — ผ่านแล้วเต็มไม้เสมอ */
 function clSatBSizeFactor(){
   if(clState.port!=='satB') return 1;
-  if(clState.subtype==='javelin') return clState.checks.javelinSwing ? 1 : 0.5;
+  if(clState.subtype==='javelin') return clState.checks.javelinSwing ? 1 : 0.6;
   return 1;
 }
 function clSetSatBPath(p){
@@ -3816,7 +3816,7 @@ function renderChecklistBody(){
         const full = !!clState.checks.javelinSwing;
         html += `<div class="hint" style="color:${full?'var(--teal)':'var(--amber)'};margin-bottom:6px">
           ${full?'✓ เข้าเต็มไม้ <b>100%</b> ของขนาดที่การ์ด Sat.B คำนวณ'
-                :'ไม่ได้ติ๊ก → เข้า <b>ครึ่งไม้ 50%</b> ของขนาดที่การ์ด Sat.B คำนวณ'}</div>`;
+                :'ไม่ได้ติ๊ก → เข้า <b>60%</b> ของขนาดที่การ์ด Sat.B คำนวณ'}</div>`;
       } else {
         html += `<div class="hint">เลือกแนวทาง Entry ก่อน</div>`;
       }
@@ -5040,7 +5040,7 @@ function saveTrade(){
     submitted: prevTrade ? !!prevTrade.submitted : false,
     /* ไม้นอกแผน — ไม่เคยผ่าน Pre-trade Checklist · ธงนี้ติดถาวรกับไม้ แก้ทีหลังไม่ได้จากฟอร์ม */
     unplanned: unplannedMode || (prevTrade ? !!prevTrade.unplanned : false),
-    /* ขนาดไม้ที่ Checklist สั่งไว้ (Sat.B: 1 = เต็มไม้ · 0.5 = ครึ่งไม้) — เก็บไว้เทียบตอนรีวิว */
+    /* ขนาดไม้ที่ Checklist สั่งไว้ (Sat.B: 1 = เต็มไม้ · 0.6 = ไม่ติ๊ก 1st Swing) — เก็บไว้เทียบตอนรีวิว */
     sizeFactor: (tPortVal==='satB' && szSizeFactor>0 && szSizeFactor<1) ? szSizeFactor : null,
     status
   };
@@ -5758,8 +5758,8 @@ function szSatBVol(symName){
   const key = Object.keys(v).find(k=>k.toUpperCase()===symName.toUpperCase());
   return key ? (parseFloat(v[key])||0) : 0;
 }
-/* ตัวคูณขนาดไม้ Sat.B ที่ Pre-trade Checklist ส่งมา — 1 = เต็มไม้ · 0.5 = ครึ่งไม้
-   (Setup.A ไม่ติ๊ก "1st Major Reversal Swing Point" → 0.5) */
+/* ตัวคูณขนาดไม้ Sat.B ที่ Pre-trade Checklist ส่งมา — 1 = เต็มไม้ · 0.6 = ไม่ติ๊ก 1st Swing
+   (Setup.A ไม่ติ๊ก "1st Major Reversal Swing Point" → 0.6) */
 let szSizeFactor = 1;
 function szSatBCalc(o){
   const mult=o.mult||1;
@@ -5798,14 +5798,14 @@ function szRenderSatB(o){
     grid = `<div class="szCell"><div class="k">ระยะ SL</div><div class="v">${szNum(c.useDist,2)}</div>
         <div class="s">${cur}${szNum(c.useDist*o.mult)}/หน่วย · ${volNote}</div></div>
       <div class="szCell"><div class="k">งบเสี่ยง RPT ${c.rpt}%${c.factor<1?` × ${Math.round(c.factor*100)}%`:''}</div><div class="v">${cur}${szNum(c.budgetNative)}</div>
-        <div class="s">${c.factor<1?`ครึ่งไม้ — เต็มไม้คือ ${cur}${szNum(c.budgetFull)}`:'โดน stop = เสียเต็มงบ'}</div></div>`;
+        <div class="s">${c.factor<1?`ไม่เต็มไม้ — เต็มไม้คือ ${cur}${szNum(c.budgetFull)}`:'โดน stop = เสียเต็มงบ'}</div></div>`;
   }
   let h=`<div class="szCard">
     <div class="szHero">
       <span class="szR full">${qtyTxt}</span>
       <span class="szRsub">หน่วย · Max Cap size ที่เข้าได้${c.floored?` · ถูกคุมด้วย volatility`:''}</span>
     </div>
-    ${c.factor<1?`<div class="szMsg yellow">◑ <b>ครึ่งไม้ ${Math.round(c.factor*100)}%</b> — Setup.A ไม่ได้ติ๊ก “1st Major Reversal Swing Point” · เต็มไม้จะได้ <b>${(c.qty/c.factor).toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย</div>`:''}
+    ${c.factor<1?`<div class="szMsg yellow">◑ <b>เข้า ${Math.round(c.factor*100)}%</b> — Setup.A ไม่ได้ติ๊ก “1st Major Reversal Swing Point” · เต็มไม้จะได้ <b>${(c.qty/c.factor).toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย</div>`:''}
     <div class="szGrid">${grid}</div>`;
   if(c.floored){
     h+=`<div class="szMsg yellow">⚠ SL แคบกว่าที่ ${o.symName||'สินค้านี้'} แกว่งปกติ${c.qtyAtSL?` — ถ้าคิดที่ SL จริงจะได้ <b>${c.qtyAtSL.toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย ซึ่งใหญ่เกินไป จึงใช้เพดาน volatility แทน`:''}</div>`;
