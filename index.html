@@ -1716,7 +1716,10 @@ async function doPersist(){
   pendingLocalWrite = false;   /* กำลังจะส่ง state ปัจจุบันไปแล้ว — ถ้ามีการแก้ไขใหม่หลังจุดนี้ schedulePersist() จะตั้งกลับเป็น true เอง */
   try{
     await db.collection('users').doc(uid).set(toSave);
-    await db.waitForPendingWrites();   /* รอจน server ยืนยันจริง — แม่นกว่า snap.metadata.hasPendingWrites ซึ่งค้างไม่นิ่งบน long-polling */
+    /* เดิมใช้ db.waitForPendingWrites() แต่พบว่ายังค้างไม่นิ่งบน long-polling เหมือนกัน (badge ค้าง "กำลังบันทึก" ตลอดหลัง edit)
+       เปลี่ยนมาใช้ .get({source:'server'}) แทน — เป็น request ธรรมดาที่พิสูจน์แล้วว่าเชื่อถือได้จริงในสภาพแวดล้อมนี้
+       (ใช้เช็คข้อมูลบน server ได้เร็ว/นิ่งตลอดการดีบักที่ผ่านมา ต่างจาก long-lived channel ที่บางทีค้าง) */
+    await db.collection('users').doc(uid).get({source:'server'});
     if(!pendingLocalWrite && toSave===state) setSyncBadge('saved');   /* กันทับ badge ถ้ามีการแก้ไขใหม่แทรกเข้ามาระหว่างรอ */
   }catch(e){
     console.error('firestore set error:', e);
