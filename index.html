@@ -6733,10 +6733,17 @@ function bkTriggerDownload(){
   const blob = new Blob([bkPayload()], {type:'application/json'});
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href = url; a.download = bkFilename(); a.style.display='none';
+  a.href = url; a.download = bkFilename();
+  /* อย่าใช้ display:none และอย่า removeChild ทันทีหลัง click() — เจอจริงบน macOS Safari (5 ส.ค.):
+     Safari เล่นอนิเมชัน "ไอคอนไฟล์บินไปที่ปุ่ม Downloads" โดยใช้ตำแหน่งของ element ต้นทางเป็นจุดเริ่ม
+     ถ้า element ไม่มีตำแหน่ง (display:none) แล้วยังถูกลบทิ้งกลางคัน อนิเมชันจะค้างเป็นไอคอนบนจอ
+     (ไอคอนที่เห็นเป็นรูปเข็มทิศเพราะ macOS ตั้ง Safari เป็นโปรแกรมเปิด .json โดย default)
+     นอกจากนั้นการลบทิ้งทันทีหลัง click() ยังทำให้ Safari ยกเลิกดาวน์โหลดได้ในบางเวอร์ชัน
+     แก้: ให้ element มีขนาดจริง (1x1 โปร่งใส) มุมขวาบนใกล้ปุ่ม Downloads แล้วค่อยลบหลังอนิเมชันจบ */
+  a.style.cssText = 'position:fixed;top:0;right:0;width:1px;height:1px;opacity:0;pointer-events:none';
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
+  setTimeout(()=>{ if(a.parentNode) a.parentNode.removeChild(a); }, 3000);
   setTimeout(()=>URL.revokeObjectURL(url), 30000);
 }
 
