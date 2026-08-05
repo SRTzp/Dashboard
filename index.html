@@ -1653,7 +1653,9 @@ function startListening(){
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('errorScreen').style.display='none';
     document.getElementById('mainWrap').style.display='block';
-    setSyncBadge(snap.metadata.hasPendingWrites ? 'saving' : 'saved');
+    /* ไม่ใช้ snap.metadata.hasPendingWrites ตัดสิน badge อีกต่อไป — พบว่าไม่นิ่งเมื่อบังคับ long-polling (ค้าง true แม้ server ยืนยันแล้วจริง)
+       ถึงจุดนี้คือผ่าน pendingLocalWrite guard ด้านบนมาแล้ว (ไม่มีการแก้ไขค้างส่ง) ถือว่า sync ตรงกับ server แล้ว */
+    setSyncBadge('saved');
     render();
     autoFetchFxOnce();
   }, err=>{
@@ -1686,7 +1688,8 @@ async function doPersist(){
   pendingLocalWrite = false;   /* กำลังจะส่ง state ปัจจุบันไปแล้ว — ถ้ามีการแก้ไขใหม่หลังจุดนี้ schedulePersist() จะตั้งกลับเป็น true เอง */
   try{
     await db.collection('users').doc(uid).set(toSave);
-    /* onSnapshot (local cache echo) จะอัปเดต badge เป็น 'saved' เองเมื่อ pendingWrites=false */
+    await db.waitForPendingWrites();   /* รอจน server ยืนยันจริง — แม่นกว่า snap.metadata.hasPendingWrites ซึ่งค้างไม่นิ่งบน long-polling */
+    if(!pendingLocalWrite && toSave===state) setSyncBadge('saved');   /* กันทับ badge ถ้ามีการแก้ไขใหม่แทรกเข้ามาระหว่างรอ */
   }catch(e){
     console.error('firestore set error:', e);
     pendingLocalWrite = true;  /* ส่งไม่สำเร็จ — ถือว่า state ในเครื่องยังไม่ตรงกับ server กันไม่ให้ snapshot มาทับ */
