@@ -1650,7 +1650,13 @@ function startListening(){
     }
     ensureScoreLabels();
     ensureJournalView();
-    { const a=ensureSatBDefaults(), b=ensureTabsOffsetV2(), c=ensure1RModel(); if(a||b||c) schedulePersist(); }
+    /* บั๊กร้ายแรงที่เพิ่งเจอ: ถ้า snapshot นี้มาจาก local cache เก่าของเครื่อง/มือถือ (offline หรือไม่เคย sync มานาน)
+       ก่อนหน้านี้โค้ดจะ "ซ่อม" ค่า default ที่ขาดแล้วสั่ง schedulePersist() ทันที — เท่ากับเขียนข้อมูลเก่าที่ค้างอยู่ใน cache
+       ทับข้อมูลจริงบน server แบบเงียบๆ แค่เปิดหน้าเว็บดูเฉยๆ (ไม่ต้องแก้อะไร) ก็เกิดได้
+       แก้โดยห้าม auto-persist จาก snapshot ที่ยังมาจาก cache (fromCache) — รอ snapshot ที่ยืนยันจาก server จริงก่อนเท่านั้น */
+    if(!snap.metadata.fromCache){
+      const a=ensureSatBDefaults(), b=ensureTabsOffsetV2(), c=ensure1RModel(); if(a||b||c) schedulePersist();
+    }
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('errorScreen').style.display='none';
     document.getElementById('mainWrap').style.display='block';
