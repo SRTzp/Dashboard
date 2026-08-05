@@ -1625,6 +1625,10 @@ function startListening(){
 
   const ref = db.collection('users').doc(uid);
   unsubDoc = ref.onSnapshot(snap=>{
+    /* กันบั๊ก: ถ้ามีการแก้ไขในเครื่องที่ยังไม่ถูกส่งขึ้น Firestore (pendingLocalWrite=true)
+       ห้ามเอาข้อมูลจาก snapshot นี้ (ซึ่งยังไม่รวมการแก้ไขล่าสุด) มาทับ state ในหน่วยความจำ
+       ไม่งั้นการแก้ไขที่ยังไม่ทันส่งจะหายไปเงียบๆ ตอน snapshot รอบก่อนหน้ามายืนยันทีหลัง */
+    if(pendingLocalWrite){ setSyncBadge('saving'); return; }
     if(snap.exists){
       const d = snap.data() || {};
       state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
@@ -1661,19 +1665,26 @@ function startListening(){
 }
 
 let persistTimer = null;
+/* true = state ในหน่วยความจำมีการแก้ไขที่ยังไม่ได้ถูกส่ง (issue) ไปที่ Firestore
+   ใช้กันไม่ให้ onSnapshot เอาข้อมูลเก่ามาทับการแก้ไขที่ยังค้างอยู่ */
+let pendingLocalWrite = false;
 function schedulePersist(){
   if(!uid || !state) return;
+  pendingLocalWrite = true;
   setSyncBadge('saving');
   clearTimeout(persistTimer);
   persistTimer = setTimeout(doPersist, 350);
 }
 async function doPersist(){
   if(!uid || !state) return;
+  const toSave = state;
+  pendingLocalWrite = false;   /* กำลังจะส่ง state ปัจจุบันไปแล้ว — ถ้ามีการแก้ไขใหม่หลังจุดนี้ schedulePersist() จะตั้งกลับเป็น true เอง */
   try{
-    await db.collection('users').doc(uid).set(state);
+    await db.collection('users').doc(uid).set(toSave);
     /* onSnapshot (local cache echo) จะอัปเดต badge เป็น 'saved' เองเมื่อ pendingWrites=false */
   }catch(e){
     console.error('firestore set error:', e);
+    pendingLocalWrite = true;  /* ส่งไม่สำเร็จ — ถือว่า state ในเครื่องยังไม่ตรงกับ server กันไม่ให้ snapshot มาทับ */
     setSyncBadge('error');
   }
 }
