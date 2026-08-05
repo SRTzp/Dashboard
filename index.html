@@ -43,6 +43,13 @@
   /* ระยะกันชนหัวจอ = safe-area ของเครื่อง + ค่าปรับละเอียดที่ผู้ใช้ตั้งเอง (ปกติ 0) */
   --tabs-safe:calc(env(safe-area-inset-top, 0px) + var(--tabs-offset, 0px));
   --wlnote-size:.84rem;
+  /* คอลัมน์ INDUSTRY ใน Watchlist — บีบให้แคบที่สุดเท่าที่ยังอ่านชื่อจบใน 2 บรรทัด
+     เพื่อยกพื้นที่ที่เหลือให้คอลัมน์ FUNDAMENTAL ซึ่งเป็นข้อมูลที่ต้องอ่านจริง
+     คำนวณจากชื่อที่ยาวสุดตอนนี้ "Semiconductor test & burn-in equipment" (38 ตัวอักษร)
+     ที่ .68rem ≈ 207px รวม -> 2 บรรทัดต้องการ ~104px + ไอคอน 15px -> 120px มีเผื่อพอดี
+     อยากแคบ/กว้างกว่านี้ แก้แค่ 2 ค่านี้พอ ไม่ต้องไปยุ่งที่อื่น */
+  --ind-w:120px;
+  --ind-size:.68rem;
   --plan-size:.8rem;
   --closed-size:.8rem;
 }
@@ -468,6 +475,19 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
 .syncbadge.error{color:var(--red);cursor:pointer;text-decoration:underline}
 .syncbadge.error .sdot{background:var(--red)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ---------- คอลัมน์ INDUSTRY ใน Watchlist ----------
+   จำกัดความกว้างไม่ให้ชื่อ industry ยาวๆ ไปเบียดคอลัมน์ FUNDAMENTAL (ซึ่ง clamp ไว้ 2 บรรทัด
+   ยิ่งคอลัมน์แคบ ยิ่งอ่านได้น้อยบรรทัดละไม่กี่คำ) · max-width ใส่ที่ span ข้างในไม่ใช่ที่ td
+   เพราะ table-layout:auto มักเมิน max-width ที่ตัว cell เอง */
+td.industryCell{ max-width:calc(var(--ind-w) + 12px) }   /* +12 = padding ซ้ายขวาของ td ในตาราง wltable */
+td.industryCell .indTxt{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  max-width:var(--ind-w);
+  white-space:normal;        /* ★ td ตั้ง nowrap ไว้ (ดูกฎ td ด้านบน) ถ้าไม่ปลดตรงนี้จะไม่มีวันตัดเป็น 2 บรรทัด */
+  overflow-wrap:anywhere;    /* ชื่อยาวคำเดียวจะได้ไม่ทะลุกรอบ */
+  font-size:var(--ind-size);line-height:1.3;
+}
 
 /* ---------- แถบเตือนสำรองข้อมูลประจำวัน ---------- */
 .bkBanner{
@@ -1459,7 +1479,19 @@ db.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPoll
 try{ db.enablePersistence().catch(e=>console.warn('persistence:',e.code)); }catch(e){}
 
 /* ================= state ================= */
-const ICON_INDUSTRY_MINI = '<svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="16" width="24" height="13" fill="#3A5568" stroke="#111" stroke-width="1.6"/><polygon points="6,16 18,9 30,16" fill="#2C4256" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/><rect x="9" y="5" width="3.5" height="11" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="16" y="2" width="3.5" height="14" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="10" y="20" width="3" height="3" fill="#8FD6EE"/><rect x="15" y="20" width="3" height="3" fill="#8FD6EE"/><rect x="22" y="22" width="4" height="7" fill="#8FD6EE"/></svg>';
+/* ย่อชื่อ Industry สำหรับ "แสดงผล" เท่านั้น — ไม่แตะข้อมูลจริงใน state
+   ส่วนในวงเล็บมักเป็นรายละเอียดขยายความที่ยาวมากและไปเบียดคอลัมน์ FUNDAMENTAL ซึ่งเป็นข้อมูลที่ต้องอ่านจริง
+   เช่น "Semiconductor test & burn-in equipment (AI processors / silicon photonics / SiC power)"
+        -> "Semiconductor test & burn-in equipment"   (ข้อความเต็มยังดูได้จาก tooltip ตอน hover)
+   รองรับวงเล็บทั้งครึ่งความกว้าง () และเต็มความกว้าง （） เผื่อพิมพ์จากคีย์บอร์ดไทย
+   ถ้าตัดแล้วเหลือค่าว่าง (ทั้งชื่ออยู่ในวงเล็บ) ให้คืนของเดิมไป ไม่งั้นช่องจะโล่ง */
+function industryShort(s){
+  const raw = String(s||'').trim();
+  const cut = raw.replace(/[（(][^）)]*[）)]/g, ' ').replace(/\s{2,}/g, ' ').trim()
+                 .replace(/[\/\-–—·,]+$/, '').trim();
+  return cut || raw;
+}
+const ICON_INDUSTRY_MINI ='<svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="16" width="24" height="13" fill="#3A5568" stroke="#111" stroke-width="1.6"/><polygon points="6,16 18,9 30,16" fill="#2C4256" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/><rect x="9" y="5" width="3.5" height="11" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="16" y="2" width="3.5" height="14" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="10" y="20" width="3" height="3" fill="#8FD6EE"/><rect x="15" y="20" width="3" height="3" fill="#8FD6EE"/><rect x="22" y="22" width="4" height="7" fill="#8FD6EE"/></svg>';
 const PORTS = {
   core:{name:'Core Port',color:'#46C8AC',cur:'THB',sym:'฿'},
   satA:{name:'Satellite.A — RS',color:'#6CA8F0',cur:'USD',sym:'$'},
@@ -2894,7 +2926,7 @@ function renderWatchPort(port){
       <td style="font-weight:600">${escHtml(w.sym)}${eligible?'':' <span class="hint" style="display:inline;color:var(--amber)">⚠ ยังไม่ครบเงื่อนไข</span>'}</td>
       ${port==='satB'?`<td class="sans">${w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:'—'}</td>`:''}
       ${port==='satB'?noteTd(w,'technical'):''}
-      ${scored?`<td class="sans" style="color:var(--muted)">${w.industry?`${ICON_INDUSTRY_MINI} ${escHtml(w.industry)}`:'—'}</td>`:''}
+      ${scored?`<td class="sans industryCell" style="color:var(--muted)"${w.industry?` title="${escHtml(w.industry)}"`:''}>${w.industry?`<span class="indTxt">${ICON_INDUSTRY_MINI} ${escHtml(industryShort(w.industry))}</span>`:'—'}</td>`:''}
       ${noteTd(w,'fundamental')}
       ${scored?`<td class="sans" style="padding-left:2px;padding-right:2px;text-align:center">${fundExpandIcon(w)}</td><td class="sans">${scoreBadge(w)}</td>`:''}
       <td class="sans">${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')" title="เปิดลิงก์">🔗</button>`:''}</td>
@@ -2908,7 +2940,7 @@ function renderWatchPort(port){
   document.getElementById(`wlCards_${port}`).innerHTML = list.length ? list.map(w=>{
     const eligible = watchEligible(w);
     return `<div class="tcard" data-wid="${w.id}" style="${eligible?'':'opacity:.6'}">
-      <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:''} ${w.industry?`<span class="hint" style="display:inline;color:var(--muted)"><svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.8"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.8" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.4"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="2"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="3" stroke-linecap="round"/></svg> ${escHtml(w.industry)}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
+      <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:''} ${w.industry?`<span class="hint" style="display:inline;color:var(--muted)" title="${escHtml(w.industry)}"><svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.8"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.8" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.4"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="2"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="3" stroke-linecap="round"/></svg> ${escHtml(industryShort(w.industry))}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
       ${!eligible?`<div class="hint" style="color:var(--amber)">⚠ ${port==='satB'?'ต้องมี Technical หรือ Sentiment อย่างน้อย 1 อย่าง':`ต้องมี ${port==='core'?'Business':'Fundamental'}`}</div>`:''}
       ${port==='satB'?noteInline(w,'technical','Technical'):''}
       ${noteInline(w,'fundamental',port==='satB'?'Sentiment':(port==='core'?'Business':'Fundamental'))}
