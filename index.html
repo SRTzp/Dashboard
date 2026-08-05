@@ -1635,17 +1635,27 @@ function startListening(){
   if(unsubDoc){ unsubDoc(); unsubDoc=null; }
 
   const ref = db.collection('users').doc(uid);
-  unsubDoc = ref.onSnapshot(snap=>{
-    /* กันบั๊ก: ถ้ามีการแก้ไขในเครื่องที่ยังไม่ถูกส่งขึ้น Firestore (pendingLocalWrite=true)
-       ห้ามเอาข้อมูลจาก snapshot นี้ (ซึ่งยังไม่รวมการแก้ไขล่าสุด) มาทับ state ในหน่วยความจำ
-       ไม่งั้นการแก้ไขที่ยังไม่ทันส่งจะหายไปเงียบๆ ตอน snapshot รอบก่อนหน้ามายืนยันทีหลัง */
-    if(pendingLocalWrite){ setSyncBadge('saving'); return; }
-    /* ยืนยันว่า state ที่กำลังจะสร้างนี้ตรงกับ server จริง (ไม่ใช่แค่ cache ในเครื่อง) — schedulePersist() ทั้งระบบ
-       จะไม่ยอมเขียนอะไรเลยจนกว่า flag นี้จะเป็น true (ดูเหตุผลเต็มที่ schedulePersist()) */
+  /* ★ ต้องมี includeMetadataChanges:true — นี่คือต้นเหตุของอาการ badge ค้าง "กำลังบันทึก" ตั้งแต่ refresh รอบที่ 2
+     onSnapshot แบบ default จะยิง callback เฉพาะตอน "ข้อมูลในเอกสารเปลี่ยน" เท่านั้น ไม่ยิงตอน metadata เปลี่ยน
+       - เปิดสดครั้งแรก (cache ว่าง): snapshot แรกต้องรอ server -> fromCache:false -> serverConfirmed=true ผ่านปกติ
+       - refresh รอบ 2+ (cache มีข้อมูลแล้ว): snapshot แรกมาจาก cache (fromCache:true) พอ server ตอบกลับมา
+         ข้อมูลเหมือนเดิมทุก field -> ไม่นับเป็น data change -> callback ไม่ยิงอีกเลย
+         -> serverConfirmed ค้าง false ตลอด -> badge ค้าง และ schedulePersist()/doPersist() ถูกบล็อกทั้งหมด
+            (แก้อะไรก็ไม่ถูกบันทึกขึ้น server แบบเงียบๆ)
+     ใส่ option นี้แล้วจะได้ callback เพิ่มตอน fromCache พลิกเป็น false ด้วย
+     (อาการนี้ไม่เกี่ยวกับ Safari / long-polling / enablePersistence / security rules — ตัดออกไปหมดแล้วจากการทดสอบจริง) */
+  unsubDoc = ref.onSnapshot({ includeMetadataChanges: true }, snap=>{
+    /* ต้องเช็ค serverConfirmed ก่อน pendingLocalWrite guard ข้างล่างเสมอ
+       เพราะการ "ยืนยันว่าติดต่อ server ได้จริง" เป็นเรื่อง metadata ล้วนๆ ไม่ขึ้นกับว่าจะเอาข้อมูลมาใช้หรือไม่
+       ถ้าปล่อยให้ guard ข้างล่าง return ก่อน snapshot ที่ fromCache:false อาจถูกข้ามไปโดยไม่ได้ปลดล็อก write */
     if(!snap.metadata.fromCache && !serverConfirmed){
       serverConfirmed = true;
       if(missedPersistBeforeConfirm){ missedPersistBeforeConfirm = false; setTimeout(schedulePersist, 0); }
     }
+    /* กันบั๊ก: ถ้ามีการแก้ไขในเครื่องที่ยังไม่ถูกส่งขึ้น Firestore (pendingLocalWrite=true)
+       ห้ามเอาข้อมูลจาก snapshot นี้ (ซึ่งยังไม่รวมการแก้ไขล่าสุด) มาทับ state ในหน่วยความจำ
+       ไม่งั้นการแก้ไขที่ยังไม่ทันส่งจะหายไปเงียบๆ ตอน snapshot รอบก่อนหน้ามายืนยันทีหลัง */
+    if(pendingLocalWrite){ setSyncBadge('saving'); return; }
     if(snap.exists){
       const d = snap.data() || {};
       state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
