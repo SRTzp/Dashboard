@@ -6202,6 +6202,17 @@ function rrgSetProg(p){
   ffRenderThemes();
 }
 function rrgSleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+/* กัน auto-fetch ยิงซ้ำข้ามการรีเฟรชหน้า — rrgAutoDone เป็นแค่ตัวแปรในหน่วยความจำ รีเฟรชแล้วหาย
+   ใช้ localStorage เก็บ "เวลาที่พยายามดึงล่าสุด" (นับแม้ error) ซึ่งอยู่ข้ามการรีเฟรช — กันรีเฟรชถี่ๆ ยิง API ซ้อนจนชนโควตา/นาที
+   ข้อมูล RRG ปกติไม่เปลี่ยนเร็ว ภายใน 1 ชม. ยังไม่จำเป็นต้องดึงใหม่ (ปุ่ม "รีเฟรช" กดเองยังใช้ได้เสมอ ไม่โดนกันด้วยตัวนี้) */
+const RRG_AUTO_COOLDOWN_MS = 60*60*1000;
+function rrgAutoRecently(){
+  const t = parseInt(localStorage.getItem('rrgAutoAttemptAt')||'0', 10);
+  return !!t && (Date.now() - t) < RRG_AUTO_COOLDOWN_MS;
+}
+function rrgMarkAutoAttempt(){
+  try{ localStorage.setItem('rrgAutoAttemptAt', String(Date.now())); }catch(e){}
+}
 async function rrgRefresh(force){
   const f = ffState();
   const key = rrgKey();
@@ -6209,6 +6220,7 @@ async function rrgRefresh(force){
   if(rrgBusy) return;
   if(!force && rrgCacheFresh(f)) return;
   rrgBusy = true;
+  rrgMarkAutoAttempt();
   f.rrg = Object.assign({}, f.rrg, {loading:true, err:''});
   renderFundflow();
   try{
@@ -6270,6 +6282,7 @@ function rrgAutoOnce(){
   const f = ffState();
   if(!rrgKey()) return;                                  /* ยังไม่ใส่ key — ไม่ต้องพยายาม */
   if(rrgCacheFresh(f)) return;
+  if(rrgAutoRecently()){ rrgAutoDone = true; return; }   /* เพิ่งพยายามไปเมื่อไม่ถึง 1 ชม. ที่แล้ว (ข้ามรีเฟรชหน้าด้วย) — ข้าม รอรอบหน้า */
   rrgAutoDone = true;
   rrgRefresh(false);
 }
