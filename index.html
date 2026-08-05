@@ -1611,6 +1611,8 @@ auth.onAuthStateChanged(user=>{
   } else {
     uid = null;
     fxAutoDone = false;
+    serverConfirmed = false;
+    missedPersistBeforeConfirm = false;
     if(unsubDoc){ unsubDoc(); unsubDoc=null; }
     state = null;
     document.getElementById('authScreen').style.display='flex';
@@ -1623,6 +1625,7 @@ auth.onAuthStateChanged(user=>{
 /* ================= Firestore sync ================= */
 function startListening(){
   if(!uid) return;
+  serverConfirmed = false;   /* เริ่ม listen session ใหม่ — ต้องรอยืนยันจาก server ใหม่ก่อนถึงจะยอมเขียนอะไร */
   document.getElementById('errorScreen').style.display='none';
   document.getElementById('loadingScreen').style.display='block';
   document.getElementById('mainWrap').style.display='none';
@@ -1634,6 +1637,12 @@ function startListening(){
        ห้ามเอาข้อมูลจาก snapshot นี้ (ซึ่งยังไม่รวมการแก้ไขล่าสุด) มาทับ state ในหน่วยความจำ
        ไม่งั้นการแก้ไขที่ยังไม่ทันส่งจะหายไปเงียบๆ ตอน snapshot รอบก่อนหน้ามายืนยันทีหลัง */
     if(pendingLocalWrite){ setSyncBadge('saving'); return; }
+    /* ยืนยันว่า state ที่กำลังจะสร้างนี้ตรงกับ server จริง (ไม่ใช่แค่ cache ในเครื่อง) — schedulePersist() ทั้งระบบ
+       จะไม่ยอมเขียนอะไรเลยจนกว่า flag นี้จะเป็น true (ดูเหตุผลเต็มที่ schedulePersist()) */
+    if(!snap.metadata.fromCache && !serverConfirmed){
+      serverConfirmed = true;
+      if(missedPersistBeforeConfirm){ missedPersistBeforeConfirm = false; setTimeout(schedulePersist, 0); }
+    }
     if(snap.exists){
       const d = snap.data() || {};
       state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
@@ -1644,9 +1653,10 @@ function startListening(){
         fundflow: (d.fundflow && typeof d.fundflow==='object') ? d.fundflow : defaultFundflow(),
         scoreLabels: (d.scoreLabels && typeof d.scoreLabels==='object') ? d.scoreLabels : null,
         journalView: (d.journalView && typeof d.journalView==='object') ? d.journalView : null,
-        reasonTags: (d.reasonTags && typeof d.reasonTags==='object') ? d.reasonTags : null};
+        reasonTags: (d.reasonTags && typeof d.reasonTags==='object') ? d.reasonTags : null,
+        failLog: Array.isArray(d.failLog) ? d.failLog : []};   /* เดิมไม่ได้ copy field นี้มา — ประวัติ fail-log ของ Fundamental Checklist จะหายทุกครั้งที่ sync */
     } else {
-      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags()};
+      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[]};
     }
     ensureScoreLabels();
     ensureJournalView();
@@ -1661,8 +1671,8 @@ function startListening(){
     document.getElementById('errorScreen').style.display='none';
     document.getElementById('mainWrap').style.display='block';
     /* ไม่ใช้ snap.metadata.hasPendingWrites ตัดสิน badge อีกต่อไป — พบว่าไม่นิ่งเมื่อบังคับ long-polling (ค้าง true แม้ server ยืนยันแล้วจริง)
-       ถึงจุดนี้คือผ่าน pendingLocalWrite guard ด้านบนมาแล้ว (ไม่มีการแก้ไขค้างส่ง) ถือว่า sync ตรงกับ server แล้ว */
-    setSyncBadge('saved');
+       ถ้ายังไม่ผ่าน serverConfirmed (snapshot นี้ยังมาจาก cache เก่า) ไม่ควรขึ้น "ซิงก์แล้ว" หลอกๆ — โชว์ "กำลังบันทึก" (กำลังรอข้อมูลจริง) ไปก่อน */
+    setSyncBadge(serverConfirmed ? 'saved' : 'saving');
     render();
     autoFetchFxOnce();
   }, err=>{
@@ -1682,15 +1692,26 @@ let persistTimer = null;
 /* true = state ในหน่วยความจำมีการแก้ไขที่ยังไม่ได้ถูกส่ง (issue) ไปที่ Firestore
    ใช้กันไม่ให้ onSnapshot เอาข้อมูลเก่ามาทับการแก้ไขที่ยังค้างอยู่ */
 let pendingLocalWrite = false;
+/* true = เพิ่งได้ snapshot ที่ยืนยันจาก server จริง (ไม่ใช่ cache ในเครื่อง) มาแล้วอย่างน้อย 1 ครั้งในเซสชันนี้
+   บั๊กร้ายแรงที่เจอ: อุปกรณ์ที่มี cache เก่าค้าง (เช่น มือถือที่ไม่ได้เปิดมานาน) อาจมีโค้ดหลายจุด
+   (migration check, rrgRefresh ฯลฯ) ที่เรียก schedulePersist() อัตโนมัติโดยไม่ใช่ user สั่งเอง — ถ้าปล่อยให้เขียนได้
+   ทั้งที่ state ยังสร้างจาก cache เก่า จะเอาข้อมูลเก่าทับของจริงบน server แบบเงียบๆ
+   จึงห้าม schedulePersist() ทำงานเลยจนกว่าจะมั่นใจว่า state ตรงกับ server จริงก่อน */
+let serverConfirmed = false;
+let missedPersistBeforeConfirm = false;
 function schedulePersist(){
   if(!uid || !state) return;
+  if(!serverConfirmed){ missedPersistBeforeConfirm = true; return; }
   pendingLocalWrite = true;
   setSyncBadge('saving');
   clearTimeout(persistTimer);
-  persistTimer = setTimeout(doPersist, 350);
+  persistTimer = setTimeout(()=>{ persistTimer = null; doPersist(); }, 350);
 }
 async function doPersist(){
   if(!uid || !state) return;
+  /* ด่านสุดท้าย: ไม่ว่าใครจะเรียก doPersist() มาจากทางไหนก็ตาม (timer ปกติ, retrySync, flushPendingPersist,
+     หรือโค้ดที่เพิ่มในอนาคต) ห้ามเขียนขึ้น server จนกว่าจะยืนยันแล้วว่า state ตรงกับของจริง กัน cache เก่าทับข้อมูล */
+  if(!serverConfirmed){ missedPersistBeforeConfirm = true; return; }
   const toSave = state;
   pendingLocalWrite = false;   /* กำลังจะส่ง state ปัจจุบันไปแล้ว — ถ้ามีการแก้ไขใหม่หลังจุดนี้ schedulePersist() จะตั้งกลับเป็น true เอง */
   try{
