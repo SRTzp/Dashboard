@@ -469,6 +469,20 @@ footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:10px;font
 .syncbadge.error .sdot{background:var(--red)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
+/* ---------- แถบเตือนสำรองข้อมูลประจำวัน ---------- */
+.bkBanner{
+  position:fixed;left:12px;right:12px;bottom:12px;z-index:9000;
+  display:none;align-items:center;gap:9px;
+  background:var(--surface);border:1px solid var(--amber);border-left:4px solid var(--amber);
+  border-radius:12px;padding:10px 12px;box-shadow:0 6px 26px rgba(0,0,0,.16);
+  font-size:.8rem;color:var(--text);
+}
+.bkBanner.show{display:flex}
+.bkBanner .bkTxt{flex:1;line-height:1.35;min-width:0}
+.bkBanner .bkTxt b{color:var(--amber)}
+.bkBanner .bkSub{display:block;color:var(--muted);font-size:.74rem;margin-top:2px}
+@media(min-width:640px){ .bkBanner{left:auto;right:16px;bottom:16px;max-width:430px} }
+
 /* ---------- auth screen ---------- */
 .authwrap{min-height:80vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .authcard{
@@ -1309,6 +1323,13 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <div class="f"><label>ระยะเพิ่มเติมจากขอบบน (px) <span style="font-weight:400;color:var(--muted)">— ปกติใส่ 0</span></label>
       <input type="number" step="1" min="0" max="80" inputmode="numeric" id="tabsOffset"></div>
     <div class="hint" style="margin-top:-6px">ระยะหลบนาฬิกา/รอยบากถูกคำนวณอัตโนมัติแล้ว และจะกันที่<b>เฉพาะตอนเลื่อนหน้าจอ</b> ไม่กินช่องว่างตอนอยู่นิ่ง · ช่องนี้ใส่เพิ่มเฉพาะกรณีที่ยังรู้สึกว่าแท็บชิดเกินไปตอนเลื่อน</div>
+
+    <div class="divlbl">สำรองข้อมูลลงเครื่อง</div>
+    <div class="hint" style="margin-top:-6px">ดาวน์โหลดข้อมูลทั้งหมด (Trades · Watchlist · Settings · Fund-flow · Checklist) เป็นไฟล์ JSON เก็บไว้ในเครื่อง · ระบบจะสำรองให้อัตโนมัติวันละครั้งหลัง <b>20:00 น.</b> ถ้าวันไหนไม่ได้เปิดแอป จะชดเชยให้ตอนเปิดครั้งถัดไป</div>
+    <div class="btns" style="justify-content:flex-start;margin-top:8px">
+      <button onclick="exportBackupNow(true)">⬇ Export JSON ตอนนี้</button>
+    </div>
+    <div class="hint" id="bkLastHint" style="margin-top:6px"></div>
 
     <div class="btns" style="justify-content:space-between">
       <button onclick="resetFontSizes()">ค่าเริ่มต้น</button>
@@ -2954,6 +2975,7 @@ function openSystemSettings(){
   document.getElementById('sizePlan').value = state.fontSizes.plan;
   document.getElementById('sizeClosed').value = state.fontSizes.closed;
   document.getElementById('tabsOffset').value = state.tabsOffset;
+  bkRenderLastHint();
   document.getElementById('sysOverlay').classList.add('show');
 }
 function saveSystemSettings(){
@@ -6651,5 +6673,138 @@ function ffDelProxy(list,i){
 </div>
 
 <button id="scrollTopBtn" class="scrollTopBtn" onclick="scrollToTop()" title="ขึ้นบนสุด">↑</button>
+
+<!-- ===== แถบเตือนสำรองข้อมูลประจำวัน ===== -->
+<div class="bkBanner" id="bkBanner">
+  <div class="bkTxt">
+    <b id="bkTitle">ถึงเวลาสำรองข้อมูลประจำวัน</b>
+    <span class="bkSub" id="bkSub">แตะเพื่อบันทึกไฟล์ backup ลงเครื่อง</span>
+  </div>
+  <button class="small primary" onclick="exportBackupNow(true)">ดาวน์โหลด</button>
+  <button class="small ghost" onclick="bkDismiss()">ไว้ก่อน</button>
+</div>
+
+<script>
+/* ================= สำรองข้อมูลลงเครื่อง (Export JSON) =================
+   ที่มา: 5 ส.ค. 2026 ข้อมูลถูกเขียนทับ 2 รอบ และทั้งสองรอบ "ไม่มีไฟล์ backup ให้กู้เลย"
+   Firestore เก็บเป็นเอกสารเดียวและไม่มี version history ในตัว (PITR ต้องเปิดล่วงหน้า + ต้องเป็น Blaze plan)
+   ถ้าเอกสารถูกเขียนทับเมื่อไหร่ ของเดิมหายถาวรทันที — จึงต้องมีสำเนาออฟไลน์เสมอ */
+const BK_LAST_KEY   = 'bkLastBackupAt';   /* epoch ms ของ backup ล่าสุดที่สำเร็จ */
+const BK_SNOOZE_KEY = 'bkSnoozeUntil';    /* กด "ไว้ก่อน" แล้วเงียบถึงเวลานี้ */
+const BK_HOUR       = 20;                 /* 20:00 น. */
+const BK_SNOOZE_MS  = 3*60*60*1000;       /* เลื่อนไป 3 ชม. */
+
+/* iOS/iPadOS Safari บล็อก programmatic download ที่ไม่มี user gesture แทบทุกกรณี
+   เครื่องกลุ่มนี้ข้าม auto ไปใช้ banner ให้กดเองอย่างเดียว จะได้ไม่ "คิดว่า backup แล้ว" ทั้งที่ไม่มีไฟล์ */
+function bkIsIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);  /* iPad ที่รายงานตัวเป็น Mac */
+}
+
+/* หา "เส้นตาย 20:00 ล่าสุดที่ผ่านมาแล้ว" แทนการตั้ง timer ที่ 20:00 ตรงๆ
+   เพราะเว็บแอปตั้งเวลาเองไม่ได้ถ้าไม่ได้เปิดหน้าอยู่ — วิธีนี้ชดเชยให้เองตอนเปิดครั้งถัดไป
+   เช่น ไม่ได้เปิดเลยทั้งคืน มาเปิด 9 โมงเช้า -> เส้นตายล่าสุด = 20:00 เมื่อวาน -> ยังไม่ได้ backup -> เตือนทันที */
+function bkLastDeadline(){
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), BK_HOUR, 0, 0, 0);
+  if(now < d) d.setDate(d.getDate() - 1);
+  return d.getTime();
+}
+function bkDue(){
+  const last = parseInt(localStorage.getItem(BK_LAST_KEY) || '0', 10);
+  return last < bkLastDeadline();
+}
+function bkSnoozed(){
+  const t = parseInt(localStorage.getItem(BK_SNOOZE_KEY) || '0', 10);
+  return !!t && Date.now() < t;
+}
+
+function bkFilename(){
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return `dashboard-backup-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
+}
+function bkPayload(){
+  return JSON.stringify({
+    _meta:{ app:'trading-dashboard', schema:1, exportedAt:new Date().toISOString(), uid: uid||null },
+    state: state
+  }, null, 2);
+}
+function bkTriggerDownload(){
+  const blob = new Blob([bkPayload()], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = bkFilename(); a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 30000);
+}
+
+/* manual=true  = มาจากการกดปุ่ม (มี user gesture) เชื่อถือได้
+   manual=false = auto ตอนถึงเวลา อาจถูกเบราว์เซอร์บล็อกเงียบๆ โดยไม่ throw */
+function exportBackupNow(manual){
+  if(!state){ if(manual) alert('ยังไม่มีข้อมูลให้สำรอง'); return false; }
+  /* ★ ห้ามสำรองจาก state ที่ยังไม่ได้ยืนยันกับ server
+     ถ้าปล่อยให้ backup ข้อมูลจาก cache เก่า จะได้ไฟล์ที่ "ดูเหมือนสำเนาที่ถูกต้อง" แต่เป็นของเก่า
+     ซึ่งอันตรายกว่าไม่มี backup เลย เพราะจะเอาไปกู้ทับของจริงในอนาคต */
+  if(!stateFromServer){
+    if(manual) alert('ยังซิงก์กับ server ไม่สำเร็จ — ข้อมูลบนจอตอนนี้อาจเป็นของเก่าจาก cache\n\nรอให้สถานะมุมบนขึ้น "ซิงก์แล้ว" ก่อน แล้วค่อยกดใหม่');
+    return false;
+  }
+  try{ bkTriggerDownload(); }
+  catch(e){ console.warn('backup download failed:', e); return false; }
+  localStorage.setItem(BK_LAST_KEY, String(Date.now()));
+  localStorage.removeItem(BK_SNOOZE_KEY);
+  bkHideBanner();
+  bkRenderLastHint();
+  return true;
+}
+
+function bkShowBanner(title, sub){
+  const el = document.getElementById('bkBanner'); if(!el) return;
+  if(title) document.getElementById('bkTitle').textContent = title;
+  if(sub)   document.getElementById('bkSub').textContent   = sub;
+  el.classList.add('show');
+}
+function bkHideBanner(){ const el = document.getElementById('bkBanner'); if(el) el.classList.remove('show'); }
+function bkDismiss(){
+  /* ไม่บันทึกว่า backup แล้ว เพราะยังไม่ได้ backup จริง — แค่เงียบไป 3 ชม. แล้วเตือนซ้ำ */
+  localStorage.setItem(BK_SNOOZE_KEY, String(Date.now() + BK_SNOOZE_MS));
+  bkHideBanner();
+}
+function bkRenderLastHint(){
+  const el = document.getElementById('bkLastHint'); if(!el) return;
+  const last = parseInt(localStorage.getItem(BK_LAST_KEY) || '0', 10);
+  if(!last){ el.innerHTML = '<b style="color:var(--amber)">ยังไม่เคยสำรองข้อมูลจากเครื่องนี้</b>'; return; }
+  const d = new Date(last), p = n => String(n).padStart(2,'0');
+  const stale = bkDue();
+  el.innerHTML = 'สำรองล่าสุดจากเครื่องนี้: '
+    + `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())} น.`
+    + (stale ? ' · <b style="color:var(--amber)">เลยรอบประจำวันแล้ว</b>' : '');
+}
+
+function bkCheck(){
+  if(!state || !stateFromServer) return;              /* ยังไม่ยืนยันกับ server — รอรอบหน้า ห้าม backup ของเก่า */
+  if(!bkDue() || bkSnoozed()) return;
+  if(bkIsIOS()){                                       /* auto ใช้ไม่ได้บน iOS — ให้กดเอง */
+    bkShowBanner('ถึงเวลาสำรองข้อมูลประจำวัน', 'แตะ “ดาวน์โหลด” เพื่อบันทึกไฟล์ลงเครื่อง');
+    return;
+  }
+  if(exportBackupNow(false)){
+    /* auto สำเร็จในมุมของ JS แล้ว แต่ Safari อาจบล็อกเงียบๆ โดยไม่ throw — ยืนยันกับตาผู้ใช้สักครู่
+       เผื่อไฟล์ไม่ลงจริง จะได้กดเองทัน ไม่ปล่อยให้เข้าใจผิดว่ามี backup */
+    bkShowBanner('สำรองข้อมูลอัตโนมัติแล้ว', 'ไม่เห็นไฟล์ในโฟลเดอร์ Downloads? แตะ “ดาวน์โหลด” เพื่อบันทึกซ้ำ');
+    setTimeout(bkHideBanner, 15000);
+  } else {
+    bkShowBanner('สำรองอัตโนมัติไม่สำเร็จ', 'แตะ “ดาวน์โหลด” เพื่อบันทึกไฟล์เอง');
+  }
+}
+
+/* เช็คตอนเปิดแอป (หน่วงรอ snapshot จาก server มาถึงก่อน) + เช็คซ้ำทุกนาที
+   เผื่อกรณีเปิดหน้าค้างไว้แล้วเวลาข้าม 20:00 ระหว่างนั้น */
+setTimeout(bkCheck, 8000);
+setInterval(bkCheck, 60*1000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) setTimeout(bkCheck, 1500); });
+</script>
 </body>
 </html>
