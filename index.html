@@ -1639,6 +1639,7 @@ function startListening(){
       state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
         watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
         fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[], ideas: Array.isArray(d.ideas)?d.ideas:[], watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAULT_TABS_OFFSET,
+        tabsOffsetV2: !!d.tabsOffsetV2,   /* เดิมไม่ได้ copy field นี้มา — ทำให้ ensureTabsOffsetV2() คิดว่าต้อง migrate ใหม่ทุกครั้งที่ sync ยิง schedulePersist() วนซ้ำไม่จำเป็น */
         exitReasons: Array.isArray(d.exitReasons) ? d.exitReasons : null,   /* เก็บไว้ให้ ensureReasonTags ย้ายเข้า reasonTags.exit */
         fundflow: (d.fundflow && typeof d.fundflow==='object') ? d.fundflow : defaultFundflow(),
         scoreLabels: (d.scoreLabels && typeof d.scoreLabels==='object') ? d.scoreLabels : null,
@@ -1697,6 +1698,18 @@ async function doPersist(){
   }
 }
 function retrySync(){ if(document.getElementById('syncBadge').classList.contains('error')) doPersist(); }
+/* กันไม้หาย: ถ้าปิดแท็บ/สลับแอป/พับจอภายใน 350ms debounce เดิม คำสั่งเขียนจะไม่ทันถูกยิงออกไปเลย
+   (persistTimer ถูกทำลายไปพร้อมหน้าเว็บ ไม่มีอะไรไปเรียก doPersist() ต่อ)
+   ดักจังหวะที่หน้าเว็บกำลังจะถูกซ่อน/ปิด แล้วยิง doPersist() ทันทีแทนที่จะรอ timer เดิม */
+function flushPendingPersist(){
+  if(persistTimer){
+    clearTimeout(persistTimer);
+    persistTimer = null;
+    doPersist();
+  }
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushPendingPersist(); });
+window.addEventListener('pagehide', flushPendingPersist);
 function setSyncBadge(st){
   const b = document.getElementById('syncBadge'), t = document.getElementById('syncText');
   if(!b) return;
