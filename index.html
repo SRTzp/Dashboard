@@ -1429,8 +1429,9 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn(
 const db = firebase.firestore();
 /* Safari บล็อก WebChannel/fetch streaming ของ Firestore ด้วย "access control checks"
    ทำให้ Listen/Write channel ค้างไม่เคยสำเร็จเลย (badge ค้าง "กำลังบันทึก" ตลอด แม้ไม่มี error โผล่ตรงๆ)
-   บังคับใช้ long-polling แทน (ช้ากว่าเล็กน้อยแต่เข้ากันได้กับ Safari) แก้ปัญหานี้โดยตรง */
-db.settings({ experimentalForceLongPolling: true, merge: true });
+   บังคับใช้ long-polling แทน (ช้ากว่าเล็กน้อยแต่เข้ากันได้กับ Safari) แก้ปัญหานี้โดยตรง
+   SDK นี้ตั้ง experimentalAutoDetectLongPolling:true เป็นค่าเริ่มต้นเองอยู่แล้ว — ต้องปิดทิ้งด้วย ไม่งั้นชนกับ forceLongPolling จน settings() throw error */
+db.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false, merge: true });
 try{ db.enablePersistence({synchronizeTabs:true}).catch(e=>console.warn('persistence:',e.code)); }catch(e){}
 
 /* ================= state ================= */
