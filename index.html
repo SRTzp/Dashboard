@@ -1615,6 +1615,7 @@ auth.onAuthStateChanged(user=>{
     uid = null;
     fxAutoDone = false;
     serverConfirmed = false;
+    stateFromServer = false;
     missedPersistBeforeConfirm = false;
     if(unsubDoc){ unsubDoc(); unsubDoc=null; }
     state = null;
@@ -1629,6 +1630,7 @@ auth.onAuthStateChanged(user=>{
 function startListening(){
   if(!uid) return;
   serverConfirmed = false;   /* เริ่ม listen session ใหม่ — ต้องรอยืนยันจาก server ใหม่ก่อนถึงจะยอมเขียนอะไร */
+  stateFromServer = false;   /* state เก่าที่ค้างอยู่ (ถ้ามี) ถือว่าใช้ยืนยันการเขียนไม่ได้แล้ว */
   document.getElementById('errorScreen').style.display='none';
   document.getElementById('loadingScreen').style.display='block';
   document.getElementById('mainWrap').style.display='none';
@@ -1656,6 +1658,17 @@ function startListening(){
        ห้ามเอาข้อมูลจาก snapshot นี้ (ซึ่งยังไม่รวมการแก้ไขล่าสุด) มาทับ state ในหน่วยความจำ
        ไม่งั้นการแก้ไขที่ยังไม่ทันส่งจะหายไปเงียบๆ ตอน snapshot รอบก่อนหน้ามายืนยันทีหลัง */
     if(pendingLocalWrite){ setSyncBadge('saving'); return; }
+    /* ★★ ด่านสำคัญที่สุดของไฟล์นี้ — กันข้อมูลหาย
+       เคสจริงที่เกิด (5 ส.ค. iPhone): serverConfirmed เป็น true ไปแล้วจาก snapshot แรกที่มาจาก server
+       พอ iPhone หลับ/สลับ Wi-Fi<->cellular, Firestore ยิง snapshot ใหม่ที่ fromCache:true (เสิร์ฟจาก cache เก่าของเครื่อง)
+       โค้ดเดิม rebuild state จาก snapshot นั้นแบบไม่มีเงื่อนไข -> state ในหน่วยความจำกลายเป็นข้อมูลเก่า
+       แล้ว autoFetchFxOnce()/rrgAutoOnce() (auto-write ที่ไม่ต้องมี user action) เรียก schedulePersist()
+       ซึ่งผ่านด่านเพราะ serverConfirmed ยังเป็น true -> เขียนข้อมูลเก่าทับของจริงบน server
+       บทเรียน: serverConfirmed บอกแค่ว่า "เซสชันนี้เคยคุยกับ server สำเร็จ" ไม่ได้บอกว่า
+       "state ที่อยู่ในมือตอนนี้มาจาก server" — ต้องแยกเป็นคนละ flag (stateFromServer)
+       กฎ: ถ้ามี state ที่มาจาก server อยู่แล้ว ห้าม rebuild ทับด้วย snapshot ที่มาจาก cache เด็ดขาด
+       (snapshot จาก cache ตอนนั้นไม่มีข้อมูลใหม่อะไรให้เลย มีแต่ของเก่ากว่าหรือเท่ากัน) */
+    if(snap.metadata.fromCache && stateFromServer){ return; }
     if(snap.exists){
       const d = snap.data() || {};
       state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
@@ -1671,6 +1684,9 @@ function startListening(){
     } else {
       state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[]};
     }
+    /* บันทึก "ที่มา" ของ state ก้อนที่เพิ่งสร้าง — true = สร้างจากข้อมูล server จริง, false = สร้างจาก cache ในเครื่อง
+       ทุกการเขียนขึ้น server ต้องเช็ค flag นี้ ไม่ใช่เช็คแค่ serverConfirmed */
+    stateFromServer = !snap.metadata.fromCache;
     ensureScoreLabels();
     ensureJournalView();
     /* บั๊กร้ายแรงที่เพิ่งเจอ: ถ้า snapshot นี้มาจาก local cache เก่าของเครื่อง/มือถือ (offline หรือไม่เคย sync มานาน)
@@ -1685,7 +1701,7 @@ function startListening(){
     document.getElementById('mainWrap').style.display='block';
     /* ไม่ใช้ snap.metadata.hasPendingWrites ตัดสิน badge อีกต่อไป — พบว่าไม่นิ่งเมื่อบังคับ long-polling (ค้าง true แม้ server ยืนยันแล้วจริง)
        ถ้ายังไม่ผ่าน serverConfirmed (snapshot นี้ยังมาจาก cache เก่า) ไม่ควรขึ้น "ซิงก์แล้ว" หลอกๆ — โชว์ "กำลังบันทึก" (กำลังรอข้อมูลจริง) ไปก่อน */
-    setSyncBadge(serverConfirmed ? 'saved' : 'saving');
+    setSyncBadge(stateFromServer ? 'saved' : 'saving');
     render();
     autoFetchFxOnce();
   }, err=>{
@@ -1711,10 +1727,14 @@ let pendingLocalWrite = false;
    ทั้งที่ state ยังสร้างจาก cache เก่า จะเอาข้อมูลเก่าทับของจริงบน server แบบเงียบๆ
    จึงห้าม schedulePersist() ทำงานเลยจนกว่าจะมั่นใจว่า state ตรงกับ server จริงก่อน */
 let serverConfirmed = false;
+/* true = state ที่อยู่ในหน่วยความจำตอนนี้ ถูกสร้างจาก snapshot ที่มาจาก server จริง (fromCache:false)
+   ต่างจาก serverConfirmed ที่บอกแค่ว่า "เคยคุยกับ server สำเร็จอย่างน้อย 1 ครั้งในเซสชันนี้" แล้วค้าง true ตลอดไป
+   ความต่างนี้คือสาเหตุที่ข้อมูลหายรอบ 5 ส.ค. — ดูคำอธิบายเต็มที่ guard ใน onSnapshot */
+let stateFromServer = false;
 let missedPersistBeforeConfirm = false;
 function schedulePersist(){
   if(!uid || !state) return;
-  if(!serverConfirmed){ missedPersistBeforeConfirm = true; return; }
+  if(!serverConfirmed || !stateFromServer){ missedPersistBeforeConfirm = true; return; }
   pendingLocalWrite = true;
   setSyncBadge('saving');
   clearTimeout(persistTimer);
@@ -1724,7 +1744,7 @@ async function doPersist(){
   if(!uid || !state) return;
   /* ด่านสุดท้าย: ไม่ว่าใครจะเรียก doPersist() มาจากทางไหนก็ตาม (timer ปกติ, retrySync, flushPendingPersist,
      หรือโค้ดที่เพิ่มในอนาคต) ห้ามเขียนขึ้น server จนกว่าจะยืนยันแล้วว่า state ตรงกับของจริง กัน cache เก่าทับข้อมูล */
-  if(!serverConfirmed){ missedPersistBeforeConfirm = true; return; }
+  if(!serverConfirmed || !stateFromServer){ missedPersistBeforeConfirm = true; return; }
   const toSave = state;
   pendingLocalWrite = false;   /* กำลังจะส่ง state ปัจจุบันไปแล้ว — ถ้ามีการแก้ไขใหม่หลังจุดนี้ schedulePersist() จะตั้งกลับเป็น true เอง */
   try{
