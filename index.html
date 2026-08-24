@@ -4193,7 +4193,7 @@ const FUND_CRITERIA = {
     scores: [
       {id:'s1', label:'ROIC', opts:['&gt;20%','12-20%','8-11.9%','&lt;8%']},
       {id:'s2', label:'Forward P/E', opts:['&lt;20','20-28','28-35','&gt;35']},
-      {id:'s3', label:'Total Shareholder Yield (Div+Buyback)', opts:['&gt;4%','2-4%','0-1.9%','ติดลบ']},
+      {id:'s3', label:'Total Shareholder Yield (Div + Buyback <b>สุทธิ</b> — จากส่วนต่างจำนวนหุ้น ไม่ใช่ยอดเงินซื้อคืน)', opts:['&gt;4%','2-4%','0-1.9%','ติดลบ']},
       {id:'s4', label:'Revenue Growth (CAGR 3 ปี)', opts:['&gt;15%','8-15%','4-7.9%','&lt;4%']},
       {id:'s5', label:'Operating Margin', opts:['&gt;20% คงที่/ขยาย','10-20% คงที่','เริ่มหด','&lt;10% หรือแกว่งรุนแรง']},
       {id:'s6', label:'Earnings Quality (CFO/NI เฉลี่ย 3 ปี)', opts:['&gt;1.1','0.9-1.1','0.7-0.9','&lt;0.7']},
@@ -6072,6 +6072,10 @@ function ffState(){
   if(f.rrg.rows){ delete f.rrg.rows; f.rrg.day = ''; }
   if(!Array.isArray(f.rrg.rowsD)) f.rrg.rowsD = [];
   if(!Array.isArray(f.rrg.rowsW)) f.rrg.rowsW = [];
+  /* แคชที่เก็บไว้เป็นผลลัพธ์ ไม่ใช่ราคาดิบ — พอตรรกะเปลี่ยน แถวเก่าจะขาด field ใหม่และคำนวณย้อนไม่ได้
+     ล้าง day ทิ้งให้ดึงใหม่รอบเดียว (19 เครดิตจากโควตา 800/วัน) แทนที่จะโชว์ค่าที่ผิดเงียบ ๆ
+     หมายเหตุ: rrgRefresh ต้องเขียน build กลับลงไปด้วย ไม่งั้นจะดึงใหม่ทุกครั้งที่เปิดหน้า */
+  if(f.rrg.build !== RRG_BUILD){ f.rrg.build = RRG_BUILD; f.rrg.day = ''; }
   if(f.rrgTf !== 'D' && f.rrgTf !== 'W') f.rrgTf = 'D';
   /* err/loading ถูกเซฟลง Firestore ไปด้วย — ถ้าไม่ล้างตอนโหลด จะค้างโชว์ error เก่าข้ามวัน
      และถ้าปิดหน้าตอนกำลังดึง loading:true จะค้าง ปุ่มรีเฟรชกดไม่ได้ตลอดกาล
@@ -6187,8 +6191,15 @@ function ffSet(list,i,v){
      mom   = 100 + zscore(raw - raw[5], 252)        <- โมเมนตัมนำ ratio ตามนิยาม RRG
    ตัดกันที่ 100 -> Leading / Weakening / Lagging / Improving
    ตัวเลขจะไม่ตรงกับ RRG ของ StockCharts เป๊ะ แต่ลำดับการหมุนสอดคล้องกัน
+
+   ⚠ ratio/mom เป็น z-score เทียบ "ประวัติของตัวเอง" ไม่ใช่เทียบตัวอื่นในตะกร้า
+     => ratio >= 100 แปลว่า "โมเมนตัม RS สูงกว่าค่าเฉลี่ยของตัวเอง" ไม่ใช่ "แข็งกว่า SPY"
+        และแต่ละตัวจะอยู่เหนือ 100 ราว 50% ของเวลาโดยนิยาม เอาไปนับ breadth ไม่ได้
+     => breadth จึงนับจาก rsTrend (= raw ตัวดิบก่อน z-score) > 0
+        ซึ่งแปลว่า EMA12(rs) > EMA26(rs) = ชนะ SPY อยู่จริง ๆ ณ ตอนนี้ (ดู ffRenderThemes)
 ============================================================================== */
-const RRG_BUILD = 4;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง */
+const RRG_BUILD = 5;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง
+                          + ใช้ทิ้งแคชอัตโนมัติเมื่อรูปร่างแถวเปลี่ยน (ดู ffState) */
 const RRG_BENCH = 'SPY';
 const RRG_SYMS = [
   {s:'XLU',  n:'Utilities'},      {s:'PAVE', n:'Infrastructure'}, {s:'XHB',  n:'Homebuilders'},
@@ -6278,7 +6289,9 @@ function rrgCompute(closes, highs, bench, tfKey){
   const dRatio = (back>=0 && ratioS[back]!==null) ? ratioS[last]-ratioS[back] : null;
   const dMom   = (back>=0 && momS[back]!==null)   ? momS[last]-momS[back]     : null;
   const hi52 = Math.max.apply(null, highs.slice(Math.max(0, n - (tfKey==='W' ? 52 : 252))));
-  return {ratio:ratioS[last], mom:momS[last], quad, days, dRatio, dMom,
+  /* rsTrend = raw ก่อน z-score · > 0 คือ EMA12(rs) เหนือ EMA26(rs) = ชนะ SPY อยู่ ณ ตอนนี้
+     ต้องเก็บแยกเพราะ ratio ผ่าน z-score แล้ว เทียบกับศูนย์ไม่ได้อีก — ใช้เป็นฐานของ breadth */
+  return {ratio:ratioS[last], mom:momS[last], quad, days, dRatio, dMom, rsTrend:raw[last],
           off52: hi52>0 ? (closes[last]/hi52-1)*100 : 0, close:closes[last], bars:n};
 }
 
@@ -6401,7 +6414,7 @@ async function rrgRefresh(force){
       rowsW.push(Object.assign({}, base, {date:wk.dates[wk.dates.length-1]},
                  rrgCompute(wk.closes, wk.highs, wkB.closes, 'W')));
     });
-    f.rrg = {rowsD, rowsW, day:rrgToday(), at:new Date().toISOString(), loading:false, err:''};
+    f.rrg = {rowsD, rowsW, build:RRG_BUILD, day:rrgToday(), at:new Date().toISOString(), loading:false, err:''};
   }catch(e){
     f.rrg = Object.assign({}, f.rrg, {loading:false, err:String((e && e.message) || e)});
   }finally{
@@ -6501,13 +6514,21 @@ function ffRenderThemes(){
       +' · RS-Mom '+x.mom.toFixed(1)+' · อยู่ควอดแรนต์นี้ '+x.days+' '+TF.unit+'">'+ffEsc(x.sym)+'</span>');
   });
 
-  /* breadth = สัดส่วนที่แข็งกว่า SPY (RS-Ratio >= 100) ไม่ใช่แค่ Leading */
-  const up = ok.filter(x=>x.ratio>=100).length;
+  /* breadth = กี่ธีมที่ "ชนะ SPY อยู่จริง" ตอนนี้ — วัดจาก rsTrend (raw ก่อน z-score) > 0
+     ห้ามกลับไปใช้ ratio >= 100: นั่นคือ z-score เทียบประวัติของตัวเอง แต่ละตัวจะอยู่เหนือ 100
+     ราว 50% ของเวลาโดยนิยาม ตัวเลขเลยเกาะครึ่ง ๆ ตลอด และไม่ลงแม้ตลาดไหลออกทั้งกระดาน
+     rsTrend > 0 คือ EMA12(rs) เหนือ EMA26(rs) — เทียบกับศูนย์ได้จริง จึงสวิงได้เต็ม 0-100% */
+  const scored = ok.filter(x=>typeof x.rsTrend === 'number');
+  const up = scored.filter(x=>x.rsTrend > 0).length;
   const b = document.getElementById('ffBreadth');
   if(b){
-    b.textContent = ok.length ? (up+'/'+ok.length+' นำตลาด') : '—';
-    b.style.color = !ok.length ? 'var(--muted)'
-                  : up*2>ok.length ? 'var(--teal)' : up===0 ? 'var(--red)' : 'var(--muted)';
+    b.textContent = scored.length ? (up+'/'+scored.length+' ชนะ SPY') : '—';
+    b.title = scored.length
+      ? 'กี่ธีมที่ EMA12 ของ RS ยังเหนือ EMA26 = ชนะ SPY อยู่ ณ ตอนนี้ (' + TF.label + ')'
+        + '\nเกินครึ่ง = เงินไหลกระจายหลายธีม · เหลือ 0 = ไหลออกทั้งกระดาน ไม่ใช่แค่หมุนกลุ่ม'
+      : 'ยังไม่มีข้อมูล — กดรีเฟรชราคา';
+    b.style.color = !scored.length ? 'var(--muted)'
+                  : up*2>scored.length ? 'var(--teal)' : up===0 ? 'var(--red)' : 'var(--muted)';
   }
 
   const QLBL = {lead:['LEADING','var(--teal)'], weak:['WEAKENING','var(--amber)'],
