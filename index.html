@@ -986,18 +986,16 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       </div>
     </div>
     <div class="hint" id="riskHint" style="margin-top:-4px"></div>
-    <div class="f" id="posTierField" style="margin-top:8px"><label>ไม้นี้คือ (Core / Sat.A)</label>
+    <div class="f" id="posTierField" style="margin-top:8px"><label>Setup (Core / Sat.A)</label>
       <div class="seg">
-        <button type="button" id="posT2x" onclick="setPosTier('2x')">Base 70%</button>
-        <button type="button" id="posTStd" onclick="setPosTier('std')">Add-on 30%</button>
+        <button type="button" id="posT2x" onclick="setSetup('acc')">Acc/Dist</button>
+        <button type="button" id="posTStd" onclick="setSetup('pp')">PP</button>
       </div>
       <div class="frow" style="gap:8px;margin-top:8px">
         <div class="f"><label>Lot</label>
           <select id="tLot" onchange="calcHint()">
             <option value="1">1</option><option value="10">10</option><option value="100">100</option>
           </select></div>
-        <div class="f"><label>ราคา add (คาด)</label>
-          <input type="number" step="any" inputmode="decimal" id="tAddPx" oninput="calcHint()" placeholder="เช่น 108"></div>
         <div class="f"><label>&nbsp;</label>
           <button type="button" class="small" onclick="szApplyQty()" title="ใส่จำนวนหุ้นที่คำนวณได้ลงช่อง Qty">↧ ใส่ Qty ให้</button></div>
       </div>
@@ -1199,13 +1197,15 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <div class="divlbl">Position Sizing — โมเดล 1R</div>
     <div class="fgrid">
       <div class="f"><label>Core — 1R %</label><input type="number" step="any" inputmode="decimal" id="sRCore"></div>
-      <div class="f"><label>Sat.A — 1R %</label><input type="number" step="any" inputmode="decimal" id="sRSatA"></div>
-      <div class="f"><label>Core — Max Cap ไม้ Base %</label><input type="number" step="any" inputmode="decimal" id="sCapCore"></div>
-      <div class="f"><label>Sat.A — Max Cap ไม้ Base %</label><input type="number" step="any" inputmode="decimal" id="sCapSatA"></div>
+      <div class="f"><label>Sat.A — 1R % <span style="font-weight:400;color:var(--muted)">(หน่วยวัด heat)</span></label><input type="number" step="any" inputmode="decimal" id="sRSatA"></div>
+      <div class="f"><label>Core — Max Cap ต่อไม้ %</label><input type="number" step="any" inputmode="decimal" id="sCapCore"></div>
+      <div class="f"><label>Sat.A — Max Cap ต่อไม้ %</label><input type="number" step="any" inputmode="decimal" id="sCapSatA"></div>
       <div class="f"><label>Sat.B — RPT Risk %</label><input type="number" step="any" inputmode="decimal" id="sPosSatB"></div>
       <div class="f"><label>Sat.A — RS Benchmark</label><input type="text" id="sRsBench" placeholder="NASDAQ:IXIC"></div>
     </div>
-    <div class="hint"><code>ไม้ base = MIN(Max Cap, 1R ÷ ระยะ stop%)</code> · add-on = หุ้น base × 0.4286 (70:30) · <b>ไม่ต้องมี Max Cap ของ add-on แยก</b> เพราะ add-on คิดจากจำนวนหุ้นไม้ base จึงล็อกที่ 42.86% เสมอ</div>
+    <div class="hint"><code>ขนาดไม้ = MIN(Max Cap, R ÷ ระยะ stop%)</code> · <code>R = 1R(คะแนน) × Setup × เพดาน Fund-flow</code><br>
+      <b>Sat.A</b> — 1R มาจากคะแนน Growth Gate ของหุ้นตัวนั้นใน Watchlist: <code>8-9 → 1.25%</code> · <code>6-7 → 1.00%</code> · <code>4-5 → 0.75%</code> · <code>≤3 → 0.50%</code> (ช่อง "Sat.A — 1R %" ด้านบนใช้เป็น<u>หน่วยอ้างอิง</u>ของ Portfolio heat เท่านั้น ไม่ได้กำหนดขนาดไม้)<br>
+      <b>Setup</b> — Acc/Dist ×1.00 · PP ×0.50 · <b>ไม่มีบันไดไม้ (base/add-on) แล้ว ทุกไม้เป็นไม้เดียว</b></div>
 
     <div class="divlbl">แผนที่ธีม (RRG) — แหล่งราคา</div>
     <div class="f"><label>Twelve Data API key</label>
@@ -1253,9 +1253,10 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 <div class="overlay" id="impOverlay">
   <div class="modal">
     <h3>Import จาก Claude — Core Checklist</h3>
-    <div class="hint" style="margin-top:-6px;margin-bottom:10px">วางก้อน JSON จาก <code>/core-checklist</code> หรือ <code>/satellite-checklist</code> แล้วกด Import. ถ้ามี <code>type</code> (th / us_q / us_g) จะ<b>เปิด Fundamental Checklist พร้อมเติมค่าให้ — เริ่มที่ GATE</b> ช่องไหน Claude กรอกมาก็ติ๊ก/ใส่ให้ ที่เหลือ (เช่น RS/RVOL) คุณเช็ค→ปรับ แล้วกด "เพิ่มเข้า Watchlist" เอง</div>
+    <div class="hint" style="margin-top:-6px;margin-bottom:10px"><b>Core</b> — วาง JSON จาก <code>/core-checklist</code> ที่มี <code>type</code> (th / us_q) จะ<b>เปิด Fundamental Checklist พร้อมเติมค่าให้ — เริ่มที่ GATE</b> ที่เหลือคุณเช็ค→ปรับ แล้วกด "เพิ่มเข้า Watchlist" เอง<br>
+      <b>Sat.A</b> — ใช้ <code>"port":"satA"</code> และส่งคะแนน Growth Gate มาที่ <code>"gg":{"gm":3,"rev":2,"eps":2,"catalyst":"..."}</code> ระบบจะเข้า Watchlist ให้เลย (type <code>us_g</code> เดิมไม่ใช้แล้ว)</div>
     <div class="f"><label>JSON</label>
-      <textarea id="impText" rows="10" placeholder='{ "sym":"RKLB", "type":"us_g", "industry":"Space / Defense", "mktcap":12, "gate":{"g2":true,"g3":true,"g4":true,"g5":true}, "score":{"s1":3,"s2":2,"s3":2,"s4":2,"s5":1}, "note":{"biz":"...","n2":"...","n3":"...","n4":"...","n5":"..."} }' style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;min-height:150px"></textarea>
+      <textarea id="impText" rows="10" placeholder='{ "sym":"RKLB", "port":"satA", "industry":"Space / Defense", "gg":{"gm":3,"rev":2,"eps":2,"catalyst":"งบ Q3 ต้น พ.ย. · Neutron test flight"}, "fundamental":"..." }' style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;min-height:150px"></textarea>
     </div>
     <div class="hint" id="impHint" style="min-height:18px"></div>
     <div class="btns">
@@ -1280,36 +1281,23 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
         <option value="satB">Satellite.B — Swing</option>
       </select>
     </div>
-    <div class="f" id="wBiasField" style="display:none"><label>Trend <span style="font-weight:400;color:var(--muted)">(by Trend = EMA10,20,50 TF.Day)</span></label>
+    <div class="f" id="wBiasField" style="display:none"><label>Trend หลัก — คุมภาพรวม <span style="font-weight:400;color:var(--muted)">(by Trend = EMA10,20,50 TF.Day)</span></label>
       <div class="seg">
         <button type="button" id="wbLong" onclick="setWBias('Long')">Bullish</button>
         <button type="button" id="wbShort" onclick="setWBias('Short')">Bearish</button>
-        <button type="button" id="wbUnclear" onclick="setWBias('Unclear')">Unclear</button>
+        <button type="button" id="wbUnclear" onclick="setWBias('Unclear')">Ranging</button>
       </div>
-      <div class="hint" id="wBiasWarn" style="display:none;color:var(--amber);margin-top:5px">⚠ Trend ยังไม่ชัด — ให้มองกรอบภาพใหญ่ (Higher TF) ก่อนตัดสินใจ · Symbol นี้จะยังเลือกเข้า Trade ไม่ได้จนกว่า Trend จะชัด</div>
+      <div class="hint" id="wBiasWarn" style="display:none;color:var(--amber);margin-top:5px">Ranging = ไม่มีเทรนด์หลัก (EMA พันกัน) — <b>เทรดได้</b> แต่ให้เล่นในกรอบ ตั้งเป้าที่ขอบกรอบ อย่าถือคาดหวัง trend continuation</div>
     </div>
-    <div class="f" id="wTechField"><label>Technical — Wyckoff Stage</label>
-      <div class="seg" id="wyckStageSeg">
-        <button type="button" id="wyStAccum" onclick="setWyckStage('accum')">Accumulation</button>
-        <button type="button" id="wyStMarkup" onclick="setWyckStage('markup')">Mark Up</button>
-        <button type="button" id="wyStDistrib" onclick="setWyckStage('distrib')">Distribution</button>
-        <button type="button" id="wyStMarkdown" onclick="setWyckStage('markdown')">Mark Down</button>
-      </div>
-      <div id="wyckBaseWrap" style="display:none;margin-top:8px">
-        <label style="display:block;margin-bottom:4px">Base (Re-accumulation)</label>
-        <div class="seg" id="wyckBaseSeg">
-          <button type="button" id="wyBase1" onclick="setWyckBase(1)">Base 1</button>
-          <button type="button" id="wyBase2" onclick="setWyckBase(2)">Base 2</button>
-          <button type="button" id="wyBase3" onclick="setWyckBase(3)">Base 3</button>
-          <button type="button" id="wyBase4" onclick="setWyckBase(4)">Base 4</button>
-          <button type="button" id="wyBase5" onclick="setWyckBase(5)">Base 5</button>
-        </div>
-        <div class="hint" id="wyckBaseHint" style="margin-top:5px"></div>
-      </div>
-      <textarea id="wTech" rows="2" readonly placeholder="เลือก Stage เพื่อสร้างโน้ตอัตโนมัติ" style="width:100%;margin-top:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)"></textarea>
+    <div class="f" id="wGGField" style="display:none">
+      <div class="divlbl" style="margin-top:0;padding-top:0;border:none">Growth Gate — SCORE (เต็ม 9)</div>
+      <div class="hint" style="margin-top:-6px;margin-bottom:8px">คะแนนเดียวกับ indicator <b>Growth Gate v8</b> บนชาร์ต · คะแนนนี้ไปกำหนด <b>1R%</b> ของไม้ Sat.A โดยตรง</div>
+      <div id="ggBody"></div>
+      <div class="f"><label>Catalyst ใน 1–3 เดือน <span style="font-weight:400;color:var(--muted)">(งบ · สินค้าใหม่ · งานอีเวนต์ · ผู้บริหารใหม่)</span></label>
+        <textarea id="wCatalyst" rows="2" oninput="ggSetCatalyst(this.value)" placeholder="เช่น งบ Q3 ต้น พ.ย. · GTC มี.ค. · เริ่มส่งมอบ Blackwell Q4" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)"></textarea></div>
     </div>
-    <div class="f"><label id="wFundLabel">Fundamental Reason</label><textarea id="wFund" rows="3" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)"></textarea></div>
-    <div class="hint" id="wEligHint" style="margin-top:-6px;margin-bottom:12px">ต้องมี Technical หรือ Fundamental อย่างน้อย 1 อย่าง ถึงจะเลือก Symbol นี้ตอนเพิ่ม Trade ได้</div>
+    <div class="f"><label id="wFundLabel">Fundamental Reason</label><textarea id="wFund" rows="4" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)"></textarea></div>
+    <div class="hint" id="wEligHint" style="margin-top:-6px;margin-bottom:12px">ต้องมี Fundamental ถึงจะเลือก Symbol นี้ตอนเพิ่ม Trade ได้</div>
     <div class="f" id="wIndustryField"><label>Industry <span style="font-weight:400;color:var(--muted)">(เฉพาะ Core/Sat.A — ใช้ทำ pie chart ที่แท็บ Portfolio Mix)</span></label>
       <div style="display:flex;gap:6px">
         <select id="wIndustry" style="flex:1"><option value="">— ไม่ระบุ —</option></select>
@@ -1345,7 +1333,9 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <div class="hint" style="margin-top:-6px">ระยะหลบนาฬิกา/รอยบากถูกคำนวณอัตโนมัติแล้ว และจะกันที่<b>เฉพาะตอนเลื่อนหน้าจอ</b> ไม่กินช่องว่างตอนอยู่นิ่ง · ช่องนี้ใส่เพิ่มเฉพาะกรณีที่ยังรู้สึกว่าแท็บชิดเกินไปตอนเลื่อน</div>
 
     <div class="divlbl">สำรองข้อมูลลงเครื่อง</div>
-    <div class="hint" style="margin-top:-6px">ดาวน์โหลดข้อมูลทั้งหมด (Trades · Watchlist · Settings · Fund-flow · Checklist) เป็นไฟล์ JSON เก็บไว้ในเครื่อง · ระบบจะสำรองให้อัตโนมัติวันละครั้งหลัง <b>20:00 น.</b> ถ้าวันไหนไม่ได้เปิดแอป จะชดเชยให้ตอนเปิดครั้งถัดไป</div>
+    <div class="hint" style="margin-top:-6px">ดาวน์โหลดข้อมูลทั้งหมด (Trades · Watchlist · Settings · Fund-flow · Checklist) เป็นไฟล์ JSON เก็บไว้ในเครื่อง<br>
+      รอบอัตโนมัติ: <b>เฉพาะบน Mac · ทุกวันอาทิตย์หลัง 20:00 น.</b> สัปดาห์ไหนไม่ได้เปิด จะชดเชยให้ตอนเปิดครั้งถัดไป<br>
+      <b>มือถือ / iPad ไม่มีรอบอัตโนมัติและไม่มีแถบเตือน</b> — ปุ่มด้านล่างยังกดสำรองเองได้ทุกเครื่อง</div>
     <div class="btns" style="justify-content:flex-start;margin-top:8px">
       <button onclick="exportBackupNow(true)">⬇ Export JSON ตอนนี้</button>
     </div>
@@ -1505,7 +1495,7 @@ const DEFAULTS = {
   fxUpdatedAt:null,
   posSize:{core:4,satA:4,satB:15},
   posTier:{threshold:0.625},
-  sizing:{ r:{core:1, satA:1}, cap:{core:12.5, satA:12.5}, ffThrottle:true },
+  sizing:{ r:{core:1, satA:1}, cap:{core:12.5, satA:25}, ffThrottle:true },
   rsBench:'NASDAQ:IXIC',
   /* Sat.B — พื้นระยะขั้นต่ำตอนคำนวณขนาดไม้ (จุด) · 0 = ไม่ใช้ */
   satBVol:{XAUUSD:0, S50:0, BTCUSD:0},
@@ -1605,7 +1595,9 @@ let unsubDoc = null;
 let editId = null;
 let bias = 'Long';
 let curSel = 'THB';
-let posTier = 'std';
+/* ★ 30 ส.ค. 2026 — เดิมเป็น posTier ('2x' = ไม้ base · 'std' = ไม้ต่อ) ตามโครงบันไดไม้
+   ตอนนี้บันไดไม้ถูกยกเลิก เหลือ "Setup" ของไม้เดียว: 'acc' = Acc/Dist · 'pp' = Primary Pivot */
+let tSetup = 'acc';
 let posTierLocked = false;
 let filter = 'all';
 let jFilter = 'all';
@@ -1747,7 +1739,9 @@ function startListening(){
        ทับข้อมูลจริงบน server แบบเงียบๆ แค่เปิดหน้าเว็บดูเฉยๆ (ไม่ต้องแก้อะไร) ก็เกิดได้
        แก้โดยห้าม auto-persist จาก snapshot ที่ยังมาจาก cache (fromCache) — รอ snapshot ที่ยืนยันจาก server จริงก่อนเท่านั้น */
     if(!snap.metadata.fromCache){
-      const a=ensureSatBDefaults(), b=ensureTabsOffsetV2(), c=ensure1RModel(); if(a||b||c) schedulePersist();
+      const a=ensureSatBDefaults(), b=ensureTabsOffsetV2(), c=ensure1RModel(),
+            d2=ensureSatBNoteMerge(), e2=ensureSatACap25();
+      if(a||b||c||d2||e2) schedulePersist();
     }
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('errorScreen').style.display='none';
@@ -1836,6 +1830,8 @@ function resetAll(){
   if(!confirm('ล้างข้อมูลทั้งหมด (Trades + การตั้งค่า) ทุกอุปกรณ์? ทำย้อนกลับไม่ได้')) return;
   state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags()};
   ensureSatBDefaults();
+  ensureSatBNoteMerge();
+  ensureSatACap25();
   document.getElementById('setOverlay').classList.remove('show');
   render();
   schedulePersist();
@@ -1910,24 +1906,28 @@ document.addEventListener('keydown', (e)=>{
 function tradeCur(t){ return t.cur || PORTS[t.port].cur; }
 function tradeSym(t){ return tradeCur(t)==='USD' ? '$' : '฿'; }
 function portCapTHB(k){ return PORTS[k].cur==='USD' ? state.settings.capital[k]*state.settings.fx : state.settings.capital[k]; }
-/* เพดานความเสี่ยงต่อไม้ของแต่ละ port — Core/Sat.A ใช้ 1R · Sat.B ใช้ RPT Risk */
-function szTradeLimit(port){
+/* เพดานความเสี่ยงต่อไม้ของแต่ละ port — Core/Sat.A ใช้ 1R · Sat.B ใช้ RPT Risk
+   ★ Sat.A: 1R มาจากคะแนน Growth Gate ของ symbol นั้น (1.25 / 1.00 / 0.75 / 0.50)
+     ถ้าไม่ได้ส่ง sym มา ใช้เพดานสูงสุด 1.25 เพื่อไม่ให้ขึ้นธง "เกิน %/trade" ผิด ๆ กับไม้คะแนนสูง */
+function szTradeLimit(port, sym){
   const s = state && state.settings; if(!s) return 1;
   if(port==='satB') return (s.posSize && s.posSize.satB) || 2;
+  if(port==='satA'){
+    if(typeof ggScoreOfSym!=='function' || typeof ggRow!=='function') return 1.25;
+    const t = sym ? ggScoreOfSym(sym) : null;
+    return t!=null ? ggRow(t).r : 1.25;
+  }
   const r = s.sizing && s.sizing.r && s.sizing.r[port];
   return (r>0) ? r : ((s.limits && s.limits.trade) || 1);
 }
-/* เพดานถือครองต่อ 1 สัญลักษณ์ = บันไดเต็มไม้ (base 2x + add-on 1x + 1x = Standard × 4)
-   Core/Sat.A ใช้โมเดล 1R · Sat.B ใช้คนละกลไก จึงคงค่าเดิม */
-/* เพดานถือครองต่อสัญลักษณ์ = ไม้เต็มตามสัดส่วนของ port นั้น
-   Core  : cap × (1 + 0.5 × 2)   = cap × 2       (Base 50% + Dip 25% ×2)
-   Sat.A : cap × (1 + 0.4286 × 1) = cap × 1.4286 (Base 70% + Add-on 30%)
-   SZ/szLeg อยู่ใน script block ถัดไป — ใส่ fallback กันลำดับโหลด */
+/* เพดานถือครองต่อ 1 สัญลักษณ์
+   ★ เดิมเป็น "บันไดเต็มไม้" (base + ไม้ต่อ) — บันไดถูกยกเลิกเมื่อ 30 ส.ค. 2026
+     ตอนนี้ไม้เดียวจบ เพดานจึงเท่ากับ Max Cap ของ port นั้นตรง ๆ
+   szBaseCap อยู่ใน script block ถัดไป — ใส่ fallback กันลำดับโหลด */
 function holdLimitPct(port){
   if(port==='satB') return 16;
-  if(typeof SZ==='undefined' || typeof szLeg!=='function' || typeof szBaseCap!=='function') return 17.86;
-  const lg = szLeg(port);
-  return +(szBaseCap(port) * (1 + lg.ratio * lg.maxAdd)).toFixed(2);
+  if(typeof szBaseCap!=='function') return 12.5;
+  return +szBaseCap(port).toFixed(2);
 }
 function portHeatLimit(k){
   const p = state.settings.limits.port;
@@ -2170,16 +2170,16 @@ function render(){
     if(!groupMap.has(key)){ groupMap.set(key, []); groupOrder.push(key); }
     groupMap.get(key).push(t);
   });
-  /* ในแต่ละกลุ่ม ให้ไม้ 2xBase ขึ้นบนสุดก่อนเสมอ */
+  /* ในแต่ละกลุ่ม ให้ไม้ Acc/Dist ขึ้นบนสุดก่อนเสมอ */
   groupMap.forEach(legs=>{
-    legs.sort((a,b)=>(b.posTier==='2x'?1:0)-(a.posTier==='2x'?1:0));
+    legs.sort((a,b)=>(legacySetup(b)==='acc'?1:0)-(legacySetup(a)==='acc'?1:0));
   });
 
   function legRowHtml(t, indent, gcolor, isLast){
     const risk = riskOf(t), rr = rrOf(t);
     const rPctPort = pct(riskTHBOf(t), portCapTHB(t.port));
     const symC = tradeSym(t);
-    const hot = rPctPort > szTradeLimit(t.port);
+    const hot = rPctPort > szTradeLimit(t.port, t.sym);
     const hasSlippage = t.plannedEntry!=null && t.plannedEntry!==t.entry;
     const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
     const cls = [indent?'legrow':'', gcolor?'gbox':'', (gcolor&&isLast)?'gbox-last':''].filter(Boolean).join(' ');
@@ -2250,7 +2250,7 @@ function render(){
     const risk = riskOf(t), rr = rrOf(t);
     const rPctPort = pct(riskTHBOf(t), portCapTHB(t.port));
     const symC = tradeSym(t);
-    const hot = rPctPort > szTradeLimit(t.port);
+    const hot = rPctPort > szTradeLimit(t.port, t.sym);
     const hasSlippage = t.plannedEntry!=null && t.plannedEntry!==t.entry;
     const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
     const rrCls = rr===null?'':rr>=2?'rr-good':rr<1.5?'rr-bad':'';
@@ -2317,7 +2317,7 @@ function render(){
   }).join('') : `<div class="empty">ยังไม่มีรายการ — กด “+ เพิ่ม Trade” เพื่อเริ่ม</div>`;
 
   document.getElementById('foot').textContent =
-    `1R: Core ${szTradeLimit('core')}% · Sat.A ${szTradeLimit('satA')}% · heat/port: Core ${portHeatLimit('core')}% · Sat.A ${portHeatLimit('satA')}% · Sat.B ${portHeatLimit('satB')}% · ${L.total}% total (ฐาน THB @ ${fmt2(fx)}) — sync ผ่าน Firestore`;
+    `1R: Core ${szTradeLimit('core')}% · Sat.A 0.50–1.25% (ตามคะแนน Growth Gate) × Setup (Acc/Dist 1.00 · PP 0.50) · heat/port: Core ${portHeatLimit('core')}% · Sat.A ${portHeatLimit('satA')}% · Sat.B ${portHeatLimit('satB')}% · ${L.total}% total (ฐาน THB @ ${fmt2(fx)}) — sync ผ่าน Firestore`;
 
   renderJournal();
   renderWatchlist();
@@ -2683,6 +2683,112 @@ function normalizeWatchlist(wl){
   }
   return [];
 }
+/* ══════════ Growth Gate v8 — Score /9 → %Risk (Satellite.A) ══════════
+   แทนที่ fundCheck `us_g` (Gate 7 + Score 7 → Tier S/A/B/C) ที่ถูกถอดออกเมื่อ 30 ส.ค. 2026
+   เหตุผลที่เปลี่ยน: Tier เดิมเป็นป้ายเฉย ๆ ไม่ได้ผูกกับขนาดไม้เลย ต้องกรอก 14 ช่องเพื่อได้ตัวอักษร 1 ตัว
+   ของใหม่ตรงกับ indicator ที่ใช้จริงบนชาร์ต: 3 ข้อ (GM · Rev · EPS) ข้อละ 0-3 = /9
+   แล้วคะแนนไป "คุมความเสี่ยงต่อไม้" ไม่ใช่คุมเงิน → โดน stop แล้วขาดทุนเท่ากันทุกไม้
+   ไม่ว่าหุ้นจะเหวี่ยงแค่ไหน เพราะจำนวนหุ้นถูกหารด้วยระยะ stop อีกที
+   ⚠ ตัวเลือกของแต่ละข้อเรียง 3 → 0 (index 0 = 3 แต้ม) ให้ตรงกับสไตล์เดิมของ fundCheck */
+const GG_ITEMS = [
+  {id:'gm',  label:'s1 · Gross Margin',
+   opts:['≥50% หรือ ≥35% และขยาย ≥1.5pp YoY','≥35%','≥25%','&lt;25%']},
+  {id:'rev', label:'s2 · Revenue Growth (TTM YoY)',
+   opts:['≥40% และเร่งขึ้น 3 ไตรมาสติด','≥40% หรือ (≥20% และเร่ง 3Q)','≥20%','&lt;20% — หรือชะลอ 3Q ติด ให้ลด 1 ขั้น']},
+  {id:'eps', label:'s3 · EPS Growth (TTM YoY)',
+   opts:['≥50%','≥25% หรือ พลิกจากขาดทุนเป็นกำไร','≥10%','&lt;10% — หรือชะลอ 3Q ติด ให้ลด 1 ขั้น']}
+];
+const GG_MAX = 9;
+/* คะแนน → 1R% (ก่อนคูณ Setup และก่อนโดนเพดาน Fund-flow ย่อ) */
+const GG_R = [
+  {min:8, r:1.25, tag:'เต็มไม้'},
+  {min:6, r:1.00, tag:'ปกติ'},
+  {min:4, r:0.75, tag:'ครึ่งไม้'},
+  {min:0, r:0.50, tag:'Starter'}
+];
+function ggRow(total){ return GG_R.find(x=>(total||0) >= x.min) || GG_R[GG_R.length-1]; }
+function ggTotal(gg){
+  if(!gg) return 0;
+  return GG_ITEMS.reduce((a,it)=>a + (gg[it.id]!=null ? Number(gg[it.id])||0 : 0), 0);
+}
+function ggDone(gg){ return !!gg && GG_ITEMS.every(it=>gg[it.id]!=null); }
+/* หาคะแนน Growth Gate ของ symbol ใน Watchlist Sat.A — null ถ้ายังไม่ได้ให้คะแนนครบ */
+function ggScoreOfSym(sym){
+  if(!state || !Array.isArray(state.watchlist) || !sym) return null;
+  const S = String(sym).toUpperCase();
+  const w = state.watchlist.find(x=>x.port==='satA' && String(x.sym||'').toUpperCase()===S);
+  return (w && ggDone(w.gg)) ? ggTotal(w.gg) : null;
+}
+
+/* ══════════ Setup ของไม้ — แทนโครง Base/Add-on เดิม ══════════
+   30 ส.ค. 2026: เลิกใช้บันไดไม้ (Sat.A 70/30 · Core 50/25×2) — ทุกไม้เป็น "ไม้เดียว"
+   Setup คุมตัวคูณความเสี่ยง: Acc/Dist เข้าเต็ม · PP เข้าครึ่ง (จุดเข้าแคบ ยังไม่ยืนยันโครงสร้าง) */
+const SETUPS = {
+  acc: {key:'acc', label:'Acc/Dist', factor:1.00, hint:'สะสม / กระจาย — โครงสร้างยืนยันแล้ว เข้าเต็มความเสี่ยง'},
+  pp:  {key:'pp',  label:'PP',       factor:0.50, hint:'Primary Pivot — จุดเข้าแคบ ยังไม่ยืนยัน เข้าครึ่งความเสี่ยง'}
+};
+function setupCfg(k){ return SETUPS[k] || SETUPS.acc; }
+function setupFactor(k){ return setupCfg(k).factor; }
+
+/* ---- ฟอร์มให้คะแนนใน Watchlist modal ---- */
+let ggState = {gm:null, rev:null, eps:null, catalyst:''};
+function ggReset(){ ggState = {gm:null, rev:null, eps:null, catalyst:''}; }
+function ggLoad(gg){
+  ggState = {
+    gm:  gg && gg.gm!=null  ? Number(gg.gm)  : null,
+    rev: gg && gg.rev!=null ? Number(gg.rev) : null,
+    eps: gg && gg.eps!=null ? Number(gg.eps) : null,
+    catalyst: (gg && gg.catalyst) || ''
+  };
+}
+function ggCollect(){
+  const done = ggDone(ggState);
+  return {
+    gm: ggState.gm, rev: ggState.rev, eps: ggState.eps,
+    total: ggTotal(ggState),
+    catalyst: (ggState.catalyst||'').trim(),
+    checkedAt: done ? new Date().toISOString().slice(0,10) : null
+  };
+}
+/* รับคะแนนจาก JSON ที่ Claude ส่งมา — บังคับให้อยู่ในช่วง 0-3 หรือ null เท่านั้น
+   ถ้าปล่อยค่าแปลก ๆ เข้าไป ggTotal จะได้ผลรวมเพี้ยนแล้วไปคุมขนาดไม้ผิดโดยไม่มีอะไรเตือน */
+function ggNormalizeImport(raw){
+  const clamp = v => {
+    if(v===null || v===undefined || v==='') return null;
+    const n = Math.round(Number(v));
+    return (isNaN(n) || n<0 || n>3) ? null : n;
+  };
+  const g = {gm: clamp(raw.gm), rev: clamp(raw.rev), eps: clamp(raw.eps),
+             catalyst: String(raw.catalyst||'').trim(), checkedAt: null};
+  g.total = ggTotal(g);
+  g.checkedAt = ggDone(g) ? new Date().toISOString().slice(0,10) : null;
+  return g;
+}
+function ggSet(id, v){ ggState[id] = v; renderGGForm(); }
+function ggSetCatalyst(v){ ggState.catalyst = v; }
+function renderGGForm(){
+  const host = document.getElementById('ggBody');
+  if(!host) return;
+  let html = '';
+  GG_ITEMS.forEach(it=>{
+    const cur = ggState[it.id];
+    const pend = (cur==null) ? ' <span class="tag" style="background:var(--amber);color:#111;font-size:.6rem;padding:0 4px;font-weight:700">รอให้คะแนน</span>' : '';
+    html += `<div class="f"><label>${it.label}${pend}</label><div class="seg">${
+      it.opts.map((o,i)=>{
+        const v = 3-i;
+        return `<button type="button" class="${cur===v?'on-cur':''}" onclick="ggSet('${it.id}',${v})">${v} · ${o}</button>`;
+      }).join('')}</div></div>`;
+  });
+  const total = ggTotal(ggState), done = ggDone(ggState), row = ggRow(total);
+  const clr = total>=8?'var(--teal)':total>=6?'var(--blue)':total>=4?'var(--amber)':'var(--muted)';
+  html += `<div class="hint" style="margin:4px 0 12px">รวม <b style="color:${clr}">${total}/${GG_MAX}</b>`
+        + (done ? ` — <b style="color:${clr}">1R = ${row.r.toFixed(2)}%</b> (${row.tag}) · Acc/Dist ${(row.r).toFixed(2)}% · PP ${(row.r/2).toFixed(3).replace(/0$/,'')}%`
+                : ` <span style="color:var(--amber);font-weight:700">⚠ ยังให้คะแนนไม่ครบ — ระบบจะคิดไม้เป็น Starter 0.50% จนกว่าจะครบ</span>`)
+        + `</div>`;
+  host.innerHTML = html;
+  const cat = document.getElementById('wCatalyst');
+  if(cat && cat.value !== (ggState.catalyst||'')) cat.value = ggState.catalyst||'';
+}
 const SATB_DEFAULT_SYMBOLS = ['S50','XAUUSD','BTCUSD'];
 /* ย้ายความหมายของ tabsOffset: เดิมเป็น padding ตายตัว (ต้องตั้งเองให้พ้นนาฬิกา)
    ตอนนี้ safe-area ถูกจัดการอัตโนมัติแล้ว ค่านี้เหลือเป็นตัวปรับละเอียด — รีเซ็ตเป็น 0 ครั้งเดียว */
@@ -2698,7 +2804,7 @@ function ensure1RModel(){
     r:{   core: (old.r&&old.r.core>0)?old.r.core:1,
           satA: (old.r&&old.r.satA>0)?old.r.satA:1 },
     cap:{ core: (old.cap&&old.cap.core>0)?old.cap.core:((s.posTier&&s.posTier.baseCap)||12.5),
-          satA: (old.cap&&old.cap.satA>0)?old.cap.satA:((s.posTier&&s.posTier.baseCap)||12.5) },
+          satA: (old.cap&&old.cap.satA>0)?old.cap.satA:25 },   /* Sat.A default 25% ตั้งแต่ 30 ส.ค. 2026 */
     ffThrottle: old.ffThrottle!=null ? old.ffThrottle : true
   };
   s.sz1Rv2 = true;
@@ -2711,6 +2817,47 @@ function ensureTabsOffsetV2(){
   state.tabsOffsetV2 = true;
   return true;
 }
+/* ★ 30 ส.ค. 2026 — Sat.B ควบ Technical + Sentiment เป็น "Note" เดียว และเลิกใช้ Wyckoff
+   ข้อมูลเก่าต้องไม่หาย: แปลง wyckoff object -> ข้อความ แล้วต่อหน้า Sentiment เดิม
+   ทำครั้งเดียว มีธง satBNoteV1 กันรันซ้ำ (ไม่งั้นข้อความจะถูกต่อทบทุกครั้งที่เปิดแอป) */
+const WYCK_LEGACY = {accum:'Stage 1 - Accumulation', markup:'Stage 2 - Mark Up',
+                     distrib:'Stage 3 - Distribution', markdown:'Stage 4 - Mark Down'};
+function ensureSatBNoteMerge(){
+  if(!state) return false;
+  if(state.satBNoteV1) return false;
+  if(!Array.isArray(state.watchlist)) state.watchlist = [];
+  state.watchlist.forEach(w=>{
+    if(w.port!=='satB') return;
+    /* ข้อความใน technical คือโน้ตที่ระบบ generate จาก Wyckoff ไว้แล้วและ "ยาวกว่า" (มีวลีความเสี่ยง/เฟส)
+       จึงใช้ของเดิมก่อนเสมอ — สร้างใหม่จาก object เฉพาะกรณีที่ technical ว่าง (ไม้เก่ามาก) */
+    let tech = (w.technical||'').trim();
+    if(!tech && w.wyckoff && WYCK_LEGACY[w.wyckoff.stage]){
+      tech = WYCK_LEGACY[w.wyckoff.stage] + (w.wyckoff.base ? ' : Base#' + w.wyckoff.base : '');
+    }
+    const sent = (w.fundamental||'').trim();
+    w.fundamental = [tech, sent].filter(Boolean).join('\n');
+    w.technical = '';
+    w.wyckoff = null;
+  });
+  state.satBNoteV1 = true;
+  return true;
+}
+/* ★ 30 ส.ค. 2026 — Sat.A Max Cap 12.5% -> 25%
+   เหตุผล: 1R ของ Sat.A ขึ้นเป็นสูงสุด 1.25% ตามคะแนน Growth Gate แล้ว
+   เพดาน 12.5% จะเริ่มกัดตั้งแต่ stop < 10% ซึ่งกินไม้คะแนนดีเกือบทุกตัว
+   (gate ADR >= 4% ทำให้ stop จริงตกราว 4-8%) พอชนเพดาน ทุกไม้จะได้ขนาดเท่ากันหมด
+   = การปรับขนาดตามคะแนนหยุดทำงาน  ตั้ง 25% ให้เพดานกัดเฉพาะตอน stop แคบผิดปกติ (< 5%)
+   ต้อง migrate ค่าที่เคยเซฟไว้ด้วย ไม่งั้นค่าเดิม 12.5% ใน Firestore จะทับ default ตัวใหม่ */
+function ensureSatACap25(){
+  if(!state || !state.settings) return false;
+  const s = state.settings;
+  if(s.szCapSatA25) return false;
+  s.sizing = s.sizing || {};
+  s.sizing.cap = s.sizing.cap || {};
+  if(!(s.sizing.cap.satA > 12.5)) s.sizing.cap.satA = 25;   /* เคารพค่าที่ตั้งเองไว้สูงกว่านี้แล้ว */
+  s.szCapSatA25 = true;
+  return true;
+}
 function ensureSatBDefaults(){
   if(!state) return false;
   if(!Array.isArray(state.watchlist)) state.watchlist = [];
@@ -2721,7 +2868,7 @@ function ensureSatBDefaults(){
       state.watchlist.push({
         id: 'w'+Date.now()+Math.random().toString(36).slice(2,7),
         date: new Date().toISOString().slice(0,10),
-        sym, port:'satB', bias:'Unclear',
+        sym, port:'satB', bias:'Unclear',   /* แสดงผลเป็น Ranging */
         technical:'', fundamental:'', industry:'', link:'', order:i
       });
       changed = true;
@@ -2732,15 +2879,20 @@ function ensureSatBDefaults(){
 function watchEligible(w){
   return !!((w.technical && w.technical.trim()) || (w.fundamental && w.fundamental.trim()));
 }
+/* ★ เดิม Sat.B ที่ Trend = Unclear จะเลือกเข้า Trade ไม่ได้
+   ตอนนี้ Unclear ถูกนิยามใหม่เป็น "Ranging" = สภาวะตลาดแบบหนึ่งที่เทรดได้ (เล่นในกรอบ)
+   จึงไม่บล็อกอีกต่อไป — เหลือเงื่อนไขเดียวคือต้องมี Note */
 function watchEligibleForTrade(w){
-  return watchEligible(w) && !(w.port==='satB' && w.bias==='Unclear');
+  return watchEligible(w);
 }
 function biasTagClass(bias){
   return bias==='Long' ? 'long' : bias==='Short' ? 'short' : 'unclear';
 }
-/* Watchlist Sat.B stores Trend internally as Long/Short/Unclear; display as Bullish/Bearish/Unclear */
+/* Watchlist Sat.B เก็บ Trend ภายในเป็น Long/Short/Unclear — แสดงผลเป็น Bullish/Bearish/Ranging
+   ★ ค่าใน DB คงเป็น 'Unclear' เหมือนเดิม (ไม่ต้อง migrate) เปลี่ยนแค่คำที่แสดง
+     ความหมายใหม่: Ranging = ไม่มีเทรนด์หลัก ไม่ใช่ "ยังดูไม่ออก" — และเทรดได้ */
 function trendWord(bias){
-  return bias==='Long' ? 'Bullish' : bias==='Short' ? 'Bearish' : 'Unclear';
+  return bias==='Long' ? 'Bullish' : bias==='Short' ? 'Bearish' : 'Ranging';
 }
 const PIE_COLORS = ['#3467C7','#0E9C86','#EAC13A','#D64545','#8E5FD1','#E6873C','#4FA8D8','#B85C9E','#6FBF73','#C9A227','#5B7DB1','#D48CB0'];
 const CASH_COLOR = '#B7BEC9';
@@ -2840,7 +2992,7 @@ function renderWatchlist(){
           <table class="wltable">
             <thead><tr>
               <th class="dragCol"></th>
-              <th style="width:88px">Date</th><th style="width:${k==='satB'?'90px':'84px'}">Symbol</th>${k==='satB'?'<th style="width:70px">Trend</th>':''}${k==='satB'?'<th style="width:28%">Technical</th>':''}${scored?'<th style="width:96px">Industry</th>':''}<th>${k==='satB'?'Sentiment':(k==='core'?'Business':'Fundamental')}</th>${scored?'<th style="width:1%;padding-left:2px;padding-right:2px"></th><th style="width:64px">Score</th>':''}<th style="width:32px"></th><th style="width:64px"></th>
+              <th style="width:88px">Date</th><th style="width:${k==='satB'?'90px':'84px'}">Symbol</th>${k==='satB'?'<th style="width:78px">Trend</th>':''}${scored?'<th style="width:96px">Industry</th>':''}<th>${k==='satB'?'Note':(k==='core'?'Business':'Fundamental')}</th>${scored?'<th style="width:1%;padding-left:2px;padding-right:2px"></th><th style="width:64px">Score</th>':''}<th style="width:32px"></th><th style="width:64px"></th>
             </tr></thead>
             <tbody id="wlBody_${k}"></tbody>
           </table>
@@ -2877,6 +3029,13 @@ function renderWatchPort(port){
   const dragOn = mode==='manual';
 
   function scoreBadge(w){
+    /* Sat.A — Growth Gate /9 พร้อม 1R% ที่คะแนนนั้นให้ (ตัวเลขที่เอาไปคิดขนาดไม้จริง) */
+    if(port==='satA'){
+      if(!ggDone(w.gg)) return `<span class="hint" style="margin:0;color:var(--amber)">ยังไม่ให้คะแนน</span>`;
+      const t = ggTotal(w.gg), row = ggRow(t);
+      const bg = t>=8?'var(--teal)':t>=6?'var(--blue)':t>=4?'var(--amber)':'var(--muted)';
+      return `<span class="tag" style="background:${bg};color:#fff;font-weight:700">${t}/${GG_MAX}</span> <span class="hint" style="margin:0">1R ${row.r.toFixed(2)}%</span>`;
+    }
     if(w.fundCheck && w.fundCheck.tier){
       const fc = w.fundCheck;
       return `<span class="tag" style="background:${fundTierColor(fc.tier)};color:#fff;font-weight:700">${fc.tier}</span> <span class="hint" style="margin:0">${fc.total||0}/${fundScoreMax(fc.type)}</span>`;
@@ -2899,24 +3058,27 @@ function renderWatchPort(port){
     return `<div><div class="wlnote" style="max-width:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${biz?escHtml(biz):'<span class="placeholder">—</span>'}</div>${meta}</div>`;
   }
   function fundExpandIcon(w){
+    if(port==='satA'){
+      const cat = (w.gg && w.gg.catalyst || '').trim();
+      if(!cat) return `<span class="hint" style="margin:0;color:var(--amber)" title="ยังไม่ได้ระบุ Catalyst 1-3 เดือน">⚡</span>`;
+      return `<span class="hint" style="margin:0;color:var(--teal);cursor:help" title="Catalyst 1-3 เดือน: ${escHtml(cat)}">⚡</span>`;
+    }
     if(!w.fundCheck) return '';
     return `<button class="small ghost" style="padding:2px 4px" onclick="openFundDetail('${w.id}')" title="ดูรายละเอียด Fundamental Checklist">⤢</button>`;
   }
   function noteTd(w, field){
     const val = w[field]||'';
+    /* Core ที่ทำ Fundamental Checklist มาแล้ว — โชว์สรุปจาก checklist แทน (แก้ inline ไม่ได้) */
     if(field==='fundamental' && w.fundCheck) return `<td>${fundBizText(w)}</td>`;
-    if(field==='technical' && port==='satB' && w.wyckoff) return `<td class="wlnote">${wyckTechHtml(w)}</td>`;
-    if(!scored) return `<td class="wlnote">${escHtml(val)||'—'}</td>`;
     return `<td class="wlnote${val?'':' placeholder'}" contenteditable="true" data-wid="${w.id}" data-field="${field}" onfocus="clearPlaceholder(this)" onblur="saveInlineField(this)">${escHtml(val)||'เพิ่มข้อความ…'}</td>`;
   }
   function noteInline(w, field, label){
     const val = w[field]||'';
     if(field==='fundamental' && w.fundCheck) return `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> ${fundBizText(w)}</div>`;
-    if(field==='technical' && port==='satB' && w.wyckoff) return `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> ${wyckTechHtml(w)}</div>`;
-    if(!scored) return val ? `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> ${escHtml(val)}</div>` : '';
     return `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> <span class="wlnote${val?'':' placeholder'}" contenteditable="true" data-wid="${w.id}" data-field="${field}" onfocus="clearPlaceholder(this)" onblur="saveInlineField(this)">${escHtml(val)||'เพิ่มข้อความ…'}</span></div>`;
   }
-  function editBtnAction(w){ return w.fundCheck ? `openFundEdit('${w.id}')` : `editWatch('${w.id}')`; }
+  /* Sat.A ไม่ใช้ Fundamental Checklist แล้ว — ให้แก้ในฟอร์ม Watchlist ที่มีช่องให้คะแนน Growth Gate */
+  function editBtnAction(w){ return (w.fundCheck && port!=='satA') ? `openFundEdit('${w.id}')` : `editWatch('${w.id}')`; }
 
   document.getElementById(`wlBody_${port}`).innerHTML = list.map(w=>{
     const eligible = watchEligible(w);
@@ -2925,7 +3087,6 @@ function renderWatchPort(port){
       <td>${w.date||'—'}</td>
       <td style="font-weight:600">${escHtml(w.sym)}${eligible?'':' <span class="hint" style="display:inline;color:var(--amber)">⚠ ยังไม่ครบเงื่อนไข</span>'}</td>
       ${port==='satB'?`<td class="sans">${w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:'—'}</td>`:''}
-      ${port==='satB'?noteTd(w,'technical'):''}
       ${scored?`<td class="sans industryCell" style="color:var(--muted)"${w.industry?` title="${escHtml(w.industry)}"`:''}>${w.industry?`<span class="indTxt">${ICON_INDUSTRY_MINI} ${escHtml(industryShort(w.industry))}</span>`:'—'}</td>`:''}
       ${noteTd(w,'fundamental')}
       ${scored?`<td class="sans" style="padding-left:2px;padding-right:2px;text-align:center">${fundExpandIcon(w)}</td><td class="sans">${scoreBadge(w)}</td>`:''}
@@ -2941,10 +3102,10 @@ function renderWatchPort(port){
     const eligible = watchEligible(w);
     return `<div class="tcard" data-wid="${w.id}" style="${eligible?'':'opacity:.6'}">
       <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:''} ${w.industry?`<span class="hint" style="display:inline;color:var(--muted)" title="${escHtml(w.industry)}"><svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.8"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.8" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.4"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="2"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="3" stroke-linecap="round"/></svg> ${escHtml(industryShort(w.industry))}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
-      ${!eligible?`<div class="hint" style="color:var(--amber)">⚠ ${port==='satB'?'ต้องมี Technical หรือ Sentiment อย่างน้อย 1 อย่าง':`ต้องมี ${port==='core'?'Business':'Fundamental'}`}</div>`:''}
-      ${port==='satB'?noteInline(w,'technical','Technical'):''}
-      ${noteInline(w,'fundamental',port==='satB'?'Sentiment':(port==='core'?'Business':'Fundamental'))}
+      ${!eligible?`<div class="hint" style="color:var(--amber)">⚠ ต้องมี ${port==='satB'?'Note':(port==='core'?'Business':'Fundamental')}</div>`:''}
+      ${noteInline(w,'fundamental',port==='satB'?'Note':(port==='core'?'Business':'Fundamental'))}
       ${scored?`<div style="margin-top:2px;margin-bottom:6px;display:flex;align-items:center;gap:4px">${scoreBadge(w)}${fundExpandIcon(w)}</div>`:''}
+      ${port==='satA'?`<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>Catalyst 1-3 เดือน:</b> ${(w.gg&&w.gg.catalyst||'').trim()?escHtml(w.gg.catalyst):'<span class="placeholder">ยังไม่ได้ระบุ</span>'}</div>`:''}
       <div class="foot"><div></div><div class="rowbtns">
         <button class="small" onclick="${editBtnAction(w)}">แก้ไข</button>
         <button class="small danger" onclick="delWatch('${w.id}')">ลบ</button>
@@ -3102,98 +3263,14 @@ function toggleWBiasField(){
   const isSwing = port === 'satB';
   document.getElementById('wBiasField').style.display = isSwing ? '' : 'none';
   document.getElementById('wIndustryField').style.display = isSwing ? 'none' : '';
-  document.getElementById('wTechField').style.display = isSwing ? '' : 'none';
-  const word = isSwing ? 'Sentiment' : 'Fundamental';
-  document.getElementById('wFundLabel').textContent = word + ' Reason';
+  /* ★ Sat.A ใช้ Growth Gate score (บล็อก #wGGField) · Core ใช้ Fundamental Checklist แยกต่างหาก */
+  const ggf = document.getElementById('wGGField');
+  if(ggf) ggf.style.display = (port==='satA') ? '' : 'none';
+  document.getElementById('wFundLabel').textContent = isSwing ? 'Note — Technical / Sentiment' : 'Fundamental Reason';
   document.getElementById('wEligHint').textContent = isSwing
-    ? `ต้องมี Technical หรือ ${word} อย่างน้อย 1 อย่าง ถึงจะเลือก Symbol นี้ตอนเพิ่ม Trade ได้`
-    : `ต้องมี ${word} ถึงจะเลือก Symbol นี้ตอนเพิ่ม Trade ได้`;
+    ? 'ต้องมี Note ถึงจะเลือก Symbol นี้ตอนเพิ่ม Trade ได้'
+    : 'ต้องมี Fundamental ถึงจะเลือก Symbol นี้ตอนเพิ่ม Trade ได้';
   if(!isSwing) populateIndustrySelect();
-}
-/* ===== Wyckoff Stage checklist (Sat.B Technical) ===== */
-const WYCKOFF_STAGES = {
-  accum:    {n:1, name:'Accumulation', cls:'on-accum',    hasBase:false, bias:null},
-  markup:   {n:2, name:'Mark Up',      cls:'on-markup',   hasBase:true,  bias:'Long'},
-  distrib:  {n:3, name:'Distribution', cls:'on-distrib',  hasBase:false, bias:null},
-  markdown: {n:4, name:'Mark Down',    cls:'on-markdown', hasBase:true,  bias:'Short'}
-};
-let wWyckStage = null, wWyckBase = null;
-function wyckBaseInfo(b){
-  if(b<=2) return {phase:'ต้น Trend', risk:'ต่ำ', riskCls:'on-risklow', clr:'--green', detail:'ปลอดภัยที่สุด — รายใหญ่ยังดึงของกลับ โครงสร้างแน่นตึง'};
-  if(b===3) return {phase:'กลาง Trend', risk:'ปานกลาง', riskCls:'on-riskmed', clr:'--amber', detail:'เทรนด์ชัดในสายตารายย่อย ราคาเริ่มวิ่งชัน — ยังเทรดได้ แต่ต้องรัดกุม'};
-  return {phase:'ปลาย Trend', risk:'สูงมาก', riskCls:'on-riskhigh', clr:'--red', detail:'Late Stage / Climax Run — เสี่ยง False Breakout จุดเริ่ม Distribution'};
-}
-function wyckNote(){
-  if(!wWyckStage) return '';
-  const s = WYCKOFF_STAGES[wWyckStage];
-  let note = `Stage ${s.n} - ${s.name}`;
-  if(s.hasBase && wWyckBase){
-    const bi = wyckBaseInfo(wWyckBase);
-    note += ` : Base#${wWyckBase} ${bi.phase} - ความเสี่ยง${bi.risk}`;
-  }
-  return note;
-}
-function setWyckStage(k){
-  wWyckStage = k;
-  if(!WYCKOFF_STAGES[k].hasBase) wWyckBase = null;
-  renderWyckUI();
-}
-function setWyckBase(b){ wWyckBase = b; renderWyckUI(); }
-function wyckStageColor(stage){ return ({accum:'--purple',markup:'--green',distrib:'--amber',markdown:'--red'})[stage] || '--text'; }
-function wyckTechHtml(w){
-  const wy = w.wyckoff;
-  if(!wy || !WYCKOFF_STAGES[wy.stage]) return escHtml(w.technical||'') || '—';
-  const s = WYCKOFF_STAGES[wy.stage];
-  let html = `Stage ${s.n} - <b style="color:var(${wyckStageColor(wy.stage)})">${s.name}</b>`;
-  if(s.hasBase && wy.base){
-    const bi = wyckBaseInfo(wy.base);
-    html += ` : <b style="color:var(${bi.clr})">Base#${wy.base}</b> ${bi.phase} - <b style="color:var(${bi.clr})">ความเสี่ยง${bi.risk}</b>`;
-  }
-  return html;
-}
-function renderWyckUI(){
-  Object.entries(WYCKOFF_STAGES).forEach(([k,s])=>{
-    const btn = document.getElementById('wySt'+k.charAt(0).toUpperCase()+k.slice(1));
-    if(btn) btn.className = (wWyckStage===k) ? s.cls : '';
-  });
-  const stage = wWyckStage ? WYCKOFF_STAGES[wWyckStage] : null;
-  const wrap = document.getElementById('wyckBaseWrap');
-  if(wrap) wrap.style.display = (stage && stage.hasBase) ? '' : 'none';
-  for(let b=1;b<=5;b++){
-    const btn = document.getElementById('wyBase'+b);
-    if(btn) btn.className = (wWyckBase===b) ? wyckBaseInfo(b).riskCls : '';
-  }
-  const hint = document.getElementById('wyckBaseHint');
-  if(hint){
-    if(stage && stage.hasBase && wWyckBase){
-      const bi = wyckBaseInfo(wWyckBase);
-      hint.innerHTML = `Base#${wWyckBase} · ${bi.phase} · <b style="color:var(${bi.clr})">ความเสี่ยง${bi.risk}</b> — ${bi.detail}`;
-    } else if(stage && stage.hasBase){
-      hint.textContent = 'เลือก Base (1–5)';
-    } else hint.textContent = '';
-  }
-  const tech = document.getElementById('wTech');
-  if(tech && wWyckStage) tech.value = wyckNote();
-  applyWyckBiasConstraint();
-}
-function applyWyckBiasConstraint(){
-  const stage = wWyckStage ? WYCKOFF_STAGES[wWyckStage] : null;
-  const forced = stage ? stage.bias : null;
-  const longBtn = document.getElementById('wbLong');
-  const shortBtn = document.getElementById('wbShort');
-  const unclearBtn = document.getElementById('wbUnclear');
-  if(!longBtn || !shortBtn || !unclearBtn) return;
-  const lock = (btn, msg)=>{ btn.disabled=true; btn.style.opacity='.35'; btn.style.cursor='not-allowed'; btn.title=msg; };
-  [longBtn,shortBtn,unclearBtn].forEach(b=>{ b.disabled=false; b.style.opacity=''; b.style.cursor=''; b.title=''; });
-  if(forced==='Long'){
-    if(wBias!=='Long') setWBias('Long');
-    lock(shortBtn,'Mark Up = ขาขึ้น Trend ต้องเป็น Bullish');
-    lock(unclearBtn,'Mark Up ต้องระบุ Trend = Bullish');
-  } else if(forced==='Short'){
-    if(wBias!=='Short') setWBias('Short');
-    lock(longBtn,'Mark Down = ขาลง Trend ต้องเป็น Bearish');
-    lock(unclearBtn,'Mark Down ต้องระบุ Trend = Bearish');
-  }
 }
 function populateIndustrySelect(selected){
   populateIndustrySelectInto('wIndustry', selected);
@@ -3353,11 +3430,20 @@ function importChecklistJSON(){
     if(d.industry) ensureIndustryExists(String(d.industry).trim());
     const existing = state.watchlist.find(w => w.sym===sym && w.port===port);
     if(existing){
-      existing.fundamental = fundamental || existing.fundamental;
-      if(d.technical!=null) existing.technical = String(d.technical);
+      if(port==='satB'){
+        /* Sat.B ไม่มีช่อง Technical แยกแล้ว — ต่อเข้า Note เดียวกัน */
+        const inc = [String(d.technical||'').trim(), fundamental].filter(Boolean).join('\n');
+        if(inc) existing.fundamental = inc;
+      } else {
+        existing.fundamental = fundamental || existing.fundamental;
+        if(d.technical!=null) existing.technical = String(d.technical);
+      }
       if(d.industry!=null) existing.industry = String(d.industry);
       if(d.link!=null) existing.link = String(d.link);
-      if(typeof d.score==='number') existing.score = Number(d.score) || 0;
+      if(port==='satA' && d.gg && typeof d.gg==='object'){
+        const g = ggNormalizeImport(d.gg);
+        existing.gg = g; existing.score = ggTotal(g);
+      } else if(typeof d.score==='number') existing.score = Number(d.score) || 0;
       if(d.date) existing.date = String(d.date);
       updated++;
     } else {
@@ -3368,13 +3454,15 @@ function importChecklistJSON(){
         date: d.date || today,
         sym, port,
         bias: d.bias || null,
-        technical: (d.technical || '').toString(),
-        wyckoff: null,
+        technical: '',
         fundamental,
         industry: (d.industry || '').toString(),
         link: (d.link || '').toString(),
         order: nextOrder,
-        score: (typeof d.score==='number' ? (Number(d.score)||0) : 0)
+        gg: (port==='satA' && d.gg && typeof d.gg==='object') ? ggNormalizeImport(d.gg) : null,
+        score: (port==='satA' && d.gg && typeof d.gg==='object')
+                 ? ggTotal(ggNormalizeImport(d.gg))
+                 : (typeof d.score==='number' ? (Number(d.score)||0) : 0)
       });
       added++;
     }
@@ -3391,14 +3479,21 @@ function openWatch(port){
   document.getElementById('wDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('wSym').value = '';
   document.getElementById('wPort').value = port || 'core';
-  document.getElementById('wTech').value = '';
   document.getElementById('wFund').value = '';
   document.getElementById('wLink').value = '';
-  wWyckStage = null; wWyckBase = null;
+  ggReset();
   setWBias('Long');
   toggleWBiasField();
-  renderWyckUI();
+  renderGGForm();
   document.getElementById('watchOverlay').classList.add('show');
+}
+/* เปิดฟอร์ม Watchlist พร้อมเติม port + symbol ให้ (ใช้จากตาราง "หุ้นที่สนใจ") */
+function openWatchFor(port, sym){
+  openWatch(port);
+  const el = document.getElementById('wSym');
+  if(el) el.value = String(sym||'').toUpperCase();
+  toggleWBiasField();
+  renderGGForm();
 }
 function editWatch(id){
   const w = state.watchlist.find(x=>x.id===id); if(!w) return;
@@ -3407,14 +3502,12 @@ function editWatch(id){
   document.getElementById('wDate').value = w.date||'';
   document.getElementById('wSym').value = w.sym||'';
   document.getElementById('wPort').value = w.port||'core';
-  document.getElementById('wTech').value = w.technical||'';
   document.getElementById('wFund').value = w.fundamental||'';
   document.getElementById('wLink').value = w.link||'';
-  wWyckStage = w.wyckoff ? w.wyckoff.stage : null;
-  wWyckBase = w.wyckoff ? w.wyckoff.base : null;
+  ggLoad(w.gg);
   setWBias(w.bias || 'Long');
   toggleWBiasField();
-  renderWyckUI();
+  renderGGForm();
   populateIndustrySelect(w.industry||'');
   document.getElementById('watchOverlay').classList.add('show');
 }
@@ -3437,13 +3530,15 @@ function saveWatch(){
     sym,
     port,
     bias: port==='satB' ? wBias : null,
-    technical: document.getElementById('wTech').value.trim(),
-    wyckoff: (port==='satB' && wWyckStage) ? {stage:wWyckStage, base:wWyckBase} : null,
+    /* ★ Sat.B ควบ Technical + Sentiment เป็น Note เดียว เก็บใน field `fundamental`
+       (ไม่สร้าง field ใหม่ — ข้อมูลเก่าถูกรวมให้แล้วโดย ensureSatBNoteMerge) */
+    technical: '',
     fundamental: document.getElementById('wFund').value.trim(),
     industry: port==='satB' ? '' : document.getElementById('wIndustry').value.trim(),
     link: document.getElementById('wLink').value.trim(),
     order: prevEntry && prevEntry.order!=null ? prevEntry.order : nextOrder,
-    score: prevEntry ? (prevEntry.score||0) : 0
+    gg: port==='satA' ? ggCollect() : null,
+    score: port==='satA' ? ggTotal(ggCollect()) : (prevEntry ? (prevEntry.score||0) : 0)
   };
   if(!Array.isArray(state.watchlist)) state.watchlist = [];
   if(watchEditId){
@@ -3753,7 +3848,9 @@ function applySymbolWatchLink(sym){
   return w;
 }
 /* ================= pre-trade system checklist ================= */
-let clState = {sym:'', port:null, bias:null, tier:'std', subtype:null, trend:null, checks:{}};
+/* ★ tier ('2x'/'std') ถูกแทนด้วย setup ('acc'/'pp') เมื่อ 30 ส.ค. 2026 พร้อมกับการยกเลิกบันไดไม้
+   การ map: Base (2x) -> Acc/Dist · ไม้ต่อ (std) -> PP — เกณฑ์ในแต่ละช่องคงเดิมทุกข้อ เปลี่ยนแค่ชื่อ */
+let clState = {sym:'', port:null, bias:null, setup:'acc', subtype:null, checks:{}};
 let editingDraftId = null;
 function clItem(id, label){
   const checked = !!clState.checks[id];
@@ -3763,15 +3860,19 @@ function clItem(id, label){
   </label>`;
 }
 function clSetCheck(id, val){ clState.checks[id]=val; renderChecklistBody(); updateChecklistUI(); }
-/* Sat.A → Base / Add-on   ·   Core → Base / Dip (Dip เข้าก่อน base ได้) */
-function clLegLabel(){ return clState.port==='core' ? 'Dip' : 'หยอด / Add-on'; }
 function clSegTier(){
   return `<div class="seg">
-    <button type="button" class="${clState.tier==='2x'?'on-cur':''}" onclick="clSetTier('2x')">Base</button>
-    <button type="button" class="${clState.tier==='std'?'on-cur':''}" onclick="clSetTier('std')">${clLegLabel()}</button>
+    <button type="button" class="${clState.setup==='acc'?'on-cur':''}" onclick="clSetSetup('acc')">Acc/Dist</button>
+    <button type="button" class="${clState.setup==='pp'?'on-cur':''}" onclick="clSetSetup('pp')">PP</button>
   </div>`;
 }
-function clSetTier(t){ clState.tier=t; clState.subtype=null; clState.checks={}; renderChecklistBody(); updateChecklistUI(); }
+function clSetSetup(t){ clState.setup=t; clState.subtype=null; clState.checks={}; renderChecklistBody(); updateChecklistUI(); }
+/* draft เก่าที่บันทึกไว้ก่อนเปลี่ยนระบบ ยังมี tier — แปลงตอนโหลด */
+function clNormalize(cs){
+  if(!cs) return cs;
+  if(!cs.setup) cs.setup = (cs.tier==='std') ? 'pp' : 'acc';
+  return cs;
+}
 /* ประเภทไม้ย่อย — ใช้เฉพาะ Sat.A */
 function clSegSubtype(){
   return `<div class="seg">
@@ -3780,7 +3881,6 @@ function clSegSubtype(){
   </div>`;
 }
 function clSetSubtype(s){ clState.subtype=s; clState.checks={}; renderChecklistBody(); updateChecklistUI(); }
-function clSetTrend(t){ clState.trend=t; renderChecklistBody(); updateChecklistUI(); }
 
 function twoXGatePass(prefix){
   const c = clState.checks;
@@ -3792,69 +3892,39 @@ function twoXPass(prefix){
 }
 function checklistCorePass(){
   const c = clState.checks;
-  if(clState.tier==='2x') return twoXPass('core2x');
+  if(clState.setup==='acc') return twoXPass('core2x');
   /* Core Dip — ไม่มีประเภทไม้ย่อย · HVN ทับโซน EMA50/200 */
   return !!(c.coreRub1 && c.coreRub2);
 }
 function checklistSatAPass(){
   const c = clState.checks;
-  if(clState.tier==='2x') return twoXPass('satA2x');
+  if(clState.setup==='acc') return twoXPass('satA2x');
   if(clState.subtype==='breakout') return !!(c.satABo1 && c.satABo2);
   if(clState.subtype==='เติม') return !!(c.satATerm1 && c.satATerm2);
   return false;
 }
-function satBGatePass(){
-  const c = clState.checks;
-  if(!clState.trend || c.weekBar===undefined || c.tooExtend===undefined) return false;
-  if(clState.trend==='against'){
-    if(c.dayHold===undefined) return false;
-    return c.tooExtend===true || c.weekBar===true || c.dayHold===true;
-  }
-  if(clState.trend==='with') return c.weekBar===false || c.tooExtend===false;
-  return false;
-}
-function checklistSatBPass(){
-  if(!satBGatePass()) return false;
-  const c = clState.checks;
-  if(clState.subtype==='aegis') return !!(c.aegisSwing && c.aegisPoc && c.aegis3Swing && c.aegisOB);
-  if(clState.subtype==='javelin') return !!(c.javelinHVN && c.javelinBreak && c.javelinRS);
-  return false;
-}
-/* Setup.A ข้อ 5 (1st Major Reversal Swing Point) — ไม่ใช่เงื่อนไขผ่าน แต่คุมขนาดไม้
-   มี = เข้าเต็ม 100% · ไม่มี = เข้า 60% ของ Qty ที่การ์ด Sat.B คำนวณ
-   Setup.B ไม่มีตัวปรับ — ผ่านแล้วเต็มไม้เสมอ */
-function clSatBSizeFactor(){
-  if(clState.port!=='satB') return 1;
-  if(clState.subtype==='javelin') return clState.checks.javelinSwing ? 1 : 0.6;
-  return 1;
-}
-function clSetSatBPath(p){
-  clState.subtype = p;
-  delete clState.checks.aegisPoc; delete clState.checks.aegisSwing;
-  delete clState.checks.aegis3Swing; delete clState.checks.aegisOB;
-  delete clState.checks.javelinHVN; delete clState.checks.javelinRS;
-  delete clState.checks.javelinBreak;
-  delete clState.checks.javelinSwing;
-  renderChecklistBody(); updateChecklistUI();
-}
+/* ★ 30 ส.ค. 2026 — Checklist ของ Sat.B ถูกถอดออกทั้งหมด (Gate Trend/Counter · Setup.A Breakthrough HVN ·
+   Setup.B Shield of Block · ตัวคูณขนาดไม้ 60%/100% จาก 1st Major Reversal Swing Point)
+   รอออกแบบใหม่ — ระหว่างนี้ Sat.B ข้ามด่าน checklist ไปหน้าเพิ่ม Trade ได้เลย
+   โค้ดเดิมอยู่ใน index.backup-20260830b-preSatBChecklistRemoval.html ถ้าต้องการดึงกลับ */
 function checklistPass(){
   if(!clState.sym || !clState.port) return false;
   if(clState.port==='core') return checklistCorePass();
   if(clState.port==='satA') return checklistSatAPass();
-  if(clState.port==='satB') return checklistSatBPass();
+  if(clState.port==='satB') return true;   /* ยังไม่มี checklist สำหรับ Sat.B — ไม่บล็อก */
   return false;
 }
 function clReachedEntryStage(){
   if(!clState.port) return false;
   if(clState.port==='core' || clState.port==='satA'){
-    if(clState.tier==='2x'){
+    if(clState.setup==='acc'){
       const prefix = clState.port==='core' ? 'core2x' : 'satA2x';
       return twoXGatePass(prefix);
     }
     if(clState.port==='core') return true;   /* Core Dip ไม่มีประเภทไม้ย่อย */
     return !!clState.subtype;
   }
-  if(clState.port==='satB') return satBGatePass();
+  if(clState.port==='satB') return false;  /* ไม่มีอะไรให้กรอกค้าง จึงไม่ต้องมีปุ่มบันทึกค้างไว้ */
   return false;
 }
 function renderChecklistBody(){
@@ -3865,8 +3935,8 @@ function renderChecklistBody(){
   let html = `<div class="hint" style="margin-bottom:12px">Port: <b>${PORTS[clState.port].name}</b>${clState.bias?` · Trend: <b style="color:${trendClr}">${trendWord(clState.bias)}</b>`:''}</div>`;
   if(clState.port==='core' || clState.port==='satA'){
     html += `<div class="f"><label>Setup</label>${clSegTier()}
-      <div class="hint" style="margin-top:5px">2xBase = Price &gt; EMA.50 &amp; Signal เกิดตรง Key PoC</div></div>`;
-    if(clState.tier==='2x'){
+      <div class="hint" style="margin-top:5px"><b>Acc/Dist</b> (×1.00 ของ 1R) = Price &gt; EMA.50 &amp; Signal เกิดตรง Key PoC · <b>PP</b> (×0.50) = จุดเข้าแคบ ยังไม่ยืนยันโครงสร้าง</div></div>`;
+    if(clState.setup==='acc'){
       const prefix = clState.port==='core' ? 'core2x' : 'satA2x';
       const tf = clState.port==='core' ? '[Week]' : '[Day]';
       const gateTf = clState.port==='core' ? '' : ' [Day]';
@@ -3883,10 +3953,10 @@ function renderChecklistBody(){
               + clItem(prefix+'Entry2', `PoC เกิดที่ฐานของ Signal ${tf}`);
       }
     } else if(clState.port==='core'){
-      /* Core — ไม้ Dip: ไม่มีประเภทไม้ย่อย · เข้าก่อนไม้ base ได้ · ยิงได้ 2 ไม้ วาง 2 zone */
-      html += `<div class="hint" style="margin-bottom:6px">Dip — ต้องผ่านครบทั้ง 2 ข้อ · <b>เข้าก่อนไม้ base ได้</b> · ยิงได้สูงสุด 2 ไม้ วางคนละ zone · ขนาดไม้ละ 25% (base 50%)</div>`;
-      html += clItem('coreRub1','Dip - High Volume Node [Week]')
-            + clItem('coreRub2','Dip - HVN ทับโซน support EMA50/200');
+      /* Core — PP: ไม่มีประเภทไม้ย่อย · เกณฑ์เดิมของไม้ Dip */
+      html += `<div class="hint" style="margin-bottom:6px">PP — ต้องผ่านครบทั้ง 2 ข้อ · ขนาดไม้ = <b>ครึ่งหนึ่ง</b>ของ Acc/Dist (×0.50)</div>`;
+      html += clItem('coreRub1','PP - High Volume Node [Week]')
+            + clItem('coreRub2','PP - HVN ทับโซน support EMA50/200');
     } else {
       html += `<div class="f"><label>ประเภทไม้ย่อย</label>${clSegSubtype()}</div>`;
       html += `<div class="hint" style="margin-bottom:6px">${clState.subtype?'ต้องผ่านครบทั้ง 2 ข้อของประเภทที่เลือก':'เลือกประเภทไม้ก่อน'}</div>`;
@@ -3898,82 +3968,14 @@ function renderChecklistBody(){
               + clItem('satATerm2','Momentum - มี Pattern Continuation/Break Blocker');
     }
   } else if(clState.port==='satB'){
-    const c = clState.checks;
-    const bias = clState.bias;
-    const gatePass = satBGatePass();
-    html += `<div class="hint" style="margin-bottom:10px">Gate: Trend = ผ่าน 1/2 · Counter = ผ่าน 1/3 · จากนั้น Entry ต้องครบทุกข้อของ Setup ที่เลือก</div>`;
-    html += `<div class="divlbl" style="margin-top:0;padding-top:0;border:none">Gate — ต้องผ่านก่อนถึงจะกรอก Entry checklist ต่อได้</div>`;
-    const withLabel = bias==='Short' ? 'Short (Trend)' : 'Long (Trend)';
-    const againstLabel = bias==='Short' ? 'Long (Counter)' : 'Short (Counter)';
-    const withColor = bias==='Short' ? 'var(--red)' : 'var(--teal)';
-    const againstColor = bias==='Short' ? 'var(--teal)' : 'var(--red)';
-    const withBg = bias==='Short' ? 'var(--red-dim)' : 'var(--teal-dim)';
-    const againstBg = bias==='Short' ? 'var(--teal-dim)' : 'var(--red-dim)';
-    html += `<div class="f"><label>Bias เข้ากับ Trend หลัก <span style="font-weight:400;color:var(--muted)">(by Trend = EMA10,20,50 TF.Day)</span></label>
-      <div class="seg">
-        <button type="button" onclick="clSetTrend('with')" style="background:${clState.trend==='with'?withBg:'var(--surface2)'};color:${withColor};font-weight:${clState.trend==='with'?700:600}">${withLabel}</button>
-        <button type="button" onclick="clSetTrend('against')" style="background:${clState.trend==='against'?againstBg:'var(--surface2)'};color:${againstColor};font-weight:${clState.trend==='against'?700:600}">${againstLabel}</button>
-      </div></div>`;
-    html += `<div class="f"><label>Weekly Chart มี Reversal Signal ชัด</label>
-      <div class="seg">
-        <button type="button" class="${c.weekBar===true?'on-cur':''}" onclick="clSetCheck('weekBar',true)">มี</button>
-        <button type="button" class="${c.weekBar===false?'on-cur':''}" onclick="clSetCheck('weekBar',false)">ไม่มี</button>
-      </div></div>`;
-    html += `<div class="f"><label>Too Extend from EMA (Daily TF)</label>
-      <div class="seg">
-        <button type="button" class="${c.tooExtend===true?'on-cur':''}" onclick="clSetCheck('tooExtend',true)">Yes</button>
-        <button type="button" class="${c.tooExtend===false?'on-cur':''}" onclick="clSetCheck('tooExtend',false)">No</button>
-      </div></div>`;
-    if(clState.trend==='against'){
-      const counterLong = bias==='Short';
-      const holdLabel = counterLong
-        ? 'แนวรับ TF Day เริ่มยืนได้ (ไม่ทำ LL ต่อ)'
-        : 'แนวต้าน TF Day เริ่มยืนได้ (ไม่ทำ HH ต่อ)';
-      html += `<div class="f"><label>${holdLabel}</label>
-        <div class="seg">
-          <button type="button" class="${c.dayHold===true?'on-cur':''}" onclick="clSetCheck('dayHold',true)">Yes</button>
-          <button type="button" class="${c.dayHold===false?'on-cur':''}" onclick="clSetCheck('dayHold',false)">No</button>
-        </div></div>`;
-      html += `<div class="hint" style="margin-bottom:6px">Counter — ผ่านถ้าเข้าเงื่อนไขอย่างน้อย 1 ใน 3 ข้อ</div>`;
-    } else if(clState.trend==='with'){
-      html += `<div class="hint" style="margin-bottom:6px">Trend — ผ่านถ้าอยู่ในสถานะดีอย่างน้อย 1 ใน 2 ข้อ (Weekly = ไม่มี หรือ Too Extend = No)</div>`;
-    }
-    if(!gatePass){
-      html += `<div class="hint" style="color:var(--amber)">⚠ ต้องผ่าน Gate นี้ก่อน ถึงจะกรอก Entry checklist ต่อได้</div>`;
-    } else {
-      html += `<div class="hint" style="color:var(--teal);margin-bottom:8px">✓ ผ่าน Gate แล้ว</div>`;
-      html += `<div class="divlbl">Entry Checklist — เลือกแนวทาง</div>`;
-      html += `<div class="f"><label>แนวทาง Entry</label>
-        <div class="seg">
-          <button type="button" class="${clState.subtype==='javelin'?'on-cur':''}" onclick="clSetSatBPath('javelin')">Setup.A — Breakthrough HVN</button>
-          <button type="button" class="${clState.subtype==='aegis'?'on-cur':''}" onclick="clSetSatBPath('aegis')">Setup.B — Shield of Block</button>
-        </div></div>`;
-      if(clState.subtype==='aegis'){
-        html += `<div class="hint" style="margin-bottom:6px">Original Swing OB — ต้องผ่านครบทั้ง 4 ข้อ · เข้าเต็มไม้ 100%</div>`;
-        html += clItem('aegisSwing','Post swing leg')
-              + clItem('aegisPoc','PoC located on Neckline')
-              + clItem('aegis3Swing','มีอย่างน้อย 3 Swing point')
-              + clItem('aegisOB','50% of Orderblock mitigate');
-      } else if(clState.subtype==='javelin'){
-        const rsLabel = bias==='Short' ? 'Support become Resistance' : 'Resistance become Support';
-        html += `<div class="hint" style="margin-bottom:6px">Breakthrough HVN — ต้องผ่านครบทั้ง 3 ข้อ</div>`;
-        html += clItem('javelinHVN','High Volume Node Located')
-              + clItem('javelinBreak','Breakthrough on Line Chart [4H]')
-              + clItem('javelinRS', rsLabel);
-        html += `<div class="divlbl">ขนาดไม้ — ไม่ใช่เงื่อนไขผ่าน</div>`;
-        html += clItem('javelinSwing','1st Major Reversal Swing Point');
-        const full = !!clState.checks.javelinSwing;
-        html += `<div class="hint" style="color:${full?'var(--teal)':'var(--amber)'};margin-bottom:6px">
-          ${full?'✓ เข้าเต็มไม้ <b>100%</b> ของขนาดที่การ์ด Sat.B คำนวณ'
-                :'ไม่ได้ติ๊ก → เข้า <b>60%</b> ของขนาดที่การ์ด Sat.B คำนวณ'}</div>`;
-      } else {
-        html += `<div class="hint">เลือกแนวทาง Entry ก่อน</div>`;
-      }
-      if(clState.subtype){
-        const pass = checklistSatBPass();
-        html += `<div class="hint" style="color:${pass?'var(--teal)':'var(--amber)'}">${pass?'✓ ผ่านเงื่อนไข Entry checklist':'⚠ Entry checklist ยังไม่ผ่านตามเงื่อนไข'}</div>`;
-      }
-    }
+    /* ★ Checklist Sat.B ถูกถอดออกทั้งหมดเมื่อ 30 ส.ค. 2026 — รอออกแบบชุดใหม่
+       ระหว่างนี้ไม่บล็อก: กด "ไปต่อ" เพื่อเข้าหน้าเพิ่ม Trade ได้เลย
+       (การ์ดคำนวณขนาดไม้ Sat.B ในหน้าเพิ่ม Trade ยังทำงานตามปกติ) */
+    html += `<div class="hint" style="margin-bottom:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;line-height:1.55">
+      <b style="color:var(--amber)">ยังไม่มี Checklist สำหรับ Satellite.B</b><br>
+      ชุดเดิม (Gate Trend/Counter · Setup.A Breakthrough HVN · Setup.B Shield of Block) ถูกถอดออกแล้ว รอออกแบบใหม่<br>
+      ระหว่างนี้กด <b>ไปต่อ</b> เพื่อเข้าหน้าเพิ่ม Trade ได้เลย — ขนาดไม้ยังคิดจาก RPT Risk % และ Default Volatility เหมือนเดิม
+    </div>`;
   }
   body.innerHTML = html;
 }
@@ -4001,7 +4003,7 @@ function populateChecklistSymbolSelect(){
 }
 function clOnSymChange(){
   const sym = document.getElementById('clSym').value;
-  clState = {sym, port:null, bias:null, tier:'std', subtype:null, trend:null, checks:{}};
+  clState = {sym, port:null, bias:null, setup:'acc', subtype:null, checks:{}};
   if(sym){
     const w = findWatchForSymbol(sym);
     clState.port = w ? w.port : null;
@@ -4021,7 +4023,7 @@ function openTradeChecklist(){
   document.getElementById('clTradeFooter').style.display = '';
   document.getElementById('clFundFooter').style.display = 'none';
   { const w = document.getElementById('fcSaveWarn'); if(w) w.textContent = ''; }
-  clState = {sym:'', port:null, bias:null, tier:'std', subtype:null, trend:null, checks:{}};
+  clState = {sym:'', port:null, bias:null, setup:'acc', subtype:null, checks:{}};
   editingDraftId = null;
   populateChecklistSymbolSelect();
   document.getElementById('clBody').innerHTML = '<div class="hint">เลือก Symbol จาก Watchlist ก่อน ระบบจะดึง Port ให้อัตโนมัติ</div>';
@@ -4039,12 +4041,11 @@ function clContinue(){
     editingDraftId = null;
     schedulePersist();
   }
-  const tier = (clState.port==='core'||clState.port==='satA') ? clState.tier : null;
-  let presetBias = null;
-  if(clState.port==='satB'){
-    presetBias = clState.trend==='against' ? (clState.bias==='Short' ? 'Long' : 'Short') : clState.bias;
-  }
-  openTrade(clState.sym, tier, presetBias, clSatBSizeFactor());
+  const tier = (clState.port==='core'||clState.port==='satA') ? clState.setup : null;
+  /* Sat.B ไม่มี checklist แล้ว จึงไม่มีทั้ง preset ทิศและตัวคูณขนาดไม้ — เลือกเองในหน้าเพิ่ม Trade
+     (Trend หลักใน Watchlist เป็นข้อมูลประกอบ ไม่ใช่คำสั่งว่าไม้นี้ต้องไปทางไหน โดยเฉพาะตอน Ranging) */
+  const presetBias = null;
+  openTrade(clState.sym, tier, presetBias, 1);
 }
 function clSaveDraft(){
   if(!clState.sym || !clState.port) return;
@@ -4071,7 +4072,7 @@ function clEditDraft(id){
   document.getElementById('clFundView').style.display = 'none';
   document.getElementById('clTradeFooter').style.display = '';
   document.getElementById('clFundFooter').style.display = 'none';
-  clState = JSON.parse(JSON.stringify(d.clState));
+  clState = clNormalize(JSON.parse(JSON.stringify(d.clState)));
   editingDraftId = id;
   populateChecklistSymbolSelect();
   document.getElementById('clSym').value = clState.sym || '';
@@ -4089,8 +4090,11 @@ function clMissingList(cs){
   const c = cs.checks || {};
   const missing = [];
   if(cs.port==='core' || cs.port==='satA'){
-    if(!cs.tier){ missing.push('เลือก Setup (Base / หยอด)'); return missing; }
-    if(cs.tier==='2x'){
+    /* ★ draft เก่าเก็บเป็น tier ('2x'/'std') · ของใหม่เป็น setup ('acc'/'pp') — อ่านให้ได้ทั้งคู่
+       ถ้าไม่แปลง draft ทุกใบจะขึ้น "ยังไม่เลือก Setup" ทั้งที่กรอกครบแล้ว */
+    const setup = cs.setup || (cs.tier==='std' ? 'pp' : cs.tier==='2x' ? 'acc' : null);
+    if(!setup){ missing.push('เลือก Setup (Acc/Dist หรือ PP)'); return missing; }
+    if(setup==='acc'){
       const prefix = cs.port==='core' ? 'core2x' : 'satA2x';
       if(!c[prefix+'Gate1']) missing.push('EMA50>=200');
       if(!c[prefix+'Gate2']) missing.push('Price>EMA50');
@@ -4099,9 +4103,9 @@ function clMissingList(cs){
       if(!c[prefix+'Entry1']) missing.push('RS line support');
       if(!c[prefix+'Entry2']) missing.push('PoC ที่ฐาน Signal');
     } else if(cs.port==='core'){
-      /* Core Dip — ไม่มีประเภทไม้ย่อย */
-      if(!c.coreRub1) missing.push('Dip - High Volume Node');
-      if(!c.coreRub2) missing.push('Dip - HVN ทับโซน EMA50/200');
+      /* Core PP — ไม่มีประเภทไม้ย่อย */
+      if(!c.coreRub1) missing.push('PP - High Volume Node');
+      if(!c.coreRub2) missing.push('PP - HVN ทับโซน EMA50/200');
     } else {
       if(!cs.subtype){ missing.push('เลือกประเภทไม้ย่อย (Break out / Momentum)'); return missing; }
       if(cs.subtype==='breakout'){
@@ -4112,28 +4116,8 @@ function clMissingList(cs){
         if(!c.satATerm2) missing.push('Continuation/Break Blocker');
       }
     }
-  } else if(cs.port==='satB'){
-    if(!cs.trend) missing.push('เลือกทิศทาง Trend/Counter');
-    if(c.weekBar===undefined) missing.push('Weekly Reversal');
-    if(c.tooExtend===undefined) missing.push('Too Extend');
-    if(cs.trend==='against' && c.dayHold===undefined) missing.push('แนวรับ/แนวต้าน TF Day ยืนได้');
-    if(missing.length) return missing;
-    const gateOk = cs.trend==='against'
-      ? (c.tooExtend===true || c.weekBar===true || c.dayHold===true)
-      : (c.weekBar===false || c.tooExtend===false);
-    if(!gateOk){ missing.push('Trend/Reversal/Extend ยังไม่ตรงกัน'); return missing; }
-    if(!cs.subtype){ missing.push('เลือกแนวทาง Entry (Setup.A Breakthrough HVN / Setup.B Shield of Block)'); return missing; }
-    if(cs.subtype==='aegis'){
-      if(!c.aegisSwing) missing.push('Post swing leg');
-      if(!c.aegisPoc) missing.push('PoC located on Neckline');
-      if(!c.aegis3Swing) missing.push('มีอย่างน้อย 3 Swing point');
-      if(!c.aegisOB) missing.push('50% of Orderblock mitigate');
-    } else if(cs.subtype==='javelin'){
-      if(!c.javelinHVN) missing.push('High Volume Node Located');
-      if(!c.javelinBreak) missing.push('Breakthrough on Line Chart [4H]');
-      if(!c.javelinRS) missing.push(cs.bias==='Short' ? 'Support become Resistance' : 'Resistance become Support');
-    }
   }
+  /* Sat.B — ไม่มี checklist แล้ว จึงไม่มีรายการ "ขาด" (draft เก่าที่ค้างอยู่จะแสดงเป็นว่างและลบทิ้งได้) */
   return missing;
 }
 
@@ -4207,42 +4191,6 @@ const FUND_CRITERIA = {
       {id:'n4', label:'④ ความเสี่ยงหลัก 1 ข้อ'},
       {id:'n5', label:'⑤ ความทนทานการเงิน: net cash/หนี้ · FCF · share count · earnings quality'},
       {id:'n6', label:'⑥ Tripwire: ตัวเลขไหน เปลี่ยนถึงระดับไหน = thesis พัง ต้องกลับมาอ่านใหม่ (เขียนเป็นเส้นตายที่วัดได้ ไม่ใช่คำบรรยาย)'}
-    ]
-  },
-  us_g: {
-    label: '🇺🇸 High Growth, Innovation &amp; Market Theme',
-    port: 'satA',
-    capUnit: '$ พันล้าน (USD Billion)',
-    capGateMin: 2,
-    capGateLabel: 'Mid Cap ($2B) ขึ้นไป',
-    capTiers: [[200,'Mega Cap'],[10,'Large Cap'],[2,'Mid Cap'],[0,'Small Cap']],
-    hasCG: false,
-    gates: [
-      {id:'g1', auto:true, label:'Market Cap ≥ $2B'},
-      {id:'g2', label:'$Volume &gt; $20M/วัน (สภาพคล่องพอ)'},
-      {id:'g3', label:'Price &gt; EMA200 (Stage 2 ขาขึ้น)'},
-      {id:'g4', label:'ห่างจาก 52-Week High ไม่เกิน −30%'},
-      {id:'g5', label:'Gross Margin ≥ 35%'},
-      {id:'g6', label:'RS Line &gt; RS MA50 (CANSLIM - {RS_BENCH})'},
-      {id:'g7', label:'Revenue TTM YoY ≥ 20% หรือ ยอดขายเร่งขึ้น 3 ไตรมาสติด'}
-    ],
-    scores: [
-      {id:'s1', label:'Revenue Growth (ไตรมาสล่าสุด YoY)', opts:['&gt;40%','25-40%','15-24.9%','&lt;15%']},
-      {id:'s2', label:'Rule of 40 (%Rev Growth + %FCF Margin)', opts:['&gt;50%','40-50%','20-39%','&lt;20%']},
-      {id:'s4', label:'RVOL — TF Week (แรงซื้อสถาบันช่วงเบรคเอาท์/พักตัว)', opts:['RVOL &gt;2.0 (แท่งเขียว)','RVOL 1.5-2.0 (แท่งเขียว)','RVOL 1.0-1.4','RVOL &gt;1.5 (แท่งแดง)']},
-      {id:'s5', label:'Valuation (P/S หรือ Fwd PEG)', opts:['P/S&lt;10 / PEG&lt;1.5','P/S 10-20 / PEG 1.5-2.5','P/S 20-30','P/S&gt;30 (ฟองสบู่)']},
-      {id:'s6', label:'Growth Acceleration (YoY 4 ไตรมาสล่าสุด)', opts:['เร่งขึ้นต่อเนื่อง','ทรงตัว','ชะลอเล็กน้อย','ชะลอแรง']},
-      {id:'s7', label:'Dilution (Share Count YoY)', opts:['ลด/&lt;+2%','2-5%','5-10%','&gt;10%']},
-      {id:'s8', label:'EPS Revisions up vs down — Yahoo Analysis/InvestingPro', opts:['Up ≥3× Down','Up &gt; Down','สูสี/ไม่มีข้อมูล','Down &gt; Up']}
-    ],
-    notes: [
-      {id:'sum', label:'📌 สรุปสั้น (อ่านแล้วเข้าใจทันที) — บริษัททำอะไร / อยู่ธีมอะไร / catalyst ล่าสุด'},
-      {id:'biz', label:'① ธุรกิจ + Moat/Position ใน Value Chain'},
-      {id:'n2', label:'② Theme fit: อยู่ใน theme ที่ตลาดสนใจตอนนี้ไหม'},
-      {id:'n3', label:'③ Catalyst (New): สินค้าใหม่ / ผู้บริหารใหม่ / Earnings Surprise'},
-      {id:'n4', label:'④ Sponsorship: กองทุนชั้นนำ / Big Tech เข้าถือเพิ่มมีนัยไหม'},
-      {id:'n5', label:'⑤ Invalidation: อะไรจะบอกว่า thesis พัง'},
-      {id:'n6', label:'⑥ Dilution & Runway: share count YoY · SBC · net cash · runway · offering'}
     ]
   }
 };
@@ -4333,8 +4281,7 @@ function renderFundTypeRow(){
   const opt = (t, label) => `<button type="button" class="${fcState.type===t?'primary':''}" style="text-align:left;justify-content:flex-start" onclick="fcSetType('${t}')">${label}</button>`;
   row.innerHTML = `
     ${opt('th','🇹🇭 หุ้นไทยตั้งรับ ปันผลเด่น เน้นกึ่งผูกขาด')}
-    ${opt('us_q','🇺🇸 Quality Growth &amp; Global Compounder')}
-    ${opt('us_g','🇺🇸 High Growth, Innovation &amp; Market Theme')}`;
+    ${opt('us_q','🇺🇸 Quality Growth &amp; Global Compounder')}`;
 }
 function fcOnMktcapInput(val){
   fcState.mktcap = val===''?null:Number(val);
@@ -4375,7 +4322,7 @@ function fcDaysSince(d){
 const PRICE_SENSITIVE = {
   th:   ['mktcap','g2','g5','s2','s3'],
   us_q: ['mktcap','g2','g5','s2'],
-  us_g: ['mktcap','g2','g3','g4','g6','s5']
+  us_g: []   /* legacy — Sat.A ย้ายไปใช้ Growth Gate score แล้ว */
 };
 /* เหลือเฉพาะช่องที่ยังเป็นค่าจาก AI — ช่องที่คุณแตะเองแล้วถือว่าสดแล้ว ไม่ต้องเตือนซ้ำ */
 function fcStaleFields(){
@@ -4758,14 +4705,8 @@ function renderChecklistDrafts(){
   if(!panel || !state) return;
   const tag = (txt,dir)=>{ const clr=dir==='Short'?'var(--red)':dir==='Long'?'var(--teal)':'var(--amber)'; const bg=dir==='Short'?'var(--red-dim)':dir==='Long'?'var(--teal-dim)':'var(--surface2)'; return `<span class="tag" style="background:${bg};color:${clr};flex-shrink:0">${txt}</span>`; };
   const draftDirTag = (cs)=>{
-    if(cs.port==='satB'){
-      if(cs.trend){
-        const dir = cs.trend==='against' ? (cs.bias==='Short'?'Long':'Short') : cs.bias;
-        const qual = cs.trend==='against' ? 'Counter' : 'Trend';
-        return tag(`${dir} (${qual})`, dir);
-      }
-      return cs.bias ? tag(`Trend: ${trendWord(cs.bias)}`, cs.bias) : '';
-    }
+    /* Sat.B ไม่มี checklist แล้ว — โชว์แค่ Trend หลักจาก Watchlist เป็นข้อมูลประกอบ */
+    if(cs.port==='satB') return cs.bias ? tag(`Trend: ${trendWord(cs.bias)}`, cs.bias) : '';
     return cs.bias ? tag(cs.bias, cs.bias) : '';
   };
   const drafts = Array.isArray(state.checklistDrafts) ? state.checklistDrafts : [];
@@ -4850,7 +4791,11 @@ function ideaFulfilled(sym){
       /* Sat.B ไม่มี Score — ถือว่าเสร็จเมื่อมี Note (Technical หรือ Sentiment) ครบเงื่อนไข */
       return watchEligible(w);
     }
-    /* Core / Sat.A — ต้องมี Score (fundCheck tier) + Note */
+    if(w.port==='satA'){
+      /* Sat.A — เสร็จเมื่อให้คะแนน Growth Gate ครบ 3 ข้อ + มี Note */
+      return ggDone(w.gg) && !!(w.fundamental||'').trim();
+    }
+    /* Core — ต้องมี Score (fundCheck tier) + Note */
     const hasScore = !!(w.fundCheck && w.fundCheck.tier);
     const n = (w.fundCheck && w.fundCheck.note) || {};
     const hasNote = !!((n.sum||n.biz||'').trim() || (w.fundamental||'').trim());
@@ -4876,7 +4821,10 @@ function renderIdeas(){
     return `<span class="tag" style="background:${hexToRgba(clr,0.16)};color:${clr};font-weight:700"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${clr};margin-right:5px;vertical-align:middle"></span>${name}</span>`;
   };
   const imgCell = (it)=>{ if(!it.imageUrl) return ''; const s=driveImgSrc(it.imageUrl); return s?`<img src="${s}" class="imgthumb" onclick="window.open('${it.imageUrl}','_blank')" title="เปิดรูป">`:`<a href="${it.imageUrl}" target="_blank" class="imglink">📎 รูป</a>`; };
-  const doBtns = (it)=>`<button class="small" onclick="openFundChecklist('${it.sym}')" title="ทำ Fundamental Checklist">📋</button><button class="small" onclick="openImportCL()" title="Import จาก Claude Checklist">📥</button>`;
+  /* Sat.A ไม่มี Fundamental Checklist แล้ว — เปิดฟอร์ม Watchlist (มีช่องให้คะแนน Growth Gate) แทน */
+  const doBtns = (it)=> it.port==='satA'
+    ? `<button class="small" onclick="openWatchFor('satA','${it.sym}')" title="เพิ่มเข้า Watchlist Sat.A + ให้คะแนน Growth Gate">📋</button><button class="small" onclick="openImportCL()" title="Import จาก Claude Checklist">📥</button>`
+    : `<button class="small" onclick="openFundChecklist('${it.sym}')" title="ทำ Fundamental Checklist">📋</button><button class="small" onclick="openImportCL()" title="Import จาก Claude Checklist">📥</button>`;
   body.innerHTML = `
     <div class="tablewrap"><table>
       <thead><tr><th style="width:96px">วันที่</th><th style="width:90px">Symbol</th><th style="width:120px">Port</th><th>Reason</th><th style="width:60px">รูป</th><th style="width:76px">ทำต่อ</th><th style="width:80px"></th></tr></thead>
@@ -4953,7 +4901,7 @@ function openTrade(presetSym, presetTier, presetBias, presetSizeFactor){
   document.getElementById('tradeTitle').textContent='เพิ่ม Trade';
   document.getElementById('tDate').value = new Date().toISOString().slice(0,10);
   populateSymbolSelect(presetSym||'');
-  ['tEntry','tSL','tTP','tQty','tExitPrice','tExitDate','tImageUrl','tDiscScore','tSetupScore','tExitNote','tInvalidation','tInvalHit','tAddPx']
+  ['tEntry','tSL','tTP','tQty','tExitPrice','tExitDate','tImageUrl','tDiscScore','tSetupScore','tExitNote','tInvalidation','tInvalHit']
     .forEach(i=>{ const el=document.getElementById(i); if(el) el.value=''; });
   populateReasonSelect('exit', '');
   populateBothScoreSelects('', '');
@@ -4962,7 +4910,7 @@ function openTrade(presetSym, presetTier, presetBias, presetSizeFactor){
   document.getElementById('tPort').value='core';
   document.getElementById('tStatus').value='plan';
   lockPortBiasFields(false);
-  setBias('Long'); setCur('THB'); setPosTier('2x'); toggleExitFields(); szSyncLot();
+  setBias('Long'); setCur('THB'); setSetup('acc'); toggleExitFields(); szSyncLot();
   if(presetSym){
     document.getElementById('tSym').value = presetSym;
     applySymbolWatchLink(presetSym);
@@ -4971,7 +4919,7 @@ function openTrade(presetSym, presetTier, presetBias, presetSizeFactor){
     setBias(presetBias);
   }
   if(presetTier){
-    setPosTier(presetTier);
+    setSetup(presetTier);
     posTierLocked = true;
   } else {
     posTierLocked = false;
@@ -5007,7 +4955,7 @@ function editTrade(id){
   document.getElementById('tInvalHit').value = t.invalHit || '';
   document.getElementById('tImageUrl').value=t.imageUrl||'';
   document.getElementById('imgHint').textContent='';
-  setBias(t.bias); setCur(tradeCur(t)); setPosTier(t.posTier||'std'); toggleExitFields();
+  setBias(t.bias); setCur(tradeCur(t)); setSetup(legacySetup(t)); toggleExitFields();
   lockPortBiasFields(!t.unplanned && !!findWatchForSymbol(t.sym));
   posTierLocked = false;
   lockPosTierField(false);
@@ -5022,11 +4970,17 @@ function setBias(b){
   calcHint();
 }
 function setMult(m){ document.getElementById('tMult').value=m; calcHint(); }
-function setPosTier(t){
-  posTier = t;
-  document.getElementById('posT2x').className = t==='2x' ? 'on-cur' : '';
-  document.getElementById('posTStd').className = t==='std' ? 'on-cur' : '';
+function setSetup(t){
+  tSetup = (t==='pp') ? 'pp' : 'acc';
+  document.getElementById('posT2x').className  = tSetup==='acc' ? 'on-cur' : '';
+  document.getElementById('posTStd').className = tSetup==='pp'  ? 'on-cur' : '';
   calcHint();
+}
+/* ไม้เก่าที่บันทึกไว้ก่อนเปลี่ยนระบบ: '2x' (base) -> Acc/Dist · 'std' (ไม้ต่อ) -> PP */
+function legacySetup(t){
+  if(!t) return 'acc';
+  if(t.setup==='acc' || t.setup==='pp') return t.setup;
+  return t.posTier==='std' ? 'pp' : 'acc';
 }
 function lockPosTierField(lock){
   const b1 = document.getElementById('posT2x'), b2 = document.getElementById('posTStd');
@@ -5115,7 +5069,8 @@ function calcHint(){
       const rpPort = rTHB/portCapTHB(port)*100;
       const rpTotal = rTHB/cap*100;
       msg = `Risk = ${sym}${fmt0(r)}${isUSD?` ≈ ฿${fmt0(rTHB)}`:''} (${fmt2(rpPort)}% ของ ${PORTS[port].name} · ${fmt2(rpTotal)}% ของทุนรวม)`;
-      if(rpPort>szTradeLimit(port)) msg += ` ⚠ เกิน ${szTradeLimit(port)}%/trade`;
+      const lim = szTradeLimit(port, curSymVal());
+      if(rpPort>lim) msg += ` ⚠ เกิน ${lim}%/trade`;
     }
     if(tp>0){
       const rr = Math.abs(tp-e)/dist;
@@ -5177,7 +5132,9 @@ function saveTrade(){
     sym: curSymVal(),
     port: tPortVal,
     bias,
-    posTier: (tPortVal==='core'||tPortVal==='satA') ? posTier : null,
+    /* setup แทน posTier · posTier ถูกเก็บไว้เป็น null เพื่อไม่ให้โค้ดเก่าที่หลุดรอดอ่านค่าผิด */
+    setup: (tPortVal==='core'||tPortVal==='satA') ? tSetup : null,
+    posTier: null,
     entry: parseFloat(document.getElementById('tEntry').value),
     sl: parseFloat(document.getElementById('tSL').value),
     tp: parseFloat(document.getElementById('tTP').value)||null,
@@ -5555,7 +5512,7 @@ function saveSettings(){
       r:{   core: parseFloat(document.getElementById('sRCore').value)||1,
             satA: parseFloat(document.getElementById('sRSatA').value)||1 },
       cap:{ core: parseFloat(document.getElementById('sCapCore').value)||12.5,
-            satA: parseFloat(document.getElementById('sCapSatA').value)||12.5 },
+            satA: parseFloat(document.getElementById('sCapSatA').value)||25 },
       ffThrottle: document.getElementById('sFfThrottle').value==='1'
     },
     satBVol:{
@@ -5605,30 +5562,52 @@ document.addEventListener('keydown', (e)=>{
 setAuthMode('in');
 </script>
 <script>
-/* ================= Position Sizing — 1R model (Core / Sat.A) =================
-   1R = 1% ของทุน Port · Cap ไม้ base = 12.5% · base:add = 70:30
-   สำคัญ: 1R ตกที่ "ไม้ base" เต็มจำนวน ไม่หารตามน้ำหนัก 70/30
-          เพราะถ้าเทรดพังก่อนได้ add ผู้ใช้จะถือแค่ไม้ base
-   Cap คุมเฉพาะไม้ base — position รวมหลัง add ขึ้นได้ถึง 17.86%
-============================================================================= */
+/* ================= Position Sizing — Score × Setup (Core / Sat.A) =================
+   ★ เขียนใหม่ 30 ส.ค. 2026 — ยกเลิก "บันไดไม้" (Sat.A 70/30 · Core 50/25×2) ทั้งหมด
+     ทุกไม้เป็นไม้เดียว ไม่มี add-on / dip ให้ไล่ต่อ
+
+   R ต่อไม้ = 1R(คะแนน) × ตัวคูณ Setup × เพดาน Fund-flow
+     · 1R(คะแนน) — Sat.A มาจาก Growth Gate /9 : 8-9 = 1.25% · 6-7 = 1.00% · 4-5 = 0.75% · ≤3 = 0.50%
+                    Core ยังใช้ค่าคงที่จากหน้าตั้งค่า (sizing.r.core)
+     · Setup      — Acc/Dist × 1.00 · PP × 0.50
+     · Fund-flow  — เพดานจากแท็บ Fund-flow ย่อลงอีกชั้น (ถ้าเปิดใช้)
+
+   ตาราง R สุดท้ายของ Sat.A:
+     คะแนน 8-9 → Acc/Dist 1.250% · PP 0.625%
+     คะแนน 6-7 → Acc/Dist 1.000% · PP 0.500%
+     คะแนน 4-5 → Acc/Dist 0.750% · PP 0.375%
+     คะแนน ≤3  → Acc/Dist 0.500% · PP 0.250%
+
+   จำนวนหุ้น = (ทุน Port × R%) ÷ ระยะ stop  แล้ว cap ที่ Max Cap ของ port
+   ผลลัพธ์: โดน stop แล้วขาดทุนเท่ากันทุกไม้ที่คะแนน+Setup เดียวกัน ไม่ว่าหุ้นจะเหวี่ยงแค่ไหน
+================================================================================ */
 const SZ = {
-  R_PCT:1.00, BASE_CAP:12.50, ADD_RATIO:0.4286,
+  R_PCT:1.00, BASE_CAP:12.50,
   MAX_POS:5, MAX_HEAT_R:5, WARN_HEAT_R:4, MAX_PER_THEME:2,
-  TIGHT_STOP_PCT:8, WARN_TOTAL_PCT:15,
-  /* สัดส่วนไม้ต่อ แยกตาม port
-     Sat.A — Base 70% + Add-on 30%  → ไม้ต่อ = base × 30/70 · ต่อได้ 1 ไม้ · ต้องเข้าเหนือราคา base
-     Core  — Base 50% + Dip 25% × 2 → ไม้ต่อ = base × 25/50 · ต่อได้ 2 ไม้ · Dip เข้าต่ำกว่า/ก่อน base ได้ */
-  LEG:{
-    satA:{ ratio:30/70, maxAdd:1, label:'Add-on', mustBeAbove:true,  canPrecedeBase:false, split:'70 / 30' },
-    core:{ ratio:25/50, maxAdd:2, label:'Dip',    mustBeAbove:false, canPrecedeBase:true,  split:'50 / 25 × 2' }
-  }
+  TIGHT_STOP_PCT:8, WARN_TOTAL_PCT:15
 };
-function szLeg(port){ return SZ.LEG[port] || SZ.LEG.satA; }
 /* ---- อ่านค่าจากหน้าตั้งค่า (แยกราย port) ---- */
 function szCfg(){ return (state && state.settings && state.settings.sizing) || {r:{core:SZ.R_PCT,satA:SZ.R_PCT},cap:{core:SZ.BASE_CAP,satA:SZ.BASE_CAP},ffThrottle:true}; }
-/* 1R ตามที่ตั้งไว้ (ยังไม่คิดเพดาน Fund-flow) — ใช้เป็นหน่วยวัด R */
-function szRpct(port){ const v = szCfg().r && szCfg().r[port]; return (v>0)?v:SZ.R_PCT; }
-function szBaseCap(port){ const v = szCfg().cap && szCfg().cap[port]; return (v>0)?v:SZ.BASE_CAP; }
+/* หน่วย R อ้างอิงของ port — คงที่ ไม่ขึ้นกับคะแนนรายตัว
+   ★ จำเป็น เพราะ Sat.A มี 1R ต่างกันรายหุ้น (1.25 / 1.00 / 0.75 / 0.50)
+     ถ้าเอา R รายหุ้นไปรวมเป็น Portfolio heat หน่วยจะคนละเรื่องกัน บวกกันไม่ได้
+     จึงตรึงหน่วยไว้ที่ค่าในหน้าตั้งค่า (ปกติ 1% ของทุน port) แล้ววัดทุกไม้เทียบหน่วยนี้
+     ผลคือไม้คะแนน 8-9 แบบ Acc/Dist จะอ่านได้ว่า "1.25R" ตรงตามที่ตั้งใจจริง ๆ */
+function szPortRefR(port){ const v = szCfg().r && szCfg().r[port]; return (v>0)?v:SZ.R_PCT; }
+/* 1R ตามคะแนน (ยังไม่คูณ Setup ยังไม่คิดเพดาน Fund-flow) — ที่มาของขนาดไม้
+   Sat.A: มาจากคะแนน Growth Gate ของ symbol นั้น · ยังไม่ให้คะแนน = Starter 0.50%
+   Core : ค่าคงที่จากหน้าตั้งค่า */
+function szRpct(port, sym){
+  if(port==='satA'){
+    const t = (typeof ggScoreOfSym==='function') ? ggScoreOfSym(sym) : null;
+    return (t!=null) ? ggRow(t).r : ggRow(0).r;
+  }
+  const v = szCfg().r && szCfg().r[port]; return (v>0)?v:SZ.R_PCT;
+}
+function szBaseCap(port){
+  const v = szCfg().cap && szCfg().cap[port];
+  return (v>0) ? v : (port==='satA' ? 25 : SZ.BASE_CAP);
+}
 /* เพดานลงเงินจากแท็บ Fund-flow (100 = ไม่ถูกคุม) */
 function ffDeployCap(port){
   if(typeof ffState!=='function' || !state || !state.fundflow) return 100;
@@ -5638,12 +5617,15 @@ function ffDeployCap(port){
     return port==='satA' ? Math.min(capCore,capA) : capCore;
   }catch(e){ return 100; }
 }
-/* ความเสี่ยงเป้าหมายต่อไม้หลังถูกเพดาน Fund-flow ย่อ — เพดาน 40% → 1R เหลือ 0.40% */
-function szTargetRisk(port){
-  const base = szRpct(port);
-  if(!szCfg().ffThrottle) return {pct:base, cap:100, throttled:false};
+/* ความเสี่ยงเป้าหมายต่อไม้ = 1R(คะแนน) × ตัวคูณ Setup × เพดาน Fund-flow
+   เช่น คะแนน 8/9 (1.25%) · Setup = PP (×0.5) · เพดาน Fund-flow 40% → 1.25 × 0.5 × 0.4 = 0.25% */
+function szTargetRisk(port, sym, setup){
+  const scoreR = szRpct(port, sym);
+  const f      = (typeof setupFactor==='function') ? setupFactor(setup) : 1;
+  const base   = scoreR * f;
+  if(!szCfg().ffThrottle) return {pct:base, cap:100, throttled:false, setupF:f, scoreR};
   const cap = ffDeployCap(port);
-  return {pct: base*cap/100, cap, throttled: cap<100};
+  return {pct: base*cap/100, cap, throttled: cap<100, setupF:f, scoreR};
 }
 /* Fund-flow เก่ากี่วันแล้ว (null = ยังไม่เคยกรอก) */
 function szFfStaleDays(){
@@ -5652,56 +5634,38 @@ function szFfStaleDays(){
   return isNaN(t)?null:Math.floor((Date.now()-t)/86400000);
 }
 function szFloorLot(v, lot){ return Math.floor(v/lot)*lot; }
-/* o = {capTHB, entry, stop, lot, mult, fx, isUSD, baseShOverride} */
+/* o = {port, symName, setup, capTHB, entry, stop, lot, mult, fx, isUSD} */
 function szCalc(o){
   const mult = o.mult||1, lot = o.lot||1;
-  /* rUnit = หน่วยวัด R (คงที่) · rTarget = ความเสี่ยงเป้าหมายจริงหลังเพดาน Fund-flow ย่อ */
-  const rUnit   = (o.rPct>0) ? o.rPct : szRpct(o.port);
-  const tgt     = (o.rTarget>0) ? {pct:o.rTarget, cap:o.ffCap??100, throttled:(o.ffCap??100)<100}
-                                : szTargetRisk(o.port);
+  /* rUnit = หน่วยวัด R (= 1R เต็มของคะแนนนั้น ก่อนคูณ Setup) — ใช้ให้เห็นว่าไม้นี้กิน "กี่ R"
+     rTarget = ความเสี่ยงเป้าหมายจริง หลังคูณ Setup และหลังเพดาน Fund-flow ย่อ */
+  const tgt     = szTargetRisk(o.port, o.symName, o.setup);
+  const rUnit   = (o.rPct>0) ? o.rPct : szPortRefR(o.port);
   const rTarget = tgt.pct;
   const cap  = (o.baseCap>0) ? o.baseCap : szBaseCap(o.port);
   const dist = Math.abs(o.entry - o.stop);
   if(!(o.entry>0) || !(dist>0) || !(o.capTHB>0)) return null;
   const distPct   = dist/o.entry*100;
-  const baseRawPct= rTarget/distPct*100;
-  const basePct   = Math.min(cap, baseRawPct);
+  const posRawPct = rTarget/distPct*100;          /* น้ำหนักที่ความเสี่ยงเป้าหมายเรียกร้อง */
+  const posPct    = Math.min(cap, posRawPct);     /* ตัดด้วย Max Cap ของ port */
   const capNative = o.capTHB/(o.isUSD?o.fx:1);
-  const baseVal   = capNative*basePct/100;
-  const baseSh    = (o.baseShOverride!=null && o.baseShOverride>0)
-                    ? o.baseShOverride
-                    : szFloorLot(baseVal/(o.entry*mult), lot);
-  const leg       = szLeg(o.port);
-  const addSh     = szFloorLot(baseSh*leg.ratio, lot);
-  const riskNative= baseSh*dist*mult;
+  const posVal    = capNative*posPct/100;
+  const sh        = szFloorLot(posVal/(o.entry*mult), lot);
+  const riskNative= sh*dist*mult;
   const riskTHB   = riskNative*(o.isUSD?o.fx:1);
-  const oneRTHB   = o.capTHB*rUnit/100;    /* R ยังวัดจาก 1R เต็มเสมอ จะได้เห็นว่าไม้นี้เหลือกี่ R */
+  const oneRTHB   = o.capTHB*rUnit/100;
   const riskR     = oneRTHB>0 ? riskTHB/oneRTHB : 0;
-  const baseValAct= baseSh*o.entry*mult;
-  const addValAct = addSh*o.entry*mult;              /* ประเมินคร่าว ๆ ที่ราคาเข้า */
+  const valAct    = sh*o.entry*mult;
   return {
-    dist, distPct, baseRawPct, basePct, baseSh, addSh,
-    baseValNative: baseValAct,
-    basePctActual: capNative>0 ? baseValAct/capNative*100 : 0,
-    addPctAtEntry: capNative>0 ? addValAct/capNative*100 : 0,
-    riskNative, riskTHB, riskR, oneRTHB, capNative, leg,
-    addPctTotal: capNative>0 ? addValAct*leg.maxAdd/capNative*100 : 0,   /* ต่อครบทุกไม้ */
+    dist, distPct, posRawPct, posPct, sh,
+    valNative: valAct,
+    posPctActual: capNative>0 ? valAct/capNative*100 : 0,
+    riskNative, riskTHB, riskR, oneRTHB, capNative,
     rUnit, rTarget, ffCap: tgt.cap, throttled: tgt.throttled,
-    clipped: baseRawPct > cap + 1e-9,
-    atEdge: Math.abs(baseRawPct - cap) < 1e-9
+    setupF: tgt.setupF, scoreR: tgt.scoreR,
+    clipped: posRawPct > cap + 1e-9,
+    atEdge: Math.abs(posRawPct - cap) < 1e-9
   };
-}
-/* เดินไม้: base → หลัง add ที่ราคา addPx แล้วยก stop ไป newStop */
-function szWalk(c, entry, addPx, mult, newStop, capTHB, fx, isUSD){
-  const totSh = c.baseSh + c.addSh;
-  if(totSh<=0) return null;
-  const cost  = c.baseSh*entry*mult + c.addSh*addPx*mult;
-  const avg   = cost/(totSh*mult);
-  const orNat = totSh*(avg-newStop)*mult;
-  const orTHB = orNat*(isUSD?fx:1);
-  return {totSh, cost, avg, openRiskNative:orNat, openRiskTHB:orTHB,
-          openRiskR: c.oneRTHB>0 ? orTHB/c.oneRTHB : 0,
-          totalPctOfPort: capTHB>0 ? (cost*(isUSD?fx:1))/capTHB*100 : 0};
 }
 /* R ladder: ราคาที่ระดับ R ต่าง ๆ (1R = ระยะ entry→stop ต่อหุ้น) */
 function szLadder(entry, dist, isLong){
@@ -5753,23 +5717,17 @@ let szPrevQty = 0;
 /* lot ตามตลาดของ port — หุ้นไทย 100 · หุ้น US 1 */
 /* Core & Sat.A ใช้ lot = 1 (ซื้อเป็นหุ้นตรง ๆ) · Sat.B ค่อยว่ากันตามสัญญา */
 function szDefaultLot(port){ return (port==='core'||port==='satA') ? 1 : 1; }
-/* ป้ายปุ่มไม้ตามสัดส่วนจริงของ port นั้น — Core: Base 50% / Dip 25% · Sat.A: Base 70% / Add-on 30% */
+/* ป้ายปุ่ม Setup — เหมือนกันทั้ง Core และ Sat.A (ไม่มีบันไดไม้แล้ว) */
 function szSyncLegLabels(port){
   const b1=document.getElementById('posT2x'), b2=document.getElementById('posTStd');
   if(!b1||!b2) return;
-  if(port==='core'){ b1.textContent='Base 50%'; b2.textContent='Dip 25% ×2'; }
-  else            { b1.textContent='Base 70%'; b2.textContent='Add-on 30%'; }
+  b1.textContent = SETUPS.acc.label + ' ×1.00';
+  b2.textContent = SETUPS.pp.label  + ' ×0.50';
 }
 function szSyncLot(){
   const el=document.getElementById('tLot'), p=document.getElementById('tPort');
   if(p) szSyncLegLabels(p.value);
   if(el&&p) el.value = String(szDefaultLot(p.value));
-}
-/* หาไม้ base ที่เปิดอยู่ของ symbol นี้ (ใช้ตอนกรอกไม้ add-on) */
-function szFindBaseLeg(port, sym){
-  if(!state||!Array.isArray(state.trades)||!sym) return null;
-  return state.trades.find(t=>t.port===port && t.sym===sym && t.posTier==='2x'
-           && (t.status==='open'||t.status==='plan') && t.id!==editId) || null;
 }
 function szRenderCard(o){
   const host=document.getElementById('szCard'), pth=document.getElementById('posTierHint');
@@ -5777,52 +5735,49 @@ function szRenderCard(o){
   const lotEl=document.getElementById('tLot');
   const lot=parseFloat(lotEl&&lotEl.value)||szDefaultLot(o.port);
   const fx=state.settings.fx, capTHB=portCapTHB(o.port);
-  const isAdd = posTier==='std';
-  const tgt = szTargetRisk(o.port);
-  const LG = szLeg(o.port);
+  const symU=curSymVal();
+  const setup=setupCfg(tSetup);
   szSyncLegLabels(o.port);
-  pth.innerHTML = isAdd
-    ? `ไม้ <b>${LG.label}</b> — คิดจาก <b>จำนวนหุ้นไม้ base × ${LG.ratio.toFixed(4)}</b> ไม่ใช่จากงบเสี่ยงที่เหลือ · สัดส่วน ${LG.split}${LG.maxAdd>1?` · ต่อได้ ${LG.maxAdd} ไม้ (วางคนละ zone)`:''}${LG.canPrecedeBase?' · <b>เข้าก่อนไม้ base ได้</b>':''}`
-    : `ไม้ base · <b>1R = ${szRpct(o.port)}% ของทุน ${PORTS[o.port].name}</b> (${o.isUSD?'$':'฿'}${szNum(capTHB*szRpct(o.port)/100/(o.isUSD?fx:1))}) · cap ${szBaseCap(o.port)}% · สัดส่วน ${LG.split}`;
+
+  /* ---- บรรทัดอธิบายใต้ปุ่ม Setup: ที่มาของ R ทั้งเส้น ---- */
+  const scoreR = szRpct(o.port, symU);
+  const ggT = (o.port==='satA') ? ggScoreOfSym(symU) : null;
+  const srcTxt = o.port==='satA'
+    ? (ggT!=null
+        ? `Growth Gate <b>${ggT}/${GG_MAX}</b> → 1R ${scoreR.toFixed(2)}%`
+        : `<b style="color:var(--amber)">ยังไม่ได้ให้คะแนน Growth Gate</b> → คิดเป็น Starter 1R ${scoreR.toFixed(2)}%`)
+    : `1R ${scoreR.toFixed(2)}% (ตั้งค่าไว้)`;
+  pth.innerHTML = `${srcTxt} × <b>${setup.label} ${setup.factor.toFixed(2)}</b> = <b>${(scoreR*setup.factor).toFixed(3).replace(/0$/,'')}%</b> ของทุน ${PORTS[o.port].name}`
+                + ` · cap ${szBaseCap(o.port)}%<br><span style="opacity:.8">${setup.hint}</span>`;
 
   if(!(o.entry>0) || !(o.stop>0) || o.entry===o.stop){
     host.innerHTML=''; return;
   }
-  const baseLeg = isAdd ? szFindBaseLeg(o.port, curSymVal()) : null;
-  const c = szCalc({port:o.port, capTHB, entry:o.entry, stop:o.stop, lot, mult:o.mult, fx, isUSD:o.isUSD,
-                    baseShOverride: baseLeg ? baseLeg.qty : null});
+  const c = szCalc({port:o.port, symName:symU, setup:tSetup, capTHB, entry:o.entry, stop:o.stop,
+                    lot, mult:o.mult, fx, isUSD:o.isUSD});
   if(!c){ host.innerHTML=''; return; }
 
   const cur=o.sym, heat=szHeat(o.port), isLong=o.bias!=='Short';
-  const addPx=parseFloat(document.getElementById('tAddPx').value);
+  szLastQty = c.sh;
 
-  /* จำนวนหุ้นที่ไม้นี้ต้องใช้ — ปุ่ม "ใส่ Qty ให้" อ่านจากตรงนี้ */
-  szLastQty = isAdd ? c.addSh : c.baseSh;
-
-  /* ไม้ base → โชว์ความเสี่ยงของไม้ base · ไม้ add-on → โชว์ Open Risk รวมหลัง add */
-  let heroR = c.riskR, heroTxt = 'ความเสี่ยงจริงของไม้ base', heroMoney = c.riskNative;
-  if(isAdd && baseLeg){
-    const wNow = szWalk(c, baseLeg.entry, o.entry, o.mult, o.stop, capTHB, fx, o.isUSD);
-    if(wNow){ heroR = wNow.openRiskR; heroMoney = wNow.openRiskNative; heroTxt = 'Open Risk รวมหลัง add ที่ stop ใหม่'; }
-  }
-
+  const heroR = c.riskR, heroMoney = c.riskNative;
   /* ---- แถบความเสี่ยงเทียบ 1R (เต็มแถบ = 1.5R) ---- */
   const pctBar=Math.min(100, Math.abs(heroR)/1.5*100);
-  const rCls = c.baseSh<=0 ? 'zero' : heroR<0 ? 'full' : c.clipped ? 'clip' : 'full';
+  const rCls = c.sh<=0 ? 'zero' : c.clipped ? 'clip' : 'full';
   let h=`<div class="szCard">
     <div class="szHero">
       <span class="szR ${rCls}">${heroR.toFixed(2)}R</span>
-      <span class="szRsub">= ${cur}${szNum(heroMoney)}${o.isUSD?` ≈ ฿${szNum(heroMoney*(o.isUSD?fx:1))}`:''} · ${heroTxt}</span>
+      <span class="szRsub">= ${cur}${szNum(heroMoney)}${o.isUSD?` ≈ ฿${szNum(heroMoney*(o.isUSD?fx:1))}`:''} · ความเสี่ยงจริงของไม้นี้</span>
     </div>
-    <div class="szBar"><i class="${c.riskR>1?'over':''}" style="width:${pctBar}%"></i><u style="left:66.7%"></u></div>
-    <div class="szRsub">ขีด = 1R · เต็มแถบ = 1.5R</div>
+    <div class="szBar"><i class="${c.rTarget > c.rUnit + 1e-9 ?'over':''}" style="width:${pctBar}%"></i><u style="left:66.7%"></u></div>
+    <div class="szRsub">ขีด = 1R (${c.rUnit.toFixed(2)}% ของทุน ${PORTS[o.port].name}) · เต็มแถบ = 1.5R${c.rTarget > c.rUnit + 1e-9 ? ' · <b>ไม้นี้ใหญ่กว่า 1R ปกติ</b> เพราะคะแนนสูง' : ''}</div>
     <div class="szGrid">
-      <div class="szCell" style="${isAdd?'':'outline:2px solid var(--teal);outline-offset:-2px'}"><div class="k">ไม้ base</div><div class="v">${szNum(c.baseSh)}</div>
-        <div class="s">${cur}${szNum(c.baseValNative)} · ${c.basePctActual.toFixed(2)}%</div></div>
-      <div class="szCell" style="${isAdd?'outline:2px solid var(--purple);outline-offset:-2px':''}"><div class="k">add-on ${isAdd?'(ไม้นี้)':'ตั้งรอ'}</div><div class="v">${szNum(c.addSh)}</div>
-        <div class="s">${isAdd?'ใช้จำนวนนี้':'stop-buy ค้างไว้'}</div></div>
-      <div class="szCell"><div class="k">position รวมเต็ม</div><div class="v">${(c.basePctActual+c.addPctTotal).toFixed(2)}%</div>
-        <div class="s">${szNum(c.baseSh+c.addSh)} หุ้น</div></div>
+      <div class="szCell" style="outline:2px solid var(--teal);outline-offset:-2px"><div class="k">จำนวนหุ้น</div><div class="v">${szNum(c.sh)}</div>
+        <div class="s">${cur}${szNum(c.valNative)}</div></div>
+      <div class="szCell"><div class="k">น้ำหนักใน port</div><div class="v">${c.posPctActual.toFixed(2)}%</div>
+        <div class="s">${c.clipped?`ติดเพดาน ${szBaseCap(o.port)}%`:`เพดาน ${szBaseCap(o.port)}%`}</div></div>
+      <div class="szCell"><div class="k">R เป้าหมาย</div><div class="v">${c.rTarget.toFixed(3).replace(/0$/,'')}%</div>
+        <div class="s">stop ห่าง ${c.distPct.toFixed(2)}%</div></div>
       <div class="szCell"><div class="k">Portfolio heat</div><div class="v">${heat.totalR.toFixed(2)}R</div>
         <div class="s">${heat.nPos} ตัว · เพดาน ${SZ.MAX_HEAT_R}R</div></div>
     </div>`;
@@ -5830,64 +5785,39 @@ function szRenderCard(o){
   /* แถบเพดาน Fund-flow */
   if(c.throttled){
     const stale=szFfStaleDays();
-    h+=`<div class="szMsg yellow">🔻 เพดาน Fund-flow <b>${c.ffCap}%</b> → 1R ถูกย่อเหลือ <b>${c.rTarget.toFixed(2)}%</b> (จาก ${c.rUnit}%) — ไม้นี้จึงเสี่ยง ${c.riskR.toFixed(2)}R แทนที่จะเป็น ~1R
+    h+=`<div class="szMsg yellow">🔻 เพดาน Fund-flow <b>${c.ffCap}%</b> → R เป้าหมายถูกย่อเหลือ <b>${c.rTarget.toFixed(3).replace(/0$/,'')}%</b> (จาก ${(c.scoreR*c.setupF).toFixed(3).replace(/0$/,'')}%) — ไม้นี้จึงเสี่ยง ${c.riskR.toFixed(2)}R
       ${stale!=null&&stale>10?`<br>⚠ ข้อมูล Fund-flow เก่า ${stale} วัน — ไปอัปเดตก่อนใช้ตัวเลขนี้`:''}
       ${stale==null?'<br>⚠ ยังไม่เคยกรอก Fund-flow — เพดานอาจไม่ตรงจริง':''}</div>`;
-  }
-  if(isAdd){
-    h+=`<div class="szMsg yellow">ไม้นี้ตั้งเป็น <b>add-on</b> — ระบบใช้จำนวน <b>${szNum(c.addSh)}</b> หุ้น${baseLeg?` (คิดจากไม้ base ${szNum(baseLeg.qty)} หุ้นที่บันทึกไว้)`:' (ยังไม่พบไม้ base ของสัญลักษณ์นี้ — คิดจากขนาด base ตามสูตร)'}</div>`;
   }
 
   /* ---- R ladder ---- */
   h+=`<div class="szSec">R ladder</div><table class="szTbl"><tr><th>ระดับ</th>${szLadder(o.entry,c.dist,isLong).map(x=>`<th>${x.r>0?'+':''}${x.r}R</th>`).join('')}</tr>
       <tr><td>ราคา</td>${szLadder(o.entry,c.dist,isLong).map(x=>`<td>${szNum(x.price,2)}</td>`).join('')}</tr></table>`;
 
-  /* ---- ตารางเดินไม้ ---- */
-  if(addPx>0){
-    const stops=[o.entry, o.entry*1.02, o.entry*1.04];
-    const before=c.riskR;
-    h+=`<div class="szSec">ตารางเดินไม้ (add ที่ ${szNum(addPx,2)})</div>
-        <table class="szTbl"><tr><th>ยก stop ไป</th><th>หุ้นรวม</th><th>ต้นทุนเฉลี่ย</th><th>Open Risk</th><th>R</th></tr>`;
-    stops.forEach(ns=>{
-      const w=szWalk(c,o.entry,addPx,o.mult,ns,capTHB,fx,o.isUSD);
-      const good=w.openRiskR<before;
-      h+=`<tr><td>${szNum(ns,2)}</td><td>${szNum(w.totSh)}</td><td>${szNum(w.avg,2)}</td>
-          <td>${cur}${szNum(w.openRiskNative)}</td>
-          <td style="color:${w.openRiskR<0?'var(--teal)':good?'var(--text)':'var(--red)'}">${w.openRiskR.toFixed(2)}R</td></tr>`;
-    });
-    h+=`</table><div class="szRsub" style="margin-top:3px">ก่อน add = ${before.toFixed(2)}R · ต้องยก stop ให้ Open Risk ต่ำกว่านี้เสมอ</div>`;
-  }
-
   /* ---- เงื่อนไขเตือน ---- */
   const red=[], yellow=[];
-  if(c.baseSh<=0) red.push(`ไม้ base คำนวณได้ 0 หุ้น — ทุนน้อยเกินไปสำหรับ lot ${lot} ที่ราคานี้`);
-  /* Sat.A: add-on ต้องเข้าเหนือราคา base เสมอ · Core: Dip ตั้งใจเข้าต่ำกว่าอยู่แล้ว จึงไม่ใช้กฎนี้ */
-  if(isAdd && LG.mustBeAbove && baseLeg && addPx>0 && addPx<=baseLeg.entry)
-    red.push(`ราคา add (${szNum(addPx,2)}) ≤ ราคาเข้าไม้ base (${szNum(baseLeg.entry,2)}) — ห้าม add ตอนไม้ base ยังไม่กำไร`);
-  if(isAdd && LG.maxAdd>1){
-    const symU=curSymVal();
-    const nAdd=(state.trades||[]).filter(t=>t.port===o.port && t.sym===symU && t.posTier==='std'
-                 && (t.status==='open'||t.status==='plan') && t.id!==editId).length;
-    if(nAdd>=LG.maxAdd) red.push(`${LG.label} ของ ${symU} มีอยู่ ${nAdd} ไม้แล้ว — เกินเพดาน ${LG.maxAdd} ไม้`);
-  }
-  if(isAdd && baseLeg && o.stop<=baseLeg.sl) red.push(`stop ใหม่ (${szNum(o.stop,2)}) ≤ stop เดิม (${szNum(baseLeg.sl,2)}) — ต้องยก stop พร้อม add เสมอ`);
-  if(isAdd && baseLeg && addPx>0){
-    const w=szWalk(c,baseLeg.entry,addPx,o.mult,o.stop,capTHB,fx,o.isUSD);
-    const beforeR=Math.abs(baseLeg.entry-baseLeg.sl)*baseLeg.qty*(baseLeg.mult||1)*(o.isUSD?fx:1)/c.oneRTHB;
-    if(w && w.openRiskR>beforeR) red.push(`Open Risk หลัง add (${w.openRiskR.toFixed(2)}R) สูงกว่าก่อน add (${beforeR.toFixed(2)}R)`);
-  }
-  const willBeNew = !heat.rows.some(r=>r.sym===curSymVal());
+  if(c.sh<=0) red.push(`คำนวณได้ 0 หุ้น — ทุนน้อยเกินไปสำหรับ lot ${lot} ที่ราคานี้`);
+  if(o.port==='satA' && ggT==null)
+    yellow.push(`ยังไม่ได้ให้คะแนน Growth Gate ให้ <b>${escHtml(symU||'symbol นี้')}</b> ใน Watchlist — ระบบคิดเป็น Starter (1R ${scoreR.toFixed(2)}%) ซึ่งอาจเล็กกว่าที่ควรเป็น`);
+  /* ไม้ซ้ำ symbol เดิม — ไม่มีบันไดไม้แล้ว การเปิดซ้ำจึงเป็นการเพิ่มความเสี่ยงตรง ๆ */
+  const dupLegs=(state.trades||[]).filter(t=>t.port===o.port && t.sym===symU
+                 && (t.status==='open'||t.status==='plan') && t.id!==editId);
+  if(dupLegs.length)
+    yellow.push(`มีไม้ของ ${escHtml(symU)} ค้างอยู่แล้ว ${dupLegs.length} ไม้ — ระบบไม่มีบันไดไม้แล้ว การเปิดเพิ่มคือการซ้อนความเสี่ยง ไม่ใช่การต่อไม้`);
+  const willBeNew = !heat.rows.some(r=>r.sym===symU);
   if(willBeNew && heat.nPos>=SZ.MAX_POS) red.push(`ถืออยู่ ${heat.nPos} ตัวแล้ว — เกินเพดาน ${SZ.MAX_POS} ตัวพร้อมกัน`);
   if(heat.totalR + (willBeNew?c.riskR:0) > SZ.MAX_HEAT_R) red.push(`Portfolio heat จะเป็น ${(heat.totalR+(willBeNew?c.riskR:0)).toFixed(2)}R — เกินเพดาน ${SZ.MAX_HEAT_R}R`);
-  const symNow=curSymVal();
   const wl=Array.isArray(state.watchlist)?state.watchlist:[];
-  const wRow=wl.find(x=>x.sym===symNow && x.port===o.port);
+  const wRow=wl.find(x=>x.sym===symU && x.port===o.port);
   const myTheme=(wRow&&wRow.industry)||null;
   if(myTheme && heat.byTheme[myTheme] && willBeNew && heat.byTheme[myTheme].n>=SZ.MAX_PER_THEME)
     red.push(`ธีม "${myTheme}" ถืออยู่ ${heat.byTheme[myTheme].n} ตัวแล้ว — เกินเพดาน ${SZ.MAX_PER_THEME} ตัวต่อธีม`);
+  /* Catalyst 1-3 เดือน — ไม่ใช่เงื่อนไขบล็อก แต่เป็นเหตุผลที่ควรมีก่อนลงเงินไม้ Satellite */
+  if(o.port==='satA' && wRow && !((wRow.gg&&wRow.gg.catalyst||'').trim()))
+    yellow.push(`ยังไม่ได้เขียน <b>Catalyst 1-3 เดือน</b> ของ ${escHtml(symU)} — ไม้ Satellite ที่ไม่มี catalyst คือการถือรอเฉย ๆ`);
 
-  if(c.clipped) yellow.push(`cap ${szBaseCap(o.port)}% กำลังลดขนาดไม้ให้ — ความเสี่ยงจริงเหลือ <b>${c.riskR.toFixed(2)}R</b> (stop แคบกว่า ${(c.rTarget/szBaseCap(o.port)*100).toFixed(1)}%)`);
-  if(c.basePctActual + c.addPctTotal > SZ.WARN_TOTAL_PCT) yellow.push(`position รวมเต็ม = ${(c.basePctActual+c.addPctTotal).toFixed(2)}% เกิน ${SZ.WARN_TOTAL_PCT}%`);
+  if(c.clipped) yellow.push(`cap ${szBaseCap(o.port)}% กำลังลดขนาดไม้ให้ — ความเสี่ยงจริงเหลือ <b>${c.riskR.toFixed(2)}R</b> (stop แคบกว่า ${(c.rTarget/szBaseCap(o.port)*100).toFixed(2)}%)`);
+  if(c.posPctActual > SZ.WARN_TOTAL_PCT) yellow.push(`น้ำหนักไม้นี้ = ${c.posPctActual.toFixed(2)}% เกิน ${SZ.WARN_TOTAL_PCT}%`);
   if(heat.totalR > SZ.WARN_HEAT_R && heat.totalR <= SZ.MAX_HEAT_R) yellow.push(`Portfolio heat ${heat.totalR.toFixed(2)}R เกิน ${SZ.WARN_HEAT_R}R แล้ว`);
 
   red.forEach(x=>h+=`<div class="szMsg red">⛔ ${x}</div>`);
@@ -5997,7 +5927,7 @@ function renderHeatPanel(){
 function szHeat(port){
   if(!state || !Array.isArray(state.trades)) return {rows:[],totalR:0,totalTHB:0,byTheme:{},nPos:0};
   const fx = state.settings.fx, capTHB = portCapTHB(port);
-  const oneR = capTHB*szRpct(port)/100;
+  const oneR = capTHB*szPortRefR(port)/100;
   const wl = Array.isArray(state.watchlist)?state.watchlist:[];
   const industryOf = sym => { const w = wl.find(x=>x.sym===sym && x.port===port); return (w&&w.industry)||'— ไม่ระบุ'; };
   const bySym = {};
@@ -6730,7 +6660,7 @@ function ffDelProxy(list,i){
 <!-- ===== แถบเตือนสำรองข้อมูลประจำวัน ===== -->
 <div class="bkBanner" id="bkBanner">
   <div class="bkTxt">
-    <b id="bkTitle">ถึงเวลาสำรองข้อมูลประจำวัน</b>
+    <b id="bkTitle">ถึงเวลาสำรองข้อมูลประจำสัปดาห์</b>
     <span class="bkSub" id="bkSub">แตะเพื่อบันทึกไฟล์ backup ลงเครื่อง</span>
   </div>
   <button class="small primary" onclick="exportBackupNow(true)">ดาวน์โหลด</button>
@@ -6745,22 +6675,33 @@ function ffDelProxy(list,i){
 const BK_LAST_KEY   = 'bkLastBackupAt';   /* epoch ms ของ backup ล่าสุดที่สำเร็จ */
 const BK_SNOOZE_KEY = 'bkSnoozeUntil';    /* กด "ไว้ก่อน" แล้วเงียบถึงเวลานี้ */
 const BK_HOUR       = 20;                 /* 20:00 น. */
+const BK_DOW        = 0;                  /* 0 = วันอาทิตย์ — รอบสำรองประจำสัปดาห์ */
 const BK_SNOOZE_MS  = 3*60*60*1000;       /* เลื่อนไป 3 ชม. */
 
-/* iOS/iPadOS Safari บล็อก programmatic download ที่ไม่มี user gesture แทบทุกกรณี
-   เครื่องกลุ่มนี้ข้าม auto ไปใช้ banner ให้กดเองอย่างเดียว จะได้ไม่ "คิดว่า backup แล้ว" ทั้งที่ไม่มีไฟล์ */
-function bkIsIOS(){
-  return /iPad|iPhone|iPod/.test(navigator.userAgent)
-      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);  /* iPad ที่รายงานตัวเป็น Mac */
+/* ★ 30 ส.ค. 2026 — backup ทำ "เฉพาะบน Mac สัปดาห์ละครั้ง (ทุกวันอาทิตย์ 20:00)"
+   เดิม: เตือน/ดาวน์โหลดทุกวันทุกเครื่อง — บนมือถือ iOS Safari บล็อก programmatic download อยู่แล้ว
+         banner จึงขึ้นทุกวันโดยที่กดไปก็มักไม่ได้ไฟล์ กลายเป็น noise ที่ทำให้เลิกสนใจ banner จริง ๆ
+   ใหม่: มือถือ/iPad ปิดสนิท (ไม่มี banner ไม่มี auto) · Mac เท่านั้นที่มีรอบอัตโนมัติ
+   ปุ่ม "Export JSON ตอนนี้" ในหน้าตั้งค่ายังกดได้จากทุกเครื่องตามเดิม */
+function bkIsMac(){
+  const ua   = navigator.userAgent || '';
+  const plat = navigator.platform  || '';
+  if(/iPad|iPhone|iPod/.test(ua)) return false;
+  /* iPadOS 13+ รายงานตัวเป็น MacIntel — แยกออกด้วยจำนวน touch points */
+  if(plat === 'MacIntel' && navigator.maxTouchPoints > 1) return false;
+  return /Mac/.test(plat) || /Mac OS X/.test(ua);
 }
 
 /* หา "เส้นตาย 20:00 ล่าสุดที่ผ่านมาแล้ว" แทนการตั้ง timer ที่ 20:00 ตรงๆ
    เพราะเว็บแอปตั้งเวลาเองไม่ได้ถ้าไม่ได้เปิดหน้าอยู่ — วิธีนี้ชดเชยให้เองตอนเปิดครั้งถัดไป
-   เช่น ไม่ได้เปิดเลยทั้งคืน มาเปิด 9 โมงเช้า -> เส้นตายล่าสุด = 20:00 เมื่อวาน -> ยังไม่ได้ backup -> เตือนทันที */
+   เช่น อาทิตย์ไม่ได้เปิดเลย มาเปิดวันพุธ -> เส้นตายล่าสุด = อาทิตย์ที่ผ่านมา 20:00 -> ยังไม่ได้ backup -> เตือนทันที */
 function bkLastDeadline(){
   const now = new Date();
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), BK_HOUR, 0, 0, 0);
-  if(now < d) d.setDate(d.getDate() - 1);
+  let back = d.getDay() - BK_DOW;              /* ถอยกี่วันถึงจะถึงวันอาทิตย์ */
+  if(back < 0) back += 7;
+  if(back === 0 && now < d) back = 7;          /* วันนี้อาทิตย์ แต่ยังไม่ถึง 20:00 -> ใช้อาทิตย์ที่แล้ว */
+  d.setDate(d.getDate() - back);
   return d.getTime();
 }
 function bkDue(){
@@ -6840,20 +6781,17 @@ function bkRenderLastHint(){
   const stale = bkDue();
   el.innerHTML = 'สำรองล่าสุดจากเครื่องนี้: '
     + `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())} น.`
-    + (stale ? ' · <b style="color:var(--amber)">เลยรอบประจำวันแล้ว</b>' : '');
+    + (stale ? ' · <b style="color:var(--amber)">เลยรอบประจำสัปดาห์แล้ว</b>' : '');
 }
 
 function bkCheck(){
   if(!state || !stateFromServer) return;              /* ยังไม่ยืนยันกับ server — รอรอบหน้า ห้าม backup ของเก่า */
+  if(!bkIsMac()) return;                              /* ★ มือถือ/iPad — ปิดสนิท ไม่เตือน ไม่ดาวน์โหลด */
   if(!bkDue() || bkSnoozed()) return;
-  if(bkIsIOS()){                                       /* auto ใช้ไม่ได้บน iOS — ให้กดเอง */
-    bkShowBanner('ถึงเวลาสำรองข้อมูลประจำวัน', 'แตะ “ดาวน์โหลด” เพื่อบันทึกไฟล์ลงเครื่อง');
-    return;
-  }
   if(exportBackupNow(false)){
     /* auto สำเร็จในมุมของ JS แล้ว แต่ Safari อาจบล็อกเงียบๆ โดยไม่ throw — ยืนยันกับตาผู้ใช้สักครู่
        เผื่อไฟล์ไม่ลงจริง จะได้กดเองทัน ไม่ปล่อยให้เข้าใจผิดว่ามี backup */
-    bkShowBanner('สำรองข้อมูลอัตโนมัติแล้ว', 'ไม่เห็นไฟล์ในโฟลเดอร์ Downloads? แตะ “ดาวน์โหลด” เพื่อบันทึกซ้ำ');
+    bkShowBanner('สำรองข้อมูลประจำสัปดาห์แล้ว', 'ไม่เห็นไฟล์ในโฟลเดอร์ Downloads? แตะ “ดาวน์โหลด” เพื่อบันทึกซ้ำ');
     setTimeout(bkHideBanner, 15000);
   } else {
     bkShowBanner('สำรองอัตโนมัติไม่สำเร็จ', 'แตะ “ดาวน์โหลด” เพื่อบันทึกไฟล์เอง');
@@ -6862,9 +6800,11 @@ function bkCheck(){
 
 /* เช็คตอนเปิดแอป (หน่วงรอ snapshot จาก server มาถึงก่อน) + เช็คซ้ำทุกนาที
    เผื่อกรณีเปิดหน้าค้างไว้แล้วเวลาข้าม 20:00 ระหว่างนั้น */
-setTimeout(bkCheck, 8000);
-setInterval(bkCheck, 60*1000);
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) setTimeout(bkCheck, 1500); });
+if(bkIsMac()){
+  setTimeout(bkCheck, 8000);
+  setInterval(bkCheck, 60*1000);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) setTimeout(bkCheck, 1500); });
+}
 </script>
 </body>
 </html>
