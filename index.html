@@ -1213,15 +1213,20 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <div class="hint">ใช้ดึงราคาปิดรายวันมาคำนวณ RRG ให้อัตโนมัติ · สมัครฟรีที่ <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener" style="color:var(--blue)">twelvedata.com</a> — ใช้วันละ ~19 เครดิตจากโควตาฟรี 800/วัน<br>
       key ถูกเก็บใน Firestore ของคุณเอง ซิงก์ข้ามเครื่อง · ใครก็ตามที่เปิด dashboard นี้ได้จะเห็น key ได้ ถ้าหลุดให้ไป regenerate ใหม่</div>
 
-    <div class="divlbl">Sat.B — Default Volatility (จุด/point)</div>
+    <div class="divlbl">Sat.B — กรอบระยะ SL ที่ยอมรับได้ (จุด/point)</div>
     <div class="fgrid">
-      <div class="f"><label>XAUUSD</label><input type="number" step="any" inputmode="decimal" id="sVolXAU" placeholder="เช่น 30"></div>
-      <div class="f"><label>S50</label><input type="number" step="any" inputmode="decimal" id="sVolS50" placeholder="เช่น 5"></div>
-      <div class="f"><label>BTCUSD</label><input type="number" step="any" inputmode="decimal" id="sVolBTC" placeholder="เช่น 800"></div>
+      <div class="f"><label>XAUUSD — ค่าล่าง (lo)</label><input type="number" step="any" inputmode="decimal" id="sVolXAULo" placeholder="เช่น 20"></div>
+      <div class="f"><label>XAUUSD — ค่าบน (hi)</label><input type="number" step="any" inputmode="decimal" id="sVolXAUHi" placeholder="เช่น 60"></div>
+      <div class="f"><label>S50 — ค่าล่าง (lo)</label><input type="number" step="any" inputmode="decimal" id="sVolS50Lo" placeholder="เช่น 4"></div>
+      <div class="f"><label>S50 — ค่าบน (hi)</label><input type="number" step="any" inputmode="decimal" id="sVolS50Hi" placeholder="เช่น 12"></div>
+      <div class="f"><label>BTCUSD — ค่าล่าง (lo)</label><input type="number" step="any" inputmode="decimal" id="sVolBTCLo" placeholder="เช่น 600"></div>
+      <div class="f"><label>BTCUSD — ค่าบน (hi)</label><input type="number" step="any" inputmode="decimal" id="sVolBTCHi" placeholder="เช่น 2000"></div>
+      <div class="f"><label>Risk % เมื่อ SL แคบกว่าค่าล่าง</label><input type="number" step="any" inputmode="decimal" id="sSatBLowRisk" placeholder="1"></div>
     </div>
-    <div class="hint">ใช้เป็น<b>พื้นระยะขั้นต่ำ</b>ตอนคำนวณขนาดไม้: <code>ระยะที่ใช้ = MAX(ระยะ SL จริง, Default Volatility)</code><br>
-      SL กว้างกว่าค่านี้ → ใช้ SL จริง ไม้เล็กลงตามปกติ · SL <u>แคบกว่า</u>ค่านี้ → ยังใช้ค่านี้คำนวณ กันไม้ใหญ่เกินจากการตั้ง stop ชิดกว่าที่สินค้านั้นแกว่งจริง<br>
-      เช่น RPT 2% · XAUUSD 30p · ตั้ง SL 20p → ยังคิดที่ 30p (ไม้เล็กกว่าที่ 20p จะให้) แต่ถ้าตั้ง SL 40p → คิดที่ 40p</div>
+    <div class="hint">เทียบกับ <b>ระยะ SL ที่กรอกจริง</b> (Entry − SL) — ไม่ใช่ความผันผวนสด<br>
+      <b>SL &lt; ค่าล่าง</b> → stop ชิดเกินกว่าที่สินค้าแกว่งปกติ โอกาสโดนเขี่ยสูง → <b>ลด Risk เหลือค่าในช่องขวาสุด (ปกติ 1%)</b> แต่ยังคิดขนาดไม้จากระยะ SL จริง<br>
+      <b>SL &gt; ค่าบน</b> → <b>ล็อกไม่ให้เทรด</b> — stop กว้างขนาดนั้นแปลว่าเข้าผิดจังหวะ ไม่ใช่แค่ไม้ใหญ่เกิน<br>
+      ใส่ 0 = ไม่ใช้เกณฑ์นั้น · <span style="color:var(--amber)">กลไกเดิม "SL แคบกว่า vol แล้วยกระยะขึ้น" ถูกยกเลิกแล้ว — ตอนนี้คิดที่ระยะ SL จริงเสมอ</span></div>
 
     <div class="divlbl">เพดาน Fund-flow — คุมขนาดไม้อัตโนมัติ</div>
     <div class="fgrid">
@@ -1498,7 +1503,10 @@ const DEFAULTS = {
   sizing:{ r:{core:1, satA:1}, cap:{core:12.5, satA:25}, ffThrottle:true },
   rsBench:'NASDAQ:IXIC',
   /* Sat.B — พื้นระยะขั้นต่ำตอนคำนวณขนาดไม้ (จุด) · 0 = ไม่ใช้ */
-  satBVol:{XAUUSD:0, S50:0, BTCUSD:0},
+  /* ★ 31 ส.ค. 2026 — เดิมเป็นตัวเลขเดียวต่อสินค้า (พื้นระยะ: SL แคบกว่านี้ให้ใช้ค่านี้คำนวณแทน)
+     ตอนนี้เป็น "กรอบ" 2 ค่า: lo = ระยะ SL ต่ำสุดที่ยอมให้เข้าเต็ม risk · hi = ระยะ SL สูงสุดที่ยอมให้เทรด */
+  satBVol:{XAUUSD:{lo:0,hi:0}, S50:{lo:0,hi:0}, BTCUSD:{lo:0,hi:0}},
+  satBLowRisk:1,          /* SL แคบกว่า lo -> ใช้ risk เท่านี้แทน RPT ปกติ (%) */
   limits:{trade:1,port:{core:3,satA:3,satB:3},total:6}
 };
 const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
@@ -1747,7 +1755,7 @@ function startListening(){
        แก้โดยห้าม auto-persist จาก snapshot ที่ยังมาจาก cache (fromCache) — รอ snapshot ที่ยืนยันจาก server จริงก่อนเท่านั้น */
     if(!snap.metadata.fromCache){
       const ran = {satBDefaults:ensureSatBDefaults(), tabsOffsetV2:ensureTabsOffsetV2(), r1Model:ensure1RModel(),
-                   satBNote:ensureSatBNoteMerge(), satACap25:ensureSatACap25()};
+                   satBNote:ensureSatBNoteMerge(), satACap25:ensureSatACap25(), satBVolBands:ensureSatBVolBands()};
       const changed = Object.keys(ran).filter(k=>ran[k]);
       if(changed.length){
         /* ★ เบรกวงจร: migration ที่ "ทำครั้งเดียว" ต้องหยุดยิง persist ภายในไม่กี่รอบ
@@ -1854,6 +1862,7 @@ function resetAll(){
   ensureSatBDefaults();
   ensureSatBNoteMerge();
   ensureSatACap25();
+  ensureSatBVolBands();
   document.getElementById('setOverlay').classList.remove('show');
   render();
   schedulePersist();
@@ -3003,6 +3012,25 @@ function ensureSatBNoteMerge(){
    (gate ADR >= 4% ทำให้ stop จริงตกราว 4-8%) พอชนเพดาน ทุกไม้จะได้ขนาดเท่ากันหมด
    = การปรับขนาดตามคะแนนหยุดทำงาน  ตั้ง 25% ให้เพดานกัดเฉพาะตอน stop แคบผิดปกติ (< 5%)
    ต้อง migrate ค่าที่เคยเซฟไว้ด้วย ไม่งั้นค่าเดิม 12.5% ใน Firestore จะทับ default ตัวใหม่ */
+/* ★ 31 ส.ค. 2026 — satBVol: number -> {lo,hi}
+   ค่าเดิมคือ "พื้นระยะขั้นต่ำ" ซึ่งความหมายใกล้กับ lo มากที่สุด จึงย้ายลง lo แล้วปล่อย hi = 0 (ยังไม่ล็อก)
+   ธงเก็บใน settings (ไม่ใช่บน state) — บทเรียนจากบั๊ก satBNoteV1 ที่ธงบน state ไม่ถูก copy ตอน rebuild */
+function ensureSatBVolBands(){
+  if(!state || !state.settings) return false;
+  const s = state.settings;
+  if(s.satBVolV2) return false;
+  const old = s.satBVol || {};
+  const out = {};
+  ['XAUUSD','S50','BTCUSD'].forEach(k=>{
+    const v = old[k];
+    if(v && typeof v === 'object') out[k] = {lo: parseFloat(v.lo)||0, hi: parseFloat(v.hi)||0};
+    else out[k] = {lo: parseFloat(v)||0, hi: 0};
+  });
+  s.satBVol = out;
+  if(!(s.satBLowRisk > 0)) s.satBLowRisk = 1;
+  s.satBVolV2 = true;
+  return true;
+}
 function ensureSatACap25(){
   if(!state || !state.settings) return false;
   const s = state.settings;
@@ -3990,13 +4018,18 @@ function swingDefaultMult(sym){
   if(s==='BTCUSDT') return 1;
   return 1;
 }
-function lockPortBiasFields(lock){
-  document.getElementById('tPort').disabled = lock;
-  document.getElementById('bLong').disabled = lock;
-  document.getElementById('bShort').disabled = lock;
-  const hint = lock ? 'ดึงมาจาก Watchlist ของ Symbol นี้ — ล็อกไว้' : '';
-  document.getElementById('portLockHint').textContent = hint;
-  document.getElementById('biasLockHint').textContent = hint;
+/* ★ 31 ส.ค. 2026 — แยกล็อก Port กับ Bias ออกจากกัน
+   เหตุ: Sat.B ดึง Port มาจาก Weekly Plan ได้ (มีแค่ 3 ตัว รู้อยู่แล้วว่าอยู่ port ไหน)
+        แต่ "ทิศของไม้" ต้องเลือกเองทุกครั้ง — Trend หลักของสัปดาห์เป็นบริบท ไม่ใช่คำสั่ง
+        โดยเฉพาะตอน Ranging ที่เล่นได้ทั้งสองฝั่งในกรอบ
+   เดิมล็อกพร้อมกันทั้งคู่ ทำให้ Sat.B กดเลือก Long/Short ไม่ได้เลย */
+function lockPortBiasFields(lockPort, lockBias){
+  if(lockBias === undefined) lockBias = lockPort;
+  document.getElementById('tPort').disabled = lockPort;
+  document.getElementById('bLong').disabled = lockBias;
+  document.getElementById('bShort').disabled = lockBias;
+  document.getElementById('portLockHint').textContent = lockPort ? 'ดึงมาจาก Watchlist / Weekly Plan ของ Symbol นี้ — ล็อกไว้' : '';
+  document.getElementById('biasLockHint').textContent = lockBias ? 'ดึงมาจาก Watchlist ของ Symbol นี้ — ล็อกไว้' : '';
 }
 /* apply Port + Bias + default Multiplier from the matching Watchlist entry for a symbol */
 function applySymbolWatchLink(sym){
@@ -4004,9 +4037,11 @@ function applySymbolWatchLink(sym){
   if(!w){ lockPortBiasFields(false); return null; }
   document.getElementById('tPort').value = w.port;
   setCur(PORTS[w.port].cur);
-  setBias(w.port==='satB' ? (w.bias||'Long') : 'Long');
-  lockPortBiasFields(true);
-  document.getElementById('tMult').value = w.port==='satB' ? swingDefaultMult(sym) : 1;
+  const isSwing = w.port==='satB';
+  /* Sat.B: ตั้งค่าเริ่มต้นตาม Trend หลักของสัปดาห์ (Ranging -> Long) แต่ปล่อยให้แก้ได้ */
+  setBias(isSwing ? (w.bias==='Short' ? 'Short' : 'Long') : 'Long');
+  lockPortBiasFields(true, !isSwing);
+  document.getElementById('tMult').value = isSwing ? swingDefaultMult(sym) : 1;
   return w;
 }
 /* ================= pre-trade system checklist ================= */
@@ -4170,6 +4205,13 @@ function clOnSymChange(){
     const w = findWatchForSymbol(sym);
     clState.port = w ? w.port : null;
     clState.bias = w ? (w.port==='satB' ? (w.bias||'Unclear') : 'Long') : null;
+    /* ★ Sat.B ไม่มี checklist แล้ว — ไม่มีเหตุให้ค้างหน้านี้ไว้ ข้ามไปหน้าเพิ่ม Trade เลย
+       (bias ปล่อยเป็น null ให้เลือกเองในฟอร์ม · sizeFactor = 1 เสมอ เพราะตัวคูณจาก checklist ถูกถอดไปแล้ว) */
+    if(clState.port === 'satB'){
+      closeChecklist();
+      openTrade(sym, null, null, 1);
+      return;
+    }
   }
   renderChecklistBody();
   updateChecklistUI();
@@ -5118,7 +5160,8 @@ function editTrade(id){
   document.getElementById('tImageUrl').value=t.imageUrl||'';
   document.getElementById('imgHint').textContent='';
   setBias(t.bias); setCur(tradeCur(t)); setSetup(legacySetup(t)); toggleExitFields();
-  lockPortBiasFields(!t.unplanned && !!findWatchForSymbol(t.sym));
+  const linked = !t.unplanned && !!findWatchForSymbol(t.sym);
+  lockPortBiasFields(linked, linked && t.port!=='satB');
   posTierLocked = false;
   lockPosTierField(false);
   calcHint();
@@ -5257,7 +5300,7 @@ function calcHint(){
     ptf.style.display = 'none';
     pth.textContent = '';
     if(psh) psh.textContent='';
-    szRenderSatB({port, entry:e, stop:sl, mult:m, isUSD, sym,
+    szRenderSatB({port, entry:e, stop:sl, mult:m, isUSD, sym, bias,
                   symName:curSymVal(), sizeFactor:szSizeFactor});
   } else if(port==='core' || port==='satA'){
     if(psh) psh.textContent = '';
@@ -5319,6 +5362,14 @@ function saveTrade(){
   };
   if(!t.sym || !(t.entry>0) || !(t.sl>0) || !(t.qty>0) || t.entry===t.sl){
     alert('กรอก Symbol, Entry, SL, Qty ให้ครบ (Entry ≠ SL)'); return;
+  }
+  /* ★ ค่าบนของกรอบ SL = "ล็อกไม่ให้เทรด" จริง ๆ ไม่ใช่แค่เตือน
+     บล็อกเฉพาะไม้ที่ยังจะเข้า (plan / open) — ไม้ที่ปิดไปแล้วต้องบันทึกได้ ไม่งั้น Journal ไม่ตรงความจริง */
+  if(t.port==='satB' && (status==='plan' || status==='open') && szSatBBlocked(t.sym, t.entry, t.sl)){
+    const b = szSatBBand(t.sym);
+    alert(`ระยะ SL ของ ${t.sym} = ${Math.abs(t.entry-t.sl)} กว้างกว่าค่าบนที่ตั้งไว้ (${b.hi})\n\n`
+      + `ไม้นี้ถูกล็อกไม่ให้เทรด — รอจุดเข้าที่ SL แคบลง หรือแก้ค่าบนในหน้าตั้งค่า Port`);
+    return;
   }
   /* ★ กระสุนรายสัปดาห์ของ Sat.B — เตือนแบบขอคำยืนยัน ไม่ใช่บล็อกตาย
      เพราะบางครั้งต้องบันทึกไม้ที่ "เข้าไปแล้วจริง" ย้อนหลัง การห้ามบันทึกจะทำให้ Journal ไม่ตรงความจริง
@@ -5581,9 +5632,13 @@ function openSettings(){
   const ps = s.posSize || cloneDefaults().posSize;
   document.getElementById('sPosSatB').value=ps.satB;
   const vv = s.satBVol || {};
-  document.getElementById('sVolXAU').value = vv.XAUUSD || '';
-  document.getElementById('sVolS50').value = vv.S50 || '';
-  document.getElementById('sVolBTC').value = vv.BTCUSD || '';
+  const band = k => (vv[k] && typeof vv[k]==='object') ? vv[k] : {lo: parseFloat(vv[k])||0, hi:0};
+  [['XAUUSD','sVolXAU'],['S50','sVolS50'],['BTCUSD','sVolBTC']].forEach(([k,id])=>{
+    const b = band(k);
+    document.getElementById(id+'Lo').value = b.lo || '';
+    document.getElementById(id+'Hi').value = b.hi || '';
+  });
+  document.getElementById('sSatBLowRisk').value = (s.satBLowRisk>0 ? s.satBLowRisk : 1);
   const sz = s.sizing || cloneDefaults().sizing;
   document.getElementById('sRCore').value   = sz.r.core;
   document.getElementById('sRSatA').value   = sz.r.satA;
@@ -5693,10 +5748,12 @@ function saveSettings(){
       ffThrottle: document.getElementById('sFfThrottle').value==='1'
     },
     satBVol:{
-      XAUUSD: parseFloat(document.getElementById('sVolXAU').value)||0,
-      S50:    parseFloat(document.getElementById('sVolS50').value)||0,
-      BTCUSD: parseFloat(document.getElementById('sVolBTC').value)||0
+      XAUUSD:{lo: parseFloat(document.getElementById('sVolXAULo').value)||0, hi: parseFloat(document.getElementById('sVolXAUHi').value)||0},
+      S50:   {lo: parseFloat(document.getElementById('sVolS50Lo').value)||0, hi: parseFloat(document.getElementById('sVolS50Hi').value)||0},
+      BTCUSD:{lo: parseFloat(document.getElementById('sVolBTCLo').value)||0, hi: parseFloat(document.getElementById('sVolBTCHi').value)||0}
     },
+    satBLowRisk: parseFloat(document.getElementById('sSatBLowRisk').value)||1,
+    satBVolV2: true,
     rsBench: (document.getElementById('sRsBench').value||'').trim() || 'NASDAQ:IXIC',
     tdKey: (document.getElementById('sTdKey').value||'').trim()
   };
@@ -6008,86 +6065,115 @@ function szRenderCard(o){
    SL กว้างกว่า → ใช้ SL จริง (ไม้เล็กลงตาม RPT)
    SL แคบกว่า  → ใช้ค่า volatility (กันไม้ใหญ่เกินจากการตั้ง stop ชิดกว่าที่สินค้าแกว่งจริง)
 ============================================================================== */
-function szSatBVol(symName){
+/* กรอบระยะ SL ของสินค้านั้น — {lo, hi} · 0 = ไม่ใช้เกณฑ์ */
+function szSatBBand(symName){
   const v = state && state.settings && state.settings.satBVol;
-  if(!v || !symName) return 0;
-  const key = Object.keys(v).find(k=>k.toUpperCase()===symName.toUpperCase());
-  return key ? (parseFloat(v[key])||0) : 0;
+  if(!v || !symName) return {lo:0, hi:0};
+  const key = Object.keys(v).find(k=>k.toUpperCase()===String(symName).toUpperCase());
+  if(!key) return {lo:0, hi:0};
+  const b = v[key];
+  if(b && typeof b === 'object') return {lo: parseFloat(b.lo)||0, hi: parseFloat(b.hi)||0};
+  return {lo: parseFloat(b)||0, hi: 0};   /* ค่าเก่าแบบตัวเลขเดียว — อ่านเป็น lo */
 }
-/* ตัวคูณขนาดไม้ Sat.B ที่ Pre-trade Checklist ส่งมา — 1 = เต็มไม้ · 0.6 = ไม่ติ๊ก 1st Swing
-   (Setup.A ไม่ติ๊ก "1st Major Reversal Swing Point" → 0.6) */
-let szSizeFactor = 1;
+function szSatBLowRisk(){
+  const v = state && state.settings && state.settings.satBLowRisk;
+  return (v>0) ? v : 1;
+}
+let szSizeFactor = 1;   /* ตัวคูณขนาดไม้จาก Checklist — Sat.B ไม่มี checklist แล้ว จึงเป็น 1 เสมอ */
+/* ══════════ ขนาดไม้ Sat.B — % Risk บนระยะ SL จริง + กรอบ lo/hi ══════════
+   ★ เขียนใหม่ 31 ส.ค. 2026 — ยกเลิกกลไกเดิมที่ "ยกระยะขึ้นเป็น Default Volatility เมื่อ SL แคบกว่า"
+     ปัญหาของกลไกเดิม: มันโกหกตัวเลข — บอกว่าเสี่ยง 2% ทั้งที่ถ้าโดน stop จริงจะเสียน้อยกว่านั้นมาก
+     ทำให้ทั้ง Journal และ Portfolio heat อ่านค่าผิดไปหมด
+   กฎใหม่ ตรงไปตรงมา: คิดขนาดไม้จากระยะ SL จริงเสมอ แล้วให้กรอบ lo/hi ทำหน้าที่คุมแทน
+     · SL < lo  -> stop ชิดเกินกว่าที่สินค้าแกว่งปกติ โอกาสโดนเขี่ยสูง -> ลด Risk เหลือ satBLowRisk (ปกติ 1%)
+     · SL > hi  -> ไม่ใช่ "ไม้ใหญ่เกิน" แต่คือ "เข้าผิดจังหวะ" -> ล็อก ไม่ให้เทรด
+     · อยู่ในกรอบ -> Risk เต็มตาม RPT
+   ผลลัพธ์: เลข "ถ้าโดน stop เสียเท่าไร" = งบเสี่ยงที่ตั้งไว้จริง ๆ เสมอ ไม่มีส่วนต่างซ่อนอยู่ */
 function szSatBCalc(o){
   const mult=o.mult||1;
   const factor = (o.sizeFactor>0 && o.sizeFactor<=1) ? o.sizeFactor : 1;
-  const rpt = (state.settings.posSize && state.settings.posSize.satB) || 2;
-  const capTHB = portCapTHB('satB');
-  const budgetFull = (capTHB*rpt/100)/(o.isUSD?state.settings.fx:1);
-  const budgetNative = budgetFull*factor;
+  const rptBase = (state.settings.posSize && state.settings.posSize.satB) || 2;
+  const band = szSatBBand(o.symName);
   const slDist = (o.entry>0 && o.stop>0 && o.entry!==o.stop) ? Math.abs(o.entry-o.stop) : 0;
-  const vol = szSatBVol(o.symName);
-  const useDist = Math.max(slDist, vol);
-  if(!(useDist>0)) return null;
-  const qty = budgetNative/(useDist*mult);
-  const qtyAtSL = slDist>0 ? budgetNative/(slDist*mult) : null;
-  return {rpt, factor, budgetFull, budgetNative, slDist, vol, useDist, qty, qtyAtSL,
-          floored: vol>0 && slDist>0 && vol>slDist,      /* volatility เป็นตัวคุม */
-          riskAtSL: slDist>0 ? qty*slDist*mult : 0};     /* ถ้าโดน stop จริงจะเสียเท่านี้ */
+  if(!(slDist>0)) return null;
+
+  const tooWide   = band.hi>0 && slDist > band.hi;     /* ล็อก */
+  const tooTight  = band.lo>0 && slDist < band.lo;     /* ลด risk */
+  const lowRisk   = szSatBLowRisk();
+  const rpt       = tooTight ? lowRisk : rptBase;
+
+  const capTHB = portCapTHB('satB');
+  const budgetFull   = (capTHB*rpt/100)/(o.isUSD?state.settings.fx:1);
+  const budgetNative = budgetFull*factor;
+  const qty = tooWide ? 0 : budgetNative/(slDist*mult);
+  return {rpt, rptBase, lowRisk, factor, budgetFull, budgetNative, slDist,
+          lo:band.lo, hi:band.hi, tooWide, tooTight,
+          useDist: slDist, qty,
+          riskAtSL: qty*slDist*mult};
+}
+/* ใช้จากหน้าเพิ่ม Trade เพื่อกันบันทึกไม้ที่ SL กว้างเกินกรอบ */
+function szSatBBlocked(symName, entry, stop){
+  const b = szSatBBand(symName);
+  if(!(b.hi>0) || !(entry>0) || !(stop>0)) return false;
+  return Math.abs(entry-stop) > b.hi;
 }
 function szRenderSatB(o){
   const host=document.getElementById('szCard'); if(!host) return;
   const c = szSatBCalc(o);
   if(!c){ host.innerHTML=''; szLastQty=0; return; }
-  szLastQty = c.qty;
+  szLastQty = c.tooWide ? 0 : c.qty;
   const cur=o.sym;
-  const qtyTxt=c.qty.toLocaleString('en-US',{maximumFractionDigits:2});
-  const volNote = c.vol>0 ? `เพดาน vol ${szNum(c.vol,2)}` : 'ยังไม่ตั้ง vol';
-  /* ไม่โชว์ตัวเลขซ้ำ — ช่อง "ระยะที่ใช้คำนวณ" จะแยกออกมาเฉพาะตอนที่มันต่างจาก SL จริงเท่านั้น */
-  let grid;
-  if(c.floored){
-    grid = `<div class="szCell" style="outline:2px solid var(--amber);outline-offset:-2px">
-        <div class="k">ระยะที่ใช้คำนวณ</div><div class="v">${szNum(c.vol,2)}</div><div class="s">Default Volatility</div></div>
-      <div class="szCell"><div class="k">ระยะ SL จริง</div><div class="v">${szNum(c.slDist,2)}</div><div class="s">แคบกว่า → ถูกยกขึ้น</div></div>
-      <div class="szCell"><div class="k">ถ้าโดน stop จริง</div><div class="v">${cur}${szNum(c.riskAtSL)}</div>
-        <div class="s">${(c.riskAtSL/c.budgetNative*100).toFixed(0)}% ของงบ ${cur}${szNum(c.budgetNative)}</div></div>`;
-  } else {
-    grid = `<div class="szCell"><div class="k">ระยะ SL</div><div class="v">${szNum(c.useDist,2)}</div>
-        <div class="s">${cur}${szNum(c.useDist*o.mult)}/หน่วย · ${volNote}</div></div>
-      <div class="szCell"><div class="k">งบเสี่ยง RPT ${c.rpt}%${c.factor<1?` × ${Math.round(c.factor*100)}%`:''}</div><div class="v">${cur}${szNum(c.budgetNative)}</div>
-        <div class="s">${c.factor<1?`ไม่เต็มไม้ — เต็มไม้คือ ${cur}${szNum(c.budgetFull)}`:'โดน stop = เสียเต็มงบ'}</div></div>`;
-  }
+  const name = o.symName || 'สินค้านี้';
+  const qtyTxt = c.qty.toLocaleString('en-US',{maximumFractionDigits:2});
+  const bandTxt = (c.lo>0||c.hi>0)
+    ? `กรอบ ${c.lo>0?szNum(c.lo,2):'—'} – ${c.hi>0?szNum(c.hi,2):'—'}`
+    : 'ยังไม่ตั้งกรอบ';
+
   let h=`<div class="szCard">
     <div class="szHero">
-      <span class="szR full">${qtyTxt}</span>
-      <span class="szRsub">หน่วย · Max Cap size ที่เข้าได้${c.floored?` · ถูกคุมด้วย volatility`:''}</span>
+      <span class="szR ${c.tooWide?'zero':'full'}">${c.tooWide?'ล็อก':qtyTxt}</span>
+      <span class="szRsub">${c.tooWide
+        ? `SL กว้างเกินกรอบของ ${escHtml(name)} — ไม้นี้เทรดไม่ได้`
+        : `หน่วย · Risk ${c.rpt}%${c.tooTight?' (ลดจาก '+c.rptBase+'% เพราะ SL แคบกว่าค่าล่าง)':''}`}</span>
     </div>
-    ${c.factor<1?`<div class="szMsg yellow">◑ <b>เข้า ${Math.round(c.factor*100)}%</b> — Setup.A ไม่ได้ติ๊ก “1st Major Reversal Swing Point” · เต็มไม้จะได้ <b>${(c.qty/c.factor).toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย</div>`:''}
-    <div class="szGrid">${grid}</div>`;
-  if(c.floored){
-    h+=`<div class="szMsg yellow">⚠ SL แคบกว่าที่ ${o.symName||'สินค้านี้'} แกว่งปกติ${c.qtyAtSL?` — ถ้าคิดที่ SL จริงจะได้ <b>${c.qtyAtSL.toLocaleString('en-US',{maximumFractionDigits:2})}</b> หน่วย ซึ่งใหญ่เกินไป จึงใช้เพดาน volatility แทน`:''}</div>`;
-  } else if(c.vol<=0){
-    h+=`<div class="szMsg yellow">ยังไม่ได้ตั้ง Default Volatility ของ ${o.symName||'สินค้านี้'} — ตั้งได้ในหน้า 🛠 ตั้งค่า Port</div>`;
+    <div class="szGrid">
+      <div class="szCell" style="${c.tooWide?'outline:2px solid var(--red);outline-offset:-2px':c.tooTight?'outline:2px solid var(--amber);outline-offset:-2px':''}">
+        <div class="k">ระยะ SL ที่กรอก</div><div class="v">${szNum(c.slDist,2)}</div><div class="s">${bandTxt}</div></div>
+      <div class="szCell"><div class="k">งบเสี่ยง RPT ${c.rpt}%</div><div class="v">${cur}${szNum(c.budgetNative)}</div>
+        <div class="s">${c.tooWide?'—':'โดน stop = เสียเต็มงบนี้'}</div></div>
+      <div class="szCell"><div class="k">ถ้าโดน stop จริง</div><div class="v">${c.tooWide?'—':cur+szNum(c.riskAtSL)}</div>
+        <div class="s">${c.tooWide?'—':'ตรงกับงบเสี่ยงพอดี'}</div></div>
+      <div class="szCell"><div class="k">กระสุนสัปดาห์นี้</div><div class="v">${wpBulletsLeft()}/${WP_BULLETS}</div>
+        <div class="s">Reset อาทิตย์ 00:00</div></div>
+    </div>`;
+
+  if(c.tooWide){
+    h+=`<div class="szMsg red">⛔ ระยะ SL <b>${szNum(c.slDist,2)}</b> กว้างกว่าค่าบนที่ตั้งไว้ (<b>${szNum(c.hi,2)}</b>) — <b>ล็อกไม่ให้เทรด</b><br>
+        stop กว้างขนาดนี้แปลว่าเข้าผิดจังหวะ ไม่ใช่แค่ต้องลดขนาดไม้ · รอจุดเข้าที่ SL แคบลง หรือแก้ค่าบนในหน้า 🛠 ตั้งค่า Port</div>`;
+  } else if(c.tooTight){
+    h+=`<div class="szMsg yellow">◑ ระยะ SL <b>${szNum(c.slDist,2)}</b> แคบกว่าค่าล่าง (<b>${szNum(c.lo,2)}</b>) — stop ชิดกว่าที่ ${escHtml(name)} แกว่งปกติ โอกาสโดนเขี่ยสูง<br>
+        ระบบจึง<b>ลด Risk เหลือ ${c.lowRisk}%</b> (จาก ${c.rptBase}%) แต่ยังคิดขนาดไม้จากระยะ SL จริง</div>`;
   }
-  /* ★ กระสุนรายสัปดาห์ — เตือนตรงจุดที่กำลังจะลงเงิน ไม่ใช่แค่ในแผง Weekly Plan */
-  const symU2 = String(o.symName||'').toUpperCase();
-  const isNewLeg = !editId || !(state.trades||[]).some(t=>t.id===editId && (t.status==='open'||t.status==='closed'));
-  const left = wpBulletsLeft();
-  if(isNewLeg && left===0){
-    h+=`<div class="szMsg red">⛔ สัปดาห์นี้ใช้กระสุนครบ ${WP_BULLETS} นัดแล้ว — ไม้นี้จะเกินโควตา (Reset วันอาทิตย์ 00:00)</div>`;
-  } else if(isNewLeg && left===1){
-    h+=`<div class="szMsg yellow">⚠ เหลือกระสุนนัดสุดท้ายของสัปดาห์นี้</div>`;
+  if(!(c.lo>0) && !(c.hi>0)){
+    h+=`<div class="szMsg yellow">ยังไม่ได้ตั้งกรอบระยะ SL ของ ${escHtml(name)} — ตั้งได้ในหน้า 🛠 ตั้งค่า Port</div>`;
   }
-  if(symU2 && !wpIsPicked(symU2)){
-    h+=`<div class="szMsg yellow">⚠ ${escHtml(symU2)} ไม่ได้ถูกติ๊กไว้ใน Weekly Plan ของสัปดาห์นี้</div>`;
-  } else if(symU2){
-    const tr = wpTrendOf(symU2);
+  const symU = String(o.symName||'').toUpperCase();
+  if(symU && !wpIsPicked(symU)){
+    h+=`<div class="szMsg yellow">⚠ ${escHtml(symU)} ไม่ได้ถูกติ๊กไว้ใน Weekly Plan ของสัปดาห์นี้</div>`;
+  } else if(symU){
+    const tr = wpTrendOf(symU);
     if(tr) h+=`<div class="szMsg" style="background:var(--surface2)">Trend หลักของสัปดาห์นี้: <b>${trendWord(tr)}</b>${
       (tr==='Long'&&o.bias==='Short')||(tr==='Short'&&o.bias!=='Short')
         ? ` — ไม้นี้เป็น ${o.bias} <b>สวนกับ Trend หลัก</b>` : ''}</div>`;
   }
+  const isNewLeg = !editId || !(state.trades||[]).some(t=>t.id===editId && (t.status==='open'||t.status==='closed'));
+  const left = wpBulletsLeft();
+  if(isNewLeg && left===0) h+=`<div class="szMsg red">⛔ สัปดาห์นี้ใช้กระสุนครบ ${WP_BULLETS} นัดแล้ว</div>`;
+  else if(isNewLeg && left===1) h+=`<div class="szMsg yellow">⚠ เหลือกระสุนนัดสุดท้ายของสัปดาห์นี้</div>`;
+
   h+=`</div>`;
   host.innerHTML=h;
-  szAutoFillQty();
+  if(!c.tooWide) szAutoFillQty();
 }
 /* ---- แผง Portfolio Heat ในแท็บแผนเทรด ---- */
 function renderHeatPanel(){
