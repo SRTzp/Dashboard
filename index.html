@@ -499,6 +499,7 @@ tr:last-child td{border-bottom:none}
 /* ---------- Watchlist ---------- */
 .wlports{display:flex;flex-direction:column;gap:16px}
 .wlhead{display:flex;align-items:center;gap:9px;margin-bottom:12px;flex-wrap:wrap;position:sticky;top:calc(var(--tabs-safe,0px) + 42px);background:var(--surface);z-index:20;padding:6px 0}
+.wlAddBtn{flex-shrink:0;margin-left:8px}
 .wlhead h2{font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:6px}
 .wlCollapseBtn{background:none;border:none;box-shadow:none;color:var(--faint);cursor:pointer;font-size:.75rem;padding:3px 5px;line-height:1;transition:transform .16s,color .14s}
 .wlCollapseBtn:hover{color:var(--text);background:none}
@@ -548,6 +549,24 @@ footer{color:var(--faint);font-size:.68rem;text-align:center;margin-top:16px;fon
 .errscreen .msg{font-family:var(--sans);font-size:.9rem;line-height:1.65}
 .errscreen .sub2{font-size:.72rem;color:var(--muted);margin-top:8px;font-family:var(--mono)}
 .errscreen .btns2{display:flex;gap:9px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+.acctBar{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}
+.acctBar select{
+  font-family:var(--sans);font-size:.8rem;font-weight:700;color:var(--text);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:5px 9px;max-width:220px;box-shadow:var(--sh-1);cursor:pointer;
+}
+.acctBar select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
+.acctRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--hair)}
+.acctRow:first-child{border-top:none}
+.acctRow input.nm{flex:1 1 150px;min-width:0;font-family:var(--sans);font-size:.82rem;background:var(--surface3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:8px 10px}
+.acctRow input.nm:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
+.acctPorts{display:flex;gap:5px;flex-wrap:wrap}
+.acctPorts label{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;color:var(--muted);
+  background:var(--surface2);border:1px solid transparent;border-radius:20px;padding:5px 11px;cursor:pointer}
+.acctPorts label.on{background:var(--teal-dim);border-color:rgba(14,156,134,.3);color:var(--teal)}
+.acctPorts input{width:14px;height:14px;accent-color:var(--teal);margin:0}
+.acctCur{font-size:.63rem;font-weight:700;color:var(--teal);background:var(--teal-dim);border-radius:20px;padding:3px 9px;white-space:nowrap}
+@media(max-width:700px){ .acctBar select{max-width:100%;flex:1 1 auto;padding:8px 10px} }
 .syncbadge{display:inline-flex;align-items:center;gap:6px;font-size:.67rem;font-family:var(--mono);color:var(--faint);cursor:default;padding:4px 0}
 .syncbadge .sdot{width:6px;height:6px;border-radius:50%;background:var(--faint)}
 .syncbadge.saved .sdot{background:var(--teal)}
@@ -652,10 +671,22 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   .hbtns>button>svg{width:19px;height:19px}
   .hbtns>button[onclick^="openSystemSettings"],
   .hbtns>button[onclick^="openSettings"],
-  .hbtns>button[onclick^="openIndustryManager"]{font-size:.6rem;gap:3px}
+  .hbtns>button[onclick^="openIndustryManager"]{flex:0 0 auto;min-width:54px;padding:8px 5px;font-size:.58rem;gap:3px}
+  .hbtns>button[onclick^="openImportCL"]{flex:1 1 0}
+  .hbtns>button[onclick^="openChecklist"]{flex:1.9 1 0;font-size:.72rem}   /* ＋ Add Trade — ปุ่มหลัก ให้กว้างสุด */
+  .hbtns>button[onclick^="openChecklist"] .btnIcon{font-size:1.3rem}
   .hbtns>button[onclick^="openIndustryManager"]::after{content:'Industry'}
   .hbtns .iconOnlyMobile .btnIcon{display:block;font-size:1.15rem;line-height:1.1}
   .hbtns .iconOnlyMobile .btnTxt{display:block;font-size:.6rem}
+
+  /* หัวกลุ่ม Watchlist บนมือถือ: แถวบน = ชื่อพอร์ต + ปุ่ม ＋ · แถวล่าง = ชิปเรียงลำดับ เลื่อนแนวนอนได้
+     เดิมกินไป 3 แถวเพราะชิปดันปุ่ม ＋ ตกบรรทัดของตัวเอง */
+  .wlhead{gap:8px 6px;padding:8px 0}
+  .wlhead h2{flex:1 1 auto;min-width:0}
+  .wlAddBtn{order:2;margin-left:auto;padding:8px 14px;font-size:.8rem}
+  .wlsortchips{order:3;width:100%;margin-left:0!important;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+  .wlsortchips::-webkit-scrollbar{display:none}
+  .wlsortchips>*{flex:none}
 
   /* Modal เป็นแผ่นเลื่อนขึ้นจากล่าง — นิ้วเอื้อมถึงปุ่มยืนยัน */
   .overlay{padding:0;align-items:flex-end}
@@ -716,13 +747,13 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   <div>
     <h1><span class="tick">▮</span> TRADING DASHBOARD</h1>
     <div class="sub">ความเสี่ยงรวม + Trading Journal · ฐานคำนวณ THB</div>
+    <div class="acctBar"><select id="acctSel" onchange="acctSwitch(this.value)" title="สลับบัญชี"></select><span id="acctPortsHint" class="hint" style="margin:0"></span></div>
     <div class="syncbadge" id="syncBadge" onclick="retrySync()"><span class="sdot"></span><span id="syncText">—</span> · <span id="authedAs" style="opacity:.7"></span></div>
   </div>
   <div class="hbtns">
     <button onclick="openSystemSettings()">🛠</button>
     <button onclick="openSettings()" title="Portfolio Setting"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="11" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><path d="M18 18 L18 7 A11 11 0 0 1 27.5 13 Z" fill="#F0397A" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L27.5 13 A11 11 0 0 1 28.9 21 Z" fill="#C084F5" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L18 7 A11 11 0 0 0 9 12.5 Z" fill="#8BD450" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="6" fill="#FFDD66" stroke="#111" stroke-width="1.6"/><text x="8" y="11" font-size="8" text-anchor="middle" font-weight="800" fill="#111" font-family="Arial">$</text></svg></button>
     <button onclick="openIndustryManager()" title="Industry"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.4"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="16" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="20" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="24" y="23" width="3.5" height="6" fill="#8FD6EE"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="2.6" stroke-linecap="round"/></svg></button>
-    <button class="warn iconOnlyMobile" onclick="openChecklist('fund')" title="Fundamental Checklist" aria-label="Checklist"><span class="btnIcon">📋</span><span class="btnTxt"> Checklist</span></button>
     <button class="iconOnlyMobile" onclick="openImportCL()" title="Import จาก Claude Checklist (วาง JSON)" aria-label="Import"><span class="btnIcon">📥</span><span class="btnTxt"> Import</span></button>
     <button class="primary iconOnlyMobile" onclick="openChecklist('trade')" title="Add Trade" aria-label="Add Trade"><span class="btnIcon">＋</span><span class="btnTxt"> Add Trade</span></button>
   </div>
@@ -1415,7 +1446,10 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
     <h3>ตั้งค่าระบบ</h3>
   <details class="setsec" open><summary class="divlbl">บัญชี</summary>
   <div class="secbody">
-    <button class="danger" onclick="doSignOut()">ออกจากระบบ</button>
+    <div class="hint" style="margin:0 0 10px">แต่ละบัญชีมีข้อมูลของตัวเองแยกกันหมด (ทุน · Trade · Watchlist · Journal · Fund-flow) อยู่ในล็อกอินเดียวกัน สลับได้โดยไม่ต้องออกจากระบบ<br>ติ๊กเลือกว่าบัญชีนั้นใช้พอร์ตไหนบ้าง — พอร์ตที่ไม่ได้ติ๊กจะถูกซ่อนทั้งแอป</div>
+    <div id="acctMgr"></div>
+    <button class="small" onclick="acctAdd()" style="margin-top:8px">＋ เพิ่มบัญชี</button>
+    <div style="margin-top:16px"><button class="danger" onclick="doSignOut()">ออกจากระบบ</button></div>
 
   </div></details>
   <details class="setsec"><summary class="divlbl">ขนาดตัวอักษร (rem)</summary>
@@ -1781,6 +1815,169 @@ auth.onAuthStateChanged(user=>{
 });
 
 /* ================= Firestore sync ================= */
+/* ── สร้าง state จาก "ก้อนข้อมูลของบัญชี" (โครงเดิมเป๊ะ) ──
+   ย้ายออกมาเป็นฟังก์ชันเพื่อให้ทั้ง onSnapshot และการสลับบัญชีใช้ตัวเดียวกัน
+   เนื้อในคัดลอกจากของเดิมทั้งหมด ไม่ได้แก้ตรรกะ */
+function buildStateFromBook(d, exists){
+  if(exists){
+      return {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
+        watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
+        fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[], ideas: Array.isArray(d.ideas)?d.ideas:[], watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAULT_TABS_OFFSET,
+        tabsOffsetV2: !!d.tabsOffsetV2,   /* เดิมไม่ได้ copy field นี้มา — ทำให้ ensureTabsOffsetV2() คิดว่าต้อง migrate ใหม่ทุกครั้งที่ sync ยิง schedulePersist() วนซ้ำไม่จำเป็น */
+        satBNoteV1: !!d.satBNoteV1,       /* ★ 31 ส.ค. 2026 — พลาดซ้ำรอยเดิมกับ tabsOffsetV2 เป๊ะ ๆ
+             ธงนี้ถูกเซ็ตบน state (ไม่ใช่ settings) แต่ตอน rebuild จาก snapshot ไม่ได้ copy กลับมา
+             ผล: ทุก snapshot -> satBNoteV1 undefined -> ensureSatBNoteMerge() คืน true -> schedulePersist()
+                 -> เขียน server -> snapshot ใหม่ -> วนไม่รู้จบ badge สลับ ซิงก์แล้ว/กำลังบันทึก ทุก ~0.5 วิ
+             (ข้อมูลไม่เสียหาย เพราะรอบสองขึ้นไป technical เป็น '' อยู่แล้ว note จึงไม่ถูกต่อทบ — แต่ยิง write รัว ๆ ตลอดเวลา)
+             บทเรียน: ธงที่เก็บบน state ต้อง copy ที่นี่เสมอ · ธงใน settings ปลอดภัยกว่าเพราะ ...d.settings เหมาไปให้แล้ว */
+        exitReasons: Array.isArray(d.exitReasons) ? d.exitReasons : null,   /* เก็บไว้ให้ ensureReasonTags ย้ายเข้า reasonTags.exit */
+        fundflow: (d.fundflow && typeof d.fundflow==='object') ? d.fundflow : defaultFundflow(),
+        scoreLabels: (d.scoreLabels && typeof d.scoreLabels==='object') ? d.scoreLabels : null,
+        journalView: (d.journalView && typeof d.journalView==='object') ? d.journalView : null,
+        reasonTags: (d.reasonTags && typeof d.reasonTags==='object') ? d.reasonTags : null,
+        weeklyPlan: (d.weeklyPlan && typeof d.weeklyPlan==='object') ? d.weeklyPlan : {},
+        failLog: Array.isArray(d.failLog) ? d.failLog : []};   /* เดิมไม่ได้ copy field นี้มา — ประวัติ fail-log ของ Fundamental Checklist จะหายทุกครั้งที่ sync */
+  } else {
+      return {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[]};
+    }
+}
+
+/* ══════════════════════ หลายบัญชีในล็อกอินเดียว ══════════════════════
+   1 ก.ย. 2026 — เดิมข้อมูลทั้งหมดวางแบน ๆ ที่ users/{uid} ตรง ๆ
+   ตอนนี้ห่ออีกชั้นเป็น { _v:2, accounts:[...], activeAccount, books:{ <id>: <ก้อนข้อมูลโครงเดิม> } }
+   เอกสารเก่าที่ยังไม่มี _v จะถูกย้ายให้อัตโนมัติเป็นบัญชีแรกชื่อ "บัญชีหลัก" ครบทั้ง 3 พอร์ต
+   ★ "ก้อนข้อมูลของบัญชี" มีโครงเหมือน state เดิมทุกประการ — เครื่องคำนวณทั้งหมดจึงไม่ต้องแก้อะไรเลย */
+const ACCT_PORT_KEYS = ['core','satA','satB'];
+let acctList   = [];        /* [{id,name,ports:[]}] */
+let acctActive = null;
+let acctBooks  = {};        /* id -> ก้อนข้อมูลดิบจาก server (ของบัญชีที่ไม่ได้เปิดอยู่ ต้องเก็บไว้ให้ครบตอนเซฟ) */
+let acctDocExists = false;
+
+function acctNewId(){ return 'ac' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function acctSanitizePorts(p){
+  const out = Array.isArray(p) ? ACCT_PORT_KEYS.filter(k=>p.includes(k)) : [];
+  return out.length ? out : ACCT_PORT_KEYS.slice();   /* ต้องเหลืออย่างน้อย 1 พอร์ตเสมอ */
+}
+/* อ่านเอกสารจาก server แล้วตั้งค่า acctList / acctActive / acctBooks
+   รองรับทั้งโครงใหม่ (_v:2) และเอกสารเก่าที่ยังแบนอยู่ */
+function acctAdoptDoc(raw){
+  const isNew = raw && raw._v >= 2 && raw.books && typeof raw.books === 'object';
+  if(isNew){
+    acctDocExists = true;
+    acctBooks = {...raw.books};
+    acctList  = (Array.isArray(raw.accounts) ? raw.accounts : [])
+                  .filter(a=>a && a.id)
+                  .map(a=>({id:String(a.id), name:String(a.name||'บัญชี'), ports:acctSanitizePorts(a.ports)}));
+    if(!acctList.length) acctList = [{id:'main', name:'บัญชีหลัก', ports:ACCT_PORT_KEYS.slice()}];
+    acctActive = acctList.some(a=>a.id===raw.activeAccount) ? raw.activeAccount : acctList[0].id;
+    return;
+  }
+  /* เอกสารเก่า (หรือยังไม่มีเอกสาร) — ยกทั้งก้อนขึ้นเป็นบัญชีแรก */
+  const hasData = raw && Object.keys(raw).length > 0;
+  acctDocExists = !!hasData;
+  acctList   = [{id:'main', name:'บัญชีหลัก', ports:ACCT_PORT_KEYS.slice()}];
+  acctActive = 'main';
+  acctBooks  = hasData ? {main: raw} : {};
+}
+function acctBookExists(){ return acctDocExists && !!acctBooks[acctActive]; }
+function acctCurrentBook(){ return acctBooks[acctActive] || {}; }
+function acctCurrent(){ return acctList.find(a=>a.id===acctActive) || acctList[0] || null; }
+/* พอร์ตที่บัญชีที่เปิดอยู่เลือกใช้ — ทุกที่ที่วน PORTS ต้องผ่านตัวนี้ */
+function acctPorts(){ const a = acctCurrent(); return a ? a.ports : ACCT_PORT_KEYS.slice(); }
+function portOn(k){ return acctPorts().includes(k); }
+function portsOn(){ return Object.entries(PORTS).filter(([k])=>portOn(k)); }
+
+/* ---- แถบสลับบัญชีใต้ชื่อแอป ---- */
+function renderAcctBar(){
+  const sel = document.getElementById('acctSel'); if(!sel) return;
+  sel.innerHTML = acctList.map(a=>`<option value="${escHtml(a.id)}"${a.id===acctActive?' selected':''}>${escHtml(a.name)}</option>`).join('');
+  sel.style.display = acctList.length>1 ? '' : 'none';
+  const hint = document.getElementById('acctPortsHint');
+  if(hint){
+    const on = acctPorts();
+    hint.textContent = (acctList.length>1 && on.length<ACCT_PORT_KEYS.length)
+      ? on.map(k=>PORTS[k].name.split(' — ')[0]).join(' · ') : '';
+  }
+}
+/* สลับบัญชี — เก็บก้อนของบัญชีเดิมไว้ในมือก่อน แล้วสร้าง state ใหม่จากก้อนของบัญชีปลายทาง
+   ห้ามสลับตอนยังไม่ยืนยันกับ server เพราะก้อนของบัญชีอื่นใน acctBooks อาจยังเป็นของเก่าจาก cache
+   ถ้าปล่อยให้สลับแล้วเซฟ จะเอาข้อมูลเก่าทับของจริง (ซ้ำรอยบั๊ก 5 ส.ค.) */
+function acctSwitch(id){
+  if(!acctList.some(a=>a.id===id) || id===acctActive){ renderAcctBar(); return; }
+  if(!serverConfirmed || !stateFromServer){
+    alert('ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — รอสักครู่แล้วลองสลับอีกครั้ง');
+    renderAcctBar(); return;
+  }
+  acctBooks[acctActive] = state;
+  acctActive = id;
+  const has = !!acctBooks[id];
+  state = buildStateFromBook(acctBooks[id] || {}, has);
+  ensureScoreLabels(); ensureJournalView();
+  ensureSatBDefaults(); ensureTabsOffsetV2(); ensure1RModel();
+  ensureSatBNoteMerge(); ensureSatACap25(); ensureSatBVolBands();
+  applyFontSizes();
+  render();
+  renderAcctMgr();
+  schedulePersist();
+}
+function acctAdd(){
+  const name = (prompt('ชื่อบัญชีใหม่', 'บัญชี ' + (acctList.length+1)) || '').trim();
+  if(!name) return;
+  const id = acctNewId();
+  acctList.push({id, name, ports:ACCT_PORT_KEYS.slice()});
+  renderAcctBar(); renderAcctMgr(); schedulePersist();
+}
+function acctRename(id, v){
+  const a = acctList.find(x=>x.id===id); if(!a) return;
+  a.name = String(v||'').trim() || a.name;
+  renderAcctBar(); schedulePersist();
+}
+function acctTogglePort(id, key, on){
+  const a = acctList.find(x=>x.id===id); if(!a) return;
+  const next = on ? Array.from(new Set([...a.ports, key])) : a.ports.filter(k=>k!==key);
+  if(!next.length){ alert('ต้องเหลืออย่างน้อย 1 พอร์ต'); renderAcctMgr(); return; }
+  a.ports = ACCT_PORT_KEYS.filter(k=>next.includes(k));
+  if(id===acctActive){ render(); }
+  renderAcctBar(); renderAcctMgr(); schedulePersist();
+}
+function acctDelete(id){
+  if(acctList.length<=1){ alert('ต้องเหลืออย่างน้อย 1 บัญชี'); return; }
+  const a = acctList.find(x=>x.id===id); if(!a) return;
+  if(!confirm('ลบบัญชี "'+a.name+'" ?\n\nข้อมูลทั้งหมดของบัญชีนี้ (Trade · Watchlist · Journal · Fund-flow · การตั้งค่าทุน) จะหายถาวร กู้คืนไม่ได้')) return;
+  if(!confirm('ยืนยันอีกครั้ง — ลบ "'+a.name+'" ถาวร?')) return;
+  acctList = acctList.filter(x=>x.id!==id);
+  delete acctBooks[id];
+  if(acctActive===id){
+    acctActive = acctList[0].id;
+    state = buildStateFromBook(acctBooks[acctActive] || {}, !!acctBooks[acctActive]);
+    ensureScoreLabels(); ensureJournalView();
+    applyFontSizes(); render();
+  }
+  renderAcctBar(); renderAcctMgr(); schedulePersist();
+}
+function renderAcctMgr(){
+  const host = document.getElementById('acctMgr'); if(!host) return;
+  host.innerHTML = acctList.map(a=>`
+    <div class="acctRow">
+      <input class="nm" type="text" value="${escHtml(a.name)}" onchange="acctRename('${a.id}',this.value)">
+      ${a.id===acctActive?'<span class="acctCur">เปิดอยู่</span>':`<button class="small" onclick="acctSwitch('${a.id}')">สลับไป</button>`}
+      <button class="small danger" onclick="acctDelete('${a.id}')" ${acctList.length<=1?'disabled':''}>ลบ</button>
+      <div class="acctPorts" style="flex-basis:100%">
+        ${ACCT_PORT_KEYS.map(k=>{
+          const on = a.ports.includes(k);
+          return `<label class="${on?'on':''}"><input type="checkbox" ${on?'checked':''} onchange="acctTogglePort('${a.id}','${k}',this.checked)">${escHtml(PORTS[k].name)}</label>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+}
+
+/* ห่อ state ปัจจุบันกลับเป็นเอกสารเต็ม โดยไม่ทำก้อนของบัญชีอื่นหาย */
+function acctWrapDoc(book){
+  const books = {...acctBooks};
+  books[acctActive] = book;
+  return {_v:2, accounts:acctList, activeAccount:acctActive, books};
+}
+
 function startListening(){
   if(!uid) return;
   serverConfirmed = false;   /* เริ่ม listen session ใหม่ — ต้องรอยืนยันจาก server ใหม่ก่อนถึงจะยอมเขียนอะไร */
@@ -1823,28 +2020,8 @@ function startListening(){
        กฎ: ถ้ามี state ที่มาจาก server อยู่แล้ว ห้าม rebuild ทับด้วย snapshot ที่มาจาก cache เด็ดขาด
        (snapshot จาก cache ตอนนั้นไม่มีข้อมูลใหม่อะไรให้เลย มีแต่ของเก่ากว่าหรือเท่ากัน) */
     if(snap.metadata.fromCache && stateFromServer){ return; }
-    if(snap.exists){
-      const d = snap.data() || {};
-      state = {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
-        watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
-        fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[], ideas: Array.isArray(d.ideas)?d.ideas:[], watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAULT_TABS_OFFSET,
-        tabsOffsetV2: !!d.tabsOffsetV2,   /* เดิมไม่ได้ copy field นี้มา — ทำให้ ensureTabsOffsetV2() คิดว่าต้อง migrate ใหม่ทุกครั้งที่ sync ยิง schedulePersist() วนซ้ำไม่จำเป็น */
-        satBNoteV1: !!d.satBNoteV1,       /* ★ 31 ส.ค. 2026 — พลาดซ้ำรอยเดิมกับ tabsOffsetV2 เป๊ะ ๆ
-             ธงนี้ถูกเซ็ตบน state (ไม่ใช่ settings) แต่ตอน rebuild จาก snapshot ไม่ได้ copy กลับมา
-             ผล: ทุก snapshot -> satBNoteV1 undefined -> ensureSatBNoteMerge() คืน true -> schedulePersist()
-                 -> เขียน server -> snapshot ใหม่ -> วนไม่รู้จบ badge สลับ ซิงก์แล้ว/กำลังบันทึก ทุก ~0.5 วิ
-             (ข้อมูลไม่เสียหาย เพราะรอบสองขึ้นไป technical เป็น '' อยู่แล้ว note จึงไม่ถูกต่อทบ — แต่ยิง write รัว ๆ ตลอดเวลา)
-             บทเรียน: ธงที่เก็บบน state ต้อง copy ที่นี่เสมอ · ธงใน settings ปลอดภัยกว่าเพราะ ...d.settings เหมาไปให้แล้ว */
-        exitReasons: Array.isArray(d.exitReasons) ? d.exitReasons : null,   /* เก็บไว้ให้ ensureReasonTags ย้ายเข้า reasonTags.exit */
-        fundflow: (d.fundflow && typeof d.fundflow==='object') ? d.fundflow : defaultFundflow(),
-        scoreLabels: (d.scoreLabels && typeof d.scoreLabels==='object') ? d.scoreLabels : null,
-        journalView: (d.journalView && typeof d.journalView==='object') ? d.journalView : null,
-        reasonTags: (d.reasonTags && typeof d.reasonTags==='object') ? d.reasonTags : null,
-        weeklyPlan: (d.weeklyPlan && typeof d.weeklyPlan==='object') ? d.weeklyPlan : {},
-        failLog: Array.isArray(d.failLog) ? d.failLog : []};   /* เดิมไม่ได้ copy field นี้มา — ประวัติ fail-log ของ Fundamental Checklist จะหายทุกครั้งที่ sync */
-    } else {
-      state = {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[]};
-    }
+    acctAdoptDoc(snap.exists ? (snap.data()||{}) : {});
+    state = buildStateFromBook(acctCurrentBook(), acctBookExists());
     /* บันทึก "ที่มา" ของ state ก้อนที่เพิ่งสร้าง — true = สร้างจากข้อมูล server จริง, false = สร้างจาก cache ในเครื่อง
        ทุกการเขียนขึ้น server ต้องเช็ค flag นี้ ไม่ใช่เช็คแค่ serverConfirmed */
     stateFromServer = !snap.metadata.fromCache;
@@ -1926,7 +2103,8 @@ async function doPersist(){
   const toSave = state;
   pendingLocalWrite = false;   /* กำลังจะส่ง state ปัจจุบันไปแล้ว — ถ้ามีการแก้ไขใหม่หลังจุดนี้ schedulePersist() จะตั้งกลับเป็น true เอง */
   try{
-    await db.collection('users').doc(uid).set(toSave);
+    acctBooks[acctActive] = toSave;   /* ให้ก้อนในมือตรงกับสิ่งที่กำลังจะเขียน */
+    await db.collection('users').doc(uid).set(acctWrapDoc(toSave));
     /* เดิมใช้ db.waitForPendingWrites() แต่พบว่ายังค้างไม่นิ่งบน long-polling เหมือนกัน (badge ค้าง "กำลังบันทึก" ตลอดหลัง edit)
        เปลี่ยนมาใช้ .get({source:'server'}) แทน — เป็น request ธรรมดาที่พิสูจน์แล้วว่าเชื่อถือได้จริงในสภาพแวดล้อมนี้
        (ใช้เช็คข้อมูลบน server ได้เร็ว/นิ่งตลอดการดีบักที่ผ่านมา ต่างจาก long-lived channel ที่บางทีค้าง) */
@@ -2066,7 +2244,7 @@ function portHeatLimit(k){
   if(p && typeof p==='object') return p[k] ?? 3;
   return p || 3;
 }
-function totalTHB(){ return Object.keys(PORTS).reduce((a,k)=>a+portCapTHB(k),0) + (state.settings.strategicCash||0); }
+function totalTHB(){ return acctPorts().reduce((a,k)=>a+portCapTHB(k),0) + (state.settings.strategicCash||0); }
 
 /* ================= planned-risk calc ================= */
 function riskOf(t){ return Math.abs(t.entry - t.sl) * t.qty * (t.mult||1); }
@@ -2108,7 +2286,7 @@ function portRealizedLossTHB(k){
     .reduce((a,t)=>{ const p = realizedPnlTHBOf(t); return p<0 ? a+(-p) : a; }, 0);
 }
 function totalRealizedLossTHB(){
-  return Object.keys(PORTS).reduce((a,k)=>a+portRealizedLossTHB(k), 0);
+  return acctPorts().reduce((a,k)=>a+portRealizedLossTHB(k), 0);
 }
 function holdingDaysOf(t){
   if(!t.date || !t.exitDate) return null;
@@ -2180,6 +2358,7 @@ function hexToRgba(hex, alpha){
 
 /* ================= render: Tab 1 ================= */
 function render(){
+  renderAcctBar();
   if(!state) return;
   if(!state.fontSizes) state.fontSizes = {...DEFAULT_FONT_SIZES};
   applyFontSizes();
@@ -2227,7 +2406,7 @@ function render(){
       </div>
     </div>`;
 
-  document.getElementById('ports').innerHTML = Object.entries(PORTS).map(([k,p])=>{
+  document.getElementById('ports').innerHTML = portsOn().map(([k,p])=>{
     const capNat = state.settings.capital[k];
     const capTH = portCapTHB(k);
     const oTH = s.per[k].open, plTH = s.per[k].plan;
@@ -2569,7 +2748,7 @@ function renderJournal(){
       <div class="lbl">วินัยเฉลี่ย <small>(รีวิวแล้ว ${j.overall.nReviewed}/${j.overall.n})</small></div>
       <div class="val">${j.overall.avgDisc===null?'—':fmt2(j.overall.avgDisc)+' / 3'}${j.overall.avgSetup===null?'':` <small>setup ${fmt2(j.overall.avgSetup)}</small>`}${j.overall.invalFired?` <small title="ในไม้ที่สัญญาณ invalidation เกิดขึ้นจริง ออกตามที่เขียนไว้กี่ครั้ง">· inval ${j.overall.invalHit}/${j.overall.invalFired}</small>`:''}</div></div>`;
 
-  document.getElementById('jPorts').innerHTML = Object.entries(PORTS).map(([k,p])=>{
+  document.getElementById('jPorts').innerHTML = portsOn().map(([k,p])=>{
     const st = j[k];
     return `<div class="port">
       <div class="pname"><span class="dot" style="background:${p.color}"></span>${p.name}</div>
@@ -3279,7 +3458,7 @@ function renderWatchlist(){
   if(!state.watchCollapsed) state.watchCollapsed = {};
   const container = document.getElementById('watchGroups');
   /* ★ Sat.B ถูกถอดออกจาก Watchlist — ใช้แผง Weekly Plan แทน (ต่อท้ายด้านล่าง) */
-  container.innerHTML = `<div class="wlports">${Object.entries(PORTS).filter(([k])=>k!=='satB').map(([k,p])=>{
+  container.innerHTML = `<div class="wlports">${portsOn().filter(([k])=>k!=='satB').map(([k,p])=>{
     const mode = state.watchSortMode[k] || 'date';
     const scored = k!=='satB';
     const collapsed = !!state.watchCollapsed[k];
@@ -3294,7 +3473,7 @@ function renderWatchlist(){
           ${scored?`<span class="chip ${mode==='score'?'on':''}" onclick="setWatchSortMode('${k}','score')">เรียงคะแนน</span>
           <span class="scoreHeadWrap"><span class="scoreInfo" onclick="toggleScoreInfo(event,'${k}')" title="เกณฑ์การให้คะแนน">i</span><div class="scorePop" id="scorePop_${k}"></div></span>`:''}
         </div>
-        <button class="small primary" style="flex-shrink:0;margin-left:8px"
+        <button class="small primary wlAddBtn"
           onclick="${k==='core'?'openFundChecklist()':'openWatch(\'satA\')'}"
           title="${k==='core'?'เปิด Fundamental Checklist แล้วบันทึกเข้า Watchlist':'เพิ่มหุ้นเข้า Watchlist Sat.A + ให้คะแนน Growth Gate'}">＋ เพิ่ม</button>
       </div>
@@ -3313,15 +3492,15 @@ function renderWatchlist(){
       </div>
     </div>`;
   }).join('')}
-    <div class="panel" id="wpPanel">
+    <div class="panel" id="wpPanel"${portOn('satB')?'':' style="display:none"'}>
       <div class="wlhead">
         <h2><span class="dot" style="background:${PORTS.satB.color};display:inline-block;width:9px;height:9px;border-radius:50%"></span>${PORTS.satB.name} — Weekly Plan</h2>
       </div>
       <div id="wpBody"></div>
     </div>
   </div>`;
-  ['core','satA'].forEach(renderWatchPort);
-  renderWeeklyPlan();
+  ['core','satA'].filter(portOn).forEach(renderWatchPort);
+  if(portOn('satB')) renderWeeklyPlan();
 }
 function toggleWatchCollapse(port){
   if(!state.watchCollapsed) state.watchCollapsed = {};
@@ -3491,6 +3670,7 @@ function openSystemSettings(){
   document.getElementById('sizeClosed').value = state.fontSizes.closed;
   document.getElementById('tabsOffset').value = state.tabsOffset;
   bkRenderLastHint();
+  renderAcctMgr();
   document.getElementById('sysOverlay').classList.add('show');
 }
 function saveSystemSettings(){
@@ -3580,7 +3760,14 @@ function setWBias(v){
   const warn = document.getElementById('wBiasWarn');
   if(warn) warn.style.display = v==='Unclear' ? '' : 'none';
 }
+/* ซ่อน option ของพอร์ตที่บัญชีนี้ไม่ได้เปิดใช้ · ถ้าค่าที่เลือกอยู่โดนซ่อน ให้เด้งไปพอร์ตแรกที่เปิด */
+function acctSyncPortSelect(id){
+  const sel = document.getElementById(id); if(!sel) return;
+  Array.from(sel.options).forEach(o=>{ if(ACCT_PORT_KEYS.includes(o.value)) o.hidden = !portOn(o.value); });
+  if(ACCT_PORT_KEYS.includes(sel.value) && !portOn(sel.value)) sel.value = acctPorts()[0];
+}
 function toggleWBiasField(){
+  acctSyncPortSelect('wPort');
   const port = document.getElementById('wPort').value;
   const isSwing = port === 'satB';
   document.getElementById('wBiasField').style.display = isSwing ? '' : 'none';
@@ -4116,7 +4303,7 @@ function populateSymbolSelect(selected){
   const wpSyms = wpEligibleSyms();
   const all = new Set([...eligible.map(w=>w.sym), ...wpSyms]);
   let html = '<option value="">— เลือก Symbol —</option>';
-  Object.entries(PORTS).forEach(([k,p])=>{
+  portsOn().forEach(([k,p])=>{
     const syms = k==='satB' ? wpSyms : eligible.filter(w=>w.port===k).map(w=>w.sym);
     if(syms.length){
       const label = k==='satB' ? `${p.name} — Weekly Plan (เหลือ ${wpBulletsLeft()}/${WP_BULLETS} นัด)` : p.name;
@@ -4334,7 +4521,7 @@ function populateChecklistSymbolSelect(){
   const sel = document.getElementById('clSym');
   const eligible = (state && Array.isArray(state.watchlist) ? state.watchlist : []).filter(watchEligibleForTrade);
   let html = '<option value="">— เลือก Symbol —</option>';
-  Object.entries(PORTS).forEach(([k,p])=>{
+  portsOn().forEach(([k,p])=>{
     const syms = k==='satB' ? wpEligibleSyms() : eligible.filter(w=>w.port===k).map(w=>w.sym);
     if(syms.length){
       html += `<optgroup label="${escHtml(p.name)}">` + syms.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('') + '</optgroup>';
@@ -5265,7 +5452,8 @@ function openTrade(presetSym, presetTier, presetBias, presetSizeFactor){
   populateBothScoreSelects('', '');
   document.getElementById('imgHint').textContent='';
   document.getElementById('tMult').value = 1;
-  document.getElementById('tPort').value='core';
+  document.getElementById('tPort').value = portOn('core') ? 'core' : acctPorts()[0];
+  acctSyncPortSelect('tPort');
   document.getElementById('tStatus').value='plan';
   lockPortBiasFields(false);
   setBias('Long'); setCur('THB'); setSetup('acc'); toggleExitFields(); szSyncLot();
@@ -5296,6 +5484,7 @@ function editTrade(id){
   document.getElementById('tradeTitle').textContent = t.unplanned ? 'แก้ไข Trade — ไม้นอกแผน' : 'แก้ไข Trade';
   document.getElementById('tDate').value=t.date;
   populateSymbolSelect(t.sym);
+  acctSyncPortSelect('tPort');
   document.getElementById('tPort').value=t.port;
   document.getElementById('tEntry').value=t.entry;
   document.getElementById('tSL').value=t.sl;
@@ -5808,6 +5997,7 @@ function openSettings(){
   document.getElementById('sTdKey').value = s.tdKey || '';
   updTotal();
   updFxUpdatedHint(s.fxUpdatedAt);
+  acctApplyPortVisibility();
   document.getElementById('setOverlay').classList.add('show');
 }
 function updFxUpdatedHint(iso){
@@ -5863,6 +6053,26 @@ function updTotal(){
   const tot = core + (a+b)*fx + strat;
   document.getElementById('totalHint').innerHTML =
     `ทุนรวม ≈ <b>฿${fmt0(tot)}</b> (฿${fmt0(core)} + $${fmt0(a+b)} × ${fmt2(fx)} + Strategic Cash ฿${fmt0(strat)})`;
+}
+/* ซ่อนช่องตั้งค่าที่เป็นของพอร์ตซึ่งบัญชีนี้ไม่ได้เปิดใช้ แล้วถ้าหมวดไหนไม่เหลือช่องเลย ก็ซ่อนทั้งหมวด
+   (ค่าที่ซ่อนไม่ได้ถูกลบ — แค่ไม่แสดง ถ้าเปิดพอร์ตกลับมาก็เห็นค่าเดิม) */
+function acctApplyPortVisibility(){
+  [['sCore','core'],['sSatA','satA'],['sSatB','satB'],
+   ['sRCore','core'],['sRSatA','satA'],['sCapCore','core'],['sCapSatA','satA'],
+   ['sPosSatB','satB'],['sRsBench','satA'],
+   ['sPortCore','core'],['sPortSatA','satA'],['sPortSatB','satB'],
+   ['sVolXAULo','satB'],['sVolXAUHi','satB'],['sVolS50Lo','satB'],['sVolS50Hi','satB'],
+   ['sVolBTCLo','satB'],['sVolBTCHi','satB'],['sSatBLowRisk','satB']
+  ].forEach(([id,port])=>{
+    const el = document.getElementById(id);
+    const f  = el && el.closest('.f');
+    if(f) f.style.display = portOn(port) ? '' : 'none';
+  });
+  document.querySelectorAll('#setOverlay .setsec').forEach(sec=>{
+    const fs = sec.querySelectorAll('.f');
+    if(!fs.length) return;
+    sec.style.display = Array.from(fs).some(f=>f.style.display!=='none') ? '' : 'none';
+  });
 }
 function saveSettings(){
   const fxVal = parseFloat(document.getElementById('sFx').value)||36;
@@ -7152,8 +7362,13 @@ function bkFilename(){
   return `dashboard-backup-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
 }
 function bkPayload(){
+  /* ★ 1 ก.ย. 2026 — ต้องสำรอง "ทุกบัญชี" ไม่ใช่เฉพาะบัญชีที่เปิดอยู่
+     ไม่งั้นไฟล์สำรองจะดูเหมือนสมบูรณ์ แต่ขาดข้อมูลของบัญชีอื่นไปเงียบ ๆ
+     คง field `state` (บัญชีที่เปิดอยู่) ไว้ด้วย เพื่อให้ไฟล์ยังอ่านแบบเดิมได้ */
   return JSON.stringify({
-    _meta:{ app:'trading-dashboard', schema:1, exportedAt:new Date().toISOString(), uid: uid||null },
+    _meta:{ app:'trading-dashboard', schema:2, exportedAt:new Date().toISOString(), uid: uid||null,
+            accounts: acctList.map(a=>({id:a.id, name:a.name, ports:a.ports})), activeAccount: acctActive },
+    doc: acctWrapDoc(state),
     state: state
   }, null, 2);
 }
