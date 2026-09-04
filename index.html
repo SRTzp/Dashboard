@@ -4701,8 +4701,9 @@ function populateChecklistSymbolSelect(){
   const sel = document.getElementById('clSym');
   const eligible = (state && Array.isArray(state.watchlist) ? state.watchlist : []).filter(watchEligibleForTrade);
   let html = '<option value="">— เลือก Symbol —</option>';
-  portsOn().forEach(([k,p])=>{
-    const syms = k==='satB' ? wpEligibleSyms() : eligible.filter(w=>w.port===k).map(w=>w.sym);
+  /* Sat.B มีแผงเทรดของตัวเองในแท็บแผนเทรดแล้ว — ห้ามโผล่ในทางเข้า Add Trade */
+  portsOn().filter(([k])=>k!=='satB').forEach(([k,p])=>{
+    const syms = eligible.filter(w=>w.port===k).map(w=>w.sym);
     if(syms.length){
       html += `<optgroup label="${escHtml(p.name)}">` + syms.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('') + '</optgroup>';
     }
@@ -4717,16 +4718,14 @@ function clOnSymChange(){
     const w = findWatchForSymbol(sym);
     clState.port = w ? w.port : null;
     clState.bias = w ? (w.port==='satB' ? (w.bias||'Unclear') : 'Long') : null;
-    /* ★ Sat.B ไม่มี checklist แล้ว — ไม่มีเหตุให้ค้างหน้านี้ไว้ ข้ามไปหน้าเพิ่ม Trade เลย
-       (bias ปล่อยเป็น null ให้เลือกเองในฟอร์ม · sizeFactor = 1 เสมอ เพราะตัวคูณจาก checklist ถูกถอดไปแล้ว) */
-    if(clState.port === 'satB' || clState.port === 'satA'){
-      /* ★ 31 ส.ค. 2026 — Sat.A ถอด Pre-trade Checklist ออกเช่นเดียวกับ Sat.B
-         tier = null → ช่อง Setup (Acc/Dist · PP) ไม่ถูกล็อก เลือกเองในหน้าเพิ่ม Trade
-         1R ของ Sat.A ยังมาจากคะแนน Growth Gate ใน Watchlist เหมือนเดิม ไม่ได้หายไปไหน */
-      closeChecklist();
-      openTrade(sym, null, null, 1);
-      return;
-    }
+    /* ★ 4 ก.ย. 2026 — Core ถอด Pre-trade Checklist ออกด้วย (ตามหลัง Sat.B และ Sat.A)
+       ตอนนี้ทุกพอร์ตข้ามหมด หน้านี้จึงเหลือหน้าที่เดียวคือ "เลือก Symbol" แล้วเด้งเข้าฟอร์ม Trade
+       tier = null → ช่อง Setup (Acc/Dist · PP) ไม่ถูกล็อก เลือกเองในฟอร์ม
+       1R ยังคิดจากกติกาเดิม (Core = sizing.r.core · Sat.A = คะแนน Growth Gate) ไม่ได้หายไปไหน
+       ตัว checklist ยังอยู่ในโค้ด ใช้กับ draft เก่าที่ค้างไว้ได้ ถ้าจะเอากลับมาก็แค่ปลดเงื่อนไขนี้ */
+    closeChecklist();
+    openTrade(sym, null, null, 1);
+    return;
   }
   renderChecklistBody();
   updateChecklistUI();
@@ -4736,7 +4735,7 @@ function openChecklist(stage){
   openTradeChecklist();
 }
 function openTradeChecklist(){
-  document.getElementById('checklistTitle').textContent = 'Pre-trade Checklist — ก่อนเข้า Trade';
+  document.getElementById('checklistTitle').textContent = 'เพิ่ม Trade — เลือก Symbol';
   document.getElementById('clTradeView').style.display = '';
   document.getElementById('clFundView').style.display = 'none';
   document.getElementById('clTradeFooter').style.display = '';
@@ -4745,7 +4744,7 @@ function openTradeChecklist(){
   clState = {sym:'', port:null, bias:null, setup:'acc', subtype:null, checks:{}};
   editingDraftId = null;
   populateChecklistSymbolSelect();
-  document.getElementById('clBody').innerHTML = '<div class="hint">เลือก Symbol จาก Watchlist ก่อน ระบบจะดึง Port ให้อัตโนมัติ</div>';
+  document.getElementById('clBody').innerHTML = '<div class="hint">เลือก Symbol จาก Watchlist — ระบบจะดึง Port ให้อัตโนมัติแล้วเข้าฟอร์มกรอกไม้ทันที<br>Sat.B ไม่อยู่ที่นี่ ใช้แผง “แผนเทรด Sat.B” ในแท็บแผนเทรดแทน</div>';
   updateChecklistUI();
   document.getElementById('checklistOverlay').classList.add('show');
 }
