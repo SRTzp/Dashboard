@@ -215,24 +215,68 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 #mixSummary{grid-template-columns:repeat(4,1fr)}
 @media(max-width:1000px){ #mixSummary{grid-template-columns:repeat(2,1fr)} }
 @media(max-width:560px){ #mixSummary{grid-template-columns:1fr} }
-/* ---------- แผนเทรด Sat.B (Zone / Setup) ---------- */
-.sbCard{background:var(--surface3);border:1px solid var(--hair);border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
+/* ---------- แผนเทรด Sat.B (Zone / Setup) — เน้นแน่นในแนวตั้ง ---------- */
+.sbCard{background:var(--surface3);border:1px solid var(--hair);border-radius:var(--r);padding:11px 13px;margin-bottom:10px}
 .sbCard:last-child{margin-bottom:0}
-.sbHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.sbSw{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:.84rem}
-.sbSw input[type="checkbox"]{width:19px;height:19px;accent-color:var(--teal);margin:0;flex:none;cursor:pointer}
-.sbRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:7px;
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);transition:border-color .14s,background .14s}
-.sbRow.on{border-color:rgba(14,156,134,.4);background:var(--teal-dim)}
-.sbRow.on .sbSw b{color:var(--teal)}
-.sbRow .sbLvl{width:150px;margin-left:auto;font-family:var(--mono);font-size:.86rem;text-align:right;
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:8px 11px}
-.sbRow .sbLvl:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
-/* ยังไม่เปิด Zone/Setup — หรี่ช่องกรอกไม้ลง แต่ยังกดได้ (ปุ่มบันทึกกันไว้อีกชั้นใน sbSave) */
-.sbEntry{margin-top:14px;padding-top:14px;border-top:1px solid var(--hair)}
-.sbEntry.off{opacity:.45}
-.sbEntry.off .f input{pointer-events:none}
-@media(max-width:700px){ .sbRow .sbLvl{width:100%;margin-left:0} }
+.sbHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.sbSw{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-weight:600;font-size:.82rem;white-space:nowrap}
+.sbSw input[type="checkbox"]{width:17px;height:17px;accent-color:var(--teal);margin:0;flex:none;cursor:pointer}
+.sbHead .seg{margin-left:auto}
+.sbHead .seg button{padding:5px 10px;font-size:.72rem}
+/* Zone / Setup อยู่แถวเดียวกัน — ในแต่ละช่อง: บรรทัดบน = ชื่อ + สวิตช์ · บรรทัดล่าง = ระดับราคา
+   ระดับราคากรอกล่วงหน้าได้ตลอด สวิตช์คือ "เงื่อนไขมาถึงแล้วจริง" */
+.sbGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:2px}
+.sbCell{padding:9px 11px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-sm);transition:border-color .14s,background .14s}
+.sbCell.on{border-color:rgba(14,156,134,.4);background:var(--teal-dim)}
+.sbCell.on .sbTgl span{color:var(--teal)}
+.sbCell .sbLvl{width:100%;margin-top:7px;font-family:var(--mono);font-size:.84rem;text-align:right;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:6px 9px}
+.sbCell .sbLvl:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
+/* สวิตช์เลื่อน — input ซ่อนไว้ ตัวที่เห็นคือ <i> ที่อยู่ถัดจาก input (ลำดับ span → input → i ห้ามสลับ) */
+.sbTgl{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;
+  font-weight:600;font-size:.78rem;line-height:1.25;user-select:none}
+.sbTgl span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.sbTgl input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+.sbTgl i{position:relative;flex:none;width:42px;height:24px;border-radius:999px;
+  background:#D9DEE5;transition:background .18s}
+.sbTgl i::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(16,24,40,.28);transition:transform .18s}
+.sbTgl input:checked + i{background:var(--teal)}
+.sbTgl input:checked + i::after{transform:translateX(18px)}
+.sbTgl input:focus-visible + i{box-shadow:0 0 0 3px var(--teal-dim)}
+@media(prefers-reduced-motion:reduce){ .sbTgl i,.sbTgl i::after{transition:none} }
+/* แถวกรอกไม้: ทิศ + Entry/SL/TP เรียงแถวเดียว — บนมือถือ Entry/SL/TP ยังเป็น 3 คอลัมน์ (ตัวเลขสั้น) */
+.sbEntry{margin-top:10px;padding-top:10px;border-top:1px solid var(--hair)}
+.sbEntry.off{opacity:.42}
+.sbEntry.off input,.sbEntry.off .seg{pointer-events:none}
+.sbFields{display:flex;align-items:flex-end;gap:9px;flex-wrap:wrap}
+.sbFields .seg{flex:0 0 132px;height:36px}
+.sbFields .seg button{padding:0 8px;font-size:.74rem}
+.sbFields .f{flex:1 1 78px;min-width:0;margin:0}
+.sbFields .f label{font-size:.66rem;margin-bottom:3px}
+.sbFields .f input{padding:7px 9px;font-size:15px;font-family:var(--mono)}
+/* การ์ดคำนวณยุบเหลือบรรทัดเดียว */
+.sbCalcBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding:9px 12px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm)}
+.sbCalcBar.bad{border-color:var(--red);background:var(--red-dim)}
+.sbQty{font-family:var(--mono);font-size:1.35rem;font-weight:700;line-height:1;color:var(--teal)}
+.sbCalcBar.bad .sbQty{color:var(--red);font-size:1.05rem}
+.sbUnit{font-size:.68rem;color:var(--faint);margin-left:-5px}
+.sbMeta{font-family:var(--mono);font-size:.71rem;color:var(--muted);line-height:1.5}
+.sbMeta b{color:var(--text)}
+.sbActs{display:flex;gap:6px;margin-left:auto;flex:none}
+.sbWarn{font-size:.72rem;font-weight:600;border-radius:var(--r-sm);padding:6px 10px;margin-top:6px;line-height:1.45}
+.sbWarn.red{background:var(--red-dim);color:var(--red-dark)}
+.sbWarn.yellow{background:var(--amber-dim);color:var(--amber)}
+.sbLock{font-size:.73rem;color:var(--muted);background:var(--surface2);border-radius:var(--r-sm);padding:8px 11px;margin-top:10px}
+@media(max-width:700px){
+  .sbHead .seg{margin-left:0;flex:1 1 100%}
+  .sbFields .seg{flex:1 1 100%}
+  .sbFields .f{flex:1 1 0}
+  .sbActs{margin-left:0;flex:1 1 100%}
+  .sbActs button{flex:1}
+}
 .mixPort{background:var(--surface3);border:1px solid var(--hair);border-radius:var(--r);padding:13px 15px}
 .mixPortHead{display:flex;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap}
 .mixPortHead .dot{width:9px;height:9px;border-radius:50%;flex:none}
@@ -477,6 +521,9 @@ tr:last-child td{border-bottom:none}
 .seg button.on-risklow{background:var(--green-dim);color:var(--green);font-weight:700}
 .seg button.on-riskmed{background:var(--amber-dim);color:var(--amber);font-weight:700}
 .seg button.on-riskhigh{background:var(--red-dim);color:var(--red);font-weight:700}
+.seg button.on-bull{background:var(--green-dim);color:var(--green);font-weight:700}
+.seg button.on-bear{background:var(--red-dim);color:var(--red);font-weight:700}
+.seg button.on-range{background:var(--amber-dim);color:var(--amber);font-weight:700}
 
 /* ---------- หัวข้อย่อยในฟอร์ม + หมวดพับได้ในหน้าตั้งค่า ---------- */
 .divlbl{font-size:.68rem;color:var(--faint);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:18px 0 10px;border-top:1px solid var(--hair);padding-top:14px}
@@ -6659,47 +6706,47 @@ function sbRenderCalc(sym){
   const host = document.getElementById('sbCalc_'+sym); if(!host) return;
   const pl = sbPlanOf(sym), cfg = sbCfg(sym), cur = cfg.cur==='USD' ? '$' : '฿';
   if(!sbArmed(pl)){
-    host.innerHTML = `<div class="szMsg yellow">เปิด <b>Zone</b> หรือ <b>Setup</b> ก่อน จึงจะกรอกไม้ได้ — กติกาคือไม่เข้าไม้ก่อนที่เงื่อนไขจะมาถึง</div>`;
+    host.innerHTML = `<div class="sbLock">เปิด <b>Zone</b> หรือ <b>Setup</b> ก่อนจึงจะกรอกไม้ได้</div>`;
     return;
   }
   const c = szSatBCalc(sbCalcOpts(sym));
-  if(!c){ host.innerHTML = `<div class="hint">กรอก Entry และ SL ให้ครบ (Entry ≠ SL) เพื่อคำนวณขนาดไม้</div>`; return; }
-  const band = (c.lo>0||c.hi>0) ? `กรอบ ${c.lo>0?szNum(c.lo,2):'—'} – ${c.hi>0?szNum(c.hi,2):'—'}` : 'ยังไม่ตั้งกรอบ';
-  const rr = (pl.tp>0 && c.slDist>0) ? Math.abs(pl.tp-pl.entry)/c.slDist : null;
-  let h = `<div class="szCard">
-    <div class="szHero">
-      <span class="szR ${c.tooWide?'zero':'full'}">${c.tooWide?'ล็อก':c.qty.toLocaleString('en-US',{maximumFractionDigits:2})}</span>
-      <span class="szRsub">${c.tooWide ? `SL กว้างเกินกรอบ — ไม้นี้เทรดไม่ได้`
-        : `หน่วย · Risk ${c.rpt}%${c.tooTight?' (ลดจาก '+c.rptBase+'% เพราะ SL แคบกว่าค่าล่าง)':''}`}</span>
-    </div>
-    <div class="szGrid">
-      <div class="szCell" style="${c.tooWide?'outline:2px solid var(--red);outline-offset:-2px':c.tooTight?'outline:2px solid var(--amber);outline-offset:-2px':''}">
-        <div class="k">ระยะ SL</div><div class="v">${szNum(c.slDist,2)}</div><div class="s">${band}</div></div>
-      <div class="szCell"><div class="k">งบเสี่ยง ${c.rpt}%</div><div class="v">${cur}${szNum(c.budgetNative)}</div>
-        <div class="s">โดน stop = เสียเต็มงบนี้</div></div>
-      <div class="szCell"><div class="k">R:R ถ้าถึง TP</div><div class="v">${rr!=null?rr.toFixed(2)+'R':'—'}</div>
-        <div class="s">${pl.tp>0?'':'ยังไม่ใส่ TP'}</div></div>
-      <div class="szCell"><div class="k">กระสุนสัปดาห์นี้</div><div class="v">${wpBulletsLeft()}/${WP_BULLETS}</div>
-        <div class="s">Reset อาทิตย์ 00:00</div></div>
-    </div>`;
-  if(c.tooWide){
-    h += `<div class="szMsg red">⛔ ระยะ SL <b>${szNum(c.slDist,2)}</b> กว้างกว่าค่าบนที่ตั้งไว้ (<b>${szNum(c.hi,2)}</b>) — <b>ล็อกไม่ให้เทรด</b><br>
-      stop กว้างขนาดนี้แปลว่าเข้าผิดจังหวะ ไม่ใช่แค่ต้องลดขนาดไม้</div>`;
-  } else if(c.tooTight){
-    h += `<div class="szMsg yellow">◑ ระยะ SL แคบกว่าค่าล่าง (<b>${szNum(c.lo,2)}</b>) — ระบบลด Risk เหลือ <b>${c.lowRisk}%</b> แต่ยังคิดขนาดไม้จากระยะ SL จริง</div>`;
-  }
-  if(!(c.lo>0) && !(c.hi>0)) h += `<div class="szMsg yellow">ยังไม่ได้ตั้งกรอบระยะ SL ของ ${escHtml(sym)} — ตั้งได้ในหน้า 🛠 ตั้งค่า Port</div>`;
+  if(!c){ host.innerHTML = `<div class="sbLock">กรอก Entry และ SL ให้ครบ (Entry ≠ SL)</div>`; return; }
+  const rr   = (pl.tp>0 && c.slDist>0) ? Math.abs(pl.tp-pl.entry)/c.slDist : null;
+  const left = wpBulletsLeft();
+  const band = (c.lo>0||c.hi>0) ? `${c.lo>0?szNum(c.lo,0):'—'}–${c.hi>0?szNum(c.hi,0):'—'}` : 'ไม่ตั้งกรอบ';
+
+  /* บรรทัดเดียว: ขนาดไม้ตัวโต แล้วต่อด้วยตัวเลขประกอบคั่นด้วยจุด */
+  const meta = [
+    `Risk <b>${c.rpt}%</b>${c.tooTight?` <span style="color:var(--amber)">(ลดจาก ${c.rptBase}%)</span>`:''}`,
+    `SL <b>${szNum(c.slDist,2)}</b> <span style="opacity:.7">(กรอบ ${band})</span>`,
+    `งบ <b>${cur}${szNum(c.budgetNative)}</b>`,
+    rr!=null ? `R:R <b>${rr.toFixed(2)}R</b>` : null,
+    `กระสุน <b style="color:${left===0?'var(--red)':left===1?'var(--amber)':'var(--teal)'}">${left}/${WP_BULLETS}</b>`
+  ].filter(Boolean).join(' · ');
+
+  /* คำเตือนขึ้นเฉพาะตอนมีจริง — ไม่จองที่ไว้ตลอดเวลา */
+  const warns = [];
+  if(c.tooWide) warns.push(['red', `⛔ SL <b>${szNum(c.slDist,2)}</b> กว้างกว่าค่าบน (<b>${szNum(c.hi,2)}</b>) — ล็อกไม่ให้เทรด`]);
+  else if(c.tooTight) warns.push(['yellow', `◑ SL แคบกว่าค่าล่าง (<b>${szNum(c.lo,2)}</b>) — ลด Risk เหลือ <b>${c.lowRisk}%</b>`]);
+  if(!(c.lo>0) && !(c.hi>0)) warns.push(['yellow', `ยังไม่ได้ตั้งกรอบระยะ SL ของ ${escHtml(sym)} — ตั้งในหน้า 🛠 ตั้งค่า Port`]);
   const tr = wpTrendOf(sym);
-  if(!wpIsPicked(sym)) h += `<div class="szMsg yellow">⚠ ยังไม่ได้ติ๊ก ${escHtml(sym)} เป็นสินค้าของสัปดาห์นี้</div>`;
+  if(!wpIsPicked(sym)) warns.push(['yellow', `⚠ ยังไม่ได้ติ๊ก ${escHtml(sym)} เป็นสินค้าของสัปดาห์นี้`]);
   else if(tr && ((tr==='Long' && pl.bias==='Short') || (tr==='Short' && pl.bias!=='Short')))
-    h += `<div class="szMsg yellow">⚠ ไม้นี้เป็น ${pl.bias} <b>สวนกับ Trend หลัก (${trendWord(tr)})</b> ของสัปดาห์นี้</div>`;
-  if(wpBulletsLeft()===0) h += `<div class="szMsg red">⛔ สัปดาห์นี้ใช้กระสุนครบ ${WP_BULLETS} นัดแล้ว</div>`;
-  else if(wpBulletsLeft()===1) h += `<div class="szMsg yellow">⚠ เหลือกระสุนนัดสุดท้ายของสัปดาห์นี้</div>`;
-  h += `<div class="btns" style="justify-content:flex-end;border:none;padding:0;margin-top:12px">
-      <button class="small" onclick="sbSave('${sym}','plan')" ${c.tooWide?'disabled':''}>บันทึกเป็น Plan</button>
-      <button class="small primary" onclick="sbSave('${sym}','open')" ${c.tooWide?'disabled':''}>เข้าไม้แล้ว → Open</button>
-    </div></div>`;
-  host.innerHTML = h;
+    warns.push(['yellow', `⚠ ไม้นี้เป็น ${pl.bias} สวนกับ Trend หลัก (${trendWord(tr)})`]);
+  if(left===0) warns.push(['red', `⛔ สัปดาห์นี้ใช้กระสุนครบ ${WP_BULLETS} นัดแล้ว`]);
+  else if(left===1) warns.push(['yellow', `⚠ เหลือกระสุนนัดสุดท้ายของสัปดาห์นี้`]);
+
+  host.innerHTML =
+      `<div class="sbCalcBar${c.tooWide?' bad':''}">
+        <span class="sbQty">${c.tooWide?'ล็อก':c.qty.toLocaleString('en-US',{maximumFractionDigits:2})}</span>
+        <span class="sbUnit">หน่วย</span>
+        <span class="sbMeta">${meta}</span>
+        <span class="sbActs">
+          <button class="small" onclick="sbSave('${sym}','plan')" ${c.tooWide?'disabled':''}>Plan</button>
+          <button class="small primary" onclick="sbSave('${sym}','open')" ${c.tooWide?'disabled':''}>→ Open</button>
+        </span>
+      </div>`
+    + warns.map(([k,m])=>`<div class="sbWarn ${k}">${m}</div>`).join('');
 }
 function sbSave(sym, status){
   const pl = sbPlanOf(sym), cfg = sbCfg(sym);
@@ -6726,10 +6773,12 @@ function sbSave(sym, status){
   pl.entry = null; pl.sl = null; pl.tp = null;   /* Zone/Setup ยังเปิดค้างไว้ตามที่ตั้งใจ */
   render(); schedulePersist();
 }
+/* ช่องระดับราคากรอกไว้ล่วงหน้าได้เสมอ — สวิตช์ไว้สะบัดตอนเงื่อนไขมาถึงจริง */
 function sbRow(sym, field, onField, label, ph){
   const pl = sbPlanOf(sym), cfg = sbCfg(sym), on = !!pl[onField];
-  return `<div class="sbRow ${on?'on':''}">
-    <label class="sbSw"><input type="checkbox" ${on?'checked':''} onchange="sbToggle('${sym}','${onField}')"><b>${label}</b></label>
+  return `<div class="sbCell ${on?'on':''}">
+    <label class="sbTgl"><span>${label}</span>
+      <input type="checkbox" ${on?'checked':''} onchange="sbToggle('${sym}','${onField}')"><i></i></label>
     <input type="number" step="${cfg.step}" inputmode="decimal" placeholder="${ph}" class="sbLvl"
       value="${pl[field] ?? ''}" oninput="sbSetNum('${sym}','${field}',this.value)">
   </div>`;
@@ -6752,20 +6801,22 @@ function renderSBPlan(){
   document.getElementById('sbPlanBody').innerHTML = SB_PLAN_PRODUCTS.map(sym=>{
     const pl = sbPlanOf(sym), cfg = sbCfg(sym);
     const picked = wpIsPicked(sym), tr = wpTrendOf(sym);
-    const trBtn = (v,txt)=>`<button type="button" class="${tr===v?'on-cur':''}" onclick="wpSetTrend('${sym}','${v}')">${txt}</button>`;
+    const TRCLS = {Long:'on-bull', Short:'on-bear', Unclear:'on-range'};
+    const trBtn = (v,txt)=>`<button type="button" class="${tr===v?TRCLS[v]:''}" onclick="wpSetTrend('${sym}','${v}')">${txt}</button>`;
     const biasBtn = (v,txt)=>`<button type="button" class="${pl.bias===v?(v==='Long'?'on-long':'on-short'):''}" onclick="sbSetBias('${sym}','${v}')">${txt}</button>`;
     return `<div class="sbCard">
       <div class="sbHead">
         <label class="sbSw"><input type="checkbox" ${picked?'checked':''} onchange="wpToggle('${sym}')">
           <b style="font-size:.95rem">${escHtml(cfg.label)} — ${escHtml(sym)}</b></label>
-        <span class="hint" style="margin:0">${picked?'สินค้าของสัปดาห์นี้':'ยังไม่ได้ติ๊กเป็นสินค้าของสัปดาห์นี้'}</span>
-        <div class="seg" style="margin-left:auto;min-width:210px">${trBtn('Long','Bullish')}${trBtn('Short','Bearish')}${trBtn('Unclear','Ranging')}</div>
+        <div class="seg">${trBtn('Long','Bullish')}${trBtn('Short','Bearish')}${trBtn('Unclear','Ranging')}</div>
       </div>
-      ${sbRow(sym,'zoneLevel','zoneOn','Zone Activate','Zone Level')}
-      ${sbRow(sym,'setupLevel','setupOn','Setup Activate','Activation Level')}
+      <div class="sbGrid">
+        ${sbRow(sym,'zoneLevel','zoneOn','Zone Activate','Zone Level')}
+        ${sbRow(sym,'setupLevel','setupOn','Setup Activate','Activation Level')}
+      </div>
       <div class="sbEntry ${sbArmed(pl)?'':'off'}">
-        <div class="seg" style="max-width:220px;margin-bottom:10px">${biasBtn('Long','Long')}${biasBtn('Short','Short')}</div>
-        <div class="frow3">
+        <div class="sbFields">
+          <div class="seg">${biasBtn('Long','Long')}${biasBtn('Short','Short')}</div>
           <div class="f"><label>Entry</label><input type="number" step="${cfg.step}" inputmode="decimal" value="${pl.entry ?? ''}" oninput="sbSetNum('${sym}','entry',this.value)"></div>
           <div class="f"><label>SL</label><input type="number" step="${cfg.step}" inputmode="decimal" value="${pl.sl ?? ''}" oninput="sbSetNum('${sym}','sl',this.value)"></div>
           <div class="f"><label>TP</label><input type="number" step="${cfg.step}" inputmode="decimal" value="${pl.tp ?? ''}" oninput="sbSetNum('${sym}','tp',this.value)"></div>
