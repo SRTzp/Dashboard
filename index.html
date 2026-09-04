@@ -320,7 +320,9 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
   .sbCell{display:flex;align-items:center;gap:10px;padding:6px 11px}
   .sbTgl{flex:0 1 auto;justify-content:flex-start;gap:9px;min-width:0}
   .sbCell .sbTgl span{white-space:nowrap}   /* ป้ายมี emoji นำหน้า อย่าให้ตกบรรทัด */
-  .sbCell .sbLvl{flex:0 1 118px;min-width:74px;width:auto;margin:0 0 0 auto}
+  .sbCell{gap:8px;padding:6px 10px}
+  .sbCell .sbLvl{flex:0 1 100px;min-width:62px;width:auto;margin:0 0 0 auto;padding:6px 8px}
+  .sbHead .seg button{padding:5px 9px}
   /* ป้าย Entry/SL/TP ย้ายมาอยู่หน้าช่อง แทนที่จะซ้อนอยู่ข้างบน */
   .sbEntry{margin-top:8px;padding-top:8px}
   .sbFields{align-items:center;gap:8px}
@@ -332,15 +334,16 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
   .sbWarn{padding:5px 10px;margin-top:5px}
 }
 /* จอกว้างมาก: หัวการ์ด + Zone/Setup อยู่แถวเดียวกัน (ไม่ต้องแก้ markup — .sbCard เป็น flex ห่อ 3 ส่วน) */
-@media(min-width:901px){
-  .sbCard{display:flex;flex-wrap:wrap;align-items:center;gap:0 14px}
+/* ต่ำกว่า 900px เนื้อหาไม่พอในแถวเดียวจริง ๆ — ให้ตกเป็น 2 แถวที่จัดไว้อย่างตั้งใจ ดีกว่าปล่อยให้ wrap มั่ว */
+@media(min-width:900px){
+  .sbCard{display:flex;flex-wrap:wrap;align-items:center;gap:0 12px}
   .sbHead{flex:0 1 auto;margin-bottom:0;flex-wrap:nowrap}
   .sbHead>.sbSw{flex:0 1 auto;min-width:0}
   .sbHead>.sbSw b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .sbHead .seg{margin-left:10px;flex:0 0 auto}
   .sbHead .seg button{white-space:nowrap}
   .sbHead .seg{margin-left:auto}
-  .sbGrid{flex:1 1 420px}
+  .sbGrid{flex:1 1 340px}
   .sbEntry{flex:1 1 100%;margin-top:9px}
 }
 .mixPort{background:var(--surface3);border:1px solid var(--hair);border-radius:var(--r);padding:13px 15px}
@@ -6884,10 +6887,10 @@ function sbSave(sym, status){
   render(); schedulePersist();
 }
 /* ช่องระดับราคากรอกไว้ล่วงหน้าได้เสมอ — สวิตช์ไว้สะบัดตอนเงื่อนไขมาถึงจริง */
-function sbRow(sym, field, onField, label, ph, kind){
+function sbRow(sym, field, onField, label, ph, kind, tip){
   const pl = sbPlanOf(sym), cfg = sbCfg(sym), on = !!pl[onField];
   return `<div class="sbCell sb-${kind} ${on?'on':''}">
-    <label class="sbTgl"><span>${label}</span>
+    <label class="sbTgl" title="${escHtml(tip||'')}"><span>${label}</span>
       <input type="checkbox" ${on?'checked':''} onchange="sbToggle('${sym}','${onField}')"><i></i></label>
     <input type="number" step="${cfg.step}" inputmode="decimal" placeholder="${ph}" class="sbLvl"
       value="${pl[field] ?? ''}" oninput="sbSetNum('${sym}','${field}',this.value)" onchange="sbCommit('${sym}')">
@@ -6933,8 +6936,8 @@ function renderSBPlan(){
         <div class="seg">${trBtn('Long','Bullish')}${trBtn('Short','Bearish')}${trBtn('Unclear','Ranging')}</div>
       </div>
       <div class="sbGrid">
-        ${sbRow(sym,'zoneLevel','zoneOn','📍 Zone Activate','Zone Level','zone')}
-        ${sbRow(sym,'setupLevel','setupOn','⚡ Setup Activate','Activation Level','setup')}
+        ${sbRow(sym,'zoneLevel','zoneOn','📍 Zone','Zone Level','zone','Zone Activate — ราคาเข้าโซนที่รอแล้ว')}
+        ${sbRow(sym,'setupLevel','setupOn','⚡ Setup','Activation Level','setup','Setup Activate — เงื่อนไขจุดชนวนมาถึงแล้ว')}
       </div>
       <div class="sbEntry ${sbArmed(pl)?'':'off'}">
         <div class="sbFields">
