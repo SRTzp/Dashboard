@@ -251,8 +251,8 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .sbEntry.off{opacity:.42}
 .sbEntry.off input,.sbEntry.off .seg{pointer-events:none}
 .sbFields{display:flex;align-items:flex-end;gap:9px;flex-wrap:wrap}
-.sbFields .seg{flex:0 0 132px;height:36px}
-.sbFields .seg button{padding:0 8px;font-size:.74rem}
+.sbFields .seg{flex:0 0 auto;height:36px}
+.sbFields .seg button{padding:0 11px;font-size:.74rem;white-space:nowrap;line-height:1}
 .sbFields .f{flex:1 1 78px;min-width:0;margin:0}
 .sbFields .f label{font-size:.66rem;margin-bottom:3px}
 .sbFields .f input{padding:7px 9px;font-size:15px;font-family:var(--mono)}
@@ -327,16 +327,20 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
   .sbFields .f{display:flex;align-items:center;gap:7px;flex:1 1 120px}
   .sbFields .f label{margin:0;flex:none;font-size:.7rem;color:var(--muted)}
   .sbFields .f input{flex:1;min-width:0}
-  .sbFields .seg{flex:0 0 124px;height:34px}
+  .sbFields .seg{flex:0 0 auto;height:34px}
   .sbCalcBar{margin-top:8px;padding:7px 11px}
   .sbWarn{padding:5px 10px;margin-top:5px}
 }
 /* จอกว้างมาก: หัวการ์ด + Zone/Setup อยู่แถวเดียวกัน (ไม่ต้องแก้ markup — .sbCard เป็น flex ห่อ 3 ส่วน) */
 @media(min-width:901px){
   .sbCard{display:flex;flex-wrap:wrap;align-items:center;gap:0 14px}
-  .sbHead{flex:1 1 290px;margin-bottom:0}
+  .sbHead{flex:0 1 auto;margin-bottom:0;flex-wrap:nowrap}
+  .sbHead>.sbSw{flex:0 1 auto;min-width:0}
+  .sbHead>.sbSw b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sbHead .seg{margin-left:10px;flex:0 0 auto}
+  .sbHead .seg button{white-space:nowrap}
   .sbHead .seg{margin-left:auto}
-  .sbGrid{flex:1 1 440px}
+  .sbGrid{flex:1 1 420px}
   .sbEntry{flex:1 1 100%;margin-top:9px}
 }
 .mixPort{background:var(--surface3);border:1px solid var(--hair);border-radius:var(--r);padding:13px 15px}
@@ -6746,7 +6750,39 @@ function sbArmed(pl){ return !!(pl.zoneOn || pl.setupOn); }
 function sbNum(v){ const x = parseFloat(v); return (isNaN(x) || x===0) ? null : x; }
 function sbToggle(sym, field){
   const pl = sbPlanOf(sym);
+  if(field==='invalOn' && !pl.invalOn){ sbInvalidate(sym); return; }
   pl[field] = !pl[field];
+  renderSBPlan(); schedulePersist();
+}
+/* สะบัดสวิตช์ Invalidation = "setup เสียแล้ว" → เสนอล้างแผนให้เริ่มรอบใหม่
+   กติกา: ล้างเฉพาะสิ่งที่ถูก activate ไปแล้ว + ตัวเลขไม้ · สิ่งที่ยังไม่ได้ activate เก็บไว้
+   (เช่น Zone ที่ยังไม่โดน ราคายังไม่มาถึง เงื่อนไขนั้นยังใช้ได้อยู่ ไม่มีเหตุให้ทิ้ง) */
+function sbInvalidate(sym){
+  const pl = sbPlanOf(sym), cfg = sbCfg(sym);
+  const clear = [], keep = [];
+  if(pl.zoneOn)  clear.push(`📍 Zone Activate${pl.zoneLevel!=null?' ('+pl.zoneLevel+')':''}`);
+  else if(pl.zoneLevel!=null) keep.push(`📍 Zone Level ${pl.zoneLevel}`);
+  if(pl.setupOn) clear.push(`⚡ Setup Activate${pl.setupLevel!=null?' ('+pl.setupLevel+')':''}`);
+  else if(pl.setupLevel!=null) keep.push(`⚡ Activation Level ${pl.setupLevel}`);
+  const nums = [pl.entry!=null?'Entry '+pl.entry:null, pl.sl!=null?'SL '+pl.sl:null, pl.tp!=null?'TP '+pl.tp:null].filter(Boolean);
+  if(nums.length) clear.push(nums.join(' · '));
+  if(pl.etype==='stop') clear.push('◆ Stop → กลับเป็น ◇ Limit');
+  if((pl.invalNote||'').trim()) clear.push('ข้อความ Invalidation');
+
+  const ok = confirm(
+      `${cfg.icon||'📦'} ${cfg.label} — setup โดน invalidate\n\n`
+    + `ล้างแผนแล้วเริ่มรอบใหม่?\n\n`
+    + `จะล้าง:\n${clear.length ? '  • ' + clear.join('\n  • ') : '  (ไม่มีอะไรให้ล้าง)'}\n\n`
+    + `เก็บไว้:\n${keep.length ? '  • ' + keep.join('\n  • ') : '  (ไม่มี)'}\n\n`
+    + `กด Cancel = แค่ทำเครื่องหมายว่าเสียไว้ก่อน ยังไม่ล้าง (จะบันทึกไม้ไม่ได้จนกว่าจะปิดสวิตช์)`);
+
+  if(!ok){ pl.invalOn = true; renderSBPlan(); schedulePersist(); return; }
+  if(pl.zoneOn){  pl.zoneOn = false;  pl.zoneLevel = null; }
+  if(pl.setupOn){ pl.setupOn = false; pl.setupLevel = null; }
+  pl.entry = null; pl.sl = null; pl.tp = null;
+  pl.etype = 'limit';                 /* setup ใหม่อาจเข้าคนละแบบ — กลับไปตั้งต้นที่ Limit เสมอ */
+  pl.invalNote = '';
+  pl.invalOn = false;                 /* ล้างแล้วปลดล็อกทันที พร้อมรับ setup รอบใหม่ */
   renderSBPlan(); schedulePersist();
 }
 function sbSetBias(sym, b){ sbPlanOf(sym).bias = b; renderSBPlan(); schedulePersist(); }
@@ -6893,7 +6929,7 @@ function renderSBPlan(){
     return `<div class="sbCard">
       <div class="sbHead">
         <label class="sbSw"><input type="checkbox" ${picked?'checked':''} onchange="wpToggle('${sym}')">
-          <b style="font-size:.95rem">${cfg.icon||'📦'} ${escHtml(cfg.label)} — ${escHtml(sym)}</b></label>
+          <b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b></label>
         <div class="seg">${trBtn('Long','Bullish')}${trBtn('Short','Bearish')}${trBtn('Unclear','Ranging')}</div>
       </div>
       <div class="sbGrid">
