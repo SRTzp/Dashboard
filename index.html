@@ -256,6 +256,21 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .sbFields .f{flex:1 1 78px;min-width:0;margin:0}
 .sbFields .f label{font-size:.66rem;margin-bottom:3px}
 .sbFields .f input{padding:7px 9px;font-size:15px;font-family:var(--mono)}
+/* Invalidation — toggle + ช่องข้อความ วางถัดจาก TP · ตกบรรทัดเองเมื่อที่ไม่พอ */
+.sbInval{display:flex;align-items:center;gap:9px;flex:1 1 250px;min-width:0;
+  padding:5px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
+  transition:border-color .14s,background .14s}
+.sbInval.on{border-color:rgba(214,69,69,.45);background:var(--red-dim)}
+.sbInval.on .sbTgl span{color:var(--red)}
+.sbInval .sbTgl{flex:0 0 auto;gap:8px;justify-content:flex-start;font-size:.72rem}
+.sbInval .sbTgl i{width:36px;height:21px}
+.sbInval .sbTgl i::after{width:17px;height:17px}
+.sbInval .sbTgl input:checked + i{background:var(--red)}
+.sbInval .sbTgl input:checked + i::after{transform:translateX(15px)}
+.sbInvalTxt{flex:1 1 90px;min-width:0;font-family:var(--sans);font-size:.78rem;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:6px 9px}
+.sbInvalTxt:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
+@media(max-width:700px){ .sbInval{flex:1 1 100%} }
 /* การ์ดคำนวณยุบเหลือบรรทัดเดียว */
 .sbCalcBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding:9px 12px;
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm)}
@@ -6707,7 +6722,12 @@ function sbPlanOf(sym){
   if(!state.sbPlan || typeof state.sbPlan!=='object') state.sbPlan = {};
   if(!state.sbPlan[sym]) state.sbPlan[sym] = {zoneOn:false, zoneLevel:null, setupOn:false, setupLevel:null,
                                               bias:'Long', entry:null, sl:null, tp:null, mult:null};
-  return state.sbPlan[sym];
+  const pl = state.sbPlan[sym];
+  /* เติมค่าเริ่มต้นให้ก้อนที่บันทึกไว้ก่อนมีฟิลด์พวกนี้ — ไม่งั้นของเก่าจะได้ undefined */
+  if(!pl.etype) pl.etype = 'limit';
+  if(pl.invalOn===undefined) pl.invalOn = false;
+  if(pl.invalNote===undefined) pl.invalNote = '';
+  return pl;
 }
 function sbArmed(pl){ return !!(pl.zoneOn || pl.setupOn); }
 function sbNum(v){ const x = parseFloat(v); return (isNaN(x) || x===0) ? null : x; }
@@ -6717,12 +6737,17 @@ function sbToggle(sym, field){
   renderSBPlan(); schedulePersist();
 }
 function sbSetBias(sym, b){ sbPlanOf(sym).bias = b; renderSBPlan(); schedulePersist(); }
-/* ช่องตัวเลขใช้ oninput เพื่อให้การ์ดขนาดไม้อัปเดตสด — จึงวาดใหม่เฉพาะการ์ด ไม่วาดทั้งแผง (กันช่องกรอกเสีย focus) */
+/* ★ ระหว่างพิมพ์: อัปเดต state + วาดใหม่เฉพาะการ์ดคำนวณ · ห้าม schedulePersist() ที่นี่
+   เหตุผล: persist -> Firestore ตอบ snapshot กลับมา -> render() -> renderSBPlan() วาด innerHTML ทับ
+   -> ช่องที่กำลังพิมพ์ถูกทำลายและสร้างใหม่ -> เคอร์เซอร์เด้งออกกลางคัน (อาการ "บางครั้งเด้งเอง")
+   จึงเลื่อนการเซฟไปตอน onchange (ออกจากช่อง / กด Enter) แทน */
 function sbSetNum(sym, field, v){
   sbPlanOf(sym)[field] = sbNum(v);
   sbRenderCalc(sym);
-  schedulePersist();
 }
+function sbSetText(sym, field, v){ sbPlanOf(sym)[field] = String(v||''); }
+function sbCommit(sym){ sbRenderCalc(sym); schedulePersist(); }
+function sbSetType(sym, v){ sbPlanOf(sym).etype = v; renderSBPlan(); schedulePersist(); }
 /* ตัวเลือกให้ szSatBCalc — โครงเดียวกับที่ฟอร์ม Add Trade ส่งเข้าไป */
 function sbCalcOpts(sym){
   const pl = sbPlanOf(sym), cfg = sbCfg(sym);
@@ -6736,6 +6761,11 @@ function sbRenderCalc(sym){
     host.innerHTML = `<div class="sbLock">เปิด <b>Zone</b> หรือ <b>Setup</b> ก่อนจึงจะกรอกไม้ได้</div>`;
     return;
   }
+  if(pl.invalOn){
+    host.innerHTML = `<div class="sbWarn red" style="margin-top:10px">⛔ <b>Setup โดน invalidate แล้ว</b> — ไม้นี้ตกไป บันทึกไม่ได้`
+      + `<br>ถ้าจะเทรดรอบใหม่ ให้ปิดสวิตช์นี้แล้วตั้ง Zone / Setup ใหม่</div>`;
+    return;
+  }
   const c = szSatBCalc(sbCalcOpts(sym));
   if(!c){ host.innerHTML = `<div class="sbLock">กรอก Entry และ SL ให้ครบ (Entry ≠ SL)</div>`; return; }
   const rr   = (pl.tp>0 && c.slDist>0) ? Math.abs(pl.tp-pl.entry)/c.slDist : null;
@@ -6745,6 +6775,7 @@ function sbRenderCalc(sym){
   /* บรรทัดเดียว: ขนาดไม้ตัวโต แล้วต่อด้วยตัวเลขประกอบคั่นด้วยจุด */
   const meta = [
     `Risk <b>${c.rpt}%</b>${c.tooTight?` <span style="color:var(--amber)">(ลดจาก ${c.rptBase}%)</span>`:''}`,
+    `<b>${pl.etype==='stop'?'Stop':'Limit'}</b>`,
     `SL <b>${szNum(c.slDist,2)}</b> <span style="opacity:.7">(กรอบ ${band})</span>`,
     `งบ <b>${cur}${szNum(c.budgetNative)}</b>`,
     rr!=null ? `R:R <b>${rr.toFixed(2)}R</b>` : null,
@@ -6778,6 +6809,7 @@ function sbRenderCalc(sym){
 function sbSave(sym, status){
   const pl = sbPlanOf(sym), cfg = sbCfg(sym);
   if(!sbArmed(pl)){ alert('เปิด Zone หรือ Setup ก่อน'); return; }
+  if(pl.invalOn){ alert('Setup โดน invalidate ไปแล้ว — ไม้นี้บันทึกไม่ได้\n\nปิดสวิตช์ Invalidation แล้วตั้ง Zone / Setup ใหม่ก่อน'); return; }
   const c = szSatBCalc(sbCalcOpts(sym));
   if(!c){ alert('กรอก Entry และ SL ให้ครบ (Entry ≠ SL)'); return; }
   if(c.tooWide){ alert(`ระยะ SL ของ ${sym} กว้างกว่าค่าบนที่ตั้งไว้ — ไม้นี้ถูกล็อกไม่ให้เทรด`); return; }
@@ -6790,7 +6822,9 @@ function sbSave(sym, status){
     id:'t'+Date.now(), date:today, sym, port:'satB', bias:pl.bias,
     setup:null, posTier:null,
     entry:pl.entry, sl:pl.sl, tp:pl.tp||null, qty, mult:(pl.mult>0?pl.mult:cfg.mult), cur:cfg.cur,
-    invalidation:null, imageUrl:null, submitted:false, unplanned:false,
+    entryType: pl.etype,                              /* limit = รอราคามาหา · stop = ตามราคาไป */
+    invalidation: (pl.invalNote||'').trim() || null,  /* ใช้คอลัมน์ Invalidation เดิมในตาราง Trading Plan */
+    imageUrl:null, submitted:false, unplanned:false,
     openedAt: status==='open' ? today : null,
     sizeFactor:null, status,
     /* บันทึกเงื่อนไขที่ปลดล็อกไม้นี้ไว้ด้วย — ตอนรีวิวจะได้รู้ว่าเข้าเพราะ Zone หรือ Setup และที่ระดับไหน */
@@ -6807,7 +6841,7 @@ function sbRow(sym, field, onField, label, ph){
     <label class="sbTgl"><span>${label}</span>
       <input type="checkbox" ${on?'checked':''} onchange="sbToggle('${sym}','${onField}')"><i></i></label>
     <input type="number" step="${cfg.step}" inputmode="decimal" placeholder="${ph}" class="sbLvl"
-      value="${pl[field] ?? ''}" oninput="sbSetNum('${sym}','${field}',this.value)">
+      value="${pl[field] ?? ''}" oninput="sbSetNum('${sym}','${field}',this.value)" onchange="sbCommit('${sym}')">
   </div>`;
 }
 function renderSBPlan(){
@@ -6815,6 +6849,15 @@ function renderSBPlan(){
   const show = portOn('satB');
   panel.style.display = show ? '' : 'none';
   if(!show) return;
+  /* ★ ถ้ากำลังพิมพ์อยู่ในแผงนี้ ห้ามวาด innerHTML ทับ — element ที่โฟกัสอยู่จะถูกทำลาย เคอร์เซอร์เด้งออก
+     (เกิดได้จาก snapshot ของ Firestore, การซิงก์จากเครื่องอื่น, หรือ render() ที่ถูกเรียกด้วยเหตุอื่น)
+     กรณีนั้นอัปเดตเฉพาะการ์ดคำนวณซึ่งไม่มีช่องกรอกอยู่ข้างใน แล้วปล่อยให้รอบหน้าวาดเต็มตอนไม่มีโฟกัส */
+  const ae = document.activeElement;
+  const bodyEl = document.getElementById('sbPlanBody');
+  if(bodyEl && ae && bodyEl.contains(ae) && (ae.tagName==='INPUT' || ae.tagName==='TEXTAREA')){
+    SB_PLAN_PRODUCTS.forEach(sbRenderCalc);
+    return;
+  }
   const used = wpBulletsUsed(), left = wpBulletsLeft();
   const clr = left===0 ? 'var(--red)' : left===1 ? 'var(--amber)' : 'var(--teal)';
   const dots = Array.from({length:WP_BULLETS}, (_,i)=>
@@ -6831,6 +6874,9 @@ function renderSBPlan(){
     const TRCLS = {Long:'on-bull', Short:'on-bear', Unclear:'on-range'};
     const trBtn = (v,txt)=>`<button type="button" class="${tr===v?TRCLS[v]:''}" onclick="wpSetTrend('${sym}','${v}')">${txt}</button>`;
     const biasBtn = (v,txt)=>`<button type="button" class="${pl.bias===v?(v==='Long'?'on-long':'on-short'):''}" onclick="sbSetBias('${sym}','${v}')">${txt}</button>`;
+    const typBtn  = (v,txt)=>`<button type="button" class="${pl.etype===v?'on-cur':''}" onclick="sbSetType('${sym}','${v}')">${txt}</button>`;
+    const numF = (label,field)=>`<div class="f"><label>${label}</label><input type="number" step="${cfg.step}" inputmode="decimal"`
+      + ` value="${pl[field] ?? ''}" oninput="sbSetNum('${sym}','${field}',this.value)" onchange="sbCommit('${sym}')"></div>`;
     return `<div class="sbCard">
       <div class="sbHead">
         <label class="sbSw"><input type="checkbox" ${picked?'checked':''} onchange="wpToggle('${sym}')">
@@ -6844,9 +6890,14 @@ function renderSBPlan(){
       <div class="sbEntry ${sbArmed(pl)?'':'off'}">
         <div class="sbFields">
           <div class="seg">${biasBtn('Long','Long')}${biasBtn('Short','Short')}</div>
-          <div class="f"><label>Entry</label><input type="number" step="${cfg.step}" inputmode="decimal" value="${pl.entry ?? ''}" oninput="sbSetNum('${sym}','entry',this.value)"></div>
-          <div class="f"><label>SL</label><input type="number" step="${cfg.step}" inputmode="decimal" value="${pl.sl ?? ''}" oninput="sbSetNum('${sym}','sl',this.value)"></div>
-          <div class="f"><label>TP</label><input type="number" step="${cfg.step}" inputmode="decimal" value="${pl.tp ?? ''}" oninput="sbSetNum('${sym}','tp',this.value)"></div>
+          <div class="seg" title="Limit = ตั้งรอให้ราคาย้อนมาหา · Stop = ตั้งไว้ให้ราคาวิ่งไปโดน">${typBtn('limit','Limit')}${typBtn('stop','Stop')}</div>
+          ${numF('Entry','entry')}${numF('SL','sl')}${numF('TP','tp')}
+          <div class="sbInval ${pl.invalOn?'on':''}">
+            <label class="sbTgl" title="เปิดเมื่อ setup โดน invalidate ไปแล้ว — ไม้นี้จะบันทึกไม่ได้"><span>Invalidation</span>
+              <input type="checkbox" ${pl.invalOn?'checked':''} onchange="sbToggle('${sym}','invalOn')"><i></i></label>
+            <input type="text" class="sbInvalTxt" placeholder="อะไรจะบอกว่าไม้นี้ผิดทาง"
+              value="${escHtml(pl.invalNote||'')}" oninput="sbSetText('${sym}','invalNote',this.value)" onchange="sbCommit('${sym}')">
+          </div>
         </div>
         <div id="sbCalc_${sym}"></div>
       </div>
