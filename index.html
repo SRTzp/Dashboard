@@ -256,6 +256,25 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .sbFields .f{flex:1 1 78px;min-width:0;margin:0}
 .sbFields .f label{font-size:.66rem;margin-bottom:3px}
 .sbFields .f input{padding:7px 9px;font-size:15px;font-family:var(--mono)}
+/* Zone = เขียว (จุดที่รอ) · Setup = ม่วง (ตัวจุดชนวน) — คนละสีจะได้ไม่สับสนว่าอันไหนคืออันไหน */
+.sbCell.sb-setup.on{border-color:rgba(138,99,210,.45);background:var(--purple-dim)}
+.sbCell.sb-setup.on .sbTgl span{color:var(--purple)}
+.sbCell.sb-setup .sbTgl input:checked + i{background:var(--purple)}
+/* Entry Type: Limit = น้ำเงิน (ตั้งรอ) · Stop = ส้ม (วิ่งไปโดน) */
+.seg button.on-limit{background:var(--blue-dim);color:var(--blue);font-weight:700}
+.seg button.on-stop{background:var(--amber-dim);color:var(--amber);font-weight:700}
+/* ---- ตัวจัดการสินค้า Sat.B ในหน้าตั้งค่า ---- */
+.sbProd{border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:8px;background:var(--surface3)}
+.sbProd.on{border-color:rgba(14,156,134,.4);background:var(--teal-dim)}
+.sbProdTop{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px}
+.sbProdTop .sbTgl span{font-family:var(--mono);font-size:.8rem}
+.sbProdNm{flex:1 1 110px;min-width:0;font-size:.8rem;font-family:var(--sans);padding:6px 9px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text)}
+.sbProdNm:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
+.sbProdGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:7px}
+.sbProdGrid .f{margin:0}
+.sbProdGrid .f label{font-size:.63rem;margin-bottom:3px}
+.sbProdGrid .f input,.sbProdGrid .f select{padding:6px 8px;font-size:14px}
 /* Invalidation — toggle + ช่องข้อความ วางถัดจาก TP · ตกบรรทัดเองเมื่อที่ไม่พอ */
 .sbInval{display:flex;align-items:center;gap:9px;flex:1 1 250px;min-width:0;
   padding:5px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);
@@ -300,7 +319,8 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
   .sbGrid{gap:8px;margin-bottom:0}
   .sbCell{display:flex;align-items:center;gap:10px;padding:6px 11px}
   .sbTgl{flex:0 1 auto;justify-content:flex-start;gap:9px;min-width:0}
-  .sbCell .sbLvl{width:118px;flex:none;margin:0 0 0 auto}
+  .sbCell .sbTgl span{white-space:nowrap}   /* ป้ายมี emoji นำหน้า อย่าให้ตกบรรทัด */
+  .sbCell .sbLvl{flex:0 1 118px;min-width:74px;width:auto;margin:0 0 0 auto}
   /* ป้าย Entry/SL/TP ย้ายมาอยู่หน้าช่อง แทนที่จะซ้อนอยู่ข้างบน */
   .sbEntry{margin-top:8px;padding-top:8px}
   .sbFields{align-items:center;gap:8px}
@@ -1417,22 +1437,17 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
       key ถูกเก็บใน Firestore ของคุณเอง ซิงก์ข้ามเครื่อง · ใครก็ตามที่เปิด dashboard นี้ได้จะเห็น key ได้ ถ้าหลุดให้ไป regenerate ใหม่</div>
 
   </div></details>
-  <details class="setsec"><summary class="divlbl">Sat.B — กรอบระยะ SL ที่ยอมรับได้ (จุด/point)</summary>
+  <details class="setsec"><summary class="divlbl">สินค้า Sat.B &amp; กรอบระยะ SL</summary>
   <div class="secbody">
-    <div class="fgrid">
-      <div class="f"><label>XAUUSD — ค่าล่าง (lo)</label><input type="number" step="any" inputmode="decimal" id="sVolXAULo" placeholder="เช่น 20"></div>
-      <div class="f"><label>XAUUSD — ค่าบน (hi)</label><input type="number" step="any" inputmode="decimal" id="sVolXAUHi" placeholder="เช่น 60"></div>
-      <div class="f"><label>S50 — ค่าล่าง (lo)</label><input type="number" step="any" inputmode="decimal" id="sVolS50Lo" placeholder="เช่น 4"></div>
-      <div class="f"><label>S50 — ค่าบน (hi)</label><input type="number" step="any" inputmode="decimal" id="sVolS50Hi" placeholder="เช่น 12"></div>
-      <div class="f"><label>BTCUSD — ค่าล่าง (lo)</label><input type="number" step="any" inputmode="decimal" id="sVolBTCLo" placeholder="เช่น 600"></div>
-      <div class="f"><label>BTCUSD — ค่าบน (hi)</label><input type="number" step="any" inputmode="decimal" id="sVolBTCHi" placeholder="เช่น 2000"></div>
-      <div class="f"><label>Risk % เมื่อ SL แคบกว่าค่าล่าง</label><input type="number" step="any" inputmode="decimal" id="sSatBLowRisk" placeholder="1"></div>
-    </div>
+    <div class="hint" style="margin:0 0 10px">ติ๊กเปิดสินค้าที่จะให้โผล่ในแผนเทรด Sat.B · กรอบระยะ SL ใช้คุมขนาดไม้ของสินค้านั้น</div>
+    <div id="sbProdMgr"></div>
+    <button type="button" class="small" onclick="sbProdAdd()" style="margin-top:10px">＋ เพิ่มสินค้า</button>
+    <div class="f" style="margin-top:14px"><label>Risk % เมื่อ SL แคบกว่าค่าล่าง</label>
+      <input type="number" step="any" inputmode="decimal" id="sSatBLowRisk" placeholder="1"></div>
     <div class="hint">เทียบกับ <b>ระยะ SL ที่กรอกจริง</b> (Entry − SL) — ไม่ใช่ความผันผวนสด<br>
-      <b>SL &lt; ค่าล่าง</b> → stop ชิดเกินกว่าที่สินค้าแกว่งปกติ โอกาสโดนเขี่ยสูง → <b>ลด Risk เหลือค่าในช่องขวาสุด (ปกติ 1%)</b> แต่ยังคิดขนาดไม้จากระยะ SL จริง<br>
+      <b>SL &lt; ค่าล่าง</b> → stop ชิดเกินกว่าที่สินค้าแกว่งปกติ โอกาสโดนเขี่ยสูง → <b>ลด Risk เหลือค่าในช่องด้านบน (ปกติ 1%)</b> แต่ยังคิดขนาดไม้จากระยะ SL จริง<br>
       <b>SL &gt; ค่าบน</b> → <b>ล็อกไม่ให้เทรด</b> — stop กว้างขนาดนั้นแปลว่าเข้าผิดจังหวะ ไม่ใช่แค่ไม้ใหญ่เกิน<br>
-      ใส่ 0 = ไม่ใช้เกณฑ์นั้น · <span style="color:var(--amber)">กลไกเดิม "SL แคบกว่า vol แล้วยกระยะขึ้น" ถูกยกเลิกแล้ว — ตอนนี้คิดที่ระยะ SL จริงเสมอ</span></div>
-
+      ใส่ 0 = ไม่ใช้เกณฑ์นั้น</div>
   </div></details>
   <details class="setsec"><summary class="divlbl">เพดาน Fund-flow — คุมขนาดไม้อัตโนมัติ</summary>
   <div class="secbody">
@@ -1926,9 +1941,10 @@ function buildStateFromBook(d, exists){
         reasonTags: (d.reasonTags && typeof d.reasonTags==='object') ? d.reasonTags : null,
         weeklyPlan: (d.weeklyPlan && typeof d.weeklyPlan==='object') ? d.weeklyPlan : {},
         sbPlan: (d.sbPlan && typeof d.sbPlan==='object') ? d.sbPlan : {},   /* ★ แผนเทรด Sat.B (Zone/Setup) — ต้อง copy ที่นี่เสมอ ดูบทเรียน satBNoteV1 ด้านบน */
+        sbProducts: Array.isArray(d.sbProducts) ? d.sbProducts : null,      /* ★ รายการสินค้า Sat.B — เช่นกัน */
         failLog: Array.isArray(d.failLog) ? d.failLog : []};   /* เดิมไม่ได้ copy field นี้มา — ประวัติ fail-log ของ Fundamental Checklist จะหายทุกครั้งที่ sync */
   } else {
-      return {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[], weeklyPlan:{}, sbPlan:{}};
+      return {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[], weeklyPlan:{}, sbPlan:{}, sbProducts:null};
     }
 }
 
@@ -6137,13 +6153,7 @@ function openSettings(){
   document.getElementById('sTotal').value=s.limits.total;
   const ps = s.posSize || cloneDefaults().posSize;
   document.getElementById('sPosSatB').value=ps.satB;
-  const vv = s.satBVol || {};
-  const band = k => (vv[k] && typeof vv[k]==='object') ? vv[k] : {lo: parseFloat(vv[k])||0, hi:0};
-  [['XAUUSD','sVolXAU'],['S50','sVolS50'],['BTCUSD','sVolBTC']].forEach(([k,id])=>{
-    const b = band(k);
-    document.getElementById(id+'Lo').value = b.lo || '';
-    document.getElementById(id+'Hi').value = b.hi || '';
-  });
+  renderSbProdMgr();
   document.getElementById('sSatBLowRisk').value = (s.satBLowRisk>0 ? s.satBLowRisk : 1);
   const sz = s.sizing || cloneDefaults().sizing;
   document.getElementById('sRCore').value   = sz.r.core;
@@ -6224,8 +6234,7 @@ function acctApplyPortVisibility(){
    ['sRCore','core'],['sRSatA','satA'],['sCapCore','core'],['sCapSatA','satA'],
    ['sPosSatB','satB'],['sRsBench','satA'],
    ['sPortCore','core'],['sPortSatA','satA'],['sPortSatB','satB'],
-   ['sVolXAULo','satB'],['sVolXAUHi','satB'],['sVolS50Lo','satB'],['sVolS50Hi','satB'],
-   ['sVolBTCLo','satB'],['sVolBTCHi','satB'],['sSatBLowRisk','satB']
+   ['sSatBLowRisk','satB']
   ].forEach(([id,port])=>{
     const el = document.getElementById(id);
     const f  = el && el.closest('.f');
@@ -6274,11 +6283,7 @@ function saveSettings(){
             satA: parseFloat(document.getElementById('sCapSatA').value)||25 },
       ffThrottle: document.getElementById('sFfThrottle').value==='1'
     },
-    satBVol:{
-      XAUUSD:{lo: parseFloat(document.getElementById('sVolXAULo').value)||0, hi: parseFloat(document.getElementById('sVolXAUHi').value)||0},
-      S50:   {lo: parseFloat(document.getElementById('sVolS50Lo').value)||0, hi: parseFloat(document.getElementById('sVolS50Hi').value)||0},
-      BTCUSD:{lo: parseFloat(document.getElementById('sVolBTCLo').value)||0, hi: parseFloat(document.getElementById('sVolBTCHi').value)||0}
-    },
+    satBVol: sbCollectBands(),
     satBLowRisk: parseFloat(document.getElementById('sSatBLowRisk').value)||1,
     satBVolV2: true,
     rsBench: (document.getElementById('sRsBench').value||'').trim() || 'NASDAQ:IXIC',
@@ -6709,15 +6714,23 @@ function szRenderSatB(o){
    เปิด Zone และ/หรือ Setup พร้อมระดับราคา → กรอก Entry/SL/TP แล้วบันทึกได้เลย
    ขนาดไม้ใช้ szSatBCalc() ตัวเดียวกับที่ฟอร์ม Add Trade เคยใช้ ไม่ได้คิดสูตรใหม่
 
-   ★ เพิ่มสินค้าใหม่: ใส่ key ลง SB_PLAN_PRODUCTS แล้วเพิ่ม config ใน SB_CFG — ไม่ต้องแก้อย่างอื่น
-     (อย่าลืมตั้งกรอบระยะ SL ของสินค้านั้นในหน้า 🛠 ตั้งค่า Port ด้วย) */
-const SB_CFG = {
-  XAUUSD: {label:'ทองคำ',            cur:'USD', mult:1,   step:'0.01'},
-  S50:    {label:'S50 Index Futures', cur:'THB', mult:200, step:'0.1'},
-  BTCUSD: {label:'Bitcoin',           cur:'USD', mult:1,   step:'1'}
-};
-const SB_PLAN_PRODUCTS = ['XAUUSD'];
-function sbCfg(sym){ return SB_CFG[sym] || {label:sym, cur:'USD', mult:1, step:'0.01'}; }
+   ★ เพิ่ม/เปิด-ปิดสินค้า: ทำได้จากหน้า 🛠 ตั้งค่า Port → หมวด "สินค้า Sat.B" (ไม่ต้องแก้โค้ดแล้ว) */
+/* รายการสินค้าเก็บใน state (แก้ได้จากหน้าตั้งค่า) — ของเดิมฝังไว้ในโค้ดจึงเพิ่มเองไม่ได้
+   กรอบระยะ SL ยังอยู่ที่ state.settings.satBVol[KEY] ที่เดิม szSatBCalc จึงไม่ต้องแก้อะไรเลย */
+const SB_BUILTIN = [
+  {key:'XAUUSD', label:'ทองคำ',      icon:'🥇', cur:'USD', mult:1,   step:'0.01', on:true},
+  {key:'S50',    label:'S50 Futures', icon:'📊', cur:'THB', mult:200, step:'0.1',  on:false},
+  {key:'BTCUSD', label:'Bitcoin',     icon:'₿',  cur:'USD', mult:1,   step:'1',    on:false}
+];
+function sbProducts(){
+  if(!Array.isArray(state.sbProducts) || !state.sbProducts.length)
+    state.sbProducts = SB_BUILTIN.map(x=>({...x}));
+  return state.sbProducts;
+}
+function sbOnProducts(){ return sbProducts().filter(x=>x.on).map(x=>x.key); }
+function sbCfg(sym){
+  return sbProducts().find(x=>x.key===sym) || {key:sym, label:sym, icon:'📦', cur:'USD', mult:1, step:'0.01'};
+}
 function sbPlanOf(sym){
   if(!state.sbPlan || typeof state.sbPlan!=='object') state.sbPlan = {};
   if(!state.sbPlan[sym]) state.sbPlan[sym] = {zoneOn:false, zoneLevel:null, setupOn:false, setupLevel:null,
@@ -6835,9 +6848,9 @@ function sbSave(sym, status){
   render(); schedulePersist();
 }
 /* ช่องระดับราคากรอกไว้ล่วงหน้าได้เสมอ — สวิตช์ไว้สะบัดตอนเงื่อนไขมาถึงจริง */
-function sbRow(sym, field, onField, label, ph){
+function sbRow(sym, field, onField, label, ph, kind){
   const pl = sbPlanOf(sym), cfg = sbCfg(sym), on = !!pl[onField];
-  return `<div class="sbCell ${on?'on':''}">
+  return `<div class="sbCell sb-${kind} ${on?'on':''}">
     <label class="sbTgl"><span>${label}</span>
       <input type="checkbox" ${on?'checked':''} onchange="sbToggle('${sym}','${onField}')"><i></i></label>
     <input type="number" step="${cfg.step}" inputmode="decimal" placeholder="${ph}" class="sbLvl"
@@ -6855,7 +6868,7 @@ function renderSBPlan(){
   const ae = document.activeElement;
   const bodyEl = document.getElementById('sbPlanBody');
   if(bodyEl && ae && bodyEl.contains(ae) && (ae.tagName==='INPUT' || ae.tagName==='TEXTAREA')){
-    SB_PLAN_PRODUCTS.forEach(sbRenderCalc);
+    sbOnProducts().forEach(sbRenderCalc);
     return;
   }
   const used = wpBulletsUsed(), left = wpBulletsLeft();
@@ -6868,32 +6881,32 @@ function renderSBPlan(){
      <span style="margin-left:8px">${dots}</span>
      <b style="color:${clr};margin-left:4px">กระสุนเหลือ ${left}/${WP_BULLETS}</b>`;
 
-  document.getElementById('sbPlanBody').innerHTML = SB_PLAN_PRODUCTS.map(sym=>{
+  document.getElementById('sbPlanBody').innerHTML = sbOnProducts().map(sym=>{
     const pl = sbPlanOf(sym), cfg = sbCfg(sym);
     const picked = wpIsPicked(sym), tr = wpTrendOf(sym);
     const TRCLS = {Long:'on-bull', Short:'on-bear', Unclear:'on-range'};
     const trBtn = (v,txt)=>`<button type="button" class="${tr===v?TRCLS[v]:''}" onclick="wpSetTrend('${sym}','${v}')">${txt}</button>`;
-    const biasBtn = (v,txt)=>`<button type="button" class="${pl.bias===v?(v==='Long'?'on-long':'on-short'):''}" onclick="sbSetBias('${sym}','${v}')">${txt}</button>`;
-    const typBtn  = (v,txt)=>`<button type="button" class="${pl.etype===v?'on-cur':''}" onclick="sbSetType('${sym}','${v}')">${txt}</button>`;
+    const biasBtn = (v,txt)=>`<button type="button" class="${pl.bias===v?(v==='Long'?'on-bull':'on-bear'):''}" onclick="sbSetBias('${sym}','${v}')">${txt}</button>`;
+    const typBtn  = (v,txt)=>`<button type="button" class="${pl.etype===v?'on-'+v:''}" onclick="sbSetType('${sym}','${v}')">${txt}</button>`;
     const numF = (label,field)=>`<div class="f"><label>${label}</label><input type="number" step="${cfg.step}" inputmode="decimal"`
       + ` value="${pl[field] ?? ''}" oninput="sbSetNum('${sym}','${field}',this.value)" onchange="sbCommit('${sym}')"></div>`;
     return `<div class="sbCard">
       <div class="sbHead">
         <label class="sbSw"><input type="checkbox" ${picked?'checked':''} onchange="wpToggle('${sym}')">
-          <b style="font-size:.95rem">${escHtml(cfg.label)} — ${escHtml(sym)}</b></label>
+          <b style="font-size:.95rem">${cfg.icon||'📦'} ${escHtml(cfg.label)} — ${escHtml(sym)}</b></label>
         <div class="seg">${trBtn('Long','Bullish')}${trBtn('Short','Bearish')}${trBtn('Unclear','Ranging')}</div>
       </div>
       <div class="sbGrid">
-        ${sbRow(sym,'zoneLevel','zoneOn','Zone Activate','Zone Level')}
-        ${sbRow(sym,'setupLevel','setupOn','Setup Activate','Activation Level')}
+        ${sbRow(sym,'zoneLevel','zoneOn','📍 Zone Activate','Zone Level','zone')}
+        ${sbRow(sym,'setupLevel','setupOn','⚡ Setup Activate','Activation Level','setup')}
       </div>
       <div class="sbEntry ${sbArmed(pl)?'':'off'}">
         <div class="sbFields">
-          <div class="seg">${biasBtn('Long','Long')}${biasBtn('Short','Short')}</div>
-          <div class="seg" title="Limit = ตั้งรอให้ราคาย้อนมาหา · Stop = ตั้งไว้ให้ราคาวิ่งไปโดน">${typBtn('limit','Limit')}${typBtn('stop','Stop')}</div>
+          <div class="seg">${biasBtn('Long','▲ Long')}${biasBtn('Short','▼ Short')}</div>
+          <div class="seg" title="Limit = ตั้งรอให้ราคาย้อนมาหา · Stop = ตั้งไว้ให้ราคาวิ่งไปโดน">${typBtn('limit','◇ Limit')}${typBtn('stop','◆ Stop')}</div>
           ${numF('Entry','entry')}${numF('SL','sl')}${numF('TP','tp')}
           <div class="sbInval ${pl.invalOn?'on':''}">
-            <label class="sbTgl" title="เปิดเมื่อ setup โดน invalidate ไปแล้ว — ไม้นี้จะบันทึกไม่ได้"><span>Invalidation</span>
+            <label class="sbTgl" title="เปิดเมื่อ setup โดน invalidate ไปแล้ว — ไม้นี้จะบันทึกไม่ได้"><span>⛔ Invalidation</span>
               <input type="checkbox" ${pl.invalOn?'checked':''} onchange="sbToggle('${sym}','invalOn')"><i></i></label>
             <input type="text" class="sbInvalTxt" placeholder="อะไรจะบอกว่าไม้นี้ผิดทาง"
               value="${escHtml(pl.invalNote||'')}" oninput="sbSetText('${sym}','invalNote',this.value)" onchange="sbCommit('${sym}')">
@@ -6903,7 +6916,81 @@ function renderSBPlan(){
       </div>
     </div>`;
   }).join('');
-  SB_PLAN_PRODUCTS.forEach(sbRenderCalc);
+  sbOnProducts().forEach(sbRenderCalc);
+}
+
+
+/* ---- ตัวจัดการสินค้า Sat.B (หน้าตั้งค่า Port) ---- */
+function sbBandOf(key){
+  const vv = (state.settings && state.settings.satBVol) || {};
+  const b = vv[key];
+  if(b && typeof b==='object') return {lo: parseFloat(b.lo)||0, hi: parseFloat(b.hi)||0};
+  return {lo: parseFloat(b)||0, hi:0};
+}
+/* อ่านค่ากรอบจากช่องที่วาดไว้ ตอนกดบันทึกหน้าตั้งค่า */
+function sbCollectBands(){
+  const out = {};
+  sbProducts().forEach(pr=>{
+    const lo = document.getElementById('sbBandLo_'+pr.key);
+    const hi = document.getElementById('sbBandHi_'+pr.key);
+    const cur = sbBandOf(pr.key);
+    out[pr.key] = {lo: lo ? (parseFloat(lo.value)||0) : cur.lo,
+                   hi: hi ? (parseFloat(hi.value)||0) : cur.hi};
+  });
+  return out;
+}
+function sbProdSet(key, field, v){
+  const pr = sbProducts().find(x=>x.key===key); if(!pr) return;
+  if(field==='mult')      pr.mult  = Math.max(0.0001, parseFloat(v)||1);
+  else if(field==='on')   pr.on    = !!v;
+  else if(field==='label')pr.label = String(v||'').trim() || pr.key;
+  else if(field==='icon') pr.icon  = String(v||'').trim().slice(0,2) || '📦';
+  else if(field==='cur')  pr.cur   = (v==='THB') ? 'THB' : 'USD';
+  else if(field==='step') pr.step  = String(v||'').trim() || '0.01';
+  if(field==='on') renderSbProdMgr();
+  render(); schedulePersist();
+}
+function sbProdAdd(){
+  const key = (prompt('ชื่อย่อสินค้า (เช่น XAGUSD, ES) — ตัวพิมพ์ใหญ่','') || '').trim().toUpperCase();
+  if(!key) return;
+  if(!/^[A-Z0-9._-]{1,16}$/.test(key)){ alert('ใช้ได้เฉพาะ A-Z 0-9 . _ - ยาวไม่เกิน 16 ตัว'); return; }
+  if(sbProducts().some(x=>x.key===key)){ alert('มีสินค้านี้อยู่แล้ว'); return; }
+  const label = (prompt('ชื่อที่จะให้แสดง', key) || key).trim();
+  sbProducts().push({key, label, icon:'📦', cur:'USD', mult:1, step:'0.01', on:true});
+  renderSbProdMgr(); render(); schedulePersist();
+}
+function sbProdDel(key){
+  const pr = sbProducts().find(x=>x.key===key); if(!pr) return;
+  const nTrades = (state.trades||[]).filter(t=>t.port==='satB' && t.sym===key).length;
+  if(!confirm(`ลบสินค้า "${pr.label} — ${key}" ออกจากรายการ?\n\n`
+    + (nTrades ? `ไม้เดิม ${nTrades} รายการของสินค้านี้ยังอยู่ใน Journal ไม่ถูกลบ\n` : '')
+    + 'แผน Zone/Setup ที่ค้างอยู่ของสินค้านี้จะถูกลบด้วย')) return;
+  state.sbProducts = sbProducts().filter(x=>x.key!==key);
+  if(state.sbPlan) delete state.sbPlan[key];
+  renderSbProdMgr(); render(); schedulePersist();
+}
+function renderSbProdMgr(){
+  const host = document.getElementById('sbProdMgr'); if(!host || !state) return;
+  host.innerHTML = sbProducts().map(pr=>{
+    const b = sbBandOf(pr.key);
+    return `<div class="sbProd ${pr.on?'on':''}">
+      <div class="sbProdTop">
+        <label class="sbTgl" style="flex:0 0 auto"><span>${pr.icon||'📦'} ${escHtml(pr.key)}</span>
+          <input type="checkbox" ${pr.on?'checked':''} onchange="sbProdSet('${pr.key}','on',this.checked)"><i></i></label>
+        <input type="text" class="sbProdNm" value="${escHtml(pr.label)}" onchange="sbProdSet('${pr.key}','label',this.value)" placeholder="ชื่อที่แสดง">
+        <button type="button" class="small danger" onclick="sbProdDel('${pr.key}')">ลบ</button>
+      </div>
+      <div class="sbProdGrid">
+        <div class="f"><label>ไอคอน</label><input type="text" value="${escHtml(pr.icon||'')}" maxlength="2" onchange="sbProdSet('${pr.key}','icon',this.value)"></div>
+        <div class="f"><label>สกุลเงิน</label><select onchange="sbProdSet('${pr.key}','cur',this.value)">
+          <option value="USD"${pr.cur!=='THB'?' selected':''}>USD</option><option value="THB"${pr.cur==='THB'?' selected':''}>THB</option></select></div>
+        <div class="f"><label>ตัวคูณสัญญา</label><input type="number" step="any" value="${pr.mult}" onchange="sbProdSet('${pr.key}','mult',this.value)"></div>
+        <div class="f"><label>step ราคา</label><input type="text" value="${escHtml(pr.step)}" onchange="sbProdSet('${pr.key}','step',this.value)"></div>
+        <div class="f"><label>SL ค่าล่าง</label><input type="number" step="any" id="sbBandLo_${pr.key}" value="${b.lo||''}" placeholder="0"></div>
+        <div class="f"><label>SL ค่าบน</label><input type="number" step="any" id="sbBandHi_${pr.key}" value="${b.hi||''}" placeholder="0"></div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ---- แผง Portfolio Heat ในแท็บแผนเทรด ---- */
