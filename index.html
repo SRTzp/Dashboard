@@ -215,6 +215,24 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 #mixSummary{grid-template-columns:repeat(4,1fr)}
 @media(max-width:1000px){ #mixSummary{grid-template-columns:repeat(2,1fr)} }
 @media(max-width:560px){ #mixSummary{grid-template-columns:1fr} }
+/* ---------- แผนเทรด Sat.B (Zone / Setup) ---------- */
+.sbCard{background:var(--surface3);border:1px solid var(--hair);border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
+.sbCard:last-child{margin-bottom:0}
+.sbHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.sbSw{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:.84rem}
+.sbSw input[type="checkbox"]{width:19px;height:19px;accent-color:var(--teal);margin:0;flex:none;cursor:pointer}
+.sbRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:7px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);transition:border-color .14s,background .14s}
+.sbRow.on{border-color:rgba(14,156,134,.4);background:var(--teal-dim)}
+.sbRow.on .sbSw b{color:var(--teal)}
+.sbRow .sbLvl{width:150px;margin-left:auto;font-family:var(--mono);font-size:.86rem;text-align:right;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:8px 11px}
+.sbRow .sbLvl:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
+/* ยังไม่เปิด Zone/Setup — หรี่ช่องกรอกไม้ลง แต่ยังกดได้ (ปุ่มบันทึกกันไว้อีกชั้นใน sbSave) */
+.sbEntry{margin-top:14px;padding-top:14px;border-top:1px solid var(--hair)}
+.sbEntry.off{opacity:.45}
+.sbEntry.off .f input{pointer-events:none}
+@media(max-width:700px){ .sbRow .sbLvl{width:100%;margin-left:0} }
 .mixPort{background:var(--surface3);border:1px solid var(--hair);border-radius:var(--r);padding:13px 15px}
 .mixPortHead{display:flex;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap}
 .mixPortHead .dot{width:9px;height:9px;border-radius:50%;flex:none}
@@ -788,6 +806,14 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 <div id="tabPlan" style="display:none">
   <div class="strip" id="strip"></div>
   <div class="ports" id="ports"></div>
+
+  <div class="panel" id="sbPlanPanel" style="display:none">
+    <div class="panel-head">
+      <h2><span class="dot" style="background:#E6B45A;display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px"></span>แผนเทรด Sat.B</h2>
+      <div id="sbBullets"></div>
+    </div>
+    <div id="sbPlanBody"></div>
+  </div>
 
   <details class="panel" id="szHeatPanel" style="padding:10px 14px">
     <summary style="cursor:pointer;font-weight:700;font-size:.9rem">Open Risk รายตัว &amp; รายธีม <span style="font-weight:400;color:var(--muted);font-size:.76rem">— กางดูเมื่อต้องการ</span></summary>
@@ -1810,9 +1836,10 @@ function buildStateFromBook(d, exists){
         journalView: (d.journalView && typeof d.journalView==='object') ? d.journalView : null,
         reasonTags: (d.reasonTags && typeof d.reasonTags==='object') ? d.reasonTags : null,
         weeklyPlan: (d.weeklyPlan && typeof d.weeklyPlan==='object') ? d.weeklyPlan : {},
+        sbPlan: (d.sbPlan && typeof d.sbPlan==='object') ? d.sbPlan : {},   /* ★ แผนเทรด Sat.B (Zone/Setup) — ต้อง copy ที่นี่เสมอ ดูบทเรียน satBNoteV1 ด้านบน */
         failLog: Array.isArray(d.failLog) ? d.failLog : []};   /* เดิมไม่ได้ copy field นี้มา — ประวัติ fail-log ของ Fundamental Checklist จะหายทุกครั้งที่ sync */
   } else {
-      return {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[]};
+      return {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[], weeklyPlan:{}, sbPlan:{}};
     }
 }
 
@@ -2604,6 +2631,7 @@ function render(){
   document.getElementById('foot').textContent =
     `1R: Core ${szTradeLimit('core')}% · Sat.A 0.50–1.25% (ตามคะแนน Growth Gate) × Setup (Acc/Dist 1.00 · PP 0.50) · heat/port: Core ${portHeatLimit('core')}% · Sat.A ${portHeatLimit('satA')}% · Sat.B ${portHeatLimit('satB')}% · ${L.total}% total (ฐาน THB @ ${fmt2(fx)}) — sync ผ่าน Firestore`;
 
+  try{ renderSBPlan(); }catch(err){ console.warn('sat.b plan:', err); }
   renderJournal();
   renderWatchlist();
   renderPortfolioMix();
@@ -3177,70 +3205,13 @@ function wpToggle(sym){
   e.on = !e.on;
   if(e.on && !e.trend) e.trend = 'Long';   /* ติ๊กแล้วต้องมี Trend เสมอ — ตั้ง Bullish ไว้ก่อนให้แก้ต่อ */
   if(!e.on) e.trend = null;
-  renderWeeklyPlan(); schedulePersist();
+  renderSBPlan(); schedulePersist();
 }
 function wpSetTrend(sym, tr){
   const e = wpEntry(sym);
   e.on = true; e.trend = tr;
-  renderWeeklyPlan(); schedulePersist();
+  renderSBPlan(); schedulePersist();
 }
-function renderWeeklyPlan(){
-  const host = document.getElementById('wpBody');
-  if(!host || !state) return;
-  const used = wpBulletsUsed(), left = wpBulletsLeft();
-  const key = wpWeekKey();
-  const bulletClr = left===0 ? 'var(--red)' : left===1 ? 'var(--amber)' : 'var(--teal)';
-  const dots = Array.from({length:WP_BULLETS}, (_,i) =>
-    `<span style="display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:4px;
-      background:${i < used.length ? 'var(--red)' : 'var(--teal)'};opacity:${i < used.length ? .85 : .35}"></span>`).join('');
-
-  let h = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-      <span class="tag" style="background:var(--surface2);color:var(--text);font-weight:700">${wpWeekRangeText(key)}</span>
-      <span style="display:flex;align-items:center;gap:2px">${dots}</span>
-      <b style="color:${bulletClr}">กระสุนเหลือ ${left}/${WP_BULLETS}</b>
-      <span class="hint" style="margin:0">นับเฉพาะไม้ที่เข้าจริง · Reset อัตโนมัติทุกวันอาทิตย์ 00:00</span>
-    </div>`;
-
-  h += `<div class="tablewrap"><table class="wltable"><thead><tr>
-      <th style="width:52px">เลือก</th><th style="width:110px">Product</th>
-      <th style="width:280px">Trend หลักของสัปดาห์นี้</th><th>ไม้ที่เข้าไปแล้วสัปดาห์นี้</th>
-    </tr></thead><tbody>`;
-  SATB_PRODUCTS.forEach(sym=>{
-    const e = (state.weeklyPlan && state.weeklyPlan[key] && state.weeklyPlan[key][sym]) || {on:false, trend:null};
-    const mine = used.filter(t=>t.sym===sym);
-    const seg = ['Long','Short','Unclear'].map(tr=>{
-      const on = e.trend===tr;
-      const cls = tr==='Long'?'on-long':tr==='Short'?'on-short':'on-unclear';
-      return `<button type="button" class="${on?cls:''}" onclick="wpSetTrend('${sym}','${tr}')">${trendWord(tr)}</button>`;
-    }).join('');
-    h += `<tr style="${e.on?'':'opacity:.5'}">
-      <td class="sans" style="text-align:center">
-        <input type="checkbox" ${e.on?'checked':''} onchange="wpToggle('${sym}')" style="width:19px;height:19px;cursor:pointer">
-      </td>
-      <td style="font-weight:700">${sym}</td>
-      <td class="sans"><div class="seg">${seg}</div></td>
-      <td class="sans">${ mine.length
-          ? mine.map(t=>`<span class="tag ${t.status==='closed'?'closed':'open'}" style="margin-right:4px">${t.bias} ${t.status==='closed'?'ปิดแล้ว':'ถืออยู่'}</span>`).join('')
-          : '<span class="hint" style="margin:0">—</span>' }</td>
-    </tr>`;
-  });
-  h += `</tbody></table></div>`;
-
-  if(left===0){
-    h += `<div class="szMsg red" style="margin-top:10px">⛔ ใช้กระสุนครบ ${WP_BULLETS} นัดของสัปดาห์นี้แล้ว — รอ Reset วันอาทิตย์ 00:00</div>`;
-  }
-  const pickedNoTrend = SATB_PRODUCTS.filter(s=>wpIsPicked(s) && !wpTrendOf(s));
-  if(pickedNoTrend.length){
-    h += `<div class="szMsg yellow" style="margin-top:10px">⚠ ยังไม่ได้ระบุ Trend หลักของ ${pickedNoTrend.join(' · ')}</div>`;
-  }
-  if(!SATB_PRODUCTS.some(wpIsPicked)){
-    h += `<div class="hint" style="margin-top:10px">ยังไม่ได้เลือก Product ของสัปดาห์นี้ — ติ๊กก่อนถึงจะเลือกเข้า Trade ได้</div>`;
-  }
-  host.innerHTML = h;
-}
-/* ย้ายความหมายของ tabsOffset: เดิมเป็น padding ตายตัว (ต้องตั้งเองให้พ้นนาฬิกา)
-   ตอนนี้ safe-area ถูกจัดการอัตโนมัติแล้ว ค่านี้เหลือเป็นตัวปรับละเอียด — รีเซ็ตเป็น 0 ครั้งเดียว */
-/* โมเดล 1R: Max Risk/Trade = 1R = 1% · เพดานไม้ base 12.5% · ตั้งค่าครั้งเดียว */
 function ensure1RModel(){
   if(!state || !state.settings) return false;
   const s = state.settings;
@@ -3590,15 +3561,8 @@ function renderWatchlist(){
       </div>
     </div>`;
   }).join('')}
-    <div class="panel" id="wpPanel"${portOn('satB')?'':' style="display:none"'}>
-      <div class="wlhead">
-        <h2><span class="dot" style="background:${PORTS.satB.color};display:inline-block;width:9px;height:9px;border-radius:50%"></span>${PORTS.satB.name} — Weekly Plan</h2>
-      </div>
-      <div id="wpBody"></div>
-    </div>
   </div>`;
   ['core','satA'].filter(portOn).forEach(renderWatchPort);
-  if(portOn('satB')) renderWeeklyPlan();
 }
 function toggleWatchCollapse(port){
   if(!state.watchCollapsed) state.watchCollapsed = {};
@@ -3861,7 +3825,10 @@ function setWBias(v){
 /* ซ่อน option ของพอร์ตที่บัญชีนี้ไม่ได้เปิดใช้ · ถ้าค่าที่เลือกอยู่โดนซ่อน ให้เด้งไปพอร์ตแรกที่เปิด */
 function acctSyncPortSelect(id){
   const sel = document.getElementById(id); if(!sel) return;
-  Array.from(sel.options).forEach(o=>{ if(ACCT_PORT_KEYS.includes(o.value)) o.hidden = !portOn(o.value); });
+  Array.from(sel.options).forEach(o=>{
+    if(!ACCT_PORT_KEYS.includes(o.value)) return;
+    o.hidden = !portOn(o.value) || (id==='tPort' && o.value==='satB' && !tradeAllowSatB);
+  });
   if(ACCT_PORT_KEYS.includes(sel.value) && !portOn(sel.value)) sel.value = acctPorts()[0];
 }
 function toggleWBiasField(){
@@ -4395,13 +4362,16 @@ function resetScoreLabels(){
   ensureScoreLabels()[scoreMgrKind] = {...DEFAULT_SCORE_LABELS[scoreMgrKind]};
   afterScoreLabelChange();
 }
+/* Sat.B ถูกย้ายไปมีแผงเทรดของตัวเองในแท็บแผนเทรดแล้ว — ฟอร์ม Add Trade เหลือ Core + Sat.A
+   ตั้งเป็น true เฉพาะตอนแก้ไม้ Sat.B เดิม / บันทึกไม้ปิดนอกแผน เพื่อไม่ให้ของเก่าแก้ไม่ได้ */
+let tradeAllowSatB = false;
 function populateSymbolSelect(selected){
   const sel = document.getElementById('tSym');
   const eligible = (state && Array.isArray(state.watchlist) ? state.watchlist : []).filter(watchEligibleForTrade);
-  const wpSyms = wpEligibleSyms();
+  const wpSyms = tradeAllowSatB ? wpEligibleSyms() : [];
   const all = new Set([...eligible.map(w=>w.sym), ...wpSyms]);
   let html = '<option value="">— เลือก Symbol —</option>';
-  portsOn().forEach(([k,p])=>{
+  portsOn().filter(([k])=>k!=='satB' || tradeAllowSatB).forEach(([k,p])=>{
     const syms = k==='satB' ? wpSyms : eligible.filter(w=>w.port===k).map(w=>w.sym);
     if(syms.length){
       const label = k==='satB' ? `${p.name} — Weekly Plan (เหลือ ${wpBulletsLeft()}/${WP_BULLETS} นัด)` : p.name;
@@ -5524,6 +5494,9 @@ function setUnplannedMode(on){
 /* เปิดฟอร์มบันทึกไม้ที่ปิดไปแล้วแต่ไม่ได้วางแผนไว้ก่อน — ข้าม Checklist โดยตั้งใจ */
 function openUnplannedClosed(){
   openTrade();
+  /* บันทึกไม้ที่ปิดไปแล้วย้อนหลัง — ต้องเลือก Sat.B ได้ ไม่งั้น Journal ไม่ตรงกับความจริง */
+  tradeAllowSatB = true;
+  acctSyncPortSelect('tPort');
   setUnplannedMode(true);
   setSymFreeMode(true, '');
   lockPortBiasFields(false);
@@ -5550,7 +5523,9 @@ function openTrade(presetSym, presetTier, presetBias, presetSizeFactor){
   populateBothScoreSelects('', '');
   document.getElementById('imgHint').textContent='';
   document.getElementById('tMult').value = 1;
-  document.getElementById('tPort').value = portOn('core') ? 'core' : acctPorts()[0];
+  tradeAllowSatB = false;
+  const openPorts = acctPorts().filter(k=>k!=='satB');
+  document.getElementById('tPort').value = portOn('core') ? 'core' : (openPorts[0] || acctPorts()[0]);
   acctSyncPortSelect('tPort');
   document.getElementById('tStatus').value='plan';
   lockPortBiasFields(false);
@@ -5582,6 +5557,7 @@ function editTrade(id){
   document.getElementById('tradeTitle').textContent = t.unplanned ? 'แก้ไข Trade — ไม้นอกแผน' : 'แก้ไข Trade';
   document.getElementById('tDate').value=t.date;
   populateSymbolSelect(t.sym);
+  tradeAllowSatB = (t.port==='satB');
   acctSyncPortSelect('tPort');
   document.getElementById('tPort').value=t.port;
   document.getElementById('tEntry').value=t.entry;
@@ -6637,6 +6613,170 @@ function szRenderSatB(o){
   host.innerHTML=h;
   if(!c.tooWide) szAutoFillQty();
 }
+
+/* ══════════════════ แผนเทรด Sat.B — Zone / Setup ══════════════════
+   4 ก.ย. 2026 — Sat.B ถูกถอดออกจาก Watchlist และออกจากฟอร์ม Add Trade
+   ที่นี่คือที่เดียวที่เปิดไม้ Sat.B ได้: ติ๊กสินค้าของสัปดาห์ → Trend หลัก →
+   เปิด Zone และ/หรือ Setup พร้อมระดับราคา → กรอก Entry/SL/TP แล้วบันทึกได้เลย
+   ขนาดไม้ใช้ szSatBCalc() ตัวเดียวกับที่ฟอร์ม Add Trade เคยใช้ ไม่ได้คิดสูตรใหม่
+
+   ★ เพิ่มสินค้าใหม่: ใส่ key ลง SB_PLAN_PRODUCTS แล้วเพิ่ม config ใน SB_CFG — ไม่ต้องแก้อย่างอื่น
+     (อย่าลืมตั้งกรอบระยะ SL ของสินค้านั้นในหน้า 🛠 ตั้งค่า Port ด้วย) */
+const SB_CFG = {
+  XAUUSD: {label:'ทองคำ',            cur:'USD', mult:1,   step:'0.01'},
+  S50:    {label:'S50 Index Futures', cur:'THB', mult:200, step:'0.1'},
+  BTCUSD: {label:'Bitcoin',           cur:'USD', mult:1,   step:'1'}
+};
+const SB_PLAN_PRODUCTS = ['XAUUSD'];
+function sbCfg(sym){ return SB_CFG[sym] || {label:sym, cur:'USD', mult:1, step:'0.01'}; }
+function sbPlanOf(sym){
+  if(!state.sbPlan || typeof state.sbPlan!=='object') state.sbPlan = {};
+  if(!state.sbPlan[sym]) state.sbPlan[sym] = {zoneOn:false, zoneLevel:null, setupOn:false, setupLevel:null,
+                                              bias:'Long', entry:null, sl:null, tp:null, mult:null};
+  return state.sbPlan[sym];
+}
+function sbArmed(pl){ return !!(pl.zoneOn || pl.setupOn); }
+function sbNum(v){ const x = parseFloat(v); return (isNaN(x) || x===0) ? null : x; }
+function sbToggle(sym, field){
+  const pl = sbPlanOf(sym);
+  pl[field] = !pl[field];
+  renderSBPlan(); schedulePersist();
+}
+function sbSetBias(sym, b){ sbPlanOf(sym).bias = b; renderSBPlan(); schedulePersist(); }
+/* ช่องตัวเลขใช้ oninput เพื่อให้การ์ดขนาดไม้อัปเดตสด — จึงวาดใหม่เฉพาะการ์ด ไม่วาดทั้งแผง (กันช่องกรอกเสีย focus) */
+function sbSetNum(sym, field, v){
+  sbPlanOf(sym)[field] = sbNum(v);
+  sbRenderCalc(sym);
+  schedulePersist();
+}
+/* ตัวเลือกให้ szSatBCalc — โครงเดียวกับที่ฟอร์ม Add Trade ส่งเข้าไป */
+function sbCalcOpts(sym){
+  const pl = sbPlanOf(sym), cfg = sbCfg(sym);
+  return {symName:sym, entry:pl.entry, stop:pl.sl, mult:(pl.mult>0?pl.mult:cfg.mult),
+          isUSD:cfg.cur==='USD', sym:(cfg.cur==='USD'?'$':'฿'), bias:pl.bias, sizeFactor:1};
+}
+function sbRenderCalc(sym){
+  const host = document.getElementById('sbCalc_'+sym); if(!host) return;
+  const pl = sbPlanOf(sym), cfg = sbCfg(sym), cur = cfg.cur==='USD' ? '$' : '฿';
+  if(!sbArmed(pl)){
+    host.innerHTML = `<div class="szMsg yellow">เปิด <b>Zone</b> หรือ <b>Setup</b> ก่อน จึงจะกรอกไม้ได้ — กติกาคือไม่เข้าไม้ก่อนที่เงื่อนไขจะมาถึง</div>`;
+    return;
+  }
+  const c = szSatBCalc(sbCalcOpts(sym));
+  if(!c){ host.innerHTML = `<div class="hint">กรอก Entry และ SL ให้ครบ (Entry ≠ SL) เพื่อคำนวณขนาดไม้</div>`; return; }
+  const band = (c.lo>0||c.hi>0) ? `กรอบ ${c.lo>0?szNum(c.lo,2):'—'} – ${c.hi>0?szNum(c.hi,2):'—'}` : 'ยังไม่ตั้งกรอบ';
+  const rr = (pl.tp>0 && c.slDist>0) ? Math.abs(pl.tp-pl.entry)/c.slDist : null;
+  let h = `<div class="szCard">
+    <div class="szHero">
+      <span class="szR ${c.tooWide?'zero':'full'}">${c.tooWide?'ล็อก':c.qty.toLocaleString('en-US',{maximumFractionDigits:2})}</span>
+      <span class="szRsub">${c.tooWide ? `SL กว้างเกินกรอบ — ไม้นี้เทรดไม่ได้`
+        : `หน่วย · Risk ${c.rpt}%${c.tooTight?' (ลดจาก '+c.rptBase+'% เพราะ SL แคบกว่าค่าล่าง)':''}`}</span>
+    </div>
+    <div class="szGrid">
+      <div class="szCell" style="${c.tooWide?'outline:2px solid var(--red);outline-offset:-2px':c.tooTight?'outline:2px solid var(--amber);outline-offset:-2px':''}">
+        <div class="k">ระยะ SL</div><div class="v">${szNum(c.slDist,2)}</div><div class="s">${band}</div></div>
+      <div class="szCell"><div class="k">งบเสี่ยง ${c.rpt}%</div><div class="v">${cur}${szNum(c.budgetNative)}</div>
+        <div class="s">โดน stop = เสียเต็มงบนี้</div></div>
+      <div class="szCell"><div class="k">R:R ถ้าถึง TP</div><div class="v">${rr!=null?rr.toFixed(2)+'R':'—'}</div>
+        <div class="s">${pl.tp>0?'':'ยังไม่ใส่ TP'}</div></div>
+      <div class="szCell"><div class="k">กระสุนสัปดาห์นี้</div><div class="v">${wpBulletsLeft()}/${WP_BULLETS}</div>
+        <div class="s">Reset อาทิตย์ 00:00</div></div>
+    </div>`;
+  if(c.tooWide){
+    h += `<div class="szMsg red">⛔ ระยะ SL <b>${szNum(c.slDist,2)}</b> กว้างกว่าค่าบนที่ตั้งไว้ (<b>${szNum(c.hi,2)}</b>) — <b>ล็อกไม่ให้เทรด</b><br>
+      stop กว้างขนาดนี้แปลว่าเข้าผิดจังหวะ ไม่ใช่แค่ต้องลดขนาดไม้</div>`;
+  } else if(c.tooTight){
+    h += `<div class="szMsg yellow">◑ ระยะ SL แคบกว่าค่าล่าง (<b>${szNum(c.lo,2)}</b>) — ระบบลด Risk เหลือ <b>${c.lowRisk}%</b> แต่ยังคิดขนาดไม้จากระยะ SL จริง</div>`;
+  }
+  if(!(c.lo>0) && !(c.hi>0)) h += `<div class="szMsg yellow">ยังไม่ได้ตั้งกรอบระยะ SL ของ ${escHtml(sym)} — ตั้งได้ในหน้า 🛠 ตั้งค่า Port</div>`;
+  const tr = wpTrendOf(sym);
+  if(!wpIsPicked(sym)) h += `<div class="szMsg yellow">⚠ ยังไม่ได้ติ๊ก ${escHtml(sym)} เป็นสินค้าของสัปดาห์นี้</div>`;
+  else if(tr && ((tr==='Long' && pl.bias==='Short') || (tr==='Short' && pl.bias!=='Short')))
+    h += `<div class="szMsg yellow">⚠ ไม้นี้เป็น ${pl.bias} <b>สวนกับ Trend หลัก (${trendWord(tr)})</b> ของสัปดาห์นี้</div>`;
+  if(wpBulletsLeft()===0) h += `<div class="szMsg red">⛔ สัปดาห์นี้ใช้กระสุนครบ ${WP_BULLETS} นัดแล้ว</div>`;
+  else if(wpBulletsLeft()===1) h += `<div class="szMsg yellow">⚠ เหลือกระสุนนัดสุดท้ายของสัปดาห์นี้</div>`;
+  h += `<div class="btns" style="justify-content:flex-end;border:none;padding:0;margin-top:12px">
+      <button class="small" onclick="sbSave('${sym}','plan')" ${c.tooWide?'disabled':''}>บันทึกเป็น Plan</button>
+      <button class="small primary" onclick="sbSave('${sym}','open')" ${c.tooWide?'disabled':''}>เข้าไม้แล้ว → Open</button>
+    </div></div>`;
+  host.innerHTML = h;
+}
+function sbSave(sym, status){
+  const pl = sbPlanOf(sym), cfg = sbCfg(sym);
+  if(!sbArmed(pl)){ alert('เปิด Zone หรือ Setup ก่อน'); return; }
+  const c = szSatBCalc(sbCalcOpts(sym));
+  if(!c){ alert('กรอก Entry และ SL ให้ครบ (Entry ≠ SL)'); return; }
+  if(c.tooWide){ alert(`ระยะ SL ของ ${sym} กว้างกว่าค่าบนที่ตั้งไว้ — ไม้นี้ถูกล็อกไม่ให้เทรด`); return; }
+  const qty = +c.qty.toFixed(2);
+  if(!(qty>0)){ alert('คำนวณขนาดไม้ได้ 0 — ตรวจทุน Sat.B และ Risk % ในหน้าตั้งค่า'); return; }
+  if(status==='open' && wpBulletsLeft()<=0
+     && !confirm(`สัปดาห์นี้ใช้กระสุนครบ ${WP_BULLETS} นัดแล้ว\n\nยืนยันจะบันทึกไม้นี้เพิ่มหรือไม่?`)) return;
+  const today = new Date().toISOString().slice(0,10);
+  state.trades.push({
+    id:'t'+Date.now(), date:today, sym, port:'satB', bias:pl.bias,
+    setup:null, posTier:null,
+    entry:pl.entry, sl:pl.sl, tp:pl.tp||null, qty, mult:(pl.mult>0?pl.mult:cfg.mult), cur:cfg.cur,
+    invalidation:null, imageUrl:null, submitted:false, unplanned:false,
+    openedAt: status==='open' ? today : null,
+    sizeFactor:null, status,
+    /* บันทึกเงื่อนไขที่ปลดล็อกไม้นี้ไว้ด้วย — ตอนรีวิวจะได้รู้ว่าเข้าเพราะ Zone หรือ Setup และที่ระดับไหน */
+    sbZone:  pl.zoneOn  ? (pl.zoneLevel  ?? true) : null,
+    sbSetup: pl.setupOn ? (pl.setupLevel ?? true) : null
+  });
+  pl.entry = null; pl.sl = null; pl.tp = null;   /* Zone/Setup ยังเปิดค้างไว้ตามที่ตั้งใจ */
+  render(); schedulePersist();
+}
+function sbRow(sym, field, onField, label, ph){
+  const pl = sbPlanOf(sym), cfg = sbCfg(sym), on = !!pl[onField];
+  return `<div class="sbRow ${on?'on':''}">
+    <label class="sbSw"><input type="checkbox" ${on?'checked':''} onchange="sbToggle('${sym}','${onField}')"><b>${label}</b></label>
+    <input type="number" step="${cfg.step}" inputmode="decimal" placeholder="${ph}" class="sbLvl"
+      value="${pl[field] ?? ''}" oninput="sbSetNum('${sym}','${field}',this.value)">
+  </div>`;
+}
+function renderSBPlan(){
+  const panel = document.getElementById('sbPlanPanel'); if(!panel || !state) return;
+  const show = portOn('satB');
+  panel.style.display = show ? '' : 'none';
+  if(!show) return;
+  const used = wpBulletsUsed(), left = wpBulletsLeft();
+  const clr = left===0 ? 'var(--red)' : left===1 ? 'var(--amber)' : 'var(--teal)';
+  const dots = Array.from({length:WP_BULLETS}, (_,i)=>
+    `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;
+      background:${i<used.length?'var(--red)':'var(--teal)'};opacity:${i<used.length?.85:.35}"></span>`).join('');
+  document.getElementById('sbBullets').innerHTML =
+    `<span class="tag" style="background:var(--surface2);color:var(--text);font-weight:700">${wpWeekRangeText(wpWeekKey())}</span>
+     <span style="margin-left:8px">${dots}</span>
+     <b style="color:${clr};margin-left:4px">กระสุนเหลือ ${left}/${WP_BULLETS}</b>`;
+
+  document.getElementById('sbPlanBody').innerHTML = SB_PLAN_PRODUCTS.map(sym=>{
+    const pl = sbPlanOf(sym), cfg = sbCfg(sym);
+    const picked = wpIsPicked(sym), tr = wpTrendOf(sym);
+    const trBtn = (v,txt)=>`<button type="button" class="${tr===v?'on-cur':''}" onclick="wpSetTrend('${sym}','${v}')">${txt}</button>`;
+    const biasBtn = (v,txt)=>`<button type="button" class="${pl.bias===v?(v==='Long'?'on-long':'on-short'):''}" onclick="sbSetBias('${sym}','${v}')">${txt}</button>`;
+    return `<div class="sbCard">
+      <div class="sbHead">
+        <label class="sbSw"><input type="checkbox" ${picked?'checked':''} onchange="wpToggle('${sym}')">
+          <b style="font-size:.95rem">${escHtml(cfg.label)} — ${escHtml(sym)}</b></label>
+        <span class="hint" style="margin:0">${picked?'สินค้าของสัปดาห์นี้':'ยังไม่ได้ติ๊กเป็นสินค้าของสัปดาห์นี้'}</span>
+        <div class="seg" style="margin-left:auto;min-width:210px">${trBtn('Long','Bullish')}${trBtn('Short','Bearish')}${trBtn('Unclear','Ranging')}</div>
+      </div>
+      ${sbRow(sym,'zoneLevel','zoneOn','Zone Activate','Zone Level')}
+      ${sbRow(sym,'setupLevel','setupOn','Setup Activate','Activation Level')}
+      <div class="sbEntry ${sbArmed(pl)?'':'off'}">
+        <div class="seg" style="max-width:220px;margin-bottom:10px">${biasBtn('Long','Long')}${biasBtn('Short','Short')}</div>
+        <div class="frow3">
+          <div class="f"><label>Entry</label><input type="number" step="${cfg.step}" inputmode="decimal" value="${pl.entry ?? ''}" oninput="sbSetNum('${sym}','entry',this.value)"></div>
+          <div class="f"><label>SL</label><input type="number" step="${cfg.step}" inputmode="decimal" value="${pl.sl ?? ''}" oninput="sbSetNum('${sym}','sl',this.value)"></div>
+          <div class="f"><label>TP</label><input type="number" step="${cfg.step}" inputmode="decimal" value="${pl.tp ?? ''}" oninput="sbSetNum('${sym}','tp',this.value)"></div>
+        </div>
+        <div id="sbCalc_${sym}"></div>
+      </div>
+    </div>`;
+  }).join('');
+  SB_PLAN_PRODUCTS.forEach(sbRenderCalc);
+}
+
 /* ---- แผง Portfolio Heat ในแท็บแผนเทรด ---- */
 function renderHeatPanel(){
   const host=document.getElementById('szHeatBody'); if(!host||!state) return;
