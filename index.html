@@ -702,6 +702,16 @@ footer{color:var(--faint);font-size:.68rem;text-align:center;margin-top:16px;fon
   padding:5px 9px;max-width:220px;box-shadow:var(--sh-1);cursor:pointer;
 }
 .acctBar select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
+/* ปุ่มตาประจำการ์ด — จาง ๆ จนกว่าจะชี้ ไม่ให้แย่งสายตาไปจากตัวเลข */
+.privEye{
+  display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;
+  margin-left:7px;padding:0 4px;height:20px;font-size:.78rem;line-height:1;
+  background:transparent;border:none;box-shadow:none;border-radius:5px;
+  opacity:.28;cursor:pointer;transition:opacity .14s,background .14s;
+}
+.privEye:hover{opacity:1;background:var(--surface2)}
+.privEye.on{opacity:.85}
+.privEye:active{transform:none}
 .acctRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--hair)}
 .acctRow:first-child{border-top:none}
 .acctRow input.nm{flex:1 1 150px;min-width:0;font-family:var(--sans);font-size:.82rem;background:var(--surface3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:8px 10px}
@@ -893,7 +903,8 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   <div>
     <h1><span class="tick">▮</span> TRADING DASHBOARD</h1>
     <div class="sub">ความเสี่ยงรวม + Trading Journal · ฐานคำนวณ THB</div>
-    <div class="acctBar"><select id="acctSel" onchange="acctSwitch(this.value)" title="สลับบัญชี"></select><span id="acctPortsHint" class="hint" style="margin:0"></span></div>
+    <div class="acctBar"><select id="acctSel" onchange="acctSwitch(this.value)" title="สลับบัญชี"></select>
+      <span id="acctPortsHint" class="hint" style="margin:0"></span></div>
     <div class="syncbadge" id="syncBadge" onclick="retrySync()"><span class="sdot"></span><span id="syncText">—</span> · <span id="authedAs" style="opacity:.7"></span></div>
   </div>
   <div class="hbtns">
@@ -2494,10 +2505,10 @@ function render(){
   const totPW = Math.min(100-totLossW-totOW, planPct/L.total*100);
   const totBarColor = totOver ? 'var(--red)' : 'var(--yellow)';
   document.getElementById('strip').innerHTML = `
-    <div class="stat"><div class="lbl">ทุนรวม (เทียบ THB)</div>
+    <div class="stat" data-priv="p-cap"><div class="lbl">ทุนรวม (เทียบ THB)</div>
       <div class="val">฿${fmt0(cap)}</div>
       <div class="sub" style="font-family:var(--mono)">฿${fmt0(state.settings.capital.core)} + $${fmt0(usdCap)} @ ${fmt2(fx)}${state.settings.strategicCash?` + Strategic Cash ฿${fmt0(state.settings.strategicCash)}`:''}</div></div>
-    <div class="stat ${totOver?'bad':''}">
+    <div class="stat ${totOver?'bad':''}" data-priv="p-risk">
       <div class="cornerbadge" style="color:${remain<=0?'var(--red)':'var(--muted)'}">Budget เหลือ<br><b>${fmt2(remain)}%</b></div>
       <div class="lbl" style="padding-right:60px">Risk รวมทั้งหมด (Open + Plan + Loss สะสม)</div>
       <div class="val">${fmt2(combAllPct)}% <small>฿${fmt0(combAllTHB)}</small></div>
@@ -2510,7 +2521,7 @@ function render(){
         </div>
       </div>
     </div>
-    <div class="stat">
+    <div class="stat" data-priv="p-break">
       <div class="lbl">Breakdown — Open / Plan / Loss</div>
       <div class="riskstats">
         <div class="cell"><span class="k">Open</span><span class="v" style="color:var(--amber)">฿${fmt0(s.tot.open)}</span><span class="v2" style="color:var(--amber)">${fmt2(openPct)}%</span></div>
@@ -2537,7 +2548,7 @@ function render(){
     const symP = p.cur==='USD' ? '$' : '฿';
     const oNat = p.cur==='USD' ? oTH/fx : oTH;
     const plNat = p.cur==='USD' ? plTH/fx : plTH;
-    return `<div class="port ${over?'over':''}">
+    return `<div class="port ${over?'over':''}" data-priv="p-port-${k}">
       <div class="pname"><span class="dot" style="background:${p.color}"></span>${p.name}<span class="cur">ทุน ${p.cur}</span></div>
       <div class="alloc">ทุน ${capLine} · ${fmt2(pct(capTH,cap))}% ของทุนรวม</div>
       <div class="riskstats">
@@ -2749,6 +2760,7 @@ function render(){
   renderPortfolioMix();
   renderChecklistDrafts();
   renderIdeas();
+  privacyApply();   /* ต้องเป็นบรรทัดสุดท้าย — ทำงานกับ DOM ที่วาดเสร็จแล้วเท่านั้น */
 }
 
 /* ══════════ Journal — หุบ/ขยาย + กรองเดือนของปี (แยกอิสระต่อพาเนล) ══════════
@@ -3575,22 +3587,22 @@ function renderPortfolioMix(){
   /* ---- แถบสรุปข้ามบัญชี ---- */
   const nAcc = entries.length;
   document.getElementById('mixSummary').innerHTML = `
-    <div class="stat">
+    <div class="stat" data-priv="m-cap">
       <div class="lbl">ทุนรวมทุกบัญชี</div>
       <div class="val">฿${fmt0(sum.cap)}</div>
       <div class="cornerbadge">${nAcc} บัญชี</div>
     </div>
-    <div class="stat">
+    <div class="stat" data-priv="m-hold">
       <div class="lbl">ถือครอง / เงินสด</div>
       <div class="val">${fmt2(pct(sum.held,sum.cap))}%<small> ถือครอง</small></div>
       <div class="cornerbadge">฿${fmt0(sum.held)}<br>เงินสด ฿${fmt0(sum.cash)}</div>
     </div>
-    <div class="stat ${pct(sum.risk,sum.cap)>=6?'bad':pct(sum.risk,sum.cap)>=4?'warn':''}">
+    <div class="stat ${pct(sum.risk,sum.cap)>=6?'bad':pct(sum.risk,sum.cap)>=4?'warn':''}" data-priv="m-risk">
       <div class="lbl">Open Risk รวม</div>
       <div class="val">${fmt2(pct(sum.risk,sum.cap))}%</div>
       <div class="cornerbadge">฿${fmt0(sum.risk)}</div>
     </div>
-    <div class="stat ${sum.realized<0?'bad':sum.realized>0?'good':''}">
+    <div class="stat ${sum.realized<0?'bad':sum.realized>0?'good':''}" data-priv="m-real">
       <div class="lbl">Realized สะสม</div>
       <div class="val">${sum.realized<0?'−':''}฿${fmt0(Math.abs(sum.realized))}</div>
       <div class="cornerbadge">${fmt2(pct(sum.realized,sum.cap))}% ของทุน</div>
@@ -3615,20 +3627,23 @@ function renderPortfolioMix(){
       const base = `${a.id}_${k}`;
       pies.push([base+'_sym', withState(entry.st, ()=>computePortHoldingsBySymbol(k))],
                 [base+'_ind', withState(entry.st, ()=>computePortHoldingsByIndustry(k))]);
-      return `<div class="mixPort">
+      return `<div class="mixPort" data-priv="m-port-${a.id}-${k}">
         <div class="mixPortHead"><span class="dot" style="background:${p.color}"></span><b>${escHtml(p.name)}</b>
           <span class="cap">ทุน ฿${fmt0(capK)}</span></div>
         <div class="pierow">${mixPieBlock(base+'_sym','สัดส่วนหุ้น')}${mixPieBlock(base+'_ind','สัดส่วน Industry')}</div>
       </div>`;
     }).join('');
     html += `<div class="panel">
-      ${nAcc>1 ? `<div class="mixAcctHead"><h2>${escHtml(a.name)}${a.id===acctActive?' <span class="acctCur">เปิดอยู่</span>':''}</h2>
+      ${nAcc>1 ? `<div class="mixAcctHead" data-priv="m-acct-${a.id}"><h2>${escHtml(a.name)}${a.id===acctActive?' <span class="acctCur">เปิดอยู่</span>':''}</h2>
         <span class="hint" style="margin:0">ทุน ฿${fmt0(s.cap)} · ถือครอง ${fmt2(pct(s.held,s.cap))}% · Open Risk ${fmt2(pct(s.risk,s.cap))}%</span></div>` : ''}
       <div class="mixgrid" style="gap:14px">${inner}</div>
     </div>`;
   });
   document.getElementById('mixBody').innerHTML = html;
   pies.forEach(([id,data])=>renderPieChart('pie_'+id, 'leg_'+id, data));
+  /* ★ switchTab('mix') เรียกฟังก์ชันนี้ตรง ๆ ไม่ผ่าน render() — ถ้าไม่ปิดเลขที่นี่ด้วย
+     พอสลับแท็บมาหน้า Portfolio ตัวเงินจะกลับมาโผล่ทั้งที่โหมดซ่อนเปิดอยู่ */
+  privacyApply();
 }
 function renderWatchlist(){
   if(!state) return;
@@ -7030,6 +7045,71 @@ function renderSbProdMgr(){
     </div>`;
   }).join('');
 }
+
+
+/* ══════════════ ซ่อนตัวเงิน — ตาละการ์ด ══════════════
+   แต่ละการ์ดที่โชว์ยอดเงินมีปุ่มตาของตัวเอง วางไว้ข้างตัวเลขเลย กดปิด-เปิดแยกกันได้
+   ปิดแล้ว ฿1,234,567 กลายเป็น ฿X,XXX,XXX · เปอร์เซ็นต์ ราคา และจำนวนหน่วยยังเห็นปกติ
+   (สิ่งที่ไม่อยากให้คนข้าง ๆ เห็นคือขนาดพอร์ต ไม่ใช่ราคา — ปิดหมดก็ทำงานไม่ได้)
+
+   ★ ทำที่ชั้นแสดงผลล้วน ๆ: แก้ text node หลังวาดเสร็จ ไม่แตะ state ไม่แตะสูตร
+     ค่าที่คำนวณและที่เซฟขึ้น Firestore เป็นตัวเลขจริงเสมอ
+   ★ เก็บใน localStorage = ตั้งแยกต่อเครื่อง ไม่ซิงก์ข้ามอุปกรณ์
+   ★ การ์ดใหม่แค่ใส่ data-priv="คีย์ที่ไม่ซ้ำ" ก็ได้ปุ่มตาเอง ไม่ต้องแก้ที่นี่ */
+const PRIV_KEY = 'td_privacy_cards_v1';
+let privHidden = new Set();
+function privacyInit(){
+  try{
+    const raw = localStorage.getItem(PRIV_KEY);
+    if(raw) privHidden = new Set(JSON.parse(raw) || []);
+  }catch(e){ privHidden = new Set(); }
+}
+function privSave(){
+  try{ localStorage.setItem(PRIV_KEY, JSON.stringify([...privHidden])); }catch(e){}
+}
+function privToggleCard(key){
+  if(privHidden.has(key)) privHidden.delete(key); else privHidden.add(key);
+  privSave();
+  render();   /* วาดใหม่ — ตอนเปิดกลับต้องได้ตัวเลขจริงคืนมา */
+}
+/* ฿1,234.50 -> ฿X,XXX.XX (คงคอมมา จุดทศนิยม และเครื่องหมายลบไว้ ความยาวจะได้ไม่กระโดด) */
+function privMaskText(s){
+  return s.replace(/([฿$])(\s*)(-|−)?(\d[\d,]*)(\.\d+)?/g,
+    (m, cur, sp, neg, int, dec) =>
+      cur + sp + (neg||'') + int.replace(/\d/g, 'X') + (dec ? '.' + dec.slice(1).replace(/\d/g, 'X') : ''));
+}
+function privMaskIn(root){
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  const hits = [];
+  while(w.nextNode()){ if(/[฿$]\s*\d/.test(w.currentNode.nodeValue)) hits.push(w.currentNode); }
+  hits.forEach(nd=>{ nd.nodeValue = privMaskText(nd.nodeValue); });
+}
+/* จุดวางปุ่ม — ไล่หา "ก้อนตัวเลขหลัก" ของการ์ดนั้นก่อน ถ้าไม่มีค่อยไปเกาะข้อความเงินก้อนแรก */
+function privAnchor(card){
+  const pick = card.querySelector('.val') || card.querySelector('.alloc')
+            || card.querySelector('.hint') || card.querySelector('.cap');
+  if(pick) return pick;
+  const w = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null);
+  while(w.nextNode()){ if(/[฿$]\s*[\dX]/.test(w.currentNode.nodeValue)) return w.currentNode.parentNode; }
+  return card;
+}
+function privacyApply(){
+  document.querySelectorAll('[data-priv]').forEach(card=>{
+    const key = card.getAttribute('data-priv');
+    const hide = privHidden.has(key);
+    if(hide) privMaskIn(card);
+    if(!card.querySelector('.privEye')){
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'privEye' + (hide ? ' on' : '');
+      b.textContent = hide ? '🙈' : '👁';
+      b.title = hide ? 'ตัวเงินถูกซ่อนอยู่ — กดเพื่อแสดง' : 'ซ่อนตัวเงินในการ์ดนี้';
+      b.onclick = (ev)=>{ ev.stopPropagation(); privToggleCard(key); };
+      privAnchor(card).appendChild(b);
+    }
+  });
+}
+privacyInit();
 
 /* ---- แผง Portfolio Heat ในแท็บแผนเทรด ---- */
 function renderHeatPanel(){
