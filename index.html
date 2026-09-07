@@ -732,6 +732,16 @@ footer{color:var(--faint);font-size:.68rem;text-align:center;margin-top:16px;fon
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
 /* คอลัมน์ INDUSTRY — จำกัดกว้าง ไม่ให้เบียด FUNDAMENTAL (max-width ต้องอยู่ที่ span ไม่ใช่ td) */
+/* industry ที่มีลิงก์คู่มือ — ทำให้รู้ว่ากดได้ โดยไม่ตะโกนจนแย่งสายตาจากข้อมูลหลัก */
+.indLinked{cursor:pointer;color:var(--blue)!important;border-radius:4px;transition:background .12s}
+.indLinked:hover{background:var(--blue-dim);text-decoration:underline}
+.indRow{background:var(--surface2);border:1px solid transparent;border-radius:var(--r-sm);padding:8px 10px}
+.indRow.on{border-color:rgba(52,103,199,.3);background:var(--blue-dim)}
+.indRowTop{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.indRowNm{flex:1;min-width:0;font-size:.84rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.indRowUrl{width:100%;font-family:var(--mono);font-size:.72rem;padding:6px 9px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text)}
+.indRowUrl:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
 td.industryCell{ max-width:calc(var(--ind-w) + 12px) }
 td.industryCell .indTxt{
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
@@ -1617,7 +1627,8 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 <div class="overlay" id="industryOverlay">
   <div class="modal">
     <h3>จัดการ Industry</h3>
-    <div class="hint" style="margin-top:-8px;margin-bottom:12px">ใช้เฉพาะ Core Port และ Satellite.A — เพิ่มชื่อ Industry ไว้เป็น selection ตอนเพิ่มหุ้นใน Watchlist</div>
+    <div class="hint" style="margin-top:-8px;margin-bottom:12px">ใช้เฉพาะ Core Port และ Satellite.A — เพิ่มชื่อ Industry ไว้เป็น selection ตอนเพิ่มหุ้นใน Watchlist<br>
+      ใส่ URL คู่มือของ industry นั้นได้ด้วย แล้วชื่อ industry ในตาราง Watchlist และใน legend ของ pie หน้า Portfolio จะกดเปิดได้</div>
     <div class="frow" style="gap:8px">
       <div class="f" style="flex:1"><input type="text" id="newIndustryName" placeholder="ชื่อ Industry ใหม่ เช่น Semiconductor"></div>
       <button class="primary" style="flex-shrink:0;align-self:flex-end" onclick="addIndustry()">เพิ่ม</button>
@@ -1737,6 +1748,33 @@ try{ db.enablePersistence().catch(e=>console.warn('persistence:',e.code)); }catc
         -> "Semiconductor test & burn-in equipment"   (ข้อความเต็มยังดูได้จาก tooltip ตอน hover)
    รองรับวงเล็บทั้งครึ่งความกว้าง () และเต็มความกว้าง （） เผื่อพิมพ์จากคีย์บอร์ดไทย
    ถ้าตัดแล้วเหลือค่าว่าง (ทั้งชื่ออยู่ในวงเล็บ) ให้คืนของเดิมไป ไม่งั้นช่องจะโล่ง */
+/* ══════════ ลิงก์ industry → interactive packet จาก learn-any-industry ══════════
+   เก็บเป็น map แยก state.industryLinks = {"<ชื่อ industry>": "https://..."}
+   ไม่ยัดลง state.industries (ที่เป็น array ของสตริง) เพราะโค้ดอีกหลายที่อ่านมันเป็นสตริงตรง ๆ
+   เทียบชื่อแบบไม่สนตัวพิมพ์ใหญ่-เล็ก จะได้ไม่พังเวลาพิมพ์ Semiconductor / semiconductor ปนกัน */
+function indSafeUrl(u){
+  const s = String(u||'').trim();
+  return /^https?:\/\//i.test(s) ? s : '';   /* รับเฉพาะ http/https กัน javascript: หลุดเข้ามา */
+}
+function indLink(name){
+  const m = (state && state.industryLinks && typeof state.industryLinks==='object') ? state.industryLinks : null;
+  const k = String(name||'').trim();
+  if(!m || !k) return '';
+  const hit = Object.keys(m).find(x=>x.toLowerCase()===k.toLowerCase());
+  return hit ? indSafeUrl(m[hit]) : '';
+}
+function indOpen(name){
+  const u = indLink(name);
+  if(u) window.open(u, '_blank', 'noopener');
+}
+function setIndustryLink(name, url){
+  if(!state.industryLinks || typeof state.industryLinks!=='object') state.industryLinks = {};
+  const u = indSafeUrl(url);
+  if(u) state.industryLinks[name] = u; else delete state.industryLinks[name];
+  render();            /* onchange = ยิงตอนออกจากช่อง จึงวาดใหม่ได้โดยไม่แย่ง focus */
+  renderIndustryList();
+  schedulePersist();
+}
 function industryShort(s){
   const raw = String(s||'').trim();
   const cut = raw.replace(/[（(][^）)]*[）)]/g, ' ').replace(/\s{2,}/g, ' ').trim()
@@ -1960,9 +1998,10 @@ function buildStateFromBook(d, exists){
         weeklyPlan: (d.weeklyPlan && typeof d.weeklyPlan==='object') ? d.weeklyPlan : {},
         sbPlan: (d.sbPlan && typeof d.sbPlan==='object') ? d.sbPlan : {},   /* ★ แผนเทรด Sat.B (Zone/Setup) — ต้อง copy ที่นี่เสมอ ดูบทเรียน satBNoteV1 ด้านบน */
         sbProducts: Array.isArray(d.sbProducts) ? d.sbProducts : null,      /* ★ รายการสินค้า Sat.B — เช่นกัน */
+        industryLinks: (d.industryLinks && typeof d.industryLinks==='object') ? d.industryLinks : {},  /* ★ ลิงก์ packet ของแต่ละ industry */
         failLog: Array.isArray(d.failLog) ? d.failLog : []};   /* เดิมไม่ได้ copy field นี้มา — ประวัติ fail-log ของ Fundamental Checklist จะหายทุกครั้งที่ sync */
   } else {
-      return {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[], weeklyPlan:{}, sbPlan:{}, sbProducts:null};
+      return {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[], weeklyPlan:{}, sbPlan:{}, sbProducts:null, industryLinks:{}};
     }
 }
 
@@ -3488,7 +3527,7 @@ function computePortHoldingsByIndustry(port){
   if(capTH>0) result.push({label:'Cash', value:cashTH, isCash:true});
   return result;
 }
-function renderPieChart(chartId, legendId, data){
+function renderPieChart(chartId, legendId, data, linkIndustry){
   const chart = document.getElementById(chartId), leg = document.getElementById(legendId);
   if(!chart || !leg) return;
   const total = data.reduce((a,d)=>a+d.value,0);
@@ -3508,7 +3547,11 @@ function renderPieChart(chartId, legendId, data){
   chart.style.background = `conic-gradient(${stops})`;
   leg.innerHTML = data.map((d,i)=>{
     const p = d.value/total*100;
-    return `<div class="lgrow"><span class="lgname"><span class="swatch" style="background:${colorFor(d,i)}"></span>${escHtml(d.label)}</span><b>${fmt2(p)}%</b></div>`;
+    const url = (linkIndustry && !d.isCash) ? indLink(d.label) : '';
+    const nm = url
+      ? `<span class="lgname indLinked" onclick="indOpen('${escHtml(d.label).replace(/'/g,"\\'")}')" title="เปิดคู่มือ ${escHtml(d.label)}"><span class="swatch" style="background:${colorFor(d,i)}"></span>${escHtml(d.label)} ↗</span>`
+      : `<span class="lgname"><span class="swatch" style="background:${colorFor(d,i)}"></span>${escHtml(d.label)}</span>`;
+    return `<div class="lgrow">${nm}<b>${fmt2(p)}%</b></div>`;
   }).join('');
 }
 /* ══════════════ หน้า Portfolio — รวมทุกบัญชี ══════════════
@@ -3617,7 +3660,7 @@ function renderPortfolioMix(){
         <span class="hint" style="margin:0">รวมไม้ที่เปิดอยู่ของทุกบัญชี ทุกพอร์ต · แปลงเป็นบาทด้วย fx ของแต่ละบัญชี</span></div>
       <div class="pierow">${mixPieBlock('allSym','สัดส่วนหุ้น')}${mixPieBlock('allInd','สัดส่วน Industry')}</div>
     </div>`;
-    pies.push(['allSym', mixCombinedHoldings('sym')], ['allInd', mixCombinedHoldings('ind')]);
+    pies.push(['allSym', mixCombinedHoldings('sym'), false], ['allInd', mixCombinedHoldings('ind'), true]);
   }
   entries.forEach((entry, i)=>{
     const a = entry.acct, s = stats[i];
@@ -3625,8 +3668,8 @@ function renderPortfolioMix(){
       const p = PORTS[k];
       const capK = withState(entry.st, ()=>portCapTHB(k));
       const base = `${a.id}_${k}`;
-      pies.push([base+'_sym', withState(entry.st, ()=>computePortHoldingsBySymbol(k))],
-                [base+'_ind', withState(entry.st, ()=>computePortHoldingsByIndustry(k))]);
+      pies.push([base+'_sym', withState(entry.st, ()=>computePortHoldingsBySymbol(k)), false],
+                [base+'_ind', withState(entry.st, ()=>computePortHoldingsByIndustry(k)), true]);
       return `<div class="mixPort" data-priv="m-port-${a.id}-${k}">
         <div class="mixPortHead"><span class="dot" style="background:${p.color}"></span><b>${escHtml(p.name)}</b>
           <span class="cap">ทุน ฿${fmt0(capK)}</span></div>
@@ -3640,7 +3683,7 @@ function renderPortfolioMix(){
     </div>`;
   });
   document.getElementById('mixBody').innerHTML = html;
-  pies.forEach(([id,data])=>renderPieChart('pie_'+id, 'leg_'+id, data));
+  pies.forEach(([id,data,link])=>renderPieChart('pie_'+id, 'leg_'+id, data, link));
   /* ★ switchTab('mix') เรียกฟังก์ชันนี้ตรง ๆ ไม่ผ่าน render() — ถ้าไม่ปิดเลขที่นี่ด้วย
      พอสลับแท็บมาหน้า Portfolio ตัวเงินจะกลับมาโผล่ทั้งที่โหมดซ่อนเปิดอยู่ */
   privacyApply();
@@ -3774,7 +3817,9 @@ function renderWatchPort(port){
       <td>${w.date||'—'}</td>
       <td style="font-weight:600">${escHtml(w.sym)}${eligible?'':' <span class="hint" style="display:inline;color:var(--amber)">⚠ ยังไม่ครบเงื่อนไข</span>'}${port==='satA'&&!ggDone(w.gg)?' <span style="color:var(--amber)" title="ยังไม่ได้ใส่คะแนน Growth Gate — เทรดได้ปกติ แต่ระบบจะคิดขนาดไม้เป็น Starter 0.50%">⚠</span>':''}</td>
       ${port==='satB'?`<td class="sans">${w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:'—'}</td>`:''}
-      ${scored?`<td class="sans industryCell" style="color:var(--muted)"${w.industry?` title="${escHtml(w.industry)}"`:''}>${w.industry?`<span class="indTxt">${ICON_INDUSTRY_MINI} ${escHtml(industryShort(w.industry))}</span>`:'—'}</td>`:''}
+      ${scored?`<td class="sans industryCell" style="color:var(--muted)"${w.industry?` title="${escHtml(w.industry)}"`:''}>${w.industry?(indLink(w.industry)
+        ? `<span class="indTxt indLinked" onclick="indOpen('${escHtml(w.industry).replace(/'/g,"\\'")}')" title="เปิดคู่มือ ${escHtml(w.industry)}">${ICON_INDUSTRY_MINI} ${escHtml(industryShort(w.industry))} ↗</span>`
+        : `<span class="indTxt">${ICON_INDUSTRY_MINI} ${escHtml(industryShort(w.industry))}</span>`):'—'}</td>`:''}
       ${port==='satA'
         ? `<td class="wlnote${(w.gg&&w.gg.catalyst||'').trim()?'':' placeholder'}">${(w.gg&&w.gg.catalyst||'').trim()?escHtml(w.gg.catalyst):'ยังไม่ได้ระบุ'}</td>`
         : noteTd(w,'fundamental')}
@@ -3790,7 +3835,7 @@ function renderWatchPort(port){
   document.getElementById(`wlCards_${port}`).innerHTML = list.length ? list.map(w=>{
     const eligible = watchEligible(w);
     return `<div class="tcard" data-wid="${w.id}" style="${eligible?'':'opacity:.6'}">
-      <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:''} ${w.industry?`<span class="hint" style="display:inline;color:var(--muted)" title="${escHtml(w.industry)}"><svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.8"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.8" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.4"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="2"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="3" stroke-linecap="round"/></svg> ${escHtml(industryShort(w.industry))}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
+      <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:''} ${w.industry?`<span class="hint${indLink(w.industry)?' indLinked':''}" style="display:inline;color:var(--muted)" ${indLink(w.industry)?`onclick="indOpen('${escHtml(w.industry).replace(/'/g,"\\'")}')" title="เปิดคู่มือ ${escHtml(w.industry)}"`:`title="${escHtml(w.industry)}"`}><svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.8"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.8" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.4"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="2"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="3" stroke-linecap="round"/></svg> ${escHtml(industryShort(w.industry))}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
       ${!eligible?`<div class="hint" style="color:var(--amber)">⚠ ต้องมี ${port==='satB'?'Note':'Business'}</div>`:''}
       ${port==='satA'&&!ggDone(w.gg)?`<div class="hint" style="color:var(--amber)">⚠ ยังไม่ได้ใส่คะแนน Growth Gate — เทรดได้ปกติ แต่ระบบคิดขนาดไม้เป็น Starter 0.50%</div>`:''}
       ${port==='satA'?'':noteInline(w,'fundamental',port==='satB'?'Note':'Business')}
@@ -4273,11 +4318,19 @@ function openIndustryManager(){
 function renderIndustryList(){
   const list = document.getElementById('industryList');
   const items = (state.industries||[]).slice().sort((a,b)=>a.localeCompare(b));
-  list.innerHTML = items.length ? items.map(ind=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surface2);border-radius:8px">
-      <span>${escHtml(ind)}</span>
-      <button class="small danger" onclick="deleteIndustry('${escHtml(ind).replace(/'/g,"\\'")}')">✕</button>
-    </div>`).join('') : '<div class="hint" style="margin:0">ยังไม่มี Industry — เพิ่มด้านบนได้เลย</div>';
+  list.innerHTML = items.length ? items.map(ind=>{
+    const esc = escHtml(ind).replace(/'/g,"\\'");
+    const url = indLink(ind);
+    return `<div class="indRow ${url?'on':''}">
+      <div class="indRowTop">
+        <span class="indRowNm">${escHtml(ind)}</span>
+        ${url?`<button class="small" onclick="indOpen('${esc}')" title="ลองเปิดดู">↗ เปิด</button>`:''}
+        <button class="small danger" onclick="deleteIndustry('${esc}')">✕</button>
+      </div>
+      <input type="url" class="indRowUrl" placeholder="วาง URL คู่มือ interactive ของ industry นี้ (https://…)"
+        value="${escHtml(url)}" onchange="setIndustryLink('${esc}', this.value)">
+    </div>`;
+  }).join('') : '<div class="hint" style="margin:0">ยังไม่มี Industry — เพิ่มด้านบนได้เลย</div>';
 }
 function addIndustry(){
   const input = document.getElementById('newIndustryName');
@@ -4294,6 +4347,7 @@ function addIndustry(){
 function deleteIndustry(name){
   if(!confirm(`ลบ Industry "${name}"? (หุ้นที่เคยตั้งค่านี้ไว้จะยังคงมีชื่อเดิมติดอยู่ที่ตัวเอง แต่จะไม่มีใน list ให้เลือกอีก)`)) return;
   state.industries = (state.industries||[]).filter(x=>x!==name);
+  if(state.industryLinks) delete state.industryLinks[name];
   renderIndustryList();
   populateIndustrySelect();
   schedulePersist();
