@@ -317,9 +317,16 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .sbStratLvl:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
 /* หัวการ์ดล็อกแล้ว: badge Bias (ใช้ .tag เดิม) + ปุ่มไอคอน ⓘ/🔄 ชิดขวาแถวเดียวกับ checkbox — คงความ compact แบบเดิม */
 .sbHead button.small{padding:4px 9px;font-size:.8rem;line-height:1}
-.sbStratInfo{font-size:.74rem;color:var(--muted);background:var(--surface2);border-radius:var(--r-sm);
-  padding:8px 11px;margin-bottom:9px;line-height:1.5}
-.sbStratInfo b{color:var(--text)}
+/* ⓘ — popover ลอย hover หรือ focus (คีย์บอร์ด) เห็นทันที ไม่กินที่ในการ์ด · แตะ/คลิกเพื่อ pin ค้างไว้ (จอสัมผัสไม่มี hover) */
+.sbInfoWrap{position:relative;display:inline-flex}
+.sbStratTip{position:absolute;top:calc(100% + 6px);right:0;z-index:20;min-width:210px;max-width:280px;
+  font-size:.74rem;color:var(--muted);background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:8px 11px;line-height:1.5;box-shadow:var(--sh-2);
+  opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-4px);transition:opacity .12s,transform .12s}
+.sbInfoWrap:hover .sbStratTip,.sbInfoWrap:focus-within .sbStratTip,.sbStratTip.pinned{
+  opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0)}
+.sbStratTip b{color:var(--text)}
+@media(max-width:480px){ .sbStratTip{right:auto;left:0} }
 .sbMissed{font-size:.78rem;color:var(--muted);background:var(--surface2);border-radius:var(--r-sm);padding:10px 12px}
 @media(max-width:700px){
   .sbStratGate{gap:7px}
@@ -3335,7 +3342,7 @@ function ggSetTotal(v){ ggState.tot = ggClampTot(v); renderGGForm(); }
      ตัด Ranging ออก เหลือแค่ Bullish/Bearish · เลือกได้ก็ต่อเมื่อกรอก Rationale (ทำไมถึงคิดว่าใช่) +
      Invalidation level (ราคาที่ถือว่า Bias ผิด — ตัวเลข) ไว้ก่อนทั้งคู่ (wpCanLock) พอกดเลือก = ล็อกทันที
      (locked:true) แก้ไม่ได้อีกจนรีเซ็ตอาทิตย์หน้า · หัวการ์ดล็อกแล้วยังแถวเดียวแบบเดิม (compact) — badge Bias
-     ใช้ .tag เดิม + ไอคอน ⓘ (เปิด/ปิดกล่อง Rationale/Invalidation ผ่าน wpInfoOpen ไม่ persist) + ไอคอน 🔄ตัวเดียว
+     ใช้ .tag เดิม + ไอคอน ⓘ (popover ลอย เห็นด้วย hover ล้วน ๆ ผ่าน CSS .sbInfoWrap:hover — แตะ/คลิกเพื่อ pin ค้างไว้บนจอสัมผัส) + ไอคอน 🔄ตัวเดียว
      หน้าต่างตั้งได้ = อา.+จ. ของสัปดาห์นั้นเท่านั้น (wpStrategyDeadlinePassed) — พ้นจันทร์แล้วยังไม่ล็อก = งดเทรดตัวนั้นทั้งสัปดาห์
      ถ้า Invalidation trigger กลางสัปดาห์ สลับ Bias ได้ 1 ครั้ง (flipUsed) ผ่าน wpStartFlip → wpCommitFlip
      ต้องกรอก Rationale + Invalidation level ใหม่ก่อนเลือก Trend ใหม่เหมือนกัน และล้าง Zone/Setup/Entry/SL/TP เดิมทั้งหมด
@@ -3441,10 +3448,15 @@ function wpLockStrategy(sym, trend){
   renderSBPlan(); schedulePersist();
 }
 /* สลับ Bias กลางสัปดาห์ — สิทธิ์เดียว/สัปดาห์ ใช้เมื่อ Invalidation ของ Strategy เดิม trigger จริง
-   wpFlipMode/wpFlipDraft เป็น state ชั่วคราวในหน้าจอ ไม่ persist — แค่คุม UI ระหว่างกำลังเลือกใหม่
-   wpInfoOpen คุมการเปิด/ปิดกล่องข้อมูล Rationale/Invalidation ในหัวการ์ด (ⓘ) เช่นกัน ไม่ persist */
-let wpFlipMode = {}, wpFlipDraft = {}, wpInfoOpen = {};
-function wpToggleInfo(sym){ wpInfoOpen[sym] = !wpInfoOpen[sym]; renderSBPlan(); }
+   wpFlipMode/wpFlipDraft เป็น state ชั่วคราวในหน้าจอ ไม่ persist — แค่คุม UI ระหว่างกำลังเลือกใหม่ */
+let wpFlipMode = {}, wpFlipDraft = {};
+/* ⓘ ปกติเห็นด้วย hover ล้วน ๆ (CSS :hover/:focus-within บน .sbInfoWrap ใน index.css) —
+   ฟังก์ชันนี้แค่ toggle class .pinned ให้ค้างไว้ได้ตอนแตะจอสัมผัส (iPad/iPhone ไม่มี hover)
+   ไม่เรียก renderSBPlan() เพราะไม่จำเป็นต้องวาดใหม่ทั้งก้อนแค่เพราะจะดูข้อความที่มีอยู่แล้ว */
+function wpToggleInfo(sym){
+  const tip = document.getElementById('sbTip_'+sym);
+  if(tip) tip.classList.toggle('pinned');
+}
 function wpStartFlip(sym){
   const e = wpEntry(sym);
   if(!e.locked) return;
@@ -7136,21 +7148,25 @@ function renderSBPlan(){
     const tpField = `<div class="f"><label>TP${tpHint}</label><input type="number" step="${cfg.step}" inputmode="decimal"`
       + ` value="${pl.tp ?? ''}" oninput="sbSetNum('${sym}','tp',this.value)" onchange="sbCommit('${sym}')"></div>`;
 
+    /* ⓘ = hover เห็นเลย (CSS :hover/:focus-within) และแตะ/คลิกเพื่อ pin ค้างไว้ก็ได้ (wpToggleInfo ติด class .pinned
+       ตรง ๆ ไม่ renderSBPlan() ทั้งก้อน — กันงานหนักเกินจำเป็นตอนแค่ hover ดูข้อมูล) */
     const stratHead = `
         <span class="tag ${bias==='Long'?'long':'short'}" style="margin-left:auto">${bias==='Long'?'Bullish':'Bearish'}</span>
-        <button type="button" class="small" onclick="wpToggleInfo('${sym}')" title="ดู Rationale / Invalidation level">ⓘ</button>
+        <span class="sbInfoWrap">
+          <button type="button" class="small" onclick="wpToggleInfo('${sym}')" title="Rationale / Invalidation level — hover หรือแตะเพื่อดู">ⓘ</button>
+          <div class="sbStratTip" id="sbTip_${sym}">
+            <div><b>Rationale:</b> ${escHtml(e.rationale||'—')}</div>
+            <div><b>Invalidation level:</b> ${e.invalLevel!=null?szNum(e.invalLevel,2):'—'}</div>
+            ${e.flipUsed?'<div style="color:var(--muted)">ใช้สิทธิ์สลับ Bias ไปแล้ว</div>':''}
+          </div>
+        </span>
         ${e.flipUsed ? '' : `<button type="button" class="small" onclick="wpStartFlip('${sym}')" title="สลับ Bias (เหลือ 1 ครั้ง)">🔄</button>`}`;
-    const stratInfo = wpInfoOpen[sym] ? `<div class="sbStratInfo">
-        <div><b>Rationale:</b> ${escHtml(e.rationale||'—')}</div>
-        <div><b>Invalidation level:</b> ${e.invalLevel!=null?szNum(e.invalLevel,2):'—'}${e.flipUsed?' · <span style="color:var(--muted)">ใช้สิทธิ์สลับ Bias ไปแล้ว</span>':''}</div>
-      </div>` : '';
 
     if(wpFlipMode[sym]){
       return `<div class="sbCard">
         <div class="sbHead">
           <b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b>${stratHead}
         </div>
-        ${stratInfo}
         <div class="sbStratGate">
           <input type="text" class="sbStratNote" placeholder="Rationale ใหม่ — ทำไมถึงคิดว่าเป็น Bias ใหม่นี้"
             oninput="wpSetFlipRationale('${sym}',this.value)">
@@ -7170,7 +7186,6 @@ function renderSBPlan(){
         <label class="sbSw"><input type="checkbox" checked disabled title="ล็อกแล้วสัปดาห์นี้">
           <b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b></label>${stratHead}
       </div>
-      ${stratInfo}
       <div class="sbGrid">
         ${sbRow(sym,'zoneLevel','zoneOn','📍 Zone','Zone Level','zone','Zone Activate — ราคาเข้าโซนที่รอแล้ว')}
         ${sbRow(sym,'setupLevel','setupOn','⚡ Setup','Activation Level','setup','Setup Activate — เงื่อนไขจุดชนวนมาถึงแล้ว')}
