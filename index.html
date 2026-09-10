@@ -304,22 +304,26 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .sbWarn.red{background:var(--red-dim);color:var(--red-dark)}
 .sbWarn.yellow{background:var(--amber-dim);color:var(--amber)}
 .sbLock{font-size:.73rem;color:var(--muted);background:var(--surface2);border-radius:var(--r-sm);padding:8px 11px;margin-top:10px}
-/* ---- Weekly Strategy: ขั้นก่อนเป็นการ์ด Zone/Setup (★ 10 ก.ย. 2026) ---- */
+/* ---- Weekly Strategy: ขั้นก่อนเป็นการ์ด Zone/Setup (★ 10 ก.ย. 2026, compact rev.2) ---- */
 .sbStratGate{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 11px;
   background:var(--surface);border:1px dashed var(--border);border-radius:var(--r-sm)}
 .sbStratGate .seg{flex:0 0 auto}
 .sbStratGate .seg button:disabled{opacity:.35;cursor:not-allowed}
-.sbStratNote{flex:1 1 220px;min-width:0;font-family:var(--sans);font-size:.8rem;padding:7px 9px;
+.sbStratNote{flex:1 1 190px;min-width:0;font-family:var(--sans);font-size:.8rem;padding:7px 9px;
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text)}
 .sbStratNote:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
-.sbStratLocked{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.78rem;margin-bottom:9px}
-.sbStratLocked .badge{font-weight:700;font-size:.74rem;padding:3px 10px;border-radius:20px;white-space:nowrap}
-.sbStratLocked .badge.bull{background:var(--teal-dim);color:var(--teal)}
-.sbStratLocked .badge.bear{background:var(--red-dim);color:var(--red)}
-.sbStratLocked .note{color:var(--muted);flex:1 1 160px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbStratLvl{flex:0 0 130px;min-width:0;font-family:var(--mono);font-size:.8rem;text-align:right;padding:7px 9px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text)}
+.sbStratLvl:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
+/* หัวการ์ดล็อกแล้ว: badge Bias (ใช้ .tag เดิม) + ปุ่มไอคอน ⓘ/🔄 ชิดขวาแถวเดียวกับ checkbox — คงความ compact แบบเดิม */
+.sbHead button.small{padding:4px 9px;font-size:.8rem;line-height:1}
+.sbStratInfo{font-size:.74rem;color:var(--muted);background:var(--surface2);border-radius:var(--r-sm);
+  padding:8px 11px;margin-bottom:9px;line-height:1.5}
+.sbStratInfo b{color:var(--text)}
 .sbMissed{font-size:.78rem;color:var(--muted);background:var(--surface2);border-radius:var(--r-sm);padding:10px 12px}
 @media(max-width:700px){
-  .sbStratLocked .note{white-space:normal}
+  .sbStratGate{gap:7px}
+  .sbStratLvl{flex:1 1 120px}
 }
 @media(max-width:700px){
   .sbHead .seg{margin-left:0;flex:1 1 100%}
@@ -3328,11 +3332,13 @@ function ggSetTotal(v){ ggState.tot = ggClampTot(v); renderGGForm(); }
      และได้ประวัติสัปดาห์เก่าติดมาฟรี ๆ ไม่ต้องเขียน logic ล้างที่อาจลบพลาด
 
    ★ 10 ก.ย. 2026 — Weekly Strategy ล็อก + deadline + Invalidation-flip
-     ตัด Ranging ออก เหลือแค่ Bullish/Bearish · เลือกได้ก็ต่อเมื่อกรอก Invalidation point (invalNote) ไว้ก่อน
-     พอกดเลือก = ล็อกทันที (locked:true) แก้ไม่ได้อีกจนรีเซ็ตอาทิตย์หน้า
+     ตัด Ranging ออก เหลือแค่ Bullish/Bearish · เลือกได้ก็ต่อเมื่อกรอก Rationale (ทำไมถึงคิดว่าใช่) +
+     Invalidation level (ราคาที่ถือว่า Bias ผิด — ตัวเลข) ไว้ก่อนทั้งคู่ (wpCanLock) พอกดเลือก = ล็อกทันที
+     (locked:true) แก้ไม่ได้อีกจนรีเซ็ตอาทิตย์หน้า · หัวการ์ดล็อกแล้วยังแถวเดียวแบบเดิม (compact) — badge Bias
+     ใช้ .tag เดิม + ไอคอน ⓘ (เปิด/ปิดกล่อง Rationale/Invalidation ผ่าน wpInfoOpen ไม่ persist) + ไอคอน 🔄ตัวเดียว
      หน้าต่างตั้งได้ = อา.+จ. ของสัปดาห์นั้นเท่านั้น (wpStrategyDeadlinePassed) — พ้นจันทร์แล้วยังไม่ล็อก = งดเทรดตัวนั้นทั้งสัปดาห์
      ถ้า Invalidation trigger กลางสัปดาห์ สลับ Bias ได้ 1 ครั้ง (flipUsed) ผ่าน wpStartFlip → wpCommitFlip
-     ต้องกรอก Invalidation point ใหม่ก่อนเลือก Trend ใหม่เหมือนกัน และล้าง Zone/Setup/Entry/SL/TP เดิมทั้งหมด
+     ต้องกรอก Rationale + Invalidation level ใหม่ก่อนเลือก Trend ใหม่เหมือนกัน และล้าง Zone/Setup/Entry/SL/TP เดิมทั้งหมด
      ใช้สิทธิ์ไปแล้วเกิด invalidate อีก = งดเทรดตัวนั้นทั้งสัปดาห์เช่นกัน ไม่มี override
      Bias ของ "ไม้" (sbBiasOf) ตอนนี้ตามหลัง Trend ที่ล็อกไว้เสมอ ไม่มีปุ่ม Long/Short แยกให้เลือกเองแล้ว
      Migration: สัปดาห์ที่กำลังเปิดอยู่ก่อนแก้รอบนี้ ถ้ามี trend ตั้งไว้แล้วถือว่า locked ไปเลย (ไม่งั้นข้อมูลที่กรอกค้างจะหายจากจอ)
@@ -3365,11 +3371,14 @@ function wpCurrent(){
 }
 function wpEntry(sym){
   const w = wpCurrent();
-  if(!w[sym]) w[sym] = {on:false, trend:null, locked:false, invalNote:'', flipUsed:false};
+  if(!w[sym]) w[sym] = {on:false, trend:null, locked:false, rationale:'', invalLevel:null, flipUsed:false};
   const e = w[sym];
   /* ★ migrate ของเก่า/สัปดาห์ที่กำลังเปิดอยู่ก่อนมีระบบล็อก — ดู note ★ 10 ก.ย. 2026 ด้านบน */
   if(e.locked===undefined) e.locked = !!e.trend;
-  if(e.invalNote===undefined) e.invalNote = '';
+  /* ★ 10 ก.ย. 2026 rev.2 — ช่อง invalNote เดิม (text เดียว) แยกเป็น rationale (ทำไมถึงคิดว่าใช่) +
+     invalLevel (ราคาที่ invalidate เป็นตัวเลข) ของเก่าย้ายข้อความไปไว้ที่ rationale ก่อน level เว้นว่างไว้ */
+  if(e.rationale===undefined) e.rationale = (e.invalNote!=null ? e.invalNote : '');
+  if(e.invalLevel===undefined) e.invalLevel = null;
   if(e.flipUsed===undefined) e.flipUsed = false;
   if(e.trend==='Unclear'){ e.trend = null; e.locked = false; }
   return e;
@@ -3401,22 +3410,25 @@ function wpToggle(sym){
   const e = wpEntry(sym);
   if(e.locked) return;   /* ล็อกแล้วแก้ไม่ได้จนรีเซ็ตอาทิตย์หน้า */
   e.on = !e.on;
-  if(!e.on){ e.trend = null; e.invalNote = ''; }
+  if(!e.on){ e.trend = null; e.rationale = ''; e.invalLevel = null; }
   renderSBPlan(); schedulePersist();
 }
 /* เปิดรับตั้ง Strategy ได้แค่ อาทิตย์(0) กับ จันทร์(1) ของสัปดาห์นั้น — อังคารเป็นต้นไปถือว่าพ้น deadline */
 function wpStrategyDeadlinePassed(){
   return new Date().getDay() >= 2;
 }
-/* พิมพ์ Invalidation point ระหว่างยังไม่ล็อก — อัปเดตแค่ state + ปลด/ล็อกปุ่ม Bull/Bear ตรง ๆ
-   ห้าม renderSBPlan() ที่นี่ (เหตุผลเดียวกับ sbSetNum — กันเคอร์เซอร์เด้งตอนพิมพ์) */
-function wpSetStratNote(sym, v){
-  wpEntry(sym).invalNote = String(v||'');
-  const on = !!String(v||'').trim();
+/* ★ 10 ก.ย. 2026 rev.2 — เงื่อนไขปลดล็อกปุ่ม Bull/Bear: ต้องมีทั้ง Rationale (ข้อความ) และ Invalidation level (ตัวเลข) */
+function wpCanLock(e){ return !!(e.rationale||'').trim() && (e.invalLevel>0); }
+function wpUpdateStratButtons(sym){
+  const e = wpEntry(sym), on = wpCanLock(e);
   const b1 = document.getElementById('sbStratBull_'+sym), b2 = document.getElementById('sbStratBear_'+sym);
   if(b1) b1.disabled = !on;
   if(b2) b2.disabled = !on;
 }
+/* พิมพ์ Rationale / Invalidation level ระหว่างยังไม่ล็อก — อัปเดตแค่ state + ปลด/ล็อกปุ่ม Bull/Bear ตรง ๆ
+   ห้าม renderSBPlan() ที่นี่ (เหตุผลเดียวกับ sbSetNum — กันเคอร์เซอร์เด้งตอนพิมพ์) */
+function wpSetRationale(sym, v){ wpEntry(sym).rationale = String(v||''); wpUpdateStratButtons(sym); }
+function wpSetInvalLevel(sym, v){ wpEntry(sym).invalLevel = sbNum(v); wpUpdateStratButtons(sym); }
 function wpLockStrategy(sym, trend){
   const e = wpEntry(sym);
   if(e.locked) return;
@@ -3424,36 +3436,39 @@ function wpLockStrategy(sym, trend){
     alert(`พ้นกำหนดตั้ง Strategy ของสัปดาห์นี้แล้ว (เปิดรับแค่ อา.–จ.)\n\nงดเทรด ${sym} จนกว่าจะรีเซ็ตอาทิตย์หน้า`);
     renderSBPlan(); return;
   }
-  if(!(e.invalNote||'').trim()){ alert('กรอก Invalidation point ก่อน — อะไรจะบอกว่า Bias นี้ผิด'); return; }
+  if(!wpCanLock(e)){ alert('กรอก Rationale และ Invalidation level ให้ครบก่อน'); return; }
   e.on = true; e.trend = trend; e.locked = true;
   renderSBPlan(); schedulePersist();
 }
 /* สลับ Bias กลางสัปดาห์ — สิทธิ์เดียว/สัปดาห์ ใช้เมื่อ Invalidation ของ Strategy เดิม trigger จริง
-   wpFlipMode/wpFlipNoteDraft เป็น state ชั่วคราวในหน้าจอ ไม่ persist — แค่คุม UI ระหว่างกำลังเลือกใหม่ */
-let wpFlipMode = {}, wpFlipNoteDraft = {};
+   wpFlipMode/wpFlipDraft เป็น state ชั่วคราวในหน้าจอ ไม่ persist — แค่คุม UI ระหว่างกำลังเลือกใหม่
+   wpInfoOpen คุมการเปิด/ปิดกล่องข้อมูล Rationale/Invalidation ในหัวการ์ด (ⓘ) เช่นกัน ไม่ persist */
+let wpFlipMode = {}, wpFlipDraft = {}, wpInfoOpen = {};
+function wpToggleInfo(sym){ wpInfoOpen[sym] = !wpInfoOpen[sym]; renderSBPlan(); }
 function wpStartFlip(sym){
   const e = wpEntry(sym);
   if(!e.locked) return;
   if(e.flipUsed){ alert(`ใช้สิทธิ์สลับ Bias ของสัปดาห์นี้ไปแล้ว — งดเทรด ${sym} จนกว่าจะรีเซ็ตอาทิตย์หน้า`); return; }
   if(!confirm(`Invalidation trigger แล้ว?\n\nการสลับ Bias ใช้ได้ครั้งเดียวต่อสัปดาห์ และจะล้าง Zone/Setup/Entry/SL/TP ที่กรอกไว้ของ ${sym} ทั้งหมด — ยืนยัน?`)) return;
-  wpFlipMode[sym] = true; wpFlipNoteDraft[sym] = '';
+  wpFlipMode[sym] = true; wpFlipDraft[sym] = {rationale:'', invalLevel:null};
   renderSBPlan();
 }
-function wpCancelFlip(sym){ delete wpFlipMode[sym]; delete wpFlipNoteDraft[sym]; renderSBPlan(); }
-function wpSetFlipNote(sym, v){
-  wpFlipNoteDraft[sym] = String(v||'');
-  const on = !!String(v||'').trim();
+function wpCancelFlip(sym){ delete wpFlipMode[sym]; delete wpFlipDraft[sym]; renderSBPlan(); }
+function wpUpdateFlipButtons(sym){
+  const d = wpFlipDraft[sym] || {}, on = !!(d.rationale||'').trim() && (d.invalLevel>0);
   const b1 = document.getElementById('sbFlipBull_'+sym), b2 = document.getElementById('sbFlipBear_'+sym);
   if(b1) b1.disabled = !on;
   if(b2) b2.disabled = !on;
 }
+function wpSetFlipRationale(sym, v){ (wpFlipDraft[sym]=wpFlipDraft[sym]||{}).rationale = String(v||''); wpUpdateFlipButtons(sym); }
+function wpSetFlipLevel(sym, v){ (wpFlipDraft[sym]=wpFlipDraft[sym]||{}).invalLevel = sbNum(v); wpUpdateFlipButtons(sym); }
 function wpCommitFlip(sym, trend){
   const e = wpEntry(sym);
   if(!e.locked || e.flipUsed) return;
-  const note = (wpFlipNoteDraft[sym]||'').trim();
-  if(!note){ alert('กรอก Invalidation point ใหม่ก่อนยืนยันสลับ Bias'); return; }
-  e.trend = trend; e.invalNote = note; e.flipUsed = true;
-  delete wpFlipMode[sym]; delete wpFlipNoteDraft[sym];
+  const d = wpFlipDraft[sym] || {};
+  if(!((d.rationale||'').trim() && d.invalLevel>0)){ alert('กรอก Rationale และ Invalidation level ใหม่ให้ครบก่อนยืนยันสลับ Bias'); return; }
+  e.trend = trend; e.rationale = d.rationale.trim(); e.invalLevel = d.invalLevel; e.flipUsed = true;
+  delete wpFlipMode[sym]; delete wpFlipDraft[sym];
   const pl = sbPlanOf(sym);
   pl.zoneOn = false; pl.zoneLevel = null; pl.setupOn = false; pl.setupLevel = null;
   pl.entry = null; pl.sl = null; pl.tp = null; pl._tpAuto = false; pl.etype = 'limit';
@@ -7093,15 +7108,17 @@ function renderSBPlan(){
           <div class="sbMissed">⛔ พ้นกำหนดตั้ง Strategy ของสัปดาห์นี้แล้ว (เปิดรับแค่ อา.–จ.) — งดเทรด ${escHtml(cfg.label)} จนกว่าจะรีเซ็ตอาทิตย์หน้า</div>
         </div>`;
       }
-      const canPick = !!(e.invalNote||'').trim();
+      const canPick = wpCanLock(e);
       return `<div class="sbCard">
         <div class="sbHead">
           <label class="sbSw"><input type="checkbox" ${e.on?'checked':''} onchange="wpToggle('${sym}')">
             <b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b></label>
         </div>
         <div class="sbStratGate">
-          <input type="text" class="sbStratNote" id="sbStratNote_${sym}" placeholder="Invalidation point — อะไรจะบอกว่า Bias สัปดาห์นี้ผิด (กรอกก่อนถึงจะเลือกได้)"
-            value="${escHtml(e.invalNote||'')}" oninput="wpSetStratNote('${sym}',this.value)" onchange="schedulePersist()">
+          <input type="text" class="sbStratNote" placeholder="Rationale — ทำไมถึงคิดว่าเป็น Bias นี้"
+            value="${escHtml(e.rationale||'')}" oninput="wpSetRationale('${sym}',this.value)" onchange="schedulePersist()">
+          <input type="number" class="sbStratLvl" placeholder="Invalidation level"
+            value="${e.invalLevel ?? ''}" oninput="wpSetInvalLevel('${sym}',this.value)" onchange="schedulePersist()">
           <div class="seg">
             <button type="button" id="sbStratBull_${sym}" ${canPick?'':'disabled'} onclick="wpLockStrategy('${sym}','Long')">Bullish</button>
             <button type="button" id="sbStratBear_${sym}" ${canPick?'':'disabled'} onclick="wpLockStrategy('${sym}','Short')">Bearish</button>
@@ -7110,7 +7127,7 @@ function renderSBPlan(){
       </div>`;
     }
 
-    /* ---- ล็อกแล้ว ---- */
+    /* ---- ล็อกแล้ว — หัวการ์ดแถวเดียวแบบเดิม: checkbox+ชื่อ ... badge Bias · ⓘ · 🔄 ---- */
     const pl = sbPlanOf(sym), bias = sbBiasOf(sym);
     const typBtn = (v,txt)=>`<button type="button" class="${pl.etype===v?'on-'+v:''}" onclick="sbSetType('${sym}','${v}')">${txt}</button>`;
     const numF = (label,field)=>`<div class="f"><label>${label}</label><input type="number" step="${cfg.step}" inputmode="decimal"`
@@ -7119,21 +7136,26 @@ function renderSBPlan(){
     const tpField = `<div class="f"><label>TP${tpHint}</label><input type="number" step="${cfg.step}" inputmode="decimal"`
       + ` value="${pl.tp ?? ''}" oninput="sbSetNum('${sym}','tp',this.value)" onchange="sbCommit('${sym}')"></div>`;
 
-    const stratBadge = `<div class="sbStratLocked">
-        <span class="badge ${bias==='Long'?'bull':'bear'}">${bias==='Long'?'Bullish':'Bearish'}</span>
-        <span class="note" title="${escHtml(e.invalNote||'')}">⚠ ${escHtml(e.invalNote||'')}</span>
-        ${e.flipUsed
-          ? `<span class="hint" style="color:var(--muted)">ใช้สิทธิ์สลับ Bias ของสัปดาห์นี้ไปแล้ว</span>`
-          : `<button type="button" class="small" onclick="wpStartFlip('${sym}')">🔄 สลับ Bias (เหลือ 1 ครั้ง)</button>`}
-      </div>`;
+    const stratHead = `
+        <span class="tag ${bias==='Long'?'long':'short'}" style="margin-left:auto">${bias==='Long'?'Bullish':'Bearish'}</span>
+        <button type="button" class="small" onclick="wpToggleInfo('${sym}')" title="ดู Rationale / Invalidation level">ⓘ</button>
+        ${e.flipUsed ? '' : `<button type="button" class="small" onclick="wpStartFlip('${sym}')" title="สลับ Bias (เหลือ 1 ครั้ง)">🔄</button>`}`;
+    const stratInfo = wpInfoOpen[sym] ? `<div class="sbStratInfo">
+        <div><b>Rationale:</b> ${escHtml(e.rationale||'—')}</div>
+        <div><b>Invalidation level:</b> ${e.invalLevel!=null?szNum(e.invalLevel,2):'—'}${e.flipUsed?' · <span style="color:var(--muted)">ใช้สิทธิ์สลับ Bias ไปแล้ว</span>':''}</div>
+      </div>` : '';
 
     if(wpFlipMode[sym]){
       return `<div class="sbCard">
-        <div class="sbHead"><b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b></div>
-        ${stratBadge}
+        <div class="sbHead">
+          <b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b>${stratHead}
+        </div>
+        ${stratInfo}
         <div class="sbStratGate">
-          <input type="text" class="sbStratNote" id="sbFlipNote_${sym}" placeholder="Invalidation point ใหม่ — อะไรจะบอกว่า Bias ใหม่นี้ผิด"
-            oninput="wpSetFlipNote('${sym}',this.value)">
+          <input type="text" class="sbStratNote" placeholder="Rationale ใหม่ — ทำไมถึงคิดว่าเป็น Bias ใหม่นี้"
+            oninput="wpSetFlipRationale('${sym}',this.value)">
+          <input type="number" class="sbStratLvl" placeholder="Invalidation level ใหม่"
+            oninput="wpSetFlipLevel('${sym}',this.value)">
           <div class="seg">
             <button type="button" id="sbFlipBull_${sym}" disabled onclick="wpCommitFlip('${sym}','Long')">Bullish</button>
             <button type="button" id="sbFlipBear_${sym}" disabled onclick="wpCommitFlip('${sym}','Short')">Bearish</button>
@@ -7146,9 +7168,9 @@ function renderSBPlan(){
     return `<div class="sbCard">
       <div class="sbHead">
         <label class="sbSw"><input type="checkbox" checked disabled title="ล็อกแล้วสัปดาห์นี้">
-          <b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b></label>
+          <b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b></label>${stratHead}
       </div>
-      ${stratBadge}
+      ${stratInfo}
       <div class="sbGrid">
         ${sbRow(sym,'zoneLevel','zoneOn','📍 Zone','Zone Level','zone','Zone Activate — ราคาเข้าโซนที่รอแล้ว')}
         ${sbRow(sym,'setupLevel','setupOn','⚡ Setup','Activation Level','setup','Setup Activate — เงื่อนไขจุดชนวนมาถึงแล้ว')}
