@@ -304,6 +304,23 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .sbWarn.red{background:var(--red-dim);color:var(--red-dark)}
 .sbWarn.yellow{background:var(--amber-dim);color:var(--amber)}
 .sbLock{font-size:.73rem;color:var(--muted);background:var(--surface2);border-radius:var(--r-sm);padding:8px 11px;margin-top:10px}
+/* ---- Weekly Strategy: ขั้นก่อนเป็นการ์ด Zone/Setup (★ 10 ก.ย. 2026) ---- */
+.sbStratGate{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 11px;
+  background:var(--surface);border:1px dashed var(--border);border-radius:var(--r-sm)}
+.sbStratGate .seg{flex:0 0 auto}
+.sbStratGate .seg button:disabled{opacity:.35;cursor:not-allowed}
+.sbStratNote{flex:1 1 220px;min-width:0;font-family:var(--sans);font-size:.8rem;padding:7px 9px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text)}
+.sbStratNote:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim)}
+.sbStratLocked{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.78rem;margin-bottom:9px}
+.sbStratLocked .badge{font-weight:700;font-size:.74rem;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.sbStratLocked .badge.bull{background:var(--teal-dim);color:var(--teal)}
+.sbStratLocked .badge.bear{background:var(--red-dim);color:var(--red)}
+.sbStratLocked .note{color:var(--muted);flex:1 1 160px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbMissed{font-size:.78rem;color:var(--muted);background:var(--surface2);border-radius:var(--r-sm);padding:10px 12px}
+@media(max-width:700px){
+  .sbStratLocked .note{white-space:normal}
+}
 @media(max-width:700px){
   .sbHead .seg{margin-left:0;flex:1 1 100%}
   .sbFields .seg{flex:1 1 100%}
@@ -3308,7 +3325,18 @@ function ggSetTotal(v){ ggState.tot = ggClampTot(v); renderGGForm(); }
 
    เก็บเป็น state.weeklyPlan = { '<วันอาทิตย์ที่เริ่มสัปดาห์>': { XAUUSD:{on:true,trend:'Long'}, ... } }
    ★ การคีย์ด้วยวันเริ่มสัปดาห์ทำให้ "reset" เกิดเองโดยไม่ต้องมีโค้ดล้างค่า — ขึ้นสัปดาห์ใหม่ = คีย์ใหม่ = ว่างเปล่า
-     และได้ประวัติสัปดาห์เก่าติดมาฟรี ๆ ไม่ต้องเขียน logic ล้างที่อาจลบพลาด */
+     และได้ประวัติสัปดาห์เก่าติดมาฟรี ๆ ไม่ต้องเขียน logic ล้างที่อาจลบพลาด
+
+   ★ 10 ก.ย. 2026 — Weekly Strategy ล็อก + deadline + Invalidation-flip
+     ตัด Ranging ออก เหลือแค่ Bullish/Bearish · เลือกได้ก็ต่อเมื่อกรอก Invalidation point (invalNote) ไว้ก่อน
+     พอกดเลือก = ล็อกทันที (locked:true) แก้ไม่ได้อีกจนรีเซ็ตอาทิตย์หน้า
+     หน้าต่างตั้งได้ = อา.+จ. ของสัปดาห์นั้นเท่านั้น (wpStrategyDeadlinePassed) — พ้นจันทร์แล้วยังไม่ล็อก = งดเทรดตัวนั้นทั้งสัปดาห์
+     ถ้า Invalidation trigger กลางสัปดาห์ สลับ Bias ได้ 1 ครั้ง (flipUsed) ผ่าน wpStartFlip → wpCommitFlip
+     ต้องกรอก Invalidation point ใหม่ก่อนเลือก Trend ใหม่เหมือนกัน และล้าง Zone/Setup/Entry/SL/TP เดิมทั้งหมด
+     ใช้สิทธิ์ไปแล้วเกิด invalidate อีก = งดเทรดตัวนั้นทั้งสัปดาห์เช่นกัน ไม่มี override
+     Bias ของ "ไม้" (sbBiasOf) ตอนนี้ตามหลัง Trend ที่ล็อกไว้เสมอ ไม่มีปุ่ม Long/Short แยกให้เลือกเองแล้ว
+     Migration: สัปดาห์ที่กำลังเปิดอยู่ก่อนแก้รอบนี้ ถ้ามี trend ตั้งไว้แล้วถือว่า locked ไปเลย (ไม่งั้นข้อมูลที่กรอกค้างจะหายจากจอ)
+     ถ้า trend เดิมเป็น 'Unclear' (Ranging เก่า) ให้ถือว่ายังไม่ล็อก ต้องเลือกใหม่ระหว่าง Bull/Bear */
 const SATB_PRODUCTS = ['XAUUSD','S50','BTCUSD'];
 const WP_BULLETS = 3;
 
@@ -3337,8 +3365,14 @@ function wpCurrent(){
 }
 function wpEntry(sym){
   const w = wpCurrent();
-  if(!w[sym]) w[sym] = {on:false, trend:null};
-  return w[sym];
+  if(!w[sym]) w[sym] = {on:false, trend:null, locked:false, invalNote:'', flipUsed:false};
+  const e = w[sym];
+  /* ★ migrate ของเก่า/สัปดาห์ที่กำลังเปิดอยู่ก่อนมีระบบล็อก — ดู note ★ 10 ก.ย. 2026 ด้านบน */
+  if(e.locked===undefined) e.locked = !!e.trend;
+  if(e.invalNote===undefined) e.invalNote = '';
+  if(e.flipUsed===undefined) e.flipUsed = false;
+  if(e.trend==='Unclear'){ e.trend = null; e.locked = false; }
+  return e;
 }
 function wpIsPicked(sym){
   const w = state && state.weeklyPlan && state.weeklyPlan[wpWeekKey()];
@@ -3365,16 +3399,69 @@ function wpBulletsLeft(){ return Math.max(0, WP_BULLETS - wpBulletsUsed().length
 
 function wpToggle(sym){
   const e = wpEntry(sym);
+  if(e.locked) return;   /* ล็อกแล้วแก้ไม่ได้จนรีเซ็ตอาทิตย์หน้า */
   e.on = !e.on;
-  if(e.on && !e.trend) e.trend = 'Long';   /* ติ๊กแล้วต้องมี Trend เสมอ — ตั้ง Bullish ไว้ก่อนให้แก้ต่อ */
-  if(!e.on) e.trend = null;
+  if(!e.on){ e.trend = null; e.invalNote = ''; }
   renderSBPlan(); schedulePersist();
 }
-function wpSetTrend(sym, tr){
+/* เปิดรับตั้ง Strategy ได้แค่ อาทิตย์(0) กับ จันทร์(1) ของสัปดาห์นั้น — อังคารเป็นต้นไปถือว่าพ้น deadline */
+function wpStrategyDeadlinePassed(){
+  return new Date().getDay() >= 2;
+}
+/* พิมพ์ Invalidation point ระหว่างยังไม่ล็อก — อัปเดตแค่ state + ปลด/ล็อกปุ่ม Bull/Bear ตรง ๆ
+   ห้าม renderSBPlan() ที่นี่ (เหตุผลเดียวกับ sbSetNum — กันเคอร์เซอร์เด้งตอนพิมพ์) */
+function wpSetStratNote(sym, v){
+  wpEntry(sym).invalNote = String(v||'');
+  const on = !!String(v||'').trim();
+  const b1 = document.getElementById('sbStratBull_'+sym), b2 = document.getElementById('sbStratBear_'+sym);
+  if(b1) b1.disabled = !on;
+  if(b2) b2.disabled = !on;
+}
+function wpLockStrategy(sym, trend){
   const e = wpEntry(sym);
-  e.on = true; e.trend = tr;
+  if(e.locked) return;
+  if(wpStrategyDeadlinePassed()){
+    alert(`พ้นกำหนดตั้ง Strategy ของสัปดาห์นี้แล้ว (เปิดรับแค่ อา.–จ.)\n\nงดเทรด ${sym} จนกว่าจะรีเซ็ตอาทิตย์หน้า`);
+    renderSBPlan(); return;
+  }
+  if(!(e.invalNote||'').trim()){ alert('กรอก Invalidation point ก่อน — อะไรจะบอกว่า Bias นี้ผิด'); return; }
+  e.on = true; e.trend = trend; e.locked = true;
   renderSBPlan(); schedulePersist();
 }
+/* สลับ Bias กลางสัปดาห์ — สิทธิ์เดียว/สัปดาห์ ใช้เมื่อ Invalidation ของ Strategy เดิม trigger จริง
+   wpFlipMode/wpFlipNoteDraft เป็น state ชั่วคราวในหน้าจอ ไม่ persist — แค่คุม UI ระหว่างกำลังเลือกใหม่ */
+let wpFlipMode = {}, wpFlipNoteDraft = {};
+function wpStartFlip(sym){
+  const e = wpEntry(sym);
+  if(!e.locked) return;
+  if(e.flipUsed){ alert(`ใช้สิทธิ์สลับ Bias ของสัปดาห์นี้ไปแล้ว — งดเทรด ${sym} จนกว่าจะรีเซ็ตอาทิตย์หน้า`); return; }
+  if(!confirm(`Invalidation trigger แล้ว?\n\nการสลับ Bias ใช้ได้ครั้งเดียวต่อสัปดาห์ และจะล้าง Zone/Setup/Entry/SL/TP ที่กรอกไว้ของ ${sym} ทั้งหมด — ยืนยัน?`)) return;
+  wpFlipMode[sym] = true; wpFlipNoteDraft[sym] = '';
+  renderSBPlan();
+}
+function wpCancelFlip(sym){ delete wpFlipMode[sym]; delete wpFlipNoteDraft[sym]; renderSBPlan(); }
+function wpSetFlipNote(sym, v){
+  wpFlipNoteDraft[sym] = String(v||'');
+  const on = !!String(v||'').trim();
+  const b1 = document.getElementById('sbFlipBull_'+sym), b2 = document.getElementById('sbFlipBear_'+sym);
+  if(b1) b1.disabled = !on;
+  if(b2) b2.disabled = !on;
+}
+function wpCommitFlip(sym, trend){
+  const e = wpEntry(sym);
+  if(!e.locked || e.flipUsed) return;
+  const note = (wpFlipNoteDraft[sym]||'').trim();
+  if(!note){ alert('กรอก Invalidation point ใหม่ก่อนยืนยันสลับ Bias'); return; }
+  e.trend = trend; e.invalNote = note; e.flipUsed = true;
+  delete wpFlipMode[sym]; delete wpFlipNoteDraft[sym];
+  const pl = sbPlanOf(sym);
+  pl.zoneOn = false; pl.zoneLevel = null; pl.setupOn = false; pl.setupLevel = null;
+  pl.entry = null; pl.sl = null; pl.tp = null; pl._tpAuto = false; pl.etype = 'limit';
+  pl.invalOn = false; pl.invalNote = '';
+  renderSBPlan(); schedulePersist();
+}
+/* Bias ของไม้ = ตาม Trend ที่ล็อกไว้เสมอ ไม่มีให้เลือกแยกอีกแล้ว (ดู note ★ 10 ก.ย. 2026) */
+function sbBiasOf(sym){ return wpTrendOf(sym)==='Short' ? 'Short' : 'Long'; }
 function ensure1RModel(){
   if(!state || !state.settings) return false;
   const s = state.settings;
@@ -6856,13 +6943,22 @@ function sbInvalidate(sym){
   pl.invalOn = false;                 /* ล้างแล้วปลดล็อกทันที พร้อมรับ setup รอบใหม่ */
   renderSBPlan(); schedulePersist();
 }
-function sbSetBias(sym, b){ sbPlanOf(sym).bias = b; renderSBPlan(); schedulePersist(); }
 /* ★ ระหว่างพิมพ์: อัปเดต state + วาดใหม่เฉพาะการ์ดคำนวณ · ห้าม schedulePersist() ที่นี่
    เหตุผล: persist -> Firestore ตอบ snapshot กลับมา -> render() -> renderSBPlan() วาด innerHTML ทับ
    -> ช่องที่กำลังพิมพ์ถูกทำลายและสร้างใหม่ -> เคอร์เซอร์เด้งออกกลางคัน (อาการ "บางครั้งเด้งเอง")
-   จึงเลื่อนการเซฟไปตอน onchange (ออกจากช่อง / กด Enter) แทน */
+   จึงเลื่อนการเซฟไปตอน onchange (ออกจากช่อง / กด Enter) แทน
+   ★ 10 ก.ย. 2026 — Entry/SL ครบและ TP ยังว่าง → auto-fill TP = entry ± 2×ระยะ SL (2R) ตามทิศ Bias
+   ตรงกับกติกา exit สองขยัก (50% ที่ 2R) — พิมพ์ทับเองได้เสมอ, ลบ TP ออก = รอ auto เติมใหม่รอบหน้าที่ entry/sl เปลี่ยน */
 function sbSetNum(sym, field, v){
-  sbPlanOf(sym)[field] = sbNum(v);
+  const pl = sbPlanOf(sym);
+  pl[field] = sbNum(v);
+  if((field==='entry' || field==='sl') && pl.tp==null && pl.entry>0 && pl.sl>0 && pl.entry!==pl.sl){
+    const dist = Math.abs(pl.entry - pl.sl), bias = sbBiasOf(sym);
+    pl.tp = +((bias==='Long' ? pl.entry + 2*dist : pl.entry - 2*dist).toFixed(6));
+    pl._tpAuto = true;
+  } else if(field==='tp'){
+    pl._tpAuto = false;   /* ผู้ใช้แตะ TP เอง — ไม่ใช่ค่า auto แล้ว */
+  }
   sbRenderCalc(sym);
 }
 function sbSetText(sym, field, v){ sbPlanOf(sym)[field] = String(v||''); }
@@ -6872,7 +6968,7 @@ function sbSetType(sym, v){ sbPlanOf(sym).etype = v; renderSBPlan(); schedulePer
 function sbCalcOpts(sym){
   const pl = sbPlanOf(sym), cfg = sbCfg(sym);
   return {symName:sym, entry:pl.entry, stop:pl.sl, mult:(pl.mult>0?pl.mult:cfg.mult),
-          isUSD:cfg.cur==='USD', sym:(cfg.cur==='USD'?'$':'฿'), bias:pl.bias, sizeFactor:1};
+          isUSD:cfg.cur==='USD', sym:(cfg.cur==='USD'?'$':'฿'), bias:sbBiasOf(sym), sizeFactor:1};
 }
 function sbRenderCalc(sym){
   const host = document.getElementById('sbCalc_'+sym); if(!host) return;
@@ -6907,10 +7003,7 @@ function sbRenderCalc(sym){
   if(c.tooWide) warns.push(['red', `⛔ SL <b>${szNum(c.slDist,2)}</b> กว้างกว่าค่าบน (<b>${szNum(c.hi,2)}</b>) — ล็อกไม่ให้เทรด`]);
   else if(c.tooTight) warns.push(['yellow', `◑ SL แคบกว่าค่าล่าง (<b>${szNum(c.lo,2)}</b>) — ลด Risk เหลือ <b>${c.lowRisk}%</b>`]);
   if(!(c.lo>0) && !(c.hi>0)) warns.push(['yellow', `ยังไม่ได้ตั้งกรอบระยะ SL ของ ${escHtml(sym)} — ตั้งในหน้า 🛠 ตั้งค่า Port`]);
-  const tr = wpTrendOf(sym);
-  if(!wpIsPicked(sym)) warns.push(['yellow', `⚠ ยังไม่ได้ติ๊ก ${escHtml(sym)} เป็นสินค้าของสัปดาห์นี้`]);
-  else if(tr && ((tr==='Long' && pl.bias==='Short') || (tr==='Short' && pl.bias!=='Short')))
-    warns.push(['yellow', `⚠ ไม้นี้เป็น ${pl.bias} สวนกับ Trend หลัก (${trendWord(tr)})`]);
+  /* ★ 10 ก.ย. 2026 — ไม่มี warning "สวน Trend หลัก" อีกแล้ว เพราะ Bias ตามหลัง Strategy ที่ล็อกไว้เสมอ เป็นไปไม่ได้ที่จะสวนกัน */
   if(left===0) warns.push(['red', `⛔ สัปดาห์นี้ใช้กระสุนครบ ${WP_BULLETS} นัดแล้ว`]);
   else if(left===1) warns.push(['yellow', `⚠ เหลือกระสุนนัดสุดท้ายของสัปดาห์นี้`]);
 
@@ -6939,7 +7032,7 @@ function sbSave(sym, status){
      && !confirm(`สัปดาห์นี้ใช้กระสุนครบ ${WP_BULLETS} นัดแล้ว\n\nยืนยันจะบันทึกไม้นี้เพิ่มหรือไม่?`)) return;
   const today = new Date().toISOString().slice(0,10);
   state.trades.push({
-    id:'t'+Date.now(), date:today, sym, port:'satB', bias:pl.bias,
+    id:'t'+Date.now(), date:today, sym, port:'satB', bias:sbBiasOf(sym),
     setup:null, posTier:null,
     entry:pl.entry, sl:pl.sl, tp:pl.tp||null, qty, mult:(pl.mult>0?pl.mult:cfg.mult), cur:cfg.cur,
     entryType: pl.etype,                              /* limit = รอราคามาหา · stop = ตามราคาไป */
@@ -6951,7 +7044,7 @@ function sbSave(sym, status){
     sbZone:  pl.zoneOn  ? (pl.zoneLevel  ?? true) : null,
     sbSetup: pl.setupOn ? (pl.setupLevel ?? true) : null
   });
-  pl.entry = null; pl.sl = null; pl.tp = null;   /* Zone/Setup ยังเปิดค้างไว้ตามที่ตั้งใจ */
+  pl.entry = null; pl.sl = null; pl.tp = null; pl._tpAuto = false;   /* Zone/Setup ยังเปิดค้างไว้ตามที่ตั้งใจ */
   render(); schedulePersist();
 }
 /* ช่องระดับราคากรอกไว้ล่วงหน้าได้เสมอ — สวิตช์ไว้สะบัดตอนเงื่อนไขมาถึงจริง */
@@ -6988,30 +7081,83 @@ function renderSBPlan(){
      <span style="margin-left:8px">${dots}</span>
      <b style="color:${clr};margin-left:4px">กระสุนเหลือ ${left}/${WP_BULLETS}</b>`;
 
+  const deadlinePassed = wpStrategyDeadlinePassed();
   document.getElementById('sbPlanBody').innerHTML = sbOnProducts().map(sym=>{
-    const pl = sbPlanOf(sym), cfg = sbCfg(sym);
-    const picked = wpIsPicked(sym), tr = wpTrendOf(sym);
-    const TRCLS = {Long:'on-bull', Short:'on-bear', Unclear:'on-range'};
-    const trBtn = (v,txt)=>`<button type="button" class="${tr===v?TRCLS[v]:''}" onclick="wpSetTrend('${sym}','${v}')">${txt}</button>`;
-    const biasBtn = (v,txt)=>`<button type="button" class="${pl.bias===v?(v==='Long'?'on-bull':'on-bear'):''}" onclick="sbSetBias('${sym}','${v}')">${txt}</button>`;
-    const typBtn  = (v,txt)=>`<button type="button" class="${pl.etype===v?'on-'+v:''}" onclick="sbSetType('${sym}','${v}')">${txt}</button>`;
+    const e = wpEntry(sym), cfg = sbCfg(sym);
+
+    /* ---- ยังไม่ล็อก Strategy ---- */
+    if(!e.locked){
+      if(deadlinePassed){
+        return `<div class="sbCard">
+          <div class="sbHead"><b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b></div>
+          <div class="sbMissed">⛔ พ้นกำหนดตั้ง Strategy ของสัปดาห์นี้แล้ว (เปิดรับแค่ อา.–จ.) — งดเทรด ${escHtml(cfg.label)} จนกว่าจะรีเซ็ตอาทิตย์หน้า</div>
+        </div>`;
+      }
+      const canPick = !!(e.invalNote||'').trim();
+      return `<div class="sbCard">
+        <div class="sbHead">
+          <label class="sbSw"><input type="checkbox" ${e.on?'checked':''} onchange="wpToggle('${sym}')">
+            <b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b></label>
+        </div>
+        <div class="sbStratGate">
+          <input type="text" class="sbStratNote" id="sbStratNote_${sym}" placeholder="Invalidation point — อะไรจะบอกว่า Bias สัปดาห์นี้ผิด (กรอกก่อนถึงจะเลือกได้)"
+            value="${escHtml(e.invalNote||'')}" oninput="wpSetStratNote('${sym}',this.value)" onchange="schedulePersist()">
+          <div class="seg">
+            <button type="button" id="sbStratBull_${sym}" ${canPick?'':'disabled'} onclick="wpLockStrategy('${sym}','Long')">Bullish</button>
+            <button type="button" id="sbStratBear_${sym}" ${canPick?'':'disabled'} onclick="wpLockStrategy('${sym}','Short')">Bearish</button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    /* ---- ล็อกแล้ว ---- */
+    const pl = sbPlanOf(sym), bias = sbBiasOf(sym);
+    const typBtn = (v,txt)=>`<button type="button" class="${pl.etype===v?'on-'+v:''}" onclick="sbSetType('${sym}','${v}')">${txt}</button>`;
     const numF = (label,field)=>`<div class="f"><label>${label}</label><input type="number" step="${cfg.step}" inputmode="decimal"`
       + ` value="${pl[field] ?? ''}" oninput="sbSetNum('${sym}','${field}',this.value)" onchange="sbCommit('${sym}')"></div>`;
+    const tpHint = (pl._tpAuto && pl.tp!=null) ? ` <span style="font-size:.6rem;font-weight:400;color:var(--muted)">auto 2R</span>` : '';
+    const tpField = `<div class="f"><label>TP${tpHint}</label><input type="number" step="${cfg.step}" inputmode="decimal"`
+      + ` value="${pl.tp ?? ''}" oninput="sbSetNum('${sym}','tp',this.value)" onchange="sbCommit('${sym}')"></div>`;
+
+    const stratBadge = `<div class="sbStratLocked">
+        <span class="badge ${bias==='Long'?'bull':'bear'}">${bias==='Long'?'Bullish':'Bearish'}</span>
+        <span class="note" title="${escHtml(e.invalNote||'')}">⚠ ${escHtml(e.invalNote||'')}</span>
+        ${e.flipUsed
+          ? `<span class="hint" style="color:var(--muted)">ใช้สิทธิ์สลับ Bias ของสัปดาห์นี้ไปแล้ว</span>`
+          : `<button type="button" class="small" onclick="wpStartFlip('${sym}')">🔄 สลับ Bias (เหลือ 1 ครั้ง)</button>`}
+      </div>`;
+
+    if(wpFlipMode[sym]){
+      return `<div class="sbCard">
+        <div class="sbHead"><b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b></div>
+        ${stratBadge}
+        <div class="sbStratGate">
+          <input type="text" class="sbStratNote" id="sbFlipNote_${sym}" placeholder="Invalidation point ใหม่ — อะไรจะบอกว่า Bias ใหม่นี้ผิด"
+            oninput="wpSetFlipNote('${sym}',this.value)">
+          <div class="seg">
+            <button type="button" id="sbFlipBull_${sym}" disabled onclick="wpCommitFlip('${sym}','Long')">Bullish</button>
+            <button type="button" id="sbFlipBear_${sym}" disabled onclick="wpCommitFlip('${sym}','Short')">Bearish</button>
+            <button type="button" class="small" onclick="wpCancelFlip('${sym}')">ยกเลิก</button>
+          </div>
+        </div>
+      </div>`;
+    }
+
     return `<div class="sbCard">
       <div class="sbHead">
-        <label class="sbSw"><input type="checkbox" ${picked?'checked':''} onchange="wpToggle('${sym}')">
+        <label class="sbSw"><input type="checkbox" checked disabled title="ล็อกแล้วสัปดาห์นี้">
           <b style="font-size:.95rem" title="${escHtml(sym)}">${cfg.icon||'📦'} ${escHtml(cfg.label)}</b></label>
-        <div class="seg">${trBtn('Long','Bullish')}${trBtn('Short','Bearish')}${trBtn('Unclear','Ranging')}</div>
       </div>
+      ${stratBadge}
       <div class="sbGrid">
         ${sbRow(sym,'zoneLevel','zoneOn','📍 Zone','Zone Level','zone','Zone Activate — ราคาเข้าโซนที่รอแล้ว')}
         ${sbRow(sym,'setupLevel','setupOn','⚡ Setup','Activation Level','setup','Setup Activate — เงื่อนไขจุดชนวนมาถึงแล้ว')}
       </div>
       <div class="sbEntry ${sbArmed(pl)?'':'off'}">
         <div class="sbFields">
-          <div class="seg">${biasBtn('Long','▲ Long')}${biasBtn('Short','▼ Short')}</div>
+          <span class="tag ${bias==='Long'?'long':'short'}" style="flex:0 0 auto">${bias==='Long'?'▲ Long':'▼ Short'}</span>
           <div class="seg" title="Limit = ตั้งรอให้ราคาย้อนมาหา · Stop = ตั้งไว้ให้ราคาวิ่งไปโดน">${typBtn('limit','◇ Limit')}${typBtn('stop','◆ Stop')}</div>
-          ${numF('Entry','entry')}${numF('SL','sl')}${numF('TP','tp')}
+          ${numF('Entry','entry')}${numF('SL','sl')}${tpField}
           <div class="sbInval ${pl.invalOn?'on':''}">
             <label class="sbTgl" title="เปิดเมื่อ setup โดน invalidate ไปแล้ว — ไม้นี้จะบันทึกไม่ได้"><span>⛔ Invalidation</span>
               <input type="checkbox" ${pl.invalOn?'checked':''} onchange="sbToggle('${sym}','invalOn')"><i></i></label>
