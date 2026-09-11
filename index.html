@@ -692,12 +692,13 @@ tr:last-child td{border-bottom:none}
 .rrgTbl td.dn{color:var(--red)}
 .rrgTbl tr.dim td{opacity:.55}
 /* แถบความแรง RS-Ratio/RS-Mom — แทนตัวเลข z-score ดิบที่อ่านยาก (ดู rrgGaugeHtml) */
-.rrgGaugeWrap{display:inline-flex;flex-direction:column;gap:3px;width:62px;text-align:left;vertical-align:middle}
+.rrgGaugeWrap{display:inline-flex;flex-direction:column;gap:3px;width:92px;text-align:left;vertical-align:middle}
 .rrgGauge{position:relative;height:6px;border-radius:999px;background:var(--hair);overflow:hidden}
 .rrgGauge::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--border)}
 .rrgGaugeFill{height:100%;border-radius:999px}
-.rrgGaugeLbl{display:flex;align-items:baseline;justify-content:space-between;gap:5px;
-  font-family:var(--sans);font-size:.64rem;font-weight:700;white-space:nowrap}
+/* flex-wrap: label กับ Δ อยู่บรรทัดเดียวกันถ้าพอ ไม่พอก็ตกบรรทัดเอง (Δ ตอนนี้เป็นคำยาวขึ้น "ปรับเพิ่ม/ปรับลง NN%") */
+.rrgGaugeLbl{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 6px;
+  font-family:var(--sans);font-size:.64rem;font-weight:700;line-height:1.3}
 .rrgGaugeDelta{font-size:.62rem;font-weight:700}
 .rrgGaugeDelta.muted{color:var(--muted);font-weight:400}
 .jvWrap{display:flex;gap:6px;align-items:center}
@@ -964,11 +965,11 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 </header>
 
 <div class="tabs">
-  <button type="button" class="tabbtn on" id="tabBtnMix" onclick="switchTab('mix')">Portfolio <span class="kbdhint">1</span></button>
-  <button type="button" class="tabbtn" id="tabBtnWatch" onclick="switchTab('watch')">Watchlist <span class="kbdhint">2</span></button>
-  <button type="button" class="tabbtn" id="tabBtnPlan" onclick="switchTab('plan')">แผนเทรด <span class="kbdhint">3</span></button>
-  <button type="button" class="tabbtn" id="tabBtnJournal" onclick="switchTab('journal')">Journal <span class="kbdhint">4</span></button>
-  <button type="button" class="tabbtn" id="tabBtnFlow" onclick="switchTab('flow')">Fund-flow <span class="kbdhint">5</span></button>
+  <button type="button" class="tabbtn on" id="tabBtnFlow" onclick="switchTab('flow')">Fund-flow <span class="kbdhint">1</span></button>
+  <button type="button" class="tabbtn" id="tabBtnMix" onclick="switchTab('mix')">Portfolio <span class="kbdhint">2</span></button>
+  <button type="button" class="tabbtn" id="tabBtnWatch" onclick="switchTab('watch')">Watchlist <span class="kbdhint">3</span></button>
+  <button type="button" class="tabbtn" id="tabBtnPlan" onclick="switchTab('plan')">แผนเทรด <span class="kbdhint">4</span></button>
+  <button type="button" class="tabbtn" id="tabBtnJournal" onclick="switchTab('journal')">Journal <span class="kbdhint">5</span></button>
 </div>
 
 <!-- ---- TAB 0: Watchlist ---- -->
@@ -1098,13 +1099,13 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 </div>
 
 <!-- ---- TAB 3: Portfolio Mix — รวมทุกบัญชี (สร้างจาก JS ทั้งแผง) ---- -->
-<div id="tabMix">
+<div id="tabMix" style="display:none">
   <div class="strip" id="mixSummary"></div>
   <div id="mixBody"></div>
 </div>
 
 <!-- ---- TAB 4: Fund-flow / Risk-on–Risk-off ---- -->
-<div id="tabFlow" style="display:none">
+<div id="tabFlow">
 
   <div class="ffQeBar" id="ffQeBar" onclick="ffOpenQe()" title="แตะเพื่อแก้โหมด / วันที่ประกาศ">
     <span class="ffQeMode" id="ffQeMode">—</span>
@@ -1941,7 +1942,7 @@ let tSetup = 'acc';
 let posTierLocked = false;
 let filter = 'all';
 let jFilter = 'all';
-let activeTab = 'mix';
+let activeTab = 'flow';
 let sortKey = 'date';
 let sortDir = 'desc';
 function setSort(key){
@@ -2349,7 +2350,7 @@ function resetAll(){
 
 /* ================= tabs ================= */
 function switchTab(t){
-  const order = ['mix','watch','plan','journal','flow'];
+  const order = ['flow','mix','watch','plan','journal'];
   const fromI = order.indexOf(activeTab), toI = order.indexOf(t);
   const dir = toI > fromI ? 1 : toI < fromI ? -1 : 0; // 1 = ไปข้างหน้า (ปัดซ้าย), -1 = ย้อนกลับ (ปัดขวา)
   activeTab = t;
@@ -2379,7 +2380,7 @@ function switchTab(t){
 }
 
 /* ---- swipe ซ้าย/ขวาเปลี่ยน tab (มือถือ) ---- */
-const TAB_ORDER = ['mix','watch','plan','journal','flow'];
+const TAB_ORDER = ['flow','mix','watch','plan','journal'];
 (function(){
   let sx=0, sy=0, tracking=false;
   document.addEventListener('touchstart', (e)=>{
@@ -2405,11 +2406,11 @@ document.addEventListener('keydown', (e)=>{
   if(e.target && e.target.isContentEditable) return;
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   if(document.querySelector('.overlay.show')) return; // อย่าสลับแท็บขณะเปิด modal อยู่
-  if(e.key==='1') switchTab('mix');
-  else if(e.key==='2') switchTab('watch');
-  else if(e.key==='3') switchTab('plan');
-  else if(e.key==='4') switchTab('journal');
-  else if(e.key==='5') switchTab('flow');
+  if(e.key==='1') switchTab('flow');
+  else if(e.key==='2') switchTab('mix');
+  else if(e.key==='3') switchTab('watch');
+  else if(e.key==='4') switchTab('plan');
+  else if(e.key==='5') switchTab('journal');
 });
 
 /* ================= currency helpers ================= */
@@ -2834,6 +2835,7 @@ function render(){
   renderJournal();
   renderWatchlist();
   renderPortfolioMix();
+  try{ renderFundflow(); }catch(err){ console.warn('fundflow:', err); }   /* Fund-flow = แท็บเริ่มต้นแล้ว ต้องพร้อมทันทีที่เปิดหน้า */
   renderChecklistDrafts();
   renderIdeas();
   privacyApply();   /* ต้องเป็นบรรทัดสุดท้าย — ทำงานกับ DOM ที่วาดเสร็จแล้วเท่านั้น */
@@ -7868,11 +7870,15 @@ function rrgPct(v){
   const z = Math.max(-2, Math.min(2, v-100));
   return Math.round((z+2)/4*100);
 }
-/* Δ อยู่หน่วยเดียวกับแถบ (z-score+100) · สเกลแถบเต็ม = ±2SD = 100% จึงคูณ 25 แปลงเป็น % ของแถบได้ตรง ๆ */
+/* คำบอกความเร็ว ไม่ใช้ % — label (แข็งมาก/อ่อน ฯลฯ) คือสภาวะปัจจุบัน ส่วนนี้คือ "ขยับเร็วแค่ไหนช่วงหลัง"
+   คนละสเกลกับ label โดยเจตนา (ดูคำอธิบาย legend เหนือตาราง) · title = ค่าดิบเผื่ออยาก hover ดูตัวเลขจริง */
 function rrgDeltaHtml(d){
   if(d==null) return '<span class="rrgGaugeDelta muted">—</span>';
-  const pct = Math.round(d*25), col = d>=0 ? 'var(--teal)' : 'var(--red)';
-  return '<span class="rrgGaugeDelta" style="color:'+col+'">'+(d>=0?'▲':'▼')+Math.abs(pct)+'%</span>';
+  const a = Math.abs(d), tt = 'เปลี่ยนไป '+d.toFixed(2)+' หน่วย';
+  const word = a<0.15 ? 'นิ่ง' : a<0.5 ? 'ขยับ' : a<1.0 ? 'ขยับแรง' : 'ขยับแรงมาก';
+  if(a<0.15) return '<span class="rrgGaugeDelta muted" title="'+tt+'">'+word+'</span>';
+  const col = d>=0 ? 'var(--teal)' : 'var(--red)';
+  return '<span class="rrgGaugeDelta" style="color:'+col+'" title="'+tt+'">'+(d>=0?'▲':'▼')+word+'</span>';
 }
 function rrgGaugeHtml(v, d){
   const lv = rrgLevel(v-100), pct = rrgPct(v);
@@ -7969,12 +7975,15 @@ function ffRenderThemes(){
         const da = a.dMom==null ? -Infinity : a.dMom, db = b.dMom==null ? -Infinity : b.dMom;
         return (db-da) || (b.ratio-a.ratio);
       });
-      /* Δ = เคลื่อนไปเท่าไหร่ใน momLag แท่งล่าสุด — แทนหางของ RRG ในรูปตัวเลข (ดู rrgDeltaHtml)
+      /* Δ = เคลื่อนไปเท่าไหร่ใน momLag แท่งล่าสุด — แทนหางของ RRG ด้วยคำ (ดู rrgDeltaHtml)
          ▲ = กำลังมุ่งขึ้น/ขวา (เข้าหา Leading) · ▼ = กำลังถอย */
       host.innerHTML =
-        '<table class="rrgTbl"><thead><tr><th>SYM</th><th>ควอดแรนต์</th>'
-        + '<th title="แข็งหรืออ่อนกว่า SPY อยู่ตอนนี้ (RS-Ratio) · Δ% = เปลี่ยนไปเท่าไหร่ใน '+TF.momLag+' '+TF.unit+'ล่าสุด">ความแข็ง</th>'
-        + '<th title="กำลังเร่งขึ้นหรือแผ่วลง (RS-Mom) · Δ% = เปลี่ยนไปเท่าไหร่ใน '+TF.momLag+' '+TF.unit+'ล่าสุด · เรียงลำดับในกลุ่มด้วยค่านี้">โมเมนตัม ↓</th>'
+        '<div class="hint" style="margin:2px 0 6px">Δ ล่าสุด ('+TF.momLag+' '+TF.unit+'): '
+        + '<b>นิ่ง</b>=แทบไม่ขยับ · <b>ขยับ</b>=มีทิศชัด · <b>ขยับแรง/ขยับแรงมาก</b>=เปลี่ยนเร็ว '
+        + '(hover ดูค่าจริงได้)</div>'
+        + '<table class="rrgTbl"><thead><tr><th>SYM</th><th>ควอดแรนต์</th>'
+        + '<th title="แข็งหรืออ่อนกว่า SPY อยู่ตอนนี้ (RS-Ratio) · Δ = ขยับเร็วแค่ไหนใน '+TF.momLag+' '+TF.unit+'ล่าสุด">ความแข็ง</th>'
+        + '<th title="กำลังเร่งขึ้นหรือแผ่วลง (RS-Mom) · Δ = ขยับเร็วแค่ไหนใน '+TF.momLag+' '+TF.unit+'ล่าสุด · เรียงลำดับในกลุ่มด้วยค่านี้">โมเมนตัม ↓</th>'
         + '<th title="อยู่ควอดแรนต์นี้มากี่'+TF.unit+'ติดกัน">อยู่มา ('+TF.unit+')</th>'
         + '<th title="ห่างจากจุดสูงสุด 1 ปี">OFF52W</th></tr></thead><tbody>'
         + sorted.map(x=>{
