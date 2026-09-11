@@ -696,7 +696,10 @@ tr:last-child td{border-bottom:none}
 .rrgGauge{position:relative;height:6px;border-radius:999px;background:var(--hair);overflow:hidden}
 .rrgGauge::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--border)}
 .rrgGaugeFill{height:100%;border-radius:999px}
-.rrgGaugeLbl{font-family:var(--sans);font-size:.64rem;font-weight:700;white-space:nowrap}
+.rrgGaugeLbl{display:flex;align-items:baseline;justify-content:space-between;gap:5px;
+  font-family:var(--sans);font-size:.64rem;font-weight:700;white-space:nowrap}
+.rrgGaugeDelta{font-size:.62rem;font-weight:700}
+.rrgGaugeDelta.muted{color:var(--muted);font-weight:400}
 .jvWrap{display:flex;gap:6px;align-items:center}
 
 .scrollTopBtn{
@@ -7865,11 +7868,17 @@ function rrgPct(v){
   const z = Math.max(-2, Math.min(2, v-100));
   return Math.round((z+2)/4*100);
 }
-function rrgGaugeHtml(v){
+/* Δ อยู่หน่วยเดียวกับแถบ (z-score+100) · สเกลแถบเต็ม = ±2SD = 100% จึงคูณ 25 แปลงเป็น % ของแถบได้ตรง ๆ */
+function rrgDeltaHtml(d){
+  if(d==null) return '<span class="rrgGaugeDelta muted">—</span>';
+  const pct = Math.round(d*25), col = d>=0 ? 'var(--teal)' : 'var(--red)';
+  return '<span class="rrgGaugeDelta" style="color:'+col+'">'+(d>=0?'▲':'▼')+Math.abs(pct)+'%</span>';
+}
+function rrgGaugeHtml(v, d){
   const lv = rrgLevel(v-100), pct = rrgPct(v);
   return '<div class="rrgGaugeWrap" title="ค่าดิบ: '+v.toFixed(1)+'">'
        + '<div class="rrgGauge"><div class="rrgGaugeFill" style="width:'+pct+'%;background:'+lv.col+'"></div></div>'
-       + '<div class="rrgGaugeLbl" style="color:'+lv.col+'">'+lv.lbl+'</div>'
+       + '<div class="rrgGaugeLbl"><span style="color:'+lv.col+'">'+lv.lbl+'</span>'+rrgDeltaHtml(d)+'</div>'
        + '</div>';
 }
 function ffRenderThemes(){
@@ -7960,16 +7969,13 @@ function ffRenderThemes(){
         const da = a.dMom==null ? -Infinity : a.dMom, db = b.dMom==null ? -Infinity : b.dMom;
         return (db-da) || (b.ratio-a.ratio);
       });
-      /* Δ = เคลื่อนไปเท่าไหร่ใน momLag แท่งล่าสุด — แทนหางของ RRG ในรูปตัวเลข
+      /* Δ = เคลื่อนไปเท่าไหร่ใน momLag แท่งล่าสุด — แทนหางของ RRG ในรูปตัวเลข (ดู rrgDeltaHtml)
          ▲ = กำลังมุ่งขึ้น/ขวา (เข้าหา Leading) · ▼ = กำลังถอย */
-      const delta = v => v==null ? '<div class="sub">—</div>'
-        : '<div class="sub" style="color:'+(v>=0?'var(--teal)':'var(--red)')+'">'
-          + (v>=0?'▲':'▼') + Math.abs(v).toFixed(1) + '</div>';
       host.innerHTML =
         '<table class="rrgTbl"><thead><tr><th>SYM</th><th>ควอดแรนต์</th>'
-        + '<th title="แข็ง/อ่อนกว่า SPY · ตัวเลขล่าง = เปลี่ยนไปเท่าไหร่ใน '+TF.momLag+' '+TF.unit+'ล่าสุด">RS-Ratio</th>'
-        + '<th title="โมเมนตัมของ RS · ตัวเลขล่าง = เปลี่ยนไปเท่าไหร่ใน '+TF.momLag+' '+TF.unit+'ล่าสุด · เรียงลำดับในกลุ่มด้วยค่านี้">RS-Mom ↓</th>'
-        + '<th title="อยู่ควอดแรนต์นี้มากี่'+TF.unit+'ติดกัน">'+TF.unit+'</th>'
+        + '<th title="แข็งหรืออ่อนกว่า SPY อยู่ตอนนี้ (RS-Ratio) · Δ% = เปลี่ยนไปเท่าไหร่ใน '+TF.momLag+' '+TF.unit+'ล่าสุด">ความแข็ง</th>'
+        + '<th title="กำลังเร่งขึ้นหรือแผ่วลง (RS-Mom) · Δ% = เปลี่ยนไปเท่าไหร่ใน '+TF.momLag+' '+TF.unit+'ล่าสุด · เรียงลำดับในกลุ่มด้วยค่านี้">โมเมนตัม ↓</th>'
+        + '<th title="อยู่ควอดแรนต์นี้มากี่'+TF.unit+'ติดกัน">อยู่มา ('+TF.unit+')</th>'
         + '<th title="ห่างจากจุดสูงสุด 1 ปี">OFF52W</th></tr></thead><tbody>'
         + sorted.map(x=>{
             if(x.err) return '<tr class="dim"><td><b>'+ffEsc(x.sym)+'</b><div class="sub">'+ffEsc(x.name)+'</div></td>'
@@ -7977,10 +7983,10 @@ function ffRenderThemes(){
             const q = QLBL[x.quad];
             return '<tr><td><b>'+ffEsc(x.sym)+'</b><div class="sub">'+ffEsc(x.name)+'</div></td>'
               + '<td style="color:'+q[1]+';font-weight:700">'+q[0]+'</td>'
-              + '<td>'+rrgGaugeHtml(x.ratio)+delta(x.dRatio)+'</td>'
-              + '<td>'+rrgGaugeHtml(x.mom)+delta(x.dMom)+'</td>'
+              + '<td>'+rrgGaugeHtml(x.ratio, x.dRatio)+'</td>'
+              + '<td>'+rrgGaugeHtml(x.mom, x.dMom)+'</td>'
               + '<td>'+x.days+'</td>'
-              + '<td class="'+(x.off52>-5?'':'dn')+'">'+x.off52.toFixed(1)+'</td></tr>';
+              + '<td class="'+(x.off52>-5?'':'dn')+'">'+x.off52.toFixed(1)+'%</td></tr>';
           }).join('')
         + '</tbody></table>';
     }
