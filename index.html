@@ -691,6 +691,12 @@ tr:last-child td{border-bottom:none}
 .rrgTbl td.up{color:var(--teal)}
 .rrgTbl td.dn{color:var(--red)}
 .rrgTbl tr.dim td{opacity:.55}
+/* แถบความแรง RS-Ratio/RS-Mom — แทนตัวเลข z-score ดิบที่อ่านยาก (ดู rrgGaugeHtml) */
+.rrgGaugeWrap{display:inline-flex;flex-direction:column;gap:3px;width:62px;text-align:left;vertical-align:middle}
+.rrgGauge{position:relative;height:6px;border-radius:999px;background:var(--hair);overflow:hidden}
+.rrgGauge::after{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--border)}
+.rrgGaugeFill{height:100%;border-radius:999px}
+.rrgGaugeLbl{font-family:var(--sans);font-size:.64rem;font-weight:700;white-space:nowrap}
 .jvWrap{display:flex;gap:6px;align-items:center}
 
 .scrollTopBtn{
@@ -7844,6 +7850,28 @@ function ffRenderCtx(){
     +'<div class="ffCtxVerdict '+V[0]+'">'+V[1]+'</div>';
 }
 /* ---------- ธีม: ควอดแรนต์ ---------- */
+/* RS-Ratio/RS-Mom เป็น z-score บวก 100 (ดูคอมเมนต์บนสุดของบล็อก RRG) — ตัวเลขดิบเทียบ 99 กับ 100
+   แทบไม่ต่างกันแม้ความหมายคนละขั้ว จึงแปลงเป็นแถบ + ป้ายความแรง 5 ระดับ ให้เห็นภาพทันทีแทน
+   z = ค่าดิบ - 100 · เขียว = แข็งกว่าตลาด (SPY) · แดง = อ่อนกว่า · เหลือง = พอๆ กัน */
+function rrgLevel(z){
+  if(z >=  1)   return {lbl:'แข็งมาก',  col:'var(--teal)'};
+  if(z >=  0.3) return {lbl:'แข็ง',     col:'rgba(14,156,134,.65)'};
+  if(z >  -0.3) return {lbl:'กลาง',     col:'var(--amber)'};
+  if(z >  -1)   return {lbl:'อ่อน',     col:'rgba(214,69,69,.65)'};
+  return              {lbl:'อ่อนมาก', col:'var(--red)'};
+}
+/* แถบเต็มสเกล = ±2SD (ครอบคลุมข้อมูลส่วนใหญ่จริง ๆ) · จุดกึ่งกลางแถบ = เท่ากับตลาดพอดี */
+function rrgPct(v){
+  const z = Math.max(-2, Math.min(2, v-100));
+  return Math.round((z+2)/4*100);
+}
+function rrgGaugeHtml(v){
+  const lv = rrgLevel(v-100), pct = rrgPct(v);
+  return '<div class="rrgGaugeWrap" title="ค่าดิบ: '+v.toFixed(1)+'">'
+       + '<div class="rrgGauge"><div class="rrgGaugeFill" style="width:'+pct+'%;background:'+lv.col+'"></div></div>'
+       + '<div class="rrgGaugeLbl" style="color:'+lv.col+'">'+lv.lbl+'</div>'
+       + '</div>';
+}
 function ffRenderThemes(){
   const f = ffState();
   const r = f.rrg || {};
@@ -7949,8 +7977,8 @@ function ffRenderThemes(){
             const q = QLBL[x.quad];
             return '<tr><td><b>'+ffEsc(x.sym)+'</b><div class="sub">'+ffEsc(x.name)+'</div></td>'
               + '<td style="color:'+q[1]+';font-weight:700">'+q[0]+'</td>'
-              + '<td class="'+(x.ratio>=100?'up':'dn')+'">'+x.ratio.toFixed(1)+delta(x.dRatio)+'</td>'
-              + '<td class="'+(x.mom>=100?'up':'dn')+'">'+x.mom.toFixed(1)+delta(x.dMom)+'</td>'
+              + '<td>'+rrgGaugeHtml(x.ratio)+delta(x.dRatio)+'</td>'
+              + '<td>'+rrgGaugeHtml(x.mom)+delta(x.dMom)+'</td>'
               + '<td>'+x.days+'</td>'
               + '<td class="'+(x.off52>-5?'':'dn')+'">'+x.off52.toFixed(1)+'</td></tr>';
           }).join('')
