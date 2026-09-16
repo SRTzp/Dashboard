@@ -3026,7 +3026,8 @@ async function rsLoad(force){
       db.collection('news').orderBy('date','desc').limit(30).get(),
       db.collection('meta').doc('push').get()
     ]);
-    researchDocs = rs.docs.map(d=>d.data());
+    /* ticker สำรองจาก doc id — doc ที่ import_pine.py สร้างใหม่ (มีแค่ fqc/growth_gate) ยังไม่มี field ticker */
+    researchDocs = rs.docs.map(d=>Object.assign({ticker:d.id}, d.data()));
     macroDoc     = mc.docs.length ? mc.docs[0].data() : null;
     newsDocs     = nw.docs.map(d=>d.data());
     metaPushDoc  = mt.exists ? mt.data() : null;
@@ -4926,7 +4927,7 @@ function wlScoreChips(r){
   const d = r.d;
   if(r.port==='core'){
     const f = d && d.fqc;
-    const fq = f ? `<span class="rsChip ghost">FQC ${escHtml(f.lane||'—')}·${escHtml(f.score!=null?f.score:'—')}</span>`
+    const fq = f ? `<span class="rsChip ghost">FQC ${escHtml(f.lane||'—')}${f.approx?'~':''}·${escHtml(f.score!=null?f.score:'—')}</span>`
       : (r.w && r.w.fundCheck && r.w.fundCheck.tier ? `<span class="rsChip ghost" title="Fundamental Checklist ในเครื่อง">FC ${escHtml(r.w.fundCheck.tier)}</span>` : '<span class="rsChip ghost">FQC —</span>');
     return rsGates(d||{}) + fq;
   }
@@ -5146,7 +5147,7 @@ function wlResearchHtml(r){
     rows += wlLayer('Thesis + Gates', th ? rsGatesNamed(d) + (th.rule_fired?' <span class="rsChip red">rule fired</span>':'') : '<span class="rsChip amber">ยังไม่มี Thesis</span>',
       th ? `${esc(rsD(th.date))}${th.age_days!=null?' · '+th.age_days+' วัน':''}` : '—');
     rows += wlLayer('Round Card', rc && rc.verdict && rc.verdict!=='none' ? rsRcChip(rc) + (rc.reason?` <span class="small2">${esc(rc.reason)}</span>`:'') : none, esc(rsD(rc && rc.date)));
-    rows += wlLayer('FQC · sizing', f ? `<span class="rsChip ghost">${esc(f.lane||'—')} · ${esc(f.score!=null?f.score:'—')}</span> เป้า ${f.target_weight!=null?esc(f.target_weight)+'%':'—'}${f.eligible===false?' <span class="rsChip red">ไม่ผ่านเกณฑ์</span>':''}` : none, esc(rsD(f && f.date)));
+    rows += wlLayer('FQC · sizing', f ? `<span class="rsChip ghost">${esc(f.lane||'—')}${f.approx?'~':''} · ${esc(f.score!=null?f.score:'—')}</span> เป้า ${f.target_weight!=null?(f.approx?'~':'')+esc(f.target_weight)+'%':'—'}${f.approx?' <span class="small2">(ประมาณจาก Lite — ยืนยันด้วย FQC-Full)</span>':''}${f.eligible===false?' <span class="rsChip red">ไม่ผ่านเกณฑ์</span>':''}` : none, esc(rsD(f && f.date)));
     const ta = d.tier_ab, ma = d.mode_a;
     after += `<div class="wlSmall">Tier A/B ${ta?esc(ta.verdict)+' '+esc(ta.pass)+'/'+esc(ta.total):'—'} · Screening ${ma?esc(ma.score)+'/'+esc(ma.max||15):'—'}</div>`;
     after += wlBizHtml(b) + wlDeepHtml(th);
@@ -9509,7 +9510,7 @@ function szSizeLine(){
   const slotsAfter = heat.nPos + (held ? 0 : 1);
   if(port==='core'){
     const f = d && d.fqc;
-    P.push(part(`FQC เป้า ${f && f.target_weight!=null ? f.target_weight+'%' : '—'} (จริง ${szHoldPct(port,sym).toFixed(1)}%)`, f && f.eligible===false ? 'r' : ''));
+    P.push(part(`FQC เป้า ${f && f.target_weight!=null ? (f.approx?'~':'')+f.target_weight+'%' : '—'} (จริง ${szHoldPct(port,sym).toFixed(1)}%)`, f && f.eligible===false ? 'r' : ''));
     P.push(part(`ช่อง ${slotsAfter}/${max}`, slotsAfter>max ? 'r' : ''));
     const th = d && d.thesis;
     const dots = th && th.gates ? GATE_ORDER.map(k=>({GREEN:'🟢',YELLOW:'🟡',RED:'🔴'})[th.gates[k]]||'⚪').join('') : '—';
