@@ -850,6 +850,9 @@ tr:last-child td{border-bottom:none}
 .wlKV{display:grid;grid-template-columns:80px minmax(0,1fr);gap:10px;padding:7px 0;border-top:1px solid var(--hair);font-size:.78rem}
 .wlKV .k{color:var(--muted);font-size:.7rem}
 .wlDot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-right:6px}
+.wlDelta{width:100%;min-width:520px;border-collapse:collapse;font-size:.72rem;line-height:1.35}
+.wlDelta th,.wlDelta td{padding:6px;text-align:left;vertical-align:top;border-bottom:1px solid var(--hair)}
+.wlDelta th{color:var(--muted);font-weight:600;white-space:nowrap}
 .wlLay{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--hair);font-size:.78rem}
 .wlLay .n{font-weight:600}
 .wlLay .u{font-size:.66rem;color:var(--faint);text-align:right}
@@ -3082,8 +3085,6 @@ const RS_DEMO = (function(){
            : g('YELLOW','RED','RED','YELLOW'),
       sections:{}, rules:[], rule_fired:false, coverage_path:'coverage/TICKER'+i+'-thesis.md'
     },
-    checklist:null,
-    round_card:{date:'2026-08-20', verdict: rc, blocked: rc!=='ready', reason:''},
     blockers:[], history:[], next_action:{code:'none',label:'—',level:'none'}, summary:''
   });
 
@@ -3121,10 +3122,6 @@ const RS_DEMO = (function(){
       ],
       rule_fired:true, coverage_path:'coverage/NVDA-thesis.md'
     },
-    checklist:{verdict:'WATCH', date:'2026-08-20', age_days:24, q1:'Wide', q2:'Core fit', q3:'Aging-mild', q4:'Some',
-      q5_tripwires:['[tripwire]'], s6:1, s7:1, n6:'[ข้อความ tripwire]',
-      stepdowns:[{reason:'Q3 None recent', steps:1}], effective_R:0.75},
-    round_card:{date:'2026-07-13', verdict:'caution', blocked:true, reason:'ด่าน RED'},
     blockers:[
       {text:'§C valuation range ผิด (ลำดับปีกลับด้าน)', src:'gate:C'},
       {text:'DOJ สอบ Groq = trigger §F ยังไม่ re-run', src:'rule_fired'},
@@ -3145,8 +3142,7 @@ const RS_DEMO = (function(){
     mode_a:{score:14, max:15, rank:1, universe:20, date:today},
     growth_gate:{score:8, max:9, gate_pass:6, R:1.00, date:today},
     biz:{done:false, date:null, age_days:null, dealbreaker:{hit:false, items:[]}, sources:[]},
-    thesis:null, checklist:null,
-    round_card:{date:null, verdict:'none', blocked:false, reason:''},
+    thesis:null,
     blockers:[], history:[{date:today, event:'Mode A', result:'14/15'}],
     next_action:{code:'run_biz', label:'Biz', level:'amber'},
     summary:'คะแนนรอบคัดสูงสุด แต่ยังไม่เคยทำความเข้าใจธุรกิจ'
@@ -5059,6 +5055,31 @@ function wlTradeFor(sym){
 function wlLayer(name, res, date){
   return `<div class="wlLay"><span class="n">${name}</span><span class="r">${res}</span><span class="u">${date==null?'—':date}</span></div>`;
 }
+/* เฟส 5 ขั้น 5: field ใหม่เป็น optional ทั้งหมด เพื่อให้เอกสารเก่าไม่เกิดกล่องว่าง */
+function wlVerdictStatus(v){
+  return v==='GREEN' ? ['green','🟢'] : v==='YELLOW' ? ['amber','🟡'] : v==='RED' ? ['red','🔴'] : ['ghost','—'];
+}
+function wlCoreThesisExtras(th){
+  if(!th || typeof th!=='object') return '';
+  const stance = th.stance && typeof th.stance==='object' ? th.stance : null;
+  const stanceRows = stance && ['business','equity'].filter(k=>['GREEN','YELLOW','RED'].includes(stance[k]));
+  const deltas = Array.isArray(th.delta) ? th.delta.filter(x=>x && typeof x==='object' && (x.section || x.before || x.evidence || x.verdict)).slice(0,5) : [];
+  const confirmations = Array.isArray(th.rules) ? th.rules.filter(x=>x && x.type==='confirmation' && x.status==='watching' && x.text) : [];
+  if(!stanceRows.length && !deltas.length && !confirmations.length) return '';
+  const chips = stanceRows.map(k=>{
+    const [color, icon] = wlVerdictStatus(stance[k]);
+    return `<span class="rsChip ${color}">${k==='business'?'ธุรกิจ':'ผู้ถือหุ้น'} ${icon}</span>`;
+  }).join(' ');
+  const gate = ['GREEN','YELLOW','RED'].includes(th.gate_overall) ? (()=>{
+    const [color, icon] = wlVerdictStatus(th.gate_overall);
+    return `<span class="rsChip ${color}">Gate ${icon}</span>`;
+  })() : '';
+  const deltaTable = deltas.length ? `<div class="wlKV"><span class="k">งบนี้เปลี่ยน thesis ตรงไหน</span><span class="v" style="overflow:auto"><table class="wlDelta"><thead><tr><th>หมวด</th><th>เดิม</th><th>หลักฐานใหม่</th><th>ข้อสรุป</th></tr></thead><tbody>${deltas.map(x=>{
+    const [color, icon] = wlVerdictStatus(x.verdict);
+    return `<tr><td>${escHtml(x.section||'—')}</td><td>${escHtml(x.before||'—')}</td><td>${escHtml(x.evidence||'—')}</td><td><span class="rsChip ${color}">${icon}</span></td></tr>`;
+  }).join('')}</tbody></table></span></div>` : '';
+  return `${(gate||chips)?`<div class="wlKV"><span class="k">Thesis stance</span><span class="v">${gate}${gate&&chips?' ':''}${chips}</span></div>`:''}${deltaTable}${confirmations.length?`<div class="wlKV"><span class="k">ต้องเห็น</span><span class="v">${confirmations.map(x=>`<span class="wlDot"></span>${escHtml(x.text)}`).join('<br>')}</span></div>`:''}`;
+}
 function wlDeepHtml(th){
   if(!th) return '<div class="panel"><div class="rsCardTitle"><h3>Deep dive · Quality Thesis</h3></div><div class="empty">ยังไม่เคยเขียน Thesis ของตัวนี้</div></div>';
   const sec = (th.sections && th.sections[wlDeep]) || null;
@@ -5072,7 +5093,7 @@ function wlDeepHtml(th){
       <div class="rsDeepBox"><div class="k">ตารางเฝ้าระวัง §F</div>
         ${(th.rules||[]).map(x=>`<div style="margin-bottom:7px">${x.status==='fired'?'<span class="fired">fired</span><br>':''}
           <div class="v">${escHtml(x.text)}${x.date?' — '+rsD(x.date):''}${x.source?' · '+escHtml(x.source):''}</div></div>`).join('') || '<div class="v">—</div>'}</div>
-    </div></div>`;
+    </div>${wlDeep==='C' && sec && typeof sec.implied==='string' && sec.implied.trim()?`<div class="wlKV" style="margin-top:10px"><span class="k">ราคานี้ต้องการ</span><span class="v">${escHtml(sec.implied.trim())}</span></div>`:''}</div>`;
 }
 function wlBizHtml(b){
   if(!b || !b.done) return '';
@@ -5146,6 +5167,7 @@ function wlDetailHtml(r){
       ${ind?`<div class="wlKV"><span class="k">Industry</span><span class="v">${ind}</span></div>`:''}
       ${w && w.technical ? `<div class="wlKV"><span class="k">Note</span><span class="v">${esc(w.technical)}</span></div>` : ''}
       <div class="wlKV"><span class="k">Blockers</span><span class="v">${bl.length ? bl.slice(0,3).map(b=>`<span class="wlDot"></span>${esc(b.text)}`).join('<br>') : 'ไม่มี'}</span></div>
+      ${r.port==='core' ? wlCoreThesisExtras(d && d.thesis) : ''}
       ${ruleNews.length ? `<div class="wlKV"><span class="k">ข่าวชนกฎ</span><span class="v">${ruleNews.map(n=>`${esc(rsD(n.date))} · ${esc(n.headline)} <span class="rsChip red">rule ${esc(n.matched_rule)}</span>`).join('<br>')}</span></div>` : ''}
     </div>`;
   }
@@ -5211,171 +5233,6 @@ function wlResearchHtml(r){
   return `<div class="panel"><div class="rsCardTitle"><h3>ชั้นคะแนน · ${r.port==='core'?'Core':r.port==='satA'?'Sat.A':'Candidate'}</h3>${r.port==='core'?wlEntryChip(d):''}</div>${wlResearchRows(d).join('')}
     ${r.port==='cand'?`<div class="wlSmall">ขั้นถัดไป: <code>/biz ${escHtml(r.sym)}</code></div>`:''}
     ${r.port==='core' && d.thesis && d.thesis.coverage_path?`<div class="rsFoot">เนื้อเต็ม: ${escHtml(d.thesis.coverage_path)} บน Mac</div>`:''}</div>${after}`;
-}
-/* ---- ของเดิม (ตารางแยก Core/Sat.A + ลากเรียง) — เลิกใช้เฟส 4 · ไม่มีปุ่มไหนเรียกแล้ว
-   renderWatchPort ต้องมี wlBody_/wlCards_ ซึ่งไม่มีใน DOM แล้ว จึงใส่ guard ไว้ ---- */
-function toggleWatchCollapse(port){
-  if(!state.watchCollapsed) state.watchCollapsed = {};
-  state.watchCollapsed[port] = !state.watchCollapsed[port];
-  const content = document.getElementById(`wlContent_${port}`);
-  const btn = document.getElementById(`wlCollapseBtn_${port}`);
-  if(content) content.style.display = state.watchCollapsed[port] ? 'none' : '';
-  if(btn) btn.classList.toggle('collapsed', !!state.watchCollapsed[port]);
-  schedulePersist();
-}
-function renderWatchPort(port){
-  if(!document.getElementById(`wlBody_${port}`)) return;
-  if(!state.watchSortMode) state.watchSortMode = defaultWatchSortMode();
-  const mode = state.watchSortMode[port] || 'date';
-  const scored = port!=='satB';
-  let list = state.watchlist.filter(w=>w.port===port);
-  if(mode==='manual'){
-    list = list.slice().sort((a,b)=>(a.order??0)-(b.order??0));
-  } else if(mode==='score' && scored){
-    list = list.slice().sort((a,b)=>((b.score||0)-(a.score||0)) || (b.date||'').localeCompare(a.date||''));
-  } else {
-    list = list.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  }
-  document.getElementById(`wlEmpty_${port}`).style.display = list.length ? 'none' : 'block';
-  const dragOn = mode==='manual';
-
-  function scoreBadge(w){
-    /* Sat.A — Growth Gate /9 พร้อม 1R% ที่คะแนนนั้นให้ (ตัวเลขที่เอาไปคิดขนาดไม้จริง) */
-    if(port==='satA'){
-      if(!ggDone(w.gg)) return `<span class="hint" style="margin:0;color:var(--amber)">ยังไม่ให้คะแนน</span>`;
-      const t = ggTotal(w.gg), row = ggRow(t);
-      const bg = t>=8?'var(--teal)':t>=6?'var(--blue)':t>=4?'var(--amber)':'var(--muted)';
-      return `<span class="tag" style="background:${bg};color:#fff;font-weight:700">${t}/${GG_MAX}</span> <span class="hint" style="margin:0">1R ${row.r.toFixed(2)}%</span>`;
-    }
-    if(w.fundCheck && w.fundCheck.tier){
-      const fc = w.fundCheck;
-      return `<span class="tag" style="background:${fundTierColor(fc.tier)};color:#fff;font-weight:700">${fc.tier}</span> <span class="hint" style="margin:0">${fc.total||0}/${fundScoreMax(fc.type)}</span>`;
-    }
-    return `<span class="hint" style="margin:0">—</span>`;
-  }
-  function fundBizText(w){
-    const fc = w.fundCheck || {};
-    const n = fc.note || {};
-    const biz = n.sum || n.biz || '';
-    const when = fc.checkedAt || '';
-    let meta = '';
-    if(when){
-      const days = Math.floor((Date.now()-Date.parse(when))/86400000);
-      const stale = !isNaN(days) && days>90;
-      meta = `<div class="hint" style="font-size:.66rem;margin-top:3px;opacity:.85">เช็คเมื่อ ${when}${fc.source?' · AI ช่วยกรอก':''}`
-        + (stale?` <span class="tag" style="background:var(--amber);color:#111;font-size:.6rem;padding:0 4px;font-weight:700">ครบไตรมาส — ควร re-check</span>`:'')
-        + `</div>`;
-    }
-    return `<div><div class="wlnote" style="max-width:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${biz?escHtml(biz):'<span class="placeholder">—</span>'}</div>${meta}</div>`;
-  }
-  function fundExpandIcon(w){
-    if(port==='satA'){
-      const cat = (w.gg && w.gg.catalyst || '').trim();
-      if(!cat) return `<span class="hint" style="margin:0;color:var(--amber)" title="ยังไม่ได้ระบุ Catalyst 1-3 เดือน">⚡</span>`;
-      return `<span class="hint" style="margin:0;color:var(--teal);cursor:help" title="Catalyst 1-3 เดือน: ${escHtml(cat)}">⚡</span>`;
-    }
-    if(!w.fundCheck) return '';
-    return `<button class="small ghost" style="padding:2px 4px" onclick="openFundDetail('${w.id}')" title="ดูรายละเอียด Fundamental Checklist">⤢</button>`;
-  }
-  function noteTd(w, field){
-    const val = w[field]||'';
-    /* Core ที่ทำ Fundamental Checklist มาแล้ว — โชว์สรุปจาก checklist แทน (แก้ inline ไม่ได้) */
-    if(field==='fundamental' && w.fundCheck) return `<td>${fundBizText(w)}</td>`;
-    return `<td class="wlnote${val?'':' placeholder'}" contenteditable="true" data-wid="${w.id}" data-field="${field}" onfocus="clearPlaceholder(this)" onblur="saveInlineField(this)">${escHtml(val)||'เพิ่มข้อความ…'}</td>`;
-  }
-  function noteInline(w, field, label){
-    const val = w[field]||'';
-    if(field==='fundamental' && w.fundCheck) return `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> ${fundBizText(w)}</div>`;
-    return `<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>${label}:</b> <span class="wlnote${val?'':' placeholder'}" contenteditable="true" data-wid="${w.id}" data-field="${field}" onfocus="clearPlaceholder(this)" onblur="saveInlineField(this)">${escHtml(val)||'เพิ่มข้อความ…'}</span></div>`;
-  }
-  /* Sat.A ไม่ใช้ Fundamental Checklist แล้ว — ให้แก้ในฟอร์ม Watchlist ที่มีช่องให้คะแนน Growth Gate */
-  function editBtnAction(w){ return (w.fundCheck && port!=='satA') ? `openFundEdit('${w.id}')` : `editWatch('${w.id}')`; }
-
-  document.getElementById(`wlBody_${port}`).innerHTML = list.map(w=>{
-    const eligible = watchEligible(w);
-    return `<tr data-wid="${w.id}" style="${eligible?'':'opacity:.55'}">
-      <td class="dragCol"><span class="dragHandle ${dragOn?'':'disabled'}" title="ลากเพื่อจัดเรียง">⠿</span></td>
-      <td>${w.date||'—'}</td>
-      <td style="font-weight:600">${escHtml(w.sym)}${eligible?'':' <span class="hint" style="display:inline;color:var(--amber)">⚠ ยังไม่ครบเงื่อนไข</span>'}${port==='satA'&&!ggDone(w.gg)?' <span style="color:var(--amber)" title="ยังไม่ได้ใส่คะแนน Growth Gate — เทรดได้ปกติ แต่ระบบจะคิดขนาดไม้เป็น Starter 0.50%">⚠</span>':''}</td>
-      ${port==='satB'?`<td class="sans">${w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:'—'}</td>`:''}
-      ${scored?`<td class="sans industryCell" style="color:var(--muted)"${w.industry?` title="${escHtml(w.industry)}"`:''}>${w.industry?(indLink(w.industry)
-        ? `<span class="indTxt indLinked" onclick="indOpen('${escHtml(w.industry).replace(/'/g,"\\'")}')" title="เปิดคู่มือ ${escHtml(w.industry)}">${ICON_INDUSTRY_MINI} ${escHtml(industryShort(w.industry))} ↗</span>`
-        : `<span class="indTxt">${ICON_INDUSTRY_MINI} ${escHtml(industryShort(w.industry))}</span>`):'—'}</td>`:''}
-      ${port==='satA'
-        ? `<td class="wlnote${(w.gg&&w.gg.catalyst||'').trim()?'':' placeholder'}">${(w.gg&&w.gg.catalyst||'').trim()?escHtml(w.gg.catalyst):'ยังไม่ได้ระบุ'}</td>`
-        : noteTd(w,'fundamental')}
-      ${scored?`<td class="sans" style="padding-left:2px;padding-right:2px;text-align:center">${fundExpandIcon(w)}</td><td class="sans">${scoreBadge(w)}</td>`:''}
-      <td class="sans">${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')" title="เปิดลิงก์">🔗</button>`:''}</td>
-      <td class="sans"><div class="rowbtns">
-        <button class="small" onclick="${editBtnAction(w)}" title="${w.fundCheck?'แก้ไข Fundamental Checklist':'แก้ไข Watchlist'}">✎</button>
-        <button class="small danger" onclick="delWatch('${w.id}')">✕</button>
-      </div></td>
-    </tr>`;
-  }).join('');
-
-  document.getElementById(`wlCards_${port}`).innerHTML = list.length ? list.map(w=>{
-    const eligible = watchEligible(w);
-    return `<div class="tcard" data-wid="${w.id}" style="${eligible?'':'opacity:.6'}">
-      <div class="r1"><span class="sym"><span class="dragHandle ${dragOn?'':'disabled'}" style="margin-right:2px;vertical-align:middle">⠿</span>${escHtml(w.sym)} ${port==='satB'&&w.bias?`<span class="tag ${biasTagClass(w.bias)}">${trendWord(w.bias)}</span>`:''} ${w.industry?`<span class="hint${indLink(w.industry)?' indLinked':''}" style="display:inline;color:var(--muted)" ${indLink(w.industry)?`onclick="indOpen('${escHtml(w.industry).replace(/'/g,"\\'")}')" title="เปิดคู่มือ ${escHtml(w.industry)}"`:`title="${escHtml(w.industry)}"`}><svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.8"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.8" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.4"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="2"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="3" stroke-linecap="round"/></svg> ${escHtml(industryShort(w.industry))}</span>`:''} ${w.link?`<button class="wllinkbtn" onclick="window.open('${escHtml(w.link)}','_blank')">🔗</button>`:''}</span><span class="sub">${w.date||''}</span></div>
-      ${!eligible?`<div class="hint" style="color:var(--amber)">⚠ ต้องมี ${port==='satB'?'Note':'Business'}</div>`:''}
-      ${port==='satA'&&!ggDone(w.gg)?`<div class="hint" style="color:var(--amber)">⚠ ยังไม่ได้ใส่คะแนน Growth Gate — เทรดได้ปกติ แต่ระบบคิดขนาดไม้เป็น Starter 0.50%</div>`:''}
-      ${port==='satA'?'':noteInline(w,'fundamental',port==='satB'?'Note':'Business')}
-      ${scored?`<div style="margin-top:2px;margin-bottom:6px;display:flex;align-items:center;gap:4px">${scoreBadge(w)}${fundExpandIcon(w)}</div>`:''}
-      ${port==='satA'?`<div style="font-size:var(--wlnote-size);margin-bottom:4px"><b>Catalyst 1-3 เดือน:</b> ${(w.gg&&w.gg.catalyst||'').trim()?escHtml(w.gg.catalyst):'<span class="placeholder">ยังไม่ได้ระบุ</span>'}</div>`:''}
-      <div class="foot"><div></div><div class="rowbtns">
-        <button class="small" onclick="${editBtnAction(w)}">แก้ไข</button>
-        <button class="small danger" onclick="delWatch('${w.id}')">ลบ</button>
-      </div></div>
-    </div>`;
-  }).join('') : `<div class="empty">ยังไม่มีรายการ</div>`;
-
-  enableDragReorder(document.getElementById(`wlBody_${port}`), false, dragOn);
-  enableDragReorder(document.getElementById(`wlCards_${port}`), true, dragOn);
-}
-
-/* ---- drag-to-reorder (pointer events: works for mouse + touch) ---- */
-function enableDragReorder(containerEl, isCard, active){
-  if(!containerEl) return;
-  const itemSel = isCard ? '.tcard[data-wid]' : 'tr[data-wid]';
-  containerEl.querySelectorAll('.dragHandle').forEach(handle=>{
-    handle.onpointerdown = active ? (e)=>{
-      e.preventDefault();
-      const item = handle.closest(isCard ? '.tcard' : 'tr');
-      if(!item) return;
-      item.classList.add('wdragging');
-      const move = (ev)=>{
-        const y = ev.clientY;
-        const items = Array.from(containerEl.querySelectorAll(itemSel)).filter(i=>i!==item);
-        let placed = false;
-        for(const it of items){
-          const rect = it.getBoundingClientRect();
-          if(y < rect.top + rect.height/2){ containerEl.insertBefore(item, it); placed = true; break; }
-        }
-        if(!placed) containerEl.appendChild(item);
-      };
-      const up = ()=>{
-        document.removeEventListener('pointermove', move);
-        document.removeEventListener('pointerup', up);
-        item.classList.remove('wdragging');
-        const ids = Array.from(containerEl.querySelectorAll(itemSel)).map(i=>i.dataset.wid);
-        ids.forEach((id,i)=>{ const w = state.watchlist.find(x=>x.id===id); if(w) w.order = i; });
-        schedulePersist();
-      };
-      document.addEventListener('pointermove', move);
-      document.addEventListener('pointerup', up);
-    } : null;
-  });
-}
-function setWatchSortMode(port, mode){
-  if(!state.watchSortMode) state.watchSortMode = defaultWatchSortMode();
-  if(mode==='manual' && state.watchSortMode[port]!=='manual'){
-    /* seed order values from whatever is currently on screen so the switch feels seamless */
-    const current = state.watchlist.filter(w=>w.port===port).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    current.forEach((w,i)=>{ w.order = i; });
-  }
-  state.watchSortMode[port] = mode;
-  renderWatchPort(port);
-  schedulePersist();
 }
 function openSystemSettings(){
   if(!state.fontSizes) state.fontSizes = {...DEFAULT_FONT_SIZES};
