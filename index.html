@@ -2941,9 +2941,9 @@ function switchTab(t){
   }, {passive:true});
 })();
 document.addEventListener('keydown', (e)=>{
-  const tag = (e.target && e.target.tagName || '').toLowerCase();
-  if(tag==='input' || tag==='select' || tag==='textarea') return;
-  if(e.target && e.target.isContentEditable) return;
+  if(kbEditableTarget(e.target)) return;
+  if(e.isComposing || e.keyCode===229) return;
+  if(e.defaultPrevented) return;
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   if(document.querySelector('.overlay.show')) return; // อย่าสลับแท็บขณะเปิด modal อยู่
   const n = parseInt(e.key,10);
@@ -2955,7 +2955,8 @@ document.addEventListener('keydown', (e)=>{
    ใช้ e.code (ตำแหน่งปุ่ม) ไม่ใช่ e.key → ใช้ได้แม้คีย์บอร์ดเป็นภาษาไทย
    ทั่วไป: T = Add Trade · N = ข่าว (กระดิ่ง) · ? = ดูปุ่มลัด
    ในแท็บ: [ ] = วนหมวดย่อย · ตัวอักษรเฉพาะแท็บตาม KB_SUB
-   Watch: C = Watchlist · V = Candidates · [ ] = วน All/Core/Sat.A · Esc = กลับ (มือถือ) */
+   Watch: [ ] = วน All/Core/Sat.A · Esc = กลับ (มือถือ)
+   ทุกแท็บ: C = Watchlist · V = Candidates */
 const WL_PORT_CYCLE_KB = ['all','core','satA'];
 const KB_SUB = {
   plan: {
@@ -2966,15 +2967,30 @@ const KB_SUB = {
   watch: {
     name:'Watch',
     cycle:{list:WL_PORT_CYCLE_KB, get:()=>wlView==='cand'?'':wlPort, set:v=>wlSetPort(v), label:'วน All → Core → Sat.A'},
-    keys:{KeyC:['Watchlist', ()=>wlSetView('wl')], KeyV:['Candidates', ()=>wlSetView('cand')]},
+    keys:{},
     extra:[['Esc','มือถือ: กลับจากหน้ารายตัว']]
   }
 };
-const KB_GLOBAL = [['1–5','สลับแท็บ ตลาด · Port · Watch · แผน · Journal'],['T','Add Trade'],['N','ข่าว (กระดิ่ง)'],['?','ดูปุ่มลัด'],['Esc','ปิดหน้าต่าง']];
+const KB_GLOBAL = [['1–5','สลับแท็บ ตลาด · Port · Watch · แผน · Journal'],['C','Watchlist'],['V','Candidates'],['T','Add Trade'],['N','ข่าว (กระดิ่ง)'],['?','ดูปุ่มลัด'],['Esc','ปิดหน้าต่าง']];
 function kbAppReady(){ const w=document.getElementById('mainWrap'); return w && w.style.display!=='none'; }
+function kbEditableTarget(target){
+  if(!target) return false;
+  const el = target.nodeType===1 ? target : target.parentElement;
+  if(!el) return false;
+  if(el.isContentEditable) return true;
+  return !!(el.closest && el.closest('input, textarea, select, [contenteditable], [contenteditable="true"]'));
+}
+function kbOpenWatchView(view){
+  if(activeTab!=='watch') switchTab('watch');
+  wlSetView(view);
+}
 function kbHandle(e){
   if(!kbAppReady()) return;
   if(e.shiftKey && (e.key==='?' || e.code==='Slash')){ e.preventDefault(); openKbHelp(); return; }
+  // e.code ทำให้ C/V ใช้ตำแหน่งปุ่มเดิมได้แม้สลับภาษาแป้นพิมพ์;
+  // ยอมรับ Shift สำหรับ C/V ด้วย เพื่อให้ตัวพิมพ์ใหญ่ทำงานเหมือนตัวพิมพ์เล็ก.
+  if(e.code==='KeyC'){ e.preventDefault(); kbOpenWatchView('wl'); return; }
+  if(e.code==='KeyV'){ e.preventDefault(); kbOpenWatchView('cand'); return; }
   if(e.shiftKey) return;
   if(e.code==='KeyT'){ e.preventDefault(); openChecklist('trade'); return; }
   if(e.code==='KeyN'){ e.preventDefault(); openNewsFeed(); return; }
