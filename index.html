@@ -1453,7 +1453,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
         <thead><tr>
           <th class="sortable" onclick="setSort('date')">Date <span id="sortIconDate"></span></th>
           <th class="sortable" onclick="setSort('port')">Port <span id="sortIconPort"></span></th>
-          <th>Symbol</th><th>Bias</th><th title="Core = ด่านคุณภาพ 4 ด่าน · Sat.A = satellite-checklist">Thesis</th>
+          <th>Symbol</th><th>Bias</th><th>Research Card</th>
           <th>Entry</th><th>SL</th><th>TP</th><th>Qty</th>
           <th>Risk</th><th>Risk%</th><th>R:R</th>
           <th title="อะไรจะบอกว่าไม้นี้ผิดทาง — เขียนไว้ตอนยังไม่มีเงินอยู่ในตลาด">Invalidation</th>
@@ -3366,11 +3366,11 @@ function renderResearch(){
 /* ความเร่งด่วน — เลขน้อย = ต้องจัดการก่อน
    rule fired มาก่อน gate RED เสมอ เพราะมีเหตุการณ์จริงเกิดแล้ว ไม่ใช่แค่ด่านไม่ผ่าน */
 function rsUrgency(x){
-  if(x.thesis && x.thesis.rule_fired) return 0;
-  /* มีข่าวไปชนเงื่อนไขเลิกเชื่อ แต่ยังไม่มีคนยืนยัน — ด่วนรองจาก rule fired */
-  if(x.thesis && x.thesis.rule_check) return 0.5;
-  const lv = (x.next_action && x.next_action.level) || 'none';
-  return lv==='red' ? 1 : lv==='amber' ? 2 : 3;
+  const tw = (x.research_card && x.research_card.tripwires) || [];
+  if(tw.some(w=>w.status==='confirmed')) return 0;
+  if(tw.some(w=>w.status==='check')) return 0.5;
+  return x.research_card ? 3 : 2;
+
 }
 function rsSortUrgent(a,b){
   const d = rsUrgency(a) - rsUrgency(b);
@@ -3484,7 +3484,7 @@ function rsRenderNews(){
           <div class="rsNewsTop"><span class="t">${escHtml(n.ticker)}${seen[n.id]?'':' <span class="rsChip lime" style="font-size:.6rem">ใหม่</span>'}</span>
             <span class="d">${rsD(n.date)} · ${escHtml(n.source||'')}</span></div>
           <div class="h">${escHtml(n.headline)}</div>
-          ${n.matched_rule ? `<div class="h" style="color:var(--red);margin-top:4px">ตรงเงื่อนไขเลิกเชื่อ ${escHtml(n.impact_section||'')} (${escHtml(n.matched_rule)})</div>` : ''}
+          ${n.impact_section==='tripwire' && n.matched_rule ? `<div class="h" style="color:var(--red);margin-top:4px">ตรง Tripwire (${escHtml(n.matched_rule)})</div>` : ''}
           ${/^https?:\/\//i.test(n.url||'') ? `<div class="rsFoot"><a href="${escHtml(n.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">เปิดต้นทาง ↗</a></div>` : ''}
         </div>`).join('') || '<div class="empty">ยังไม่มีข่าว</div>'}</div>
       <div class="rsFoot">จากตัวเฝ้าข่าว RSS → LLM · เฉพาะ key event · กดที่ข่าวเพื่อเปิดหุ้นตัวนั้นในแท็บ Watch</div>
@@ -3885,7 +3885,7 @@ function render(){
         <span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>${rrBadge}</span>
         <span class="tag ${(t.status==='plan'&&t.submitted)?'submitted':t.status}" ${t.status==='plan'?`onclick="toggleSubmitted('${t.id}')" style="cursor:pointer"`:''}>${(t.status==='plan'&&t.submitted)?'SUBMIT':t.status.toUpperCase()}</span>
       </div>
-      <div class="sub" style="margin-bottom:6px">${t.date||''} · ${PORTS[t.port].name} · Risk ${tradeCur(t)}${(t.port==='core'||t.port==='satA')?' · Thesis '+planThesisCell(t):''}</div>
+      <div class="sub" style="margin-bottom:6px">${t.date||''} · ${PORTS[t.port].name} · Risk ${tradeCur(t)}${(t.port==='core'||t.port==='satA')?' · Research Card '+planThesisCell(t):''}</div>
       <div class="grid">
         <div><span class="k">🔵 Entry</span>${fmt2(t.entry)}${hasSlippage?`<br><span style="color:var(--muted);font-size:.68rem">แผน ${fmt2(t.plannedEntry)}</span>`:''}</div>
         <div><span class="k">🛑 SL</span>${fmt2(t.sl)}</div>
@@ -4965,12 +4965,12 @@ function wlCutoffIso(days){ const d = new Date(); d.setDate(d.getDate()-days); r
 function wlAlertNews(){
   const cut = wlCutoffIso(WL_NEWS_DAYS);
   const seen = (state && state.newsSeen) || {};
-  return rsNewsAll().filter(n=>(n.matched_rule || n.severity==='high') && !seen[n.id] && String(n.date||'') >= cut)
+  return rsNewsAll().filter(n=>(n.impact_section==='tripwire' || n.severity==='high') && !seen[n.id] && String(n.date||'') >= cut)
     .sort((a,b)=>((a.matched_rule?0:1)-(b.matched_rule?0:1)) || String(b.date).localeCompare(String(a.date)));
 }
 function wlResearchDate(d){
   if(!d) return null;
-  return (d.biz && d.biz.date) || (d.thesis && d.thesis.date) || (d.mode_a && d.mode_a.date) || null;
+  return (d.research_card && d.research_card.as_of) || null;
 }
 
 function wlPortTag(p){
@@ -4994,7 +4994,7 @@ function wlNeedBizLite(sym){
     const g = wlGG({sym:S, d:wlDocMap()[S]||null});
     if(!g || g.score < 8) return false;
     const d = wlDocMap()[S];
-    return !(d && d.biz && d.biz.done && d.biz.mode==='lite');
+    return !(d && d.research_card);
   }catch(e){ return false; }
 }
 function wlVerdictChip(v){
@@ -5003,10 +5003,12 @@ function wlVerdictChip(v){
   return `<span class="rsChip ${c}">${escHtml(v)}</span>`;
 }
 function wlActionChip(d, readyTxt){
-  if(!d) return readyTxt ? '<span class="rsChip ghost">ไม่มีรีเสิร์ช</span>' : '';
-  const na = d.next_action;
-  if(!na || !na.level || na.level==='none') return readyTxt ? `<span class="rsChip green">${readyTxt}</span>` : '';
-  return `<span class="rsChip ${na.level==='red'?'red':'amber'}">${escHtml(na.label||'—')}</span>`;
+  if(!d || !d.research_card) return '<span class="rsChip amber">รอสร้าง Research Card</span>';
+  const tw = d.research_card.tripwires || [];
+  if(tw.some(x=>x.status==='confirmed')) return '<span class="rsChip red">อัปเดต Research</span>';
+  if(tw.some(x=>x.status==='check')) return '<span class="rsChip amber">ตรวจ Tripwire</span>';
+  return readyTxt ? `<span class="rsChip green">${readyTxt}</span>` : '';
+
 }
 function wlScoreChips(r){
   const d = r.d;
@@ -5014,12 +5016,12 @@ function wlScoreChips(r){
     const f = d && d.fqc;
     const fq = f ? `<span class="rsChip ghost">FQC ${escHtml(f.lane||'—')}${f.approx?'~':''}·${escHtml(f.score!=null?f.score:'—')}</span>`
       : (r.w && r.w.fundCheck && r.w.fundCheck.tier ? `<span class="rsChip ghost" title="Fundamental Checklist ในเครื่อง">FC ${escHtml(r.w.fundCheck.tier)}</span>` : '<span class="rsChip ghost">FQC —</span>');
-    return rsGates(d||{}) + fq + wlEntryChip(d);
+    return (d && d.research_card ? '<span class="rsChip green">Research Card</span>' : '<span class="rsChip amber">รอสร้าง Research Card</span>') + fq + wlEntryChip(d);
   }
   if(r.port==='satA'){
     const g = wlGG(r);
     const gg = g ? `<span class="rsChip ${g.score>=8?'green':g.score>=6?'ghost':'amber'}">GG ${g.score}/${GG_MAX}</span>` : '<span class="rsChip amber">GG —</span>';
-    return gg + (wlNeedBizLite(r.sym) ? '<span class="rsChip amber" title="GG 8–9 ควรรัน /biz mode=lite ก่อนไม้แรก — เตือนเท่านั้น">⚠ biz lite ยังไม่ทำ</span>' : '');
+    return gg + (wlNeedBizLite(r.sym) ? '<span class="rsChip amber">รอสร้าง Research Card</span>' : '');
   }
   const m = d && d.mode_a;
   return m ? `<span class="rsChip ghost">Screen ${escHtml(m.score)}/${escHtml(m.max||15)} · #${escHtml(m.rank!=null?m.rank:'—')}</span>` : '<span class="rsChip ghost">Screen —</span>';
@@ -5028,9 +5030,9 @@ function wlLine2(r){
   const d = r.d || {};
   if(r.port==='core'){
     const fc = r.w && r.w.fundCheck && r.w.fundCheck.note;
-    return (d.biz && d.biz.done && d.biz.q1_what) || (fc && (fc.sum||fc.biz)) || (r.w && r.w.fundamental) || '';
+    return (d.research_card && d.research_card.business && d.research_card.business.sells) || (fc && (fc.sum||fc.biz)) || (r.w && r.w.fundamental) || '';
   }
-  if(r.port==='satA') return (wlCatalysts(d.biz)[0] || {}).text || (d.biz && d.biz.summary_lite) || 'ยังไม่ทำ /biz lite';
+  if(r.port==='satA') return (d.research_card && d.research_card.business && d.research_card.business.sells) || 'รอสร้าง Research Card';
   return d.summary || (d.mode_a && d.mode_a.one_liner) || '';
 }
 function wlRowHtml(r){
@@ -5056,15 +5058,9 @@ function renderWatchlist(){
   const narrow = wlNarrow();
   const open = narrow && wlMobOpen && !!wlSel;
 
-  /* แถบสถานะ — นับเฉพาะ Watchlist */
-  let nRed=0, nAging=0, nNoTh=0;
-  A.wl.forEach(r=>{
-    const t = r.d && r.d.thesis;
-    if(t && t.gate_overall==='RED') nRed++;
-    if((t && t.age_days>=75) || (r.d && r.d.next_action && /aging|expired/.test(r.d.next_action.code||''))) nAging++;
-    if(r.port==='core' && !(t && t.date)) nNoTh++;
-  });
-  const status = `<div class="wlStat"><span class="${nRed?'r':''}">${nRed} RED</span> · <span class="${nAging?'a':''}">${nAging} aging</span> · <span>${nNoTh} Core ไม่มี thesis</span>`
+  /* Research Card status is independent of legacy Thesis/Gates. */
+  const nNoCard = A.wl.filter(r=>!(r.d && r.d.research_card)).length;
+  const status = `<div class="wlStat"><span>${nNoCard} ตัวรอสร้าง Research Card</span>`
     + (RS_DEMO_ON ? ' · <b>ข้อมูลตัวอย่าง</b>' : rsLoadErr ? ` · <span class="r">โหลดรีเสิร์ชไม่สำเร็จ</span> <span class="rsChip ghost" style="cursor:pointer" onclick="rsLoad(true)">ลองใหม่</span>`
       : rsLoading && !rsLoadedAt ? ' · กำลังโหลดรีเสิร์ช…' : '')
     + `</div>`;
@@ -5073,7 +5069,7 @@ function renderWatchlist(){
   const newsStrip = alerts.length ? `<div class="wlNewsStrip"><div class="wlNsHead"><b>ข่าวที่ต้องดู</b><span class="rsChip ghost" style="cursor:pointer" onclick="openNewsFeed()">ดูทั้งหมด</span></div>
     ${alerts.slice(0,WL_NEWS_MAX).map(n=>`<div class="wlNs ${n.matched_rule?'hi':''}" data-sym="${escHtml(String(n.ticker||'').toUpperCase())}" onclick="wlOpen(this.dataset.sym,'news')">
       <span class="d">${escHtml(rsD(n.date))}</span><b>${escHtml(n.ticker||'—')}</b><span class="h">${escHtml(n.headline||'—')}</span>
-      ${n.matched_rule?`<span class="rsChip red">rule ${escHtml(n.matched_rule)}</span>`:'<span class="rsChip amber">needs review</span>'}</div>`).join('')}</div>` : '';
+      ${n.impact_section==='tripwire'?`<span class="rsChip amber">Tripwire ${escHtml(n.matched_rule||'')}</span>`:'<span class="rsChip amber">needs review</span>'}</div>`).join('')}</div>` : '';
 
   const pill = (on,txt,fn,kb)=>`<button type="button" class="rsDeepBtn ${on?'on':''}" onclick="${fn}">${txt}${kb?` <span class="kbdhint">${kb}</span>`:''}</button>`;
   const head = `<div class="wlHead">
@@ -5127,65 +5123,8 @@ function wlTradeFor(sym){
     if(sel && Array.from(sel.options).some(o=>o.value===sym)){ sel.value = sym; clOnSymChange(); }
   }catch(e){ console.warn('prefill Add Trade ไม่สำเร็จ', e); }
 }
-function wlLayer(name, res, date){
-  return `<div class="wlLay"><span class="n">${name}</span><span class="r">${res}</span><span class="u">${date==null?'—':date}</span></div>`;
-}
-/* เฟส 5 ขั้น 5: field ใหม่เป็น optional ทั้งหมด เพื่อให้เอกสารเก่าไม่เกิดกล่องว่าง */
-function wlVerdictStatus(v){
-  return v==='GREEN' ? ['green','🟢'] : v==='YELLOW' ? ['amber','🟡'] : v==='RED' ? ['red','🔴'] : ['ghost','—'];
-}
-function wlCoreThesisExtras(th){
-  if(!th || typeof th!=='object') return '';
-  const stance = th.stance && typeof th.stance==='object' ? th.stance : null;
-  /* `stance` is optional in legacy / partially-published Thesis documents.
-     It must mean “no stance rows”, not leave a null value for the render path. */
-  const stanceRows = stance ? ['business','equity'].filter(k=>['GREEN','YELLOW','RED'].includes(stance[k])) : [];
-  const deltas = Array.isArray(th.delta) ? th.delta.filter(x=>x && typeof x==='object' && (x.section || x.before || x.evidence || x.verdict)).slice(0,5) : [];
-  const confirmations = Array.isArray(th.rules) ? th.rules.filter(x=>x && x.type==='confirmation' && x.status==='watching' && x.text) : [];
-  if(!stanceRows.length && !deltas.length && !confirmations.length) return '';
-  const chips = stanceRows.map(k=>{
-    const [color, icon] = wlVerdictStatus(stance[k]);
-    return `<span class="rsChip ${color}">${k==='business'?'ธุรกิจ':'ผู้ถือหุ้น'} ${icon}</span>`;
-  }).join(' ');
-  const gate = ['GREEN','YELLOW','RED'].includes(th.gate_overall) ? (()=>{
-    const [color, icon] = wlVerdictStatus(th.gate_overall);
-    return `<span class="rsChip ${color}">Gate ${icon}</span>`;
-  })() : '';
-  const deltaTable = deltas.length ? `<div class="wlKV"><span class="k">งบนี้เปลี่ยน thesis ตรงไหน</span><span class="v" style="overflow:auto"><table class="wlDelta"><thead><tr><th>หมวด</th><th>เดิม</th><th>หลักฐานใหม่</th><th>ข้อสรุป</th></tr></thead><tbody>${deltas.map(x=>{
-    const [color, icon] = wlVerdictStatus(x.verdict);
-    return `<tr><td>${escHtml(x.section||'—')}</td><td>${escHtml(x.before||'—')}</td><td>${escHtml(x.evidence||'—')}</td><td><span class="rsChip ${color}">${icon}</span></td></tr>`;
-  }).join('')}</tbody></table></span></div>` : '';
-  return `${(gate||chips)?`<div class="wlKV"><span class="k">Thesis stance</span><span class="v">${gate}${gate&&chips?' ':''}${chips}</span></div>`:''}${deltaTable}${confirmations.length?`<div class="wlKV"><span class="k">ต้องเห็น</span><span class="v">${confirmations.map(x=>`<span class="wlDot"></span>${escHtml(x.text)}`).join('<br>')}</span></div>`:''}`;
-}
-function wlDeepHtml(th){
-  if(!th) return '<div class="panel"><div class="rsCardTitle"><h3>Deep dive · Quality Thesis</h3></div><div class="empty">ยังไม่เคยเขียน Thesis ของตัวนี้</div></div>';
-  const sec = (th.sections && th.sections[wlDeep]) || null;
-  return `<div class="panel">
-    <div class="rsCardTitle"><h3>Deep dive · Quality Thesis</h3><span class="when">เขียน ${rsD(th.date)} · ด่านตรวจ ${rsD(th.checked_at)}</span></div>
-    <div class="rsDeepTabs">${RS_SECTIONS.map(p=>`<button type="button" class="rsDeepBtn ${wlDeep===p[0]?'on':''}" onclick="wlSetDeep('${p[0]}')" title="${p[2]}">${p[1]}</button>`).join('')}</div>
-    <div class="wlDeepG">
-      <div class="rsDeepBox"><div class="k">${escHtml(rsSecName(wlDeep))}</div><div class="v">${escHtml((sec&&sec.summary)||'—')}</div></div>
-      <div class="rsDeepBox ${sec && (sec.gate_misses||[]).length ? 'warn':''}"><div class="k">ด่านที่ติดในหมวดนี้</div>
-        <div class="v">${sec && (sec.gate_misses||[]).length ? sec.gate_misses.map(escHtml).join('<br>') : 'ไม่มี'}</div></div>
-      <div class="rsDeepBox"><div class="k">ตารางเฝ้าระวัง §F</div>
-        ${(th.rules||[]).map(x=>`<div style="margin-bottom:7px">${x.status==='fired'?'<span class="fired">fired</span><br>':''}
-          <div class="v">${escHtml(x.text)}${x.date?' — '+rsD(x.date):''}${x.source?' · '+escHtml(x.source):''}</div></div>`).join('') || '<div class="v">—</div>'}</div>
-    </div>${wlDeep==='C' && sec && typeof sec.implied==='string' && sec.implied.trim()?`<div class="wlKV" style="margin-top:10px"><span class="k">ราคานี้ต้องการ</span><span class="v">${escHtml(sec.implied.trim())}</span></div>`:''}</div>`;
-}
-function wlBizHtml(b){
-  if(!b || !b.done) return '';
-  return `<div class="panel"><div class="rsCardTitle"><h3>Business</h3><span class="when">${rsD(b.date)}${b.age_days!=null?' · '+b.age_days+' วัน':''}</span></div>
-    <div class="rsBizBox"><div class="k">ขายอะไร ให้ใคร</div><div class="v">${escHtml(b.q1_what||'—')}</div></div>
-    <div class="rsBizBox"><div class="k">หาเงินยังไง</div><div class="v">${escHtml(b.q2_economics||'—')}</div></div>
-    <div class="rsBizBox"><div class="k">${b.q3_moat!=null?'คุณภาพ / ตำแหน่งใน value chain':'อะไรทำให้ธุรกิจนี้พัง'}</div><div class="v">${escHtml(b.q3_moat||b.q3_break||'—')}</div></div>
-    <div class="rsBizBox ${b.dealbreaker && !b.dealbreaker.hit ? 'ok':''}"><div class="k">Deal-breaker</div>
-      <div>${b.dealbreaker && b.dealbreaker.hit ? '<span class="rsChip red">ติด</span>' : '<span class="rsChip green">ไม่ติด</span>'}
-      <span class="v">${((b.dealbreaker && b.dealbreaker.items)||[]).map(i=>escHtml(i.k)+(i.hit?' ⚠':'')).join(' · ')}</span></div></div>
-    <div class="rsFoot">แหล่ง: ${(b.sources||[]).map(escHtml).join(' · ') || '—'}</div></div>`;
-}
 function wlNewsItem(n){
   const chip = n.impact_section==='tripwire' ? `<span class="rsChip amber">tripwire ${escHtml(n.matched_rule||'')} · needs review</span>`
-    : n.matched_rule ? `<span class="rsChip red">rule ${escHtml(n.matched_rule)} · fired</span>`
     : (n.severity==='high' || n.impact_section) ? `<span class="rsChip amber">${escHtml(n.impact_section||'high')} · needs review</span>` : '';
   const sev = `<span class="rsChip ghost">${n.severity==='high'?'แรง':n.severity==='mid'?'กลาง':n.severity==='low'?'เบา':'—'}</span>`;
   const url = /^https?:\/\//i.test(n.url||'') ? n.url : '';
@@ -5209,12 +5148,12 @@ function wlDetailHtml(r){
       ${w.fundCheck && r.port==='core' ? `<button class="small ghost" onclick="openFundDetail('${esc(w.id)}')">⤢ Checklist</button>` : ''}
       ${/^https?:\/\//i.test(w.link||'') ? `<button class="small ghost" data-u="${esc(w.link)}" onclick="window.open(this.dataset.u,'_blank')">🔗</button>` : ''}
       <button class="small danger" onclick="delWatch('${esc(w.id)}')">✕ ลบ</button></div>`
-    : `<div class="wlActs"><span class="hint" style="margin:0">ขั้นถัดไป: รัน <code>/biz ${esc(r.sym)}</code> ที่ Mac · อยากเข้าลิสต์ กด ＋ Core / ＋ Sat.A</span></div>`;
+    : `<div class="wlActs"><span class="hint" style="margin:0">เลือกแท็บ Research เพื่อคัดลอกคำสั่งสร้าง Research Card</span></div>`;
 
   const head = `<div class="wlDHead">
       ${wlNarrow() ? '<button class="small ghost wlBackBtn" onclick="wlBack()">← Watchlist</button>' : ''}
       <div class="wlDT"><b>${esc(r.sym)}</b> <span class="nm">${esc((d&&d.name)||'')}</span> ${wlPortTag(r.port)} ${r.port==='core'?wlEntryChip(d):''} ${wlActionChip(d,'พร้อม')}</div>
-      <div class="wlDates">รีเสิร์ช ${esc(rsD(wlResearchDate(d)))} · ข่าวล่าสุด ${esc(rsD(lastNews))}</div>
+      <div class="wlDates">Research Card ${esc(rsD(wlResearchDate(d)))} · ข่าวล่าสุด ${esc(rsD(lastNews))}</div>
       ${acts}
       <div class="rsDeepTabs" style="margin:10px 0 0">
         <button type="button" class="rsDeepBtn ${wlSub==='ov'?'on':''}" onclick="wlSetSub('ov')">Overview</button>
@@ -5225,17 +5164,15 @@ function wlDetailHtml(r){
   let body = '';
   if(wlSub==='news'){
     body = `<div class="panel"><div class="rsNews">${news.map(wlNewsItem).join('') || '<div class="empty">ยังไม่มีข่าวของตัวนี้</div>'}</div>
-      <div class="rsFoot">อ่านแล้วไม่ได้แปลว่าปิดเรื่อง — ข่าวที่ตรงกฎต้องยืนยันผ่าน Telegram หรือ refresh thesis ที่ Mac</div></div>`;
+      <div class="rsFoot">ข่าวที่ตรง Tripwire ต้องให้คนตรวจยืนยันก่อน</div></div>`;
   } else if(wlSub==='rs'){
     body = wlResearchHtml(r);
   } else {
-    const todo = d ? (d.next_action && d.next_action.level && d.next_action.level!=='none'
-        ? `${esc(d.next_action.label||'—')}${d.summary?' — '+esc(d.summary):''}` : (d.summary ? esc(d.summary) : 'ไม่มีงานค้าง'))
-      : 'ยังไม่มีข้อมูลรีเสิร์ช — ' + (r.port==='satA' ? 'รัน /biz mode=lite ที่ Mac' : 'รัน /biz แล้ว /quality-thesis ที่ Mac');
+    const todo = d && d.research_card ? (d.research_card.review_result==='no_data' ? 'ตรวจแล้วไม่พบข้อมูลใหม่' : 'Research Card พร้อมใช้งาน') : 'รอสร้าง Research Card';
     const l2 = wlLine2(r);
     const label = r.port==='core' ? 'Business' : r.port==='satA' ? 'Catalyst' : 'สรุป';
-    const bl = (d && d.blockers) || [];
-    const ruleNews = news.filter(n=>n.matched_rule);
+    const bl = d && d.research_card ? (d.research_card.severe_risks||[]).map(text=>({text})) : [];
+    const ruleNews = news.filter(n=>n.impact_section==='tripwire' && n.matched_rule);
     const ind = w && w.industry ? (indLink(w.industry)
         ? `<span class="indTxt indLinked" data-i="${esc(w.industry)}" onclick="indOpen(this.dataset.i)">${esc(w.industry)} ↗</span>` : esc(w.industry)) : '';
     body = `<div class="panel">
@@ -5244,72 +5181,29 @@ function wlDetailHtml(r){
       ${ind?`<div class="wlKV"><span class="k">Industry</span><span class="v">${ind}</span></div>`:''}
       ${w && w.technical ? `<div class="wlKV"><span class="k">Note</span><span class="v wlReadText">${esc(w.technical)}</span></div>` : ''}
       <div class="wlKV"><span class="k">Blockers</span><span class="v wlReadText">${bl.length ? bl.slice(0,3).map(b=>`<span class="wlDot"></span>${esc(b.text)}`).join('<br>') : 'ไม่มี'}</span></div>
-      ${r.port==='core' ? wlCoreThesisExtras(d && d.thesis) : ''}
-      ${ruleNews.length ? `<div class="wlKV"><span class="k">ข่าวชนกฎ</span><span class="v wlReadText">${ruleNews.map(n=>`${esc(rsD(n.date))} · ${esc(n.headline)} <span class="rsChip red">rule ${esc(n.matched_rule)}</span>`).join('<br>')}</span></div>` : ''}
+
+      ${ruleNews.length ? `<div class="wlKV"><span class="k">ข่าวตรง Tripwire</span><span class="v wlReadText">${ruleNews.map(n=>`${esc(rsD(n.date))} · ${esc(n.headline)} <span class="rsChip red">Tripwire ${esc(n.matched_rule)}</span>`).join('<br>')}</span></div>` : ''}
     </div>`;
   }
   return `<div class="panel wlDPanel">${head}</div>${body}`;
 }
-/* เฟส 5 ขั้น 1–4: แสดงเฉพาะชั้นของพอร์ต · entry อ่านจาก pusher เท่านั้น */
+/* Investment clearance is a separate, verified legacy snapshot; Research Card cannot grant it. */
 function wlEntryChip(d){
-  const e = d && d.entry;
-  if(!e || typeof e.ok!=='boolean') return '<span class="rsChip ghost">ยังไม่ประเมิน</span>';
-  const reasons = Array.isArray(e.reasons) ? e.reasons.slice(0,5).join(' · ') : '';
-  return `<span class="rsChip ${e.ok?'green':'red'}" title="${escHtml(e.ok?'ผ่านเกณฑ์ entry':reasons||'ไม่ผ่านเกณฑ์ entry')}">${e.ok?'เข้าได้':'ยังเข้าไม่ได้'}</span>`;
-}
-function wlCatalysts(b){
-  return (b && Array.isArray(b.catalysts) ? b.catalysts : []).filter(x=>x && x.text)
-    .slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
-}
-function wlBizLiteHtml(b){
-  if(!b || !b.done || b.mode!=='lite') return '<span class="rsChip amber">ยังไม่ทำ /biz lite</span>';
-  const catalysts = wlCatalysts(b);
-  const deal = b.dealbreaker;
-  return `<div style="white-space:pre-line">${escHtml(b.summary_lite||'ยังไม่มีสรุปธุรกิจ')}</div>
-    ${catalysts.map(c=>`<div class="wlSmall">${escHtml(c.date||'ไม่ระบุวันที่')} · ${escHtml(c.text)}${c.source?' · '+escHtml(c.source):''}</div>`).join('')}
-    ${deal?`<span class="rsChip ${deal.hit?'red':'green'}">${deal.hit?'ติด deal-breaker':'ไม่ติด deal-breaker'}</span>`:''}`;
-}
-function wlTripwiresHtml(d){
-  const tw = d.biz && Array.isArray(d.biz.tripwires) ? d.biz.tripwires : [];
-  if(!tw.length) return '<span class="rsChip ghost">ยังไม่มี tripwire — รัน /biz lite</span>';
-  const news = wlNewsOf(String(d.ticker||'').toUpperCase());
-  return tw.filter(Boolean).map(t=>{
-    const hit = news.find(n=>n.impact_section==='tripwire' && n.matched_rule===t.id);
-    const status = t.status==='confirmed' ? 'ยืนยันแล้ว' : t.status==='cleared' ? 'ตรวจแล้ว ไม่เข้าเงื่อนไข' : hit ? 'needs review' : 'เฝ้าดู';
-    const color = t.status==='confirmed' ? 'red' : t.status==='cleared' ? 'green' : hit ? 'amber' : 'ghost';
-    return `<div style="margin-bottom:8px">${escHtml(t.text||t.id||'')} <span class="rsChip ${color}">${status}</span>
-      <div class="wlSmall">คำเฝ้าดู: ${escHtml((Array.isArray(t.keywords)?t.keywords:[]).join(' · ')||'ยังไม่ระบุ')}</div>
-      ${hit?`<div class="wlSmall">${escHtml(hit.date||'')} · ${escHtml(hit.headline||'ข่าวตรงคำเฝ้าดู')}</div>`:''}</div>`;
-  }).join('');
-}
-function wlResearchRows(doc){
-  const d = doc || {}, p = d.port, b = d.biz, th = d.thesis, f = d.fqc;
-  const date = x=>x && x.date ? escHtml(rsD(x.date)) : '';
-  if(p==='core') return [
-    wlLayer('Business', b && b.done ? `<span class="rsChip ${b.dealbreaker && b.dealbreaker.hit?'red':'green'}">${b.dealbreaker && b.dealbreaker.hit?'ติด deal-breaker':'ทำแล้ว'}</span>` : '<span class="rsChip amber">ยังไม่ทำ /biz</span>', date(b)),
-    wlLayer('Thesis + Gates', th ? rsGatesNamed(d)+(th.rule_fired?' <span class="rsChip red">rule fired</span>':'') : '<span class="rsChip amber">ยังไม่มี Thesis</span>', date(th)),
-    wlLayer('FQC · sizing', f ? `<span class="rsChip ghost">${escHtml(f.lane||'ยังไม่มี lane')}${f.approx?'~':''} · ${escHtml(f.score!=null?f.score:'ยังไม่มีคะแนน')}</span> เป้า ${f.target_weight!=null?(f.approx?'~':'')+escHtml(f.target_weight)+'%':'ยังไม่ระบุ'} · จริง ${szHoldPct('core',String(d.ticker||'').toUpperCase()).toFixed(1)}%${f.approx?' <span class="small2">(ประมาณจาก Lite — ยืนยันด้วย FQC-Full)</span>':''}${f.eligible===false?' <span class="rsChip red">ไม่ผ่านเกณฑ์</span>':''}` : '<span class="rsChip amber">ยังไม่มี FQC</span>', date(f))
-  ];
-  if(p==='satA'){
-    const g = wlGG({sym:String(d.ticker||'').toUpperCase(),d});
-    return [
-      wlLayer('Growth Gate', g ? `<span class="rsChip ${g.score>=8?'green':'ghost'}">${escHtml(g.score)}/${GG_MAX}</span> 1R ${Number(g.R).toFixed(2)}%` : '<span class="rsChip amber">ยังไม่ให้คะแนน</span>',date(g)),
-      wlLayer('Business lite',wlBizLiteHtml(b),date(b)),
-      wlLayer('Tripwire',wlTripwiresHtml(d),'')
-    ];
-  }
-  const ta=d.tier_ab, ma=d.mode_a;
-  return [
-    wlLayer('Tier A/B',ta && ta.verdict ? `<span class="rsChip ${ta.verdict==='pass'?'green':ta.verdict==='fail'?'red':'ghost'}">${ta.verdict==='pass'?'ผ่าน':ta.verdict==='fail'?'ไม่ผ่าน':escHtml(ta.verdict)}${ta.pass!=null?' '+escHtml(ta.pass)+'/'+escHtml(ta.total):''}</span>` : '<span class="rsChip ghost">ยังไม่ประเมิน Tier A/B</span>',date(ta)),
-    wlLayer('Screening',ma && ma.score!=null ? `<b>${escHtml(ma.score)}</b>/${escHtml(ma.max||15)} · ${ma.rank!=null?'#'+escHtml(ma.rank):'ยังไม่จัดอันดับ'}${ma.universe?'/'+escHtml(ma.universe):''}` : '<span class="rsChip ghost">ยังไม่ทำ Screening</span>',date(ma))
-  ];
+  const e = d && d.investment_clearance;
+  if(!e || e.status!=='verified_legacy' || e.ok!==true || !e.source || e.source.rule_set!=='legacy_entry_v1')
+    return '<span class="rsChip ghost">เกณฑ์ลงทุนเดิมยังไม่ประเมิน</span>';
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const expired = !/^\d{4}-\d{2}-\d{2}$/.test(e.valid_until||'') || e.valid_until < today;
+  const fqcBlocked = !(d && d.fqc && d.fqc.eligible===true);
+  const tripwireBlocked = !!(d && d.research_card && (d.research_card.tripwires||[]).some(w=>w.status==='confirmed'));
+  const passed = !expired && !fqcBlocked && !tripwireBlocked;
+  const reason = expired ? `เกณฑ์เดิมหมดอายุ ${e.valid_until||''}` : fqcBlocked ? 'FQC ยังไม่ผ่านหรือไม่มีข้อมูล' : tripwireBlocked ? 'Tripwire ยืนยันแล้ว' : `ตรวจเกณฑ์เดิม ${e.evaluated_at||''}; Gates ${e.source.gates_checked_at||''}; FQC ${e.source.fqc_date||''}`;
+  return `<span class="rsChip ${passed?'green':'amber'}" title="${escHtml(reason)}">${passed?'เกณฑ์ลงทุนเดิมผ่าน':'เกณฑ์ลงทุนเดิมต้องทบทวน'}</span>`;
+
 }
 function wlResearchHtml(r){
-  const d = {...(r.d||{}),port:r.port,ticker:r.sym};
-  const after = r.port==='core' ? wlBizHtml(d.biz)+wlDeepHtml(d.thesis) : '';
-  return `<div class="panel"><div class="rsCardTitle"><h3>ชั้นคะแนน · ${r.port==='core'?'Core':r.port==='satA'?'Sat.A':'Candidate'}</h3>${r.port==='core'?wlEntryChip(d):''}</div>${wlResearchRows(d).join('')}
-    ${r.port==='cand'?`<div class="wlSmall">ขั้นถัดไป: <code>/biz ${escHtml(r.sym)}</code></div>`:''}
-    ${r.port==='core' && d.thesis && d.thesis.coverage_path?`<div class="rsFoot">เนื้อเต็ม: ${escHtml(d.thesis.coverage_path)} บน Mac</div>`:''}</div>${after}`;
+  return rcCardHtml(r);
 }
 function openSystemSettings(){
   if(!state.fontSizes) state.fontSizes = {...DEFAULT_FONT_SIZES};
@@ -8039,9 +7933,9 @@ function szRenderCard(o){
         <div class="s">${heat.nPos} ตัว · เพดาน ${SZ.MAX_HEAT_R}R</div></div>
     </div>`;
 
-  /* Sat.A GG 8–9 ยังไม่มี biz lite — เตือนอย่างเดียว ไม่บล็อก */
+  /* Sat.A GG 8–9 ยังไม่มี Research Card — เตือนอย่างเดียว */
   if(o.port==='satA' && typeof wlNeedBizLite==='function' && wlNeedBizLite(symU)){
-    h+=`<div class="szMsg yellow">⚠ ${escHtml(symU)} คะแนน Growth Gate 8–9: biz lite ยังไม่ทำ — ควรรัน /biz mode=lite ก่อนไม้แรก (เทรดต่อได้)</div>`;
+    h+=`<div class="szMsg yellow">⚠ ${escHtml(symU)} คะแนน Growth Gate 8–9: รอสร้าง Research Card — กดแท็บ Research เพื่อคัดลอกคำสั่ง</div>`;
   }
   /* แถบเพดาน Fund-flow */
   if(c.throttled){
@@ -9488,9 +9382,7 @@ function szSizeLine(){
     const f = d && d.fqc;
     P.push(part(`FQC เป้า ${f && f.target_weight!=null ? (f.approx?'~':'')+f.target_weight+'%' : '—'} (จริง ${szHoldPct(port,sym).toFixed(1)}%)`, f && f.eligible===false ? 'r' : ''));
     P.push(part(`ช่อง ${slotsAfter}/${max}`, slotsAfter>max ? 'r' : ''));
-    const th = d && d.thesis;
-    const dots = th && th.gates ? GATE_ORDER.map(k=>({GREEN:'🟢',YELLOW:'🟡',RED:'🔴'})[th.gates[k]]||'⚪').join('') : '—';
-    P.push(part(`thesis ${dots}`, th && (th.gate_overall==='RED' || th.rule_fired) ? 'r' : !th ? 'a' : ''));
+    P.push(part(d && d.research_card ? 'Research Card พร้อม' : 'รอสร้าง Research Card', d && d.research_card ? '' : 'a'));
     P.push(wlEntryChip(d));
   } else {
     const g = (typeof wlGG==='function') ? wlGG({sym, d}) : null;
@@ -9501,7 +9393,7 @@ function szSizeLine(){
     const lastSlot = !held && slotsAfter===max;
     P.push(part(`ช่อง ${slotsAfter}/${max}${lastSlot?` · เงินเหลือ ${Math.max(0,100-usedA).toFixed(0)}%`:''}`,
       slotsAfter>max || (lastSlot && usedA>=99.5) ? 'r' : lastSlot ? 'a' : ''));
-    if(typeof wlNeedBizLite==='function' && wlNeedBizLite(sym)) P.push(part('⚠ biz lite ยังไม่ทำ', 'a'));
+    if(typeof wlNeedBizLite==='function' && wlNeedBizLite(sym)) P.push(part('รอสร้าง Research Card', 'a'));
     P.push(part('earnings —', '', 'ยังไม่มีข้อมูลวันประกาศงบ (เฟส 5)'));
   }
   el.innerHTML = `<b>${port==='core'?'Core':'Sat.A'}:</b> ` + P.join('<span class="szlSep"> · </span>');
@@ -9510,10 +9402,9 @@ function szSizeLine(){
 /* คอลัมน์ Thesis ในตาราง positions — Core = ด่าน 4 จุด · Sat.A = checklist verdict */
 function planThesisCell(t){
   if(!t || (t.port!=='core' && t.port!=='satA')) return '<span style="color:var(--faint)">—</span>';
-  const d = (typeof wlDocMap==='function') ? wlDocMap()[String(t.sym||'').toUpperCase()] : null;
-  if(!d) return '<span style="color:var(--faint)">—</span>';
-  if(t.port==='core') return d.thesis ? rsGates(d) + (d.thesis.rule_fired ? ' <span class="rsChip red">fired</span>' : '') : '<span class="rsChip amber">ไม่มี</span>';
-  return d.checklist ? wlVerdictChip(d.checklist.verdict) : '<span style="color:var(--faint)">—</span>';
+  const d = wlDocMap()[String(t.sym||'').toUpperCase()];
+  return d && d.research_card ? '<span class="rsChip green">มีการ์ด</span>' : '<span class="rsChip amber">รอสร้าง</span>';
+
 }
 /* ---------- เข็มเดี่ยว (Compass — ตัดจาก UI เฟส 4 · ไม่มี host ก็ไม่ทำอะไร) ---------- */
 function ffRenderDials(){
@@ -9821,5 +9712,6 @@ if(bkIsMac()){
   try{ updateAcctChip(); }catch(e){}
 })();
 </script>
+<script src="research-card.js"></script>
 </body>
 </html>
