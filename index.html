@@ -9712,6 +9712,180 @@ if(bkIsMac()){
   try{ updateAcctChip(); }catch(e){}
 })();
 </script>
-<script src="research-card.js"></script>
+<!-- RESEARCH CARD INLINE START -->
+<script>
+/* source: research-card.js · sha256 8df3ce58bcd9 */
+/* Research Card v1 — mirrors shared/research-card-v1.md and research_card.py. */
+(function(){
+  'use strict';
+  const VERSION = 'research-card/1.0';
+  const owner = 'ountradingalert@gmail.com';
+  const previewOnly = typeof location!=='undefined' && /index\.research-card-preview\.html$/.test(location.pathname);
+  let pending = null;
+  const bad = message => { throw new Error(message); };
+  const stable = v => Array.isArray(v) ? '['+v.map(stable).join(',')+']' : v && typeof v==='object' ? '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}' : JSON.stringify(v);
+  const isStr = (v, name) => { if(typeof v !== 'string' || !v.trim() || v.length>4000) bad(name+' ต้องเป็นข้อความ'); };
+  const url = (v,name) => { isStr(v,name); if(!/^https?:\/\/\S+$/i.test(v)) bad(name+' ต้องเป็น http(s) URL'); };
+  const arr = (v, name, max) => { if(!Array.isArray(v) || v.length>max) bad(name+' ต้องเป็นรายการไม่เกิน '+max); };
+  const date = (v, name, allowFuture=false) => {
+    if(typeof v!=='string' || !/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(v)) || new Date(v).toISOString().slice(0,10)!==v) bad(name+' วันที่ผิดรูปแบบ');
+    const tomorrow = new Date(Date.now()+86400000).toISOString().slice(0,10);
+    if(!allowFuture && v>tomorrow) bad(name+' เป็นวันในอนาคต');
+  };
+  const validate = (c, ticker) => {
+    if(!c || typeof c!=='object' || Array.isArray(c)) bad('JSON ต้องเป็น object');
+    const keys=['schema_version','ticker','as_of','researched_at','review_result','business','metrics','drivers','additional_drivers','catalysts','tripwires','severe_risks','sources','missing_data','changes'];
+    if(Object.keys(c).length!==keys.length || Object.keys(c).some(k=>!keys.includes(k))) bad('ฟิลด์ระดับบนขาดหรือเกิน schema');
+    if(c.schema_version!==VERSION) bad('schema_version ไม่รองรับ');
+    if(typeof c.ticker!=='string' || !/^[A-Z][A-Z0-9.\-]{0,14}$/.test(c.ticker) || c.ticker!==ticker) bad('ticker ไม่ตรงกับหุ้นที่เลือก');
+    date(c.as_of,'as_of');
+    if(typeof c.researched_at!=='string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(c.researched_at) || Number.isNaN(Date.parse(c.researched_at)) || Date.parse(c.researched_at)>Date.now()+86400000) bad('researched_at ต้องเป็น UTC ISO timestamp ลงท้าย Z');
+    if(!['changed','no_change','no_data'].includes(c.review_result)) bad('review_result ต้องเป็น changed, no_change หรือ no_data; การ์ดใหม่ใช้ changed');
+    if(!c.business || typeof c.business!=='object') bad('business หาย');
+    ['sells','customers','revenue_model'].forEach(k=>isStr(c.business[k],'business.'+k));
+    [['metrics',12],['drivers',3],['additional_drivers',12],['catalysts',8],['tripwires',2],['severe_risks',8],['sources',30],['missing_data',20],['changes',20]].forEach(([k,n])=>arr(c[k],k,n));
+    if(c.tripwires.length<1) bad('tripwires ต้องมี 1–2 ข้อ');
+    c.metrics.forEach((m,i)=>{ if(!m || typeof m!=='object') bad('metrics['+i+'] ผิดรูปแบบ'); ['name','value','unit','period'].forEach(k=>isStr(m[k],'metrics.'+k)); url(m.source_url,'metrics.source_url'); });
+    const did = new Set();
+    c.drivers.forEach((d,i)=>{
+      if(!d || typeof d!=='object') bad('drivers['+i+'] ผิดรูปแบบ');
+      ['id','title','why_material','mechanism','indicator','bull','bear'].forEach(k=>isStr(d[k],'drivers.'+k));
+      if(did.has(d.id)) bad('driver id ซ้ำ'); did.add(d.id);
+      if(!['confirmed','unconfirmed'].includes(d.status)) bad('driver status ไม่ถูกต้อง');
+      arr(d.evidence,'driver evidence',8);
+      if(d.status==='confirmed' && !d.evidence.length) bad('driver ที่ยืนยันแล้วต้องมีหลักฐาน');
+      d.evidence.forEach(e=>{ if(!e || typeof e!=='object') bad('evidence ผิดรูปแบบ'); isStr(e.claim,'evidence.claim'); url(e.source_url,'evidence.source_url'); });
+    });
+    c.additional_drivers.forEach(x=>isStr(x,'additional_drivers'));
+    c.catalysts.forEach(x=>{ if(!x || typeof x!=='object') bad('catalyst ผิดรูปแบบ'); isStr(x.event,'catalyst.event'); date(x.date,'catalyst.date',true); if(!['confirmed','estimated'].includes(x.date_status)) bad('catalyst.date_status ผิดรูปแบบ'); url(x.source_url,'catalyst.source_url'); });
+    const wid = new Set();
+    c.tripwires.forEach(w=>{
+      if(!w || typeof w!=='object' || typeof w.id!=='string' || !/^[a-z][a-z0-9_-]{1,39}$/.test(w.id) || wid.has(w.id)) bad('tripwire id ผิดรูปแบบหรือซ้ำ');
+      wid.add(w.id); ['text','threshold','current_value'].forEach(k=>isStr(w[k],'tripwire.'+k));
+      arr(w.keywords,'tripwire.keywords',12); w.keywords.forEach(x=>isStr(x,'tripwire.keyword'));
+    });
+    ['severe_risks','missing_data','changes'].forEach(k=>c[k].forEach(x=>isStr(x,k)));
+    c.sources.forEach(s=>{ if(!s || typeof s!=='object') bad('source ผิดรูปแบบ'); isStr(s.title,'source.title'); url(s.url,'source.url'); date(s.date,'source.date'); });
+    if(c.review_result!=='changed' && c.changes.length) bad('ผลตรวจไม่เปลี่ยน ห้ามระบุการเปลี่ยนแปลง');
+    if(c.review_result==='changed' && !c.changes.length) bad('ผลที่เปลี่ยนต้องสรุปสิ่งที่เปลี่ยน');
+    return JSON.parse(JSON.stringify(c));
+  };
+  const merge = (old, incoming, ticker) => {
+    const c = validate(incoming,ticker), prior = old && old.research_card;
+    if(prior){
+      validate(prior,ticker);
+      if(Date.parse(c.researched_at)<=Date.parse(prior.researched_at) || c.as_of<prior.as_of) bad('ผลเก่าหรือเวลาเท่ากัน ห้ามทับการ์ดใหม่');
+    }
+    if(c.review_result!=='changed'){
+      if(!prior) bad('ผลไม่เปลี่ยนต้องมีการ์ดเดิม');
+      if(c.review_result==='no_data' && c.as_of!==prior.as_of) bad('no_data ต้องคงวันที่ข้อมูลเดิม');
+      ['business','metrics','drivers','additional_drivers','catalysts','severe_risks'].forEach(k=>{
+        if(stable(c[k])!==stable(prior[k])) bad(c.review_result+' เปลี่ยน '+k+' ไม่ได้');
+      });
+      if(c.tripwires.length!==prior.tripwires.length) bad('ผลไม่เปลี่ยน ห้ามเปลี่ยน Tripwire');
+      c.tripwires.forEach((w,i)=>['id','text','threshold','current_value','keywords'].forEach(k=>{
+        if(stable(w[k])!==stable(prior.tripwires[i][k])) bad('ผลไม่เปลี่ยน ห้ามเปลี่ยน Tripwire');
+      }));
+    }
+    c.tripwires.forEach(w=>{
+      const p = prior && prior.tripwires.find(x=>x.id===w.id);
+      if(p && p.text===w.text && p.threshold===w.threshold){
+        ['status','alert_history','news_id','news_title','date'].forEach(k=>{ if(p[k]!==undefined) w[k]=JSON.parse(JSON.stringify(p[k])); });
+      } else { w.status='watching'; w.alert_history=[]; }
+    });
+    const history = (old && Array.isArray(old.research_card_history) ? old.research_card_history.slice() : []);
+    if(prior) history.unshift(prior);
+    return {card:c, history:history.slice(0,10)};
+  };
+  const esc = s => window.escHtml(String(s==null?'':s));
+  function promptText(ticker, old, legacy){
+    const prior = old ? {
+      ticker:old.ticker, as_of:old.as_of, business:old.business,
+      metrics:old.metrics, drivers:old.drivers, additional_drivers:old.additional_drivers,
+      catalysts:old.catalysts, tripwires:(old.tripwires||[]).map(w=>({id:w.id,text:w.text,threshold:w.threshold,current_value:w.current_value,keywords:w.keywords})),
+      severe_risks:old.severe_risks, sources:old.sources, missing_data:old.missing_data
+    } : null;
+    const oldBiz = !prior && legacy ? {date:legacy.date, what:legacy.q1_what, economics:legacy.q2_economics, sources:legacy.sources} : null;
+    return `Research ${ticker} into one concise Research Card JSON object (schema_version research-card/1.0). Return JSON only, without a Markdown fence. Use the existing card and newest primary documents first. Read the latest financial statement and material company events since the old as_of date. Update only changed conclusions, but return a complete card. Choose up to three drivers using documented impact size, causal mechanism, and trackable indicator. Use the same evidence set for bull and bear. Mark thin evidence unconfirmed; do not invent numbers or fill slots. Put other material drivers in additional_drivers. Top-level review_result MUST be a string exactly "changed", "no_change", or "no_data". For a FIRST card with no existing card, use "changed" and a nonempty changes array even if some requested facts are missing. Put unavailable facts in missing_data as plain strings, not objects with area/status/detail. For updates, use no_change only when checked evidence confirms no substantive change; use no_data when a check found insufficient new evidence. For no_change/no_data, keep prior content unchanged and set changes to []; for no_data, keep the prior as_of date. In one pass, verify numbers against sources and internal consistency, labeling this as self review. No subagents, long report, Google Doc, forced probability, reverse DCF, base rate, or peer valuation. Each tripwire needs a stable id, threshold, current_value, and keywords. Return exactly these 15 top-level fields with no extras: schema_version,ticker,as_of,researched_at (UTC YYYY-MM-DDTHH:MM:SSZ),review_result,business{sells,customers,revenue_model},metrics[{name,value,unit,period,source_url}],drivers[{id,title,why_material,mechanism,indicator,bull,bear,status,evidence[{claim,source_url}]}],additional_drivers,catalysts[{event,date,date_status,source_url}],tripwires[{id,text,threshold,current_value,keywords}],severe_risks,sources[{title,url,date}],missing_data,changes. Driver status confirmed/unconfirmed; catalyst date_status confirmed/estimated. Ticker: ${ticker}. Existing card JSON: ${prior ? JSON.stringify(prior) : 'null'}. Legacy business reference (unverified; do not promote thesis prose to confirmed drivers): ${oldBiz ? JSON.stringify(oldBiz) : 'null'}.`;
+  }
+  window.rcCopy = async ticker => {
+    const d = window.wlDocMap()[ticker] || {};
+    const value = promptText(ticker,d.research_card||null,d.biz||null);
+    try{ await navigator.clipboard.writeText(value); alert('คัดลอกคำสั่งสำหรับ '+ticker+' แล้ว นำไปรันใน GPT หรือ Claude'); }
+    catch(e){ prompt('คัดลอกคำสั่งนี้',value); }
+  };
+  window.rcPreview = ticker => {
+    const box = document.getElementById('rcJson');
+    const status = document.getElementById('rcStatus');
+    if(!box || !status) return;
+    try{
+      const incoming = JSON.parse(box.value);
+      const old = window.wlDocMap()[ticker] || {};
+      const result = merge(old,incoming,ticker);
+      const prior = old.research_card;
+      const fields = ['as_of','business','metrics','drivers','additional_drivers','catalysts','tripwires','severe_risks','sources','missing_data'];
+      const comparable=(card,k)=>k==='tripwires' ? (card.tripwires||[]).map(w=>({id:w.id,text:w.text,threshold:w.threshold,current_value:w.current_value,keywords:w.keywords})) : card[k];
+      const changedFields = prior ? fields.filter(k=>stable(comparable(prior,k))!==stable(comparable(incoming,k))) : ['สร้างการ์ดใหม่'];
+      pending = {ticker,raw:box.value};
+      status.innerHTML = `<b>ตรวจผ่าน · ${esc(incoming.review_result)}</b><br>ข้อมูล ณ ${esc(incoming.as_of)} · drivers ${incoming.drivers.length} · tripwires ${incoming.tripwires.length}<br>ฟิลด์ที่เปลี่ยน: ${changedFields.length?changedFields.map(esc).join(', '):'ไม่มี'}<br>${incoming.changes.length ? incoming.changes.map(esc).join('<br>') : (incoming.review_result==='no_data'?'ตรวจแล้วไม่พบข้อมูลใหม่':'ไม่มีการเปลี่ยนแปลง')}<br>จะเก็บเวอร์ชันก่อนหน้า ${result.history.length} รุ่น ${previewOnly?'<span class="rsChip amber">พรีวิวเท่านั้น</span>':`<button type="button" class="small primary" onclick="rcSave('${ticker}')">ยืนยันบันทึก</button>`}`;
+    }catch(e){ pending=null; status.textContent='ไม่รับข้อมูล: '+e.message; }
+  };
+  window.rcSave = async ticker => {
+    if(!pending || pending.ticker!==ticker) return;
+    if(previewOnly){ alert('หน้าพรีวิว: ยังไม่บันทึก Firestore'); return; }
+    if(!auth.currentUser || auth.currentUser.email!==owner){ alert('บัญชีนี้ไม่มีสิทธิ์นำเข้าการ์ด'); return; }
+    const incoming = JSON.parse(pending.raw);
+    const status = document.getElementById('rcStatus');
+    if(status) status.textContent='กำลังบันทึก…';
+    try{
+      const ref = db.collection('research').doc(ticker);
+      await db.runTransaction(async tx=>{
+        const snap = await tx.get(ref);
+        const merged = merge(snap.exists ? snap.data() : {},incoming,ticker);
+        const payload={ticker,research_card:merged.card,research_card_history:merged.history};
+        if(snap.exists) tx.update(ref,payload); else tx.set(ref,payload);
+      });
+      pending=null;
+      await window.rsLoad(true);
+      if(status) status.textContent='บันทึก Research Card แล้ว';
+    }catch(e){ if(status) status.textContent='บันทึกไม่สำเร็จ: '+e.message; }
+  };
+  function legacyHtml(d){
+    const b=d.biz||{}, t=d.thesis||{};
+    const bits=[];
+    if(d.biz){
+      bits.push(`<h4>Business เดิม · ${esc(b.date||'ไม่ระบุวันที่')}</h4>`);
+      ['q1_what','q2_economics','q3_break','q4_kpi','summary_lite'].forEach(k=>{if(b[k]) bits.push(`<p>${esc(Array.isArray(b[k]) ? b[k].map(x=>typeof x==='string'?x:JSON.stringify(x)).join(' · ') : b[k])}</p>`);});
+      if(Array.isArray(b.sources)) bits.push(`<p>แหล่งเดิม: ${b.sources.map(esc).join(' · ')}</p>`);
+    }
+    if(d.thesis){
+      bits.push(`<h4>Thesis เดิม · ${esc(t.date||'ไม่ระบุวันที่')}</h4>`);
+      if(t.sections && typeof t.sections==='object') Object.keys(t.sections).sort().forEach(k=>{
+        const section=t.sections[k]||{};
+        bits.push(`<p><b>${esc(k)} ${esc(section.title||'')}</b><br>${esc(section.summary||'')}</p>`);
+      });
+      if(t.coverage_path) bits.push(`<p>ไฟล์ต้นฉบับ: ${esc(t.coverage_path)}</p>`);
+    }
+    return bits.join('') || '<p>ไม่มีข้อมูลเก่าที่แสดงได้</p>';
+  }
+  function cardHtml(r){
+    const d=r.d||{}, c=d.research_card, ticker=r.sym;
+    const controls=`${previewOnly?'<div class="rsChip amber">พรีวิว · ตรวจ Import ได้ แต่ยังไม่บันทึก Firestore</div>':''}<div class="wlActs"><button type="button" class="small primary" onclick="rcCopy('${esc(ticker)}')">${c?'อัปเดต Research · คัดลอกคำสั่ง':'สร้าง Research Card · คัดลอกคำสั่ง'}</button></div><details><summary>นำเข้าผล Research</summary><textarea id="rcJson" aria-label="Research Card JSON" style="width:100%;min-height:150px;box-sizing:border-box" placeholder="วาง JSON จาก GPT หรือ Claude"></textarea><button type="button" class="small" onclick="rcPreview('${esc(ticker)}')">ตรวจข้อมูลและดูสิ่งที่เปลี่ยน</button><div id="rcStatus" role="status"></div></details>`;
+    if(!c) return `<div class="panel"><h3>รอสร้าง Research Card · ${esc(ticker)}</h3>${controls}<details><summary>ดูข้อมูลเก่า (archive)</summary>${legacyHtml(d)}</details></div>`;
+    const row=(name,v)=>`<div class="wlKV"><span class="k">${esc(name)}</span><span class="v wlReadText">${v}</span></div>`;
+    const metric=c.metrics.map(m=>`${esc(m.name)} ${esc(m.value)} ${esc(m.unit)} · ${esc(m.period)} <a href="${esc(m.source_url)}" target="_blank" rel="noopener">ที่มา</a>`).join('<br>')||'ยังไม่มี';
+    const drivers=c.drivers.map(x=>`<div class="rsDeepBox"><b>${esc(x.title)}</b> <span class="rsChip ${x.status==='confirmed'?'green':'amber'}">${x.status==='confirmed'?'ยืนยันแล้ว':'ยังไม่ยืนยัน'}</span>${row('นัยยะ',esc(x.why_material))}${row('กลไก',esc(x.mechanism))}${row('ติดตาม',esc(x.indicator))}${row('Bull / Bear',esc(x.bull)+' / '+esc(x.bear))}</div>`).join('')||'ยังไม่ยืนยัน driver';
+    const today=new Date().toISOString().slice(0,10);
+    const cats=c.catalysts.filter(x=>x.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3)
+      .map(x=>`${esc(x.date)} (${x.date_status==='confirmed'?'ยืนยัน':'คาดการณ์'}) · ${esc(x.event)}`).join('<br>')||'ยังไม่มีวันที่ Catalyst ถัดไปที่ยืนยันหรือคาดการณ์';
+    const wires=c.tripwires.map(w=>`${esc(w.text)} · เกณฑ์ ${esc(w.threshold)} · ปัจจุบัน ${esc(w.current_value)} <span class="rsChip ${w.status==='confirmed'?'red':w.status==='check'?'amber':'ghost'}">${esc(w.status||'watching')}</span>`).join('<br>');
+    return `<div class="panel"><div class="rsCardTitle"><h3>Research Card · ${esc(ticker)}</h3><span class="when">ข้อมูล ${esc(c.as_of)}</span></div>${controls}${row('ธุรกิจ',esc(c.business.sells)+' · ลูกค้า '+esc(c.business.customers)+' · รายได้ '+esc(c.business.revenue_model))}${row('ตัวเลขหลัก',metric)}${row('Drivers',drivers)}${c.additional_drivers.length?row('ประเด็นเพิ่มเติม',c.additional_drivers.map(esc).join(' · ')):''}${row('Catalyst ถัดไป',cats)}${row('Tripwire',wires)}${c.severe_risks.length?row('ความเสี่ยงร้ายแรง',c.severe_risks.map(esc).join('<br>')):''}<details><summary>วันที่ข้อมูล แหล่งอ้างอิง และข้อมูลที่ขาด</summary>${row('ตรวจล่าสุด',esc(c.researched_at))}${row('แหล่งอ้างอิง',c.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a> · ${esc(s.date)}`).join('<br>')||'ยังไม่มี')}${row('ข้อมูลที่ขาด',c.missing_data.map(esc).join('<br>')||'ไม่มีที่ระบุ')}${row('ผลตรวจ',esc(c.review_result))}</details><details><summary>ดูข้อมูลเก่า (archive)</summary>${legacyHtml(d)}</details></div>`;
+  }
+  window.rcCardHtml=cardHtml;
+  window.rcValidate=validate;
+  window.rcMerge=merge;
+})();
+</script>
+<!-- RESEARCH CARD INLINE END -->
 </body>
 </html>
