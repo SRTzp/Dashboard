@@ -813,6 +813,11 @@ tr:last-child td{border-bottom:none}
 .wlm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;align-items:start}
 .wlm>*{min-width:0}
 .wlDet{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain}
+.wlm.rcExpanded{position:fixed;inset:0;z-index:200;display:block;overflow:hidden;background:var(--bg);padding:0;max-width:none}
+.wlm.rcExpanded .wlList{display:none}
+.wlm.rcExpanded .wlDet{display:block;position:relative;top:0;max-height:none;height:100dvh;overflow-y:auto;overflow-x:hidden;padding:12px max(12px,calc((100vw - 1100px)/2));box-sizing:border-box;scrollbar-gutter:stable}
+.wlm.rcExpanded .wlDPanel{position:sticky;top:0;z-index:2;background:var(--surface)}
+.wlm.rcExpanded .rcCard{max-width:1100px}
 .wlDet>.panel{margin-bottom:12px}
 .wlHead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
 .wlPills{display:flex;flex-wrap:wrap;gap:6px}
@@ -1165,6 +1170,38 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 .rsCardTitle>span{min-width:0}
 .rsCardTitle h3{font-size:.86rem;font-weight:700;letter-spacing:.005em}
 .rsCardTitle .when{font-family:var(--mono);font-size:.66rem;color:var(--faint);flex:none}
+.rcCard{min-width:0;overflow-wrap:anywhere}
+.rcSection{padding:17px 0;border-top:1px solid var(--hair)}
+.rcSection h4{font-size:1.02rem;margin:0 0 8px}
+.rcHelp{color:var(--muted);font-size:.8rem;margin:0 0 12px}
+.rcRow{grid-template-columns:minmax(110px,180px) minmax(0,1fr)}
+.rcRow .k{font-weight:600}
+.rcCard .wlReadText{font-size:.92rem;line-height:1.7}
+.rcMetricGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px}
+.rcMetric{display:flex;flex-direction:column;gap:3px;min-width:0;padding:11px;background:var(--surface2);border-radius:var(--r-sm)}
+.rcMetric span{font-size:.78rem;color:var(--muted)}
+.rcMetric b{font-size:1.05rem}
+.rcMetric small{font-size:.72rem;color:var(--muted)}
+.rcDriver{margin-bottom:10px}
+.rcDriver h5{font-size:.94rem;margin:0 0 9px;display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.rcEvidence{font-size:.78rem;color:var(--muted);padding-top:9px}
+.rcEvidence p{margin:5px 0}
+.rcWire{padding:12px;border:1px solid var(--border);border-radius:var(--r-sm);margin:8px 0}
+.rcWire>b{display:block;margin-bottom:8px}
+.rcRef{font-size:.78em;display:inline-flex;align-items:center;justify-content:center;min-width:26px;min-height:26px;white-space:nowrap;vertical-align:baseline;margin-left:3px}
+.rcSources,.rcTools,.rcArchive{border-top:1px solid var(--hair);padding:14px 0}
+.rcSources ol{list-style:none;padding:0;margin:12px 0;font-size:.82rem;line-height:1.8}
+.rcSources li{overflow-wrap:anywhere}
+.rcSources .wlKV p,.rcSection p{margin:5px 0}
+.rcTools textarea{font-family:var(--mono);font-size:.78rem}
+@media(max-width:600px){
+  .wlm.rcExpanded .wlDet{padding:8px 10px calc(20px + env(safe-area-inset-bottom))}
+  .rcRow{display:block}
+  .rcRow .k{display:block;margin-bottom:3px}
+  .rcMetricGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rcMetric b{font-size:.91rem}
+  .rcRef{min-width:36px;min-height:36px}
+}
 
 /* การ์ด lime "ต้องจัดการก่อน" — ไฮไลต์เดียวของหน้านี้ ตัวหนังสือดำเสมอ */
 .rsTodo{background:var(--lime);border:1px solid var(--lime);color:var(--text)}
@@ -2918,6 +2955,10 @@ function visibleTabs(){
 }
 function switchTab(t){
   if(!TAB_MAP[t]) return;
+  if(t!=='watch' && wlResearchExpanded){
+    wlResearchExpanded=false;
+    requestAnimationFrame(()=>window.scrollTo(0,wlResearchScroll));
+  }
   const order = TAB_ORDER;
   const fromI = order.indexOf(activeTab), toI = order.indexOf(t);
   const dir = (fromI<0 || toI<0) ? 0 : (toI > fromI ? 1 : toI < fromI ? -1 : 0); // 1 = ไปข้างหน้า (ปัดซ้าย)
@@ -2967,6 +3008,9 @@ function switchTab(t){
   }, {passive:true});
 })();
 document.addEventListener('keydown', (e)=>{
+  if((e.key==='Escape' || e.key==='Esc') && activeTab==='watch' && wlResearchExpanded){
+    e.preventDefault(); if(wlNarrow()) wlBack(); else wlSetSub('ov'); return;
+  }
   if(kbEditableTarget(e.target)) return;
   if(e.isComposing || e.keyCode===229) return;
   if(e.defaultPrevented) return;
@@ -3306,6 +3350,7 @@ let readExpandSeq = 0;
 function initReadExpanders(root=document){
   if(!root || !root.querySelectorAll) return;
   root.querySelectorAll('.rsNewsItem .h,.rsBizBox .v,.rsDeepBox .v,.rsAsset .row2,.wlReadText').forEach(block=>{
+    if(block.closest('.rcCard')) return;
     if(block.dataset.readExpandReady || block.querySelector('table,button,input,select,textarea,a')) return;
     block.dataset.readExpandReady='1';
     if(!block.textContent.trim()) return;
@@ -4931,6 +4976,7 @@ function renderPortfolioMix(){
    Candidates = research ที่ in_watchlist=false และยังไม่อยู่ใน watchlist ฝั่งเทรด
    ★ ตัวแปรชุดนี้เป็นสถานะหน้าจอล้วน — ห้ามเก็บลง state/Firestore */
 let wlView = 'wl', wlPort = 'all', wlSel = '', wlSub = 'ov', wlDeep = 'B', wlMobOpen = false, wlScroll = 0;
+let wlResearchExpanded = false, wlResearchScroll = 0;
 const WL_NEWS_MAX = 5;      /* แถบ "ข่าวที่ต้องดู" โชว์กี่รายการ */
 const WL_NEWS_DAYS = 7;     /* ยังไม่มี newsSeen → เอาเฉพาะข่าวใน n วันล่าสุด */
 const WL_PORT_CYCLE = ['all','core','satA'];
@@ -5085,11 +5131,12 @@ function renderWatchlist(){
     <div class="wlRows">${rows.map(wlRowHtml).join('') || `<div class="empty">${empty}</div>`}</div></div>`;
 
   const det = `<div class="wlDet">${wlSel ? wlDetailHtml(wlFind(wlSel)) : '<div class="panel"><div class="empty">เลือกหุ้นจากลิสต์</div></div>'}</div>`;
-  host.innerHTML = `<div class="wlm${open?' open':''}">${list}${det}</div>`;
+  const expanded = wlResearchExpanded && wlSub==='rs' && !!(wlSel && wlFind(wlSel)?.d?.research_card);
+  host.innerHTML = `<div class="wlm${open?' open':''}${expanded?' rcExpanded':''}">${list}${det}</div>`;
   initReadExpanders(host);
 }
-function wlSetView(v){ wlView = (v==='cand'?'cand':'wl'); wlMobOpen = false; renderWatchlist(); }
-function wlSetPort(p){ wlView = 'wl'; wlPort = WL_PORT_CYCLE.includes(p) ? p : 'all'; wlMobOpen = false; renderWatchlist(); }
+function wlSetView(v){ wlResearchExpanded=false; wlView = (v==='cand'?'cand':'wl'); wlMobOpen = false; renderWatchlist(); }
+function wlSetPort(p){ wlResearchExpanded=false; wlView = 'wl'; wlPort = WL_PORT_CYCLE.includes(p) ? p : 'all'; wlMobOpen = false; renderWatchlist(); }
 function wlOpen(sym, sub){
   sym = String(sym||'').toUpperCase(); if(!sym) return;
   const r = wlFind(sym);
@@ -5099,6 +5146,10 @@ function wlOpen(sym, sub){
   }
   if(wlSel!==sym){ wlDeep = 'B'; }
   wlSel = sym; wlSub = sub || 'ov';
+  if(wlSub==='rs' && r?.d?.research_card){
+    if(!wlResearchExpanded) wlResearchScroll=window.scrollY||0;
+    wlResearchExpanded=true;
+  } else wlResearchExpanded=false;
   if(wlNarrow()){
     if(!wlMobOpen) wlScroll = window.scrollY || 0;
     wlMobOpen = true;
@@ -5107,12 +5158,24 @@ function wlOpen(sym, sub){
   } else renderWatchlist();
 }
 function wlBack(){
+  wlResearchExpanded = false;
   wlMobOpen = false;
   renderWatchlist();
   const y = wlScroll;
   requestAnimationFrame(()=>{ try{ window.scrollTo(0,y); }catch(e){} });
 }
-function wlSetSub(s){ wlSub = s; renderWatchlist(); }
+function wlSetSub(s){
+  const wasExpanded=wlResearchExpanded;
+  if(s==='rs' && wlFind(wlSel)?.d?.research_card){
+    if(!wasExpanded) wlResearchScroll=window.scrollY||0;
+    wlResearchExpanded=true;
+  } else wlResearchExpanded=false;
+  wlSub=s;
+  renderWatchlist();
+  if(wasExpanded && !wlResearchExpanded){
+    requestAnimationFrame(()=>{ try{ window.scrollTo(0,wlNarrow()?0:wlResearchScroll); }catch(e){} });
+  }
+}
 function wlSetDeep(s){ wlDeep = s; renderWatchlist(); }
 /* ปุ่ม "เปิดแผนเทรด →" — ไปแท็บแผน แล้วเปิดฟอร์ม Add Trade พร้อมเลือก Symbol ให้ */
 function wlTradeFor(sym){
@@ -9714,7 +9777,9 @@ if(bkIsMac()){
 </script>
 <!-- RESEARCH CARD INLINE START -->
 <script>
-/* source: research-card.js · sha256 e9e2c12e0c3a */
+/* source: research-card.js · sha256 1fb441574bdc */
+window.RC_AVGO_TH={"schema_version":"research-card/1.0","ticker":"AVGO","as_of":"2026-09-18","researched_at":"2026-09-18T13:07:08Z","review_result":"changed","business":{"sells":"ออกแบบชิปเร่งประมวลผล AI เฉพาะลูกค้า ชิปเครือข่าย และเซมิคอนดักเตอร์อื่น ๆ รวมถึงซอฟต์แวร์โครงสร้างพื้นฐาน เช่น VMware Cloud Foundation","customers":"กลุ่มลูกค้าชิปคือผู้ให้บริการคลาวด์ ผู้ผลิตอุปกรณ์ (OEM) และผู้จัดจำหน่าย ส่วนซอฟต์แวร์ขายให้องค์กรและหน่วยงานรัฐ","revenue_model":"รายได้มาจากการขายชิปและให้สิทธิใช้ทรัพย์สินทางปัญญา รวมถึงใบอนุญาตซอฟต์แวร์ การสมัครใช้บริการ การสนับสนุน และบริการอื่น ๆ รายได้จากใบอนุญาตบางส่วนรับรู้ตั้งแต่เริ่มสัญญา"},"metrics":[{"name":"รายได้รวม","value":"29591","unit":"ล้านดอลลาร์","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"รายได้เซมิคอนดักเตอร์","value":"20839","unit":"ล้านดอลลาร์","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"รายได้ชิป AI","value":"16.7","unit":"พันล้านดอลลาร์; ตัวเลขที่ฝ่ายบริหารรายงาน","period":"Q3 FY2026","source_url":"https://investors.broadcom.com/node/64671/pdf"},{"name":"รายได้ซอฟต์แวร์โครงสร้างพื้นฐาน","value":"8752","unit":"ล้านดอลลาร์","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"รายได้ใบอนุญาตซอฟต์แวร์ที่รับรู้ล่วงหน้า","value":"3465","unit":"ล้านดอลลาร์","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"สัดส่วนรายได้จากลูกค้าปลายทาง 5 รายใหญ่","value":"55","unit":"%; ประมาณ","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"สัดส่วนรายได้จากผู้จัดจำหน่ายชิปรายหนึ่ง","value":"50","unit":"%","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"FCF — เงินสดจากการดำเนินงานหลังหักลงทุน","value":"13665","unit":"ล้านดอลลาร์; ตามนิยามบริษัท","period":"Q3 FY2026","source_url":"https://investors.broadcom.com/node/64671/pdf"}],"drivers":[{"id":"ai_semiconductors","title":"ความต้องการชิปเร่งประมวลผล AI และชิปเครือข่าย","why_material":"ฝ่ายบริหารรายงานรายได้ชิป AI ไตรมาส 3 ที่ 16.7 พันล้านดอลลาร์ และคาดไตรมาส 4 ประมาณ 21.7 พันล้านดอลลาร์","mechanism":"การติดตั้งระบบ AI เพิ่มคำสั่งซื้อชิปเร่งประมวลผลเฉพาะลูกค้าและชิปเครือข่าย หากการติดตั้งล่าช้าหรือเสียแบบชิปให้คู่แข่ง คำสั่งซื้อจะลดลง","indicator":"รายได้ชิป AI ไตรมาส 4 เทียบกับเป้าของฝ่ายบริหารที่ประมาณ 21.7 พันล้านดอลลาร์","bull":"รายได้ชิป AI ไตรมาส 3 โต 221% เทียบปีก่อน และฝ่ายบริหารคาดว่าจะเพิ่มขึ้นอีกในไตรมาส 4","bear":"แม้ไตรมาส 3 แข็งแกร่ง แต่จังหวะสั่งซื้อและติดตั้งระบบของลูกค้าอาจทำให้รายได้เลื่อนไประหว่างไตรมาส","status":"confirmed","evidence":[{"claim":"รายได้ชิป AI ไตรมาส 3 อยู่ที่ 16.7 พันล้านดอลลาร์; แนวโน้มไตรมาส 4 ประมาณ 21.7 พันล้านดอลลาร์","source_url":"https://investors.broadcom.com/node/64671/pdf"},{"claim":"รายงาน 10-Q ระบุว่าการเติบโตของธุรกิจชิปมาจากชิปเร่งประมวลผล AI เฉพาะลูกค้าและชิปเครือข่าย AI เป็นหลัก และเตือนว่าจังหวะคำสั่งซื้ออาจทำให้รายได้ผันผวน","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"}]},{"id":"vmware_software","title":"ความต้องการ VMware และจังหวะรับรู้รายได้ซอฟต์แวร์","why_material":"ซอฟต์แวร์โครงสร้างพื้นฐานทำรายได้ 8,752 ล้านดอลลาร์ หรือ 30% ของรายได้ไตรมาส 3 โดย 3,465 ล้านดอลลาร์เป็นรายได้ใบอนุญาตที่รับรู้ตั้งแต่เริ่มสัญญา","mechanism":"สัญญา VMware Cloud Foundation เพิ่มยอดขายซอฟต์แวร์ ส่วนเงื่อนไขสัญญากำหนดว่าจะรับรู้รายได้ใบอนุญาตทันทีหรือทยอยรับรู้","indicator":"รายได้ธุรกิจซอฟต์แวร์ รายได้ใบอนุญาตที่รับรู้ตั้งแต่เริ่มสัญญา และสินทรัพย์จากสัญญาในงบงวดถัดไป","bull":"รายได้ซอฟต์แวร์ไตรมาส 3 โต 29% เทียบปีก่อน โดยรายงาน 10-Q ระบุถึงความต้องการ VMware Cloud Foundation","bear":"การเติบโตที่รายงานอ่อนไหวต่อเงื่อนไขสัญญาและจังหวะต่ออายุ; รายได้ธุรกิจซอฟต์แวร์ไม่ใช่ตัวเลขรายได้ประจำที่บริษัทเปิดเผย","status":"confirmed","evidence":[{"claim":"รายได้ซอฟต์แวร์โครงสร้างพื้นฐานไตรมาส 3 เท่ากับ 8,752 ล้านดอลลาร์ เทียบกับ 6,786 ล้านดอลลาร์ปีก่อน; Broadcom ระบุถึงความต้องการ VMware Cloud Foundation","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"claim":"รายได้ใบอนุญาตที่รับรู้ตั้งแต่เริ่มสัญญาไตรมาส 3 เท่ากับ 3,465 ล้านดอลลาร์; รายงาน 10-Q อธิบายการรับรู้รายได้ของใบอนุญาตที่ยกเลิกสัญญาไม่ได้","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"}]},{"id":"customer_concentration","title":"การกระจุกตัวของลูกค้าและผู้จัดจำหน่าย","why_material":"รายได้ไตรมาส 3 ประมาณ 55% มาจากลูกค้าปลายทาง 5 รายใหญ่ และผู้จัดจำหน่ายชิปรายหนึ่งคิดเป็น 50% ของรายได้รวม","mechanism":"การติดตั้งระบบขนาดใหญ่ของลูกค้ารายสำคัญช่วยเร่งยอดขายได้ แต่คำสั่งซื้อที่เลื่อน การเสียแบบชิป หรือการสะดุดของช่องทางจำหน่ายอาจกระทบรายได้มาก","indicator":"สัดส่วนรายได้จากลูกค้าปลายทาง 5 รายใหญ่และจากผู้จัดจำหน่ายรายใหญ่ที่สุดในงบงวดถัดไป","bull":"คำสั่งซื้อที่กระจุกตัวเกิดพร้อมกับการเติบโตอย่างมากของรายได้ธุรกิจชิปในไตรมาส 3","bear":"การกระจุกตัวเดียวกันทำให้รายได้ขึ้นกับการตัดสินใจของลูกค้าไม่กี่รายและผู้จัดจำหน่ายรายใหญ่รายหนึ่ง","status":"confirmed","evidence":[{"claim":"ลูกค้าปลายทาง 5 รายใหญ่คิดเป็นประมาณ 55% ของรายได้ไตรมาส 3 และผู้จัดจำหน่ายรายหนึ่งคิดเป็น 50%","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"claim":"Broadcom ระบุว่าคำสั่งซื้อชิปขนาดใหญ่หรือการเลื่อนคำสั่งซื้ออาจทำให้รายได้รายไตรมาสผันผวนมาก","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"}]}],"additional_drivers":["งานตามสัญญาที่ยังไม่รับรู้เป็นรายได้ (RPO): ณ 2 สิงหาคม อยู่ที่ประมาณ 179.2 พันล้านดอลลาร์ รวมสัญญาชิปเร่งประมวลผล AI เฉพาะลูกค้า บริษัทคาดว่าจะรับรู้ประมาณ 25% ภายใน 12 เดือน แต่ไม่เปิดเผยสัดส่วนระหว่างชิปกับซอฟต์แวร์ (แหล่งข้อมูล: https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm)","เงินสดและหนี้: FCF — เงินสดจากการดำเนินงานหลังหักลงทุน ไตรมาส 3 อยู่ที่ 13,665 ล้านดอลลาร์; ยอดเงินกู้คงค้าง ณ 2 สิงหาคม ประมาณ 61.1 พันล้านดอลลาร์ (แหล่งข้อมูล: https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm)","การพึ่งพาผู้ผลิต: Broadcom จ้างภายนอกผลิตเวเฟอร์ขั้นต้นเป็นส่วนใหญ่ รวมถึง TSMC (แหล่งข้อมูล: https://www.sec.gov/Archives/edgar/data/1730168/000173016825000121/avgo-20251102.htm)"],"catalysts":[],"tripwires":[{"id":"ai_q4_outlook","text":"รายได้ชิป AI ไตรมาส 4 ปีงบประมาณ 2026 ต่ำกว่าแนวโน้มที่ฝ่ายบริหารให้ไว้","threshold":"รายได้ชิป AI ไตรมาส 4 ปีงบประมาณ 2026 < ประมาณ 21.7 พันล้านดอลลาร์","current_value":"ยังไม่มีผลไตรมาส 4; ไตรมาส 3 ปีงบประมาณ 2026 อยู่ที่ 16.7 พันล้านดอลลาร์","keywords":["AI semiconductor revenue","custom accelerators","Q4 FY2026"]},{"id":"top_five_concentration","text":"สัดส่วนรายได้จากลูกค้าปลายทาง 5 รายใหญ่สูงกว่าระดับไตรมาส 3 ปีงบประมาณ 2026","threshold":"สัดส่วนรายได้จากลูกค้าปลายทาง 5 รายใหญ่ > ประมาณ 55%","current_value":"ไตรมาส 3 ปีงบประมาณ 2026: ประมาณ 55%","keywords":["top five end customers","customer concentration","distributor"]}],"severe_risks":["การสูญเสียหรือเลื่อนคำสั่งซื้อจากลูกค้า AI จำนวนน้อยรายที่มีสัดส่วนรายได้สูง","การผลิตที่จ้างภายนอกหรือช่องทางผู้จัดจำหน่ายรายใหญ่สะดุด","การต่ออายุซอฟต์แวร์อ่อนแอ แต่ถูกกลบด้วยรายได้ใบอนุญาตที่รับรู้ตั้งแต่เริ่มสัญญา","เงินสดที่สร้างได้ลดลงขณะยังต้องรับภาระหนี้จำนวนมาก"],"sources":[{"title":"รายงาน 10-Q ไตรมาส 3 ปีงบประมาณ 2026 ของ Broadcom","url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm","date":"2026-09-10"},{"title":"ข่าวผลประกอบการไตรมาส 3 ปีงบประมาณ 2026 ของ Broadcom","url":"https://investors.broadcom.com/node/64671/pdf","date":"2026-09-02"},{"title":"รายงาน 10-K ปีงบประมาณ 2025 ของ Broadcom","url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016825000121/avgo-20251102.htm","date":"2025-12-18"},{"title":"หน้ารวมข่าวการเงินของ Broadcom (ตรวจเมื่อ 2026-09-18)","url":"https://investors.broadcom.com/financial-information/financial-news-releases","date":"2026-09-18"}],"missing_data":["เอกสารที่ตรวจไม่เปิดเผยสัดส่วนรายได้ประจำทั้งบริษัทและอัตราการต่ออายุ VMware","รายได้ชิป AI เป็นตัวเลขที่ฝ่ายบริหารรายงาน ไม่ใช่ธุรกิจแยกในงบตาม GAAP","บริษัทไม่เปิดเผยสัดส่วนงานตามสัญญาที่ยังไม่รับรู้เป็นรายได้ (RPO) ระหว่างชิปกับซอฟต์แวร์","ไม่พบวันประกาศผลประกอบการครั้งถัดไปที่ยืนยันแล้วในแหล่งข้อมูลหลักที่ตรวจ"],"changes":["การ์ดแรก: ไม่มี Research Card เดิม ข้อมูลธุรกิจวันที่ 17 กันยายนใช้เป็นเอกสารอ้างอิงที่ยังไม่ยืนยัน","ตรวจตัวเอง: เทียบตัวเลขกับข่าวผลประกอบการและรายงาน 10-Q ไตรมาส 3; รายได้ชิป 20,839 ล้านดอลลาร์ + รายได้ซอฟต์แวร์ 8,752 ล้านดอลลาร์ = รายได้รวม 29,591 ล้านดอลลาร์ และเงินสดจากการดำเนินงาน 14,197 ล้านดอลลาร์ − เงินลงทุน 532 ล้านดอลลาร์ = FCF ตามนิยามบริษัท 13,665 ล้านดอลลาร์","แก้ตัวเลขการกระจุกตัวจากข้อมูลเก่าเป็นระดับไตรมาส 3 ล่าสุด: ลูกค้าปลายทาง 5 รายใหญ่ประมาณ 55% และผู้จัดจำหน่ายชิปรายหนึ่ง 50%","ตรวจตัวเอง: หน้ารวมข่าวการเงินของ Broadcom ไม่แสดงข่าวการเงินที่ใหม่กว่าข่าวผลประกอบการวันที่ 2 กันยายน ณ วันที่ 18 กันยายน; การตรวจนี้ไม่ใช่ด่านตรวจคุณภาพอิสระ"]};
+window.RC_AVGO_ORIGINAL={"schema_version":"research-card/1.0","ticker":"AVGO","as_of":"2026-09-18","researched_at":"2026-09-18T13:07:08Z","review_result":"changed","business":{"sells":"Custom AI accelerators, networking and other semiconductors; infrastructure software including VMware Cloud Foundation.","customers":"Cloud operators, OEMs and distributors for semiconductors; enterprises and government organizations for software.","revenue_model":"Semiconductor product sales and IP licensing; software licenses, subscriptions, support and services. Some software license revenue is recognized upfront."},"metrics":[{"name":"Total revenue","value":"29591","unit":"USD million","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"Semiconductor revenue","value":"20839","unit":"USD million","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"AI semiconductor revenue","value":"16.7","unit":"USD billion; management-reported","period":"Q3 FY2026","source_url":"https://investors.broadcom.com/node/64671/pdf"},{"name":"Infrastructure software revenue","value":"8752","unit":"USD million","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"Upfront software license revenue","value":"3465","unit":"USD million","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"Revenue from top five end customers","value":"55","unit":"percent; approximately","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"Revenue from one semiconductor distributor","value":"50","unit":"percent","period":"Q3 FY2026","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"name":"Free cash flow","value":"13665","unit":"USD million; company-defined","period":"Q3 FY2026","source_url":"https://investors.broadcom.com/node/64671/pdf"}],"drivers":[{"id":"ai_semiconductors","title":"AI accelerator and networking demand","why_material":"Management reported $16.7 billion of Q3 AI semiconductor revenue and expects approximately $21.7 billion in Q4.","mechanism":"AI deployments drive orders for custom accelerators and networking products; delayed deployments or lost designs reduce those orders.","indicator":"Q4 AI semiconductor revenue against management's approximately $21.7 billion outlook.","bull":"Q3 AI revenue grew 221% year over year, and management expects a further sequential increase.","bear":"Customer order and deployment timing can shift revenue between quarters despite the strong Q3 result.","status":"confirmed","evidence":[{"claim":"Q3 AI semiconductor revenue was $16.7 billion; the Q4 outlook is approximately $21.7 billion.","source_url":"https://investors.broadcom.com/node/64671/pdf"},{"claim":"The 10-Q attributes semiconductor growth mainly to custom AI accelerators and AI networking and warns of order-timing fluctuations.","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"}]},{"id":"vmware_software","title":"VMware demand and revenue recognition","why_material":"Infrastructure software generated $8,752 million, or 30% of Q3 revenue; $3,465 million of software license revenue was recognized upfront.","mechanism":"VMware Cloud Foundation contracts increase software sales, while contract terms determine whether license revenue is recognized upfront or over time.","indicator":"Software segment revenue, upfront license revenue and contract assets in subsequent filings.","bull":"Q3 software revenue rose 29% year over year, with the 10-Q citing VMware Cloud Foundation demand.","bear":"The same reported growth is sensitive to contract terms and renewal timing; software segment revenue is not a disclosed recurring-revenue measure.","status":"confirmed","evidence":[{"claim":"Q3 infrastructure software revenue was $8,752 million versus $6,786 million a year earlier; Broadcom cites VMware Cloud Foundation demand.","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"claim":"Q3 upfront license revenue was $3,465 million; the 10-Q explains how non-terminable software licenses are recognized.","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"}]},{"id":"customer_concentration","title":"Customer and distributor concentration","why_material":"Approximately 55% of Q3 revenue came from the top five end customers; one semiconductor distributor accounted for 50% of total revenue.","mechanism":"Large customer deployments can scale sales rapidly, but an order delay, lost design or channel disruption can have an outsized effect.","indicator":"Top-five end-customer and largest-distributor revenue shares in subsequent filings.","bull":"Concentrated orders accompanied substantial Q3 semiconductor growth.","bear":"The same concentration exposes revenue to decisions by a small number of customers and one major distributor.","status":"confirmed","evidence":[{"claim":"Top-five end customers represented approximately 55% of Q3 revenue, and one distributor represented 50%.","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"},{"claim":"Broadcom says large semiconductor orders or delays can cause significant quarterly fluctuations.","source_url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm"}]}],"additional_drivers":["Contracted revenue visibility: Remaining performance obligations were approximately $179.2 billion at August 2, including a custom AI accelerator contract. Broadcom expects approximately 25% to be recognized within 12 months; it does not disclose the semiconductor/software split. (source: https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm)","Cash generation and debt: Q3 free cash flow was $13,665 million. Borrowings outstanding were approximately $61.1 billion at August 2. (source: https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm)","Manufacturing dependence: Broadcom outsources most front-end wafer manufacturing, including to TSMC. (source: https://www.sec.gov/Archives/edgar/data/1730168/000173016825000121/avgo-20251102.htm)"],"catalysts":[],"tripwires":[{"id":"ai_q4_outlook","text":"Q4 FY2026 AI semiconductor revenue falls below management's outlook.","threshold":"Q4 FY2026 AI semiconductor revenue < approximately USD 21.7 billion","current_value":"Q4 result unavailable; Q3 FY2026 was USD 16.7 billion","keywords":["AI semiconductor revenue","custom accelerators","Q4 FY2026"]},{"id":"top_five_concentration","text":"Top-five end-customer concentration rises above the Q3 FY2026 level.","threshold":"Top-five end-customer share > approximately 55%","current_value":"Q3 FY2026: approximately 55%","keywords":["top five end customers","customer concentration","distributor"]}],"severe_risks":["Order losses or delays among a small number of AI customers.","Outsourced manufacturing or major distributor disruption.","Software renewal weakness obscured by upfront license recognition.","Reduced cash generation while servicing substantial debt."],"sources":[{"title":"Broadcom Q3 FY2026 Form 10-Q","url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016826000080/avgo-20260802.htm","date":"2026-09-10"},{"title":"Broadcom Q3 FY2026 earnings release","url":"https://investors.broadcom.com/node/64671/pdf","date":"2026-09-02"},{"title":"Broadcom FY2025 Form 10-K","url":"https://www.sec.gov/Archives/edgar/data/1730168/000173016825000121/avgo-20251102.htm","date":"2025-12-18"},{"title":"Broadcom investor financial news listing (reviewed 2026-09-18)","url":"https://investors.broadcom.com/financial-information/financial-news-releases","date":"2026-09-18"}],"missing_data":["The company-wide recurring revenue percentage and VMware renewal rate are not disclosed in the reviewed documents.","AI semiconductor revenue is management-reported rather than a separate GAAP segment.","The semiconductor/software split of remaining performance obligations is not disclosed.","No confirmed date for the next earnings release was found in the reviewed primary sources."],"changes":["First card: no existing Research Card was supplied. The September 17 legacy business note was treated as unverified reference material.","Self review: checked figures against the Q3 release and Form 10-Q; $20,839 million semiconductor revenue plus $8,752 million software revenue equals $29,591 million total revenue, and $14,197 million operating cash flow less $532 million capital expenditure equals $13,665 million company-defined free cash flow.","Corrected the legacy concentration figures to the latest reported Q3 levels: approximately 55% from the top five end customers and 50% from one semiconductor distributor.","Self review: the Broadcom investor financial news listing showed no newer financial news item than the September 2 Q3 release as of September 18; this is not an independent quality gate."]};
 /* Research Card v1 — mirrors shared/research-card-v1.md and research_card.py. */
 (function(){
   'use strict';
@@ -9806,7 +9871,7 @@ if(bkIsMac()){
       severe_risks:old.severe_risks, sources:old.sources, missing_data:old.missing_data
     } : null;
     const oldBiz = !prior && legacy ? {date:legacy.date, what:legacy.q1_what, economics:legacy.q2_economics, sources:legacy.sources} : null;
-    return `Research ${ticker} into one concise Research Card JSON object (schema_version research-card/1.0). Return JSON only, without a Markdown fence. JSON types are strict: every metrics[].value is a quoted string (for example "29591", not 29591); additional_drivers, missing_data, and changes are arrays of plain strings, never objects. Use the existing card and newest primary documents first. Read the latest financial statement and material company events since the old as_of date. Update only changed conclusions, but return a complete card. Choose up to three drivers using documented impact size, causal mechanism, and trackable indicator. Use the same evidence set for bull and bear. Mark thin evidence unconfirmed; do not invent numbers or fill slots. Put other material drivers in additional_drivers. Top-level review_result MUST be a string exactly "changed", "no_change", or "no_data". For a FIRST card with no existing card, use "changed" and a nonempty changes array even if some requested facts are missing. Put unavailable facts in missing_data as plain strings, not objects with area/status/detail. For updates, use no_change only when checked evidence confirms no substantive change; use no_data when a check found insufficient new evidence. For no_change/no_data, keep prior content unchanged and set changes to []; for no_data, keep the prior as_of date. In one pass, verify numbers against sources and internal consistency, labeling this as self review. No subagents, long report, Google Doc, forced probability, reverse DCF, base rate, or peer valuation. Each tripwire needs a stable id, threshold, current_value, and keywords. Return exactly these 15 top-level fields with no extras: schema_version,ticker,as_of,researched_at (UTC YYYY-MM-DDTHH:MM:SSZ),review_result,business{sells,customers,revenue_model},metrics[{name,value,unit,period,source_url}],drivers[{id,title,why_material,mechanism,indicator,bull,bear,status,evidence[{claim,source_url}]}],additional_drivers,catalysts[{event,date,date_status,source_url}],tripwires[{id,text,threshold,current_value,keywords}],severe_risks,sources[{title,url,date}],missing_data,changes. Driver status confirmed/unconfirmed; catalyst date_status confirmed/estimated. Ticker: ${ticker}. Existing card JSON: ${prior ? JSON.stringify(prior) : 'null'}. Legacy business reference (unverified; do not promote thesis prose to confirmed drivers): ${oldBiz ? JSON.stringify(oldBiz) : 'null'}.`;
+    return `Research ${ticker} into one concise Research Card JSON object (schema_version research-card/1.0). Return JSON only, without a Markdown fence. Write all reader-facing text in clear Thai. Keep company names, product names, tickers, stable IDs, JSON keys, dates, numerical values and source URLs unchanged. Explain necessary technical terms briefly at first use, for example FCF — เงินสดจากการดำเนินงานหลังหักลงทุน. Write percentages with % and an explicit comparison base for growth; distinguish % from percentage points. Format money in Thai units without changing its value or calculation. Preserve approximately and company-defined qualifications. For no_change/no_data, retain the prior content exactly, including its language. JSON types are strict: every metrics[].value is a quoted string (for example "29591", not 29591); additional_drivers, missing_data, and changes are arrays of plain strings, never objects. Use the existing card and newest primary documents first. Read the latest financial statement and material company events since the old as_of date. Update only changed conclusions, but return a complete card. Choose up to three drivers using documented impact size, causal mechanism, and trackable indicator. Use the same evidence set for bull and bear. Mark thin evidence unconfirmed; do not invent numbers or fill slots. Put other material drivers in additional_drivers. Top-level review_result MUST be a string exactly "changed", "no_change", or "no_data". For a FIRST card with no existing card, use "changed" and a nonempty changes array even if some requested facts are missing. Put unavailable facts in missing_data as plain strings, not objects with area/status/detail. For updates, use no_change only when checked evidence confirms no substantive change; use no_data when a check found insufficient new evidence. For no_change/no_data, keep prior content unchanged and set changes to []; for no_data, keep the prior as_of date. In one pass, verify numbers against sources and internal consistency, labeling this as self review. No subagents, long report, Google Doc, forced probability, reverse DCF, base rate, or peer valuation. Each tripwire needs a stable id, threshold, current_value, and keywords. Return exactly these 15 top-level fields with no extras: schema_version,ticker,as_of,researched_at (UTC YYYY-MM-DDTHH:MM:SSZ),review_result,business{sells,customers,revenue_model},metrics[{name,value,unit,period,source_url}],drivers[{id,title,why_material,mechanism,indicator,bull,bear,status,evidence[{claim,source_url}]}],additional_drivers,catalysts[{event,date,date_status,source_url}],tripwires[{id,text,threshold,current_value,keywords}],severe_risks,sources[{title,url,date}],missing_data,changes. Driver status confirmed/unconfirmed; catalyst date_status confirmed/estimated. Ticker: ${ticker}. Existing card JSON: ${prior ? JSON.stringify(prior) : 'null'}. Legacy business reference (unverified; do not promote thesis prose to confirmed drivers): ${oldBiz ? JSON.stringify(oldBiz) : 'null'}.`;
   }
   window.rcCopy = async ticker => {
     const d = window.wlDocMap()[ticker] || {};
@@ -9869,17 +9934,61 @@ if(bkIsMac()){
     return bits.join('') || '<p>ไม่มีข้อมูลเก่าที่แสดงได้</p>';
   }
   function cardHtml(r){
-    const d=r.d||{}, c=d.research_card, ticker=r.sym;
+    const d=r.d||{}, original=d.research_card, ticker=r.sym;
+    const local=window.RC_AVGO_TH, base=window.RC_AVGO_ORIGINAL;
+    const sameAVGO=original && ticker==='AVGO' && local && base && original.as_of===base.as_of
+      && ['business','metrics','drivers','additional_drivers','catalysts','severe_risks','missing_data'].every(k=>stable(original[k])===stable(base[k]))
+      && stable((original.tripwires||[]).map(w=>({id:w.id,text:w.text,threshold:w.threshold,current_value:w.current_value,keywords:w.keywords})))===stable(base.tripwires)
+      && stable((original.sources||[]).map(s=>({url:s.url,date:s.date})))===stable(base.sources.map(s=>({url:s.url,date:s.date})));
+    const c=sameAVGO
+      ? {...local,researched_at:original.researched_at,review_result:original.review_result,changes:original.review_result==='changed'?local.changes:original.changes,
+        tripwires:local.tripwires.map(w=>{
+          const live=(original.tripwires||[]).find(x=>x.id===w.id);
+          return {...w,status:live&&live.status};
+        })}
+      : original;
     const controls=`${previewOnly?'<div class="rsChip amber">พรีวิว · ตรวจ Import ได้ แต่ยังไม่บันทึก Firestore</div>':''}<div class="wlActs"><button type="button" class="small primary" onclick="rcCopy('${esc(ticker)}')">${c?'อัปเดต Research · คัดลอกคำสั่ง':'สร้าง Research Card · คัดลอกคำสั่ง'}</button></div><details><summary>นำเข้าผล Research</summary><textarea id="rcJson" aria-label="Research Card JSON" style="width:100%;min-height:150px;box-sizing:border-box" placeholder="วาง JSON จาก GPT หรือ Claude"></textarea><button type="button" class="small" onclick="rcPreview('${esc(ticker)}')">ตรวจข้อมูลและดูสิ่งที่เปลี่ยน</button><div id="rcStatus" role="status"></div></details>`;
     if(!c) return `<div class="panel"><h3>รอสร้าง Research Card · ${esc(ticker)}</h3>${controls}<details><summary>ดูข้อมูลเก่า (archive)</summary>${legacyHtml(d)}</details></div>`;
-    const row=(name,v)=>`<div class="wlKV"><span class="k">${esc(name)}</span><span class="v wlReadText">${v}</span></div>`;
-    const metric=c.metrics.map(m=>`${esc(m.name)} ${esc(m.value)} ${esc(m.unit)} · ${esc(m.period)} <a href="${esc(m.source_url)}" target="_blank" rel="noopener">ที่มา</a>`).join('<br>')||'ยังไม่มี';
-    const drivers=c.drivers.map(x=>`<div class="rsDeepBox"><b>${esc(x.title)}</b> <span class="rsChip ${x.status==='confirmed'?'green':'amber'}">${x.status==='confirmed'?'ยืนยันแล้ว':'ยังไม่ยืนยัน'}</span>${row('นัยยะ',esc(x.why_material))}${row('กลไก',esc(x.mechanism))}${row('ติดตาม',esc(x.indicator))}${row('Bull / Bear',esc(x.bull)+' / '+esc(x.bear))}</div>`).join('')||'ยังไม่ยืนยัน driver';
+    const refs=[], index=new Map();
+    const register=(url,title,date)=>{
+      if(!/^https?:\/\/\S+$/i.test(String(url||''))) return null;
+      if(!index.has(url)){ index.set(url,refs.length+1); refs.push({url,title:title||'เอกสารอ้างอิง',date:date||''}); }
+      else if(title){ const item=refs[index.get(url)-1]; item.title=title; item.date=date||item.date; }
+      return index.get(url);
+    };
+    (c.sources||[]).forEach(s=>register(s.url,s.title,s.date));
+    c.metrics.forEach(m=>register(m.source_url));
+    c.drivers.forEach(d=>d.evidence.forEach(e=>register(e.source_url)));
+    c.catalysts.forEach(x=>register(x.source_url));
+    c.additional_drivers.forEach(x=>{ (String(x).match(/https?:\/\/[^\s)]+/g)||[]).forEach(registerUrl=>register(registerUrl)); });
+    const cite=url=>{
+      const n=register(url); return n ? `<a class="rcRef" href="${esc(url)}" target="_blank" rel="noopener noreferrer" aria-label="เปิดแหล่งข้อมูล ${n}">[${n}]</a>` : '';
+    };
+    const prose=value=>{
+      const str=String(value==null?'':value), pattern=/https?:\/\/[^\s)]+/g;
+      let out='', last=0, match;
+      while((match=pattern.exec(str))){ out+=esc(str.slice(last,match.index))+cite(match[0]); last=pattern.lastIndex; }
+      return out+esc(str.slice(last));
+    };
+    const row=(name,v)=>`<div class="wlKV rcRow"><span class="k">${esc(name)}</span><span class="v wlReadText">${v}</span></div>`;
+    const section=(title,body,subtitle='')=>`<section class="rcSection"><h4>${esc(title)}</h4>${subtitle?`<p class="rcHelp">${esc(subtitle)}</p>`:''}${body}</section>`;
+    const metricValue=m=>{
+      const value=String(m.value), unit=String(m.unit||'');
+      const displayed=/^-?\d+(\.\d+)?$/.test(value) ? Number(value).toLocaleString('en-US',{maximumFractionDigits:10}) : value;
+      const clean=unit.replace(/\bpercent\b|เปอร์เซ็นต์|ร้อยละ/gi,'%').replace(/USD million/gi,'ล้านดอลลาร์').replace(/USD billion/gi,'พันล้านดอลลาร์').replace(/;?\s*approximately/gi,'; ประมาณ').replace(/;?\s*company-defined/gi,'; ตามนิยามบริษัท').replace(/;?\s*management-reported/gi,'; ตัวเลขที่ฝ่ายบริหารรายงาน');
+      return clean.startsWith('%') ? `${clean.includes('ประมาณ')?'ประมาณ ':''}${esc(displayed)}%` : `${esc(displayed)} ${esc(clean.replace(/^;?\s*/,''))}`;
+    };
+    const metric=`<div class="rcMetricGrid">${c.metrics.map(m=>`<div class="rcMetric"><span>${prose(m.name)}</span><b>${metricValue(m)}</b><small>${esc(m.period)} ${cite(m.source_url)}</small></div>`).join('')||'ยังไม่มี'}</div>`;
+    const drivers=c.drivers.map(x=>`<div class="rsDeepBox rcDriver"><h5>${prose(x.title)} <span class="rsChip ${x.status==='confirmed'?'green':'amber'}">${x.status==='confirmed'?'ยืนยันแล้ว':'ยังไม่ยืนยัน'}</span></h5>${row('สำคัญแค่ไหน',prose(x.why_material))}${row('กระทบธุรกิจอย่างไร',prose(x.mechanism))}${row('ติดตามตัวเลขอะไร',prose(x.indicator))}${row('กรณีดี',prose(x.bull))}${row('กรณีแย่',prose(x.bear))}${x.evidence.length?`<div class="rcEvidence"><b>หลักฐาน</b>${x.evidence.map(e=>`<p>${prose(e.claim)} ${cite(e.source_url)}</p>`).join('')}</div>`:''}</div>`).join('')||'<p>ยังไม่มีปัจจัยที่ยืนยันได้</p>';
     const today=new Date().toISOString().slice(0,10);
     const cats=c.catalysts.filter(x=>x.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3)
-      .map(x=>`${esc(x.date)} (${x.date_status==='confirmed'?'ยืนยัน':'คาดการณ์'}) · ${esc(x.event)}`).join('<br>')||'ยังไม่มีวันที่ Catalyst ถัดไปที่ยืนยันหรือคาดการณ์';
-    const wires=c.tripwires.map(w=>`${esc(w.text)} · เกณฑ์ ${esc(w.threshold)} · ปัจจุบัน ${esc(w.current_value)} <span class="rsChip ${w.status==='confirmed'?'red':w.status==='check'?'amber':'ghost'}">${esc(w.status||'watching')}</span>`).join('<br>');
-    return `<div class="panel"><div class="rsCardTitle"><h3>Research Card · ${esc(ticker)}</h3><span class="when">ข้อมูล ${esc(c.as_of)}</span></div>${controls}${row('ธุรกิจ',esc(c.business.sells)+' · ลูกค้า '+esc(c.business.customers)+' · รายได้ '+esc(c.business.revenue_model))}${row('ตัวเลขหลัก',metric)}${row('Drivers',drivers)}${c.additional_drivers.length?row('ประเด็นเพิ่มเติม',c.additional_drivers.map(esc).join(' · ')):''}${row('Catalyst ถัดไป',cats)}${row('Tripwire',wires)}${c.severe_risks.length?row('ความเสี่ยงร้ายแรง',c.severe_risks.map(esc).join('<br>')):''}<details><summary>วันที่ข้อมูล แหล่งอ้างอิง และข้อมูลที่ขาด</summary>${row('ตรวจล่าสุด',esc(c.researched_at))}${row('แหล่งอ้างอิง',c.sources.map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a> · ${esc(s.date)}`).join('<br>')||'ยังไม่มี')}${row('ข้อมูลที่ขาด',c.missing_data.map(esc).join('<br>')||'ไม่มีที่ระบุ')}${row('ผลตรวจ',esc(c.review_result))}</details><details><summary>ดูข้อมูลเก่า (archive)</summary>${legacyHtml(d)}</details></div>`;
+      .map(x=>`${esc(x.date)} (${x.date_status==='confirmed'?'ยืนยันแล้ว':'คาดการณ์'}) · ${prose(x.event)} ${cite(x.source_url)}`).join('<br>')||'ยังไม่พบวันที่เหตุการณ์ถัดไปที่ยืนยันหรือคาดการณ์';
+    const wires=c.tripwires.map(w=>`<div class="rcWire"><b>${prose(w.text)}</b>${row('เกณฑ์',prose(w.threshold))}${row('ค่าปัจจุบัน',prose(w.current_value))}<span class="rsChip ${w.status==='confirmed'?'red':w.status==='check'?'amber':'ghost'}">${esc(w.status==='confirmed'?'ยืนยันแล้ว':w.status==='check'?'รอตรวจ':'ติดตาม')}</span></div>`).join('');
+    const refList=refs.map((s,i)=>`<li id="rc-source-${i+1}"><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">[${i+1}] ${esc(s.title)}</a>${s.date?` · ${esc(s.date)}`:''}</li>`).join('');
+    const businessSource=(c.sources||[]).find(s=>/10-K/i.test(s.title));
+    const business=`${row('ขายอะไร',prose(c.business.sells))}${row('ขายให้ใคร',prose(c.business.customers))}${row('เก็บเงินอย่างไร',prose(c.business.revenue_model)+(businessSource?' '+cite(businessSource.url):''))}`;
+    const detail=`<details class="rcSources"><summary>แหล่งข้อมูล (${refs.length}) · วันที่และข้อมูลเพิ่มเติม</summary><ol>${refList}</ol>${row('ตรวจล่าสุด',esc(c.researched_at))}${row('ข้อมูลที่ยังไม่ทราบ',c.missing_data.map(x=>`<p>${prose(x)}</p>`).join('')||'ไม่มีที่ระบุ')}${row('ผลตรวจ',esc(c.review_result))}${row('สิ่งที่เปลี่ยน',c.changes.map(x=>`<p>${prose(x)}</p>`).join('')||'ไม่มี')}</details>`;
+    return `<div class="panel rcCard"><div class="rsCardTitle"><h3>Research Card · ${esc(ticker)}</h3><span class="when">ข้อมูล ${esc(c.as_of)}</span></div>${section('บริษัททำเงินอย่างไร',business)}${section('รายได้ กำไร และเงินสด',metric,'ผลประกอบการและตัวเลขที่ใช้ติดตามธุรกิจ')}${section('ปัจจัยสำคัญที่มีผลต่อธุรกิจ',drivers)}${c.additional_drivers.length?section('ปัจจัยอื่นที่ควรติดตาม',c.additional_drivers.map(x=>`<p>${prose(x)}</p>`).join('')):''}${section('เหตุการณ์ถัดไปที่ต้องติดตาม',cats)}${section('เงื่อนไขที่ต้องทบทวน',wires)}${c.severe_risks.length?section('ความเสี่ยงสำคัญ',c.severe_risks.map(x=>`<p>${prose(x)}</p>`).join('')):''}${detail}<details class="rcTools"><summary>อัปเดตหรือนำเข้าผล Research</summary>${controls}</details><details class="rcArchive"><summary>ดูข้อมูลเก่า (archive)</summary>${legacyHtml(d)}</details></div>`;
   }
   window.rcCardHtml=cardHtml;
   window.rcValidate=validate;
