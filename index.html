@@ -2104,6 +2104,8 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
     <div class="hint" style="margin:0 0 10px">แต่ละบัญชีมีข้อมูลของตัวเองแยกกันหมด (ทุน · Trade · Watchlist · Journal · Fund-flow) อยู่ในล็อกอินเดียวกัน สลับได้โดยไม่ต้องออกจากระบบ<br>ติ๊กเลือกว่าบัญชีนั้นใช้พอร์ตไหนบ้าง — พอร์ตที่ไม่ได้ติ๊กจะถูกซ่อนทั้งแอป</div>
     <div id="acctMgr"></div>
     <button class="small" onclick="acctAdd()" style="margin-top:8px">＋ เพิ่มบัญชี</button>
+    <button class="small" onclick="phase7mRunAll()" style="margin-top:8px;margin-left:6px" title="ย้ายไม้/Watchlist Sat.A→Core, ซ่อน Sat.A, เตรียมถัง Option — ทำทีละบัญชี มี preview ก่อนเซฟทุกครั้ง">→ Migrate เป็น Core/Sat/Option (7M)</button>
+    <button class="small" onclick="phase7mRestoreFromFile()" style="margin-top:8px;margin-left:6px" title="เลือกไฟล์ phase7m-backup-*.json แล้วทับข้อมูลบัญชีที่เลือกทั้งก้อน — ใช้ตอนต้องย้อนกลับ">⟲ กู้คืนบัญชีจาก backup JSON</button>
     <div style="margin-top:16px"><button class="danger" onclick="doSignOut()">ออกจากระบบ</button></div>
 
   </div></details>
@@ -2305,13 +2307,21 @@ function industryShort(s){
   return cut || raw;
 }
 const ICON_INDUSTRY_MINI ='<svg width="11" height="11" viewBox="0 0 32 32" style="vertical-align:-1.5px" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="16" width="24" height="13" fill="#3A5568" stroke="#111" stroke-width="1.6"/><polygon points="6,16 18,9 30,16" fill="#2C4256" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/><rect x="9" y="5" width="3.5" height="11" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="16" y="2" width="3.5" height="14" fill="#3A5568" stroke="#111" stroke-width="1.4"/><rect x="10" y="20" width="3" height="3" fill="#8FD6EE"/><rect x="15" y="20" width="3" height="3" fill="#8FD6EE"/><rect x="22" y="22" width="4" height="7" fill="#8FD6EE"/></svg>';
+/* ══════════ เฟส 7 (สเปค v2 · 23 ก.ย. 2569) — ชื่อและ key พอร์ต ══════════
+   key ในโค้ด | ชื่อที่แสดง | ความหมาย                         | สัดส่วน | สถานะ
+   core       | Core        | หุ้น US + TH · EMA10/40 W · บันไดไม้ | 70%    | ใช้งาน
+   satB       | Sat         | XAUUSD · BTC · S50 · Brent (CFD/future) · 3 ด่าน | 20% | ใช้งาน (เปลี่ยนป้าย+กติกาใน 7D)
+   (ยังไม่มี key) | Option  | Put · LEAPS · เงินสดวิกฤต          | 10%    | รอบนี้เก็บแค่ settings.capital.option ยังไม่ลงทะเบียนเป็นพอร์ต
+   satA       | (ซ่อน)      | หุ้น swing/VCP ระบบเดิม            | 0%     | ซ่อนหลัง Phase 7M · อ่านได้อย่างเดียว · ไม่นับในผลรวมใด ๆ
+   ★ กลไกซ่อน: phase7mRunAll() ตัด 'satA' ออกจาก a.ports ของทุกบัญชี — ทุกจุดในแอปที่วน PORTS
+     ต้องผ่าน portOn()/acctPorts() อยู่แล้ว (ดูคอมเมนต์เดิมที่ acctPorts()) จึงไม่ต้องแก้จุดรวมผลทีละจุด */
 const PORTS = {
   core:{name:'Core Port',color:'#3FB79B',cur:'THB',sym:'฿'},
   satA:{name:'Satellite.A — RS',color:'#5E9BE6',cur:'USD',sym:'$'},
   satB:{name:'Satellite.B — Swing',color:'#DCA84B',cur:'USD',sym:'$'}
 };
 const DEFAULTS = {
-  capital:{core:500000,satA:10000,satB:10000},
+  capital:{core:500000,satA:10000,satB:10000,option:0},   /* option: เฟส 7 — เก็บถังไว้เฉย ๆ ยังไม่ลงทะเบียนเป็นพอร์ต (ดูคอมเมนต์ PORTS ด้านบน) */
   strategicCash:0,
   fx:36,
   fxAuto:true,
@@ -2670,6 +2680,7 @@ function acctDelete(id){
   if(!confirm('ยืนยันอีกครั้ง — ลบ "'+a.name+'" ถาวร?')) return;
   acctList = acctList.filter(x=>x.id!==id);
   delete acctBooks[id];
+  pendingDeletedBookIds.push(id);   /* เฟส 7B — ลบจริงบน server ตอน doPersist() ด้วย FieldValue.delete() ไม่ใช่แค่ในเครื่อง */
   if(acctActive===id){
     acctActive = acctList[0].id;
     state = buildStateFromBook(acctBooks[acctActive] || {}, !!acctBooks[acctActive]);
@@ -2808,6 +2819,8 @@ let serverConfirmed = false;
    ความต่างนี้คือสาเหตุที่ข้อมูลหายรอบ 5 ส.ค. — ดูคำอธิบายเต็มที่ guard ใน onSnapshot */
 let stateFromServer = false;
 let missedPersistBeforeConfirm = false;
+/* เฟส 7B — คิวบัญชีที่ถูกลบในเครื่องแต่ยังไม่ถูกลบออกจาก books.<id> บน server (merge:true ไม่ลบ field ให้เอง ต้องสั่งด้วย FieldValue.delete() ชัดเจน) */
+let pendingDeletedBookIds = [];
 /* นับจำนวนครั้งที่ migration สั่ง persist ในเซสชันนี้ — ใช้เบรกวงจร write ไม่รู้จบ (ดู guard ใน onSnapshot) */
 let migrationPersistCount = 0;
 function schedulePersist(){
@@ -2825,9 +2838,33 @@ async function doPersist(){
   if(!serverConfirmed || !stateFromServer){ missedPersistBeforeConfirm = true; return; }
   const toSave = state;
   pendingLocalWrite = false;   /* กำลังจะส่ง state ปัจจุบันไปแล้ว — ถ้ามีการแก้ไขใหม่หลังจุดนี้ schedulePersist() จะตั้งกลับเป็น true เอง */
+  /* ★ เฟส 7B (สเปค v2 · 23 ก.ย. 2569) — เขียนเฉพาะ books.<acctActive> ด้วย set(...,{mergeFields}) แทนการ set ทั้ง doc แบบเดิม
+     เดิม acctWrapDoc(toSave) ส่ง books:{...acctBooks, [acctActive]:toSave} คือก้อนของ "ทุกบัญชีที่แคชไว้ในเครื่องนี้" ไปทับทั้ง doc ทุกครั้ง
+     ช่องโหว่: ถ้าบัญชีอื่นเพิ่งถูกแก้จากอุปกรณ์/แท็บอื่น แล้วเครื่องนี้ยังไม่ได้ดึงอัปเดตล่าสุดของบัญชีนั้นมา (เช่น สลับบัญชีไปมา
+     acctBooks ของบัญชีที่ไม่ได้เปิดอยู่จะไม่ถูก sync สดเหมือน state ของบัญชีที่เปิดอยู่) การ set ทั้ง doc จะเอาแคชเก่านั้น
+     ไปทับของจริงบน server แบบเงียบ ๆ — คนละบั๊กกับ "5 ส.ค." (เอกสารด้านบน) แต่กลไกเดียวกัน: ข้อมูลเก่าที่ไม่ตรง server ไปทับของจริง
+     mergeFields ที่ path books.<acctActive> เท่านั้น แก้ปัญหานี้เพราะ Firestore จะแทนที่ทั้งก้อนที่ path นี้แบบ atomic (ไม่ recurse ลงไปข้างในอีก) —
+     books.<บัญชีอื่น> บน server จะไม่ถูกแตะเลยไม่ว่าแคชในเครื่องของบัญชีนั้นจะตรงหรือไม่ตรงกับ server ก็ตาม (ตรงตามเกณฑ์ 7B:
+     "เขียนบัญชีหนึ่งแล้วอีกบัญชีไม่เปลี่ยน") ใช้ได้ทั้งสร้าง doc ใหม่และอัปเดตของเดิม ไม่ต้องแยกเคส
+     ข้อยกเว้นเดียว: เอกสารเก่ามาก (ก่อนอัปเกรดเป็นหลายบัญชี 1 ก.ย. 2026, schema แบนไม่มี _v/books) ที่ merge:true จะไม่ลบ
+     field เก่าที่ root ให้ — ผู้ใช้ปัจจุบันผ่านจุดนั้นมานานแล้ว (_v:2 อยู่แล้วตั้งแต่ก่อน 7M) จึงไม่กระทบ แต่ถ้ามี uid ใหม่ที่ยังไม่เคย
+     อัปเกรดมาเจอโค้ดนี้ จะเหลือ field เก่าตกค้างที่ root เป็นขยะ (ไม่กระทบการทำงาน เพราะ acctAdoptDoc เช็ค _v>=2 && books ก่อนเสมอ) */
   try{
     acctBooks[acctActive] = toSave;   /* ให้ก้อนในมือตรงกับสิ่งที่กำลังจะเขียน */
-    await db.collection('users').doc(uid).set(acctWrapDoc(toSave));
+    const delIds = pendingDeletedBookIds.slice();   /* snapshot ไว้ก่อน — ถ้าเขียนสำเร็จค่อยล้างของจริง กันหลุดถ้ารอบนี้ fail */
+    /* ★ ใช้ mergeFields แทน merge:true เฉย ๆ — merge:true จะไล่ merge ลึกลงไปในทุก field ของ toSave เองด้วย
+       (settings.capital, watchCollapsed ฯลฯ เป็น object ซ้อน) ทำให้ field ที่ถูกลบออกจาก toSave ไปแล้วในเครื่อง
+       (เช่น key เก่าใน object ซ้อนที่เลิกใช้) ไม่ถูกลบออกจาก server ตาม — ค่าเก่าโผล่กลับมาผสมกับของใหม่ได้
+       mergeFields บอก Firestore ตรง ๆ ว่า "แทนที่ทั้งก้อน" ที่ path 'books.<acctActive>' เท่านั้น (ไม่ recurse ลงไปข้างในอีก)
+       เหมือน update({['books.'+acctActive]: toSave}) แต่ยังสร้าง doc ใหม่ได้ถ้ายังไม่มี (update() ธรรมดาทำไม่ได้) */
+    const payload = {...acctExtra, _v:2, accounts:acctList, activeAccount:acctActive, books:{[acctActive]: toSave}};
+    const mergeFields = ['_v', 'accounts', 'activeAccount', 'books.'+acctActive, ...Object.keys(acctExtra)];
+    delIds.forEach(delId=>{
+      payload.books[delId] = firebase.firestore.FieldValue.delete();   /* ลบบัญชีที่ถูกลบจริงออกจาก server ด้วย ไม่ใช่แค่ในเครื่อง */
+      mergeFields.push('books.'+delId);   /* ต้องอยู่ใน mergeFields ด้วย ไม่งั้น FieldValue.delete() ที่ path นี้จะไม่มีผล */
+    });
+    await db.collection('users').doc(uid).set(payload, {mergeFields});
+    pendingDeletedBookIds = pendingDeletedBookIds.filter(x=>delIds.indexOf(x)===-1);
     /* เดิมใช้ db.waitForPendingWrites() แต่พบว่ายังค้างไม่นิ่งบน long-polling เหมือนกัน (badge ค้าง "กำลังบันทึก" ตลอดหลัง edit)
        เปลี่ยนมาใช้ .get({source:'server'}) แทน — เป็น request ธรรมดาที่พิสูจน์แล้วว่าเชื่อถือได้จริงในสภาพแวดล้อมนี้
        (ใช้เช็คข้อมูลบน server ได้เร็ว/นิ่งตลอดการดีบักที่ผ่านมา ต่างจาก long-lived channel ที่บางทีค้าง) */
@@ -4741,6 +4778,231 @@ function ensureSatACap25(){
   if(!(s.sizing.cap.satA > 12.5)) s.sizing.cap.satA = 25;   /* เคารพค่าที่ตั้งเองไว้สูงกว่านี้แล้ว */
   s.szCapSatA25 = true;
   return true;
+}
+
+/* ══════════════════ เฟส 7M — ย้ายข้อมูล satA→core + เตรียม Core/Sat/Option (สเปค v2 · 23 ก.ย. 2569) ══════════════════
+   ทำทีละบัญชี · preview ด้วย confirm() ก่อนเขียนจริงเสมอ · กันรันซ้ำด้วยธง book.phase7mV1 (เทียบเท่า "_v:3" ในสเปค
+   แต่เก็บเป็นธงต่อบัญชีให้ตรงแนวเดิมของไฟล์นี้ — ดู ensureSatACap25/ensureSatBNoteMerge ด้านบน แทนที่จะไปชน _v:2 ของทั้งเอกสาร)
+   ย้อนกลับ: เลิกซ่อน = ติ๊ก satA กลับในตั้งค่า > บัญชี · ไม้/watchlist ที่ port ถูกเปลี่ยนต้องแก้มือกลับ (ไม่มีปุ่ม undo อัตโนมัติ) */
+function phase7mMarketOf(sym){
+  return /\.BK$/i.test(String(sym||'').trim()) ? 'TH' : 'US';
+}
+function phase7mTodayISO(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+/* สรุปยอดที่จะเปลี่ยนของบัญชีหนึ่ง — ใช้โชว์ preview ก่อนถาม confirm() · แยก open/plan เพราะ plan ต้องไล่ตรวจทีละตัวด้วยกติกา Core ทีหลัง */
+function phase7mSummarize(book){
+  const trades = Array.isArray(book.trades) ? book.trades : [];
+  const watchlist = Array.isArray(book.watchlist) ? book.watchlist : [];
+  return {
+    openTrades: trades.filter(t=>t.port==='satA' && t.status==='open'),
+    planTrades: trades.filter(t=>t.port==='satA' && t.status==='plan'),
+    satAWatch: watchlist.filter(w=>w.port==='satA'),
+    satBLegacyWatch: watchlist.filter(w=>w.port==='satB' && !w.legacy)
+  };
+}
+/* ย้ายข้อมูลจริงของ "ก้อนบัญชีหนึ่ง" (โครงเหมือน state) — mutate in place แล้วคืน true ถ้าย้ายจริง
+   ★ ไม้ satA ที่ port เปลี่ยนเป็น core รอบนี้ ครอบคลุมทั้ง open และ plan — ไม้ plan ที่วางไว้ตามระบบเดิม (VCP/SL แคบ)
+     ยังต้องไปไล่ตรวจทีละตัวด้วยกติกา Core (EMA10/40 W ตรง + ตรง 1 ใน 3 setup) เอง หลังย้าย — ตัวที่ไม่เข้าเงื่อนไขให้ยกเลิก
+     ระบบไม่ auto-cancel ให้ เพราะต้องดูกราฟจริงประกอบ */
+function phase7mMigrateBook(book){
+  if(!book || book.phase7mV1) return false;
+  if(!Array.isArray(book.trades)) book.trades = [];
+  if(!Array.isArray(book.watchlist)) book.watchlist = [];
+  book.trades.forEach(t=>{
+    if(t.port==='satA' && (t.status==='open'||t.status==='plan')) t.port = 'core';
+  });
+  book.watchlist.forEach(w=>{
+    if(w.port==='satA'){
+      w.port = 'core';
+      if(!w.market) w.market = phase7mMarketOf(w.sym);
+    } else if(w.port==='satB' && !w.legacy){
+      w.legacy = true;   /* ไม่ลบ ไม่แสดง — ตามสเปค 7M ข้อ 4 */
+    }
+  });
+  book.settings = book.settings || {};
+  book.settings.capital = book.settings.capital || {};
+  if(book.settings.capital.satA_archived == null){
+    book.settings.capital.satA_archived = book.settings.capital.satA || 0;   /* เก็บเลขเดิมไว้อ้างอิง — เพราะสถิติ Sat.A การ์ดเก่าจะหาร % ด้วยถัง=0 หลังจากนี้ */
+  }
+  book.settings.capital.satA = 0;   /* ซ่อน satA: ถัง = 0 · ยอดเดิมไม่เอามาบวกรวมที่ไหน */
+  if(book.settings.capital.option == null) book.settings.capital.option = 0;
+  if(!book.sat_since) book.sat_since = phase7mTodayISO();   /* ตัวนับไม้ใหม่ของ Sat เริ่มนับจากวันนี้ */
+  book.phase7mV1 = true;
+  return true;
+}
+/* ตัวเลขก่อน/หลัง ของบัญชีหนึ่ง คำนวณตรงจาก book ที่ส่งเข้ามา (ไม่พึ่ง state/acctActive ตัวโกลบอล
+   เพื่อให้เรียกกับบัญชีที่ไม่ได้เปิดอยู่ตอนนี้ได้ปลอดภัย) — สูตรก็อปจาก totalTHB()/riskTHBOf()/realizedPnlTHBOf() เดิมทุกตัว */
+function phase7mSnapshot(book, ports){
+  const fx = (book.settings && book.settings.fx) || 1;
+  const cap = (book.settings && book.settings.capital) || {};
+  const capTHB = k => (PORTS[k] && PORTS[k].cur==='USD') ? (cap[k]||0)*fx : (cap[k]||0);
+  const totalValueTHB = ports.reduce((a,k)=>a+capTHB(k),0) + ((book.settings && book.settings.strategicCash)||0);
+  const trades = Array.isArray(book.trades) ? book.trades : [];
+  const curOf = t => t.cur || (PORTS[t.port] && PORTS[t.port].cur) || 'THB';
+  let closedPnlTHB = 0, openRiskTHB = 0, openCount = 0;
+  trades.forEach(t=>{
+    if(t.status==='closed' && t.exitPrice>0){
+      /* กำไรที่ปิดแล้ว: ไม่กรองด้วย ports ตั้งใจ — ให้ตรงกับ "closed" ของแอปจริง (ตัวป้อน overall stats)
+         ที่ไม่ได้กรองด้วย port เลย ไม้ satA ที่ปิดไปแล้วจึงยังนับรวมอยู่เสมอ ไม่ว่าจะซ่อน satA จาก a.ports หรือไม่ */
+      const dir = t.bias==='Short' ? -1 : 1;
+      const pnl = (t.exitPrice - t.entry) * t.qty * (t.mult||1) * dir;
+      closedPnlTHB += curOf(t)==='USD' ? pnl*fx : pnl;
+    } else if(t.status==='open' && ports.indexOf(t.port) >= 0){
+      openCount++;
+      const risk = Math.abs(t.entry - t.sl) * t.qty * (t.mult||1);
+      openRiskTHB += curOf(t)==='USD' ? risk*fx : risk;
+    }
+  });
+  return {totalValueTHB, closedPnlTHB, openRiskTHB, openCount};
+}
+function phase7mFmtSnapshot(before, after){
+  const row = (label, b, a, isInt) => {
+    const fb = isInt ? fmt0(b) : fmt0(Math.round(b));
+    const fa = isInt ? fmt0(a) : fmt0(Math.round(a));
+    return `${label.padEnd(20,' ')} ${String(fb).padStart(14,' ')}  →  ${String(fa).padStart(14,' ')}`;
+  };
+  return [
+    row('มูลค่ารวม (฿)', before.totalValueTHB, after.totalValueTHB, false),
+    row('กำไรที่ปิดแล้ว (฿)', before.closedPnlTHB, after.closedPnlTHB, false),
+    row('ความเสี่ยงค้างรวม (฿)', before.openRiskTHB, after.openRiskTHB, false),
+    row('จำนวนไม้ที่เปิดอยู่', before.openCount, after.openCount, true)
+  ].join('\n');
+}
+/* เกณฑ์ตรวจตามที่ยืนยัน: กำไรที่ปิดแล้ว/ความเสี่ยงค้างรวม/จำนวนไม้เปิดอยู่ ต้องเท่าเดิมเป๊ะ
+   มูลค่ารวมต้องลดลงเท่ากับถัง Sat.A เดิม (คำนวณเป็น ฿) พอดี — ไม่เท่า 3 ข้อแรกข้อใดข้อหนึ่ง = หยุด ไม่ commit */
+function phase7mCheckInvariants(book, before, after){
+  const bad = [];
+  if(Math.round(before.closedPnlTHB) !== Math.round(after.closedPnlTHB)) bad.push('กำไรที่ปิดแล้ว');
+  if(Math.round(before.openRiskTHB) !== Math.round(after.openRiskTHB)) bad.push('ความเสี่ยงค้างรวม');
+  if(before.openCount !== after.openCount) bad.push('จำนวนไม้ที่เปิดอยู่');
+  const fx = (book.settings && book.settings.fx) || 1;
+  const satACapBefore = (book.settings && book.settings.capital && book.settings.capital.satA) || 0;
+  const expectedDropTHB = PORTS.satA.cur==='USD' ? satACapBefore*fx : satACapBefore;
+  const actualDropTHB = before.totalValueTHB - after.totalValueTHB;
+  if(Math.abs(actualDropTHB - expectedDropTHB) > 1) bad.push(`มูลค่ารวม (ลดลง ${fmt0(actualDropTHB)} ฿ แต่ควรลดลง ${fmt0(expectedDropTHB)} ฿ พอดี)`);
+  return bad;
+}
+/* ดาวน์โหลด backup JSON ของบัญชีหนึ่งก่อนย้ายจริง — ต้องเรียกก่อน phase7mMigrateBook() เสมอ */
+function phase7mDownloadBackup(book, acctId, acctName){
+  try{
+    const blob = new Blob([JSON.stringify(book, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = phase7mTodayISO() + '-' + String(Date.now()).slice(-6);
+    a.href = url;
+    a.download = `phase7m-backup-${acctId}-${ts}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    return true;
+  }catch(e){
+    console.warn('phase7m backup download ล้มเหลว:', e);
+    return confirm(`ดาวน์โหลด backup ของบัญชี "${acctName}" ไม่สำเร็จ (${e.message||e})\n\nฝืนย้ายต่อโดยไม่มี backup ไฟล์นี้เลยหรือไม่? (แนะนำ: กด Cancel แล้วลองใหม่)`);
+  }
+}
+/* กู้คืนบัญชีจากไฟล์ backup JSON ที่ phase7mDownloadBackup() สร้างไว้ (หรือ book JSON รูปแบบเดียวกัน)
+   ทับข้อมูลปัจจุบันของบัญชีที่เลือกทั้งก้อน — ไม่มีการ merge เพราะ "กู้คืน" ต้องได้ของเดิมเป๊ะ ๆ ไม่ใช่ผสม */
+function phase7mRestoreFromFile(){
+  if(!acctList.length) return;
+  const idList = acctList.map(a=>`${a.id} = ${a.name}`).join('\n');
+  const acctId = prompt('จะกู้คืนทับบัญชีไหน? พิมพ์ id บัญชี (id อยู่ในชื่อไฟล์ backup เช่น phase7m-backup-<id>-วันที่.json)\n\nบัญชีที่มีอยู่ตอนนี้:\n'+idList);
+  if(!acctId) return;
+  const a = acctList.find(x=>x.id===acctId.trim());
+  if(!a){ alert('ไม่พบบัญชี id นี้ — ตรวจตัวสะกดจากรายการด้านบนอีกครั้ง'); return; }
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'application/json';
+  input.onchange = () => {
+    const f = input.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let book;
+      try{ book = JSON.parse(reader.result); }catch(e){ alert('ไฟล์นี้ไม่ใช่ JSON ที่ถูกต้อง: '+e.message); return; }
+      if(!confirm(`ยืนยันกู้คืนบัญชี "${a.name}" ทับด้วยไฟล์ "${f.name}"?\n\nข้อมูลปัจจุบันของบัญชีนี้จะถูกทับทั้งหมด (ย้อนกลับไม่ได้ถ้าไม่มี backup ของสถานะตอนนี้อีกไฟล์)`)) return;
+      if(a.id === acctActive){ state = book; } else { acctBooks[a.id] = book; }
+      ensureScoreLabels(); ensureJournalView();
+      render(); renderAcctBar(); renderAcctMgr();
+      schedulePersist();
+      alert('กู้คืนบัญชี "'+a.name+'" จากไฟล์ backup เรียบร้อย — ตรวจสอบข้อมูลให้ครบก่อนเชื่อ');
+    };
+    reader.readAsText(f);
+  };
+  input.click();
+}
+/* ถามถังใหม่ทันทีหลังย้ายบัญชีนี้เสร็จ — ไม่รอให้ครบทุกบัญชีก่อน เพราะระหว่างยังไม่กรอก ขนาดไม้ Core (1% ของพอร์ตรวม)
+   จะถูกคำนวณจากยอดที่ต่ำกว่าความจริง (ถัง Sat.A เดิมถูกหักออกจาก totalTHB ไปแล้วตั้งแต่ตอนนี้) */
+function phase7mPromptCapital(book, a){
+  const ask = (label, cur, unit) => {
+    const v = prompt(`บัญชี "${a.name}" — ตั้งถัง ${label} ใหม่ (${unit})\nปัจจุบัน: ${fmt0(cur||0)} ${unit}\n\nเว้นว่างไว้ = ไม่เปลี่ยนตอนนี้ (มากรอกทีหลังได้ที่ตั้งค่า)`, cur||'');
+    if(v==null || v.trim()==='') return null;
+    const n = parseFloat(v);
+    return isNaN(n) ? null : n;
+  };
+  const core = ask('Core', book.settings.capital.core, '฿');
+  if(core!=null) book.settings.capital.core = core;
+  const sat = ask('Sat', book.settings.capital.satB, '$ USD');
+  if(sat!=null) book.settings.capital.satB = sat;
+  const opt = ask('Option', book.settings.capital.option, '$ USD — แก้หน่วยเองทีหลังได้ถ้าไม่ตรง');
+  if(opt!=null) book.settings.capital.option = opt;
+}
+/* ปุ่มเรียกจากตั้งค่า > บัญชี — ย้ายทุกบัญชีทีละบัญชี · dry-run บน clone ก่อนเสมอ แล้วเช็ค invariant ก่อน commit จริง */
+function phase7mRunAll(){
+  if(!acctList.length) return;
+  let changedAny = false;
+  acctList.forEach(a=>{
+    const isActive = a.id === acctActive;
+    const book = isActive ? state : (acctBooks[a.id] || {});
+    if(book.phase7mV1){ return; }
+    const sum = phase7mSummarize(book);
+    const lines = [
+      `บัญชี "${a.name}"`,
+      `· ไม้ Sat.A ที่เปิดอยู่ (open) → ย้ายเป็น Core: ${sum.openTrades.length} ตัว`
+        + (sum.openTrades.length ? ' ('+sum.openTrades.map(t=>t.sym).join(', ')+')' : ''),
+      `· ไม้ Sat.A ที่ยังเป็น Plan → ย้ายเป็น Core เช่นกัน แต่ต้องไปไล่ตรวจทีละตัวด้วยกติกา Core (EMA10/40W + 1 ใน 3 setup) เอง — ไม่เข้าเงื่อนไขให้ยกเลิก: ${sum.planTrades.length} ตัว`
+        + (sum.planTrades.length ? ' ('+sum.planTrades.map(t=>t.sym).join(', ')+')' : ''),
+      `· Watchlist Sat.A → ย้ายเป็น Core (+market): ${sum.satAWatch.length} แถว`
+        + (sum.satAWatch.length ? ' ('+sum.satAWatch.map(w=>w.sym+'→'+phase7mMarketOf(w.sym)).join(', ')+')' : ''),
+      `· Watchlist Sat.B เก่าที่จะติด legacy (ไม่แสดง): ${sum.satBLegacyWatch.length} แถว`,
+      `· ถัง Sat.A จะถูกตั้งเป็น 0 (ไม้ที่ปิดแล้วยังอยู่ในเก็บถาวร ไม่ลบ)`,
+      '',
+      'ยืนยันย้ายบัญชีนี้?'
+    ];
+    if(!confirm(lines.join('\n'))) return;
+    const beforePorts = a.ports.slice();
+    const downloadedOk = phase7mDownloadBackup(book, a.id, a.name);
+    if(!downloadedOk){ return; }   /* ดาวน์โหลด backup ไม่สำเร็จและผู้ใช้ไม่ยืนยันให้ฝืนต่อ — ข้ามบัญชีนี้ */
+    const before = phase7mSnapshot(book, beforePorts);
+    /* dry-run บน clone ก่อนเสมอ — ยังไม่แตะ book จริงจนกว่าจะเช็ค invariant ผ่าน */
+    const clone = JSON.parse(JSON.stringify(book));
+    if(!phase7mMigrateBook(clone)) return;
+    const afterPorts = beforePorts.filter(k=>k!=='satA');
+    const after = phase7mSnapshot(clone, afterPorts);
+    const bad = phase7mCheckInvariants(book, before, after);
+    if(bad.length){
+      alert(`บัญชี "${a.name}" — หยุด ไม่ย้าย! ตัวเลขต่อไปนี้ผิดจากที่ควรจะเป็น:\n${bad.join('\n')}\n\n${phase7mFmtSnapshot(before, after)}\n\nไม่มีอะไรถูกเซฟ (ทำงานบน clone) — ส่งตารางนี้กลับไปให้ Claude Code ดูก่อนลองใหม่`);
+      return;   /* ไม่ commit จริง — book เดิมยังไม่ถูกแตะเลย */
+    }
+    /* invariant ผ่าน — commit ของจริง */
+    phase7mMigrateBook(book);
+    a.ports = a.ports.filter(k=>k!=='satA');   /* ตัด satA ออกจากผลรวมทั้งแอปผ่าน portOn() */
+    if(isActive) state = book; else acctBooks[a.id] = book;
+    alert(`บัญชี "${a.name}" — ย้ายข้อมูลเสร็จ (ดาวน์โหลด backup ไว้แล้ว) ตัวเลขตรงตามเกณฑ์ทุกข้อ\n\n${phase7mFmtSnapshot(before, after)}\n\n· มูลค่ารวมลดลง ${fmt0(before.totalValueTHB-after.totalValueTHB)} ฿ = ถัง Sat.A เดิมพอดี ตามที่ตั้งใจ (ไม่เอายอดเก่ามาบวกให้ Core/Sat อัตโนมัติ)`);
+    if(sum.planTrades.length){
+      alert(`อย่าลืม: ไม้ Plan ${sum.planTrades.length} ตัวที่เพิ่งย้ายเข้า Core — ${sum.planTrades.map(t=>t.sym).join(', ')}\nต้องไล่ตรวจทีละตัวด้วยกติกา Core (EMA10/40W ตรง + ตรง 1 ใน 3 setup) — ตัวที่ไม่เข้าเงื่อนไขให้ยกเลิก`);
+    }
+    phase7mPromptCapital(book, a);   /* กรอกถังใหม่ทันที ไม่รอให้ครบทุกบัญชี */
+    changedAny = true;
+  });
+  if(changedAny){
+    ensureScoreLabels(); ensureJournalView();
+    render(); renderAcctBar(); renderAcctMgr();
+    schedulePersist();
+    alert('ย้ายข้อมูล Phase 7M เสร็จแล้ว — ตรวจสอบตัวเลขให้ครบก่อนเปิด auto push ฝั่ง Research-team กลับ');
+  } else {
+    alert('ไม่มีบัญชีไหนต้องย้าย (ย้ายไปแล้วทุกบัญชี หรือกดยกเลิก/หยุดเพราะ invariant ไม่ผ่านทั้งหมด)');
+  }
 }
 /* ★ 31 ส.ค. 2026 — Sat.B ไม่มี Watchlist แล้ว (ย้ายไป Weekly Plan) จึงไม่ต้องเติม default อีก
    ไม่ลบรายการ Sat.B เก่าใน state.watchlist ทิ้ง — ปล่อยค้างไว้เฉย ๆ เพื่อไม่ให้ Note เดิมหาย
