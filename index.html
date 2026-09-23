@@ -3064,7 +3064,7 @@ document.addEventListener('keydown', (e)=>{
    ในแท็บ: [ ] = วนหมวดย่อย · ตัวอักษรเฉพาะแท็บตาม KB_SUB
    Watch: [ ] = วน All/Core/Sat.A · Esc = กลับ (มือถือ)
    ทุกแท็บ: C = Watchlist · V = Candidates */
-const WL_PORT_CYCLE_KB = ['all','core','satA'];
+const WL_PORT_CYCLE_KB = ['all','core'];
 const KB_SUB = {
   plan: {
     name:'แผน',
@@ -3073,7 +3073,7 @@ const KB_SUB = {
   },
   watch: {
     name:'Watch',
-    cycle:{list:WL_PORT_CYCLE_KB, get:()=>wlView==='cand'?'':wlPort, set:v=>wlSetPort(v), label:'วน All → Core → Sat.A'},
+    cycle:{list:WL_PORT_CYCLE_KB, get:()=>wlView==='cand'?'':wlPort, set:v=>wlSetPort(v), label:'วน All → Core'},
     keys:{},
     extra:[['Esc','มือถือ: กลับจากหน้ารายตัว']]
   }
@@ -5241,7 +5241,7 @@ let wlView = 'wl', wlPort = 'all', wlSel = '', wlSub = 'ov', wlDeep = 'B', wlMob
 let wlResearchExpanded = false, wlResearchScroll = 0;
 const WL_NEWS_MAX = 5;      /* แถบ "ข่าวที่ต้องดู" โชว์กี่รายการ */
 const WL_NEWS_DAYS = 7;     /* ยังไม่มี newsSeen → เอาเฉพาะข่าวใน n วันล่าสุด */
-const WL_PORT_CYCLE = ['all','core','satA'];
+const WL_PORT_CYCLE = ['all','core'];
 
 function wlNarrow(){ try{ return window.matchMedia('(max-width:899px)').matches; }catch(e){ return false; } }
 function wlDocMap(){ const m = {}; rsAll().forEach(d=>{ if(d && d.ticker) m[String(d.ticker).toUpperCase()] = d; }); return m; }
@@ -5326,11 +5326,7 @@ function wlScoreChips(r){
       : (r.w && r.w.fundCheck && r.w.fundCheck.tier ? `<span class="rsChip ghost" title="Fundamental Checklist ในเครื่อง">FC ${escHtml(r.w.fundCheck.tier)}</span>` : '<span class="rsChip ghost">FQC —</span>');
     return (d && d.research_card ? '<span class="rsChip green">Research Card</span>' : '<span class="rsChip amber">รอสร้าง Research Card</span>') + fq + wlEntryChip(d);
   }
-  if(r.port==='satA'){
-    const g = wlGG(r);
-    const gg = g ? `<span class="rsChip ${g.score>=8?'green':g.score>=6?'ghost':'amber'}">GG ${g.score}/${GG_MAX}</span>` : '<span class="rsChip amber">GG —</span>';
-    return gg + (wlNeedBizLite(r.sym) ? '<span class="rsChip amber">รอสร้าง Research Card</span>' : '');
-  }
+  /* ★ 7C — satA ไม่มีแถวใน Watchlist แล้ว (ย้ายเป็น core หมดตอน 7M); เหลือไว้แค่ core กับ candidate (mode_a) */
   const m = d && d.mode_a;
   return m ? `<span class="rsChip ghost">Screen ${escHtml(m.score)}/${escHtml(m.max||15)} · #${escHtml(m.rank!=null?m.rank:'—')}</span>` : '<span class="rsChip ghost">Screen —</span>';
 }
@@ -5340,7 +5336,6 @@ function wlLine2(r){
     const fc = r.w && r.w.fundCheck && r.w.fundCheck.note;
     return (d.research_card && d.research_card.business && d.research_card.business.sells) || (fc && (fc.sum||fc.biz)) || (r.w && r.w.fundamental) || '';
   }
-  if(r.port==='satA') return (d.research_card && d.research_card.business && d.research_card.business.sells) || 'รอสร้าง Research Card';
   return d.summary || (d.mode_a && d.mode_a.one_liner) || '';
 }
 function wlRowHtml(r){
@@ -5382,8 +5377,8 @@ function renderWatchlist(){
   const pill = (on,txt,fn,kb)=>`<button type="button" class="rsDeepBtn ${on?'on':''}" onclick="${fn}">${txt}${kb?` <span class="kbdhint">${kb}</span>`:''}</button>`;
   const head = `<div class="wlHead">
       <div class="wlPills">${pill(wlView==='wl',`Watchlist ${A.wl.length}`,"wlSetView('wl')",'C')}${pill(wlView==='cand',`Candidates ${A.cand.length}`,"wlSetView('cand')",'V')}</div>
-      ${wlView==='wl' ? `<div class="wlPills">${pill(wlPort==='all','All',"wlSetPort('all')")}${portOn('core')?pill(wlPort==='core','Core',"wlSetPort('core')"):''}${portOn('satA')?pill(wlPort==='satA','Sat.A',"wlSetPort('satA')"):''}</div>` : ''}
-      <div class="wlAdd">${portOn('core')?'<button class="small" onclick="openFundChecklist()" title="เปิด Fundamental Checklist แล้วบันทึกเข้า Watchlist Core">＋ Core</button>':''}${portOn('satA')?'<button class="small" onclick="openWatch(\'satA\')" title="เพิ่มหุ้นเข้า Watchlist Sat.A + ให้คะแนน Growth Gate">＋ Sat.A</button>':''}</div>
+      ${wlView==='wl' ? `<div class="wlPills">${pill(wlPort==='all','All',"wlSetPort('all')")}${portOn('core')?pill(wlPort==='core','Core',"wlSetPort('core')"):''}</div>` : ''}
+      <div class="wlAdd">${portOn('core')?'<button class="small" onclick="openFundChecklist()" title="เปิด Fundamental Checklist แล้วบันทึกเข้า Watchlist Core">＋ Core</button>':''}</div>
     </div>`;
 
   const empty = wlView==='cand'
