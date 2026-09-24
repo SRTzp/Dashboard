@@ -3397,7 +3397,7 @@ const KB_SUB = {
     name:'Watch',
     cycle:{list:WL_PORT_CYCLE_KB, get:()=>wlView==='cand'?'':wlPort, set:v=>wlSetPort(v), label:'วน All → Core.US → Core.TH'},
     keys:{},
-    extra:[['Esc','มือถือ: กลับจากหน้ารายตัว']]
+    extra:[['↑ ↓','เลื่อนหุ้นใน Watchlist'],['Esc','มือถือ: กลับจากหน้ารายตัว']]
   }
 };
 const KB_GLOBAL = [['1–5','สลับแท็บ ตลาด · Port · Watch · แผน · Journal'],['C','Watchlist'],['V','Candidates'],['T','Add Trade'],['N','ข่าว (กระดิ่ง)'],['?','ดูปุ่มลัด'],['Esc','ปิดหน้าต่าง']];
@@ -3424,6 +3424,8 @@ function kbHandle(e){
   if(e.code==='KeyT'){ e.preventDefault(); openChecklist('trade'); return; }
   if(e.code==='KeyN'){ e.preventDefault(); openNewsFeed(); return; }
   if((e.key==='Escape' || e.key==='Esc') && activeTab==='watch' && wlMobOpen && wlNarrow()){ e.preventDefault(); wlBack(); return; }
+  /* ↑/↓ เลื่อนหุ้นในรายชื่อ Watch (เฉพาะจอ ≥1024) */
+  if((e.key==='ArrowDown' || e.key==='ArrowUp') && activeTab==='watch' && !wlNarrow()){ e.preventDefault(); wlStep(e.key==='ArrowDown' ? 1 : -1); return; }
   const sub = KB_SUB[activeTab]; if(!sub) return;
   if(e.code==='BracketLeft' || e.code==='BracketRight'){
     const c=sub.cycle.list, cur=c.indexOf(sub.cycle.get());
@@ -5901,6 +5903,29 @@ function wlOpen(sym, sub){
     renderWatchlist();
     try{ window.scrollTo(0,0); }catch(e){}
   } else renderWatchlist();
+}
+/* ↑/↓ เลื่อนหุ้น (≥1024) — ไฮไลต์ซ้ายขยับทันที · แผงขวาวาดหน่วง ~80ms · ไม่เขียน Firestore/ไม่เรียก schedulePersist · คงแท็บย่อย wlSub */
+let wlStepTimer = 0;
+function wlStep(dir){
+  if(wlNarrow()) return;
+  const rows = wlRowsView().rows; if(!rows.length) return;
+  const cur = rows.findIndex(r=>r.sym===wlSel);
+  const ni = cur<0 ? (dir>0 ? 0 : rows.length-1) : cur+dir;
+  if(ni<0 || ni>=rows.length || ni===cur) return;   /* สุดรายการ → หยุด ไม่วนกลับ */
+  const sym = rows[ni].sym;
+  if(wlSel!==sym) wlDeep = 'B';
+  wlSel = sym; wlResearchExpanded = false;
+  try{ localStorage.setItem('wlSelLast', sym); }catch(e){}
+  const nl = document.getElementById('wlListBody');
+  if(nl){
+    let row = null;
+    nl.querySelectorAll('.wlR').forEach(el=>{ const on = el.dataset.sym===sym; el.classList.toggle('on', on); if(on) row = el; });
+    if(row){ const t = row.offsetTop, b = t + row.offsetHeight;   /* คำนวณ scrollTop เอง ห้าม scrollIntoView */
+      if(t < nl.scrollTop) nl.scrollTop = Math.max(0, t - 8);
+      else if(b > nl.scrollTop + nl.clientHeight) nl.scrollTop = b - nl.clientHeight + 8; }
+  }
+  clearTimeout(wlStepTimer);
+  wlStepTimer = setTimeout(()=>{ if(activeTab==='watch' && !wlNarrow()) renderWatchlist(); }, 80);
 }
 function wlBack(){
   wlResearchExpanded = false;
