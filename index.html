@@ -77,8 +77,10 @@
   --closed-size:.8rem;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-text-size-adjust:100%;font-size:17px}
+html{-webkit-text-size-adjust:100%;font-size:17px;overscroll-behavior:none}
+html,body{overscroll-behavior:none}   /* กันทั้งหน้าเด้ง (rubber-band) — ตัวเลื่อนย่อยใช้ contain */
 body{
+  min-height:100vh;min-height:100dvh;
   background:var(--bg);color:var(--text);
   font-family:var(--sans);font-size:16px;line-height:1.55;
   -webkit-font-smoothing:antialiased;
@@ -286,7 +288,11 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .stat.good .val{color:var(--teal)}
 
 /* ---------- การ์ด Port ---------- */
-.ports{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.ports{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:12px;margin-bottom:18px}   /* กติกากริดการ์ดกลาง: auto-fit · การ์ดเดียวยืดเต็มแถว */
+/* พอร์ตการ์ด + แผงแผนของพอร์ต (เช่น Sat.B) อยู่กริดเดียวกัน → จอกว้างวางคู่กันได้ จอแคบเรียงลง */
+.planTop{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:12px;align-items:start;margin-bottom:18px}
+.planTop>.ports{display:contents}
+.planTop>.panel{margin-bottom:0}
 .port{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
   padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--sh-2);
@@ -332,13 +338,11 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 
 /* ---------- แผง / Panel ---------- */
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:17px 19px;margin-bottom:18px;box-shadow:var(--sh-2)}
-.mixgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px}
+.mixgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:16px}
 .mixgrid>.panel{margin-bottom:0}
 /* บล็อกย่อยรายพอร์ตในหน้า Portfolio — การ์ดจาง ๆ ซ้อนในแผงบัญชี ไม่ให้ดูเป็นกล่องซ้อนกล่อง */
 /* แถบสรุปหน้า Portfolio มี 4 ใบ — strip ปกติเป็น 3 คอลัมน์ ทำให้ใบที่ 4 ตกบรรทัดโดดเดี่ยว */
-#mixSummary{grid-template-columns:repeat(4,1fr)}
-@media(max-width:1000px){ #mixSummary{grid-template-columns:repeat(2,1fr)} }
-@media(max-width:560px){ #mixSummary{grid-template-columns:1fr} }
+#mixSummary{grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))}
 /* ---------- แผนเทรด Sat.B (Zone / Setup) — เน้นแน่นในแนวตั้ง ---------- */
 .sbCard{background:var(--surface3);border:1px solid var(--hair);border-radius:var(--r);padding:11px 13px;margin-bottom:10px}
 .sbCard:last-child{margin-bottom:0}
@@ -821,7 +825,12 @@ tr:last-child td{border-bottom:none}
   background:var(--surface2);border:none;border-radius:4px;padding:1px 5px;margin-left:6px;
   vertical-align:middle;
 }
-@media (display-mode: standalone){ .kbdhint{display:none} }
+@media (display-mode: standalone){
+  .kbdhint{display:none}
+  html,body{overscroll-behavior:none}
+  /* โหมดเพิ่มไปหน้าจอโฮม: แถบล่างยึดขอบล่างจอจริง พื้นหลังยาวถึงขอบรวม safe-area */
+  .tabs{bottom:0}
+}
 @keyframes tabSlideIn{
   from{ transform:translateX(var(--slideFrom,18px)); opacity:0 }
   to{ transform:translateX(0); opacity:1 }
@@ -831,15 +840,26 @@ tr:last-child td{border-bottom:none}
 
 /* ---------- Watchlist ---------- */
 /* ---- เฟส 4: Watch master-detail ---- */
-.wlm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;align-items:start}
+.wlm{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
 .wlm>*{min-width:0}
-.wlDet{position:sticky;top:12px;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}
-.wlm.rcExpanded{position:fixed;inset:0;z-index:200;display:block;overflow:hidden;background:var(--bg);padding:0;max-width:none}
-.wlm.rcExpanded .wlList{display:none}
-.wlm.rcExpanded .wlDet{display:block;position:relative;top:0;max-height:none;height:100dvh;overflow-y:auto;overflow-x:hidden;padding:12px max(12px,calc((100vw - 1100px)/2));box-sizing:border-box;scrollbar-gutter:stable}
-.wlm.rcExpanded .wlDPanel{position:sticky;top:0;z-index:2;background:var(--surface)}
-.wlm.rcExpanded .rcCard{max-width:1100px}
-.wlDet>.panel{margin-bottom:12px}
+/* 7Y — ≥1024: รายชื่อซ้าย 280px + รายละเอียดขวา · แต่ละฝั่งเลื่อนแยก (สูง = 100dvh − แถบบน − ขอบล่าง) · ≤1023: เต็มจอทีละหน้า ตัวเลื่อนหลักตัวเดียว */
+.wlList.panel{padding:0;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.wlListHead{flex:none;padding:12px 12px 4px}
+.wlListHead .wlHead{margin-bottom:6px;gap:6px}
+.wlListBody{position:relative;flex:1;min-height:0;padding:0 8px 8px}
+.wlDet{display:flex;flex-direction:column;min-height:0}
+.wlDPanel{flex:none;margin-bottom:10px}
+.wlDBody{flex:1;min-height:0}
+.wlDBody>.panel{margin-bottom:12px}
+@media (min-width:1024px){
+  .wlm{grid-template-columns:280px minmax(0,1fr);align-items:stretch;height:calc(100dvh - var(--wl-top,120px) - var(--wl-bot,52px));min-height:440px}
+  .wlList.panel{height:100%}
+  .wlListBody{overflow-y:auto;overscroll-behavior:contain}
+  .wlDet{height:100%}
+  .wlDBody{overflow-y:auto;overscroll-behavior:contain}
+  .wlBackBtn{display:none}
+  .wlListHead .kbdhint{display:none}
+}
 .wlHead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
 .wlPills{display:flex;flex-wrap:wrap;gap:6px}
 .wlAdd{margin-left:auto;display:flex;gap:6px}
@@ -852,21 +872,26 @@ tr:last-child td{border-bottom:none}
 .wlNs .d{color:var(--faint);font-family:var(--mono);font-size:.68rem}
 .wlNs .h{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wlNs.hi b{color:var(--red)}
-.wlR{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 8px;border-top:1px solid var(--hair);cursor:pointer;border-radius:8px}
+.wlR{display:flex;align-items:center;gap:8px;padding:9px 10px;border-top:1px solid var(--hair);cursor:pointer;border-radius:8px}
 .wlR:hover{background:var(--surface2)}
 .wlR.on{background:var(--surface2);box-shadow:inset 3px 0 0 var(--lime,#b5e61d)}
-.wlR1{display:flex;flex-direction:column;gap:3px;font-size:.86rem;min-width:0}
-.wlR1 b{overflow-wrap:anywhere;line-height:1.15}
+.wlRn{font-size:.9rem;font-weight:700;overflow-wrap:anywhere;min-width:0;line-height:1.15}
+.wlMkt{flex:none;font-size:.58rem;font-weight:700;letter-spacing:.04em;border-radius:4px;padding:1px 5px;background:var(--surface2);color:var(--muted)}
+.wlMkt.US{background:var(--teal-dim);color:var(--teal)}
+.wlMkt.TH{background:var(--purple-dim);color:var(--purple)}
+.wlRDots{margin-left:auto;display:inline-flex;align-items:center;gap:5px;flex:none}
+.wlDotH,.wlDotR{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none;box-sizing:border-box}
+.wlDotR.ok{background:var(--teal)}
+.wlDotR.wait{background:transparent;border:2px solid var(--amber)}
+.wlNewsN{color:var(--red);font-weight:700;font-size:.66rem}
 .wlPTag{font-size:.56rem;font-weight:700;letter-spacing:.04em;border-radius:4px;padding:1px 4px;width:max-content;background:var(--surface2);color:var(--muted)}
 .wlPTag.core{background:var(--teal-dim);color:var(--teal)}
 .wlPTag.satA{background:var(--purple-dim);color:var(--purple)}
-.wlR2{min-width:0}
 .wlChips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
 .wlChips .rsChip{padding:2px 7px;font-size:.62rem}
-.wlL2{font-size:.72rem;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.wlR3{display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:.66rem}
-.wlNewsN{color:var(--red);font-weight:700}
-.wlDate{color:var(--faint);font-family:var(--mono)}
+.wlOvChips{margin-bottom:10px}
+.wlDTop{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.wlDTop .wlActs{margin-top:0}
 .wlDT{font-size:1rem;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .wlDT .nm{color:var(--muted);font-size:.8rem}
 .wlDates{font-size:.68rem;color:var(--faint);margin-top:4px}
@@ -926,11 +951,10 @@ tr:last-child td{border-bottom:none}
 .wlLay .u{font-size:.66rem;color:var(--faint);text-align:right}
 .wlSmall{font-size:.8125rem;color:var(--muted);line-height:1.6;margin:6px 0 10px}
 .wlDeepG{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
-@media (max-width:899px){
-  .wlm{grid-template-columns:minmax(0,1fr)}
-  .wlm .wlDet{display:none;position:static;max-height:none;overflow:visible}
+@media (max-width:1023px){
+  .wlm .wlDet{display:none}
   .wlm.open .wlList{display:none}
-  .wlm.open .wlDet{display:block}
+  .wlm.open .wlDet{display:flex}
 }
 @media (max-width:480px){
   .wlR{grid-template-columns:58px minmax(0,1fr) auto;padding:9px 4px}
@@ -1128,7 +1152,6 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 /* ---------- Responsive ---------- */
 @media(max-width:900px){
   .strip{grid-template-columns:repeat(2,1fr)}
-  .ports{grid-template-columns:1fr}
 }
 @media(max-width:700px){
   body{font-size:15px}
@@ -1522,6 +1545,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
     </div>
   </div>
 
+  <div class="planTop" id="planTop">
   <div class="ports" id="ports"></div>
 
   <div class="panel" id="sbPlanPanel" style="display:none">
@@ -1530,6 +1554,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
       <div id="sbBullets"></div>
     </div>
     <div id="sbPlanBody"></div>
+  </div>
   </div>
 
   <details class="panel" id="szHeatPanel" style="padding:10px 14px">
@@ -5647,7 +5672,7 @@ const WL_NEWS_MAX = 5;      /* แถบ "ข่าวที่ต้องด�
 const WL_NEWS_DAYS = 7;     /* ยังไม่มี newsSeen → เอาเฉพาะข่าวใน n วันล่าสุด */
 const WL_PORT_CYCLE = ['all','US','TH'];
 
-function wlNarrow(){ try{ return window.matchMedia('(max-width:899px)').matches; }catch(e){ return false; } }
+function wlNarrow(){ try{ return window.matchMedia('(max-width:1023px)').matches; }catch(e){ return false; } }
 function wlDocMap(){ const m = {}; rsAll().forEach(d=>{ if(d && d.ticker) m[String(d.ticker).toUpperCase()] = d; }); return m; }
 function wlRowsAll(){
   const map = wlDocMap();
@@ -5698,7 +5723,7 @@ function wlHoldersOf(sym){
     const book = a.id===acctActive ? state : (acctBooks||{})[a.id];
     const trades = book && Array.isArray(book.trades) ? book.trades : [];
     const n = trades.filter(t=>t && t.status==='open' && wlSymKey(t.sym)===key).length;
-    if(n) out.push({id:a.id, name:a.name, n, color:PIE_COLORS[i % PIE_COLORS.length]});
+    if(n) out.push({id:a.id, name:a.name, n, color:acctColor(a)});   /* จุด/ชิป "ถืออยู่" ใช้สีประจำบัญชีเดียวกับหน้าแผน */
   });
   return out;
 }
@@ -5761,33 +5786,47 @@ function wlLine2(r){
   }
   return d.summary || (d.mode_a && d.mode_a.one_liner) || '';
 }
-/* 7W — Industry สั้น ๆ ในแถว เพื่อเช็กว่ากรอกแล้ว (เฉพาะแถวใน Watchlist ไม่ใช่ Candidates) */
+/* 7W — Industry สั้น ๆ เพื่อเช็กว่ากรอกแล้ว (เฉพาะรายการใน Watchlist ไม่ใช่ Candidates) — 7Y: ย้ายไปอยู่ใน Overview */
 function wlIndChip(r){
   if(!r.item) return '';
   const ind = String(r.item.industry||'').trim();
-  if(!ind) return '<span class="rsChip ghost" title="ยังไม่ได้กรอก Industry — เปิดแถวแล้วกด ✎ แก้ไข">Ind —</span>';
+  if(!ind) return '<span class="rsChip ghost" title="ยังไม่ได้กรอก Industry — กด ✎ แก้ไข">Ind —</span>';
   const short = ind.length>14 ? ind.slice(0,13)+'…' : ind;
   return `<span class="rsChip ghost" title="Industry: ${escHtml(ind)}">Ind · ${escHtml(short)}</span>`;
 }
+/* 7Y — แถวรายชื่อกะทัดรัด: ชื่อหุ้น · ป้าย market · จุดสถานะเล็ก (ถืออยู่ = จุดสีบัญชี · Research Card มี/รอ · จำนวนข่าว)
+   ชิป Ind / FQC / Tripwire อยู่ใน Overview ของแผงขวาแทน */
 function wlRowHtml(r){
-  const d = r.d;
-  const nNews = wlNewsOf(r.sym).length;
-  const rd = wlResearchDate(d);
-  const l2 = wlLine2(r) || (r.item && r.item.note) || '';
-  const hold = r.item ? wlHoldChips(r.sym) : '';
+  const d = r.d, nNews = wlNewsOf(r.sym).length;
+  const tag = r.item ? `<span class="wlMkt ${escHtml(r.market||'')}">${escHtml(r.market||'')}</span>` : '<span class="wlMkt">CAND</span>';
+  const holders = r.item ? wlHoldersOf(r.sym) : [];
+  const hd = holders.map(h=>`<i class="wlDotH" style="background:${h.color}" title="ถืออยู่ · ${escHtml(h.name)}"></i>`).join('');
+  const ok = !!(d && d.research_card);
+  const rc = `<i class="wlDotR ${ok?'ok':'wait'}" title="${ok?'มี Research Card':'รอสร้าง Research Card'}"></i>`;
   return `<div class="wlR${wlSel===r.sym?' on':''}" data-sym="${escHtml(r.sym)}" onclick="wlOpen(this.dataset.sym)">
-    <div class="wlR1"><b>${escHtml(r.sym)}</b>${wlPortTag(r.port, r.market)}</div>
-    <div class="wlR2"><div class="wlChips">${hold}${wlIndChip(r)}${wlScoreChips(r)}${(d && d.research_card) ? wlActionChip(d,'') : ''}${d?'':'<span class="rsChip ghost">ไม่มีรีเสิร์ช</span>'}</div>
-      <div class="wlL2">${l2?escHtml(l2):'<span class="placeholder">—</span>'}</div></div>
-    <div class="wlR3">${nNews?`<span class="wlNewsN">●${nNews}</span>`:''}<span class="wlDate">${rd?escHtml(rsD(rd)):'—'}</span></div>
+    <b class="wlRn">${escHtml(r.sym)}</b>${tag}
+    <span class="wlRDots">${hd}${rc}${nNews?`<span class="wlNewsN" title="ข่าว ${nNews} รายการ">${nNews}</span>`:''}</span>
   </div>`;
 }
+/* ความสูงกล่องเลื่อนของหน้า Watch (≥1024): CSS ใช้ 100dvh − --wl-top − --wl-bot · วัดแถบบน/ขอบล่างจริงตอนวาดและตอนปรับจอ */
+function wlFit(){
+  const host = document.querySelector('#watchGroups .wlm'); if(!host) return;
+  const top = host.getBoundingClientRect().top + (window.scrollY || 0);
+  const pb = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
+  const rs = document.documentElement.style;
+  rs.setProperty('--wl-top', Math.max(0, Math.round(top)) + 'px');
+  rs.setProperty('--wl-bot', Math.round(pb + 12) + 'px');
+}
+window.addEventListener('resize', ()=>{ if(typeof activeTab!=='undefined' && activeTab==='watch') wlFit(); });
+window.addEventListener('orientationchange', ()=>{ if(typeof activeTab!=='undefined' && activeTab==='watch') wlFit(); });
 function renderWatchlist(){
   if(!state) return;
   if(!Array.isArray(state.watchlist)) state.watchlist = normalizeWatchlist(state.watchlist);
   const host = document.getElementById('watchGroups'); if(!host) return;
   const V = wlRowsView(), rows = V.rows, A = V.A;
   /* เลือกตัวที่ยังอยู่ในลิสต์ปัจจุบัน — ไม่มี → ตัวแรก (desktop) */
+  /* จำหุ้นที่เลือกล่าสุด (เครื่องนี้) — เปิดหน้า Watch ใหม่แล้วเลือกตัวเดิม · สถานะหน้าจอล้วน ไม่เก็บลง Firestore */
+  if(!wlSel){ try{ const last = localStorage.getItem('wlSelLast'); if(last && rows.find(r=>r.sym===last)) wlSel = last; }catch(e){} }
   if(!rows.find(r=>r.sym===wlSel)){ wlSel = rows.length ? rows[0].sym : ''; if(!wlSel) wlMobOpen = false; }
   const narrow = wlNarrow();
   const open = narrow && wlMobOpen && !!wlSel;
@@ -5816,13 +5855,31 @@ function renderWatchlist(){
   const empty = wlView==='cand'
     ? (rsLoading && !rsLoadedAt ? 'กำลังโหลด…' : 'ยังไม่มี Candidates — หุ้นที่มีรีเสิร์ชแต่ยังไม่อยู่ใน Watchlist จะขึ้นที่นี่')
     : (wlStoreErr ? 'โหลด Watchlist ไม่สำเร็จ' : 'ยังไม่มีรายการ — กด ＋ เพิ่มหุ้น เพื่อเริ่ม Watchlist ใหม่ (ใช้ร่วมทุกบัญชี)');
-  const list = `<div class="panel wlList">${head}${status}${newsStrip}
-    <div class="wlRows">${rows.map(wlRowHtml).join('') || `<div class="empty">${empty}</div>`}</div></div>`;
+  const list = `<div class="panel wlList"><div class="wlListHead">${head}${status}</div>
+    <div class="wlListBody" id="wlListBody">${newsStrip}<div class="wlRows">${rows.map(wlRowHtml).join('') || `<div class="empty">${empty}</div>`}</div></div></div>`;
 
   const det = `<div class="wlDet">${wlSel ? wlDetailHtml(wlFind(wlSel)) : '<div class="panel"><div class="empty">เลือกหุ้นจากลิสต์</div></div>'}</div>`;
-  const expanded = wlResearchExpanded && wlSub==='rs' && !!(wlSel && wlFind(wlSel)?.d?.research_card);
-  host.innerHTML = `<div class="wlm${open?' open':''}${expanded?' rcExpanded':''}">${list}${det}</div>`;
+  /* 7Y — Research แสดงในแผงขวา ไม่เปิดเต็มหน้าแล้ว (ไม่มีโหมด rcExpanded) */
+  const oldList = host.querySelector('.wlListBody'), oldDet = host.querySelector('.wlDBody');
+  const keepList = oldList ? oldList.scrollTop : 0;
+  const detKey = wlSel + '|' + wlSub + '|' + wlDeep + '|' + wlView;
+  const keepDet = (oldDet && host.dataset.detKey === detKey) ? oldDet.scrollTop : 0;
+  host.innerHTML = `<div class="wlm${open?' open':''}">${list}${det}</div>`;
+  host.dataset.detKey = detKey;
   initReadExpanders(host);
+  wlFit();
+  if(!wlNarrow()){
+    const nl = host.querySelector('.wlListBody'), nd = host.querySelector('.wlDBody');
+    if(nl){
+      nl.scrollTop = keepList;
+      /* เลื่อนเฉพาะกล่องรายชื่อให้เห็นแถวที่เลือก (ห้ามใช้ scrollIntoView — มันดันทั้งหน้า) */
+      const row = nl.querySelector('.wlR.on');
+      if(row){ const t = row.offsetTop, b = t + row.offsetHeight;
+        if(t < nl.scrollTop) nl.scrollTop = Math.max(0, t - 8);
+        else if(b > nl.scrollTop + nl.clientHeight) nl.scrollTop = b - nl.clientHeight + 8; }
+    }
+    if(nd) nd.scrollTop = keepDet;
+  }
   try{ wlGateCheck(); }catch(e){ console.warn('wl gate:', e); }
 }
 function wlSetView(v){ wlResearchExpanded=false; wlView = (v==='cand'?'cand':'wl'); wlMobOpen = false; renderWatchlist(); }
@@ -5836,10 +5893,8 @@ function wlOpen(sym, sub){
   }
   if(wlSel!==sym){ wlDeep = 'B'; }
   wlSel = sym; wlSub = sub || 'ov';
-  if(wlSub==='rs' && r?.d?.research_card){
-    if(!wlResearchExpanded) wlResearchScroll=window.scrollY||0;
-    wlResearchExpanded=true;
-  } else wlResearchExpanded=false;
+  try{ localStorage.setItem('wlSelLast', sym); }catch(e){}
+  wlResearchExpanded = false;   /* 7Y — Research อยู่ในแผงขวา */
   if(wlNarrow()){
     if(!wlMobOpen) wlScroll = window.scrollY || 0;
     wlMobOpen = true;
@@ -5855,16 +5910,9 @@ function wlBack(){
   requestAnimationFrame(()=>{ try{ window.scrollTo(0,y); }catch(e){} });
 }
 function wlSetSub(s){
-  const wasExpanded=wlResearchExpanded;
-  if(s==='rs' && wlFind(wlSel)?.d?.research_card){
-    if(!wasExpanded) wlResearchScroll=window.scrollY||0;
-    wlResearchExpanded=true;
-  } else wlResearchExpanded=false;
-  wlSub=s;
+  wlResearchExpanded = false;   /* 7Y — ไม่มีโหมดเต็มหน้าแล้ว: สลับแท็บในแผงขวาเฉย ๆ */
+  wlSub = s;
   renderWatchlist();
-  if(wasExpanded && !wlResearchExpanded){
-    requestAnimationFrame(()=>{ try{ window.scrollTo(0,wlNarrow()?0:wlResearchScroll); }catch(e){} });
-  }
 }
 function wlSetDeep(s){ wlDeep = s; renderWatchlist(); }
 /* ปุ่ม "เปิดแผนเทรด →" — ไปแท็บแผน แล้วเปิดฟอร์ม Add Trade พร้อมใส่ ticker (อ่านอย่างเดียว · ไม่เขียนอะไรกลับที่ watchlist) */
@@ -6015,10 +6063,12 @@ function wlDetailHtml(r){
     : `<div class="wlActs"><button class="small primary" data-sym="${esc(r.sym)}" onclick="wlOpenAdd(this.dataset.sym)">＋ เพิ่มเข้า Watchlist</button><span class="hint" style="margin:0">หรือเลือกแท็บ Research เพื่อคัดลอกคำสั่งสร้าง Research Card</span></div>`;
 
   const head = `<div class="wlDHead">
-      ${wlNarrow() ? '<button class="small ghost wlBackBtn" onclick="wlBack()">← Watchlist</button>' : ''}
-      <div class="wlDT"><b>${esc(r.sym)}</b> <span class="nm">${esc((d&&d.name)||'')}</span> ${wlPortTag(r.port, r.market)} ${w?wlHoldChips(r.sym):''} ${r.port==='core'?wlEntryChip(d, true):''} ${wlActionChip(d,'พร้อม')}</div>
+      ${wlNarrow() ? '<button class="small ghost wlBackBtn" onclick="wlBack()">‹ Watchlist</button>' : ''}
+      <div class="wlDTop">
+        <div class="wlDT"><b>${esc(r.sym)}</b> <span class="nm">${esc((d&&d.name)||'')}</span> ${wlPortTag(r.port, r.market)} ${w?wlHoldChips(r.sym):''}</div>
+        ${acts}
+      </div>
       <div class="wlDates">Research Card ${esc(rsD(wlResearchDate(d)))} · ข่าวล่าสุด ${esc(rsD(lastNews))}</div>
-      ${acts}
       <div class="rsDeepTabs" style="margin:10px 0 0">
         <button type="button" class="rsDeepBtn ${wlSub==='ov'?'on':''}" onclick="wlSetSub('ov')">Overview</button>
         <button type="button" class="rsDeepBtn ${wlSub==='rs'?'on':''}" onclick="wlSetSub('rs')">Research</button>
@@ -6039,7 +6089,9 @@ function wlDetailHtml(r){
     const ruleNews = news.filter(n=>n.impact_section==='tripwire' && n.matched_rule);
     const ind = w && w.industry ? (indLink(w.industry)
         ? `<span class="indTxt indLinked" data-i="${esc(w.industry)}" onclick="indOpen(this.dataset.i)">${esc(w.industry)} ↗</span>` : esc(w.industry)) : '';
+    const ovChips = `<div class="wlChips wlOvChips">${wlIndChip(r)}${wlScoreChips(r)}${(d && d.research_card) ? wlActionChip(d,'พร้อม') : ''}</div>`;
     body = `<div class="panel">
+      ${ovChips}
       <div class="wlTodo"><b>ต้องทำ:</b> ${todo}</div>
       <div class="wlKV"><span class="k">${label}</span><span class="v wlReadText">${l2?esc(l2):'—'}</span></div>
       ${ind?`<div class="wlKV"><span class="k">Industry</span><span class="v">${ind}</span></div>`:''}
@@ -6049,7 +6101,7 @@ function wlDetailHtml(r){
       ${ruleNews.length ? `<div class="wlKV"><span class="k">ข่าวตรง Tripwire</span><span class="v wlReadText">${ruleNews.map(n=>`${esc(rsD(n.date))} · ${esc(n.headline)} <span class="rsChip red">Tripwire ${esc(n.matched_rule)}</span>`).join('<br>')}</span></div>` : ''}
     </div>`;
   }
-  return `<div class="panel wlDPanel">${head}</div>${body}`;
+  return `<div class="panel wlDPanel">${head}</div><div class="wlDBody">${body}</div>`;
 }
 /* Investment clearance is a separate, verified legacy snapshot; Research Card cannot grant it. */
 function wlEntryChip(d, hideUnassessed){
@@ -10332,7 +10384,7 @@ function szSizeLine(){
     P.push(part(`FQC เป้า ${f && f.target_weight!=null ? (f.approx?'~':'')+f.target_weight+'%' : '—'} (จริง ${szHoldPct(port,sym).toFixed(1)}%)`, f && f.eligible===false ? 'r' : ''));
     P.push(part(`ช่อง ${slotsAfter}/${max}`, slotsAfter>max ? 'r' : ''));
     P.push(part(d && d.research_card ? 'Research Card พร้อม' : 'รอสร้าง Research Card', d && d.research_card ? '' : 'a'));
-    P.push(wlEntryChip(d));
+    { const ec = wlEntryChip(d, true); if(ec) P.push(ec); }   /* ซ่อน "ยังไม่ประเมิน" ในบรรทัดสรุปของฟอร์มด้วย */
   } else {
     const g = (typeof wlGG==='function') ? wlGG({sym, d}) : null;
     const baseR = g ? Number(g.R) : ggRow(0).r;
