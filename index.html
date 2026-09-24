@@ -98,11 +98,15 @@ header{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;
 /* ปุ่ม ⋯ เพิ่มเติม + ปุ่มสลับโหมดใน bottom bar — โผล่เฉพาะจอมือถือ */
 .mobileOnly{display:none !important}
 .moreMenu{
-  position:fixed;right:12px;bottom:82px;z-index:60;display:none;
+  position:fixed;right:12px;bottom:calc(var(--tabbar-h,68px) + 10px);z-index:60;display:none;max-height:calc(100dvh - var(--tabbar-h,68px) - 24px);overflow-y:auto;
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
   box-shadow:var(--sh-3);padding:6px;min-width:190px;
 }
 .moreMenu.show{display:block}
+@media (min-width:481px){
+  .moreMenu{bottom:auto;top:72px;right:24px;max-height:calc(100dvh - 96px)}
+  #hdrMoreBtn .btnTxt{display:none}
+}
 .moreMenu button{
   display:block;width:100%;text-align:left;background:transparent;border:none;box-shadow:none;
   border-radius:var(--r-sm);padding:11px 13px;font-size:.84rem;font-weight:500;color:var(--text);min-height:0;
@@ -159,6 +163,13 @@ button.ghost:hover{background:var(--surface2);border-color:transparent}
   display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;flex:none}
 .brandName{font-weight:700;font-size:.98rem;letter-spacing:-.01em;white-space:nowrap}
 .topbar .tabs{margin:0 auto}
+.brandSync{display:inline-flex;align-items:center;gap:6px;background:transparent;border:none;box-shadow:none;padding:2px 4px;min-height:0;
+  font-family:var(--mono);font-size:.68rem;color:var(--faint);white-space:nowrap;cursor:pointer;margin-left:4px}
+.brandSync:hover{background:transparent;color:var(--muted);border-color:transparent}
+.brandSync.stale{color:var(--amber)}
+.mmSec{padding:8px 10px;border-bottom:1px solid var(--border)}
+.mmSec .acctBar select{width:100%;min-width:0}
+.mmSync .syncbadge,.mmSync .pushbadge{display:flex;align-items:center;gap:6px;font-size:.72rem;margin:2px 0}
 .acctWrap{position:relative;flex:none}
 .acctChip{
   display:inline-flex;align-items:center;gap:9px;
@@ -227,7 +238,8 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
   .tabs{
     position:fixed;left:0;right:0;bottom:0;z-index:40;
     display:flex;gap:0;flex-wrap:nowrap;background:var(--surface);border-top:1px solid var(--border);
-    padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));
+    padding:6px 4px 6px;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px));
+    transform:translateZ(0);   /* กันแถบลอยกลางจอตอน Safari ย่อ/ขยายแถบเครื่องมือ */
   }
   .tabbtn{
     flex:1 1 0;min-width:0;margin:0;padding:8px 2px;border-radius:var(--r-sm);
@@ -236,7 +248,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
   .tabbtn.on{background:var(--lime-dim);color:var(--text);border-color:transparent}
   .tabbtn.on .kbdhint{background:var(--surface2);color:var(--faint)}
   .tabbtn .kbdhint{display:none}
-  body{padding-bottom:68px}
+  body{padding-bottom:calc(var(--tabbar-h,68px) + 8px)}   /* เท่าความสูงแถบล่าง (วัดจริงด้วย JS ตอนโหลด/หมุนจอ) */
 }
 
 /* ---------- toggle ขอบเขตแผนเทรด: หุ้น / Future ---------- */
@@ -732,6 +744,15 @@ tr:last-child td{border-bottom:none}
 .f input:focus,.f select:focus{outline:none;border-color:var(--teal);background:var(--surface);box-shadow:0 0 0 3px var(--teal-dim)}
 .f select{font-family:var(--sans)}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.frow>.f{min-width:0}
+.f input,.f select{min-width:0;max-width:100%}
+#tDate{min-width:0;width:100%;box-sizing:border-box}
+#tSymFree::placeholder{text-transform:none}
+@media (max-width:480px){
+  .frowDS{grid-template-columns:1fr}          /* Date กับ Symbol เรียงแนวตั้งเต็มความกว้าง */
+  .frowDS .fSym{order:-1}                     /* Symbol ขึ้นก่อน */
+  .frowDS input{width:100%;min-width:0}
+}
 .frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px 12px}
 .fgrid+.hint{margin-top:10px}
@@ -812,7 +833,7 @@ tr:last-child td{border-bottom:none}
 /* ---- เฟส 4: Watch master-detail ---- */
 .wlm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;align-items:start}
 .wlm>*{min-width:0}
-.wlDet{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain}
+.wlDet{position:sticky;top:12px;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}
 .wlm.rcExpanded{position:fixed;inset:0;z-index:200;display:block;overflow:hidden;background:var(--bg);padding:0;max-width:none}
 .wlm.rcExpanded .wlList{display:none}
 .wlm.rcExpanded .wlDet{display:block;position:relative;top:0;max-height:none;height:100dvh;overflow-y:auto;overflow-x:hidden;padding:12px max(12px,calc((100vw - 1100px)/2));box-sizing:border-box;scrollbar-gutter:stable}
@@ -852,8 +873,25 @@ tr:last-child td{border-bottom:none}
 .wlActs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .wlHold{display:inline-flex;align-items:center;border-radius:4px;padding:1px 6px;font-size:.6rem;font-weight:700;white-space:nowrap}
 .wlHold.badge{background:var(--teal-dim);color:var(--teal)}
-.strip.acctStrip{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
-.stat.acctCard{border-left:4px solid var(--ac,var(--border))}
+.strip.acctStrip{display:flex;flex-direction:column;gap:8px}
+.stat.acctCard{padding:0}
+.acctRow1{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:10px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.acctRow1 b{font-weight:700}
+.acctRow1>b:first-of-type{font-size:.92rem}
+.acctSum{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:.76rem;color:var(--muted)}
+.acctSum b{color:var(--text);font-weight:600}
+.acctCaret2{margin-left:auto;color:var(--faint);font-size:.8rem;transition:transform .15s}
+.acctCard.open .acctCaret2{transform:rotate(180deg)}
+.acctDetail{display:none;padding:2px 14px 12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:2px 28px}
+.acctCard.open .acctDetail{display:grid}
+@media (max-width:480px){
+  .acctRow1{position:relative;gap:2px 8px;padding:9px 32px 9px 12px}
+  .acctRow1>b:first-of-type{font-size:.88rem}
+  .acctSum{flex:1 1 100%;font-size:.7rem;line-height:1.4}
+  .acctCaret2{position:absolute;right:12px;top:9px;margin:0}
+  .acctDetail{padding:0 12px 10px}
+}
+.stat.acctCard{border-left:4px solid var(--ac,var(--border))}   /* ต้องอยู่หลัง .stat.acctCard{padding:0} ไม่ได้ทับกัน */
 .acctCardHead{display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:.92rem}
 .acctDotC{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--ac);flex-shrink:0}
 .acctKV{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.78rem;padding:2px 0}
@@ -1041,7 +1079,7 @@ td.industryCell .indTxt{
 @media(min-width:640px){ .bkBanner{left:auto;right:16px;bottom:16px;max-width:430px} }
 
 /* ---------- หน้าเข้าสู่ระบบ ---------- */
-.authwrap{min-height:80vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.authwrap{min-height:80vh;min-height:80dvh;display:flex;align-items:center;justify-content:center;padding:20px}
 .authcard{background:var(--surface);border:none;border-radius:var(--r-xl);width:100%;max-width:380px;padding:32px 26px;box-shadow:var(--sh-3)}
 .authcard h1{text-align:center;margin-bottom:6px;font-size:1.1rem}
 .authcard .sub{text-align:center;margin-bottom:24px}
@@ -1139,7 +1177,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
   .modal{
     max-width:none;border-radius:var(--r-xl) var(--r-xl) 0 0;
     padding:18px 16px calc(16px + env(safe-area-inset-bottom));
-    max-height:92vh;overflow-y:auto;animation:sheetUp .22s ease-out;
+    max-height:92vh;max-height:92dvh;overflow-y:auto;animation:sheetUp .22s ease-out;
   }
   @keyframes sheetUp{from{transform:translateY(28px)}to{transform:translateY(0)}}
   .modal h3{position:sticky;top:-18px;background:var(--surface);margin:-18px -16px 14px;padding:18px 16px 12px;border-bottom:1px solid var(--hair);z-index:2}
@@ -1164,7 +1202,7 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 .bellDot{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid var(--surface)}
 
 .overlay.newsDrawerOv{justify-content:flex-end;align-items:stretch;padding:0}
-.newsDrawer{width:min(460px,100%);height:100%;max-height:100vh;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:-8px 0 30px rgba(0,0,0,.18);animation:ndIn .2s ease-out}
+.newsDrawer{width:min(460px,100%);height:100%;max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:-8px 0 30px rgba(0,0,0,.18);animation:ndIn .2s ease-out}
 @keyframes ndIn{from{transform:translateX(24px);opacity:.6}to{transform:none;opacity:1}}
 .ndHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
 .ndHead h2{margin:0}
@@ -1431,6 +1469,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
 <header class="topbar">
   <div class="brand" title="Trading Dashboard — ความเสี่ยงรวม + Trading Journal · ฐานคำนวณ THB">
     <span class="brandMark">▮</span><span class="brandName">Trading</span>
+    <button type="button" class="brandSync" id="brandSync" onclick="retrySync()" title="ซิงก์ · push ล่าสุด"><span class="acctDot" id="acctDot"></span><span id="brandSyncTime">—</span></button>
   </div>
 
   <div class="tabs" id="tabsMain">
@@ -1448,27 +1487,21 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
     <button onclick="openIndustryManager()" title="Industry"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.4"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="16" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="20" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="24" y="23" width="3.5" height="6" fill="#8FD6EE"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="2.6" stroke-linecap="round"/></svg></button>
     <button class="iconOnlyMobile" onclick="openImportCL()" title="Import จาก Claude Checklist (วาง JSON)" aria-label="Import" hidden style="display:none"><span class="btnIcon">📥</span><span class="btnTxt"> Import</span></button>
     <button class="primary iconOnlyMobile" onclick="openChecklist('trade')" title="Add Trade" aria-label="Add Trade"><span class="btnIcon">＋</span><span class="btnTxt"> Add Trade</span></button>
-    <button class="mobileOnly" id="hdrMoreBtn" onclick="toggleMoreMenu(event)" title="เพิ่มเติม" aria-label="เพิ่มเติม" aria-haspopup="true" aria-expanded="false"><span class="btnIcon">⋯</span><span class="btnTxt"> เพิ่มเติม</span></button>
+    <button class="iconOnlyMobile" id="hdrMoreBtn" onclick="toggleMoreMenu(event)" title="เพิ่มเติม" aria-label="เพิ่มเติม" aria-haspopup="true" aria-expanded="false"><span class="btnIcon">⋯</span><span class="btnTxt"> เพิ่มเติม</span></button>
   </div>
 
-  <div class="acctWrap">
-    <button type="button" class="acctChip" id="acctChip" onclick="toggleAcctMenu(event)" aria-haspopup="true" aria-expanded="false" title="บัญชี · สถานะซิงก์ · เวลาที่ข้อมูลรีเสิร์ชอัปเดต">
-      <span class="acctAv" id="acctAv">—</span>
-      <span class="acctTxt"><b id="acctChipName">บัญชี</b><span id="acctChipSub">—</span></span>
-      <span class="acctDot" id="acctDot"></span>
-      <span class="acctCaret">⌄</span>
-    </button>
-    <div class="acctMenu" id="acctMenu">
-      <div class="acctMenuHead">สลับบัญชี</div>
-      <div class="acctBar"><select id="acctSel" onchange="acctSwitch(this.value)" title="สลับบัญชี"></select>
-        <span id="acctPortsHint" class="hint" style="margin:0"></span></div>
-      <div class="syncbadge" id="syncBadge" onclick="retrySync()"><span class="sdot"></span><span id="syncText">—</span> · <span id="authedAs" style="opacity:.7"></span></div>
-      <div class="pushbadge" id="pushBadge" title="เวลาที่ Mac ส่งข้อมูลรีเสิร์ชขึ้นล่าสุด">push ล่าสุด <b id="pushWhen">—</b></div>
-    </div>
-  </div>
 </header>
 
 <div class="moreMenu" id="moreMenu" role="menu" aria-label="เมนูเพิ่มเติม">
+  <div class="mmSec" id="mmAcct">
+    <div class="acctMenuHead">บัญชี</div>
+    <div class="acctBar"><select id="acctSel" onchange="closeMoreMenu();acctSwitch(this.value)" title="สลับบัญชี"></select>
+      <span id="acctPortsHint" class="hint" style="margin:0"></span></div>
+  </div>
+  <div class="mmSec mmSync">
+    <div class="syncbadge" id="syncBadge" onclick="retrySync()"><span class="sdot"></span><span id="syncText">—</span> · <span id="authedAs" style="opacity:.7"></span></div>
+    <div class="pushbadge" id="pushBadge" title="เวลาที่ Mac ส่งข้อมูลรีเสิร์ชขึ้นล่าสุด">push ล่าสุด <b id="pushWhen">—</b></div>
+  </div>
   <button type="button" role="menuitem" onclick="moreMenuGo('settings')">ตั้งค่าพอร์ต</button>
   <button type="button" role="menuitem" onclick="moreMenuGo('system')">ตั้งค่าระบบ</button>
 </div>
@@ -1487,7 +1520,6 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
       <button type="button" class="scopeBtn on" id="scopeStock" onclick="setPlanScope('stock')">Port หุ้น <span class="kbdhint">S</span></button>
       <button type="button" class="scopeBtn" id="scopeFuture" onclick="setPlanScope('future')">Port Future <span class="kbdhint">F</span></button>
     </div>
-    <div class="scopeSum" id="scopeSum"></div>
   </div>
 
   <div class="ports" id="ports"></div>
@@ -1698,11 +1730,11 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
     <div class="frow" id="tAcctRow" style="grid-template-columns:1fr">
       <div class="f"><label>บัญชี <span style="font-weight:400;color:var(--muted)">(sizing · heat · เพดาน คำนวณจากบัญชีนี้)</span></label><select id="tAcct" onchange="tradeAcctChanged()"></select></div>
     </div>
-    <div class="frow">
-      <div class="f"><label>Date</label><input type="date" id="tDate"></div>
-      <div class="f"><label>Symbol <span id="tSymHint" style="font-weight:400;color:var(--muted)">(เลือกจาก Watchlist หรือพิมพ์เอง)</span></label>
+    <div class="frow frowDS">
+      <div class="f fDate"><label>Date</label><input type="date" id="tDate"></div>
+      <div class="f fSym"><label>Symbol<span id="tSymHint" hidden></span></label>
         <select id="tSym" style="display:none"></select>
-        <input type="text" id="tSymFree" list="tSymList" style="text-transform:uppercase" placeholder="พิมพ์ / เลือก Symbol" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <input type="text" id="tSymFree" list="tSymList" style="text-transform:uppercase" placeholder="เลือกจาก Watchlist หรือพิมพ์เอง" autocomplete="off" autocapitalize="characters" spellcheck="false">
         <datalist id="tSymList"></datalist>
         <div class="hint" id="tSymPlanHint" style="margin:4px 0 0;min-height:0"></div>
       </div>
@@ -2871,6 +2903,7 @@ function renderAcctBar(){
   const sel = document.getElementById('acctSel'); if(!sel) return;
   sel.innerHTML = acctList.map(a=>`<option value="${escHtml(a.id)}"${a.id===acctActive?' selected':''}>${escHtml(a.name)}</option>`).join('');
   sel.style.display = acctList.length>1 ? '' : 'none';
+  const mmA = document.getElementById('mmAcct'); if(mmA) mmA.style.display = acctList.length>1 ? '' : 'none';
   const hint = document.getElementById('acctPortsHint');
   if(hint){
     const on = acctPorts();
@@ -3160,6 +3193,7 @@ function setSyncBadge(st){
   const b = document.getElementById('syncBadge'), t = document.getElementById('syncText');
   if(!b) return;
   b.className = 'syncbadge '+st;
+  try{ updateAcctChip(); }catch(e){}
   t.textContent = st==='saving' ? 'กำลังบันทึก…' : st==='saved' ? 'ซิงก์แล้ว — ข้ามอุปกรณ์ได้' : 'บันทึกไม่สำเร็จ — แตะเพื่อลองใหม่';
 }
 function resetAll(){
@@ -3192,26 +3226,22 @@ document.addEventListener('click', (e)=>{
   if(e.target.closest && (e.target.closest('#acctMenu') || e.target.closest('#acctChip'))) return;
   closeAcctMenu();
 });
-/* ชื่อบัญชี + ตัวย่อ + จุดสถานะซิงก์ บนปุ่ม — อ่านจากของเดิมที่ซ่อนอยู่ในเมนู */
+/* จุดสถานะซิงก์ + เวลา push ข้างหัว "Trading" — อ่านจาก badge ที่อยู่ในเมนู ⋯ เพิ่มเติม */
 function updateAcctChip(){
-  const sel = document.getElementById('acctSel');
-  const nm  = document.getElementById('acctChipName');
-  const av  = document.getElementById('acctAv');
-  const sub = document.getElementById('acctChipSub');
-  const dot = document.getElementById('acctDot');
-  if(nm && sel){
-    const t = (sel.options[sel.selectedIndex] && sel.options[sel.selectedIndex].text) || 'บัญชี';
-    nm.textContent = t;
-    if(av) av.textContent = (t.replace(/\s/g,'').slice(0,2).toUpperCase() || '—');
-  }
-  const badge = document.getElementById('syncBadge');
+  const dot = document.getElementById('acctDot'), badge = document.getElementById('syncBadge');
+  const t = document.getElementById('brandSyncTime'), pw = document.getElementById('pushWhen');
+  const pb = document.getElementById('pushBadge'), bs = document.getElementById('brandSync');
   if(dot && badge){
     dot.className = 'acctDot ' + (badge.classList.contains('saved') ? 'ok'
       : badge.classList.contains('saving') ? 'busy'
       : badge.classList.contains('error') ? 'bad' : '');
   }
-  const pw = document.getElementById('pushWhen');
-  if(sub && pw) sub.textContent = 'push ' + pw.textContent;
+  if(t && pw) t.textContent = pw.textContent;
+  if(bs){
+    bs.classList.toggle('stale', !!(pb && pb.classList.contains('stale')));
+    const st = document.getElementById('syncText');
+    bs.title = 'ซิงก์: ' + (st ? st.textContent : '—') + ' · push ล่าสุด ' + (pw ? pw.textContent : '—');
+  }
 }
 
 /* ---- เมนู ⋯ เพิ่มเติม (มือถือ): Journal + ตั้งค่า ---- */
@@ -3606,16 +3636,36 @@ function rsUnseenNews(){
   const seen = (typeof state!=='undefined' && state && state.newsSeen) || {};
   return rsNewsAll().filter(n=>!seen[n.id]);
 }
+/* Firestore Timestamp / {seconds,nanoseconds} / ISO string / ms → Date (ไม่ได้ = null) — ต้นเหตุของบั๊กที่โชว์ "Timestamp(seconds=…)" */
+function tsToDate(v){
+  if(v == null) return null;
+  let d = null;
+  if(typeof v.toDate === 'function') d = v.toDate();
+  else if(typeof v === 'object' && typeof v.seconds === 'number') d = new Date(v.seconds*1000 + Math.floor((v.nanoseconds||0)/1e6));
+  else if(typeof v === 'object' && typeof v._seconds === 'number') d = new Date(v._seconds*1000);
+  else d = new Date(v);
+  return (d instanceof Date && !isNaN(d)) ? d : null;
+}
+/* < 1 นาที "เมื่อครู่" · < 60 นาที "x นาทีที่แล้ว" · วันนี้ HH:MM · วันอื่น d/m HH:MM */
+function pushAgoText(d){
+  const p = n => String(n).padStart(2,'0');
+  const mins = Math.floor((Date.now() - d.getTime())/60000);
+  if(mins < 1) return 'เมื่อครู่';
+  if(mins < 60) return mins + ' นาทีที่แล้ว';
+  const hm = p(d.getHours()) + ':' + p(d.getMinutes());
+  const now = new Date();
+  return d.toDateString() === now.toDateString() ? hm : d.getDate() + '/' + (d.getMonth()+1) + ' ' + hm;
+}
 function rsUpdatePushBadge(){
   const b = document.getElementById('pushBadge'), w = document.getElementById('pushWhen');
   const m = rsMetaPush();
   if(b && w){
     if(!m || !m.last_push_at){ w.textContent = 'ยังไม่เคย'; b.classList.add('stale'); }
     else{
-      const d = new Date(m.last_push_at);
-      w.textContent = isNaN(d) ? String(m.last_push_at) : d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+      const d = tsToDate(m.last_push_at);
+      w.textContent = d ? pushAgoText(d) : '—';
       /* เกิน 36 ชม. = ข้อมูลเก่าเกินไป ต้องเตือน ไม่ใช่โชว์เฉยๆ */
-      b.classList.toggle('stale', !isNaN(d) && (Date.now()-d.getTime()) > 36*3600*1000);
+      b.classList.toggle('stale', !!d && (Date.now()-d.getTime()) > 36*3600*1000);
     }
   }
   const dot = document.getElementById('bellDot');
@@ -4042,6 +4092,8 @@ function planBuildSection(A, s){
   function legRowHtml(t, indent, gcolor, isLast){
     const risk = riskOf(t), rr = rrOf(t);
     const rPctPort = pct(riskTHBOf(t), portCapTHB(t.port));
+    const rPctTot = pct(riskTHBOf(t), cap);   /* 7X — % ทุกจุดใช้ฐานเดียว = ทุนรวมของบัญชี (คำเตือน ⚠ ยังเทียบเพดานต่อไม้เดิม อัตราส่วนเท่าเดิม) */
+    const limTot = szTradeLimit(t.port, t.sym) * (cap>0 ? portCapTHB(t.port)/cap : 0);
     const symC = tradeSym(t);
     const hot = rPctPort > szTradeLimit(t.port, t.sym);
     const hasSlippage = t.plannedEntry!=null && t.plannedEntry!==t.entry;
@@ -4057,7 +4109,7 @@ function planBuildSection(A, s){
       <td>${fmt2(t.entry)}${hasSlippage?`<br><span style="color:var(--muted);font-size:.68rem;font-weight:400">แผน ${fmt2(t.plannedEntry)}</span>`:''}</td><td>${fmt2(t.sl)}</td><td>${t.tp?fmt2(t.tp):'—'}</td>
       <td>${fmt2(t.qty)}${(t.mult||1)!==1?`<span style="color:var(--muted)"> ×${fmt2(t.mult)}</span>`:''}</td>
       <td class="riskcell ${hot?'hot':''}">${symC}${fmt0(risk)}</td>
-      <td class="riskcell ${hot?'hot':''}">${fmt2(rPctPort)}%${hot?' ⚠':''}</td>
+      <td class="riskcell ${hot?'hot':''}"${hot?` title="เกินเพดานต่อไม้ (${fmt2(limTot)}% ของทุนรวม)"`:''}>${fmt2(rPctTot)}%${hot?' ⚠':''}</td>
       <td class="${rr===null?'':rr>=2?'rr-good':rr<1.5?'rr-bad':''}">${rr===null?'—':fmt2(rr)}</td>
       <td class="sans" style="max-width:200px;white-space:normal;font-size:var(--plan-size)">${t.invalidation ? escHtml(t.invalidation) : `<span style="color:var(--muted)" title="ยังไม่ได้เขียน — กด ✎ เพิ่มได้">—</span>`}</td>
       <td class="sans"><span class="tag ${(t.status==='plan'&&t.submitted)?'submitted':t.status}" ${t.status==='plan'?`onclick="toggleSubmitted('${t.id}','${A}')" style="cursor:pointer" title="กดเพื่อสลับ Plan/Submit"`:''}>${(t.status==='plan'&&t.submitted)?'SUBMIT':t.status.toUpperCase()}</span></td>
@@ -4106,7 +4158,7 @@ function planBuildSection(A, s){
       <span class="gmeta">${legs.length} legs (${nOpen}O/${nPlan}P)</span>
       <span class="gmeta">avg <b>${fmt2(avgEntry)}</b></span>
       <span class="gmeta">qty <b>${fmt2(sumQty)}</b></span>
-      <span class="gmeta ${hotG?'riskcell hot':''}" title="% ของทุน Port / % ของทุนรวม">Risk <b>฿${fmt0(totalRiskTHB)}</b> (${fmt2(riskPctPort)}%/${fmt2(riskPctTot)}%)${hotG?' ⚠':''}</span>
+      <span class="gmeta ${hotG?'riskcell hot':''}" title="% ของทุนรวมบัญชี">Risk <b>฿${fmt0(totalRiskTHB)}</b> (${fmt2(riskPctTot)}% ของทุนรวม)${hotG?' ⚠':''}</span>
       <span class="gmeta ${holdWarn?'riskcell hot':''}" title="% ถือครองของทุน Port (เพดานเต็มไม้ ${holdLim}%)">Hold <b>${fmt2(holdPctPort)}%</b>${holdWarn?` ⚠>${holdLim}%`:''}</span>
     </div></td></tr>`;
     return header + legs.map((t,i)=>legRowHtml(t, true, gcolor, i===legs.length-1)).join('');
@@ -4115,6 +4167,8 @@ function planBuildSection(A, s){
   function legCardHtml(t){
     const risk = riskOf(t), rr = rrOf(t);
     const rPctPort = pct(riskTHBOf(t), portCapTHB(t.port));
+    const rPctTot = pct(riskTHBOf(t), cap);   /* 7X — % ทุกจุดใช้ฐานเดียว = ทุนรวมของบัญชี (คำเตือน ⚠ ยังเทียบเพดานต่อไม้เดิม อัตราส่วนเท่าเดิม) */
+    const limTot = szTradeLimit(t.port, t.sym) * (cap>0 ? portCapTHB(t.port)/cap : 0);
     const symC = tradeSym(t);
     const hot = rPctPort > szTradeLimit(t.port, t.sym);
     const hasSlippage = t.plannedEntry!=null && t.plannedEntry!==t.entry;
@@ -4133,7 +4187,7 @@ function planBuildSection(A, s){
         <div><span class="k">🎯 TP</span>${t.tp?fmt2(t.tp):'—'}</div>
         <div><span class="k">🔢 Qty ${(t.mult||1)!==1?`×${fmt2(t.mult)}`:''}</span>${fmt2(t.qty)}</div>
         <div><span class="k">💸 Risk</span><span class="${hot?'riskcell hot':''}">${symC}${fmt0(risk)}</span></div>
-        <div><span class="k">⚠️ Risk%</span><span class="${hot?'riskcell hot':''}">${fmt2(rPctPort)}%${hot?' ⚠':''}</span></div>
+        <div><span class="k">⚠️ Risk%</span><span class="${hot?'riskcell hot':''}"${hot?` title="เกินเพดานต่อไม้ (${fmt2(limTot)}% ของทุนรวม)"`:''}>${fmt2(rPctTot)}%${hot?' ⚠':''}</span></div>
       </div>
       ${t.invalidation ? `<div style="margin-top:8px;font-size:var(--plan-size);border-left:2px solid var(--border);padding-left:8px"><span style="color:var(--muted)">Invalidation · </span>${escHtml(t.invalidation)}</div>` : ''}
       ${t.imageUrl ? `<div style="margin-top:8px">${imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 เปิดรูป</a>`}</div>` : ''}
@@ -4171,12 +4225,13 @@ function planBuildSection(A, s){
     const avgEntry = sumQty>0 ? sumEntryQty/sumQty : 0;
     const riskPctPort = capTH>0 ? totalRiskTHB/capTH*100 : 0;
     const holdPctPort = capTH>0 ? holdValueTHB/capTH*100 : 0;
+    const riskPctTot = pct(totalRiskTHB, cap);
     const holdLim = holdLimitPct(port);
     const holdWarn = holdPctPort > holdLim;
     const groupCard = `<div class="tcard" style="background:${hexToRgba(PORTS[port].color,0.08)};border-left:2px solid ${gcolor};border-radius:10px">
       <div class="r1"><span class="sym">${symG} <span class="gmeta" style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">${portName}</span> <span class="tag ${legs[0].bias==='Long'?'long':'short'}">${legs[0].bias}</span></span><span class="sub">${legs.length} ไม้</span></div>
       <div class="sub">${nOpen} open / ${nPlan} plan · avg entry ${fmt2(avgEntry)} · qty รวม ${fmt2(sumQty)}</div>
-      <div class="sub">รวม Risk ฿${fmt0(totalRiskTHB)} (${fmt2(riskPctPort)}% ของ ${PORTS[port].name})</div>
+      <div class="sub">รวม Risk ฿${fmt0(totalRiskTHB)} (${fmt2(riskPctTot)}% ของทุนรวม)</div>
       <div class="sub ${holdWarn?'riskcell hot':''}">ถือครอง ${fmt2(holdPctPort)}% ของ ${PORTS[port].name}${holdWarn?` ⚠ เกิน ${holdLim}%`:''}</div>
     </div>`;
     return groupCard + legs.map(legCardHtml).join('');
@@ -4208,22 +4263,36 @@ function planViewList(){
   if(!one.length){ planAcctFilter = 'all'; return v; }
   return one;
 }
+const planStripOpen = new Set();   /* หน้าจอล้วน — ค่าเริ่มต้น = ย่อ */
+function togglePlanStrip(el){
+  const id = el.dataset.acct, card = el.closest('.acctCard'); if(!card) return;
+  const open = !card.classList.contains('open');
+  card.classList.toggle('open', open);
+  el.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if(open) planStripOpen.add(id); else planStripOpen.delete(id);
+}
+/* ป้ายพอร์ตในแถบสรุป: ตามชื่อใหม่ Core / Sat */
+const PLAN_STRIP_LBL = {core:'Core', satA:'Sat', satB:'Sat'};
 function planStripCardHtml(a, b){
-  const color = acctColor(a);
-  const head = `<div class="acctCardHead"><span class="acctDotC" style="--ac:${color}"></span><b>${escHtml(a.name)}</b></div>`;
-  if(!b) return `<div class="stat acctCard" style="--ac:${color}">${head}<div class="acctKV"><span>คำนวณไม่สำเร็จ</span></div></div>`;
+  const color = acctColor(a), open = planStripOpen.has(a.id);
+  const nm = `<span class="acctDotC" style="--ac:${color}"></span><b>${escHtml(a.name)}</b>`;
+  const row = (inner)=>`<div class="acctRow1" role="button" tabindex="0" aria-expanded="${open}" data-acct="${escHtml(a.id)}" onclick="togglePlanStrip(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePlanStrip(this)}">${inner}<span class="acctCaret2" aria-hidden="true">▾</span></div>`;
+  if(!b) return `<div class="stat acctCard" style="--ac:${color}">${row(nm+'<span class="acctSum">คำนวณไม่สำเร็จ</span>')}</div>`;
   const m = b.sum;
   const heat = m.heats.length ? m.heats.map(x=>{
       const bad = x.h.totalR > SZ.MAX_HEAT_R || x.h.nPos > SZ.MAX_POS, warn = !bad && x.h.totalR > SZ.WARN_HEAT_R;
       const c = bad ? 'var(--red)' : warn ? 'var(--amber)' : 'inherit';
-      return `<span style="color:${c}">${escHtml(PORT_SHORT[x.k]||x.k)} ${x.h.totalR.toFixed(2)}<small>/${SZ.MAX_HEAT_R}R</small></span>`;
+      return `<span style="color:${c}">${escHtml(PLAN_STRIP_LBL[x.k]||x.k)} ${x.h.totalR.toFixed(2)}<small>/${SZ.MAX_HEAT_R}R</small></span>`;
     }).join(' · ') : '—';
-  return `<div class="stat acctCard" style="--ac:${color}" data-priv="p-acct-${escHtml(a.id)}">${head}
-    <div class="acctKV"><span>ความเสี่ยงค้าง (Open)</span><b>${fmt2(m.openPct)}%<small>฿${fmt0(m.openTH)}</small></b></div>
-    <div class="acctKV"><span>Plan</span><b>+${fmt2(m.planPct)}%</b></div>
-    <div class="acctKV"><span>Heat 1R</span><b>${heat}</b></div>
-    <div class="acctKV"><span>จำนวนไม้</span><b>${m.nOpen}<small>open</small> ${m.nPlan}<small>plan</small></b></div>
-    <div class="acctKV"><span>ไม้ใหม่สัปดาห์นี้</span><b>${m.newWk}</b></div>
+  const sumTxt = `Open <b>${fmt2(m.openPct)}%</b> · Plan <b>+${fmt2(m.planPct)}%</b> · <b>${m.nOpen}</b> open/<b>${m.nPlan}</b> plan · ใหม่ <b>${m.newWk}</b>`;
+  return `<div class="stat acctCard${open?' open':''}" style="--ac:${color}" data-priv="p-acct-${escHtml(a.id)}">${row(nm+`<span class="acctSum">${sumTxt}</span>`)}
+    <div class="acctDetail">
+      <div class="acctKV"><span>ความเสี่ยงค้าง (Open) · % ของทุนรวมบัญชี</span><b>${fmt2(m.openPct)}%<small>฿${fmt0(m.openTH)}</small></b></div>
+      <div class="acctKV"><span>Plan</span><b>+${fmt2(m.planPct)}%<small>฿${fmt0(m.planTH)}</small></b></div>
+      <div class="acctKV"><span>Heat 1R</span><b>${heat}</b></div>
+      <div class="acctKV"><span>จำนวนไม้</span><b>${m.nOpen}<small>open</small> ${m.nPlan}<small>plan</small></b></div>
+      <div class="acctKV"><span>ไม้ใหม่สัปดาห์นี้</span><b>${m.newWk}</b></div>
+    </div>
   </div>`;
 }
 function planSectionHtml(a, b){
@@ -4303,6 +4372,7 @@ function render(){
     const capTH = portCapTHB(k);
     const oTH = s.per[k].open, plTH = s.per[k].plan;
     const oPct = pct(oTH,capTH), plPct = pct(plTH,capTH), lim = portHeatLimit(k);
+    const bf = (capTH>0 && cap>0) ? capTH/cap : 0;   /* 7X — ฐานเดียวทั้งหน้า = ทุนรวมของบัญชี · ตัวเลข % และเพดานแปลงด้วยตัวคูณเดียวกัน อัตราส่วน/คำเตือนไม่เปลี่ยน */
     const lossTH = portRealizedLossTHB(k);
     const lossPct = pct(lossTH,capTH);
     const lossW = Math.min(100, lossPct/lim*100);
@@ -4320,8 +4390,8 @@ function render(){
       <div class="pname"><span class="dot" style="background:${p.color}"></span>${p.name}<span class="cur">ทุน ${p.cur}</span></div>
       <div class="alloc">ทุน ${capLine} · ${fmt2(pct(capTH,cap))}% ของทุนรวม</div>
       <div class="riskstats">
-        <div class="cell"><span class="k">Open Risk</span><span class="v" style="color:var(--amber)">${symP}${fmt0(oNat)}</span><span class="v2" style="color:var(--amber)">${fmt2(oPct)}%</span></div>
-        <div class="cell"><span class="k">Planned</span><span class="v">${symP}${fmt0(plNat)}</span><span class="v2">${fmt2(plPct)}%</span></div>
+        <div class="cell"><span class="k">Open Risk</span><span class="v" style="color:var(--amber)">${symP}${fmt0(oNat)}</span><span class="v2" style="color:var(--amber)">${fmt2(oPct*bf)}%</span></div>
+        <div class="cell"><span class="k">Planned</span><span class="v">${symP}${fmt0(plNat)}</span><span class="v2">${fmt2(plPct*bf)}%</span></div>
         <div class="cell"><span class="k">Positions</span><span class="v">${nOpen} / ${nPlan}</span><span class="v2">open / plan</span></div>
         ${(k==='core'||k==='satA') ? (()=>{ const hR=szHeat(k);
             const bad=hR.totalR>SZ.MAX_HEAT_R || hR.nPos>SZ.MAX_POS;
@@ -4332,7 +4402,7 @@ function render(){
           })() : ''}
       </div>
       <div class="heatwrap">
-        <div class="heatlbl"><span style="${over?'color:var(--red);font-weight:700':''}">Heat รวมของ Port = ${fmt2(totalHeatPct)}%</span><span>limit ${lim}%</span></div>
+        <div class="heatlbl"><span style="${over?'color:var(--red);font-weight:700':''}">Heat รวมของ Port = ${fmt2(totalHeatPct*bf)}% ของทุนรวม</span><span>limit ${fmt2(lim*bf)}%</span></div>
         <div class="heatbar">
           <div class="loss" style="left:0;width:${lossW}%"></div>
           <div class="open" style="left:${lossW}%;width:${oW}%;background:${barColor}"></div>
@@ -4344,7 +4414,6 @@ function render(){
 
   const ideasEl = document.getElementById('ideasPanel');
   if(ideasEl) ideasEl.style.display = planScope==='stock' ? '' : 'none';
-  renderScopeSum(s);
 
   const fdefs = [['all','ทั้งหมด'],['plan','Plan'],['open','Open']];
   document.getElementById('filters').innerHTML = fdefs.map(([k,l])=>
@@ -10578,6 +10647,16 @@ if(bkIsMac()){
 /* ---- 7X: ฟังก์ชันที่ฟอร์ม Add Trade/แก้ไข เรียก → คำนวณในบริบทของบัญชีที่เลือก (formAcct) ----
    ห่อที่จุดเดียวนี้: handler ใน HTML และการเรียกกันเองใช้ชื่อ global เดียวกัน จึงผ่านตัวห่อทุกทาง
    formRun() ไม่ซ้อน withAccount (ถ้าอยู่ในบริบทแล้วรันตรง ๆ) */
+/* ความสูงแถบแท็บล่าง (มือถือ) → --tabbar-h : ให้เนื้อหาเว้นที่ด้านล่างเท่าแถบจริง รวม safe-area ของ iPhone */
+function syncTabbarH(){
+  const t = document.getElementById('tabsMain'); if(!t) return;
+  const fixed = getComputedStyle(t).position === 'fixed';
+  document.documentElement.style.setProperty('--tabbar-h', fixed ? Math.ceil(t.getBoundingClientRect().height) + 'px' : '0px');
+}
+window.addEventListener('resize', syncTabbarH); window.addEventListener('orientationchange', syncTabbarH);
+try{ if(window.ResizeObserver) new ResizeObserver(syncTabbarH).observe(document.getElementById('tabsMain')); }catch(e){}
+syncTabbarH();
+setInterval(function(){ try{ rsUpdatePushBadge(); updateAcctChip(); }catch(e){} }, 30000);   /* ให้ "x นาทีที่แล้ว" ขยับเอง */
 (function(){
   ['calcHint','setBias','setCur','setPreset','setSetup','szApplyQty','szMarkQtyTouched','szSyncLot',
    'toggleExitFields','tradeSymChanged','tradeSymPlanHint'].forEach(function(n){
