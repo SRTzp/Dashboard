@@ -293,6 +293,44 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .planTop{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:12px;align-items:start;margin-bottom:18px}
 .planTop>.ports{display:contents}
 .planTop>.panel{margin-bottom:0}
+
+/* ═══ 7D — แท็บ Sat ═══ */
+.planTop>.sat7d{grid-column:1/-1;min-width:0}
+.sat7d .s7Head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.sat7d .s7Tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+.sat7d .s7Sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:8px;margin-bottom:12px}
+.sat7d .s7SumC,.sat7d .s7Slot{min-width:0;border:1px solid var(--border);border-top:3px solid var(--ac,var(--border));border-radius:10px;padding:8px 10px;font-size:.8rem;background:var(--surface2);overflow-wrap:anywhere}
+.sat7d .s7Ideas{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:12px;align-items:start;margin-top:8px}
+.sat7d .s7Card{min-width:0;border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--surface)}
+.sat7d .s7CardH{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px}
+.sat7d .s7Grow{flex:1 1 auto}
+.sat7d .s7WeekRow{font-size:.78rem;margin-bottom:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sat7d .s7Cks{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0}
+.sat7d .s7F{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(90px,100%),1fr));gap:6px;margin-bottom:6px}
+.sat7d .s7F label,.sat7d .s7Wide{display:flex;flex-direction:column;gap:2px;font-size:.75rem;min-width:0}
+.sat7d .s7F input,.sat7d .s7Wide input,.sat7d .s7Wide textarea{width:100%;min-width:0;box-sizing:border-box}
+.sat7d .s7Wide{margin-bottom:6px}
+.sat7d .s7BadIn{border-color:var(--red)!important;color:var(--red);background:var(--red-dim)}
+.sat7d .s7Slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:8px;margin-top:10px}
+.sat7d .s7SlotH{font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.sat7d .s7L{display:flex;justify-content:space-between;gap:6px;min-width:0}
+.sat7d .s7L>span:first-child{color:var(--muted)}
+.sat7d .s7L>span:last-child{text-align:right;min-width:0}
+.sat7d .s7Dash{color:var(--faint)}.sat7d .s7Hint{color:var(--muted);font-size:.72rem}
+.sat7d .s7Ok{color:var(--teal);font-weight:700}.sat7d .s7Warn,.sat7d .s7Bad{color:var(--red)}
+.sat7d .s7Msg{font-size:.75rem;margin-bottom:4px}
+.sat7d .s7Status{margin:6px 0 4px;font-weight:600}
+.sat7d .s7Placed,.sat7d .s7Ck{display:flex;align-items:center;gap:5px;font-size:.78rem}
+.sat7d .s7Seg{display:flex;gap:6px;margin-top:6px}.sat7d .s7Seg button{flex:1 1 0;min-width:0}
+.sat7d .s7Done{margin-top:6px;font-weight:600}
+.sat7d .s7Err{background:var(--red-dim);color:var(--red);border-radius:8px;padding:6px 10px;font-size:.78rem;margin-bottom:8px}
+.sat7d .s7Old{margin-top:14px;border-top:1px solid var(--hair);padding-top:8px}
+.sat7d .s7Old summary{cursor:pointer;font-size:.82rem;color:var(--muted)}
+.sat7d .s7OldAcct{margin:8px 0;font-size:.8rem}.sat7d .s7OldRow{margin:3px 0 3px 12px;overflow-wrap:anywhere}
+#sat7dBrokerOverlay .s7BAcct{border:1px solid var(--border);border-top:3px solid var(--ac);border-radius:10px;padding:8px 10px;margin-bottom:10px}
+#sat7dBrokerOverlay .s7BA{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:.78rem;margin:4px 0}
+#sat7dBrokerOverlay .s7BAn{min-width:56px;font-weight:600}
+#sat7dBrokerOverlay .s7BTick{display:flex;align-items:center;gap:6px;margin-top:6px}
 .port{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
   padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--sh-2);
@@ -1555,6 +1593,8 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
     </div>
     <div id="sbPlanBody"></div>
   </div>
+
+  <div class="panel sat7d" id="sat7dPanel" style="display:none"></div>
   </div>
 
   <details class="panel" id="szHeatPanel" style="padding:10px 14px">
@@ -2719,6 +2759,7 @@ auth.onAuthStateChanged(user=>{
     missedPersistBeforeConfirm = false;
     if(unsubDoc){ unsubDoc(); unsubDoc=null; }
     wlStop();
+    sat7dStop();
     state = null;
     document.getElementById('authScreen').style.display='flex';
     document.getElementById('loadingScreen').style.display='none';
@@ -2752,6 +2793,7 @@ function buildStateFromBookRaw(d, exists){
         sbPlan: (d.sbPlan && typeof d.sbPlan==='object') ? d.sbPlan : {},   /* ★ แผนเทรด Sat.B (Zone/Setup) — ต้อง copy ที่นี่เสมอ ดูบทเรียน satBNoteV1 ด้านบน */
         sbProducts: Array.isArray(d.sbProducts) ? d.sbProducts : null,      /* ★ รายการสินค้า Sat.B — เช่นกัน */
         industryLinks: (d.industryLinks && typeof d.industryLinks==='object') ? d.industryLinks : {},  /* ★ ลิงก์ packet ของแต่ละ industry */
+        ...(d.sat_since ? {sat_since: d.sat_since} : {}),   /* 7D — ตัวนับไม้ Sat เริ่มจากวันนี้ · เดิมไม่ได้ copy → หายทุกครั้งที่ snapshot มา */
         failLog: Array.isArray(d.failLog) ? d.failLog : []};   /* เดิมไม่ได้ copy field นี้มา — ประวัติ fail-log ของ Fundamental Checklist จะหายทุกครั้งที่ sync */
   } else {
       return {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[], weeklyPlan:{}, sbPlan:{}, sbProducts:null, industryLinks:{}};
@@ -3024,6 +3066,7 @@ function acctWrapDoc(book){
 function startListening(){
   if(!uid) return;
   wlStart();   /* 7W — Watchlist อยู่ที่ users/{uid}/watchlist แยกจาก books */
+  sat7dStart();   /* 7D — users/{uid}/satIdeas + satWeek (อ่านอย่างเดียวใน listener) */
   serverConfirmed = false;   /* เริ่ม listen session ใหม่ — ต้องรอยืนยันจาก server ใหม่ก่อนถึงจะยอมเขียนอะไร */
   stateFromServer = false;   /* state เก่าที่ค้างอยู่ (ถ้ามี) ถือว่าใช้ยืนยันการเขียนไม่ได้แล้ว */
   document.getElementById('errorScreen').style.display='none';
@@ -4452,6 +4495,7 @@ function render(){
     `1R: Core ${szTradeLimit('core')}% · Sat.A 0.50–1.25% (ตามคะแนน Growth Gate) × Setup (Acc/Dist 1.00 · PP 0.50) · heat/port: Core ${portHeatLimit('core')}% · Sat.A ${portHeatLimit('satA')}% · Sat.B ${portHeatLimit('satB')}% · ${L.total}% total (ฐาน THB @ ${fmt2(fx)}) — sync ผ่าน Firestore`;
 
   try{ renderSBPlan(); }catch(err){ console.warn('sat.b plan:', err); }
+  try{ renderSat7d(); }catch(err){ console.warn('sat7d:', err); }
   renderJournal();
   renderWatchlist();
   renderPortfolioMix();
@@ -4981,7 +5025,7 @@ function ggSetTotal(v){ ggState.tot = ggClampTot(v); renderGGForm(); }
      Bias ของ "ไม้" (sbBiasOf) ตอนนี้ตามหลัง Trend ที่ล็อกไว้เสมอ ไม่มีปุ่ม Long/Short แยกให้เลือกเองแล้ว
      Migration: สัปดาห์ที่กำลังเปิดอยู่ก่อนแก้รอบนี้ ถ้ามี trend ตั้งไว้แล้วถือว่า locked ไปเลย (ไม่งั้นข้อมูลที่กรอกค้างจะหายจากจอ)
      ถ้า trend เดิมเป็น 'Unclear' (Ranging เก่า) ให้ถือว่ายังไม่ล็อก ต้องเลือกใหม่ระหว่าง Bull/Bear */
-const SATB_PRODUCTS = ['XAUUSD','S50','BTCUSD'];
+const SATB_PRODUCTS = ['XAUUSD','S50','BTCUSD','BRENT'];   /* 7D: เพิ่ม BRENT (ชื่อเดิมไม่เปลี่ยน) */
 const WP_BULLETS = 3;
 
 /* วันอาทิตย์ 00:00 ที่เริ่มสัปดาห์ของวันที่ d (คืนเป็น 'YYYY-MM-DD' ตามเวลาเครื่อง) */
@@ -8000,7 +8044,7 @@ function editTradeBody(id){
   calcHint();
   document.getElementById('tradeOverlay').classList.add('show');
 }
-function closeTrade(){ document.getElementById('tradeOverlay').classList.remove('show'); formAcct = null; }
+function closeTrade(){ document.getElementById('tradeOverlay').classList.remove('show'); formAcct = null; sat7dPending = null; }
 /* ═══ 7X — ฟอร์ม Add Trade / แก้ไข / ปิดไม้ ทำงานในบริบทของ "บัญชีที่เลือก" ═══
    formAcct = บัญชีของฟอร์มที่เปิดอยู่ · ทุกฟังก์ชันที่ฟอร์มเรียก (calcHint ฯลฯ) ถูกห่อด้วย formRun → คำนวณใน withAccount(formAcct)
    การเขียนทำนอก withAccount เสมอ: saveTrade() → คำนวณในบัญชี → push เข้า getBook(id) → saveBook(id) */
@@ -8027,6 +8071,7 @@ function tradeFillAcctSelect(sel, locked){
   if(row) row.style.display = acctList.length > 1 ? '' : 'none';
 }
 function openTrade(presetSym, presetTier, presetBias, presetSizeFactor){
+  sat7dPending = null;   /* 7D — เปิดฟอร์มปกติ ไม่ใช่จากปุ่ม "ใช้" */
   formAcct = tradeDefaultAcct();
   tradeFillAcctSelect(formAcct, false);
   return formRun(()=>openTradeBody(presetSym, presetTier, presetBias, presetSizeFactor));
@@ -8264,7 +8309,7 @@ function saveTradeCompute(){
     submitted: prevTrade ? !!prevTrade.submitted : false,
     /* ไม้นอกแผน — ไม่เคยผ่าน Pre-trade Checklist · ธงนี้ติดถาวรกับไม้ แก้ทีหลังไม่ได้จากฟอร์ม */
     /* 7W — ไม้ใหม่ที่ไม่อยู่ใน Watchlist (และไม่ใช่สินค้า Sat / Port Sat) = นอกแผน · ไม้เดิมที่แก้ไข = คงธงเดิม ไม่ตัดสินใหม่ */
-    unplanned: unplannedMode || (prevTrade ? !!prevTrade.unplanned : (tPortVal!=='satB' && !isSatProduct(curSymVal()) && !wlHas(curSymVal()))),
+    unplanned: unplannedMode || (!editId && sat7dPending && sat7dPending.offplan) || (prevTrade ? !!prevTrade.unplanned : (tPortVal!=='satB' && !isSatProduct(curSymVal()) && !wlHas(curSymVal()))),
     /* ★ ประทับวันที่ "เข้าจริง" ครั้งแรกที่ status เป็น open — ใช้ตัดสินว่าไม้นี้กินกระสุนของสัปดาห์ไหน
        ใช้ t.date ไม่ได้ เพราะไม้ที่วางแผนไว้ปลายสัปดาห์ก่อนแล้วมาเข้าจริงสัปดาห์นี้ จะไปนับผิดสัปดาห์
        ไม้เก่าที่ไม่มีค่านี้ wpOpenedKey() จะถอยไปใช้ t.date ให้เอง */
@@ -8281,14 +8326,18 @@ function saveTradeCompute(){
      บล็อกเฉพาะไม้ที่ยังจะเข้า (plan / open) — ไม้ที่ปิดไปแล้วต้องบันทึกได้ ไม่งั้น Journal ไม่ตรงความจริง */
   if(t.port==='satB' && (status==='plan' || status==='open') && szSatBBlocked(t.sym, t.entry, t.sl)){
     const b = szSatBBand(t.sym);
-    alert(`ระยะ SL ของ ${t.sym} = ${Math.abs(t.entry-t.sl)} กว้างกว่าค่าบนที่ตั้งไว้ (${b.hi})\n\n`
-      + `ไม้นี้ถูกล็อกไม่ให้เทรด — รอจุดเข้าที่ SL แคบลง หรือแก้ค่าบนในหน้าตั้งค่า Port`);
-    return;
+    if(SAT7D_ON){   /* 7D — เตือน ไม่บล็อก */
+      if(!confirm(`ระยะ SL ของ ${t.sym} = ${Math.abs(t.entry-t.sl)} กว้างกว่าค่าบนที่ตั้งไว้ (${b.hi})\n\nบันทึกต่อหรือไม่?`)) return;
+    } else {
+      alert(`ระยะ SL ของ ${t.sym} = ${Math.abs(t.entry-t.sl)} กว้างกว่าค่าบนที่ตั้งไว้ (${b.hi})\n\n`
+        + `ไม้นี้ถูกล็อกไม่ให้เทรด — รอจุดเข้าที่ SL แคบลง หรือแก้ค่าบนในหน้าตั้งค่า Port`);
+      return;
+    }
   }
   /* ★ กระสุนรายสัปดาห์ของ Sat.B — เตือนแบบขอคำยืนยัน ไม่ใช่บล็อกตาย
      เพราะบางครั้งต้องบันทึกไม้ที่ "เข้าไปแล้วจริง" ย้อนหลัง การห้ามบันทึกจะทำให้ Journal ไม่ตรงความจริง
      แต่ต้องกดยืนยันเอง เพื่อไม่ให้เผลอเกินโควตาโดยไม่รู้ตัว */
-  if(t.port==='satB' && (status==='open' || status==='closed')){
+  if(!SAT7D_ON && t.port==='satB' && (status==='open' || status==='closed')){   /* 7D — กติกากระสุน 3 นัดเดิมถูกแทนด้วย ไม้ใหม่ ≤ 2/สัปดาห์ ต่อบัญชี (เตือนในการ์ด) */
     const wasCounted = prevTrade && (prevTrade.status==='open' || prevTrade.status==='closed')
                        && wpOpenedKey(prevTrade) === wpWeekKey(t.openedAt || t.date);
     if(!wasCounted && wpBulletsLeft() <= 0){
@@ -8355,6 +8404,7 @@ function saveTrade(){
   } else B.trades.push(t);
   try{ localStorage.setItem('tradeLastAcct', id); }catch(e){}
   saveBook(id);
+  if(!editId) sat7dTradeSaved(id, t.id);   /* 7D — เก็บ trade_id กลับที่ช่องของบัญชีใน satIdeas (ก่อน closeTrade ที่ล้าง pending) */
   closeTrade(); render();
 }
 function quick(id,st,A){
@@ -8694,6 +8744,7 @@ function saveSettings(){
             satA: parseFloat(document.getElementById('sCapSatA').value)||25 },
       ffThrottle: document.getElementById('sFfThrottle').value==='1'
     },
+    ...(state.settings.brokers ? {brokers: state.settings.brokers} : {}),   /* 7D — ตั้งค่าโบรกรายบัญชี ห้ามหายตอนกดบันทึกตั้งค่า */
     satBVol: sbCollectBands(),
     satBLowRisk: parseFloat(document.getElementById('sSatBLowRisk').value)||1,
     satBVolV2: true,
@@ -9316,9 +9367,473 @@ function sbRow(sym, field, onField, label, ph, kind, tip){
       value="${pl[field] ?? ''}" oninput="sbSetNum('${sym}','${field}',this.value)" onchange="sbCommit('${sym}')">
   </div>`;
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   เฟส 7D — แท็บ Sat (ตัวสลับ "Port Future" ในแท็บแผน): การ์ดไอเดียเดียว + ช่องต่อบัญชี + ตั้งค่าโบรก
+   ── ที่เก็บ (แยกจาก books ทั้งหมด) ──
+     users/{uid}/satIdeas/{id}   ไอเดีย 1 ใบ · accts.<accId> = {broker, lot, placed, skip, trade_id}  (trade_id = key อย่างเดียว ไม่คัดลอกข้อมูลไม้)
+     users/{uid}/satWeek/{weekKey}   { <asset>:{bias, flips} }  (weekKey = wpWeekKey())
+   ── ตั้งค่าโบรกรายบัญชี ── book.settings.brokers = { XM|IC|Pi : { <asset>:{contract, lotStep, minLot, cur} } } (อ่าน/เขียนผ่าน getBook/saveBook)
+   ── กฎเหล็ก ──
+     · เขียนเฉพาะจากการกระทำของผู้ใช้ (onchange/onclick) — ห้ามเขียนใน render และใน onSnapshot (กันลูป)
+     · เขียนแบบ set merge เฉพาะเอกสารที่แก้ · ไม่แตะ state.ideas / state.weeklyPlan (แผนเดิมอ่านอย่างเดียว)
+     · ไม่เรียก saveBook ใน withAccount (ไฟล์นี้ไม่ใช้ withAccount เลย — อ่านผ่าน getBook)
+     · ข้อมูลขาด = "—" + เตือน · เตือน ไม่บล็อก · SAT7D_ON=false → แท็บกลับเป็นแผง Weekly Plan เดิม
+   ── asset key ── XAUUSD · BTCUSD (ตามของเดิมใน SATB_PRODUCTS) · S50 · BRENT (ตัวพิมพ์ใหญ่เหมือนที่ Add Trade แปลงให้) — ป้ายแสดง BTC / Brent
+   ══════════════════════════════════════════════════════════════════════════ */
+const SAT7D_ON = true;
+const SAT7D_ASSETS = ['XAUUSD','BTCUSD','S50','BRENT'];
+const SAT7D_LABEL = {XAUUSD:'XAUUSD', BTCUSD:'BTC', S50:'S50', BRENT:'Brent'};
+const SAT7D_UNIT = {S50:'สัญญา'};
+const SAT7D_BROKERS = ['XM','IC','Pi'];
+/* ค่าเริ่มต้น (แก้ได้ในหน้าตั้งโบรก) — BTC/Brent ของ XM/IC ว่างไว้ตามสเปค */
+const SAT7D_DEFAULT_BROKERS = {
+  XM:{XAUUSD:{contract:100, lotStep:0.01, minLot:0.01, cur:'USD'}},
+  IC:{XAUUSD:{contract:100, lotStep:0.01, minLot:0.01, cur:'USD'}},
+  Pi:{S50:{contract:200, lotStep:1, minLot:1, cur:'THB'}}
+};
+const SAT7D_RPT = 1.25, SAT7D_RPT_HI = 1.5, SAT7D_HEAT_MAX = 6, SAT7D_NEW_MAX = 2, SAT7D_PROVE_N = 50, SAT7D_PROVE_R = 0.25;
+
+let satIdeasList = [], satWeekMap = {};
+let satErr = null, satWeekErr = null, satFilter = 'active';
+let satUnsubs = [], satUnsubUid = null;
+let sat7dPending = null;     /* {ideaId, acctId, offplan} — ไม้ที่กำลังเปิดจากปุ่ม "ใช้" */
+
+function sat7dCol(name){ return (uid && typeof db!=='undefined' && db) ? db.collection('users').doc(uid).collection(name) : null; }
+function sat7dErrText(e){ return (e && (e.code || e.message)) || String(e); }
+function sat7dStart(){
+  if(!SAT7D_ON || !uid || typeof db==='undefined' || !db) return;
+  if(satUnsubs.length && satUnsubUid===uid) return;
+  sat7dStop();
+  satUnsubUid = uid;
+  /* ★ handler อ่านอย่างเดียว: เก็บข้อมูล + วาดแผงนี้ใหม่ — ไม่มีการเขียนกลับ (กันลูป snapshot→write→snapshot) */
+  const c1 = sat7dCol('satIdeas'), c2 = sat7dCol('satWeek');
+  try{
+    satUnsubs.push(c1.onSnapshot(snap=>{
+      satIdeasList = snap.docs.map(d=>({...(d.data()||{}), id:d.id}));
+      satErr = null; sat7dRefresh();
+    }, err=>{ console.warn('satIdeas listener:', err); satErr = sat7dErrText(err); sat7dRefresh(); }));
+  }catch(e){ satErr = sat7dErrText(e); }
+  try{
+    satUnsubs.push(c2.onSnapshot(snap=>{
+      const m = {}; snap.docs.forEach(d=>{ m[d.id] = d.data() || {}; });
+      satWeekMap = m; satWeekErr = null; sat7dRefresh();
+    }, err=>{ console.warn('satWeek listener:', err); satWeekErr = sat7dErrText(err); sat7dRefresh(); }));
+  }catch(e){ satWeekErr = sat7dErrText(e); }
+}
+function sat7dStop(){
+  satUnsubs.forEach(f=>{ try{ f(); }catch(e){} });
+  satUnsubs = []; satUnsubUid = null; satIdeasList = []; satWeekMap = {}; satErr = null; satWeekErr = null;
+}
+/* วาดเฉพาะแผง Sat — ถ้ากำลังพิมพ์อยู่ในแผงนี้ ไม่วาดทับ (กันเคอร์เซอร์เด้ง) แล้วรอวาดตอนออกจากช่อง */
+function sat7dRefresh(){
+  if(!SAT7D_ON || !state) return;
+  const panel = document.getElementById('sat7dPanel'); if(!panel) return;
+  const ae = document.activeElement;
+  if(ae && panel.contains(ae) && (ae.tagName==='INPUT' || ae.tagName==='TEXTAREA' || ae.tagName==='SELECT')){
+    if(!panel._s7Wait){ panel._s7Wait = true; ae.addEventListener('blur', ()=>{ panel._s7Wait = false; sat7dRefresh(); }, {once:true}); }
+    return;
+  }
+  try{ renderSat7d(); }catch(e){ console.warn('sat7d refresh:', e); }
+}
+/* เขียนเฉพาะเอกสารที่แก้ (set merge) — เรียกจากการกระทำของผู้ใช้เท่านั้น */
+function sat7dWrite(col, docId, patch){
+  const c = sat7dCol(col);
+  if(!c){ return Promise.resolve(); }
+  return c.doc(docId).set(patch, {merge:true}).catch(e=>{
+    console.warn('sat7d write', col, e);
+    if(col==='satIdeas') satErr = sat7dErrText(e); else satWeekErr = sat7dErrText(e);
+    sat7dRefresh();
+  });
+}
+function sat7dIdea(id){ return satIdeasList.find(x=>x.id===id) || null; }
+function sat7dAccts(){ return acctList.filter(a=>Array.isArray(a.ports) && a.ports.includes('satB')); }
+function sat7dLabel(a){ return SAT7D_LABEL[a] || a; }
+function sat7dNum(v){ const n = parseFloat(v); return (isFinite(n) ? n : null); }
+
+/* ── ตั้งค่าโบรกรายบัญชี ── */
+function sat7dBrokerCfg(B, broker, asset){
+  const c = B && B.settings && B.settings.brokers && B.settings.brokers[broker] && B.settings.brokers[broker][asset];
+  if(!c) return null;
+  const contract = +c.contract, lotStep = +c.lotStep, minLot = +c.minLot;
+  if(!(contract>0) || !(lotStep>0)) return null;
+  return {contract, lotStep, minLot: (minLot>0 ? minLot : lotStep), cur: c.cur==='THB' ? 'THB' : 'USD'};
+}
+function sat7dBrokerOpts(B, asset){
+  return SAT7D_BROKERS.map(b=>({broker:b, cfg:sat7dBrokerCfg(B, b, asset)})).filter(x=>x.cfg);
+}
+function sat7dHasAnyBroker(B){
+  const b = B && B.settings && B.settings.brokers;
+  return !!b && typeof b==='object' && Object.keys(b).length>0;
+}
+
+/* ── ตัวคำนวณ: 1 ไอเดีย × 1 บัญชี (อ่านล้วน · ไม่มี side effect) ── */
+function sat7dCounter(B){
+  const since = B && B.sat_since ? String(B.sat_since) : null;
+  const out = {since, n:0, avgR:null, hi:false};
+  if(!since) return out;
+  let sum = 0;
+  (Array.isArray(B.trades) ? B.trades : []).forEach(t=>{
+    if(t.port!=='satB' || t.status!=='closed' || !(t.exitPrice>0)) return;
+    const d = String(t.openedAt || t.date || ''); if(!d || d < since) return;   /* ไม้ก่อน sat_since ไม่นับ */
+    const r = realizedROf(t); if(r==null) return;
+    out.n++; sum += r;
+  });
+  out.avgR = out.n ? sum/out.n : null;
+  out.hi = out.n >= SAT7D_PROVE_N && out.avgR != null && out.avgR >= SAT7D_PROVE_R;
+  return out;
+}
+function sat7dAcctBase(accId){
+  const B = getBook(accId), st = B.settings || {};
+  const fx = (state.settings && state.settings.fx) || 0;   /* USDTHB ที่เดียว = settings.fx ของแอป */
+  const capNat = (st.capital && +st.capital.satB) || 0;
+  const cap = capNat * (PORTS.satB.cur==='USD' ? fx : 1);
+  const trades = (Array.isArray(B.trades) ? B.trades : []).filter(t=>t.port==='satB');
+  const toTHB = t => ((t.cur || PORTS.satB.cur)==='USD' ? fx : 1);
+  const openRisk = trades.filter(t=>t.status==='open')
+    .reduce((a,t)=>a + Math.abs(t.entry - t.sl) * t.qty * (t.mult||1) * toTHB(t), 0);
+  const wk = wpWeekKey();
+  const nNew = trades.filter(t=>(t.status==='open' || t.status==='closed') && wpOpenedKey(t)===wk).length;
+  const cnt = sat7dCounter(B);
+  const rpt = cnt.hi ? SAT7D_RPT_HI : SAT7D_RPT;
+  return {B, fx, cap, trades, openRisk, nNew, cnt, rpt, riskTHB: cap*rpt/100, heatPct: cap>0 ? openRisk/cap*100 : null};
+}
+function sat7dSideOk(idea){
+  const e = +idea.entry, s = +idea.sl;
+  if(!(e>0) || !(s>0)) return null;                 /* ยังกรอกไม่ครบ */
+  return idea.bias==='Short' ? s>e : s<e;           /* เท่ากัน = ผิดฝั่ง */
+}
+function sat7dChecksOk(idea){
+  const c = idea.checks || {};
+  return !!(c.g1 && c.g2 && c.g3 && c.setup);
+}
+/* "พร้อม" ระดับไอเดีย: checklist 4 ข้อ + Invalidation + Entry/SL ถูกฝั่ง */
+function sat7dIdeaReady(idea){
+  return sat7dChecksOk(idea) && !!String(idea.invalidation||'').trim() && sat7dSideOk(idea)===true;
+}
+function sat7dWeekOf(idea){ const w = satWeekMap[idea.week || wpWeekKey()]; return (w && w[idea.asset]) || null; }
+function sat7dIdeaFlags(idea){
+  const wb = sat7dWeekOf(idea);
+  const offBias = !!(wb && wb.bias && wb.bias!==idea.bias);
+  const overFlip = !!(wb && (wb.flips||0) >= 2);
+  return {wb, offBias, overFlip, off: offBias || overFlip};
+}
+function sat7dCalc(idea, accId){
+  const base = sat7dAcctBase(accId);
+  const slot = (idea.accts && idea.accts[accId]) || {};
+  const opts = sat7dBrokerOpts(base.B, idea.asset);
+  const chosen = opts.find(o=>o.broker===slot.broker) || opts[0] || null;
+  const e = +idea.entry, s = +idea.sl;
+  const side = sat7dSideOk(idea);
+  const dist = (e>0 && s>0) ? Math.abs(e-s) : 0;
+  let lot = null, lotMsg = '', actualTHB = 0, riskCur = null;
+  if(chosen){
+    riskCur = chosen.cfg.cur==='USD' ? (base.fx>0 ? base.riskTHB/base.fx : null) : base.riskTHB;
+    if(side===true && riskCur>0 && dist>0){
+      const raw = riskCur / (dist * chosen.cfg.contract);
+      const steps = Math.floor(raw/chosen.cfg.lotStep + 1e-9);
+      const l = steps * chosen.cfg.lotStep;
+      if(l < chosen.cfg.minLot - 1e-12) lotMsg = 'SL กว้างเกินขนาดขั้นต่ำ';
+      else { lot = l; actualTHB = l * dist * chosen.cfg.contract * (chosen.cfg.cur==='USD' ? base.fx : 1); }
+    }
+  }
+  const tradeExists = !!(slot.trade_id && base.trades.some(t=>t.id===slot.trade_id));
+  const heatTHB = base.openRisk + (tradeExists ? 0 : actualTHB);
+  const heatPct = base.cap>0 ? heatTHB/base.cap*100 : null;
+  const quotaFull = tradeExists ? base.nNew > SAT7D_NEW_MAX : base.nNew >= SAT7D_NEW_MAX;
+  const warns = [];
+  if(heatPct!=null && heatPct > SAT7D_HEAT_MAX + 1e-9) warns.push('heat เกิน');
+  if(quotaFull) warns.push('โควตาเต็ม');
+  if(!sat7dChecksOk(idea)) warns.push('checklist ไม่ครบ');
+  if(!String(idea.invalidation||'').trim()) warns.push('ไม่มี Invalidation');
+  if(side===null) warns.push('ยังไม่กรอก Entry/SL'); else if(side===false) warns.push('SL ผิดฝั่ง');
+  if(!chosen) warns.push(sat7dHasAnyBroker(base.B) ? 'ยังไม่ตั้งขนาดสัญญา' : 'ยังไม่ตั้งโบรก');
+  if(lotMsg) warns.push(lotMsg);
+  if(!(base.cap>0)) warns.push('ยังไม่ตั้งถัง Sat');
+  const flags = sat7dIdeaFlags(idea);
+  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns, ready: warns.length===0, tradeExists,
+          offplan: flags.off || warns.length>0, flags};
+}
+
+/* ── การกระทำของผู้ใช้ → เขียนเอกสารที่แก้เท่านั้น ── */
+function sat7dNew(){
+  const a = (document.getElementById('s7NewAsset')||{}).value || 'XAUUSD';
+  const b = (document.getElementById('s7NewBias')||{}).value === 'Short' ? 'Short' : 'Long';
+  const id = 'i' + Date.now();
+  sat7dWrite('satIdeas', id, {asset:a, bias:b, week:wpWeekKey(), created_at:new Date().toISOString(),
+    checks:{g1:false,g2:false,g3:false,setup:false}, entry:null, sl:null, tp:null, invalidation:'', note:'',
+    status:'active', accts:{}});
+}
+function sat7dEdit(id, field, val){
+  if(['entry','sl','tp'].includes(field)) val = sat7dNum(val);
+  else val = String(val==null?'':val);
+  sat7dWrite('satIdeas', id, {[field]: val});
+}
+function sat7dCheck(id, key, on){ sat7dWrite('satIdeas', id, {checks:{[key]: !!on}}); }
+function sat7dSetIdeaBias(id, b){ if(b!=='Long' && b!=='Short') return; sat7dWrite('satIdeas', id, {bias:b}); }
+function sat7dSetStatus(id, st){ sat7dWrite('satIdeas', id, {status: st==='closed' ? 'closed' : 'active'}); }
+function sat7dSetFilter(f){ satFilter = (f==='closed' ? 'closed' : 'active'); renderSat7d(); }
+/* Bias สัปดาห์: ตั้งครั้งแรกไม่นับเป็นสลับ · สลับได้ 1 ครั้ง/สัปดาห์/asset · ครั้งที่ 2 = เตือน (ไม่บล็อก) + ไอเดียติดนอกแผน */
+function sat7dSetWeekBias(asset, b){
+  if(b!=='Long' && b!=='Short') return;
+  const wk = wpWeekKey(), cur = (satWeekMap[wk] || {})[asset];
+  if(!cur || !cur.bias){ sat7dWrite('satWeek', wk, {[asset]:{bias:b, flips:0}}); return; }
+  if(cur.bias===b) return;
+  const flips = (cur.flips||0) + 1;
+  if(flips >= 2 && !confirm('เกินโควตาสลับ Bias ของ '+sat7dLabel(asset)+' สัปดาห์นี้ (สลับได้ 1 ครั้ง/สัปดาห์)\n\nทำต่อได้ แต่ไอเดียที่เกี่ยวข้องจะติดป้ายนอกแผน')) return;
+  sat7dWrite('satWeek', wk, {[asset]:{bias:b, flips}});
+}
+/* เขียนช่องของบัญชีหนึ่ง + ถ้าทุกบัญชี "ใช้/ข้าม" ครบ → ปิดไอเดียในการเขียนเดียวกัน (ไม่ปิดตอน render) */
+function sat7dSlotWrite(idea, accId, patch){
+  const merged = Object.assign({}, idea.accts||{}, {[accId]: Object.assign({}, (idea.accts||{})[accId]||{}, patch)});
+  const out = {accts:{[accId]: patch}};
+  const done = sat7dAccts().length>0 && sat7dAccts().every(a=>{ const s = merged[a.id]; return s && (s.skip || s.trade_id); });
+  if(done && idea.status!=='closed') out.status = 'closed';
+  sat7dWrite('satIdeas', idea.id, out);
+}
+function sat7dSetBroker(id, accId, broker){
+  const idea = sat7dIdea(id); if(!idea) return;
+  sat7dWrite('satIdeas', id, {accts:{[accId]:{broker}}});
+}
+function sat7dPlaced(id, accId, on){
+  const idea = sat7dIdea(id); if(!idea) return;
+  sat7dWrite('satIdeas', id, {accts:{[accId]:{placed: !!on}}});
+}
+function sat7dSkip(id, accId, on){
+  const idea = sat7dIdea(id); if(!idea) return;
+  const s = (idea.accts||{})[accId] || {}; if(s.trade_id) return;
+  sat7dSlotWrite(idea, accId, {skip: !!on});
+}
+/* "ใช้" = เปิด Add Trade ของบัญชีนั้น (ล็อกบัญชี) เติม asset/ทิศ/Entry/SL/TP/lot ให้ · ไม้ลง books.<บัญชีนั้น> ผ่าน saveTrade เดิมเท่านั้น */
+function sat7dUse(id, accId){
+  const idea = sat7dIdea(id); if(!idea || !acctList.some(a=>a.id===accId)) return;
+  const s = (idea.accts||{})[accId] || {}; if(s.trade_id || s.skip) return;
+  const c = sat7dCalc(idea, accId);
+  sat7dPending = null;
+  formAcct = accId;
+  tradeFillAcctSelect(accId, true);
+  formRun(()=>{
+    openTradeBody(idea.asset, null, idea.bias);
+    const set = (k,v)=>{ const el = document.getElementById(k); if(el) el.value = (v==null ? '' : v); };
+    set('tPort','satB');
+    if(c.chosen){ setCur(c.chosen.cfg.cur); set('tMult', c.chosen.cfg.contract); }
+    set('tEntry', idea.entry); set('tSL', idea.sl); set('tTP', idea.tp);
+    if(c.lot!=null){ szResetQtyTouched(true); set('tQty', c.lot); }
+    set('tInvalidation', idea.invalidation || '');
+    szSyncLot(); calcHint();
+  });
+  sat7dPending = {ideaId:id, acctId:accId, offplan:c.offplan};
+}
+/* เรียกจาก saveTrade() หลังไม้ใหม่ถูกบันทึกลงสมุดของบัญชีนั้น — เก็บ trade_id (key อย่างเดียว) กลับที่ช่องของบัญชี */
+function sat7dTradeSaved(acctId, tradeId){
+  const p = sat7dPending; sat7dPending = null;
+  if(!p || p.acctId!==acctId) return;
+  const idea = sat7dIdea(p.ideaId); if(!idea) return;
+  const c = sat7dCalc(idea, acctId);
+  sat7dSlotWrite(idea, acctId, {trade_id:tradeId, broker: c.chosen ? c.chosen.broker : null, lot: c.lot, placed: false});
+}
+
+/* ── แผงตั้งโบรก (ต่อบัญชี · เขียนผ่าน getBook/saveBook) ── */
+function sat7dBrokerOpen(){
+  let ov = document.getElementById('sat7dBrokerOverlay');
+  if(!ov){
+    ov = document.createElement('div'); ov.className = 'overlay'; ov.id = 'sat7dBrokerOverlay';
+    ov.addEventListener('click', ev=>{ if(ev.target===ov) ov.classList.remove('show'); });
+    document.body.appendChild(ov);
+  }
+  const fld = (k,v,w)=>`<input type="number" step="any" min="0" data-k="${k}" value="${v==null?'':escHtml(String(v))}" style="width:${w}px;min-width:0">`;
+  const body = sat7dAccts().map(a=>{
+    const B = getBook(a.id), cur = (B.settings && B.settings.brokers) || {};
+    const has = sat7dHasAnyBroker(B);
+    return `<div class="s7BAcct" data-acct="${escHtml(a.id)}" style="--ac:${acctColor(a)}">
+      <div class="s7BHead"><span class="acctDotC" style="--ac:${acctColor(a)}"></span><b>${escHtml(a.name)}</b></div>
+      ${SAT7D_BROKERS.map(b=>{
+        const on = has ? !!cur[b] : false;
+        return `<div class="s7BRow" data-broker="${b}"><label class="s7BTick"><input type="checkbox" class="s7BOn" ${on?'checked':''} onchange="sat7dBrokerTick(this)"> บัญชีนี้ใช้ <b>${b}</b></label>
+          <div class="s7BAssets" ${on?'':'style="display:none"'}>${SAT7D_ASSETS.map(as=>{
+            const c = (cur[b] && cur[b][as]) || {};
+            return `<div class="s7BA" data-asset="${as}"><span class="s7BAn">${sat7dLabel(as)}</span>
+              <label>สัญญา ${fld('contract', c.contract, 70)}</label><label>step ${fld('lotStep', c.lotStep, 56)}</label><label>min ${fld('minLot', c.minLot, 56)}</label>
+              <label>สกุล <select data-k="cur"><option value="USD"${c.cur!=='THB'?' selected':''}>USD</option><option value="THB"${c.cur==='THB'?' selected':''}>THB</option></select></label></div>`;
+          }).join('')}</div></div>`;
+      }).join('')}</div>`;
+  }).join('') || '<div class="empty">ไม่มีบัญชีที่เปิดพอร์ต Sat</div>';
+  ov.innerHTML = `<div class="modal" style="max-width:640px"><h3>ตั้งค่าโบรก · ขนาดสัญญา</h3>
+    <div class="hint" style="margin-bottom:8px">เว้นช่อง "สัญญา" ว่าง = ยังไม่ตั้ง (ช่อง lot ในการ์ดจะขึ้น "—") · ติ๊กโบรกแล้วค่าเริ่มต้นจะเติมให้ แก้ได้ · ถัง Sat และ USDTHB ใช้ค่าใน "ตั้งค่า" เดิม</div>
+    ${body}<div class="btns"><button onclick="document.getElementById('sat7dBrokerOverlay').classList.remove('show')">ยกเลิก</button><button class="primary" onclick="sat7dBrokerSave()">บันทึก</button></div></div>`;
+  ov.classList.add('show');
+}
+function sat7dBrokerTick(cb){
+  const row = cb.closest('.s7BRow'), box = row.querySelector('.s7BAssets'), b = row.dataset.broker;
+  box.style.display = cb.checked ? '' : 'none';
+  if(!cb.checked) return;
+  row.querySelectorAll('.s7BA').forEach(r=>{
+    const d = (SAT7D_DEFAULT_BROKERS[b]||{})[r.dataset.asset];
+    const cont = r.querySelector('[data-k="contract"]');
+    if(d && cont && cont.value===''){
+      cont.value = d.contract; r.querySelector('[data-k="lotStep"]').value = d.lotStep;
+      r.querySelector('[data-k="minLot"]').value = d.minLot; r.querySelector('[data-k="cur"]').value = d.cur;
+    }
+  });
+}
+function sat7dBrokerSave(){
+  const ov = document.getElementById('sat7dBrokerOverlay'); if(!ov) return;
+  const changed = [];
+  ov.querySelectorAll('.s7BAcct').forEach(box=>{
+    const id = box.dataset.acct; if(!acctList.some(a=>a.id===id)) return;
+    const out = {};
+    box.querySelectorAll('.s7BRow').forEach(row=>{
+      if(!row.querySelector('.s7BOn').checked) return;
+      const o = {};
+      row.querySelectorAll('.s7BA').forEach(r=>{
+        const v = k => r.querySelector('[data-k="'+k+'"]').value;
+        const contract = sat7dNum(v('contract'));
+        if(!(contract>0)) return;                     /* ว่าง = ยังไม่ตั้ง */
+        const lotStep = sat7dNum(v('lotStep')) > 0 ? sat7dNum(v('lotStep')) : 0.01;
+        const minLot = sat7dNum(v('minLot')) > 0 ? sat7dNum(v('minLot')) : lotStep;
+        o[r.dataset.asset] = {contract, lotStep, minLot, cur: v('cur')==='THB' ? 'THB' : 'USD'};
+      });
+      out[row.dataset.broker] = o;                    /* โบรกที่ติ๊กแต่ยังไม่ตั้งสินค้าใดเลย = {} (แยก "ยังไม่ตั้งโบรก" ออกจาก "ยังไม่ตั้งขนาดสัญญา") */
+    });
+    const B = getBook(id);
+    if(!B.settings) B.settings = {};
+    const before = JSON.stringify(B.settings.brokers || {});
+    if(JSON.stringify(out) === before) return;
+    B.settings.brokers = out;
+    changed.push(id);
+  });
+  changed.forEach(id=>saveBook(id));                  /* นอก withAccount · เขียนเฉพาะ books.<id> ที่แก้ */
+  ov.classList.remove('show');
+  render();
+}
+
+/* ── วาดหน้าจอ ── */
+function sat7dMoney(n){ return '฿' + fmt0(Math.round(n)); }
+function sat7dSlotHtml(idea, a){
+  const c = sat7dCalc(idea, a.id), s = c.slot, ac = acctColor(a), id = escHtml(idea.id), aid = escHtml(a.id);
+  const used = !!s.trade_id, skipped = !!s.skip;
+  const step = c.chosen ? c.chosen.cfg.lotStep : 0.01;
+  const dec = (String(step).split('.')[1]||'').length;
+  const unit = SAT7D_UNIT[idea.asset] || 'lot';
+  const brokerRow = c.opts.length
+    ? `<select ${used||skipped?'disabled':''} onchange="sat7dSetBroker('${id}','${aid}',this.value)">${c.opts.map(o=>`<option value="${o.broker}"${c.chosen && c.chosen.broker===o.broker?' selected':''}>${o.broker}</option>`).join('')}</select>`
+    : '<span class="s7Dash">—</span> <span class="s7Hint">'+(sat7dHasAnyBroker(c.base.B) ? 'ยังไม่ตั้งขนาดสัญญา' : 'ตั้งโบรกในตั้งค่า')+'</span>';
+  const lotTxt = c.lot!=null ? `<b>${c.lot.toFixed(dec)}</b> ${unit}` : `<span class="s7Dash">—</span>${c.lotMsg?` <span class="s7Bad">${escHtml(c.lotMsg)}</span>`:''}`;
+  const riskTxt = c.base.cap>0
+    ? `${sat7dMoney(c.base.riskTHB)}${c.chosen && c.chosen.cfg.cur==='USD' && c.riskCur!=null ? ` <span class="s7Hint">($${fmt2(Math.round(c.riskCur*100)/100)})</span>` : ''}`
+    : '<span class="s7Dash">—</span>';
+  const heatBad = c.heatPct!=null && c.heatPct > SAT7D_HEAT_MAX + 1e-9;
+  const newBad = c.tradeExists ? c.base.nNew > SAT7D_NEW_MAX : c.base.nNew >= SAT7D_NEW_MAX;
+  const status = c.ready ? '<span class="s7Ok">✅ พร้อม</span>' : `<span class="s7Warn">⚠️ ${escHtml(c.warns.join(' · '))}</span>`;
+  const act = used
+    ? `<div class="s7Done">ใช้แล้ว ✓ <span class="s7Hint">${c.tradeExists ? '' : '(ไม่พบไม้ในสมุดแล้ว)'}</span></div>`
+    : skipped
+      ? `<div class="s7Done">ข้ามแล้ว <button class="small ghost" onclick="sat7dSkip('${id}','${aid}',false)">เลิกข้าม</button></div>`
+      : `<div class="s7Seg"><button class="small primary" onclick="sat7dUse('${id}','${aid}')">ใช้</button><button class="small ghost" onclick="sat7dSkip('${id}','${aid}',true)">ข้าม</button></div>`;
+  return `<div class="s7Slot" style="--ac:${ac}" data-acct="${aid}">
+    <div class="s7SlotH"><span class="acctDotC" style="--ac:${ac}"></span>${escHtml(a.name)}</div>
+    <div class="s7L"><span>โบรก</span><span>${brokerRow}</span></div>
+    <div class="s7L"><span>ขนาด</span><span class="s7Lot">${lotTxt}</span></div>
+    <div class="s7L"><span>เสี่ยง</span><span class="s7Risk">${riskTxt}</span></div>
+    <div class="s7L"><span>heat →</span><span class="s7Heat${heatBad?' s7Bad':''}">${c.heatPct==null?'—':fmt2(Math.round(c.heatPct*100)/100)} / ${SAT7D_HEAT_MAX}%</span></div>
+    <div class="s7L"><span>ไม้ใหม่</span><span class="s7New${newBad?' s7Bad':''}">${c.base.nNew} / ${SAT7D_NEW_MAX}</span></div>
+    <div class="s7Status">${status}</div>
+    <label class="s7Placed"><input type="checkbox" ${s.placed?'checked':''} ${skipped?'disabled':''} onchange="sat7dPlaced('${id}','${aid}',this.checked)"> วาง order แล้ว</label>
+    ${act}</div>`;
+}
+function sat7dIdeaHtml(idea){
+  const id = escHtml(idea.id), f = sat7dIdeaFlags(idea), side = sat7dSideOk(idea);
+  const ck = (k,l)=>`<label class="s7Ck"><input type="checkbox" ${(idea.checks||{})[k]?'checked':''} onchange="sat7dCheck('${id}','${k}',this.checked)"> ${l}</label>`;
+  const e = +idea.entry, s = +idea.sl, t = +idea.tp;
+  let rTxt = '';
+  if(side===true && t>0){
+    const good = idea.bias==='Short' ? t<e : t>e;
+    rTxt = good ? `= ${(Math.abs(t-e)/Math.abs(e-s)).toFixed(1)}R` : '<span class="s7Bad">TP ผิดฝั่ง</span>';
+  }
+  const wk = sat7dWeekOf(idea);
+  const weekRow = `<div class="s7WeekRow">Bias สัปดาห์ ${escHtml(sat7dLabel(idea.asset))}:
+    <span class="chip ${wk&&wk.bias==='Long'?'on':''}" onclick="sat7dSetWeekBias('${escHtml(idea.asset)}','Long')">Long</span>
+    <span class="chip ${wk&&wk.bias==='Short'?'on':''}" onclick="sat7dSetWeekBias('${escHtml(idea.asset)}','Short')">Short</span>
+    <span class="s7Hint">${wk&&wk.bias ? 'สลับแล้ว '+(wk.flips||0)+' ครั้ง' : 'ยังไม่ตั้ง'}</span></div>`;
+  const tags = [];
+  if(f.offBias) tags.push('นอกแผน · Bias ไม่ตรงสัปดาห์');
+  if(f.overFlip) tags.push('นอกแผน · เกินโควตาสลับ Bias');
+  const ready = sat7dIdeaReady(idea);
+  const closed = idea.status==='closed';
+  return `<div class="s7Card" data-idea="${id}">
+    <div class="s7CardH"><b>${escHtml(sat7dLabel(idea.asset))}</b>
+      <span class="chip ${idea.bias==='Long'?'on':''}" onclick="sat7dSetIdeaBias('${id}','Long')">Long</span>
+      <span class="chip ${idea.bias==='Short'?'on':''}" onclick="sat7dSetIdeaBias('${id}','Short')">Short</span>
+      ${tags.map(x=>`<span class="tag offplan">${escHtml(x)}</span>`).join('')}
+      <span class="s7Grow"></span>${ready?'<span class="s7Ok">พร้อม</span>':'<span class="s7Hint">ยังไม่พร้อม</span>'}
+      <button class="small ghost" onclick="sat7dSetStatus('${id}','${closed?'active':'closed'}')">${closed?'เปิดใหม่':'ปิดไอเดีย'}</button></div>
+    ${weekRow}
+    <div class="s7Cks">${ck('g1','ด่าน 1')}${ck('g2','ด่าน 2')}${ck('g3','ด่าน 3')}${ck('setup','setup')}</div>
+    <div class="s7F">
+      <label>Entry<input type="number" step="any" value="${idea.entry==null?'':escHtml(String(idea.entry))}" onchange="sat7dEdit('${id}','entry',this.value)"></label>
+      <label>SL<input type="number" step="any" class="${side===false?'s7BadIn':''}" value="${idea.sl==null?'':escHtml(String(idea.sl))}" onchange="sat7dEdit('${id}','sl',this.value)"></label>
+      <label><span>TP <span class="s7Hint">${rTxt}</span></span><input type="number" step="any" value="${idea.tp==null?'':escHtml(String(idea.tp))}" onchange="sat7dEdit('${id}','tp',this.value)"></label>
+    </div>
+    ${side===false ? '<div class="s7Bad s7Msg">SL ผิดฝั่ง — ไม่คำนวณ lot</div>' : ''}
+    <label class="s7Wide">Invalidation<input type="text" value="${escHtml(idea.invalidation||'')}" onchange="sat7dEdit('${id}','invalidation',this.value)"></label>
+    <label class="s7Wide">note<textarea rows="2" onchange="sat7dEdit('${id}','note',this.value)">${escHtml(idea.note||'')}</textarea></label>
+    <div class="s7Slots">${sat7dAccts().map(a=>sat7dSlotHtml(idea, a)).join('')}</div></div>`;
+}
+function sat7dSummaryHtml(){
+  return sat7dAccts().map(a=>{
+    const b = sat7dAcctBase(a.id), ac = acctColor(a);
+    const heatBad = b.heatPct!=null && b.heatPct > SAT7D_HEAT_MAX + 1e-9, newBad = b.nNew > SAT7D_NEW_MAX;
+    const cnt = b.cnt.since
+      ? `${b.cnt.n}/${SAT7D_PROVE_N}${b.cnt.avgR!=null ? ` · เฉลี่ย ${b.cnt.avgR>=0?'+':''}${b.cnt.avgR.toFixed(2)}R` : ''}`
+      : '<span class="s7Dash">—</span> <span class="s7Hint">ไม่พบ sat_since</span>';
+    return `<div class="s7SumC" style="--ac:${ac}" data-acct="${escHtml(a.id)}">
+      <div class="s7SlotH"><span class="acctDotC" style="--ac:${ac}"></span>${escHtml(a.name)}</div>
+      <div class="s7L"><span>ถัง Sat</span><span>${b.cap>0 ? sat7dMoney(b.cap) : '<span class="s7Dash">—</span>'}</span></div>
+      <div class="s7L"><span>heat</span><span class="${heatBad?'s7Bad':''}">${b.heatPct==null?'—':fmt2(Math.round(b.heatPct*100)/100)} / ${SAT7D_HEAT_MAX}%</span></div>
+      <div class="s7L"><span>ไม้ใหม่</span><span class="${newBad?'s7Bad':''}">${b.nNew} / ${SAT7D_NEW_MAX}</span></div>
+      <div class="s7L"><span>RPT</span><span>${b.rpt}%</span></div>
+      <div class="s7L"><span>ตัวนับ</span><span>${cnt}</span></div></div>`;
+  }).join('');
+}
+function sat7dOldPlanHtml(){
+  const wk = wpWeekKey();
+  const rows = sat7dAccts().map(a=>{
+    const w = (getBook(a.id).weeklyPlan || {})[wk] || {};
+    const items = Object.keys(w).filter(k=>w[k] && w[k].on).map(k=>{
+      const e = w[k];
+      return `<div class="s7OldRow"><b>${escHtml(sat7dLabel(k))}</b> ${e.trend?`<span class="tag ${e.trend==='Long'?'long':'short'}">${escHtml(e.trend)}</span>`:''}${e.locked?' 🔒':''}
+        <span class="s7Hint">${e.invalLevel?'Inval '+escHtml(String(e.invalLevel))+' · ':''}${escHtml(e.rationale||'')}</span></div>`;
+    }).join('');
+    return `<div class="s7OldAcct"><b><span class="acctDotC" style="--ac:${acctColor(a)}"></span>${escHtml(a.name)}</b>${items || '<div class="s7Hint">ไม่มีแผนสัปดาห์นี้</div>'}</div>`;
+  }).join('');
+  return `<details class="s7Old"><summary>แผนเดิม (Weekly Plan · อ่านอย่างเดียว) — ${escHtml(wpWeekRangeText(wk))}</summary>${rows}</details>`;
+}
+function renderSat7d(){
+  const panel = document.getElementById('sat7dPanel'); if(!panel) return;
+  const show = SAT7D_ON && !!state && planScope==='future';
+  panel.style.display = show ? '' : 'none';
+  if(!show) return;
+  const accts = sat7dAccts();
+  if(!accts.length){ panel.innerHTML = '<div class="panel-head"><h2>แผนเทรด Sat</h2></div><div class="empty">ไม่มีบัญชีที่เปิดพอร์ต Sat</div>'; return; }
+  const err = (satErr ? `<div class="s7Err">โหลดไอเดีย Sat ไม่สำเร็จ (${escHtml(satErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satIdeas</div>` : '')
+    + (satWeekErr ? `<div class="s7Err">โหลด Bias สัปดาห์ไม่สำเร็จ (${escHtml(satWeekErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satWeek</div>` : '');
+  const list = satIdeasList.filter(x=>(x.status==='closed') === (satFilter==='closed'))
+    .sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  const nClosed = satIdeasList.filter(x=>x.status==='closed').length, nActive = satIdeasList.length - nClosed;
+  panel.innerHTML = `<div class="panel-head s7Head"><h2><span class="dot" style="background:#DCA84B;display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px"></span>แผนเทรด Sat</h2>
+      <div class="s7Tools"><select id="s7NewAsset">${SAT7D_ASSETS.map(a=>`<option value="${a}">${sat7dLabel(a)}</option>`).join('')}</select>
+      <select id="s7NewBias"><option>Long</option><option>Short</option></select>
+      <button class="small primary" onclick="sat7dNew()">＋ ไอเดียใหม่</button>
+      <button class="small ghost" onclick="sat7dBrokerOpen()">ตั้งโบรก</button></div></div>
+    ${err}
+    <div class="s7Sum">${sat7dSummaryHtml()}</div>
+    <div class="filters s7Filters"><span class="chip ${satFilter==='active'?'on':''}" onclick="sat7dSetFilter('active')">ใช้งาน ${nActive}</span><span class="chip ${satFilter==='closed'?'on':''}" onclick="sat7dSetFilter('closed')">ปิดแล้ว ${nClosed}</span></div>
+    <div class="s7Ideas">${list.map(sat7dIdeaHtml).join('') || `<div class="empty">${satFilter==='closed'?'ยังไม่มีไอเดียที่ปิดแล้ว':'ยังไม่มีไอเดีย — กด ＋ ไอเดียใหม่'}</div>`}</div>
+    ${sat7dOldPlanHtml()}`;
+}
+
 function renderSBPlan(){
   const panel = document.getElementById('sbPlanPanel'); if(!panel || !state) return;
-  const show = portOn('satB') && planScope==='future';
+  const show = !SAT7D_ON && portOn('satB') && planScope==='future';   /* 7D: SAT7D_ON → ซ่อนแผงเดิม (ข้อมูล weeklyPlan ยังอยู่ · แสดงอ่านอย่างเดียวใน "แผนเดิม") */
   panel.style.display = show ? '' : 'none';
   if(!show) return;
   /* ★ ถ้ากำลังพิมพ์อยู่ในแผงนี้ ห้ามวาด innerHTML ทับ — element ที่โฟกัสอยู่จะถูกทำลาย เคอร์เซอร์เด้งออก
