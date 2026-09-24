@@ -850,6 +850,13 @@ tr:last-child td{border-bottom:none}
 .wlDT .nm{color:var(--muted);font-size:.8rem}
 .wlDates{font-size:.68rem;color:var(--faint);margin-top:4px}
 .wlActs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.wlHold{display:inline-flex;align-items:center;border-radius:4px;padding:1px 6px;font-size:.6rem;font-weight:700;white-space:nowrap}
+.wlHold.badge{background:var(--teal-dim);color:var(--teal)}
+.wlHold.nowl{background:rgba(224,181,46,.16);color:var(--amber,#B8863A);white-space:normal}
+.wlAdd{display:flex;gap:6px;align-items:center}
+.wlLegTbl{width:100%;border-collapse:collapse;font-size:.78rem}
+.wlLegTbl th,.wlLegTbl td{padding:5px 6px;text-align:left;border-bottom:1px solid var(--hair)}
+.wlLegTbl th{color:var(--muted);font-weight:600}
 .wlBackBtn{margin-bottom:8px}
 .wlTodo{background:var(--lime-dim,rgba(181,230,29,.16));border-radius:var(--r);padding:9px 12px;font-size:.8rem;margin-bottom:8px}
 .wlKV{display:grid;grid-template-columns:80px minmax(0,1fr);gap:10px;padding:7px 0;border-top:1px solid var(--hair);font-size:.875rem;line-height:1.6}
@@ -1421,7 +1428,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
     <button onclick="openSystemSettings()">🛠</button>
     <button onclick="openSettings()" title="Portfolio Setting"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="11" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><path d="M18 18 L18 7 A11 11 0 0 1 27.5 13 Z" fill="#F0397A" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L27.5 13 A11 11 0 0 1 28.9 21 Z" fill="#C084F5" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L18 7 A11 11 0 0 0 9 12.5 Z" fill="#8BD450" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="6" fill="#FFDD66" stroke="#111" stroke-width="1.6"/><text x="8" y="11" font-size="8" text-anchor="middle" font-weight="800" fill="#111" font-family="Arial">$</text></svg></button>
     <button onclick="openIndustryManager()" title="Industry"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.4"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="16" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="20" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="24" y="23" width="3.5" height="6" fill="#8FD6EE"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="2.6" stroke-linecap="round"/></svg></button>
-    <button class="iconOnlyMobile" onclick="openImportCL()" title="Import จาก Claude Checklist (วาง JSON)" aria-label="Import"><span class="btnIcon">📥</span><span class="btnTxt"> Import</span></button>
+    <button class="iconOnlyMobile" onclick="openImportCL()" title="Import จาก Claude Checklist (วาง JSON)" aria-label="Import" hidden style="display:none"><span class="btnIcon">📥</span><span class="btnTxt"> Import</span></button>
     <button class="primary iconOnlyMobile" onclick="openChecklist('trade')" title="Add Trade" aria-label="Add Trade"><span class="btnIcon">＋</span><span class="btnTxt"> Add Trade</span></button>
     <button class="mobileOnly" id="hdrMoreBtn" onclick="toggleMoreMenu(event)" title="เพิ่มเติม" aria-label="เพิ่มเติม" aria-haspopup="true" aria-expanded="false"><span class="btnIcon">⋯</span><span class="btnTxt"> เพิ่มเติม</span></button>
   </div>
@@ -1686,10 +1693,11 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
     </div>
     <div class="frow">
       <div class="f"><label>Date</label><input type="date" id="tDate"></div>
-      <div class="f"><label>Symbol <span id="tSymHint" style="font-weight:400;color:var(--muted)">(จาก Watchlist เท่านั้น)</span></label>
-        <select id="tSym"></select>
-        <input type="text" id="tSymFree" list="tSymList" style="display:none" placeholder="พิมพ์ชื่อ Symbol" autocomplete="off">
+      <div class="f"><label>Symbol <span id="tSymHint" style="font-weight:400;color:var(--muted)">(เลือกจาก Watchlist หรือพิมพ์เอง)</span></label>
+        <select id="tSym" style="display:none"></select>
+        <input type="text" id="tSymFree" list="tSymList" style="text-transform:uppercase" placeholder="พิมพ์ / เลือก Symbol" autocomplete="off" autocapitalize="characters" spellcheck="false">
         <datalist id="tSymList"></datalist>
+        <div class="hint" id="tSymPlanHint" style="margin:4px 0 0;min-height:0"></div>
       </div>
     </div>
     <div class="szLine" id="tSizeLine" style="display:none"></div>
@@ -2045,6 +2053,44 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
     <div class="btns">
       <button onclick="closeImportCL()">ยกเลิก</button>
       <button class="primary" onclick="importChecklistJSON()"><span class="btnIcon">📥 </span>Import เข้า Watchlist</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 7W: เพิ่ม/แก้หุ้นใน Watchlist (ระบบรีเสิร์ช · ใช้ร่วมทุกบัญชี) ===== -->
+<div class="overlay" id="wlAddOverlay">
+  <div class="modal">
+    <h3 id="wlAddTitle">เพิ่มหุ้นเข้า Watchlist</h3>
+    <div class="hint" style="margin-top:-6px;margin-bottom:10px">Watchlist = รายการรีเสิร์ช ใช้ร่วมทุกบัญชี · ไม่ผูกกับไม้/Journal (ลบหุ้นที่นี่ ไม้ไม่หาย)</div>
+    <div class="frow">
+      <div class="f"><label>Ticker</label><input type="text" id="wlAddSym" placeholder="NVDA / PTT.BK" style="text-transform:uppercase" autocomplete="off" autocapitalize="characters" spellcheck="false" oninput="wlAddOnSym()"></div>
+      <div class="f"><label>Market</label>
+        <select id="wlAddMkt" onchange="wlMktTouched=true">
+          <option value="US">US → Core.US</option>
+          <option value="TH">TH → Core.TH</option>
+        </select></div>
+    </div>
+    <div class="f"><label>Industry <span style="font-weight:400;color:var(--muted)">(ไม่บังคับ — ว่าง = ไม่ระบุ)</span></label>
+      <input type="text" id="wlAddInd" list="wlIndList" placeholder="เช่น Semis" autocomplete="off"><datalist id="wlIndList"></datalist></div>
+    <div class="f"><label>Note</label><textarea id="wlAddNote" rows="3" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)"></textarea></div>
+    <div class="hint" id="wlAddHint" style="min-height:18px"></div>
+    <div class="btns">
+      <button onclick="wlAddClose()">ยกเลิก</button>
+      <button class="primary" id="wlAddBtn" onclick="wlAddSave()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 7W: Watchlist เดิม (ก่อนแยกระบบ) — อ่านอย่างเดียว ===== -->
+<div class="overlay" id="wlLegacyOverlay">
+  <div class="modal">
+    <h3>Watchlist เดิม (ก่อน 7W)</h3>
+    <div class="hint" id="wlLegacyMsg" style="margin-top:-6px;margin-bottom:10px">อ่านอย่างเดียว · ระบบเลิกอ่านรายการนี้แล้ว แต่ยังไม่ได้ลบออกจาก Firestore</div>
+    <div id="wlLegacyBody" style="max-height:52vh;overflow:auto"></div>
+    <div class="btns">
+      <button onclick="wlLegacyCopy()">คัดลอกรายชื่อ</button>
+      <button onclick="wlLegacyClose()">ปิด</button>
+      <button class="primary" id="wlLegacyAckBtn" style="display:none" onclick="wlLegacyAck()">จดแล้ว — เริ่ม Watchlist ใหม่</button>
     </div>
   </div>
 </div>
@@ -2486,6 +2532,115 @@ function doSignOut(){
   auth.signOut();
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   เฟส 7W — Watchlist (ระบบรีเสิร์ช) แยกออกจาก Journal/ไม้
+   ที่เก็บ  : users/{uid}/watchlist/{TICKER}  (subcollection · 1 doc ต่อหุ้น · ใช้ร่วมทุกบัญชี)
+   ฟิลด์    : ticker · market (US|TH) · port ('core') · note · industry (ไม่บังคับ) · added_at   — ไม่มี checklist / ไม่มีฟิลด์อ้างถึงไม้
+   กติกา    : เขียน watchlist ไม่แตะ users/{uid} (books) · เขียน books ไม่แตะ watchlist
+              ปิดไม้ → watchlist ไม่กระทบ · ลบหุ้นจาก watchlist → ไม้ไม่กระทบ (เชื่อมกันด้วยชื่อหุ้นตอนแสดงผลเท่านั้น)
+
+   state.watchlist = "สำเนาในหน่วยความจำ" ที่โหลดจาก collection ใหม่ (ทำให้โค้ดเดิมที่อ่าน state.watchlist ไม่ต้องแก้)
+     ★ เป็น property แบบ non-enumerable → Firestore / JSON.stringify ไม่เห็น → ไม่ถูกเขียนกลับลง books.<id>
+     ★ watchlist เดิมที่อยู่ใน books ถูก "เลิกอ่าน" แต่เก็บดิบไว้ที่ state.__legacyWatchlist (non-enumerable)
+       แล้วใส่กลับตอนเซฟ (wlBookForWrite) → ยังไม่ถูกลบออกจาก Firestore ตามสเปค
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* Industry (ใช้กับ pie ธีม + เพดานต่อธีม) — มาจากช่อง industry ของหุ้นใน Watchlist ใหม่อย่างเดียว · ไม่มี → "ไม่ระบุ"
+   สะพานอ่าน industry จาก watchlist เดิมปิดถาวรแล้ว (false) — โค้ดเก็บไว้เผื่อต้องเปิดชั่วคราว แต่ไม่ถูกเรียกเมื่อเป็น false */
+const WL_LEGACY_INDUSTRY_BRIDGE = false;
+let wlItems = [];            /* [{ticker, market, port:'core', note, added_at}] */
+let wlStoreReady = false;
+let wlStoreErr = null;
+let wlUnsub = null, wlUnsubUid = null;
+let wlGateShown = false;     /* หน้าจอแสดงรายชื่อเดิม (จดก่อน reset) — ขึ้นครั้งเดียวต่อการเปิดหน้า */
+const WL_ACK_KEY = 'wlV2LegacyAck';
+
+function wlNormTicker(v){ return String(v==null?'':v).trim().toUpperCase(); }
+function wlGuessMarket(t){ return /\.BK$/i.test(t) ? 'TH' : 'US'; }
+function wlValidTicker(t){ return /^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(t); }
+function wlSymKey(v){ return wlNormTicker(v).replace(/\.BK$/,''); }       /* จับคู่ PTT กับ PTT.BK ได้ */
+function wlHas(sym){ const k = wlSymKey(sym); return !!k && wlItems.some(w=>wlSymKey(w.ticker)===k); }
+function wlCol(){ return (uid && typeof db!=='undefined' && db) ? db.collection('users').doc(uid).collection('watchlist') : null; }
+
+function wlStart(){
+  if(!uid || typeof db==='undefined' || !db) return;
+  if(wlUnsub && wlUnsubUid===uid) return;
+  wlStop();
+  wlUnsubUid = uid;
+  wlUnsub = wlCol().onSnapshot(snap=>{
+    wlItems = snap.docs.map(d=>{
+      const x = d.data() || {};
+      const t = wlNormTicker(x.ticker || d.id);
+      return {ticker:t, market:(x.market==='TH'||x.market==='US') ? x.market : wlGuessMarket(t), port:'core',
+              note:String(x.note==null?'':x.note), industry:String(x.industry==null?'':x.industry).trim(), added_at:x.added_at||''};
+    }).filter(w=>w.ticker).sort((a,b)=>a.ticker.localeCompare(b.ticker));
+    wlStoreReady = true; wlStoreErr = null;
+    wlSyncMirror(); wlRefreshUI();
+  }, err=>{
+    console.warn('watchlist listener:', err);
+    wlStoreErr = (err && (err.code || err.message)) || String(err);
+    wlStoreReady = true;
+    wlRefreshUI();
+  });
+}
+function wlStop(){
+  if(wlUnsub){ try{ wlUnsub(); }catch(e){} }
+  wlUnsub = null; wlUnsubUid = null; wlItems = []; wlStoreReady = false; wlStoreErr = null;
+  wlSyncMirror();
+}
+function wlRefreshUI(){
+  if(!state) return;
+  try{ render(); }catch(e){ console.warn('wl refresh:', e); }
+}
+
+/* ---- สำเนา state.watchlist (โครงเดิม: id/sym/port…) ---- */
+function wlToLegacyShape(w){
+  return {id:w.ticker, sym:w.ticker, ticker:w.ticker, market:w.market, port:'core', note:w.note,
+          date:String(w.added_at||'').slice(0,10), fundamental:'', technical:'', industry:w.industry||'', link:'',
+          bias:null, order:0, gg:null, score:0};
+}
+function wlHasWrapper(b){ return !!b && Object.prototype.hasOwnProperty.call(b,'__legacyWatchlist'); }
+function wlSyncMirror(){
+  if(!state || !wlHasWrapper(state)) return;      /* state ที่ไม่ได้ผ่าน wrapper (เช่น หลังกู้คืน backup) — ไม่แตะ */
+  state.watchlist = wlItems.map(wlToLegacyShape);  /* assign ทับ property เดิม → คง non-enumerable */
+}
+function wlAttachMirror(st, d){
+  /* watchlist เดิมแบบดิบ: ถ้า d เป็น state ที่เคยผ่าน wrapper แล้ว (เช่น acctBooks[id]=state) ใช้ __legacyWatchlist
+     ไม่งั้นใช้ d.watchlist จากก้อนที่มาจาก server */
+  const legacy = wlHasWrapper(d) ? d.__legacyWatchlist : (d ? d.watchlist : undefined);
+  const hide = (k,v)=>Object.defineProperty(st, k, {value:v, writable:true, enumerable:false, configurable:true});
+  hide('__legacyWatchlist', legacy);
+  hide('watchlist', wlItems.map(wlToLegacyShape));
+  /* JSON.stringify(state) (backup ต่าง ๆ) ต้องได้ watchlist เดิมกลับไปเหมือนเดิม ไม่ใช่สำเนาใหม่ */
+  hide('toJSON', function(){ return wlBookForWrite(this); });
+  return st;
+}
+function buildStateFromBook(d, exists){
+  return wlAttachMirror(buildStateFromBookRaw(d, exists), d);
+}
+/* ก้อนที่จะเขียนลง users/{uid}.books.<id> — ไม่มีสำเนา watchlist ใหม่ · ใส่ watchlist เดิม (ดิบ) กลับเหมือนที่อ่านมา */
+function wlBookForWrite(book){
+  if(!wlHasWrapper(book)) return book;
+  const out = Object.assign({}, book);            /* เฉพาะ enumerable → ไม่ติดสำเนา/ธง/toJSON */
+  if(book.__legacyWatchlist !== undefined) out.watchlist = book.__legacyWatchlist;
+  return out;
+}
+function wlLegacyList(b){
+  const raw = wlHasWrapper(b) ? b.__legacyWatchlist : (b ? b.watchlist : undefined);
+  return normalizeWatchlist(raw);
+}
+/* Industry ของหุ้น = ช่อง industry ใน Watchlist ใหม่เท่านั้น (ไม่ดึง research.sector — ตัวนั้นเป็นแค่สำเนาจาก watchlist เดิม)
+   หุ้นที่ไม่อยู่ใน Watchlist หรือยังไม่กรอก industry → '' (ผู้เรียกแสดงเป็น "ไม่ระบุ") */
+function wlIndustryOfSym(sym){
+  const k = wlSymKey(sym); if(!k || !state) return '';
+  const it = wlItems.find(w=>wlSymKey(w.ticker)===k);
+  if(it && it.industry) return it.industry;
+  if(WL_LEGACY_INDUSTRY_BRIDGE){
+    const w = wlLegacyList(state).find(x=>x && wlSymKey(x.sym)===k && x.industry && String(x.industry).trim());
+    if(w) return String(w.industry).trim();
+  }
+  return '';
+}
+
 auth.onAuthStateChanged(user=>{
   if(user){
     uid = user.uid;
@@ -2499,6 +2654,7 @@ auth.onAuthStateChanged(user=>{
     stateFromServer = false;
     missedPersistBeforeConfirm = false;
     if(unsubDoc){ unsubDoc(); unsubDoc=null; }
+    wlStop();
     state = null;
     document.getElementById('authScreen').style.display='flex';
     document.getElementById('loadingScreen').style.display='none';
@@ -2511,7 +2667,7 @@ auth.onAuthStateChanged(user=>{
 /* ── สร้าง state จาก "ก้อนข้อมูลของบัญชี" (โครงเดิมเป๊ะ) ──
    ย้ายออกมาเป็นฟังก์ชันเพื่อให้ทั้ง onSnapshot และการสลับบัญชีใช้ตัวเดียวกัน
    เนื้อในคัดลอกจากของเดิมทั้งหมด ไม่ได้แก้ตรรกะ */
-function buildStateFromBook(d, exists){
+function buildStateFromBookRaw(d, exists){
   if(exists){
       return {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
         watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
@@ -2714,6 +2870,7 @@ function acctWrapDoc(book){
 
 function startListening(){
   if(!uid) return;
+  wlStart();   /* 7W — Watchlist อยู่ที่ users/{uid}/watchlist แยกจาก books */
   serverConfirmed = false;   /* เริ่ม listen session ใหม่ — ต้องรอยืนยันจาก server ใหม่ก่อนถึงจะยอมเขียนอะไร */
   stateFromServer = false;   /* state เก่าที่ค้างอยู่ (ถ้ามี) ถือว่าใช้ยืนยันการเขียนไม่ได้แล้ว */
   document.getElementById('errorScreen').style.display='none';
@@ -2857,7 +3014,7 @@ async function doPersist(){
        (เช่น key เก่าใน object ซ้อนที่เลิกใช้) ไม่ถูกลบออกจาก server ตาม — ค่าเก่าโผล่กลับมาผสมกับของใหม่ได้
        mergeFields บอก Firestore ตรง ๆ ว่า "แทนที่ทั้งก้อน" ที่ path 'books.<acctActive>' เท่านั้น (ไม่ recurse ลงไปข้างในอีก)
        เหมือน update({['books.'+acctActive]: toSave}) แต่ยังสร้าง doc ใหม่ได้ถ้ายังไม่มี (update() ธรรมดาทำไม่ได้) */
-    const payload = {...acctExtra, _v:2, accounts:acctList, activeAccount:acctActive, books:{[acctActive]: toSave}};
+    const payload = {...acctExtra, _v:2, accounts:acctList, activeAccount:acctActive, books:{[acctActive]: wlBookForWrite(toSave)}};   /* 7W: ไม่เขียนสำเนา watchlist ใหม่ลง books · ใส่ watchlist เดิมกลับตามเดิม */
     const mergeFields = ['_v', 'accounts', 'activeAccount', 'books.'+acctActive, ...Object.keys(acctExtra)];
     delIds.forEach(delId=>{
       payload.books[delId] = firebase.firestore.FieldValue.delete();   /* ลบบัญชีที่ถูกลบจริงออกจาก server ด้วย ไม่ใช่แค่ในเครื่อง */
@@ -3064,7 +3221,7 @@ document.addEventListener('keydown', (e)=>{
    ในแท็บ: [ ] = วนหมวดย่อย · ตัวอักษรเฉพาะแท็บตาม KB_SUB
    Watch: [ ] = วน All/Core/Sat.A · Esc = กลับ (มือถือ)
    ทุกแท็บ: C = Watchlist · V = Candidates */
-const WL_PORT_CYCLE_KB = ['all','core'];
+const WL_PORT_CYCLE_KB = ['all','US','TH'];   /* 7W: กรองตาม market (Core.US / Core.TH) */
 const KB_SUB = {
   plan: {
     name:'แผน',
@@ -3073,7 +3230,7 @@ const KB_SUB = {
   },
   watch: {
     name:'Watch',
-    cycle:{list:WL_PORT_CYCLE_KB, get:()=>wlView==='cand'?'':wlPort, set:v=>wlSetPort(v), label:'วน All → Core'},
+    cycle:{list:WL_PORT_CYCLE_KB, get:()=>wlView==='cand'?'':wlPort, set:v=>wlSetPort(v), label:'วน All → Core.US → Core.TH'},
     keys:{},
     extra:[['Esc','มือถือ: กลับจากหน้ารายตัว']]
   }
@@ -5036,8 +5193,8 @@ function trendWord(bias){
 const PIE_COLORS = ['#2F5FBE','#0E8F6F','#E0B52E','#C93B37','#7E58C9','#DC7A2E','#4A9BC4','#AE5289','#5FA862','#B8863A'];
 const CASH_COLOR = '#B0B5BD';
 function getIndustryForSymbol(sym){
-  const w = (state.watchlist||[]).find(x=>x.sym===sym && x.industry && x.industry.trim());
-  return w ? w.industry.trim() : 'ไม่ระบุ';
+  /* 7W — Watchlist ใหม่ไม่มี industry · อ่านสะพานอ่านอย่างเดียวจาก watchlist เดิม (ดู WL_LEGACY_INDUSTRY_BRIDGE) */
+  return wlIndustryOfSym(sym) || 'ไม่ระบุ';
 }
 function computePortHoldingsBySymbol(port){
   const fx = state.settings.fx;
@@ -5060,14 +5217,16 @@ function computePortHoldingsByIndustry(port){
   const capTH = portCapTHB(port);
   const opens = state.trades.filter(t=>t.port===port && t.status==='open');
   const map = new Map();
+  const unl = new Set();   /* หุ้นที่ถืออยู่แต่ยังไม่อยู่ใน Watchlist (→ ไม่ระบุ + ป้าย) */
   let investedTH = 0;
   opens.forEach(t=>{
     const valTHB = t.entry * t.qty * (t.mult||1) * (tradeCur(t)==='USD'?fx:1);
     const ind = getIndustryForSymbol(t.sym);
     map.set(ind, (map.get(ind)||0) + valTHB);
+    if(ind==='ไม่ระบุ' && !wlHas(t.sym)) unl.add(String(t.sym).toUpperCase());
     investedTH += valTHB;
   });
-  const result = Array.from(map.entries()).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);
+  const result = Array.from(map.entries()).map(([label,value])=>({label,value, notInWl:(label==='ไม่ระบุ' && unl.size) ? [...unl] : null})).sort((a,b)=>b.value-a.value);
   const cashTH = Math.max(0, capTH - investedTH);
   if(capTH>0) result.push({label:'Cash', value:cashTH, isCash:true});
   return result;
@@ -5096,7 +5255,9 @@ function renderPieChart(chartId, legendId, data, linkIndustry){
     const nm = url
       ? `<span class="lgname indLinked" onclick="indOpen('${escHtml(d.label).replace(/'/g,"\\'")}')" title="เปิดคู่มือ ${escHtml(d.label)}"><span class="swatch" style="background:${colorFor(d,i)}"></span>${escHtml(d.label)} ↗</span>`
       : `<span class="lgname"><span class="swatch" style="background:${colorFor(d,i)}"></span>${escHtml(d.label)}</span>`;
-    return `<div class="lgrow">${nm}<b>${fmt2(p)}%</b></div>`;
+    const nowl = (d.notInWl && d.notInWl.length)
+      ? `<div style="margin:1px 0 5px 16px"><span class="wlHold nowl" title="หุ้นที่ถืออยู่แต่ยังไม่อยู่ใน Watchlist จึงไม่มี Industry">ยังไม่อยู่ใน Watchlist · ${d.notInWl.map(escHtml).join(', ')}</span></div>` : '';
+    return `<div class="lgrow">${nm}<b>${fmt2(p)}%</b></div>${nowl}`;
   }).join('');
 }
 /* ══════════════ หน้า Portfolio — รวมทุกบัญชี ══════════════
@@ -5140,6 +5301,7 @@ function mixAcctStats(entry){
 /* รวมมูลค่าถือครองข้ามทุกบัญชี/ทุกพอร์ต — by='sym' หรือ 'ind' */
 function mixCombinedHoldings(by){
   const map = new Map();
+  const unl = new Set();
   let invested = 0, cap = 0;
   acctAllStates().forEach(entry=>{
     const ports = entry.acct.ports;
@@ -5148,12 +5310,13 @@ function mixCombinedHoldings(by){
       state.trades.filter(tr=>tr.status==='open' && ports.includes(tr.port)).forEach(tr=>{
         const v = tr.entry * tr.qty * (tr.mult||1) * (tradeCur(tr)==='USD'?state.settings.fx:1);
         const key = by==='ind' ? getIndustryForSymbol(tr.sym) : tr.sym;
+        if(by==='ind' && key==='ไม่ระบุ' && !wlHas(tr.sym)) unl.add(String(tr.sym).toUpperCase());
         map.set(key, (map.get(key)||0) + v);
         invested += v;
       });
     });
   });
-  const out = Array.from(map.entries()).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);
+  const out = Array.from(map.entries()).map(([label,value])=>({label,value, notInWl:(by==='ind' && label==='ไม่ระบุ' && unl.size) ? [...unl] : null})).sort((a,b)=>b.value-a.value);
   const cash = Math.max(0, cap - invested);
   if(cap>0) out.push({label:'เงินสด', value:cash, isCash:true});
   return out;
@@ -5234,25 +5397,26 @@ function renderPortfolioMix(){
   privacyApply();
 }
 /* ══════════════════ Watch — master-detail (เฟส 4 §4) ══════════════════
-   ลิสต์ = state.watchlist (ฝั่งเทรด เจ้าของเดิม) join research/ ด้วย ticker ตัวใหญ่
-   Candidates = research ที่ in_watchlist=false และยังไม่อยู่ใน watchlist ฝั่งเทรด
+   ลิสต์ = Watchlist ใหม่ (7W · users/{uid}/watchlist ใช้ร่วมทุกบัญชี) join research/ ด้วย ticker ตัวใหญ่
+   Candidates = research ทุกตัวที่ยังไม่อยู่ใน Watchlist ใหม่ (ไม่พึ่ง in_watchlist)
    ★ ตัวแปรชุดนี้เป็นสถานะหน้าจอล้วน — ห้ามเก็บลง state/Firestore */
 let wlView = 'wl', wlPort = 'all', wlSel = '', wlSub = 'ov', wlDeep = 'B', wlMobOpen = false, wlScroll = 0;
 let wlResearchExpanded = false, wlResearchScroll = 0;
 const WL_NEWS_MAX = 5;      /* แถบ "ข่าวที่ต้องดู" โชว์กี่รายการ */
 const WL_NEWS_DAYS = 7;     /* ยังไม่มี newsSeen → เอาเฉพาะข่าวใน n วันล่าสุด */
-const WL_PORT_CYCLE = ['all','core'];
+const WL_PORT_CYCLE = ['all','US','TH'];
 
 function wlNarrow(){ try{ return window.matchMedia('(max-width:899px)').matches; }catch(e){ return false; } }
 function wlDocMap(){ const m = {}; rsAll().forEach(d=>{ if(d && d.ticker) m[String(d.ticker).toUpperCase()] = d; }); return m; }
 function wlRowsAll(){
   const map = wlDocMap();
-  const wl = (Array.isArray(state && state.watchlist) ? state.watchlist : [])
-    .filter(w=>(w.port==='core' || w.port==='satA') && portOn(w.port) && w.sym)
-    .map(w=>{ const s = String(w.sym).toUpperCase(); return {sym:s, port:w.port, w, d:map[s]||null}; });
-  const inList = {}; wl.forEach(r=>{ inList[r.sym] = true; });
-  const cand = rsAll().filter(d=>d && d.ticker && d.in_watchlist===false && !inList[String(d.ticker).toUpperCase()])
-    .map(d=>({sym:String(d.ticker).toUpperCase(), port:'cand', w:null, d}));
+  /* 7W — อ่านจาก Watchlist ใหม่ (wlItems) · ใช้ร่วมทุกบัญชี จึงไม่กรองด้วย portOn() */
+  const wl = wlItems.filter(w=>w.ticker)
+    .map(w=>({sym:w.ticker, port:'core', market:w.market, w:wlToLegacyShape(w), item:w, d:map[w.ticker]||null}));
+  /* 7W — Candidates = research ทุกตัวที่ "ไม่อยู่ใน Watchlist ใหม่" · ไม่พึ่งธง in_watchlist (กันหน้าจอผิดตอน pusher ยังไม่อัปเดตธง) */
+  const inList = {}; wl.forEach(r=>{ inList[wlSymKey(r.sym)] = true; });
+  const cand = rsAll().filter(d=>d && d.ticker && !inList[wlSymKey(d.ticker)])
+    .map(d=>({sym:String(d.ticker).toUpperCase(), port:'cand', market:null, w:null, d}));
   return {wl, cand};
 }
 function wlSortRows(a,b){
@@ -5261,7 +5425,7 @@ function wlSortRows(a,b){
 }
 function wlRowsView(){
   const A = wlRowsAll();
-  let rows = wlView==='cand' ? A.cand : A.wl.filter(r=>wlPort==='all' || r.port===wlPort);
+  let rows = wlView==='cand' ? A.cand : A.wl.filter(r=>wlPort==='all' || r.market===wlPort);
   return {rows: rows.slice().sort(wlSortRows), A};
 }
 function wlFind(sym){
@@ -5281,9 +5445,27 @@ function wlResearchDate(d){
   return (d.research_card && d.research_card.as_of) || null;
 }
 
-function wlPortTag(p){
-  const t = p==='core' ? 'CORE' : p==='satA' ? 'SAT.A' : 'CAND';
+function wlPortTag(p, mkt){
+  const t = p==='core' ? (mkt ? 'CORE.'+mkt : 'CORE') : p==='satA' ? 'SAT.A' : 'CAND';
   return `<span class="wlPTag ${p}">${t}</span>`;
+}
+/* 7W — ป้าย "ถืออยู่" + ชิปสีของบัญชีที่มีไม้เปิดอยู่ของหุ้นตัวนี้ (คำนวณตอนแสดงผลจากชื่อหุ้น · ไม่เก็บ/ไม่เขียนกลับ) */
+function wlHoldersOf(sym){
+  const key = wlSymKey(sym), out = [];
+  if(!key) return out;
+  (acctList||[]).forEach((a,i)=>{
+    const book = a.id===acctActive ? state : (acctBooks||{})[a.id];
+    const trades = book && Array.isArray(book.trades) ? book.trades : [];
+    const n = trades.filter(t=>t && t.status==='open' && wlSymKey(t.sym)===key).length;
+    if(n) out.push({id:a.id, name:a.name, n, color:PIE_COLORS[i % PIE_COLORS.length]});
+  });
+  return out;
+}
+function wlHoldChips(sym){
+  const h = wlHoldersOf(sym);
+  if(!h.length) return '';
+  return `<span class="wlHold badge">ถืออยู่</span>` + h.map(x=>
+    `<span class="wlHold" style="background:${hexToRgba(x.color,0.16)};color:${x.color}" title="${escHtml(x.name)} · ไม้เปิด ${x.n}">${escHtml(x.name)}</span>`).join('');
 }
 /* คะแนน Growth Gate — ใช้ค่าจาก watchlist ฝั่งเทรดก่อน (ตัวเดียวกับที่คิดขนาดไม้) · ไม่มีค่อยใช้ Pine */
 function wlGG(r){
@@ -5342,11 +5524,11 @@ function wlRowHtml(r){
   const d = r.d;
   const nNews = wlNewsOf(r.sym).length;
   const rd = wlResearchDate(d);
-  const l2 = wlLine2(r);
-  const warn = r.w && !watchEligible(r.w) ? ' <span class="rsChip amber">⚠ ยังไม่ครบ</span>' : '';
+  const l2 = wlLine2(r) || (r.item && r.item.note) || '';
+  const hold = r.item ? wlHoldChips(r.sym) : '';
   return `<div class="wlR${wlSel===r.sym?' on':''}" data-sym="${escHtml(r.sym)}" onclick="wlOpen(this.dataset.sym)">
-    <div class="wlR1"><b>${escHtml(r.sym)}</b>${wlPortTag(r.port)}</div>
-    <div class="wlR2"><div class="wlChips">${wlScoreChips(r)}${wlActionChip(d,'')}${warn}${d?'':'<span class="rsChip ghost">ไม่มีรีเสิร์ช</span>'}</div>
+    <div class="wlR1"><b>${escHtml(r.sym)}</b>${wlPortTag(r.port, r.market)}</div>
+    <div class="wlR2"><div class="wlChips">${hold}${wlScoreChips(r)}${wlActionChip(d,'')}${d?'':'<span class="rsChip ghost">ไม่มีรีเสิร์ช</span>'}</div>
       <div class="wlL2">${l2?escHtml(l2):'<span class="placeholder">—</span>'}</div></div>
     <div class="wlR3">${nNews?`<span class="wlNewsN">●${nNews}</span>`:''}<span class="wlDate">${rd?escHtml(rsD(rd)):'—'}</span></div>
   </div>`;
@@ -5364,6 +5546,7 @@ function renderWatchlist(){
   /* Research Card status is independent of legacy Thesis/Gates. */
   const nNoCard = A.wl.filter(r=>!(r.d && r.d.research_card)).length;
   const status = `<div class="wlStat"><span>${nNoCard} ตัวรอสร้าง Research Card</span>`
+    + (wlStoreErr ? ` · <span class="r">โหลด Watchlist ไม่สำเร็จ (${escHtml(wlStoreErr)}) — ตรวจ Firestore Rules ของ users/{uid}/watchlist</span>` : '')
     + (RS_DEMO_ON ? ' · <b>ข้อมูลตัวอย่าง</b>' : rsLoadErr ? ` · <span class="r">โหลดรีเสิร์ชไม่สำเร็จ</span> <span class="rsChip ghost" style="cursor:pointer" onclick="rsLoad(true)">ลองใหม่</span>`
       : rsLoading && !rsLoadedAt ? ' · กำลังโหลดรีเสิร์ช…' : '')
     + `</div>`;
@@ -5377,13 +5560,13 @@ function renderWatchlist(){
   const pill = (on,txt,fn,kb)=>`<button type="button" class="rsDeepBtn ${on?'on':''}" onclick="${fn}">${txt}${kb?` <span class="kbdhint">${kb}</span>`:''}</button>`;
   const head = `<div class="wlHead">
       <div class="wlPills">${pill(wlView==='wl',`Watchlist ${A.wl.length}`,"wlSetView('wl')",'C')}${pill(wlView==='cand',`Candidates ${A.cand.length}`,"wlSetView('cand')",'V')}</div>
-      ${wlView==='wl' ? `<div class="wlPills">${pill(wlPort==='all','All',"wlSetPort('all')")}${portOn('core')?pill(wlPort==='core','Core',"wlSetPort('core')"):''}</div>` : ''}
-      <div class="wlAdd">${portOn('core')?'<button class="small" onclick="openFundChecklist()" title="เปิด Fundamental Checklist แล้วบันทึกเข้า Watchlist Core">＋ Core</button>':''}</div>
+      ${wlView==='wl' ? `<div class="wlPills">${pill(wlPort==='all','All',"wlSetPort('all')")}${pill(wlPort==='US','Core.US',"wlSetPort('US')")}${pill(wlPort==='TH','Core.TH',"wlSetPort('TH')")}</div>` : ''}
+      <div class="wlAdd"><button class="small" onclick="wlOpenAdd()" title="เพิ่มหุ้นเข้า Watchlist (ใช้ร่วมทุกบัญชี)">＋ เพิ่มหุ้น</button><button class="small ghost" onclick="wlOpenLegacy(false)" title="ดูรายชื่อ Watchlist เดิม (อ่านอย่างเดียว)">เดิม</button></div>
     </div>`;
 
   const empty = wlView==='cand'
-    ? (rsLoading && !rsLoadedAt ? 'กำลังโหลด…' : 'ยังไม่มี Candidates — ตัวที่ผ่านรอบคัด (Screening) แต่ยังไม่ได้เข้า Watchlist จะขึ้นที่นี่')
-    : 'ยังไม่มีรายการ — กด ＋ Core / ＋ Sat.A เพื่อเพิ่ม';
+    ? (rsLoading && !rsLoadedAt ? 'กำลังโหลด…' : 'ยังไม่มี Candidates — หุ้นที่มีรีเสิร์ชแต่ยังไม่อยู่ใน Watchlist จะขึ้นที่นี่')
+    : (wlStoreErr ? 'โหลด Watchlist ไม่สำเร็จ' : 'ยังไม่มีรายการ — กด ＋ เพิ่มหุ้น เพื่อเริ่ม Watchlist ใหม่ (ใช้ร่วมทุกบัญชี)');
   const list = `<div class="panel wlList">${head}${status}${newsStrip}
     <div class="wlRows">${rows.map(wlRowHtml).join('') || `<div class="empty">${empty}</div>`}</div></div>`;
 
@@ -5391,6 +5574,7 @@ function renderWatchlist(){
   const expanded = wlResearchExpanded && wlSub==='rs' && !!(wlSel && wlFind(wlSel)?.d?.research_card);
   host.innerHTML = `<div class="wlm${open?' open':''}${expanded?' rcExpanded':''}">${list}${det}</div>`;
   initReadExpanders(host);
+  try{ wlGateCheck(); }catch(e){ console.warn('wl gate:', e); }
 }
 function wlSetView(v){ wlResearchExpanded=false; wlView = (v==='cand'?'cand':'wl'); wlMobOpen = false; renderWatchlist(); }
 function wlSetPort(p){ wlResearchExpanded=false; wlView = 'wl'; wlPort = WL_PORT_CYCLE.includes(p) ? p : 'all'; wlMobOpen = false; renderWatchlist(); }
@@ -5399,7 +5583,7 @@ function wlOpen(sym, sub){
   const r = wlFind(sym);
   if(r){
     if(r.port==='cand') wlView = 'cand';
-    else { wlView = 'wl'; if(wlPort!=='all' && wlPort!==r.port) wlPort = 'all'; }
+    else { wlView = 'wl'; if(wlPort!=='all' && wlPort!==r.market) wlPort = 'all'; }
   }
   if(wlSel!==sym){ wlDeep = 'B'; }
   wlSel = sym; wlSub = sub || 'ov';
@@ -5434,14 +5618,127 @@ function wlSetSub(s){
   }
 }
 function wlSetDeep(s){ wlDeep = s; renderWatchlist(); }
-/* ปุ่ม "เปิดแผนเทรด →" — ไปแท็บแผน แล้วเปิดฟอร์ม Add Trade พร้อมเลือก Symbol ให้ */
+/* ปุ่ม "เปิดแผนเทรด →" — ไปแท็บแผน แล้วเปิดฟอร์ม Add Trade พร้อมใส่ ticker (อ่านอย่างเดียว · ไม่เขียนอะไรกลับที่ watchlist) */
 function wlTradeFor(sym){
   switchTab('plan');
-  try{
-    openTradeChecklist();
-    const sel = document.getElementById('clSym');
-    if(sel && Array.from(sel.options).some(o=>o.value===sym)){ sel.value = sym; clOnSymChange(); }
-  }catch(e){ console.warn('prefill Add Trade ไม่สำเร็จ', e); }
+  try{ openTrade(String(sym||'').toUpperCase(), null, null, 1); }
+  catch(e){ console.warn('prefill Add Trade ไม่สำเร็จ', e); }
+}
+/* ═══════ 7W — เพิ่ม / แก้ / ลบหุ้นใน Watchlist (เขียนเฉพาะ users/{uid}/watchlist/{TICKER}) ═══════ */
+let wlAddEditing = null, wlMktTouched = false;
+function wlIndFill(){
+  const set = new Set();
+  (Array.isArray(state && state.industries) ? state.industries : []).forEach(x=>{ if(x) set.add(String(x)); });
+  wlItems.forEach(w=>{ if(w.industry) set.add(w.industry); });
+  document.getElementById('wlIndList').innerHTML = [...set].sort((a,b)=>a.localeCompare(b)).map(x=>`<option value="${escHtml(x)}"></option>`).join('');
+}
+function wlOpenAdd(sym){
+  if(!uid || !state){ alert('เข้าสู่ระบบก่อน'); return; }
+  wlAddEditing = null; wlMktTouched = false;
+  const t = wlNormTicker(sym);
+  document.getElementById('wlAddTitle').textContent = 'เพิ่มหุ้นเข้า Watchlist';
+  const el = document.getElementById('wlAddSym'); el.value = t; el.readOnly = false;
+  document.getElementById('wlAddMkt').value = t ? wlGuessMarket(t) : 'US';
+  document.getElementById('wlAddNote').value = '';
+  document.getElementById('wlAddInd').value = '';
+  wlIndFill();
+  document.getElementById('wlAddHint').textContent = '';
+  wlAddOnSym();
+  document.getElementById('wlAddOverlay').classList.add('show');
+  try{ el.focus(); }catch(e){}
+}
+function wlOpenEdit(sym){
+  const t = wlNormTicker(sym), it = wlItems.find(x=>x.ticker===t); if(!it) return;
+  wlAddEditing = t; wlMktTouched = true;
+  document.getElementById('wlAddTitle').textContent = 'แก้ไข ' + t;
+  const el = document.getElementById('wlAddSym'); el.value = t; el.readOnly = true;
+  document.getElementById('wlAddMkt').value = it.market;
+  document.getElementById('wlAddNote').value = it.note || '';
+  document.getElementById('wlAddInd').value = it.industry || '';
+  wlIndFill();
+  document.getElementById('wlAddHint').textContent = '';
+  document.getElementById('wlAddOverlay').classList.add('show');
+}
+function wlAddClose(){ document.getElementById('wlAddOverlay').classList.remove('show'); wlAddEditing = null; }
+function wlAddOnSym(){
+  const el = document.getElementById('wlAddSym');
+  if(!el.readOnly){
+    const pos = el.selectionStart, up = el.value.toUpperCase();
+    if(up !== el.value){ el.value = up; try{ el.setSelectionRange(pos,pos); }catch(e){} }
+  }
+  const t = wlNormTicker(el.value);
+  if(!wlMktTouched && !wlAddEditing && t) document.getElementById('wlAddMkt').value = wlGuessMarket(t);
+  const h = document.getElementById('wlAddHint');
+  if(!wlAddEditing && t && wlItems.some(x=>x.ticker===t)){ h.style.color='var(--amber)'; h.textContent = 'มี ' + t + ' อยู่แล้ว — กดบันทึกจะอัปเดต Market/Industry/Note'; }
+  else if(!wlAddEditing){ h.style.color=''; h.textContent = ''; }
+}
+function wlAddSave(){
+  const h = document.getElementById('wlAddHint');
+  const ticker = wlNormTicker(document.getElementById('wlAddSym').value);
+  if(!wlValidTicker(ticker)){ h.style.color='var(--red)'; h.textContent = 'Ticker ไม่ถูกต้อง — ใช้ A-Z 0-9 . - _ (ไม่เกิน 20 ตัว)'; return; }
+  const market = document.getElementById('wlAddMkt').value === 'TH' ? 'TH' : 'US';
+  const note = document.getElementById('wlAddNote').value.trim();
+  const industry = document.getElementById('wlAddInd').value.trim();
+  const col = wlCol(); if(!col){ alert('เข้าสู่ระบบก่อน'); return; }
+  const exists = wlItems.some(x=>x.ticker===ticker);
+  const ref = col.doc(ticker);
+  /* ไม่ await — Firestore อัปเดตหน้าจอทันทีจากแคชในเครื่อง · ถ้าเซิร์ฟเวอร์ปฏิเสธ (เช่น Rules) จะแจ้งเตือนและลิสต์ย้อนกลับเอง */
+  const p = exists ? ref.update({market, note, industry})
+                   : ref.set({ticker, market, port:'core', note, industry, added_at:new Date().toISOString()});
+  p.catch(e=>{ alert('บันทึก Watchlist ไม่สำเร็จ: ' + ((e && (e.code||e.message)) || e) + '\n\nถ้าเป็น permission-denied ให้เพิ่ม Firestore Rules ของ users/{uid}/watchlist'); });
+  wlView = 'wl'; wlSel = ticker;
+  wlAddClose();
+}
+function wlDeleteItem(sym){
+  const t = wlNormTicker(sym), col = wlCol(); if(!t || !col) return;
+  const held = wlHoldersOf(t);
+  if(!confirm('ลบ ' + t + ' ออกจาก Watchlist?\n\n• ไม้/Journal ของทุกบัญชีไม่กระทบ' + (held.length ? ' (ตอนนี้ยังมีไม้เปิดอยู่ใน: ' + held.map(x=>x.name).join(', ') + ')' : '') + '\n• ข้อมูลรีเสิร์ชของหุ้นนี้ (research/' + t + ') ไม่ถูกลบ · เพิ่มกลับเมื่อไรจะผูกกับรีเสิร์ชเดิมเอง')) return;
+  col.doc(t).delete().catch(e=>{ alert('ลบไม่สำเร็จ: ' + ((e && (e.code||e.message)) || e)); });
+}
+
+/* ═══════ 7W — รายชื่อ Watchlist เดิม (อ่านอย่างเดียว) + หน้าจอ "จดก่อน reset" ═══════ */
+function wlLegacyRows(){
+  const rows = [];
+  (acctList||[]).forEach(a=>{
+    const b = a.id===acctActive ? state : (acctBooks||{})[a.id]; if(!b) return;
+    wlLegacyList(b).forEach(w=>{ if(w && w.sym) rows.push({acct:a.name, sym:String(w.sym).toUpperCase(), port:w.port||'', industry:w.industry||'', legacy:!!w.legacy}); });
+  });
+  return rows;
+}
+function wlOpenLegacy(gate){
+  const rows = wlLegacyRows();
+  document.getElementById('wlLegacyMsg').textContent = gate
+    ? 'จดรายชื่อเดิมไว้ก่อน แล้วกดยืนยัน — Watchlist ใหม่เริ่มจากว่าง · รายการเดิมยังไม่ถูกลบออกจาก Firestore (ดูซ้ำได้จากปุ่ม “เดิม” ในหน้า Watch)'
+    : 'อ่านอย่างเดียว · ระบบเลิกอ่านรายการนี้แล้ว แต่ยังไม่ได้ลบออกจาก Firestore';
+  document.getElementById('wlLegacyBody').innerHTML = rows.length
+    ? `<table class="wlLegTbl"><thead><tr><th>บัญชี</th><th>Symbol</th><th>Port</th><th>Industry</th></tr></thead><tbody>${
+        rows.map(r=>`<tr><td>${escHtml(r.acct)}</td><td><b>${escHtml(r.sym)}</b>${r.legacy?' <span class="hint" style="margin:0">(legacy)</span>':''}</td><td>${escHtml(r.port)}</td><td>${escHtml(r.industry)}</td></tr>`).join('')}</tbody></table>
+       <div class="hint" style="margin-top:8px">รวม ${rows.length} แถว · ${new Set(rows.map(r=>r.sym)).size} หุ้นไม่ซ้ำ</div>`
+    : '<div class="empty">ไม่มีรายการใน Watchlist เดิม</div>';
+  document.getElementById('wlLegacyAckBtn').style.display = gate ? '' : 'none';
+  document.getElementById('wlLegacyOverlay').classList.add('show');
+}
+function wlLegacyClose(){ document.getElementById('wlLegacyOverlay').classList.remove('show'); }
+function wlLegacyAck(){
+  try{ localStorage.setItem(WL_ACK_KEY, String(Date.now())); }catch(e){}
+  wlLegacyClose();
+}
+function wlLegacyCopy(){
+  const rows = wlLegacyRows();
+  const txt = rows.map(r=>[r.acct, r.sym, r.port, r.industry].join('\t')).join('\n');
+  const done = ()=>alert('คัดลอกแล้ว ' + rows.length + ' แถว');
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, ()=>prompt('คัดลอกข้อความนี้ (Ctrl/Cmd+C)', txt));
+  else prompt('คัดลอกข้อความนี้ (Ctrl/Cmd+C)', txt);
+}
+/* ขึ้นครั้งเดียวต่อการเปิดหน้า: ยังไม่เคยกด "จดแล้ว" + Watchlist ใหม่ยังว่าง + มีรายการเดิมอยู่ */
+function wlGateCheck(){
+  if(wlGateShown || !wlStoreReady || wlStoreErr || !stateFromServer) return;
+  if(wlItems.length) return;
+  let acked = null; try{ acked = localStorage.getItem(WL_ACK_KEY); }catch(e){}
+  if(acked) return;
+  if(!wlLegacyRows().length) return;
+  wlGateShown = true;
+  wlOpenLegacy(true);
 }
 function wlNewsItem(n){
   const chip = n.impact_section==='tripwire' ? `<span class="rsChip amber">tripwire ${escHtml(n.matched_rule||'')} · needs review</span>`
@@ -5461,18 +5758,16 @@ function wlDetailHtml(r){
   const rawSym = w ? w.sym : r.sym;
   const esc = s=>escHtml(s);
 
-  /* ปุ่มจัดการ (เฉพาะแถวใน Watchlist ฝั่งเทรด) */
+  /* ปุ่มจัดการ (เฉพาะแถวใน Watchlist) */
   const acts = w ? `<div class="wlActs">
       <button class="small primary" data-sym="${esc(rawSym)}" onclick="wlTradeFor(this.dataset.sym)">เปิดแผนเทรด →</button>
-      <button class="small" onclick="${(w.fundCheck && r.port!=='satA') ? `openFundEdit('${esc(w.id)}')` : `editWatch('${esc(w.id)}')`}">✎ แก้ไข</button>
-      ${w.fundCheck && r.port==='core' ? `<button class="small ghost" onclick="openFundDetail('${esc(w.id)}')">⤢ Checklist</button>` : ''}
-      ${/^https?:\/\//i.test(w.link||'') ? `<button class="small ghost" data-u="${esc(w.link)}" onclick="window.open(this.dataset.u,'_blank')">🔗</button>` : ''}
-      <button class="small danger" onclick="delWatch('${esc(w.id)}')">✕ ลบ</button></div>`
-    : `<div class="wlActs"><span class="hint" style="margin:0">เลือกแท็บ Research เพื่อคัดลอกคำสั่งสร้าง Research Card</span></div>`;
+      <button class="small" data-sym="${esc(rawSym)}" onclick="wlOpenEdit(this.dataset.sym)">✎ แก้ไข</button>
+      <button class="small danger" data-sym="${esc(rawSym)}" onclick="wlDeleteItem(this.dataset.sym)">✕ ลบ</button></div>`
+    : `<div class="wlActs"><button class="small primary" data-sym="${esc(r.sym)}" onclick="wlOpenAdd(this.dataset.sym)">＋ เพิ่มเข้า Watchlist</button><span class="hint" style="margin:0">หรือเลือกแท็บ Research เพื่อคัดลอกคำสั่งสร้าง Research Card</span></div>`;
 
   const head = `<div class="wlDHead">
       ${wlNarrow() ? '<button class="small ghost wlBackBtn" onclick="wlBack()">← Watchlist</button>' : ''}
-      <div class="wlDT"><b>${esc(r.sym)}</b> <span class="nm">${esc((d&&d.name)||'')}</span> ${wlPortTag(r.port)} ${r.port==='core'?wlEntryChip(d):''} ${wlActionChip(d,'พร้อม')}</div>
+      <div class="wlDT"><b>${esc(r.sym)}</b> <span class="nm">${esc((d&&d.name)||'')}</span> ${wlPortTag(r.port, r.market)} ${w?wlHoldChips(r.sym):''} ${r.port==='core'?wlEntryChip(d):''} ${wlActionChip(d,'พร้อม')}</div>
       <div class="wlDates">Research Card ${esc(rsD(wlResearchDate(d)))} · ข่าวล่าสุด ${esc(rsD(lastNews))}</div>
       ${acts}
       <div class="rsDeepTabs" style="margin:10px 0 0">
@@ -5499,7 +5794,7 @@ function wlDetailHtml(r){
       <div class="wlTodo"><b>ต้องทำ:</b> ${todo}</div>
       <div class="wlKV"><span class="k">${label}</span><span class="v wlReadText">${l2?esc(l2):'—'}</span></div>
       ${ind?`<div class="wlKV"><span class="k">Industry</span><span class="v">${ind}</span></div>`:''}
-      ${w && w.technical ? `<div class="wlKV"><span class="k">Note</span><span class="v wlReadText">${esc(w.technical)}</span></div>` : ''}
+      ${w && w.note ? `<div class="wlKV"><span class="k">Note</span><span class="v wlReadText">${esc(w.note)}</span></div>` : ''}
       <div class="wlKV"><span class="k">Blockers</span><span class="v wlReadText">${bl.length ? bl.slice(0,3).map(b=>`<span class="wlDot"></span>${esc(b.text)}`).join('<br>') : 'ไม่มี'}</span></div>
 
       ${ruleNews.length ? `<div class="wlKV"><span class="k">ข่าวตรง Tripwire</span><span class="v wlReadText">${ruleNews.map(n=>`${esc(rsD(n.date))} · ${esc(n.headline)} <span class="rsChip red">Tripwire ${esc(n.matched_rule)}</span>`).join('<br>')}</span></div>` : ''}
@@ -6177,7 +6472,7 @@ function resetScoreLabels(){
 let tradeAllowSatB = false;
 function populateSymbolSelect(selected){
   const sel = document.getElementById('tSym');
-  const eligible = (state && Array.isArray(state.watchlist) ? state.watchlist : []).filter(watchEligibleForTrade);
+  const eligible = wlItems.map(w=>({sym:w.ticker, port:'core'}));   /* 7W — เลิกใช้ watchEligibleForTrade */
   const wpSyms = tradeAllowSatB ? wpEligibleSyms() : [];
   const all = new Set([...eligible.map(w=>w.sym), ...wpSyms]);
   let html = '<option value="">— เลือก Symbol —</option>';
@@ -6218,8 +6513,8 @@ function findWatchForSymbol(sym){
   if(SATB_PRODUCTS.includes(S) && wpIsPicked(S)){
     return {sym:S, port:'satB', bias:wpTrendOf(S), fundamental:'', technical:'', industry:'', __weekly:true};
   }
-  if(!state || !Array.isArray(state.watchlist)) return null;
-  return state.watchlist.find(w=>w.sym===sym && w.port!=='satB' && watchEligible(w)) || null;
+  /* 7W — Watchlist ใหม่ไม่มี Port/Bias ให้ล็อก → หุ้นทั่วไปไม่ผูกอะไรอัตโนมัติ (Port/Bias เลือกเอง) · เหลือเฉพาะสินค้า Sat ที่ติ๊กใน Weekly Plan */
+  return null;
 }
 function swingDefaultMult(sym){
   const s = (sym||'').toUpperCase();
@@ -6397,7 +6692,7 @@ function updateChecklistUI(){
 }
 function populateChecklistSymbolSelect(){
   const sel = document.getElementById('clSym');
-  const eligible = (state && Array.isArray(state.watchlist) ? state.watchlist : []).filter(watchEligibleForTrade);
+  const eligible = wlItems.map(w=>({sym:w.ticker, port:'core'}));   /* 7W — เลิกใช้ watchEligibleForTrade */
   let html = '<option value="">— เลือก Symbol —</option>';
   /* Sat.B มีแผงเทรดของตัวเองในแท็บแผนเทรดแล้ว — ห้ามโผล่ในทางเข้า Add Trade */
   portsOn().filter(([k])=>k!=='satB').forEach(([k,p])=>{
@@ -6429,10 +6724,12 @@ function clOnSymChange(){
   updateChecklistUI();
 }
 function openChecklist(stage){
-  if(stage==='fund'){ openFundChecklist(); return; }
+  if(stage==='fund'){ wlOpenAdd(); return; }   /* 7W — ตัด Fundamental Checklist ออก */
   openTradeChecklist();
 }
-function openTradeChecklist(){
+/* 7W — ไม่มีขั้น "เลือก Symbol จาก Watchlist" แล้ว: เปิดฟอร์ม Add Trade ตรง ๆ (พิมพ์เอง/เลือกจาก datalist) */
+function openTradeChecklist(){ closeChecklist(); openTrade(); }
+function openTradeChecklistLegacy(){
   document.getElementById('checklistTitle').textContent = 'เพิ่ม Trade — เลือก Symbol';
   document.getElementById('clTradeView').style.display = '';
   document.getElementById('clFundView').style.display = 'none';
@@ -7205,24 +7502,8 @@ function delIdea(id){
 }
 /* หุ้นที่สนใจนี้ "ทำการบ้านเสร็จ" แล้วหรือยัง — เข้า Watchlist + มี Score + Note ครบ */
 function ideaFulfilled(sym){
-  if(!state || !Array.isArray(state.watchlist)) return false;
-  const S = String(sym||'').toUpperCase();
-  return state.watchlist.some(w=>{
-    if(String(w.sym||'').toUpperCase() !== S) return false;
-    if(w.port==='satB'){
-      /* Sat.B ไม่มี Score — ถือว่าเสร็จเมื่อมี Note (Technical หรือ Sentiment) ครบเงื่อนไข */
-      return watchEligible(w);
-    }
-    if(w.port==='satA'){
-      /* Sat.A — เสร็จเมื่อให้คะแนน Growth Gate ครบ 3 ข้อ + มี Note */
-      return ggDone(w.gg) && !!(w.fundamental||'').trim();
-    }
-    /* Core — ต้องมี Score (fundCheck tier) + Note */
-    const hasScore = !!(w.fundCheck && w.fundCheck.tier);
-    const n = (w.fundCheck && w.fundCheck.note) || {};
-    const hasNote = !!((n.sum||n.biz||'').trim() || (w.fundamental||'').trim());
-    return hasScore && hasNote;
-  });
+  /* 7W — เข้า Watchlist ใหม่แล้ว = ทำการบ้านเสร็จ (Watchlist ใหม่ไม่มี Score/Checklist ให้เช็คแล้ว) */
+  return wlHas(sym);
 }
 function renderIdeas(){
   const body = document.getElementById('ideasBody');
@@ -7244,9 +7525,7 @@ function renderIdeas(){
   };
   const imgCell = (it)=>{ if(!it.imageUrl) return ''; const s=driveImgSrc(it.imageUrl); return s?`<img src="${s}" class="imgthumb" onclick="window.open('${it.imageUrl}','_blank')" title="เปิดรูป">`:`<a href="${it.imageUrl}" target="_blank" class="imglink">📎 รูป</a>`; };
   /* Sat.A ไม่มี Fundamental Checklist แล้ว — เปิดฟอร์ม Watchlist (มีช่องให้คะแนน Growth Gate) แทน */
-  const doBtns = (it)=> it.port==='satA'
-    ? `<button class="small" onclick="openWatchFor('satA','${it.sym}')" title="เพิ่มเข้า Watchlist Sat.A + ให้คะแนน Growth Gate">📋</button><button class="small" onclick="openImportCL()" title="Import จาก Claude Checklist">📥</button>`
-    : `<button class="small" onclick="openFundChecklist('${it.sym}')" title="ทำ Fundamental Checklist">📋</button><button class="small" onclick="openImportCL()" title="Import จาก Claude Checklist">📥</button>`;
+  const doBtns = (it)=> `<button class="small" data-sym="${escHtml(it.sym)}" onclick="wlOpenAdd(this.dataset.sym)" title="เพิ่มเข้า Watchlist">📋</button>`;
   body.innerHTML = `
     <div class="tablewrap"><table>
       <thead><tr><th style="width:96px">วันที่</th><th style="width:90px">Symbol</th><th style="width:120px">Port</th><th>Reason</th><th style="width:60px">รูป</th><th style="width:76px">ทำต่อ</th><th style="width:80px"></th></tr></thead>
@@ -7283,7 +7562,8 @@ function symInputEl(){ return document.getElementById(symFreeMode ? 'tSymFree' :
 function curSymVal(){ return (symInputEl().value || '').trim().toUpperCase(); }
 function buildSymDatalist(){
   const syms = new Set();
-  (state && Array.isArray(state.watchlist) ? state.watchlist : []).forEach(w=>syms.add(w.sym));
+  wlItems.forEach(w=>syms.add(w.ticker));                                   /* 7W — รายชื่อจาก Watchlist ใหม่ */
+  try{ sbProducts().forEach(p=>syms.add(String(p.key).toUpperCase())); }catch(e){}
   (state && Array.isArray(state.trades) ? state.trades : []).forEach(t=>syms.add(t.sym));
   document.getElementById('tSymList').innerHTML =
     [...syms].filter(Boolean).sort().map(s=>`<option value="${escHtml(s)}"></option>`).join('');
@@ -7293,7 +7573,7 @@ function setSymFreeMode(on, val){
   document.getElementById('tSym').style.display = on ? 'none' : '';
   const fi = document.getElementById('tSymFree');
   fi.style.display = on ? '' : 'none';
-  document.getElementById('tSymHint').textContent = on ? '(พิมพ์เองได้ / เลือกจากรายการ)' : '(จาก Watchlist เท่านั้น)';
+  document.getElementById('tSymHint').textContent = on ? '(เลือกจาก Watchlist หรือพิมพ์เอง)' : '(จาก Watchlist เท่านั้น)';
   if(on){ buildSymDatalist(); fi.value = val || ''; }
 }
 function setUnplannedMode(on){
@@ -7322,7 +7602,8 @@ function openTrade(presetSym, presetTier, presetBias, presetSizeFactor){
   szResetQtyTouched(false);
   szSizeFactor = (presetSizeFactor>0 && presetSizeFactor<=1) ? presetSizeFactor : 1;
   setUnplannedMode(false);
-  setSymFreeMode(false);
+  setSymFreeMode(true, presetSym||'');   /* 7W — พิมพ์เองได้เสมอ + datalist จาก Watchlist */
+  tPortTouched = false;
   document.getElementById('tradeTitle').textContent='เพิ่ม Trade';
   document.getElementById('tDate').value = new Date().toISOString().slice(0,10);
   populateSymbolSelect(presetSym||'');
@@ -7332,7 +7613,7 @@ function openTrade(presetSym, presetTier, presetBias, presetSizeFactor){
   populateBothScoreSelects('', '');
   document.getElementById('imgHint').textContent='';
   document.getElementById('tMult').value = 1;
-  tradeAllowSatB = false;
+  tradeAllowSatB = true;   /* 7W — Port เลือกเองได้ (ค่าเริ่มต้น: สินค้า Sat → Sat · นอกนั้น → Core) */
   const openPorts = acctPorts().filter(k=>k!=='satB');
   document.getElementById('tPort').value = portOn('core') ? 'core' : (openPorts[0] || acctPorts()[0]);
   acctSyncPortSelect('tPort');
@@ -7340,9 +7621,8 @@ function openTrade(presetSym, presetTier, presetBias, presetSizeFactor){
   lockPortBiasFields(false);
   setBias('Long'); setCur('THB'); setSetup('acc'); toggleExitFields(); szSyncLot();
   if(presetSym){
-    document.getElementById('tSym').value = presetSym;
-    applySymbolWatchLink(presetSym);
-  }
+    tradeSymChanged();
+  } else { tradeSymPlanHint(); }
   if(presetBias){
     setBias(presetBias);
   }
@@ -7362,7 +7642,7 @@ function editTrade(id){
   szResetQtyTouched(true);   /* ไม้ที่มีอยู่แล้ว — Qty เดิมคือของจริง ห้ามให้การ์ดทับ */
   szSizeFactor = (t.sizeFactor>0 && t.sizeFactor<=1) ? t.sizeFactor : 1;
   setUnplannedMode(!!t.unplanned);
-  setSymFreeMode(!!t.unplanned, t.sym);
+  setSymFreeMode(true, t.sym);
   document.getElementById('tradeTitle').textContent = t.unplanned ? 'แก้ไข Trade — ไม้นอกแผน' : 'แก้ไข Trade';
   document.getElementById('tDate').value=t.date;
   populateSymbolSelect(t.sym);
@@ -7386,8 +7666,9 @@ function editTrade(id){
   document.getElementById('tImageUrl').value=t.imageUrl||'';
   document.getElementById('imgHint').textContent='';
   setBias(t.bias); setCur(tradeCur(t)); setSetup(legacySetup(t)); toggleExitFields();
-  const linked = !t.unplanned && !!findWatchForSymbol(t.sym);
-  lockPortBiasFields(linked, linked && t.port!=='satB');
+  lockPortBiasFields(false);   /* 7W — ไม่มี watchlist ผูก Port/Bias แล้ว */
+  tPortTouched = true;
+  tradeSymPlanHint();
   posTierLocked = false;
   lockPosTierField(false);
   calcHint();
@@ -7453,30 +7734,56 @@ function toggleExitFields(){
   }
   calcHint();
 }
-document.getElementById('tSym').addEventListener('change',()=>{
-  if(editId) return;
-  const sym = document.getElementById('tSym').value;
-  if(!sym){ lockPortBiasFields(false); calcHint(); return; }
-  applySymbolWatchLink(sym);
-  calcHint();
-});
-/* ช่องพิมพ์เอง (ไม้นอกแผน) — ถ้าชื่อตรงกับ Watchlist ก็ดึง Port/Bias ให้ แต่ไม่ล็อก ให้แก้เองได้เสมอ */
-document.getElementById('tSymFree').addEventListener('change',()=>{
+/* 7W — ช่อง Symbol ของ Add Trade: พิมพ์เอง (ตัวพิมพ์ใหญ่อัตโนมัติ) + เลือกจาก Watchlist ผ่าน datalist
+   Port เลือกเอง: ค่าเริ่มต้น = สินค้า Sat → Sat · นอกนั้น → Core (ถ้าผู้ใช้แตะ Port เองแล้วจะไม่ทับ) */
+let tPortTouched = false;
+function isSatProduct(sym){
+  const S = wlNormTicker(sym); if(!S) return false;
+  if(SATB_PRODUCTS.includes(S) || S==='BTCUSDT' || S.startsWith('S50')) return true;
+  try{ return sbProducts().some(x=>String(x.key).toUpperCase()===S); }catch(e){ return false; }
+}
+function tradeSymPlanHint(){
+  const el = document.getElementById('tSymPlanHint'); if(!el) return;
   const sym = curSymVal();
-  document.getElementById('tSymFree').value = sym;
-  if(sym && !editId){
-    const w = findWatchForSymbol(sym);
-    if(w){
-      document.getElementById('tPort').value = w.port;
-      setCur(PORTS[w.port].cur);
-      document.getElementById('tMult').value = w.port==='satB' ? swingDefaultMult(sym) : 1;
+  if(!sym || editId || unplannedMode || document.getElementById('tPort').value==='satB' || isSatProduct(sym)){ el.innerHTML = ''; return; }
+  el.innerHTML = wlHas(sym)
+    ? '<span style="color:var(--teal)">✓ อยู่ใน Watchlist</span>'
+    : '<span style="color:var(--amber)">ไม่อยู่ใน Watchlist — บันทึกได้ แต่จะติดป้าย <b>นอกแผน</b></span>';
+}
+function tradeSymChanged(){
+  const sym = curSymVal();
+  const fi = document.getElementById('tSymFree'); if(fi && symFreeMode) fi.value = sym;
+  if(!sym){ lockPortBiasFields(false); tradeSymPlanHint(); calcHint(); return; }
+  if(!editId && !tPortTouched){
+    const p = document.getElementById('tPort');
+    if(isSatProduct(sym) && portOn('satB')){
+      p.value = 'satB'; setCur(PORTS.satB.cur);
+      let tr = null; try{ tr = wpTrendOf(sym); }catch(e){}
+      setBias(tr==='Short' ? 'Short' : 'Long');
+      document.getElementById('tMult').value = swingDefaultMult(sym);
+      szSyncLot();
+    } else if(!isSatProduct(sym) && portOn('core')){
+      p.value = 'core'; setCur(PORTS.core.cur);
+      document.getElementById('tMult').value = 1;
+      szSyncLot();
     }
   }
   lockPortBiasFields(false);
+  tradeSymPlanHint();
   calcHint();
+}
+document.getElementById('tSym').addEventListener('change', tradeSymChanged);   /* select เดิม (ซ่อนถาวรแล้ว) */
+document.getElementById('tSymFree').addEventListener('input', ()=>{
+  const el = document.getElementById('tSymFree');
+  const pos = el.selectionStart, up = el.value.toUpperCase();
+  if(up !== el.value){ el.value = up; try{ el.setSelectionRange(pos,pos); }catch(e){} }
+  tradeSymPlanHint();
 });
+document.getElementById('tSymFree').addEventListener('change', tradeSymChanged);
 document.getElementById('tPort').addEventListener('change',()=>{
+  tPortTouched = true;
   setCur(PORTS[document.getElementById('tPort').value].cur);
+  tradeSymPlanHint();
 });
 
 function calcHint(){
@@ -7577,7 +7884,8 @@ function saveTrade(){
     imageUrl: document.getElementById('tImageUrl').value.trim() || null,
     submitted: prevTrade ? !!prevTrade.submitted : false,
     /* ไม้นอกแผน — ไม่เคยผ่าน Pre-trade Checklist · ธงนี้ติดถาวรกับไม้ แก้ทีหลังไม่ได้จากฟอร์ม */
-    unplanned: unplannedMode || (prevTrade ? !!prevTrade.unplanned : false),
+    /* 7W — ไม้ใหม่ที่ไม่อยู่ใน Watchlist (และไม่ใช่สินค้า Sat / Port Sat) = นอกแผน · ไม้เดิมที่แก้ไข = คงธงเดิม ไม่ตัดสินใหม่ */
+    unplanned: unplannedMode || (prevTrade ? !!prevTrade.unplanned : (tPortVal!=='satB' && !isSatProduct(curSymVal()) && !wlHas(curSymVal()))),
     /* ★ ประทับวันที่ "เข้าจริง" ครั้งแรกที่ status เป็น open — ใช้ตัดสินว่าไม้นี้กินกระสุนของสัปดาห์ไหน
        ใช้ t.date ไม่ได้ เพราะไม้ที่วางแผนไว้ปลายสัปดาห์ก่อนแล้วมาเข้าจริงสัปดาห์นี้ จะไปนับผิดสัปดาห์
        ไม้เก่าที่ไม่มีค่านี้ wpOpenedKey() จะถอยไปใช้ t.date ให้เอง */
@@ -8290,7 +8598,7 @@ function szRenderCard(o){
   if(heat.totalR + (willBeNew?c.riskR:0) > SZ.MAX_HEAT_R) red.push(`Portfolio heat จะเป็น ${(heat.totalR+(willBeNew?c.riskR:0)).toFixed(2)}R — เกินเพดาน ${SZ.MAX_HEAT_R}R`);
   const wl=Array.isArray(state.watchlist)?state.watchlist:[];
   const wRow=wl.find(x=>x.sym===symU && x.port===o.port);
-  const myTheme=(wRow&&wRow.industry)||null;
+  const myTheme=wlIndustryOfSym(symU)||null;   /* 7W — สะพาน industry จาก watchlist เดิม */
   if(myTheme && heat.byTheme[myTheme] && willBeNew && heat.byTheme[myTheme].n>=SZ.MAX_PER_THEME)
     red.push(`ธีม "${myTheme}" ถืออยู่ ${heat.byTheme[myTheme].n} ตัวแล้ว — เกินเพดาน ${SZ.MAX_PER_THEME} ตัวต่อธีม`);
   /* Catalyst 1-3 เดือน — ไม่ใช่เงื่อนไขบล็อก แต่เป็นเหตุผลที่ควรมีก่อนลงเงินไม้ Satellite */
@@ -8886,7 +9194,7 @@ function renderHeatPanel(){
     if(!d.rows.length){ h+=`<div class="hint">ยังไม่มีไม้ที่เปิดอยู่</div>`; return; }
     h+=`<table class="szTbl"><tr><th>Symbol</th><th>ธีม</th><th>ไม้</th><th>Open Risk</th><th>R</th></tr>`;
     d.rows.forEach(r=>{
-      h+=`<tr><td><b>${r.sym}</b></td><td style="text-align:left;color:var(--muted)">${r.industry}</td>
+      h+=`<tr><td><b>${r.sym}</b></td><td style="text-align:left;color:var(--muted)">${r.industry}${(r.unlisted && r.industry==='— ไม่ระบุ')?' <span class="wlHold nowl">ยังไม่อยู่ใน Watchlist</span>':''}</td>
           <td>${r.legs}</td><td>฿${szNum(r.riskTHB)}</td>
           <td style="color:${r.R>1.05?'var(--red)':'var(--text)'}">${r.R.toFixed(2)}R</td></tr>`;
     });
@@ -8895,7 +9203,7 @@ function renderHeatPanel(){
     if(themes.length){
       h+=`<table class="szTbl" style="margin-top:6px"><tr><th>รวมรายธีม</th><th>จำนวน</th><th>R</th></tr>`;
       themes.sort((a,b)=>b[1].R-a[1].R).forEach(([k,v])=>{
-        const bad=v.n>SZ.MAX_PER_THEME;
+        const bad=v.n>SZ.MAX_PER_THEME && k!=='— ไม่ระบุ';   /* "ไม่ระบุ" ไม่ใช่ธีมจริง — ไม่ตีธงเพดานต่อธีม (ตรงกับเช็คในฟอร์มที่ข้ามธีมว่างอยู่แล้ว) */
         h+=`<tr><td style="color:${bad?'var(--red)':'inherit'}">${k}${bad?' ⚠':''}</td>
             <td style="color:${bad?'var(--red)':'inherit'}">${v.n}/${SZ.MAX_PER_THEME}</td><td>${v.R.toFixed(2)}R</td></tr>`;
       });
@@ -8910,13 +9218,13 @@ function szHeat(port){
   const fx = state.settings.fx, capTHB = portCapTHB(port);
   const oneR = capTHB*szPortRefR(port)/100;
   const wl = Array.isArray(state.watchlist)?state.watchlist:[];
-  const industryOf = sym => { const w = wl.find(x=>x.sym===sym && x.port===port); return (w&&w.industry)||'— ไม่ระบุ'; };
+  const industryOf = sym => wlIndustryOfSym(sym) || '— ไม่ระบุ';   /* 7W — สะพาน industry จาก watchlist เดิม */
   const bySym = {};
   state.trades.filter(t=>t.status==='open' && t.port===port).forEach(t=>{
     const d = Math.abs((t.entry||0)-(t.sl||0));
     const rNat = d*(t.qty||0)*(t.mult||1);
     const rTHB = rNat*((t.cur||PORTS[port].cur)==='USD'?fx:1);
-    if(!bySym[t.sym]) bySym[t.sym] = {sym:t.sym, industry:industryOf(t.sym), riskTHB:0, legs:0, qty:0};
+    if(!bySym[t.sym]) bySym[t.sym] = {sym:t.sym, industry:industryOf(t.sym), unlisted:!wlHas(t.sym), riskTHB:0, legs:0, qty:0};
     bySym[t.sym].riskTHB += rTHB; bySym[t.sym].legs++; bySym[t.sym].qty += (t.qty||0);
   });
   const rows = Object.values(bySym).map(r=>({...r, R: oneR>0 ? r.riskTHB/oneR : 0}))
@@ -9927,7 +10235,9 @@ function bkPayload(){
     _meta:{ app:'trading-dashboard', schema:2, exportedAt:new Date().toISOString(), uid: uid||null,
             accounts: acctList.map(a=>({id:a.id, name:a.name, ports:a.ports})), activeAccount: acctActive },
     doc: acctWrapDoc(state),
-    state: state
+    state: state,
+    /* 7W — Watchlist ใหม่ (users/{uid}/watchlist) · ไฟล์กู้คืนเดิมไม่อ่าน key นี้ จึงไม่กระทบปุ่มกู้คืน/นำเข้า */
+    watchlistV2: wlItems.map(w=>({ticker:w.ticker, market:w.market, port:w.port, note:w.note, added_at:w.added_at}))
   }, null, 2);
 }
 function bkTriggerDownload(){
