@@ -25,20 +25,20 @@
    ============================================================ */
 :root{
   /* ---- พื้นผิว: ไล่จากพื้นหลัง → การ์ด → ช่องกรอก ---- */
-  --bg:#EBECEF;
+  --bg:#EEF0F3;   /* 7D.3 §0.1 — ค่าจาก mockup (เดิม #EBECEF) */
   --surface:#FFFFFF;
   --surface2:#F3F4F6;
   --surface3:#FAFAFB;
-  --border:#E4E6EA;
+  --border:#E3E6EA;   /* 7D.3 §0.1 — ค่าจาก mockup (เดิม #E4E6EA) */
   --hair:#EEF0F3;          /* เส้นคั่นในตาราง — จางกว่า border หนึ่งขั้น */
   --text:#141518;
-  --muted:#62666E;
+  --muted:#7B818C;   /* 7D.3 §0.1 — ค่าจาก mockup (เดิม #62666E) */
   --faint:#9AA0A9;
 
   /* ---- ไฮไลต์ / หมึก (ชุดใหม่ QorTrade) ---- */
   --lime:#A3E635;                      /* พื้นไฮไลต์เท่านั้น — ตัวหนังสือบน lime ต้องดำเสมอ */
   --lime-dim:rgba(163,230,53,.26);
-  --ink:#141518;                       /* พื้นปุ่มหลักสีดำ */
+  --ink:#16181D;                       /* พื้นปุ่มหลักสีดำ — 7D.3 §0.1 ค่าจาก mockup (เดิม #141518) */
   /* การ์ดเด่นใบเดียวของหน้าจอ — ไล่สีเขียวเข้ม ตัวหนังสือขาว */
   --hero:linear-gradient(145deg,#3FA45C 0%,#1C6B3A 55%,#12402A 100%);
 
@@ -75,6 +75,24 @@
   --ind-size:.68rem;
   --plan-size:.8rem;
   --closed-size:.8rem;
+
+  /* ---- 7D.3 §0.1 — ตัวแปรกลาง (design tokens) — ค่าจาก mockups/*.html ----
+     ใช้ชื่อตามสเปกเป๊ะ: --bg --card --ink --mute --line --soft --up --dn --flat --warn --dark
+     --bg/--ink คือของเดิม (เปลี่ยนแค่ค่าให้ตรง mockup) ส่วนที่เหลือเป็นตัวแปรใหม่
+     เอาไปใช้กับ "สไตล์พื้นฐานทั้งแอปทันที" ผ่านการรีแมป --bg/--border/--muted ด้านบน — ไม่แตะ selector อื่นในรอบนี้ */
+  --card:#FFFFFF;
+  --mute:#7B818C;
+  --line:#E3E6EA;
+  --soft:#F5F6F8;
+  --up:#1F9D6B;
+  --dn:#D4493F;
+  --flat:#9AA0A8;
+  --warn:#C98A12;
+  --dark:#1D2025;
+  /* รัศมี (การ์ด 12px · แถว 10px · ปุ่ม 8px · ชิป 999px) */
+  --r-card:12px; --r-row:10px; --r-btn:8px; --r-chip:999px;
+  /* ระยะ */
+  --sp-4:4px; --sp-6:6px; --sp-8:8px; --sp-10:10px; --sp-12:12px; --sp-16:16px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%;font-size:17px;overscroll-behavior:none}
@@ -1509,6 +1527,63 @@ tr.wdragging{opacity:.4;background:var(--teal-dim)!important}
 /* ปิดดีเลย์ 300ms และไฮไลต์เทาตอนแตะของ iOS — ปุ่มจะตอบสนองทันทีที่นิ้วแตะ */
 button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7D.3 §0.2 — ชิ้นส่วนกลาง (namespace UI) — สไตล์
+   คลาสทั้งหมดขึ้นต้น "ui-" ไม่ชนกับคลาสเดิมของแอป (เช่น .tile/.chip/.row มีอยู่แล้วในหน้าอื่น)
+   ยังไม่ถูกอ้างอิงจากหน้าไหนในรอบนี้ — dormant จนกว่าจะเริ่ม "ส่วนที่ 1" (รอบถัดไป)
+   ══════════════════════════════════════════════════════════════════════════ */
+.ui-acctStrip{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--c,#888);border-radius:var(--r-row);padding:7px 12px;margin-bottom:6px;font-size:13px;flex-wrap:wrap;color:var(--dark)}
+.ui-acctStrip b{min-width:70px}
+.ui-acctF{color:var(--mute)}
+.ui-acctF.ui-warn{color:var(--warn);font-weight:600}
+@media (max-width:430px){ .ui-acctStrip .ui-acctF.ui-sec:not(.ui-warn){display:none} }
+
+.ui-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:430px){ .ui-tiles{grid-template-columns:1fr 1fr} }
+.ui-tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:10px;cursor:pointer;min-width:0}
+.ui-tile.ui-sel{border-color:var(--dark);box-shadow:0 0 0 1px var(--dark)}
+.ui-tile-k{font-size:11.5px;color:var(--mute)}
+.ui-tile-v{font-size:15px;font-weight:700;margin-top:2px;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ui-tile-v.ok{color:var(--up)}.ui-tile-v.bad{color:var(--dn)}.ui-tile-v.warn{color:var(--warn)}.ui-tile-v.flat{color:var(--flat)}
+.ui-tile-s{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.ui-plan{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:12px;min-width:0}
+.ui-plan-h{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.ui-plan-h b{font-size:15px;color:var(--dark)}
+.ui-plan-nums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:430px){ .ui-plan-nums{grid-template-columns:1fr 1fr} }
+.ui-plan-nums label{display:block;font-size:11px;color:var(--mute)}
+.ui-num{border:1px solid var(--line);border-radius:var(--r-btn);padding:8px;font-size:15px;color:var(--dark)}
+.ui-rr{font-size:12px;color:var(--mute);margin:6px 0 4px}
+.ui-rr b{color:var(--dark)}
+.ui-plan-accts{margin-top:8px}
+/* ปุ่มหลักของการ์ดบน ≤430 ติดล่างจอเหนือแถบแท็บ (safe-area) — .ui-plan-cta คือปุ่มหลักของการ์ดเมื่อถูกใช้จริงในรอบถัดไป */
+.ui-plan-cta{margin-top:10px}
+@media (max-width:430px){
+  .ui-plan-cta.ui-sticky{position:fixed;left:12px;right:12px;bottom:calc(var(--tabbar-h,68px) + env(safe-area-inset-bottom,0px) + 8px);z-index:55}
+}
+
+.ui-row{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-row);margin-bottom:6px;font-size:13px;flex-wrap:wrap}
+.ui-dot{width:8px;height:8px;border-radius:50%;background:var(--c,#888);flex:none}
+.ui-nm{font-weight:700;min-width:62px;color:var(--dark)}
+.ui-v{flex:1;min-width:120px;color:var(--dark)}
+.ui-tag{font-size:11px;padding:2px 8px;border-radius:var(--r-chip);background:var(--soft);color:var(--mute)}
+.ui-tag.L{background:rgba(31,157,107,.14);color:var(--up)}
+.ui-tag.S{background:rgba(212,73,63,.14);color:var(--dn)}
+.ui-btn{border:1px solid var(--line);background:var(--card);border-radius:var(--r-btn);padding:5px 10px;font-size:12px;white-space:nowrap;color:var(--dark);cursor:pointer}
+
+.ui-chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
+.ui-chip{font-size:11.5px;padding:3px 9px;border-radius:var(--r-chip);border:1px solid var(--line);background:var(--card);color:var(--dark);cursor:pointer}
+.ui-chip.ui-on{background:var(--dark);color:#fff;border-color:var(--dark)}
+
+.ui-sheet-backdrop{position:fixed;inset:0;background:rgba(20,21,24,.32);z-index:200;display:flex;align-items:center;justify-content:center}
+.ui-sheet{background:var(--card);border-radius:var(--r-card);max-width:560px;width:min(90vw,560px);max-height:80vh;overflow:auto;box-shadow:0 12px 32px rgba(16,20,28,.2);padding:16px}
+@media (max-width:430px){
+  .ui-sheet-backdrop{align-items:flex-end}
+  .ui-sheet{width:100%;max-width:none;border-radius:var(--r-card) var(--r-card) 0 0;max-height:86vh;
+    padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+}
 </style>
 </head>
 <body>
@@ -2737,14 +2812,26 @@ function wlAttachMirror(st, d){
   hide('toJSON', function(){ return wlBookForWrite(this); });
   return st;
 }
-function buildStateFromBook(d, exists){
-  return wlAttachMirror(buildStateFromBookRaw(d, exists), d);
+function buildStateFromBook(d, exists, acctIdForLog){
+  return wlAttachMirror(buildStateFromBookRaw(d, exists, acctIdForLog), d);
 }
 /* ก้อนที่จะเขียนลง users/{uid}.books.<id> — ไม่มีสำเนา watchlist ใหม่ · ใส่ watchlist เดิม (ดิบ) กลับเหมือนที่อ่านมา */
 function wlBookForWrite(book){
-  if(!wlHasWrapper(book)) return book;
+  if(!wlHasWrapper(book)) return stripTransientKeys(book);
   const out = Object.assign({}, book);            /* เฉพาะ enumerable → ไม่ติดสำเนา/ธง/toJSON */
   if(book.__legacyWatchlist !== undefined) out.watchlist = book.__legacyWatchlist;
+  return stripTransientKeys(out);
+}
+/* 7D.3 §0.5 — ตัด field ใน TRANSIENT_KEYS ออกก่อนเขียนขึ้น Firestore เสมอ (TRANSIENT_KEYS ว่างอยู่ตอนนี้ จึงยังไม่มีผลจริง) */
+function stripTransientKeys(book){
+  if(!book || !TRANSIENT_KEYS.length) return book;
+  let out = book, copied = false;
+  TRANSIENT_KEYS.forEach(k=>{
+    if(Object.prototype.hasOwnProperty.call(out, k)){
+      if(!copied){ out = Object.assign({}, out); copied = true; }
+      delete out[k];
+    }
+  });
   return out;
 }
 function wlLegacyList(b){
@@ -2791,9 +2878,30 @@ auth.onAuthStateChanged(user=>{
 /* ── สร้าง state จาก "ก้อนข้อมูลของบัญชี" (โครงเดิมเป๊ะ) ──
    ย้ายออกมาเป็นฟังก์ชันเพื่อให้ทั้ง onSnapshot และการสลับบัญชีใช้ตัวเดียวกัน
    เนื้อในคัดลอกจากของเดิมทั้งหมด ไม่ได้แก้ตรรกะ */
-function buildStateFromBookRaw(d, exists){
+/* 7D.3 §0.5 — แก้ต้นเหตุ "field หายตอนโหลด" (บั๊กแบบ sat_since/phase7mV1 ข้างบนนี้ เกิดมา 4 ครั้งแล้ว)
+   เดิม: allowlist ตายตัว — field ใหม่ที่ยังไม่ถูกเพิ่มในนี้จะหายทุกครั้งที่ sync แม้จะ save ไว้บน server แล้วก็ตาม
+   ใหม่: {...d} ก่อน (คงทุก field ที่มีมาจาก server) แล้วค่อย normalize/ใส่ค่าเริ่มต้นทับเฉพาะ field ที่รู้จัก
+   field ชั่วคราวที่ห้ามบันทึกกลับ ประกาศใน TRANSIENT_KEYS แล้วตัดออกตอน persist (ดู wlBookForWrite) */
+const TRANSIENT_KEYS = [];
+/* รายชื่อ field บนสุดของ "ก้อนข้อมูลบัญชี" ที่โค้ดรู้จักแล้ว ณ วันที่เขียน §0.5 (23 field ของเดิม + สอง field แบบมีเงื่อนไข) */
+const KNOWN_BOOK_FIELDS = ['settings','trades','watchlist','industries','watchSortMode','scoreCriteria','fontSizes',
+  'checklistDrafts','ideas','watchCollapsed','tabsOffset','tabsOffsetV2','satBNoteV1','exitReasons','fundflow',
+  'scoreLabels','journalView','reasonTags','weeklyPlan','sbPlan','sbProducts','industryLinks','sat_since','phase7mV1','failLog'];
+/* กันสแปม console — log "unknown keys" ซ้ำเฉพาะตอนรายการเปลี่ยนไปจากครั้งก่อนของบัญชีเดียวกัน (ไม่ใช่ทุกครั้งที่ re-render เรียกฟังก์ชันนี้) */
+const _unknownBookKeysLogged = new Map();   /* acctId -> JSON ของรายการล่าสุดที่ log ไปแล้ว */
+function buildStateFromBookRaw(d, exists, acctIdForLog){
   if(exists){
-      return {settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
+      const unknown = Object.keys(d).filter(k=>!KNOWN_BOOK_FIELDS.includes(k));
+      if(unknown.length){
+        const label = acctIdForLog || '(ไม่ทราบบัญชี)';
+        const sig = JSON.stringify(unknown);
+        if(_unknownBookKeysLogged.get(label) !== sig){
+          _unknownBookKeysLogged.set(label, sig);
+          console.info('[buildStateFromBookRaw] บัญชี "'+label+'" มี field บนสุดที่ยังไม่รู้จัก (ไม่ได้ normalize/ตัดทิ้ง เพราะ {...d} เก็บไว้ให้แล้ว):', unknown);
+        }
+      }
+      const out = {...d,
+        settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
         watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
         fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[], ideas: Array.isArray(d.ideas)?d.ideas:[], watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAULT_TABS_OFFSET,
         tabsOffsetV2: !!d.tabsOffsetV2,   /* เดิมไม่ได้ copy field นี้มา — ทำให้ ensureTabsOffsetV2() คิดว่าต้อง migrate ใหม่ทุกครั้งที่ sync ยิง schedulePersist() วนซ้ำไม่จำเป็น */
@@ -2812,9 +2920,12 @@ function buildStateFromBookRaw(d, exists){
         sbPlan: (d.sbPlan && typeof d.sbPlan==='object') ? d.sbPlan : {},   /* ★ แผนเทรด Sat.B (Zone/Setup) — ต้อง copy ที่นี่เสมอ ดูบทเรียน satBNoteV1 ด้านบน */
         sbProducts: Array.isArray(d.sbProducts) ? d.sbProducts : null,      /* ★ รายการสินค้า Sat.B — เช่นกัน */
         industryLinks: (d.industryLinks && typeof d.industryLinks==='object') ? d.industryLinks : {},  /* ★ ลิงก์ packet ของแต่ละ industry */
-        ...(d.sat_since ? {sat_since: d.sat_since} : {}),   /* 7D — ตัวนับไม้ Sat เริ่มจากวันนี้ · เดิมไม่ได้ copy → หายทุกครั้งที่ snapshot มา */
-        ...(d.phase7mV1 ? {phase7mV1: true} : {}),   /* 7D — ธงกันรัน 7M ซ้ำ เดิมก็ไม่ได้ copy เหมือนกัน (บทเรียนเดียวกับ sat_since ด้านบน) */
         failLog: Array.isArray(d.failLog) ? d.failLog : []};   /* เดิมไม่ได้ copy field นี้มา — ประวัติ fail-log ของ Fundamental Checklist จะหายทุกครั้งที่ sync */
+      /* sat_since/phase7mV1 — ต้อง "ไม่มี key นี้เลย" เมื่อค่าเป็น falsy (พฤติกรรมเดิมเป๊ะ) ไม่ใช่แค่เป็น undefined
+         {...d} ด้านบนแปะ raw value มาให้แล้วไม่ว่า falsy หรือไม่ ต้องเช็คซ้ำแล้วลบออกเองตรงนี้ */
+      if(d.sat_since) out.sat_since = d.sat_since; else delete out.sat_since;
+      if(d.phase7mV1) out.phase7mV1 = true; else delete out.phase7mV1;
+      return out;
   } else {
       return {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), failLog:[], weeklyPlan:{}, sbPlan:{}, sbProducts:null, industryLinks:{}};
     }
@@ -2902,8 +3013,8 @@ function viewAccounts(){
   return cur ? [cur] : [];
 }
 /* สร้าง state ของบัญชีที่ไม่ได้เปิดอยู่ — รัน ensure* ชุดเดียวกับตอน acctSwitch เพื่อให้ตัวเลขตรงกับตอนสลับไปดูจริง (ไม่เรียก render/persist) */
-function acctBuildBook(raw){
-  const st = buildStateFromBook(raw || {}, !!raw);
+function acctBuildBook(raw, id){
+  const st = buildStateFromBook(raw || {}, !!raw, id);
   const savedState = state, savedActive = acctActive;
   try{
     state = st;
@@ -2917,7 +3028,7 @@ function getBook(id){
   if(id === acctActive && state) return state;
   const raw = acctBooks[id];
   if(wlHasWrapper(raw)) return raw;            /* เคยสร้างไว้แล้ว (หรือเป็น state ที่เก็บไว้ตอนสลับบัญชี) */
-  const st = acctBuildBook(raw);
+  const st = acctBuildBook(raw, id);
   acctBooks[id] = st;                          /* คงตัวเดียวจนกว่า snapshot ใหม่จะแทนที่ — ทำให้แก้แล้วเซฟได้ก้อนเดียวกัน */
   return st;
 }
@@ -3010,7 +3121,7 @@ function acctSwitch(id){
   acctBooks[acctActive] = state;
   acctActive = id;
   const has = !!acctBooks[id];
-  state = buildStateFromBook(acctBooks[id] || {}, has);
+  state = buildStateFromBook(acctBooks[id] || {}, has, id);
   ensureScoreLabels(); ensureJournalView();
   ensureSatBDefaults(); ensureTabsOffsetV2(); ensure1RModel();
   ensureSatBNoteMerge(); ensureSatACap25(); ensureSatBVolBands();
@@ -3050,7 +3161,7 @@ function acctDelete(id){
   pendingDeletedBookIds.push(id);   /* เฟส 7B — ลบจริงบน server ตอน doPersist() ด้วย FieldValue.delete() ไม่ใช่แค่ในเครื่อง */
   if(acctActive===id){
     acctActive = acctList[0].id;
-    state = buildStateFromBook(acctBooks[acctActive] || {}, !!acctBooks[acctActive]);
+    state = buildStateFromBook(acctBooks[acctActive] || {}, !!acctBooks[acctActive], acctActive);
     ensureScoreLabels(); ensureJournalView();
     applyFontSizes(); render();
   }
@@ -3128,7 +3239,7 @@ function startListening(){
        (snapshot จาก cache ตอนนั้นไม่มีข้อมูลใหม่อะไรให้เลย มีแต่ของเก่ากว่าหรือเท่ากัน) */
     if(snap.metadata.fromCache && stateFromServer){ return; }
     acctAdoptDoc(snap.exists ? (snap.data()||{}) : {});
-    state = buildStateFromBook(acctCurrentBook(), acctBookExists());
+    state = buildStateFromBook(acctCurrentBook(), acctBookExists(), acctActive);
     /* บันทึก "ที่มา" ของ state ก้อนที่เพิ่งสร้าง — true = สร้างจากข้อมูล server จริง, false = สร้างจาก cache ในเครื่อง
        ทุกการเขียนขึ้น server ต้องเช็ค flag นี้ ไม่ใช่เช็คแค่ serverConfirmed */
     stateFromServer = !snap.metadata.fromCache;
@@ -5608,7 +5719,7 @@ function withState(st, fn){
 function acctAllStates(){
   return acctList.map(a=>({
     acct: a,
-    st: (a.id===acctActive) ? state : buildStateFromBook(acctBooks[a.id] || {}, !!acctBooks[a.id])
+    st: (a.id===acctActive) ? state : buildStateFromBook(acctBooks[a.id] || {}, !!acctBooks[a.id], a.id)
   }));
 }
 /* ตัวเลขสรุปของบัญชีเดียว (ฐาน THB) — นับเฉพาะพอร์ตที่บัญชีนั้นเปิดใช้ */
@@ -9461,6 +9572,151 @@ const SATW_COMPS = ['trend','momentum','zone','sentiment','macro'];
 const SATW_COMP_LABEL = {trend:'Trend', momentum:'Momentum', zone:'Zone', sentiment:'Sentiment', macro:'Macro'};
 const SATW_MACRO_KEY = {XAUUSD:'XAU', BRENT:'OIL', BTCUSD:'BTC', S50:null};
 
+/* ══════════════════════════════════════════════════════════════════════════
+   7D.3 §0.3/0.4/0.7 — ฐานรากสำหรับ "ส่วนที่ 1" (หน้า Sat ใหม่) — ยังไม่ถูกเรียกใช้จริงที่ไหนในรอบนี้ (dormant)
+   ส่วนที่ 1 (UI จริง) เป็นงานรอบถัดไปที่ต้องได้รับอนุมัติก่อน — รอบนี้แค่วางฐาน + ทดสอบแยกได้
+   ══════════════════════════════════════════════════════════════════════════ */
+/* §0.7 — สวิตช์: true = หน้า Sat แบบใหม่ (ส่วนที่ 1) · false = หน้า Sat แบบ 7D.2 เดิม (ปัจจุบัน)
+   ยังไม่มีผลอะไรในรอบนี้เพราะหน้าใหม่ยังไม่ถูกสร้าง — ตั้งเป็น false ไว้ก่อน (ของใหม่ยังไม่มีอยู่จริง ไม่ควร "เปิด" สิ่งที่ยังไม่มี)
+   SAT7D_ON (สวิตช์เดิมด้านบน) ยังคงอยู่และยังคุมพฤติกรรมจริงเหมือนเดิมทุกอย่าง */
+const SAT_V3_ON = false;
+/* §0.3 — เนื้อหาเป็นรายการข้อมูล (ไม่ฝังในโค้ด HTML) — เพิ่ม/สลับองค์ประกอบ = แก้ที่นี่ที่เดียว
+   ค่าตรงกับ SAT7D_ASSETS/SAT7D_LABEL/SATW_MACRO_KEY เดิมด้านบน (ยังไม่ได้รวมเป็นตัวเดียวกันในรอบนี้ เพื่อไม่แตะพฤติกรรมของ 7D/7D.2 เดิม) */
+const SAT_ASSETS = [
+  {key:'XAUUSD', label:'XAUUSD', ff:'XAU'},
+  {key:'BTCUSD', label:'BTC',    ff:'BTC'},
+  {key:'S50',    label:'S50',    ff:null},
+  {key:'BRENT',  label:'Brent',  ff:'OIL'}
+];
+const SAT_FACTORS = [
+  {k:'trend',     label:'Trend'},
+  {k:'momentum',  label:'Momentum'},
+  {k:'zone',      label:'Zone'},
+  {k:'sentiment', label:'Sentiment'},
+  {k:'macro',     label:'Macro'}
+];
+/* §0.3 — STRIP_FIELDS กำหนดว่าแถบบัญชีของแต่ละโหมดโชว์ช่องอะไร (ป้าย/ลำดับเท่านั้น — ตัวเลขจริงมาจาก settings ตอน render จริงใน UI.acctStrip)
+   สเปกทิ้งรายการไว้เป็น "..." — รายการด้านล่างเป็นตัวเลือกที่ตัดสินใจเอง อิง mockup app-mockup.html/acctStrip() · ปรับได้ตอนสร้างส่วนที่ 1 จริง */
+const STRIP_FIELDS = {
+  sat: [
+    {key:'heat',      label:'heat',  suffix:'/6%'},
+    {key:'newCount',  label:'ใหม่',   suffix:'/2'},
+    {key:'rpt',       label:'RPT',   secondary:true},
+    {key:'openCount', label:'ไม้ Sat', secondary:true}
+  ],
+  core: [
+    {key:'riskOpen',   label:'เสี่ยงค้าง', suffix:'%'},
+    {key:'riskPlan',   label:'plan',      suffix:'%'},
+    {key:'watchReady', label:'',          suffix:'ตัว'},
+    {key:'newCount',   label:'ใหม่',       suffix:'/2'}
+  ]
+};
+
+/* §0.4 — ชั้นคำนวณแยก (namespace Calc) — ฟังก์ชันล้วน (pure) ไม่แตะ DOM ไม่อ่าน state/settings ตรง ๆ (รับค่าที่ต้องใช้เป็นพารามิเตอร์)
+   sat7dCalc()/sat7dAcctBase() ด้านล่าง (ตัวคำนวณเดิมของ 7D/7D.2) ถูกแก้ให้เรียกผ่านชุดนี้แล้ว — ทดสอบ §7 (0.19 lot / 6 สัญญา) ต้องได้ค่าเดิม
+   UI (ปัจจุบันคือ sat7d* — อนาคตคือส่วนที่ 1) เรียก Calc เท่านั้น ไม่คำนวณเอง */
+const Calc = {
+  /* ขนาดไม้ Sat (lot หรือ สัญญา แล้วแต่ broker) — ย้ายมาจากใจกลาง sat7dCalc() เดิมทั้งดุ้น พฤติกรรมเท่าเดิมทุกกรณี
+     riskAmount = เงินเสี่ยงต่อไม้ "ในสกุลของสัญญา" (แปลง USD/THB มาก่อนแล้วจากผู้เรียก) · dist = |entry-sl|
+     คืน {lot:number|null, msg:string} — lot=null,msg='' = ข้อมูลไม่พอให้คำนวณ · lot=null,msg=... = คำนวณได้แต่ต่ำกว่า minLot */
+  satLot({riskAmount, dist, contract, lotStep, minLot}){
+    if(!(riskAmount>0) || !(dist>0) || !(contract>0) || !(lotStep>0)) return {lot:null, msg:''};
+    const raw = riskAmount / (dist * contract);
+    const steps = Math.floor(raw/lotStep + 1e-9);
+    const l = steps * lotStep;
+    if(l < minLot - 1e-12) return {lot:null, msg:'SL กว้างเกินขนาดขั้นต่ำ'};
+    return {lot:l, msg:''};
+  },
+  /* Risk:Reward แบบง่าย — |tp-entry| / |entry-sl| */
+  rr(entry, sl, tp){
+    const e=+entry, s=+sl, t=+tp;
+    if(!e || !s || !t || e===s) return null;
+    return Math.abs(t-e)/Math.abs(e-s);
+  },
+  /* heat% ของบัญชี = ความเสี่ยงที่ค้างอยู่ (บาท) / ทุน (บาท) * 100 */
+  heat(openRiskTHB, capTHB){
+    return capTHB>0 ? openRiskTHB/capTHB*100 : null;
+  },
+  /* จำนวนไม้ใหม่ในสัปดาห์ (status open/closed ที่เปิดในสัปดาห์ weekKey) — openedKeyFn(t) คืนสัปดาห์ที่ไม้นั้นเปิด */
+  newCount(trades, weekKey, openedKeyFn){
+    return (trades||[]).filter(t=>(t.status==='open' || t.status==='closed') && openedKeyFn(t)===weekKey).length;
+  },
+  /* พร้อมเข้าไม้ไหม + เหตุผลที่ไม่พร้อม (ลำดับตรงกับ warns เดิมของ sat7dCalc เป๊ะ) — คืน {ok, reasons[]} */
+  readiness({heatPct, heatMax, quotaFull, checksOk, hasInvalidation, side, hasChosenBroker, hasAnyBroker, lotMsg, hasCapital}){
+    const reasons = [];
+    if(heatPct!=null && heatMax!=null && heatPct > heatMax + 1e-9) reasons.push('heat เกิน');
+    if(quotaFull) reasons.push('โควตาเต็ม');
+    if(!checksOk) reasons.push('checklist ไม่ครบ');
+    if(!hasInvalidation) reasons.push('ไม่มี Invalidation');
+    if(side===null) reasons.push('ยังไม่กรอก Entry/SL'); else if(side===false) reasons.push('SL ผิดฝั่ง');
+    if(!hasChosenBroker) reasons.push(hasAnyBroker ? 'ยังไม่ตั้งขนาดสัญญา' : 'ยังไม่ตั้งโบรก');
+    if(lotMsg) reasons.push(lotMsg);
+    if(!hasCapital) reasons.push('ยังไม่ตั้งถัง Sat');
+    return {ok: reasons.length===0, reasons};
+  }
+};
+
+/* §0.2 — ชิ้นส่วนกลาง (namespace UI) — คืน HTML string เท่านั้น ไม่แตะ state/DOM ตรง ๆ
+   ยังไม่ถูกเรียกใช้ในหน้าใดในรอบนี้ (dormant จนกว่าจะเริ่มส่วนที่ 1) — คลาส CSS ทั้งหมดขึ้นต้นด้วย "ui-" กันชนกับคลาสเดิมทั้งแอป
+   (แอปเดิมมี .tile/.chip/.row ของตัวเองอยู่แล้วในหน้าอื่น ๆ — ใช้ชื่อชนกันจะทำให้ CSS เดิมเพี้ยน จึงตั้ง namespace แยกตามหลัก "namespace UI") */
+const UI = {
+  /* fields: [{name, color, items:[{label, value, warn, secondary}]}] — 1 รายการ = 1 บัญชี 1 บรรทัด
+     บน ≤430 (ดู CSS .ui-acctF.ui-sec) ซ่อน field รอง (secondary) แต่ field ที่ warn ไม่ถูกซ่อนแม้จะเป็น secondary ก็ตาม */
+  acctStrip(fields){
+    return (fields||[]).map(a=>{
+      const items = (a.items||[]).map(it=>{
+        const cls = 'ui-acctF' + (it.warn?' ui-warn':'') + (it.secondary?' ui-sec':'');
+        return `<span class="${cls}">${it.label?escHtml(it.label)+' ':''}${it.value!=null?it.value:'—'}</span>`;
+      }).join('');
+      return `<div class="ui-acctStrip" style="--c:${a.color||'#888'}"><b>${escHtml(a.name||'')}</b>${items}</div>`;
+    }).join('');
+  },
+  /* list: [{key,title,value,sub,cls}] · selKey = key ที่เลือกอยู่ตอนนี้ (หรือ null) — บน ≤430 จัด 2×2 ด้วย CSS grid (ดู .ui-tiles) */
+  tiles(list, selKey){
+    return `<div class="ui-tiles">${(list||[]).map(t=>
+      `<div class="ui-tile${selKey===t.key?' ui-sel':''}" data-key="${escHtml(t.key)}">
+         <div class="ui-tile-k">${escHtml(t.title||'')}</div>
+         <div class="ui-tile-v${t.cls?(' '+t.cls):''}">${t.value!=null?t.value:'—'}</div>
+         <div class="ui-tile-s">${escHtml(t.sub||'')}</div>
+       </div>`).join('')}</div>`;
+  },
+  /* model: {sym,dir:'L'|'S',tag,entry,sl,tp,cancel,rr,setups:[{label,on}],accts:[{name,color,line}]}
+     adapter: {sizeLine(model,acct)->string} — ส่วนคำนวณขนาดไม้มาจาก adapter (Sat = lot/สัญญา · อนาคต Core = หุ้น) ตัว UI.planCard เองไม่คำนวณ */
+  planCard(model, adapter){
+    const dt = model.dir==='S' ? 'Short' : 'Long';
+    const rows = (model.accts||[]).map(a=>{
+      const line = adapter && typeof adapter.sizeLine==='function' ? adapter.sizeLine(model, a) : (a.line||'—');
+      return `<div class="ui-row" style="--c:${a.color||'#888'}"><span class="ui-dot"></span><span class="ui-nm">${escHtml(a.name||'')}</span><span class="ui-v">${line}</span></div>`;
+    }).join('');
+    const setups = (model.setups||[]).map(s=>`<span class="ui-chip${s.on?' ui-on':''}">${s.on?'✓ ':''}${escHtml(s.label)}</span>`).join('');
+    return `<div class="ui-plan">
+      <div class="ui-plan-h"><b>${escHtml(model.sym||'')}</b><span class="ui-tag ${model.dir||''}">${dt}</span>${model.tag?`<span class="ui-tag">${escHtml(model.tag)}</span>`:''}</div>
+      <div class="ui-plan-nums">
+        <div><label>Entry</label><div class="ui-num">${model.entry??'—'}</div></div>
+        <div><label>SL</label><div class="ui-num">${model.sl??'—'}</div></div>
+        <div><label>TP</label><div class="ui-num">${model.tp??'—'}</div></div>
+        <div><label>Cancel Level</label><div class="ui-num">${model.cancel??'—'}</div></div>
+      </div>
+      ${model.rr!=null?`<div class="ui-rr">= <b>${model.rr}</b></div>`:''}
+      <div class="ui-chips">${setups}</div>
+      <div class="ui-plan-accts">${rows}</div>
+    </div>`;
+  },
+  /* model: {color,name,tag,detail,btns:[{label,cls}]} — แถว 1 บรรทัด (จุดสีบัญชี · ชื่อ · ป้าย · รายละเอียด · ปุ่ม) */
+  row(model){
+    const btns = (model.btns||[]).map(b=>`<span class="ui-btn${b.cls?(' '+b.cls):''}">${escHtml(b.label)}</span>`).join('');
+    return `<div class="ui-row" style="--c:${model.color||'#888'}"><span class="ui-dot"></span><span class="ui-nm">${escHtml(model.name||'')}</span>${model.tag?`<span class="ui-tag">${escHtml(model.tag)}</span>`:''}<span class="ui-v">${escHtml(model.detail||'')}</span>${btns}</div>`;
+  },
+  /* list: [{label,on}] — ชิปเลือก/ติ๊ก */
+  chips(list){
+    return `<div class="ui-chips">${(list||[]).map(c=>`<span class="ui-chip${c.on?' ui-on':''}">${c.on?'✓ ':''}${escHtml(c.label)}</span>`).join('')}</div>`;
+  },
+  /* html = เนื้อหาข้างใน — Mac แสดงเป็นหน้าต่างลอย / iPhone แสดงเป็นแผ่นเลื่อนขึ้นจากล่าง (ตัดสินใจล้วนด้วย CSS media query ไม่ใช่ JS) */
+  sheet(html){
+    return `<div class="ui-sheet-backdrop"><div class="ui-sheet">${html||''}</div></div>`;
+  }
+};
+
 let satIdeasList = [], satWeekMap = {};
 let satErr = null, satWeekErr = null, satFilter = 'active';
 let satUnsubs = [], satUnsubUid = null;
@@ -9560,10 +9816,10 @@ function sat7dAcctBase(accId){
   const openRisk = trades.filter(t=>t.status==='open')
     .reduce((a,t)=>a + Math.abs(t.entry - t.sl) * t.qty * (t.mult||1) * toTHB(t), 0);
   const wk = wpWeekKey();
-  const nNew = trades.filter(t=>(t.status==='open' || t.status==='closed') && wpOpenedKey(t)===wk).length;
+  const nNew = Calc.newCount(trades, wk, wpOpenedKey);   /* §0.4 — ย้ายมาที่ Calc.newCount() พฤติกรรมเท่าเดิม */
   const cnt = sat7dCounter(B);
   const rpt = cnt.hi ? SAT7D_RPT_HI : SAT7D_RPT;
-  return {B, fx, cap, trades, openRisk, nNew, cnt, rpt, riskTHB: cap*rpt/100, heatPct: cap>0 ? openRisk/cap*100 : null};
+  return {B, fx, cap, trades, openRisk, nNew, cnt, rpt, riskTHB: cap*rpt/100, heatPct: Calc.heat(openRisk, cap)};
 }
 function sat7dSideOk(idea){
   const e = +idea.entry, s = +idea.sl;
@@ -9597,29 +9853,24 @@ function sat7dCalc(idea, accId){
   if(chosen){
     riskCur = chosen.cfg.cur==='USD' ? (base.fx>0 ? base.riskTHB/base.fx : null) : base.riskTHB;
     if(side===true && riskCur>0 && dist>0){
-      const raw = riskCur / (dist * chosen.cfg.contract);
-      const steps = Math.floor(raw/chosen.cfg.lotStep + 1e-9);
-      const l = steps * chosen.cfg.lotStep;
-      if(l < chosen.cfg.minLot - 1e-12) lotMsg = 'SL กว้างเกินขนาดขั้นต่ำ';
-      else { lot = l; actualTHB = l * dist * chosen.cfg.contract * (chosen.cfg.cur==='USD' ? base.fx : 1); }
+      /* §0.4 — ย้ายมาที่ Calc.satLot() พฤติกรรมเท่าเดิม (ดู §7: XAUUSD main/XM = 0.19 lot · S50 main/Pi = 6 สัญญา) */
+      const r = Calc.satLot({riskAmount:riskCur, dist, contract:chosen.cfg.contract, lotStep:chosen.cfg.lotStep, minLot:chosen.cfg.minLot});
+      if(r.lot==null) lotMsg = r.msg;
+      else { lot = r.lot; actualTHB = r.lot * dist * chosen.cfg.contract * (chosen.cfg.cur==='USD' ? base.fx : 1); }
     }
   }
   const tradeExists = !!(slot.trade_id && base.trades.some(t=>t.id===slot.trade_id));
   const heatTHB = base.openRisk + (tradeExists ? 0 : actualTHB);
-  const heatPct = base.cap>0 ? heatTHB/base.cap*100 : null;
+  const heatPct = Calc.heat(heatTHB, base.cap);
   const quotaFull = tradeExists ? base.nNew > SAT7D_NEW_MAX : base.nNew >= SAT7D_NEW_MAX;
-  const warns = [];
-  if(heatPct!=null && heatPct > SAT7D_HEAT_MAX + 1e-9) warns.push('heat เกิน');
-  if(quotaFull) warns.push('โควตาเต็ม');
-  if(!sat7dChecksOk(idea)) warns.push('checklist ไม่ครบ');
-  if(!String(idea.invalidation||'').trim()) warns.push('ไม่มี Invalidation');
-  if(side===null) warns.push('ยังไม่กรอก Entry/SL'); else if(side===false) warns.push('SL ผิดฝั่ง');
-  if(!chosen) warns.push(sat7dHasAnyBroker(base.B) ? 'ยังไม่ตั้งขนาดสัญญา' : 'ยังไม่ตั้งโบรก');
-  if(lotMsg) warns.push(lotMsg);
-  if(!(base.cap>0)) warns.push('ยังไม่ตั้งถัง Sat');
   const flags = sat7dIdeaFlags(idea);
-  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns, ready: warns.length===0, tradeExists,
-          offplan: flags.off || warns.length>0, flags};
+  const rd = Calc.readiness({
+    heatPct, heatMax: SAT7D_HEAT_MAX, quotaFull,
+    checksOk: sat7dChecksOk(idea), hasInvalidation: !!String(idea.invalidation||'').trim(), side,
+    hasChosenBroker: !!chosen, hasAnyBroker: sat7dHasAnyBroker(base.B), lotMsg, hasCapital: base.cap>0
+  });
+  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: rd.reasons, ready: rd.ok, tradeExists,
+          offplan: flags.off || !rd.ok, flags};
 }
 
 /* ── การกระทำของผู้ใช้ → เขียนเอกสารที่แก้เท่านั้น ── */
