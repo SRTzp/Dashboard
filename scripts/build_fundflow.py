@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-build_fundflow.py — คำนวณ 5 ratio ของแถบ Regime แล้วเขียน fundflow.json (เฟส 4 · งาน P1)
+build_fundflow.py — คำนวณ 6 ratio ของแถบ Regime แล้วเขียน fundflow.json (เฟส 4 · งาน P1)
 
 หน้า index.html อ่านไฟล์นี้แบบ relative ('fundflow.json') จึงต้องวางไว้ที่ราก repo เดียวกับ index.html
 รันโดย GitHub Actions หลังตลาด US ปิด (.github/workflows/fundflow.yml) — ไม่ใช้ LLM ไม่ใช้ secret
@@ -20,6 +20,7 @@ RATIOS = {
     # key          ตัวตั้ง   ตัวหาร   TF
     'ACWI_BIL':  ('ACWI',  'BIL',  'W'),
     'HYG_IEF':   ('HYG',   'IEF',  'W'),
+    'HYG_IEI':   ('HYG',   'IEI',  'W'),   # เพิ่มใหม่ — คู่กับ HYG_IEF (แอปยังอ่าน key เดิม)
     'HG_GC':     ('HG=F',  'GC=F', 'W'),   # front-month continuous — ต่างจาก HG1!/GC1! ของ TV เล็กน้อยช่วง roll (ยอมรับแล้ว)
     'SPHB_SPLV': ('SPHB',  'SPLV', 'D'),
     'RSP_SPY':   ('RSP',   'SPY',  'D'),
@@ -104,12 +105,14 @@ def selftest():
     one = {d: 1.0 for d in ds}
     # ขึ้นแล้วกลับลง 5 วันท้าย
     turn = {d: (100 + i * 0.1 if i < len(ds) - 5 else 100 + (len(ds) - 5) * 0.1 - (i - len(ds) + 6) * 20) for i, d in enumerate(ds)}
-    p = {'ACWI': up, 'BIL': one, 'HYG': dn, 'IEF': one, 'HG=F': up, 'GC=F': one,
+    p = {'ACWI': up, 'BIL': one, 'HYG': dn, 'IEF': one, 'IEI': one, 'HG=F': up, 'GC=F': one,
          'SPHB': turn, 'SPLV': one, 'RSP': up, 'SPY': one}
     r, e = compute(p)
     assert not e, e
     assert r['ACWI_BIL']['up'] and r['ACWI_BIL']['tf'] == 'W'
     assert r['HYG_IEF']['up'] is False
+    assert 'HYG_IEI' in r and r['HYG_IEI']['up'] is False and r['HYG_IEI']['tf'] == 'W', r.get('HYG_IEI')
+    assert len(r) == len(RATIOS)
     assert r['SPHB_SPLV']['up'] is False and 1 <= r['SPHB_SPLV']['flip_days'] <= 5, r['SPHB_SPLV']
     assert r['ACWI_BIL']['flip_days'] > 50
     wk = weekly_last(ds[:10], list(range(10)))
@@ -131,7 +134,7 @@ def main():
     if len(ratios) < len(RATIOS):
         # ไม่ครบ = ไม่เขียนทับไฟล์เดิม — หน้าจอจะขึ้น "ข้อมูลเก่า" เองเมื่อ as_of เกิน 2 วันทำการ
         # (ดีกว่าเขียนไฟล์ขาด ratio แล้วเพดาน % คำนวณผิดเงียบ ๆ)
-        print('✗ ได้ไม่ครบ 5 ratio — ไม่เขียนไฟล์'); sys.exit(1)
+        print(f'✗ ได้ไม่ครบ {len(RATIOS)} ratio — ไม่เขียนไฟล์'); sys.exit(1)
     as_of = max(v['bar'] for v in ratios.values())
     doc = {'as_of': as_of,
            'generated_at': datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(),
