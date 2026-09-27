@@ -1555,8 +1555,13 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
    ══════════════════════════════════════════════════════════════════════════ */
 .ui-tile-th{display:flex;align-items:center;gap:8px;cursor:pointer}
 .ui-tile-th .ui-tile-a{font-weight:700;color:var(--dark)}
-.ui-tile-th .ui-tile-b{color:var(--mute);font-size:12.5px}
+.ui-tile-th .ui-tile-b{color:var(--mute);font-size:12.5px;white-space:nowrap}
 .ui-tile-th .ui-btn{margin-left:auto}
+/* 7D.3 รอบ 3 — [+ แผน] ล้นช่องบน iPhone (430) → ≤480px ย้ายปุ่มลงแถวล่างสุด เต็มความกว้าง · ป้าย "Long · x/4" ไม่ขึ้นบรรทัดใหม่ (nowrap ด้านบน) · Mac (>480) คงเดิม */
+@media (max-width:480px){
+  .ui-tile-th{flex-wrap:wrap;row-gap:6px}
+  .ui-tile-th .ui-btn{flex:0 0 100%;margin-left:0;text-align:center}
+}
 .ui-dir{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#fff;font-size:12px;flex:none}
 .ui-dir-up{background:var(--up)}.ui-dir-dn{background:var(--dn)}.ui-dir-none{background:var(--flat)}
 .ui-dir-todo{border:1.5px dashed var(--mute);color:var(--mute)}
@@ -1567,7 +1572,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
 .ui-editor{background:var(--card);border:1px solid var(--dark);border-radius:var(--r-card);padding:12px;margin-top:10px}
 .ui-editor-h{font-size:13px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--dark)}
 .ui-editor-h small{color:var(--mute);font-weight:400}
-.ui-factors{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:4px 0 6px}
+.ui-factors{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:4px 0 6px}
 .ui-factor{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 2px;text-align:center;user-select:none;cursor:pointer;min-width:0}
 .ui-f-n{font-size:10.5px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ui-f-pen{border:0;background:none;color:var(--mute);font-size:10px;padding:0 0 0 2px;cursor:pointer}
@@ -1627,8 +1632,10 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
 .ui-acct-ok{color:var(--up);font-size:11.5px}
 
 .ui-chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
-.ui-chip{font-size:11.5px;padding:3px 9px;border-radius:var(--r-chip);border:1px solid var(--line);background:var(--card);color:var(--dark);cursor:pointer}
+.ui-chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;padding:3px 9px;border-radius:var(--r-chip);border:1px solid var(--line);background:var(--card);color:var(--dark);cursor:pointer}
 .ui-chip.ui-on{background:var(--dark);color:#fff;border-color:var(--dark)}
+.ui-chip-x{border:0;background:none;color:inherit;font-size:10px;padding:0;line-height:1;cursor:pointer;opacity:.65}
+.ui-chip-x:hover{opacity:1}
 
 .ui-sheet-backdrop{position:fixed;inset:0;background:rgba(20,21,24,.32);z-index:200;display:flex;align-items:center;justify-content:center}
 .ui-sheet{background:var(--card);border-radius:var(--r-card);max-width:560px;width:min(90vw,560px);max-height:80vh;overflow:auto;box-shadow:0 12px 32px rgba(16,20,28,.2);padding:16px}
@@ -9700,10 +9707,14 @@ const SAT_V3_ON = true;
 const SAT_FACTORS = [
   {k:'trend',     label:'Trend'},
   {k:'momentum',  label:'Momentum'},
-  {k:'zone',      label:'Zone'},
+  {k:'zone',      label:'Zone', kind:'levels'},   /* 7D.3 รอบ 3 — Zone ไม่ใช่องค์ประกอบให้คะแนนแล้ว (ไม่มี ▲▬▼) */
   {k:'sentiment', label:'Sentiment'},
   {k:'macro',     label:'Macro'}
 ];
+/* 7D.3 รอบ 3 — องค์ประกอบที่ยังให้คะแนน (▲▬▼) มีแค่ 4 ตัว (ตัด Zone ออกเพราะ kind:'levels')
+   ทุกจุดที่นับคะแนน/แสดง x/4 ต้องอ่านจากตัวนี้ ห้าม hardcode 5 หรือ SATW_COMPS (ตัวนั้นยังมี zone อยู่ ใช้กับของเดิม/ข้อมูลดิบเท่านั้น) */
+const SAT_FACTORS_SCORED = SAT_FACTORS.filter(f=>f.kind!=='levels');
+const SATW_COMPS_SCORED = SAT_FACTORS_SCORED.map(f=>f.k);
 /* §0.3 — STRIP_FIELDS กำหนดว่าแถบบัญชีของแต่ละโหมดโชว์ช่องอะไร (ป้าย/ลำดับเท่านั้น — ตัวเลขจริงมาจาก settings ตอน render จริงใน UI.acctStrip)
    สเปกทิ้งรายการไว้เป็น "..." — รายการด้านล่างเป็นตัวเลือกที่ตัดสินใจเอง อิง mockup app-mockup.html/acctStrip() · ปรับได้ตอนสร้างส่วนที่ 1 จริง */
 const STRIP_FIELDS = {
@@ -9789,7 +9800,7 @@ const UI = {
   tiles(list, selKey){
     return `<div class="ui-tiles">${(list||[]).map(t=>{
       const body = t.head!=null
-        ? `${t.head}${t.sub!=null?`<div class="ui-tile-s">${escHtml(t.sub)}</div>`:''}${t.dotsHtml?`<div class="ui-tile-dots">${t.dotsHtml}</div>`:''}`
+        ? `${t.head}${t.sub!=null?`<div class="ui-tile-s">${escHtml(t.sub)}</div>`:''}${t.sub2?`<div class="ui-tile-s">${escHtml(t.sub2)}</div>`:''}${t.dotsHtml?`<div class="ui-tile-dots">${t.dotsHtml}</div>`:''}`
         : `<div class="ui-tile-k">${escHtml(t.title||'')}</div>
            <div class="ui-tile-v${t.cls?(' '+t.cls):''}">${t.value!=null?t.value:'—'}</div>
            <div class="ui-tile-s">${escHtml(t.sub||'')}</div>`;
@@ -10227,7 +10238,7 @@ function satwPrevWeekKey(wk){ const d = new Date(wk+'T00:00:00'); d.setDate(d.ge
 function satwTally(w){
   const c = (w && w.comps) || {};
   let up=0, flat=0, down=0, n=0;
-  SATW_COMPS.forEach(k=>{ const v = c[k] && c[k].v; if(v==='up'){up++;n++;} else if(v==='flat'){flat++;n++;} else if(v==='down'){down++;n++;} });
+  SATW_COMPS_SCORED.forEach(k=>{ const v = c[k] && c[k].v; if(v==='up'){up++;n++;} else if(v==='flat'){flat++;n++;} else if(v==='down'){down++;n++;} });
   return {up, flat, down, n};
 }
 function satwMacroFF(asset){
@@ -10238,7 +10249,7 @@ function satwMacroFF(asset){
 function satwReady(w){
   if(!w) return false;
   const t = satwTally(w);
-  return t.n>=5 && (w.bias==='Long'||w.bias==='Short'||w.bias==='None') && w.invalidation!=null && !!String(w.inv_note||'').trim();
+  return t.n>=SATW_COMPS_SCORED.length && (w.bias==='Long'||w.bias==='Short'||w.bias==='None') && w.invalidation!=null && !!String(w.inv_note||'').trim();
 }
 function satwWrite(asset, patch){
   return sat7dWrite('satWeek', wpWeekKey(), {[asset]: patch});
@@ -10270,11 +10281,27 @@ function satwSetWhy(asset, val){
   satwWrite(asset, {why: String(val||''), updated_at:new Date().toISOString()});
 }
 function satwSetSupport(asset, text){
-  const values = String(text||'').split(',').map(x=>parseFloat(x.trim())).filter(n=>isFinite(n));
+  const values = String(text||'').split(/[,\s]+/).map(x=>parseFloat(x.trim())).filter(n=>isFinite(n));
   satwWrite(asset, {support: values, updated_at:new Date().toISOString()});
 }
 function satwSetResistance(asset, text){
-  const values = String(text||'').split(',').map(x=>parseFloat(x.trim())).filter(n=>isFinite(n));
+  const values = String(text||'').split(/[,\s]+/).map(x=>parseFloat(x.trim())).filter(n=>isFinite(n));
+  satwWrite(asset, {resistance: values, updated_at:new Date().toISOString()});
+}
+/* 7D.3 รอบ 3 — ลบค่าแนวรับ/แนวต้านทีละค่า (ปุ่ม ✕ บนชิป) · ทำงานได้แม้ค่าที่เห็นยัง fallback มาจาก comps.zone.levels เดิม
+   (กรณีนั้นจะสร้าง field support/resistance จริงขึ้นมาใหม่ทันที โดยไม่ไปแก้/ลบ comps.zone.levels เดิม)
+   ลบจนหมด (values กลายเป็น []) ยังคง satwWrite({support:[]}) เสมอ — เขียนอาร์เรย์ว่างจริง ไม่ข้าม ไม่ delete field
+   → รอบถัดไป satV3SupportDisplay เจอ Array.isArray([])===true จะไม่ fallback กลับไปที่ levels เดิมอีก */
+function satwRemoveSupportValue(asset, idx){
+  const w = satwWeek(wpWeekKey(), asset);
+  const values = satV3SupportDisplay(w).values.slice();
+  values.splice(idx, 1);
+  satwWrite(asset, {support: values, updated_at:new Date().toISOString()});
+}
+function satwRemoveResistanceValue(asset, idx){
+  const w = satwWeek(wpWeekKey(), asset);
+  const values = satV3ResistanceDisplay(w).values.slice();
+  values.splice(idx, 1);
   satwWrite(asset, {resistance: values, updated_at:new Date().toISOString()});
 }
 /* ตั้ง Bias สัปดาห์: ตั้งครั้งแรกไม่นับเป็นสลับ · สลับได้ 1 ครั้ง/สัปดาห์/asset · ครั้งที่ 2 = เตือน (ไม่บล็อก) + ไอเดียติดนอกแผน — กติกาเดิมจาก 7D */
@@ -10375,13 +10402,23 @@ function satV3WhyValue(w){
 /* แนวรับ: ถ้ายังไม่เคยตั้ง support (ไม่ใช่ array แปลว่ายังไม่เคยแก้เลย) → fallback ไปใช้ comps.zone.levels
    เดิมแบบอ่านอย่างเดียว (ไม่ลบ levels) จนกว่าผู้ใช้จะพิมพ์แก้ช่องนี้ครั้งแรก (เขียน support จริงแม้จะว่างเปล่า) */
 function satV3SupportDisplay(w){
-  if(w && Array.isArray(w.support)) return {values:w.support, readonly:false};
+  /* จงใจเช็คแค่ Array.isArray (ไม่เช็ค .length) — ลบชิปจนหมดแล้ว support=[] ต้องนับว่า "ตั้งค่าแล้ว (ว่าง)"
+     ห้ามดึง comps.zone.levels กลับมาโชว์อีก · fallback ใช้เฉพาะตอน w.support เป็น undefined (ยังไม่เคยตั้งเลย) เท่านั้น */
+  if(w && Array.isArray(w.support)) return {values:w.support};
   const lv = (w && w.comps && w.comps.zone && Array.isArray(w.comps.zone.levels)) ? w.comps.zone.levels : [];
-  return {values:lv, readonly:true};
+  return {values:lv};
 }
 /* แนวต้าน: field ใหม่ล้วน ไม่มี fallback จากของเดิม (comps.zone.levels ไม่เคยแทนความหมาย "แนวต้าน" มาก่อน) */
 function satV3ResistanceDisplay(w){
   return {values:(w && Array.isArray(w.resistance)) ? w.resistance : [], readonly:false};
+}
+/* 7D.3 รอบ 3 — ชิปแนวรับ/แนวต้านใต้ช่อง แตะ ✕ ลบทีละค่า (readonly = สัปดาห์เก่า ไม่ให้ลบ) */
+function satV3LevelChipsHtml(asset, field, values, readonly){
+  if(!values || !values.length) return '';
+  const rmFn = field==='support' ? 'satwRemoveSupportValue' : 'satwRemoveResistanceValue';
+  return `<div class="ui-chips">${values.map((v,i)=>
+    `<span class="ui-chip">${escHtml(fmt2(v))}${readonly?'':` <button type="button" class="ui-chip-x" title="ลบ" onclick="${rmFn}('${escHtml(asset)}',${i})">✕</button>`}</span>`
+  ).join('')}</div>`;
 }
 /* เตือนเดิมของ Bias (คงไว้ตามสเปก): สวนองค์ประกอบ · สวน Trend · ยังไม่มีจุดผิด · เกินโควตาสลับ */
 function satV3Warnings(asset, w){
@@ -10406,8 +10443,9 @@ function satV3TileDirHtml(bias){
 /* {badge, sub} ของช่อง — ตรงกับ tileHtml() ใน sat-mockup.html ทุกกรณี (Long/Short/งดเทรด/ยังไม่ประเมิน) */
 function satV3TileBadgeSub(asset, w){
   const t = satwTally(w);
+  const N = SATW_COMPS_SCORED.length;
   if(!w || (w.bias!=='Long' && w.bias!=='Short' && w.bias!=='None')){
-    return {badge:'ยังไม่ประเมิน', sub:`${t.n}/5`};
+    return {badge:'ยังไม่ประเมิน', sub:`${t.n}/${N}`};
   }
   if(w.bias==='None'){
     return {badge:'งดเทรด', sub: satV3WhyValue(w)};
@@ -10416,11 +10454,12 @@ function satV3TileBadgeSub(asset, w){
   const supTxt = sup.values.length ? sup.values.map(fmt2).join(', ') : '—';
   const resTxt = res.values.length ? res.values.map(fmt2).join(', ') : '—';
   const invTxt = w.invalidation!=null ? fmt2(w.invalidation) : '—';
-  if(w.bias==='Long') return {badge:`Long · ${t.up}/5`, sub:`รับ ${supTxt} · ต้าน ${resTxt} · ผิด <${invTxt}`};
-  return {badge:`Short · ${t.down}/5`, sub:`ต้าน ${resTxt} · รับ ${supTxt} · ผิด >${invTxt}`};
+  const why = satV3WhyValue(w) || undefined;   /* 7D.3 รอบ 3 — โชว์เหตุผลเป็นบรรทัดที่ 2 ใต้ รับ/ต้าน/ผิด ในช่องที่พับอยู่ */
+  if(w.bias==='Long') return {badge:`Long · ${t.up}/${N}`, sub:`รับ ${supTxt} · ต้าน ${resTxt} · ผิด <${invTxt}`, sub2: why};
+  return {badge:`Short · ${t.down}/${N}`, sub:`ต้าน ${resTxt} · รับ ${supTxt} · ผิด >${invTxt}`, sub2: why};
 }
 function satV3TileDotsHtml(w){
-  return SATW_COMPS.map(k=>{
+  return SATW_COMPS_SCORED.map(k=>{
     const v = w && w.comps && w.comps[k] && w.comps[k].v;
     const cls = v==='up' ? 'ui-dot-up' : v==='down' ? 'ui-dot-dn' : v==='flat' ? 'ui-dot-flat' : '';
     return `<i class="ui-tile-dot${cls?(' '+cls):''}"></i>`;
@@ -10439,8 +10478,8 @@ function satV3TileHead(asset, w){
 }
 function satV3TileModel(asset, wk){
   const w = satwWeek(wk, asset);
-  const { sub } = satV3TileBadgeSub(asset, w);
-  return {key:asset, head: satV3TileHead(asset, w), sub, dotsHtml: satV3TileDotsHtml(w), dim: !!(w && w.bias==='None')};
+  const { sub, sub2 } = satV3TileBadgeSub(asset, w);
+  return {key:asset, head: satV3TileHead(asset, w), sub, sub2, dotsHtml: satV3TileDotsHtml(w), dim: !!(w && w.bias==='None')};
 }
 /* แตะช่อง = กาง (ทีละ asset) · แตะซ้ำ = พับ */
 function satV3Pick(asset){
@@ -10474,7 +10513,7 @@ function satV3EditorHtml(asset, wk){
   const readonly = wk !== wpWeekKey();
   const w = satwWeek(wk, asset) || {};
   const t = satwTally(w);
-  const factors = SATW_COMPS.map(k=>{
+  const factors = SATW_COMPS_SCORED.map(k=>{
     const c = (w.comps && w.comps[k]) || {};
     const v = c.v || null;
     const sym = v==='up' ? '▲' : v==='flat' ? '▬' : v==='down' ? '▼' : '·';
@@ -10487,7 +10526,7 @@ function satV3EditorHtml(asset, wk){
       <div class="ui-f-n">${SATW_COMP_LABEL[k]}${!readonly?` <button type="button" class="ui-f-pen" title="เปิด/ปิดโน้ต" onclick="event.stopPropagation();satV3ToggleNote('${escHtml(asset)}','${k}')">✎</button>`:''}</div>
       <div class="ui-f-v">${sym}</div></div>${noteRow}</div>`;
   }).join('');
-  const tallyTxt = `รวม ▲${t.up} ▬${t.flat} ▼${t.down}${t.n<5?` · ประเมินแล้ว ${t.n}/5`:''}`;
+  const tallyTxt = `รวม ▲${t.up} ▬${t.flat} ▼${t.down}${t.n<SATW_COMPS_SCORED.length?` · ประเมินแล้ว ${t.n}/${SATW_COMPS_SCORED.length}`:''}`;
   const whyVal = satV3WhyValue(w);
   const sup = satV3SupportDisplay(w), res = satV3ResistanceDisplay(w);
   const macroFF = satwMacroFF(asset);
@@ -10503,8 +10542,8 @@ function satV3EditorHtml(asset, wk){
     <div class="ui-tally">${escHtml(tallyTxt)}</div>
     <div class="ui-flds">
       <div class="ui-fl ui-fl-w2"><label>เหตุผล 1 ประโยค</label><input type="text" value="${escHtml(whyVal)}" ${readonly?'disabled':''} onchange="satwSetWhy('${escHtml(asset)}',this.value)"></div>
-      <div class="ui-fl"><label>แนวรับ${sup.readonly?' <span class="ui-hint">(ค่าเดิม)</span>':''}</label><input type="text" inputmode="decimal" value="${escHtml(sup.values.join(', '))}" ${(readonly||sup.readonly)?'disabled':''} onchange="satwSetSupport('${escHtml(asset)}',this.value)"></div>
-      <div class="ui-fl"><label>แนวต้าน</label><input type="text" inputmode="decimal" value="${escHtml(res.values.join(', '))}" ${readonly?'disabled':''} onchange="satwSetResistance('${escHtml(asset)}',this.value)"></div>
+      <div class="ui-fl"><label>แนวรับ</label><input type="text" inputmode="decimal" placeholder="เช่น 2600, 2610" value="${escHtml(sup.values.join(', '))}" ${readonly?'disabled':''} onchange="satwSetSupport('${escHtml(asset)}',this.value)">${satV3LevelChipsHtml(asset,'support',sup.values,readonly)}</div>
+      <div class="ui-fl"><label>แนวต้าน</label><input type="text" inputmode="decimal" placeholder="เช่น 2680, 2700" value="${escHtml(res.values.join(', '))}" ${readonly?'disabled':''} onchange="satwSetResistance('${escHtml(asset)}',this.value)">${satV3LevelChipsHtml(asset,'resistance',res.values,readonly)}</div>
       <div class="ui-fl"><label>ผิดเมื่อ</label><input type="number" step="any" value="${w.invalidation!=null?escHtml(String(w.invalidation)):''}" ${readonly?'disabled':''} onchange="satwSetInvalidation('${escHtml(asset)}',this.value)"></div>
     </div>
     <div class="ui-bias-row">
