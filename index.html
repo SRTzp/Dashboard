@@ -1648,6 +1648,47 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 .ui-chip-x{border:0;background:none;color:inherit;font-size:10px;padding:0;line-height:1;cursor:pointer;opacity:.65}
 .ui-chip-x:hover{opacity:1}
 
+/* F2b — Macro Playbook (คลาส pb*) */
+.pbPanel{margin-bottom:14px}
+.pbTitle{font-size:11px;letter-spacing:.04em;color:var(--mute);margin-bottom:6px}
+.pbCard{border:1px solid var(--line);border-radius:var(--r-row);background:var(--card);overflow:hidden}
+.pbHead{display:flex;align-items:center;gap:8px;padding:9px 10px;min-width:0}
+.pbHead[role=button]{cursor:pointer}
+.pbCaret{color:var(--mute);font-size:12px}
+.pbQ{font-size:12.5px;white-space:nowrap}
+.pbHl{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pbBadge{font-size:10.5px;padding:1px 7px;border-radius:var(--r-chip);white-space:nowrap}
+.pbBadge.on{background:var(--dark);color:#fff}.pbBadge.dr{border:1px dashed var(--mute);color:var(--mute)}
+.pbIcos{display:flex;gap:6px;white-space:nowrap}
+.pbIco{font-size:12px;font-weight:700;white-space:nowrap}
+.pb-up{color:var(--up)}.pb-dn{color:var(--dn)}.pb-flat{color:var(--flat)}
+.pbBody{padding:2px 10px 10px;border-top:1px solid var(--line)}
+.pbThesis{font-size:13px;margin:8px 0 2px;line-height:1.5}
+.pbPill .ui-chip{cursor:default}
+.pbScn{font-size:12.5px;color:var(--ink);margin:3px 0}.pbScn b{color:var(--mute);font-weight:600;margin-right:4px}
+.pbRows{margin-top:6px}
+.pbRowW{padding:6px 0;border-top:1px solid var(--line);cursor:pointer}
+.pbRow{display:flex;align-items:center;gap:8px;min-width:0}
+.pbRow .pbIco{min-width:24px}
+.pbAsset{font-size:12.5px;min-width:52px}
+.pbConf{font-size:11px;color:var(--mute);white-space:nowrap}
+.pbWhy{flex:1;min-width:0;font-size:12.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pbMix{font-size:11.5px;color:var(--mute);margin:2px 0 0 32px}
+.pbBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.pbEmpty{font-size:13px;color:var(--mute);padding:6px 0}
+.pbWarn,.pbWarns,.pbFixWarn{font-size:12px;color:var(--warn);margin:4px 0}
+.pbErrs{font-size:12.5px;color:var(--dn);margin:8px 0;line-height:1.5}
+.pbDraftBar{margin-top:6px;padding:7px 10px;border:1px dashed var(--mute);border-radius:var(--r-row);font-size:12.5px;color:var(--mute);cursor:pointer}
+.pbSh{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pbShH{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.pbSecK{font-size:11px;color:var(--mute);margin-top:8px}.pbSecV{font-size:13px;line-height:1.5}
+.pbNoDoc{font-size:12px;color:var(--mute)}
+.pbTa{width:100%;box-sizing:border-box;font:12px/1.4 ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:var(--r-btn);padding:8px;background:var(--soft);color:var(--ink)}
+.pbPrev{font-size:12px;color:var(--mute);margin:10px 0 4px}.pbChg{font-size:12.5px;margin:6px 0}
+.pbHist{padding:8px 0;border-top:1px solid var(--line);cursor:pointer}
+.pbHistT{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pbDate{font-size:11.5px;color:var(--mute)}
+.pbHistS{font-size:12.5px;margin-top:2px}.pbHistC{font-size:12px;color:var(--mute);margin-top:2px}
+
 .ui-sheet-backdrop{position:fixed;inset:0;background:rgba(20,21,24,.32);z-index:200;display:flex;align-items:center;justify-content:center}
 .ui-sheet{background:var(--card);border-radius:var(--r-card);max-width:560px;width:min(90vw,560px);max-height:80vh;overflow:auto;box-shadow:0 12px 32px rgba(16,20,28,.2);padding:16px}
 @media (max-width:430px){
@@ -1866,6 +1907,8 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 <div id="tabFlow">
 
   <div class="ffAction" id="ffAction" aria-label="ผลที่ต้องทำ"></div>
+
+  <div id="pbPanel"></div>
 
   <div class="ffQeBar" id="ffQeBar" onclick="ffOpenQe()" title="แตะเพื่อแก้โหมด / วันที่ประกาศ">
     <span class="ffQeMode" id="ffQeMode">—</span>
@@ -2933,6 +2976,7 @@ auth.onAuthStateChanged(user=>{
     if(unsubDoc){ unsubDoc(); unsubDoc=null; }
     wlStop();
     sat7dStop();
+    pbStop();
     state = null;
     document.getElementById('authScreen').style.display='flex';
     document.getElementById('loadingScreen').style.display='none';
@@ -9613,6 +9657,138 @@ const Calc = {
     if(lotMsg) reasons.push(lotMsg);
     if(!hasCapital) reasons.push('ยังไม่ตั้งถัง Sat');
     return {ok: reasons.length===0, reasons};
+  },
+
+  /* ═══ F2b — Macro Playbook (schema "macroPlaybook/v1") · ฟังก์ชัน pure ทั้งหมด — F2c เรียกใช้ตัวเดียวกัน ═══ */
+  pbAssets: ['XAUUSD','BTC','BRENT','US'],
+  pbStances: ['up','up_flat','flat','down_flat','down','none'],
+  pbReasonTypes: ['trigger','evidence','review','fix'],
+  /* 'YYYYQn' ของเวลา d (เวลาท้องถิ่นของเครื่อง) */
+  pbQuarterOf(d){ const x = d instanceof Date ? d : new Date(d); return x.getFullYear()+'Q'+(Math.floor(x.getMonth()/3)+1); },
+  /* เวลา (ms) จาก ISO string / number / Date / Firestore Timestamp — ไม่ได้ค่า = null (เช่น serverTimestamp ที่ยังรอเซิร์ฟเวอร์) */
+  pbMs(v){
+    if(v==null) return null;
+    if(typeof v==='number') return v;
+    if(v instanceof Date) return v.getTime();
+    if(typeof v==='string'){ const t = Date.parse(v); return isNaN(t) ? null : t; }
+    if(typeof v.toMillis==='function') return v.toMillis();
+    if(typeof v.toDate==='function') return v.toDate().getTime();
+    if(typeof v.seconds==='number') return v.seconds*1000;
+    return null;
+  },
+  /* คืน {errors:[], warnings:[]} เป็นข้อความไทยระบุช่อง · obj = object หรือ string JSON · now = เวลาเทียบไตรมาสปัจจุบัน */
+  pbValidate(obj, now){
+    const errors = [], warnings = [];
+    if(typeof obj==='string'){
+      const s = obj.trim();
+      if(!s){ return {errors:['JSON ผิดรูป: ยังไม่ได้วาง JSON'], warnings}; }
+      try{ obj = JSON.parse(s); }catch(e){ return {errors:['JSON ผิดรูป: '+((e&&e.message)||e)], warnings}; }
+    }
+    const isObj = v => v!==null && typeof v==='object' && !Array.isArray(v);
+    const isStr = v => typeof v==='string' && v.trim()!=='';
+    if(!isObj(obj)){ return {errors:['JSON ผิดรูป: ต้องเป็น object {...}'], warnings}; }
+    const known = (o, keys, where) => Object.keys(o).forEach(k=>{ if(!keys.includes(k)) warnings.push('key แปลก "'+k+'" ใน '+where+' (เก็บไว้ตามเดิม)'); });
+    known(obj, ['schema','quarter','status','doc_url','view','assets'], 'ระดับบนสุด');
+    if(obj.schema!=='macroPlaybook/v1') errors.push('schema: ต้องเป็น "macroPlaybook/v1"');
+    if(typeof obj.quarter!=='string' || !/^\d{4}Q[1-4]$/.test(obj.quarter)) errors.push('quarter: ต้องเป็นรูปแบบ YYYYQn เช่น 2026Q4');
+    else if(obj.quarter < Calc.pbQuarterOf(now||new Date())) warnings.push('quarter '+obj.quarter+' เก่ากว่าไตรมาสปัจจุบัน ('+Calc.pbQuarterOf(now||new Date())+')');
+    if(obj.status!=='draft' && obj.status!=='active') errors.push('status: ต้องเป็น "draft" หรือ "active"');
+    if(obj.doc_url!=null && typeof obj.doc_url!=='string') errors.push('doc_url: ต้องเป็นข้อความ');
+    if(!isStr(obj.doc_url)) warnings.push('ยังไม่มีลิงก์รายงานเต็ม (doc_url)');
+    const pillarIds = [];
+    if(!isObj(obj.view)) errors.push('view: ต้องมี object view');
+    else {
+      const v = obj.view;
+      known(v, ['headline','thesis','pillars','base','alt'], 'view');
+      if(!isStr(v.headline)) errors.push('view.headline: ขาด (บังคับ)');
+      if(!isStr(v.thesis)) errors.push('view.thesis: ขาด (บังคับ)');
+      ['base','alt'].forEach(k=>{ if(v[k]!=null && typeof v[k]!=='string') errors.push('view.'+k+': ต้องเป็นข้อความ'); });
+      if(!Array.isArray(v.pillars) || v.pillars.length<1) errors.push('view.pillars: ต้องมีอย่างน้อย 1 รายการ');
+      else v.pillars.forEach((p,i)=>{
+        const w = 'view.pillars['+i+']';
+        if(!isObj(p)){ errors.push(w+': ต้องเป็น object {id,title,note}'); return; }
+        known(p, ['id','title','note'], w);
+        if(!isStr(p.id)) errors.push(w+'.id: ขาด (บังคับ)');
+        else if(pillarIds.includes(p.id)) errors.push(w+'.id: "'+p.id+'" ซ้ำ');
+        else pillarIds.push(p.id);
+        if(!isStr(p.title)) errors.push(w+'.title: ขาด (บังคับ)');
+        if(p.note!=null && typeof p.note!=='string') errors.push(w+'.note: ต้องเป็นข้อความ');
+      });
+    }
+    if(!isObj(obj.assets)) errors.push('assets: ต้องมี object assets ครบ 4 key (XAUUSD · BTC · BRENT · US)');
+    else {
+      known(obj.assets, Calc.pbAssets, 'assets');
+      Calc.pbAssets.forEach(a=>{
+        const x = obj.assets[a], w = 'assets.'+a;
+        if(!isObj(x)){ errors.push(w+': ขาด (ต้องมีครบ 4 asset)'); return; }
+        known(x, ['stance','why','change_if','drivers','confidence','posture','if_alt','doc_url'], w);
+        if(!Calc.pbStances.includes(x.stance)){ errors.push(w+'.stance: ต้องเป็น up · up_flat · flat · down_flat · down · none'); }
+        else if(x.stance!=='none'){
+          if(!isStr(x.why)) errors.push(w+'.why: ขาด (บังคับเมื่อ stance ไม่ใช่ none)');
+          if(!isStr(x.change_if)) errors.push(w+'.change_if: ขาด (บังคับเมื่อ stance ไม่ใช่ none)');
+        }
+        if(x.drivers!=null){
+          if(!Array.isArray(x.drivers)) errors.push(w+'.drivers: ต้องเป็นรายการ pillar id เช่น ["P1","P2"]');
+          else x.drivers.forEach(d=>{ if(!pillarIds.includes(d)) errors.push(w+'.drivers: "'+d+'" ไม่มี pillar นี้ใน view.pillars'); });
+        }
+        if(x.confidence!=null && !['low','mid','high'].includes(x.confidence)) errors.push(w+'.confidence: ต้องเป็น low · mid · high');
+        ['posture','if_alt','doc_url'].forEach(k=>{ if(x[k]!=null && typeof x[k]!=='string') errors.push(w+'.'+k+': ต้องเป็นข้อความ'); });
+        if((x.stance==='up_flat' || x.stance==='down_flat') && !isStr(x.posture)) warnings.push(w+': ท่าทีผสมควรมีวิธีวางตัว/สมมติฐาน (posture)');
+      });
+    }
+    return {errors, warnings};
+  },
+  /* stanceChanges เทียบเวอร์ชัน active ก่อนหน้า (null = ยังไม่เคยมี → เทียบกับ 'none') — คืน {ASSET:{from,to}} เฉพาะตัวที่เปลี่ยน */
+  pbDiff(prevActive, next){
+    const out = {};
+    Calc.pbAssets.forEach(a=>{
+      const from = (prevActive && prevActive.assets && prevActive.assets[a] && prevActive.assets[a].stance) || 'none';
+      const to = (next && next.assets && next.assets[a] && next.assets[a].stance) || 'none';
+      if(from!==to) out[a] = {from, to};
+    });
+    return out;
+  },
+  /* ท่าทีที่มีผล ณ atTime: ใช้เฉพาะเวอร์ชัน active ล่าสุดที่ savedAt ≤ atTime (ร่างไม่มีผล)
+     changedAt = savedAt ของเวอร์ชัน active แรก "ในชุดต่อเนื่องล่าสุด" ที่ท่าทีของ asset นี้เท่ากับค่าปัจจุบัน */
+  pbEffective(versions, asset, atTime){
+    const at = Calc.pbMs(atTime==null ? Date.now() : atTime);
+    const act = (versions||[]).filter(v=>v && v.status==='active').map(v=>({v, t: Calc.pbMs(v.savedAt)}))
+      .filter(o=>o.t==null || o.t<=at).map(o=>({v:o.v, t:o.t==null?at:o.t}))
+      .sort((a,b)=>(a.t-b.t) || ((a.v.versionNo||0)-(b.v.versionNo||0)));
+    if(!act.length) return {state:'none', versionId:null, changedAt:null, stale:false, posture:null};
+    const st = o => (o.v.assets && o.v.assets[asset] && o.v.assets[asset].stance) || 'none';
+    const last = act[act.length-1], cur = st(last);
+    let i = act.length-1;
+    while(i>0 && st(act[i-1])===cur) i--;
+    const cell = (last.v.assets && last.v.assets[asset]) || {};
+    return {
+      state: Calc.pbStances.includes(cur) ? cur : 'none',
+      versionId: last.v.id!=null ? last.v.id : null,
+      changedAt: act[i].v.savedAt!=null ? act[i].v.savedAt : new Date(act[i].t).toISOString(),
+      stale: !!last.v.quarter && last.v.quarter < Calc.pbQuarterOf(new Date(at)),
+      posture: (typeof cell.posture==='string' && cell.posture.trim()) ? cell.posture : null
+    };
+  },
+  /* ท่าทีเทียบกับด้านของไม้ (long|short) → 'with' ตาม · 'neutral' Neutral · 'against' สวน · 'none' ไม่มี Playbook */
+  pbAlign(state, side){
+    const s = side==='short' ? 'short' : side==='long' ? 'long' : null;
+    if(!s) return 'none';
+    if(state==='up' || state==='up_flat') return s==='long' ? 'with' : 'against';
+    if(state==='down' || state==='down_flat') return s==='short' ? 'with' : 'against';
+    if(state==='flat') return 'neutral';
+    return 'none';
+  },
+  pbStanceText(state){
+    return ({up:'▲ ขึ้น', up_flat:'▲▬ ขึ้น/ผสม', flat:'▬ ผสม', down_flat:'▼▬ ลง/ผสม', down:'▼ ลง'})[state] || '— ยังไม่มี';
+  },
+  pbStanceIcon(state){
+    return ({up:'▲', up_flat:'▲▬', flat:'▬', down_flat:'▼▬', down:'▼'})[state] || '—';
+  },
+  /* id/versionNo ของเวอร์ชันถัดไปของไตรมาส q (นับต่อจากเลขสูงสุดของไตรมาสนั้น) */
+  pbNextId(list, q){
+    const mx = (list||[]).filter(v=>v && v.quarter===q).reduce((m,v)=>Math.max(m, +v.versionNo||0), 0);
+    const n = mx+1;
+    return {versionNo:n, id: q+'-v'+String(n).padStart(3,'0')};
   }
 };
 
@@ -11818,6 +11994,7 @@ function renderFundflow(){
     st.style.display=''; st.textContent='⚠ ยังไม่เคยอัปเดต — เปิดกราฟแล้วกดให้ตรงจริงก่อนใช้งาน';
   } else st.style.display='none';
 
+  try{ pbRender(); }catch(e){ console.warn('pbRender:', e); }
   ffRenderRegime();
   ffRenderCtx();
   ffRenderThemes();
@@ -12482,6 +12659,249 @@ function ffRenderActionBar(){
     + cell('lead',  'ธีมนำ', leads.length ? leads.map(escHtml).join(' · ') : '—')
     + cell('fresh', 'ความสดข้อมูล', escHtml(fresh), '', freshCls)
     + `</div>`;
+}
+
+/* ══════════ F2b — Macro Playbook (แท็บ Flow · users/{uid}/macroPlaybook · 1 เวอร์ชัน = 1 เอกสาร · create เท่านั้น) ══════════
+   ห้ามอ่าน/เขียน collection 'macro' เดิม · ไม่มี update/delete บน macroPlaybook · ตรรกะทั้งหมดอยู่ใน Calc.pb* (pure) — ที่นี่แค่ I/O + หน้าจอ */
+const PB_ID_RE = /^\d{4}Q[1-4]-v\d{3}$/;
+const PB_REASON = {trigger:'เงื่อนไขเปลี่ยนแผนเกิดแล้ว', evidence:'หลักฐานใหม่', review:'ทบทวนตามรอบ', fix:'แก้คำผิด/ข้อมูล'};
+const PB_CONF = {low:'ต่ำ', mid:'กลาง', high:'สูง'};
+const PB_META_KEYS = ['id','savedAt','versionNo','prevId','reason','stanceChanges'];
+let pbList = [], pbErr = null, pbLoaded = false, pbUnsub = null, pbUnsubUid = null;
+let pbOpen = false, pbPaste = null, pbSaving = false;
+
+function pbStart(){
+  if(!uid || typeof db==='undefined' || !db) return;
+  if(pbUnsub && pbUnsubUid===uid) return;
+  pbStop();
+  pbUnsubUid = uid;
+  const c = sat7dCol('macroPlaybook'); if(!c) return;
+  try{
+    pbUnsub = c.onSnapshot(snap=>{
+      pbList = snap.docs.filter(d=>PB_ID_RE.test(d.id)).map(d=>({...(d.data()||{}), id:d.id}));
+      pbErr = null; pbLoaded = true; pbRender();
+    }, err=>{ console.warn('macroPlaybook listener:', err); pbErr = sat7dErrText(err); pbLoaded = true; pbRender(); });
+  }catch(e){ pbErr = sat7dErrText(e); pbLoaded = true; }
+}
+function pbStop(){
+  if(pbUnsub){ try{ pbUnsub(); }catch(e){} }
+  pbUnsub = null; pbUnsubUid = null; pbList = []; pbErr = null; pbLoaded = false; pbPaste = null;
+  document.querySelectorAll('.pb-sheet').forEach(el=>el.remove());
+}
+function pbMsOf(v){ const t = Calc.pbMs(v.savedAt); return t==null ? Infinity : t; }
+function pbSorted(){ return pbList.slice().sort((a,b)=>(pbMsOf(a)-pbMsOf(b)) || (a.id<b.id?-1:a.id>b.id?1:0)); }
+function pbLatestActive(){ const s = pbSorted().filter(v=>v.status==='active'); return s.length ? s[s.length-1] : null; }
+function pbMain(){
+  const s = pbSorted(), a = pbLatestActive();
+  if(a) return a;
+  return s.length ? s[s.length-1] : null;
+}
+function pbDraftNewer(){
+  const s = pbSorted(), a = pbLatestActive();
+  const d = s.filter(v=>v.status==='draft' && (!a || s.indexOf(v) > s.indexOf(a)));
+  return d.length ? d[d.length-1] : null;
+}
+function pbVerById(id){
+  if(id==='preview') return pbPaste && pbPaste.obj ? {...pbPaste.obj, id:'preview'} : null;
+  return pbList.find(v=>v.id===id) || null;
+}
+function pbDate(v){
+  const t = Calc.pbMs(v); if(t==null) return 'กำลังบันทึก…';
+  try{ return new Date(t).toLocaleString('en-GB', {timeZone:'Asia/Bangkok', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false}); }
+  catch(e){ return new Date(t).toISOString(); }
+}
+function pbStanceCls(st){ return st==='up' || st==='up_flat' ? 'pb-up' : st==='down' || st==='down_flat' ? 'pb-dn' : 'pb-flat'; }
+function pbChangesText(ch){
+  const k = Object.keys(ch||{});
+  return k.map(a=>a+' '+Calc.pbStanceIcon(ch[a].from)+'→'+Calc.pbStanceIcon(ch[a].to)).join(' · ');
+}
+function pbSafeUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u.trim()) ? u.trim() : ''; }
+
+/* การ์ด (ใช้ร่วมกันทั้งแผงจริง · พรีวิว · ดูประวัติ) — o.open = กางไหม · o.toggle = onclick ของหัว (ไม่ใส่ = ไม่พับ/กาง) */
+function pbCardHtml(ver, o){
+  o = o || {};
+  const view = ver.view || {}, assets = ver.assets || {}, vid = escHtml(ver.id);
+  const icons = Calc.pbAssets.map(a=>{ const st = (assets[a]||{}).stance || 'none';
+    return `<span class="pbIco ${pbStanceCls(st)}" title="${a} ${escHtml(Calc.pbStanceText(st))}">${Calc.pbStanceIcon(st)}</span>`; }).join('');
+  const head = `<div class="pbHead"${o.toggle?` onclick="${o.toggle}" role="button" aria-expanded="${o.open?'true':'false'}"`:''}>
+    ${o.toggle?`<span class="pbCaret">${o.open?'▾':'▸'}</span>`:''}<b class="pbQ">${escHtml(ver.quarter||'—')}</b>
+    <span class="pbHl">${escHtml(view.headline||'—')}</span>
+    <span class="pbBadge ${ver.status==='active'?'on':'dr'}">${ver.status==='active'?'ใช้จริง':'ร่าง'}</span>
+    <span class="pbIcos">${icons}</span></div>`;
+  if(!o.open) return `<div class="pbCard">${head}</div>`;
+  const pillars = Array.isArray(view.pillars) ? view.pillars : [];
+  const chips = pillars.length ? `<div class="ui-chips pbPill">${pillars.map(p=>`<span class="ui-chip" title="${escHtml(p.note||'')}">${escHtml(p.id)} · ${escHtml(p.title)}</span>`).join('')}</div>` : '';
+  const rows = Calc.pbAssets.map(a=>{
+    const x = assets[a] || {}, st = x.stance || 'none';
+    const mix = (st==='up_flat' || st==='down_flat')
+      ? `<div class="pbMix">${escHtml(Calc.pbStanceText(st))}${x.posture?' · '+escHtml(x.posture):''}</div>` : '';
+    return `<div class="pbRowW" onclick="pbAssetSheet('${vid}','${a}')"><div class="pbRow">
+      <span class="pbIco ${pbStanceCls(st)}">${Calc.pbStanceIcon(st)}</span><b class="pbAsset">${a}</b>
+      ${x.confidence&&PB_CONF[x.confidence]?`<span class="pbConf">${PB_CONF[x.confidence]}</span>`:''}
+      ${x.why?`<span class="pbWhy">${escHtml(x.why)}</span>`:''}</div>${mix}</div>`;
+  }).join('');
+  return `<div class="pbCard">${head}<div class="pbBody">
+    ${view.thesis?`<div class="pbThesis">${escHtml(view.thesis)}</div>`:''}${chips}
+    ${view.base?`<div class="pbScn"><b>Base</b> ${escHtml(view.base)}</div>`:''}
+    ${view.alt?`<div class="pbScn"><b>Alt</b> ${escHtml(view.alt)}</div>`:''}
+    <div class="pbRows">${rows}</div></div></div>`;
+}
+
+/* ── sheet ซ้อนได้ (แผ่น asset ทับแผ่นดูเวอร์ชันได้) ── */
+function pbSheet(html){
+  document.body.insertAdjacentHTML('beforeend', UI.sheet(html).replace('ui-sheet-backdrop','ui-sheet-backdrop pb-sheet'));
+  const el = document.body.lastElementChild;
+  el.addEventListener('click', e=>{ if(e.target===el) el.remove(); });
+  return el;
+}
+function pbSheetClose(){ const all = document.querySelectorAll('.pb-sheet'); if(all.length) all[all.length-1].remove(); }
+
+function pbAssetSheet(id, a){
+  const ver = pbVerById(id); if(!ver) return;
+  const x = (ver.assets||{})[a] || {}, st = x.stance || 'none', pills = (ver.view||{}).pillars || [];
+  const sec = (k, v) => v ? `<div class="pbSecK">${k}</div><div class="pbSecV">${escHtml(v)}</div>` : '';
+  const drv = Array.isArray(x.drivers) && x.drivers.length
+    ? `<div class="pbSecK">Drivers</div><div class="ui-chips">${x.drivers.map(d=>{ const p = pills.find(q=>q.id===d); return `<span class="ui-chip">${escHtml(d)}${p?' · '+escHtml(p.title):''}</span>`; }).join('')}</div>` : '';
+  const url = pbSafeUrl(x.doc_url) || pbSafeUrl(ver.doc_url);
+  const read = url ? `<a class="ui-btn ui-btn-pri" href="${escHtml(url)}" target="_blank" rel="noopener">อ่านเต็ม ↗</a>` : `<span class="pbNoDoc">อ่านเต็ม: —</span>`;
+  pbSheet(`<div class="pbSh"><div class="pbShH"><b>${a}</b><span class="pbIco ${pbStanceCls(st)}">${escHtml(Calc.pbStanceText(st))}</span>
+      ${x.confidence&&PB_CONF[x.confidence]?`<span class="pbConf">ความมั่นใจ ${PB_CONF[x.confidence]}</span>`:''}</div>
+    ${sec('why', x.why)}${sec('วิธีวางตัว', x.posture)}${sec('change_if · เงื่อนไขเปลี่ยนแผน', x.change_if)}${sec('ถ้า Alternative เกิด', x.if_alt)}${drv}
+    <div class="pbBtns">${read}<button type="button" class="ui-btn" onclick="pbSheetClose()">ปิด</button></div></div>`);
+}
+
+/* ── แผงในแท็บ Flow ── */
+function pbToggle(){ pbOpen = !pbOpen; pbRender(); }
+function pbRender(){
+  const host = document.getElementById('pbPanel'); if(!host) return;
+  pbStart();
+  const btnPaste = `<button type="button" class="ui-btn" onclick="pbOpenPaste()">วาง JSON</button>`;
+  const btnHist = pbList.length ? `<button type="button" class="ui-btn" onclick="pbOpenHistory()">ประวัติ</button>` : '';
+  let body;
+  if(pbErr){
+    body = `<div class="pbWarn">⚠ อ่าน Playbook ไม่ได้ (${escHtml(pbErr)}) — ยังใช้หน้าอื่นได้ตามปกติ</div><div class="pbBtns">${btnPaste}</div>`;
+  } else if(!pbLoaded){
+    body = `<div class="pbEmpty">กำลังโหลด Playbook…</div>`;
+  } else {
+    const m = pbMain();
+    if(!m) body = `<div class="pbEmpty">ยังไม่มี Playbook</div><div class="pbBtns">${btnPaste}</div>`;
+    else {
+      const dn = pbDraftNewer(), q = Calc.pbQuarterOf(new Date());
+      const stale = m.status==='active' && m.quarter && m.quarter < q;
+      body = (stale?`<div class="pbWarn">⚠ Playbook เป็นของ ${escHtml(m.quarter)} — ยังไม่มีของไตรมาสนี้</div>`:'')
+        + pbCardHtml(m, {open:pbOpen, toggle:'pbToggle()'})
+        + (dn && dn!==m ? `<div class="pbDraftBar" onclick="pbViewVer('${escHtml(dn.id)}')">มีร่าง v${+dn.versionNo||'?'} · ${escHtml(dn.id)} ›</div>` : '')
+        + `<div class="pbBtns">${btnPaste}${btnHist}${m.status==='draft'?`<button type="button" class="ui-btn ui-btn-pri" onclick="pbOpenActivate('${escHtml(m.id)}')">เปลี่ยนเป็นใช้จริง</button>`:''}</div>`;
+    }
+  }
+  host.innerHTML = `<div class="panel pbPanel"><div class="pbTitle">Macro ไตรมาส</div>${body}</div>`;
+}
+
+/* ── ประวัติ ── */
+function pbOpenHistory(){
+  const rows = pbSorted().reverse().map(v=>{
+    const ch = pbChangesText(v.stanceChanges), r = v.reason;
+    return `<div class="pbHist" onclick="pbViewVer('${escHtml(v.id)}')"><div class="pbHistT"><b>${escHtml(v.id)}</b>
+      <span class="pbBadge ${v.status==='active'?'on':'dr'}">${v.status==='active'?'ใช้จริง':'ร่าง'}</span><span class="pbDate">${pbDate(v.savedAt)}</span></div>
+      <div class="pbHistS">${r&&r.type?escHtml((PB_REASON[r.type]||r.type)+(r.text?' — '+r.text:'')):'ไม่มีเหตุผล'}</div>
+      ${ch?`<div class="pbHistC">ท่าทีเปลี่ยน: ${escHtml(ch)}</div>`:''}</div>`;
+  }).join('') || '<div class="pbEmpty">ยังไม่มีเวอร์ชัน</div>';
+  pbSheet(`<div class="pbSh"><div class="pbShH"><b>ประวัติ Playbook</b></div>${rows}<div class="pbBtns"><button type="button" class="ui-btn" onclick="pbSheetClose()">ปิด</button></div></div>`);
+}
+function pbViewVer(id){
+  const v = pbVerById(id); if(!v) return;
+  const ch = pbChangesText(v.stanceChanges), r = v.reason;
+  pbSheet(`<div class="pbSh"><div class="pbShH"><b>${escHtml(v.id)}</b><span class="pbDate">${pbDate(v.savedAt)}</span></div>
+    ${pbCardHtml(v, {open:true})}
+    <div class="pbHistS">${r&&r.type?escHtml((PB_REASON[r.type]||r.type)+(r.text?' — '+r.text:'')):'ไม่มีเหตุผล'}</div>
+    ${ch?`<div class="pbHistC">ท่าทีเปลี่ยน: ${escHtml(ch)}</div>`:''}
+    <div class="pbBtns">${v.status==='draft'?`<button type="button" class="ui-btn ui-btn-pri" onclick="pbSheetClose();pbOpenActivate('${escHtml(v.id)}')">เปลี่ยนเป็นใช้จริง</button>`:''}<button type="button" class="ui-btn" onclick="pbSheetClose()">ปิด</button></div></div>`);
+}
+
+/* ── ขั้นวาง JSON / เปลี่ยนร่างเป็นใช้จริง ── */
+function pbOpenPaste(){
+  pbPaste = {mode:'paste', text:'', checked:false, res:null, obj:null, rtype:'', rtext:'', err:''};
+  pbSheet('<div id="pbPasteHost"></div>'); pbPasteRender();
+}
+function pbOpenActivate(id){
+  const v = pbList.find(x=>x.id===id); if(!v) return;
+  const obj = {}; Object.keys(v).forEach(k=>{ if(!PB_META_KEYS.includes(k)) obj[k] = JSON.parse(JSON.stringify(v[k])); });
+  obj.status = 'active';
+  pbPaste = {mode:'activate', text:'', checked:true, res:Calc.pbValidate(obj), obj, rtype:'', rtext:'', err:'', from:id};
+  pbSheet('<div id="pbPasteHost"></div>'); pbPasteRender();
+}
+function pbPasteCan(){
+  const P = pbPaste; if(!P || !P.checked || !P.res || P.res.errors.length) return false;
+  return pbList.length===0 || (!!P.rtype && P.rtext.trim()!=='');
+}
+function pbPasteRender(){
+  const host = document.getElementById('pbPasteHost'), P = pbPaste; if(!host || !P) return;
+  const first = pbList.length===0, act = P.mode==='activate';
+  let h = `<div class="pbSh"><div class="pbShH"><b>${act?'เปลี่ยนเป็นใช้จริง · '+escHtml(P.from):'วาง JSON Playbook'}</b></div>`;
+  if(!act) h += `<textarea id="pbText" class="pbTa" rows="7" placeholder='{"schema":"macroPlaybook/v1", ...}' oninput="pbPaste.text=this.value">${escHtml(P.text)}</textarea>
+    <div class="pbBtns"><button type="button" class="ui-btn ui-btn-pri" onclick="pbCheck()">ตรวจ</button></div>`;
+  if(P.checked && P.res){
+    if(P.res.errors.length) h += `<div class="pbErrs"><b>แก้ก่อนบันทึก</b>${P.res.errors.map(e=>`<div>✕ ${escHtml(e)}</div>`).join('')}</div>`;
+    if(P.res.warnings.length) h += `<div class="pbWarns">${P.res.warnings.map(e=>`<div>⚠ ${escHtml(e)}</div>`).join('')}</div>`;
+    if(!P.res.errors.length && P.obj){
+      const prev = pbLatestActive(), ch = Calc.pbDiff(prev, P.obj), nx = Calc.pbNextId(pbList, P.obj.quarter);
+      h += `<div class="pbPrev">พรีวิว → จะบันทึกเป็น <b>${escHtml(nx.id)}</b></div>${pbCardHtml({...P.obj, id:'preview'}, {open:true})}
+        <div class="pbChg">${Object.keys(ch).length?'ท่าทีเปลี่ยน: '+escHtml(pbChangesText(ch)):(prev?'ท่าทีไม่เปลี่ยน':'ท่าทีเปลี่ยน: — (เวอร์ชันแรกที่ใช้จริง)')}</div>`;
+      if(!first){
+        h += `<div class="pbSecK">เหตุผล (บังคับ)</div>${UI.chips(Object.keys(PB_REASON).map(k=>({label:PB_REASON[k], on:P.rtype===k, onClick:`pbSetReason('${k}')`})))}
+          <textarea id="pbReasonText" class="pbTa" rows="2" placeholder="อธิบายสั้น ๆ" oninput="pbPaste.rtext=this.value;pbPasteSync()">${escHtml(P.rtext)}</textarea>`;
+      }
+      h += `<div class="pbFixWarn" id="pbFixWarn"></div>`;
+    }
+  }
+  if(P.err) h += `<div class="pbErrs">${escHtml(P.err)}</div>`;
+  h += `<div class="pbBtns">${(P.checked&&P.res&&!P.res.errors.length)?`<button type="button" class="ui-btn ui-btn-pri" id="pbSaveBtn" onclick="pbSave()">บันทึก</button>`:''}
+    <button type="button" class="ui-btn" onclick="pbCancel()">ปิด</button></div></div>`;
+  host.innerHTML = h; pbPasteSync();
+}
+function pbPasteSync(){
+  const P = pbPaste; if(!P) return;
+  const b = document.getElementById('pbSaveBtn'); if(b) b.disabled = !pbPasteCan() || pbSaving;
+  const w = document.getElementById('pbFixWarn');
+  if(w){
+    const ch = P.obj ? Calc.pbDiff(pbLatestActive(), P.obj) : {};
+    w.textContent = (P.rtype==='fix' && Object.keys(ch).length) ? '⚠ แก้คำผิดแต่ท่าทีเปลี่ยน' : '';
+    w.style.display = w.textContent ? '' : 'none';
+  }
+}
+function pbSetReason(k){ if(pbPaste){ pbPaste.rtype = k; pbPasteRender(); } }
+function pbCancel(){ pbPaste = null; pbSheetClose(); }
+function pbCheck(){
+  const P = pbPaste; if(!P) return;
+  P.err = ''; P.res = Calc.pbValidate(P.text); P.checked = true; P.obj = null;
+  if(!P.res.errors.length){ try{ P.obj = JSON.parse(P.text); }catch(e){} }
+  pbPasteRender();
+}
+async function pbSave(){
+  const P = pbPaste; if(!P || pbSaving || !pbPasteCan() || !P.obj) return;
+  const col = sat7dCol('macroPlaybook');
+  if(!col){ P.err = 'บันทึกไม่สำเร็จ: ยังไม่ได้เข้าสู่ระบบ'; pbPasteRender(); return; }
+  pbSaving = true; pbPasteSync();
+  try{
+    const first = pbList.length===0, nx = Calc.pbNextId(pbList, P.obj.quarter);
+    const sorted = pbSorted(), prevId = sorted.length ? sorted[sorted.length-1].id : null;
+    const body = {}; Object.keys(P.obj).forEach(k=>{ if(!PB_META_KEYS.includes(k)) body[k] = P.obj[k]; });
+    const reason = (P.rtype && P.rtext.trim()) ? {type:P.rtype, text:P.rtext.trim()} : null;
+    if(!first && !reason) throw new Error('ต้องกรอกเหตุผล');
+    const doc = {...body, savedAt: firebase.firestore.FieldValue.serverTimestamp(), versionNo: nx.versionNo, prevId,
+      reason, stanceChanges: Calc.pbDiff(pbLatestActive(), body)};
+    const ref = col.doc(nx.id);
+    const ex = await ref.get();
+    if(ex && ex.exists) throw new Error('เวอร์ชัน '+nx.id+' มีอยู่แล้ว — ลองวางใหม่อีกครั้ง');
+    await ref.set(doc);
+    pbSaving = false; pbPaste = null;
+    document.querySelectorAll('.pb-sheet').forEach(el=>el.remove());
+    if(!pbList.some(v=>v.id===nx.id)) pbList.push({...doc, id:nx.id, savedAt:new Date().toISOString()});
+    pbRender();
+  }catch(e){
+    pbSaving = false;
+    if(pbPaste){ pbPaste.err = 'บันทึกไม่สำเร็จ: '+sat7dErrText(e)+' — ข้อความในช่องยังอยู่ ลองกดบันทึกอีกครั้ง'; pbPasteRender(); }
+  }
 }
 
 /* ══════════ F1 — การ์ดปฏิทินข่าว (iframe Investing.com สร้างเมื่อกางเท่านั้น) ══════════ */
