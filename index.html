@@ -3229,6 +3229,8 @@ function acctSwitch(id){
     alert('ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — รอสักครู่แล้วลองสลับอีกครั้ง');
     renderAcctBar(); return;
   }
+  /* มีงานค้าง (debounce ยังไม่ยิง / รอบก่อนเขียนล้มเหลว) → ต้องมาร์คบัญชีเดิมเป็น dirty ไม่งั้น doPersist หลังสลับจะเขียนแค่บัญชีใหม่ */
+  if(persistTimer || pendingLocalWrite) dirtyBooks.set(acctActive, (dirtyBooks.get(acctActive)||0)+1);
   acctBooks[acctActive] = state;
   acctActive = id;
   const has = !!acctBooks[id];
