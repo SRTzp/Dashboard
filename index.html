@@ -1572,7 +1572,8 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
 .ui-editor{background:var(--card);border:1px solid var(--dark);border-radius:var(--r-card);padding:12px;margin-top:10px}
 .ui-editor-h{font-size:13px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--dark)}
 .ui-editor-h small{color:var(--mute);font-weight:400}
-.ui-factors{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:4px 0 6px}
+.ui-factors{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));gap:6px;margin:4px 0 6px}
+.ui-f-sub{font-size:10.5px;color:var(--mute);opacity:.75;margin-top:3px;line-height:1.35}
 .ui-factor{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 2px;text-align:center;user-select:none;cursor:pointer;min-width:0}
 .ui-f-n{font-size:10.5px;color:var(--mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ui-f-pen{border:0;background:none;color:var(--mute);font-size:10px;padding:0 0 0 2px;cursor:pointer}
@@ -1608,6 +1609,28 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
 @media (max-width:430px){ .ui-plan-nums{grid-template-columns:1fr 1fr} }
 .ui-plan-nums label{display:block;font-size:11px;color:var(--mute)}
 .ui-num{border:1px solid var(--line);border-radius:var(--r-btn);padding:8px;font-size:15px;color:var(--dark)}
+/* 7D.4 — ช่อง Entry/SL/TP/Cancel Level สูงขึ้น ~6px ตัวเลขใหญ่ขึ้น ~2px (ก่อนแก้: สูง 19px · ตัวเลข 13.3px ไม่มี padding) — ใช้กับการ์ดทั้งใหม่และเก่า ทั้ง 1440/430 */
+.ui-plan-nums input{width:100%;min-width:0;font-size:15px;padding:2px 6px;color:var(--dark)}
+/* 7D.4 — รายการเงื่อนไขในการ์ดแผน */
+.ui-conds{margin:2px 0 8px}
+.ui-conds-h{font-size:12.5px;font-weight:700;color:var(--dark);margin-bottom:4px}
+.ui-conds-h small{color:var(--mute);font-weight:400}
+.ui-cond{border:1px solid var(--line);border-radius:var(--r-btn);padding:8px;margin-bottom:6px;min-width:0}
+.ui-cond.ui-cond-on{border-color:var(--dark);background:var(--soft)}
+.ui-cond-top{display:flex;align-items:center;gap:6px;min-width:0}
+.ui-cond-act{display:inline-flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;color:var(--dark);cursor:pointer}
+.ui-cond-text{flex:1;min-width:0;border:1px solid var(--line);border-radius:var(--r-btn);padding:6px 8px;font-size:13px}
+.ui-cond-nums{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:11.5px;color:var(--mute)}
+.ui-cond-g{display:inline-flex;align-items:center;gap:6px;min-width:0}
+@media (max-width:430px){
+  .ui-cond-top{flex-wrap:wrap}
+  .ui-cond-act{flex:0 0 100%}
+  .ui-cond-text{flex:1 1 0}
+}
+.ui-cond-nums input{width:78px;min-width:0;border:1px solid var(--line);border-radius:var(--r-btn);padding:4px 6px;font-size:12.5px}
+.ui-cond-nums input[placeholder^="ราคา"]{width:120px}
+.ui-cond-hint{font-size:11.5px;margin-top:4px}
+.ui-wait .ui-row{margin-bottom:6px}
 .ui-rr{font-size:12px;color:var(--mute);margin:6px 0 4px}
 .ui-rr b{color:var(--dark)}
 .ui-plan-accts{margin-top:8px}
@@ -8572,6 +8595,12 @@ function makeTradeObject(o){
                   : (prevTrade && prevTrade.cancel_level!=null ? prevTrade.cancel_level : null),
     setups: Array.isArray(o.setups) ? o.setups.slice()
             : (prevTrade && Array.isArray(prevTrade.setups) ? prevTrade.setups.slice() : null),
+    /* ★ 7D.4 — field เสริมล้วน (optional) จากเงื่อนไขที่ Activate ในการ์ดแผน Sat: condition_id · entry_condition (สำเนาข้อความ
+       ไว้ให้ Journal อ่านได้แม้ลบเงื่อนไขทีหลัง) · tp_zone {from,to} — caller เดิมไม่ส่ง = null / ค่าเดิมของ prevTrade */
+    condition_id: o.condition_id!=null ? String(o.condition_id) : (prevTrade && prevTrade.condition_id!=null ? prevTrade.condition_id : null),
+    entry_condition: o.entry_condition!=null ? String(o.entry_condition) : (prevTrade && prevTrade.entry_condition!=null ? prevTrade.entry_condition : null),
+    tp_zone: (o.tp_zone && typeof o.tp_zone==='object') ? {from: o.tp_zone.from!=null?o.tp_zone.from:null, to: o.tp_zone.to!=null?o.tp_zone.to:null}
+             : (prevTrade && prevTrade.tp_zone ? prevTrade.tp_zone : null),
     status
   };
   if(status==='closed'){
@@ -9032,6 +9061,7 @@ function saveSettings(){
             satA: parseFloat(document.getElementById('sCapSatA').value)||25 },
       ffThrottle: document.getElementById('sFfThrottle').value==='1'
     },
+    ...(state.settings.satSetupPassRatio!=null ? {satSetupPassRatio: state.settings.satSetupPassRatio} : {}),   /* 7D.4 — เกณฑ์ Setup ผ่าน ห้ามหายตอนกดบันทึกตั้งค่า */
     ...(state.settings.brokers ? {brokers: state.settings.brokers} : {}),   /* 7D — ตั้งค่าโบรกรายบัญชี ห้ามหายตอนกดบันทึกตั้งค่า */
     satBVol: sbCollectBands(),
     satBLowRisk: parseFloat(document.getElementById('sSatBLowRisk').value)||1,
@@ -9688,6 +9718,7 @@ const SAT7D_DEFAULT_BROKERS = {
   IC:{XAUUSD:{contract:100, lotStep:0.01, minLot:0.01, cur:'USD'}},
   Pi:{S50:{contract:200, lotStep:1, minLot:1, cur:'THB'}}
 };
+const SAT_SETUP_PASS_DEFAULT = 0.65;   /* 7D.4 — Setup ผ่านเมื่อ ติ๊ก/ทั้งหมด ≥ ค่านี้ (แก้ได้ที่ state.settings.satSetupPassRatio) */
 const SAT7D_RPT = 1.25, SAT7D_RPT_HI = 1.5, SAT7D_HEAT_MAX = 6, SAT7D_NEW_MAX = 2, SAT7D_PROVE_N = 50, SAT7D_PROVE_R = 0.25;
 const SAT_VIEW_ON = true;   /* 7D.2 — มุมมองสัปดาห์ (ชั้น A) เหนือการ์ดเข้าไม้ · false = การ์ดมี Bias ของตัวเองแบบ 7D เดิม */
 const SATW_COMPS = ['trend','momentum','zone','sentiment','macro'];
@@ -9706,13 +9737,11 @@ const SAT_V3_ON = true;
    SAT_ASSETS ถูกย้ายขึ้นไปประกาศรวมกับ SAT7D_ASSETS ด้านบนแล้ว (7D.3 Phase 1 — รวมเป็นแหล่งเดียวกันแล้ว) */
 const SAT_FACTORS = [
   {k:'trend',     label:'Trend'},
-  {k:'momentum',  label:'Momentum'},
-  {k:'zone',      label:'Zone', kind:'levels'},   /* 7D.3 รอบ 3 — Zone ไม่ใช่องค์ประกอบให้คะแนนแล้ว (ไม่มี ▲▬▼) */
-  {k:'sentiment', label:'Sentiment'},
+  {k:'zone',      label:'Zone', kind:'levels'},   /* 7D.3 รอบ 3 — Zone ไม่ใช่องค์ประกอบให้คะแนน (ไม่มี ▲▬▼) */
   {k:'macro',     label:'Macro'}
-];
-/* 7D.3 รอบ 3 — องค์ประกอบที่ยังให้คะแนน (▲▬▼) มีแค่ 4 ตัว (ตัด Zone ออกเพราะ kind:'levels')
-   ทุกจุดที่นับคะแนน/แสดง x/4 ต้องอ่านจากตัวนี้ ห้าม hardcode 5 หรือ SATW_COMPS (ตัวนั้นยังมี zone อยู่ ใช้กับของเดิม/ข้อมูลดิบเท่านั้น) */
+];   /* 7D.4 — ตัด momentum/sentiment ออกจากการนับและการแสดง (ข้อมูลเดิมใน satWeek.comps ไม่ลบ) */
+/* 7D.4 — องค์ประกอบที่ให้คะแนน (▲▬▼) เหลือ 2 ตัว = Trend · Macro (ตัด Zone ออกเพราะ kind:'levels')
+   ทุกจุดที่นับคะแนน/แสดง x/2 ต้องอ่านจากตัวนี้ ห้าม hardcode ตัวเลข หรือใช้ SATW_COMPS (ตัวนั้นยังมี 5 ตัวเดิม ใช้กับของเดิม/ข้อมูลดิบเท่านั้น) */
 const SAT_FACTORS_SCORED = SAT_FACTORS.filter(f=>f.kind!=='levels');
 const SATW_COMPS_SCORED = SAT_FACTORS_SCORED.map(f=>f.k);
 /* §0.3 — STRIP_FIELDS กำหนดว่าแถบบัญชีของแต่ละโหมดโชว์ช่องอะไร (ป้าย/ลำดับเท่านั้น — ตัวเลขจริงมาจาก settings ตอน render จริงใน UI.acctStrip)
@@ -9746,6 +9775,12 @@ const Calc = {
     const l = steps * lotStep;
     if(l < minLot - 1e-12) return {lot:null, msg:'SL กว้างเกินขนาดขั้นต่ำ'};
     return {lot:l, msg:''};
+  },
+  /* 7D.4 — Setup ผ่านไหม: n/total ≥ minRatio (ค่าเริ่มต้น 0.65) · 2/3 ผ่าน · 3/4 ผ่าน · 2/4 ไม่ผ่าน · total=0 = ไม่ผ่าน */
+  setupPass(n, total, minRatio){
+    if(!(total>0)) return false;
+    const r = (minRatio>0 && minRatio<=1) ? +minRatio : SAT_SETUP_PASS_DEFAULT;
+    return n/total >= r - 1e-9;
   },
   /* Risk:Reward แบบง่าย — |tp-entry| / |entry-sl| */
   rr(entry, sl, tp){
@@ -9819,7 +9854,11 @@ const UI = {
        model.addSetupBtn / model.editSetupBtn → ปุ่ม [+ เพิ่ม] / [✎ แก้รายการ] ต่อท้ายแถว setup chips
        model.setupsLabel   → บรรทัดข้อความเหนือแถว setup chips (เช่น "Setup 2/3 · ยังไม่ครบ = นอกแผน")
        model.saveBtn       → {label, onClick, disabled} ปุ่มหลักท้ายการ์ด
-       adapter.rowExtra(model,acct) → HTML เสริมต่อท้ายแต่ละแถวบัญชี (เช่น ✅/⚠️+เหตุผล + ปุ่ม [ข้าม]) */
+       adapter.rowExtra(model,acct) → HTML เสริมต่อท้ายแต่ละแถวบัญชี (เช่น ✅/⚠️+เหตุผล + ปุ่ม [ข้าม])
+     ★ 7D.4 — เพิ่ม field เสริมแบบ optional (ไม่ส่ง = เหมือนเดิมทุกประการ):
+       model.topHtml   → HTML ดิบใต้หัวการ์ด (ก่อนช่องราคา) — Sat ใช้ใส่รายการเงื่อนไข
+       model.hideNums  → ซ่อนช่อง Entry/SL/TP/Cancel Level + R  ·  model.hideSetups → ซ่อนแถว Setup  ·  model.hideAccts → ซ่อนแถวบัญชี
+       model.footHtml  → HTML ดิบท้ายการ์ด (หลังปุ่มหลัก) */
   planCard(model, adapter){
     const dt = model.dir==='S' ? 'Short' : 'Long';
     const rows = (model.accts||[]).map(a=>{
@@ -9839,18 +9878,20 @@ const UI = {
       : `<div class="ui-num">${val??'—'}</div>`;
     return `<div class="ui-plan"${model.id!=null?` data-id="${escHtml(String(model.id))}"`:''}>
       <div class="ui-plan-h"><b>${escHtml(model.sym||'')}</b><span class="ui-tag ${model.dir||''}">${dt}</span>${model.tag?`<span class="ui-tag">${escHtml(model.tag)}</span>`:''}${model.closeBtn?`<button type="button" class="ui-btn" style="margin-left:auto" onclick="${model.closeBtn}">✕</button>`:''}</div>
+      ${model.topHtml||''}
       ${priceChips?`<div class="ui-chips">${priceChips}</div>`:''}
-      <div class="ui-plan-nums">
+      ${model.hideNums?'':`<div class="ui-plan-nums">
         <div><label>Entry</label>${numField('entry', model.entry)}</div>
         <div><label>SL</label>${numField('sl', model.sl)}</div>
         <div><label>TP</label>${numField('tp', model.tp)}</div>
         <div><label>Cancel Level</label>${numField('cancel_level', model.cancel)}</div>
-      </div>
-      ${model.rr!=null?`<div class="ui-rr">= <b>${model.rr}</b></div>`:''}
-      ${model.setupsLabel?`<div class="ui-hint">${escHtml(model.setupsLabel)}</div>`:''}
-      <div class="ui-chips">${setups}${model.addSetupBtn?`<span class="ui-chip" style="border-style:dashed" onclick="${model.addSetupBtn}">+ เพิ่ม</span>`:''}${model.editSetupBtn?`<button type="button" class="ui-btn" onclick="${model.editSetupBtn}">✎ แก้รายการ</button>`:''}</div>
-      <div class="ui-plan-accts">${rows}</div>
+      </div>`}
+      ${(!model.hideNums && model.rr!=null)?`<div class="ui-rr">= <b>${model.rr}</b></div>`:''}
+      ${model.hideSetups?'':`${model.setupsLabel?`<div class="ui-hint">${escHtml(model.setupsLabel)}</div>`:''}
+      <div class="ui-chips">${setups}${model.addSetupBtn?`<span class="ui-chip" style="border-style:dashed" onclick="${model.addSetupBtn}">+ เพิ่ม</span>`:''}${model.editSetupBtn?`<button type="button" class="ui-btn" onclick="${model.editSetupBtn}">✎ แก้รายการ</button>`:''}</div>`}
+      ${model.hideAccts?'':`<div class="ui-plan-accts">${rows}</div>`}
       ${model.saveBtn?`<div class="ui-plan-cta"><button type="button" class="ui-btn ui-btn-pri ui-btn-big" ${model.saveBtn.disabled?'disabled':''} onclick="${model.saveBtn.onClick}">${escHtml(model.saveBtn.label)}</button></div>`:''}
+      ${model.footHtml||''}
     </div>`;
   },
   /* model: {color,name,tag,detail,btns:[{label,cls}]} — แถว 1 บรรทัด (จุดสีบัญชี · ชื่อ · ป้าย · รายละเอียด · ปุ่ม)
@@ -9907,12 +9948,30 @@ function sat7dStop(){
 function sat7dRefresh(){
   if(!SAT7D_ON || !state) return;
   const panel = document.getElementById(SAT_V3_ON ? 'satV3Panel' : 'sat7dPanel'); if(!panel) return;
+  if(sat7dTypingGuard(panel)) return;
+  try{ renderSat7d(); }catch(e){ console.warn('sat7d refresh:', e); }
+}
+/* กำลังพิมพ์ในแผงนี้ → true (ยังไม่วาด รอวาดตอนออกจากช่อง) — ★ 7D.4: renderSat7d() (V3) เรียกตัวเดียวกันด้วย เพราะ render() ทั้งแอป
+   (เช่น listener ของหน้าอื่น) เรียก renderSat7d() ตรง ๆ ไม่ผ่าน sat7dRefresh → เดิมวาดทับช่องที่กำลังพิมพ์/เพิ่งโฟกัส (เคอร์เซอร์เด้ง)
+   วาดตอน blur ผ่าน setTimeout 0 เพื่อให้โฟกัสย้ายไปช่องถัดไปก่อน (ไม่ทำลายช่องที่กำลังจะโฟกัสด้วยการวาดทับกลาง Tab/คลิก) */
+/* ★ 7D.4 — กดปุ่มค้างอยู่ (mousedown แล้วยังไม่ mouseup) ห้ามวาดแผงทับ: พิมพ์ช่องหนึ่งแล้วกดปุ่ม → blur ยิง change → เขียน → snapshot วาดใหม่
+   ก่อน mouseup → ปุ่มที่กดถูกแทนที่ click หาย (ต้องกดซ้ำ) · รอวาดหลังปล่อยเมาส์ · กันค้าง: เกิน 3 วินาทีถือว่าปล่อยแล้ว */
+let sat7dPtrDownAt = 0, sat7dPtrPending = false;
+(function(){
+  const inPanel = e => !!(e.target && e.target.closest && e.target.closest('#satV3Panel, #sat7dPanel'));
+  document.addEventListener('pointerdown', e=>{ if(inPanel(e)) sat7dPtrDownAt = Date.now(); }, true);
+  const up = ()=>{ if(!sat7dPtrDownAt) return; sat7dPtrDownAt = 0; setTimeout(()=>{ if(sat7dPtrPending){ sat7dPtrPending = false; sat7dRefresh(); } }, 0); };
+  document.addEventListener('pointerup', up, true);
+  document.addEventListener('pointercancel', up, true);
+})();
+function sat7dTypingGuard(panel){
+  if(sat7dPtrDownAt && Date.now() - sat7dPtrDownAt < 3000){ sat7dPtrPending = true; return true; }
   const ae = document.activeElement;
   if(ae && panel.contains(ae) && (ae.tagName==='INPUT' || ae.tagName==='TEXTAREA' || ae.tagName==='SELECT')){
-    if(!panel._s7Wait){ panel._s7Wait = true; ae.addEventListener('blur', ()=>{ panel._s7Wait = false; sat7dRefresh(); }, {once:true}); }
-    return;
+    if(!panel._s7Wait){ panel._s7Wait = true; ae.addEventListener('blur', ()=>{ setTimeout(()=>{ panel._s7Wait = false; sat7dRefresh(); }, 0); }, {once:true}); }
+    return true;
   }
-  try{ renderSat7d(); }catch(e){ console.warn('sat7d refresh:', e); }
+  return false;
 }
 /* เขียนเฉพาะเอกสารที่แก้ (set merge) — เรียกจากการกระทำของผู้ใช้เท่านั้น */
 function sat7dWrite(col, docId, patch){
@@ -10245,7 +10304,7 @@ function satwMacroFF(asset){
   const key = SATW_MACRO_KEY[asset]; if(!key) return null;
   try{ const d = rsMacroDoc(); return (d && d.assets && d.assets[key]) || null; }catch(e){ return null; }
 }
-/* "พร้อม" ของมุมมองสัปดาห์: ประเมินครบ 5 องค์ประกอบ + ตั้ง Bias (รวมงดเทรด) + Invalidation ราคา+เหตุผล */
+/* "พร้อม" ของมุมมองสัปดาห์: ประเมินครบทุกองค์ประกอบที่ให้คะแนน (SATW_COMPS_SCORED) + ตั้ง Bias (รวมงดเทรด) + Invalidation ราคา+เหตุผล */
 function satwReady(w){
   if(!w) return false;
   const t = satwTally(w);
@@ -10355,7 +10414,7 @@ function satwAssetHtml(asset, wk, w, readonly){
       ${readonly ? `<span class="s7Hint">${c.v==='up'?'↑':c.v==='down'?'↓':c.v==='flat'?'→':'—'}</span>` : satwCompArrows(asset,k,c.v)}
       <input type="text" placeholder="โน้ต" value="${escHtml(c.note||'')}" ${readonly?'disabled':''} onchange="satwSetCompNote('${asset}','${k}',this.value)"></div>${zoneLv}${macroFF}`;
   }).join('');
-  const tallyTxt = tally.n<5 ? `ยังประเมินไม่ครบ ${tally.n}/5` : `↑${tally.up} →${tally.flat} ↓${tally.down}`;
+  const tallyTxt = tally.n<SATW_COMPS_SCORED.length ? `ยังประเมินไม่ครบ ${tally.n}/${SATW_COMPS_SCORED.length}` : `↑${tally.up} →${tally.flat} ↓${tally.down}`;
   const bias = w && w.bias;
   const contra = (bias==='Long' && tally.down>tally.up) || (bias==='Short' && tally.up>tally.down);
   const ready = satwReady(w);
@@ -10420,7 +10479,7 @@ function satV3LevelChipsHtml(asset, field, values, readonly){
     `<span class="ui-chip">${escHtml(fmt2(v))}${readonly?'':` <button type="button" class="ui-chip-x" title="ลบ" onclick="${rmFn}('${escHtml(asset)}',${i})">✕</button>`}</span>`
   ).join('')}</div>`;
 }
-/* เตือนเดิมของ Bias (คงไว้ตามสเปก): สวนองค์ประกอบ · สวน Trend · ยังไม่มีจุดผิด · เกินโควตาสลับ */
+/* เตือนเดิมของ Bias (คงไว้ตามสเปก): สวนองค์ประกอบ · สวน Trend · ยังไม่มี Trend Shift (เดิม "จุดผิด") · เกินโควตาสลับ */
 function satV3Warnings(asset, w){
   const warns = [];
   if(!w || (w.bias!=='Long' && w.bias!=='Short')) return warns;
@@ -10430,7 +10489,7 @@ function satV3Warnings(asset, w){
   if(oppose > agree) warns.push('Bias สวนองค์ประกอบ');
   const trendV = w.comps && w.comps.trend && w.comps.trend.v;
   if((w.bias==='Long' && trendV==='down') || (w.bias==='Short' && trendV==='up')) warns.push('สวน Trend');
-  if(w.invalidation==null) warns.push('ยังไม่มีจุดผิด');
+  if(w.invalidation==null) warns.push('ยังไม่มี Trend Shift');
   if((w.flips||0) >= 2) warns.push('เกินโควตาสลับ Bias สัปดาห์นี้');
   return warns;
 }
@@ -10455,8 +10514,8 @@ function satV3TileBadgeSub(asset, w){
   const resTxt = res.values.length ? res.values.map(fmt2).join(', ') : '—';
   const invTxt = w.invalidation!=null ? fmt2(w.invalidation) : '—';
   const why = satV3WhyValue(w) || undefined;   /* 7D.3 รอบ 3 — โชว์เหตุผลเป็นบรรทัดที่ 2 ใต้ รับ/ต้าน/ผิด ในช่องที่พับอยู่ */
-  if(w.bias==='Long') return {badge:`Long · ${t.up}/${N}`, sub:`รับ ${supTxt} · ต้าน ${resTxt} · ผิด <${invTxt}`, sub2: why};
-  return {badge:`Short · ${t.down}/${N}`, sub:`ต้าน ${resTxt} · รับ ${supTxt} · ผิด >${invTxt}`, sub2: why};
+  if(w.bias==='Long') return {badge:`Long · ${t.up}/${N}`, sub:`รับ ${supTxt} · ต้าน ${resTxt} · Trend Shift <${invTxt}`, sub2: why};
+  return {badge:`Short · ${t.down}/${N}`, sub:`ต้าน ${resTxt} · รับ ${supTxt} · Trend Shift >${invTxt}`, sub2: why};
 }
 function satV3TileDotsHtml(w){
   return SATW_COMPS_SCORED.map(k=>{
@@ -10522,29 +10581,26 @@ function satV3EditorHtml(asset, wk){
     const noteRow = noteOpen
       ? `<div class="ui-f-note"><input type="text" value="${escHtml(c.note||'')}" placeholder="โน้ต" ${readonly?'disabled':''} onchange="satwSetCompNote('${escHtml(asset)}','${k}',this.value)"></div>`
       : '';
+    const macroSub = k==='macro' ? '<div class="ui-f-sub">ใส่เอง · จะเชื่อม Playbook หน้า Flow ภายหลัง</div>' : '';
     return `<div><div class="ui-factor${cls?(' '+cls):''}" ${readonly?'':`onclick="satV3CycleFactor('${escHtml(asset)}','${k}')"`}>
       <div class="ui-f-n">${SATW_COMP_LABEL[k]}${!readonly?` <button type="button" class="ui-f-pen" title="เปิด/ปิดโน้ต" onclick="event.stopPropagation();satV3ToggleNote('${escHtml(asset)}','${k}')">✎</button>`:''}</div>
-      <div class="ui-f-v">${sym}</div></div>${noteRow}</div>`;
+      <div class="ui-f-v">${sym}</div></div>${macroSub}${noteRow}</div>`;
   }).join('');
   const tallyTxt = `รวม ▲${t.up} ▬${t.flat} ▼${t.down}${t.n<SATW_COMPS_SCORED.length?` · ประเมินแล้ว ${t.n}/${SATW_COMPS_SCORED.length}`:''}`;
   const whyVal = satV3WhyValue(w);
   const sup = satV3SupportDisplay(w), res = satV3ResistanceDisplay(w);
-  const macroFF = satwMacroFF(asset);
-  const macroHtml = macroFF
-    ? `Fund-flow ${escHtml(macroFF.label||macroFF.view||'')}: ${escHtml(macroFF.mechanism||'')}${macroFF.flip_when?' · พลิกเมื่อ '+escHtml(macroFF.flip_when):''}`
-    : `— ไม่มีข้อมูล Fund-flow สำหรับ ${escHtml(sat7dLabel(asset))}`;
   const warns = satV3Warnings(asset, w);
   const curWk = wpWeekKey(), opts = satwWeekOptions();
   const weekSel = `<select id="satV3WeekSel" onchange="satwViewWeekChanged(this.value)">${opts.map(k=>`<option value="${k}"${k===wk?' selected':''}>${k===curWk?'สัปดาห์นี้':escHtml(wpWeekRangeText(k))}</option>`).join('')}</select>`;
   return `<div class="ui-editor" data-asset="${escHtml(asset)}">
     <div class="ui-editor-h">${escHtml(sat7dLabel(asset))} <small>แก้ Strategy · แตะช่องเดิมอีกครั้งเพื่อพับ${readonly?' · อ่านอย่างเดียว':''}</small>${weekSel}</div>
-    <div class="ui-factors">${factors}</div>
+    <div class="ui-factors" style="--n:${SATW_COMPS_SCORED.length}">${factors}</div>
     <div class="ui-tally">${escHtml(tallyTxt)}</div>
     <div class="ui-flds">
       <div class="ui-fl ui-fl-w2"><label>เหตุผล 1 ประโยค</label><input type="text" value="${escHtml(whyVal)}" ${readonly?'disabled':''} onchange="satwSetWhy('${escHtml(asset)}',this.value)"></div>
       <div class="ui-fl"><label>แนวรับ</label><input type="text" inputmode="decimal" placeholder="เช่น 2600, 2610" value="${escHtml(sup.values.join(', '))}" ${readonly?'disabled':''} onchange="satwSetSupport('${escHtml(asset)}',this.value)">${satV3LevelChipsHtml(asset,'support',sup.values,readonly)}</div>
       <div class="ui-fl"><label>แนวต้าน</label><input type="text" inputmode="decimal" placeholder="เช่น 2680, 2700" value="${escHtml(res.values.join(', '))}" ${readonly?'disabled':''} onchange="satwSetResistance('${escHtml(asset)}',this.value)">${satV3LevelChipsHtml(asset,'resistance',res.values,readonly)}</div>
-      <div class="ui-fl"><label>ผิดเมื่อ</label><input type="number" step="any" value="${w.invalidation!=null?escHtml(String(w.invalidation)):''}" ${readonly?'disabled':''} onchange="satwSetInvalidation('${escHtml(asset)}',this.value)"></div>
+      <div class="ui-fl"><label>Trend Shift</label><input type="number" step="any" value="${w.invalidation!=null?escHtml(String(w.invalidation)):''}" ${readonly?'disabled':''} onchange="satwSetInvalidation('${escHtml(asset)}',this.value)"></div>
     </div>
     <div class="ui-bias-row">
       <button type="button" class="ui-bias-btn ui-bias-L${w.bias==='Long'?' ui-on':''}" ${readonly?'disabled':''} onclick="satV3SetBias('${escHtml(asset)}','Long')">Long</button>
@@ -10552,7 +10608,6 @@ function satV3EditorHtml(asset, wk){
       <button type="button" class="ui-bias-btn ui-bias-N${w.bias==='None'?' ui-on':''}" ${readonly?'disabled':''} onclick="satV3SetBias('${escHtml(asset)}','None')">งดเทรด</button>
     </div>
     ${warns.length?`<div class="ui-editor-hint">⚠️ ${warns.map(escHtml).join(' · ')}</div>`:''}
-    <div class="ui-editor-macro"><b>Macro</b><div class="ui-hint">${macroHtml}</div></div>
     ${!readonly?`<button type="button" class="ui-btn" onclick="satV3CopyPrev('${escHtml(asset)}')">คัดลอกจากสัปดาห์ก่อน</button>`:''}
   </div>`;
 }
@@ -10604,6 +10659,11 @@ function satV3Render(){
   /* "โฟกัสช่องพิมพ์ทันที" ตอนเปิดช่องเพิ่ม/แก้ Setup ใหม่ (แทน prompt() ชั่วคราวของ Phase 3) */
   const af = el.querySelector('[data-autofocus]');
   if(af){ af.focus(); if(af.select) af.select(); }
+  /* 7D.4 — เงื่อนไขที่เพิ่งเพิ่ม (ปุ่มลัด/+ เพิ่มเอง): โฟกัสช่องข้อความ วางเคอร์เซอร์ท้ายข้อความให้พิมพ์ต่อได้ทันที */
+  if(satV3FocusCond){
+    const ci = el.querySelector(`[data-cond-text="${satV3FocusCond}"]`);
+    if(ci){ satV3FocusCond = null; ci.focus(); const n = ci.value.length; try{ ci.setSelectionRange(n, n); }catch(e){} }
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -10683,16 +10743,122 @@ function satV3NewPlan(asset){
   const bias = wk && wk.bias;
   if(bias!=='Long' && bias!=='Short') return;   /* ปุ่มควรถูกซ่อนอยู่แล้วถ้าไม่ใช่ Long/Short — กันไว้อีกชั้น */
   const existing = satV3PlanDraftFor(asset);
-  if(existing){ satV3PlanHighlight = existing.id; return; }
-  const sup = satV3SupportDisplay(wk), res = satV3ResistanceDisplay(wk);
-  const zones = bias==='Long' ? sup.values : res.values;
+  if(existing){
+    satV3PlanHighlight = existing.id;
+    if(satV3IsCondIdea(existing) && existing.planned===true && !satV3Open.has(existing.id)){ satV3Open.add(existing.id); satV3Render(); }   /* แผนที่ยุบเป็นแถว "รอเงื่อนไข" → กางให้ */
+    return;
+  }
   const id = 'i' + Date.now();
+  /* 7D.4 — ไอเดียใหม่ = การ์ด 2 ขั้น: conditions[] (ขั้นวางแผน) · planned=false จนกว่าจะกด [บันทึกแผน] · ไม่เติม Entry จากแนวรับอีก (ตัดชิปราคาแล้ว) */
   sat7dWrite('satIdeas', id, {
     v3: true, asset, bias, week: wpWeekKey(), created_at: new Date().toISOString(),
-    entry: zones.length===1 ? zones[0] : null, sl: null, tp: null, cancel_level: null,
+    entry: null, sl: null, tp: null, cancel_level: null,
+    conditions: [], planned: false,
     setups: [], status: 'active', accts: {}
   });
   satV3PlanHighlight = id;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7D.4 — การ์ดแผน 2 ขั้น (ไอเดียใหม่ที่มี conditions[]) — ไอเดียเก่าที่ไม่มี conditions ยังใช้การ์ดเดิม (ดู satV3DraftCardHtml)
+   ขั้นวางแผน: conditions[] = {id, text, tp_from, tp_to, inval, active:false} ใส่ได้หลายข้อ → [บันทึกแผน] เขียน satIdeas เท่านั้น (planned:true) ไม่สร้างไม้
+   ขั้นหน้างาน: ติ๊ก Activate ทีละ 1 ข้อ (ติ๊กข้ออื่น = ย้าย) → ช่อง Entry/SL/TP/Cancel Level ขึ้น · TP เริ่มต้น = ขอบใกล้ของ TP zone ข้อนั้น
+   ทุกการเขียนมาจากการกระทำของผู้ใช้ (onchange/onclick) — ไม่เขียนตอน render/onSnapshot · ✕ ลบเงื่อนไข = ผู้ใช้กดเอง ไม่ลบอัตโนมัติ
+   ══════════════════════════════════════════════════════════════════════════ */
+let satV3Open = new Set();        /* id ของแผนที่ planned แล้วและกางการ์ดอยู่ (ค่าเริ่มต้น = ยุบเป็นแถว "รอเงื่อนไข") */
+let satV3FocusCond = null;        /* id เงื่อนไขที่เพิ่งเพิ่ม → satV3Render() โฟกัสช่องข้อความให้ */
+const SAT_V3_COND_SHORTCUTS = ['Break & Pullback @ ', 'Swing back in demand zone @ '];
+function satV3IsCondIdea(idea){ return !!idea && Array.isArray(idea.conditions); }
+function satV3ActiveCond(idea){ return satV3IsCondIdea(idea) ? (idea.conditions.find(c=>c && c.active) || null) : null; }
+/* ขอบใกล้ของ TP zone: Long = min(from,to) · Short = max(from,to) — กรอกกลับด้านก็ได้ค่าเดิม · มีค่าเดียว = ค่านั้น · ไม่มีเลย = null */
+function satV3TpNear(cond, bias){
+  if(!cond) return null;
+  const v = [cond.tp_from, cond.tp_to].filter(x=>x!=null && x!=='').map(Number).filter(isFinite);
+  if(!v.length) return null;
+  return bias==='Short' ? Math.max(...v) : Math.min(...v);
+}
+/* เขียนไอเดีย + สะท้อนลง satIdeasList ทันที (ผู้ใช้กดต่อเนื่องเร็ว ๆ ไม่อ่านค่าเก่าก่อน snapshot มา) — เขียนเฉพาะเอกสารที่แก้ */
+function satV3IdeaWrite(ideaId, patch){
+  const idea = sat7dIdea(ideaId); if(idea) Object.assign(idea, patch);
+  return sat7dWrite('satIdeas', ideaId, patch);
+}
+function satV3CondAdd(ideaId, text){
+  const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea)) return;
+  const id = 'c' + Date.now() + Math.floor(Math.random()*1000);
+  satV3FocusCond = id;
+  satV3IdeaWrite(ideaId, {conditions: idea.conditions.concat([{id, text:String(text||''), tp_from:null, tp_to:null, inval:null, active:false}])});
+  satV3Render();
+}
+function satV3CondEdit(ideaId, condId, field, val){
+  const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea) || !['text','tp_from','tp_to','inval'].includes(field)) return;
+  const v = field==='text' ? String(val==null?'':val) : sat7dNum(val);
+  const before = idea.conditions.find(c=>c.id===condId);
+  const prevDefault = (before && before.active) ? satV3TpNear(before, idea.bias) : undefined;   /* ต้องจับก่อนเขียน (satV3IdeaWrite แก้ idea ในหน่วยความจำทันที) */
+  const conditions = idea.conditions.map(c=> c.id===condId ? Object.assign({}, c, {[field]: v}) : c);
+  const patch = {conditions};
+  /* แก้ TP zone ของข้อที่ Activate อยู่: TP ยังเป็นค่าเริ่มต้นเดิม (ไม่เคยแก้เอง) → ตามขอบใกล้ใหม่ · แก้เองแล้ว → ไม่ทับ */
+  if(prevDefault!==undefined && (field==='tp_from' || field==='tp_to') && (idea.tp==null || idea.tp===prevDefault)){
+    patch.tp = satV3TpNear(conditions.find(c=>c.id===condId), idea.bias);
+  }
+  satV3IdeaWrite(ideaId, patch);
+}
+function satV3CondRemove(ideaId, condId){
+  const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea)) return;
+  satV3IdeaWrite(ideaId, {conditions: idea.conditions.filter(c=>c.id!==condId)});   /* ไม้ที่บันทึกไปแล้วเก็บสำเนาข้อความไว้เอง (entry_condition) ไม่กระทบ */
+  satV3Render();
+}
+/* ติ๊ก Activate = ข้อนี้เป็นข้อเดียวที่ active (ข้ออื่นถูกย้ายออก) · ติ๊กออก = ไม่มีข้อ active · ยังไม่ Activate = ไม่แสดงช่อง Entry/SL */
+function satV3CondActivate(ideaId, condId, on){
+  const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea)) return;
+  const prev = satV3ActiveCond(idea);
+  const conditions = idea.conditions.map(c=>Object.assign({}, c, {active: !!on && c.id===condId}));
+  const patch = {conditions};
+  if(on){
+    const next = conditions.find(c=>c.id===condId);
+    /* TP เริ่มต้น = ขอบใกล้ของ TP zone ข้อนี้ · ถ้า TP เดิมเป็นค่าที่ผู้ใช้แก้เอง (ไม่ตรงค่าเริ่มต้นของข้อก่อนหน้า) ไม่ทับ */
+    if(idea.tp==null || (prev && idea.tp===satV3TpNear(prev, idea.bias))) patch.tp = satV3TpNear(next, idea.bias);
+  }
+  satV3IdeaWrite(ideaId, patch);
+  satV3Render();
+}
+function satV3PlanHasCond(idea){ return satV3IsCondIdea(idea) && idea.conditions.some(c=>String(c.text||'').trim()); }
+/* [บันทึกแผน] = เขียนลง satIdeas เท่านั้น (planned:true) ไม่สร้างไม้ → ยุบเป็นแถว "รอเงื่อนไข · n ข้อ" */
+function satV3PlanSave(ideaId){
+  const idea = sat7dIdea(ideaId); if(!satV3PlanHasCond(idea)) return;
+  satV3Open.delete(ideaId);
+  satV3IdeaWrite(ideaId, {planned: true, planned_at: new Date().toISOString()});
+  satV3Render();
+}
+function satV3PlanToggleOpen(ideaId){
+  if(satV3Open.has(ideaId)) satV3Open.delete(ideaId); else satV3Open.add(ideaId);
+  satV3Render();
+}
+function satV3CondListHtml(idea, planned, active){
+  const id = escHtml(idea.id);
+  const rows = idea.conditions.map(c=>{
+    const cid = escHtml(c.id), on = !!c.active;
+    const numIn = (f, v, ph) => `<input type="text" inputmode="decimal" placeholder="${ph}" value="${v==null?'':escHtml(String(v))}" onchange="satV3CondEdit('${id}','${cid}','${f}',this.value)">`;
+    return `<div class="ui-cond${on?' ui-cond-on':''}" data-cond="${cid}">
+      <div class="ui-cond-top">
+        ${planned?`<label class="ui-cond-act"><input type="checkbox" ${on?'checked':''} onchange="satV3CondActivate('${id}','${cid}',this.checked)"> Activate</label>`:''}
+        <input type="text" class="ui-cond-text" data-cond-text="${cid}" placeholder="เงื่อนไขเข้า เช่น Break &amp; Pullback @ 4600" value="${escHtml(c.text||'')}" onchange="satV3CondEdit('${id}','${cid}','text',this.value)">
+        <button type="button" class="ui-btn ui-cond-x" title="ลบเงื่อนไขข้อนี้" onclick="satV3CondRemove('${id}','${cid}')">✕</button>
+      </div>
+      <div class="ui-cond-nums">
+        <span class="ui-cond-g"><span class="ui-cond-l">TP zone</span>${numIn('tp_from', c.tp_from, 'จาก')}<span class="ui-cond-l">–</span>${numIn('tp_to', c.tp_to, 'ถึง')}</span>
+        <span class="ui-cond-g"><span class="ui-cond-l">Inval</span>${numIn('inval', c.inval, 'ราคา (ไม่บังคับ)')}</span>
+      </div></div>`;
+  }).join('');
+  const shortcuts = SAT_V3_COND_SHORTCUTS.map(t=>`<button type="button" class="ui-btn ui-cond-sc" data-shortcut="1" onclick="satV3CondAdd('${id}', ${escHtml(JSON.stringify(t))})">${escHtml(t.trim())}</button>`).join('')
+    + `<button type="button" class="ui-btn ui-cond-sc" style="border-style:dashed" onclick="satV3CondAdd('${id}','')">+ เพิ่มเอง</button>`;
+  const hint = planned && !active ? '<div class="ui-hint ui-cond-hint">ติ๊ก Activate ที่เงื่อนไขที่เกิดขึ้น → ช่อง Entry / SL / TP จะขึ้น</div>' : '';
+  return `<div class="ui-conds"><div class="ui-conds-h">เงื่อนไขเข้า <small>${planned?'หน้างาน · Activate ได้ทีละ 1 ข้อ':'ขั้นวางแผน · ใส่ได้หลายข้อ'}</small></div>${rows}<div class="ui-chips">${shortcuts}</div>${hint}</div>`;
+}
+/* แถวยุบของแผนที่บันทึกแล้วแต่ยังไม่มีเงื่อนไขไหนเกิด */
+function satV3WaitRowHtml(idea){
+  const n = idea.conditions.length;
+  return `<div class="ui-wait" data-id="${escHtml(idea.id)}">${UI.row({color:'#DCA84B', name: sat7dLabel(idea.asset), tag: idea.bias,
+    detail:`รอเงื่อนไข · ${n} ข้อ`, btns:[{label:'เปิด', onClick:`satV3PlanToggleOpen('${escHtml(idea.id)}')`}]})}</div>`;
 }
 function satV3PlanEdit(ideaId, field, val){
   if(['entry','sl','tp','cancel_level'].includes(field)){
@@ -10715,10 +10881,20 @@ function satV3IdeaDelete(ideaId){
   c.doc(ideaId).delete().catch(e=>console.warn('satV3IdeaDelete', e));
 }
 /* setup ครบ/ไม่ครบ — เตือนเท่านั้น ไม่บล็อกการบันทึก (ตามสเปก) */
+/* 7D.4 — ผ่านเมื่อ ติ๊ก/ทั้งหมด ≥ เกณฑ์ (settings.satSetupPassRatio · ค่าเริ่มต้น 0.65) คำนวณใน Calc.setupPass · complete = pass (ชื่อเดิม คงไว้) */
+function satV3SetupPassRatio(){
+  const r = state && state.settings ? +state.settings.satSetupPassRatio : NaN;
+  return (r>0 && r<=1) ? r : SAT_SETUP_PASS_DEFAULT;
+}
 function satV3SetupsReady(idea){
   const setups = satV3SetupsFor(idea.asset);
   const checked = (Array.isArray(idea.setups) ? idea.setups : []).filter(id=>setups.some(s=>s.id===id));
-  return {n: checked.length, total: setups.length, complete: setups.length>0 && checked.length===setups.length};
+  const ratio = satV3SetupPassRatio();
+  const pass = Calc.setupPass(checked.length, setups.length, ratio);
+  return {n: checked.length, total: setups.length, ratio, pass, complete: pass};
+}
+function satV3SetupLabel(su){
+  return `Setup ${su.n}/${su.total}${su.pass?'':` · ต่ำกว่า ${Math.round(su.ratio*100)}% = นอกแผน`}`;
 }
 /* คำนวณต่อบัญชี — เทียบเท่า sat7dCalc() เดิมทุกจุด (โบรก/lot/heat/โควตา) เว้นแต่ "ครบ checklist" แทนด้วย setup
    ซึ่งเป็นแค่คำเตือน (นอกแผน) ไม่ใช่ตัวบล็อกความพร้อมต่อบัญชี — ผ่าน Calc.satLot/Calc.heat/Calc.readiness เดิมทั้งหมด */
@@ -10776,6 +10952,8 @@ function satV3SkipToggle(ideaId, accId, on){
 function satV3SaveSlot(ideaId, accId){
   const idea = sat7dIdea(ideaId); if(!idea || !acctList.some(a=>a.id===accId)) return;
   const s = (idea.accts||{})[accId] || {}; if(s.trade_id || s.skip) return;
+  const act = satV3ActiveCond(idea);
+  if(satV3IsCondIdea(idea) && !act) return;   /* 7D.4 — การ์ด 2 ขั้น: ต้อง Activate เงื่อนไขก่อนถึงบันทึก order ได้ */
   const c = satV3PlanAcctCalc(idea, accId);
   if(c.lot==null) return;
   const B = getBook(accId);
@@ -10786,9 +10964,13 @@ function satV3SaveSlot(ideaId, accId){
     entry: idea.entry, sl: idea.sl, tp: idea.tp,
     qty: c.lot, mult: c.chosen ? c.chosen.cfg.contract : 1, cur: c.chosen ? c.chosen.cfg.cur : PORTS.satB.cur,
     invalidation: null, status: 'plan', prevTrade: null, unplannedMode: false,
-    offplanOverride: !su.complete, sizeFactor: null,
+    offplanOverride: !su.pass, sizeFactor: null,
     cancel_level: idea.cancel_level,
-    setups: Array.isArray(idea.setups) ? idea.setups : []
+    setups: Array.isArray(idea.setups) ? idea.setups : [],
+    /* 7D.4 — เงื่อนไขที่ Activate: id + สำเนาข้อความ + TP zone (ไว้ให้ Journal อ่านได้แม้ลบเงื่อนไขทีหลัง) */
+    condition_id: act ? act.id : null,
+    entry_condition: act ? String(act.text||'') : null,
+    tp_zone: (act && (act.tp_from!=null || act.tp_to!=null)) ? {from: act.tp_from!=null?act.tp_from:null, to: act.tp_to!=null?act.tp_to:null} : null
   });
   B.trades.push(t);
   saveBook(accId);
@@ -10907,6 +11089,10 @@ const satV3PlanAdapter = {
   }
 };
 function satV3DraftCardHtml(idea){
+  const isCond = satV3IsCondIdea(idea);
+  const planned = isCond && idea.planned===true;
+  const active = isCond ? satV3ActiveCond(idea) : null;
+  const step2 = !isCond || (planned && !!active);   /* ช่อง Entry/SL/TP/Cancel + Setup + บัญชี ขึ้นเมื่อ Activate แล้ว (หรือไอเดียเก่าที่ไม่มี conditions) */
   const su = satV3SetupsReady(idea);
   const setups = satV3SetupsFor(idea.asset);
   const checked = Array.isArray(idea.setups) ? idea.setups : [];
@@ -10917,20 +11103,29 @@ function satV3DraftCardHtml(idea){
   const skipSet = new Set(sat7dAccts().filter(a=>{ const s=(idea.accts||{})[a.id]; return s && s.skip; }).map(a=>a.id));
   const model = {
     id: idea.id, sym: sat7dLabel(idea.asset), dir: idea.bias==='Short'?'S':'L',
-    tag: `ผิด ${idea.bias==='Long'?'<':'>'}${idea.cancel_level!=null?fmt2(idea.cancel_level):'—'}`,
+    tag: isCond
+      ? `Trend Shift ${idea.bias==='Long'?'<':'>'}${wk && wk.invalidation!=null ? fmt2(wk.invalidation) : '—'}`
+      : `ผิด ${idea.bias==='Long'?'<':'>'}${idea.cancel_level!=null?fmt2(idea.cancel_level):'—'}`,
     entry: idea.entry, sl: idea.sl, tp: idea.tp, cancel: idea.cancel_level,
     rr: r!=null ? `${r.toFixed(1)}R` : null,
     editPrefix: `satV3PlanEdit('${escHtml(idea.id)}',`,
     closeBtn: `satV3IdeaDelete('${escHtml(idea.id)}')`,
-    priceChips: zones.map(z=>({value:z, onClick:`satV3PlanEdit('${escHtml(idea.id)}','entry','${z}')`})),
-    setupsLabel: `Setup ${su.n}/${su.total}${!su.complete?' · ยังไม่ครบ = นอกแผน':''}`,
+    priceChips: isCond ? [] : zones.map(z=>({value:z, onClick:`satV3PlanEdit('${escHtml(idea.id)}','entry','${z}')`})),
+    setupsLabel: satV3SetupLabel(su),
     setups: setups.map(s=>({id:s.id, label:s.name, on:checked.includes(s.id), onClick:`satV3PlanSetupToggle('${escHtml(idea.id)}','${escHtml(s.id)}')`})),
     addSetupBtn: `satV3SetupEditorOpen('${escHtml(idea.asset)}','add')`,
     editSetupBtn: `satV3SetupEditorOpen('${escHtml(idea.asset)}','list')`,
     accts: sat7dAccts().map(a=>({id:a.id, name:a.name, color:acctColor(a)})),
-    saveBtn: {label:`บันทึก order ทุกบัญชีที่พร้อม (${satV3ReadyCount(idea)})`, onClick:`satV3SaveReadyAccounts('${escHtml(idea.id)}')`, disabled: satV3ReadyCount(idea)===0},
+    saveBtn: !isCond || step2
+      ? {label:`บันทึก order ทุกบัญชีที่พร้อม (${satV3ReadyCount(idea)})`, onClick:`satV3SaveReadyAccounts('${escHtml(idea.id)}')`, disabled: satV3ReadyCount(idea)===0}
+      : (!planned ? {label:'บันทึกแผน', onClick:`satV3PlanSave('${escHtml(idea.id)}')`, disabled: !satV3PlanHasCond(idea)} : null),
     _idea: idea, _skipSet: skipSet
   };
+  if(isCond){
+    model.topHtml = satV3CondListHtml(idea, planned, active);
+    model.hideNums = model.hideSetups = model.hideAccts = !step2;
+    if(planned) model.footHtml = `<div class="ui-plan-cta"><button type="button" class="ui-btn" onclick="satV3PlanToggleOpen('${escHtml(idea.id)}')">พับกลับเป็นแถว "รอเงื่อนไข"</button></div>`;
+  }
   return `<div class="ui-pcell">${UI.planCard(model, satV3PlanAdapter)}${satV3SetupEditorHtml(idea.asset)}</div>`;
 }
 /* ══════════════════════════════════════════════════════════════════════════
@@ -10991,8 +11186,11 @@ function satV3PlansSectionHtml(){
   const ideas = satIdeasList.filter(x=>x.v3 && x.week===wpWeekKey());
   const drafts = ideas.filter(x=>satV3PlanRowState(x)==='draft' && x.status!=='closed');
   const rows = ideas.filter(x=>satV3PlanRowState(x)!=='draft' && satV3PlanRowState(x)!=='closed');
+  const isWait = x => satV3IsCondIdea(x) && x.planned===true && !satV3Open.has(x.id);   /* 7D.4 — บันทึกแผนแล้ว ยังไม่กาง = แถว "รอเงื่อนไข" */
+  const cards = drafts.filter(x=>!isWait(x)), waits = drafts.filter(isWait);
   let html = `<div class="h">Trade Plans <small>${drafts.length} ร่าง</small></div>`;
-  html += drafts.length ? `<div class="ui-pgrid">${drafts.map(satV3DraftCardHtml).join('')}</div>` : '';
+  html += cards.length ? `<div class="ui-pgrid">${cards.map(satV3DraftCardHtml).join('')}</div>` : '';
+  html += waits.map(satV3WaitRowHtml).join('');
   html += rows.map(satV3PlanRowsHtml).join('');
   return html;
 }
@@ -11127,6 +11325,7 @@ function renderSat7d(){
   if(!show) return;
   if(SAT_V3_ON){
     try{ satV3ConfigStart(); }catch(e){}
+    if(v3panel && sat7dTypingGuard(v3panel)) return;
     try{ satV3Render(); }catch(e){ console.warn('satV3 render:', e); }
     return;
   }
