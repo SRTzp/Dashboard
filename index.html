@@ -640,6 +640,16 @@ details.panel[open]>summary::before{transform:rotate(90deg)}
 .ffActL{font-size:.64rem;color:rgba(255,255,255,.62);letter-spacing:.02em}
 .ffActV{font-family:var(--mono);font-size:1.05rem;font-weight:700;line-height:1.3;margin-top:2px;overflow-wrap:anywhere}
 .ffActCell.warn .ffActV{color:#F2B84B}
+.ffChg{padding:0;margin:8px 0}
+.ffChgHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;cursor:pointer;min-width:0}
+.ffChgL{font-size:.72rem;color:var(--mute)}
+.ffChgSum{font-size:13px;color:var(--dark);overflow-wrap:anywhere}
+.ffChgBody{padding:0 12px 10px 12px;font-size:12.5px}
+.ffChgNote{font-size:11px;color:var(--mute);margin-bottom:4px}
+.ffChgR{margin-top:3px;overflow-wrap:anywhere}
+.ffChgNone{color:var(--mute)}
+.ffActClick{cursor:pointer}
+.ffActClick .ffActV{font-size:.78rem;overflow-wrap:anywhere}
 .ffActTag{display:inline-block;margin-top:3px;font-size:.6rem;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.8)}
 @media (max-width:700px){ .ffActGrid{grid-template-columns:repeat(2,minmax(0,1fr))} }
 /* F1 — การ์ดปฏิทินข่าว (พับ 1 บรรทัด) */
@@ -1557,6 +1567,22 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 .ui-bias-btn.ui-bias-S.ui-on{background:var(--dn);border-color:var(--dn);color:#fff}
 .ui-bias-btn.ui-bias-N.ui-on{background:var(--flat);border-color:var(--flat);color:#fff}
 .ui-editor-hint{font-size:11.5px;color:var(--warn);margin-top:6px}
+.ui-f-ro{cursor:default}
+.ui-f2c{margin:8px 0 2px;font-size:12.5px;color:var(--dark);min-width:0}
+.ui-f2c-r{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:5px;min-width:0}
+.ui-f2c-pick{display:inline-flex;gap:6px;flex-wrap:wrap}
+.ui-f2c .pbMix{margin:2px 0 0 0}
+.ui-f2c-off{display:inline-block;font-size:11px;padding:1px 7px;border-radius:var(--r-chip);border:1px solid var(--warn);color:var(--warn)}
+.ui-f2c-tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:var(--r-chip);border:1px solid var(--line);color:var(--mute);margin-left:4px}
+.ui-f2c-tl{font-size:11.5px;color:var(--mute);margin:-2px 0 8px 18px;overflow-wrap:anywhere}
+.ui-mac{margin:8px 0 2px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-btn);background:var(--card)}
+.ui-mac-st{font-size:13px;color:var(--dark);overflow-wrap:anywhere}
+.ui-mac-dim{font-size:12px;color:var(--mute);opacity:.85}
+.ui-mac-chg{font-size:11.5px;color:var(--mute);margin-top:3px;overflow-wrap:anywhere}
+.ui-mac .pbMix{margin-left:0}
+.ui-mac-op{margin-top:8px}
+.ui-mac-op label{font-size:11px;color:var(--mute);display:block;margin-bottom:2px}
+.ui-mac-op input{width:100%;box-sizing:border-box}
 .ui-editor-macro{font-size:12px;margin-top:8px}
 .ui-hint{color:var(--mute)}
 
@@ -1652,14 +1678,14 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 .pbPanel{margin-bottom:14px}
 .pbTitle{font-size:11px;letter-spacing:.04em;color:var(--mute);margin-bottom:6px}
 .pbCard{border:1px solid var(--line);border-radius:var(--r-row);background:var(--card);overflow:hidden}
-.pbHead{display:flex;align-items:center;gap:8px;padding:9px 10px;min-width:0}
+.pbHead{display:flex;align-items:center;gap:8px;padding:9px 10px;min-width:0;flex-wrap:wrap}
 .pbHead[role=button]{cursor:pointer}
 .pbCaret{color:var(--mute);font-size:12px}
 .pbQ{font-size:12.5px;white-space:nowrap}
 .pbHl{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pbBadge{font-size:10.5px;padding:1px 7px;border-radius:var(--r-chip);white-space:nowrap}
 .pbBadge.on{background:var(--dark);color:#fff}.pbBadge.dr{border:1px dashed var(--mute);color:var(--mute)}
-.pbIcos{display:flex;gap:6px;white-space:nowrap}
+.pbIcos{display:block;white-space:normal;color:var(--mute);font-size:12px}
 .pbIco{font-size:12px;font-weight:700;white-space:nowrap}
 .pb-up{color:var(--up)}.pb-dn{color:var(--dn)}.pb-flat{color:var(--flat)}
 .pbBody{padding:2px 10px 10px;border-top:1px solid var(--line)}
@@ -1908,6 +1934,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 
   <div class="ffAction" id="ffAction" aria-label="ผลที่ต้องทำ"></div>
 
+  <div id="ffChanges"></div>
   <div id="pbPanel"></div>
 
   <div class="ffQeBar" id="ffQeBar" onclick="ffOpenQe()" title="แตะเพื่อแก้โหมด / วันที่ประกาศ">
@@ -8438,6 +8465,11 @@ function makeTradeObject(o){
              : (prevTrade && prevTrade.tp_zone ? prevTrade.tp_zone : null),
     status
   };
+  /* ★ F2c — field เสริมล้วน (optional) ค่า ณ ตอนกดบันทึก order Sat: ไม่ส่ง = ไม่มี field (ไม้เก่าเหมือนเดิม) · แก้ไม้ภายหลัง = คงค่าเดิมของ prevTrade */
+  ['trend_state','trend_changed','macro_state','macro_stance','playbook_version','driver','size_rule','off_rule','macro_note','macro_recent'].forEach(k=>{
+    if(o[k]!==undefined) t[k] = o[k];
+    else if(prevTrade && prevTrade[k]!==undefined) t[k] = prevTrade[k];
+  });
   if(status==='closed'){
     t.exitPrice = o.exitPrice;
     t.exitDate = o.exitDate || t.date;
@@ -9579,6 +9611,10 @@ const SAT_FACTORS = [
    ทุกจุดที่นับคะแนน/แสดง x/2 ต้องอ่านจากตัวนี้ ห้าม hardcode ตัวเลข หรือใช้ SATW_COMPS (ตัวนั้นยังมี 5 ตัวเดิม ใช้กับของเดิม/ข้อมูลดิบเท่านั้น) */
 const SAT_FACTORS_SCORED = SAT_FACTORS.filter(f=>f.kind!=='levels');
 const SATW_COMPS_SCORED = SAT_FACTORS_SCORED.map(f=>f.k);
+/* F2c — asset ของ Sat → key ใน Macro Playbook (S50 = null = ไม่อยู่ใน Playbook เสมอ) · รับทั้ง key จริง (BTCUSD/BRENT) และชื่อป้าย (BTC/Brent) */
+const SAT_PB_ASSET = {XAUUSD:'XAUUSD', BTCUSD:'BTC', BTC:'BTC', BRENT:'BRENT', Brent:'BRENT', S50:null};
+/* F2c — ตัวคูณขนาดไม้เมื่อสวนทั้ง Macro และ Trend (ค่าเดียว ห้าม hard-code 0.6 ที่อื่น) */
+const SAT_MACRO_CUT = 0.6;
 /* §0.3 — STRIP_FIELDS กำหนดว่าแถบบัญชีของแต่ละโหมดโชว์ช่องอะไร (ป้าย/ลำดับเท่านั้น — ตัวเลขจริงมาจาก settings ตอน render จริงใน UI.acctStrip)
    สเปกทิ้งรายการไว้เป็น "..." — รายการด้านล่างเป็นตัวเลือกที่ตัดสินใจเอง อิง mockup app-mockup.html/acctStrip() · ปรับได้ตอนสร้างส่วนที่ 1 จริง */
 const STRIP_FIELDS = {
@@ -9632,6 +9668,14 @@ const Calc = {
     if(!(total>0)) return false;
     const r = (minRatio>0 && minRatio<=1) ? +minRatio : SAT_SETUP_PASS_DEFAULT;
     return n/total >= r - 1e-9;
+  },
+  /* F2c — กฎขนาดไม้: สวนทั้ง Macro และ Trend = SAT_MACRO_CUT (0.6) · นอกนั้น 1
+     macro สวน = macroAlign==='against' · trend สวน = (Long และ trend 'down') หรือ (Short และ trend 'up') · flat/neutral/none = ไม่สวน */
+  sizeRule({macroAlign, trendState, side}){
+    const sd = String(side||'').toLowerCase();
+    const macro = macroAlign==='against';
+    const trend = (sd==='long' && trendState==='down') || (sd==='short' && trendState==='up');
+    return {factor: (macro && trend) ? SAT_MACRO_CUT : 1, against:{macro, trend}};
   },
   /* Risk:Reward แบบง่าย — |tp-entry| / |entry-sl| */
   rr(entry, sl, tp){
@@ -10277,20 +10321,50 @@ function sat7dMoney(n){ return '฿' + fmt0(Math.round(n)); }
    เขียนเฉพาะ field ของ asset นั้นตอนผู้ใช้กด/ออกจากช่อง · ไม่เขียนตอน render/onSnapshot · ข้อมูล {bias,flips} เดิมอ่านต่อได้ (ใช้เป็นค่าเริ่มต้นของ bias ใหม่) */
 function satwWeek(wk, asset){ const w = satWeekMap[wk] || {}; return w[asset] || null; }
 function satwPrevWeekKey(wk){ const d = new Date(wk+'T00:00:00'); d.setDate(d.getDate()-7); return wpWeekKey(d); }
-function satwTally(w){
+/* F2c — Macro ของ asset จาก Playbook (อ่านอย่างเดียว) · S50/ไม่ผูก = state 'none' drivers []
+   = Calc.pbEffective(pbList, key, atTime) + ข้อความจากเวอร์ชันนั้น · drivers = assets.X.drivers แปลงเป็น {id, title จาก view.pillars}
+   ไม่เขียน macroPlaybook · list = pbList (ให้เทสส่งเองได้) */
+function satMacroOf(asset, atTime, list){
+  const key = SAT_PB_ASSET[asset];
+  const none = {state:'none', versionId:null, changedAt:null, stale:false, posture:null, why:null, change_if:null, quarter:null, drivers:[]};
+  if(!key) return none;
+  const L = list || (typeof pbList!=='undefined' ? pbList : []);
+  const e = Calc.pbEffective(L, key, atTime);
+  if(e.versionId==null && e.state==='none') return Object.assign({}, none, {stale:e.stale});
+  const ver = (L||[]).find(v=>v && v.id===e.versionId) || {};
+  const cell = (ver.assets && ver.assets[key]) || {};
+  const pills = (ver.view && Array.isArray(ver.view.pillars)) ? ver.view.pillars : [];
+  const drivers = (e.state==='none' || !Array.isArray(cell.drivers)) ? []
+    : cell.drivers.map(id=>{ const p = pills.find(q=>q && q.id===id); return {id, title: p ? String(p.title||'') : ''}; });
+  return Object.assign({}, e, {
+    why: (typeof cell.why==='string' && cell.why.trim()) ? cell.why : null,
+    change_if: (typeof cell.change_if==='string' && cell.change_if.trim()) ? cell.change_if : null,
+    quarter: ver.quarter || null, drivers});
+}
+/* ท่าทีของ Playbook → up/flat/down (none = null = ไม่นับ) */
+function satMacroTrendOf(state){
+  return (state==='up' || state==='up_flat') ? 'up' : (state==='down' || state==='down_flat') ? 'down' : state==='flat' ? 'flat' : null;
+}
+/* เวลาอ้างอิงของสัปดาห์ที่ดู: สัปดาห์นี้ = ตอนนี้ · สัปดาห์เก่า = สิ้นสัปดาห์นั้น (Playbook ที่ใช้จริง ณ ตอนนั้น) */
+function satwAtTime(wk){
+  if(!wk || wk===wpWeekKey()) return Date.now();
+  const t = new Date(wk+'T00:00:00').getTime();
+  return isFinite(t) ? t + 7*86400000 : Date.now();
+}
+/* asset ส่งมา = Macro นับจาก Playbook (ไม่อ่าน comps.macro.v เดิม) · ไม่ส่ง asset = นับจาก comps ตรง ๆ (ชั้นล่างสุด) */
+function satwTally(w, asset, atTime){
   const c = (w && w.comps) || {};
   let up=0, flat=0, down=0, n=0;
-  SATW_COMPS_SCORED.forEach(k=>{ const v = c[k] && c[k].v; if(v==='up'){up++;n++;} else if(v==='flat'){flat++;n++;} else if(v==='down'){down++;n++;} });
+  SATW_COMPS_SCORED.forEach(k=>{
+    const v = (k==='macro' && asset!=null) ? satMacroTrendOf(satMacroOf(asset, atTime).state) : (c[k] && c[k].v);
+    if(v==='up'){up++;n++;} else if(v==='flat'){flat++;n++;} else if(v==='down'){down++;n++;}
+  });
   return {up, flat, down, n};
 }
-function satwMacroFF(asset){
-  const key = SATW_MACRO_KEY[asset]; if(!key) return null;
-  try{ const d = rsMacroDoc(); return (d && d.assets && d.assets[key]) || null; }catch(e){ return null; }
-}
 /* "พร้อม" ของมุมมองสัปดาห์: ประเมินครบทุกองค์ประกอบที่ให้คะแนน (SATW_COMPS_SCORED) + ตั้ง Bias (รวมงดเทรด) + Invalidation ราคา+เหตุผล */
-function satwReady(w){
+function satwReady(w, asset, atTime){
   if(!w) return false;
-  const t = satwTally(w);
+  const t = satwTally(w, asset, atTime);
   return t.n>=SATW_COMPS_SCORED.length && (w.bias==='Long'||w.bias==='Short'||w.bias==='None') && w.invalidation!=null && !!String(w.inv_note||'').trim();
 }
 function satwWrite(asset, patch){
@@ -10382,25 +10456,24 @@ function satwCompArrows(asset, comp, v){
 }
 function satwAssetHtml(asset, wk, w, readonly){
   const comps = (w && w.comps) || {};
-  const tally = satwTally(w);
+  const tally = satwTally(w, asset);
   const rows = SATW_COMPS.map(k=>{
     const c = comps[k] || {};
     const zoneLv = k!=='zone' ? '' : `<input type="text" class="s7ZoneLv" placeholder="แนวรับ/ต้าน คั่นด้วย , เช่น 1900, 1950" value="${escHtml((c.levels||[]).join(', '))}" ${readonly?'disabled':''} onchange="satwSetZoneLevels('${asset}',this.value)">`;
-    let macroFF = '';
+    /* F2c — Macro อ่านจาก Playbook (อ่านอย่างเดียว) ไม่มีลูกศรกรอกเอง · โน้ตยังแก้ได้ (comps.macro.note) */
     if(k==='macro'){
-      const ff = satwMacroFF(asset);
-      macroFF = ff
-        ? `<div class="s7MacroFF">Fund-flow ${escHtml(ff.label||ff.view||'')}: ${escHtml(ff.mechanism||'')}${ff.flip_when?' · พลิกเมื่อ '+escHtml(ff.flip_when):''}</div>`
-        : `<div class="s7MacroFF s7Dash">— ไม่มีข้อมูล Fund-flow สำหรับ ${escHtml(sat7dLabel(asset))}</div>`;
+      const m = satMacroOf(asset);
+      return `<div class="s7Comp"><span>${SATW_COMP_LABEL[k]}</span><span class="s7Hint">${escHtml(m.state==='none' ? '— ไม่มี Playbook' : Calc.pbStanceText(m.state))}</span>
+      <input type="text" placeholder="My opinion" value="${escHtml(c.note||'')}" ${readonly?'disabled':''} onchange="satwSetCompNote('${asset}','${k}',this.value)"></div>`;
     }
     return `<div class="s7Comp"><span>${SATW_COMP_LABEL[k]}</span>
       ${readonly ? `<span class="s7Hint">${c.v==='up'?'↑':c.v==='down'?'↓':c.v==='flat'?'→':'—'}</span>` : satwCompArrows(asset,k,c.v)}
-      <input type="text" placeholder="โน้ต" value="${escHtml(c.note||'')}" ${readonly?'disabled':''} onchange="satwSetCompNote('${asset}','${k}',this.value)"></div>${zoneLv}${macroFF}`;
+      <input type="text" placeholder="โน้ต" value="${escHtml(c.note||'')}" ${readonly?'disabled':''} onchange="satwSetCompNote('${asset}','${k}',this.value)"></div>${zoneLv}`;
   }).join('');
   const tallyTxt = tally.n<SATW_COMPS_SCORED.length ? `ยังประเมินไม่ครบ ${tally.n}/${SATW_COMPS_SCORED.length}` : `↑${tally.up} →${tally.flat} ↓${tally.down}`;
   const bias = w && w.bias;
   const contra = (bias==='Long' && tally.down>tally.up) || (bias==='Short' && tally.up>tally.down);
-  const ready = satwReady(w);
+  const ready = satwReady(w, asset);
   const biasBtn = (v,label) => `<span class="chip ${bias===v?'on':''}"${readonly?'':` onclick="satwSetBias('${asset}','${v}')"`}>${label}</span>`;
   return `<div class="s7WkA" data-asset="${asset}">
     <div class="s7WkAH"><b>${escHtml(sat7dLabel(asset))}</b><span class="s7Grow"></span>${ready?'<span class="s7Ok">พร้อม</span>':'<span class="s7Hint">ยังไม่พร้อม</span>'}</div>
@@ -10429,7 +10502,7 @@ function satwSectionHtml(){
 /* ══════════════════════════════════════════════════════════════════════════
    7D.3 Phase 2 — namespace satV3: Strategy tile bar (ส่วนที่ 1 ช่อง B) ตาม sat-mockup.html
    ยังไม่ถูก mount เข้าหน้าไหนจริงในรอบนี้ (dormant — SAT_V3_ON=false) เรียกตรง ๆ ได้เพื่อทดสอบแยก
-   ใช้ตัวคำนวณ/ตัวเขียนข้อมูลเดิมของ satw* ทั้งหมด (satwWeek/satwTally/satwWrite/satwSetBias/satwMacroFF/
+   ใช้ตัวคำนวณ/ตัวเขียนข้อมูลเดิมของ satw* ทั้งหมด (satwWeek/satwTally/satwWrite/satwSetBias/
    satwCopyFromPrev/satwWeekOptions/satwViewWeekChanged) ไม่เขียนซ้ำ — ต่อยอดเฉพาะการแสดงผล + ฟิลด์ใหม่
    ══════════════════════════════════════════════════════════════════════════ */
 let satV3Sel = null;             /* asset ที่กำลังกางตัวแก้อยู่ (เลือกได้ทีละ 1) */
@@ -10463,10 +10536,10 @@ function satV3LevelChipsHtml(asset, field, values, readonly){
   ).join('')}</div>`;
 }
 /* เตือนเดิมของ Bias (คงไว้ตามสเปก): สวนองค์ประกอบ · สวน Trend · ยังไม่มี Trend Shift (เดิม "จุดผิด") · เกินโควตาสลับ */
-function satV3Warnings(asset, w){
+function satV3Warnings(asset, w, atTime){
   const warns = [];
   if(!w || (w.bias!=='Long' && w.bias!=='Short')) return warns;
-  const t = satwTally(w);
+  const t = satwTally(w, asset, atTime);
   const agree = w.bias==='Long' ? t.up : t.down;
   const oppose = w.bias==='Long' ? t.down : t.up;
   if(oppose > agree) warns.push('Bias สวนองค์ประกอบ');
@@ -10483,8 +10556,14 @@ function satV3TileDirHtml(bias){
   return '<span class="ui-dir ui-dir-todo">?</span>';
 }
 /* {badge, sub} ของช่อง — ตรงกับ tileHtml() ใน sat-mockup.html ทุกกรณี (Long/Short/งดเทรด/ยังไม่ประเมิน) */
-function satV3TileBadgeSub(asset, w){
-  const t = satwTally(w);
+/* F2c — ขนาดไม้ตามกฎของสัปดาห์: Macro (Playbook) + Trend ของสัปดาห์ + ด้านของ Bias */
+function satV3WeekSizeRule(asset, w, atTime){
+  const side = w && w.bias==='Short' ? 'short' : 'long';
+  const tr = w && w.comps && w.comps.trend && w.comps.trend.v || null;
+  return Calc.sizeRule({macroAlign: Calc.pbAlign(satMacroOf(asset, atTime).state, side), trendState: tr, side});
+}
+function satV3TileBadgeSub(asset, w, atTime){
+  const t = satwTally(w, asset, atTime);
   const N = SATW_COMPS_SCORED.length;
   if(!w || (w.bias!=='Long' && w.bias!=='Short' && w.bias!=='None')){
     return {badge:'ยังไม่ประเมิน', sub:`${t.n}/${N}`};
@@ -10497,27 +10576,28 @@ function satV3TileBadgeSub(asset, w){
   const resTxt = res.values.length ? res.values.map(fmt2).join(', ') : '—';
   const invTxt = w.invalidation!=null ? fmt2(w.invalidation) : '—';
   const why = satV3WhyValue(w) || undefined;   /* 7D.3 รอบ 3 — โชว์เหตุผลเป็นบรรทัดที่ 2 ใต้ รับ/ต้าน/ผิด ในช่องที่พับอยู่ */
-  if(w.bias==='Long') return {badge:`Long · ${t.up}/${N}`, sub:`รับ ${supTxt} · ต้าน ${resTxt} · Trend Shift <${invTxt}`, sub2: why};
-  return {badge:`Short · ${t.down}/${N}`, sub:`ต้าน ${resTxt} · รับ ${supTxt} · Trend Shift >${invTxt}`, sub2: why};
+  const szTxt = satV3WeekSizeRule(asset, w, atTime).factor<1 ? `ลด ${Math.round((1-SAT_MACRO_CUT)*100)}%` : 'ขนาดไม้ เต็ม';   /* F2c — แทน "x/2" */
+  if(w.bias==='Long') return {badge:`Long · ${szTxt}`, sub:`รับ ${supTxt} · ต้าน ${resTxt} · Trend Shift <${invTxt}`, sub2: why};
+  return {badge:`Short · ${szTxt}`, sub:`ต้าน ${resTxt} · รับ ${supTxt} · Trend Shift >${invTxt}`, sub2: why};
 }
-function satV3TileDotsHtml(w){
+function satV3TileDotsHtml(w, asset, atTime){
   return SATW_COMPS_SCORED.map(k=>{
-    const v = w && w.comps && w.comps[k] && w.comps[k].v;
+    const v = k==='macro' ? satMacroTrendOf(satMacroOf(asset, atTime).state) : (w && w.comps && w.comps[k] && w.comps[k].v);
     const cls = v==='up' ? 'ui-dot-up' : v==='down' ? 'ui-dot-dn' : v==='flat' ? 'ui-dot-flat' : '';
     return `<i class="ui-tile-dot${cls?(' '+cls):''}"></i>`;
   }).join('');
 }
-function satV3TileHead(asset, w){
+function satV3TileHead(asset, w, atTime){
   const bias = w && w.bias;
-  const { badge } = satV3TileBadgeSub(asset, w);
+  const { badge } = satV3TileBadgeSub(asset, w, atTime);
   const canPlan = bias==='Long' || bias==='Short';
   const btn = canPlan ? `<button type="button" class="ui-btn ui-btn-pri" onclick="event.stopPropagation();satV3NewPlan('${escHtml(asset)}')">+ แผน</button>` : '';
   return `<div class="ui-tile-th" onclick="satV3Pick('${escHtml(asset)}')">${satV3TileDirHtml(bias)}<span class="ui-tile-a">${escHtml(sat7dLabel(asset))}</span><span class="ui-tile-b">${escHtml(badge)}</span>${btn}</div>`;
 }
 function satV3TileModel(asset, wk){
-  const w = satwWeek(wk, asset);
-  const { sub, sub2 } = satV3TileBadgeSub(asset, w);
-  return {key:asset, head: satV3TileHead(asset, w), sub, sub2, dotsHtml: satV3TileDotsHtml(w), dim: !!(w && w.bias==='None')};
+  const w = satwWeek(wk, asset), at = satwAtTime(wk);
+  const { sub, sub2 } = satV3TileBadgeSub(asset, w, at);
+  return {key:asset, head: satV3TileHead(asset, w, at), sub, sub2, dotsHtml: satV3TileDotsHtml(w, asset, at), dim: !!(w && w.bias==='None')};
 }
 /* แตะช่อง = กาง (ทีละ asset) · แตะซ้ำ = พับ */
 function satV3Pick(asset){
@@ -10526,6 +10606,7 @@ function satV3Pick(asset){
 }
 /* แตะวนองค์ประกอบ: null → ▲ → ▬ → ▼ → null (แทนปุ่ม 3 อันเดิมของ satwSetComp ซึ่งเป็นแค่ toggle ไม่ใช่วน) */
 function satV3CycleFactor(asset, compKey){
+  if(compKey==='macro') return;   /* F2c — Macro อ่านจาก Playbook ไม่ใช่ช่องกรอกเอง */
   const cur = satwWeek(wpWeekKey(), asset);
   const c = (cur && cur.comps && cur.comps[compKey]) || {};
   const idx = SAT_V3_CYCLE.indexOf(c.v || null);
@@ -10547,33 +10628,61 @@ function satV3CopyPrev(asset){
   satwCopyFromPrev(asset);
   satV3Render();
 }
+/* F2c — บรรทัดท่าทีผสม (▼▬ ลง/ผสม · posture) = ชิ้นเดียวกับ .pbMix ของ F2b · ข้อมูล ไม่ใช่คำเตือน */
+function satMixLineHtml(m){
+  return (m && (m.state==='up_flat' || m.state==='down_flat'))
+    ? `<div class="pbMix">${escHtml(Calc.pbStanceText(m.state))}${m.posture?' · '+escHtml(m.posture):''}</div>` : '';
+}
+/* F2c — Macro ในตัวแก้ Strategy: อ่านอย่างเดียวจาก Playbook + ช่อง My opinion (comps.macro.note · แก้ได้เสมอ · ไม่มีผลกับคะแนน/ขนาดไม้) */
+function satV3MacroBlockHtml(asset, wk, readonly, c){
+  const at = satwAtTime(wk), m = satMacroOf(asset, at), aEsc = escHtml(asset);
+  let body;
+  if(!SAT_PB_ASSET[asset]){
+    body = `<div class="ui-mac-dim" data-mac="s50">— ${escHtml(sat7dLabel(asset))} ไม่อยู่ใน Playbook</div>`;
+  } else if(m.versionId==null){
+    body = `<div class="ui-mac-st" data-mac="none">—</div><div class="ui-editor-hint" data-mac-warn="nopb">⚠ ยังไม่มี Playbook ใช้จริง</div>`;
+  } else if(m.state==='none'){
+    body = `<div class="ui-mac-dim" data-mac="uncovered">— ${escHtml(sat7dLabel(asset))} ไม่ครอบคลุมใน Playbook ${escHtml(m.quarter||'')}</div>`
+      + (m.stale ? `<div class="ui-editor-hint" data-mac-warn="stale">⚠ Playbook เป็นของ ${escHtml(m.quarter||'')}</div>` : '');
+  } else {
+    body = `<div class="ui-mac-st" data-mac="${escHtml(m.state)}"><b>${escHtml(Calc.pbStanceText(m.state))}</b>${m.why?` · <span class="ui-mac-why">${escHtml(m.why)}</span>`:''}</div>`
+      + satMixLineHtml(m)
+      + (m.change_if ? `<div class="ui-mac-chg">เปลี่ยนเมื่อ: ${escHtml(m.change_if)}</div>` : '')
+      + (m.stale ? `<div class="ui-editor-hint" data-mac-warn="stale">⚠ Playbook เป็นของ ${escHtml(m.quarter||'')}</div>` : '');
+  }
+  return `<div class="ui-mac" data-macro-block="1">${body}
+    <div class="ui-fl ui-mac-op"><label>My opinion</label><input type="text" data-my-opinion="1" placeholder="ความเห็นของฉันต่อ Macro (ไม่มีผลกับคะแนน/ขนาดไม้)" value="${escHtml((c && c.note)||'')}" ${readonly?'disabled':''} onchange="satwSetCompNote('${aEsc}','macro',this.value)"></div></div>`;
+}
 function satV3EditorHtml(asset, wk){
   const readonly = wk !== wpWeekKey();
   const w = satwWeek(wk, asset) || {};
-  const t = satwTally(w);
+  const at = satwAtTime(wk);
+  const t = satwTally(w, asset, at);
   const factors = SATW_COMPS_SCORED.map(k=>{
     const c = (w.comps && w.comps[k]) || {};
-    const v = c.v || null;
+    const v = k==='macro' ? satMacroTrendOf(satMacroOf(asset, at).state) : (c.v || null);
     const sym = v==='up' ? '▲' : v==='flat' ? '▬' : v==='down' ? '▼' : '·';
     const cls = v==='up' ? 'ui-f-up' : v==='down' ? 'ui-f-dn' : v==='flat' ? 'ui-f-flat' : '';
-    const noteOpen = satV3NoteOpen.has(asset+':'+k);
+    const isMac = k==='macro';
+    const noteOpen = !isMac && satV3NoteOpen.has(asset+':'+k);
     const noteRow = noteOpen
       ? `<div class="ui-f-note"><input type="text" value="${escHtml(c.note||'')}" placeholder="โน้ต" ${readonly?'disabled':''} onchange="satwSetCompNote('${escHtml(asset)}','${k}',this.value)"></div>`
       : '';
-    const macroSub = k==='macro' ? '<div class="ui-f-sub">ใส่เอง · จะเชื่อม Playbook หน้า Flow ภายหลัง</div>' : '';
-    return `<div><div class="ui-factor${cls?(' '+cls):''}" ${readonly?'':`onclick="satV3CycleFactor('${escHtml(asset)}','${k}')"`}>
-      <div class="ui-f-n">${SATW_COMP_LABEL[k]}${!readonly?` <button type="button" class="ui-f-pen" title="เปิด/ปิดโน้ต" onclick="event.stopPropagation();satV3ToggleNote('${escHtml(asset)}','${k}')">✎</button>`:''}</div>
+    const macroSub = '';
+    return `<div><div class="ui-factor${cls?(' '+cls):''}${isMac?' ui-f-ro':''}" ${(readonly||isMac)?'':`onclick="satV3CycleFactor('${escHtml(asset)}','${k}')"`}>
+      <div class="ui-f-n">${SATW_COMP_LABEL[k]}${(!readonly && !isMac)?` <button type="button" class="ui-f-pen" title="เปิด/ปิดโน้ต" onclick="event.stopPropagation();satV3ToggleNote('${escHtml(asset)}','${k}')">✎</button>`:''}</div>
       <div class="ui-f-v">${sym}</div></div>${macroSub}${noteRow}</div>`;
   }).join('');
   const tallyTxt = `รวม ▲${t.up} ▬${t.flat} ▼${t.down}${t.n<SATW_COMPS_SCORED.length?` · ประเมินแล้ว ${t.n}/${SATW_COMPS_SCORED.length}`:''}`;
   const whyVal = satV3WhyValue(w);
   const sup = satV3SupportDisplay(w), res = satV3ResistanceDisplay(w);
-  const warns = satV3Warnings(asset, w);
+  const warns = satV3Warnings(asset, w, at);
   const curWk = wpWeekKey(), opts = satwWeekOptions();
   const weekSel = `<select id="satV3WeekSel" onchange="satwViewWeekChanged(this.value)">${opts.map(k=>`<option value="${k}"${k===wk?' selected':''}>${k===curWk?'สัปดาห์นี้':escHtml(wpWeekRangeText(k))}</option>`).join('')}</select>`;
   return `<div class="ui-editor" data-asset="${escHtml(asset)}">
     <div class="ui-editor-h">${escHtml(sat7dLabel(asset))} <small>แก้ Strategy · แตะช่องเดิมอีกครั้งเพื่อพับ${readonly?' · อ่านอย่างเดียว':''}</small>${weekSel}</div>
     <div class="ui-factors" style="--n:${SATW_COMPS_SCORED.length}">${factors}</div>
+    ${satV3MacroBlockHtml(asset, wk, readonly, w.comps && w.comps.macro)}
     <div class="ui-tally">${escHtml(tallyTxt)}</div>
     <div class="ui-flds">
       <div class="ui-fl ui-fl-w2"><label>เหตุผล 1 ประโยค</label><input type="text" value="${escHtml(whyVal)}" ${readonly?'disabled':''} onchange="satwSetWhy('${escHtml(asset)}',this.value)"></div>
@@ -10773,6 +10882,7 @@ let satV3FocusCond = null;        /* id เงื่อนไขที่เพ�
 let satV3ScrollTo = null;         /* 7D.6 — id แผนที่เพิ่งกางจากแถวพับ → satV3Render() เลื่อนจอไปที่การ์ดนั้น (ครั้งเดียว) */
 /* 7D.5 — สถานะหน้าจอล้วน ๆ (ไม่เขียน Firestore): ใครกำลังแก้ข้อที่ Activate ในที่ · กาง "เงื่อนไขอื่น" · กาง "ที่ยกเลิก" · ตัวแก้รายการปุ่มลัด */
 let satV3ActiveEdit = new Set(), satV3OthersOpen = new Set(), satV3CancelledOpen = new Set();
+let satV3TrendPick = new Set();   /* F2c — ไอเดียที่กาง [ขึ้น][ผสม][ลง] ของ Trend อยู่ (UI ล้วน ไม่เขียนข้อมูล) */
 let satV3CondTplEditor = null;    /* {ideaId, mode:'list'|'add'} หรือ null */
 const SAT_V3_COND_SHORTCUTS = ['Break & Pullback @ ', 'Swing back in demand zone @ '];   /* ค่าเริ่มต้นของ satConfig/conditionTemplates (ไม่มีเอกสาร = ใช้ตัวนี้) */
 function satV3IsCondIdea(idea){ return !!idea && Array.isArray(idea.conditions); }
@@ -11012,6 +11122,78 @@ function satV3CancelledBlockHtml(idea){
   const items = open ? list.map(c=>`<div class="ui-cancd-i" data-cond="${escHtml(c.id)}"><span class="ui-cancd-t">${escHtml(c.text || '—')}</span> · ${escHtml(satV3CondMeta(c))}${c.cancelled_at ? ' · ยกเลิก '+escHtml(String(c.cancelled_at).slice(0,10)) : ''}</div>`).join('') : '';
   return `<div class="ui-cancd"><button type="button" class="ui-link" onclick="satV3CancelledToggle('${id}')">${open?'ซ่อนที่ยกเลิก':'ดูที่ยกเลิก'} (${list.length})</button>${items}</div>`;
 }
+/* ══ F2c — ขั้นหน้างาน: Trend (override เฉพาะแผน) · Macro (Playbook) · Driver · ขนาดไม้ ══
+   ค่าทั้งหมดคำนวณ ณ ตอนเรียก (at = ms · ไม่ส่ง = ตอนนี้) — satV3SaveSlot เรียกใหม่ตอนกดบันทึก ไม่ใช้ค่าที่ cache */
+function satV3F2c(idea, at){
+  at = at==null ? Date.now() : at;
+  const asset = idea.asset, side = idea.bias==='Short' ? 'short' : 'long';
+  const wk = satwWeek(wpWeekKey(), asset) || {};
+  const base = (wk.comps && wk.comps.trend && wk.comps.trend.v) || null;
+  const ov = (idea.trend_override && idea.trend_override.to) ? idea.trend_override : null;
+  const trend = ov ? ov.to : base;
+  const mac = satMacroOf(asset, at);
+  const align = Calc.pbAlign(mac.state, side);
+  const rule = Calc.sizeRule({macroAlign: align, trendState: trend, side});
+  const drv = mac.drivers;
+  const driver = drv.length ? (drv.some(d=>d.id===idea.driver) ? idea.driver : drv[0].id) : null;
+  const off = rule.factor<1 && idea.size_full_override===true;
+  const ch = Calc.pbMs(mac.changedAt);
+  const recent = mac.state!=='none' && ch!=null && at-ch>=0 && at-ch<=86400000;
+  const lvl = wk.invalidation!=null ? +wk.invalidation : null, e = +idea.entry;
+  const shift = lvl!=null && isFinite(lvl) && e>0 && ((side==='long' && e<lvl) || (side==='short' && e>lvl));
+  const note = wk.comps && wk.comps.macro && typeof wk.comps.macro.note==='string' && wk.comps.macro.note.trim() ? wk.comps.macro.note : null;
+  return {side, base, ov, trend, changed: (ov && ov.to!==base) ? {from: base, to: ov.to} : null,
+          mac, align, rule, driver, off, factor: off ? 1 : rule.factor, recent, shift, note, at};
+}
+function satV3TrendToggle(ideaId){
+  if(satV3TrendPick.has(ideaId)) satV3TrendPick.delete(ideaId); else satV3TrendPick.add(ideaId);
+  satV3Render();
+}
+/* to = 'up'|'flat'|'down' → เขียน idea.trend_override เท่านั้น (ไม่แตะ satWeek) · เท่ากับค่า Strategy หรือ null = ล้าง override */
+function satV3TrendSet(ideaId, to){
+  const idea = sat7dIdea(ideaId); if(!idea) return;
+  const f = satV3F2c(idea);
+  satV3TrendPick.delete(ideaId);
+  satV3IdeaWrite(ideaId, {trend_override: (to && to!==f.base) ? {to, at: new Date().toISOString()} : null});
+  satV3Render();
+}
+function satV3DriverSet(ideaId, id){
+  const idea = sat7dIdea(ideaId); if(!idea) return;
+  satV3IdeaWrite(ideaId, {driver: id});
+  satV3Render();
+}
+function satV3SizeSwitch(ideaId){
+  const idea = sat7dIdea(ideaId); if(!idea) return;
+  satV3IdeaWrite(ideaId, {size_full_override: !(idea.size_full_override===true)});
+  satV3Render();
+}
+function satV3F2cHtml(idea){
+  const f = satV3F2c(idea), id = escHtml(idea.id), m = f.mac;
+  const sym = v => ({up:'▲', flat:'▬', down:'▼'})[v] || '—';
+  const picking = satV3TrendPick.has(idea.id) || f.shift;
+  const trendTxt = f.changed ? `Trend ${sym(f.trend)} (เปลี่ยนจาก ${sym(f.changed.from)})` : `Trend ${sym(f.trend)} (Strategy จ.)`;
+  const pick = picking ? `<span class="ui-f2c-pick">${['up','flat','down'].map(v=>
+    `<button type="button" class="ui-btn${f.trend===v?' ui-btn-pri':''}" data-trend="${v}" onclick="satV3TrendSet('${id}','${v}')">${({up:'ขึ้น',flat:'ผสม',down:'ลง'})[v]}</button>`).join('')}</span>` : '';
+  const clr = f.changed ? ` <button type="button" class="ui-link" data-trend-clear="1" onclick="satV3TrendSet('${id}',null)">ใช้ค่า Strategy</button>` : '';
+  let h = `<div class="ui-f2c" data-f2c="1">`;
+  h += `<div class="ui-f2c-r" data-f2c-row="trend"><span>${escHtml(trendTxt)}</span> <button type="button" class="ui-btn ui-f2c-chg" onclick="satV3TrendToggle('${id}')">เปลี่ยน</button>${clr}${pick}</div>`;
+  if(f.shift) h += `<div class="ui-cond-warn" data-trend-shift="1">⚠ ราคาผ่าน Trend Shift — Trend อาจเปลี่ยนแล้ว · ราคาปิดรายวันผ่านระดับแล้ว → กด [เปลี่ยน] · แค่ Sweep แล้วกลับ → Trend เดิม ไม่ต้องทำอะไร</div>`;
+  const ver = m.versionId ? (String(m.versionId).match(/v\d{3}$/)||[''])[0] : '';
+  h += `<div class="ui-f2c-r" data-f2c-row="macro">${m.state==='none' ? '<span class="ui-mac-dim">Macro: ไม่มี Playbook</span>'
+      : `<span>Macro: <b>${escHtml(Calc.pbStanceText(m.state))}</b>${ver?` <span class="ui-mac-dim">${escHtml(ver)}</span>`:''}</span>`}</div>${satMixLineHtml(m)}`;
+  if(f.recent) h += `<div class="ui-mac-dim" data-f2c-recent="1">Playbook เพิ่งเปลี่ยน ${escHtml(pbDate(m.changedAt))}</div>`;
+  h += m.drivers.length
+    ? `<div class="ui-f2c-r" data-f2c-row="driver"><span>Driver</span><span class="ui-chips">${m.drivers.map(d=>
+        `<span class="ui-chip${d.id===f.driver?' ui-on':''}" data-driver="${escHtml(d.id)}" onclick="satV3DriverSet('${id}','${escHtml(d.id)}')">${escHtml(d.id)}${d.title?' · '+escHtml(d.title):''}</span>`).join('')}</span></div>`
+    : `<div class="ui-f2c-r" data-f2c-row="driver"><span class="ui-mac-dim">Driver —</span></div>`;
+  const cutTxt = `ลด ${Math.round((1-SAT_MACRO_CUT)*100)}%`;
+  if(f.rule.factor<1){
+    h += `<div class="ui-f2c-r" data-f2c-row="size"><span>ขนาดไม้: ${f.off ? 'เต็ม' : `${cutTxt} (สวนทั้ง Macro และ Trend)`}</span>`
+      + (f.off ? ' <span class="ui-f2c-off" data-off-rule="1">ไม่ตามกฎ</span>' : '')
+      + ` <button type="button" class="ui-link" data-size-switch="1" onclick="satV3SizeSwitch('${id}')">${f.off ? 'กลับตามกฎ' : 'ใช้ไม้เต็ม (ไม่ตามกฎ)'}</button></div>`;
+  } else h += `<div class="ui-f2c-r" data-f2c-row="size"><span>ขนาดไม้: เต็ม</span></div>`;
+  return h + `</div>`;
+}
 /* ขั้นหน้างาน (มีข้อ Activate): บรรทัดสรุปของข้อนั้น + "เงื่อนไขอื่นรออยู่ n ข้อ" 1 บรรทัด — ไม่มีแถวปุ่มลัด/เพิ่มเอง */
 function satV3ActiveBlockHtml(idea, act){
   const id = escHtml(idea.id), cid = escHtml(act.id);
@@ -11033,7 +11215,7 @@ function satV3ActiveBlockHtml(idea, act){
 function satV3CondListHtml(idea, planned, active){
   const id = escHtml(idea.id);
   if(planned && active){
-    return `<div class="ui-conds"><div class="ui-conds-h">เงื่อนไขเข้า <small>หน้างาน · Activate ได้ทีละ 1 ข้อ</small></div>${satV3ActiveBlockHtml(idea, active)}${satV3CancelledBlockHtml(idea)}</div>`;
+    return `<div class="ui-conds"><div class="ui-conds-h">เงื่อนไขเข้า <small>หน้างาน · Activate ได้ทีละ 1 ข้อ</small></div>${satV3ActiveBlockHtml(idea, active)}${satV3F2cHtml(idea)}${satV3CancelledBlockHtml(idea)}</div>`;
   }
   const live = satV3CondLive(idea);
   const rows = live.map(c=>{
@@ -11103,8 +11285,9 @@ function satV3SetupLabel(su){
 }
 /* คำนวณต่อบัญชี — เทียบเท่า sat7dCalc() เดิมทุกจุด (โบรก/lot/heat/โควตา) เว้นแต่ "ครบ checklist" แทนด้วย setup
    ซึ่งเป็นแค่คำเตือน (นอกแผน) ไม่ใช่ตัวบล็อกความพร้อมต่อบัญชี — ผ่าน Calc.satLot/Calc.heat/Calc.readiness เดิมทั้งหมด */
-function satV3PlanAcctCalc(idea, accId){
+function satV3PlanAcctCalc(idea, accId, f2c){
   const base = sat7dAcctBase(accId);
+  const F = f2c || satV3F2c(idea);   /* F2c — ขนาดไม้ = riskAmount × factor ที่ใช้จริง (1 หรือ SAT_MACRO_CUT) */
   const slot = (idea.accts && idea.accts[accId]) || {};
   const opts = sat7dBrokerOpts(base.B, idea.asset);
   const chosen = opts.find(o=>o.broker===slot.broker) || opts[0] || null;
@@ -11115,7 +11298,7 @@ function satV3PlanAcctCalc(idea, accId){
   if(chosen){
     riskCur = chosen.cfg.cur==='USD' ? (base.fx>0 ? base.riskTHB/base.fx : null) : base.riskTHB;
     if(side===true && riskCur>0 && dist>0){
-      const r = Calc.satLot({riskAmount:riskCur, dist, contract:chosen.cfg.contract, lotStep:chosen.cfg.lotStep, minLot:chosen.cfg.minLot});
+      const r = Calc.satLot({riskAmount:riskCur*F.factor, dist, contract:chosen.cfg.contract, lotStep:chosen.cfg.lotStep, minLot:chosen.cfg.minLot});
       if(r.lot==null) lotMsg = r.msg;
       else { lot = r.lot; actualTHB = r.lot * dist * chosen.cfg.contract * (chosen.cfg.cur==='USD' ? base.fx : 1); }
     }
@@ -11130,7 +11313,7 @@ function satV3PlanAcctCalc(idea, accId){
     hasInvalidation: true,   /* Cancel Level เป็นแค่เตือน ไม่บล็อกเหมือน invalidation ของ 7D.2 เดิม */
     side, hasChosenBroker: !!chosen, hasAnyBroker: sat7dHasAnyBroker(base.B), lotMsg, hasCapital: base.cap>0
   });
-  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: rd.reasons, ready: rd.ok, tradeExists};
+  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: rd.reasons, ready: rd.ok, tradeExists, factor: F.factor, f2c: F};
 }
 function satV3ReadyCount(idea){
   return sat7dAccts().filter(a=>{
@@ -11159,7 +11342,8 @@ function satV3SaveSlot(ideaId, accId){
   const s = (idea.accts||{})[accId] || {}; if(s.trade_id || s.skip) return;
   const act = satV3ActiveCond(idea);
   if(satV3IsCondIdea(idea) && !act) return;   /* 7D.4 — การ์ด 2 ขั้น: ต้อง Activate เงื่อนไขก่อนถึงบันทึก order ได้ */
-  const c = satV3PlanAcctCalc(idea, accId);
+  const F = satV3F2c(idea, Date.now());   /* F2c — ค่า ณ วินาทีที่กดบันทึก (ไม่ใช้ค่าที่เห็นตอน Activate) · ล็อกลงไม้ */
+  const c = satV3PlanAcctCalc(idea, accId, F);
   if(c.lot==null) return;
   const B = getBook(accId);
   const su = satV3SetupsReady(idea);
@@ -11169,7 +11353,17 @@ function satV3SaveSlot(ideaId, accId){
     entry: idea.entry, sl: idea.sl, tp: idea.tp,
     qty: c.lot, mult: c.chosen ? c.chosen.cfg.contract : 1, cur: c.chosen ? c.chosen.cfg.cur : PORTS.satB.cur,
     invalidation: null, status: 'plan', prevTrade: null, unplannedMode: false,
-    offplanOverride: !su.pass, sizeFactor: null,
+    offplanOverride: !su.pass, sizeFactor: F.factor<1 ? F.factor : null,
+    trend_state: F.trend || null,
+    trend_changed: F.changed ? {from: F.changed.from, to: F.changed.to} : null,
+    macro_state: F.align,
+    macro_stance: F.mac.state,
+    playbook_version: F.mac.versionId || null,
+    driver: F.driver || null,
+    size_rule: F.rule.factor,
+    off_rule: F.off,
+    macro_note: F.note,
+    macro_recent: F.recent,
     cancel_level: idea.cancel_level,
     setups: Array.isArray(idea.setups) ? idea.setups : [],
     /* 7D.4 — เงื่อนไขที่ Activate: id + สำเนาข้อความ + TP zone (ไว้ให้ Journal อ่านได้แม้ลบเงื่อนไขทีหลัง) */
@@ -11246,6 +11440,21 @@ function satV3RowCancelAll(ideaId){
   satV3EffectiveTrades(idea).filter(x=>x.trade.status==='plan').forEach(({accId})=>sat7dCancelSlot(ideaId, accId));
   satV3MaybeAutoClose(ideaId);
 }
+/* F2c — รายละเอียดไม้ 1 บรรทัด (อ่านอย่างเดียว) จาก field ที่ล็อกตอนบันทึก · ไม้เก่าไม่มี field = ไม่แสดง */
+function satV3F2cTradeLine(t){
+  if(!t || t.size_rule===undefined || t.macro_state===undefined) return '';
+  const side = t.bias==='Short' ? 'short' : 'long';
+  const mac = ({with:'ตาม', neutral:'Neutral', against:'สวน', none:'ไม่มี Playbook'})[t.macro_state] || '—';
+  const vm = t.playbook_version ? (String(t.playbook_version).match(/v\d{3}$/)||[''])[0] : '';
+  const macTxt = t.macro_state==='none' ? mac : `${mac} (${Calc.pbStanceIcon(t.macro_stance)}${vm?' '+vm:''})`;
+  const tr = t.trend_state==null ? '—' : t.trend_state==='flat' ? 'ผสม'
+    : ((side==='long' && t.trend_state==='up') || (side==='short' && t.trend_state==='down')) ? 'ตาม' : 'สวน';
+  const size = (t.size_rule<1 && !t.off_rule) ? `ลด ${Math.round((1-t.size_rule)*100)}%` : 'เต็ม';
+  const tags = (t.off_rule ? '<span class="ui-f2c-off">ไม่ตามกฎ</span>' : '')
+    + (t.trend_changed ? '<span class="ui-f2c-tag">Trend เปลี่ยน</span>' : '')
+    + (t.macro_recent ? '<span class="ui-f2c-tag">Playbook เพิ่งเปลี่ยน</span>' : '');
+  return `<div class="ui-f2c-tl" data-f2c-trade="1">Macro ${escHtml(macTxt)} · Trend ${tr} · Driver ${escHtml(t.driver||'—')} · ${size} ${tags}</div>`;
+}
 function satV3PlanRowsHtml(idea){
   const trades = satV3EffectiveTrades(idea);
   const planTrades = trades.filter(x=>x.trade.status==='plan');
@@ -11265,13 +11474,13 @@ function satV3PlanRowsHtml(idea){
     rows.push(UI.row({color: acctColor(acctList.find(a=>a.id===planTrades[0].accId)), name: sat7dLabel(idea.asset),
       tag: idea.bias, detail,
       btns:[{label:'เข้าแล้ว', onClick:`satV3RowMarkOpenAll('${escHtml(idea.id)}')`},
-            {label:'ยกเลิก', onClick:`satV3RowCancelAll('${escHtml(idea.id)}')`}]}));
+            {label:'ยกเลิก', onClick:`satV3RowCancelAll('${escHtml(idea.id)}')`}]}) + satV3F2cTradeLine(t0));
   }
   openTrades.forEach(({accId, trade})=>{
     rows.push(UI.row({color: acctColor(acctList.find(a=>a.id===accId)), name: sat7dLabel(idea.asset),
       tag: idea.bias, detail:`เข้า ${fmt2(trade.entry)} · SL ${fmt2(trade.sl)} · TP ${trade.tp!=null?fmt2(trade.tp):'—'}`,
       btns:[{label:'ปิดไม้', onClick:`openClosePos('${escHtml(trade.id)}','${escHtml(accId)}')`},
-            {label:'แก้ SL', onClick:`editTrade('${escHtml(trade.id)}','${escHtml(accId)}')`}]}));
+            {label:'แก้ SL', onClick:`editTrade('${escHtml(trade.id)}','${escHtml(accId)}')`}]}) + satV3F2cTradeLine(trade));
   });
   return rows.join('');
 }
@@ -11282,7 +11491,7 @@ const satV3PlanAdapter = {
     if(model._skipSet.has(a.id)) return 'ข้ามบัญชีนี้';
     if(c.lot==null) return c.lotMsg ? `<span class="ui-hint">${escHtml(c.lotMsg)}</span>` : '<span class="ui-hint">กรอก Entry/SL</span>';
     const brokerTxt = c.chosen ? c.chosen.broker : '—';
-    return `${escHtml(brokerTxt)} <b>${fmt2(c.lot)}</b> ${SAT7D_UNIT[idea.asset]||'lot'} · ฿${fmt0(Math.round(c.riskCur!=null && c.chosen && c.chosen.cfg.cur==='USD' ? c.riskCur : c.base.riskTHB))}`;
+    return `${escHtml(brokerTxt)} <b>${fmt2(c.lot)}</b> ${SAT7D_UNIT[idea.asset]||'lot'} · ฿${fmt0(Math.round((c.riskCur!=null && c.chosen && c.chosen.cfg.cur==='USD' ? c.riskCur : c.base.riskTHB) * (c.factor||1)))}${c.factor<1?` <span class="ui-hint">ลด ${Math.round((1-c.factor)*100)}%</span>`:''}`;
   },
   rowExtra(model, a){
     const idea = model._idea, c = satV3PlanAcctCalc(idea, a.id);
@@ -11326,6 +11535,7 @@ function satV3DraftCardHtml(idea){
       : (!planned ? {label:'บันทึกแผน', onClick:`satV3PlanSave('${escHtml(idea.id)}')`, disabled: !satV3PlanHasCond(idea)} : null),
     _idea: idea, _skipSet: skipSet
   };
+  if(!isCond) model.topHtml = satV3F2cHtml(idea);   /* F2c — ไอเดียเก่าที่ไม่มี conditions: การ์ดเป็นขั้นหน้างานเสมอ */
   if(isCond){
     model.topHtml = satV3CondListHtml(idea, planned, active);
     model.hideNums = model.hideSetups = model.hideAccts = !step2;
@@ -12051,7 +12261,7 @@ function ffSet(list,i,v){
      => breadth จึงนับจาก rsTrend (= raw ตัวดิบก่อน z-score) > 0
         ซึ่งแปลว่า EMA12(rs) > EMA26(rs) = ชนะ SPY อยู่จริง ๆ ณ ตอนนี้ (ดู ffRenderThemes)
 ============================================================================== */
-const RRG_BUILD = 5;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง
+const RRG_BUILD = 6;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง
                           + ใช้ทิ้งแคชอัตโนมัติเมื่อรูปร่างแถวเปลี่ยน (ดู ffState) */
 const RRG_BENCH = 'SPY';
 const RRG_SYMS = [
@@ -12141,10 +12351,13 @@ function rrgCompute(closes, highs, bench, tfKey){
   const back = last - TF.momLag;
   const dRatio = (back>=0 && ratioS[back]!==null) ? ratioS[last]-ratioS[back] : null;
   const dMom   = (back>=0 && momS[back]!==null)   ? momS[last]-momS[back]     : null;
+  /* F2c — ควอดแรนต์ ณ แท่งของสัปดาห์ก่อน (TF W = แท่ง last-1 · TF D = แท่ง last-5) · หาไม่ได้ = null */
+  const pi = last - (tfKey==='W' ? 1 : 5);
+  const prevQuad = (pi>=0 && ratioS[pi]!==null && momS[pi]!==null) ? rrgQuadOf(ratioS[pi], momS[pi]) : null;
   const hi52 = Math.max.apply(null, highs.slice(Math.max(0, n - (tfKey==='W' ? 52 : 252))));
   /* rsTrend = raw ก่อน z-score · > 0 คือ EMA12(rs) เหนือ EMA26(rs) = ชนะ SPY อยู่ ณ ตอนนี้
      ต้องเก็บแยกเพราะ ratio ผ่าน z-score แล้ว เทียบกับศูนย์ไม่ได้อีก — ใช้เป็นฐานของ breadth */
-  return {ratio:ratioS[last], mom:momS[last], quad, days, dRatio, dMom, rsTrend:raw[last],
+  return {ratio:ratioS[last], mom:momS[last], quad, prevQuad, days, dRatio, dMom, rsTrend:raw[last],
           off52: hi52>0 ? (closes[last]/hi52-1)*100 : 0, close:closes[last], bars:n};
 }
 
@@ -12347,6 +12560,7 @@ function rrgGaugeHtml(v, d){
        + '</div>';
 }
 function ffRenderThemes(){
+  if(!rrgProg){ try{ ffRenderChanges(); }catch(e){ console.warn('ffRenderChanges:', e); } }   /* F2c — ธีมเปลี่ยน (prevQuad) อ่านจากแถวเดียวกัน */
   const f = ffState();
   const r = f.rrg || {};
   const tf = rrgTf(), TF = RRG_TF[tf];
@@ -12653,14 +12867,63 @@ function ffRenderActionBar(){
   else if(age<=2){ fresh = 'สด'; }
   else { fresh = 'เก่า ' + age + ' วันทำการ'; freshCls = ' warn'; }
   const capCls = demo ? '' : (C.stale||C.missing.length ? ' warn' : C.cap<100 ? ' warn' : '');
+  /* F2c — ช่อง Macro: ท่าทีล่าสุดของ Playbook ที่ใช้จริง · แตะ = เลื่อนไป #pbPanel */
+  const mv = pbLatestActive();
+  const vNo = mv ? (String(mv.id).match(/v\d{3}$/)||[''])[0] : '';
+  const macroCell = `<div class="ffActCell ffActClick" data-ff="macro" role="button" tabindex="0" onclick="pbScrollTo()" onkeydown="if(event.key==='Enter')pbScrollTo()">`
+    + `<div class="ffActL">Macro</div><div class="ffActV">${mv ? escHtml(pbStanceLineText(mv.assets)) : '—'}</div>`
+    + `<div class="ffActTag">${mv ? escHtml((mv.quarter||'') + (vNo?' '+vNo:'')) : (pbLoaded ? 'ยังไม่มี Playbook ใช้จริง' : 'กำลังโหลด Playbook…')}</div></div>`;
   const cell = (k, lbl, val, extra, cls) => `<div class="ffActCell${cls||''}" data-ff="${k}"><div class="ffActL">${lbl}</div><div class="ffActV">${val}</div>${extra||''}</div>`;
   host.innerHTML = `<div class="ffActSum" data-ff="sum">${escHtml(sum)}</div>
     <div class="ffActGrid">`
     + cell('cap',   'เพดานไม้ Core', demo ? '—' : C.cap + '%', '', capCls)
-    + cell('macro', 'Macro', '—', '<div class="ffActTag">รอ Playbook</div>')
+    + macroCell
     + cell('lead',  'ธีมนำ', leads.length ? leads.map(escHtml).join(' · ') : '—')
     + cell('fresh', 'ความสดข้อมูล', escHtml(fresh), '', freshCls)
     + `</div>`;
+  try{ ffRenderChanges(); }catch(e){ console.warn('ffRenderChanges:', e); }
+}
+
+/* ══════════ F2c — "อะไรเปลี่ยนสัปดาห์นี้" (พับได้ · ใต้แถบดำ เหนือ #pbPanel) · อ่านอย่างเดียว ══════════
+   เพดาน = Calc.ffCoreCap ปัจจุบัน vs prev_week (fundflow.json · ไม่คิดสูตรใหม่) · ratio พลิก = up ≠ prev_week.up · ธีม = quad ≠ prevQuad (rrgCompute)
+   ไม่มี fundflow.json จริง (ข้อมูลตัวอย่าง) = ไม่แสดงบล็อก · ไม่มี prev_week = "—" ไม่ error */
+let ffChgOpen = false;
+const RRG_QUAD_LABEL = {lead:'Leading', weak:'Weakening', imp:'Improving', lag:'Lagging'};
+function ffChgToggle(){ ffChgOpen = !ffChgOpen; ffRenderChanges(); }
+function ffChangesData(){
+  if(!ffJson) return null;
+  const R = ffJson.ratios || {};
+  const pw = k => (R[k] && R[k].prev_week && typeof R[k].prev_week.up==='boolean') ? R[k].prev_week.up : null;
+  const cur = ffCoreNow();
+  let capPrev = null;
+  if(pw('ACWI_BIL')!=null && pw('HYG_IEI')!=null) capPrev = Calc.ffCoreCap({acwi:pw('ACWI_BIL'), hyg:pw('HYG_IEI'), ageDays:null}).cap;
+  const flips = FF_RATIOS.filter(d=>R[d.k] && pw(d.k)!=null && !!R[d.k].up !== pw(d.k))
+    .map(d=>({k:d.k, nm:d.nm, from: pw(d.k)?'เขียว':'แดง', to: R[d.k].up?'เขียว':'แดง'}));
+  const rr = (ffState().rrg)||{}, rows = rrgTf()==='W' ? rr.rowsW : rr.rowsD;
+  const themes = Array.isArray(rows) ? rows.filter(x=>x && !x.err && x.quad && x.prevQuad && x.quad!==x.prevQuad)
+    .map(x=>({sym:String(x.sym), name:String(x.name||x.sym), from:x.prevQuad, to:x.quad})) : [];
+  const anyPrev = capPrev!=null || FF_RATIOS.some(d=>pw(d.k)!=null);
+  return {cap: cur.cap, capPrev, capChanged: capPrev!=null && capPrev!==cur.cap, flips, themes, anyPrev};
+}
+function ffRenderChanges(){
+  const host = document.getElementById('ffChanges'); if(!host) return;
+  const D = ffChangesData();
+  if(!D){ host.innerHTML = ''; return; }
+  const parts = [];
+  if(D.capChanged) parts.push(`เพดาน ${D.capPrev}% → ${D.cap}%`);
+  if(D.flips.length) parts.push(`${D.flips.length} ratio พลิก`);
+  if(D.themes.length) parts.push(`${D.themes.length} ธีมเปลี่ยน`);
+  const sum = parts.length ? parts.join(' · ') : (D.anyPrev || D.themes.length ? 'ไม่มีอะไรเปลี่ยน' : '—');
+  const capRow = D.capPrev==null ? 'เพดาน Core: —'
+    : D.capChanged ? `เพดาน Core: ${D.capPrev}% → ${D.cap}%` : `เพดาน Core: ${D.cap}% (เท่าเดิม)`;
+  const flipRows = D.flips.length ? D.flips.map(f=>`<div class="ffChgR" data-chg="flip">${escHtml(f.nm)} · ${f.from}→${f.to}</div>`).join('')
+    : `<div class="ffChgR ffChgNone">${D.anyPrev ? 'ไม่มี ratio พลิก' : 'ratio: —'}</div>`;
+  const thRows = D.themes.length ? D.themes.map(t=>`<div class="ffChgR" data-chg="theme">${escHtml(t.name)} · ${RRG_QUAD_LABEL[t.from]||t.from}→${RRG_QUAD_LABEL[t.to]||t.to}</div>`).join('')
+    : `<div class="ffChgR ffChgNone">ไม่มีธีมเปลี่ยน</div>`;
+  host.innerHTML = `<div class="panel ffChg"><div class="ffChgHead" role="button" tabindex="0" aria-expanded="${ffChgOpen?'true':'false'}" onclick="ffChgToggle()" onkeydown="if(event.key==='Enter')ffChgToggle()">
+      <span class="pbCaret">${ffChgOpen?'▾':'▸'}</span><span class="ffChgL">อะไรเปลี่ยนสัปดาห์นี้</span><b class="ffChgSum" data-chg="sum">${escHtml(sum)}</b></div>
+    ${ffChgOpen ? `<div class="ffChgBody"><div class="ffChgNote">สัปดาห์นี้ (ยังไม่ปิด) เทียบสัปดาห์ก่อน</div>
+      <div class="ffChgR" data-chg="cap">${escHtml(capRow)}</div>${flipRows}${thRows}</div>` : ''}</div>`;
 }
 
 /* ══════════ F2b — Macro Playbook (แท็บ Flow · users/{uid}/macroPlaybook · 1 เวอร์ชัน = 1 เอกสาร · create เท่านั้น) ══════════
@@ -12682,6 +12945,7 @@ function pbStart(){
     pbUnsub = c.onSnapshot(snap=>{
       pbList = snap.docs.filter(d=>PB_ID_RE.test(d.id)).map(d=>({...(d.data()||{}), id:d.id}));
       pbErr = null; pbLoaded = true; pbRender();
+      try{ sat7dRefresh(); }catch(e){}   /* F2c — Macro ของหน้า Sat อ่านจาก pbList: Playbook มาถึง/เปลี่ยนต้องวาดหน้า Sat ใหม่ */
     }, err=>{ console.warn('macroPlaybook listener:', err); pbErr = sat7dErrText(err); pbLoaded = true; pbRender(); });
   }catch(e){ pbErr = sat7dErrText(e); pbLoaded = true; }
 }
@@ -12718,13 +12982,19 @@ function pbChangesText(ch){
   return k.map(a=>a+' '+Calc.pbStanceIcon(ch[a].from)+'→'+Calc.pbStanceIcon(ch[a].to)).join(' · ');
 }
 function pbSafeUrl(u){ return typeof u==='string' && /^https?:\/\//i.test(u.trim()) ? u.trim() : ''; }
+/* F2c — ป้ายสั้นของ asset ในแถวพับ/แถบดำ: XAU ▲ · BTC ▲▬ · BR ▼ · US — */
+const PB_SHORT = {XAUUSD:'XAU', BTC:'BTC', BRENT:'BR', US:'US'};
+function pbStanceLineText(assets){
+  return Calc.pbAssets.map(a=>`${PB_SHORT[a]||a} ${Calc.pbStanceIcon(((assets||{})[a]||{}).stance)}`).join(' · ');
+}
+function pbScrollTo(){ const el = document.getElementById('pbPanel'); if(el && el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'start'}); }
 
 /* การ์ด (ใช้ร่วมกันทั้งแผงจริง · พรีวิว · ดูประวัติ) — o.open = กางไหม · o.toggle = onclick ของหัว (ไม่ใส่ = ไม่พับ/กาง) */
 function pbCardHtml(ver, o){
   o = o || {};
   const view = ver.view || {}, assets = ver.assets || {}, vid = escHtml(ver.id);
   const icons = Calc.pbAssets.map(a=>{ const st = (assets[a]||{}).stance || 'none';
-    return `<span class="pbIco ${pbStanceCls(st)}" title="${a} ${escHtml(Calc.pbStanceText(st))}">${Calc.pbStanceIcon(st)}</span>`; }).join('');
+    return `<span class="pbIco ${pbStanceCls(st)}" title="${a} ${escHtml(Calc.pbStanceText(st))}">${PB_SHORT[a]||a} ${Calc.pbStanceIcon(st)}</span>`; }).join(' · ');
   const head = `<div class="pbHead"${o.toggle?` onclick="${o.toggle}" role="button" aria-expanded="${o.open?'true':'false'}"`:''}>
     ${o.toggle?`<span class="pbCaret">${o.open?'▾':'▸'}</span>`:''}<b class="pbQ">${escHtml(ver.quarter||'—')}</b>
     <span class="pbHl">${escHtml(view.headline||'—')}</span>
@@ -12797,6 +13067,7 @@ function pbRender(){
     }
   }
   host.innerHTML = `<div class="panel pbPanel"><div class="pbTitle">Macro ไตรมาส</div>${body}</div>`;
+  try{ ffRenderActionBar(); }catch(e){ console.warn('ffRenderActionBar:', e); }   /* F2c — ช่อง Macro ในแถบดำอ่านจาก Playbook */
 }
 
 /* ── ประวัติ ── */
