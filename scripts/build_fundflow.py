@@ -9,6 +9,10 @@ build_fundflow.py — คำนวณ 6 ratio ของแถบ Regime แล�
 ต่อ ratio: EMA10 vs EMA20 ของ (ตัวตั้ง / ตัวหาร)
   up         = EMA10 > EMA20 ที่แท่งล่าสุด
   flip_days  = จำนวนแท่งที่อยู่ฝั่งเดิมติดกัน นับแท่งล่าสุดด้วย (weekly = สัปดาห์ · daily = วัน)
+  prev_week  = {'up', 'bar'} สถานะ ณ แท่งสุดท้ายที่อยู่ในสัปดาห์ ISO ก่อนสัปดาห์ของแท่งล่าสุด
+               (TF W = แท่งสัปดาห์ก่อนหน้า 1 แท่ง · TF D = แท่งรายวันสุดท้ายของสัปดาห์ก่อนหน้า)
+               อ่านจาก EMA ชุดเดียวกับค่าปัจจุบันที่ index ย้อนหลัง (EMA ไม่มองอนาคต)
+               หาแท่งไม่ได้ หรือแท่งนั้นมีข้อมูลน้อยกว่า MIN_BARS → None
 weekly ใช้แท่งสัปดาห์ (สิ้นสุดวันศุกร์) รวมสัปดาห์ปัจจุบันที่ยังไม่ปิด — ตรงกับที่ TradingView แสดงแบบ realtime
 
 ทดสอบเครื่องตัวเอง:  python3 scripts/build_fundflow.py --out /tmp/fundflow.json
@@ -39,7 +43,7 @@ def ema(vals, span):
 
 
 def state_of(vals):
-    """คืน (up, flip_days) จากลำดับค่า ratio (เก่า→ใหม่)"""
+    """คืน (up, flip_days, sides) จากลำดับค่า ratio (เก่า→ใหม่) — sides = up ของทุกแท่ง"""
     f, s = ema(vals, FAST), ema(vals, SLOW)
     sides = [a > b for a, b in zip(f, s)]
     up = sides[-1]
@@ -47,7 +51,17 @@ def state_of(vals):
     for x in reversed(sides):
         if x != up: break
         n += 1
-    return up, n
+    return up, n, sides
+
+
+def prev_week_of(ds, sides):
+    """แท่งสุดท้ายในสัปดาห์ ISO ก่อนสัปดาห์ของแท่งล่าสุด → {'up','bar'} หรือ None"""
+    last = ds[-1].isocalendar()[:2]
+    for i in range(len(ds) - 2, -1, -1):
+        if ds[i].isocalendar()[:2] < last:
+            if i + 1 < MIN_BARS: return None
+            return {'up': bool(sides[i]), 'bar': ds[i].isoformat()}
+    return None
 
 
 def weekly_last(dates, closes):
@@ -78,9 +92,9 @@ def compute(prices):
             ds, r = [x[0] for x in wk], [x[1] for x in wk]
         if len(r) < MIN_BARS:
             errs.append(f'{key}: ข้อมูลไม่พอ ({len(r)} แท่ง)'); continue
-        up, n = state_of(r)
+        up, n, sides = state_of(r)
         res[key] = {'up': bool(up), 'flip_days': int(n), 'tf': tf, 'bar': ds[-1].isoformat(),
-                    'ratio': round(r[-1], 6)}
+                    'ratio': round(r[-1], 6), 'prev_week': prev_week_of(ds, sides)}
     return res, errs
 
 
@@ -103,8 +117,8 @@ def selftest():
     up = {d: 100 + i * 0.1 for i, d in enumerate(ds)}             # ขึ้นตลอด
     dn = {d: 100 - i * 0.01 for i, d in enumerate(ds)}            # ลงตลอด
     one = {d: 1.0 for d in ds}
-    # ขึ้นแล้วกลับลง 5 วันท้าย
-    turn = {d: (100 + i * 0.1 if i < len(ds) - 5 else 100 + (len(ds) - 5) * 0.1 - (i - len(ds) + 6) * 20) for i, d in enumerate(ds)}
+    # ขึ้นแล้วกลับลง 3 วันท้าย (แท่งล่าสุดคือพฤหัส → 3 วันท้ายอยู่ในสัปดาห์ล่าสุดทั้งหมด ไม่คร่อมสัปดาห์)
+    turn = {d: (100 + i * 0.1 if i < len(ds) - 3 else 100 + (len(ds) - 3) * 0.1 - (i - len(ds) + 4) * 20) for i, d in enumerate(ds)}
     p = {'ACWI': up, 'BIL': one, 'HYG': dn, 'IEF': one, 'IEI': one, 'HG=F': up, 'GC=F': one,
          'SPHB': turn, 'SPLV': one, 'RSP': up, 'SPY': one}
     r, e = compute(p)
@@ -117,6 +131,22 @@ def selftest():
     assert r['ACWI_BIL']['flip_days'] > 50
     wk = weekly_last(ds[:10], list(range(10)))
     assert [x[1] for x in wk] == [2, 7, 9], wk          # 2020-01-01 = พุธ → สัปดาห์แรกมี 3 วัน (พ-ศ)
+    for k, v in r.items():
+        pw = v['prev_week']
+        assert pw is not None and pw['bar'] < v['bar'], (k, v)
+    assert r['ACWI_BIL']['prev_week']['up'] is True
+    sp = r['SPHB_SPLV']
+    assert sp['up'] is False and sp['prev_week']['up'] is True, sp
+    # weekly: prev_week.bar = แท่งก่อนแท่งล่าสุด 1 แท่งพอดี
+    wds, _ = ratio_series(p['ACWI'], p['BIL'])
+    wkd = [x[0] for x in weekly_last(wds, [0] * len(wds))]
+    assert r['ACWI_BIL']['prev_week']['bar'] == wkd[-2].isoformat(), (r['ACWI_BIL'], wkd[-2:])
+    # daily: prev_week.bar = วันสุดท้ายของสัปดาห์ ISO ก่อนหน้า
+    assert datetime.date.fromisoformat(sp['prev_week']['bar']).isocalendar()[:2] < datetime.date.fromisoformat(sp['bar']).isocalendar()[:2]
+    # ข้อมูลสั้น: prev ไม่ถึง MIN_BARS → None แต่ค่าปัจจุบันยังออก (W: 60 แท่งพอดี → prev มี 59)
+    short = [ds[0] + datetime.timedelta(days=7 * i) for i in range(MIN_BARS)]
+    rs, es = compute({'ACWI': dict(zip(short, [100 + i for i in range(MIN_BARS)])), 'BIL': dict.fromkeys(short, 1.0)})
+    assert 'ACWI_BIL' in rs and rs['ACWI_BIL']['prev_week'] is None and rs['ACWI_BIL']['up'] is True, rs
     print('selftest OK', json.dumps(r, default=str)[:300])
 
 
@@ -138,7 +168,7 @@ def main():
     as_of = max(v['bar'] for v in ratios.values())
     doc = {'as_of': as_of,
            'generated_at': datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat(),
-           'method': f'EMA{FAST}/EMA{SLOW} of ratio · W = ISO week (current week incl.) · source yfinance',
+           'method': f'EMA{FAST}/EMA{SLOW} of ratio · W = ISO week (current week incl.) · prev_week = last bar of previous ISO week · source yfinance',
            'ratios': ratios}
     with open(a.out, 'w', encoding='utf-8') as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)
