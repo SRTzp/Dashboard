@@ -1631,6 +1631,30 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn,.rsLink{touch-action:
 .ui-cond-nums input[placeholder^="ราคา"]{width:120px}
 .ui-cond-hint{font-size:11.5px;margin-top:4px}
 .ui-wait .ui-row{margin-bottom:6px}
+/* 7D.5 — แถวพับ "รอเงื่อนไข" (1 แถวต่อเงื่อนไข) · บรรทัดสรุปข้อที่ Activate · เงื่อนไขอื่น · ที่ยกเลิก */
+.ui-wait{background:var(--card);border:1px solid var(--line);border-radius:var(--r-row);padding:9px 12px;margin-bottom:6px;font-size:13px;min-width:0}
+.ui-wc-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--dark)}
+.ui-wc-h b{font-weight:700}
+.ui-wc-hb{margin-left:auto;display:inline-flex;gap:6px}
+.ui-wc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid var(--line);min-width:0}
+.ui-wc-t{flex:1 1 140px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;color:var(--dark)}
+.ui-wc-m{color:var(--mute);font-size:12px;white-space:nowrap}
+.ui-wc-b{display:inline-flex;gap:6px;margin-left:auto}
+@media (max-width:480px){ .ui-wc-b{flex:0 0 100%;margin-left:0} .ui-wc-t{flex:1 1 100%} }
+.ui-cond-sum{display:flex;align-items:center;gap:6px;flex-wrap:wrap;border:1px solid var(--dark);background:var(--soft);border-radius:var(--r-btn);padding:8px;font-size:13px;min-width:0}
+.ui-cs-t{flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--dark)}
+.ui-cs-m{color:var(--mute);font-size:12px;white-space:nowrap}
+.ui-cs-b{display:inline-flex;gap:6px;margin-left:auto}
+@media (max-width:480px){ .ui-cs-b{flex:0 0 100%;margin-left:0} .ui-cs-t{flex:1 1 0} }
+.ui-cond-edit{margin-top:6px}
+.ui-cond-warn{color:var(--warn);font-size:12px;margin:6px 0 2px}
+.ui-cond-oth{margin-top:8px}
+.ui-cond-empty{font-size:12.5px;color:var(--mute);margin:4px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ui-link{border:0;background:none;padding:0;font-size:11.5px;color:var(--mute);text-decoration:underline;cursor:pointer}
+.ui-cancd{margin-top:8px;font-size:11.5px;color:var(--mute)}
+.ui-cancd-i{opacity:.55;margin-top:3px;padding-left:8px;border-left:2px solid var(--line)}
+.ui-cancd-t{text-decoration:line-through}
+.ui-ctpl-ed{margin:4px 0}
 .ui-rr{font-size:12px;color:var(--mute);margin:6px 0 4px}
 .ui-rr b{color:var(--dark)}
 .ui-plan-accts{margin-top:8px}
@@ -10646,7 +10670,8 @@ function satV3Render(){
   if(!el) return;
   const err = (satErr ? `<div class="s7Err">โหลดไอเดีย Sat ไม่สำเร็จ (${escHtml(satErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satIdeas</div>` : '')
     + (satWeekErr ? `<div class="s7Err">โหลด Bias สัปดาห์ไม่สำเร็จ (${escHtml(satWeekErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satWeek</div>` : '')
-    + (satConfigErr ? `<div class="s7Err">อ่านรายการ Setup ที่ตั้งเองไม่สำเร็จ (${escHtml(satConfigErr)}) — ใช้ค่าเริ่มต้น (Sweep/BigBar/Break Trendline) ไปพลาง ตรวจ Firestore Rules ของ users/{uid}/satConfig เมื่อพร้อม deploy</div>` : '');
+    + (satConfigErr ? `<div class="s7Err">อ่านรายการ Setup ที่ตั้งเองไม่สำเร็จ (${escHtml(satConfigErr)}) — ใช้ค่าเริ่มต้น (Sweep/BigBar/Break Trendline) ไปพลาง ตรวจ Firestore Rules ของ users/{uid}/satConfig เมื่อพร้อม deploy</div>` : '')
+    + (satConfigTplErr ? `<div class="s7Err">อ่านรายการปุ่มลัดเงื่อนไขไม่สำเร็จ (${escHtml(satConfigTplErr)}) — ใช้ค่าเริ่มต้นไปพลาง</div>` : '');
   const accts = sat7dAccts();
   if(!accts.length){ el.innerHTML = '<div class="panel-head"><h2>แผนเทรด Sat</h2></div><div class="empty">ไม่มีบัญชีที่เปิดพอร์ต Sat</div>'; return; }
   el.innerHTML = `<div class="panel-head s7Head"><h2><span class="dot" style="background:#DCA84B;display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px"></span>แผนเทรด Sat</h2>
@@ -10678,6 +10703,8 @@ const SAT_V3_DEFAULT_SETUP_NAMES = ['Sweep', 'BigBar', 'Break Trendline'];
 let satConfigSetups = null;   /* null = ยังไม่โหลด (ใช้ default ไปพลาง) · {} หรือ {asset:[...]} = โหลดแล้ว (อาจว่างเปล่า) */
 let satConfigErr = null;
 let satConfigUnsub = null;
+let satConfigCondTpl = null;        /* null = ไม่มีเอกสาร/ยังไม่โหลด (ใช้ค่าเริ่มต้น) · array = รายการที่ผู้ใช้ตั้งเอง (อาจว่าง) */
+let satConfigTplErr = null, satConfigCondTplUnsub = null;
 function satV3ConfigStart(){
   if(!uid || typeof db==='undefined' || !db) return;
   if(satConfigUnsub) return;
@@ -10696,10 +10723,25 @@ function satV3ConfigStart(){
       sat7dRefresh();
     });
   }catch(e){ satConfigSetups = {}; satConfigErr = sat7dErrText(e); }
+  /* 7D.5 — รายการปุ่มลัดเงื่อนไข (ใช้ร่วมทุก asset): satConfig/conditionTemplates = {items:[{id,text}]} · ไม่มีเอกสาร/อ่านไม่ได้ = ใช้ค่าเริ่มต้น ไม่ error */
+  try{
+    satConfigCondTplUnsub = c.doc('conditionTemplates').onSnapshot(snap=>{
+      const d = snap.exists ? (snap.data()||{}) : null;
+      satConfigCondTpl = (d && Array.isArray(d.items)) ? d.items.filter(x=>x && x.id && typeof x.text==='string') : null;
+      satConfigTplErr = null;
+      sat7dRefresh();
+    }, err=>{
+      console.warn('satConfig conditionTemplates read', err);
+      satConfigCondTpl = null; satConfigTplErr = sat7dErrText(err);
+      sat7dRefresh();
+    });
+  }catch(e){ satConfigCondTpl = null; satConfigTplErr = sat7dErrText(e); }
 }
 function satV3ConfigStop(){
   if(satConfigUnsub){ try{ satConfigUnsub(); }catch(e){} }
+  if(satConfigCondTplUnsub){ try{ satConfigCondTplUnsub(); }catch(e){} }
   satConfigUnsub = null; satConfigSetups = null; satConfigErr = null;
+  satConfigCondTplUnsub = null; satConfigCondTpl = null; satConfigTplErr = null;
 }
 function satV3DefaultSetups(){
   return SAT_V3_DEFAULT_SETUP_NAMES.map((n,i)=>({id:'default:'+i, name:n}));
@@ -10767,9 +10809,17 @@ function satV3NewPlan(asset){
    ══════════════════════════════════════════════════════════════════════════ */
 let satV3Open = new Set();        /* id ของแผนที่ planned แล้วและกางการ์ดอยู่ (ค่าเริ่มต้น = ยุบเป็นแถว "รอเงื่อนไข") */
 let satV3FocusCond = null;        /* id เงื่อนไขที่เพิ่งเพิ่ม → satV3Render() โฟกัสช่องข้อความให้ */
-const SAT_V3_COND_SHORTCUTS = ['Break & Pullback @ ', 'Swing back in demand zone @ '];
+/* 7D.5 — สถานะหน้าจอล้วน ๆ (ไม่เขียน Firestore): ใครกำลังแก้ข้อที่ Activate ในที่ · กาง "เงื่อนไขอื่น" · กาง "ที่ยกเลิก" · ตัวแก้รายการปุ่มลัด */
+let satV3ActiveEdit = new Set(), satV3OthersOpen = new Set(), satV3CancelledOpen = new Set();
+let satV3CondTplEditor = null;    /* {ideaId, mode:'list'|'add'} หรือ null */
+const SAT_V3_COND_SHORTCUTS = ['Break & Pullback @ ', 'Swing back in demand zone @ '];   /* ค่าเริ่มต้นของ satConfig/conditionTemplates (ไม่มีเอกสาร = ใช้ตัวนี้) */
 function satV3IsCondIdea(idea){ return !!idea && Array.isArray(idea.conditions); }
-function satV3ActiveCond(idea){ return satV3IsCondIdea(idea) ? (idea.conditions.find(c=>c && c.active) || null) : null; }
+/* 7D.5 — เงื่อนไขที่ยกเลิก = status:'cancelled' (ซ่อน ไม่ลบ) · ไม่มี status (ข้อมูล 7D.4) = รออยู่ */
+function satV3CondLive(idea){ return satV3IsCondIdea(idea) ? idea.conditions.filter(c=>c && c.status!=='cancelled') : []; }
+function satV3CondCancelled(idea){ return satV3IsCondIdea(idea) ? idea.conditions.filter(c=>c && c.status==='cancelled') : []; }
+/* "บันทึกแผนแล้ว" ระดับข้อ: แผนถูกบันทึกแล้ว และข้อนี้ไม่ได้เพิ่งพิมพ์หลังบันทึก (saved:false) — ข้อ 7D.4 ที่ไม่มี field นี้ = บันทึกแล้ว */
+function satV3CondSaved(idea, c){ return !!idea && idea.planned===true && !!c && c.saved!==false; }
+function satV3ActiveCond(idea){ return satV3IsCondIdea(idea) ? (idea.conditions.find(c=>c && c.active && c.status!=='cancelled') || null) : null; }
 /* ขอบใกล้ของ TP zone: Long = min(from,to) · Short = max(from,to) — กรอกกลับด้านก็ได้ค่าเดิม · มีค่าเดียว = ค่านั้น · ไม่มีเลย = null */
 function satV3TpNear(cond, bias){
   if(!cond) return null;
@@ -10786,7 +10836,8 @@ function satV3CondAdd(ideaId, text){
   const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea)) return;
   const id = 'c' + Date.now() + Math.floor(Math.random()*1000);
   satV3FocusCond = id;
-  satV3IdeaWrite(ideaId, {conditions: idea.conditions.concat([{id, text:String(text||''), tp_from:null, tp_to:null, inval:null, active:false}])});
+  /* saved:false = เพิ่งพิมพ์ ยังไม่เคยบันทึกแผน → ✕ ลบจริง (กันขยะจากพิมพ์ผิด) · พอ [บันทึกแผน]/พับการ์ด/Activate จึงกลายเป็น "บันทึกแล้ว" (✕ = ซ่อน) */
+  satV3IdeaWrite(ideaId, {conditions: idea.conditions.concat([{id, text:String(text||''), tp_from:null, tp_to:null, inval:null, active:false, saved:false}])});
   satV3Render();
 }
 function satV3CondEdit(ideaId, condId, field, val){
@@ -10802,63 +10853,253 @@ function satV3CondEdit(ideaId, condId, field, val){
   }
   satV3IdeaWrite(ideaId, patch);
 }
+/* ลบจริง — ใช้กับข้อที่ยังไม่เคยบันทึกแผนเท่านั้น (ผ่าน satV3CondCancel) · ไม้ที่บันทึกไปแล้วเก็บสำเนาข้อความไว้เอง (entry_condition) ไม่กระทบ */
 function satV3CondRemove(ideaId, condId){
   const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea)) return;
-  satV3IdeaWrite(ideaId, {conditions: idea.conditions.filter(c=>c.id!==condId)});   /* ไม้ที่บันทึกไปแล้วเก็บสำเนาข้อความไว้เอง (entry_condition) ไม่กระทบ */
+  satV3IdeaWrite(ideaId, {conditions: idea.conditions.filter(c=>c.id!==condId)});
   satV3Render();
 }
-/* ติ๊ก Activate = ข้อนี้เป็นข้อเดียวที่ active (ข้ออื่นถูกย้ายออก) · ติ๊กออก = ไม่มีข้อ active · ยังไม่ Activate = ไม่แสดงช่อง Entry/SL */
+/* 7D.5 — ยกเลิกเงื่อนไข: บันทึกแผนแล้ว → status:'cancelled' + cancelled_at (ซ่อน ไม่ลบ) · ยังไม่เคยบันทึก → ลบจริง */
+function satV3CondCancel(ideaId, condId){
+  const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea)) return;
+  const c = idea.conditions.find(x=>x && x.id===condId); if(!c) return;
+  if(!satV3CondSaved(idea, c)) return satV3CondRemove(ideaId, condId);
+  const wasActive = !!c.active && c.status!=='cancelled';
+  const conditions = idea.conditions.map(x=> x.id===condId
+    ? Object.assign({}, x, {status:'cancelled', cancelled_at:new Date().toISOString(), active:false}) : x);
+  const patch = {conditions};
+  if(wasActive && idea.tp!=null && idea.tp===satV3TpNear(c, idea.bias)) patch.tp = null;   /* TP ที่ยังเป็นค่าเริ่มต้นของข้อนี้ ไม่ตกค้าง */
+  satV3ActiveEdit.delete(ideaId);
+  satV3IdeaWrite(ideaId, patch);
+  satV3Render();
+}
+/* ติ๊ก Activate = ข้อนี้เป็นข้อเดียวที่ active (ข้ออื่นถูกย้ายออก) · ติ๊กออก = ไม่มีข้อ active · ยังไม่ Activate = ไม่แสดงช่อง Entry/SL
+   7D.5 — Activate จากแถวพับ ([Activate] บนแถว "รอเงื่อนไข") = กางการ์ดที่ขั้นหน้างานโดยเลือกข้อนั้นไว้แล้ว */
 function satV3CondActivate(ideaId, condId, on){
   const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea)) return;
   const prev = satV3ActiveCond(idea);
-  const conditions = idea.conditions.map(c=>Object.assign({}, c, {active: !!on && c.id===condId}));
+  const conditions = idea.conditions.map(c=>{
+    const o = Object.assign({}, c, {active: !!on && c.id===condId});
+    if(on && c.id===condId && c.status!=='cancelled') o.saved = true;
+    else if(on && c.id===condId) o.active = false;   /* ข้อที่ยกเลิกแล้ว Activate ไม่ได้ */
+    return o;
+  });
   const patch = {conditions};
   if(on){
     const next = conditions.find(c=>c.id===condId);
     /* TP เริ่มต้น = ขอบใกล้ของ TP zone ข้อนี้ · ถ้า TP เดิมเป็นค่าที่ผู้ใช้แก้เอง (ไม่ตรงค่าเริ่มต้นของข้อก่อนหน้า) ไม่ทับ */
     if(idea.tp==null || (prev && idea.tp===satV3TpNear(prev, idea.bias))) patch.tp = satV3TpNear(next, idea.bias);
+    satV3Open.add(ideaId);
+  } else if(prev && idea.tp!=null && idea.tp===satV3TpNear(prev, idea.bias)){
+    patch.tp = null;   /* [ยกเลิก Activate]: TP ที่ยังเป็นค่าเริ่มต้นของข้อนั้น ไม่ตกค้างไปข้อถัดไป */
   }
+  satV3ActiveEdit.delete(ideaId); satV3OthersOpen.delete(ideaId);
   satV3IdeaWrite(ideaId, patch);
   satV3Render();
 }
-function satV3PlanHasCond(idea){ return satV3IsCondIdea(idea) && idea.conditions.some(c=>String(c.text||'').trim()); }
-/* [บันทึกแผน] = เขียนลง satIdeas เท่านั้น (planned:true) ไม่สร้างไม้ → ยุบเป็นแถว "รอเงื่อนไข · n ข้อ" */
+function satV3PlanHasCond(idea){ return satV3CondLive(idea).some(c=>String(c.text||'').trim()); }
+/* [บันทึกแผน] = เขียนลง satIdeas เท่านั้น (planned:true) ไม่สร้างไม้ → ยุบเป็นแถว "รอเงื่อนไข" · ทุกข้อที่ยังรออยู่ = "บันทึกแล้ว" */
 function satV3PlanSave(ideaId){
   const idea = sat7dIdea(ideaId); if(!satV3PlanHasCond(idea)) return;
   satV3Open.delete(ideaId);
-  satV3IdeaWrite(ideaId, {planned: true, planned_at: new Date().toISOString()});
+  const conditions = idea.conditions.map(c=> (c && c.status!=='cancelled') ? Object.assign({}, c, {saved:true}) : c);
+  satV3IdeaWrite(ideaId, {planned: true, planned_at: new Date().toISOString(), conditions});
   satV3Render();
 }
 function satV3PlanToggleOpen(ideaId){
-  if(satV3Open.has(ideaId)) satV3Open.delete(ideaId); else satV3Open.add(ideaId);
+  const idea = sat7dIdea(ideaId);
+  if(satV3Open.has(ideaId)){
+    satV3Open.delete(ideaId);
+    /* พับการ์ดที่บันทึกแผนแล้ว = ยืนยันข้อที่เพิ่มระหว่างกาง → กลายเป็น "บันทึกแล้ว" */
+    if(satV3IsCondIdea(idea) && idea.planned===true && idea.conditions.some(c=>c && c.status!=='cancelled' && c.saved===false)){
+      satV3IdeaWrite(ideaId, {conditions: idea.conditions.map(c=> (c && c.status!=='cancelled' && c.saved===false) ? Object.assign({}, c, {saved:true}) : c)});
+    }
+  } else satV3Open.add(ideaId);
   satV3Render();
+}
+/* 7D.5 — แถวพับ "รอเงื่อนไข": แตะข้อความ = กางการ์ดเพื่อแก้ข้อนั้น (โฟกัสช่องข้อความข้อนั้น) */
+function satV3WaitEditCond(ideaId, condId){
+  satV3FocusCond = condId;
+  satV3Open.add(ideaId);
+  satV3Render();
+}
+/* [ปิดแผน] — ผู้ใช้กดเองเท่านั้น (ไม่ปิดเอง) · เปลี่ยนแค่ status ของไอเดีย ไม่ลบข้อมูล · ไม่ทำถ้ามีไม้ผูกอยู่ */
+function satV3PlanClose(ideaId){
+  const idea = sat7dIdea(ideaId); if(!idea || satV3EffectiveTrades(idea).length) return;
+  satV3Open.delete(ideaId);
+  satV3IdeaWrite(ideaId, {status:'closed', closed_at: new Date().toISOString()});
+  satV3Render();
+}
+function satV3ActiveEditToggle(ideaId){
+  if(satV3ActiveEdit.has(ideaId)) satV3ActiveEdit.delete(ideaId); else satV3ActiveEdit.add(ideaId);
+  satV3Render();
+}
+function satV3OthersToggle(ideaId){
+  if(satV3OthersOpen.has(ideaId)) satV3OthersOpen.delete(ideaId); else satV3OthersOpen.add(ideaId);
+  satV3Render();
+}
+function satV3CancelledToggle(ideaId){
+  if(satV3CancelledOpen.has(ideaId)) satV3CancelledOpen.delete(ideaId); else satV3CancelledOpen.add(ideaId);
+  satV3Render();
+}
+
+/* ── 7D.5 — รายการปุ่มลัดเงื่อนไข (ใช้ร่วมทุก asset) · users/{uid}/satConfig/conditionTemplates = {items:[{id,text}]}
+   ไม่มีเอกสาร = ค่าเริ่มต้น (ไม่ error) · แก้ = เพิ่ม/แก้ชื่อ/ลบ แบบเดียวกับรายการ Setup ── */
+function satV3CondTemplates(){
+  return satConfigCondTpl || SAT_V3_COND_SHORTCUTS.map((t,i)=>({id:'default:'+i, text:t}));
+}
+function satV3CondTplWrite(items){
+  const prev = satConfigCondTpl;
+  satConfigCondTpl = items;   /* สะท้อนทันที (แก้ต่อเนื่องเร็ว ๆ ไม่อ่านค่าเก่า) — เขียนไม่ได้ = ย้อนกลับ + เตือน */
+  const c = sat7dCol('satConfig'); if(!c) return;
+  c.doc('conditionTemplates').set({items}, {merge:true}).catch(e=>{
+    console.warn('satConfig conditionTemplates write', e);
+    satConfigCondTpl = prev; satConfigTplErr = sat7dErrText(e);
+    sat7dRefresh();
+  });
+}
+/* ข้อความปุ่มลัดเก็บตามที่พิมพ์ (รวมเว้นวรรคท้าย เช่น "Retest VWAP @ ") — ว่างเปล่าไม่รับ */
+function satV3CondTplAdd(text){
+  const t = String(text==null?'':text); if(!t.trim()) return;
+  satV3CondTplWrite(satV3CondTemplates().concat([{id:'t'+Date.now()+Math.floor(Math.random()*1000), text:t}]));
+}
+function satV3CondTplRename(id, text){
+  const t = String(text==null?'':text); if(!t.trim()) return;
+  satV3CondTplWrite(satV3CondTemplates().map(x=> x.id===id ? Object.assign({}, x, {text:t}) : x));
+}
+function satV3CondTplRemove(id){
+  satV3CondTplWrite(satV3CondTemplates().filter(x=>x.id!==id));
+}
+function satV3CondTplEditorOpen(ideaId, mode){ satV3CondTplEditor = {ideaId, mode: mode==='add'?'add':'list'}; satV3Render(); }
+function satV3CondTplEditorClose(){ satV3CondTplEditor = null; satV3Render(); }
+function satV3CondTplAddConfirm(ideaId, inputId){
+  const el = document.getElementById(inputId);
+  if(el) satV3CondTplAdd(el.value);
+  satV3CondTplEditor = {ideaId, mode:'list'};
+  satV3Render();
+}
+function satV3CondTplRenameCommit(id, inputId){
+  const el = document.getElementById(inputId);
+  if(el) satV3CondTplRename(id, el.value);
+}
+function satV3CondTplEditorHtml(ideaId){
+  if(!satV3CondTplEditor || satV3CondTplEditor.ideaId!==ideaId) return '';
+  const iEsc = escHtml(ideaId);
+  if(satV3CondTplEditor.mode==='add'){
+    const inputId = 'ctplAdd_'+ideaId;
+    return `<div class="ui-editor ui-ctpl-ed" data-ctpl="1">
+      <div class="ui-fl" style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="${escHtml(inputId)}" data-autofocus="1" placeholder="ข้อความปุ่มลัดใหม่ เช่น Retest VWAP @ " style="flex:1;min-width:0;border:1px solid var(--line);border-radius:var(--r-btn);padding:7px 8px;font-size:13px"
+          onkeydown="if(event.key==='Enter'){ satV3CondTplAddConfirm('${iEsc}','${escHtml(inputId)}'); } else if(event.key==='Escape'){ satV3CondTplEditorClose(); }">
+        <button type="button" class="ui-btn ui-btn-pri" onclick="satV3CondTplAddConfirm('${iEsc}','${escHtml(inputId)}')">เพิ่ม</button>
+        <button type="button" class="ui-btn" onclick="satV3CondTplEditorClose()">ยกเลิก</button>
+      </div></div>`;
+  }
+  const rows = satV3CondTemplates().map(t=>{
+    const inputId = 'ctplEd_'+t.id;
+    return `<div class="ui-fl" style="display:flex;gap:6px;align-items:center;margin-top:6px" data-tpl="${escHtml(t.id)}">
+      <input type="text" id="${escHtml(inputId)}" value="${escHtml(t.text)}" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:var(--r-btn);padding:6px 8px;font-size:13px"
+        onchange="satV3CondTplRenameCommit('${escHtml(t.id)}','${escHtml(inputId)}')">
+      <button type="button" class="ui-btn" onclick="satV3CondTplRemove('${escHtml(t.id)}')">ลบ</button>
+    </div>`;
+  }).join('');
+  return `<div class="ui-editor ui-ctpl-ed" data-ctpl="1">
+    <div class="ui-hint" style="font-size:11.5px">ปุ่มลัดใช้ร่วมทุกสินค้า</div>
+    ${rows}
+    <div class="ui-fl" style="display:flex;gap:6px;align-items:center;margin-top:6px">
+      <button type="button" class="ui-btn" style="border-style:dashed" onclick="satV3CondTplEditorOpen('${iEsc}','add')">+ เพิ่ม</button>
+      <button type="button" class="ui-btn" onclick="satV3CondTplEditorClose()">เสร็จแล้ว</button>
+    </div></div>`;
+}
+
+/* ── 7D.5 — ชิ้นส่วนแสดงเงื่อนไข ── */
+function satV3NumTxt(v){ return (v==null || v==='') ? '—' : String(v); }
+/* "TP จาก–ถึง · Inval" — ข้อมูลขาด = "—" */
+function satV3CondMeta(c){
+  const hasTp = c.tp_from!=null || c.tp_to!=null;
+  return `TP ${hasTp ? satV3NumTxt(c.tp_from)+'–'+satV3NumTxt(c.tp_to) : '—'} · Inval ${satV3NumTxt(c.inval)}`;
+}
+/* ช่องแก้ข้อความ · ช่อง TP zone + Inval ของข้อเดียว (ใช้ทั้งในรายการเงื่อนไขและตอนกด ✎ แก้ในที่) */
+function satV3CondTextHtml(idea, c){
+  const id = escHtml(idea.id), cid = escHtml(c.id);
+  return `<input type="text" class="ui-cond-text" data-cond-text="${cid}" placeholder="เงื่อนไขเข้า เช่น Break &amp; Pullback @ 4600" value="${escHtml(c.text||'')}" onchange="satV3CondEdit('${id}','${cid}','text',this.value)">`;
+}
+function satV3CondNumsHtml(idea, c){
+  const id = escHtml(idea.id), cid = escHtml(c.id);
+  const numIn = (f, v, ph) => `<input type="text" inputmode="decimal" placeholder="${ph}" value="${v==null?'':escHtml(String(v))}" onchange="satV3CondEdit('${id}','${cid}','${f}',this.value)">`;
+  return `<div class="ui-cond-nums">
+        <span class="ui-cond-g"><span class="ui-cond-l">TP zone</span>${numIn('tp_from', c.tp_from, 'จาก')}<span class="ui-cond-l">–</span>${numIn('tp_to', c.tp_to, 'ถึง')}</span>
+        <span class="ui-cond-g"><span class="ui-cond-l">Inval</span>${numIn('inval', c.inval, 'ราคา (ไม่บังคับ)')}</span>
+      </div>`;
+}
+/* แถวสั้น 1 เงื่อนไข: ข้อความ (ตัดด้วย … · แตะ = กางการ์ดแก้ข้อนี้) · TP · Inval + ปุ่ม [primary] [ยกเลิก] — ≤480px ปุ่มลงแถวล่าง */
+function satV3ShortRowHtml(idea, c, primaryLabel, primaryOnClick){
+  const id = escHtml(idea.id), cid = escHtml(c.id);
+  return `<div class="ui-wc" data-cond="${cid}">
+    <span class="ui-wc-t" title="${escHtml(c.text||'')}" onclick="satV3WaitEditCond('${id}','${cid}')">${escHtml(c.text || '—')}</span>
+    <span class="ui-wc-m">${escHtml(satV3CondMeta(c))}</span>
+    <span class="ui-wc-b"><button type="button" class="ui-btn ui-wc-act" onclick="${primaryOnClick}">${escHtml(primaryLabel)}</button><button type="button" class="ui-btn ui-wc-cancel" onclick="satV3CondCancel('${id}','${cid}')">ยกเลิก</button></span>
+  </div>`;
+}
+/* ลิงก์ "ดูที่ยกเลิก (n)" — แสดงจาง อ่านอย่างเดียว */
+function satV3CancelledBlockHtml(idea){
+  const list = satV3CondCancelled(idea); if(!list.length) return '';
+  const id = escHtml(idea.id), open = satV3CancelledOpen.has(idea.id);
+  const items = open ? list.map(c=>`<div class="ui-cancd-i" data-cond="${escHtml(c.id)}"><span class="ui-cancd-t">${escHtml(c.text || '—')}</span> · ${escHtml(satV3CondMeta(c))}${c.cancelled_at ? ' · ยกเลิก '+escHtml(String(c.cancelled_at).slice(0,10)) : ''}</div>`).join('') : '';
+  return `<div class="ui-cancd"><button type="button" class="ui-link" onclick="satV3CancelledToggle('${id}')">${open?'ซ่อนที่ยกเลิก':'ดูที่ยกเลิก'} (${list.length})</button>${items}</div>`;
+}
+/* ขั้นหน้างาน (มีข้อ Activate): บรรทัดสรุปของข้อนั้น + "เงื่อนไขอื่นรออยู่ n ข้อ" 1 บรรทัด — ไม่มีแถวปุ่มลัด/เพิ่มเอง */
+function satV3ActiveBlockHtml(idea, act){
+  const id = escHtml(idea.id), cid = escHtml(act.id);
+  const editing = satV3ActiveEdit.has(idea.id);
+  const noTp = act.tp_from==null && act.tp_to==null;
+  let h = `<div class="ui-cond-sum" data-cond="${cid}"><span class="ui-cs-ok">✅</span><span class="ui-cs-t" title="${escHtml(act.text||'')}">${escHtml(act.text || '—')}</span><span class="ui-cs-m">· ${escHtml(satV3CondMeta(act))}</span>
+    <span class="ui-cs-b"><button type="button" class="ui-btn ui-cs-edit" title="แก้ข้อความ / TP zone / Inval ของข้อนี้" onclick="satV3ActiveEditToggle('${id}')">✎</button><button type="button" class="ui-btn ui-cs-off" onclick="satV3CondActivate('${id}','${cid}',false)">ยกเลิก Activate</button></span></div>`;
+  if(editing) h += `<div class="ui-cond ui-cond-on ui-cond-edit" data-cond-edit="${cid}"><div class="ui-cond-top">${satV3CondTextHtml(idea, act)}</div>${satV3CondNumsHtml(idea, act)}<div class="ui-cond-nums"><button type="button" class="ui-btn" onclick="satV3ActiveEditToggle('${id}')">เสร็จแล้ว</button></div></div>`;
+  if(noTp) h += '<div class="ui-cond-warn">⚠ ยังไม่ใส่ TP zone <span class="ui-hint">(ยังบันทึกได้)</span></div>';
+  const others = satV3CondLive(idea).filter(c=>c.id!==act.id);
+  if(others.length){
+    const open = satV3OthersOpen.has(idea.id);
+    h += `<div class="ui-cond-oth"><button type="button" class="ui-link ui-oth-t" onclick="satV3OthersToggle('${id}')">${open?'▾':'▸'} เงื่อนไขอื่นรออยู่ ${others.length} ข้อ</button>`
+      + (open ? others.map(c=>satV3ShortRowHtml(idea, c, 'ใช้ข้อนี้', `satV3CondActivate('${id}','${escHtml(c.id)}',true)`)).join('') : '')
+      + '</div>';
+  }
+  return h;
 }
 function satV3CondListHtml(idea, planned, active){
   const id = escHtml(idea.id);
-  const rows = idea.conditions.map(c=>{
-    const cid = escHtml(c.id), on = !!c.active;
-    const numIn = (f, v, ph) => `<input type="text" inputmode="decimal" placeholder="${ph}" value="${v==null?'':escHtml(String(v))}" onchange="satV3CondEdit('${id}','${cid}','${f}',this.value)">`;
+  if(planned && active){
+    return `<div class="ui-conds"><div class="ui-conds-h">เงื่อนไขเข้า <small>หน้างาน · Activate ได้ทีละ 1 ข้อ</small></div>${satV3ActiveBlockHtml(idea, active)}${satV3CancelledBlockHtml(idea)}</div>`;
+  }
+  const live = satV3CondLive(idea);
+  const rows = live.map(c=>{
+    const cid = escHtml(c.id), on = !!c.active, saved = satV3CondSaved(idea, c);
     return `<div class="ui-cond${on?' ui-cond-on':''}" data-cond="${cid}">
       <div class="ui-cond-top">
         ${planned?`<label class="ui-cond-act"><input type="checkbox" ${on?'checked':''} onchange="satV3CondActivate('${id}','${cid}',this.checked)"> Activate</label>`:''}
-        <input type="text" class="ui-cond-text" data-cond-text="${cid}" placeholder="เงื่อนไขเข้า เช่น Break &amp; Pullback @ 4600" value="${escHtml(c.text||'')}" onchange="satV3CondEdit('${id}','${cid}','text',this.value)">
-        <button type="button" class="ui-btn ui-cond-x" title="ลบเงื่อนไขข้อนี้" onclick="satV3CondRemove('${id}','${cid}')">✕</button>
-      </div>
-      <div class="ui-cond-nums">
-        <span class="ui-cond-g"><span class="ui-cond-l">TP zone</span>${numIn('tp_from', c.tp_from, 'จาก')}<span class="ui-cond-l">–</span>${numIn('tp_to', c.tp_to, 'ถึง')}</span>
-        <span class="ui-cond-g"><span class="ui-cond-l">Inval</span>${numIn('inval', c.inval, 'ราคา (ไม่บังคับ)')}</span>
-      </div></div>`;
+        ${satV3CondTextHtml(idea, c)}
+        <button type="button" class="ui-btn ui-cond-x" title="${saved?'ยกเลิกเงื่อนไขข้อนี้ (ซ่อน ไม่ลบ)':'ลบเงื่อนไขข้อนี้ (ยังไม่เคยบันทึก)'}" onclick="satV3CondCancel('${id}','${cid}')">✕</button>
+      </div>${satV3CondNumsHtml(idea, c)}</div>`;
   }).join('');
-  const shortcuts = SAT_V3_COND_SHORTCUTS.map(t=>`<button type="button" class="ui-btn ui-cond-sc" data-shortcut="1" onclick="satV3CondAdd('${id}', ${escHtml(JSON.stringify(t))})">${escHtml(t.trim())}</button>`).join('')
-    + `<button type="button" class="ui-btn ui-cond-sc" style="border-style:dashed" onclick="satV3CondAdd('${id}','')">+ เพิ่มเอง</button>`;
-  const hint = planned && !active ? '<div class="ui-hint ui-cond-hint">ติ๊ก Activate ที่เงื่อนไขที่เกิดขึ้น → ช่อง Entry / SL / TP จะขึ้น</div>' : '';
-  return `<div class="ui-conds"><div class="ui-conds-h">เงื่อนไขเข้า <small>${planned?'หน้างาน · Activate ได้ทีละ 1 ข้อ':'ขั้นวางแผน · ใส่ได้หลายข้อ'}</small></div>${rows}<div class="ui-chips">${shortcuts}</div>${hint}</div>`;
+  const shortcuts = satV3CondTemplates().map(t=>`<button type="button" class="ui-btn ui-cond-sc" data-shortcut="1" onclick="satV3CondAdd('${id}', ${escHtml(JSON.stringify(t.text))})">${escHtml(t.text.trim())}</button>`).join('')
+    + `<button type="button" class="ui-btn ui-cond-sc" style="border-style:dashed" onclick="satV3CondAdd('${id}','')">+ เพิ่มเอง</button>`
+    + `<button type="button" class="ui-btn ui-cond-sc ui-cond-tpl-edit" title="แก้รายการปุ่มลัด (ใช้ร่วมทุกสินค้า)" onclick="satV3CondTplEditorOpen('${id}','list')">✎ แก้รายการ</button>`;
+  const hint = planned && live.length ? '<div class="ui-hint ui-cond-hint">ติ๊ก Activate ที่เงื่อนไขที่เกิดขึ้น → ช่อง Entry / SL / TP จะขึ้น</div>' : '';
+  const empty = planned && !live.length
+    ? `<div class="ui-cond-empty">ไม่มีเงื่อนไขเหลือ <button type="button" class="ui-btn ui-cond-close" onclick="satV3PlanClose('${id}')">ปิดแผน</button></div>` : '';
+  return `<div class="ui-conds"><div class="ui-conds-h">เงื่อนไขเข้า <small>${planned?'หน้างาน · Activate ได้ทีละ 1 ข้อ':'ขั้นวางแผน · ใส่ได้หลายข้อ'}</small></div>${rows}${empty}<div class="ui-chips">${shortcuts}</div>${satV3CondTplEditorHtml(idea.id)}${hint}${satV3CancelledBlockHtml(idea)}</div>`;
 }
-/* แถวยุบของแผนที่บันทึกแล้วแต่ยังไม่มีเงื่อนไขไหนเกิด */
+/* แถวพับของแผนที่บันทึกแล้วแต่ยังไม่มีเงื่อนไขไหน Activate (7D.5): หัว "XAUUSD Short · รอเงื่อนไข" + 1 แถวต่อเงื่อนไข */
 function satV3WaitRowHtml(idea){
-  const n = idea.conditions.length;
-  return `<div class="ui-wait" data-id="${escHtml(idea.id)}">${UI.row({color:'#DCA84B', name: sat7dLabel(idea.asset), tag: idea.bias,
-    detail:`รอเงื่อนไข · ${n} ข้อ`, btns:[{label:'เปิด', onClick:`satV3PlanToggleOpen('${escHtml(idea.id)}')`}]})}</div>`;
+  const id = escHtml(idea.id), live = satV3CondLive(idea);
+  const dir = idea.bias==='Short' ? 'S' : 'L';
+  const empty = !live.length;
+  const hb = `<button type="button" class="ui-btn" onclick="satV3PlanToggleOpen('${id}')">เปิด</button>`
+    + (empty ? `<button type="button" class="ui-btn ui-btn-pri ui-wc-close" onclick="satV3PlanClose('${id}')">ปิดแผน</button>` : '');
+  const rows = live.map(c=>satV3ShortRowHtml(idea, c, 'Activate', `satV3CondActivate('${id}','${escHtml(c.id)}',true)`)).join('');
+  return `<div class="ui-wait" data-id="${id}">
+    <div class="ui-wc-h"><span class="ui-dot" style="--c:#DCA84B"></span><b>${escHtml(sat7dLabel(idea.asset))}</b> <span class="ui-tag ${dir}">${escHtml(idea.bias||'')}</span> <span class="ui-wc-st">· ${empty?'ไม่มีเงื่อนไขเหลือ':'รอเงื่อนไข'}</span><span class="ui-wc-hb">${hb}</span></div>
+    ${rows}${satV3CancelledBlockHtml(idea)}</div>`;
 }
 function satV3PlanEdit(ideaId, field, val){
   if(['entry','sl','tp','cancel_level'].includes(field)){
@@ -11124,7 +11365,7 @@ function satV3DraftCardHtml(idea){
   if(isCond){
     model.topHtml = satV3CondListHtml(idea, planned, active);
     model.hideNums = model.hideSetups = model.hideAccts = !step2;
-    if(planned) model.footHtml = `<div class="ui-plan-cta"><button type="button" class="ui-btn" onclick="satV3PlanToggleOpen('${escHtml(idea.id)}')">พับกลับเป็นแถว "รอเงื่อนไข"</button></div>`;
+    if(planned && !active) model.footHtml = `<div class="ui-plan-cta"><button type="button" class="ui-btn" onclick="satV3PlanToggleOpen('${escHtml(idea.id)}')">พับกลับเป็นแถว "รอเงื่อนไข"</button></div>`;
   }
   return `<div class="ui-pcell">${UI.planCard(model, satV3PlanAdapter)}${satV3SetupEditorHtml(idea.asset)}</div>`;
 }
@@ -11186,7 +11427,7 @@ function satV3PlansSectionHtml(){
   const ideas = satIdeasList.filter(x=>x.v3 && x.week===wpWeekKey());
   const drafts = ideas.filter(x=>satV3PlanRowState(x)==='draft' && x.status!=='closed');
   const rows = ideas.filter(x=>satV3PlanRowState(x)!=='draft' && satV3PlanRowState(x)!=='closed');
-  const isWait = x => satV3IsCondIdea(x) && x.planned===true && !satV3Open.has(x.id);   /* 7D.4 — บันทึกแผนแล้ว ยังไม่กาง = แถว "รอเงื่อนไข" */
+  const isWait = x => satV3IsCondIdea(x) && x.planned===true && !satV3Open.has(x.id) && !satV3ActiveCond(x);   /* 7D.4/7D.5 — บันทึกแผนแล้ว ยังไม่กาง และยังไม่มีข้อ Activate = แถว "รอเงื่อนไข" (มีข้อ Activate = การ์ดหน้างานเสมอ) */
   const cards = drafts.filter(x=>!isWait(x)), waits = drafts.filter(isWait);
   let html = `<div class="h">Trade Plans <small>${drafts.length} ร่าง</small></div>`;
   html += cards.length ? `<div class="ui-pgrid">${cards.map(satV3DraftCardHtml).join('')}</div>` : '';
