@@ -1010,11 +1010,38 @@ tr:last-child td{border-bottom:none}
 .wlActs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .wlHold{display:inline-flex;align-items:center;border-radius:4px;padding:1px 6px;font-size:.6rem;font-weight:700;white-space:nowrap}
 .wlHold.badge{background:var(--teal-dim);color:var(--teal)}
-.strip.acctStrip{display:flex;flex-direction:column;gap:8px}
-.stat.acctCard{padding:0}
+.strip.acctStrip{display:flex;flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:8px}
+.stat.acctCard{padding:0;flex:1 1 360px;min-width:0}
 .acctRow1{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;padding:10px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .acctRow1 b{font-weight:700}
 .acctRow1>b:first-of-type{font-size:.92rem}
+.acctNew{font-size:.78rem;color:var(--muted)}
+.acctNew b{color:var(--text);font-weight:600}
+.acctGrps{flex:1 1 100%;display:flex;flex-direction:column;gap:2px;margin-top:2px}
+.acctGrp{display:flex;align-items:center;flex-wrap:wrap;gap:2px 6px;font-size:.8rem}
+.acctGrpLbl{flex:0 0 3.6em;color:var(--muted);font-size:.76rem}
+.acctJump{font:inherit;font-size:.8rem;color:var(--text);background:transparent;border:0;border-radius:var(--r-sm);padding:6px 8px;min-height:32px;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+button.acctJump:hover{background:var(--surface3)}
+button.acctJump:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+.acctJump b{font-weight:600}
+.acctJump.nil{color:var(--faint);cursor:default;display:inline-flex;align-items:center}
+.acctSec{scroll-margin-top:calc(var(--tabs-safe,0px) + 56px);scroll-margin-bottom:calc(var(--tabbar-h,68px) + env(safe-area-inset-bottom,0px) + 12px)}
+.acctSec.flash{animation:acctFlash 1.5s ease-out}
+@keyframes acctFlash{0%,60%{background:var(--teal-dim)}100%{background:transparent}}
+.jInc{margin:0 0 8px;border:1px solid var(--amber);border-left-width:4px;border-radius:var(--r-sm);background:var(--surface);overflow:hidden}
+.jIncHead{display:flex;align-items:center;gap:8px;width:100%;font:inherit;font-size:.82rem;font-weight:600;color:var(--amber);background:transparent;border:0;padding:9px 12px;min-height:40px;text-align:left;cursor:pointer}
+.jIncHead .acctDotC{margin-right:-2px}
+.jIncHead .jIncAcct{color:var(--text);font-weight:600}
+.jIncHead .acctCaret2{margin-left:auto}
+.jInc.open .acctCaret2{transform:rotate(180deg)}
+.jIncList{display:none;border-top:1px solid var(--hair)}
+.jInc.open .jIncList{display:block}
+.jIncRow{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;width:100%;font:inherit;font-size:.8rem;color:var(--text);background:transparent;border:0;border-top:1px solid var(--hair);padding:8px 12px;min-height:40px;text-align:left;cursor:pointer}
+.jIncRow:first-child{border-top:0}
+.jIncRow:hover{background:var(--surface3)}
+.jIncRow .jIncDate{color:var(--muted);font-size:.76rem}
+.jIncRow b{font-weight:700}
+.jIncRow .jIncMiss{color:var(--amber);font-size:.78rem;flex:1 1 100%}
 .acctSum{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:.76rem;color:var(--muted)}
 .acctSum b{color:var(--text);font-weight:600}
 .acctCaret2{margin-left:auto;color:var(--faint);font-size:.8rem;transition:transform .15s}
@@ -1024,7 +1051,11 @@ tr:last-child td{border-bottom:none}
 @media (max-width:480px){
   .acctRow1{position:relative;gap:2px 8px;padding:9px 32px 9px 12px}
   .acctRow1>b:first-of-type{font-size:.88rem}
-  .acctSum{flex:1 1 100%;font-size:.7rem;line-height:1.4}
+  .acctSum{flex:1 1 100%;font-size:.72rem;line-height:1.4}
+  .strip.acctStrip{flex-direction:column;align-items:stretch}
+  .stat.acctCard{flex:0 0 auto}
+  .acctJump{min-height:36px;padding:8px 8px}
+  .acctGrp{gap:0 4px}
   .acctCaret2{position:absolute;right:12px;top:9px;margin:0}
   .acctDetail{padding:0 12px 10px}
 }
@@ -1875,6 +1906,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 
 <!-- ---- TAB 2: Trading Journal ---- -->
 <div id="tabJournal" style="display:none">
+  <div id="jIncomplete"></div>
   <div class="strip" id="jStrip"></div>
   <div class="ports" id="jPorts"></div>
 
@@ -4448,7 +4480,15 @@ function planAcctBundle(A){
   /* ไม้ใหม่สัปดาห์นี้ = ไม้ที่ "เข้าจริง" (open/closed) ในสัปดาห์นี้ ทุกพอร์ตของบัญชี · นับตามตำแหน่ง (posGroup) ไม่ใช่ขา */
   const wk = wpWeekKey(), seen = new Set();
   trades.forEach(t=>{ if((t.status==='open' || t.status==='closed') && wpOpenedKey(t)===wk) seen.add(t.posGroup || t.id); });
-  const sum = {cap, openTH, planTH, openPct:pct(openTH,cap), planPct:pct(planTH,cap), heats, nOpen, nPlan, newWk:seen.size};
+  /* UI1 — แยกตามกลุ่มพอร์ต (ตัวเลขเดิมจาก summarize ต่อพอร์ต · ไม่มีสูตรใหม่) · หุ้น = core+satA · Future = satB · พอร์ตที่บัญชีปิด = ไม่มีแถว */
+  const grp = (keys)=>{
+    if(!keys.some(portOn)) return null;
+    const cnt = st=>trades.filter(t=>t.status===st && keys.includes(t.port)).length;
+    const th = st=>keys.reduce((a,k)=>a+s.per[k][st],0);
+    return {nOpen:cnt('open'), nPlan:cnt('plan'), openTH:th('open'), planTH:th('plan'), openPct:pct(th('open'),cap), planPct:pct(th('plan'),cap)};
+  };
+  const split = {stock:grp(['core','satA']), future:grp(['satB'])};
+  const sum = {cap, openTH, planTH, openPct:pct(openTH,cap), planPct:pct(planTH,cap), heats, nOpen, nPlan, newWk:seen.size, split};
   return {sum, sec: planBuildSection(A, s)};
 }
 let planAcctFilter = 'all';    /* หน้าจอล้วน — ตัวกรองมุมมอง ไม่แตะข้อมูล */
@@ -4459,6 +4499,20 @@ function planViewList(){
   const one = v.filter(a=>a.id===planAcctFilter);
   if(!one.length){ planAcctFilter = 'all'; return v; }
   return one;
+}
+/* UI1 — แตะ Hold/Plan ในแถบบัญชี → เลื่อนไปตารางของบัญชีนั้น + ไฮไลต์สั้น ๆ · ไม่กาง/พับแถบ · ไม่แตะข้อมูล
+   ถ้าตัวกรองบัญชีซ่อนบัญชีนั้นอยู่ → สลับเป็น 'all' ก่อน (กรณีปกติไม่เกิด เพราะแถบก็ถูกกรองตามกัน) */
+let planFlashTimer = null;
+function planJumpToAcct(id){
+  const find = ()=>[...document.querySelectorAll('#planSections .acctSec')].find(e=>e.dataset.acct===id);
+  let sec = find();
+  if(!sec && planAcctFilter!=='all'){ planAcctFilter = 'all'; render(); sec = find(); }
+  if(!sec) return;
+  sec.scrollIntoView({behavior:'smooth', block:'start'});
+  document.querySelectorAll('#planSections .acctSec.flash').forEach(e=>e.classList.remove('flash'));
+  sec.classList.add('flash');
+  clearTimeout(planFlashTimer);
+  planFlashTimer = setTimeout(()=>sec.classList.remove('flash'), 1500);
 }
 const planStripOpen = new Set();   /* หน้าจอล้วน — ค่าเริ่มต้น = ย่อ */
 function togglePlanStrip(el){
@@ -4473,7 +4527,7 @@ const PLAN_STRIP_LBL = {core:'Core', satA:'Sat', satB:'Sat'};
 function planStripCardHtml(a, b){
   const color = acctColor(a), open = planStripOpen.has(a.id);
   const nm = `<span class="acctDotC" style="--ac:${color}"></span><b>${escHtml(a.name)}</b>`;
-  const row = (inner)=>`<div class="acctRow1" role="button" tabindex="0" aria-expanded="${open}" data-acct="${escHtml(a.id)}" onclick="togglePlanStrip(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePlanStrip(this)}">${inner}<span class="acctCaret2" aria-hidden="true">▾</span></div>`;
+  const row = (inner)=>`<div class="acctRow1" role="button" tabindex="0" aria-expanded="${open}" data-acct="${escHtml(a.id)}" onclick="togglePlanStrip(this)" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();togglePlanStrip(this)}">${inner}<span class="acctCaret2" aria-hidden="true">▾</span></div>`;
   if(!b) return `<div class="stat acctCard" style="--ac:${color}">${row(nm+'<span class="acctSum">คำนวณไม่สำเร็จ</span>')}</div>`;
   const m = b.sum;
   const heat = m.heats.length ? m.heats.map(x=>{
@@ -4481,10 +4535,20 @@ function planStripCardHtml(a, b){
       const c = bad ? 'var(--red)' : warn ? 'var(--amber)' : 'inherit';
       return `<span style="color:${c}">${escHtml(PLAN_STRIP_LBL[x.k]||x.k)} ${x.h.totalR.toFixed(2)}<small>/${SZ.MAX_HEAT_R}R</small></span>`;
     }).join(' · ') : '—';
-  const sumTxt = `Open <b>${fmt2(m.openPct)}%</b> · Plan <b>+${fmt2(m.planPct)}%</b> · <b>${m.nOpen}</b> open/<b>${m.nPlan}</b> plan · ใหม่ <b>${m.newWk}</b>`;
-  return `<div class="stat acctCard${open?' open':''}" style="--ac:${color}" data-priv="p-acct-${escHtml(a.id)}">${row(nm+`<span class="acctSum">${sumTxt}</span>`)}
+  /* แถวหุ้น / Future — Hold·Plan เป็นปุ่มเลื่อนไปตารางของบัญชี (ไม่มีไม้ = "—" ไม่ใช่ปุ่ม) */
+  const jump = (kind, n, inner)=> n>0
+    ? `<button type="button" class="acctJump" data-jump="${kind}" data-acct="${escHtml(a.id)}" onclick="event.stopPropagation();planJumpToAcct('${escHtml(a.id)}')">${inner}</button>`
+    : `<span class="acctJump nil">${kind==='hold'?'Hold':'Plan'} —</span>`;
+  const line = (key, lbl, g)=> g ? `<div class="acctGrp" data-grp="${key}" data-open-th="${g.openTH}" data-plan-th="${g.planTH}" data-n-open="${g.nOpen}" data-n-plan="${g.nPlan}">
+      <span class="acctGrpLbl">${lbl}</span>
+      ${jump('hold', g.nOpen, `Hold <b>${g.nOpen}</b> · ฿${fmt0(g.openTH)} (${fmt2(g.openPct)}%)`)}
+      ${jump('plan', g.nPlan, `Plan <b>${g.nPlan}</b> · +฿${fmt0(g.planTH)} (${fmt2(g.planPct)}%)`)}
+    </div>` : '';
+  const newTxt = m.newWk>0 ? `<span class="acctNew">ใหม่ <b>${m.newWk}</b></span>` : '';
+  const sumTxt = `<div class="acctGrps">${line('stock','หุ้น',m.split.stock)}${line('future','Future',m.split.future)}</div>`;
+  return `<div class="stat acctCard${open?' open':''}" style="--ac:${color}" data-priv="p-acct-${escHtml(a.id)}">${row(nm+newTxt+sumTxt)}
     <div class="acctDetail">
-      <div class="acctKV"><span>ความเสี่ยงค้าง (Open) · % ของทุนรวมบัญชี</span><b>${fmt2(m.openPct)}%<small>฿${fmt0(m.openTH)}</small></b></div>
+      <div class="acctKV"><span>ความเสี่ยงค้าง (Open) · % ของทุนรวมบัญชี</span><b data-priv-anchor>${fmt2(m.openPct)}%<small>฿${fmt0(m.openTH)}</small></b></div>
       <div class="acctKV"><span>Plan</span><b>+${fmt2(m.planPct)}%<small>฿${fmt0(m.planTH)}</small></b></div>
       <div class="acctKV"><span>Heat 1R</span><b>${heat}</b></div>
       <div class="acctKV"><span>จำนวนไม้</span><b>${m.nOpen}<small>open</small> ${m.nPlan}<small>plan</small></b></div>
@@ -4737,11 +4801,73 @@ function jvRenderControls(kind){
   </div>`;
   jvApplyCollapse(kind);
 }
+/* ================= UI1 — Journal: แจ้งข้อมูลไม่ครบ (อ่านอย่างเดียว) =================
+   เกณฑ์ "ช่องจำเป็นตามสถานะ" = ช่องที่ฟอร์ม/โมดัลบังคับอยู่แล้วตอนบันทึก (ไม่มีเกณฑ์ใหม่):
+     ทุกสถานะที่ Journal แสดง (closed/missed/cancelled): Symbol · Entry>0 · SL>0 · Qty>0 · Entry≠SL  ← saveTradeCompute
+     closed    : Exit Price>0                                                                     ← saveTradeCompute / confirmClosePos
+     missed    : แท็กหรือเหตุผล อย่างน้อยหนึ่งอย่าง (missedTag | missedReason)                     ← confirmMissed
+     cancelled : แท็กหรือโน้ต อย่างน้อยหนึ่งอย่าง (cancelTag | cancelNote)                          ← confirmCancel
+   plan/open ไม่อยู่ใน Journal → ไม่ตรวจ · รีวิว(วินัย/Setup)/exitReason/invalHit = ฟอร์มบอกว่าปล่อยว่างได้ → ไม่ตรวจ
+   field F2c (trend_state · macro_state · driver ฯลฯ) ไม่ใช่ช่องบังคับ → ไม่ตรวจ */
+const JINC_STATUS = ['closed','missed','cancelled'];
+function journalMissingOf(t){
+  if(!t || !JINC_STATUS.includes(t.status)) return [];
+  const m = [], pos = v=>typeof v==='number' && v>0;
+  if(!String(t.sym||'').trim()) m.push({label:'Symbol', el:'sym'});
+  if(!pos(t.entry)) m.push({label:'Entry', el:'tEntry'});
+  if(!pos(t.sl)) m.push({label:'SL', el:'tSL'});
+  if(!pos(t.qty)) m.push({label:'Qty', el:'tQty'});
+  if(pos(t.entry) && pos(t.sl) && t.entry===t.sl) m.push({label:'Entry ≠ SL', el:'tSL'});
+  if(t.status==='closed' && !pos(t.exitPrice)) m.push({label:'Exit Price', el:'tExitPrice'});
+  if(t.status==='missed' && !t.missedTag && !String(t.missedReason||'').trim()) m.push({label:'เหตุผลที่พลาด', el:'missedTag'});
+  if(t.status==='cancelled' && !t.cancelTag && !String(t.cancelNote||'').trim()) m.push({label:'เหตุผลที่ยกเลิก', el:'cancelTag'});
+  return m;
+}
+function journalIncomplete(){
+  return viewAccounts().map(a=>{
+    let items = [];
+    try{
+      items = withAccount(a.id, ()=>state.trades.map(t=>({t, miss:journalMissingOf(t)})).filter(x=>x.miss.length).map(({t,miss})=>({
+        id:t.id, status:t.status, sym:t.sym||'', miss,
+        date: (t.status==='closed'?t.exitDate:t.status==='missed'?t.missedDate:t.cancelDate) || t.date || ''
+      })));
+    }catch(e){ console.warn('journal incomplete', a.id, e); }
+    items.sort((x,y)=>(y.date||'').localeCompare(x.date||''));
+    return {a, items};
+  }).filter(x=>x.items.length);
+}
+const jIncOpen = new Set();   /* หน้าจอล้วน — บัญชีที่กางรายการอยู่ */
+function jIncToggle(id){ if(jIncOpen.has(id)) jIncOpen.delete(id); else jIncOpen.add(id); renderJournalIncomplete(); }
+function renderJournalIncomplete(){
+  const host = document.getElementById('jIncomplete'); if(!host) return;
+  const groups = journalIncomplete(), multi = viewAccounts().length > 1;
+  host.innerHTML = groups.map(({a, items})=>{
+    const open = jIncOpen.has(a.id), aid = escHtml(a.id);
+    const head = `<button type="button" class="jIncHead" aria-expanded="${open}" onclick="jIncToggle('${aid}')">
+        ${multi?`<span class="acctDotC" style="--ac:${acctColor(a)}"></span><span class="jIncAcct">${escHtml(a.name)}</span>`:''}
+        <span>ข้อมูลไม่ครบ ${items.length} รายการ</span><span class="acctCaret2" aria-hidden="true">▾</span></button>`;
+    const rows = items.map(x=>`<button type="button" class="jIncRow" data-tid="${escHtml(x.id)}" onclick="jIncGo('${aid}','${escHtml(x.id)}')">
+        <span class="jIncDate">${escHtml(x.date||'—')}</span><b>${escHtml(x.sym||'—')}</b>
+        <span class="jIncMiss">ขาด: ${x.miss.map(m=>escHtml(m.label)).join(' · ')}</span></button>`).join('');
+    return `<div class="jInc${open?' open':''}" data-acct="${aid}">${head}<div class="jIncList">${rows}</div></div>`;
+  }).join('');
+}
+/* แตะแถว → เปิดตัวแก้ของไม้นั้น (บัญชีเจ้าของไม้) แล้วโฟกัสช่องแรกที่ขาด */
+function jIncGo(acctId, id){
+  const t = getBook(acctId).trades.find(x=>x.id===id); if(!t) return;
+  const m = withAccount(acctId, ()=>journalMissingOf(t))[0]; if(!m) return;
+  if(t.status==='missed') openMissedModal(id, acctId);
+  else if(t.status==='cancelled') openCancelModal(id, acctId);
+  else editTrade(id, acctId);
+  setTimeout(()=>{ const el = document.getElementById(m.el==='sym' ? (symFreeMode?'tSymFree':'tSym') : m.el); if(el && el.focus) el.focus(); }, 60);
+}
+
 /* ================= render: Tab 2 (Journal) ================= */
 function renderJournal(){
   if(!state) return;
   ensureJournalView();
   JV_KINDS.forEach(jvRenderControls);
+  try{ renderJournalIncomplete(); }catch(err){ console.warn('journal incomplete:', err); }
   const j = journalStats();
   const rWinClass = r => r===null ? '' : r>=0 ? 'good' : 'bad';
 
@@ -12028,6 +12154,7 @@ function privMaskIn(root){
 }
 /* จุดวางปุ่ม — ไล่หา "ก้อนตัวเลขหลัก" ของการ์ดนั้นก่อน ถ้าไม่มีค่อยไปเกาะข้อความเงินก้อนแรก */
 function privAnchor(card){
+  const fixed = card.querySelector('[data-priv-anchor]'); if(fixed) return fixed;   /* UI1 — การ์ดที่กำหนดจุดวางเอง (กันปุ่มไปเกาะข้างในปุ่ม Hold/Plan) */
   const pick = card.querySelector('.val') || card.querySelector('.alloc')
             || card.querySelector('.hint') || card.querySelector('.cap');
   if(pick) return pick;
