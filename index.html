@@ -11928,15 +11928,26 @@ function satV3MaybeAutoClose(ideaId){
   if(satV3ShouldAutoClose(idea)) sat7dWrite('satIdeas', ideaId, {status:'closed'});
 }
 /* ตัวกรอง "ปิดแล้ว" (Phase 4 จะผูกปุ่มนี้) — ลบเฉพาะเอกสารไอเดีย ไม่แตะไม้ในสมุดเลย */
+/* CL1 — แผนที่ "จบแล้ว" ทุกแบบ: 'acct' (ทุกไม้ปิด/ยกเลิก) · 'nocnt' (status closed ไม่มีไม้ผูกที่ยังอยู่) · 'unused' (ร่างของสัปดาห์ก่อน) · null = ยังไม่จบ
+   status closed แต่ยังมีไม้ open/plan ค้าง → null (อยู่ในแถว plan/open เดิม กันซ่อนไม้ค้าง) */
+function satV3ClosedKind(x){
+  if(!x || !x.v3) return null;
+  const st = satV3PlanRowState(x);
+  if(st==='closed') return 'acct';
+  if(st!=='draft') return null;
+  if(x.status==='closed') return 'nocnt';
+  return String(x.week||'') < wpWeekKey() ? 'unused' : null;
+}
 function satV3ClosedIdeas(){
-  return satIdeasList.filter(x=>x.v3 && satV3PlanRowState(x)==='closed');
+  return satIdeasList.filter(x=>satV3ClosedKind(x));
 }
 /* CL1 — "แผนที่ปิดแล้ว (n)" ใต้ Trade Plans: พับไว้ · n=0 ไม่แสดง · ลบเฉพาะเอกสารแผน (satIdeas/{id}) ไม่แตะสมุด/ไม้ */
 function satV3ClosedPlansHtml(){
-  const list = satV3ClosedIdeas().slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  const list = satV3ClosedIdeas().slice().sort((a,b)=>String(b.week||'').localeCompare(String(a.week||'')) || String(b.created_at||'').localeCompare(String(a.created_at||'')));
   if(!list.length) return '';
   const rows = list.map(x=>{
-    const res = satV3EffectiveTrades(x).filter(t=>t.trade.status==='closed').map(({accId,trade})=>{
+    const kind = satV3ClosedKind(x);
+    const res = kind==='nocnt' ? '<span class="s7Res">ไม่มีไม้</span>' : kind==='unused' ? '<span class="s7Res">ร่างไม่ได้ใช้</span>' : satV3EffectiveTrades(x).filter(t=>t.trade.status==='closed').map(({accId,trade})=>{
       const a = sat7dAccts().find(q=>q.id===accId), v0 = realizedPnlTHBOf(trade), v = v0==null ? null : (Math.round(v0)||0);   /* กัน '฿-0' */
       return v==null ? '' : `<span class="s7Res">${escHtml(a?a.name:accId)} <b class="${pnlCls(v)}">฿${fmt0(v)}</b></span>`;
     }).filter(Boolean).join(' · ');
