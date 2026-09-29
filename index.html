@@ -1850,7 +1850,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 /* F2b — Macro Playbook (คลาส pb*) */
 .pbPanel{margin-bottom:14px}
 .pbTitle{font-size:11px;letter-spacing:.04em;color:var(--mute);margin-bottom:6px}
-.pbCard{border:1px solid var(--line);border-radius:var(--r-row);background:var(--card);overflow:hidden}
+.pbCard{border:1px solid var(--line);border-radius:var(--r-row);background:var(--card);overflow:hidden;container-type:inline-size;container-name:pb}
 .pbHead{display:flex;align-items:center;gap:8px;padding:9px 10px;min-width:0;flex-wrap:wrap}
 .pbHead[role=button]{cursor:pointer}
 .pbCaret{color:var(--mute);font-size:12px}
@@ -1862,17 +1862,24 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 .pbIco{font-size:12px;font-weight:700;white-space:nowrap}
 .pb-up{color:var(--up)}.pb-dn{color:var(--dn)}.pb-flat{color:var(--flat)}
 .pbBody{padding:2px 10px 10px;border-top:1px solid var(--line)}
-.pbThesis{font-size:13px;margin:8px 0 2px;line-height:1.5}
+.pbThesis{font-size:13px;margin:8px 0 2px;line-height:1.55;max-width:70ch}
 .pbPill .ui-chip{cursor:default}
-.pbScn{font-size:12.5px;color:var(--ink);margin:3px 0}.pbScn b{color:var(--mute);font-weight:600;margin-right:4px}
+.pbScn{font-size:12.5px;color:var(--ink);margin:3px 0;max-width:70ch;line-height:1.55}.pbScn b{color:var(--mute);font-weight:600;margin-right:4px}
 .pbRows{margin-top:6px}
-.pbRowW{padding:6px 0;border-top:1px solid var(--line);cursor:pointer}
+.pbColL{min-width:0}
+.pbRowW{padding:8px 0;border-top:1px solid var(--line);cursor:pointer}
 .pbRow{display:flex;align-items:center;gap:8px;min-width:0}
 .pbRow .pbIco{min-width:24px}
 .pbAsset{font-size:12.5px;min-width:52px}
-.pbConf{font-size:11px;color:var(--mute);white-space:nowrap}
-.pbWhy{flex:1;min-width:0;font-size:12.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pbConf{font-size:11.5px;color:var(--mute);white-space:nowrap;opacity:.85}
+.pbWhy{margin:3px 0 0 32px;font-size:13px;line-height:1.55;color:var(--ink);max-width:70ch;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
 .pbMix{font-size:11.5px;color:var(--mute);margin:2px 0 0 32px}
+.pbBody .pbMix{opacity:.85}
+.pbWatch{font-size:13px;margin:8px 0 4px;padding:8px 10px;background:var(--soft);border-radius:var(--r-row);max-width:70ch}
+.pbWatchK{font-size:11.5px;color:var(--mute);margin-bottom:2px}
+.pbWatchV{font-size:13px;line-height:1.55;color:var(--ink);overflow-wrap:anywhere}
+.pbWatchLink{display:inline-block;margin-top:4px;font-size:11.5px;color:var(--mute);text-decoration:underline}
+@container pb (min-width:720px){.pbBody{display:grid;grid-template-columns:5fr 6fr;column-gap:20px;align-items:start}.pbBody .pbRows{margin-top:0}.pbBody .pbColL{padding-top:0}}
 .pbBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
 .pbEmpty{font-size:13px;color:var(--mute);padding:6px 0}
 .pbWarn,.pbWarns,.pbFixWarn{font-size:12px;color:var(--warn);margin:4px 0}
@@ -13496,16 +13503,19 @@ function pbCardHtml(ver, o){
   const rows = Calc.pbAssets.map(a=>{
     const x = assets[a] || {}, st = x.stance || 'none';
     const mix = (st==='up_flat' || st==='down_flat')
-      ? `<div class="pbMix">${escHtml(Calc.pbStanceText(st))}${x.posture?' · '+escHtml(x.posture):''}</div>` : '';
+      ? `<div class="pbMix">${x.posture?escHtml(x.posture):'ท่าทีผสม'}</div>` : '';   /* UI2a — ไอคอน/คำท่าทีอยู่บรรทัดบนแล้ว · ที่นี่แสดงแค่ posture */
     return `<div class="pbRowW" onclick="pbAssetSheet('${vid}','${a}')"><div class="pbRow">
       <span class="pbIco ${pbStanceCls(st)}">${Calc.pbStanceIcon(st)}</span><b class="pbAsset">${a}</b>
-      ${x.confidence&&PB_CONF[x.confidence]?`<span class="pbConf">${PB_CONF[x.confidence]}</span>`:''}
-      ${x.why?`<span class="pbWhy">${escHtml(x.why)}</span>`:''}</div>${mix}</div>`;
+      ${x.confidence&&PB_CONF[x.confidence]?`<span class="pbConf">${PB_CONF[x.confidence]}</span>`:''}</div>
+      ${x.why?`<div class="pbWhy">${escHtml(x.why)}</div>`:''}${mix}</div>`;
   }).join('');
+  const dUrl = pbSafeUrl(ver.doc_url);
+  const watch = isStrNE(view.watch)
+    ? `<div class="pbWatch" data-pb="watch"><div class="pbWatchK">ข้อควรติดตาม</div><div class="pbWatchV">${escHtml(view.watch)}</div>${dUrl?`<a class="pbWatchLink" href="${escHtml(dUrl+'#events')}" target="_blank" rel="noopener" onclick="event.stopPropagation()">ดู scenario ↗</a>`:''}</div>` : '';
   return `<div class="pbCard">${head}<div class="pbBody">
-    ${view.thesis?`<div class="pbThesis">${escHtml(view.thesis)}</div>`:''}${isStrNE(view.watch)?`<div class="pbWatch" data-pb="watch">ข้อควรติดตาม · ${escHtml(view.watch)}</div>`:''}${chips}
+    <div class="pbColL">${view.thesis?`<div class="pbThesis">${escHtml(view.thesis)}</div>`:''}${watch}${chips}
     ${view.base?`<div class="pbScn"><b>Base</b> ${escHtml(view.base)}</div>`:''}
-    ${view.alt?`<div class="pbScn"><b>Alt</b> ${escHtml(view.alt)}</div>`:''}
+    ${view.alt?`<div class="pbScn"><b>Alt</b> ${escHtml(view.alt)}</div>`:''}</div>
     <div class="pbRows">${rows}</div></div></div>`;
 }
 
