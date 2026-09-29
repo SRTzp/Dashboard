@@ -340,6 +340,14 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .sat7d .s7Seg{display:flex;gap:6px;margin-top:6px}.sat7d .s7Seg button{flex:1 1 0;min-width:0}
 .sat7d .s7Done{margin-top:6px;font-weight:600}
 .sat7d .s7Err{background:var(--red-dim);color:var(--red);border-radius:8px;padding:6px 10px;font-size:.78rem;margin-bottom:8px}
+/* CL1 — แผนที่ปิดแล้ว (พับ) + sheet ยืนยันลบ */
+.sat7d .s7Closed{margin-top:14px;border-top:1px solid var(--hair);padding-top:8px}
+.sat7d .s7Closed summary{cursor:pointer;font-size:.82rem;color:var(--muted);padding:6px 0}
+.sat7d .s7ClRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;font-size:.82rem}
+.sat7d .s7ClTx{min-width:0;overflow-wrap:anywhere}
+.sat7d .s7ClRow button{flex:none;min-height:32px}
+.s7DelTx{font-size:14px;line-height:1.5;margin-bottom:12px;overflow-wrap:anywhere}
+.s7DelBtns{display:flex;gap:8px;justify-content:flex-end}
 .sat7d .s7Old{margin-top:14px;border-top:1px solid var(--hair);padding-top:8px}
 .sat7d .s7Old summary{cursor:pointer;font-size:.82rem;color:var(--muted)}
 .sat7d .s7OldAcct{margin:8px 0;font-size:.8rem}.sat7d .s7OldRow{margin:3px 0 3px 12px;overflow-wrap:anywhere}
@@ -1879,7 +1887,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 .pbWatchK{font-size:11.5px;color:var(--mute);margin-bottom:2px}
 .pbWatchV{font-size:13px;line-height:1.55;color:var(--ink);overflow-wrap:anywhere}
 .pbWatchLink{display:inline-block;margin-top:4px;font-size:11.5px;color:var(--mute);text-decoration:underline}
-@container pb (min-width:720px){.pbBody{display:grid;grid-template-columns:5fr 6fr;column-gap:20px;align-items:start}.pbBody .pbRows{margin-top:0}.pbBody .pbColL{padding-top:0}}
+@container pb (min-width:720px){.pbBody{display:grid;grid-template-columns:5fr 6fr;column-gap:20px;align-items:start}.pbBody .pbRows{margin-top:0}.pbBody .pbColL{padding-top:0}.pbRows .pbRowW:first-child{border-top:0}}  /* CL1: 2 คอลัมน์ — แถวแรกไม่มีเส้นบน (ซ้อนกับขอบกล่อง) */
 .pbBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
 .pbEmpty{font-size:13px;color:var(--mute);padding:6px 0}
 .pbWarn,.pbWarns,.pbFixWarn{font-size:12px;color:var(--warn);margin:4px 0}
@@ -2730,7 +2738,8 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
   </div></details>
   <details class="setsec"><summary class="divlbl">สำรองข้อมูลลงเครื่อง</summary>
   <div class="secbody">
-    <div class="hint" style="margin-top:-6px">ดาวน์โหลดข้อมูลทั้งหมด (Trades · Watchlist · Settings · Fund-flow · Checklist) เป็นไฟล์ JSON เก็บไว้ในเครื่อง<br>
+    <div class="hint" style="margin-top:-6px">ดาวน์โหลดข้อมูลทั้งหมด (บัญชี · Trades · Watchlist · Settings · แผน Sat · Bias สัปดาห์ · ตั้งค่า Setup ของ Sat · Macro Playbook · Fund-flow · Checklist) เป็นไฟล์ JSON เก็บไว้ในเครื่อง<br>
+      <b style="color:var(--amber)">⚠ ไฟล์มี API key (Twelve Data) ติดไปด้วย — เก็บเป็นไฟล์ส่วนตัว อย่าส่งต่อ</b><br>
       รอบอัตโนมัติ: <b>เฉพาะบน Mac · ทุกวันอาทิตย์หลัง 20:00 น.</b> สัปดาห์ไหนไม่ได้เปิด จะชดเชยให้ตอนเปิดครั้งถัดไป<br>
       <b>มือถือ / iPad ไม่มีรอบอัตโนมัติและไม่มีแถบเตือน</b> — ปุ่มด้านล่างยังกดสำรองเองได้ทุกเครื่อง</div>
     <div class="btns" style="justify-content:flex-start;margin-top:8px">
@@ -4824,7 +4833,9 @@ function render(){
   /* ★ 7D.3 Phase 4: การ์ด port ของ satB ("Satellite.B — Swing" เดิม) ไม่แสดงในนี้อีกต่อไป เฉพาะตอน SAT_V3_ON=true
      เท่านั้น (ย้ายไปใช้ UI.acctStrip ของหน้า Sat ใหม่แทน — satV3AcctStripHtml, ดู §A ของสเปก) — SAT_V3_ON=false ต้อง
      "fully intact" ตามที่สั่งไว้ (regression escape hatch) จึงยังโชว์การ์ดเดิมทุกอย่างเหมือนก่อน Phase 4 ไม่ตัดออก */
-  const portCards = portsOn().filter(([k])=>scopeK.indexOf(k)>=0 && !(k==='satB' && SAT_V3_ON)).map(([k,p])=>{
+  /* CL1: ลบหลัง 7E — ซ่อนบล็อก Sat A เมื่อทุน satA = 0 และไม่มีไม้ open/plan ค้าง (ไม่เรียกวาด) · มีไม้ค้าง → แสดงเหมือนเดิม กันข้อมูลหาย */
+  const satAHide = !(Number(state.settings.capital.satA) > 0) && !state.trades.some(t=>t.port==='satA' && (t.status==='open'||t.status==='plan'));
+  const portCards = portsOn().filter(([k])=>scopeK.indexOf(k)>=0 && !(k==='satB' && SAT_V3_ON) && !(k==='satA' && satAHide)).map(([k,p])=>{
     const capNat = state.settings.capital[k];
     const capTH = portCapTHB(k);
     const oTH = s.per[k].open, plTH = s.per[k].plan;
@@ -4904,7 +4915,8 @@ function render(){
   try{ renderPlanSections(); }catch(err){ console.warn('plan sections:', err); }
 
   document.getElementById('foot').textContent =
-    `1R: Core ${szTradeLimit('core')}% · Sat.A 0.50–1.25% (ตามคะแนน Growth Gate) × Setup (Acc/Dist 1.00 · PP 0.50) · heat/port: Core ${portHeatLimit('core')}% · Sat.A ${portHeatLimit('satA')}% · Sat.B ${portHeatLimit('satB')}% · ${L.total}% total (ฐาน THB @ ${fmt2(fx)}) — sync ผ่าน Firestore`;
+    /* CL1: ตัด Sat.A / Growth Gate / Setup Acc·Dist·PP ออก — ใช้ชื่อพอร์ตปัจจุบัน (Core · Sat = satB) */
+    `1R: Core ${szTradeLimit('core')}% · heat: Core ${portHeatLimit('core')}% · Sat ${portHeatLimit('satB')}% · รวม ${L.total}% (ฐาน THB @ ${fmt2(fx)}) — sync ผ่าน Firestore`;
 
   try{ renderSBPlan(); }catch(err){ console.warn('sat.b plan:', err); }
   try{ renderSat7d(); }catch(err){ console.warn('sat7d:', err); }
@@ -5095,6 +5107,8 @@ function jSetupGroups(list){
             pnl: ts.reduce((a,t)=>a+(realizedPnlTHBOf(t)||0),0)};
   }).sort((a,b)=>b.n-a.n);
 }
+/* CL1 — P&L ที่ปัด fmt0 แล้วเป็น 0 = สีปกติ (ไม่มีคลาส) · >0 pnl-pos · <0 pnl-neg */
+function pnlCls(v){ const r = Math.round(Number(v)||0); return r>0 ? 'pnl-pos' : r<0 ? 'pnl-neg' : ''; }
 function renderJournalSetup(list){
   const host = document.getElementById('setupBody'); if(!host) return;
   const groups = jSetupGroups(list);
@@ -5103,7 +5117,7 @@ function renderJournalSetup(list){
   host.innerHTML = `<div class="jSetupList"><div class="jSetupRow jSetupHead"><span>Setup</span><span>ไม้</span><span>Win%</span><span>Avg R</span><span>P&amp;L (฿)</span></div>${
     groups.map(g=>`<div class="jSetupRow${g.n<5?' few':''}" data-setup="${escHtml(g.label)}"><span class="jsN">${escHtml(g.label)}${g.n<5?'<span class="fewTag">(น้อย)</span>':''}</span>
       <span data-lb="ไม้">${g.n}</span><span data-lb="Win%">${fmt2(g.winRate)}%</span><span data-lb="Avg R">${g.avgR===null?'—':fmt2(g.avgR)+'R'}</span>
-      <span data-lb="P&amp;L (฿)" class="${g.pnl>=0?'pnl-pos':'pnl-neg'}">฿${fmt0(g.pnl)}</span></div>`).join('')}</div>
+      <span data-lb="P&amp;L (฿)" class="${pnlCls(g.pnl)}">฿${fmt0(g.pnl)}</span></div>`).join('')}</div>
     <div class="jSetupNote" style="margin:8px 0 0">ไม้ที่มีหลาย setup นับซ้ำในแต่ละกลุ่ม</div>`;
 }
 /* E) เงื่อนไขที่ยกเลิก — อ่านอย่างเดียวจาก satIdeasList (ผูกกับ idea ไม่ผูกบัญชี · ไม่ขึ้นกับชิปบัญชี/พอร์ต/ช่วงเวลา) */
@@ -5117,6 +5131,13 @@ function jCancelledConds(){
   });
   return out.sort((a,b)=>b.at.localeCompare(a.at));
 }
+/* CL1 — วันที่ ISO → "28 ก.ย." (ปีอื่นที่ไม่ใช่ปีนี้ → "28 ก.ย. 25") · ว่าง/ผิดรูป → "—" · ใช้ JV_MONTHS ชุดเดิม */
+function jDateShort(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||''));
+  if(!m || Number(m[2])<1 || Number(m[2])>12) return '—';
+  const yy = Number(m[1]) === new Date().getFullYear() ? '' : ' ' + m[1].slice(2);
+  return `${Number(m[3])} ${JV_MONTHS[Number(m[2])-1]}${yy}`;
+}
 function jWeekLabel(w){
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(w||''));
   return m && Number(m[2])>=1 && Number(m[2])<=12 ? `${Number(m[3])} ${JV_MONTHS[Number(m[2])-1]}` : (w||'—');
@@ -5127,7 +5148,7 @@ function renderJournalCond(){
   const cnt = document.getElementById('condCount'); if(cnt) cnt.textContent = list.length ? `(${list.length})` : '';
   const note = `<div class="jCondNote">ทุกบัญชี (แผน Sat ใช้ร่วมกัน)</div>`;
   host.innerHTML = note + (list.length ? `<div class="jCondList">${list.map(x=>`<div class="jCondItem" data-cond-at="${escHtml(x.at)}">
-      <div class="jCondTop"><span>${escHtml(x.at.slice(0,10)||'—')}</span><b style="color:var(--text)">${escHtml(sat7dLabel(x.asset))}</b>${x.bias?`<span class="tag ${x.bias==='Long'?'long':'short'}">${escHtml(x.bias)}</span>`:''}<span>สัปดาห์ ${escHtml(jWeekLabel(x.week))}</span></div>
+      <div class="jCondTop"><span>${escHtml(jDateShort(x.at))}</span><b style="color:var(--text)">${escHtml(sat7dLabel(x.asset))}</b>${x.bias?`<span class="tag ${x.bias==='Long'?'long':'short'}">${escHtml(x.bias)}</span>`:''}<span>สัปดาห์ ${escHtml(jWeekLabel(x.week))}</span></div>
       <div class="jCondTx">${escHtml(x.text||'—')}</div></div>`).join('')}</div>`
     : `<div class="empty" data-cond="empty">ยังไม่มีเงื่อนไขที่ยกเลิก</div>`);
 }
@@ -5203,7 +5224,7 @@ function renderJournalBody(A){
         <div><span class="k">Closed Trades</span>${st.n}</div>
         <div><span class="k">Win Rate</span>${st.n?fmt2(st.winRate)+'%':'—'}</div>
         <div><span class="k">Avg R</span>${st.avgR===null?'—':fmt2(st.avgR)}</div>
-        <div><span class="k">P&amp;L (฿)</span><span class="${st.totalPnlTHB>=0?'pnl-pos':'pnl-neg'}">฿${fmt0(st.totalPnlTHB)}</span></div>
+        <div><span class="k">P&amp;L (฿)</span><span class="${pnlCls(st.totalPnlTHB)}">฿${fmt0(st.totalPnlTHB)}</span></div>
         <div><span class="k">Avg Holding Period</span>${st.avgHoldDays===null?'—':fmt2(st.avgHoldDays)+' วัน'}</div>
         <div><span class="k">Max DD</span>${st.n?`${fmt2(st.maxDDPct)}% (฿${fmt0(st.maxDD)})`:'—'}</div>
       </div>
@@ -10412,7 +10433,7 @@ const UI = {
 };
 
 let satIdeasList = [], satWeekMap = {};
-let satErr = null, satWeekErr = null, satFilter = 'active';
+let satErr = null, satWeekErr = null, satFilter = 'active', satDelErr = null, satV3ClosedOpen = false;
 let satUnsubs = [], satUnsubUid = null;
 let satwViewWeek = null;   /* 7D.2 — สัปดาห์ที่กำลังดู (null = สัปดาห์ปัจจุบัน) — ไม่ใช่สัปดาห์ปัจจุบัน = อ่านอย่างเดียว */
 
@@ -11209,10 +11230,12 @@ function satV3AcctMetaHtml(){
 /* จุดเข้ารวมของหน้า Sat ใหม่ (สเปกส่วนที่ 1 ช่อง D) — ลำดับ: แถบบัญชี → Strategy (tile bar+editor) →
    Trade Plans (การ์ดร่างก่อน ตามด้วยแถว plan/open ที่ยุบแล้ว) → "แผนเดิม" (ของเก่า อ่านอย่างเดียว, พับไว้)
    เมนูเครื่องมือด้านบน (ตั้งโบรก) reuse ปุ่มเดิมของ 7D.2 ตรง ๆ ไม่สร้างใหม่ */
+/* CL1: ลบหลัง 7E — ซ่อน "แผนเดิม (Weekly Plan)": satV3Render ไม่เรียก sat7dOldPlanHtml() อีก (ฟังก์ชันเดิมคงไว้ ใช้โดยหน้า 7D.2 ตอน SAT_V3_ON=false) */
 function satV3Render(){
   const el = document.getElementById('satV3Panel');
   if(!el) return;
   const err = (satErr ? `<div class="s7Err">โหลดไอเดีย Sat ไม่สำเร็จ (${escHtml(satErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satIdeas</div>` : '')
+    + (satDelErr ? `<div class="s7Err" data-sat-del-err>ลบแผนไม่สำเร็จ (${escHtml(satDelErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satIdeas แล้วลองใหม่</div>` : '')
     + (satWeekErr ? `<div class="s7Err">โหลด Bias สัปดาห์ไม่สำเร็จ (${escHtml(satWeekErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satWeek</div>` : '')
     + (satConfigErr ? `<div class="s7Err">อ่านรายการ Setup ที่ตั้งเองไม่สำเร็จ (${escHtml(satConfigErr)}) — ใช้ค่าเริ่มต้น (Sweep/BigBar/Break Trendline) ไปพลาง ตรวจ Firestore Rules ของ users/{uid}/satConfig เมื่อพร้อม deploy</div>` : '')
     + (satConfigTplErr ? `<div class="s7Err">อ่านรายการปุ่มลัดเงื่อนไขไม่สำเร็จ (${escHtml(satConfigTplErr)}) — ใช้ค่าเริ่มต้นไปพลาง</div>` : '');
@@ -11223,7 +11246,7 @@ function satV3Render(){
     ${err}
     ${satV3StrategyBarHtml()}
     ${satV3PlansSectionHtml()}
-    ${sat7dOldPlanHtml()}`;
+    ${satV3ClosedPlansHtml()}`;
   /* "โฟกัสช่องพิมพ์ทันที" ตอนเปิดช่องเพิ่ม/แก้ Setup ใหม่ (แทน prompt() ชั่วคราวของ Phase 3) */
   const af = el.querySelector('[data-autofocus]');
   if(af){ af.focus(); if(af.select) af.select(); }
@@ -11598,7 +11621,7 @@ function satV3ShortRowHtml(idea, c, primaryLabel, primaryOnClick){
 function satV3CancelledBlockHtml(idea){
   const list = satV3CondCancelled(idea); if(!list.length) return '';
   const id = escHtml(idea.id), open = satV3CancelledOpen.has(idea.id);
-  const items = open ? list.map(c=>`<div class="ui-cancd-i" data-cond="${escHtml(c.id)}"><span class="ui-cancd-t">${escHtml(c.text || '—')}</span> · ${escHtml(satV3CondMeta(c))}${c.cancelled_at ? ' · ยกเลิก '+escHtml(String(c.cancelled_at).slice(0,10)) : ''}</div>`).join('') : '';
+  const items = open ? list.map(c=>`<div class="ui-cancd-i" data-cond="${escHtml(c.id)}"><span class="ui-cancd-t">${escHtml(c.text || '—')}</span> · ${escHtml(satV3CondMeta(c))}${c.cancelled_at ? ' · ยกเลิก '+escHtml(jDateShort(c.cancelled_at)) : ''}</div>`).join('') : '';
   return `<div class="ui-cancd"><button type="button" class="ui-link" onclick="satV3CancelledToggle('${id}')">${open?'ซ่อนที่ยกเลิก':'ดูที่ยกเลิก'} (${list.length})</button>${items}</div>`;
 }
 /* ══ F2c — ขั้นหน้างาน: Trend (override เฉพาะแผน) · Macro (Playbook) · Driver · ขนาดไม้ ══
@@ -11744,7 +11767,8 @@ function satV3PlanSetupToggle(ideaId, setupId){
    ต่างกัน — ฝั่ง UI เป็นคนกำหนดว่าจะโชว์ปุ่มนี้ตอนไหน: การ์ดร่าง (ยังไม่มี trade_id ที่ไหนเลย) กับตัวกรองปิดแล้วเท่านั้น) */
 function satV3IdeaDelete(ideaId){
   const c = sat7dCol('satIdeas'); if(!c) return;
-  c.doc(ideaId).delete().catch(e=>console.warn('satV3IdeaDelete', e));
+  satDelErr = null;
+  return c.doc(ideaId).delete().catch(e=>{ console.warn('satV3IdeaDelete', e); satDelErr = sat7dErrText(e); sat7dRefresh(); });   /* CL1 — ล้ม = แสดงข้อความบนหน้า (s7Err) */
 }
 /* setup ครบ/ไม่ครบ — เตือนเท่านั้น ไม่บล็อกการบันทึก (ตามสเปก) */
 /* 7D.4 — ผ่านเมื่อ ติ๊ก/ทั้งหมด ≥ เกณฑ์ (settings.satSetupPassRatio · ค่าเริ่มต้น 0.65) คำนวณใน Calc.setupPass · complete = pass (ชื่อเดิม คงไว้) */
@@ -11907,6 +11931,30 @@ function satV3MaybeAutoClose(ideaId){
 function satV3ClosedIdeas(){
   return satIdeasList.filter(x=>x.v3 && satV3PlanRowState(x)==='closed');
 }
+/* CL1 — "แผนที่ปิดแล้ว (n)" ใต้ Trade Plans: พับไว้ · n=0 ไม่แสดง · ลบเฉพาะเอกสารแผน (satIdeas/{id}) ไม่แตะสมุด/ไม้ */
+function satV3ClosedPlansHtml(){
+  const list = satV3ClosedIdeas().slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  if(!list.length) return '';
+  const rows = list.map(x=>{
+    const res = satV3EffectiveTrades(x).filter(t=>t.trade.status==='closed').map(({accId,trade})=>{
+      const a = sat7dAccts().find(q=>q.id===accId), v0 = realizedPnlTHBOf(trade), v = v0==null ? null : (Math.round(v0)||0);   /* กัน '฿-0' */
+      return v==null ? '' : `<span class="s7Res">${escHtml(a?a.name:accId)} <b class="${pnlCls(v)}">฿${fmt0(v)}</b></span>`;
+    }).filter(Boolean).join(' · ');
+    return `<div class="s7ClRow" data-closed-idea="${escHtml(x.id)}"><div class="s7ClTx"><b>${escHtml(sat7dLabel(x.asset))}</b>${x.bias?` <span class="tag ${x.bias==='Long'?'long':'short'}">${escHtml(x.bias)}</span>`:''} <span class="s7Hint">สัปดาห์ ${escHtml(jWeekLabel(x.week))}</span>${res?` <span class="s7Hint">· ${res}</span>`:''}</div>
+      <button type="button" class="small ghost" data-closed-del onclick="satV3ClosedDelAsk('${escHtml(x.id)}')">ลบ</button></div>`;
+  }).join('');
+  return `<details class="s7Closed" data-closed-plans${satV3ClosedOpen?' open':''} ontoggle="satV3ClosedOpen=this.open"><summary>แผนที่ปิดแล้ว (${list.length})</summary>${rows}</details>`;
+}
+function satV3ClosedDelAsk(ideaId){
+  const x = sat7dIdea(ideaId); if(!x) return;
+  const html = `<div class="s7DelSh" data-closed-del-sheet><div class="s7DelTx">ลบแผน ${escHtml(sat7dLabel(x.asset))} สัปดาห์ ${escHtml(jWeekLabel(x.week))}?<br><span class="s7Hint">ไม้ใน Journal ไม่หาย · เงื่อนไขที่ยกเลิกของแผนนี้จะหายจากพาเนลใน Journal</span></div>
+    <div class="s7DelBtns"><button type="button" class="ui-btn" data-del-cancel onclick="satV3ClosedDelClose()">ยกเลิก</button><button type="button" class="ui-btn ui-btn-pri" data-del-ok onclick="satV3ClosedDelGo('${escHtml(ideaId)}')">ลบ</button></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', UI.sheet(html).replace('ui-sheet-backdrop','ui-sheet-backdrop s7del-sheet'));
+  const el = document.body.lastElementChild;
+  el.addEventListener('click', e=>{ if(e.target===el) el.remove(); });
+}
+function satV3ClosedDelClose(){ document.querySelectorAll('.s7del-sheet').forEach(el=>el.remove()); }
+function satV3ClosedDelGo(ideaId){ satV3ClosedDelClose(); satV3IdeaDelete(ideaId); }
 /* บรรทัด plan/open ที่ยุบแล้ว — ผ่าน UI.row (ไม่ใช่จาก idea.status ตาม fix ด้านบน)
    plan: อาจมีหลายบัญชี → รวมเป็น 1 แถว (ตัวเลขจากบัญชีแรกที่ยังเป็น plan) + ปุ่ม [เข้าแล้ว]/[ยกเลิก] ทำทุกบัญชีที่ยัง plan
    open: 1 แถวต่อ 1 บัญชีที่เปิดอยู่จริง (ราคาเข้าจริงต่างกันได้ต่อบัญชี) ใช้ openClosePos/editTrade เดิมตรง ๆ */
