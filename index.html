@@ -725,9 +725,11 @@ details.panel[open]>summary::before{transform:rotate(90deg)}
 .sumBlk .ui-tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 @media (max-width:700px){ .sumBlk .ui-tiles{grid-template-columns:repeat(2,minmax(0,1fr))} }
 .sumBlk .ui-tile{background:var(--sum-cell);border:0;border-radius:12px;padding:12px;position:relative;color:var(--sum-fg);line-height:1.5;cursor:default}
+.sumBlk .ui-tile.ui-tap{cursor:pointer}
+.sumBlk .ui-tile.ui-tap:focus-visible{outline:2px solid var(--sum-sel);outline-offset:2px}
 .sumBlk .ui-tile.ui-sel{box-shadow:inset 0 0 0 2px var(--sum-sel)}
 .sumBlk .ui-tile.ui-dim{opacity:.55}
-.sumBlk .ui-tile-th{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px 7px;min-height:36px;cursor:pointer}
+.sumBlk .ui-tile-th{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px 7px;min-height:36px}
 .sumBlk .ui-tile-th .ui-tile-a{color:var(--sum-strong);font-size:.98rem;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sumBlk .ui-tile-th .ui-tile-b{grid-column:1/-1;justify-self:start;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .sumBlk .ui-tile-th .ui-btn.ui-btn-pri{grid-column:3;grid-row:1;justify-self:end;margin:0;background:var(--sum-fg);border:0;color:var(--sum-bg);font-size:.76rem;font-weight:600;padding:0 9px;min-height:30px;border-radius:8px}
@@ -1862,6 +1864,34 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
   .ui-sheet{width:100%;max-width:none;border-radius:var(--r-card) var(--r-card) 0 0;max-height:86vh;
     padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
 }
+
+/* BK1 — หน้าพรีวิว/สรุปกู้คืนจากไฟล์ backup */
+.bk-sheet{z-index:400}
+.bkRs h3{margin:0 0 4px;font-size:1rem}
+.bkRsSub{font-size:12px;color:var(--mute);overflow-wrap:anywhere}
+.bkRsHint{font-size:12px;color:var(--mute);margin:8px 0}
+.bkRsWarn{font-size:12.5px;margin:8px 0;padding:6px 8px;border-radius:8px;background:rgba(217,138,0,.12);color:var(--warn)}
+.bkRsWarn.bad{background:rgba(214,69,69,.12);color:var(--dn);font-weight:600}
+.bkRsRows{border-top:1px solid var(--line)}
+.bkRsRow{display:grid;grid-template-columns:22px minmax(0,1fr);gap:4px 8px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.bkRsRow.off{opacity:.5;cursor:default}
+.bkRsRow input{margin:2px 0 0;width:18px;height:18px}
+.bkRsLb{font-weight:600;font-size:13px;min-width:0;overflow-wrap:anywhere}
+.bkRsLb small{display:block;font-weight:400;font-size:12px;color:var(--mute)}
+.bkRsCmp{grid-column:2;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;min-width:0}
+.bkRsCmp>span{min-width:0;overflow-wrap:anywhere}
+.bkRsCmp em{display:block;font-style:normal;color:var(--mute);font-size:12px}
+.bkRsCf{margin-top:10px;font-size:13px}
+.bkRsCf input{display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:8px;font-size:16px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--dark)}
+.bkRsMsg{min-height:1.2em;margin-top:6px;font-size:12.5px;color:var(--dn)}
+.bkRsBtns{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.bkRsBtns .ui-btn{min-height:40px;padding:0 16px;font-size:13px}
+.bkRsBtns .ui-btn-pri{background:var(--dark);color:var(--card);border-color:var(--dark)}
+.bkRsBtns .ui-btn:disabled{opacity:.5}
+.bkRsRes{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.bkRsRes span{font-size:12.5px;color:var(--mute)}
+.bkRsRes.bad span{color:var(--dn);font-weight:600}
+.bkRsRes small{flex-basis:100%;font-size:12px;color:var(--mute);overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -2654,7 +2684,9 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
       <b>มือถือ / iPad ไม่มีรอบอัตโนมัติและไม่มีแถบเตือน</b> — ปุ่มด้านล่างยังกดสำรองเองได้ทุกเครื่อง</div>
     <div class="btns" style="justify-content:flex-start;margin-top:8px">
       <button onclick="exportBackupNow(true)">⬇ Export JSON ตอนนี้</button>
+      <button onclick="bkRestoreOpen()" title="เลือกไฟล์ dashboard-backup-*.json (schema 2/3) → ดูตัวอย่างเทียบกับตอนนี้ → เลือกหมวดที่จะกู้">⟲ กู้คืนจากไฟล์ backup…</button>
     </div>
+    <div class="hint" id="bkSummary" style="margin-top:6px"></div>
     <div class="hint" id="bkLastHint" style="margin-top:6px"></div>
 
   </div></details>
@@ -10135,7 +10167,9 @@ const UI = {
         : `<div class="ui-tile-k">${escHtml(t.title||'')}</div>
            <div class="ui-tile-v${t.cls?(' '+t.cls):''}">${t.value!=null?t.value:'—'}</div>
            <div class="ui-tile-s">${escHtml(t.sub||'')}</div>`;
-      return `<div class="ui-tile${selKey===t.key?' ui-sel':''}${t.dim?' ui-dim':''}${cc}" data-key="${escHtml(t.key)}">${body}</div>`;
+      /* BK1 — t.pick (โค้ด JS เช่น "satV3Pick('XAUUSD')") = ทั้งกรอบเป็นพื้นที่แตะเดียว · role=button · Enter/Space (เฉพาะโฟกัสอยู่ที่กรอบเอง ไม่ใช่ปุ่มข้างใน) */
+      const pk = t.pick ? ` role="button" tabindex="0" onclick="${t.pick}" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();${t.pick}}"` : '';
+      return `<div class="ui-tile${selKey===t.key?' ui-sel':''}${t.dim?' ui-dim':''}${t.pick?' ui-tap':''}${cc}" data-key="${escHtml(t.key)}"${pk}>${body}</div>`;
     }).join('')}</div>`;
   },
   /* model: {sym,dir:'L'|'S',tag,entry,sl,tp,cancel,rr,setups:[{label,on}],accts:[{name,color,line}]}
@@ -10862,17 +10896,19 @@ function satV3TileHead(asset, w, atTime){
   const canPlan = bias==='Long' || bias==='Short';
   const tone = !canPlan ? 'nt' : /ลด/.test(badge) ? 'warn' : bias==='Long' ? 'up' : 'dn';   /* UI-1b — สี pill: Long=เขียว Short=แดง · ลดขนาดไม้ = เตือน · ยังไม่ประเมิน/งดเทรด = กลาง */
   const btn = canPlan ? `<button type="button" class="ui-btn ui-btn-pri" onclick="event.stopPropagation();satV3NewPlan('${escHtml(asset)}')">+ แผน</button>` : '';
-  return `<div class="ui-tile-th" onclick="satV3Pick('${escHtml(asset)}')">${satV3TileDirHtml(bias)}<span class="ui-tile-a">${escHtml(sat7dLabel(asset))}</span><span class="ui-tile-b sumPill ${tone}">${escHtml(badge)}</span>${btn}</div>`;
+  return `<div class="ui-tile-th">${satV3TileDirHtml(bias)}<span class="ui-tile-a">${escHtml(sat7dLabel(asset))}</span><span class="ui-tile-b sumPill ${tone}">${escHtml(badge)}</span>${btn}</div>`;
 }
 function satV3TileModel(asset, wk){
   const w = satwWeek(wk, asset), at = satwAtTime(wk);
   const { sub, sub2 } = satV3TileBadgeSub(asset, w, at);
-  return {key:asset, head: satV3TileHead(asset, w, at), sub, sub2, dotsHtml: satV3TileDotsHtml(w, asset, at), dim: !!(w && w.bias==='None')};
+  return {key:asset, head: satV3TileHead(asset, w, at), sub, sub2, dotsHtml: satV3TileDotsHtml(w, asset, at), dim: !!(w && w.bias==='None'), pick: `satV3Pick('${escHtml(asset)}')`};
 }
 /* แตะช่อง = กาง (ทีละ asset) · แตะซ้ำ = พับ */
 function satV3Pick(asset){
+  const kb = document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('ui-tile');   /* BK1 — แตะด้วยคีย์บอร์ด: วาดใหม่แล้วคืนโฟกัสให้ช่องเดิม */
   satV3Sel = (satV3Sel===asset) ? null : asset;
   satV3Render();
+  if(kb){ const t = document.querySelector('#satV3Panel .ui-tile[data-key="'+asset+'"]'); if(t) t.focus(); }
 }
 /* แตะวนองค์ประกอบ: null → ▲ → ▬ → ▼ → null (แทนปุ่ม 3 อันเดิมของ satwSetComp ซึ่งเป็นแค่ toggle ไม่ใช่วน) */
 function satV3CycleFactor(asset, compKey){
@@ -13752,24 +13788,81 @@ function bkFilename(){
   const d = new Date(), p = n => String(n).padStart(2,'0');
   return `dashboard-backup-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
 }
-function bkPayload(){
+/* ★ BK1 — schema 3: เพิ่ม satIdeas / satWeek / satConfig / macroPlaybook (collection ย่อยของ users/{uid})
+   ดึงสดจาก Firestore ตอนกด export (get() ครั้งเดียวต่อ collection · ไม่ใช้ตัวแปรในหน่วยความจำที่อาจยังไม่โหลด)
+   collection ไหนดึงไม่สำเร็จ → ยังได้ไฟล์ แต่ _meta.partial = [ชื่อ...] และไม่ใส่ key นั้น (restore จะเห็นว่า "ไม่มีในไฟล์") + แจ้งเตือน ไม่เงียบ */
+const BK_COLS = ['satIdeas','satWeek','satConfig','macroPlaybook'];
+const BK_GET_TIMEOUT_MS = 10000;
+/* Timestamp ของ Firestore → {__ts:true,seconds,nanoseconds} (JSON.stringify ตรง ๆ จะเสียชนิด) · bkDec แปลงกลับตอน restore */
+function bkEnc(v){
+  if(v && typeof v==='object'){
+    if(typeof v.toDate==='function' && typeof v.seconds==='number') return {__ts:true, seconds:v.seconds, nanoseconds:v.nanoseconds};
+    if(Array.isArray(v)) return v.map(bkEnc);
+    const o = {}; Object.keys(v).forEach(k=>{ o[k] = bkEnc(v[k]); }); return o;
+  }
+  return v;
+}
+function bkDec(v){
+  if(v && typeof v==='object'){
+    if(v.__ts===true && typeof v.seconds==='number' && window.firebase && firebase.firestore && firebase.firestore.Timestamp) return new firebase.firestore.Timestamp(v.seconds, v.nanoseconds||0);
+    if(Array.isArray(v)) return v.map(bkDec);
+    const o = {}; Object.keys(v).forEach(k=>{ o[k] = bkDec(v[k]); }); return o;
+  }
+  return v;
+}
+async function bkFetchCol(name){
+  const c = sat7dCol(name); if(!c) throw new Error('ยังไม่ได้เข้าสู่ระบบ');
+  let timer;
+  try{
+    const snap = await Promise.race([c.get({source:'server'}), new Promise((_,rej)=>{ timer = setTimeout(()=>rej(new Error('timeout')), BK_GET_TIMEOUT_MS); })]);
+    return snap.docs.map(d=>({...bkEnc(d.data()||{}), id:d.id}));
+  } finally { clearTimeout(timer); }
+}
+/* → {data:{name:[docs]}, partial:[name...]} — ไม่ throw */
+async function bkFetchAll(){
+  const res = await Promise.allSettled(BK_COLS.map(bkFetchCol));
+  const data = {}, partial = [];
+  res.forEach((r,i)=>{
+    if(r.status==='fulfilled') data[BK_COLS[i]] = r.value;
+    else { partial.push(BK_COLS[i]); console.warn('backup: ดึง '+BK_COLS[i]+' ไม่สำเร็จ', r.reason); }
+  });
+  return {data, partial};
+}
+function bkBookCounts(b){
+  const t = (b && Array.isArray(b.trades)) ? b.trades : [];
+  const c = {trades:t.length, open:0, plan:0, closed:0};
+  t.forEach(x=>{ if(x && x.status==='open') c.open++; else if(x && x.status==='plan') c.plan++; else if(x && x.status==='closed') c.closed++; });
+  return c;
+}
+/* → {json, obj, partial:[...]} */
+async function bkBuild(){
   /* ★ 1 ก.ย. 2026 — ต้องสำรอง "ทุกบัญชี" ไม่ใช่เฉพาะบัญชีที่เปิดอยู่
      ไม่งั้นไฟล์สำรองจะดูเหมือนสมบูรณ์ แต่ขาดข้อมูลของบัญชีอื่นไปเงียบ ๆ
      คง field `state` (บัญชีที่เปิดอยู่) ไว้ด้วย เพื่อให้ไฟล์ยังอ่านแบบเดิมได้ */
-  return JSON.stringify({
-    _meta:{ app:'trading-dashboard', schema:2, exportedAt:new Date().toISOString(), uid: uid||null,
-            accounts: acctList.map(a=>({id:a.id, name:a.name, ports:a.ports})), activeAccount: acctActive },
-    doc: acctWrapDoc(state),
+  const f = await bkFetchAll();
+  const doc = acctWrapDoc(state);
+  const counts = {books:{}};
+  acctList.forEach(a=>{ counts.books[a.id] = bkBookCounts(doc.books[a.id]); });
+  BK_COLS.forEach(k=>{ counts[k] = f.data[k] ? f.data[k].length : null; });
+  const meta = { app:'trading-dashboard', schema:3, exportedAt:new Date().toISOString(), uid: uid||null,
+                 accounts: acctList.map(a=>({id:a.id, name:a.name, ports:a.ports})), activeAccount: acctActive, counts };
+  if(f.partial.length) meta.partial = f.partial;
+  const obj = {
+    _meta: meta,
+    doc: doc,
     state: state,
     /* 7W — Watchlist ใหม่ (users/{uid}/watchlist) · ไฟล์กู้คืนเดิมไม่อ่าน key นี้ จึงไม่กระทบปุ่มกู้คืน/นำเข้า */
     watchlistV2: wlItems.map(w=>({ticker:w.ticker, market:w.market, port:w.port, note:w.note, added_at:w.added_at}))
-  }, null, 2);
+  };
+  BK_COLS.forEach(k=>{ if(f.data[k]) obj[k] = f.data[k]; });
+  return {json: JSON.stringify(obj, null, 2), obj, partial: f.partial};
 }
-function bkTriggerDownload(){
-  const blob = new Blob([bkPayload()], {type:'application/json'});
+async function bkPayload(){ return (await bkBuild()).json; }
+function bkTriggerDownload(json, filename){
+  const blob = new Blob([json], {type:'application/json'});
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href = url; a.download = bkFilename();
+  a.href = url; a.download = filename || bkFilename();
   /* อย่าใช้ display:none และอย่า removeChild ทันทีหลัง click() — เจอจริงบน macOS Safari (5 ส.ค.):
      Safari เล่นอนิเมชัน "ไอคอนไฟล์บินไปที่ปุ่ม Downloads" โดยใช้ตำแหน่งของ element ต้นทางเป็นจุดเริ่ม
      ถ้า element ไม่มีตำแหน่ง (display:none) แล้วยังถูกลบทิ้งกลางคัน อนิเมชันจะค้างเป็นไอคอนบนจอ
@@ -13784,8 +13877,10 @@ function bkTriggerDownload(){
 }
 
 /* manual=true  = มาจากการกดปุ่ม (มี user gesture) เชื่อถือได้
-   manual=false = auto ตอนถึงเวลา อาจถูกเบราว์เซอร์บล็อกเงียบๆ โดยไม่ throw */
-function exportBackupNow(manual){
+   manual=false = auto ตอนถึงเวลา อาจถูกเบราว์เซอร์บล็อกเงียบๆ โดยไม่ throw
+   ★ BK1 — async (ดึง collection ย่อยสดก่อนดาวน์โหลด) · คืน Promise<boolean> */
+let bkBusy = false, bkLastResult = null;
+async function exportBackupNow(manual){
   if(!state){ if(manual) alert('ยังไม่มีข้อมูลให้สำรอง'); return false; }
   /* ★ ห้ามสำรองจาก state ที่ยังไม่ได้ยืนยันกับ server
      ถ้าปล่อยให้ backup ข้อมูลจาก cache เก่า จะได้ไฟล์ที่ "ดูเหมือนสำเนาที่ถูกต้อง" แต่เป็นของเก่า
@@ -13794,13 +13889,201 @@ function exportBackupNow(manual){
     if(manual) alert('ยังซิงก์กับ server ไม่สำเร็จ — ข้อมูลบนจอตอนนี้อาจเป็นของเก่าจาก cache\n\nรอให้สถานะมุมบนขึ้น "ซิงก์แล้ว" ก่อน แล้วค่อยกดใหม่');
     return false;
   }
-  try{ bkTriggerDownload(); }
-  catch(e){ console.warn('backup download failed:', e); return false; }
-  localStorage.setItem(BK_LAST_KEY, String(Date.now()));
-  localStorage.removeItem(BK_SNOOZE_KEY);
-  bkHideBanner();
-  bkRenderLastHint();
+  if(bkBusy) return false;
+  bkBusy = true;
+  try{
+    const b = await bkBuild();
+    if(!stateFromServer) return false;   /* ระหว่างรอ get() สถานะซิงก์หลุด — ไม่ปล่อยไฟล์จาก state ที่ไม่ยืนยัน */
+    bkTriggerDownload(b.json, bkFilename());
+    bkLastResult = b;
+    localStorage.setItem(BK_LAST_KEY, String(Date.now()));
+    localStorage.removeItem(BK_SNOOZE_KEY);
+    bkHideBanner();
+    bkRenderLastHint();
+    bkRenderSummary(b);
+    if(b.partial.length) bkShowBanner('backup ไม่ครบ: '+b.partial.join(', '), 'ดึงข้อมูลชุดนี้ไม่สำเร็จ — ไฟล์ที่ได้ไม่มีข้อมูลส่วนนั้น ลองกดสำรองอีกครั้ง');
+    return true;
+  }catch(e){ console.warn('backup download failed:', e); return false; }
+  finally{ bkBusy = false; }
+}
+/* สรุป 1 บรรทัดใต้ปุ่ม Export (หน้าตั้งค่า) */
+function bkSummaryText(b){
+  const c = b.obj._meta.counts, n = v => v==null ? '?' : v;
+  const ids = Object.keys(c.books);
+  return `สำรองแล้ว: ${ids.length} บัญชี · ${ids.reduce((s,id)=>s+c.books[id].trades,0)} ไม้ · แผน Sat ${n(c.satIdeas)} · สัปดาห์ ${n(c.satWeek)} · Playbook ${n(c.macroPlaybook)}`;
+}
+function bkRenderSummary(b){ const el = document.getElementById('bkSummary'); if(el) el.textContent = bkSummaryText(b); }
+
+/* ================= B) กู้คืนจากไฟล์ dashboard-backup (BK1 · schema 2 และ 3) =================
+   แยกจาก phase7mRestoreFromFile (ปุ่มเดิมคงไว้ — รับ book เดี่ยว) · ไม่ติ๊กอะไร = ไม่เขียนอะไร
+   ลำดับ: เลือกไฟล์ → ตรวจ → พรีวิวเทียบ "ในไฟล์ vs ตอนนี้" → ติ๊กหมวด + พิมพ์ กู้คืน → ดาวน์โหลด backup ของตอนนี้ (ล้ม = หยุด) → เขียน → สรุปผล
+   บัญชี: เขียนทับทั้งก้อน books.<id> ผ่าน saveBook · satIdeas/satWeek/satConfig: set ทับตาม id (ไม่ลบเอกสารที่เกิน)
+   macroPlaybook: create เฉพาะ id ที่ยังไม่มี (rules ห้าม update/delete) */
+const BK_RS_WORD = 'กู้คืน';
+const BK_RS_LABEL = {satIdeas:'แผน Sat (satIdeas)', satWeek:'สัปดาห์ Sat (satWeek)', satConfig:'ตั้งค่า Sat (satConfig)', macroPlaybook:'Playbook (macroPlaybook)'};
+let bkRs = null, bkRestoreLast = null;
+
+function bkRestoreOpen(){
+  if(!state || !stateFromServer){ alert('ยังซิงก์กับ server ไม่สำเร็จ — รอให้สถานะมุมบนขึ้น "ซิงก์แล้ว" ก่อนแล้วค่อยกู้คืน'); return; }
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'application/json,.json';
+  input.onchange = () => {
+    const f = input.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = () => { bkRestoreLoad(String(r.result), f.name); };
+    r.onerror = () => alert('อ่านไฟล์ไม่สำเร็จ');
+    r.readAsText(f);
+  };
+  input.click();
+}
+/* ตรวจไฟล์ → {ok:true, obj, books, warnUid} | {ok:false, err} */
+function bkRestoreParse(text){
+  let obj;
+  try{ obj = JSON.parse(text); }catch(e){ return {ok:false, err:'ไฟล์นี้ไม่ใช่ JSON ที่ถูกต้อง: '+e.message}; }
+  const m = obj && obj._meta;
+  if(!m || m.app !== 'trading-dashboard') return {ok:false, err:'ไม่ใช่ไฟล์ backup ของ Trading Dashboard (_meta.app ต้องเป็น trading-dashboard)'};
+  if(m.schema !== 2 && m.schema !== 3) return {ok:false, err:'ไม่รองรับ schema '+m.schema+' (รับเฉพาะ 2 และ 3)'};
+  let books = obj.doc && obj.doc.books && typeof obj.doc.books==='object' ? obj.doc.books : null;
+  if(!books && obj.state && m.activeAccount) books = {[m.activeAccount]: obj.state};
+  if(!books || !Object.keys(books).length) return {ok:false, err:'ไม่พบข้อมูลบัญชีในไฟล์'};
+  return {ok:true, obj, books, warnUid: !!(m.uid && uid && m.uid !== uid)};
+}
+async function bkRestoreLoad(text, fname){
+  const P = bkRestoreParse(text);
+  if(!P.ok){ alert(P.err); return false; }
+  const live = await bkFetchAll();   /* "ตอนนี้" = ค่าสดจาก Firestore (ดึงไม่ได้ → แสดงว่าอ่านไม่ได้) */
+  bkRs = {obj:P.obj, books:P.books, warnUid:P.warnUid, fname:fname||'', live, busy:false, el:null};
+  bkRsRender();
   return true;
+}
+function bkRsCountTxt(c){ return `open ${c.open} · plan ${c.plan} · closed ${c.closed}`; }
+function bkRsAcctName(id){
+  const a = acctList.find(x=>x.id===id); if(a) return a.name;
+  const f = ((bkRs.obj._meta.accounts)||[]).find(x=>x.id===id); return f ? f.name : id;
+}
+function bkRsRow(key, label, fileTxt, nowTxt, opts){
+  opts = opts || {};
+  return `<label class="bkRsRow${opts.off?' off':''}"><input type="checkbox" data-bk="${escHtml(key)}"${opts.off?' disabled':''}>
+    <span class="bkRsLb">${escHtml(label)}${opts.note?`<small>${escHtml(opts.note)}</small>`:''}</span>
+    <span class="bkRsCmp"><span><em>ในไฟล์</em>${escHtml(fileTxt)}</span><span><em>ตอนนี้</em>${escHtml(nowTxt)}</span></span></label>`;
+}
+function bkRsRender(){
+  const R = bkRs, m = R.obj._meta;
+  let rows = '';
+  Object.keys(R.books).forEach(id=>{
+    const inApp = acctList.some(a=>a.id===id);
+    const cur = inApp ? bkBookCounts(id===acctActive ? state : acctBooks[id]) : null;
+    rows += bkRsRow('acct:'+id, 'บัญชี '+bkRsAcctName(id), bkRsCountTxt(bkBookCounts(R.books[id])), cur ? bkRsCountTxt(cur) : '—',
+      {note: inApp ? 'เขียนทับทั้งบัญชี' : 'ไม่มีบัญชีนี้ในแอปตอนนี้ — จะข้าม'});
+  });
+  BK_COLS.forEach(k=>{
+    const inFile = Array.isArray(R.obj[k]);
+    const nowTxt = R.live.data[k] ? R.live.data[k].length+' รายการ' : 'อ่านไม่ได้';
+    rows += bkRsRow(k, BK_RS_LABEL[k], inFile ? R.obj[k].length+' รายการ' : 'ไม่มีในไฟล์', nowTxt,
+      {off: !inFile, note: k==='macroPlaybook' ? 'สร้างเฉพาะเวอร์ชันที่ยังไม่มี · ที่มีแล้วข้าม (ห้ามแก้/ลบ)' : (inFile ? 'ทับตาม id · ที่เกินในตอนนี้ไม่ลบ' : '')});
+  });
+  const warn = (R.warnUid ? `<div class="bkRsWarn bad">⚠ ไฟล์นี้เป็นของ uid อื่น (${escHtml(m.uid)}) ไม่ตรงกับบัญชีที่ล็อกอินอยู่ — ไปต่อได้ แต่ตรวจให้แน่ใจว่าเป็นไฟล์ของคุณ</div>` : '')
+    + (m.partial && m.partial.length ? `<div class="bkRsWarn">ไฟล์นี้ backup ไม่ครบ: ${escHtml(m.partial.join(', '))}</div>` : '');
+  const html = `<div class="bkRs"><h3>กู้คืนจากไฟล์ backup</h3>
+    <div class="bkRsSub">${escHtml(R.fname)} · schema ${m.schema} · ${escHtml(m.exportedAt||'')}</div>${warn}
+    <div class="bkRsHint">ติ๊กหมวดที่จะกู้ (ค่าเริ่มต้น = ไม่ติ๊กอะไร) · ก่อนเขียนจริงจะดาวน์โหลด backup ของตอนนี้ให้ 1 ไฟล์</div>
+    <div class="bkRsRows">${rows}</div>
+    <div class="bkRsCf"><label for="bkRsConfirm">พิมพ์คำว่า <b>${BK_RS_WORD}</b> เพื่อยืนยัน</label><input id="bkRsConfirm" type="text" autocomplete="off" placeholder="${BK_RS_WORD}"></div>
+    <div class="bkRsMsg" id="bkRsMsg" role="status"></div>
+    <div class="bkRsBtns"><button type="button" class="ui-btn" onclick="bkRsClose()">ยกเลิก</button><button type="button" class="ui-btn ui-btn-pri" id="bkRsGo" onclick="bkRestoreRun()">${BK_RS_WORD}</button></div></div>`;
+  bkRsMount(html);
+}
+function bkRsMount(html){
+  if(bkRs.el) bkRs.el.remove();
+  document.body.insertAdjacentHTML('beforeend', UI.sheet(html).replace('ui-sheet-backdrop','ui-sheet-backdrop bk-sheet'));
+  bkRs.el = document.body.lastElementChild;
+  bkRs.el.addEventListener('click', e=>{ if(e.target===bkRs.el) bkRsClose(); });
+}
+function bkRsClose(){ if(bkRs && bkRs.busy) return; if(bkRs && bkRs.el) bkRs.el.remove(); bkRs = null; }
+async function bkRestoreRun(){
+  const R = bkRs; if(!R || R.busy) return;
+  const msg = t=>{ const e = R.el && R.el.querySelector('#bkRsMsg'); if(e) e.textContent = t; };
+  const picked = [...R.el.querySelectorAll('input[data-bk]:checked')].map(i=>i.dataset.bk);
+  if(!picked.length){ msg('ยังไม่ได้ติ๊กหมวดที่จะกู้ — ไม่มีอะไรถูกเขียน'); return; }
+  if((R.el.querySelector('#bkRsConfirm').value||'').trim() !== BK_RS_WORD){ msg('พิมพ์คำว่า '+BK_RS_WORD+' ให้ตรงก่อน — ยังไม่มีอะไรถูกเขียน'); return; }
+  if(!stateFromServer){ msg('ยังซิงก์กับ server ไม่สำเร็จ — รอให้ขึ้น "ซิงก์แล้ว" ก่อน'); return; }
+  R.busy = true;
+  const go = R.el.querySelector('#bkRsGo'); if(go) go.disabled = true;
+  const abort = t=>{ msg(t); R.busy = false; if(go) go.disabled = false; return false; };
+  /* 1) backup ของสภาพปัจจุบัน — ดาวน์โหลดไม่สำเร็จ (หรือดึงหมวดที่จะเขียนทับไม่ได้) = หยุด ไม่กู้ */
+  msg('กำลังสำรองสภาพปัจจุบันก่อนกู้…');
+  const cats = picked.filter(k=>k.indexOf('acct:')!==0);
+  try{
+    const pre = await bkBuild();
+    const miss = pre.partial.filter(k=>cats.indexOf(k)>=0);
+    if(miss.length) return abort('หยุด ไม่กู้: สำรองสภาพปัจจุบันของ '+miss.join(', ')+' ไม่ได้ (ดึงจาก Firestore ไม่สำเร็จ) — ลองใหม่อีกครั้ง');
+    if(!stateFromServer) return abort('หยุด ไม่กู้: สถานะซิงก์หลุดระหว่างเตรียม backup');
+    bkTriggerDownload(pre.json, bkFilename().replace('dashboard-backup-', 'dashboard-backup-before-restore-'));
+  }catch(e){ console.warn('restore: pre-backup failed', e); return abort('หยุด ไม่กู้: ดาวน์โหลด backup ของสภาพปัจจุบันไม่สำเร็จ ('+sat7dErrText(e)+') — ยังไม่มีอะไรถูกเขียน'); }
+  /* 2) เขียน */
+  msg('กำลังกู้คืน…');
+  const res = {};
+  const mk = (key, label)=> (res[key] = {label, ok:0, skip:0, fail:0, notes:[]});
+  const acctIds = picked.filter(k=>k.indexOf('acct:')===0).map(k=>k.slice(5)), done = [];
+  acctIds.forEach(id=>{
+    const r = mk('acct:'+id, 'บัญชี '+bkRsAcctName(id));
+    if(!acctList.some(a=>a.id===id)){ r.skip = 1; r.notes.push('ไม่มีบัญชีนี้ในแอป'); return; }
+    try{
+      const st = acctBuildBook(JSON.parse(JSON.stringify(R.books[id])), id);
+      acctBooks[id] = st; if(id === acctActive) state = st;
+      saveBook(id); done.push(id);
+    }catch(e){ r.fail = 1; r.notes.push(sat7dErrText(e)); }
+  });
+  if(done.length){
+    try{ ensureScoreLabels(); ensureJournalView(); }catch(e){}
+    clearTimeout(persistTimer); persistTimer = null;
+    await doPersist();   /* doPersist กลืน error เอง (ตั้ง badge error + ค้าง dirtyBooks) → ตรวจผลจากสถานะที่ค้าง */
+    done.forEach(id=>{
+      const r = res['acct:'+id];
+      if(dirtyBooks.has(id) || pendingLocalWrite){ r.fail = 1; r.notes.push('เขียนขึ้น server ไม่สำเร็จ — ในเครื่องถูกแทนแล้วแต่ยังไม่ซิงก์ (แตะสถานะมุมบนเพื่อลองใหม่)'); }
+      else r.ok = 1;
+    });
+  }
+  for(const k of ['satIdeas','satWeek','satConfig']){
+    if(picked.indexOf(k)<0) continue;
+    const r = mk(k, BK_RS_LABEL[k]), col = sat7dCol(k), docs = R.obj[k] || [];
+    for(const d of docs){
+      const {id, ...data} = d;
+      if(!id || !col){ r.fail++; continue; }
+      try{ await col.doc(String(id)).set(bkDec(data)); r.ok++; }
+      catch(e){ r.fail++; if(r.notes.length<2) r.notes.push(sat7dErrText(e)); }
+    }
+  }
+  if(picked.indexOf('macroPlaybook')>=0){
+    const r = mk('macroPlaybook', BK_RS_LABEL.macroPlaybook), col = sat7dCol('macroPlaybook');
+    for(const d of (R.obj.macroPlaybook || [])){
+      const {id, ...data} = d;
+      if(!id || !col){ r.fail++; continue; }
+      try{
+        const ref = col.doc(String(id)), ex = await ref.get();
+        if(ex && ex.exists){ r.skip++; continue; }   /* rules ห้าม update — id ที่มีแล้วข้าม */
+        await ref.set(bkDec(data)); r.ok++;          /* create */
+      }catch(e){ r.fail++; if(r.notes.length<2) r.notes.push(sat7dErrText(e)); }
+    }
+    if(r.skip) r.notes.push('ข้าม '+r.skip+' เวอร์ชันที่มีอยู่แล้ว (ไม่แก้ของเดิม)');
+  }
+  bkRestoreLast = res;
+  R.busy = false;
+  bkRsResult(res);
+  try{ render(); renderAcctBar(); renderAcctMgr(); }catch(e){ console.warn('restore: render', e); }
+}
+function bkRsResult(res){
+  const keys = Object.keys(res);
+  const nFail = keys.reduce((s,k)=>s+res[k].fail, 0);
+  const rows = keys.map(k=>{
+    const r = res[k];
+    return `<div class="bkRsRes${r.fail?' bad':''}" data-bk-res="${escHtml(k)}"><b>${escHtml(r.label)}</b><span>สำเร็จ ${r.ok} · ข้าม ${r.skip} · ล้มเหลว ${r.fail}</span>${r.notes.map(n=>`<small>${escHtml(n)}</small>`).join('')}</div>`;
+  }).join('');
+  bkRsMount(`<div class="bkRs"><h3>${nFail ? 'กู้คืนเสร็จ — มีบางส่วนล้มเหลว' : 'กู้คืนเสร็จ'}</h3>
+    ${nFail ? '<div class="bkRsWarn bad">มีรายการที่เขียนไม่สำเร็จ ดูรายละเอียดด้านล่าง — ข้อมูลส่วนที่สำเร็จถูกเขียนแล้ว</div>' : ''}
+    <div class="bkRsRows">${rows}</div>
+    <div class="bkRsHint">backup ของสภาพก่อนกู้ดาวน์โหลดไว้แล้ว (dashboard-backup-before-restore-*.json)</div>
+    <div class="bkRsBtns"><button type="button" class="ui-btn ui-btn-pri" onclick="bkRsClose()">ปิด</button></div></div>`);
 }
 
 function bkShowBanner(title, sub){
@@ -13826,11 +14109,12 @@ function bkRenderLastHint(){
     + (stale ? ' · <b style="color:var(--amber)">เลยรอบประจำสัปดาห์แล้ว</b>' : '');
 }
 
-function bkCheck(){
+async function bkCheck(){
   if(!state || !stateFromServer) return;              /* ยังไม่ยืนยันกับ server — รอรอบหน้า ห้าม backup ของเก่า */
   if(!bkIsMac()) return;                              /* ★ มือถือ/iPad — ปิดสนิท ไม่เตือน ไม่ดาวน์โหลด */
   if(!bkDue() || bkSnoozed()) return;
-  if(exportBackupNow(false)){
+  if(await exportBackupNow(false)){
+    if(bkLastResult && bkLastResult.partial.length) return;   /* backup ไม่ครบ — exportBackupNow แสดงเตือนส้มแล้ว ห้ามทับด้วยข้อความ "สำเร็จ" */
     /* auto สำเร็จในมุมของ JS แล้ว แต่ Safari อาจบล็อกเงียบๆ โดยไม่ throw — ยืนยันกับตาผู้ใช้สักครู่
        เผื่อไฟล์ไม่ลงจริง จะได้กดเองทัน ไม่ปล่อยให้เข้าใจผิดว่ามี backup */
     bkShowBanner('สำรองข้อมูลประจำสัปดาห์แล้ว', 'ไม่เห็นไฟล์ในโฟลเดอร์ Downloads? แตะ “ดาวน์โหลด” เพื่อบันทึกซ้ำ');
