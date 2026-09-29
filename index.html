@@ -701,6 +701,37 @@ details.panel[open]>summary::before{transform:rotate(90deg)}
 @media (max-width:700px){ .ffActGrid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"reg cap" "lead mac"} .ffActRg{font-size:.84rem} }
 @media (max-width:420px){ .sumBig{font-size:1.6rem} }
 
+/* ── 7F Journal — บล็อกสรุปเข้ม (#jSum) · ชิปบัญชี · สถิติตาม Setup · เงื่อนไขที่ยกเลิก ── */
+.jSum .sumHead{margin-bottom:10px}
+.jSumG{grid-template-columns:repeat(6,minmax(0,1fr));margin-bottom:12px}
+.jSumG .sumCell{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.jSumG .sumL{margin-bottom:0}
+.jSumG .sumPill{margin-top:auto}
+.jSumG .sumPill.ph{visibility:hidden}
+.jSum .sumMeta{margin-bottom:0}
+@media (max-width:1100px){ .jSumG{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media (max-width:700px){ .jSumG{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.jAcctRow .chip{display:inline-flex;align-items:center;gap:6px}
+.jSetupNote,.jCondNote{font-size:.8rem;color:var(--muted);line-height:1.5;margin:0 0 10px}
+.jSetupList{font-family:var(--sans);font-size:.88rem}
+.jSetupRow{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(4,minmax(0,1fr));gap:4px 10px;padding:9px 4px;border-top:1px solid var(--hair);align-items:baseline}
+.jSetupRow>span:not(.jsN){text-align:right}
+.jSetupRow.few{opacity:.55}
+.jSetupRow .jsN{font-weight:600;overflow-wrap:anywhere}
+.jSetupHead{border-top:0;font-size:.72rem;color:var(--faint);font-weight:600;letter-spacing:.02em;padding-top:0;opacity:1}
+.jSetupRow .fewTag{font-size:.72rem;color:var(--muted);margin-left:4px;font-weight:400}
+@media (max-width:700px){
+  .jSetupHead{display:none}
+  .jSetupRow{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .jSetupRow .jsN{grid-column:1/-1}
+  .jSetupRow>span:not(.jsN){text-align:left}
+  .jSetupRow>span[data-lb]::before{content:attr(data-lb);display:block;font-size:.72rem;color:var(--faint);font-weight:500}
+}
+.jCondList{display:flex;flex-direction:column;gap:8px}
+.jCondItem{border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;background:var(--surface)}
+.jCondItem .jCondTop{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.8rem;color:var(--muted)}
+.jCondItem .jCondTx{margin-top:4px;font-size:.88rem;line-height:1.5;overflow-wrap:anywhere;white-space:normal}
+
 /* ── Port หุ้น — Core Port + Heat เป็นบล็อกสรุป (render() → #portsSum) ── */
 .planTop>.sumPorts{margin-bottom:0}
 .sumSec+.sumSec{margin-top:16px;padding-top:14px;border-top:1px solid var(--sum-line)}
@@ -2029,7 +2060,8 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 <!-- ---- TAB 2: Trading Journal ---- -->
 <div id="tabJournal" style="display:none">
   <div id="jIncomplete"></div>
-  <div class="strip" id="jStrip"></div>
+  <div class="filters jAcctRow" id="jAcctRow" style="margin-bottom:12px"></div>
+  <div class="sumBlk jSum" id="jSum" aria-label="สรุป Journal"></div>
   <div class="ports" id="jPorts"></div>
 
   <div class="panel">
@@ -2037,7 +2069,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
       <h2 style="display:flex;align-items:center;gap:6px"><button class="wlCollapseBtn" id="jColBtn_closed" onclick="jvToggleCollapse('closed')" title="หุบ / ขยาย">▾</button>Closed Trades <span id="jCount_closed" class="hint" style="display:inline"></span></h2>
       <div class="filters" id="jFilters"></div>
       <div id="jPeriod_closed"></div>
-      <button class="small" onclick="openUnplannedClosed()" title="บันทึกไม้ที่เทรดจบไปแล้ว โดยไม่ได้วางแผนไว้ใน Trade-Plan ก่อน">＋ Closed นอกแผน</button>
+      <button class="small" onclick="openUnplannedClosed(jAcctId())" title="บันทึกไม้ที่เทรดจบไปแล้ว โดยไม่ได้วางแผนไว้ใน Trade-Plan ก่อน">＋ Closed นอกแผน</button>
     </div>
     <div id="jContent_closed">
     <div class="tablewrap">
@@ -2054,6 +2086,12 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
     </div>
     <div class="cards" id="jCards"></div>
     </div>
+  </div>
+  <div class="panel" id="setupPanel">
+    <div class="panel-head">
+      <h2 style="display:flex;align-items:center;gap:6px"><button class="wlCollapseBtn" id="jColBtn_setup" onclick="jPanelToggle('setup')" title="หุบ / ขยาย" aria-expanded="true">▾</button>สถิติตาม Setup <span id="setupCount" class="hint" style="display:inline"></span></h2>
+    </div>
+    <div id="jContent_setup"><div id="setupBody"></div></div>
   </div>
   <div class="panel" id="missedPanel" style="display:none">
     <div class="panel-head">
@@ -2091,6 +2129,12 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
     </div>
     <div class="cards" id="cancelCards"></div>
     </div>
+  </div>
+  <div class="panel" id="condPanel">
+    <div class="panel-head">
+      <h2 style="display:flex;align-items:center;gap:6px"><button class="wlCollapseBtn collapsed" id="jColBtn_cond" onclick="jPanelToggle('cond')" title="หุบ / ขยาย" aria-expanded="false">▾</button>เงื่อนไขที่ยกเลิก <span id="condCount" class="hint" style="display:inline"></span></h2>
+    </div>
+    <div id="jContent_cond" style="display:none"><div id="condBody"></div></div>
   </div>
 </div>
 
@@ -3816,6 +3860,7 @@ function switchTab(t){
     const el = document.getElementById(TAB_BTN[k]);
     if(el) el.classList.toggle('on', k===t);
   });
+  if(t==='journal'){ jAcct = acctActive; try{ renderJournal(); }catch(e){ console.warn('journal open:', e); } }   /* 7F — เปิดแท็บ Journal = เริ่มที่บัญชีที่ใช้งานอยู่ */
   if(t==='watch'){ renderWatchlist(); rsLoad(); }
   if(t==='mix') renderPortfolioMix();
   if(t==='flow'){ renderFundflow(); rsLoad(); }
@@ -4914,22 +4959,26 @@ function jvLabel(kind){
   if(v.y==='all') return 'ทุกช่วงเวลา';
   return v.m==='all' ? `ปี ${v.y}` : `${JV_MONTHS[Number(v.m)-1]} ${v.y}`;
 }
+/* 7F — ช่วงเวลา/หุบของพาเนล Journal เป็นของ "บัญชีที่ดูอยู่" (jAcct) — แก้ในบริบทบัญชีนั้นแล้ว saveBook(jAcct) */
 function jvSetYear(kind, y){
-  const v = ensureJournalView(kind);
-  /* เปลี่ยนปี = รีเซ็ตเดือนเป็นทั้งปีเสมอ — กันกรณีเดือนเดิมค้างอยู่แล้วปีใหม่ว่างเปล่าโดยไม่รู้ตัว */
-  if(v.y !== y) v.m = 'all';
-  v.y = y; if(y==='all') v.m = 'all';
-  render(); schedulePersist();
+  const A = jAcctId();
+  withAccount(A, ()=>{
+    const v = ensureJournalView(kind);
+    /* เปลี่ยนปี = รีเซ็ตเดือนเป็นทั้งปีเสมอ — กันกรณีเดือนเดิมค้างอยู่แล้วปีใหม่ว่างเปล่าโดยไม่รู้ตัว */
+    if(v.y !== y) v.m = 'all';
+    v.y = y; if(y==='all') v.m = 'all';
+  });
+  saveBook(A); render();
 }
 function jvSetMonth(kind, m){
-  ensureJournalView(kind).m = m;
-  render(); schedulePersist();
+  const A = jAcctId();
+  withAccount(A, ()=>{ ensureJournalView(kind).m = m; });
+  saveBook(A); render();
 }
 function jvToggleCollapse(kind){
-  const v = ensureJournalView(kind);
-  v.col = !v.col;
-  jvApplyCollapse(kind);
-  schedulePersist();
+  const A = jAcctId();
+  withAccount(A, ()=>{ const v = ensureJournalView(kind); v.col = !v.col; jvApplyCollapse(kind); });
+  saveBook(A);
 }
 function jvApplyCollapse(kind){
   const v = ensureJournalView(kind);
@@ -5016,32 +5065,133 @@ function jIncGo(acctId, id){
   setTimeout(()=>{ const el = document.getElementById(m.el==='sym' ? (symFreeMode?'tSymFree':'tSym') : m.el); if(el && el.focus) el.focus(); }, 60);
 }
 
+function jHasSatA(){ return state.trades.some(t=>t.port==='satA' && JINC_STATUS.includes(t.status)); }
+const J_SETUP_LABEL = {acc:'Acc/Dist', pp:'PP'};
+/* C) สถิติตาม Setup — ไม้ปิดชุดเดียวกับบล็อก A (บัญชี + ช่วงเวลา + ชิปพอร์ต) · ไม้ที่มีหลาย setup นับซ้ำในทุกกลุ่ม · อ่านอย่างเดียว */
+function jSetupGroups(list){
+  const g = new Map();
+  const add = (label, t) => { if(!g.has(label)) g.set(label, []); g.get(label).push(t); };
+  list.forEach(t=>{
+    let labels = [];
+    if(t.port==='satB'){
+      const ids = Array.isArray(t.setups) ? t.setups : [];
+      const known = satV3SetupsFor(t.sym) || [];
+      labels = ids.map(id=>{ const f = known.find(s=>s.id===id); return f ? f.name : String(id); });
+    } else if(t.setup==='acc' || t.setup==='pp') labels = [J_SETUP_LABEL[t.setup]];
+    if(!labels.length) labels = ['ไม่ระบุ'];
+    [...new Set(labels)].forEach(l=>add(l, t));
+  });
+  return [...g.entries()].map(([label, ts])=>{
+    const n = ts.length, wins = ts.filter(t=>realizedPnlOf(t)>0).length;
+    const rs = ts.map(realizedROf).filter(r=>r!==null);
+    return {label, n, winRate:n?wins/n*100:0, avgR: rs.length ? rs.reduce((a,b)=>a+b,0)/rs.length : null,
+            pnl: ts.reduce((a,t)=>a+(realizedPnlTHBOf(t)||0),0)};
+  }).sort((a,b)=>b.n-a.n);
+}
+function renderJournalSetup(list){
+  const host = document.getElementById('setupBody'); if(!host) return;
+  const groups = jSetupGroups(list);
+  const cnt = document.getElementById('setupCount'); if(cnt) cnt.textContent = groups.length ? `(${groups.length})` : '';
+  if(!groups.length){ host.innerHTML = `<div class="empty" data-setup="empty">ยังไม่มีไม้ปิดในช่วงนี้</div>`; return; }
+  host.innerHTML = `<div class="jSetupList"><div class="jSetupRow jSetupHead"><span>Setup</span><span>ไม้</span><span>Win%</span><span>Avg R</span><span>P&amp;L (฿)</span></div>${
+    groups.map(g=>`<div class="jSetupRow${g.n<5?' few':''}" data-setup="${escHtml(g.label)}"><span class="jsN">${escHtml(g.label)}${g.n<5?'<span class="fewTag">(น้อย)</span>':''}</span>
+      <span data-lb="ไม้">${g.n}</span><span data-lb="Win%">${fmt2(g.winRate)}%</span><span data-lb="Avg R">${g.avgR===null?'—':fmt2(g.avgR)+'R'}</span>
+      <span data-lb="P&amp;L (฿)" class="${g.pnl>=0?'pnl-pos':'pnl-neg'}">฿${fmt0(g.pnl)}</span></div>`).join('')}</div>
+    <div class="jSetupNote" style="margin:8px 0 0">ไม้ที่มีหลาย setup นับซ้ำในแต่ละกลุ่ม</div>`;
+}
+/* E) เงื่อนไขที่ยกเลิก — อ่านอย่างเดียวจาก satIdeasList (ผูกกับ idea ไม่ผูกบัญชี · ไม่ขึ้นกับชิปบัญชี/พอร์ต/ช่วงเวลา) */
+function jCancelledConds(){
+  const out = [];
+  (Array.isArray(satIdeasList) ? satIdeasList : []).forEach(idea=>{
+    if(!idea || !Array.isArray(idea.conditions)) return;
+    idea.conditions.forEach(c=>{
+      if(c && c.status==='cancelled') out.push({at:String(c.cancelled_at||''), asset:idea.asset||'—', bias:idea.bias||'', text:String(c.text||''), week:idea.week||''});
+    });
+  });
+  return out.sort((a,b)=>b.at.localeCompare(a.at));
+}
+function jWeekLabel(w){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(w||''));
+  return m && Number(m[2])>=1 && Number(m[2])<=12 ? `${Number(m[3])} ${JV_MONTHS[Number(m[2])-1]}` : (w||'—');
+}
+function renderJournalCond(){
+  const host = document.getElementById('condBody'); if(!host) return;
+  const list = jCancelledConds();
+  const cnt = document.getElementById('condCount'); if(cnt) cnt.textContent = list.length ? `(${list.length})` : '';
+  const note = `<div class="jCondNote">ทุกบัญชี (แผน Sat ใช้ร่วมกัน)</div>`;
+  host.innerHTML = note + (list.length ? `<div class="jCondList">${list.map(x=>`<div class="jCondItem" data-cond-at="${escHtml(x.at)}">
+      <div class="jCondTop"><span>${escHtml(x.at.slice(0,10)||'—')}</span><b style="color:var(--text)">${escHtml(sat7dLabel(x.asset))}</b>${x.bias?`<span class="tag ${x.bias==='Long'?'long':'short'}">${escHtml(x.bias)}</span>`:''}<span>สัปดาห์ ${escHtml(jWeekLabel(x.week))}</span></div>
+      <div class="jCondTx">${escHtml(x.text||'—')}</div></div>`).join('')}</div>`
+    : `<div class="empty" data-cond="empty">ยังไม่มีเงื่อนไขที่ยกเลิก</div>`);
+}
+
 /* ================= render: Tab 2 (Journal) ================= */
+/* ★ 7F — jAcct = บัญชีที่ "ดู" ในแท็บ Journal (ค่าเริ่มต้น = acctActive ทุกครั้งที่เปิดแท็บ) · ไม่เขียน state · ไม่เปลี่ยน acctActive
+   ทั้งแท็บวาดในบริบท withAccount(jAcct) · ปุ่มในแถวทุกปุ่มส่ง account = jAcct */
+let jAcct = null;
+function jAcctId(){ if(!jAcct || !acctList.some(a=>a.id===jAcct)) jAcct = acctActive; return jAcct; }
+function setJAcct(id){ if(!acctList.some(a=>a.id===id)) return; jAcct = id; render(); }
+const jPanelCol = {setup:false, cond:true};   /* หน้าจอล้วน — หุบ/ขยายพาเนลใหม่ (ไม่เขียนลงข้อมูล) */
+function jPanelToggle(k){
+  jPanelCol[k] = !jPanelCol[k];
+  const c = document.getElementById('jContent_'+k), b = document.getElementById('jColBtn_'+k);
+  if(c) c.style.display = jPanelCol[k] ? 'none' : '';
+  if(b){ b.classList.toggle('collapsed', jPanelCol[k]); b.setAttribute('aria-expanded', jPanelCol[k]?'false':'true'); }
+}
 function renderJournal(){
   if(!state) return;
+  const A = jAcctId();
+  const multi = acctList.length > 1;
+  try{ renderJournalIncomplete(); }catch(err){ console.warn('journal incomplete:', err); }
+  const row = document.getElementById('jAcctRow');
+  if(row){
+    row.style.display = multi ? '' : 'none';
+    row.innerHTML = multi ? acctList.map(a=>`<span class="chip ${a.id===A?'on':''}" data-acct="${escHtml(a.id)}" onclick="setJAcct('${escHtml(a.id)}')"><span class="acctDotC" style="--ac:${acctColor(a)}"></span>${escHtml(a.name)}</span>`).join('') : '';
+  }
+  try{ renderJournalCond(); }catch(err){ console.warn('journal cond:', err); }
+  if(acctCtx !== null) return renderJournalBody(A);
+  return withAccount(A, ()=>renderJournalBody(A));
+}
+function renderJournalBody(A){
   ensureJournalView();
   JV_KINDS.forEach(jvRenderControls);
-  try{ renderJournalIncomplete(); }catch(err){ console.warn('journal incomplete:', err); }
+  const aq = escHtml(A);
   const j = journalStats();
-  const rWinClass = r => r===null ? '' : r>=0 ? 'good' : 'bad';
+  const ov = j.overall;
+  const acctName = (acctList.find(x=>x.id===A)||{}).name || A;
 
-  document.getElementById('jStrip').innerHTML = `
-    <div class="stat"${j.overall.nOffPlan?` title="ไม้นอกแผน ${j.overall.nOffPlan} ไม้ · P&L ฿${fmt0(j.overall.offPnlTHB)} — นับรวมในสถิติทั้งหมดแล้ว"`:''}>
-      ${j.overall.nOffPlan?`<div class="cornerbadge">นอกแผน <b class="rr-bad">${j.overall.nOffPlan}</b></div>`:''}
-      <div class="lbl">Closed Trades</div><div class="val">${j.overall.n}</div></div>
-    <div class="stat ${j.overall.n? (j.overall.winRate>=50?'good':'warn') : ''}"><div class="lbl">Win Rate</div><div class="val">${j.overall.n?fmt2(j.overall.winRate)+'%':'—'}</div></div>
-    <div class="stat ${rWinClass(j.overall.avgR)}"><div class="lbl">Avg R (Expectancy)</div><div class="val">${j.overall.avgR===null?'—':fmt2(j.overall.avgR)+'R'}</div></div>
-    <div class="stat ${j.overall.n ? (j.overall.totalPnlTHB>=0?'good':'bad') : ''}"><div class="lbl">Total Realized P&amp;L</div><div class="val">฿${fmt0(j.overall.totalPnlTHB)}</div></div>
-    <div class="stat ${j.overall.maxDD>0?'bad':''}"><div class="lbl">Max Drawdown (รวมทุก Port)</div><div class="val">${fmt2(j.overall.maxDDPct)}% <small>฿${fmt0(j.overall.maxDD)}</small></div></div>
-    <div class="stat ${j.overall.avgDisc===null?'':j.overall.avgDisc>=2.5?'good':j.overall.avgDisc>=1.5?'warn':'bad'}" title="วินัย = ทำตามแผนไหม (ไม่ใช่ผลลัพธ์)&#10;โชค = กำไรทั้งที่วินัยหลุด (≤1) — กำไรที่ไม่ควรเอาเป็นแบบอย่าง&#10;รับได้ = ขาดทุนทั้งที่ทำตามแผนเป๊ะ (3) — ต้นทุนปกติของระบบ">
-      <div class="cornerbadge">โชค <b class="${j.overall.luckyWins>0?'rr-bad':''}">${j.overall.luckyWins}</b><br>รับได้ <b>${j.overall.goodLosses}</b></div>
-      <div class="lbl">วินัยเฉลี่ย <small>(รีวิวแล้ว ${j.overall.nReviewed}/${j.overall.n})</small></div>
-      <div class="val">${j.overall.avgDisc===null?'—':fmt2(j.overall.avgDisc)+' / 3'}${j.overall.avgSetup===null?'':` <small>setup ${fmt2(j.overall.avgSetup)}</small>`}${j.overall.invalFired?` <small title="ในไม้ที่สัญญาณ invalidation เกิดขึ้นจริง ออกตามที่เขียนไว้กี่ครั้ง">· inval ${j.overall.invalHit}/${j.overall.invalFired}</small>`:''}</div></div>`;
+  /* ── A) บล็อกสรุปเข้ม (.sumBlk) — ตัวเลขเดิมจาก journalStats ของบัญชีนี้ทุกค่า ── */
+  const jvC0 = ensureJournalView('closed');
+  const period = jvC0.y==='all' ? 'ทั้งหมด' : jvLabel('closed');
+  const pill = (cls, tx) => `<span class="sumPill ${cls}">${tx}</span>`;
+  const phPill = `<span class="sumPill nt ph" aria-hidden="true">·</span>`;
+  const cell = (key, label, big, pillHtml, sub, title) => `<div class="sumCell" data-sum="${key}"${title?` title="${title}"`:''}>
+      <div class="sumL">${label}</div><div class="sumBig sumNw">${big}</div>${sub||''}${pillHtml||phPill}</div>`;
+  const has = ov.n > 0;
+  const decision = !has ? {tx:'ยังไม่มีไม้ปิดในช่วงนี้', warn:false, k:'empty'}
+    : ov.nOffPlan > 0 ? {tx:`ไม้นอกแผน ${ov.nOffPlan} ไม้ · P&amp;L ฿${fmt0(ov.offPnlTHB)} — ดูชิป นอกแผน`, warn:true, k:'offplan'}
+    : ov.luckyWins > 0 ? {tx:`ชนะแบบไม่ตามแผน ${ov.luckyWins} ไม้ — อย่านับเป็นฝีมือ`, warn:true, k:'lucky'}
+    : {tx:'ทุกไม้ในช่วงนี้ตามแผน', warn:false, k:'ok'};
+  document.getElementById('jSum').innerHTML = `
+    <div class="sumHead"><div class="sumT">Journal · ${escHtml(acctName)}</div><div class="sumR" data-jsum="period">${escHtml(period)}</div></div>
+    <div class="sumGrid jSumG">
+      ${cell('n','ไม้ปิด', ov.n, '', '')}
+      ${cell('win','Win Rate', has?fmt2(ov.winRate)+'%':'—', has?pill(ov.winRate>=50?'up':'dn', ov.winRate>=50?'≥ 50%':'&lt; 50%'):'')}
+      ${cell('avgr','Avg R', ov.avgR===null?'—':fmt2(ov.avgR)+'R', (ov.avgR===null||ov.avgR===0)?'':pill(ov.avgR>0?'up':'dn', ov.avgR>0?'บวก':'ติดลบ'))}
+      ${cell('pnl','P&amp;L (฿)', has?'฿'+fmt0(ov.totalPnlTHB):'—', (has&&ov.totalPnlTHB!==0)?pill(ov.totalPnlTHB>0?'up':'dn', ov.totalPnlTHB>0?'กำไร':'ขาดทุน'):'')}
+      ${cell('dd','Max DD', has?fmt2(ov.maxDDPct)+'%':'—', '', has?`<div class="sumSub">฿${fmt0(ov.maxDD)}</div>`:'')}
+      ${cell('disc','วินัยเฉลี่ย', ov.avgDisc===null?'—':fmt2(ov.avgDisc)+' <small>/ 3</small>', '', `<div class="sumSub">รีวิวแล้ว ${ov.nReviewed}/${ov.n}</div>`,
+        `วินัย = ทำตามแผนไหม (ไม่ใช่ผลลัพธ์) · โชค ${ov.luckyWins} · รับได้ ${ov.goodLosses}`)}
+    </div>
+    <div class="sumMeta" data-jsum="decision" data-k="${decision.k}"><span class="sumM${decision.warn?' warn':''}">${decision.tx}</span></div>`;
 
-  document.getElementById('jPorts').innerHTML = portsOn().map(([k,p])=>{
+  /* ── การ์ดต่อพอร์ต — เฉพาะพอร์ตที่บัญชีนี้มี · Sat.A (เก็บถาวร) เฉพาะเมื่อมีไม้ satA ── */
+  const hasSatA = jHasSatA();
+  const jPortName = k => k==='satA' ? 'เก็บถาวร (Sat.A เดิม)' : PORTS[k].name;
+  document.getElementById('jPorts').innerHTML = portsOn().filter(([k])=>k!=='satA' || hasSatA).map(([k,p])=>{
     const st = j[k];
-    return `<div class="port">
-      <div class="pname"><span class="dot" style="background:${p.color}"></span>${p.name}</div>
+    return `<div class="port" data-port="${k}">
+      <div class="pname"><span class="dot" style="background:${p.color}"></span>${jPortName(k)}</div>
       <div class="nums">
         <div><span class="k">Closed Trades</span>${st.n}</div>
         <div><span class="k">Win Rate</span>${st.n?fmt2(st.winRate)+'%':'—'}</div>
@@ -5053,15 +5203,23 @@ function renderJournal(){
     </div>`;
   }).join('');
 
-  const jfdefs = [['all','ทั้งหมด'],['core','Core'],['satA','Sat.A'],['satB','Sat'],['win','Win'],['loss','Loss'],['offplan','นอกแผน']];
+  /* ── ชิปกรอง: ซ่อนชิปพอร์ตที่บัญชีไม่มี · ชิปที่เลือกไว้แต่ไม่มีในบัญชีนี้ → กลับ "ทั้งหมด" ── */
+  const jfdefs = [['all','ทั้งหมด']];
+  if(portOn('core')) jfdefs.push(['core','Core']);
+  if(portOn('satA') && hasSatA) jfdefs.push(['satA','เก็บถาวร']);
+  if(portOn('satB')) jfdefs.push(['satB','Sat']);
+  jfdefs.push(['win','Win'],['loss','Loss'],['offplan','นอกแผน']);
+  if(!jfdefs.some(([k])=>k===jFilter)) jFilter = 'all';
   document.getElementById('jFilters').innerHTML = jfdefs.map(([k,l])=>
-    `<span class="chip ${jFilter===k?'on':''}" onclick="setJFilter('${k}')">${l}</span>`).join('');
+    `<span class="chip ${jFilter===k?'on':''}" data-jf="${k}" onclick="setJFilter('${k}')">${l}</span>`).join('');
 
   let rows = j.closed.slice().sort((a,b)=>(b.exitDate||b.date||'').localeCompare(a.exitDate||a.date||''));
   if(jFilter==='win') rows = rows.filter(t=>realizedPnlOf(t)>0);
   else if(jFilter==='loss') rows = rows.filter(t=>realizedPnlOf(t)<=0);
   else if(jFilter==='offplan') rows = rows.filter(t=>!!t.unplanned);
   else if(jFilter!=='all') rows = rows.filter(t=>t.port===jFilter);
+
+  renderJournalSetup(j.closed.filter(t=>['core','satA','satB'].includes(jFilter) ? t.port===jFilter : true));
 
   const jBody = document.getElementById('jTbody');
   const jCards = document.getElementById('jCards');
@@ -5088,7 +5246,7 @@ function renderJournal(){
     legs.forEach(t=>{ const qy=t.qty||0; sumQty+=qy; sumExitQty+=(t.exitPrice||0)*qy; sumEntryQty+=(t.entry||0)*qy; totalPnl+=realizedPnlOf(t)||0; const r=realizedROf(t); if(r!==null){ sumR+=r*qy; qR+=qy; } });
     return { sumQty, avgExit:sumQty?sumExitQty/sumQty:0, avgEntry:sumQty?sumEntryQty/sumQty:0, totalPnl, blendR: qR?sumR/qR:null };
   }
-  function jPortShort(p){ return p==='core'?'Core':p==='satA'?'Sat.A':'Sat'; }
+  function jPortShort(p){ return p==='core'?'Core':p==='satA'?'เก็บถาวร':'Sat'; }
 
   /* ── รีวิวไม้: วินัย / Setup / เหตุผลที่ออก ───────────────────────────
      null = ยังไม่ให้คะแนน (โชว์ —)  ต่างจาก 0 = ให้แล้วว่าแย่ (โชว์ 0 สีแดง) */
@@ -5130,8 +5288,8 @@ function renderJournal(){
       <td class="sans" style="white-space:nowrap">${jReviewCell(t)}</td>
       <td class="sans" style="max-width:200px;white-space:normal;font-size:var(--closed-size)">${jReasonCell(t)}</td>
       <td class="sans"><div class="rowbtns">
-        <button class="small" onclick="editTrade('${t.id}')">✎</button>
-        <button class="small danger" onclick="delTrade('${t.id}')">✕</button>
+        <button class="small" onclick="editTrade('${t.id}','${aq}')">✎</button>
+        <button class="small danger" onclick="delTrade('${t.id}','${aq}')">✕</button>
       </div></td>
     </tr>`;
   }
@@ -5176,8 +5334,8 @@ function renderJournal(){
       <div class="foot">
         <div></div>
         <div class="rowbtns">
-          <button class="small" onclick="editTrade('${t.id}')">แก้ไข</button>
-          <button class="small danger" onclick="delTrade('${t.id}')">ลบ</button>
+          <button class="small" onclick="editTrade('${t.id}','${aq}')">แก้ไข</button>
+          <button class="small danger" onclick="delTrade('${t.id}','${aq}')">ลบ</button>
         </div>
       </div>
     </div>`;
@@ -5221,16 +5379,16 @@ function renderJournal(){
       const imgSrc = t.imageUrl ? driveImgSrc(t.imageUrl) : null;
       return `<tr>
         <td>${t[cfg.dateField]||'—'}</td>
-        <td class="sans"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PORTS[t.port].color};margin-right:5px"></span>${t.port==='core'?'Core':t.port==='satA'?'Sat.A':'Sat'}</td>
+        <td class="sans"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PORTS[t.port].color};margin-right:5px"></span>${t.port==='core'?'Core':t.port==='satA'?'เก็บถาวร':'Sat'}</td>
         <td style="font-weight:600">${t.sym}</td>
         <td class="sans"><span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span></td>
         <td>${fmt2(t.entry)}</td><td>${fmt2(t.sl)}</td><td>${t.tp?fmt2(t.tp):'—'}</td>
         <td class="sans" style="max-width:260px;white-space:normal;font-size:var(--closed-size)">${reasonHtml(t)}</td>
         <td class="sans">${t.imageUrl ? (imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')" title="เปิดรูป">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 รูป</a>`) : ''}</td>
         <td class="sans"><div class="rowbtns">
-          <button class="small" onclick="${cfg.editFn}('${t.id}')" title="แก้ไขเหตุผล / รูป">✎</button>
-          <button class="small" onclick="${cfg.restoreFn}('${t.id}')" title="ย้ายกลับไป Plan">↩</button>
-          <button class="small danger" onclick="delTrade('${t.id}')">✕</button>
+          <button class="small" onclick="${cfg.editFn}('${t.id}','${aq}')" title="แก้ไขเหตุผล / รูป">✎</button>
+          <button class="small" onclick="${cfg.restoreFn}('${t.id}','${aq}')" title="ย้ายกลับไป Plan">↩</button>
+          <button class="small danger" onclick="delTrade('${t.id}','${aq}')">✕</button>
         </div></td>
       </tr>`;
     }).join('');
@@ -5244,9 +5402,9 @@ function renderJournal(){
         <div class="foot">
           <div></div>
           <div class="rowbtns">
-            <button class="small" onclick="${cfg.editFn}('${t.id}')">แก้ไข</button>
-            <button class="small" onclick="${cfg.restoreFn}('${t.id}')">↩ Restore</button>
-            <button class="small danger" onclick="delTrade('${t.id}')">ลบ</button>
+            <button class="small" onclick="${cfg.editFn}('${t.id}','${aq}')">แก้ไข</button>
+            <button class="small" onclick="${cfg.restoreFn}('${t.id}','${aq}')">↩ Restore</button>
+            <button class="small danger" onclick="delTrade('${t.id}','${aq}')">ลบ</button>
           </div>
         </div>
       </div>`;
@@ -8368,10 +8526,11 @@ function setUnplannedMode(on){
   document.getElementById('unplannedBanner').style.display = on ? '' : 'none';
 }
 /* เปิดฟอร์มบันทึกไม้ที่ปิดไปแล้วแต่ไม่ได้วางแผนไว้ก่อน — ข้าม Checklist โดยตั้งใจ */
-function openUnplannedClosed(){
-  openTrade();
+function openUnplannedClosed(acctId){
+  openTrade(undefined, undefined, undefined, undefined, acctId);   /* 7F-fix — จากแท็บ Journal ส่ง jAcct: บันทึกเข้าบัญชีที่กำลังดู */
   /* บันทึกไม้ที่ปิดไปแล้วย้อนหลัง — ต้องเลือก Sat.B ได้ ไม่งั้น Journal ไม่ตรงกับความจริง */
   tradeAllowSatB = true;
+  formRun(()=>{
   acctSyncPortSelect('tPort');
   setUnplannedMode(true);
   setSymFreeMode(true, '');
@@ -8383,6 +8542,7 @@ function openUnplannedClosed(){
   document.getElementById('tExitDate').value = today;
   document.getElementById('tDiscScore').value = '0';
   calcHint();
+  });
 }
 function openTradeBody(presetSym, presetTier, presetBias, presetSizeFactor){
   editId = null;
@@ -8489,8 +8649,8 @@ function tradeFillAcctSelect(sel, locked){
   el.value = sel; el.disabled = !!locked;
   if(row) row.style.display = acctList.length > 1 ? '' : 'none';
 }
-function openTrade(presetSym, presetTier, presetBias, presetSizeFactor){
-  formAcct = tradeDefaultAcct();
+function openTrade(presetSym, presetTier, presetBias, presetSizeFactor, acctId){
+  formAcct = (acctId && acctList.some(a=>a.id===acctId)) ? acctId : tradeDefaultAcct();
   tradeFillAcctSelect(formAcct, false);
   return formRun(()=>openTradeBody(presetSym, presetTier, presetBias, presetSizeFactor));
 }
@@ -9017,14 +9177,15 @@ function confirmMissed(){
   saveBook(missedAcct);
   render();
 }
-function restoreMissed(id){
-  const t = state.trades.find(x=>x.id===id); if(!t) return;
+function restoreMissed(id,A){
+  A = A || acctActive;
+  const t = getBook(A).trades.find(x=>x.id===id); if(!t) return;
   if(!confirm(`ย้าย ${t.sym} กลับไปที่ Plan เหมือนเดิม?`)) return;
   t.status = 'plan';
   /* เก็บเหตุผลเดิมไว้ ไม่ล้าง — เผื่อกดผิดแล้วกด Missed ใหม่ จะได้ไม่ต้องพิมพ์ซ้ำ */
   t.missedDate = null;
+  saveBook(A);
   render();
-  schedulePersist();
 }
 
 /* ================= Cancel Trade ================= */
@@ -9069,13 +9230,14 @@ function confirmCancel(){
   saveBook(cancelAcct);
   render();
 }
-function restoreCancelled(id){
-  const t = state.trades.find(x=>x.id===id); if(!t) return;
+function restoreCancelled(id,A){
+  A = A || acctActive;
+  const t = getBook(A).trades.find(x=>x.id===id); if(!t) return;
   if(!confirm(`ย้าย ${t.sym} กลับไปที่ Plan เหมือนเดิม?`)) return;
   t.status = 'plan';
   t.cancelDate = null;
+  saveBook(A);
   render();
-  schedulePersist();
 }
 
 /* ================= settings ================= */
@@ -10260,6 +10422,7 @@ function sat7dStart(){
     satUnsubs.push(c1.onSnapshot(snap=>{
       satIdeasList = snap.docs.map(d=>({...(d.data()||{}), id:d.id}));
       satErr = null; sat7dRefresh();
+      try{ renderJournalCond(); }catch(e){ console.warn('journal cond:', e); }   /* 7F — พาเนลเงื่อนไขที่ยกเลิก (อ่านอย่างเดียว) */
     }, err=>{ console.warn('satIdeas listener:', err); satErr = sat7dErrText(err); sat7dRefresh(); }));
   }catch(e){ satErr = sat7dErrText(e); }
   try{
