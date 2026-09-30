@@ -1883,6 +1883,44 @@ button.ccChip{cursor:pointer;min-height:24px}
 .ccAll{margin-left:auto;font-size:.78rem;color:var(--muted)}
 .ccLnk{border:0;background:none;color:var(--blue);cursor:pointer;font:inherit;font-size:.78rem;padding:4px;min-height:36px;box-shadow:none}
 .ccNote{font-size:.76rem;color:var(--muted);margin:-6px 0 10px}
+/* 7E-2b-1 — การ์ด L · ตารางบันได · ประตู · บล็อก Tier · แถบ 4 ส่วน */
+.ccTbl tr.cancelled td{color:var(--faint);text-decoration:line-through}
+.ccTbl tr.fillRow td{text-align:left;font-size:.72rem;color:var(--muted);font-family:var(--sans);border-bottom:1px solid var(--soft);padding-top:0}
+.ccTbl tr.totRow td{font-weight:600;border-bottom:0;text-align:left;white-space:normal;font-family:var(--sans)}
+.ccTbl td.st{font-family:var(--sans);text-align:left}
+.ccTbl td.st.up{color:var(--up)}.ccTbl td.st.nt{color:var(--muted)}
+.ccTbl .redT{color:var(--dn)}
+.ccGates{margin:8px 0;display:grid;gap:3px}
+.ccGate{font-size:.8rem;line-height:1.4}
+.ccGate.ok{color:var(--up)}.ccGate.no{color:var(--dn)}.ccGate.na{color:var(--muted)}
+.ccSeg.ccSegW{display:flex;flex-wrap:wrap}
+.ccChip.nt{color:var(--muted);background:var(--soft)}
+.ccSumLn{font-size:.8rem;color:var(--muted);margin-top:4px}
+.ccSumLn b{color:var(--dark);font-family:var(--mono);font-weight:600}
+.ccLvRow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 8px;align-items:center;margin-bottom:6px}
+.ccLvRow label{font-size:.78rem;color:var(--muted);min-width:24px}
+.ccTier{border:1px solid var(--line);border-radius:var(--r-row);padding:10px 12px;margin-bottom:10px}
+.ccTier h4{font-size:.78rem;color:var(--muted);font-weight:600;margin:0 0 6px}
+.ccTier .ccPair3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.ccG5{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center;margin-bottom:4px;font-size:.78rem}
+.ccTierRes{font-size:.82rem;margin:6px 0}
+.ccTierRes b.A{color:var(--up)}.ccTierRes b.B{color:var(--warn)}
+.ccChip.ov{color:var(--dn);border-color:var(--dn);background:var(--red-dim)}
+.sumBar4{display:flex;width:100%;height:10px;border-radius:5px;overflow:hidden;background:var(--sum-line);margin:8px 0 4px}
+.sumBar4 i{display:block;flex:none;height:100%;box-sizing:border-box}
+.sumBar4 i[data-seg="wheld"]{background:var(--sum-strong)}
+.sumBar4 i[data-seg="lheld"]{background:var(--sum-up)}
+.sumBar4 i[data-seg="lres"]{background:var(--sum-warn-val)}
+.sumBar4 i[data-seg="free"]{background:transparent}
+.sumLeg{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:.72rem;color:var(--sum-muted)}
+.sumLeg span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:0;background:var(--lc)}
+.sumFull{font-size:1.15rem;font-weight:700;line-height:1.3;margin-top:2px;overflow-wrap:anywhere}
+.sumFull small{font-size:.8rem;color:var(--sum-muted);font-weight:500}
+.sumCell.sumLv-warn .sumFull b{color:var(--sum-warn-val)}.sumCell.sumLv-over .sumFull b{color:var(--sum-dn)}
+.sumBar2{position:relative;display:flex;width:100%;height:8px;border-radius:4px;overflow:hidden;background:var(--sum-line);margin:8px 0 4px}
+.sumBar2 i{display:block;flex:none;height:100%}
+.sumBar2 i.now{background:var(--sum-strong)}.sumBar2 i.res{background:var(--sum-warn-val);opacity:.45}
+.sumBar2 b{position:absolute;top:0;bottom:0;width:2px;background:var(--sum-warn-val)}
 @media(max-width:700px){
   .ccRow{grid-template-columns:30px minmax(0,1fr) 18px;grid-template-areas:"ic tk ch" "ic nu ch";row-gap:2px;padding:8px 10px}
   .ccRow .ccIc{grid-area:ic}.ccRow .ccTkw{grid-area:tk}.ccRow .ccNums{grid-area:nu;gap:10px;font-size:.78rem}.ccRow .ccChev{grid-area:ch}
@@ -2511,7 +2549,7 @@ button.ccChip{cursor:pointer;min-height:24px}
     emergencyPct: 0.07,   // Stop ฉุกเฉิน = Stop × (1 − 7%)
     staleDays: 7,
     gateStreak: 2,        // เปิดบันไดใหม่: f < 100% ติดกัน 2 สัปดาห์
-    tier: { roicMin: 0.15, ndEbitdaMax: 2, fcfConvMin: 0.8 }
+    tier: { roicMin: 0.12, ndEbitdaMax: 2, fcfConvMin: 0.8 }
   };
   var SPLIT = { 2: [0.5, 0.5], 3: [0.4, 0.3, 0.3] };
 
@@ -2784,12 +2822,14 @@ button.ccChip{cursor:pointer;min-height:24px}
     var nl = o.ladder;
     if (!nl || !nl.ok) { reasons.push('BAD_LADDER'); return { ok: true, allowed: false, reasons: reasons }; }
     var ex = o.existingLadders || [];
-    var sp = portfolioSplit({ tank: o.tank, wCost: o.wCost, ladders: ex });
-    if ((sp.lUsed + nl.cost) / o.tank > DEFAULTS.ladderShareCap + EPS) reasons.push('L_SHARE_OVER');
+    var shareCap = num(o.shareCap) ? o.shareCap : DEFAULTS.ladderShareCap;
+    var l2Cap = num(o.l2Cap) ? o.l2Cap : DEFAULTS.layer2Cap;
+    var sp = portfolioSplit({ tank: o.tank, wCost: o.wCost, ladders: ex, capPct: shareCap });
+    if ((sp.lUsed + nl.cost) / o.tank > shareCap + EPS) reasons.push('L_SHARE_OVER');
     var res = (o.reserved || []).slice(), i;
     for (i = 0; i < nl.rows.length; i++) if (nl.rows[i].status === 'wait') res.push({ qty: nl.rows[i].qty, px: nl.rows[i].px, stop: nl.sl });
     var l2 = layer2({ tank: o.tank, positions: o.positions || [], reserved: res });
-    if (l2.pctFull > DEFAULTS.layer2Cap + EPS) reasons.push('LAYER2_OVER');
+    if (l2.pctFull > l2Cap + EPS) reasons.push('LAYER2_OVER');
     if (nl.cost > sp.cashFree + EPS) reasons.push('NO_CASH');
     return { ok: true, allowed: reasons.length === 0, reasons: reasons, pctFull: l2.pctFull, cashFree: sp.cashFree, sharePct: (sp.lUsed + nl.cost) / o.tank };
   }
@@ -4646,6 +4686,7 @@ function journalStats(){
 /* ================= formatting ================= */
 const fmt0 = n => n.toLocaleString('en-US',{maximumFractionDigits:0});
 const fmt2 = n => n.toLocaleString('en-US',{maximumFractionDigits:2});
+const coreP = n => (+n).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});   /* 7E-2b-1: ราคาบนการ์ด/ตาราง L = ทศนิยม 2 ตำแหน่งเสมอ (100.00) */
 const pct = (n,cap) => cap>0 ? (n/cap*100) : 0;
 function hexToRgba(hex, alpha){
   const h = hex.replace('#','');
@@ -4878,12 +4919,16 @@ function renderPlanSections(){
    ⚠ Firestore rules: ต้องมี  match /users/{uid}/coreCards/{doc} { allow read, write, delete: if request.auth.uid == uid; }
    listener อ่านอย่างเดียว (handler ไม่เขียนกลับ) · เขียนจากการกระทำของผู้ใช้เท่านั้น (coreWrite = set merge)
    คำนวณทุกตัวเลขผ่าน Calc.coreSize (core-size.js) — ไม่มีสูตรซ้ำในนี้ · ไม้จริงเก็บใน books.<acct>.trades (การ์ดอ้าง trade_id)
-   ฟิลด์การ์ด: acct ticker market strategy('W') tier tierReason plan{entry,stop} stop stopHistory[] px pxDate emaW lots[{n,date,px,qty,f,stop}] trade_id status('plan'|'open') created_at updated_at
+   ฟิลด์การ์ด: acct ticker market strategy('W'|'L') tier tierReason plan{entry,stop} stop stopHistory[] px pxDate emaW lots[{n,date,px,qty,f,stop}] trade_id status('plan'|'open') created_at updated_at
+   7E-2b-1 · การ์ด L (ถัวตามแนวรับ · Tier A): strategy:'L' · plan:null · emaW:null (ไม่ใช้ EMA10) · stop (= ladder.sl เสมอ) · lots[{n,level,date,px,qty,f:null,stop}]
+     ladder:{levels:[{px, status:'wait'|'bought'|'cancelled', qty?, fillPx?, boughtAt?, cancelledAt?, cancelBy?:'stop'|'manual'}], sl, budgetPct (เศษส่วน), split:[0.4,0.3,0.3]|[0.5,0.5], lockedAt}
+     บันทึกแผน L = ล็อกแผน = จองเงินทันที (ไม่มีสถานะร่าง) · Tier คำนวณ (ทั้ง W และ L): tierInputs{roic,ndEbitda,fcfConv,gate5{substitute,customerMigrating,singleProduct}} tierComputed tierReason (เฉพาะ override A)
    ═══════════════════════════════════════════════════════════════════════════ */
 let coreCardsList = [], coreErr = null, coreUnsub = null, coreUnsubUid = null;
 const coreSim = {};                 /* id -> {px, stop} ช่องจำลองไม้เติม (หน้าจอล้วน) */
 const coreShowReason = new Set();   /* id ที่กางเหตุผล Tier A */
-let coreNew = null;                 /* สถานะ sheet แผนใหม่ {acct, tier, f, showAll} */
+let coreNew = null;                 /* สถานะ sheet แผนใหม่ {acct, strat:'W'|'L', mode:'new'|'convert'|'edit', id, f, showAll, nlv, lv[], bud} */
+let coreTi = null;                  /* 7E-2b-1 · สถานะบล็อก Tier {g5{}, pick} (ช่องตัวเลขอ่านจาก DOM) */
 let coreDlg = null;                 /* สถานะ sheet อื่น {kind, id} */
 
 function coreCol(){ return (uid && typeof db!=='undefined' && db) ? db.collection('users').doc(uid).collection('coreCards') : null; }
@@ -4970,12 +5015,85 @@ function coreFWarn(F){
   if(F.missing && F.missing.length) return `⚠ Fund-flow ไม่มีข้อมูล ${F.missing.join('/')}`;
   return '';
 }
+/* 7E-2b-1 — ฐานของบัญชี (ยังไม่มีบันได) · ทุกตัวเลขบันได/งบเรียก Calc.coreSize (ไม่มีสูตรซ้ำ) · ประตู/งบ/ชั้น 2 คิดเป็นบาท · ตารางบนการ์ดแสดงสกุลตลาด */
+function coreBase(A){
+  const B = getBook(A), fx = +B.settings.fx || 1;
+  return {A, B, fx, tankTHB: coreTankTHB(B), cfg: coreRiskCfg(A), opts: coreSizeOpts(A)};
+}
+/* บันไดของการ์ด L → {nat: สกุลตลาด, thb: บาท} · thb คูณ px/sl ด้วย r (US = fx · TH = 1) และ tank = ถังบาท → จำนวนหุ้นต้องเท่ากับ nat ทุกระดับ */
+function coreLadderCalc(ld, mk, cx){
+  const cs = Calc.coreSize;
+  if(!cs || !ld || !Array.isArray(ld.levels)) return null;
+  const r = mk==='US' ? cx.fx : 1;
+  const args = (k, tank)=>({tier:'A', tank, sl:(+ld.sl)*k, levels: ld.levels.map(l=>({px:(+l.px)*k, status:l.status})),
+    split: ld.split, budgetPct: ld.budgetPct, riskCapPct: cx.cfg.ladderRisk/100, market: mk});
+  return {nat: cs.ladder(args(1, cx.tankTHB/r)), thb: cs.ladder(args(r, cx.tankTHB))};
+}
+/* การ์ด L ของบัญชีที่ยังไม่ปิด (ยกเว้น exceptId) · ต่อใบ: {c, mk, calc, e, heldTHB, reservedTHB, reservedRows[{qty,px,stop}] (บาท)} */
+function coreLadders(A, exceptId, bx){
+  bx = bx || coreBase(A);
+  const out = [];
+  coreCardsList.forEach(c=>{
+    if(c.acct!==A || c.strategy!=='L' || !c.ladder || c.id===exceptId) return;
+    const e = coreEff(c); if(e.kind==='closed') return;
+    const mk = c.market || coreMarketOf(c.ticker), calc = coreLadderCalc(c.ladder, mk, bx);
+    let held = 0;
+    if(e.kind==='open' && e.t) held = (+e.t.entry||0)*(+e.t.qty||0)*(e.t.mult||1)*(tradeCur(e.t)==='USD' ? bx.fx : 1);
+    const rows = []; let resv = 0;
+    if(calc && calc.thb && calc.thb.ok) calc.thb.rows.forEach(w=>{ if(w.status==='wait'){ rows.push({qty:w.qty, px:w.px, stop:calc.thb.sl}); resv += w.cost; } });
+    out.push({c, mk, calc, e, heldTHB:held, reservedTHB:resv, reservedRows:rows});
+  });
+  return out;
+}
+/* ทุนของ trade Core ที่เปิดอยู่ที่ไม่ผูกกับการ์ด L (ไม้ W + ไม้ไม่มีการ์ด) */
+function coreWCost(A, bx){
+  const lTid = new Set(coreCardsList.filter(c=>c.acct===A && c.strategy==='L' && c.trade_id).map(c=>c.trade_id));
+  return bx.B.trades.filter(t=>t.port==='core' && t.status==='open' && !lTid.has(t.id))
+    .reduce((a,t)=>a + (+t.entry||0)*(+t.qty||0)*(t.mult||1)*(tradeCur(t)==='USD'?bx.fx:1), 0);
+}
 function coreCtx(A){
-  const B = getBook(A), fx = +B.settings.fx || 1, tankTHB = coreTankTHB(B);
+  const bx = coreBase(A), B = bx.B, fx = bx.fx, tankTHB = bx.tankTHB;
   const openTr = B.trades.filter(t=>t.port==='core' && t.status==='open');
   const held = openTr.reduce((a,t)=>a + (+t.entry||0)*(+t.qty||0)*(t.mult||1)*(tradeCur(t)==='USD'?fx:1), 0);
-  const sp = tankTHB>0 && Calc.coreSize ? Calc.coreSize.portfolioSplit({tank:tankTHB, wCost:held}) : null;
-  return {A, B, fx, tankTHB, held, cashTHB: sp && sp.ok ? sp.cashFree : Math.max(0, tankTHB-held), cfg: coreRiskCfg(A), opts: coreSizeOpts(A), F: coreFNow()};
+  const wCost = coreWCost(A, bx), ladders = coreLadders(A, null, bx);
+  const sp = tankTHB>0 && Calc.coreSize ? Calc.coreSize.portfolioSplit({tank:tankTHB, wCost, ladders: ladders.map(x=>({heldCost:x.heldTHB, reservedCost:x.reservedTHB})), capPct: bx.cfg.ladderShare/100}) : null;
+  const split = sp && sp.ok ? sp : null;
+  return {A, B, fx, tankTHB, held, wCost, ladders, split, cashTHB: split ? split.cashFree : Math.max(0, tankTHB-held), cfg: bx.cfg, opts: bx.opts, F: coreFNow()};
+}
+/* ประตูเปิดบันไดใหม่ (f) · ไม่ทราบ = ไฟล์เก่า/demo/ขาดข้อมูล (ไม่ใช่ 100%) */
+function coreGate(A){
+  const cs = Calc.coreSize, cfg = coreRiskCfg(A), F = coreFNow();
+  const fNow = (F.demo || F.stale || (F.missing && F.missing.length)) ? null : F.f;
+  let fPrev = null;
+  try{ const D = ffChangesData(); if(D && D.capPrev!=null) fPrev = D.capPrev/100; }catch(e){}
+  const g = cs.openGate({fHistory:[fNow, fPrev], need: cfg.gateWeeks});
+  const text = g.status==='unknown' ? 'ไม่ทราบ (ไฟล์เก่า/ไม่มีข้อมูล)'
+    : (g.status==='green' ? 'f เขียว · งดเปิดบันไดใหม่'
+    : (g.open ? `แดง ≥ ${g.need} สัปดาห์ · เปิดได้` : `แดง ${g.streak} สัปดาห์ · ยังไม่เปิด`));
+  return Object.assign({}, g, {text, fNow, fPrev});
+}
+/* วางบันไดใหม่ได้ไหม → {allowed, reasons[], rows[{k,ok,text}]} · draft = {tier, thb (ผล ladder เป็นบาท)} · isEdit = ตัดประตู f ออก (แก้แผนเดิม) */
+function coreCanPlace(A, draft, exceptId, isEdit){
+  const cs = Calc.coreSize, bx = coreBase(A), cfg = bx.cfg;
+  const gate = coreGate(A), lad = coreLadders(A, exceptId, bx), l2i = coreL2Positions(A, bx);
+  const reserved = []; lad.forEach(x=>x.reservedRows.forEach(r=>reserved.push(r)));
+  const shareCap = cfg.ladderShare/100, l2Cap = cfg.l2Cap/100;
+  const res = cs.canPlaceLadder({tank: bx.tankTHB, tier: draft.tier, gate, ladder: draft.thb, wCost: coreWCost(A, bx),
+    existingLadders: lad.map(x=>({heldCost:x.heldTHB, reservedCost:x.reservedTHB})), positions: l2i.positions, reserved, shareCap, l2Cap});
+  if(!res.ok) return {allowed:false, reasons:[res.err], rows:[], res};
+  const reasons = isEdit ? res.reasons.filter(r=>!/^GATE_/.test(r)) : res.reasons;
+  const has = k=>reasons.indexOf(k) >= 0, bad = has('BAD_LADDER');
+  const rows = [
+    {k:'tier', ok: draft.tier==='A', text: draft.tier==='A' ? 'Tier A' : 'Tier A · ตอนนี้เป็น Tier B'},
+    isEdit ? {k:'gate', ok:true, na:true, text:'ประตู f · ไม่เช็กตอนแก้แผน (บันไดเดิมทำงานต่อ)'} : {k:'gate', ok: gate.open, text:'ประตู f · ' + gate.text},
+    bad ? {k:'share', ok:null, text:`L รวม — ≤ ${fmt2(cfg.ladderShare)}%`} : {k:'share', ok:!has('L_SHARE_OVER'), text:`L รวม ${fmt2(res.sharePct*100)}% ≤ ${fmt2(cfg.ladderShare)}%`},
+    bad ? {k:'l2', ok:null, text:`ชั้น 2 รวมบันไดใหม่ — ≤ ${fmt2(cfg.l2Cap)}%`} : {k:'l2', ok:!has('LAYER2_OVER'), text:`ชั้น 2 รวมบันไดใหม่ ${fmt2(res.pctFull*100)}% ≤ ${fmt2(cfg.l2Cap)}%`},
+    bad ? {k:'cash', ok:null, text:'เงินสดว่าง — ≥ —'} : {k:'cash', ok:!has('NO_CASH'), text:`เงินสดว่าง ฿${fmt0(res.cashFree)} ≥ ฿${fmt0(draft.thb.cost)}`}
+  ];
+  return {allowed: reasons.length===0, reasons, rows, res, gate};
+}
+function coreGatesHtml(cp){
+  return `<div class="ccGates" data-c-gates>${cp.rows.map(r=>`<div class="ccGate ${r.ok===null?'na':(r.na?'na':(r.ok?'ok':'no'))}" data-gate="${r.k}" data-ok="${r.ok===null?'':(r.ok?1:0)}">${r.ok===null?'·':(r.ok?'✓':'✗')} ${escHtml(r.text)}</div>`).join('')}</div>`;
 }
 function coreFirstLotCalc(cx, mk, tier, entry, stop, f){
   const cs = Calc.coreSize; if(!cs) return null;
@@ -5005,11 +5123,12 @@ function coreFirstLotHtml(cx, mk, tier, entry, stop, f, fLbl){
 }
 
 /* ── ชั้น 2 จากราคา (5.1) ── positions = การ์ด open ของบัญชี (qty/stop จาก trade · px จากการ์ดถ้าไม่เก่า > 7 วัน) → Calc.coreSize.layer2
+   7E-2b-1: + reserved = ระดับบันไดที่จอง (บาท) → pct (ตอนนี้) + pctFull (ถ้าบันไดเต็ม)
    คืน layer2 ดิบ (pct = เศษส่วน) + {tank, cards[{c,t,live,r}], cfg} · ทำงานได้ทั้งในและนอก withAccount (อ่านผ่าน getBook) */
-function coreLayer2(A){
-  const cs = Calc.coreSize; if(!cs) return null;
-  const B = getBook(A), fx = +B.settings.fx || 1, today = posThaiToday(), cfg = coreRiskCfg(A), tank = coreTankTHB(B);
-  const positions = [], cards = [];
+function coreL2Positions(A, bx){
+  const cs = Calc.coreSize;
+  bx = bx || coreBase(A);
+  const B = bx.B, fx = bx.fx, today = posThaiToday(), positions = [], cards = [];
   coreCardsList.forEach(c=>{
     if(c.acct!==A || c.status!=='open') return;
     const t = B.trades.find(x=>x.id===c.trade_id); if(!t || t.status!=='open') return;
@@ -5018,9 +5137,17 @@ function coreLayer2(A){
     positions.push({qty:+t.qty, px: live ? +c.px*r : null, stop:+t.sl*r});
     cards.push({c, t, live, r});
   });
-  const l2 = cs.layer2({tank, positions, cap: cfg.l2Cap/100, warn: Math.min(cfg.l2Warn, cfg.l2Cap)/100});
-  if(!l2.ok) return {ok:false, pct:0, risk:0, missing:0, level:'ok', tank, cards, cfg};
-  return Object.assign({}, l2, {tank, cards, cfg});
+  return {positions, cards};
+}
+function coreLayer2(A){
+  const cs = Calc.coreSize; if(!cs) return null;
+  const bx = coreBase(A), cfg = bx.cfg, tank = bx.tankTHB;
+  const {positions, cards} = coreL2Positions(A, bx);
+  const ladders = coreLadders(A, null, bx), reserved = [];
+  ladders.forEach(x=>x.reservedRows.forEach(r=>reserved.push(r)));
+  const l2 = cs.layer2({tank, positions, reserved, cap: cfg.l2Cap/100, warn: Math.min(cfg.l2Warn, cfg.l2Cap)/100});
+  if(!l2.ok) return {ok:false, pct:0, pctFull:0, risk:0, riskFull:0, riskReserved:0, missing:0, level:'ok', tank, cards, cfg, ladders};
+  return Object.assign({}, l2, {tank, cards, cfg, ladders});
 }
 function coreL2Level(pctNum, cfg){
   const lim = cfg.l2Cap, warnAt = Math.min(cfg.l2Warn, lim);
@@ -5039,8 +5166,10 @@ function coreAcctRisk(A){
     if(!withCard.has(t.id)){ costNoCard += posOpenRisk(t, fx).thb; nNoCard++; }
   });
   l2.cards.forEach(x=>{ if(!x.live) costMiss += posOpenRisk(x.t, fx).thb; });
-  const layer2THB = l2.risk + costNoCard;
-  return {l2, tank:l2.tank, cfg:l2.cfg, layer2THB, layer2Pct: l2.tank>0 ? layer2THB/l2.tank*100 : 0, missing:l2.missing, nNoCard, costNoCard,
+  const layer2THB = l2.risk + costNoCard, layer2FullTHB = l2.riskFull + costNoCard;
+  const layer2FullPct = l2.tank>0 ? layer2FullTHB/l2.tank*100 : 0;
+  return {l2, tank:l2.tank, cfg:l2.cfg, layer2THB, layer2Pct: l2.tank>0 ? layer2THB/l2.tank*100 : 0, layer2FullTHB, layer2FullPct, levelFull: coreL2Level(layer2FullPct, l2.cfg),
+          reservedTHB: l2.riskReserved, missing:l2.missing, nNoCard, costNoCard,
           dropCoreTHB: layer2THB + costMiss, vsCostTHB: vs, nOpen: l2.cards.length + nNoCard};
 }
 
@@ -5048,11 +5177,12 @@ function coreAcctRisk(A){
 function coreView(c, cx){
   const cs = Calc.coreSize, e = coreEff(c), mk = c.market || coreMarketOf(c.ticker), div = mk==='US' ? cx.fx : 1;
   const v = {c, kind:e.kind, t:e.t, mk, div, F:cx.F, sym: mk==='US' ? '$' : '฿', riskTHB:0, st:null};
+  if(c.strategy==='L'){ v.lc = coreLadderCalc(c.ladder, mk, cx); v.lad = (cx.ladders||[]).find(x=>x.c.id===c.id) || null; }
   if(e.kind==='plan') return v;
   const t = e.t; if(!t) return v;
   v.qty = +t.qty; v.stop = +t.sl; v.avg = +t.entry;
   v.px = c.px>0 ? +c.px : null;
-  v.ema = c.emaW>0 ? +c.emaW : null;
+  v.ema = (c.strategy!=='L' && c.emaW>0) ? +c.emaW : null;   /* L ไม่ใช้ EMA10 (7E-2b-1) */
   v.st = cs.status({px:v.px, pxDate:c.pxDate, today:posThaiToday(), stop:v.stop, ema10:v.ema==null?undefined:v.ema});
   v.live = v.st.status!=='na';
   v.riskPx = v.live ? v.qty*Math.max(0, v.px-v.stop) : null;          /* เสี่ยงถึง Stop จากราคา (สกุลตลาด) */
@@ -5162,6 +5292,8 @@ function coreMenuToggle(btn, ev){
 document.addEventListener('click', ()=>document.querySelectorAll('.ccMenu.on').forEach(x=>x.classList.remove('on')));
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' || e.key==='Esc') document.querySelectorAll('.ccMenu.on').forEach(x=>x.classList.remove('on')); });
 
+/* 7E-2b-fix: เงินบาท → สกุลตลาดเหมือนตาราง (US: $x ≈฿y · TH: ฿y) */
+function coreMoneyDual(thb, mk, fx){ return mk==='US' ? `$${fmt0(thb/fx)} ≈฿${fmt0(thb)}` : `฿${fmt0(thb)}`; }
 function coreMoneyS(v, mk){ return (mk==='US' ? '$' : '฿') + fmt0(v); }
 const CORE_ST_ORDER = {red:0, yellow:1, na:2, green:3};
 function coreLotN(c, v){ const n = (c.lots && c.lots.length) ? c.lots.length : 1; return n; }
@@ -5182,18 +5314,117 @@ function coreAddBlockReason(v, cx){
   return '';
 }
 function coreMenuHtml(v, cx, opts){
-  const id = escHtml(v.c.id), tier = v.c.tier==='A' ? 'A' : 'B', t = v.t;
+  const id = escHtml(v.c.id), tier = v.c.tier==='A' ? 'A' : 'B', t = v.t, isL = v.c.strategy==='L';
   const lots = (v.c.lots || []).length;
+  const hasWait = isL && v.c.ladder && (v.c.ladder.levels||[]).some(l=>l.status==='wait');
+  let strat;
+  if(isL) strat = v.kind==='plan' ? `<button type="button" data-c-strat="W" onclick="coreToW('${id}')">เปลี่ยนเป็นระบบ Week</button>`
+    : '<button type="button" class="dis" data-c-strat="lock" disabled>ซื้อแล้ว — ล็อกกลยุทธ์</button>';
+  else if(v.kind==='plan') strat = tier==='A' ? `<button type="button" data-c-strat="L" onclick="coreToL('${id}')">เปลี่ยนเป็นถัวตามแนวรับ (L)</button>`
+    : '<button type="button" class="dis" data-c-strat="L" disabled title="L ใช้ได้เฉพาะ Tier A">L ใช้ได้เฉพาะ Tier A</button>';
+  else strat = '<button type="button" class="dis" data-c-strat="L" disabled>ซื้อแล้ว — ล็อกกลยุทธ์</button>';
   return `<div class="ccMenu" data-c-menu>
     ${opts.lots && lots ? `<button type="button" data-c-lots-btn onclick="coreLotsOpen('${id}')">ดูไม้ที่ซื้อ (${lots})</button>` : ''}
+    ${opts.cancel ? (hasWait ? `<button type="button" data-c-lcancel-btn onclick="coreLCancelOpen('${id}')">ยกเลิกระดับที่จอง…</button>` : '<button type="button" class="dis" data-c-lcancel-btn disabled>ยกเลิกระดับที่จอง… (ไม่มีระดับที่จอง)</button>') : ''}
     ${opts.edit ? `<button type="button" data-c-edit-btn onclick="openTradeEdit('${escHtml(t.id)}','${escHtml(v.c.acct)}')">แก้ Entry/SL</button>` : ''}
     ${opts.close ? `<button type="button" data-c-close-btn onclick="openClosePos('${escHtml(t.id)}','${escHtml(v.c.acct)}')">ปิดตำแหน่ง</button>` : ''}
-    ${(opts.lots||opts.edit||opts.close) ? '<hr>' : ''}
-    <button type="button" data-c-tierbtn="B" onclick="coreTierSetB('${id}')">Tier B${tier==='B'?' ✓':''}</button>
-    <button type="button" data-c-tierbtn="A" onclick="coreTierAsk('${id}')">Tier A${tier==='A'?' ✓':''}</button>
-    <button type="button" class="dis" data-c-strat="L" disabled title="มาในรอบถัดไป">ถัวตามแนวรับ (L) — มาใน 7E-2b</button></div>`;
+    ${(opts.lots||opts.edit||opts.close||opts.cancel) ? '<hr>' : ''}
+    <button type="button" data-c-tierbtn onclick="coreTierOpen('${id}')">Tier…</button>
+    ${strat}</div>`;
+}
+/* 7E-2b-1 — ชิ้นส่วนกลางของตารางบันได (รับแค่ข้อมูล · ไม่อ่านการ์ด · 7E-3 ใช้ซ้ำได้)
+   rows[{lv, px, cost, qty, risk, status:'wait'|'bought'|'cancelled', by?, fill?{qty,px,at}}] · tot{avg, qty, riskPct, cap, over} · o{sym} */
+function coreLadderTableHtml(rows, tot, o){
+  const sym = (o && o.sym) || '';
+  const ST = {wait:['จอง',''], bought:['ซื้อแล้ว','up'], cancelled:['ยกเลิก','nt']};
+  const body = rows.map(r=>{
+    const cl = r.status==='cancelled', st = ST[r.status] || ST.wait;
+    const by = cl ? (r.by==='stop' ? ' · Stop' : (r.by==='manual' ? ' · มือ' : '')) : '';
+    return `<tr class="${cl?'cancelled':''}" data-lv="${escHtml(r.lv)}" data-status="${r.status}"><td>${escHtml(r.lv)}</td><td>${coreP(r.px)}</td><td>${cl?'—':sym+fmt0(r.cost)}</td><td>${cl?'—':fmt0(r.qty)}</td><td>${cl?'—':sym+fmt0(r.risk)}</td><td class="st ${st[1]}">${st[0]}${by}</td></tr>`
+      + (r.status==='bought' && r.fill ? `<tr class="fillRow" data-fill="${escHtml(r.lv)}"><td colspan="6">ซื้อจริง ${fmt0(r.fill.qty)} @ ${coreP(r.fill.px)}${r.fill.at ? ' · ' + escHtml(r.fill.at) : ''}</td></tr>` : '');
+  }).join('');
+  const over = !!tot.over;
+  return `<div class="ccTw"><table class="ccTbl" data-c-ladder><thead><tr><th>ระดับ</th><th>ราคา</th><th>เงิน</th><th>หุ้น</th><th>เสี่ยงถึง SL</th><th>สถานะ</th></tr></thead><tbody>${body}
+    <tr class="totRow"><td colspan="6" data-c-ltot>ทุนเฉลี่ยเมื่อครบ <b>${tot.avg!=null?coreP(tot.avg):'—'}</b> · หุ้นรวม <b>${fmt0(tot.qty)}</b> · เสี่ยงเต็มบันได <span class="${over?'redT':''}" data-c-lrisk>${fmt2(tot.riskPct)}% / ${fmt2(tot.cap)}%</span>${over ? ` <span class="redT" data-c-riskover>เกิน ${fmt2(tot.cap)}% — ลดงบหรือยก SL</span>` : ''}</td></tr></tbody></table></div>`;
+}
+function coreLadderRows(ld, nat){
+  return nat.rows.map((r,i)=>{
+    const l = (ld.levels||[])[i] || {};
+    return {lv:'L'+(i+1), px:r.px, cost:r.cost, qty:r.qty, risk:r.risk, status:r.status, by:l.cancelBy,
+      fill: (r.status==='bought' && l.fillPx!=null) ? {qty:l.qty, px:l.fillPx, at:l.boughtAt} : null};
+  });
+}
+function coreLadderTot(nat, cfg){ return {avg:nat.avgCost, qty:nat.qty, riskPct:nat.fullRiskPct*100, cap:cfg.ladderRisk, over:nat.warns.indexOf('RISK_OVER')>=0}; }
+/* การ์ด L — โครงเดียวกับการ์ดแบบย่อ (.ccRow → .ccBody · .ccBtns · .ccMenu) */
+function coreLCardHtml(v, cx){
+  const c = v.c, id = escHtml(c.id), cfg = cx.cfg, tier = c.tier==='A' ? 'A' : 'B', mk = v.mk, sym = v.sym;
+  const ld = c.ladder || {levels:[], sl:0}, lv = ld.levels || [];
+  const nat = (v.lc && v.lc.nat && v.lc.nat.ok) ? v.lc.nat : null;
+  const open = coreIsOpen(c, v), kPlan = v.kind==='plan';
+  if(!nat) return `<div class="ccCard${open?' open':''}" data-core-card="${id}" data-kind="${v.kind}" data-strat="L"><button type="button" class="ccRow" data-c-row aria-expanded="${open}" onclick="coreToggle('${id}')"><span class="ccIc nt" data-c-status="plan">L</span><span class="ccTkw"><span class="ccTk" data-c-ticker>${escHtml(c.ticker)}</span></span><span class="ccNums"><span class="dnT">คำนวณบันไดไม่สำเร็จ</span></span><span class="ccChev">›</span></button>
+    <div class="ccBody"><div class="ccWarn">ข้อมูลบันไดไม่ถูกต้อง${v.lc && v.lc.nat && v.lc.nat.err ? ' · ' + escHtml(v.lc.nat.err) : ''}</div>${kPlan ? `<div class="ccBtns"><button type="button" class="ccBtn" data-c-delplan onclick="coreDelAsk('${id}')">ลบแผน</button></div>` : ''}</div></div>`;
+  const nb = lv.filter(l=>l.status==='bought').length, nLive = lv.filter(l=>l.status!=='cancelled').length;
+  const fw = lv.findIndex(l=>l.status==='wait');
+  const tag = `<span class="ccTag" title="${escHtml(`${mk} · Tier ${tier} · ถัวตามแนวรับ (L)`)}">${tier}·L</span>`;
+  const lbadge = `<span class="ccLot" data-c-lbadge title="ซื้อแล้ว / ระดับที่ยังไม่ยกเลิก">L ${nb}/${nLive}</span>`;
+  const reasonChip = (tier==='A' && c.tierReason) ? `<button type="button" class="ccChip a" data-c-reason-chip title="${escHtml(c.tierReason)}" onclick="coreToggleReason('${id}')">Tier A · มีเหตุผล</button>` : '';
+  const STTXT = (!kPlan && v.st) ? `<span class="ccStTxt" data-c-statustxt${v.st.status==='red'?' data-c-redbanner':''}>${CORE_ST[v.st.status].ico} ${escHtml(CORE_ST[v.st.status].txt)}</span>` : '';
+  const tierChip = tier==='A' ? '<span class="ccChip a" data-c-tier>Tier A</span>' : '<span class="ccChip nt" data-c-tier>Tier B · บันไดเดิมทำงานต่อจนออก</span>';
+  const chips = `<div class="ccFull ccChips"><span class="ccChip">${mk}</span>${tierChip}<span class="ccChip" data-c-stratchip>L · ถัวตามแนวรับ</span>${reasonChip}${STTXT}</div>
+    ${coreShowReason.has(c.id) && c.tierReason ? `<div class="ccSub" data-c-reason>เหตุผล Tier A: ${escHtml(c.tierReason)}</div>` : ''}`;
+  const table = coreLadderTableHtml(coreLadderRows(ld, nat), coreLadderTot(nat, cfg), {sym});
+  const em = Calc.coreSize.emergencyStop({stop:+ld.sl, pct:cx.opts.emergencyPct});
+  const lad = v.lad, tank = cx.tankTHB;
+  const held = lad ? lad.heldTHB : 0, resv = lad ? lad.reservedTHB : 0;
+  const mine = tank>0 ? (held+resv)/tank*100 : 0, lTot = cx.split ? cx.split.lPct*100 : mine;
+  const lines = `<div class="ccSumLn" data-c-lsl>SL <b>${coreP(+ld.sl)}</b> · Stop ฉุกเฉิน <b>${em.ok?coreP(em.price):'—'}</b> (−${fmt2(cfg.emergencyPct)}%)</div>
+    <div class="ccSumLn" data-c-lfirst>ซื้อแค่ระดับแรก เสี่ยง <b>${fmt2(nat.firstRiskPct*100)}%</b></div>
+    <div class="ccSumLn" data-c-lhold>ถือ <b>${coreMoneyDual(held, mk, cx.fx)}</b> · จอง <b>${coreMoneyDual(resv, mk, cx.fx)}</b></div>
+    <div class="ccSumLn${lTot>cfg.ladderShare+1e-9?' dnT':''}" data-c-lshare>ตัวนี้ <b>${fmt2(mine)}%</b> · L รวม <b>${fmt2(lTot)}%</b> / ${fmt2(cfg.ladderShare)}%</div>`;
+  const delBtn = `<button type="button" class="ccBtn" data-c-delplan onclick="coreDelAsk('${id}')">ลบแผน</button>`;
+  const moreBtn = `<button type="button" class="ccBtn" data-c-more aria-label="เมนู" onclick="coreMenuToggle(this,event)">⋯</button>`;
+  const buyBtn = fw>=0 ? `<button type="button" class="ccBtn pri" data-c-lbuy onclick="coreLBuyOpen('${id}')" ${coreErr?`disabled title="${escHtml(coreErr)}"`:''}>บันทึกซื้อ L${fw+1}</button>` : '';
+  if(kPlan){
+    const l1 = fw>=0 ? nat.rows[fw].px : nat.rows[0].px;
+    return `<div class="ccCard${open?' open':''}" data-core-card="${id}" data-kind="plan" data-strat="L">
+      <button type="button" class="ccRow" data-c-row aria-expanded="${open}" onclick="coreToggle('${id}')"><span class="ccIc nt" data-c-status="plan">แผน</span>
+        <span class="ccTkw"><span class="ccTk" data-c-ticker>${escHtml(c.ticker)}</span>${tag}</span>
+        <span class="ccNums"><span>L${(fw>=0?fw:0)+1} <b>${coreP(l1)}</b></span><span>SL <b>${coreP(+ld.sl)}</b></span><span>จอง <b>${coreMoneyS(nat.reservedCost, mk)}</b></span></span><span class="ccChev">›</span></button>
+      <div class="ccBody">${chips}${table}${lines}
+        <div class="ccBtns">${buyBtn}<button type="button" class="ccBtn" data-c-ledit ${tier!=='A'?'disabled title="แก้แผนบันไดต้องเป็น Tier A"':''} onclick="coreLEditOpen('${id}')">แก้แผนบันได</button>${delBtn}${moreBtn}${coreMenuHtml(v, cx, {})}</div>
+        ${tier!=='A' ? '<div class="ccWarn" data-c-ledit-note>แก้แผนบันไดต้องเป็น Tier A</div>' : ''}</div></div>`;
+  }
+  const t = v.t, st = v.st.status, sto = CORE_ST[st], red = st==='red', age = v.st.age;
+  const px = v.px!=null ? coreP(v.px) : '—';
+  const numsPx = st==='na'
+    ? `<span class="ntT">ขาดราคา${(v.px!=null && age!=null) ? ` (เก่า ${age} วัน)` : ''}</span><span>Stop <b>${coreP(v.stop)}</b></span>`
+    : (red ? `<span>ปิด <b>${px}</b></span><span>Stop <b>${coreP(v.stop)}</b></span><span class="dnT">ปิดใต้ Stop — ขายหมด</span>`
+      : `<span>ปิด <b>${px}</b></span><span>Stop <b>${coreP(v.stop)}</b></span><span>เสี่ยง <b>${coreMoneyS(v.riskPx, mk)}</b> ${fmt2(v.riskPx*v.div/cx.tankTHB*100)}%</span>`);
+  const holdTxt = `${fmt0(v.qty)} @ ${coreP(v.avg)}`, cost = v.riskCost;
+  const riskPxV = v.riskPx!=null ? coreMoneyS(v.riskPx, mk) : '—';
+  const riskSub = v.riskPx!=null
+    ? `${fmt2(v.riskPx*v.div/cx.tankTHB*100)}% ของถัง${mk==='US' ? ` ≈฿${fmt0(v.riskPx*cx.fx)}` : ''} · <span data-c-riskcost>${cost.locked ? 'ล็อกกำไร' : 'จากทุน ' + coreMoneyS(cost.amt, mk)}</span>`
+    : `<span data-c-riskcost>นับจากทุน ${coreMoneyS(cost.amt, mk)}${cost.locked?' · ล็อกกำไร':''}</span> · ไม่นับในชั้น 2`;
+  const pxSub = c.pxDate ? `${escHtml(c.pxDate)}${age!=null ? ` · อายุ ${age} วัน` : ''}${st==='na' && v.px!=null ? ' · เก่าเกิน 7 วัน' : ''}` : 'ยังไม่มีราคา';
+  const pxBtn = `<button type="button" class="ccBtn${st==='na'?' pri':''}" data-c-px-btn onclick="corePxOpen('${id}')">อัปเดตราคา</button>`;
+  const stopBtn = `<button type="button" class="ccBtn" data-c-stop-btn onclick="coreStopOpen('${id}')">เลื่อน Stop</button>`;
+  const closeRed = `<button type="button" class="ccBtn pri dn" data-c-close-btn onclick="openClosePos('${escHtml(t.id)}','${escHtml(c.acct)}')">ปิดตำแหน่ง</button>`;
+  const first = red ? closeRed + pxBtn : buyBtn + pxBtn;
+  return `<div class="ccCard${red?' isRed':''}${open?' open':''}" data-core-card="${id}" data-kind="open" data-status="${st}" data-strat="L">
+    <button type="button" class="ccRow" data-c-row aria-expanded="${open}" onclick="coreToggle('${id}')"><span class="ccIc" data-c-status="${st}" title="${escHtml(sto.txt)}">${sto.ico}</span>
+      <span class="ccTkw"><span class="ccTk" data-c-ticker>${escHtml(c.ticker)}</span>${tag}${lbadge}</span>
+      <span class="ccNums">${numsPx}<span class="ccHold">${holdTxt}</span></span><span class="ccChev">›</span></button>
+    <div class="ccBody">${chips}
+      <div class="ccGrid4">
+        <div class="ccFld"><label>ราคาปิด</label><div class="v"><span data-c-px>${px}</span></div><small>${pxSub}${st==='na' ? ' · อัปเดตราคา (ไม่บล็อกการซื้อระดับ)' : ''}</small></div>
+        <div class="ccFld"><label>Stop · ฉุกเฉิน</label><div class="v"><span data-c-stop>${coreP(v.stop)}</span> <span class="s">· <span data-c-emg>${v.emg!=null?coreP(v.emg):'—'}</span></span></div><small>Stop ต้องเลื่อนผ่านปุ่ม "เลื่อน Stop" เท่านั้น</small></div>
+        <div class="ccFld"><label>ถือ / ทุนเฉลี่ย</label><div class="v" data-c-hold>${holdTxt}</div><small data-c-lotsub>ซื้อแล้ว ${nb}/${nLive} ระดับ</small></div>
+        <div class="ccFld"><label>เสี่ยงถึง Stop</label><div class="v" data-c-riskpx>${riskPxV}</div><small>${riskSub}</small></div></div>
+      ${table}${lines}
+      <div class="ccBtns">${first}${stopBtn}${moreBtn}${coreMenuHtml(v, cx, {lots:true, cancel:true, close:!red})}</div></div></div>`;
 }
 function coreCardHtml(v, cx){
+  if(v.c.strategy==='L') return coreLCardHtml(v, cx);
   const c = v.c, id = escHtml(c.id), cfg = cx.cfg, tier = c.tier==='A' ? 'A' : 'B';
   const capPct = tier==='A' ? cfg.tierA : cfg.tierB;
   const fullTxt = `${v.mk} · Tier ${tier} · เพดานไม้แรก ${fmt2(capPct)}% · ระบบ Week`;
@@ -5278,15 +5509,19 @@ function coreAcctHtml(a){
   });
   const planV = views.filter(v=>v.kind==='plan').sort((x,y)=>String(y.c.created_at||'').localeCompare(String(x.c.created_at||'')));
   const closedV = views.filter(v=>v.kind==='closed');
-  const lvl = rk ? coreL2Level(rk.layer2Pct, cfg) : 'ok';
+  const lvl = rk ? rk.levelFull : 'ok';   /* 7E-2b-1: สีคิดจาก "เต็ม" (ชั้น 2 นับที่จองด้วย) */
+  const gate = coreGate(A), sp = cx.split;
+  const lPctNow = sp ? sp.lPct*100 : 0, overAmt = sp && sp.overCommitted ? (cx.wCost + sp.lUsed - cx.tankTHB) : 0;
   const mkLbl = cfg.market==='both' ? 'ทั้งคู่' : cfg.market;
   const F = cx.F;
   const head = `<div class="ccAcctH" data-core-head="${escHtml(A)}"><span class="acctDotC" style="--ac:${acctColor(a)}"></span><b>${escHtml(a.name)}</b>
     <span class="ccChip">${mkLbl}</span>
     <span class="ccStat" data-c-tank>ถัง Core <b>฿${fmt0(cx.tankTHB)}</b></span>
-    <span class="ccStat" data-c-cashfree>เงินสดว่าง <b>฿${fmt0(cx.cashTHB)}</b></span>
-    <span class="ccStat lv-${lvl}" data-c-l2 data-level="${lvl}">ชั้น 2 <b>${fmt2(rk?rk.layer2Pct:0)}% / ${fmt2(cfg.l2Cap)}%</b></span>
-    <span class="ccStat" data-c-f>f <b>${Math.round(F.f*100)}%</b> <small>${escHtml(F.src)}</small></span>${coreFWarn(F) ? `<span class="ccStat warn ccFfWarn" data-c-ffwarn>${escHtml(coreFWarn(F))}</span>` : ''}
+    <span class="ccStat" data-c-cashfree>เงินสดว่าง <b>฿${fmt0(cx.cashTHB)}</b></span>${overAmt>0 ? `<span class="ccStat lv-over" data-c-overcommit>จองเกินถัง <b>฿${fmt0(overAmt)}</b></span>` : ''}
+    <span class="ccStat lv-${lvl}" data-c-l2 data-level="${lvl}">ชั้น 2 <b>ตอนนี้ ${fmt2(rk?rk.layer2Pct:0)}% · เต็ม ${fmt2(rk?rk.layer2FullPct:0)}% / ${fmt2(cfg.l2Cap)}%</b></span>
+    <span class="ccStat${lPctNow>cfg.ladderShare+1e-9?' lv-over':''}" data-c-lshare>L <b>${fmt2(lPctNow)}%</b> / ${fmt2(cfg.ladderShare)}%</span>
+    <span class="ccStat${gate.open?' gateOk':' warn'}" data-c-gate data-gate-open="${gate.open?1:0}">บันไดใหม่: ${gate.open ? 'เปิด' : 'งด · ' + escHtml(gate.text)}</span>
+    <span class="ccStat" data-c-f>f <b>${Math.round(F.f*100)}%</b>${coreFWarn(F) ? '' : ` <small>${escHtml(F.src)}</small>`}</span>${coreFWarn(F) ? `<span class="ccStat warn ccFfWarn" data-c-ffwarn>${escHtml(coreFWarn(F))}</span>` : ''}
     <span class="ccStat${rk&&rk.missing>0?' warn':''}" data-c-missing>ขาดราคา <b>${rk?rk.missing:0}</b></span>
     <span class="ccAll"><button type="button" class="ccLnk" data-c-expandall onclick="coreAll('${escHtml(A)}',1)">ขยายทั้งหมด</button> · <button type="button" class="ccLnk" data-c-collapseall onclick="coreAll('${escHtml(A)}',0)">ยุบทั้งหมด</button></span></div>`;
   const list = openV.concat(planV);
@@ -5335,41 +5570,140 @@ function coreSheet(kind, html){
   el.addEventListener('click', e=>{ if(e.target===el) coreSheetClose(); });
   return el;
 }
-function coreSheetClose(){ document.querySelectorAll('.core-sheet').forEach(el=>el.remove()); coreNew = null; coreDlg = null; }
+function coreSheetClose(){ document.querySelectorAll('.core-sheet').forEach(el=>el.remove()); coreNew = null; coreDlg = null; coreTi = null; }
 function coreEl(id){ return document.getElementById(id); }
 
-/* แผน Core ใหม่ (＋ / T เมื่อ scope = หุ้น) */
-function coreNewOpen(acct){
+/* ── 7E-2b-1 · บล็อก Tier (ใช้ทั้งแผนใหม่และ sheet "Tier…") — classifyTier ใน core-size.js ── */
+const CORE_G5 = [['substitute','ของแทนที่ถูกกว่า/ดีกว่าเริ่มมีคนใช้'], ['customerMigrating','ลูกค้าหลักเริ่มย้าย'], ['singleProduct','รายได้ > 50% จากสินค้าเดียวที่โดนข้อ 1']];
+function coreTiFmt(v, mul){ return (typeof v==='number' && isFinite(v)) ? String(+(v*(mul||1)).toFixed(6)) : ''; }
+function coreTierBlockHtml(cfg, ti){
+  ti = ti || {};
+  const g5 = ti.gate5 || {};
+  return `<div class="ccTier" data-c-tierblock><h4>Tier — คำนวณจากตัวเลข (A = ROIC &gt; 12% · ND/EBITDA &lt; 2 · FCF conv &gt; 80% · Gate 5 ไม่ทั้ง 3)</h4>
+    <div class="ccPair3"><div class="ccF"><label>ROIC %</label><input type="text" inputmode="decimal" id="tiRoic" value="${coreTiFmt(ti.roic,100)}" oninput="coreTiIn()"></div>
+      <div class="ccF"><label>ND/EBITDA (เท่า)</label><input type="text" inputmode="decimal" id="tiNd" value="${coreTiFmt(ti.ndEbitda)}" oninput="coreTiIn()"></div>
+      <div class="ccF"><label>FCF conversion %</label><input type="text" inputmode="decimal" id="tiFcf" value="${coreTiFmt(ti.fcfConv,100)}" oninput="coreTiIn()"></div></div>
+    ${CORE_G5.map((g,i)=>`<div class="ccG5"><span>Gate 5 ข้อ ${i+1} · ${g[1]}</span><div class="ccSeg" data-g5="${g[0]}"><button type="button" data-v="1" class="${g5[g[0]]===true?'on':''}" onclick="coreTiG5('${g[0]}',true)">ใช่</button><button type="button" data-v="0" class="${g5[g[0]]===false?'on':''}" onclick="coreTiG5('${g[0]}',false)">ไม่ใช่</button></div></div>`).join('')}
+    <div class="ccTierRes" id="tiRes" data-c-tierres></div>
+    <div class="ccF"><label>Tier ที่ใช้จริง</label><div class="ccSeg"><button type="button" id="cnTierB" onclick="coreTiPick('B')">B · เพดาน ${fmt2(cfg.tierB)}%</button><button type="button" id="cnTierA" onclick="coreTiPick('A')">A · เพดาน ${fmt2(cfg.tierA)}%</button></div></div>
+    <div class="ccF" id="cnReasonBox" style="display:none"><label>เหตุผลที่ตั้ง Tier A (บังคับ)</label><input type="text" id="cnReason" autocomplete="off" value="${escHtml(ti.reason||'')}" oninput="coreTiIn()"></div></div>`;
+}
+function coreTiG5(key, val){
+  if(!coreTi) return;
+  coreTi.g5[key] = (coreTi.g5[key]===val) ? null : val;
+  document.querySelectorAll(`[data-g5="${key}"] button`).forEach(b=>b.classList.toggle('on', coreTi.g5[key]!==null && coreTi.g5[key]!==undefined && (b.dataset.v==='1') === coreTi.g5[key]));
+  coreTiIn();
+}
+function coreTiPick(t){ if(!coreTi) return; coreTi.pick = t; coreTiIn(); }
+/* อ่านช่อง → classifyTier → {inputs, computed, tier, reason, ok, base} · ไม่ส่ง DOM ออก */
+function coreTiEval(){
+  const cs = Calc.coreSize, val = id=>{ const e = coreEl(id); if(!e || String(e.value).trim()==='') return null; const n = coreNum(e.value); return isFinite(n) ? n : null; };
+  const roic = val('tiRoic'), nd = val('tiNd'), fcf = val('tiFcf');
+  const g5 = {}; CORE_G5.forEach(g=>{ const v = coreTi && coreTi.g5[g[0]]; g5[g[0]] = (v===true || v===false) ? v : null; });
+  const inputs = {roic: roic==null?null:roic/100, ndEbitda: nd, fcfConv: fcf==null?null:fcf/100, gate5: g5};
+  const base = cs.classifyTier(inputs), computed = base.computed;
+  const pick = (coreTi && coreTi.pick) || computed;
+  const reason = ((coreEl('cnReason')||{}).value || '').trim();
+  const r = cs.classifyTier(Object.assign({}, inputs, {override:{tier:pick, reason}}));
+  return {inputs, computed, tier: pick, reason: (pick==='A' && computed!=='A') ? reason : '', ok: r.ok!==false, needReason: pick==='A' && computed!=='A', base};
+}
+/* ทำไมคำนวณได้ B — "ไม่ผ่าน: ROIC ≤ 12% · Gate 5 ข้อ 2 = ใช่ · ยังไม่ตอบ 1 ข้อ" */
+function coreTiWhy(ti){
+  const T = Calc.coreSize.DEFAULTS.tier, b = ti.base, w = [], I = ti.inputs;
+  if(b.failedNumbers.indexOf('roic')>=0) w.push(I.roic==null ? 'ROIC ไม่มีข้อมูล' : `ROIC ≤ ${fmt2(T.roicMin*100)}%`);
+  if(b.failedNumbers.indexOf('nd')>=0) w.push(I.ndEbitda==null ? 'ND/EBITDA ไม่มีข้อมูล' : `ND/EBITDA ≥ ${fmt2(T.ndEbitdaMax)}`);
+  if(b.failedNumbers.indexOf('fcf')>=0) w.push(I.fcfConv==null ? 'FCF conv ไม่มีข้อมูล' : `FCF conv ≤ ${fmt2(T.fcfConvMin*100)}%`);
+  b.gate5Yes.forEach(k=>{ w.push(`Gate 5 ข้อ ${CORE_G5.findIndex(g=>g[0]===k)+1} = ใช่`); });
+  if(b.gate5Unanswered.length) w.push(`ยังไม่ตอบ ${b.gate5Unanswered.length} ข้อ`);
+  return w;
+}
+/* เติมผลสด/ปุ่ม Tier/ช่องเหตุผล — ไม่วาดช่องพิมพ์ใหม่ */
+function coreTiShow(ti){
+  const res = coreEl('tiRes');
+  if(res) res.innerHTML = ti.computed==='A' ? 'คำนวณได้ <b class="A">A</b>' : `คำนวณได้ <b class="B">B</b> · ไม่ผ่าน: ${escHtml(coreTiWhy(ti).join(' · '))}`;
+  const bB = coreEl('cnTierB'), bA = coreEl('cnTierA');
+  if(bB) bB.classList.toggle('on', ti.tier==='B'); if(bA) bA.classList.toggle('on', ti.tier==='A');
+  const rb = coreEl('cnReasonBox'); if(rb) rb.style.display = ti.needReason ? '' : 'none';
+}
+/* ปรับเมื่อมีการแก้บล็อก Tier → แจ้งเจ้าของ sheet */
+function coreTiIn(){
+  if(coreNew) return coreNewIn();
+  if(coreDlg && coreDlg.kind==='tier') return coreTierIn();
+}
+function coreTiState(c){
+  const ti = (c && c.tierInputs) || {};
+  const g5 = {}; CORE_G5.forEach(g=>{ const v = ti.gate5 && ti.gate5[g[0]]; g5[g[0]] = (v===true||v===false) ? v : null; });
+  return {g5, pick: null};
+}
+
+/* แผน Core ใหม่ (＋ / T เมื่อ scope = หุ้น) · 7E-2b-1: Tier คำนวณ + สลับกลยุทธ์ W/L · opt {mode:'convert'|'edit', id} = แปลงแผน W → L / แก้แผนบันได */
+function coreNewOpen(acct, opt){
+  opt = opt || {};
   const list = acctList.filter(a=>(a.ports || ACCT_PORT_KEYS).includes('core'));
   if(!list.length){ coreSheet('new', '<h3>แผน Core ใหม่</h3><div class="ccWarn">ไม่มีบัญชีที่เปิด port Core</div><div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ปิด</button></div>'); return; }
-  const a0 = (acct && list.some(a=>a.id===acct)) ? acct : (list.some(a=>a.id===acctActive) ? acctActive : list[0].id);
-  coreNew = {acct:a0, tier:'B', f:null, showAll:false};
+  const cur = opt.id ? coreCardsList.find(x=>x.id===opt.id) : null;
+  const mode = cur ? opt.mode : 'new';
+  const a0 = cur ? cur.acct : ((acct && list.some(a=>a.id===acct)) ? acct : (list.some(a=>a.id===acctActive) ? acctActive : list[0].id));
+  coreNew = {acct:a0, strat: mode==='new' ? 'W' : 'L', mode, id: cur ? cur.id : null, f:null, showAll:false, nlv:2, lv:['','',''], sl:'', budEdited:false};
+  coreTi = coreTiState(cur);
+  if(cur) coreTi.pick = cur.tier==='A' ? 'A' : 'B';
+  if(mode==='edit' && cur.ladder){
+    const lv = cur.ladder.levels || [];
+    coreNew.nlv = Math.min(3, Math.max(2, lv.length)); coreNew.lv = [0,1,2].map(i=>lv[i] ? String(lv[i].px) : '');
+    coreNew.sl = String(cur.ladder.sl); coreNew.budEdited = true; coreNew.bud = String(+(cur.ladder.budgetPct*100).toFixed(6));
+  }
+  const cfg0 = coreRiskCfg(a0);
   const wl = [...new Set((typeof wlItems!=='undefined' ? wlItems : []).map(w=>coreNorm(w.ticker)).filter(Boolean))];
-  coreSheet('new', `<h3>แผน Core ใหม่</h3>
+  const title = mode==='edit' ? `แก้แผนบันได · ${escHtml(cur.ticker)}` : (mode==='convert' ? `เปลี่ยนเป็นถัวตามแนวรับ (L) · ${escHtml(cur.ticker)}` : 'แผน Core ใหม่');
+  coreSheet('new', `<h3>${title}</h3>
     <div class="ccF"><label>บัญชี</label><div id="cnAcctBox"></div></div>
-    <div class="ccF"><label>Ticker</label><input type="text" id="cnTicker" list="cnTickerList" autocomplete="off" autocapitalize="characters" placeholder="เช่น AAPL หรือ XXX.BK" oninput="coreNewIn()">
+    <div class="ccF"><label>Ticker</label><input type="text" id="cnTicker" list="cnTickerList" autocomplete="off" autocapitalize="characters" placeholder="เช่น AAPL หรือ XXX.BK" value="${cur?escHtml(cur.ticker):''}" ${cur?'readonly':''} oninput="coreNewIn()">
       <datalist id="cnTickerList">${wl.map(t=>`<option value="${escHtml(t)}"></option>`).join('')}</datalist></div>
-    <div class="ccF"><label>Tier</label><div class="ccSeg"><button type="button" id="cnTierB" class="on" onclick="coreNewTier('B')">B · เพดาน ${fmt2(coreRiskCfg(a0).tierB)}%</button><button type="button" id="cnTierA" onclick="coreNewTier('A')">A · เพดาน ${fmt2(coreRiskCfg(a0).tierA)}%</button></div></div>
-    <div class="ccF" id="cnReasonBox" style="display:none"><label>เหตุผลที่ตั้ง Tier A (บังคับ)</label><input type="text" id="cnReason" autocomplete="off" oninput="coreNewIn()"></div>
-    <div class="ccPair"><div class="ccF"><label>Entry ไม้แรก</label><input type="text" inputmode="decimal" id="cnEntry" oninput="coreNewIn()"></div>
+    <div id="cnTierBox" ${mode==='edit'?'style="display:none"':''}>${coreTierBlockHtml(cfg0, Object.assign({}, cur && cur.tierInputs, {reason: cur && cur.tierReason}))}</div>
+    <div class="ccF" id="cnStratBox" ${mode==='new'?'':'style="display:none"'}><label>กลยุทธ์</label><div class="ccSeg"><button type="button" id="cnStratW" class="on" onclick="coreNewStrat('W')">ระบบ Week</button><button type="button" id="cnStratL" onclick="coreNewStrat('L')">ถัวตามแนวรับ (L)</button></div><div class="ccWarn" id="cnStratMsg" style="display:none"></div></div>
+    <div id="cnWBox"><div class="ccPair"><div class="ccF"><label>Entry ไม้แรก</label><input type="text" inputmode="decimal" id="cnEntry" oninput="coreNewIn()"></div>
       <div class="ccF"><label>Stop</label><input type="text" inputmode="decimal" id="cnStop" oninput="coreNewIn()"></div></div>
     <div class="ccF"><label>Fund-flow f <span id="cnFsrc" class="ccSub"></span></label><div class="ccFfWarn ccStat warn" id="cnFwarn" data-cn-ffwarn style="display:none;margin-bottom:6px"></div><div class="ccSeg" id="cnF"><button type="button" data-f="1" onclick="coreNewF(1)">100%</button><button type="button" data-f="0.75" onclick="coreNewF(0.75)">75%</button><button type="button" data-f="0.5" onclick="coreNewF(0.5)">50%</button></div></div>
-    <div class="ccRes" id="cnRes"></div><div class="ccErr" id="cnErr" style="display:none"></div>
+    <div class="ccRes" id="cnRes"></div></div>
+    <div id="cnLBox" style="display:none"><div class="ccF"><label>ระดับราคา (เรียงจากสูงไปต่ำ · 2–3 ระดับ)</label><div id="cnLvBox"></div><button type="button" class="ccBtn" id="cnLadd" onclick="coreNewLvAdd()">＋ ระดับ 3</button></div>
+      <div class="ccPair"><div class="ccF"><label>SL (ต่ำกว่าระดับสุดท้าย)</label><input type="text" inputmode="decimal" id="cnLsl" value="${escHtml(coreNew.sl)}" oninput="coreNewIn()"></div>
+        <div class="ccF"><label>งบ % ของถัง (สูงสุด) <span class="ccSub" id="cnLbudT"></span></label><input type="text" inputmode="decimal" id="cnLbud" value="${coreNew.bud!=null?escHtml(coreNew.bud):''}" oninput="coreNewBud()"></div></div>
+      <div class="ccSub" id="cnLsplit"></div>
+      <div class="ccRes" id="cnLres"></div><div id="cnLgates"></div></div>
+    <div class="ccErr" id="cnErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="cnSave" data-cn-save onclick="coreNewSave()" disabled>บันทึกแผน</button></div>`);
+  coreNewLvDraw();
   coreNewIn();
 }
-function coreNewTier(t){ if(!coreNew) return; coreNew.tier = t; coreNewIn(); }
+function coreNewStrat(st){ if(!coreNew || coreNew.mode!=='new') return; coreNew.strat = st; coreNewIn(); }
 function coreNewF(f){ if(!coreNew) return; coreNew.f = f; coreNewIn(); }
 function coreNewPick(id){ if(!coreNew) return; coreNew.acct = id; coreNewIn(); }
 function coreNewShowAll(){ if(!coreNew) return; coreNew.showAll = true; coreNewIn(); }
+function coreNewBud(){ if(!coreNew) return; coreNew.budEdited = true; coreNewIn(); }
+function coreNewLvDraw(){
+  const n = coreNew, box = coreEl('cnLvBox'); if(!n || !box) return;
+  box.innerHTML = [0,1,2].slice(0, n.nlv).map(i=>`<div class="ccLvRow" data-lv-row="${i}"><label>L${i+1}</label><div style="display:flex;gap:6px"><input type="text" inputmode="decimal" id="cnLv${i}" value="${escHtml(n.lv[i]||'')}" oninput="coreNewLvIn(${i},this.value)" style="flex:1;min-width:0">${i===2?'<button type="button" class="ccBtn" id="cnLdel" onclick="coreNewLvDel()">ลบ</button>':''}</div></div>`).join('');
+  const add = coreEl('cnLadd'); if(add) add.style.display = n.nlv>=3 ? 'none' : '';
+}
+function coreNewLvIn(i, v){ if(!coreNew) return; coreNew.lv[i] = v; coreNewIn(); }
+function coreNewLvAdd(){ if(!coreNew || coreNew.nlv>=3) return; coreNew.nlv = 3; coreNewLvDraw(); coreNewIn(); }
+function coreNewLvDel(){ if(!coreNew || coreNew.nlv<=2) return; coreNew.nlv = 2; coreNew.lv[2] = ''; coreNewLvDraw(); coreNewIn(); }
 /* อ่านช่องทั้งหมด → คำนวณสด → เติมผล/ข้อความ/ปุ่มบันทึก (ไม่วาดช่องพิมพ์ใหม่ = เคอร์เซอร์ไม่เด้ง) */
 function coreNewRead(){
   const n = coreNew; if(!n) return null;
   const ticker = coreNorm(coreEl('cnTicker').value), mk = ticker ? coreMarketOf(ticker) : null;
-  return {ticker, mk, entry:coreNum(coreEl('cnEntry').value), stop:coreNum(coreEl('cnStop').value), reason:(coreEl('cnReason').value||'').trim()};
+  const ti = n.mode==='edit' ? null : coreTiEval();
+  return {ticker, mk, entry:coreNum(coreEl('cnEntry').value), stop:coreNum(coreEl('cnStop').value), ti,
+    lv: n.lv.slice(0, n.nlv).map(coreNum), sl: coreNum(coreEl('cnLsl').value), bud: coreNum(coreEl('cnLbud').value)};
+}
+const CORE_LERR = {LEVELS_NOT_DESC:'ระดับต้องเรียงจากสูงไปต่ำ', LEVEL_BELOW_SL:'ทุกระดับต้องสูงกว่า SL', NO_TANK:'ยังไม่ได้ตั้งถัง Core ของบัญชีนี้', BAD_SL:'กรอก SL', BAD_LEVEL:'กรอกราคาทุกระดับ', BAD_SPLIT:'สัดส่วนเงินไม่ถูกต้อง'};
+function coreNewLdraft(n, rd, cx){
+  const split = n.nlv===3 ? [0.4,0.3,0.3] : [0.5,0.5];
+  return {levels: rd.lv.map(px=>({px, status:'wait'})), sl: rd.sl, budgetPct: rd.bud/100, split};
 }
 function coreNewIn(){
   const n = coreNew; if(!n || !coreEl('cnTicker')) return;
+  const cur = n.id ? coreCardsList.find(x=>x.id===n.id) : null;
   const rd = coreNewRead();
   const all = acctList.filter(a=>(a.ports || ACCT_PORT_KEYS).includes('core'));
   const match = a=>{ const m = coreRiskCfg(a.id).market; return !rd.mk || m==='both' || m===rd.mk; };
@@ -5378,45 +5712,138 @@ function coreNewIn(){
   if(!shown.length){ shown = all; }
   if(!shown.some(a=>a.id===n.acct)) n.acct = shown[0].id;
   const box = coreEl('cnAcctBox');
-  const html = `<select id="cnAcct" onchange="coreNewPick(this.value)">${shown.map(a=>`<option value="${escHtml(a.id)}"${a.id===n.acct?' selected':''}>${escHtml(a.name)} · ${coreRiskCfg(a.id).market==='both'?'ทั้งคู่':coreRiskCfg(a.id).market}</option>`).join('')}</select>`
+  const html = n.mode!=='new' ? `<b>${escHtml((all.find(a=>a.id===n.acct)||{}).name||n.acct)}</b>`
+    : `<select id="cnAcct" onchange="coreNewPick(this.value)">${shown.map(a=>`<option value="${escHtml(a.id)}"${a.id===n.acct?' selected':''}>${escHtml(a.name)} · ${coreRiskCfg(a.id).market==='both'?'ทั้งคู่':coreRiskCfg(a.id).market}</option>`).join('')}</select>`
     + (hidden>0 && !n.showAll ? ` <button type="button" class="ccBtn" id="cnShowAll" onclick="coreNewShowAll()">แสดงบัญชีอื่น</button> <span class="ccSub">ซ่อน ${hidden} บัญชีที่ตลาดไม่ตรงกับ ticker</span>` : '');
   if(box.dataset.h !== html){ box.innerHTML = html; box.dataset.h = html; }
   const cx = coreCtx(n.acct), cfg = cx.cfg;
-  coreEl('cnTierB').classList.toggle('on', n.tier==='B'); coreEl('cnTierA').classList.toggle('on', n.tier==='A');
-  coreEl('cnReasonBox').style.display = n.tier==='A' ? '' : 'none';
-  const F = cx.F, f = n.f!=null ? n.f : F.f;
-  coreEl('cnFsrc').textContent = n.f!=null && n.f!==F.f ? `(เลือกเอง · ระบบ ${Math.round(F.f*100)}% ${F.src})` : `(${F.src})`;
-  { const w = coreFWarn(F), el = coreEl('cnFwarn'); el.style.display = w ? '' : 'none'; el.textContent = w; }
-  coreEl('cnF').querySelectorAll('button').forEach(b=>b.classList.toggle('on', Math.abs(+b.dataset.f - f) < 1e-9));
-  const mk = rd.mk || (cfg.market==='TH' ? 'TH' : 'US');
-  coreEl('cnRes').innerHTML = coreFirstLotHtml(cx, mk, n.tier, rd.entry, rd.stop, f, F.src);
-  /* ตรวจก่อนบันทึก */
+  /* Tier: แก้ได้ทุกโหมดยกเว้นแก้แผนบันได (ใช้ Tier ของการ์ด) */
+  const ti = rd.ti;
+  const tier = n.mode==='edit' ? (cur && cur.tier==='A' ? 'A' : 'B') : ti.tier;
+  if(ti) coreTiShow(ti);
+  if(tier!=='A' && n.strat==='L' && n.mode==='new') n.strat = 'W';
+  const isL = n.strat==='L';
+  { const sw = coreEl('cnStratW'), sl = coreEl('cnStratL'), msg = coreEl('cnStratMsg');
+    if(sw){ sw.classList.toggle('on', !isL); sl.classList.toggle('on', isL); sl.disabled = tier!=='A'; msg.style.display = tier!=='A' ? '' : 'none'; msg.textContent = tier!=='A' ? 'L ใช้ได้เฉพาะ Tier A' : ''; } }
+  coreEl('cnWBox').style.display = isL ? 'none' : '';
+  coreEl('cnLBox').style.display = isL ? '' : 'none';
   const errs = [];
   let dup = null;
-  if(rd.ticker) dup = coreCardsList.find(c=>c.acct===n.acct && coreNorm(c.ticker)===rd.ticker && coreEff(c).kind!=='closed') || null;
+  if(rd.ticker) dup = coreCardsList.find(c=>c.id!==n.id && c.acct===n.acct && coreNorm(c.ticker)===rd.ticker && coreEff(c).kind!=='closed') || null;
   if(!rd.ticker) errs.push('กรอก Ticker');
   if(dup) errs.push(`มีการ์ด ${rd.ticker} อยู่แล้ว`);
-  if(!(rd.entry>0) || !(rd.stop>0)) errs.push('กรอก Entry และ Stop');
-  else if(!(rd.entry>rd.stop)) errs.push('Entry ต้องมากกว่า Stop');
-  if(n.tier==='A' && !rd.reason) errs.push('Tier A ต้องมีเหตุผล');
+  if(ti && ti.needReason && !ti.reason) errs.push('Tier A ต้องมีเหตุผล');
+  if(n.mode==='edit' && tier!=='A') errs.push('แก้แผนบันไดต้องเป็น Tier A');
   if(!(cx.tankTHB>0)) errs.push('ยังไม่ได้ตั้งถัง Core ของบัญชีนี้');
   if(coreErr) errs.push(coreErr);
+  const mk = rd.mk || (cfg.market==='TH' ? 'TH' : 'US');
+  if(!isL){
+    const F = cx.F, f = n.f!=null ? n.f : F.f;
+    const fw = coreFWarn(F);
+    coreEl('cnFsrc').textContent = n.f!=null && n.f!==F.f ? (fw ? `(เลือกเอง · ระบบ ${Math.round(F.f*100)}%)` : `(เลือกเอง · ระบบ ${Math.round(F.f*100)}% ${F.src})`) : (fw ? '' : `(${F.src})`);
+    { const el = coreEl('cnFwarn'); el.style.display = fw ? '' : 'none'; el.textContent = fw; }
+    coreEl('cnF').querySelectorAll('button').forEach(b=>b.classList.toggle('on', Math.abs(+b.dataset.f - f) < 1e-9));
+    coreEl('cnRes').innerHTML = coreFirstLotHtml(cx, mk, tier, rd.entry, rd.stop, f, F.src);
+    if(!(rd.entry>0) || !(rd.stop>0)) errs.push('กรอก Entry และ Stop');
+    else if(!(rd.entry>rd.stop)) errs.push('Entry ต้องมากกว่า Stop');
+    coreEl('cnSave').textContent = 'บันทึกแผน';
+  } else {
+    coreNewInL(n, rd, cx, cfg, mk, tier, errs);
+  }
   const er = coreEl('cnErr');
-  er.style.display = (dup || errs.length && rd.ticker && (rd.entry>0||rd.stop>0||n.tier==='A')) ? '' : 'none';
-  er.innerHTML = errs.filter(x=>x!=='กรอก Ticker' && x!=='กรอก Entry และ Stop').map(escHtml).join('<br>')
+  er.style.display = (dup || errs.length && rd.ticker && (rd.entry>0||rd.stop>0||tier==='A'||isL)) ? '' : 'none';
+  er.innerHTML = errs.filter(x=>!/^กรอก/.test(x)).map(escHtml).join('<br>')
     + (dup ? ` <button type="button" class="ccBtn" id="cnGoto" onclick="coreGoto('${escHtml(dup.id)}')">ไปที่การ์ด</button>` : '');
   if(!er.innerHTML.trim()) er.style.display = 'none';
   coreEl('cnSave').disabled = errs.length>0;
   return errs;
 }
+/* ส่วนฟอร์ม L ของ coreNewIn — เติมงบ ฿ · ตาราง · ประตู 5 ข้อ · ใส่ error ลง errs */
+function coreNewInL(n, rd, cx, cfg, mk, tier, errs){
+  const bud = coreEl('cnLbud');
+  if(!n.budEdited){ const dv = String(cfg.ladderBudget); if(bud.value !== dv) bud.value = dv; rd.bud = coreNum(bud.value); }
+  coreEl('cnLbudT').textContent = rd.bud>0 ? `= ฿${fmt0(cx.tankTHB*rd.bud/100)}` : '';
+  coreEl('cnLsplit').textContent = `แบ่งเงิน ${n.nlv===3 ? '40 / 30 / 30' : '50 / 50'}`;
+  const sym = mk==='US' ? '$' : '฿', isEdit = n.mode==='edit';
+  coreEl('cnSave').textContent = isEdit ? 'บันทึกแผนใหม่' : 'ล็อกแผน';
+  const fill = rd.lv.every(x=>x>0) && rd.sl>0 && rd.bud>0;
+  let lc = null, cp;
+  if(!fill){
+    errs.push('กรอกระดับราคา · SL · งบ ให้ครบ');
+    cp = coreCanPlace(n.acct, {tier, thb:{ok:false}}, n.id, isEdit);
+    coreEl('cnLres').innerHTML = '<div class="ccSub" data-c-msg>กรอกระดับราคา · SL · งบ</div>';
+  } else {
+    const ld = coreNewLdraft(n, rd, cx);
+    lc = coreLadderCalc(ld, mk, cx);
+    if(!lc || !lc.nat.ok){
+      const er = lc && lc.nat.err;
+      errs.push(CORE_LERR[er] || ('บันไดไม่ถูกต้อง' + (er ? ' · ' + er : '')));
+      cp = coreCanPlace(n.acct, {tier, thb:{ok:false}}, n.id, isEdit);
+      coreEl('cnLres').innerHTML = `<div class="ccWarn" data-c-msg>${escHtml(CORE_LERR[er] || er || 'คำนวณไม่สำเร็จ')}</div>`;
+    } else {
+      const nat = lc.nat;
+      nat.warns.forEach(w=>{ const m = /^ZERO_LOT_L(\d)$/.exec(w); if(m) errs.push(`L${m[1]} ได้ 0 หุ้น — เพิ่มงบหรือลดจำนวนระดับ`); });
+      cp = coreCanPlace(n.acct, {tier, thb: lc.thb}, n.id, isEdit);
+      const tbl = coreLadderTableHtml(nat.rows.map((r,i)=>({lv:'L'+(i+1), px:r.px, cost:r.cost, qty:r.qty, risk:r.risk, status:'wait'})), coreLadderTot(nat, cfg), {sym});
+      coreEl('cnLres').innerHTML = tbl + `<div class="ccSumLn" data-c-lfirst>ซื้อแค่ระดับแรก เสี่ยง <b>${fmt2(nat.firstRiskPct*100)}%</b> · จอง <b>${sym}${fmt0(nat.cost)}</b> (฿${fmt0(lc.thb.cost)})</div>`;
+    }
+  }
+  coreEl('cnLgates').innerHTML = coreGatesHtml(cp);
+  if(!cp.allowed && errs.indexOf('กรอกระดับราคา · SL · งบ ให้ครบ')<0 && !(lc && !lc.nat.ok)) errs.push('ประตูวางบันไดไม่ผ่านครบ 5 ข้อ');
+}
 function coreNewSave(){
   const errs = coreNewIn(); if(!errs || errs.length) return;
-  const n = coreNew, rd = coreNewRead();
-  const id = coreNewId(), now = new Date().toISOString();
-  const card = {acct:n.acct, ticker:rd.ticker, market:rd.mk, strategy:'W', tier:n.tier, tierReason: n.tier==='A' ? rd.reason : null,
-    plan:{entry:rd.entry, stop:rd.stop}, stop:rd.stop, stopHistory:[], px:null, pxDate:null, emaW:null, lots:[], trade_id:null, status:'plan', created_at:now};
+  const n = coreNew, rd = coreNewRead(), cur = n.id ? coreCardsList.find(x=>x.id===n.id) : null;
+  const now = new Date().toISOString();
+  const tfields = rd.ti ? {tier: rd.ti.tier, tierComputed: rd.ti.computed, tierInputs: rd.ti.inputs, tierReason: rd.ti.reason || null} : {};
+  if(n.strat==='L'){
+    const cx = coreCtx(n.acct), d = coreNewLdraft(n, rd, cx);
+    const ladder = {levels: d.levels, sl: d.sl, budgetPct: d.budgetPct, split: d.split, lockedAt: now};
+    coreSheetClose();
+    if(n.mode==='edit') { coreWrite(cur.id, {ladder, stop:d.sl}); return; }
+    if(n.mode==='convert') { coreWrite(cur.id, Object.assign({strategy:'L', plan:null, ladder, stop:d.sl, emaW:null}, tfields)); return; }
+    coreWrite(coreNewId(), Object.assign({acct:n.acct, ticker:rd.ticker, market:rd.mk, strategy:'L', plan:null, ladder, stop:d.sl, stopHistory:[], px:null, pxDate:null, emaW:null, lots:[], trade_id:null, status:'plan', created_at:now}, tfields));
+    return;
+  }
+  const id = coreNewId();
+  const card = Object.assign({acct:n.acct, ticker:rd.ticker, market:rd.mk, strategy:'W', plan:{entry:rd.entry, stop:rd.stop}, stop:rd.stop, stopHistory:[], px:null, pxDate:null, emaW:null, lots:[], trade_id:null, status:'plan', created_at:now}, tfields);
   coreSheetClose();
   coreWrite(id, card);
+}
+/* แปลงกลยุทธ์ของแผน (⋯) */
+function coreToL(id){
+  const c = coreCardsList.find(x=>x.id===id); if(!c || c.status!=='plan' || c.strategy==='L' || c.tier!=='A') return;
+  coreNewOpen(c.acct, {mode:'convert', id});
+}
+function coreLEditOpen(id){
+  const c = coreCardsList.find(x=>x.id===id); if(!c || c.status!=='plan' || c.strategy!=='L' || c.tier!=='A') return;
+  coreNewOpen(c.acct, {mode:'edit', id});
+}
+function coreToW(id){
+  const c = coreCardsList.find(x=>x.id===id); if(!c || c.status!=='plan' || c.strategy!=='L' || !c.ladder) return;
+  const l1 = (c.ladder.levels||[])[0] || {};
+  coreDlg = {kind:'tow', id};
+  coreSheet('tow', `<h3>เปลี่ยนเป็นระบบ Week · ${escHtml(c.ticker)}</h3><div class="ccSub">เงินที่จองบันไดคืนทันที · ใส่ Entry / Stop ของไม้แรก</div>
+    <div class="ccPair"><div class="ccF"><label>Entry ไม้แรก</label><input type="text" inputmode="decimal" id="c2wEntry" value="${escHtml(String(l1.px!=null?l1.px:''))}" oninput="coreToWIn()"></div>
+      <div class="ccF"><label>Stop</label><input type="text" inputmode="decimal" id="c2wStop" value="${escHtml(String(c.ladder.sl))}" oninput="coreToWIn()"></div></div>
+    <div class="ccErr" id="c2wErr" style="display:none"></div>
+    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="c2wSave" data-c2w-save onclick="coreToWSave()">เปลี่ยน</button></div>`);
+  coreToWIn();
+}
+function coreToWIn(){
+  if(!coreDlg) return false;
+  const en = coreNum(coreEl('c2wEntry').value), sp = coreNum(coreEl('c2wStop').value);
+  let msg = '';
+  if(!(en>0) || !(sp>0)) msg = 'กรอก Entry และ Stop'; else if(!(en>sp)) msg = 'Entry ต้องมากกว่า Stop'; else if(coreErr) msg = coreErr;
+  const er = coreEl('c2wErr'); er.style.display = msg && en>0 && sp>0 ? '' : 'none'; er.textContent = msg;
+  coreEl('c2wSave').disabled = !!msg;
+  return !msg;
+}
+function coreToWSave(){
+  if(!coreToWIn()) return;
+  const id = coreDlg.id, en = coreNum(coreEl('c2wEntry').value), sp = coreNum(coreEl('c2wStop').value);
+  coreSheetClose();
+  coreWrite(id, {strategy:'W', plan:{entry:en, stop:sp}, ladder:null, stop:sp, emaW:null});
 }
 
 /* ซื้อไม้ 1 */
@@ -5525,6 +5952,100 @@ function coreBuyAddSave(){
   render();
 }
 
+/* 7E-2b-1 · บันทึกซื้อระดับ Lk (ระดับ wait ตัวแรกเท่านั้น) */
+function coreLBuyOpen(id){
+  const c = coreCardsList.find(x=>x.id===id); if(!c || c.strategy!=='L' || !c.ladder) return;
+  const cx = coreCtx(c.acct), v = coreView(c, cx); if(v.kind==='closed') return;
+  if(v.kind==='open' && v.st && v.st.status==='red') return;
+  const nat = v.lc && v.lc.nat; if(!nat || !nat.ok) return;
+  const k = (c.ladder.levels||[]).findIndex(l=>l.status==='wait'); if(k<0) return;
+  const rec = nat.rows[k].qty, px = nat.rows[k].px;
+  coreDlg = {kind:'lbuy', id, k, rec};
+  coreSheet('lbuy', `<h3>บันทึกซื้อ L${k+1} · ${escHtml(c.ticker)}</h3>
+    <div class="ccF"><label>ราคาซื้อจริง (ระดับ L${k+1} = ${coreP(px)})</label><input type="text" inputmode="decimal" id="clPx" value="${escHtml(String(px))}" oninput="coreLBuyIn()"></div>
+    <div class="ccF"><label>จำนวน (ตามแผน ${fmt0(rec)} · ปัดลงตามตลาด)</label><input type="text" inputmode="decimal" id="clQty" value="${rec}" oninput="coreLBuyIn()"></div>
+    <div class="ccF"><label>วันที่</label><input type="date" id="clDate" value="${posThaiToday()}" oninput="coreLBuyIn()"></div>
+    <div class="ccSub" data-cl-stop>Stop = SL บันได <b>${coreP(+c.ladder.sl)}</b> (แก้ไม่ได้ที่นี่ · ใช้ "เลื่อน Stop")</div>
+    <div class="ccErr" id="clErr" style="display:none"></div>
+    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="clSave" data-cl-save onclick="coreLBuySave()">บันทึก</button></div>`);
+  coreLBuyIn();
+}
+function coreLBuyRead(){
+  const c = coreDlg && coreCardsList.find(x=>x.id===coreDlg.id); if(!c) return null;
+  const mk = c.market || coreMarketOf(c.ticker);
+  return {c, mk, px:coreNum(coreEl('clPx').value), rawQty:coreNum(coreEl('clQty').value), qty:coreFloorLot(coreNum(coreEl('clQty').value)||0, mk), date:coreEl('clDate').value, sl:+c.ladder.sl};
+}
+function coreLBuyIn(){
+  const d = coreLBuyRead(); if(!d) return ['ไม่พบการ์ด'];
+  const errs = [];
+  if(!(d.px>0)) errs.push('ราคาซื้อต้องมากกว่า 0');
+  else if(!(d.px>d.sl)) errs.push('ราคาซื้อต้องมากกว่า Stop (SL บันได)');
+  if(!(d.qty>0)) errs.push(`จำนวนต้องอย่างน้อย 1 ${d.mk==='TH'?'หลัก (100)':'หุ้น'}`);
+  else if(d.rawQty!==d.qty) errs.push(`จะปัดลงเป็น ${fmt0(d.qty)} ตามตลาด`);
+  if(!d.date) errs.push('กรอกวันที่');
+  if(coreErr) errs.push(coreErr);
+  const e = coreEff(d.c);
+  if(e.kind==='closed') errs.push('ตำแหน่งปิดแล้ว');
+  else if(e.kind==='open' && e.t){ const st = Calc.coreSize.status({px:+d.c.px, pxDate:d.c.pxDate, today:posThaiToday(), stop:+e.t.sl}).status; if(st==='red') errs.push('ปิดใต้ Stop — ขายหมด · งดซื้อ'); }
+  const hard = errs.filter(x=>!/^จะปัดลง/.test(x));
+  const er = coreEl('clErr'); er.style.display = errs.length ? '' : 'none'; er.innerHTML = errs.map(escHtml).join('<br>');
+  coreEl('clSave').disabled = hard.length>0;
+  return hard;
+}
+function coreLBuySave(){
+  if(coreLBuyIn().length) return;
+  const d = coreLBuyRead(); if(!d) return;
+  const c = d.c, A = c.acct, B = getBook(A), ld = c.ladder, k = coreDlg.k;
+  if(!ld.levels[k] || ld.levels[k].status!=='wait'){ coreSheetClose(); return; }
+  const levels = ld.levels.map((l,i)=> i===k ? Object.assign({}, l, {status:'bought', qty:d.qty, fillPx:d.px, boughtAt:d.date}) : l);
+  const lot = {n:(c.lots||[]).length+1, level:k+1, date:d.date, px:d.px, qty:d.qty, f:null, stop:+ld.sl};
+  const patch = {ladder: Object.assign({}, ld, {levels})};
+  if(c.status==='plan' && !c.trade_id){
+    const tid = 't' + Date.now() + Math.floor(Math.random()*1000);
+    const t = makeTradeObject({id:tid, date:d.date, sym:c.ticker, port:'core', bias:'Long', entry:d.px, sl:+ld.sl, qty:d.qty, mult:1,
+      cur: d.mk==='TH' ? 'THB' : 'USD', status:'open'});
+    B.trades.push(t); saveBook(A);
+    Object.assign(patch, {status:'open', trade_id:tid, stop:+ld.sl, stopHistory:[], lots:[lot]});
+  } else {
+    const t = B.trades.find(x=>x.id===c.trade_id); if(!t || t.status!=='open'){ coreSheetClose(); return; }
+    const newQty = (+t.qty) + d.qty;
+    t.entry = ((+t.entry)*(+t.qty) + d.px*d.qty) / newQty; t.qty = newQty;   /* sl ไม่เปลี่ยน */
+    saveBook(A);
+    patch.lots = (c.lots||[]).concat([lot]);
+  }
+  coreSheetClose();
+  coreWrite(c.id, patch);
+  render();
+}
+/* 7E-2b-1 · ยกเลิกระดับที่จอง (มือ) — ไม่กระจายเงินไประดับอื่น */
+function coreLCancelOpen(id){
+  const c = coreCardsList.find(x=>x.id===id); if(!c || c.strategy!=='L' || !c.ladder) return;
+  const cx = coreCtx(c.acct), v = coreView(c, cx); if(v.kind!=='open' || !v.lc || !v.lc.thb.ok) return;
+  const opts = (c.ladder.levels||[]).map((l,i)=>({i, l, row:v.lc.thb.rows[i]})).filter(x=>x.l.status==='wait');
+  if(!opts.length) return;
+  coreDlg = {kind:'lcancel', id};
+  coreSheet('lcancel', `<h3>ยกเลิกระดับที่จอง · ${escHtml(c.ticker)}</h3>
+    <div class="ccF"><label>ระดับที่จอง</label><select id="clcSel" onchange="coreLCancelIn()">${opts.map(x=>`<option value="${x.i}" data-cost="${x.row.cost}" data-px="${x.l.px}" data-money="${escHtml(coreMoneyDual(x.row.cost, v.mk, cx.fx))}">L${x.i+1} @${coreP(+x.l.px)}</option>`).join('')}</select></div>
+    <div class="ccSub" id="clcMsg" data-clc-msg></div>
+    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ไม่ยกเลิก</button><button type="button" class="ccBtn pri dn" id="clcOk" data-clc-ok onclick="coreLCancelSave()">ยืนยันยกเลิก</button></div>`);
+  coreLCancelIn();
+}
+function coreLCancelIn(){
+  const sel = coreEl('clcSel'); if(!sel) return;
+  const o = sel.options[sel.selectedIndex];
+  coreEl('clcMsg').textContent = `ยกเลิก L${(+o.value)+1} @${coreP(+o.dataset.px)} · คืนเงินจอง ${o.dataset.money}`;
+  coreEl('clcOk').disabled = !!coreErr;
+}
+function coreLCancelSave(){
+  if(!coreDlg) return;
+  const c = coreCardsList.find(x=>x.id===coreDlg.id), k = +coreEl('clcSel').value; if(!c || !c.ladder) return;
+  const ld = c.ladder; if(!ld.levels[k] || ld.levels[k].status!=='wait'){ coreSheetClose(); return; }
+  const levels = ld.levels.map((l,i)=> i===k ? Object.assign({}, l, {status:'cancelled', cancelledAt:posThaiToday(), cancelBy:'manual'}) : l);
+  coreSheetClose();
+  coreWrite(c.id, {ladder: Object.assign({}, ld, {levels})});
+  render();
+}
+
 /* เลื่อน Stop */
 function coreStopOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
@@ -5532,6 +6053,7 @@ function coreStopOpen(id){
   coreDlg = {kind:'stop', id, cur:v.stop};
   coreSheet('stop', `<h3>เลื่อน Stop · ${escHtml(c.ticker)}</h3><div class="ccSub">Stop ปัจจุบัน ${fmt2(v.stop)} · เลื่อนขึ้นได้อย่างเดียว</div>
     <div class="ccF"><label>Stop ใหม่</label><input type="text" inputmode="decimal" id="csStop" oninput="coreStopIn()"></div>
+    ${c.strategy==='L' ? '<div class="ccSub" id="csPrev" data-cs-preview></div>' : ''}
     <div class="ccErr" id="csErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="csSave" data-cs-save onclick="coreStopSave()" disabled>บันทึก</button></div>`);
 }
@@ -5545,7 +6067,22 @@ function coreStopIn(){
   else if(coreErr) msg = coreErr;
   er.style.display = msg && (ns>0) ? '' : 'none'; er.textContent = msg;
   coreEl('csSave').disabled = !!msg;
+  const pv = coreEl('csPrev');
+  if(pv){
+    const c = coreCardsList.find(x=>x.id===coreDlg.id);
+    if(!c || !(ns>coreDlg.cur+1e-9)) pv.textContent = '';
+    else { const pr = coreStopPreview(c, ns); pv.textContent = pr.text; }
+  }
   return !msg;
+}
+/* ตัวอย่างสด: ระดับที่จะถูกยกเลิกเมื่อเลื่อน Stop (applyStopMove) · เงินคืนเป็นบาท */
+function coreStopPreview(c, ns){
+  const cx = coreCtx(c.acct), mk = c.market || coreMarketOf(c.ticker), ld = c.ladder;
+  const mv = Calc.coreSize.applyStopMove({sl:+ld.sl, newSl:ns, levels:ld.levels});
+  if(!mv.ok || !mv.cancelled.length) return {text:'ไม่มีระดับที่ถูกยกเลิก', idx:[]};
+  const lc = coreLadderCalc(ld, mk, cx);
+  const cost = mv.cancelled.reduce((a,i)=>a + (lc && lc.thb.ok ? lc.thb.rows[i].cost : 0), 0);
+  return {text:`ระดับที่จะถูกยกเลิก: ${mv.cancelled.map(i=>`L${i+1} @${coreP(+ld.levels[i].px)}`).join(', ')} (คืนเงินจอง ${coreMoneyDual(cost, mk, cx.fx)})`, idx:mv.cancelled};
 }
 function coreStopSave(){
   if(!coreStopIn()) return;
@@ -5553,8 +6090,14 @@ function coreStopSave(){
   const A = c.acct, B = getBook(A), t = B.trades.find(x=>x.id===c.trade_id); if(!t || t.status!=='open'){ coreSheetClose(); return; }
   const old = +t.sl; t.sl = ns; saveBook(A);
   const hist = (c.stopHistory || []).concat([{date:posThaiToday(), from:old, to:ns}]);
+  const patch = {stop:ns, stopHistory:hist};
+  if(c.strategy==='L' && c.ladder){
+    const mv = Calc.coreSize.applyStopMove({sl:+c.ladder.sl, newSl:ns, levels:c.ladder.levels});
+    const cancelled = mv.ok ? mv.cancelled : [];
+    patch.ladder = Object.assign({}, c.ladder, {sl:ns, levels: c.ladder.levels.map((l,i)=> cancelled.indexOf(i)>=0 ? Object.assign({}, l, {status:'cancelled', cancelledAt:posThaiToday(), cancelBy:'stop'}) : l)});
+  }
   coreSheetClose();
-  coreWrite(c.id, {stop:ns, stopHistory:hist});
+  coreWrite(c.id, patch);
   render();
 }
 
@@ -5565,14 +6108,15 @@ function corePxOpen(id){
   coreSheet('px', `<h3>อัปเดตราคาปิดสัปดาห์ · ${escHtml(c.ticker)}</h3>
     <div class="ccF"><label>ราคาปิด</label><input type="text" inputmode="decimal" id="cpxPx" value="${c.px>0?escHtml(String(c.px)):''}" oninput="corePxIn()"></div>
     <div class="ccF"><label>วันที่ (ศุกร์ล่าสุด)</label><input type="date" id="cpxDate" value="${escHtml(coreLastFriday())}" oninput="corePxIn()"></div>
-    <div class="ccF"><label>EMA10 รายสัปดาห์ (ว่างได้)</label><input type="text" inputmode="decimal" id="cpxEma" value="${c.emaW>0?escHtml(String(c.emaW)):''}" oninput="corePxIn()"></div>
+    ${c.strategy==='L' ? '' : `<div class="ccF"><label>EMA10 รายสัปดาห์ (ว่างได้)</label><input type="text" inputmode="decimal" id="cpxEma" value="${c.emaW>0?escHtml(String(c.emaW)):''}" oninput="corePxIn()"></div>`}
     <div class="ccErr" id="cpxErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="cpxSave" data-cpx-save onclick="corePxSave()" disabled>บันทึก</button></div>`);
   corePxIn();
 }
 function corePxIn(){
   if(!coreDlg) return false;
-  const px = coreNum(coreEl('cpxPx').value), ema = coreEl('cpxEma').value.trim()==='' ? null : coreNum(coreEl('cpxEma').value), d = coreEl('cpxDate').value;
+  const emaEl = coreEl('cpxEma');
+  const px = coreNum(coreEl('cpxPx').value), ema = (!emaEl || emaEl.value.trim()==='') ? null : coreNum(emaEl.value), d = coreEl('cpxDate').value;
   let msg = '';
   if(!(px>0)) msg = 'กรอกราคาปิด';
   else if(!d) msg = 'กรอกวันที่';
@@ -5585,30 +6129,39 @@ function corePxIn(){
 function corePxSave(){
   if(!corePxIn()) return;
   const id = coreDlg.id, px = coreNum(coreEl('cpxPx').value), d = coreEl('cpxDate').value;
-  const ema = coreEl('cpxEma').value.trim()==='' ? null : coreNum(coreEl('cpxEma').value);
+  const emaEl = coreEl('cpxEma');
+  const ema = (!emaEl || emaEl.value.trim()==='') ? null : coreNum(emaEl.value);
   coreSheetClose();
   coreWrite(id, {px, pxDate:d, emaW:ema});
 }
 
-/* Tier: B→A ต้องมีเหตุผล · A→B ไม่ต้อง */
-function coreTierAsk(id){
-  const c = coreCardsList.find(x=>x.id===id); if(!c || c.tier==='A') return;
+/* Tier… (⋯ ทั้ง W และ L) — บล็อก Tier เดียวกับแผนใหม่ · ยก A ตอนคำนวณได้ B ต้องมีเหตุผล · ลด A → B ได้เสมอ · ปิดโดยไม่บันทึก = ไม่มีอะไรเปลี่ยน */
+function coreTierOpen(id){
+  const c = coreCardsList.find(x=>x.id===id); if(!c) return;
   coreDlg = {kind:'tier', id};
-  coreSheet('tier', `<h3>ตั้ง Tier A · ${escHtml(c.ticker)}</h3><div class="ccSub">Tier A = เพดานไม้แรกสูงขึ้น · ต้องมีเหตุผล (มีผลกับเพดานไม้แรกของแผนเท่านั้น)</div>
-    <div class="ccF"><label>เหตุผล (บังคับ)</label><input type="text" id="ctReason" autocomplete="off" oninput="coreTierIn()"></div>
+  coreTi = coreTiState(c); coreTi.pick = c.tier==='A' ? 'A' : 'B';
+  coreSheet('tier', `<h3>Tier · ${escHtml(c.ticker)}</h3><div class="ccSub">Tier ตอนนี้ ${c.tier==='A'?'A':'B'}${c.strategy==='L' ? ' · การ์ด L ที่ถูกลดเป็น B ยังทำงานต่อจนออก' : ' · มีผลกับเพดานไม้แรกของแผน'}</div>
+    ${coreTierBlockHtml(coreRiskCfg(c.acct), Object.assign({}, c.tierInputs, {reason: c.tierReason}))}
+    <div class="ccErr" id="ctErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="ctSave" data-ct-save onclick="coreTierSave()" disabled>บันทึก</button></div>`);
+  coreTierIn();
 }
-function coreTierIn(){ const ok = !!(coreEl('ctReason').value||'').trim() && !coreErr; coreEl('ctSave').disabled = !ok; return ok; }
+function coreTierIn(){
+  if(!coreDlg || !coreEl('ctSave')) return false;
+  const ti = coreTiEval(); coreTiShow(ti);
+  const errs = [];
+  if(ti.needReason && !ti.reason) errs.push('Tier A ต้องมีเหตุผล');
+  if(coreErr) errs.push(coreErr);
+  const er = coreEl('ctErr'); er.style.display = coreErr ? '' : 'none'; er.textContent = coreErr || '';
+  coreEl('ctSave').disabled = errs.length>0;
+  return errs.length===0;
+}
 function coreTierSave(){
   if(!coreTierIn()) return;
-  const id = coreDlg.id, r = coreEl('ctReason').value.trim();
+  const id = coreDlg.id, ti = coreTiEval();
   coreSheetClose();
-  coreWrite(id, {tier:'A', tierReason:r});
-}
-function coreTierSetB(id){
-  const c = coreCardsList.find(x=>x.id===id); if(!c || c.tier!=='A') return;
   coreShowReason.delete(id);
-  coreWrite(id, {tier:'B', tierReason:null});
+  coreWrite(id, {tier: ti.tier, tierComputed: ti.computed, tierInputs: ti.inputs, tierReason: ti.reason || null});
 }
 
 /* ลบแผน (เฉพาะ plan) — sheet ยืนยันแทน confirm() */
@@ -5669,22 +6222,34 @@ function render(){
       const cfg = coreRiskCfg();
       const tank = capTH, lim = portHeatLimit('core'), warnAt = Math.min(cfg.l2Warn, lim);
       /* 7E-2 — ช่อง (a) = ชั้น 2 จากราคาปิด (coreAcctRisk) · ไม้ที่ไม่มีการ์ดนับจากทุน · ตัวที่ขาดราคาไม่นับ */
-      const cr = coreAcctRisk(acctActive);
-      const riskTHBv = cr ? cr.layer2THB : oTH;
-      const riskTank = cr ? cr.layer2Pct : (tank>0 ? oTH/tank*100 : 0);
+      const cr = coreAcctRisk(acctActive), cxs = coreCtx(acctActive), gateS = coreGate(acctActive);
+      const riskTHBv = cr ? cr.layer2FullTHB : oTH;
+      const riskNow = cr ? cr.layer2Pct : (tank>0 ? oTH/tank*100 : 0);
+      const riskTank = cr ? cr.layer2FullPct : riskNow;
       const lvl = riskTank >= lim-1e-9 ? 'over' : (riskTank >= warnAt-1e-9 ? 'warn' : 'ok');
       const coreOpen = state.trades.filter(t=>t.port==='core' && t.status==='open');
       const held = coreOpen.reduce((a,t)=>a + (+t.entry||0)*(+t.qty||0)*(t.mult||1)*(tradeCur(t)==='USD'?fx:1), 0);
-      const free = tank - held;
+      const spS = cxs.split, lHeldS = spS ? spS.lHeld : 0, lResS = spS ? spS.lReserved : 0, wHeldS = cxs.wCost;
+      const free = spS ? (tank - wHeldS - spS.lUsed) : tank - held;
+      const lPctS = spS ? spS.lPct*100 : 0;
       const nLock = coreOpen.filter(t=>posOpenRisk(t).locked).length;
+      const nL = coreCardsList.filter(c=>c.acct===acctActive && c.strategy==='L' && coreEff(c).kind==='open').length;
+      const nW = Math.max(0, nOpen - nL);
       const mktLbl = cfg.market==='both' ? 'ทั้งคู่' : cfg.market;
       const planCell = nPlan>0 ? `<div class="sumCell" data-sum="plan"><div class="sumL">แผนที่รอ (Planned)</div><div class="sumBig sumNw">${nPlan}<small> ตัว</small></div><div class="sumSub">เสี่ยง +฿${fmt0(plTH)} · ${fmt2(pct(plTH,tank))}% ของถัง</div></div>` : '';
+      const seg = v=>tank>0 ? Math.max(0, v)/Math.max(tank, wHeldS+(spS?spS.lUsed:0))*100 : 0;
+      const bar4 = `<div class="sumBar4" data-sum-bar><i data-seg="wheld" style="width:${seg(wHeldS)}%"></i><i data-seg="lheld" style="width:${seg(lHeldS)}%"></i><i data-seg="lres" style="width:${seg(lResS)}%"></i><i data-seg="free" style="width:${seg(Math.max(0,free))}%"></i></div>
+        <div class="sumLeg" data-sum-leg><span style="--lc:var(--sum-strong)">W ถือ ฿${fmt0(wHeldS)}</span><span style="--lc:var(--sum-up)">L ถือ ฿${fmt0(lHeldS)}</span><span style="--lc:var(--sum-warn-val)">L จอง ฿${fmt0(lResS)}</span><span style="--lc:var(--sum-line)">เงินว่าง</span></div>`;
+      const nowW = Math.min(100, riskNow/lim*100), resW = Math.min(100-nowW, Math.max(0, riskTank-riskNow)/lim*100), warnX = Math.min(100, warnAt/lim*100);
+      const bar2 = `<div class="sumBar2" data-sum-bar2><i class="now" style="width:${nowW}%"></i><i class="res" style="width:${resW}%"></i><b style="left:${warnX}%"></b></div>`;
+      const freeTxt = free<0 ? `${lResS>0 ? 'จองเกินถัง' : 'ถือเกินถัง'} ฿${fmt0(-free)}` : `เงินว่าง ฿${fmt0(free)}`;
       const sec = `<div class="sumSec" data-priv="p-port-${k}" data-sum-sec="${k}">
         <div class="sumHead"><div class="sumT">Core Port</div><span class="sumPill nt" data-sum-mkt>${mktLbl}</span><span class="sumR" data-priv-anchor><span class="sumNw">ทุน ${capLine}</span> · <span class="sumNw">${fmt2(pct(capTH,cap))}% ของทุนรวม</span></span></div>
         <div class="sumGrid sumG3">
-          <div class="sumCell sumLv-${lvl}" data-sum="open" data-level="${lvl}"><div class="sumL">ความเสี่ยงถึง Stop (ชั้น 2 · จากราคาปิด) · % ของถัง Core</div><div class="sumBig sumNw">${fmt2(riskTank)}<small>% / ${fmt2(lim)}%</small></div><div class="sumSub">฿${fmt0(riskTHBv)} · ≈ ${fmt2(pct(riskTHBv,cap))}% ของบัญชี</div>${cr && cr.missing>0?`<div class="sumSub" data-sum-missing>ขาดราคา ${cr.missing} ตัว (ไม่นับ)</div>`:''}${cr && cr.nNoCard>0?`<div class="sumSub" data-sum-nocard>ไม่มีการ์ด ${cr.nNoCard} ตัว (นับจากทุน)</div>`:''}${lvl==='over'?'<div class="sumSub"><span class="sumPill dn" data-stop-buy>งดซื้อเพิ่ม</span></div>':''}</div>
-          <div class="sumCell" data-sum="held"><div class="sumL">เงินที่ถือ</div><div class="sumBig sumNw">${fmt2(pct(held,tank))}<small>% ของถัง</small></div><div class="sumSub sumNw">฿${fmt0(held)}</div><div class="sumSub${free<0?' sumNeg':''}" data-sum-free>${free<0?`ถือเกินถัง ฿${fmt0(-free)}`:`เงินว่าง ฿${fmt0(free)}`}</div></div>
-          <div class="sumCell" data-sum="pos"><div class="sumL">ตำแหน่ง</div><div class="sumBig sumNw">${nOpen}<small> ตัว</small></div><div class="sumSub sumNw">ล็อกกำไร ${nLock} ตัว</div></div>
+          <div class="sumCell sumLv-${lvl}" data-sum="open" data-level="${lvl}"><div class="sumL">ความเสี่ยงถึง Stop (ชั้น 2 · จากราคาปิด) · % ของถัง Core</div><div class="sumBig sumNw" data-sum-now><small>ตอนนี้ </small>${fmt2(riskNow)}<small>%</small></div><div class="sumFull" data-sum-full><small>ถ้าบันไดเต็ม </small><b>${fmt2(riskTank)}</b><small>% / ${fmt2(lim)}%</small></div>${bar2}<div class="sumSub">฿${fmt0(riskTHBv)} · ≈ ${fmt2(pct(riskTHBv,cap))}% ของบัญชี</div>${cr && cr.missing>0?`<div class="sumSub" data-sum-missing>ขาดราคา ${cr.missing} ตัว (ไม่นับ)</div>`:''}${cr && cr.nNoCard>0?`<div class="sumSub" data-sum-nocard>ไม่มีการ์ด ${cr.nNoCard} ตัว (นับจากทุน)</div>`:''}${lvl==='over'?'<div class="sumSub"><span class="sumPill dn" data-stop-buy>งดซื้อเพิ่ม</span></div>':''}</div>
+          <div class="sumCell" data-sum="held"><div class="sumL">งบ W / L · เงินที่ถือ</div><div class="sumBig sumNw">${fmt2(pct(held,tank))}<small>% ของถัง</small></div><div class="sumSub sumNw">฿${fmt0(held)}</div>${bar4}<div class="sumSub${lPctS>cfg.ladderShare+1e-9?' sumNeg':''}" data-sum-l>L รวม ${fmt2(lPctS)}% / ${fmt2(cfg.ladderShare)}%</div><div class="sumSub${free<0?' sumNeg':''}" data-sum-free>${freeTxt}</div></div>
+          <div class="sumCell" data-sum="pos"><div class="sumL">ตำแหน่ง</div><div class="sumBig sumNw">${nOpen}<small> ตัว</small></div><div class="sumSub sumNw" data-sum-wl>W ${nW} · L ${nL}</div><div class="sumSub sumNw">ล็อกกำไร ${nLock} ตัว</div></div>
+          <div class="sumCell" data-sum="gate" data-gate-open="${gateS.open?1:0}"><div class="sumL">ประตูบันได L</div><div class="sumBig sumNw">${gateS.open?'เปิด':'งด'}</div><div class="sumSub">${escHtml(gateS.text)}</div></div>
           ${planCell}
         </div>
       </div>`;
