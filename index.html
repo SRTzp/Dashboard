@@ -4665,7 +4665,9 @@ function posOpenRisk(t, fx){
   return {amt, cur, thb: cur==='USD' ? amt*rate : amt, locked};
 }
 /* วันนี้เวลาไทย (YYYY-MM-DD) และจำนวนวันที่ถือมา (openedAt || date → วันนี้) */
-function posThaiToday(){ return new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Bangkok'}); }
+/* FX — "วันนี้" = เวลาไทย (Asia/Bangkok) เสมอ · ห้ามใช้ new Date().toISOString().slice(0,10) (= UTC → 00:00–06:59 ไทยได้เมื่อวาน) */
+function thaiToday(){ return new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Bangkok'}); }
+function posThaiToday(){ return thaiToday(); }
 function posDaysHeld(t, today){
   const d = String(t.openedAt || t.date || '').slice(0,10), n = String(today || posThaiToday()).slice(0,10);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d) || !/^\d{4}-\d{2}-\d{2}$/.test(n)) return null;
@@ -4958,9 +4960,16 @@ function coreFNow(){
   const f = cap>=100 ? 1 : (cap>=75 ? 0.75 : 0.5);
   let src = C.stale ? 'Fund-flow เก่า · ไม่ลด' : (C.red===0 ? 'เขียวทั้งคู่' : `แดง ${C.red} ตัว`);
   if(C.missing && C.missing.length) src += ' · ไม่มีข้อมูล ' + C.missing.join('/');
-  return {f, src, stale:!!C.stale, missing:C.missing||[]};
+  return {f, src, stale:!!C.stale, missing:C.missing||[], age:C.age, demo:!!C.demo};
 }
 /* ข้อมูลระดับบัญชี: ถัง · เงินสดว่าง · ค่าตั้ง (฿) */
+/* FX — เตือน Fund-flow ในที่ที่ใช้ f (ไม่เปลี่ยนค่า f/เกณฑ์ 5 วัน) · demo > stale > ขาด ratio · สดปกติ = ว่าง */
+function coreFWarn(F){
+  if(F.demo) return `⚠ ยังไม่มีข้อมูล Fund-flow · f ${Math.round(F.f*100)}%`;
+  if(F.stale) return `⚠ Fund-flow เก่า ${F.age==null?'—':F.age} วันทำการ · f ไม่ลด (100%)`;
+  if(F.missing && F.missing.length) return `⚠ Fund-flow ไม่มีข้อมูล ${F.missing.join('/')}`;
+  return '';
+}
 function coreCtx(A){
   const B = getBook(A), fx = +B.settings.fx || 1, tankTHB = coreTankTHB(B);
   const openTr = B.trades.filter(t=>t.port==='core' && t.status==='open');
@@ -5277,7 +5286,7 @@ function coreAcctHtml(a){
     <span class="ccStat" data-c-tank>ถัง Core <b>฿${fmt0(cx.tankTHB)}</b></span>
     <span class="ccStat" data-c-cashfree>เงินสดว่าง <b>฿${fmt0(cx.cashTHB)}</b></span>
     <span class="ccStat lv-${lvl}" data-c-l2 data-level="${lvl}">ชั้น 2 <b>${fmt2(rk?rk.layer2Pct:0)}% / ${fmt2(cfg.l2Cap)}%</b></span>
-    <span class="ccStat" data-c-f>f <b>${Math.round(F.f*100)}%</b> <small>${escHtml(F.src)}</small></span>
+    <span class="ccStat" data-c-f>f <b>${Math.round(F.f*100)}%</b> <small>${escHtml(F.src)}</small></span>${coreFWarn(F) ? `<span class="ccStat warn ccFfWarn" data-c-ffwarn>${escHtml(coreFWarn(F))}</span>` : ''}
     <span class="ccStat${rk&&rk.missing>0?' warn':''}" data-c-missing>ขาดราคา <b>${rk?rk.missing:0}</b></span>
     <span class="ccAll"><button type="button" class="ccLnk" data-c-expandall onclick="coreAll('${escHtml(A)}',1)">ขยายทั้งหมด</button> · <button type="button" class="ccLnk" data-c-collapseall onclick="coreAll('${escHtml(A)}',0)">ยุบทั้งหมด</button></span></div>`;
   const list = openV.concat(planV);
@@ -5344,7 +5353,7 @@ function coreNewOpen(acct){
     <div class="ccF" id="cnReasonBox" style="display:none"><label>เหตุผลที่ตั้ง Tier A (บังคับ)</label><input type="text" id="cnReason" autocomplete="off" oninput="coreNewIn()"></div>
     <div class="ccPair"><div class="ccF"><label>Entry ไม้แรก</label><input type="text" inputmode="decimal" id="cnEntry" oninput="coreNewIn()"></div>
       <div class="ccF"><label>Stop</label><input type="text" inputmode="decimal" id="cnStop" oninput="coreNewIn()"></div></div>
-    <div class="ccF"><label>Fund-flow f <span id="cnFsrc" class="ccSub"></span></label><div class="ccSeg" id="cnF"><button type="button" data-f="1" onclick="coreNewF(1)">100%</button><button type="button" data-f="0.75" onclick="coreNewF(0.75)">75%</button><button type="button" data-f="0.5" onclick="coreNewF(0.5)">50%</button></div></div>
+    <div class="ccF"><label>Fund-flow f <span id="cnFsrc" class="ccSub"></span></label><div class="ccFfWarn ccStat warn" id="cnFwarn" data-cn-ffwarn style="display:none;margin-bottom:6px"></div><div class="ccSeg" id="cnF"><button type="button" data-f="1" onclick="coreNewF(1)">100%</button><button type="button" data-f="0.75" onclick="coreNewF(0.75)">75%</button><button type="button" data-f="0.5" onclick="coreNewF(0.5)">50%</button></div></div>
     <div class="ccRes" id="cnRes"></div><div class="ccErr" id="cnErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="cnSave" data-cn-save onclick="coreNewSave()" disabled>บันทึกแผน</button></div>`);
   coreNewIn();
@@ -5377,6 +5386,7 @@ function coreNewIn(){
   coreEl('cnReasonBox').style.display = n.tier==='A' ? '' : 'none';
   const F = cx.F, f = n.f!=null ? n.f : F.f;
   coreEl('cnFsrc').textContent = n.f!=null && n.f!==F.f ? `(เลือกเอง · ระบบ ${Math.round(F.f*100)}% ${F.src})` : `(${F.src})`;
+  { const w = coreFWarn(F), el = coreEl('cnFwarn'); el.style.display = w ? '' : 'none'; el.textContent = w; }
   coreEl('cnF').querySelectorAll('button').forEach(b=>b.classList.toggle('on', Math.abs(+b.dataset.f - f) < 1e-9));
   const mk = rd.mk || (cfg.market==='TH' ? 'TH' : 'US');
   coreEl('cnRes').innerHTML = coreFirstLotHtml(cx, mk, n.tier, rd.entry, rd.stop, f, F.src);
@@ -5899,6 +5909,8 @@ function jSetupGroups(list){
   }).sort((a,b)=>b.n-a.n);
 }
 /* CL1 — P&L ที่ปัด fmt0 แล้วเป็น 0 = สีปกติ (ไม่มีคลาส) · >0 pnl-pos · <0 pnl-neg */
+/* FX — P&L ที่แสดงเป็นจำนวนเต็ม · ปัดแล้ว 0 (รวม −0.4 → "-0") แสดง 0 */
+function fmtPnl0(v){ return fmt0(Math.round(Number(v)||0) || 0); }
 function pnlCls(v){ const r = Math.round(Number(v)||0); return r>0 ? 'pnl-pos' : r<0 ? 'pnl-neg' : ''; }
 function renderJournalSetup(list){
   const host = document.getElementById('setupBody'); if(!host) return;
@@ -5924,9 +5936,12 @@ function jCancelledConds(){
 }
 /* CL1 — วันที่ ISO → "28 ก.ย." (ปีอื่นที่ไม่ใช่ปีนี้ → "28 ก.ย. 25") · ว่าง/ผิดรูป → "—" · ใช้ JV_MONTHS ชุดเดิม */
 function jDateShort(iso){
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||''));
+  let str = String(iso||'');
+  /* FX: มีเวลา (T) → แปลงเป็นวันที่ Asia/Bangkok ก่อน · วันที่ล้วน YYYY-MM-DD ใช้ตามเดิม (ห้ามเลื่อนวัน) */
+  if(str.indexOf('T')>=0){ const d = new Date(str); str = isNaN(d) ? '' : d.toLocaleDateString('en-CA', {timeZone:'Asia/Bangkok'}); }
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(str);
   if(!m || Number(m[2])<1 || Number(m[2])>12) return '—';
-  const yy = Number(m[1]) === new Date().getFullYear() ? '' : ' ' + m[1].slice(2);
+  const yy = Number(m[1]) === Number(thaiToday().slice(0,4)) ? '' : ' ' + m[1].slice(2);
   return `${Number(m[3])} ${JV_MONTHS[Number(m[2])-1]}${yy}`;
 }
 function jWeekLabel(w){
@@ -6099,7 +6114,7 @@ function renderJournalBody(A){
       <td class="sans">${indent?'':`<span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>`}</td>
       <td>${fmt2(t.entry)}</td><td>${fmt2(t.exitPrice)}</td>
       <td>${fmt2(t.qty)}${(t.mult||1)!==1?`<span style="color:var(--muted)"> ×${fmt2(t.mult)}</span>`:''}</td>
-      <td class="${pnl>=0?'pnl-pos':'pnl-neg'}">${sym}${fmt0(pnl)}</td>
+      <td class="${pnlCls(pnl)}">${sym}${fmtPnl0(pnl)}</td>
       <td class="${r===null?'':r>=0?'rr-good':'rr-bad'}">${r===null?'—':fmt2(r)+'R'}</td>
       <td class="sans"><span class="tag ${win?'win':'loss'}">${win?'WIN':'LOSS'}</span></td>
       <td class="sans" style="white-space:nowrap">${jReviewCell(t)}</td>
@@ -6124,7 +6139,7 @@ function renderJournalBody(A){
       <span class="gmeta">avg in <b>${fmt2(a.avgEntry)}</b></span>
       <span class="gmeta">avg out <b>${fmt2(a.avgExit)}</b></span>
       <span class="gmeta">qty <b>${fmt2(a.sumQty)}</b></span>
-      <span class="gmeta">P&amp;L <b class="${a.totalPnl>=0?'pnl-pos':'pnl-neg'}">${symC}${fmt0(a.totalPnl)}</b></span>
+      <span class="gmeta">P&amp;L <b class="${pnlCls(a.totalPnl)}">${symC}${fmtPnl0(a.totalPnl)}</b></span>
       ${a.blendR===null?'':`<span class="gmeta">R <b>${fmt2(a.blendR)}</b></span>`}
     </div></td></tr>`;
     return header + legs.map((t,i)=>jLegRow(t,true,gcolor,i===legs.length-1)).join('');
@@ -6143,7 +6158,7 @@ function renderJournalBody(A){
         <div><span class="k">Entry</span>${fmt2(t.entry)}</div>
         <div><span class="k">Exit</span>${fmt2(t.exitPrice)}</div>
         <div><span class="k">Qty</span>${fmt2(t.qty)}</div>
-        <div><span class="k">P&amp;L</span><span class="${pnl>=0?'pnl-pos':'pnl-neg'}">${sym}${fmt0(pnl)}</span></div>
+        <div><span class="k">P&amp;L</span><span class="${pnlCls(pnl)}">${sym}${fmtPnl0(pnl)}</span></div>
         <div><span class="k">R</span><span class="${r===null?'':r>=0?'rr-good':'rr-bad'}">${r===null?'—':fmt2(r)+'R'}</span></div>
         <div><span class="k">วินัย / Setup</span>${jReviewCell(t)}</div>
       </div>
@@ -6167,7 +6182,7 @@ function renderJournalBody(A){
         <span><b>${symG}</b> · ${jPortShort(port)} · ${legs.length} scale-out</span>
         <span>qty ${fmt2(a.sumQty)}</span>
         <span>avg out ${fmt2(a.avgExit)}</span>
-        <span>P&amp;L <span class="${a.totalPnl>=0?'pnl-pos':'pnl-neg'}">${symC}${fmt0(a.totalPnl)}</span></span>
+        <span>P&amp;L <span class="${pnlCls(a.totalPnl)}">${symC}${fmtPnl0(a.totalPnl)}</span></span>
         ${a.blendR===null?'':`<span>${fmt2(a.blendR)}R</span>`}
       </div>
       ${legs.map(jCardHtml).join('')}
@@ -6240,10 +6255,7 @@ function renderJournalBody(A){
 function escHtml(s){
   return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-function todayISO(){
-  const d = new Date();
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
+function todayISO(){ return thaiToday(); }   /* FX: เดิมใช้เวลาเครื่อง → ไทยเสมอ */
 function biasTagClass(bias){
   return bias==='Long' ? 'long' : bias==='Short' ? 'short' : 'unclear';
 }
@@ -7189,7 +7201,7 @@ function makeTradeObject(o){
        ใช้ t.date ไม่ได้ เพราะไม้ที่วางแผนไว้ปลายสัปดาห์ก่อนแล้วมาเข้าจริงสัปดาห์นี้ จะไปนับผิดสัปดาห์
        ไม้เก่าที่ไม่มีค่านี้ wpOpenedKey() จะถอยไปใช้ t.date ให้เอง */
     openedAt: (prevTrade && prevTrade.openedAt) ? prevTrade.openedAt
-              : ((status==='open' || status==='closed') ? (o.date || new Date().toISOString().slice(0,10)) : null),
+              : ((status==='open' || status==='closed') ? (o.date || thaiToday()) : null),
     /* ขนาดไม้ที่ Checklist สั่งไว้ (Sat.B: 1 = เต็มไม้ · 0.6 = ไม่ติ๊ก 1st Swing) — เก็บไว้เทียบตอนรีวิว */
     sizeFactor: (tPortVal==='satB' && o.sizeFactor>0 && o.sizeFactor<1) ? o.sizeFactor : null,
     /* ★ 7D.3 Phase 3 — field เสริมล้วน (optional) สำหรับ Trade Plan card ใหม่ (satV3) — ไม่กระทบ caller เดิม
@@ -7231,7 +7243,7 @@ function makeTradeObject(o){
     t.exitDate = null;
     /* เลือก Cancelled จาก dropdown ตรง ๆ — ลงวันที่ให้ ไม่งั้นแถวจะไม่มีวันที่และเรียงลำดับเพี้ยน
        (ปกติจะเข้าทางปุ่ม Cancel ซึ่งมีโมดัลให้กรอกเหตุผล ทางนี้เป็นทางลัดสำรอง) */
-    if(status==='cancelled' && !t.cancelDate) t.cancelDate = new Date().toISOString().slice(0,10);
+    if(status==='cancelled' && !t.cancelDate) t.cancelDate = thaiToday();
     /* ย้ายกลับไป Plan/Open — เก็บรีวิวเดิมไว้ ไม่ล้างทิ้ง เผื่อกดผิดแล้วกดกลับ */
     if(prevTrade){
       t.discScore  = prevTrade.discScore  ?? null;
@@ -7286,7 +7298,7 @@ function openTradeEdit(id, acctId, opts){
   teEl('tInvalidation').value = prev.invalidation || '';
   teEl('tImageUrl').value = prev.imageUrl || '';
   teEl('teOpenDateBox').style.display = toOpen ? '' : 'none';
-  teEl('tOpenDate').value = toOpen ? new Date().toISOString().slice(0,10) : '';
+  teEl('tOpenDate').value = toOpen ? thaiToday() : '';
   teEl('teCancelNoteBox').style.display = st==='cancelled' ? '' : 'none';
   teEl('tCancelNote').value = prev.cancelNote || '';
   teEl('exitFields').style.display = st==='closed' ? 'block' : 'none';
@@ -7330,7 +7342,7 @@ function teRefresh(){
     if(ex>0 && e>0 && q>0){
       const tmp = {...prev, status:'closed', entry:e, sl:(sl>0?sl:prev.sl), qty:q, exitPrice:ex};
       const pnl = realizedPnlOf(tmp), r = sl>0 && e!==sl ? realizedROf(tmp) : null;
-      eh.innerHTML = `P&amp;L ≈ <b style="color:${pnl>=0?'var(--teal)':'var(--red)'}">${fmt0(pnl)} ${cur}</b>${r!==null?` · R ≈ ${fmt2(r)}`:''}`;
+      eh.innerHTML = `P&amp;L ≈ <b class="${pnlCls(pnl)}">${fmtPnl0(pnl)} ${cur}</b>${r!==null?` · R ≈ ${fmt2(r)}`:''}`;
     } else eh.textContent = '';
   }
   teEl('teErr').innerHTML = errs.map(x=>escHtml(x)).join('<br>');
@@ -7382,7 +7394,7 @@ function openClosePos(id,A){
   document.getElementById('cpInfo').innerHTML = `<b>${escHtml(t.sym)}</b> · ${PORTS[t.port].name} · <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span> · Entry ${fmt2(t.entry)} · Qty คงเหลือ <b>${fmt2(t.qty)}</b>`;
   document.getElementById('cpMaxQty').textContent = fmt2(t.qty);
   document.getElementById('cpExitPrice').value = '';
-  document.getElementById('cpExitDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('cpExitDate').value = thaiToday();
   document.getElementById('cpQty').value = t.qty;
   cpRefresh();
   document.getElementById('closePosOverlay').classList.add('show');
@@ -7406,7 +7418,7 @@ function cpRefresh(){
     const pnl = (ex - t.entry) * q * (t.mult||1) * dir;
     const remain = t.qty - q;
     const sym = tradeSym(t);
-    msg = `ปิด <b>${fmt2(q)}</b> @ ${fmt2(ex)} → P&amp;L <b class="${pnl>=0?'pnl-pos':'pnl-neg'}">${sym}${fmt0(pnl)}</b> · คงเหลือใน Plan <b>${fmt2(remain)}</b>${remain<=1e-9?' <span style="color:var(--muted)">(ปิดทั้งหมด)</span>':' <span style="color:var(--muted)">(บางส่วน)</span>'}`;
+    msg = `ปิด <b>${fmt2(q)}</b> @ ${fmt2(ex)} → P&amp;L <b class="${pnlCls(pnl)}">${sym}${fmtPnl0(pnl)}</b> · คงเหลือใน Plan <b>${fmt2(remain)}</b>${remain<=1e-9?' <span style="color:var(--muted)">(ปิดทั้งหมด)</span>':' <span style="color:var(--muted)">(บางส่วน)</span>'}`;
   }
   prev.innerHTML = msg;
   btn.disabled = !valid; btn.style.opacity = valid?'':'.45'; btn.style.cursor = valid?'':'not-allowed';
@@ -7415,7 +7427,7 @@ function confirmClosePos(){
   const t = cpTrade(); if(!t) return;
   const ex = parseFloat(document.getElementById('cpExitPrice').value);
   const q = parseFloat(document.getElementById('cpQty').value);
-  const exitDate = document.getElementById('cpExitDate').value || new Date().toISOString().slice(0,10);
+  const exitDate = document.getElementById('cpExitDate').value || thaiToday();
   if(!(ex>0)){ alert('กรอก Exit Price'); return; }
   if(!(q>0) || q>t.qty+1e-9){ alert('Qty ที่จะปิดไม่ถูกต้อง'); return; }
   const full = q >= t.qty - 1e-9;
@@ -7480,7 +7492,7 @@ function confirmCancel(){
   const meta = withAccount(cancelAcct, ()=>reasonTagById('cancel', tag));
   t.cancelTagLabel = meta ? meta.label : (t.cancelTagLabel || null);
   t.cancelNote = note || null;
-  if(!t.cancelDate) t.cancelDate = new Date().toISOString().slice(0,10);
+  if(!t.cancelDate) t.cancelDate = thaiToday();
   t.imageUrl = document.getElementById('cancelImageUrl').value.trim() || null;
   document.getElementById('cancelOverlay').classList.remove('show');
   saveBook(cancelAcct);
@@ -8343,7 +8355,7 @@ function sat7dSaveOrder(id, accId){
   const B = getBook(accId);
   const t = makeTradeObject({
     id: 't'+Date.now(),
-    date: new Date().toISOString().slice(0,10),
+    date: thaiToday(),
     sym: idea.asset,
     port: 'satB',
     bias: idea.bias,
@@ -8377,7 +8389,7 @@ function sat7dMarkOpen(id, accId){
   if(!(price>0)){ alert('ราคาไม่ถูกต้อง'); return; }
   t.entry = price;
   t.status = 'open';
-  t.openedAt = new Date().toISOString().slice(0,10);
+  t.openedAt = thaiToday();
   saveBook(accId);
   render();
 }
@@ -8388,7 +8400,7 @@ function sat7dCancelSlot(id, accId){
   const B = getBook(accId), t = B.trades.find(x=>x.id===s.trade_id);
   if(!t || t.status!=='plan') return;
   t.status = 'cancelled';
-  if(!t.cancelDate) t.cancelDate = new Date().toISOString().slice(0,10);
+  if(!t.cancelDate) t.cancelDate = thaiToday();
   saveBook(accId);
   render();
 }
@@ -9467,7 +9479,7 @@ function satV3SaveSlot(ideaId, accId){
   const B = getBook(accId);
   const su = satV3SetupsReady(idea);
   const t = makeTradeObject({
-    id: 't'+Date.now()+'_'+accId, date: new Date().toISOString().slice(0,10),
+    id: 't'+Date.now()+'_'+accId, date: thaiToday(),
     sym: idea.asset, port: 'satB', bias: idea.bias,
     entry: idea.entry, sl: idea.sl, tp: idea.tp,
     qty: c.lot, mult: c.chosen ? c.chosen.cfg.contract : 1, cur: c.chosen ? c.chosen.cfg.cur : PORTS.satB.cur,
@@ -9931,9 +9943,9 @@ function ffState(){
   delete f.signals; delete f.indices;
   return f;
 }
-function ffToday(){ try{ return new Date().toLocaleDateString('th-TH',{day:'numeric',month:'short'}); }catch(e){ return new Date().toISOString().slice(0,10); } }
+function ffToday(){ try{ return new Date().toLocaleDateString('th-TH',{day:'numeric',month:'short'}); }catch(e){ return thaiToday(); } }
 function ffEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function ffTouch(){ const f=ffState(); f.updated=ffToday(); f.updatedIso=new Date().toISOString().slice(0,10); renderFundflow(); schedulePersist(); }
+function ffTouch(){ const f=ffState(); f.updated=ffToday(); f.updatedIso=thaiToday(); renderFundflow(); schedulePersist(); }
 function ffLog(msg){ const f=ffState(); f.log.unshift({d:ffToday(), m:msg}); if(f.log.length>40) f.log.length=40; }
 const FF_TF={W:'weekly',D:'daily','4H':'4H'};
 
@@ -10125,7 +10137,7 @@ function rrgCompute(closes, highs, bench, tfKey){
 
 /* ---------- ดึงราคาจาก Twelve Data ---------- */
 function rrgKey(){ return ((state && state.settings && state.settings.tdKey) || '').trim(); }
-function rrgToday(){ return new Date().toISOString().slice(0,10); }
+function rrgToday(){ return thaiToday(); }
 function rrgCacheFresh(f){
   return !!(f && f.rrg && f.rrg.day === rrgToday() && (f.rrg.rowsD||[]).length);
 }
@@ -11572,7 +11584,7 @@ setInterval(function(){ try{ rsUpdatePushBadge(); updateAcctChip(); }catch(e){} 
   const arr = (v, name, max) => { if(!Array.isArray(v) || v.length>max) bad(name+' ต้องเป็นรายการไม่เกิน '+max); };
   const date = (v, name, allowFuture=false) => {
     if(typeof v!=='string' || !/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(v)) || new Date(v).toISOString().slice(0,10)!==v) bad(name+' วันที่ผิดรูปแบบ');
-    const tomorrow = new Date(Date.now()+86400000).toISOString().slice(0,10);
+    const tomorrow = (()=>{ const d = new Date(thaiToday()+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+1); return d.toISOString().slice(0,10); })();   /* FX: พรุ่งนี้ตามเวลาไทย */
     if(!allowFuture && v>tomorrow) bad(name+' เป็นวันในอนาคต');
   };
   const validate = (c, ticker) => {
@@ -11746,7 +11758,7 @@ setInterval(function(){ try{ rsUpdatePushBadge(); updateAcctChip(); }catch(e){} 
     };
     const metric=`<div class="rcMetricGrid">${c.metrics.map(m=>`<div class="rcMetric"><span>${prose(m.name)}</span><b>${metricValue(m)}</b><small>${esc(m.period)} ${cite(m.source_url)}</small></div>`).join('')||'ยังไม่มี'}</div>`;
     const drivers=c.drivers.map(x=>`<div class="rsDeepBox rcDriver"><h5>${prose(x.title)} <span class="rsChip ${x.status==='confirmed'?'green':'amber'}">${x.status==='confirmed'?'ยืนยันแล้ว':'ยังไม่ยืนยัน'}</span></h5>${row('สำคัญแค่ไหน',prose(x.why_material))}${row('กระทบธุรกิจอย่างไร',prose(x.mechanism))}${row('ติดตามตัวเลขอะไร',prose(x.indicator))}${row('กรณีดี',prose(x.bull))}${row('กรณีแย่',prose(x.bear))}${x.evidence.length?`<div class="rcEvidence"><b>หลักฐาน</b>${x.evidence.map(e=>`<p>${prose(e.claim)} ${cite(e.source_url)}</p>`).join('')}</div>`:''}</div>`).join('')||'<p>ยังไม่มีปัจจัยที่ยืนยันได้</p>';
-    const today=new Date().toISOString().slice(0,10);
+    const today=thaiToday();
     const cats=c.catalysts.filter(x=>x.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3)
       .map(x=>`${esc(x.date)} (${x.date_status==='confirmed'?'ยืนยันแล้ว':'คาดการณ์'}) · ${prose(x.event)} ${cite(x.source_url)}`).join('<br>')||'ยังไม่พบวันที่เหตุการณ์ถัดไปที่ยืนยันหรือคาดการณ์';
     const wires=c.tripwires.map(w=>`<div class="rcWire"><b>${prose(w.text)}</b>${row('เกณฑ์',prose(w.threshold))}${row('ค่าปัจจุบัน',prose(w.current_value))}<span class="rsChip ${w.status==='confirmed'?'red':w.status==='check'?'amber':'ghost'}">${esc(w.status==='confirmed'?'ยืนยันแล้ว':w.status==='check'?'รอตรวจ':'ติดตาม')}</span></div>`).join('');
