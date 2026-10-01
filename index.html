@@ -1916,6 +1916,17 @@ button.ccChip{cursor:pointer;min-height:24px}
 .ccTier h4{font-size:.78rem;color:var(--muted);font-weight:600;margin:0 0 6px}
 .ccSh .ccPair3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px}
 .ccTier .ccPair3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.ccTierSec{border-top:1px dashed var(--line);padding-top:6px;margin-top:8px}
+.ccTierSec h5{font-size:.8rem;font-weight:700;color:var(--dark);margin:0 0 6px}
+.ccTierSec h5 .ccSub{font-weight:400}
+.ccTier .ccPair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.ccTierRes .ok{color:var(--up)}.ccTierRes .no{color:var(--dn)}
+.ccSeg.ccSegTier{display:flex;flex-wrap:wrap;max-width:100%}
+.ccSegTier button{flex:1 1 auto;min-height:36px}
+@media(max-width:700px){
+  .ccTier .ccPair3{grid-template-columns:minmax(0,1fr)}
+  .ccSegTier button{flex:1 1 calc(50% - 2px)}
+}
 .ccG5{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center;margin-bottom:4px;font-size:.78rem}
 .ccTierRes{font-size:.82rem;margin:6px 0}
 .ccTierRes b.A{color:var(--up)}.ccTierRes b.B{color:var(--warn)}
@@ -2358,6 +2369,15 @@ button.ccChip{cursor:pointer;min-height:24px}
       <div class="f"><label>L รวมทุกตัว <span class="crUnit">% ของถัง Core</span></label><input type="number" step="any" inputmode="decimal" id="sCrLShare" oninput="crOnInput()"><div class="crErr" data-err-for="sCrLShare"></div></div>
       <div class="f"><label>ประตู f <span class="crUnit">สัปดาห์</span></label><input type="number" step="any" inputmode="decimal" id="sCrGate" oninput="crOnInput()"><div class="crErr" data-err-for="sCrGate"></div></div>
     </div>
+    <div class="divlbl crSub" data-c-tiercrit-h>เกณฑ์ Tier <span class="crUnit">ค่าเริ่มต้นตาม Damodaran · ปรับได้</span></div>
+    <div class="fgrid" data-c-tiercrit>
+      <div class="f"><label>Fortress: ROIC มากกว่า <span class="crUnit">%</span></label><input type="number" step="any" inputmode="decimal" id="sCrTierRoic" oninput="crOnInput()"><div class="crErr" data-err-for="sCrTierRoic"></div></div>
+      <div class="f"><label>Fortress: ND/EBITDA น้อยกว่า <span class="crUnit">เท่า</span></label><input type="number" step="any" inputmode="decimal" id="sCrTierNd" oninput="crOnInput()"><div class="crErr" data-err-for="sCrTierNd"></div></div>
+      <div class="f"><label>Fortress: FCF conversion มากกว่า <span class="crUnit">%</span></label><input type="number" step="any" inputmode="decimal" id="sCrTierFcf" oninput="crOnInput()"><div class="crErr" data-err-for="sCrTierFcf"></div></div>
+      <div class="f"><label>Growth: รายได้โต (TTM) อย่างน้อย <span class="crUnit">%</span></label><input type="number" step="any" inputmode="decimal" id="sCrTierRevG" oninput="crOnInput()"><div class="crErr" data-err-for="sCrTierRevG"></div></div>
+      <div class="f"><label>Growth: CAGR 3 ปี อย่างน้อย <span class="crUnit">%</span></label><input type="number" step="any" inputmode="decimal" id="sCrTierCagr" oninput="crOnInput()"><div class="crErr" data-err-for="sCrTierCagr"></div></div>
+      <div class="f"><label>Growth: ND/EBITDA น้อยกว่า <span class="crUnit">เท่า</span></label><input type="number" step="any" inputmode="decimal" id="sCrTierNdG" oninput="crOnInput()"><div class="crErr" data-err-for="sCrTierNdG"></div></div>
+    </div>
     <div class="hint">เพดานชั้น 2 = ช่อง "Core" ใน Max Heat (ค่าเดียวกัน · แก้ช่องไหน อีกช่องตาม)</div>
   </div></details>
   <details class="setsec"><summary class="divlbl">แผนที่ธีม (RRG) — แหล่งราคา</summary>
@@ -2566,7 +2586,8 @@ button.ccChip{cursor:pointer;min-height:24px}
     emergencyPct: 0.07,   // Stop ฉุกเฉิน = Stop × (1 − 7%)
     staleDays: 7,
     gateStreak: 2,        // เปิดบันไดใหม่: f < 100% ติดกัน 2 สัปดาห์
-    tier: { roicMin: 0.12, ndEbitdaMax: 2, fcfConvMin: 0.8 }
+    /* เกณฑ์ Tier · คีย์ระดับบน = A-Fortress (Mature) · growth = A-Growth (High Growth) — TIER2 */
+    tier: { roicMin: 0.12, ndEbitdaMax: 2, fcfConvMin: 0.8, growth: { revGrowthMin: 0.20, revCagr3Min: 0.15, ndEbitdaMax: 3 } }
   };
   var SPLIT = { 2: [0.5, 0.5], 3: [0.4, 0.3, 0.3] };
 
@@ -2828,12 +2849,13 @@ button.ccChip{cursor:pointer;min-height:24px}
   }
 
   /* ── วางบันไดใหม่ได้ไหม (รวมทุกเงื่อนไข · คืนเหตุผลทั้งหมดที่ไม่ผ่าน) ──
-     TIER_B · GATE_<reason> · BAD_LADDER · L_SHARE_OVER (ถือ+จองรวมใหม่ > 30%) · LAYER2_OVER (ชั้น 2 รวมบันไดใหม่ > 20%) · NO_CASH (ทุนบันไดใหม่ > เงินว่าง) */
+     TIER_B · NOT_FORTRESS (o.fortress === false) · GATE_<reason> · BAD_LADDER · L_SHARE_OVER (ถือ+จองรวมใหม่ > 30%) · LAYER2_OVER (ชั้น 2 รวมบันไดใหม่ > 20%) · NO_CASH (ทุนบันไดใหม่ > เงินว่าง) */
   function canPlaceLadder(o) {
     o = o || {};
     var reasons = [];
     if (!(num(o.tank) && o.tank > 0)) return fail('NO_TANK');
     if (o.tier !== 'A') reasons.push('TIER_B');
+    if (o.fortress === false) reasons.push('NOT_FORTRESS');   /* TIER2: L ใช้ได้เฉพาะ A-Fortress · ไม่ส่ง = true */
     var g = o.gate || { open: false, reason: 'unknown' };
     if (!g.open) reasons.push('GATE_' + g.reason);
     var nl = o.ladder;
@@ -2851,16 +2873,24 @@ button.ccChip{cursor:pointer;min-height:24px}
     return { ok: true, allowed: reasons.length === 0, reasons: reasons, pctFull: l2.pctFull, cashFree: sp.cashFree, sharePct: (sp.lUsed + nl.cost) / o.tank };
   }
 
-  /* ── จัด Tier ──
-     A ต้องผ่านครบ: ตัวเลข 3 ข้อ (ROIC > roicMin · ND/EBITDA < 2 · FCF conv > 80%) และ Gate 5 ตอบ "ไม่" ทั้ง 3 ข้อ
+  /* ── จัด Tier (2 มุม · Damodaran Corporate Life Cycle) ──
+     A = ผ่านอย่างน้อย 1 มุม · B = ไม่ผ่านทั้งคู่ · ขาดข้อมูลข้อไหน = ข้อนั้นไม่ผ่าน
+     A-Fortress: ROIC > roicMin · ND/EBITDA < ndEbitdaMax · FCF conv > fcfConvMin · fcfPositive3y · capitalReturn · Gate 5 "ไม่" ทั้ง 3
+     A-Growth:   revGrowth ≥ growth.revGrowthMin · revCagr3 ≥ growth.revCagr3Min · opMargin > 0 และ ≥ opMarginPrev · ocf > 0
+                 · (ndEbitda < growth.ndEbitdaMax หรือ netDebt ≤ 0 / netCash true) · Gate 5 "ไม่" ทั้ง 3
        gate5 = {substitute, customerMigrating, singleProduct} true = ใช่ (ความเสี่ยง) · false = ไม่ · ไม่ตอบ/ขาดข้อมูล = ไม่ผ่าน
-     ไม่นับ Gate 4 (ราคา) · ค่าเริ่มต้น B · override A ตอนคำนวณได้ B ต้องมีเหตุผลอย่างน้อย 1 ตัวอักษร (ไม่ว่าง) ไม่งั้น REASON_REQUIRED */
+     passed/failedNumbers/gate5Yes/gate5Unanswered = ความหมายเดิม (ตัวเลข 3 ข้อฝั่ง Fortress) · lenses = ผลละเอียดแต่ละมุม (failed รหัส:
+       roic nd fcf fcf3y capret gate5 | rev cagr opm opm_trend ocf nd_g) · lens = 'fortress'|'growth'|'both'|null ตามผลจริงหลัง override
+     ไม่นับ Gate 4 (ราคา) · override {tier, lens, reason}: ยกเป็น A / เลือกมุมที่คำนวณไม่ผ่าน ต้องมีเหตุผล (ไม่ว่าง) ไม่งั้น REASON_REQUIRED · ลดลงไม่ต้องมีเหตุผล */
   function classifyTier(o) {
     o = o || {};
-    var T = DEFAULTS.tier;
+    var T = DEFAULTS.tier, G = T.growth, og = o.growth || {};
     var roicMin = num(o.roicMin) ? o.roicMin : T.roicMin;
     var ndMax = num(o.ndEbitdaMax) ? o.ndEbitdaMax : T.ndEbitdaMax;
     var fcfMin = num(o.fcfConvMin) ? o.fcfConvMin : T.fcfConvMin;
+    var revMin = num(og.revGrowthMin) ? og.revGrowthMin : G.revGrowthMin;
+    var cagrMin = num(og.revCagr3Min) ? og.revCagr3Min : G.revCagr3Min;
+    var ndMaxG = num(og.ndEbitdaMax) ? og.ndEbitdaMax : G.ndEbitdaMax;
     var passed = {
       roic: num(o.roic) && o.roic > roicMin,
       nd: num(o.ndEbitda) && o.ndEbitda < ndMax,
@@ -2875,15 +2905,42 @@ button.ccChip{cursor:pointer;min-height:24px}
       if (g5[keys[i]] === true) yes.push(keys[i]);
       else if (g5[keys[i]] !== false) unans.push(keys[i]);
     }
-    var computed = (failedNumbers.length === 0 && yes.length === 0 && unans.length === 0) ? 'A' : 'B';
-    var tier = computed, overridden = false, reason = '';
+    var g5ok = yes.length === 0 && unans.length === 0;
+    var fFailed = failedNumbers.slice();
+    if (o.fcfPositive3y !== true) fFailed.push('fcf3y');
+    if (o.capitalReturn !== true) fFailed.push('capret');
+    if (!g5ok) fFailed.push('gate5');
+    var gFailed = [];
+    if (!(num(o.revGrowth) && o.revGrowth >= revMin - EPS)) gFailed.push('rev');
+    if (!(num(o.revCagr3) && o.revCagr3 >= cagrMin - EPS)) gFailed.push('cagr');
+    if (!(num(o.opMargin) && o.opMargin > 0)) gFailed.push('opm');
+    if (!(num(o.opMargin) && num(o.opMarginPrev) && o.opMargin >= o.opMarginPrev - EPS)) gFailed.push('opm_trend');
+    if (!(o.ocf === true || (num(o.ocf) && o.ocf > 0))) gFailed.push('ocf');
+    if (!((num(o.ndEbitda) && o.ndEbitda < ndMaxG) || (num(o.netDebt) && o.netDebt <= 0) || o.netCash === true)) gFailed.push('nd_g');
+    if (!g5ok) gFailed.push('gate5');
+    var lenses = { fortress: { pass: fFailed.length === 0, failed: fFailed }, growth: { pass: gFailed.length === 0, failed: gFailed } };
+    var lensOf = function (f, g) { return f && g ? 'both' : f ? 'fortress' : g ? 'growth' : null; };
+    var computedLens = lensOf(lenses.fortress.pass, lenses.growth.pass);
+    var computed = computedLens ? 'A' : 'B';
+    var tier = computed, lens = computedLens, overridden = false, reason = '';
     var ov = o.override;
-    if (ov && (ov.tier === 'A' || ov.tier === 'B') && ov.tier !== computed) {
-      reason = typeof ov.reason === 'string' ? ov.reason.trim() : '';
-      if (ov.tier === 'A' && !reason) return { ok: false, err: 'REASON_REQUIRED', tier: computed, computed: computed };
-      tier = ov.tier; overridden = true;
+    if (ov && (ov.tier === 'A' || ov.tier === 'B')) {
+      if (ov.tier === 'B') {
+        if (computed !== 'B') { tier = 'B'; lens = null; overridden = true; reason = typeof ov.reason === 'string' ? ov.reason.trim() : ''; }
+      } else {
+        var want = (ov.lens === 'fortress' || ov.lens === 'growth' || ov.lens === 'both') ? ov.lens : (computed === 'A' ? computedLens : 'fortress');
+        var needF = want !== 'growth', needG = want !== 'fortress';
+        var unsupported = (needF && !lenses.fortress.pass) || (needG && !lenses.growth.pass);
+        if (unsupported) {
+          reason = typeof ov.reason === 'string' ? ov.reason.trim() : '';
+          if (!reason) return { ok: false, err: 'REASON_REQUIRED', tier: computed, computed: computed };
+        }
+        if (computed !== 'A' || want !== computedLens) { tier = 'A'; lens = want; overridden = true; }
+        if (!overridden) reason = '';
+      }
     }
-    return { ok: true, tier: tier, computed: computed, passed: passed, failedNumbers: failedNumbers, gate5Yes: yes, gate5Unanswered: unans, overridden: overridden, reason: reason };
+    return { ok: true, tier: tier, computed: computed, passed: passed, failedNumbers: failedNumbers, gate5Yes: yes, gate5Unanswered: unans,
+      overridden: overridden, reason: reason, lenses: lenses, lens: lens, computedLens: computedLens };
   }
 
 
@@ -4583,7 +4640,8 @@ function portHeatLimit(k){
 }
 /* 7E-1 — ค่าตั้งความเสี่ยง Core ต่อบัญชี (settings.coreRisk · เก็บเป็น "% ตัวเลข") · เติมค่าเริ่มต้นให้ครบ · ไม่เขียนกลับตอนอ่าน
    l2Cap = limits.port.core เสมอ (ค่าเดียวกัน — ช่อง Max Heat "Core" และช่อง "เพดานชั้น 2" แก้อันไหนอีกอันตาม) */
-const CORE_RISK_DEFAULTS = {riskPct:1, tierA:10, tierB:5, addRatio:50, l2Cap:20, l2Warn:15, emergencyPct:7, ladderBudget:10, ladderRisk:2.5, ladderShare:30, gateWeeks:2, maxLots:3};
+const CORE_RISK_DEFAULTS = {riskPct:1, tierA:10, tierB:5, addRatio:50, l2Cap:20, l2Warn:15, emergencyPct:7, ladderBudget:10, ladderRisk:2.5, ladderShare:30, gateWeeks:2, maxLots:3,
+  tierRoic:12, tierNd:2, tierFcf:80, tierRevG:20, tierCagr:15, tierNdG:3};   /* TIER2 · เกณฑ์ Tier (Fortress: ROIC % · ND/EBITDA · FCF conv % | Growth: รายได้โต % · CAGR 3 ปี % · ND/EBITDA) */
 function coreRiskDefaultMarket(acct){
   if(!acct) return 'both';
   if(acct.id==='main') return 'US';
@@ -4608,7 +4666,8 @@ function coreRiskCfg(acctId){
 function coreSizeOpts(acctId){
   const c = coreRiskCfg(acctId);
   return {riskPct:c.riskPct/100, tierCap:{A:c.tierA/100, B:c.tierB/100}, addRatio:c.addRatio/100, layer2Cap:c.l2Cap/100, layer2Warn:c.l2Warn/100,
-          emergencyPct:c.emergencyPct/100, ladderBudget:c.ladderBudget/100, ladderRiskCap:c.ladderRisk/100, ladderShareCap:c.ladderShare/100, gateStreak:c.gateWeeks};
+          emergencyPct:c.emergencyPct/100, ladderBudget:c.ladderBudget/100, ladderRiskCap:c.ladderRisk/100, ladderShareCap:c.ladderShare/100, gateStreak:c.gateWeeks,
+          tierCrit:{roicMin:c.tierRoic/100, ndEbitdaMax:c.tierNd, fcfConvMin:c.tierFcf/100, growth:{revGrowthMin:c.tierRevG/100, revCagr3Min:c.tierCagr/100, ndEbitdaMax:c.tierNdG}}};
 }
 function totalTHB(){ return acctPorts().reduce((a,k)=>a+portCapTHB(k),0) + (state.settings.strategicCash||0); }
 
@@ -5116,13 +5175,14 @@ function coreCanPlace(A, draft, exceptId, isEdit){
   const gate = coreGate(A), lad = coreLadders(A, exceptId, bx), l2i = coreL2Positions(A, bx);
   const reserved = []; lad.forEach(x=>x.reservedRows.forEach(r=>reserved.push(r)));
   const shareCap = cfg.ladderShare/100, l2Cap = cfg.l2Cap/100;
-  const res = cs.canPlaceLadder({tank: bx.tankTHB, tier: draft.tier, gate, ladder: draft.thb, wCost: coreWCost(A, bx),
+  const res = cs.canPlaceLadder({tank: bx.tankTHB, tier: draft.tier, fortress: draft.fortress!==false, gate, ladder: draft.thb, wCost: coreWCost(A, bx),
     existingLadders: lad.map(x=>({heldCost:x.heldTHB, reservedCost:x.reservedTHB})), positions: l2i.positions, reserved, shareCap, l2Cap});
   if(!res.ok) return {allowed:false, reasons:[res.err], rows:[], res};
   const reasons = isEdit ? res.reasons.filter(r=>!/^GATE_/.test(r)) : res.reasons;
   const has = k=>reasons.indexOf(k) >= 0, bad = has('BAD_LADDER');
   const rows = [
-    {k:'tier', ok: draft.tier==='A', text: draft.tier==='A' ? 'Tier A' : 'Tier A · ตอนนี้เป็น Tier B'},
+    draft.tier==='A' && draft.fortress===false ? {k:'tier', ok:false, text:'ต้องเป็น A-Fortress · ตอนนี้ A-Growth'}
+      : {k:'tier', ok: draft.tier==='A', text: draft.tier==='A' ? (draft.fortress===true ? 'A-Fortress' : 'Tier A') : 'Tier A · ตอนนี้เป็น Tier B'},
     isEdit ? {k:'gate', ok:true, na:true, text:'ประตู f · ไม่เช็กตอนแก้แผน (บันไดเดิมทำงานต่อ)'} : {k:'gate', ok: gate.open, text:'ประตู f · ' + gate.text},
     bad ? {k:'share', ok:null, text:`L รวม — ≤ ${fmt2(cfg.ladderShare)}%`} : {k:'share', ok:!has('L_SHARE_OVER'), text:`L รวม ${fmt2(res.sharePct*100)}% ≤ ${fmt2(cfg.ladderShare)}%`},
     bad ? {k:'l2', ok:null, text:`ชั้น 2 รวมบันไดใหม่ — ≤ ${fmt2(cfg.l2Cap)}%`} : {k:'l2', ok:!has('LAYER2_OVER'), text:`ชั้น 2 รวมบันไดใหม่ ${fmt2(res.pctFull*100)}% ≤ ${fmt2(cfg.l2Cap)}%`},
@@ -5358,8 +5418,8 @@ function coreMenuHtml(v, cx, opts){
   let strat;
   if(isL) strat = v.kind==='plan' ? `<button type="button" data-c-strat="W" onclick="coreToW('${id}')">เปลี่ยนเป็นระบบ Week</button>`
     : '<button type="button" class="dis" data-c-strat="lock" disabled>ซื้อแล้ว — ล็อกกลยุทธ์</button>';
-  else if(v.kind==='plan') strat = tier==='A' ? `<button type="button" data-c-strat="L" onclick="coreToL('${id}')">เปลี่ยนเป็นถัวตามแนวรับ (L)</button>`
-    : '<button type="button" class="dis" data-c-strat="L" disabled title="L ใช้ได้เฉพาะ Tier A">L ใช้ได้เฉพาะ Tier A</button>';
+  else if(v.kind==='plan') strat = coreIsFortress(v.c) ? `<button type="button" data-c-strat="L" onclick="coreToL('${id}')">เปลี่ยนเป็นถัวตามแนวรับ (L)</button>`
+    : '<button type="button" class="dis" data-c-strat="L" disabled title="L ใช้ได้เฉพาะ A-Fortress">L ใช้ได้เฉพาะ A-Fortress</button>';
   else strat = '<button type="button" class="dis" data-c-strat="L" disabled>ซื้อแล้ว — ล็อกกลยุทธ์</button>';
   return `<div class="ccMenu" data-c-menu>
     ${opts.lots && lots ? `<button type="button" data-c-lots-btn onclick="coreLotsOpen('${id}')">ดูไม้ที่ซื้อ (${lots})</button>` : ''}
@@ -5404,11 +5464,11 @@ function coreLCardHtml(v, cx){
   const nb = lv.filter(l=>l.status==='bought').length, nLive = lv.filter(l=>l.status!=='cancelled').length;
   const fw = lv.findIndex(l=>l.status==='wait');
   const tbs = coreTierBadges(c, tier);   /* 7E-2b-2 */
-  const tag = `<span class="ccTag" title="${escHtml(`${mk} · Tier ${tier} · ถัวตามแนวรับ (L)`)}">${tier}·L</span>${coreTierWarnIcon(tbs)}`;
+  const tag = `<span class="ccTag" title="${escHtml(`${mk} · Tier ${tier}${tier==='A' ? ' · ' + coreLensTxt(c) : ''} · ถัวตามแนวรับ (L)`)}">${tier}·L</span>${coreTierWarnIcon(tbs)}`;
   const lbadge = `<span class="ccLot" data-c-lbadge title="ซื้อแล้ว / ระดับที่ยังไม่ยกเลิก">L ${nb}/${nLive}</span>`;
   const reasonChip = (tier==='A' && c.tierReason) ? `<button type="button" class="ccChip a" data-c-reason-chip title="${escHtml(c.tierReason)}" onclick="coreToggleReason('${id}')">Tier A · มีเหตุผล</button>` : '';
   const STTXT = (!kPlan && v.st) ? `<span class="ccStTxt" data-c-statustxt${v.st.status==='red'?' data-c-redbanner':''}>${CORE_ST[v.st.status].ico} ${escHtml(CORE_ST[v.st.status].txt)}</span>` : '';
-  const tierChip = tier==='A' ? '<span class="ccChip a" data-c-tier>Tier A</span>' : '<span class="ccChip nt" data-c-tier>Tier B · บันไดเดิมทำงานต่อจนออก</span>';
+  const tierChip = tier==='A' ? `<span class="ccChip a" data-c-tier data-c-lens="${coreLensOf(c).lens}">Tier A · ${escHtml(coreLensTxt(c))}${coreIsFortress(c) ? '' : ' · บันไดเดิมทำงานต่อจนออก'}</span>` : '<span class="ccChip nt" data-c-tier>Tier B · บันไดเดิมทำงานต่อจนออก</span>';
   const chips = `<div class="ccFull ccChips"><span class="ccChip">${mk}</span>${tierChip}${coreTierBadgeChips(tbs)}<span class="ccChip" data-c-stratchip>L · ถัวตามแนวรับ</span>${reasonChip}${STTXT}</div>
     ${coreShowReason.has(c.id) && c.tierReason ? `<div class="ccSub" data-c-reason>เหตุผล Tier A: ${escHtml(c.tierReason)}</div>` : ''}`;
   const table = coreLadderTableHtml(coreLadderRows(ld, nat), coreLadderTot(nat, cfg), {sym});
@@ -5430,8 +5490,8 @@ function coreLCardHtml(v, cx){
         <span class="ccTkw"><span class="ccTk" data-c-ticker>${escHtml(c.ticker)}</span>${tag}</span>
         <span class="ccNums"><span>L${(fw>=0?fw:0)+1} <b>${coreP(l1)}</b></span><span>SL <b>${coreP(+ld.sl)}</b></span><span>จอง <b>${coreMoneyS(nat.reservedCost, mk)}</b></span></span><span class="ccChev">›</span></button>
       <div class="ccBody">${chips}${table}${lines}
-        <div class="ccBtns">${buyBtn}<button type="button" class="ccBtn" data-c-ledit ${tier!=='A'?'disabled title="แก้แผนบันไดต้องเป็น Tier A"':''} onclick="coreLEditOpen('${id}')">แก้แผนบันได</button>${delBtn}${moreBtn}${coreMenuHtml(v, cx, {})}</div>
-        ${tier!=='A' ? '<div class="ccWarn" data-c-ledit-note>แก้แผนบันไดต้องเป็น Tier A</div>' : ''}</div></div>`;
+        <div class="ccBtns">${buyBtn}<button type="button" class="ccBtn" data-c-ledit ${!coreIsFortress(c)?`disabled title="${tier!=='A'?'แก้แผนบันไดต้องเป็น Tier A':'แก้แผนบันไดต้องเป็น A-Fortress'}"`:''} onclick="coreLEditOpen('${id}')">แก้แผนบันได</button>${delBtn}${moreBtn}${coreMenuHtml(v, cx, {})}</div>
+        ${!coreIsFortress(c) ? `<div class="ccWarn" data-c-ledit-note>${tier!=='A' ? 'แก้แผนบันไดต้องเป็น Tier A' : 'แก้แผนบันไดต้องเป็น A-Fortress'}</div>` : ''}</div></div>`;
   }
   const t = v.t, st = v.st.status, sto = CORE_ST[st], red = st==='red', age = v.st.age;
   const px = v.px!=null ? coreP(v.px) : '—';
@@ -5466,12 +5526,13 @@ function coreCardHtml(v, cx){
   if(v.c.strategy==='L') return coreLCardHtml(v, cx);
   const c = v.c, id = escHtml(c.id), cfg = cx.cfg, tier = c.tier==='A' ? 'A' : 'B';
   const capPct = tier==='A' ? cfg.tierA : cfg.tierB;
-  const fullTxt = `${v.mk} · Tier ${tier} · เพดานไม้แรก ${fmt2(capPct)}% · ระบบ Week`;
+  const lensTx = tier==='A' ? ' · ' + coreLensTxt(c) : '';
+  const fullTxt = `${v.mk} · Tier ${tier}${lensTx} · เพดานไม้แรก ${fmt2(capPct)}% · ระบบ Week`;
   const tbs = coreTierBadges(c, tier);   /* 7E-2b-2 */
   const tag = `<span class="ccTag" title="${escHtml(fullTxt)}">${tier}·W</span>${coreTierWarnIcon(tbs)}`;
   const reasonChip = (tier==='A' && c.tierReason) ? `<button type="button" class="ccChip a" data-c-reason-chip title="${escHtml(c.tierReason)}" onclick="coreToggleReason('${id}')">Tier A · มีเหตุผล</button>` : '';
   const STTXT = (v.kind==='open' && v.st) ? `<span class="ccStTxt" data-c-statustxt${v.st.status==='red'?' data-c-redbanner':''}>${CORE_ST[v.st.status].ico} ${escHtml(CORE_ST[v.st.status].txt)}</span>` : '';
-  const chips = `<div class="ccFull ccChips"><span class="ccChip">${v.mk}</span><span class="ccChip a" data-c-tier>Tier ${tier} · เพดานไม้แรก ${fmt2(capPct)}%</span>${coreTierBadgeChips(tbs)}<span class="ccChip">W</span>${reasonChip}${STTXT}</div>
+  const chips = `<div class="ccFull ccChips"><span class="ccChip">${v.mk}</span><span class="ccChip a" data-c-tier data-c-lens="${coreLensOf(c).lens||''}">Tier ${tier}${escHtml(lensTx)} · เพดานไม้แรก ${fmt2(capPct)}%</span>${coreTierBadgeChips(tbs)}<span class="ccChip">W</span>${reasonChip}${STTXT}</div>
     ${coreShowReason.has(c.id) && c.tierReason ? `<div class="ccSub" data-c-reason>เหตุผล Tier A: ${escHtml(c.tierReason)}</div>` : ''}`;
   const open = coreIsOpen(c, v);
   if(v.kind==='plan'){
@@ -5646,6 +5707,16 @@ function coreSheet(kind, html){
 }
 function coreSheetClose(){ document.querySelectorAll('.core-sheet').forEach(el=>el.remove()); coreNew = null; coreDlg = null; coreTi = null; }
 function coreEl(id){ return document.getElementById(id); }
+/* TIER2 · มุมของการ์ด: tier B = null · A มี tierLens = ตามนั้น · A เก่าไม่มี tierLens = 'fortress' (legacy · เกณฑ์ Tier A เดิม = Fortress) */
+function coreLensOf(c){
+  if(!c || c.tier!=='A') return {lens:null, legacy:false};
+  if(c.tierLens==='fortress' || c.tierLens==='growth' || c.tierLens==='both') return {lens:c.tierLens, legacy:false};
+  return {lens:'fortress', legacy:true};
+}
+function coreIsFortress(c){ const l = coreLensOf(c).lens; return l==='fortress' || l==='both'; }
+const CORE_LENS_TXT = {fortress:'Fortress', growth:'Growth', both:'Fortress + Growth'};
+/* ข้อความมุมในชิป/title: 'Fortress' · 'Growth' · 'Fortress + Growth' · การ์ดเก่า = 'Fortress (เดิม)' */
+function coreLensTxt(c){ const o = coreLensOf(c); return o.lens ? CORE_LENS_TXT[o.lens] + (o.legacy ? ' (เดิม)' : '') : ''; }
 
 /* ── 7E-2b-1 · บล็อก Tier (ใช้ทั้งแผนใหม่และ sheet "Tier…") — classifyTier ใน core-size.js ── */
 const CORE_G5 = [['substitute','ของแทนที่ถูกกว่า/ดีกว่าเริ่มมีคนใช้'], ['customerMigrating','ลูกค้าหลักเริ่มย้าย'], ['singleProduct','รายได้ > 50% จากสินค้าเดียวที่โดนข้อ 1']];
@@ -5676,19 +5747,33 @@ function coreWlInfoText(ticker){
   return w.tier ? `Watchlist: Tier ${w.tier}${w.setAt ? ' (ตั้งเมื่อ ' + w.setAt + ')' : ''}` : 'Watchlist: ยังไม่ตั้ง Tier';
 }
 function coreTiWlShow(ticker){ const el = coreEl('tiWlInfo'); if(el){ const t = coreWlInfoText(ticker); el.textContent = t; el.style.display = t ? '' : 'none'; } }
+/* TIER2 · ช่องติ๊ก 3 สถานะ (ใช่ / ไม่ใช่ / ยังไม่ตอบ) นอกเหนือจาก Gate 5: key → [ป้าย, ชื่อฟิลด์ใน tierInputs] */
+const CORE_TK = {fcf3y:['FCF บวก 3 ปีติด','fcfPositive3y'], capret:['มีปันผลหรือซื้อหุ้นคืน','capitalReturn'], ocf:['เงินสดจากการดำเนินงาน (OCF) บวก','ocf'], netcash:['เงินสดสุทธิ (หนี้ − เงินสด ≤ 0)','netCash']};
+const CORE_TIER_PICKS = [['B','cnTierB','B'], ['fortress','cnTierA','A · Fortress'], ['growth','cnTierG','A · Growth'], ['both','cnTierAB','A · ทั้งคู่']];
+function coreTkHtml(key, val){
+  return `<div class="ccG5" data-c-tk-row="${key}"><span>${CORE_TK[key][0]}</span><div class="ccSeg" data-tk="${key}"><button type="button" data-v="1" class="${val===true?'on':''}" onclick="coreTiTk('${key}',true)">ใช่</button><button type="button" data-v="0" class="${val===false?'on':''}" onclick="coreTiTk('${key}',false)">ไม่ใช่</button></div></div>`;
+}
 function coreTierBlockHtml(cfg, ti, ticker){
   ti = ti || {};
   const g5 = ti.gate5 || {};
   const wi = coreWlInfoText(ticker);
-  return `<div class="ccTier" data-c-tierblock><h4>Tier — คำนวณจากตัวเลข (A = ROIC &gt; 12% · ND/EBITDA &lt; 2 · FCF conv &gt; 80% · Gate 5 ไม่ทั้ง 3)</h4>
+  const pc = (id, lbl, v) => `<div class="ccF"><label>${lbl}</label><input type="text" inputmode="decimal" id="${id}" value="${coreTiFmt(v,100)}" oninput="coreTiIn()"></div>`;
+  return `<div class="ccTier" data-c-tierblock><h4>Tier — คำนวณจากตัวเลข · ผ่านมุมไหนก็ได้ = A (ยังไม่ตอบ/ไม่มีข้อมูล = ข้อนั้นไม่ผ่าน)</h4>
     <div class="ccTierWl" id="tiWlInfo" data-c-wlinfo${wi?'':' style="display:none"'}>${escHtml(wi)}</div>
-    <div class="ccPair3"><div class="ccF"><label>ROIC %</label><input type="text" inputmode="decimal" id="tiRoic" value="${coreTiFmt(ti.roic,100)}" oninput="coreTiIn()"></div>
-      <div class="ccF"><label>ND/EBITDA (เท่า)</label><input type="text" inputmode="decimal" id="tiNd" value="${coreTiFmt(ti.ndEbitda)}" oninput="coreTiIn()"></div>
-      <div class="ccF"><label>FCF conversion %</label><input type="text" inputmode="decimal" id="tiFcf" value="${coreTiFmt(ti.fcfConv,100)}" oninput="coreTiIn()"></div></div>
-    ${CORE_G5.map((g,i)=>`<div class="ccG5"><span>Gate 5 ข้อ ${i+1} · ${g[1]}</span><div class="ccSeg" data-g5="${g[0]}"><button type="button" data-v="1" class="${g5[g[0]]===true?'on':''}" onclick="coreTiG5('${g[0]}',true)">ใช่</button><button type="button" data-v="0" class="${g5[g[0]]===false?'on':''}" onclick="coreTiG5('${g[0]}',false)">ไม่ใช่</button></div></div>`).join('')}
-    <div class="ccTierRes" id="tiRes" data-c-tierres></div>
-    <div class="ccF"><label>Tier ที่ใช้จริง</label><div class="ccSeg"><button type="button" id="cnTierB" onclick="coreTiPick('B')">B · เพดาน ${fmt2(cfg.tierB)}%</button><button type="button" id="cnTierA" onclick="coreTiPick('A')">A · เพดาน ${fmt2(cfg.tierA)}%</button></div></div>
-    <div class="ccF" id="cnReasonBox" style="display:none"><label>เหตุผลที่ตั้ง Tier A (บังคับ)</label><input type="text" id="cnReason" autocomplete="off" value="${escHtml(ti.reason||'')}" oninput="coreTiIn()"></div></div>`;
+    <div class="ccTierSec" data-c-tiersec="fortress"><h5>Fortress <span class="ccSub">ป้อมปราการ · ROIC &gt; ${fmt2(cfg.tierRoic)}% · ND/EBITDA &lt; ${fmt2(cfg.tierNd)} · FCF conv &gt; ${fmt2(cfg.tierFcf)}%</span></h5>
+      <div class="ccPair3">${pc('tiRoic','ROIC %',ti.roic)}
+        <div class="ccF"><label>ND/EBITDA (เท่า) <span class="ccSub">ใช้ร่วม 2 มุม</span></label><input type="text" inputmode="decimal" id="tiNd" value="${coreTiFmt(ti.ndEbitda)}" oninput="coreTiIn()"></div>
+        ${pc('tiFcf','FCF conversion %',ti.fcfConv)}</div>
+      ${coreTkHtml('fcf3y', ti.fcfPositive3y)}${coreTkHtml('capret', ti.capitalReturn)}</div>
+    <div class="ccTierSec" data-c-tiersec="growth"><h5>Growth <span class="ccSub">โตสูง · รายได้โต ≥ ${fmt2(cfg.tierRevG)}% · CAGR 3 ปี ≥ ${fmt2(cfg.tierCagr)}% · ND/EBITDA &lt; ${fmt2(cfg.tierNdG)} หรือเงินสดสุทธิ</span></h5>
+      <div class="ccPair3">${pc('tiRev','รายได้โต TTM %',ti.revGrowth)}${pc('tiCagr','CAGR 3 ปี %',ti.revCagr3)}<div class="ccF"></div></div>
+      <div class="ccPair">${pc('tiOpm','Op margin ปีนี้ %',ti.opMargin)}${pc('tiOpmPrev','Op margin ปีก่อน %',ti.opMarginPrev)}</div>
+      ${coreTkHtml('ocf', ti.ocf)}${coreTkHtml('netcash', ti.netCash)}</div>
+    <div class="ccTierSec" data-c-tiersec="gate5"><h5>Gate 5 <span class="ccSub">ใช้ร่วม 2 มุม · ต้อง "ไม่" ทั้ง 3 ข้อ</span></h5>
+    ${CORE_G5.map((g,i)=>`<div class="ccG5"><span>Gate 5 ข้อ ${i+1} · ${g[1]}</span><div class="ccSeg" data-g5="${g[0]}"><button type="button" data-v="1" class="${g5[g[0]]===true?'on':''}" onclick="coreTiG5('${g[0]}',true)">ใช่</button><button type="button" data-v="0" class="${g5[g[0]]===false?'on':''}" onclick="coreTiG5('${g[0]}',false)">ไม่ใช่</button></div></div>`).join('')}</div>
+    <div class="ccTierRes" id="tiRes" data-c-tierres><div data-c-lensline="fortress"></div><div data-c-lensline="growth"></div><div data-c-lenssum></div></div>
+    <div class="ccF"><label>Tier ที่ใช้จริง</label><div class="ccSeg ccSegW ccSegTier">${CORE_TIER_PICKS.map(p=>`<button type="button" id="${p[1]}" data-pick="${p[0]}" onclick="coreTiPick('${p[0]}')">${p[0]==='B' ? `B · เพดาน ${fmt2(cfg.tierB)}%` : `${p[2]} · เพดาน ${fmt2(cfg.tierA)}%`}</button>`).join('')}</div></div>
+    <div class="ccF" id="cnReasonBox" style="display:none"><label>เหตุผลที่เลือกมุม A ที่คำนวณไม่ผ่าน (บังคับ)</label><input type="text" id="cnReason" autocomplete="off" value="${escHtml(ti.reason||'')}" oninput="coreTiIn()"></div></div>`;
 }
 function coreTiG5(key, val){
   if(!coreTi) return;
@@ -5696,35 +5781,77 @@ function coreTiG5(key, val){
   document.querySelectorAll(`[data-g5="${key}"] button`).forEach(b=>b.classList.toggle('on', coreTi.g5[key]!==null && coreTi.g5[key]!==undefined && (b.dataset.v==='1') === coreTi.g5[key]));
   coreTiIn();
 }
-function coreTiPick(t){ if(!coreTi) return; coreTi.pick = t; coreTiIn(); }
-/* อ่านช่อง → classifyTier → {inputs, computed, tier, reason, ok, base} · ไม่ส่ง DOM ออก */
+function coreTiTk(key, val){
+  if(!coreTi) return;
+  coreTi.tk[key] = (coreTi.tk[key]===val) ? null : val;
+  document.querySelectorAll(`[data-tk="${key}"] button`).forEach(b=>b.classList.toggle('on', coreTi.tk[key]!==null && coreTi.tk[key]!==undefined && (b.dataset.v==='1') === coreTi.tk[key]));
+  coreTiIn();
+}
+/* ปุ่มเลือก Tier: 'B' | 'fortress' | 'growth' | 'both' ('A' เดิม = fortress) */
+function coreTiPick(t){ if(!coreTi) return; coreTi.pick = t==='A' ? 'fortress' : t; coreTiIn(); }
+/* บัญชีที่ใช้อ่านเกณฑ์ Tier: ฟอร์มแผนใหม่ = บัญชีที่เลือก · sheet Tier… = บัญชีของการ์ด */
+function coreTiAcct(){
+  if(coreNew) return coreNew.acct;
+  const c = coreDlg && coreDlg.kind==='tier' ? coreCardsList.find(x=>x.id===coreDlg.id) : null;
+  return c ? c.acct : acctActive;
+}
+/* อ่านช่อง → classifyTier → {inputs, computed, tier, lens, reason, ok, base} · ไม่ส่ง DOM ออก */
 function coreTiEval(){
   const cs = Calc.coreSize, val = id=>{ const e = coreEl(id); if(!e || String(e.value).trim()==='') return null; const n = coreNum(e.value); return isFinite(n) ? n : null; };
-  const roic = val('tiRoic'), nd = val('tiNd'), fcf = val('tiFcf');
+  const pct = id=>{ const v = val(id); return v==null ? null : v/100; };
+  const nd = val('tiNd');
   const g5 = {}; CORE_G5.forEach(g=>{ const v = coreTi && coreTi.g5[g[0]]; g5[g[0]] = (v===true || v===false) ? v : null; });
-  const inputs = {roic: roic==null?null:roic/100, ndEbitda: nd, fcfConv: fcf==null?null:fcf/100, gate5: g5};
-  const base = cs.classifyTier(inputs), computed = base.computed;
-  const pick = (coreTi && coreTi.pick) || computed;
+  const inputs = {roic: pct('tiRoic'), ndEbitda: nd, fcfConv: pct('tiFcf'), gate5: g5,
+    revGrowth: pct('tiRev'), revCagr3: pct('tiCagr'), opMargin: pct('tiOpm'), opMarginPrev: pct('tiOpmPrev')};
+  Object.keys(CORE_TK).forEach(k=>{ const v = coreTi && coreTi.tk[k]; inputs[CORE_TK[k][1]] = (v===true || v===false) ? v : null; });
+  const crit = coreSizeOpts(coreTiAcct()).tierCrit;
+  const base = cs.classifyTier(Object.assign({}, inputs, crit)), computed = base.computed;
+  const pick = (coreTi && coreTi.pick) || (base.computedLens || 'B');
+  const tier = pick==='B' ? 'B' : 'A', lens = tier==='A' ? pick : null;
   const reason = ((coreEl('cnReason')||{}).value || '').trim();
-  const r = cs.classifyTier(Object.assign({}, inputs, {override:{tier:pick, reason}}));
-  return {inputs, computed, tier: pick, reason: (pick==='A' && computed!=='A') ? reason : '', ok: r.ok!==false, needReason: pick==='A' && computed!=='A', base};
+  const needReason = tier==='A' && ((pick!=='growth' && !base.lenses.fortress.pass) || (pick!=='fortress' && !base.lenses.growth.pass));
+  const r = cs.classifyTier(Object.assign({}, inputs, crit, {override:{tier, lens: lens||undefined, reason}}));
+  return {inputs, computed, computedLens: base.computedLens, pick, tier, lens, reason: needReason ? reason : '', ok: r.ok!==false, needReason, base};
 }
-/* ทำไมคำนวณได้ B — "ไม่ผ่าน: ROIC ≤ 12% · Gate 5 ข้อ 2 = ใช่ · ยังไม่ตอบ 1 ข้อ" */
-function coreTiWhy(ti){
-  const T = Calc.coreSize.DEFAULTS.tier, b = ti.base, w = [], I = ti.inputs;
-  if(b.failedNumbers.indexOf('roic')>=0) w.push(I.roic==null ? 'ROIC ไม่มีข้อมูล' : `ROIC ≤ ${fmt2(T.roicMin*100)}%`);
-  if(b.failedNumbers.indexOf('nd')>=0) w.push(I.ndEbitda==null ? 'ND/EBITDA ไม่มีข้อมูล' : `ND/EBITDA ≥ ${fmt2(T.ndEbitdaMax)}`);
-  if(b.failedNumbers.indexOf('fcf')>=0) w.push(I.fcfConv==null ? 'FCF conv ไม่มีข้อมูล' : `FCF conv ≤ ${fmt2(T.fcfConvMin*100)}%`);
-  b.gate5Yes.forEach(k=>{ w.push(`Gate 5 ข้อ ${CORE_G5.findIndex(g=>g[0]===k)+1} = ใช่`); });
-  if(b.gate5Unanswered.length) w.push(`ยังไม่ตอบ ${b.gate5Unanswered.length} ข้อ`);
+/* ทำไมมุมนั้นไม่ผ่าน — ข้อความต่อรหัส failed ของ classifyTier */
+function coreTiWhy(ti, lens){
+  const cr = coreSizeOpts(coreTiAcct()).tierCrit, G = cr.growth, b = ti.base, I = ti.inputs, f = b.lenses[lens].failed, w = [];
+  const has = k=>f.indexOf(k)>=0;
+  if(lens==='fortress'){
+    if(has('roic')) w.push(I.roic==null ? 'ROIC ไม่มีข้อมูล' : `ROIC ≤ ${fmt2(cr.roicMin*100)}%`);
+    if(has('nd')) w.push(I.ndEbitda==null ? 'ND/EBITDA ไม่มีข้อมูล' : `ND/EBITDA ≥ ${fmt2(cr.ndEbitdaMax)}`);
+    if(has('fcf')) w.push(I.fcfConv==null ? 'FCF conv ไม่มีข้อมูล' : `FCF conv ≤ ${fmt2(cr.fcfConvMin*100)}%`);
+    if(has('fcf3y')) w.push(I.fcfPositive3y===false ? 'FCF ไม่บวกครบ 3 ปี' : 'ไม่มีข้อมูล FCF 3 ปี');
+    if(has('capret')) w.push(I.capitalReturn===false ? 'ไม่มีปันผล/ซื้อหุ้นคืน' : 'ไม่มีข้อมูลปันผล');
+  } else {
+    if(has('rev')) w.push(I.revGrowth==null ? 'รายได้โต ไม่มีข้อมูล' : `รายได้โต < ${fmt2(G.revGrowthMin*100)}%`);
+    if(has('cagr')) w.push(I.revCagr3==null ? 'CAGR 3 ปี ไม่มีข้อมูล' : `CAGR 3 ปี < ${fmt2(G.revCagr3Min*100)}%`);
+    if(has('opm')) w.push(I.opMargin==null ? 'Op margin ไม่มีข้อมูล' : 'Op margin ≤ 0');
+    if(has('opm_trend')) w.push(I.opMargin==null || I.opMarginPrev==null ? 'ไม่มี Op margin ปีก่อน' : 'Op margin ต่ำกว่าปีก่อน');
+    if(has('ocf')) w.push(I.ocf===false ? 'OCF ไม่บวก' : 'ไม่มีข้อมูล OCF');
+    if(has('nd_g')) w.push(I.ndEbitda==null && I.netCash==null ? 'ไม่มีข้อมูลหนี้' : `ND/EBITDA ≥ ${fmt2(G.ndEbitdaMax)} และไม่ใช่เงินสดสุทธิ`);
+  }
+  if(has('gate5')){
+    b.gate5Yes.forEach(k=>{ w.push(`Gate 5 ข้อ ${CORE_G5.findIndex(g=>g[0]===k)+1} = ใช่`); });
+    if(b.gate5Unanswered.length) w.push(`Gate 5 ยังไม่ตอบ ${b.gate5Unanswered.length} ข้อ`);
+  }
   return w;
 }
-/* เติมผลสด/ปุ่ม Tier/ช่องเหตุผล — ไม่วาดช่องพิมพ์ใหม่ */
+/* เติมผลสด 2 บรรทัด + บรรทัดรวม / ปุ่ม Tier / ช่องเหตุผล — ไม่วาดช่องพิมพ์ใหม่ */
 function coreTiShow(ti){
   const res = coreEl('tiRes');
-  if(res) res.innerHTML = ti.computed==='A' ? 'คำนวณได้ <b class="A">A</b>' : `คำนวณได้ <b class="B">B</b> · ไม่ผ่าน: ${escHtml(coreTiWhy(ti).join(' · '))}`;
-  const bB = coreEl('cnTierB'), bA = coreEl('cnTierA');
-  if(bB) bB.classList.toggle('on', ti.tier==='B'); if(bA) bA.classList.toggle('on', ti.tier==='A');
+  if(res){
+    const L = {fortress:'Fortress', growth:'Growth'};
+    ['fortress','growth'].forEach(k=>{
+      const el = res.querySelector(`[data-c-lensline="${k}"]`); if(!el) return;
+      const ok = ti.base.lenses[k].pass;
+      el.className = ok ? 'ok' : 'no'; el.dataset.pass = ok ? '1' : '0';
+      el.textContent = ok ? `${L[k]}: ✓ ผ่าน` : `${L[k]}: ✗ ${coreTiWhy(ti, k).join(' · ')}`;
+    });
+    const sm = res.querySelector('[data-c-lenssum]');
+    if(sm){ const cl = ti.computedLens; sm.innerHTML = cl==='both' ? 'คำนวณได้ <b class="A">A</b> · ทั้งสองมุม' : (cl ? `คำนวณได้ <b class="A">A</b> · ${CORE_LENS_TXT[cl]}` : 'คำนวณได้ <b class="B">B</b>'); sm.dataset.lens = cl || 'B'; }
+  }
+  CORE_TIER_PICKS.forEach(p=>{ const b = coreEl(p[1]); if(b) b.classList.toggle('on', ti.pick===p[0]); });
   const rb = coreEl('cnReasonBox'); if(rb) rb.style.display = ti.needReason ? '' : 'none';
 }
 /* ปรับเมื่อมีการแก้บล็อก Tier → แจ้งเจ้าของ sheet */
@@ -5735,8 +5862,11 @@ function coreTiIn(){
 function coreTiState(c){
   const ti = (c && c.tierInputs) || {};
   const g5 = {}; CORE_G5.forEach(g=>{ const v = ti.gate5 && ti.gate5[g[0]]; g5[g[0]] = (v===true||v===false) ? v : null; });
-  return {g5, pick: null};
+  const tk = {}; Object.keys(CORE_TK).forEach(k=>{ const v = ti[CORE_TK[k][1]]; tk[k] = (v===true||v===false) ? v : null; });
+  return {g5, tk, pick: null};
 }
+/* ปุ่มเริ่มต้นของการ์ดเดิม: B → 'B' · A → มุมที่เก็บไว้ (การ์ดเก่าไม่มี tierLens = fortress) */
+function coreTiPickOf(c){ return c.tier==='A' ? coreLensOf(c).lens : 'B'; }
 
 /* แผน Core ใหม่ (＋ / T เมื่อ scope = หุ้น) · 7E-2b-1: Tier คำนวณ + สลับกลยุทธ์ W/L · opt {mode:'convert'|'edit', id} = แปลงแผน W → L / แก้แผนบันได */
 function coreNewOpen(acct, opt){
@@ -5748,7 +5878,7 @@ function coreNewOpen(acct, opt){
   const a0 = cur ? cur.acct : ((acct && list.some(a=>a.id===acct)) ? acct : (list.some(a=>a.id===acctActive) ? acctActive : list[0].id));
   coreNew = {acct:a0, strat: mode==='new' ? 'W' : 'L', mode, id: cur ? cur.id : null, f:null, showAll:false, nlv:2, lv:['','',''], sl:'', budEdited:false};
   coreTi = coreTiState(cur);
-  if(cur) coreTi.pick = cur.tier==='A' ? 'A' : 'B';
+  if(cur) coreTi.pick = coreTiPickOf(cur);
   if(mode==='edit' && cur.ladder){
     const lv = cur.ladder.levels || [];
     coreNew.nlv = Math.min(3, Math.max(2, lv.length)); coreNew.lv = [0,1,2].map(i=>lv[i] ? String(lv[i].px) : '');
@@ -5823,11 +5953,12 @@ function coreNewIn(){
   /* Tier: แก้ได้ทุกโหมดยกเว้นแก้แผนบันได (ใช้ Tier ของการ์ด) */
   const ti = rd.ti;
   const tier = n.mode==='edit' ? (cur && cur.tier==='A' ? 'A' : 'B') : ti.tier;
+  const fortress = n.mode==='edit' ? coreIsFortress(cur) : (ti.lens==='fortress' || ti.lens==='both');   /* TIER2: L เฉพาะ A-Fortress */
   if(ti) coreTiShow(ti);
-  if(tier!=='A' && n.strat==='L' && n.mode==='new') n.strat = 'W';
+  if(!fortress && n.strat==='L' && n.mode==='new') n.strat = 'W';
   const isL = n.strat==='L';
   { const sw = coreEl('cnStratW'), sl = coreEl('cnStratL'), msg = coreEl('cnStratMsg');
-    if(sw){ sw.classList.toggle('on', !isL); sl.classList.toggle('on', isL); sl.disabled = tier!=='A'; msg.style.display = tier!=='A' ? '' : 'none'; msg.textContent = tier!=='A' ? 'L ใช้ได้เฉพาะ Tier A' : ''; } }
+    if(sw){ sw.classList.toggle('on', !isL); sl.classList.toggle('on', isL); sl.disabled = !fortress; msg.style.display = !fortress ? '' : 'none'; msg.textContent = !fortress ? 'L ใช้ได้เฉพาะ A-Fortress' : ''; } }
   coreEl('cnWBox').style.display = isL ? 'none' : '';
   coreEl('cnLBox').style.display = isL ? '' : 'none';
   const errs = [];
@@ -5837,6 +5968,7 @@ function coreNewIn(){
   if(dup) errs.push(`มีการ์ด ${rd.ticker} อยู่แล้ว`);
   if(ti && ti.needReason && !ti.reason) errs.push('Tier A ต้องมีเหตุผล');
   if(n.mode==='edit' && tier!=='A') errs.push('แก้แผนบันไดต้องเป็น Tier A');
+  else if(n.mode==='edit' && !fortress) errs.push('แก้แผนบันไดต้องเป็น A-Fortress');
   if(!(cx.tankTHB>0)) errs.push('ยังไม่ได้ตั้งถัง Core ของบัญชีนี้');
   if(coreErr) errs.push(coreErr);
   const mk = rd.mk || (cfg.market==='TH' ? 'TH' : 'US');
@@ -5851,7 +5983,7 @@ function coreNewIn(){
     else if(!(rd.entry>rd.stop)) errs.push('Entry ต้องมากกว่า Stop');
     coreEl('cnSave').textContent = 'บันทึกแผน';
   } else {
-    coreNewInL(n, rd, cx, cfg, mk, tier, errs);
+    coreNewInL(n, rd, cx, cfg, mk, tier, errs, fortress);
   }
   const er = coreEl('cnErr');
   er.style.display = (dup || errs.length && rd.ticker && (rd.entry>0||rd.stop>0||tier==='A'||isL)) ? '' : 'none';
@@ -5862,7 +5994,7 @@ function coreNewIn(){
   return errs;
 }
 /* ส่วนฟอร์ม L ของ coreNewIn — เติมงบ ฿ · ตาราง · ประตู 5 ข้อ · ใส่ error ลง errs */
-function coreNewInL(n, rd, cx, cfg, mk, tier, errs){
+function coreNewInL(n, rd, cx, cfg, mk, tier, errs, fortress){
   const bud = coreEl('cnLbud');
   if(!n.budEdited){ const dv = String(cfg.ladderBudget); if(bud.value !== dv) bud.value = dv; rd.bud = coreNum(bud.value); }
   coreEl('cnLbudT').textContent = rd.bud>0 ? `= ฿${fmt0(cx.tankTHB*rd.bud/100)}` : '';
@@ -5873,7 +6005,7 @@ function coreNewInL(n, rd, cx, cfg, mk, tier, errs){
   let lc = null, cp;
   if(!fill){
     errs.push('กรอกระดับราคา · SL · งบ ให้ครบ');
-    cp = coreCanPlace(n.acct, {tier, thb:{ok:false}}, n.id, isEdit);
+    cp = coreCanPlace(n.acct, {tier, fortress, thb:{ok:false}}, n.id, isEdit);
     coreEl('cnLres').innerHTML = '<div class="ccSub" data-c-msg>กรอกระดับราคา · SL · งบ</div>';
   } else {
     const ld = coreNewLdraft(n, rd, cx);
@@ -5881,12 +6013,12 @@ function coreNewInL(n, rd, cx, cfg, mk, tier, errs){
     if(!lc || !lc.nat.ok){
       const er = lc && lc.nat.err;
       errs.push(CORE_LERR[er] || ('บันไดไม่ถูกต้อง' + (er ? ' · ' + er : '')));
-      cp = coreCanPlace(n.acct, {tier, thb:{ok:false}}, n.id, isEdit);
+      cp = coreCanPlace(n.acct, {tier, fortress, thb:{ok:false}}, n.id, isEdit);
       coreEl('cnLres').innerHTML = `<div class="ccWarn" data-c-msg>${escHtml(CORE_LERR[er] || er || 'คำนวณไม่สำเร็จ')}</div>`;
     } else {
       const nat = lc.nat;
       nat.warns.forEach(w=>{ const m = /^ZERO_LOT_L(\d)$/.exec(w); if(m) errs.push(`L${m[1]} ได้ 0 หุ้น — เพิ่มงบหรือลดจำนวนระดับ`); });
-      cp = coreCanPlace(n.acct, {tier, thb: lc.thb}, n.id, isEdit);
+      cp = coreCanPlace(n.acct, {tier, fortress, thb: lc.thb}, n.id, isEdit);
       const tbl = coreLadderTableHtml(nat.rows.map((r,i)=>({lv:'L'+(i+1), px:r.px, cost:r.cost, qty:r.qty, risk:r.risk, status:'wait'})), coreLadderTot(nat, cfg), {sym});
       coreEl('cnLres').innerHTML = tbl + `<div class="ccSumLn" data-c-lfirst>ซื้อแค่ระดับแรก เสี่ยง <b>${fmt2(nat.firstRiskPct*100)}%</b> · จอง <b>${sym}${fmt0(nat.cost)}</b> (฿${fmt0(lc.thb.cost)})</div>`;
     }
@@ -5898,7 +6030,7 @@ function coreNewSave(){
   const errs = coreNewIn(); if(!errs || errs.length) return;
   const n = coreNew, rd = coreNewRead(), cur = n.id ? coreCardsList.find(x=>x.id===n.id) : null;
   const now = new Date().toISOString();
-  const tfields = rd.ti ? {tier: rd.ti.tier, tierComputed: rd.ti.computed, tierInputs: rd.ti.inputs, tierReason: rd.ti.reason || null} : {};
+  const tfields = rd.ti ? {tier: rd.ti.tier, tierLens: rd.ti.lens || null, tierComputed: rd.ti.computed, tierInputs: rd.ti.inputs, tierReason: rd.ti.reason || null} : {};
   if(n.strat==='L'){
     const cx = coreCtx(n.acct), d = coreNewLdraft(n, rd, cx);
     const ladder = {levels: d.levels, sl: d.sl, budgetPct: d.budgetPct, split: d.split, lockedAt: now};
@@ -5915,11 +6047,11 @@ function coreNewSave(){
 }
 /* แปลงกลยุทธ์ของแผน (⋯) */
 function coreToL(id){
-  const c = coreCardsList.find(x=>x.id===id); if(!c || c.status!=='plan' || c.strategy==='L' || c.tier!=='A') return;
+  const c = coreCardsList.find(x=>x.id===id); if(!c || c.status!=='plan' || c.strategy==='L' || !coreIsFortress(c)) return;
   coreNewOpen(c.acct, {mode:'convert', id});
 }
 function coreLEditOpen(id){
-  const c = coreCardsList.find(x=>x.id===id); if(!c || c.status!=='plan' || c.strategy!=='L' || c.tier!=='A') return;
+  const c = coreCardsList.find(x=>x.id===id); if(!c || c.status!=='plan' || c.strategy!=='L' || !coreIsFortress(c)) return;
   coreNewOpen(c.acct, {mode:'edit', id});
 }
 function coreToW(id){
@@ -6242,8 +6374,8 @@ function corePxSave(){
 function coreTierOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
   coreDlg = {kind:'tier', id};
-  coreTi = coreTiState(c); coreTi.pick = c.tier==='A' ? 'A' : 'B';
-  coreSheet('tier', `<h3>Tier · ${escHtml(c.ticker)}</h3><div class="ccSub">Tier ตอนนี้ ${c.tier==='A'?'A':'B'}${c.strategy==='L' ? ' · การ์ด L ที่ถูกลดเป็น B ยังทำงานต่อจนออก' : ' · มีผลกับเพดานไม้แรกของแผน'}</div>
+  coreTi = coreTiState(c); coreTi.pick = coreTiPickOf(c);
+  coreSheet('tier', `<h3>Tier · ${escHtml(c.ticker)}</h3><div class="ccSub">Tier ตอนนี้ ${c.tier==='A' ? 'A · ' + escHtml(coreLensTxt(c)) : 'B'}${c.strategy==='L' ? ' · การ์ด L ที่ถูกลดเป็น B ยังทำงานต่อจนออก' : ' · มีผลกับเพดานไม้แรกของแผน'}</div>
     ${coreTierBlockHtml(coreRiskCfg(c.acct), Object.assign({}, c.tierInputs, {reason: c.tierReason}), c.ticker)}
     <div class="ccErr" id="ctErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="ctSave" data-ct-save onclick="coreTierSave()" disabled>บันทึก</button></div>`);
@@ -6253,7 +6385,7 @@ function coreTierIn(){
   if(!coreDlg || !coreEl('ctSave')) return false;
   const ti = coreTiEval(); coreTiShow(ti);
   const errs = [];
-  if(ti.needReason && !ti.reason) errs.push('Tier A ต้องมีเหตุผล');
+  if(ti.needReason && !ti.reason) errs.push('มุม A ที่คำนวณไม่ผ่านต้องมีเหตุผล');
   if(coreErr) errs.push(coreErr);
   const er = coreEl('ctErr'); er.style.display = coreErr ? '' : 'none'; er.textContent = coreErr || '';
   coreEl('ctSave').disabled = errs.length>0;
@@ -6264,7 +6396,7 @@ function coreTierSave(){
   const id = coreDlg.id, ti = coreTiEval();
   coreSheetClose();
   coreShowReason.delete(id);
-  coreWrite(id, {tier: ti.tier, tierComputed: ti.computed, tierInputs: ti.inputs, tierReason: ti.reason || null});
+  coreWrite(id, {tier: ti.tier, tierLens: ti.lens || null, tierComputed: ti.computed, tierInputs: ti.inputs, tierReason: ti.reason || null});
 }
 
 /* ลบแผน (เฉพาะ plan) — sheet ยืนยันแทน confirm() */
@@ -8341,7 +8473,8 @@ function openSettings(){
   document.getElementById('sTdKey').value = s.tdKey || '';
   const cr = coreRiskCfg();
   [['sCrRisk','riskPct'],['sCrTierA','tierA'],['sCrTierB','tierB'],['sCrAdd','addRatio'],['sCrMaxLots','maxLots'],['sCrL2Cap','l2Cap'],['sCrL2Warn','l2Warn'],['sCrEmerg','emergencyPct'],
-   ['sCrLBudget','ladderBudget'],['sCrLRisk','ladderRisk'],['sCrLShare','ladderShare'],['sCrGate','gateWeeks']].forEach(([id,k])=>{ document.getElementById(id).value = cr[k]; });
+   ['sCrLBudget','ladderBudget'],['sCrLRisk','ladderRisk'],['sCrLShare','ladderShare'],['sCrGate','gateWeeks'],
+   ['sCrTierRoic','tierRoic'],['sCrTierNd','tierNd'],['sCrTierFcf','tierFcf'],['sCrTierRevG','tierRevG'],['sCrTierCagr','tierCagr'],['sCrTierNdG','tierNdG']].forEach(([id,k])=>{ document.getElementById(id).value = cr[k]; });
   document.getElementById('sCrMarket').value = cr.market;
   document.getElementById('sPortCore').value = cr.l2Cap;   /* ค่าเดียวกับเพดานชั้น 2 */
   updTotal();
@@ -8362,7 +8495,7 @@ function crOnInput(src){
   const errs = {};
   if(portOn('core')){
     const v = id => { const x = g(id).value; return x==='' ? NaN : parseFloat(x); };
-    ['sCrRisk','sCrTierA','sCrTierB','sCrAdd','sCrL2Cap','sCrL2Warn','sCrEmerg','sCrLBudget','sCrLRisk','sCrLShare','sCrGate'].forEach(id=>{
+    ['sCrRisk','sCrTierA','sCrTierB','sCrAdd','sCrL2Cap','sCrL2Warn','sCrEmerg','sCrLBudget','sCrLRisk','sCrLShare','sCrGate','sCrTierRoic','sCrTierNd','sCrTierFcf','sCrTierRevG','sCrTierCagr','sCrTierNdG'].forEach(id=>{
       const x = v(id); if(!(x>0)) errs[id] = 'ต้องเป็นตัวเลขมากกว่า 0';
     });
     if(!errs.sCrAdd && v('sCrAdd')>100) errs.sCrAdd = 'ต้องอยู่ระหว่าง 1–100';
@@ -8437,7 +8570,8 @@ function acctApplyPortVisibility(){
   [['sCore','core'],['sSatB','satB'],
    ['sPortCore','core'],['sPortSatB','satB'],
    ['sCrMarket','core'],['sCrRisk','core'],['sCrTierA','core'],['sCrTierB','core'],['sCrAdd','core'],['sCrMaxLots','core'],['sCrL2Cap','core'],['sCrL2Warn','core'],
-   ['sCrEmerg','core'],['sCrLBudget','core'],['sCrLRisk','core'],['sCrLShare','core'],['sCrGate','core']
+   ['sCrEmerg','core'],['sCrLBudget','core'],['sCrLRisk','core'],['sCrLShare','core'],['sCrGate','core'],
+   ['sCrTierRoic','core'],['sCrTierNd','core'],['sCrTierFcf','core'],['sCrTierRevG','core'],['sCrTierCagr','core'],['sCrTierNdG','core']
   ].forEach(([id,port])=>{
     const el = document.getElementById(id);
     const f  = el && el.closest('.f');
@@ -8480,7 +8614,8 @@ function saveSettings(){
       const n = id => parseFloat(document.getElementById(id).value);
       const capV = parseFloat(document.getElementById('sPortCore').value)||20;
       return {riskPct:n('sCrRisk'), tierA:n('sCrTierA'), tierB:n('sCrTierB'), addRatio:n('sCrAdd'), maxLots:n('sCrMaxLots'), l2Cap:capV, l2Warn:n('sCrL2Warn'), emergencyPct:n('sCrEmerg'),
-              ladderBudget:n('sCrLBudget'), ladderRisk:n('sCrLRisk'), ladderShare:n('sCrLShare'), gateWeeks:n('sCrGate'), market:document.getElementById('sCrMarket').value};
+              ladderBudget:n('sCrLBudget'), ladderRisk:n('sCrLRisk'), ladderShare:n('sCrLShare'), gateWeeks:n('sCrGate'), market:document.getElementById('sCrMarket').value,
+              tierRoic:n('sCrTierRoic'), tierNd:n('sCrTierNd'), tierFcf:n('sCrTierFcf'), tierRevG:n('sCrTierRevG'), tierCagr:n('sCrTierCagr'), tierNdG:n('sCrTierNdG')};
     })() : (old.coreRisk || null),
     tdKey: (document.getElementById('sTdKey').value||'').trim()
   };
@@ -12500,7 +12635,7 @@ setInterval(function(){ try{ rsUpdatePushBadge(); updateAcctChip(); }catch(e){} 
 </script>
 <!-- RESEARCH CARD INLINE START -->
 <script>
-/* source: research-card.js · sha256 ab390c713d03 */
+/* source: research-card.js · sha256 f07e3ddf9e5b */
 /* Research Card v1 — mirrors shared/research-card-v1.md and research_card.py. */
 (function(){
   'use strict';
@@ -12592,7 +12727,7 @@ setInterval(function(){ try{ rsUpdatePushBadge(); updateAcctChip(); }catch(e){} 
       severe_risks:old.severe_risks, sources:old.sources, missing_data:old.missing_data
     } : null;
     const oldBiz = !prior && legacy ? {date:legacy.date, what:legacy.q1_what, economics:legacy.q2_economics, sources:legacy.sources} : null;
-    return `Research ${ticker} into one concise Research Card JSON object (schema_version research-card/1.0). Return JSON only, without a Markdown fence. Write all reader-facing text in clear Thai. Keep company names, product names, tickers, stable IDs, JSON keys, dates, numerical values and source URLs unchanged. Explain necessary technical terms briefly at first use, for example FCF — เงินสดจากการดำเนินงานหลังหักลงทุน. Write percentages with % and an explicit comparison base for growth; distinguish % from percentage points. Format money in Thai units without changing its value or calculation. Preserve approximately and company-defined qualifications. For no_change/no_data, retain the prior content exactly, including its language. JSON types are strict: every metrics[].value is a quoted string (for example "29591", not 29591); additional_drivers, missing_data, and changes are arrays of plain strings, never objects. Use the existing card and newest primary documents first. Read the latest financial statement and material company events since the old as_of date. Update only changed conclusions, but return a complete card. Choose up to three drivers using documented impact size, causal mechanism, and trackable indicator. Use the same evidence set for bull and bear. Mark thin evidence unconfirmed; do not invent numbers or fill slots. Put other material drivers in additional_drivers. Top-level review_result MUST be a string exactly "changed", "no_change", or "no_data". For a FIRST card with no existing card, use "changed" and a nonempty changes array even if some requested facts are missing. Put unavailable facts in missing_data as plain strings, not objects with area/status/detail. For updates, use no_change only when checked evidence confirms no substantive change; use no_data when a check found insufficient new evidence. For no_change/no_data, keep prior content unchanged and set changes to []; for no_data, keep the prior as_of date. In one pass, verify numbers against sources and internal consistency, labeling this as self review. No subagents, long report, Google Doc, forced probability, reverse DCF, base rate, or peer valuation. Each tripwire needs a stable id, threshold, current_value, and keywords. Return exactly these 15 top-level fields with no extras: schema_version,ticker,as_of,researched_at (UTC YYYY-MM-DDTHH:MM:SSZ),review_result,business{sells,customers,revenue_model},metrics[{name,value,unit,period,source_url}],drivers[{id,title,why_material,mechanism,indicator,bull,bear,status,evidence[{claim,source_url}]}],additional_drivers,catalysts[{event,date,date_status,source_url}],tripwires[{id,text,threshold,current_value,keywords}],severe_risks,sources[{title,url,date}],missing_data,changes. Driver status confirmed/unconfirmed; catalyst date_status confirmed/estimated. Ticker: ${ticker}. Existing card JSON: ${prior ? JSON.stringify(prior) : 'null'}. Legacy business reference (unverified; do not promote thesis prose to confirmed drivers): ${oldBiz ? JSON.stringify(oldBiz) : 'null'}.`;
+    return `Research ${ticker} into one concise Research Card JSON object (schema_version research-card/1.0). Return JSON only, without a Markdown fence. Write all reader-facing text in clear Thai. Keep company names, product names, tickers, stable IDs, JSON keys, dates, numerical values and source URLs unchanged. Explain necessary technical terms briefly at first use, for example FCF — เงินสดจากการดำเนินงานหลังหักลงทุน. Write percentages with % and an explicit comparison base for growth; distinguish % from percentage points. Format money in Thai units without changing its value or calculation. Preserve approximately and company-defined qualifications. For no_change/no_data, retain the prior content exactly, including its language. JSON types are strict: every metrics[].value is a quoted string (for example "29591", not 29591); additional_drivers, missing_data, and changes are arrays of plain strings, never objects. Use the existing card and newest primary documents first. Read the latest financial statement and material company events since the old as_of date. Update only changed conclusions, but return a complete card. Choose up to three drivers using documented impact size, causal mechanism, and trackable indicator. Use the same evidence set for bull and bear. Mark thin evidence unconfirmed; do not invent numbers or fill slots. Metric hierarchy: when a metric is a part of another listed metric (for example AI revenue within semiconductor revenue, upfront license revenue within software revenue), name the parent in the Thai metric name, e.g. "รายได้ชิป AI (ส่วนหนึ่งของรายได้เซมิคอนดักเตอร์)"; when two shares are measured on overlapping bases (for example top-5 end customers vs one distributor), say in the name that they overlap and must not be added together. Quality metrics for Tier: always include ROIC, ND/EBITDA and FCF conversion computed from the latest 10-K or annual report plus later 10-Q/interim reports (use TTM when available, otherwise the latest fiscal year). Definitions: ROIC = NOPAT ÷ (total debt + total equity − cash and equivalents), NOPAT = operating income × (1 − effective tax rate); ND/EBITDA = (total debt − cash and equivalents) ÷ EBITDA; FCF conversion = FCF ÷ net income. Put the short formula in the metric name, state TTM or the fiscal year in period, write value as a string such as "24.5" with unit "%" or "x", and use the filing as source_url. If net income or EBITDA is zero or negative, or an input is missing, put the item in missing_data instead of estimating. Keep metrics within the 12-item limit by dropping the least useful existing metrics first. Off-balance-sheet obligations: read the commitments and contingencies notes of the latest 10-Q/10-K (or interim report). If purchase commitments, guarantees, financing backstops or similar obligations exceed 10% of annual revenue or materially affect a driver, add each to additional_drivers with amount, timing and source URL, and add it to severe_risks when it could force losses if demand weakens. Next earnings: always include the next earnings report in catalysts. If the date is not announced, estimate it from the company's usual reporting pattern, set date_status "estimated", and cite the prior-period results release as source_url. Put other material drivers in additional_drivers. Top-level review_result MUST be a string exactly "changed", "no_change", or "no_data". For a FIRST card with no existing card, use "changed" and a nonempty changes array even if some requested facts are missing. Put unavailable facts in missing_data as plain strings, not objects with area/status/detail. For updates, use no_change only when checked evidence confirms no substantive change; use no_data when a check found insufficient new evidence. For no_change/no_data, keep prior content unchanged and set changes to []; for no_data, keep the prior as_of date. In one pass, verify numbers against sources and internal consistency, labeling this as self review. No subagents, long report, Google Doc, forced probability, reverse DCF, base rate, or peer valuation. Each tripwire needs a stable id, threshold, current_value, and keywords. Return exactly these 15 top-level fields with no extras: schema_version,ticker,as_of,researched_at (UTC YYYY-MM-DDTHH:MM:SSZ),review_result,business{sells,customers,revenue_model},metrics[{name,value,unit,period,source_url}],drivers[{id,title,why_material,mechanism,indicator,bull,bear,status,evidence[{claim,source_url}]}],additional_drivers,catalysts[{event,date,date_status,source_url}],tripwires[{id,text,threshold,current_value,keywords}],severe_risks,sources[{title,url,date}],missing_data,changes. Driver status confirmed/unconfirmed; catalyst date_status confirmed/estimated. Ticker: ${ticker}. Existing card JSON: ${prior ? JSON.stringify(prior) : 'null'}. Legacy business reference (unverified; do not promote thesis prose to confirmed drivers): ${oldBiz ? JSON.stringify(oldBiz) : 'null'}.`;
   }
   window.rcCopy = async ticker => {
     const d = window.wlDocMap()[ticker] || {};
