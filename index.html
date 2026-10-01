@@ -779,6 +779,8 @@ tr:last-child td{border-bottom:none}
 .tag.cancelled{background:var(--surface2);color:var(--faint);text-decoration:line-through}
 .tag.win{background:var(--teal-dim);color:var(--teal)}
 .tag.loss{background:var(--red-dim);color:var(--red)}
+.tag.setupinc{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(214,160,40,.45)}
+.posTag.setupinc{border:1px solid rgba(214,160,40,.45)}
 .tag.offplan{background:var(--red-dim);color:var(--red);border:1px dashed rgba(214,69,69,.5)}
 .tag.be{background:var(--surface2);color:var(--muted)}   /* 7E-2b-2 · P&L ปัดแล้ว = 0 */
 
@@ -1571,6 +1573,10 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 .ui-f2c-pick{display:inline-flex;gap:6px;flex-wrap:wrap}
 .ui-f2c .pbMix{margin:2px 0 0 0}
 .ui-f2c-off{display:inline-block;font-size:11px;padding:1px 7px;border-radius:var(--r-chip);border:1px solid var(--warn);color:var(--warn)}
+.ui-mr-tag{border-color:var(--amber);color:var(--amber);margin-left:0;margin-right:4px;white-space:nowrap}
+.ui-mr-lv{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0}
+.ui-mr-line{font-size:12.5px;margin:6px 0;overflow-wrap:anywhere}
+.ui-mr-hold{color:var(--amber);font-weight:600;font-size:11.5px}
 .ui-f2c-tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:var(--r-chip);border:1px solid var(--line);color:var(--mute);margin-left:4px}
 .ui-f2c-tl{font-size:11.5px;color:var(--mute);margin:-2px 0 8px 18px;overflow-wrap:anywhere}
 .ui-mac{margin:8px 0 2px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-btn);background:var(--card)}
@@ -4684,9 +4690,12 @@ function journalStats(){
     const offList  = list.filter(tradeOffPlan);
     const nOffPlan = offList.length;
     const offPnlTHB = offList.reduce((a,t)=>a+(realizedPnlTHBOf(t)||0),0);
+    const incList = list.filter(tradeSetupInc);   /* SU */
+    const nSetupInc = incList.length;
+    const incPnlTHB = incList.reduce((a,t)=>a+(realizedPnlTHBOf(t)||0),0);
     return {n, wins, winRate: n?wins/n*100:0, avgR, totalPnlTHB, avgHoldDays, maxDD, maxDDPct,
             avgDisc: avg(ds), avgSetup: avg(ss), nReviewed: ds.length, luckyWins, goodLosses,
-            invalHit, invalFired: invalHit + invalIgn, nOffPlan, offPnlTHB};
+            invalHit, invalFired: invalHit + invalIgn, nOffPlan, offPnlTHB, nSetupInc, incPnlTHB};
   }
   return {
     overall: statsFor(closed, totalTHB()),
@@ -4733,7 +4742,7 @@ function posPortChip(t){
   return `<span class="posPort" style="background:${hexToRgba(c,0.16)};color:${c}">${t.port==='core'?'Core':'Sat'}</span>`;
 }
 function posSymHtml(t){
-  return `${escHtml(t.sym)}${tradeOffPlan(t)?' <span class="posTag">นอกแผน</span>':''}`;
+  return `${escHtml(t.sym)}${tradeOffPlan(t)?' <span class="posTag">นอกแผน</span>':''}${tradeSetupInc(t)?' <span class="posTag setupinc">Setup ไม่ครบ</span>':''}${t.mr?` ${satMrTradeHtml(t)}`:''}`;   /* 7E-4 */
 }
 function posRiskHtml(t, rk){
   const sym = tradeSym(t);
@@ -5014,6 +5023,7 @@ function coreCardOfTrade(t, acct){
   return coreCardsList.find(c=>c.trade_id===t.id && (!A || c.acct===A)) || null;
 }
 /* ไม้นอกแผน (แสดงผล/นับ) = ธง unplanned และไม่มีการ์ด Core ผูก — ไม้เก่าที่ซื้อผ่านการ์ดแต่ติดธงไว้ไม่ต้อง migrate */
+function tradeSetupInc(t){ return !!(t && t.setup_incomplete); }   /* SU */
 function tradeOffPlan(t){ return !!t.unplanned && !coreCardOfTrade(t); }
 /* การ์ดนี้ตอนนี้เป็นอะไร: plan | open (trade ยังเปิด) | closed (ปิดตำแหน่ง/ยกเลิก/ลบไม้ — status:'closed' หรือ trade ไม่เปิดแล้ว) */
 function coreEff(c){
@@ -6592,7 +6602,7 @@ function jCancelledConds(){
   (Array.isArray(satIdeasList) ? satIdeasList : []).forEach(idea=>{
     if(!idea || !Array.isArray(idea.conditions)) return;
     idea.conditions.forEach(c=>{
-      if(c && c.status==='cancelled') out.push({at:String(c.cancelled_at||''), asset:idea.asset||'—', bias:idea.bias||'', text:String(c.text||''), week:idea.week||''});
+      if(c && c.status==='cancelled') out.push({at:String(c.cancelled_at||''), asset:idea.asset||'—', bias:idea.bias||'', text:String(c.text||''), week:idea.week||'', mr: c.kind==='mr'});
     });
   });
   return out.sort((a,b)=>b.at.localeCompare(a.at));
@@ -6618,7 +6628,7 @@ function renderJournalCond(){
   const note = `<div class="jCondNote">ทุกบัญชี (แผน Sat ใช้ร่วมกัน)</div>`;
   host.innerHTML = note + (list.length ? `<div class="jCondList">${list.map(x=>`<div class="jCondItem" data-cond-at="${escHtml(x.at)}">
       <div class="jCondTop"><span>${escHtml(jDateShort(x.at))}</span><b style="color:var(--text)">${escHtml(sat7dLabel(x.asset))}</b>${x.bias?`<span class="tag ${x.bias==='Long'?'long':'short'}">${escHtml(x.bias)}</span>`:''}<span>สัปดาห์ ${escHtml(jWeekLabel(x.week))}</span></div>
-      <div class="jCondTx">${escHtml(x.text||'—')}</div></div>`).join('')}</div>`
+      <div class="jCondTx">${x.mr?satV3MrTagHtml()+' ':''}${escHtml(x.text||'—')}</div></div>`).join('')}</div>`
     : `<div class="empty" data-cond="empty">ยังไม่มีเงื่อนไขที่ยกเลิก</div>`);
 }
 
@@ -6668,6 +6678,7 @@ function renderJournalBody(A){
   const decision = !has ? {tx:'ยังไม่มีไม้ปิดในช่วงนี้', warn:false, k:'empty'}
     : ov.nOffPlan > 0 ? {tx:`ไม้นอกแผน ${ov.nOffPlan} ไม้ · P&amp;L ฿${fmt0(ov.offPnlTHB)} — ดูชิป นอกแผน`, warn:true, k:'offplan'}
     : ov.luckyWins > 0 ? {tx:`ชนะแบบไม่ตามแผน ${ov.luckyWins} ไม้ — อย่านับเป็นฝีมือ`, warn:true, k:'lucky'}
+    : ov.nSetupInc > 0 ? {tx:`Setup ไม่ครบ ${ov.nSetupInc} ไม้ · P&amp;L ฿${fmt0(ov.incPnlTHB)} — ดูชิป Setup ไม่ครบ`, warn:true, k:'setupinc'}
     : {tx:'ทุกไม้ในช่วงนี้ตามแผน', warn:false, k:'ok'};
   document.getElementById('jSum').innerHTML = `
     <div class="sumHead"><div class="sumT">Journal · ${escHtml(acctName)}</div><div class="sumR" data-jsum="period">${escHtml(period)}</div></div>
@@ -6703,7 +6714,7 @@ function renderJournalBody(A){
   const jfdefs = [['all','ทั้งหมด']];
   if(portOn('core')) jfdefs.push(['core','Core']);
   if(portOn('satB')) jfdefs.push(['satB','Sat']);
-  jfdefs.push(['win','Win'],['loss','Loss'],['offplan','นอกแผน']);
+  jfdefs.push(['win','Win'],['loss','Loss'],['offplan','นอกแผน'],['setupinc','Setup ไม่ครบ']);
   if(!jfdefs.some(([k])=>k===jFilter)) jFilter = 'all';
   document.getElementById('jFilters').innerHTML = jfdefs.map(([k,l])=>
     `<span class="chip ${jFilter===k?'on':''}" data-jf="${k}" onclick="setJFilter('${k}')">${l}</span>`).join('');
@@ -6712,6 +6723,7 @@ function renderJournalBody(A){
   if(jFilter==='win') rows = rows.filter(t=>realizedPnlOf(t)>0);
   else if(jFilter==='loss') rows = rows.filter(t=>(Math.round(realizedPnlOf(t)||0) || 0) < 0);   /* 7E-2b-2: BE ไม่อยู่ใน Loss */
   else if(jFilter==='offplan') rows = rows.filter(tradeOffPlan);
+  else if(jFilter==='setupinc') rows = rows.filter(tradeSetupInc);
   else if(jFilter!=='all') rows = rows.filter(t=>t.port===jFilter);
 
   renderJournalSetup(j.closed.filter(t=>['core','satB'].includes(jFilter) ? t.port===jFilter : true));
@@ -6773,7 +6785,7 @@ function renderJournalBody(A){
     return `<tr class="${cls}"${style}>
       <td class="${indent?'legdate':''}">${t.exitDate||'—'}</td>
       <td class="sans">${indent?'':`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PORTS[t.port].color};margin-right:5px"></span>${jPortShort(t.port)}`}</td>
-      <td style="font-weight:600">${indent?'':t.sym}${(!indent&&tradeOffPlan(t))?' <span class="tag offplan" title="ไม้นอกแผน — ไม่ได้วางแผนใน Trade-Plan ก่อนเข้า">นอกแผน</span>':''}</td>
+      <td style="font-weight:600">${indent?'':t.sym}${(!indent&&tradeOffPlan(t))?' <span class="tag offplan" title="ไม้นอกแผน — ไม่ได้วางแผนใน Trade-Plan ก่อนเข้า">นอกแผน</span>':''}${(!indent&&tradeSetupInc(t))?' <span class="tag setupinc" title="Setup ไม่ถึงเกณฑ์ — ไม่ใช่นอกแผน">Setup ไม่ครบ</span>':''}${(!indent&&t.mr)?' '+satV3MrTagHtml():''}</td>
       <td class="sans">${indent?'':`<span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>`}</td>
       <td>${fmt2(t.entry)}</td><td>${fmt2(t.exitPrice)}</td>
       <td>${fmt2(t.qty)}${(t.mult||1)!==1?`<span style="color:var(--muted)"> ×${fmt2(t.mult)}</span>`:''}</td>
@@ -6795,7 +6807,7 @@ function renderJournalBody(A){
     const a=jAgg(legs); const symC=tradeSym(legs[0]);
     const header=`<tr class="grouprow gbox gbox-first" style="--gcolor:${gcolor}"><td colspan="13" style="background:${hexToRgba(portColor,0.1)}"><div class="ghead">
       <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${portColor};flex-shrink:0"></span>
-      <span class="gsym">${symG}</span>${tradeOffPlan(legs[0])?'<span class="tag offplan">นอกแผน</span>':''}
+      <span class="gsym">${symG}</span>${tradeOffPlan(legs[0])?'<span class="tag offplan">นอกแผน</span>':''}${tradeSetupInc(legs[0])?'<span class="tag setupinc" title="Setup ไม่ถึงเกณฑ์ — ไม่ใช่นอกแผน">Setup ไม่ครบ</span>':''}${legs[0].mr?satV3MrTagHtml():''}
       <span class="gmeta">${jPortShort(port)}</span>
       <span class="tag ${legs[0].bias==='Long'?'long':'short'}">${legs[0].bias}</span>
       <span class="gmeta">${legs.length} scale-out</span>
@@ -6813,7 +6825,7 @@ function renderJournalBody(A){
     const win = pnl>0;
     return `<div class="tcard">
       <div class="r1">
-        <span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>${tradeOffPlan(t)?' <span class="tag offplan">นอกแผน</span>':''}</span>
+        <span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>${tradeOffPlan(t)?' <span class="tag offplan">นอกแผน</span>':''}${tradeSetupInc(t)?' <span class="tag setupinc" title="Setup ไม่ถึงเกณฑ์ — ไม่ใช่นอกแผน">Setup ไม่ครบ</span>':''}${t.mr?' '+satV3MrTagHtml():''}</span>
         ${pnlTagHtml(pnl)}
       </div>
       <div class="sub" style="margin-bottom:6px">ปิด ${t.exitDate||''} · ${PORTS[t.port].name}</div>
@@ -7890,6 +7902,8 @@ function makeTradeObject(o){
     invalidation: o.invalidation || null,
     imageUrl: o.imageUrl || null,
     submitted: prevTrade ? !!prevTrade.submitted : false,
+    /* SU — Setup ไม่ถึงเกณฑ์ (แผน Sat) ≠ นอกแผน · ไม่ส่ง = คงค่า prevTrade · ไม่มี prev = false (ไม้เก่า/Core ไม่มีผล) */
+    setup_incomplete: o.setupIncomplete!==undefined ? !!o.setupIncomplete : (prevTrade ? !!prevTrade.setup_incomplete : false),
     /* ไม้นอกแผน — ไม่เคยผ่าน Pre-trade Checklist · ธงนี้ติดถาวรกับไม้ แก้ทีหลังไม่ได้จากฟอร์ม
        7D.2 — o.offplanOverride: การ์ด Sat ส่งผลเช็ก heat/โควตา/checklist/Bias ของตัวเองมาแทน sat7dPending เดิม */
     unplanned: (o.fromCard || (prevTrade && coreCardOfTrade(prevTrade))) ? false     /* 7E-2b-2 · ไม้จากการ์ด Core ไม่นับนอกแผน */
@@ -7916,7 +7930,7 @@ function makeTradeObject(o){
     status
   };
   /* ★ F2c — field เสริมล้วน (optional) ค่า ณ ตอนกดบันทึก order Sat: ไม่ส่ง = ไม่มี field (ไม้เก่าเหมือนเดิม) · แก้ไม้ภายหลัง = คงค่าเดิมของ prevTrade */
-  ['trend_state','trend_changed','macro_state','macro_stance','playbook_version','driver','size_rule','off_rule','macro_note','macro_recent'].forEach(k=>{
+  ['trend_state','trend_changed','macro_state','macro_stance','playbook_version','driver','size_rule','off_rule','macro_note','macro_recent','mr','mr_level','plan_bias'].forEach(k=>{   /* 7E-4: mr/mr_level/plan_bias */
     if(o[k]!==undefined) t[k] = o[k];
     else if(prevTrade && prevTrade[k]!==undefined) t[k] = prevTrade[k];
   });
@@ -8612,6 +8626,10 @@ const SATW_COMPS_SCORED = SAT_FACTORS_SCORED.map(f=>f.k);
 const SAT_PB_ASSET = {XAUUSD:'XAUUSD', BTCUSD:'BTC', BTC:'BTC', BRENT:'BRENT', Brent:'BRENT', S50:null};
 /* F2c — ตัวคูณขนาดไม้เมื่อสวนทั้ง Macro และ Trend (ค่าเดียว ห้าม hard-code 0.6 ที่อื่น) */
 const SAT_MACRO_CUT = 0.6;
+/* 7E-4 — MR (เทรดสวน Bias สั้น ๆ ที่แนว): ระยะ Entry จากแนว (% · ค่าเดียวทุก asset ตอนนี้ — ผู้ใช้จะตั้งต่อ asset ทีหลัง → แก้ที่ satMrDistPct จุดเดียว) · ถือนานเกินกี่วันถึงเตือน */
+const SAT_MR_DIST_PCT = 1;
+const SAT_MR_HOLD_MAX = 2;
+function satMrDistPct(asset){ return SAT_MR_DIST_PCT; }
 /* §0.3 — STRIP_FIELDS กำหนดว่าแถบบัญชีของแต่ละโหมดโชว์ช่องอะไร (ป้าย/ลำดับเท่านั้น — ตัวเลขจริงมาจาก settings ตอน render จริงใน UI.acctStrip)
    สเปกทิ้งรายการไว้เป็น "..." — รายการด้านล่างเป็นตัวเลือกที่ตัดสินใจเอง อิง mockup app-mockup.html/acctStrip() · ปรับได้ตอนสร้างส่วนที่ 1 จริง */
 const STRIP_FIELDS = {
@@ -8680,6 +8698,32 @@ const Calc = {
     const macro = macroAlign==='against';
     const trend = (sd==='long' && trendState==='down') || (sd==='short' && trendState==='up');
     return {factor: (macro && trend) ? SAT_MACRO_CUT : 1, against:{macro, trend}};
+  },
+  /* 7E-4 — MR: ทิศของไม้ = ตรงข้าม Bias ของแผน (อื่นจาก Long/Short = null) */
+  mrSide(bias){ return bias==='Short' ? 'Long' : bias==='Long' ? 'Short' : null; },
+  /* 7E-4 — MR ผ่านกติกาไหม: ระยะ Entry จากแนว ≤ distPct% (epsilon 1e-9) · SL ต้องเลยแนว · TP บังคับ+ถูกฝั่ง
+     คืน {ok, distPct (ระยะจริง %, ไม่มีแนว/Entry = null), reasons[]} · Entry/SL ยังไม่กรอก = ไม่มีเหตุผลข้อนั้น (readiness เดิมบอกอยู่แล้ว) แต่ ok=false */
+  mrCheck({side, entry, sl, tp, level, distPct}){
+    const reasons = [], L = +level, e = +entry, s = +sl, t = +tp;
+    const dp = distPct>0 ? +distPct : 1;
+    const f = v => (+v).toLocaleString('en-US', {maximumFractionDigits:2});
+    if(!(L>0)) return {ok:false, distPct:null, reasons:['ยังไม่เลือกแนว MR']};
+    const long = String(side).toLowerCase()==='long';
+    const d = e>0 ? Math.abs(e-L)/L*100 : null;
+    if(d!=null && d > dp + 1e-9) reasons.push('Entry ห่างแนว '+d.toFixed(2)+'% (เกิน '+dp+'%)');
+    if(s>0 && (long ? !(s<L) : !(s>L))) reasons.push(long ? 'SL ต้องต่ำกว่าแนว '+f(L) : 'SL ต้องสูงกว่าแนว '+f(L));
+    if(!(t>0)) reasons.push('MR ต้องกรอก TP');
+    else if(e>0 && (long ? !(t>e) : !(t<e))) reasons.push('TP ผิดฝั่ง');
+    return {ok: reasons.length===0 && e>0 && s>0, distPct:d, reasons};
+  },
+  /* 7E-4 — MR ถือกี่วัน: calendar=true (BTCUSD) = วันปฏิทิน · ไม่งั้นวันทำการ (เสาร์-อาทิตย์ไม่นับ · อัลกอริทึมเดียวกับ ffBizDaysSince แต่รับ today เป็นพารามิเตอร์ = pure) · วันที่ผิดรูป = null · เตือนเมื่อ > SAT_MR_HOLD_MAX */
+  mrHoldDays({openedAt, today, calendar}){
+    const p = v => { const m = String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? Date.UTC(+m[1], +m[2]-1, +m[3]) : null; };
+    const a = p(openedAt), b = p(today); if(a==null || b==null) return null;
+    if(calendar) return Math.max(0, Math.round((b-a)/86400000));
+    let n = 0;
+    for(let d = a; d < b; ){ d += 86400000; const w = new Date(d).getUTCDay(); if(w!==0 && w!==6) n++; }
+    return n;
   },
   /* Risk:Reward แบบง่าย — |tp-entry| / |entry-sl| */
   rr(entry, sl, tp){
@@ -8890,7 +8934,7 @@ const UI = {
        model.closeBtn      → ปุ่ม ✕ มุมขวาบนของการ์ด (onclick=นี่)
        model.setups[].id/.onClick → ทำให้ชิป setup กดติ๊กได้ (เดิมมีแค่ label/on แสดงเฉย ๆ)
        model.addSetupBtn / model.editSetupBtn → ปุ่ม [+ เพิ่ม] / [✎ แก้รายการ] ต่อท้ายแถว setup chips
-       model.setupsLabel   → บรรทัดข้อความเหนือแถว setup chips (เช่น "Setup 2/3 · ยังไม่ครบ = นอกแผน")
+       model.setupsLabel   → บรรทัดข้อความเหนือแถว setup chips (เช่น "Setup 2/3 · ต่ำกว่า 65% = Setup ไม่ครบ")
        model.saveBtn       → {label, onClick, disabled} ปุ่มหลักท้ายการ์ด
        adapter.rowExtra(model,acct) → HTML เสริมต่อท้ายแต่ละแถวบัญชี (เช่น ✅/⚠️+เหตุผล + ปุ่ม [ข้าม])
      ★ 7D.4 — เพิ่ม field เสริมแบบ optional (ไม่ส่ง = เหมือนเดิมทุกประการ):
@@ -8915,7 +8959,7 @@ const UI = {
       ? `<input type="text" inputmode="decimal" value="${val==null?'':escHtml(String(val))}" onchange="${ep}'${field}',this.value)">`
       : `<div class="ui-num">${val??'—'}</div>`;
     return `<div class="ui-plan"${model.id!=null?` data-id="${escHtml(String(model.id))}"`:''}>
-      <div class="ui-plan-h"><b>${escHtml(model.sym||'')}</b><span class="ui-tag ${model.dir||''}">${dt}</span>${model.tag?`<span class="ui-tag">${escHtml(model.tag)}</span>`:''}${model.closeBtn?`<button type="button" class="ui-btn" style="margin-left:auto" onclick="${model.closeBtn}">✕</button>`:''}</div>
+      <div class="ui-plan-h"><b>${escHtml(model.sym||'')}</b><span class="ui-tag ${model.dir||''}">${dt}</span>${model.badgeHtml||''}${model.tag?`<span class="ui-tag">${escHtml(model.tag)}</span>`:''}${model.closeBtn?`<button type="button" class="ui-btn" style="margin-left:auto" onclick="${model.closeBtn}">✕</button>`:''}</div>
       ${model.topHtml||''}
       ${priceChips?`<div class="ui-chips">${priceChips}</div>`:''}
       ${model.hideNums?'':`<div class="ui-plan-nums">
@@ -9825,6 +9869,62 @@ function satV3CondCancelled(idea){ return satV3IsCondIdea(idea) ? idea.condition
 function satV3CondSaved(idea, c){ return !!idea && idea.planned===true && !!c && c.saved!==false; }
 function satV3ActiveCond(idea){ return satV3IsCondIdea(idea) ? (idea.conditions.find(c=>c && c.active && c.status!=='cancelled') || null) : null; }
 /* ขอบใกล้ของ TP zone: Long = min(from,to) · Short = max(from,to) — กรอกกลับด้านก็ได้ค่าเดิม · มีค่าเดียว = ค่านั้น · ไม่มีเลย = null */
+/* 7E-4 — ทิศที่ใช้จริงของเงื่อนไข: kind 'mr' = สวน Bias ของแผน (Calc.mrSide) · อื่น = idea.bias · satV3SideOf = ทิศของข้อที่ Activate อยู่
+   ใช้กับ "ทิศของไม้ที่จะเข้า" เท่านั้น (TP default · F2c · คำนวณบัญชี · บันทึกไม้ · ป้ายทิศการ์ด) — "ทิศของแผน/สัปดาห์" (offBias · หัวแถวรอเงื่อนไข · Trend Shift · zones) คง idea.bias */
+function satV3CondSide(idea, c){
+  if(c && c.kind==='mr'){ const m = Calc.mrSide(idea.bias); if(m) return m; }
+  return idea.bias;
+}
+function satV3SideOf(idea){ return satV3CondSide(idea, satV3ActiveCond(idea)); }
+function satV3IsMrCond(c){ return !!c && c.kind==='mr'; }
+function satV3MrActive(idea){ const a = satV3ActiveCond(idea); return satV3IsMrCond(a) ? a : null; }
+const SAT_MR_LABEL = 'MR · สวน Bias';
+function satV3MrTagHtml(){ return `<span class="ui-f2c-tag ui-mr-tag" data-mr-tag="1">${SAT_MR_LABEL}</span>`; }
+/* แนวที่ MR เลือกได้: Bias Short → แนวรับ (MR Long) · Bias Long → แนวต้าน (MR Short) · จาก Strategy สัปดาห์นี้ */
+function satV3MrLevels(idea){
+  const wk = satwWeek(wpWeekKey(), idea.asset);
+  const v = idea.bias==='Short' ? satV3SupportDisplay(wk).values : idea.bias==='Long' ? satV3ResistanceDisplay(wk).values : [];
+  return (v||[]).map(Number).filter(x=>isFinite(x) && x>0);
+}
+function satV3MrAdd(ideaId){
+  const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea) || !Calc.mrSide(idea.bias)) return;
+  const id = 'c' + Date.now() + Math.floor(Math.random()*1000);
+  satV3FocusCond = id;
+  satV3IdeaWrite(ideaId, {conditions: idea.conditions.concat([{id, kind:'mr', text:'MR ที่แนว ', mr_level:null, tp_from:null, tp_to:null, inval:null, active:false, saved:false}])});
+  satV3Render();
+}
+function satV3MrLevelSet(ideaId, condId, v){
+  const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea)) return;
+  const n = +v;
+  satV3IdeaWrite(ideaId, {conditions: idea.conditions.map(c=> (c.id===condId && c.kind==='mr') ? Object.assign({}, c, {mr_level: (isFinite(n) && n>0) ? n : null}) : c)});
+  satV3Render();
+}
+function satV3MrLevelChipsHtml(idea, c){
+  const id = escHtml(idea.id), cid = escHtml(c.id);
+  const lv = satV3MrLevels(idea), kind = idea.bias==='Short' ? 'แนวรับ' : 'แนวต้าน';
+  if(!lv.length) return `<div class="ui-mr-lv ui-hint" data-mr-nolevel="1">ยังไม่มีแนวรับ/ต้านใน Strategy สัปดาห์นี้</div>`;
+  return `<div class="ui-mr-lv"><span class="ui-cond-l">${kind}</span><span class="ui-chips">${lv.map(v=>
+    `<span class="ui-chip${+c.mr_level===v?' ui-on':''}" data-mr-level="${escHtml(String(v))}" onclick="satV3MrLevelSet('${id}','${cid}',${v})">${escHtml(fmt2(v))}</span>`).join('')}</span></div>`;
+}
+/* บรรทัดสรุปกติกาของข้อ MR ที่ Activate: แนว · ช่วง Entry · SL · TP บังคับ */
+function satV3MrLineHtml(idea, act){
+  const L = +act.mr_level, side = Calc.mrSide(idea.bias), dp = satMrDistPct(idea.asset);
+  if(!(L>0)) return `<div class="ui-mr-line" data-mr-line="1">${satV3MrTagHtml()} <span class="ui-hint">ยังไม่เลือกแนว MR</span></div>`;
+  const f = v => (+v).toLocaleString('en-US', {maximumFractionDigits:2});
+  const lo = L*(1-dp/100), hi = L*(1+dp/100);
+  return `<div class="ui-mr-line" data-mr-line="1">${satV3MrTagHtml()} แนว ${f(L)} · Entry ต้องอยู่ ${f(lo)}–${f(hi)} · SL ${side==='Long'?'ต่ำกว่า':'สูงกว่า'} ${f(L)} · TP บังคับ</div>`;
+}
+/* 7E-4 — เตือนถือนาน: ไม้ satB mr:true เปิดอยู่ ถือ > SAT_MR_HOLD_MAX วัน · คืนจำนวนวัน (หรือ null = ไม่เตือน) · BTCUSD = วันปฏิทิน */
+function satMrHoldWarn(t){
+  if(!t || !t.mr || t.status!=='open' || t.port!=='satB') return null;
+  const n = Calc.mrHoldDays({openedAt: t.openedAt || t.date, today: thaiToday(), calendar: t.sym==='BTCUSD'});
+  return (n!=null && n > SAT_MR_HOLD_MAX) ? n : null;
+}
+function satMrTradeHtml(t){
+  if(!t || !t.mr) return '';
+  const n = satMrHoldWarn(t);
+  return satV3MrTagHtml() + (n!=null ? ` <span class="ui-mr-hold" data-mr-hold="1">⚠ MR ถือ ${n} วัน (เกิน ${SAT_MR_HOLD_MAX})</span>` : '');
+}
 function satV3TpNear(cond, bias){
   if(!cond) return null;
   const v = [cond.tp_from, cond.tp_to].filter(x=>x!=null && x!=='').map(Number).filter(isFinite);
@@ -9848,12 +9948,13 @@ function satV3CondEdit(ideaId, condId, field, val){
   const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea) || !['text','tp_from','tp_to','inval'].includes(field)) return;
   const v = field==='text' ? String(val==null?'':val) : sat7dNum(val);
   const before = idea.conditions.find(c=>c.id===condId);
-  const prevDefault = (before && before.active) ? satV3TpNear(before, idea.bias) : undefined;   /* ต้องจับก่อนเขียน (satV3IdeaWrite แก้ idea ในหน่วยความจำทันที) */
+  const prevDefault = (before && before.active) ? satV3TpNear(before, satV3CondSide(idea, before)) : undefined;   /* ต้องจับก่อนเขียน (satV3IdeaWrite แก้ idea ในหน่วยความจำทันที) */
   const conditions = idea.conditions.map(c=> c.id===condId ? Object.assign({}, c, {[field]: v}) : c);
   const patch = {conditions};
   /* แก้ TP zone ของข้อที่ Activate อยู่: TP ยังเป็นค่าเริ่มต้นเดิม (ไม่เคยแก้เอง) → ตามขอบใกล้ใหม่ · แก้เองแล้ว → ไม่ทับ */
   if(prevDefault!==undefined && (field==='tp_from' || field==='tp_to') && (idea.tp==null || idea.tp===prevDefault)){
-    patch.tp = satV3TpNear(conditions.find(c=>c.id===condId), idea.bias);
+    const cc = conditions.find(c=>c.id===condId);
+    patch.tp = satV3TpNear(cc, satV3CondSide(idea, cc));
   }
   satV3IdeaWrite(ideaId, patch);
 }
@@ -9872,7 +9973,7 @@ function satV3CondCancel(ideaId, condId){
   const conditions = idea.conditions.map(x=> x.id===condId
     ? Object.assign({}, x, {status:'cancelled', cancelled_at:new Date().toISOString(), active:false}) : x);
   const patch = {conditions};
-  if(wasActive && idea.tp!=null && idea.tp===satV3TpNear(c, idea.bias)) patch.tp = null;   /* TP ที่ยังเป็นค่าเริ่มต้นของข้อนี้ ไม่ตกค้าง */
+  if(wasActive && idea.tp!=null && idea.tp===satV3TpNear(c, satV3CondSide(idea, c))) patch.tp = null;   /* TP ที่ยังเป็นค่าเริ่มต้นของข้อนี้ ไม่ตกค้าง */
   satV3ActiveEdit.delete(ideaId);
   satV3IdeaWrite(ideaId, patch);
   satV3Render();
@@ -9881,6 +9982,8 @@ function satV3CondCancel(ideaId, condId){
    7D.5 — Activate จากแถวพับ ([Activate] บนแถว "รอเงื่อนไข") = กางการ์ดที่ขั้นหน้างานโดยเลือกข้อนั้นไว้แล้ว */
 function satV3CondActivate(ideaId, condId, on){
   const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea)) return;
+  const tgt = idea.conditions.find(c=>c && c.id===condId);
+  if(on && satV3IsMrCond(tgt) && !(+tgt.mr_level>0)) return;   /* 7E-4: MR ยังไม่เลือกแนว = Activate ไม่ได้ */
   const prev = satV3ActiveCond(idea);
   const conditions = idea.conditions.map(c=>{
     const o = Object.assign({}, c, {active: !!on && c.id===condId});
@@ -9892,10 +9995,14 @@ function satV3CondActivate(ideaId, condId, on){
   if(on){
     const next = conditions.find(c=>c.id===condId);
     /* TP เริ่มต้น = ขอบใกล้ของ TP zone ข้อนี้ · ถ้า TP เดิมเป็นค่าที่ผู้ใช้แก้เอง (ไม่ตรงค่าเริ่มต้นของข้อก่อนหน้า) ไม่ทับ */
-    if(idea.tp==null || (prev && idea.tp===satV3TpNear(prev, idea.bias))) patch.tp = satV3TpNear(next, idea.bias);
+    const nextSide = satV3CondSide(idea, next), prevSide = prev ? satV3CondSide(idea, prev) : (idea.act_side || idea.bias);
+    /* 7E-4: สลับไปข้อที่ทิศต่างจากข้อก่อนหน้า (ปกติ ↔ MR) → ล้าง Entry/SL (ค่าเดิมผิดฝั่ง) · TP ใช้กติกา default เดิมตามทิศของข้อใหม่ */
+    if(prevSide!==nextSide){ patch.entry = null; patch.sl = null; }
+    patch.act_side = nextSide;
+    if(idea.tp==null || (prev && idea.tp===satV3TpNear(prev, prevSide))) patch.tp = satV3TpNear(next, nextSide);
     if(!satV3Open.has(ideaId) && !prev) satV3ScrollTo = ideaId;   /* Activate จากแถวพับ → เลื่อนไปที่การ์ด */
     satV3Open.add(ideaId);
-  } else if(prev && idea.tp!=null && idea.tp===satV3TpNear(prev, idea.bias)){
+  } else if(prev && idea.tp!=null && idea.tp===satV3TpNear(prev, satV3CondSide(idea, prev))){
     patch.tp = null;   /* [ยกเลิก Activate]: TP ที่ยังเป็นค่าเริ่มต้นของข้อนั้น ไม่ตกค้างไปข้อถัดไป */
   }
   satV3ActiveEdit.delete(ideaId); satV3OthersOpen.delete(ideaId);
@@ -10041,24 +10148,27 @@ function satV3CondNumsHtml(idea, c){
 /* แถวสั้น 1 เงื่อนไข: ข้อความ (ตัดด้วย … · แตะ = กางการ์ดแก้ข้อนี้) · TP · Inval + ปุ่ม [primary] [ยกเลิก] — ≤480px ปุ่มลงแถวล่าง */
 function satV3ShortRowHtml(idea, c, primaryLabel, primaryOnClick){
   const id = escHtml(idea.id), cid = escHtml(c.id);
-  return `<div class="ui-wc" data-cond="${cid}">
-    <span class="ui-wc-t" title="${escHtml(c.text||'')}" onclick="satV3WaitEditCond('${id}','${cid}')">${escHtml(c.text || '—')}</span>
-    <span class="ui-wc-m">${escHtml(satV3CondMeta(c))}</span>
-    <span class="ui-wc-b"><button type="button" class="ui-btn ui-wc-act" onclick="${primaryOnClick}">${escHtml(primaryLabel)}</button><button type="button" class="ui-btn ui-wc-cancel" onclick="satV3CondCancel('${id}','${cid}')">ยกเลิก</button></span>
+  const mr = satV3IsMrCond(c), mrBlock = mr && !(+c.mr_level>0);
+  return `<div class="ui-wc" data-cond="${cid}"${mr?' data-cond-kind="mr"':''}>
+    <span class="ui-wc-t" title="${escHtml(c.text||'')}" onclick="satV3WaitEditCond('${id}','${cid}')">${mr?satV3MrTagHtml()+' ':''}${escHtml(c.text || '—')}</span>
+    <span class="ui-wc-m">${escHtml(satV3CondMeta(c))}${mr?` · แนว ${c.mr_level>0?escHtml(fmt2(c.mr_level)):'—'}`:''}</span>
+    <span class="ui-wc-b"><button type="button" class="ui-btn ui-wc-act" ${mrBlock?'disabled title="ยังไม่เลือกแนว MR"':''} onclick="${primaryOnClick}">${escHtml(primaryLabel)}</button><button type="button" class="ui-btn ui-wc-cancel" onclick="satV3CondCancel('${id}','${cid}')">ยกเลิก</button></span>
   </div>`;
 }
 /* ลิงก์ "ดูที่ยกเลิก (n)" — แสดงจาง อ่านอย่างเดียว */
 function satV3CancelledBlockHtml(idea){
   const list = satV3CondCancelled(idea); if(!list.length) return '';
   const id = escHtml(idea.id), open = satV3CancelledOpen.has(idea.id);
-  const items = open ? list.map(c=>`<div class="ui-cancd-i" data-cond="${escHtml(c.id)}"><span class="ui-cancd-t">${escHtml(c.text || '—')}</span> · ${escHtml(satV3CondMeta(c))}${c.cancelled_at ? ' · ยกเลิก '+escHtml(jDateShort(c.cancelled_at)) : ''}</div>`).join('') : '';
+  const items = open ? list.map(c=>`<div class="ui-cancd-i" data-cond="${escHtml(c.id)}"><span class="ui-cancd-t">${satV3IsMrCond(c)?satV3MrTagHtml()+' ':''}${escHtml(c.text || '—')}</span> · ${escHtml(satV3CondMeta(c))}${c.cancelled_at ? ' · ยกเลิก '+escHtml(jDateShort(c.cancelled_at)) : ''}</div>`).join('') : '';
   return `<div class="ui-cancd"><button type="button" class="ui-link" onclick="satV3CancelledToggle('${id}')">${open?'ซ่อนที่ยกเลิก':'ดูที่ยกเลิก'} (${list.length})</button>${items}</div>`;
 }
 /* ══ F2c — ขั้นหน้างาน: Trend (override เฉพาะแผน) · Macro (Playbook) · Driver · ขนาดไม้ ══
    ค่าทั้งหมดคำนวณ ณ ตอนเรียก (at = ms · ไม่ส่ง = ตอนนี้) — satV3SaveSlot เรียกใหม่ตอนกดบันทึก ไม่ใช้ค่าที่ cache */
 function satV3F2c(idea, at){
   at = at==null ? Date.now() : at;
-  const asset = idea.asset, side = idea.bias==='Short' ? 'short' : 'long';
+  const mrAct = satV3MrActive(idea);   /* 7E-4: ข้อ MR = ทิศสวน Bias · ขนาด SAT_MACRO_CUT ตายตัว */
+  const asset = idea.asset, side = satV3SideOf(idea)==='Short' ? 'short' : 'long';
+  const planSide = idea.bias==='Short' ? 'short' : 'long';   /* Trend Shift เป็นระดับของแผน/สัปดาห์ → เทียบด้วยทิศของแผนเสมอ (ไม่งั้น MR Long ใต้ Bias Short เตือน "ผ่าน Trend Shift" ผิดทุกครั้ง) */
   const wk = satwWeek(wpWeekKey(), asset) || {};
   const base = (wk.comps && wk.comps.trend && wk.comps.trend.v) || null;
   const ov = (idea.trend_override && idea.trend_override.to) ? idea.trend_override : null;
@@ -10068,14 +10178,14 @@ function satV3F2c(idea, at){
   const rule = Calc.sizeRule({macroAlign: align, trendState: trend, side});
   const drv = mac.drivers;
   const driver = drv.length ? (drv.some(d=>d.id===idea.driver) ? idea.driver : drv[0].id) : null;
-  const off = rule.factor<1 && idea.size_full_override===true;
+  const off = !mrAct && rule.factor<1 && idea.size_full_override===true;
   const ch = Calc.pbMs(mac.changedAt);
   const recent = mac.state!=='none' && ch!=null && at-ch>=0 && at-ch<=86400000;
   const lvl = wk.invalidation!=null ? +wk.invalidation : null, e = +idea.entry;
-  const shift = lvl!=null && isFinite(lvl) && e>0 && ((side==='long' && e<lvl) || (side==='short' && e>lvl));
+  const shift = lvl!=null && isFinite(lvl) && e>0 && ((planSide==='long' && e<lvl) || (planSide==='short' && e>lvl));
   const note = wk.comps && wk.comps.macro && typeof wk.comps.macro.note==='string' && wk.comps.macro.note.trim() ? wk.comps.macro.note : null;
   return {side, base, ov, trend, changed: (ov && ov.to!==base) ? {from: base, to: ov.to} : null,
-          mac, align, rule, driver, off, factor: off ? 1 : rule.factor, recent, shift, note, at};
+          mac, align, rule, driver, off, factor: mrAct ? SAT_MACRO_CUT : (off ? 1 : rule.factor), recent, shift, note, at, mr: !!mrAct, mrLevel: mrAct ? +mrAct.mr_level : null};
 }
 function satV3TrendToggle(ideaId){
   if(satV3TrendPick.has(ideaId)) satV3TrendPick.delete(ideaId); else satV3TrendPick.add(ideaId);
@@ -10119,7 +10229,9 @@ function satV3F2cHtml(idea){
         `<span class="ui-chip${d.id===f.driver?' ui-on':''}" data-driver="${escHtml(d.id)}" onclick="satV3DriverSet('${id}','${escHtml(d.id)}')">${escHtml(d.id)}${d.title?' · '+escHtml(d.title):''}</span>`).join('')}</span></div>`
     : `<div class="ui-f2c-r" data-f2c-row="driver"><span class="ui-mac-dim">Driver —</span></div>`;
   const cutTxt = `ลด ${Math.round((1-SAT_MACRO_CUT)*100)}%`;
-  if(f.rule.factor<1){
+  if(f.mr){
+    h += `<div class="ui-f2c-r" data-f2c-row="size" data-mr-size="1"><span>ขนาดไม้: MR · ลด ${Math.round((1-SAT_MACRO_CUT)*100)}% (ตายตัว)</span></div>`;
+  } else if(f.rule.factor<1){
     h += `<div class="ui-f2c-r" data-f2c-row="size"><span>ขนาดไม้: ${f.off ? 'เต็ม' : `${cutTxt} (สวนทั้ง Macro และ Trend)`}</span>`
       + (f.off ? ' <span class="ui-f2c-off" data-off-rule="1">ไม่ตามกฎ</span>' : '')
       + ` <button type="button" class="ui-link" data-size-switch="1" onclick="satV3SizeSwitch('${id}')">${f.off ? 'กลับตามกฎ' : 'ใช้ไม้เต็ม (ไม่ตามกฎ)'}</button></div>`;
@@ -10131,7 +10243,7 @@ function satV3ActiveBlockHtml(idea, act){
   const id = escHtml(idea.id), cid = escHtml(act.id);
   const editing = satV3ActiveEdit.has(idea.id);
   const noTp = act.tp_from==null && act.tp_to==null;
-  let h = `<div class="ui-cond-sum" data-cond="${cid}"><span class="ui-cs-ok">✅</span><span class="ui-cs-t" title="${escHtml(act.text||'')}">${escHtml(act.text || '—')}</span><span class="ui-cs-m">· ${escHtml(satV3CondMeta(act))}</span>
+  let h = `<div class="ui-cond-sum" data-cond="${cid}"><span class="ui-cs-ok">✅</span><span class="ui-cs-t" title="${escHtml(act.text||'')}">${satV3IsMrCond(act)?satV3MrTagHtml()+' ':''}${escHtml(act.text || '—')}</span><span class="ui-cs-m">· ${escHtml(satV3CondMeta(act))}</span>
     <span class="ui-cs-b"><button type="button" class="ui-btn ui-cs-edit" title="แก้ข้อความ / TP zone / Inval ของข้อนี้" onclick="satV3ActiveEditToggle('${id}')">✎</button><button type="button" class="ui-btn ui-cs-off" onclick="satV3CondActivate('${id}','${cid}',false)">ยกเลิก Activate</button></span></div>`;
   if(editing) h += `<div class="ui-cond ui-cond-on ui-cond-edit" data-cond-edit="${cid}"><div class="ui-cond-top">${satV3CondTextHtml(idea, act)}</div>${satV3CondNumsHtml(idea, act)}<div class="ui-cond-nums"><button type="button" class="ui-btn" onclick="satV3ActiveEditToggle('${id}')">เสร็จแล้ว</button></div></div>`;
   if(noTp) h += '<div class="ui-cond-warn">⚠ ยังไม่ใส่ TP zone <span class="ui-hint">(ยังบันทึกได้)</span></div>';
@@ -10147,20 +10259,22 @@ function satV3ActiveBlockHtml(idea, act){
 function satV3CondListHtml(idea, planned, active){
   const id = escHtml(idea.id);
   if(planned && active){
-    return `<div class="ui-conds"><div class="ui-conds-h">เงื่อนไขเข้า <small>หน้างาน · Activate ได้ทีละ 1 ข้อ</small></div>${satV3ActiveBlockHtml(idea, active)}${satV3F2cHtml(idea)}${satV3CancelledBlockHtml(idea)}</div>`;
+    return `<div class="ui-conds"><div class="ui-conds-h">เงื่อนไขเข้า <small>หน้างาน · Activate ได้ทีละ 1 ข้อ</small></div>${satV3ActiveBlockHtml(idea, active)}${satV3IsMrCond(active)?satV3MrLineHtml(idea, active):''}${satV3F2cHtml(idea)}${satV3CancelledBlockHtml(idea)}</div>`;
   }
   const live = satV3CondLive(idea);
   const rows = live.map(c=>{
     const cid = escHtml(c.id), on = !!c.active, saved = satV3CondSaved(idea, c);
-    return `<div class="ui-cond${on?' ui-cond-on':''}" data-cond="${cid}">
+    const mr = satV3IsMrCond(c), mrBlock = mr && !(+c.mr_level>0);
+    return `<div class="ui-cond${on?' ui-cond-on':''}" data-cond="${cid}"${mr?' data-cond-kind="mr"':''}>
       <div class="ui-cond-top">
-        ${planned?`<label class="ui-cond-act"><input type="checkbox" ${on?'checked':''} onchange="satV3CondActivate('${id}','${cid}',this.checked)"> Activate</label>`:''}
-        ${satV3CondTextHtml(idea, c)}
+        ${planned?`<label class="ui-cond-act"><input type="checkbox" ${on?'checked':''} ${mrBlock?'disabled':''} onchange="satV3CondActivate('${id}','${cid}',this.checked)"> Activate</label>`:''}
+        ${mr?satV3MrTagHtml():''}${satV3CondTextHtml(idea, c)}
         <button type="button" class="ui-btn ui-cond-x" title="${saved?'ยกเลิกเงื่อนไขข้อนี้ (ซ่อน ไม่ลบ)':'ลบเงื่อนไขข้อนี้ (ยังไม่เคยบันทึก)'}" onclick="satV3CondCancel('${id}','${cid}')">✕</button>
-      </div>${satV3CondNumsHtml(idea, c)}</div>`;
+      </div>${mr?satV3MrLevelChipsHtml(idea, c):''}${satV3CondNumsHtml(idea, c)}</div>`;
   }).join('');
   const shortcuts = satV3CondTemplates().map(t=>`<button type="button" class="ui-btn ui-cond-sc" data-shortcut="1" onclick="satV3CondAdd('${id}', ${escHtml(JSON.stringify(t.text))})">${escHtml(t.text.trim())}</button>`).join('')
     + `<button type="button" class="ui-btn ui-cond-sc" style="border-style:dashed" onclick="satV3CondAdd('${id}','')">+ เพิ่มเอง</button>`
+    + (Calc.mrSide(idea.bias) ? `<button type="button" class="ui-btn ui-cond-sc" data-mr-add="1" title="เงื่อนไขเทรดสวน Bias สั้น ๆ ที่แนวรับ/ต้าน (ไม่เขียนรายการปุ่มลัด)" onclick="satV3MrAdd('${id}')">＋ MR สวน Bias</button>` : '')
     + `<button type="button" class="ui-btn ui-cond-sc ui-cond-tpl-edit" title="แก้รายการปุ่มลัด (ใช้ร่วมทุกสินค้า)" onclick="satV3CondTplEditorOpen('${id}','list')">✎ แก้รายการ</button>`;
   const hint = planned && live.length ? '<div class="ui-hint ui-cond-hint">ติ๊ก Activate ที่เงื่อนไขที่เกิดขึ้น → ช่อง Entry / SL / TP จะขึ้น</div>' : '';
   const empty = planned && !live.length
@@ -10214,10 +10328,10 @@ function satV3SetupsReady(idea){
   return {n: checked.length, total: setups.length, ratio, pass, complete: pass};
 }
 function satV3SetupLabel(su){
-  return `Setup ${su.n}/${su.total}${su.pass?'':` · ต่ำกว่า ${Math.round(su.ratio*100)}% = นอกแผน`}`;
+  return `Setup ${su.n}/${su.total}${su.pass?'':` · ต่ำกว่า ${Math.round(su.ratio*100)}% = Setup ไม่ครบ`}`;
 }
 /* คำนวณต่อบัญชี — เทียบเท่า sat7dCalc() เดิมทุกจุด (โบรก/lot/heat/โควตา) เว้นแต่ "ครบ checklist" แทนด้วย setup
-   ซึ่งเป็นแค่คำเตือน (นอกแผน) ไม่ใช่ตัวบล็อกความพร้อมต่อบัญชี — ผ่าน Calc.satLot/Calc.heat/Calc.readiness เดิมทั้งหมด */
+   ซึ่งเป็นแค่คำเตือน (Setup ไม่ครบ · ไม่ใช่นอกแผน) ไม่ใช่ตัวบล็อกความพร้อมต่อบัญชี — ผ่าน Calc.satLot/Calc.heat/Calc.readiness เดิมทั้งหมด */
 function satV3PlanAcctCalc(idea, accId, f2c){
   const base = sat7dAcctBase(accId);
   const F = f2c || satV3F2c(idea);   /* F2c — ขนาดไม้ = riskAmount × factor ที่ใช้จริง (1 หรือ SAT_MACRO_CUT) */
@@ -10225,7 +10339,7 @@ function satV3PlanAcctCalc(idea, accId, f2c){
   const opts = sat7dBrokerOpts(base.B, idea.asset);
   const chosen = opts.find(o=>o.broker===slot.broker) || opts[0] || null;
   const e = +idea.entry, s = +idea.sl;
-  const side = (e>0 && s>0) ? (idea.bias==='Short' ? s>e : s<e) : null;
+  const side = (e>0 && s>0) ? (satV3SideOf(idea)==='Short' ? s>e : s<e) : null;   /* 7E-4: ทิศของไม้ (MR = สวน Bias) */
   const dist = (e>0 && s>0) ? Math.abs(e-s) : 0;
   let lot = null, lotMsg = '', actualTHB = 0, riskCur = null;
   if(chosen){
@@ -10242,11 +10356,14 @@ function satV3PlanAcctCalc(idea, accId, f2c){
   const quotaFull = tradeExists ? base.nNew > SAT7D_NEW_MAX : base.nNew >= SAT7D_NEW_MAX;
   const rd = Calc.readiness({
     heatPct, heatMax: SAT7D_HEAT_MAX, quotaFull,
-    checksOk: true,          /* setup ครบ/ไม่ครบ เป็นแค่เตือน (นอกแผน) ไม่บล็อกต่อบัญชี — ดู satV3SetupsReady */
+    checksOk: true,          /* setup ครบ/ไม่ครบ เป็นแค่เตือน (Setup ไม่ครบ · ไม่ใช่นอกแผน) ไม่บล็อกต่อบัญชี — ดู satV3SetupsReady */
     hasInvalidation: true,   /* Cancel Level เป็นแค่เตือน ไม่บล็อกเหมือน invalidation ของ 7D.2 เดิม */
     side, hasChosenBroker: !!chosen, hasAnyBroker: sat7dHasAnyBroker(base.B), lotMsg, hasCapital: base.cap>0
   });
-  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: rd.reasons, ready: rd.ok, tradeExists, factor: F.factor, f2c: F};
+  /* 7E-4: ข้อ MR — mrCheck ไม่ผ่าน = ไม่ ready + เหตุผลต่อท้าย warns (Calc.readiness เดิมไม่แตะ) */
+  const mrAct = satV3MrActive(idea);
+  const mrC = mrAct ? Calc.mrCheck({side: satV3SideOf(idea), entry: idea.entry, sl: idea.sl, tp: idea.tp, level: mrAct.mr_level, distPct: satMrDistPct(idea.asset)}) : null;
+  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: rd.reasons.concat(mrC ? mrC.reasons : []), ready: rd.ok && (!mrC || mrC.ok), tradeExists, factor: F.factor, f2c: F, mr: !!mrAct, mrOk: mrC ? mrC.ok : true, mrCheck: mrC};
 }
 function satV3ReadyCount(idea){
   return sat7dAccts().filter(a=>{
@@ -10269,8 +10386,8 @@ function satV3SkipToggle(ideaId, accId, on){
   }
 }
 /* บันทึก order 1 บัญชี — makeTradeObject() เดิมทั้งดุ้น (บวก cancel_level/setups แบบ optional ที่เพิ่มเข้าไปแล้ว)
-   port satB เสมอ · status plan · unplanned ตาม offplanOverride (setup ไม่ครบ = นอกแผน) */
-function satV3SaveSlot(ideaId, accId){
+   port satB เสมอ · status plan · unplanned ตาม offplanAcct (บัญชีไม่ ready เท่านั้น) · setup ไม่ครบ → setup_incomplete (ไม่ใช่นอกแผน) */
+function satV3SaveSlot(ideaId, accId, offplanAcct){
   const idea = sat7dIdea(ideaId); if(!idea || !acctList.some(a=>a.id===accId)) return;
   const s = (idea.accts||{})[accId] || {}; if(s.trade_id || s.skip) return;
   const act = satV3ActiveCond(idea);
@@ -10278,15 +10395,17 @@ function satV3SaveSlot(ideaId, accId){
   const F = satV3F2c(idea, Date.now());   /* F2c — ค่า ณ วินาทีที่กดบันทึก (ไม่ใช้ค่าที่เห็นตอน Activate) · ล็อกลงไม้ */
   const c = satV3PlanAcctCalc(idea, accId, F);
   if(c.lot==null) return;
+  if(c.mr && !c.mrOk) return;   /* 7E-4: MR ไม่ผ่านกติกา (ระยะ/SL/TP) = บันทึกไม่ได้ ไม่มีทางลัด "รวมด้วย (นอกแผน)" */
+  const mrAct = satV3MrActive(idea);
   const B = getBook(accId);
   const su = satV3SetupsReady(idea);
   const t = makeTradeObject({
     id: 't'+Date.now()+'_'+accId, date: thaiToday(),
-    sym: idea.asset, port: 'satB', bias: idea.bias,
+    sym: idea.asset, port: 'satB', bias: satV3SideOf(idea),   /* 7E-4: ทิศของไม้ (MR = สวน Bias) */
     entry: idea.entry, sl: idea.sl, tp: idea.tp,
     qty: c.lot, mult: c.chosen ? c.chosen.cfg.contract : 1, cur: c.chosen ? c.chosen.cfg.cur : PORTS.satB.cur,
     invalidation: null, status: 'plan', prevTrade: null, unplannedMode: false,
-    offplanOverride: !su.pass, sizeFactor: F.factor<1 ? F.factor : null,
+    offplanOverride: !!offplanAcct, setupIncomplete: !su.pass, sizeFactor: F.factor<1 ? F.factor : null,
     trend_state: F.trend || null,
     trend_changed: F.changed ? {from: F.changed.from, to: F.changed.to} : null,
     macro_state: F.align,
@@ -10295,6 +10414,7 @@ function satV3SaveSlot(ideaId, accId){
     driver: F.driver || null,
     size_rule: F.rule.factor,
     off_rule: F.off,
+    mr: mrAct ? true : undefined, mr_level: mrAct ? +mrAct.mr_level : undefined, plan_bias: mrAct ? idea.bias : undefined,   /* 7E-4 — ไม้ปกติไม่มี field เหล่านี้ */
     macro_note: F.note,
     macro_recent: F.recent,
     cancel_level: idea.cancel_level,
@@ -10320,7 +10440,7 @@ function satV3SaveReadyAccounts(ideaId){
 function satV3SaveOffplanAccount(ideaId, accId){
   const idea = sat7dIdea(ideaId); if(!idea) return;
   const c = satV3PlanAcctCalc(idea, accId);
-  if(c.lot!=null) satV3SaveSlot(idea.id, accId);
+  if(c.lot!=null) satV3SaveSlot(idea.id, accId, !c.ready);   /* SU — บัญชีไม่ ready = นอกแผนจริง (ธงเดิม) · Setup ไม่ครบแยกเป็น setup_incomplete ใน satV3SaveSlot */
 }
 /* ── ★ CRITICAL FIX (25 ก.ย.): plan/open row อ่านจากไม้ในสมุดจริงของแต่ละบัญชี (status plan/open ผูก port satB)
    ไม่ใช่จาก idea.status — ไอเดียปิดเองเมื่อทุกบัญชีข้าม หรือไม้ที่ผูกไว้ทุกไม้ปิด/ยกเลิกแล้วเท่านั้น ── */
@@ -10417,11 +10537,19 @@ function satV3F2cTradeLine(t){
   const macTxt = t.macro_state==='none' ? mac : `${mac} (${Calc.pbStanceIcon(t.macro_stance)}${vm?' '+vm:''})`;
   const tr = t.trend_state==null ? '—' : t.trend_state==='flat' ? 'ผสม'
     : ((side==='long' && t.trend_state==='up') || (side==='short' && t.trend_state==='down')) ? 'ตาม' : 'สวน';
-  const size = (t.size_rule<1 && !t.off_rule) ? `ลด ${Math.round((1-t.size_rule)*100)}%` : 'เต็ม';
+  const size = t.mr ? `MR · ลด ${Math.round((1-(t.sizeFactor>0 ? t.sizeFactor : SAT_MACRO_CUT))*100)}%`
+    : (t.size_rule<1 && !t.off_rule) ? `ลด ${Math.round((1-t.size_rule)*100)}%` : 'เต็ม';
   const tags = (t.off_rule ? '<span class="ui-f2c-off">ไม่ตามกฎ</span>' : '')
     + (t.trend_changed ? '<span class="ui-f2c-tag">Trend เปลี่ยน</span>' : '')
     + (t.macro_recent ? '<span class="ui-f2c-tag">Playbook เพิ่งเปลี่ยน</span>' : '');
   return `<div class="ui-f2c-tl" data-f2c-trade="1">Macro ${escHtml(macTxt)} · Trend ${tr} · Driver ${escHtml(t.driver||'—')} · ${size} ${tags}</div>`;
+}
+/* 7E-4 — บรรทัดป้าย MR ใต้แถวไม้ Sat (ไม้ปกติ = ว่าง) */
+function satV3MrRowLine(t){
+  const inc = tradeSetupInc(t) ? `<span class="tag setupinc" data-su-chip="1">Setup ไม่ครบ</span>` : '';   /* SU */
+  const off = tradeOffPlan(t) ? `<span class="tag offplan" data-off-chip="1">นอกแผน</span>` : '';
+  const mr = (t && t.mr) ? satMrTradeHtml(t) : '';
+  return (mr||inc||off) ? `<div class="ui-f2c-tl" data-mr-trade="${mr?1:0}">${[mr,off,inc].filter(Boolean).join(' ')}</div>` : '';
 }
 function satV3PlanRowsHtml(idea){
   const trades = satV3EffectiveTrades(idea);
@@ -10440,15 +10568,15 @@ function satV3PlanRowsHtml(idea){
       + (idea.cancel_level!=null ? ` · ยกเลิกถ้าถึง ${fmt2(idea.cancel_level)}` : '')
       + (acctSummary ? ` · ${acctSummary}` : '');
     rows.push(UI.row({color: acctColor(acctList.find(a=>a.id===planTrades[0].accId)), name: sat7dLabel(idea.asset),
-      tag: idea.bias, detail,
+      tag: t0.bias || idea.bias, detail,
       btns:[{label:'เข้าแล้ว', onClick:`satV3RowMarkOpenAll('${escHtml(idea.id)}')`},
-            {label:'ยกเลิก', onClick:`satV3RowCancelAll('${escHtml(idea.id)}')`}]}) + satV3F2cTradeLine(t0));
+            {label:'ยกเลิก', onClick:`satV3RowCancelAll('${escHtml(idea.id)}')`}]}) + satV3F2cTradeLine(t0) + satV3MrRowLine(t0));
   }
   openTrades.forEach(({accId, trade})=>{
     rows.push(UI.row({color: acctColor(acctList.find(a=>a.id===accId)), name: sat7dLabel(idea.asset),
-      tag: idea.bias, detail:`เข้า ${fmt2(trade.entry)} · SL ${fmt2(trade.sl)} · TP ${trade.tp!=null?fmt2(trade.tp):'—'}`,
+      tag: trade.bias || idea.bias, detail:`เข้า ${fmt2(trade.entry)} · SL ${fmt2(trade.sl)} · TP ${trade.tp!=null?fmt2(trade.tp):'—'}`,
       btns:[{label:'ปิดไม้', onClick:`openClosePos('${escHtml(trade.id)}','${escHtml(accId)}')`},
-            {label:'แก้ SL', onClick:`openTradeEdit('${escHtml(trade.id)}','${escHtml(accId)}')`}]}) + satV3F2cTradeLine(trade));
+            {label:'แก้ SL', onClick:`openTradeEdit('${escHtml(trade.id)}','${escHtml(accId)}')`}]}) + satV3F2cTradeLine(trade) + satV3MrRowLine(trade));
   });
   return rows.join('');
 }
@@ -10466,7 +10594,7 @@ const satV3PlanAdapter = {
     if(model._skipSet.has(a.id)) return `<button type="button" class="ui-btn" onclick="satV3SkipToggle('${escHtml(idea.id)}','${escHtml(a.id)}',false)">เอากลับ</button>`;
     const statusHtml = c.lot==null ? ''
       : c.ready ? '<span class="ui-acct-ok">✅</span>'
-      : `<span class="ui-acct-warn">⚠️ ${escHtml(c.warns[0]||'')}</span> <button type="button" class="ui-btn" onclick="satV3SaveOffplanAccount('${escHtml(idea.id)}','${escHtml(a.id)}')">รวมด้วย (นอกแผน)</button>`;
+      : `<span class="ui-acct-warn">⚠️ ${escHtml(c.warns[0]||'')}</span>${(c.mr && !c.mrOk) ? '' : ` <button type="button" class="ui-btn" onclick="satV3SaveOffplanAccount('${escHtml(idea.id)}','${escHtml(a.id)}')">รวมด้วย (นอกแผน)</button>`}`;
     return `${statusHtml} <button type="button" class="ui-btn" onclick="satV3SkipToggle('${escHtml(idea.id)}','${escHtml(a.id)}',true)">ข้าม</button>`;
   }
 };
@@ -10484,7 +10612,8 @@ function satV3DraftCardHtml(idea){
   const r = Calc.rr(idea.entry, idea.sl, idea.tp);
   const skipSet = new Set(sat7dAccts().filter(a=>{ const s=(idea.accts||{})[a.id]; return s && s.skip; }).map(a=>a.id));
   const model = {
-    id: idea.id, sym: sat7dLabel(idea.asset), dir: idea.bias==='Short'?'S':'L',
+    id: idea.id, sym: sat7dLabel(idea.asset), dir: satV3SideOf(idea)==='Short'?'S':'L',   /* 7E-4: ป้ายทิศ = ทิศของไม้ที่จะเข้า (MR = สวน Bias) */
+    badgeHtml: satV3MrActive(idea) ? satV3MrTagHtml() : '',
     tag: isCond
       ? `Trend Shift ${idea.bias==='Long'?'<':'>'}${wk && wk.invalidation!=null ? fmt2(wk.invalidation) : '—'}`
       : `ผิด ${idea.bias==='Long'?'<':'>'}${idea.cancel_level!=null?fmt2(idea.cancel_level):'—'}`,
