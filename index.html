@@ -1908,6 +1908,10 @@ button.ccChip{cursor:pointer;min-height:24px}
 .wlTier{flex:none;font-size:.58rem;font-weight:700;letter-spacing:.04em;border-radius:4px;padding:1px 5px;background:var(--surface2);color:var(--muted)}
 .wlTier.A{background:var(--teal-dim);color:var(--teal)}.wlTier.B{background:var(--blue-dim);color:var(--blue)}.wlTier.rev{background:var(--surface2);color:var(--muted);font-weight:600}
 .ccTierWl{font-size:.78rem;color:var(--muted);margin:4px 0 8px}
+.ccTierFill{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 8px;min-width:0}
+.ccTierFill button{flex:0 0 auto}
+.ccTierFill .ccSub{font-size:.76rem;color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.rcTierTag{display:inline-block;margin-left:4px;padding:0 6px;border-radius:999px;font-size:.66rem;line-height:1.5;background:var(--surface);color:var(--muted);border:1px solid var(--border,currentColor);vertical-align:middle}
 .ccSumLn{font-size:.8rem;color:var(--muted);margin-top:4px}
 .ccSumLn b{color:var(--dark);font-family:var(--mono);font-weight:600}
 .ccLvRow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 8px;align-items:center;margin-bottom:6px}
@@ -5746,7 +5750,24 @@ function coreWlInfoText(ticker){
   if(!w.found) return 'ไม่อยู่ใน Watchlist';
   return w.tier ? `Watchlist: Tier ${w.tier}${w.setAt ? ' (ตั้งเมื่อ ' + w.setAt + ')' : ''}` : 'Watchlist: ยังไม่ตั้ง Tier';
 }
-function coreTiWlShow(ticker){ const el = coreEl('tiWlInfo'); if(el){ const t = coreWlInfoText(ticker); el.textContent = t; el.style.display = t ? '' : 'none'; } }
+function coreTiWlShow(ticker){ const el = coreEl('tiWlInfo'); if(el){ const t = coreWlInfoText(ticker); el.textContent = t; el.style.display = t ? '' : 'none'; } coreTiFillShow(ticker); }
+/* RC2 · ปุ่ม "เติมจาก Research" — ticker นี้ต้องมี research_card ที่มีตัวเลข Tier อย่างน้อย 1 ตัว */
+function coreTiRcFound(ticker){
+  const t = coreNorm(ticker); if(!t || typeof rcTierMetrics!=='function') return null;
+  const d = wlDocMap()[t]; const f = d && d.research_card ? rcTierMetrics(d.research_card) : null;
+  return f && f.found.length ? f : null;
+}
+function coreTiFillShow(ticker){
+  const row = coreEl('tiFillRow'); if(!row) return;
+  const t = coreNorm(ticker), show = !!coreTiRcFound(t);
+  if(row.dataset.for !== t){ row.dataset.for = t; const m = coreEl('tiFillMsg'); if(m) m.textContent = ''; }
+  row.style.display = show ? '' : 'none';
+}
+function coreTiTicker(){
+  if(coreNew){ const e = coreEl('cnTicker'); return coreNorm(e ? e.value : ''); }
+  const c = coreDlg && coreDlg.kind==='tier' ? coreCardsList.find(x=>x.id===coreDlg.id) : null;
+  return c ? coreNorm(c.ticker) : '';
+}
 /* TIER2 · ช่องติ๊ก 3 สถานะ (ใช่ / ไม่ใช่ / ยังไม่ตอบ) นอกเหนือจาก Gate 5: key → [ป้าย, ชื่อฟิลด์ใน tierInputs] */
 const CORE_TK = {fcf3y:['FCF บวก 3 ปีติด','fcfPositive3y'], capret:['มีปันผลหรือซื้อหุ้นคืน','capitalReturn'], ocf:['เงินสดจากการดำเนินงาน (OCF) บวก','ocf'], netcash:['เงินสดสุทธิ (หนี้ − เงินสด ≤ 0)','netCash']};
 const CORE_TIER_PICKS = [['B','cnTierB','B'], ['fortress','cnTierA','A · Fortress'], ['growth','cnTierG','A · Growth'], ['both','cnTierAB','A · ทั้งคู่']];
@@ -5755,11 +5776,13 @@ function coreTkHtml(key, val){
 }
 function coreTierBlockHtml(cfg, ti, ticker){
   ti = ti || {};
+  const fillOn = !!coreTiRcFound(ticker);
   const g5 = ti.gate5 || {};
   const wi = coreWlInfoText(ticker);
   const pc = (id, lbl, v) => `<div class="ccF"><label>${lbl}</label><input type="text" inputmode="decimal" id="${id}" value="${coreTiFmt(v,100)}" oninput="coreTiIn()"></div>`;
   return `<div class="ccTier" data-c-tierblock><h4>Tier — คำนวณจากตัวเลข · ผ่านมุมไหนก็ได้ = A (ยังไม่ตอบ/ไม่มีข้อมูล = ข้อนั้นไม่ผ่าน)</h4>
     <div class="ccTierWl" id="tiWlInfo" data-c-wlinfo${wi?'':' style="display:none"'}>${escHtml(wi)}</div>
+    <div class="ccTierFill" id="tiFillRow" data-c-tierfillrow data-for="${escHtml(coreNorm(ticker))}"${fillOn?'':' style="display:none"'}><button type="button" class="ccBtn" id="tiFillRc" data-c-tierfill onclick="coreTiFillRc()">เติมจาก Research</button><span class="ccSub" id="tiFillMsg" data-c-tierfillmsg role="status"></span></div>
     <div class="ccTierSec" data-c-tiersec="fortress"><h5>Fortress <span class="ccSub">ป้อมปราการ · ROIC &gt; ${fmt2(cfg.tierRoic)}% · ND/EBITDA &lt; ${fmt2(cfg.tierNd)} · FCF conv &gt; ${fmt2(cfg.tierFcf)}%</span></h5>
       <div class="ccPair3">${pc('tiRoic','ROIC %',ti.roic)}
         <div class="ccF"><label>ND/EBITDA (เท่า) <span class="ccSub">ใช้ร่วม 2 มุม</span></label><input type="text" inputmode="decimal" id="tiNd" value="${coreTiFmt(ti.ndEbitda)}" oninput="coreTiIn()"></div>
@@ -5781,10 +5804,29 @@ function coreTiG5(key, val){
   document.querySelectorAll(`[data-g5="${key}"] button`).forEach(b=>b.classList.toggle('on', coreTi.g5[key]!==null && coreTi.g5[key]!==undefined && (b.dataset.v==='1') === coreTi.g5[key]));
   coreTiIn();
 }
+function coreTiTkPaint(key){
+  document.querySelectorAll(`[data-tk="${key}"] button`).forEach(b=>b.classList.toggle('on', coreTi.tk[key]!==null && coreTi.tk[key]!==undefined && (b.dataset.v==='1') === coreTi.tk[key]));
+}
 function coreTiTk(key, val){
   if(!coreTi) return;
   coreTi.tk[key] = (coreTi.tk[key]===val) ? null : val;
-  document.querySelectorAll(`[data-tk="${key}"] button`).forEach(b=>b.classList.toggle('on', coreTi.tk[key]!==null && coreTi.tk[key]!==undefined && (b.dataset.v==='1') === coreTi.tk[key]));
+  coreTiTkPaint(key);
+  coreTiIn();
+}
+/* RC2 · เติมจาก Research: เฉพาะช่องว่าง/ยังไม่ตอบ · ไม่แตะ Gate 5 / ปุ่ม Tier / เหตุผล */
+function coreTiFillRc(){
+  if(!coreTi) return;
+  const f = coreTiRcFound(coreTiTicker()), msg = coreEl('tiFillMsg'); if(!f) return;
+  let n = 0, skip = 0;
+  [['tiRoic','roic'],['tiNd','nd'],['tiFcf','fcf'],['tiRev','rev'],['tiCagr','cagr'],['tiOpm','opm'],['tiOpmPrev','opmPrev']].forEach(([id,k])=>{
+    const e = coreEl(id), v = f[k]; if(!e || v==null) return;
+    if(String(e.value).trim()==='') { e.value = String(v); n++; } else skip++;
+  });
+  [['fcf3y','fcf3y'],['capret','capret'],['ocf','ocf'],['netcash','netCash']].forEach(([key,k])=>{
+    const v = f[k]; if(v!==true && v!==false) return;
+    if(coreTi.tk[key]===null || coreTi.tk[key]===undefined){ coreTi.tk[key] = v; coreTiTkPaint(key); n++; } else skip++;
+  });
+  if(msg) msg.textContent = n ? `เติม ${n} ช่อง · ข้าม ${skip} ช่องที่กรอกแล้ว · จาก Research ${f.asOf}` : 'ไม่มีช่องว่างให้เติม';
   coreTiIn();
 }
 /* ปุ่มเลือก Tier: 'B' | 'fortress' | 'growth' | 'both' ('A' เดิม = fortress) */
@@ -12635,7 +12677,7 @@ setInterval(function(){ try{ rsUpdatePushBadge(); updateAcctChip(); }catch(e){} 
 </script>
 <!-- RESEARCH CARD INLINE START -->
 <script>
-/* source: research-card.js · sha256 f07e3ddf9e5b */
+/* source: research-card.js · sha256 86040aacc1d4 */
 /* Research Card v1 — mirrors shared/research-card-v1.md and research_card.py. */
 (function(){
   'use strict';
@@ -12719,6 +12761,30 @@ setInterval(function(){ try{ rsUpdatePushBadge(); updateAcctChip(); }catch(e){} 
     return {card:c, history:history.slice(0,10)};
   };
   const esc = s => window.escHtml(String(s==null?'':s));
+
+  /* RC2 — ตัวเลข Tier จาก metrics (ระบุตัวด้วยรหัสท้ายชื่อ [T:code]) */
+  const TIER_CODES=['roic','nd','fcf','rev','cagr','opm','chk'];
+  const TIER_TAIL=/\s*\[\s*T\s*:\s*([A-Za-z]+)\s*\]\s*$/;
+  const rcTierCode=name=>{ const m=TIER_TAIL.exec(String(name==null?'':name)); const c=m&&m[1].toLowerCase(); return c&&TIER_CODES.includes(c)?c:null; };
+  const rcMetricLabel=name=>{ const t=String(name==null?'':name); return rcTierCode(t)?t.replace(TIER_TAIL,''):t; };
+  const tierNum=v=>{ const t=String(v==null?'':v).replace(/[,%x\s]/gi,'').replace(/−/g,'-'); if(!t) return null; const n=Number(t); return Number.isFinite(n)?n:null; };
+  const tierYn=v=>{ const t=String(v==null?'':v).trim().toLowerCase(); return t==='yes'||t==='ใช่'?true:t==='no'||t==='ไม่ใช่'?false:null; };
+  const rcTierMetrics=card=>{
+    if(!card || typeof card!=='object') return null;
+    const list=Array.isArray(card.metrics)?card.metrics:[], hit={};
+    list.forEach(m=>{ const c=m&&rcTierCode(m.name); if(c && !hit[c]) hit[c]=m; });
+    if(!hit.roic && !hit.nd && !hit.fcf){   /* การ์ด RC1 ไม่มีรหัส: หาจากชื่อ (ตัวแรกที่เจอ) */
+      [['roic',/ROIC/i],['nd',/ND\s*\/\s*EBITDA/i],['fcf',/FCF\s*conversion/i]].forEach(([c,re])=>{ const m=list.find(x=>x && re.test(String(x.name))); if(m) hit[c]=m; });
+    }
+    const val=c=>hit[c]?tierNum(hit[c].value):null;
+    const opm=hit.opm?String(hit.opm.value).split('/'):[], chk=hit.chk?String(hit.chk.value).split('/'):[];
+    const nd=val('nd'), periods={};
+    TIER_CODES.forEach(c=>{ if(hit[c]) periods[c]=hit[c].period; });
+    return {roic:val('roic'),nd,fcf:val('fcf'),rev:val('rev'),cagr:val('cagr'),
+      opm:opm.length?tierNum(opm[0]):null, opmPrev:opm.length>1?tierNum(opm[1]):null,
+      fcf3y:chk.length?tierYn(chk[0]):null, capret:chk.length>1?tierYn(chk[1]):null, ocf:chk.length>2?tierYn(chk[2]):null,
+      netCash:nd==null?null:nd<=0, asOf:card.as_of, periods, found:TIER_CODES.filter(c=>hit[c])};
+  };
   function promptText(ticker, old, legacy){
     const prior = old ? {
       ticker:old.ticker, as_of:old.as_of, business:old.business,
@@ -12727,7 +12793,7 @@ setInterval(function(){ try{ rsUpdatePushBadge(); updateAcctChip(); }catch(e){} 
       severe_risks:old.severe_risks, sources:old.sources, missing_data:old.missing_data
     } : null;
     const oldBiz = !prior && legacy ? {date:legacy.date, what:legacy.q1_what, economics:legacy.q2_economics, sources:legacy.sources} : null;
-    return `Research ${ticker} into one concise Research Card JSON object (schema_version research-card/1.0). Return JSON only, without a Markdown fence. Write all reader-facing text in clear Thai. Keep company names, product names, tickers, stable IDs, JSON keys, dates, numerical values and source URLs unchanged. Explain necessary technical terms briefly at first use, for example FCF — เงินสดจากการดำเนินงานหลังหักลงทุน. Write percentages with % and an explicit comparison base for growth; distinguish % from percentage points. Format money in Thai units without changing its value or calculation. Preserve approximately and company-defined qualifications. For no_change/no_data, retain the prior content exactly, including its language. JSON types are strict: every metrics[].value is a quoted string (for example "29591", not 29591); additional_drivers, missing_data, and changes are arrays of plain strings, never objects. Use the existing card and newest primary documents first. Read the latest financial statement and material company events since the old as_of date. Update only changed conclusions, but return a complete card. Choose up to three drivers using documented impact size, causal mechanism, and trackable indicator. Use the same evidence set for bull and bear. Mark thin evidence unconfirmed; do not invent numbers or fill slots. Metric hierarchy: when a metric is a part of another listed metric (for example AI revenue within semiconductor revenue, upfront license revenue within software revenue), name the parent in the Thai metric name, e.g. "รายได้ชิป AI (ส่วนหนึ่งของรายได้เซมิคอนดักเตอร์)"; when two shares are measured on overlapping bases (for example top-5 end customers vs one distributor), say in the name that they overlap and must not be added together. Quality metrics for Tier: always include ROIC, ND/EBITDA and FCF conversion computed from the latest 10-K or annual report plus later 10-Q/interim reports (use TTM when available, otherwise the latest fiscal year). Definitions: ROIC = NOPAT ÷ (total debt + total equity − cash and equivalents), NOPAT = operating income × (1 − effective tax rate); ND/EBITDA = (total debt − cash and equivalents) ÷ EBITDA; FCF conversion = FCF ÷ net income. Put the short formula in the metric name, state TTM or the fiscal year in period, write value as a string such as "24.5" with unit "%" or "x", and use the filing as source_url. If net income or EBITDA is zero or negative, or an input is missing, put the item in missing_data instead of estimating. Keep metrics within the 12-item limit by dropping the least useful existing metrics first. Off-balance-sheet obligations: read the commitments and contingencies notes of the latest 10-Q/10-K (or interim report). If purchase commitments, guarantees, financing backstops or similar obligations exceed 10% of annual revenue or materially affect a driver, add each to additional_drivers with amount, timing and source URL, and add it to severe_risks when it could force losses if demand weakens. Next earnings: always include the next earnings report in catalysts. If the date is not announced, estimate it from the company's usual reporting pattern, set date_status "estimated", and cite the prior-period results release as source_url. Put other material drivers in additional_drivers. Top-level review_result MUST be a string exactly "changed", "no_change", or "no_data". For a FIRST card with no existing card, use "changed" and a nonempty changes array even if some requested facts are missing. Put unavailable facts in missing_data as plain strings, not objects with area/status/detail. For updates, use no_change only when checked evidence confirms no substantive change; use no_data when a check found insufficient new evidence. For no_change/no_data, keep prior content unchanged and set changes to []; for no_data, keep the prior as_of date. In one pass, verify numbers against sources and internal consistency, labeling this as self review. No subagents, long report, Google Doc, forced probability, reverse DCF, base rate, or peer valuation. Each tripwire needs a stable id, threshold, current_value, and keywords. Return exactly these 15 top-level fields with no extras: schema_version,ticker,as_of,researched_at (UTC YYYY-MM-DDTHH:MM:SSZ),review_result,business{sells,customers,revenue_model},metrics[{name,value,unit,period,source_url}],drivers[{id,title,why_material,mechanism,indicator,bull,bear,status,evidence[{claim,source_url}]}],additional_drivers,catalysts[{event,date,date_status,source_url}],tripwires[{id,text,threshold,current_value,keywords}],severe_risks,sources[{title,url,date}],missing_data,changes. Driver status confirmed/unconfirmed; catalyst date_status confirmed/estimated. Ticker: ${ticker}. Existing card JSON: ${prior ? JSON.stringify(prior) : 'null'}. Legacy business reference (unverified; do not promote thesis prose to confirmed drivers): ${oldBiz ? JSON.stringify(oldBiz) : 'null'}.`;
+    return `Research ${ticker} into one concise Research Card JSON object (schema_version research-card/1.0). Return JSON only, without a Markdown fence. Write all reader-facing text in clear Thai. Keep company names, product names, tickers, stable IDs, JSON keys, dates, numerical values and source URLs unchanged. Explain necessary technical terms briefly at first use, for example FCF — เงินสดจากการดำเนินงานหลังหักลงทุน. Write percentages with % and an explicit comparison base for growth; distinguish % from percentage points. Format money in Thai units without changing its value or calculation. Preserve approximately and company-defined qualifications. For no_change/no_data, retain the prior content exactly, including its language. JSON types are strict: every metrics[].value is a quoted string (for example "29591", not 29591); additional_drivers, missing_data, and changes are arrays of plain strings, never objects. Use the existing card and newest primary documents first. Read the latest financial statement and material company events since the old as_of date. Update only changed conclusions, but return a complete card. Choose up to three drivers using documented impact size, causal mechanism, and trackable indicator. Use the same evidence set for bull and bear. Mark thin evidence unconfirmed; do not invent numbers or fill slots. Metric hierarchy: when a metric is a part of another listed metric (for example AI revenue within semiconductor revenue, upfront license revenue within software revenue), name the parent in the Thai metric name, e.g. "รายได้ชิป AI (ส่วนหนึ่งของรายได้เซมิคอนดักเตอร์)"; when two shares are measured on overlapping bases (for example top-5 end customers vs one distributor), say in the name that they overlap and must not be added together. Quality metrics for Tier: always include ROIC, ND/EBITDA and FCF conversion computed from the latest 10-K or annual report plus later 10-Q/interim reports (use TTM when available, otherwise the latest fiscal year). Definitions: ROIC = NOPAT ÷ (total debt + total equity − cash and equivalents), NOPAT = operating income × (1 − effective tax rate); ND/EBITDA = (total debt − cash and equivalents) ÷ EBITDA; FCF conversion = FCF ÷ net income. Put the short formula in the metric name, state TTM or the fiscal year in period, write value as a string such as "24.5" with unit "%" or "x", and use the filing as source_url. If net income or EBITDA is zero or negative, or an input is missing, put the item in missing_data instead of estimating. Keep metrics within the 12-item limit by dropping the least useful existing metrics first. Tier metrics: also include revenue growth (TTM vs the prior-year TTM), 3-year revenue CAGR ((latest fiscal-year revenue ÷ revenue three fiscal years earlier)^(1/3) − 1), operating margin for the latest and prior fiscal year written as value "latest / prior" such as "12.0 / 10.0", and one check metric with unit "-" and value "yes/no/?" in this order: FCF positive in each of the last three fiscal years / dividends paid or shares repurchased in the last 12 months / operating cash flow positive over TTM (use "?" when unknown). End each Tier metric name with exactly one code: [T:roic] [T:nd] [T:fcf] [T:rev] [T:cagr] [T:opm] [T:chk]; never put these codes on other metrics. Write Tier values as plain numbers without % or x inside value. Put these seven Tier metrics first and use at most five other metrics; if a Tier input is missing, omit that metric and add it to missing_data instead of estimating. Off-balance-sheet obligations: read the commitments and contingencies notes of the latest 10-Q/10-K (or interim report). If purchase commitments, guarantees, financing backstops or similar obligations exceed 10% of annual revenue or materially affect a driver, add each to additional_drivers with amount, timing and source URL, and add it to severe_risks when it could force losses if demand weakens. Next earnings: always include the next earnings report in catalysts. If the date is not announced, estimate it from the company's usual reporting pattern, set date_status "estimated", and cite the prior-period results release as source_url. Put other material drivers in additional_drivers. Top-level review_result MUST be a string exactly "changed", "no_change", or "no_data". For a FIRST card with no existing card, use "changed" and a nonempty changes array even if some requested facts are missing. Put unavailable facts in missing_data as plain strings, not objects with area/status/detail. For updates, use no_change only when checked evidence confirms no substantive change; use no_data when a check found insufficient new evidence. For no_change/no_data, keep prior content unchanged and set changes to []; for no_data, keep the prior as_of date. In one pass, verify numbers against sources and internal consistency, labeling this as self review. No subagents, long report, Google Doc, forced probability, reverse DCF, base rate, or peer valuation. Each tripwire needs a stable id, threshold, current_value, and keywords. Return exactly these 15 top-level fields with no extras: schema_version,ticker,as_of,researched_at (UTC YYYY-MM-DDTHH:MM:SSZ),review_result,business{sells,customers,revenue_model},metrics[{name,value,unit,period,source_url}],drivers[{id,title,why_material,mechanism,indicator,bull,bear,status,evidence[{claim,source_url}]}],additional_drivers,catalysts[{event,date,date_status,source_url}],tripwires[{id,text,threshold,current_value,keywords}],severe_risks,sources[{title,url,date}],missing_data,changes. Driver status confirmed/unconfirmed; catalyst date_status confirmed/estimated. Ticker: ${ticker}. Existing card JSON: ${prior ? JSON.stringify(prior) : 'null'}. Legacy business reference (unverified; do not promote thesis prose to confirmed drivers): ${oldBiz ? JSON.stringify(oldBiz) : 'null'}.`;
   }
   window.rcCopy = async ticker => {
     const d = window.wlDocMap()[ticker] || {};
@@ -12822,7 +12888,7 @@ setInterval(function(){ try{ rsUpdatePushBadge(); updateAcctChip(); }catch(e){} 
       const clean=unit.replace(/\bpercent\b|เปอร์เซ็นต์|ร้อยละ/gi,'%').replace(/USD million/gi,'ล้านดอลลาร์').replace(/USD billion/gi,'พันล้านดอลลาร์').replace(/;?\s*approximately/gi,'; ประมาณ').replace(/;?\s*company-defined/gi,'; ตามนิยามบริษัท').replace(/;?\s*management-reported/gi,'; ตัวเลขที่ฝ่ายบริหารรายงาน');
       return clean.startsWith('%') ? `${clean.includes('ประมาณ')?'ประมาณ ':''}${esc(displayed)}%` : `${esc(displayed)} ${esc(clean.replace(/^;?\s*/,''))}`;
     };
-    const metric=`<div class="rcMetricGrid">${c.metrics.map(m=>`<div class="rcMetric"><span>${prose(m.name)}</span><b>${metricValue(m)}</b><small>${esc(m.period)} ${cite(m.source_url)}</small></div>`).join('')||'ยังไม่มี'}</div>`;
+    const metric=`<div class="rcMetricGrid">${c.metrics.map(m=>`<div class="rcMetric"><span>${prose(rcMetricLabel(m.name))}${rcTierCode(m.name)?' <span class="rcTierTag">Tier</span>':''}</span><b>${metricValue(m)}</b><small>${esc(m.period)} ${cite(m.source_url)}</small></div>`).join('')||'ยังไม่มี'}</div>`;
     const drivers=c.drivers.map(x=>`<div class="rsDeepBox rcDriver"><h5>${prose(x.title)} <span class="rsChip ${x.status==='confirmed'?'green':'amber'}">${x.status==='confirmed'?'ยืนยันแล้ว':'ยังไม่ยืนยัน'}</span></h5>${row('สำคัญแค่ไหน',prose(x.why_material))}${row('กระทบธุรกิจอย่างไร',prose(x.mechanism))}${row('ติดตามตัวเลขอะไร',prose(x.indicator))}${row('กรณีดี',prose(x.bull))}${row('กรณีแย่',prose(x.bear))}${x.evidence.length?`<div class="rcEvidence"><b>หลักฐาน</b>${x.evidence.map(e=>`<p>${prose(e.claim)} ${cite(e.source_url)}</p>`).join('')}</div>`:''}</div>`).join('')||'<p>ยังไม่มีปัจจัยที่ยืนยันได้</p>';
     const today=thaiToday();
     const cats=c.catalysts.filter(x=>x.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3)
@@ -12835,6 +12901,9 @@ setInterval(function(){ try{ rsUpdatePushBadge(); updateAcctChip(); }catch(e){} 
     return `<div class="panel rcCard"><div class="rsCardTitle"><h3>Research Card · ${esc(ticker)}</h3><span class="when">ข้อมูล ${esc(c.as_of)}</span></div>${section('บริษัททำเงินอย่างไร',business)}${section('รายได้ กำไร และเงินสด',metric,'ผลประกอบการและตัวเลขที่ใช้ติดตามธุรกิจ')}${section('ปัจจัยสำคัญที่มีผลต่อธุรกิจ',drivers)}${c.additional_drivers.length?section('ปัจจัยอื่นที่ควรติดตาม',c.additional_drivers.map(x=>`<p>${prose(x)}</p>`).join('')):''}${section('เหตุการณ์ถัดไปที่ต้องติดตาม',cats)}${section('เงื่อนไขที่ต้องทบทวน',wires)}${c.severe_risks.length?section('ความเสี่ยงสำคัญ',c.severe_risks.map(x=>`<p>${prose(x)}</p>`).join('')):''}${detail}<details class="rcTools"><summary>อัปเดตหรือนำเข้าผล Research</summary>${controls}</details><details class="rcArchive"><summary>ดูข้อมูลเก่า (archive)</summary>${legacyHtml(d)}</details></div>`;
   }
   window.rcCardHtml=cardHtml;
+  window.rcTierCode=rcTierCode;
+  window.rcMetricLabel=rcMetricLabel;
+  window.rcTierMetrics=rcTierMetrics;
   window.rcValidate=validate;
   window.rcMerge=merge;
 })();
