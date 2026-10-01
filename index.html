@@ -1574,6 +1574,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 .ui-f2c .pbMix{margin:2px 0 0 0}
 .ui-f2c-off{display:inline-block;font-size:11px;padding:1px 7px;border-radius:var(--r-chip);border:1px solid var(--warn);color:var(--warn)}
 .ui-mr-tag{border-color:var(--amber);color:var(--amber);margin-left:0;margin-right:4px;white-space:nowrap}
+.ui-offbias-tag{border-color:var(--red);color:var(--red);margin-left:0;margin-right:4px;white-space:nowrap}
 .ui-mr-lv{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0}
 .ui-mr-line{font-size:12.5px;margin:6px 0;overflow-wrap:anywhere}
 .ui-mr-hold{color:var(--amber);font-weight:600;font-size:11.5px}
@@ -1906,8 +1907,15 @@ button.ccChip{cursor:pointer;min-height:24px}
 .ccChip.muted{color:var(--muted);background:var(--soft);white-space:normal}
 .ccWl{font-size:.74rem;color:var(--warn);margin-left:2px;line-height:1}
 .wlTier{flex:none;font-size:.58rem;font-weight:700;letter-spacing:.04em;border-radius:4px;padding:1px 5px;background:var(--surface2);color:var(--muted)}
-.wlTier.A{background:var(--teal-dim);color:var(--teal)}.wlTier.B{background:var(--blue-dim);color:var(--blue)}.wlTier.rev{background:var(--surface2);color:var(--muted);font-weight:600}
+.wlTierGo{cursor:pointer}.wlTier.none{background:transparent;border:1px dashed var(--border);color:var(--muted);font-weight:600;opacity:.8}.wlTier.A{background:var(--teal-dim);color:var(--teal)}.wlTier.B{background:var(--blue-dim);color:var(--blue)}.wlTier.rev{background:var(--surface2);color:var(--muted);font-weight:600}
 .ccTierWl{font-size:.78rem;color:var(--muted);margin:4px 0 8px}
+.ccTierOnly{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:10px 0 2px;min-width:0}
+.ccTierOnly button{flex:0 0 auto;max-width:100%;white-space:normal}
+.ccTierOnly .ccSub{font-size:.76rem;color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.wlTierSt{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:.84rem;min-width:0;overflow-wrap:anywhere}
+.wlTierSt a{font-size:.78rem;color:var(--muted);text-decoration:underline;cursor:pointer}
+.wtNote{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:calc(100vw - 32px);box-sizing:border-box;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.84rem;z-index:100000;opacity:0;pointer-events:none;transition:opacity .15s;overflow-wrap:anywhere}
+.wtNote.show{opacity:1}.wtNote.bad{border-color:var(--red);color:var(--red)}
 .ccTierFill{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 8px;min-width:0}
 .ccTierFill button{flex:0 0 auto}
 .ccTierFill .ccSub{font-size:.76rem;color:var(--muted);min-width:0;overflow-wrap:anywhere}
@@ -2384,6 +2392,15 @@ button.ccChip{cursor:pointer;min-height:24px}
     </div>
     <div class="hint">เพดานชั้น 2 = ช่อง "Core" ใน Max Heat (ค่าเดียวกัน · แก้ช่องไหน อีกช่องตาม)</div>
   </div></details>
+  <details class="setsec" id="satRiskSec"><summary class="divlbl">ความเสี่ยง SAT — % ของถัง Sat</summary>
+  <div class="secbody">
+    <div class="fgrid">
+      <div class="f"><label>เสี่ยงต่อไม้ (ปกติ) <span class="crUnit">% ของถัง Sat</span></label><input type="number" step="any" inputmode="decimal" id="sSatRpt" oninput="crOnInput()"><div class="crErr" data-err-for="sSatRpt"></div></div>
+      <div class="f"><label>เสี่ยงต่อไม้ (ผ่านเกณฑ์พิสูจน์ <span id="satProveTxt"></span>) <span class="crUnit">% ของถัง Sat</span></label><input type="number" step="any" inputmode="decimal" id="sSatRptHi" oninput="crOnInput()"><div class="crErr" data-err-for="sSatRptHi"></div></div>
+      <div class="f"><label>ไม้ใหม่ต่อสัปดาห์ <span class="crUnit">ไม้ (1–10)</span></label><input type="number" step="1" inputmode="numeric" id="sSatNewMax" oninput="crOnInput()"><div class="crErr" data-err-for="sSatNewMax"></div></div>
+    </div>
+    <div class="hint" id="satHeatHint"></div>
+  </div></details>
   <details class="setsec"><summary class="divlbl">แผนที่ธีม (RRG) — แหล่งราคา</summary>
   <div class="secbody">
     <div class="f"><label>Twelve Data API key</label>
@@ -2397,7 +2414,7 @@ button.ccChip{cursor:pointer;min-height:24px}
     <div class="fgrid">
       <div class="f"><label>รวมทุก Port — % ของทุนบัญชี</label><input type="number" step="any" inputmode="decimal" id="sTotal"></div>
       <div class="f"><label>Core — % ของถัง Core</label><input type="number" step="any" inputmode="decimal" id="sPortCore" oninput="crOnInput('heat')"><div class="hint" style="margin-top:4px">ใช้เป็นเพดานชั้น 2 ของ Core ด้วย (ค่าเดียวกับช่องในส่วนความเสี่ยง Core)</div></div>
-      <div class="f"><label>Sat — % ของถัง Sat</label><input type="number" step="any" inputmode="decimal" id="sPortSatB" oninput="crOnInput()"><div class="hint" id="satHeatNote" style="margin-top:4px;display:none">หน้า Sat ใช้ค่าคงที่ 6% (รอบหลังจะผูก)</div></div>
+      <div class="f"><label>Sat — % ของถัง Sat</label><input type="number" step="any" inputmode="decimal" id="sPortSatB" oninput="crOnInput()"><div class="hint" id="satHeatNote" style="margin-top:4px;display:none">หน้า Sat ใช้ค่านี้เป็น heat รวมของ Sat (SR1)</div></div>
     </div>
   </div></details>
   <button type="button" class="setjump" onclick="document.getElementById('setOverlay').classList.remove('show');openSystemSettings()"><span>ตั้งค่าระบบ<span class="sj">ขนาดตัวอักษร · แถบแท็บ · สำรองข้อมูล · ออกจากระบบ</span></span><span>→</span></button>
@@ -2424,9 +2441,10 @@ button.ccChip{cursor:pointer;min-height:24px}
           <option value="TH">TH → Core.TH</option>
         </select></div>
     </div>
-    <div class="f"><label>Tier <span style="font-weight:400;color:var(--muted)">(ป้ายเตือนเทียบการ์ด Core · ไม่ล็อกอะไร)</span></label>
-      <select id="wlAddTier"><option value="">ยังไม่ตั้ง</option><option value="A">A</option><option value="B">B</option></select>
-      <div class="hint" id="wlAddTierSince" style="margin:3px 0 0"></div></div>
+    <div class="f" id="wlAddTierBox" data-wl-tierbox><label>Tier <span style="font-weight:400;color:var(--muted)">(ตั้งจากฟอร์มแผน Core · เก็บที่ Watchlist)</span></label>
+      <div class="wlTierSt"><span id="wlAddTierSt" data-wl-tierst></span>
+        <button type="button" class="small" id="wlAddTierBtn" data-wl-tierbtn onclick="wlTierSet()">ตั้ง Tier…</button>
+        <a href="#" id="wlAddTierClr" data-wl-tierclr role="button" onclick="wlTierClear();return false">ล้าง Tier</a></div></div>
     <div class="f"><label>Industry <span style="font-weight:400;color:var(--muted)">(ไม่บังคับ — ว่าง = ไม่ระบุ)</span></label>
       <input type="text" id="wlAddInd" list="wlIndList" placeholder="เช่น Semis" autocomplete="off"><datalist id="wlIndList"></datalist></div>
     <div class="f"><label>Note</label><textarea id="wlAddNote" rows="3" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)"></textarea></div>
@@ -3213,7 +3231,7 @@ function doSignOut(){
 /* ═══════════════════════════════════════════════════════════════════════════
    เฟส 7W — Watchlist (ระบบรีเสิร์ช) แยกออกจาก Journal/ไม้
    ที่เก็บ  : users/{uid}/watchlist/{TICKER}  (subcollection · 1 doc ต่อหุ้น · ใช้ร่วมทุกบัญชี)
-   ฟิลด์    : ticker · market (US|TH) · port ('core') · note · industry (ไม่บังคับ) · added_at · tier ('A'|'B'|ไม่มี) · tier_set_at (7E-2b-2)   — ไม่มี checklist / ไม่มีฟิลด์อ้างถึงไม้
+   ฟิลด์    : ticker · market (US|TH) · port ('core') · note · industry (ไม่บังคับ) · added_at · tier ('A'|'B'|ไม่มี) · tier_set_at (7E-2b-2) · tier_lens/tier_inputs/tier_computed/tier_reason (WT1 · เขียนจากปุ่ม "บันทึกเฉพาะ Tier" ในฟอร์มแผน Core)   — ไม่มี checklist / ไม่มีฟิลด์อ้างถึงไม้
    กติกา    : เขียน watchlist ไม่แตะ users/{uid} (books) · เขียน books ไม่แตะ watchlist
               ปิดไม้ → watchlist ไม่กระทบ · ลบหุ้นจาก watchlist → ไม้ไม่กระทบ (เชื่อมกันด้วยชื่อหุ้นตอนแสดงผลเท่านั้น)
 
@@ -3222,7 +3240,7 @@ function doSignOut(){
      ★ CL2-a: Watchlist เดิมใน books ถูกล้างตอนรีเซ็ตครั้งเดียว (cl2aStripLegacy) — ไม่มีสะพานอ่าน/เก็บดิบอีกแล้ว
        wlAttachMirror ใส่ธง __built (non-enumerable) ไว้บน state ที่ผ่านการสร้างแล้ว · wlBookForWrite ไม่ต้องใส่ watchlist กลับ
    ═══════════════════════════════════════════════════════════════════════════ */
-let wlItems = [];            /* [{ticker, market, port:'core', note, industry, added_at, tier:'A'|'B'|null, tier_set_at:'YYYY-MM-DD'|null}] · 7E-2b-2: tier = ป้ายเตือนอย่างเดียว */
+let wlItems = [];            /* [{ticker, market, port:'core', note, industry, added_at, tier:'A'|'B'|null, tier_set_at:'YYYY-MM-DD'|null, tier_lens, tier_inputs, tier_computed, tier_reason}] · WT1: Tier เก็บที่นี่ที่เดียว · แผนใหม่ดึงไปเติมกล่อง Tier */
 let wlStoreReady = false;
 let wlStoreErr = null;
 let wlUnsub = null, wlUnsubUid = null;
@@ -3246,7 +3264,11 @@ function wlStart(){
       return {ticker:t, market:(x.market==='TH'||x.market==='US') ? x.market : wlGuessMarket(t), port:'core',
               note:String(x.note==null?'':x.note), industry:String(x.industry==null?'':x.industry).trim(), added_at:x.added_at||'',
               tier:(x.tier==='A'||x.tier==='B') ? x.tier : null,                                   /* 7E-2b-2 */
-              tier_set_at:/^\d{4}-\d{2}-\d{2}$/.test(String(x.tier_set_at||'')) ? x.tier_set_at : null};
+              tier_set_at:/^\d{4}-\d{2}-\d{2}$/.test(String(x.tier_set_at||'')) ? x.tier_set_at : null,
+              tier_lens:(x.tier_lens==='fortress'||x.tier_lens==='growth'||x.tier_lens==='both') ? x.tier_lens : null,   /* WT1 */
+              tier_inputs:(x.tier_inputs && typeof x.tier_inputs==='object' && !Array.isArray(x.tier_inputs)) ? x.tier_inputs : null,
+              tier_computed:(x.tier_computed==='A'||x.tier_computed==='B') ? x.tier_computed : null,
+              tier_reason:(typeof x.tier_reason==='string' && x.tier_reason.trim()) ? x.tier_reason : null};
     }).filter(w=>w.ticker).sort((a,b)=>a.ticker.localeCompare(b.ticker));
     wlStoreReady = true; wlStoreErr = null;
     wlSyncMirror(); wlRefreshUI();
@@ -4805,7 +4827,7 @@ function posPortChip(t){
   return `<span class="posPort" style="background:${hexToRgba(c,0.16)};color:${c}">${t.port==='core'?'Core':'Sat'}</span>`;
 }
 function posSymHtml(t){
-  return `${escHtml(t.sym)}${tradeOffPlan(t)?' <span class="posTag">นอกแผน</span>':''}${tradeSetupInc(t)?' <span class="posTag setupinc">Setup ไม่ครบ</span>':''}${t.mr?` ${satMrTradeHtml(t)}`:''}`;   /* 7E-4 */
+  return `${escHtml(t.sym)}${tradeOffPlan(t)?' <span class="posTag">นอกแผน</span>':''}${tradeSetupInc(t)?' <span class="posTag setupinc">Setup ไม่ครบ</span>':''}${t.mr?` ${satMrTradeHtml(t)}`:''}${satTradeOffBias(t)?` ${satOffBiasTagHtml()}`:''}`;   /* 7E-4 · SR1 */
 }
 function posRiskHtml(t, rk){
   const sym = tradeSym(t);
@@ -5731,6 +5753,8 @@ function coreWatchInfo(ticker){
   const it = (loaded && k) ? wlItems.find(w=>wlSymKey(w.ticker)===k) : null;
   return {loaded, found:!!it, tier: it ? it.tier : null, setAt: it ? it.tier_set_at : null};
 }
+/* WT1 · รายการ Watchlist ของ ticker (จับคู่ด้วย wlSymKey) — ไม่ผูกกับสถานะโหลด */
+function coreWlItem(ticker){ const k = wlSymKey(ticker); return k ? (wlItems.find(w=>wlSymKey(w.ticker)===k) || null) : null; }
 /* ป้ายเทียบ Tier การ์ด ↔ Watchlist (Calc.coreSize.tierBadge) · ไม่ล็อกปุ่ม ไม่เปลี่ยน Tier */
 function coreTierBadges(c, tier){
   const cs = Calc.coreSize; if(!cs || !cs.tierBadge) return [];
@@ -5750,11 +5774,20 @@ function coreWlInfoText(ticker){
   if(!w.found) return 'ไม่อยู่ใน Watchlist';
   return w.tier ? `Watchlist: Tier ${w.tier}${w.setAt ? ' (ตั้งเมื่อ ' + w.setAt + ')' : ''}` : 'Watchlist: ยังไม่ตั้ง Tier';
 }
-function coreTiWlShow(ticker){ const el = coreEl('tiWlInfo'); if(el){ const t = coreWlInfoText(ticker); el.textContent = t; el.style.display = t ? '' : 'none'; } coreTiFillShow(ticker); }
+function coreTiWlShow(ticker){
+  const el = coreEl('tiWlInfo');
+  if(el){
+    const n = coreNew, it = coreWlItem(ticker);
+    const pulled = n && n.mode==='new' && !n.tiTouched && n.tiPulled===wlSymKey(ticker) && it && it.tier_inputs;   /* WT1 · ดึงมาและยังไม่แตะ */
+    const t = pulled ? 'Tier จาก Watchlist' + (it.tier_set_at ? ' (ตั้งเมื่อ ' + it.tier_set_at + ')' : '') : coreWlInfoText(ticker);
+    el.textContent = t; el.style.display = t ? '' : 'none'; el.dataset.pulled = pulled ? '1' : '';
+  }
+  coreTiFillShow(ticker);
+}
 /* RC2 · ปุ่ม "เติมจาก Research" — ticker นี้ต้องมี research_card ที่มีตัวเลข Tier อย่างน้อย 1 ตัว */
 function coreTiRcFound(ticker){
-  const t = coreNorm(ticker); if(!t || typeof rcTierMetrics!=='function') return null;
-  const d = wlDocMap()[t]; const f = d && d.research_card ? rcTierMetrics(d.research_card) : null;
+  const k = wlSymKey(ticker); if(!k || typeof rcTierMetrics!=='function') return null;
+  const d = rsAll().find(x=>x && x.ticker && wlSymKey(x.ticker)===k); const f = d && d.research_card ? rcTierMetrics(d.research_card) : null;
   return f && f.found.length ? f : null;
 }
 function coreTiFillShow(ticker){
@@ -5774,7 +5807,7 @@ const CORE_TIER_PICKS = [['B','cnTierB','B'], ['fortress','cnTierA','A · Fortre
 function coreTkHtml(key, val){
   return `<div class="ccG5" data-c-tk-row="${key}"><span>${CORE_TK[key][0]}</span><div class="ccSeg" data-tk="${key}"><button type="button" data-v="1" class="${val===true?'on':''}" onclick="coreTiTk('${key}',true)">ใช่</button><button type="button" data-v="0" class="${val===false?'on':''}" onclick="coreTiTk('${key}',false)">ไม่ใช่</button></div></div>`;
 }
-function coreTierBlockHtml(cfg, ti, ticker){
+function coreTierBlockHtml(cfg, ti, ticker, tierOnly){
   ti = ti || {};
   const fillOn = !!coreTiRcFound(ticker);
   const g5 = ti.gate5 || {};
@@ -5796,12 +5829,16 @@ function coreTierBlockHtml(cfg, ti, ticker){
     ${CORE_G5.map((g,i)=>`<div class="ccG5"><span>Gate 5 ข้อ ${i+1} · ${g[1]}</span><div class="ccSeg" data-g5="${g[0]}"><button type="button" data-v="1" class="${g5[g[0]]===true?'on':''}" onclick="coreTiG5('${g[0]}',true)">ใช่</button><button type="button" data-v="0" class="${g5[g[0]]===false?'on':''}" onclick="coreTiG5('${g[0]}',false)">ไม่ใช่</button></div></div>`).join('')}</div>
     <div class="ccTierRes" id="tiRes" data-c-tierres><div data-c-lensline="fortress"></div><div data-c-lensline="growth"></div><div data-c-lenssum></div></div>
     <div class="ccF"><label>Tier ที่ใช้จริง</label><div class="ccSeg ccSegW ccSegTier">${CORE_TIER_PICKS.map(p=>`<button type="button" id="${p[1]}" data-pick="${p[0]}" onclick="coreTiPick('${p[0]}')">${p[0]==='B' ? `B · เพดาน ${fmt2(cfg.tierB)}%` : `${p[2]} · เพดาน ${fmt2(cfg.tierA)}%`}</button>`).join('')}</div></div>
-    <div class="ccF" id="cnReasonBox" style="display:none"><label>เหตุผลที่เลือกมุม A ที่คำนวณไม่ผ่าน (บังคับ)</label><input type="text" id="cnReason" autocomplete="off" value="${escHtml(ti.reason||'')}" oninput="coreTiIn()"></div></div>`;
+    <div class="ccF" id="cnReasonBox" style="display:none"><label>เหตุผลที่เลือกมุม A ที่คำนวณไม่ผ่าน (บังคับ)</label><input type="text" id="cnReason" autocomplete="off" value="${escHtml(ti.reason||'')}" oninput="coreTiIn()"></div>${tierOnly ? `
+    <div class="ccTierOnly" data-c-tieronlybox><button type="button" class="ccBtn" id="cnTierOnly" data-cn-tieronly onclick="coreTierOnlySave()" disabled>บันทึกเฉพาะ Tier</button><span class="ccSub">ยังไม่สร้างแผน · ไม่ต้องใส่ Entry/Stop</span></div>` : ''}</div>`;
+}
+function coreTiG5Paint(key){
+  document.querySelectorAll(`[data-g5="${key}"] button`).forEach(b=>b.classList.toggle('on', coreTi.g5[key]!==null && coreTi.g5[key]!==undefined && (b.dataset.v==='1') === coreTi.g5[key]));
 }
 function coreTiG5(key, val){
   if(!coreTi) return;
   coreTi.g5[key] = (coreTi.g5[key]===val) ? null : val;
-  document.querySelectorAll(`[data-g5="${key}"] button`).forEach(b=>b.classList.toggle('on', coreTi.g5[key]!==null && coreTi.g5[key]!==undefined && (b.dataset.v==='1') === coreTi.g5[key]));
+  coreTiG5Paint(key);
   coreTiIn();
 }
 function coreTiTkPaint(key){
@@ -5898,7 +5935,7 @@ function coreTiShow(ti){
 }
 /* ปรับเมื่อมีการแก้บล็อก Tier → แจ้งเจ้าของ sheet */
 function coreTiIn(){
-  if(coreNew) return coreNewIn();
+  if(coreNew){ coreNew.tiTouched = true; return coreNewIn(); }   /* WT1 · แตะกล่อง Tier แล้ว = เปลี่ยน ticker ไม่ทับ */
   if(coreDlg && coreDlg.kind==='tier') return coreTierIn();
 }
 function coreTiState(c){
@@ -5909,6 +5946,46 @@ function coreTiState(c){
 }
 /* ปุ่มเริ่มต้นของการ์ดเดิม: B → 'B' · A → มุมที่เก็บไว้ (การ์ดเก่าไม่มี tierLens = fortress) */
 function coreTiPickOf(c){ return c.tier==='A' ? coreLensOf(c).lens : 'B'; }
+
+/* WT1 · ค่าเริ่มของกล่อง Tier จาก Watchlist: it มี tier_inputs → {ti, pick} · ไม่มี → null */
+function coreTiFromWl(it){
+  if(!it || !it.tier_inputs) return null;
+  const pick = it.tier==='B' ? 'B' : (it.tier_lens || 'fortress');
+  return {ti: Object.assign({}, it.tier_inputs, {reason: it.tier_reason}), pick};
+}
+/* WT1 · เติม/เคลียร์ค่าในกล่อง Tier ที่วาดแล้ว (ไม่ผ่าน coreTiIn = ไม่นับว่าผู้ใช้แตะ) */
+function coreTiLoadWl(it){
+  const f = coreTiFromWl(it), ti = f ? f.ti : {};
+  [['tiRoic',ti.roic,100],['tiNd',ti.ndEbitda,1],['tiFcf',ti.fcfConv,100],['tiRev',ti.revGrowth,100],['tiCagr',ti.revCagr3,100],['tiOpm',ti.opMargin,100],['tiOpmPrev',ti.opMarginPrev,100]]
+    .forEach(([id,v,mul])=>{ const e = coreEl(id); if(e) e.value = coreTiFmt(v, mul); });
+  const r = coreEl('cnReason'); if(r) r.value = ti.reason || '';
+  coreTi = coreTiState({tierInputs: f ? f.ti : null});
+  coreTi.pick = f ? f.pick : null;
+  CORE_G5.forEach(g=>coreTiG5Paint(g[0])); Object.keys(CORE_TK).forEach(coreTiTkPaint);
+}
+/* WT1 · "บันทึกเฉพาะ Tier" — เขียน Tier ลง Watchlist doc (ไม่ตรวจ Entry/Stop · ไม่สร้างการ์ด) */
+function coreTierOnlyOk(rd){
+  return !!(coreNew && coreNew.mode==='new' && rd && rd.ti && wlValidTicker(wlNormTicker(rd.ticker)) && rd.ti.ok && !(rd.ti.needReason && !rd.ti.reason));
+}
+function coreTierNote(msg, bad){
+  let el = document.getElementById('wtNote');
+  if(!el){ document.body.insertAdjacentHTML('beforeend', '<div id="wtNote" class="wtNote" role="status" aria-live="polite"></div>'); el = document.getElementById('wtNote'); }
+  el.textContent = msg; el.classList.toggle('bad', !!bad); el.classList.add('show');
+  clearTimeout(coreTierNote.t); coreTierNote.t = setTimeout(()=>el.classList.remove('show'), 6000);
+}
+function coreTierOnlySave(){
+  const n = coreNew; if(!n || n.mode!=='new') return;
+  const rd = coreNewRead(); if(!coreTierOnlyOk(rd)) return;
+  const col = wlCol(); if(!col){ coreTierNote('เข้าสู่ระบบก่อนบันทึก Tier', true); return; }
+  const it = coreWlItem(rd.ticker), ti = rd.ti, symTxt = it ? it.ticker : wlNormTicker(rd.ticker);
+  const fields = {tier: ti.tier, tier_lens: ti.lens || null, tier_inputs: ti.inputs, tier_computed: ti.computed, tier_reason: ti.reason || null, tier_set_at: thaiToday()};
+  const label = ti.tier==='B' ? 'B' : (CORE_TIER_PICKS.find(p=>p[0]===ti.lens) || CORE_TIER_PICKS[1])[2];
+  const ref = col.doc(symTxt);
+  const p = it ? ref.update(fields) : ref.set(Object.assign({ticker:symTxt, market:coreMarketOf(symTxt), port:'core', note:'', industry:'', added_at:new Date().toISOString()}, fields));
+  p.catch(e=>{ coreTierNote('บันทึก Tier ' + symTxt + ' ไม่สำเร็จ: ' + ((e && (e.code||e.message)) || e), true); });
+  coreSheetClose();
+  coreTierNote('บันทึก Tier ' + symTxt + ' = ' + label + ' แล้ว (Watchlist)');
+}
 
 /* แผน Core ใหม่ (＋ / T เมื่อ scope = หุ้น) · 7E-2b-1: Tier คำนวณ + สลับกลยุทธ์ W/L · opt {mode:'convert'|'edit', id} = แปลงแผน W → L / แก้แผนบันได */
 function coreNewOpen(acct, opt){
@@ -5921,6 +5998,10 @@ function coreNewOpen(acct, opt){
   coreNew = {acct:a0, strat: mode==='new' ? 'W' : 'L', mode, id: cur ? cur.id : null, f:null, showAll:false, nlv:2, lv:['','',''], sl:'', budEdited:false};
   coreTi = coreTiState(cur);
   if(cur) coreTi.pick = coreTiPickOf(cur);
+  /* WT1 · แผนใหม่: ticker อยู่ใน Watchlist และมี tier_inputs → กล่อง Tier เริ่มด้วยค่าจาก Watchlist */
+  const wl0 = mode==='new' ? coreTiFromWl(coreWlItem(opt.ticker)) : null;
+  if(wl0){ coreTi = coreTiState({tierInputs: wl0.ti}); coreTi.pick = wl0.pick; }
+  coreNew.tiTouched = false; coreNew.tiKey = mode==='new' ? wlSymKey(opt.ticker) : ''; coreNew.tiPulled = wl0 ? coreNew.tiKey : '';
   if(mode==='edit' && cur.ladder){
     const lv = cur.ladder.levels || [];
     coreNew.nlv = Math.min(3, Math.max(2, lv.length)); coreNew.lv = [0,1,2].map(i=>lv[i] ? String(lv[i].px) : '');
@@ -5933,7 +6014,7 @@ function coreNewOpen(acct, opt){
     <div class="ccF"><label>บัญชี</label><div id="cnAcctBox"></div></div>
     <div class="ccF"><label>Ticker</label><input type="text" id="cnTicker" list="cnTickerList" autocomplete="off" autocapitalize="characters" placeholder="เช่น AAPL หรือ XXX.BK" value="${cur?escHtml(cur.ticker):escHtml(coreNorm(opt.ticker||''))}" ${cur?'readonly':''} oninput="coreNewIn()">
       <datalist id="cnTickerList">${wl.map(t=>`<option value="${escHtml(t)}"></option>`).join('')}</datalist></div>
-    <div id="cnTierBox" ${mode==='edit'?'style="display:none"':''}>${coreTierBlockHtml(cfg0, Object.assign({}, cur && cur.tierInputs, {reason: cur && cur.tierReason}), cur ? cur.ticker : coreNorm(opt.ticker||''))}</div>
+    <div id="cnTierBox" ${mode==='edit'?'style="display:none"':''}>${coreTierBlockHtml(cfg0, wl0 ? wl0.ti : Object.assign({}, cur && cur.tierInputs, {reason: cur && cur.tierReason}), cur ? cur.ticker : coreNorm(opt.ticker||''), mode==='new')}</div>
     <div class="ccF" id="cnStratBox" ${mode==='new'?'':'style="display:none"'}><label>กลยุทธ์</label><div class="ccSeg"><button type="button" id="cnStratW" class="on" onclick="coreNewStrat('W')">ระบบ Week</button><button type="button" id="cnStratL" onclick="coreNewStrat('L')">ถัวตามแนวรับ (L)</button></div><div class="ccWarn" id="cnStratMsg" style="display:none"></div></div>
     <div id="cnWBox"><div class="ccPair"><div class="ccF"><label>Entry ไม้แรก</label><input type="text" inputmode="decimal" id="cnEntry" oninput="coreNewIn()"></div>
       <div class="ccF"><label>Stop</label><input type="text" inputmode="decimal" id="cnStop" oninput="coreNewIn()"></div></div>
@@ -5979,6 +6060,18 @@ function coreNewIn(){
   const n = coreNew; if(!n || !coreEl('cnTicker')) return;
   const cur = n.id ? coreCardsList.find(x=>x.id===n.id) : null;
   const rd = coreNewRead();
+  /* WT1 · ticker เปลี่ยน + ผู้ใช้ยังไม่แตะกล่อง Tier → โหลดค่าของ ticker ใหม่จาก Watchlist (ไม่มี = เคลียร์) */
+  if(n.mode==='new'){
+    const k = wlSymKey(rd.ticker);
+    if(k !== n.tiKey){
+      n.tiKey = k;
+      if(!n.tiTouched){
+        const it = coreWlItem(rd.ticker), f = it && it.tier_inputs ? it : null;
+        coreTiLoadWl(f); rd.ti = coreTiEval();
+        n.tiPulled = f ? k : '';
+      }
+    }
+  }
   coreTiWlShow(rd.ticker);
   const all = acctList.filter(a=>(a.ports || ACCT_PORT_KEYS).includes('core'));
   const match = a=>{ const m = coreRiskCfg(a.id).market; return !rd.mk || m==='both' || m===rd.mk; };
@@ -6033,6 +6126,8 @@ function coreNewIn(){
     + (dup ? ` <button type="button" class="ccBtn" id="cnGoto" onclick="coreGoto('${escHtml(dup.id)}')">ไปที่การ์ด</button>` : '');
   if(!er.innerHTML.trim()) er.style.display = 'none';
   coreEl('cnSave').disabled = errs.length>0;
+  { const tb = coreEl('cnTierOnly');   /* WT1 · ไม่ตรวจ Entry/Stop/f/บันได/โควตา */
+    if(tb){ tb.disabled = !coreTierOnlyOk(rd); tb.textContent = 'บันทึกเฉพาะ Tier' + (rd.ticker && !coreWlItem(rd.ticker) ? ' (เพิ่มเข้า Watchlist)' : ''); } }
   return errs;
 }
 /* ส่วนฟอร์ม L ของ coreNewIn — เติมงบ ฿ · ตาราง · ประตู 5 ข้อ · ใส่ error ลง errs */
@@ -7362,10 +7457,22 @@ function wlTierStale(it){
   const cs = Calc.coreSize; if(!cs || !cs.tierBadge || !it || it.tier!=='A') return false;
   return cs.tierBadge({cardTier:'A', watch:{loaded:true, found:true, tier:'A', setAt:it.tier_set_at}, today:thaiToday()}).badges.some(b=>b.code==='REVIEW');
 }
-function wlTierChips(it, long){
+const WL_TIER_FIELDS = ['tier','tier_set_at','tier_lens','tier_inputs','tier_computed','tier_reason'];
+/* WT1 · ป้ายมุม: 'A · Fortress' · 'A · Growth' · 'A · ทั้งคู่' · 'B' · A เก่า (ไม่มี tier_lens) = 'A · Fortress (เดิม)' */
+function wlTierLabel(it){
   if(!it || (it.tier!=='A' && it.tier!=='B')) return '';
-  const tip = 'Tier ' + it.tier + (it.tier_set_at ? ' · ตั้งเมื่อ ' + it.tier_set_at : '');
-  return `<span class="wlTier ${it.tier}" data-wl-tier="${it.tier}" title="${escHtml(tip)}">${long?'Tier ':''}${it.tier}</span>`
+  if(it.tier==='B') return 'B';
+  const L = {fortress:'Fortress', growth:'Growth', both:'ทั้งคู่'};
+  return it.tier_lens ? 'A · ' + L[it.tier_lens] : 'A · Fortress (เดิม)';
+}
+function wlTierStText(it){ return 'Tier ' + wlTierLabel(it) + (it.tier_set_at ? ' · ตั้งเมื่อ ' + it.tier_set_at : ''); }
+function wlTierChips(it, long){
+  if(!it) return '';
+  if(it.tier!=='A' && it.tier!=='B'){
+    return long ? `<span class="wlTier none wlTierGo" role="button" tabindex="0" data-wl-tier-set data-sym="${escHtml(it.ticker)}" title="ยังไม่ตั้ง Tier — กดเพื่อตั้งในฟอร์มแผน Core" onclick="wlOpenCorePlan(this.dataset.sym)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();wlOpenCorePlan(this.dataset.sym)}">ตั้ง Tier</span>` : '';
+  }
+  const tip = wlTierStText(it);
+  return `<span class="wlTier ${it.tier}${long?' wlTierGo':''}" data-wl-tier="${it.tier}"${long?` data-wl-tier-lens="${it.tier_lens||(it.tier==='A'?'legacy':'')}" data-sym="${escHtml(it.ticker)}" role="button" tabindex="0" onclick="wlOpenCorePlan(this.dataset.sym)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();wlOpenCorePlan(this.dataset.sym)}"`:''} title="${escHtml(tip)}">${long ? escHtml(wlTierLabel(it)) : it.tier}</span>`
     + (wlTierStale(it) ? `<span class="wlTier rev" data-wl-tier-review title="ตั้ง Tier A เกิน 12 เดือนแล้ว (${escHtml(it.tier_set_at||'')}) — ทบทวนอีกครั้ง">ทบทวน</span>` : '');
 }
 /* 7W — ป้าย "ถืออยู่" + ชิปสีของบัญชีที่มีไม้เปิดอยู่ของหุ้นตัวนี้ (คำนวณตอนแสดงผลจากชื่อหุ้น · ไม่เก็บ/ไม่เขียนกลับ) */
@@ -7580,8 +7687,7 @@ function wlOpenAdd(sym){
   document.getElementById('wlAddMkt').value = t ? wlGuessMarket(t) : 'US';
   document.getElementById('wlAddNote').value = '';
   document.getElementById('wlAddInd').value = '';
-  document.getElementById('wlAddTier').value = '';
-  document.getElementById('wlAddTierSince').textContent = '';
+  document.getElementById('wlAddTierBox').style.display = 'none';   /* WT1 · เพิ่มหุ้นใหม่ = ไม่มีส่วน Tier */
   wlIndFill();
   document.getElementById('wlAddHint').textContent = '';
   wlAddOnSym();
@@ -7596,11 +7702,25 @@ function wlOpenEdit(sym){
   document.getElementById('wlAddMkt').value = it.market;
   document.getElementById('wlAddNote').value = it.note || '';
   document.getElementById('wlAddInd').value = it.industry || '';
-  document.getElementById('wlAddTier').value = it.tier || '';
-  document.getElementById('wlAddTierSince').textContent = (it.tier && it.tier_set_at) ? 'ตั้งเมื่อ ' + it.tier_set_at : '';
+  document.getElementById('wlAddTierBox').style.display = '';
+  wlTierStPaint(it);
   wlIndFill();
   document.getElementById('wlAddHint').textContent = '';
   document.getElementById('wlAddOverlay').classList.add('show');
+}
+/* WT1 · บรรทัดสถานะ Tier ในโมดัลแก้ไข + ปุ่มตั้ง/ล้าง */
+function wlTierStPaint(it){
+  const has = !!(it && (it.tier==='A' || it.tier==='B'));
+  document.getElementById('wlAddTierSt').textContent = has ? wlTierStText(it) : 'ยังไม่ตั้ง Tier';
+  document.getElementById('wlAddTierClr').style.display = has ? '' : 'none';
+}
+function wlTierSet(){ const t = wlAddEditing; wlAddClose(); if(t) wlOpenCorePlan(t); }
+function wlTierClear(){
+  const t = wlAddEditing, col = wlCol(); if(!t || !col) return;
+  const FV = (typeof firebase!=='undefined' && firebase.firestore && firebase.firestore.FieldValue) || null, del = ()=> FV && FV.delete ? FV.delete() : null;
+  const patch = {}; WL_TIER_FIELDS.forEach(k=>{ patch[k] = del(); });
+  col.doc(t).update(patch).catch(e=>{ alert('ล้าง Tier ไม่สำเร็จ: ' + ((e && (e.code||e.message)) || e)); });
+  wlTierStPaint(null);
 }
 function wlAddClose(){ document.getElementById('wlAddOverlay').classList.remove('show'); wlAddEditing = null; }
 function wlAddOnSym(){
@@ -7626,18 +7746,9 @@ function wlAddSave(){
   const exists = wlItems.some(x=>x.ticker===ticker);
   const ref = col.doc(ticker);
   /* ไม่ await — Firestore อัปเดตหน้าจอทันทีจากแคชในเครื่อง · ถ้าเซิร์ฟเวอร์ปฏิเสธ (เช่น Rules) จะแจ้งเตือนและลิสต์ย้อนกลับเอง */
-  /* 7E-2b-2 · Tier: ค่าเปลี่ยน → เขียน tier + tier_set_at (วันนี้เวลาไทย) · ไม่เปลี่ยน = ไม่แตะ · "ยังไม่ตั้ง" = ลบฟิลด์ (mock ไม่รองรับ = null) */
-  const tierSel = document.getElementById('wlAddTier').value, oldTier = (wlItems.find(x=>x.ticker===ticker)||{}).tier || '';
-  const tierPatch = {};
-  if(tierSel !== oldTier){
-    if(tierSel==='A' || tierSel==='B'){ tierPatch.tier = tierSel; tierPatch.tier_set_at = thaiToday(); }
-    else {
-      const FV = (typeof firebase!=='undefined' && firebase.firestore && firebase.firestore.FieldValue) || null;
-      tierPatch.tier = FV && FV.delete ? FV.delete() : null; tierPatch.tier_set_at = FV && FV.delete ? FV.delete() : null;
-    }
-  }
-  const p = exists ? ref.update(Object.assign({market, note, industry}, tierPatch))
-                   : ref.set(Object.assign({ticker, market, port:'core', note, industry, added_at:new Date().toISOString()}, (tierSel==='A'||tierSel==='B') ? tierPatch : {}));
+  /* WT1 · ไม่เขียนฟิลด์ Tier ที่นี่แล้ว — ตั้งผ่านปุ่ม "บันทึกเฉพาะ Tier" ในฟอร์มแผน Core · ล้างผ่าน wlTierClear */
+  const p = exists ? ref.update({market, note, industry})
+                   : ref.set({ticker, market, port:'core', note, industry, added_at:new Date().toISOString()});
   p.catch(e=>{ alert('บันทึก Watchlist ไม่สำเร็จ: ' + ((e && (e.code||e.message)) || e) + '\n\nถ้าเป็น permission-denied ให้เพิ่ม Firestore Rules ของ users/{uid}/watchlist'); });
   wlView = 'wl'; wlSel = ticker;
   wlAddClose();
@@ -8518,6 +8629,11 @@ function openSettings(){
    ['sCrLBudget','ladderBudget'],['sCrLRisk','ladderRisk'],['sCrLShare','ladderShare'],['sCrGate','gateWeeks'],
    ['sCrTierRoic','tierRoic'],['sCrTierNd','tierNd'],['sCrTierFcf','tierFcf'],['sCrTierRevG','tierRevG'],['sCrTierCagr','tierCagr'],['sCrTierNdG','tierNdG']].forEach(([id,k])=>{ document.getElementById(id).value = cr[k]; });
   document.getElementById('sCrMarket').value = cr.market;
+  const sr = satRiskCfg();   /* SR1 — ความเสี่ยง Sat ของบัญชีที่เปิดอยู่ */
+  document.getElementById('sSatRpt').value = sr.rpt;
+  document.getElementById('sSatRptHi').value = sr.rptHi;
+  document.getElementById('sSatNewMax').value = sr.newMax;
+  document.getElementById('satProveTxt').textContent = `${SAT7D_PROVE_N} ไม้ · avg R ≥ ${SAT7D_PROVE_R}`;
   document.getElementById('sPortCore').value = cr.l2Cap;   /* ค่าเดียวกับเพดานชั้น 2 */
   updTotal();
   updFxUpdatedHint(s.fxUpdatedAt);
@@ -8533,7 +8649,8 @@ function crOnInput(src){
   if(src==='cap') g('sPortCore').value = g('sCrL2Cap').value;
   else if(src==='heat') g('sCrL2Cap').value = g('sPortCore').value;
   const sat = parseFloat(g('sPortSatB').value), note = g('satHeatNote');
-  if(note) note.style.display = (isFinite(sat) && sat !== 6) ? '' : 'none';
+  if(note) note.style.display = 'none';   /* SR1 — หน้า Sat อ่านช่องนี้จริงแล้ว ไม่ต้องมีหมายเหตุ "ค่าคงที่ 6%" */
+  const hh = g('satHeatHint'); if(hh) hh.textContent = `heat รวม Sat ตั้งที่ช่อง "Sat — % ของถัง Sat" ด้านบน (ตอนนี้ ${isFinite(sat) ? fmt2(sat) : '—'}%)`;
   const errs = {};
   if(portOn('core')){
     const v = id => { const x = g(id).value; return x==='' ? NaN : parseFloat(x); };
@@ -8548,7 +8665,15 @@ function crOnInput(src){
     if(!errs.sCrTierB && !errs.sCrTierA && v('sCrTierB') > v('sCrTierA')) errs.sCrTierB = 'Tier B ต้องไม่เกิน Tier A';
     if(!errs.sCrL2Warn && !errs.sCrL2Cap && !(v('sCrL2Warn') < v('sCrL2Cap'))) errs.sCrL2Warn = 'เหลืองที่ ต้องน้อยกว่าเพดานชั้น 2';
   }
-  document.querySelectorAll('#crSec .crErr').forEach(d=>{ d.textContent = errs[d.dataset.errFor] || ''; });
+  if(portOn('satB')){
+    const v = id => { const x = g(id).value; return x==='' ? NaN : parseFloat(x); };
+    const r = v('sSatRpt'), h = v('sSatRptHi'), nm = v('sSatNewMax');
+    if(!(r>0 && r<=5)) errs.sSatRpt = 'ต้องมากกว่า 0 และไม่เกิน 5';
+    if(!(h>0 && h<=5)) errs.sSatRptHi = 'ต้องมากกว่า 0 และไม่เกิน 5';
+    else if(!errs.sSatRpt && h < r) errs.sSatRptHi = 'ต้องไม่น้อยกว่าเสี่ยงต่อไม้ (ปกติ)';
+    if(!(Number.isInteger(nm) && nm>=1 && nm<=10)) errs.sSatNewMax = 'ต้องเป็นจำนวนเต็ม 1–10';
+  }
+  document.querySelectorAll('#crSec .crErr, #satRiskSec .crErr').forEach(d=>{ d.textContent = errs[d.dataset.errFor] || ''; });
   const bad = Object.keys(errs).length > 0, btn = g('setSaveBtn');
   if(btn) btn.disabled = bad;
   return !bad;
@@ -8610,7 +8735,7 @@ function updTotal(){
    (ค่าที่ซ่อนไม่ได้ถูกลบ — แค่ไม่แสดง ถ้าเปิดพอร์ตกลับมาก็เห็นค่าเดิม) */
 function acctApplyPortVisibility(){
   [['sCore','core'],['sSatB','satB'],
-   ['sPortCore','core'],['sPortSatB','satB'],
+   ['sPortCore','core'],['sPortSatB','satB'],['sSatRpt','satB'],['sSatRptHi','satB'],['sSatNewMax','satB'],
    ['sCrMarket','core'],['sCrRisk','core'],['sCrTierA','core'],['sCrTierB','core'],['sCrAdd','core'],['sCrMaxLots','core'],['sCrL2Cap','core'],['sCrL2Warn','core'],
    ['sCrEmerg','core'],['sCrLBudget','core'],['sCrLRisk','core'],['sCrLShare','core'],['sCrGate','core'],
    ['sCrTierRoic','core'],['sCrTierNd','core'],['sCrTierFcf','core'],['sCrTierRevG','core'],['sCrTierCagr','core'],['sCrTierNdG','core']
@@ -8659,9 +8784,11 @@ function saveSettings(){
               ladderBudget:n('sCrLBudget'), ladderRisk:n('sCrLRisk'), ladderShare:n('sCrLShare'), gateWeeks:n('sCrGate'), market:document.getElementById('sCrMarket').value,
               tierRoic:n('sCrTierRoic'), tierNd:n('sCrTierNd'), tierFcf:n('sCrTierFcf'), tierRevG:n('sCrTierRevG'), tierCagr:n('sCrTierCagr'), tierNdG:n('sCrTierNdG')};
     })() : (old.coreRisk || null),
+    satRisk: portOn('satB') ? {rpt:parseFloat(document.getElementById('sSatRpt').value), rptHi:parseFloat(document.getElementById('sSatRptHi').value), newMax:parseFloat(document.getElementById('sSatNewMax').value)} : (old.satRisk || null),   /* SR1 — % ตัวเลข ต่อบัญชี */
     tdKey: (document.getElementById('sTdKey').value||'').trim()
   };
-  if(state.settings.coreRisk == null) delete state.settings.coreRisk;   /* Firestore ไม่รับ undefined/null ที่ไม่ตั้งใจ — ไม่มีค่า = ไม่มี key */
+  if(state.settings.coreRisk == null) delete state.settings.coreRisk;
+  if(state.settings.satRisk == null) delete state.settings.satRisk;   /* Firestore ไม่รับ undefined/null ที่ไม่ตั้งใจ — ไม่มีค่า = ไม่มี key */
   document.getElementById('setOverlay').classList.remove('show');
   render();
   schedulePersist();
@@ -8779,7 +8906,21 @@ const SAT7D_DEFAULT_BROKERS = {
   Pi:{S50:{contract:200, lotStep:1, minLot:1, cur:'THB'}}
 };
 const SAT_SETUP_PASS_DEFAULT = 0.65;   /* 7D.4 — Setup ผ่านเมื่อ ติ๊ก/ทั้งหมด ≥ ค่านี้ (แก้ได้ที่ state.settings.satSetupPassRatio) */
-const SAT7D_RPT = 1.25, SAT7D_RPT_HI = 1.5, SAT7D_HEAT_MAX = 6, SAT7D_NEW_MAX = 2, SAT7D_PROVE_N = 50, SAT7D_PROVE_R = 0.25;
+/* SR1 — RPT/ไม้ใหม่ ต่อบัญชีอ่านจาก settings.satRisk ผ่าน satRiskCfg() · ค่าคงที่ตรงนี้ = ค่าเริ่มต้นเท่านั้น (heat เริ่มต้น 6 = limits.port.satB) */
+const SAT7D_RPT = 1.5, SAT7D_RPT_HI = 2, SAT7D_HEAT_MAX = 6, SAT7D_NEW_MAX = 2, SAT7D_PROVE_N = 50, SAT7D_PROVE_R = 0.25;
+function satRiskCfg(accId){
+  const id = accId || acctActive;
+  const st = (id===acctActive && state) ? state : (acctBooks[id] || null);
+  const s = (st && st.settings) || {};
+  const raw = (s.satRisk && typeof s.satRisk==='object') ? s.satRisk : {};
+  const okPct = v => typeof v==='number' && isFinite(v) && v>0 && v<=5;
+  const rpt = okPct(raw.rpt) ? raw.rpt : SAT7D_RPT;
+  const rptHi = (okPct(raw.rptHi) && raw.rptHi >= rpt) ? raw.rptHi : Math.max(SAT7D_RPT_HI, rpt);
+  const lp = s.limits && s.limits.port && typeof s.limits.port==='object' ? s.limits.port.satB : null;
+  const heatMax = (typeof lp==='number' && isFinite(lp) && lp>0) ? lp : SAT7D_HEAT_MAX;
+  const newMax = (Number.isInteger(raw.newMax) && raw.newMax>=1 && raw.newMax<=10) ? raw.newMax : SAT7D_NEW_MAX;
+  return {rpt, rptHi, heatMax, newMax};
+}
 const SATW_COMPS = ['trend','momentum','zone','sentiment','macro'];
 const SATW_COMP_LABEL = {trend:'Trend', momentum:'Momentum', zone:'Zone', sentiment:'Sentiment', macro:'Macro'};
 const SATW_MACRO_KEY = Object.fromEntries(SAT_ASSETS.map(a=>[a.key, a.ff]));
@@ -8804,18 +8945,26 @@ const SAT_PB_ASSET = {XAUUSD:'XAUUSD', BTCUSD:'BTC', BTC:'BTC', BRENT:'BRENT', B
 /* F2c — ตัวคูณขนาดไม้เมื่อสวนทั้ง Macro และ Trend (ค่าเดียว ห้าม hard-code 0.6 ที่อื่น) */
 const SAT_MACRO_CUT = 0.6;
 /* 7E-4 — MR (เทรดสวน Bias สั้น ๆ ที่แนว): ระยะ Entry จากแนว (% · ค่าเดียวทุก asset ตอนนี้ — ผู้ใช้จะตั้งต่อ asset ทีหลัง → แก้ที่ satMrDistPct จุดเดียว) · ถือนานเกินกี่วันถึงเตือน */
+/* MR ปิดไว้ 1 ต.ค. 2569 — ผู้ใช้: 1 Bias · 1 ทิศ · 1 Setup · เปิดคืน = SAT_MR_ENABLED true (หรือ window.SAT_MR_ENABLED = true) */
+let SAT_MR_ENABLED = false;
+function satMrOn(){ return (typeof window!=='undefined' && typeof window.SAT_MR_ENABLED==='boolean') ? window.SAT_MR_ENABLED : SAT_MR_ENABLED; }
 const SAT_MR_DIST_PCT = 1;
 const SAT_MR_HOLD_MAX = 2;
 function satMrDistPct(asset){ return SAT_MR_DIST_PCT; }
 /* §0.3 — STRIP_FIELDS กำหนดว่าแถบบัญชีของแต่ละโหมดโชว์ช่องอะไร (ป้าย/ลำดับเท่านั้น — ตัวเลขจริงมาจาก settings ตอน render จริงใน UI.acctStrip)
    สเปกทิ้งรายการไว้เป็น "..." — รายการด้านล่างเป็นตัวเลือกที่ตัดสินใจเอง อิง mockup app-mockup.html/acctStrip() · ปรับได้ตอนสร้างส่วนที่ 1 จริง */
-const STRIP_FIELDS = {
-  sat: [
-    {key:'heat',      label:'heat',  suffix:'/6%'},
-    {key:'newCount',  label:'ใหม่',   suffix:'/2'},
+/* SR1 — ช่องแถบบัญชี Sat: suffix heat/ไม้ใหม่ สร้างจากค่าตั้งของบัญชี (satRiskCfg) ตอนเรียก ไม่ใช่สตริงตายตัว */
+function satStripFields(accId){
+  const c = satRiskCfg(accId);
+  return [
+    {key:'heat',      label:'heat',  suffix:`/${fmt2(c.heatMax)}%`},
+    {key:'newCount',  label:'ใหม่',   suffix:`/${c.newMax}`},
     {key:'rpt',       label:'RPT',   secondary:true},
     {key:'openCount', label:'ไม้ Sat', secondary:true}
-  ],
+  ];
+}
+const STRIP_FIELDS = {
+  get sat(){ return satStripFields(); },
   core: [
     {key:'riskOpen',   label:'เสี่ยงค้าง', suffix:'%'},
     {key:'riskPlan',   label:'plan',      suffix:'%'},
@@ -9292,8 +9441,9 @@ function sat7dAcctBase(accId){
   const wk = wpWeekKey();
   const nNew = Calc.newCount(trades, wk, wpOpenedKey);   /* §0.4 — ย้ายมาที่ Calc.newCount() พฤติกรรมเท่าเดิม */
   const cnt = sat7dCounter(B);
-  const rpt = cnt.hi ? SAT7D_RPT_HI : SAT7D_RPT;
-  return {B, fx, cap, trades, openRisk, nNew, cnt, rpt, riskTHB: cap*rpt/100, heatPct: Calc.heat(openRisk, cap)};
+  const cfg = satRiskCfg(accId);   /* SR1 — ค่าตั้งต่อบัญชี */
+  const rpt = cnt.hi ? cfg.rptHi : cfg.rpt;
+  return {B, fx, cap, trades, openRisk, nNew, cnt, rpt, heatMax: cfg.heatMax, newMax: cfg.newMax, riskTHB: cap*rpt/100, heatPct: Calc.heat(openRisk, cap)};
 }
 function sat7dSideOk(idea){
   const e = +idea.entry, s = +idea.sl;
@@ -9332,15 +9482,16 @@ function sat7dCalc(idea, accId){
   const tradeExists = !!(slot.trade_id && base.trades.some(t=>t.id===slot.trade_id));
   const heatTHB = base.openRisk + (tradeExists ? 0 : actualTHB);
   const heatPct = Calc.heat(heatTHB, base.cap);
-  const quotaFull = tradeExists ? base.nNew > SAT7D_NEW_MAX : base.nNew >= SAT7D_NEW_MAX;
+  const quotaFull = tradeExists ? base.nNew > base.newMax : base.nNew >= base.newMax;
   const flags = sat7dIdeaFlags(idea);
   const rd = Calc.readiness({
-    heatPct, heatMax: SAT7D_HEAT_MAX, quotaFull,
+    heatPct, heatMax: base.heatMax, quotaFull,
     checksOk: sat7dChecksOk(idea), hasInvalidation: !!String(idea.invalidation||'').trim(), side,
     hasChosenBroker: !!chosen, hasAnyBroker: sat7dHasAnyBroker(base.B), lotMsg, hasCapital: base.cap>0
   });
-  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: rd.reasons, ready: rd.ok, tradeExists,
-          offplan: flags.off || !rd.ok, flags};
+  const offB = satOffBias(idea);   /* SR1 — สวน Bias สัปดาห์ = ไม่ ready ทุกบัญชี · ไม่มีทางลัด */
+  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: (offB ? [satOffBiasMsg(idea)] : []).concat(rd.reasons), ready: rd.ok && !offB, tradeExists,
+          offplan: flags.off || !rd.ok || offB, flags, offBias: offB};
 }
 
 /* ── การกระทำของผู้ใช้ → เขียนเอกสารที่แก้เท่านั้น ── */
@@ -9375,6 +9526,7 @@ function sat7dSaveOrder(id, accId){
   const s = (idea.accts||{})[accId] || {}; if(s.trade_id || s.skip) return;
   const c = sat7dCalc(idea, accId);
   if(c.lot==null) return;   /* ปุ่มถูกปิดอยู่แล้วถ้า lot คำนวณไม่ได้ — กันไว้อีกชั้น */
+  if(c.offBias) return;     /* SR1 — สวน Bias สัปดาห์ = บันทึกไม่ได้ */
   const B = getBook(accId);
   const t = makeTradeObject({
     id: 't'+Date.now(),
@@ -9865,13 +10017,14 @@ function satV3StrategyBarHtml(){
 function satV3AcctMetaHtml(){
   const rows = sat7dAccts().map(a=>{
     const b = sat7dAcctBase(a.id);
-    const heatBad = b.heatPct!=null && b.heatPct > SAT7D_HEAT_MAX + 1e-9;
-    const newBad = b.nNew > SAT7D_NEW_MAX;
+    const heatBad = b.heatPct!=null && b.heatPct > b.heatMax + 1e-9;
+    const newBad = b.nNew > b.newMax;
+    const sf = k => (satStripFields(a.id).find(f=>f.key===k) || {}).suffix || '';
     const cntTxt = b.cnt.since ? `${b.cnt.n}/${SAT7D_PROVE_N}` : '—';
     const items = [
       {label:'ถัง Sat', value: b.cap>0 ? sat7dMoney(b.cap) : '—'},
-      {label:'heat', value:`${b.heatPct==null?'—':fmt2(Math.round(b.heatPct*100)/100)}/${SAT7D_HEAT_MAX}%`, warn:heatBad},
-      {label:'ไม้ใหม่', value:`${b.nNew}/${SAT7D_NEW_MAX}`, warn:newBad},
+      {label:'heat', value:`${b.heatPct==null?'—':fmt2(Math.round(b.heatPct*100)/100)}${sf('heat')}`, warn:heatBad},
+      {label:'ไม้ใหม่', value:`${b.nNew}${sf('newCount')}`, warn:newBad},
       {label:'RPT', value:`${b.rpt}%`},
       {label:'ไม้ Sat', value:cntTxt}
     ];
@@ -10053,6 +10206,23 @@ function satV3CondSide(idea, c){
   return idea.bias;
 }
 function satV3SideOf(idea){ return satV3CondSide(idea, satV3ActiveCond(idea)); }
+/* SR1 — ห้ามเทรดสวน Bias สัปดาห์: Bias สัปดาห์ปัจจุบันของ asset เป็น Long/Short และ ≠ ทิศของไม้ → true (ยังไม่ตั้ง/Neutral = false)
+   ข้อ MR ที่ Activate ขณะเปิด MR (SAT_MR_ENABLED) ตั้งใจสวน Bias อยู่แล้ว → ไม่นับ (MR ปิด = นับ) · ไม่แตะ Calc.sizeRule ×0.6 */
+function satWeekBiasNow(asset){ const w = satwWeek(wpWeekKey(), asset); return (w && (w.bias==='Long' || w.bias==='Short')) ? w.bias : null; }
+function satOffBias(idea){
+  if(!idea) return false;
+  const wb = satWeekBiasNow(idea.asset); if(!wb) return false;
+  if(satMrOn() && satV3MrActive(idea)) return false;
+  return wb !== satV3SideOf(idea);
+}
+function satOffBiasMsg(idea){ return `สวน Bias สัปดาห์ (ตอนนี้ ${satWeekBiasNow(idea.asset)}) — ยกเลิกแผนนี้ หรือรอ Bias กลับ`; }
+/* ไม้ที่ค้างอยู่ (plan/open · ไม่ใช่ MR) ที่ทิศ ≠ Bias สัปดาห์ปัจจุบัน → ป้ายเตือน (ไม่บังคับปิด) */
+function satTradeOffBias(t){
+  if(!t || t.port!=='satB' || t.mr || (t.status!=='open' && t.status!=='plan')) return false;
+  const wb = satWeekBiasNow(t.sym); return !!wb && (t.bias==='Long' || t.bias==='Short') && wb !== t.bias;
+}
+const SAT_OFFBIAS_LABEL = 'สวน Bias สัปดาห์';
+function satOffBiasTagHtml(){ return `<span class="ui-f2c-tag ui-offbias-tag" data-offbias-tag="1">${SAT_OFFBIAS_LABEL}</span>`; }
 function satV3IsMrCond(c){ return !!c && c.kind==='mr'; }
 function satV3MrActive(idea){ const a = satV3ActiveCond(idea); return satV3IsMrCond(a) ? a : null; }
 const SAT_MR_LABEL = 'MR · สวน Bias';
@@ -10064,6 +10234,7 @@ function satV3MrLevels(idea){
   return (v||[]).map(Number).filter(x=>isFinite(x) && x>0);
 }
 function satV3MrAdd(ideaId){
+  if(!satMrOn()) return;   /* SR1 — MR ปิดอยู่ */
   const idea = sat7dIdea(ideaId); if(!satV3IsCondIdea(idea) || !Calc.mrSide(idea.bias)) return;
   const id = 'c' + Date.now() + Math.floor(Math.random()*1000);
   satV3FocusCond = id;
@@ -10451,7 +10622,7 @@ function satV3CondListHtml(idea, planned, active){
   }).join('');
   const shortcuts = satV3CondTemplates().map(t=>`<button type="button" class="ui-btn ui-cond-sc" data-shortcut="1" onclick="satV3CondAdd('${id}', ${escHtml(JSON.stringify(t.text))})">${escHtml(t.text.trim())}</button>`).join('')
     + `<button type="button" class="ui-btn ui-cond-sc" style="border-style:dashed" onclick="satV3CondAdd('${id}','')">+ เพิ่มเอง</button>`
-    + (Calc.mrSide(idea.bias) ? `<button type="button" class="ui-btn ui-cond-sc" data-mr-add="1" title="เงื่อนไขเทรดสวน Bias สั้น ๆ ที่แนวรับ/ต้าน (ไม่เขียนรายการปุ่มลัด)" onclick="satV3MrAdd('${id}')">＋ MR สวน Bias</button>` : '')
+    + (satMrOn() && Calc.mrSide(idea.bias) ? `<button type="button" class="ui-btn ui-cond-sc" data-mr-add="1" title="เงื่อนไขเทรดสวน Bias สั้น ๆ ที่แนวรับ/ต้าน (ไม่เขียนรายการปุ่มลัด)" onclick="satV3MrAdd('${id}')">＋ MR สวน Bias</button>` : '')
     + `<button type="button" class="ui-btn ui-cond-sc ui-cond-tpl-edit" title="แก้รายการปุ่มลัด (ใช้ร่วมทุกสินค้า)" onclick="satV3CondTplEditorOpen('${id}','list')">✎ แก้รายการ</button>`;
   const hint = planned && live.length ? '<div class="ui-hint ui-cond-hint">ติ๊ก Activate ที่เงื่อนไขที่เกิดขึ้น → ช่อง Entry / SL / TP จะขึ้น</div>' : '';
   const empty = planned && !live.length
@@ -10530,9 +10701,9 @@ function satV3PlanAcctCalc(idea, accId, f2c){
   const tradeExists = !!(slot.trade_id && base.trades.some(t=>t.id===slot.trade_id));
   const heatTHB = base.openRisk + (tradeExists ? 0 : actualTHB);
   const heatPct = Calc.heat(heatTHB, base.cap);
-  const quotaFull = tradeExists ? base.nNew > SAT7D_NEW_MAX : base.nNew >= SAT7D_NEW_MAX;
+  const quotaFull = tradeExists ? base.nNew > base.newMax : base.nNew >= base.newMax;
   const rd = Calc.readiness({
-    heatPct, heatMax: SAT7D_HEAT_MAX, quotaFull,
+    heatPct, heatMax: base.heatMax, quotaFull,
     checksOk: true,          /* setup ครบ/ไม่ครบ เป็นแค่เตือน (Setup ไม่ครบ · ไม่ใช่นอกแผน) ไม่บล็อกต่อบัญชี — ดู satV3SetupsReady */
     hasInvalidation: true,   /* Cancel Level เป็นแค่เตือน ไม่บล็อกเหมือน invalidation ของ 7D.2 เดิม */
     side, hasChosenBroker: !!chosen, hasAnyBroker: sat7dHasAnyBroker(base.B), lotMsg, hasCapital: base.cap>0
@@ -10540,7 +10711,8 @@ function satV3PlanAcctCalc(idea, accId, f2c){
   /* 7E-4: ข้อ MR — mrCheck ไม่ผ่าน = ไม่ ready + เหตุผลต่อท้าย warns (Calc.readiness เดิมไม่แตะ) */
   const mrAct = satV3MrActive(idea);
   const mrC = mrAct ? Calc.mrCheck({side: satV3SideOf(idea), entry: idea.entry, sl: idea.sl, tp: idea.tp, level: mrAct.mr_level, distPct: satMrDistPct(idea.asset)}) : null;
-  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: rd.reasons.concat(mrC ? mrC.reasons : []), ready: rd.ok && (!mrC || mrC.ok), tradeExists, factor: F.factor, f2c: F, mr: !!mrAct, mrOk: mrC ? mrC.ok : true, mrCheck: mrC};
+  const offB = satOffBias(idea);   /* SR1 — สวน Bias สัปดาห์ = ไม่ ready ทุกบัญชี · ไม่มีทางลัด */
+  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: (offB ? [satOffBiasMsg(idea)] : []).concat(rd.reasons, mrC ? mrC.reasons : []), ready: rd.ok && (!mrC || mrC.ok) && !offB, tradeExists, factor: F.factor, f2c: F, mr: !!mrAct, mrOk: mrC ? mrC.ok : true, mrCheck: mrC, offBias: offB};
 }
 function satV3ReadyCount(idea){
   return sat7dAccts().filter(a=>{
@@ -10572,6 +10744,7 @@ function satV3SaveSlot(ideaId, accId, offplanAcct){
   const F = satV3F2c(idea, Date.now());   /* F2c — ค่า ณ วินาทีที่กดบันทึก (ไม่ใช้ค่าที่เห็นตอน Activate) · ล็อกลงไม้ */
   const c = satV3PlanAcctCalc(idea, accId, F);
   if(c.lot==null) return;
+  if(c.offBias) return;   /* SR1 — สวน Bias สัปดาห์ = บันทึกไม่ได้ ไม่มีทางลัด */
   if(c.mr && !c.mrOk) return;   /* 7E-4: MR ไม่ผ่านกติกา (ระยะ/SL/TP) = บันทึกไม่ได้ ไม่มีทางลัด "รวมด้วย (นอกแผน)" */
   const mrAct = satV3MrActive(idea);
   const B = getBook(accId);
@@ -10617,6 +10790,7 @@ function satV3SaveReadyAccounts(ideaId){
 function satV3SaveOffplanAccount(ideaId, accId){
   const idea = sat7dIdea(ideaId); if(!idea) return;
   const c = satV3PlanAcctCalc(idea, accId);
+  if(c.offBias) return;   /* SR1 — สวน Bias สัปดาห์ = ไม่มีทางลัดนอกแผน */
   if(c.lot!=null) satV3SaveSlot(idea.id, accId, !c.ready);   /* SU — บัญชีไม่ ready = นอกแผนจริง (ธงเดิม) · Setup ไม่ครบแยกเป็น setup_incomplete ใน satV3SaveSlot */
 }
 /* ── ★ CRITICAL FIX (25 ก.ย.): plan/open row อ่านจากไม้ในสมุดจริงของแต่ละบัญชี (status plan/open ผูก port satB)
@@ -10726,7 +10900,8 @@ function satV3MrRowLine(t){
   const inc = tradeSetupInc(t) ? `<span class="tag setupinc" data-su-chip="1">Setup ไม่ครบ</span>` : '';   /* SU */
   const off = tradeOffPlan(t) ? `<span class="tag offplan" data-off-chip="1">นอกแผน</span>` : '';
   const mr = (t && t.mr) ? satMrTradeHtml(t) : '';
-  return (mr||inc||off) ? `<div class="ui-f2c-tl" data-mr-trade="${mr?1:0}">${[mr,off,inc].filter(Boolean).join(' ')}</div>` : '';
+  const ob = satTradeOffBias(t) ? satOffBiasTagHtml() : '';   /* SR1 */
+  return (mr||inc||off||ob) ? `<div class="ui-f2c-tl" data-mr-trade="${mr?1:0}">${[mr,ob,off,inc].filter(Boolean).join(' ')}</div>` : '';
 }
 function satV3PlanRowsHtml(idea){
   const trades = satV3EffectiveTrades(idea);
@@ -10769,7 +10944,8 @@ const satV3PlanAdapter = {
   rowExtra(model, a){
     const idea = model._idea, c = satV3PlanAcctCalc(idea, a.id);
     if(model._skipSet.has(a.id)) return `<button type="button" class="ui-btn" onclick="satV3SkipToggle('${escHtml(idea.id)}','${escHtml(a.id)}',false)">เอากลับ</button>`;
-    const statusHtml = c.lot==null ? ''
+    const statusHtml = c.offBias ? `<span class="ui-acct-warn" data-offbias-block="1">⚠️ ${escHtml(c.warns[0]||'')}</span>`   /* SR1 — ไม่มีปุ่มรวมด้วย (นอกแผน) */
+      : c.lot==null ? ''
       : c.ready ? '<span class="ui-acct-ok">✅</span>'
       : `<span class="ui-acct-warn">⚠️ ${escHtml(c.warns[0]||'')}</span>${(c.mr && !c.mrOk) ? '' : ` <button type="button" class="ui-btn" onclick="satV3SaveOffplanAccount('${escHtml(idea.id)}','${escHtml(a.id)}')">รวมด้วย (นอกแผน)</button>`}`;
     return `${statusHtml} <button type="button" class="ui-btn" onclick="satV3SkipToggle('${escHtml(idea.id)}','${escHtml(a.id)}',true)">ข้าม</button>`;
