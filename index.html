@@ -2277,6 +2277,7 @@ button.ccChip{cursor:pointer;min-height:24px}
       <div class="f" id="teOpenDateBox" style="display:none"><label>วันที่เข้า</label><input type="date" id="tOpenDate" oninput="teRefresh()"></div>
     </div>
     <div class="hint" id="teRisk" style="margin-top:-4px"></div>
+    <div class="f" id="teJointBox" style="display:none"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tJointSL" checked> ใช้ SL นี้กับทั้ง 2 ไม้</label></div>
 
     <div class="f" style="margin-top:12px"><label>Invalidation — อะไรจะบอกว่าไม้นี้ผิดทาง</label>
       <textarea id="tInvalidation" rows="2" oninput="teRefresh()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น ปิดต่ำกว่า EMA50 รายวัน, volume แห้งติดกัน 3 วัน"></textarea>
@@ -4771,7 +4772,7 @@ function realizedPnlTHBOf(t){
 }
 function realizedROf(t){
   const pnl = realizedPnlOf(t); if(pnl===null) return null;
-  const risk = riskOf(t);
+  const risk = (t.pyr_parent && t.sl0>0) ? Math.abs(t.entry - t.sl0) * t.qty * (t.mult||1) : riskOf(t);   /* PY1 — ไม้เติม: R จากความเสี่ยงของตัวเอง (entry2 → SL ตอนเข้า) */
   return risk>0 ? pnl/risk : null;
 }
 function holdingDaysOf(t){
@@ -4871,7 +4872,7 @@ function posPortChip(t){
   return `<span class="posPort" style="background:${hexToRgba(c,0.16)};color:${c}">${t.port==='core'?'Core':'Sat'}</span>`;
 }
 function posSymHtml(t){
-  return `${escHtml(t.sym)}${tradeOffPlan(t)?' <span class="posTag">นอกแผน</span>':''}${tradeSetupInc(t)?' <span class="posTag setupinc">Setup ไม่ครบ</span>':''}${t.mr?` ${satMrTradeHtml(t)}`:''}${satTradeOffBias(t)?` ${satOffBiasTagHtml()}`:''}`;   /* 7E-4 · SR1 */
+  return `${escHtml(t.sym)}${tradeOffPlan(t)?' <span class="posTag">นอกแผน</span>':''}${tradeSetupInc(t)?' <span class="posTag setupinc">Setup ไม่ครบ</span>':''}${t.mr?` ${satMrTradeHtml(t)}`:''}${satTradeOffBias(t)?` ${satOffBiasTagHtml()}`:''}${t.pyr_parent?' <span class="posTag" data-pyr-tag="1">เติม</span>':''}`;   /* 7E-4 · SR1 · PY1 */
 }
 function posRiskHtml(t, rk){
   const sym = tradeSym(t);
@@ -4942,7 +4943,7 @@ function planAcctBundle(A){
   const nPlan = trades.filter(t=>t.status==='plan').length;
   /* ไม้ใหม่สัปดาห์นี้ = ไม้ที่ "เข้าจริง" (open/closed) ในสัปดาห์นี้ ทุกพอร์ตของบัญชี · นับตามตำแหน่ง (posGroup) ไม่ใช่ขา */
   const wk = wpWeekKey(), seen = new Set();
-  trades.forEach(t=>{ if((t.status==='open' || t.status==='closed') && wpOpenedKey(t)===wk) seen.add(t.posGroup || t.id); });
+  trades.forEach(t=>{ if(t.pyr_parent) return; /* PY1 — ไม้เติมไม่นับไม้ใหม่ */ if((t.status==='open' || t.status==='closed') && wpOpenedKey(t)===wk) seen.add(t.posGroup || t.id); });
   /* UI1 — แยกตามกลุ่มพอร์ต (ตัวเลขเดิมจาก summarize ต่อพอร์ต · ไม่มีสูตรใหม่) · หุ้น = core · Future = satB · พอร์ตที่บัญชีปิด = ไม่มีแถว */
   const grp = (keys)=>{
     if(!keys.some(portOn)) return null;
@@ -7098,7 +7099,7 @@ function renderJournalBody(A){
     return `<tr class="${cls}"${style}>
       <td class="${indent?'legdate':''}">${t.exitDate||'—'}</td>
       <td class="sans">${indent?'':`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${PORTS[t.port].color};margin-right:5px"></span>${jPortShort(t.port)}`}</td>
-      <td style="font-weight:600">${indent?'':t.sym}${(!indent&&tradeOffPlan(t))?' <span class="tag offplan" title="ไม้นอกแผน — ไม่ได้วางแผนใน Trade-Plan ก่อนเข้า">นอกแผน</span>':''}${(!indent&&tradeSetupInc(t))?' <span class="tag setupinc" title="Setup ไม่ถึงเกณฑ์ — ไม่ใช่นอกแผน">Setup ไม่ครบ</span>':''}${(!indent&&t.mr)?' '+satV3MrTagHtml():''}</td>
+      <td style="font-weight:600">${indent?'':t.sym}${(!indent&&tradeOffPlan(t))?' <span class="tag offplan" title="ไม้นอกแผน — ไม่ได้วางแผนใน Trade-Plan ก่อนเข้า">นอกแผน</span>':''}${(!indent&&tradeSetupInc(t))?' <span class="tag setupinc" title="Setup ไม่ถึงเกณฑ์ — ไม่ใช่นอกแผน">Setup ไม่ครบ</span>':''}${(!indent&&t.mr)?' '+satV3MrTagHtml():''}${(!indent&&t.pyr_parent)?' <span class="tag" data-pyr-tag="1" title="ไม้เติม (Pyramid)">เติม</span>':''}</td>
       <td class="sans">${indent?'':`<span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>`}</td>
       <td>${fmt2(t.entry)}</td><td>${fmt2(t.exitPrice)}</td>
       <td>${fmt2(t.qty)}${(t.mult||1)!==1?`<span style="color:var(--muted)"> ×${fmt2(t.mult)}</span>`:''}</td>
@@ -7138,7 +7139,7 @@ function renderJournalBody(A){
     const win = pnl>0;
     return `<div class="tcard">
       <div class="r1">
-        <span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>${tradeOffPlan(t)?' <span class="tag offplan">นอกแผน</span>':''}${tradeSetupInc(t)?' <span class="tag setupinc" title="Setup ไม่ถึงเกณฑ์ — ไม่ใช่นอกแผน">Setup ไม่ครบ</span>':''}${t.mr?' '+satV3MrTagHtml():''}</span>
+        <span class="sym">${t.sym} <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span>${tradeOffPlan(t)?' <span class="tag offplan">นอกแผน</span>':''}${tradeSetupInc(t)?' <span class="tag setupinc" title="Setup ไม่ถึงเกณฑ์ — ไม่ใช่นอกแผน">Setup ไม่ครบ</span>':''}${t.mr?' '+satV3MrTagHtml():''}${t.pyr_parent?' <span class="tag" data-pyr-tag="1" title="ไม้เติม (Pyramid)">เติม</span>':''}</span>
         ${pnlTagHtml(pnl)}
       </div>
       <div class="sub" style="margin-bottom:6px">ปิด ${t.exitDate||''} · ${PORTS[t.port].name}</div>
@@ -8405,6 +8406,8 @@ function openTradeEdit(id, acctId, opts){
   teEl('tQty').value = prev.qty!=null ? prev.qty : '';
   teEl('tInvalidation').value = prev.invalidation || '';
   teEl('tImageUrl').value = prev.imageUrl || '';
+  teEl('teJointBox').style.display = satPyrSibling(prev, A) ? '' : 'none';   /* PY1 */
+  teEl('tJointSL').checked = true;
   teEl('teOpenDateBox').style.display = toOpen ? '' : 'none';
   teEl('tOpenDate').value = toOpen ? thaiToday() : '';
   teEl('teCancelNoteBox').style.display = st==='cancelled' ? '' : 'none';
@@ -8430,13 +8433,15 @@ function teRefresh(){
   if(!(e>0)) errs.push('Entry ต้องมากกว่า 0');
   if(!(sl>0)) errs.push('SL ต้องมากกว่า 0');
   if(!(q>0)) errs.push('จำนวนต้องมากกว่า 0');
-  if(e>0 && sl>0){
+  const slLockOk = prev.status==='open' && prev.port==='satB';   /* PY1 — ไม้ Sat ที่เปิดอยู่ย้าย SL ไปที่ทุน/เลยทุนได้ (ล็อกกำไร) */
+  if(e>0 && sl>0 && !slLockOk){
     if(e===sl) errs.push('Entry ต้องไม่เท่ากับ SL');
     else if(prev.bias==='Long' && sl>e) errs.push('SL ผิดฝั่ง — Long ต้องมี SL ต่ำกว่า Entry');
     else if(prev.bias==='Short' && sl<e) errs.push('SL ผิดฝั่ง — Short ต้องมี SL สูงกว่า Entry');
   }
   const riskEl = teEl('teRisk');
-  riskEl.textContent = (e>0 && sl>0 && q>0) ? `เสี่ยงถึง SL = ${fmt0(Math.abs(e-sl)*q*m)} ${cur}` : '';
+  const slLocked = slLockOk && e>0 && sl>0 && (prev.bias==='Short' ? sl<=e : sl>=e);
+  riskEl.textContent = (e>0 && sl>0 && q>0) ? (slLocked ? `เสี่ยงถึง SL = 0 ${cur} · ล็อกกำไร` : `เสี่ยงถึง SL = ${fmt0(Math.abs(e-sl)*q*m)} ${cur}`) : '';
   if(teCtx.toOpen && !teEl('tOpenDate').value) errs.push('กรอกวันที่เข้า');
   if(prev.status==='closed'){
     const ex = teNum('tExitPrice'), xd = teEl('tExitDate').value;
@@ -8488,6 +8493,11 @@ function saveTradeEdit(){
   const i = B.trades.findIndex(x=>x.id===id);
   if(i < 0){ teEl('teErr').textContent = 'ไม่พบไม้นี้ในบัญชีแล้ว'; return; }
   B.trades[i] = next;
+  const jointOn = teEl('teJointBox').style.display!=='none' && teEl('tJointSL').checked;
+  if(jointOn){   /* PY1 — ใช้ SL นี้กับทั้ง 2 ไม้ (ไม้แรก ↔ ไม้เติม) */
+    const sib = satPyrSibling(next, A);
+    if(sib) sib.sl = next.sl;
+  }
   saveBook(A);
   closeTradeEdit();
   render();
@@ -9413,8 +9423,8 @@ const UI = {
      ★ 7D.3 Phase 3 — btns[].onClick (optional) ทำให้ปุ่มกดได้จริง (เดิมเป็น <span> เฉย ๆ ไม่มี onclick) —
      เปลี่ยนเป็น <button> (ไม่กระทบ caller เดิมที่เช็คแค่ label/ui-row เป็น substring) */
   row(model){
-    const btns = (model.btns||[]).map(b=>`<button type="button" class="ui-btn${b.cls?(' '+b.cls):''}"${b.onClick?` onclick="${b.onClick}"`:''}>${escHtml(b.label)}</button>`).join('');
-    return `<div class="ui-row" style="--c:${model.color||'#888'}"><span class="ui-dot"></span><span class="ui-nm">${escHtml(model.name||'')}</span>${model.tag?`<span class="ui-tag">${escHtml(model.tag)}</span>`:''}<span class="ui-v">${escHtml(model.detail||'')}</span>${btns}</div>`;
+    const btns = (model.btns||[]).map(b=>`<button type="button" class="ui-btn${b.cls?(' '+b.cls):''}"${b.onClick?` onclick="${b.onClick}"`:''}${b.disabled?' disabled':''}${b.title?` title="${escHtml(b.title)}"`:''}${b.attr?' '+b.attr:''}>${escHtml(b.label)}</button>`).join('');   /* PY1 — disabled/title/attr เสริม (optional) */
+    return `<div class="ui-row" style="--c:${model.color||'#888'}"><span class="ui-dot"></span><span class="ui-nm">${escHtml(model.name||'')}</span>${model.tag?`<span class="ui-tag">${escHtml(model.tag)}</span>`:''}${model.tagHtml||''}<span class="ui-v">${escHtml(model.detail||'')}</span>${btns}</div>`;
   },
   /* list: [{label,on}] — ชิปเลือก/ติ๊ก · ★ Phase 3: item.onClick (optional) ทำให้ชิปกดติ๊กได้จริง */
   chips(list){
@@ -9546,7 +9556,7 @@ function sat7dAcctBase(accId){
   const openRisk = trades.filter(t=>t.status==='open')
     .reduce((a,t)=>a + Math.abs(t.entry - t.sl) * t.qty * (t.mult||1) * toTHB(t), 0);
   const wk = wpWeekKey();
-  const nNew = Calc.newCount(trades, wk, wpOpenedKey);   /* §0.4 — ย้ายมาที่ Calc.newCount() พฤติกรรมเท่าเดิม */
+  const nNew = Calc.newCount(trades.filter(t=>!t.pyr_parent), wk, wpOpenedKey);   /* §0.4 — ย้ายมาที่ Calc.newCount() พฤติกรรมเท่าเดิม · PY1 — ไม้เติม (pyr_parent) ไม่นับโควตาไม้ใหม่ */
   const cnt = sat7dCounter(B);
   const cfg = satRiskCfg(accId);   /* SR1 — ค่าตั้งต่อบัญชี */
   const rpt = cnt.hi ? cfg.rptHi : cfg.rpt;
@@ -10913,12 +10923,13 @@ function satV3EffectiveTrades(idea){
 function satV3PlanRowState(idea){
   const trades = satV3EffectiveTrades(idea);
   if(!trades.length) return 'draft';
-  if(trades.some(x=>x.trade.status==='open')) return 'open';
+  if(trades.some(x=>x.trade.status==='open') || satV3PyrOpenTrades(idea).length) return 'open';   /* PY1 — ไม้เติมยังเปิด = แถวยังอยู่ */
   if(trades.some(x=>x.trade.status==='plan')) return 'plan';
   return 'closed';
 }
 function satV3ShouldAutoClose(idea){
   const accts = sat7dAccts(); if(!accts.length) return false;
+  if(satV3PyrOpenTrades(idea).length) return false;   /* PY1 */
   const allSkipped = accts.every(a=>{ const s=(idea.accts||{})[a.id]; return s && s.skip; });
   if(allSkipped) return true;
   const anyTouched = accts.some(a=>{ const s=(idea.accts||{})[a.id]; return s && (s.trade_id || s.skip); });
@@ -11002,6 +11013,164 @@ function satV3F2cTradeLine(t){
     + (t.macro_recent ? '<span class="ui-f2c-tag">Playbook เพิ่งเปลี่ยน</span>' : '');
   return `<div class="ui-f2c-tl" data-f2c-trade="1">Macro ${escHtml(macTxt)} · Trend ${tr} · Driver ${escHtml(t.driver||'—')} · ${size} ${tags}</div>`;
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   PY1 — เติมไม้ Future (Pyramid) · 1 ครั้ง · 50% ของ lot ไม้แรก · ไม้เติมไม่นับโควตาไม้ใหม่ · นับ heat ตามความเสี่ยงจริง
+   ══════════════════════════════════════════════════════════════════════════ */
+/* PY1 — เติมไม้ Future: 1 ครั้ง · 50% ของ lot ไม้แรก · ผู้ใช้ 1 ต.ค. 2569 */
+const SAT_PYR_MAX = 1, SAT_PYR_RATIO = 0.5;
+function satPyrPct(){ return Math.round(SAT_PYR_RATIO*100); }
+function satPyrTagHtml(){ return `<span class="ui-f2c-tag ui-pyr-tag" data-pyr-tag="1">เติม · ${satPyrPct()}%</span>`; }
+/* ไม้ Sat ที่เปิดอยู่ · เป็นไม้แรก · ยังเติมไม่ครบ SAT_PYR_MAX = แสดงปุ่มเติม */
+function satPyrEligible(t){
+  return !!t && t.port==='satB' && t.status==='open' && !t.pyr_parent && (t.pyr_child ? 1 : 0) < SAT_PYR_MAX;
+}
+function satPyrIdea(t, accId){
+  return satIdeasList.find(i=>i.accts && i.accts[accId] && i.accts[accId].trade_id===t.id) || null;
+}
+/* ไม้เติมที่ยังเปิดอยู่ของไอเดียนี้ (ตามบัญชี) */
+function satV3PyrOpenTrades(idea){
+  return sat7dAccts().map(a=>{
+    const s = (idea.accts||{})[a.id]; if(!s || !s.pyr_trade_id) return null;
+    const t = getBook(a.id).trades.find(x=>x.id===s.pyr_trade_id);
+    return t && t.status==='open' ? {accId:a.id, trade:t} : null;
+  }).filter(Boolean);
+}
+function satPyrCfg(t, accId){
+  const idea = satPyrIdea(t, accId);
+  const B = getBook(accId), opts = sat7dBrokerOpts(B, t.sym);
+  const slot = (idea && idea.accts && idea.accts[accId]) || {};
+  const chosen = opts.find(o=>o.broker===slot.broker) || opts[0] || null;
+  return chosen ? chosen.cfg : null;
+}
+/* lot ไม้เติม = ปัดลงตาม lotStep ของ floor(qty1 × SAT_PYR_RATIO) (ไม้ 1 ที่ลดขนาดแล้ว = 50% ของ lot ที่ลดแล้ว ไม่คูณซ้ำ) */
+function satPyrQty(qty1, cfg){
+  const n = Math.floor((+qty1 * SAT_PYR_RATIO) / cfg.lotStep + 1e-9);
+  return Math.round(n * cfg.lotStep * 1e8) / 1e8;
+}
+/* เช็กว่าเติมได้ไหม (ยังไม่ดูราคา/Break out) → {ok, reasons[], qty, minLot, cfg} */
+function satPyrCheck(t, accId){
+  const reasons = [];
+  if(!satPyrEligible(t)) return {ok:false, reasons:['ไม้นี้เติมไม่ได้'], qty:null, minLot:null, cfg:null};
+  const safe = t.bias==='Short' ? t.sl <= t.entry : t.sl >= t.entry;
+  if(!(t.sl>0) || !safe) reasons.push(`ย้าย SL ไม้ 1 ไปที่ทุน (${t.entry}) หรือดีกว่าก่อน`);
+  if(satTradeOffBias(t)) reasons.push(satOffBiasMsg({asset:t.sym}));
+  const cfg = satPyrCfg(t, accId);
+  let qty = null, minLot = null;
+  if(!cfg) reasons.push('ยังไม่ตั้งขนาดสัญญา');
+  else {
+    minLot = cfg.minLot; qty = satPyrQty(t.qty, cfg);
+    if(qty < cfg.minLot - 1e-9) reasons.push(`ไม้ 1 เล็กเกินจะแบ่ง ${satPyrPct()}% (ขั้นต่ำ ${cfg.minLot})`);
+  }
+  return {ok: reasons.length===0, reasons, qty, minLot, cfg};
+}
+/* คำนวณ sheet: inp = {broke, entry2, slj} → {errs[], qty, risk2THB, rMult, risk1After, heatPct, ...} (อ่านล้วน) */
+function satPyrCalc(t, accId, inp){
+  const ck = satPyrCheck(t, accId);
+  const errs = ck.reasons.slice();
+  const e1 = +t.entry, e2 = +inp.entry2, sj = +inp.slj, long = t.bias!=='Short';
+  if(!inp.broke) errs.push('ติ๊กยืนยัน Break out แล้วก่อน');
+  if(!(e2>0)) errs.push('กรอกราคาเข้าไม้เติม');
+  if(!(sj>0)) errs.push('กรอก SL ร่วม');
+  let slErr = false;
+  if(e2>0 && sj>0){
+    if(long ? !(sj < e2) : !(sj > e2)){ errs.push(`SL ร่วมต้อง${long?'ต่ำกว่า':'สูงกว่า'}ราคาเข้าไม้เติม (${e2})`); slErr = true; }
+    if(long ? sj < e1 : sj > e1){ errs.push(`SL ร่วมต้องไม่${long?'ต่ำ':'สูง'}กว่าทุนไม้ 1 (${e1})`); slErr = true; }
+  }
+  const base = sat7dAcctBase(accId);
+  const mult = t.mult || 1, toTHB = tradeCur(t)==='USD' ? base.fx : 1;
+  const out = {errs, qty: ck.qty, cfg: ck.cfg, slErr, base, risk2THB:null, rMult:null, risk1After:null, heatPct:null, cur: tradeCur(t)};
+  if(ck.qty!=null && e2>0 && sj>0 && !slErr){
+    const c = ck.cfg.contract;
+    out.risk2THB = ck.qty * Math.abs(e2 - sj) * c * toTHB;
+    out.rMult = base.riskTHB>0 ? out.risk2THB / base.riskTHB : null;
+    out.risk1After = (long ? (e1 - sj) : (sj - e1)) * (+t.qty) * mult;   /* ≤ 0 = ล็อกกำไร */
+    const old1 = Math.abs(e1 - (+t.sl)) * (+t.qty) * mult * toTHB;
+    const heatTHB = base.openRisk - old1 + Math.max(0, out.risk1After) * toTHB + out.risk2THB;
+    out.heatPct = Calc.heat(heatTHB, base.cap);
+    if(out.heatPct!=null && out.heatPct > base.heatMax + 1e-9) errs.push('heat เกิน');   /* ไม่เช็กโควตาไม้ใหม่/สัปดาห์ */
+  }
+  return out;
+}
+let satPyrCtx = null;
+function satPyrEl(id){ return document.getElementById(id); }
+function satPyrClose(){ document.querySelectorAll('.pyr-sheet').forEach(el=>el.remove()); satPyrCtx = null; }
+function satPyrOpen(tradeId, accId){
+  const t = getBook(accId).trades.find(x=>x.id===tradeId); if(!t) return;
+  const ck = satPyrCheck(t, accId); if(!ck.ok) return;
+  satPyrClose();
+  satPyrCtx = {tradeId, accId};
+  const acct = acctList.find(a=>a.id===accId);
+  const html = `<div class="pyrSh" data-pyr-sheet="1">
+    <h3 style="margin:0 0 8px;font-size:16px">เติมไม้ · ${escHtml(sat7dLabel(t.sym))} · ${escHtml(acct?acct.name:accId)}</h3>
+    <div class="ui-hint">ไม้ 1: ${escHtml(t.bias)} เข้า ${escHtml(String(t.entry))} · SL ${escHtml(String(t.sl))} · ${escHtml(String(t.qty))} lot</div>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="pyrBreak" onchange="satPyrRefresh()"> Break out แล้ว</label>
+    <div class="ui-flds">
+      <div class="ui-fl"><label>ราคาเข้าไม้เติม</label><input type="number" step="any" inputmode="decimal" id="pyrEntry" oninput="satPyrRefresh()"></div>
+      <div class="ui-fl"><label>SL ร่วม</label><input type="number" step="any" inputmode="decimal" id="pyrSL" value="${escHtml(String(t.sl))}" oninput="satPyrRefresh()"></div>
+    </div>
+    <div style="margin:8px 0">lot ไม้เติม (${satPyrPct()}% ของไม้ 1): <b id="pyrLot">${escHtml(String(ck.qty))}</b></div>
+    <div class="ui-hint" id="pyrRisk2"></div>
+    <div class="ui-hint" id="pyrRisk1"></div>
+    <div class="ui-hint" id="pyrHeat"></div>
+    <div id="pyrErr" style="color:var(--bad,#c0392b);font-size:13px;margin:6px 0"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button type="button" class="ui-btn" onclick="satPyrClose()">ยกเลิก</button>
+      <button type="button" class="ui-btn ui-btn-pri" id="pyrSave" onclick="satPyrSave()" disabled>บันทึก · เติมแล้ว</button>
+    </div></div>`;
+  document.body.insertAdjacentHTML('beforeend', UI.sheet(html).replace('ui-sheet-backdrop','ui-sheet-backdrop pyr-sheet'));
+  satPyrRefresh();
+}
+function satPyrRead(){
+  const n = id => { const el = satPyrEl(id); const v = el ? parseFloat(el.value) : NaN; return isFinite(v) ? v : NaN; };
+  const b = satPyrEl('pyrBreak');
+  return {broke: !!(b && b.checked), entry2: n('pyrEntry'), slj: n('pyrSL')};
+}
+function satPyrRefresh(){
+  if(!satPyrCtx) return null;
+  const t = getBook(satPyrCtx.accId).trades.find(x=>x.id===satPyrCtx.tradeId); if(!t) return null;
+  const c = satPyrCalc(t, satPyrCtx.accId, satPyrRead());
+  const set = (id, v) => { const el = satPyrEl(id); if(el) el.textContent = v; };
+  set('pyrRisk2', c.risk2THB!=null ? `ความเสี่ยงไม้เติม ฿${fmt0(Math.round(c.risk2THB))}${c.rMult!=null?` (${fmt2(c.rMult)}R ของ RPT)`:''}` : '');
+  set('pyrRisk1', c.risk1After!=null ? `ความเสี่ยงไม้ 1 หลังย้าย SL ร่วม: ${c.risk1After<=0 ? `${fmt0(Math.max(0, c.risk1After))} ${c.cur}${c.risk1After<0?' · ล็อกกำไร':''}` : fmt0(c.risk1After)+' '+c.cur}` : '');
+  set('pyrHeat', c.heatPct!=null ? `heat หลังเติม ${fmt2(Math.round(c.heatPct*100)/100)}/${c.base.heatMax}%` : '');
+  const er = satPyrEl('pyrErr'); if(er) er.innerHTML = c.errs.map(escHtml).join('<br>');
+  const sv = satPyrEl('pyrSave'); if(sv) sv.disabled = c.errs.length>0;
+  return c;
+}
+/* [บันทึก · เติมแล้ว] — เช็กซ้ำทุกข้อก่อนสร้างไม้ (เรียกตรง ๆ ก็ผ่านด่านเดียวกัน) · คืน true เมื่อสร้างไม้แล้ว */
+function satPyrSave(){
+  if(!satPyrCtx) return false;
+  const {tradeId, accId} = satPyrCtx;
+  const B = getBook(accId), t1 = B.trades.find(x=>x.id===tradeId); if(!t1) return false;
+  const inp = satPyrRead();
+  const c = satPyrCalc(t1, accId, inp);
+  if(c.errs.length || c.qty==null) { satPyrRefresh(); return false; }
+  const idea = satPyrIdea(t1, accId);
+  const keys = ['trend_state','trend_changed','macro_state','macro_stance','playbook_version','driver','size_rule','off_rule','macro_note','macro_recent','mr','mr_level','plan_bias'];
+  const o = {
+    id: 't'+Date.now()+'p', date: thaiToday(), sym: t1.sym, port: t1.port, bias: t1.bias, setup: t1.setup,
+    entry: inp.entry2, sl: inp.slj, tp: t1.tp, qty: c.qty, mult: t1.mult || 1, cur: tradeCur(t1),
+    invalidation: t1.invalidation, setups: t1.setups, cancel_level: t1.cancel_level, condition_id: t1.condition_id, entry_condition: t1.entry_condition, tp_zone: t1.tp_zone,
+    sizeFactor: t1.sizeFactor, status: 'open', prevTrade: null, unplannedMode: false
+  };
+  keys.forEach(k=>{ if(t1[k]!==undefined) o[k] = t1[k]; });
+  const t2 = makeTradeObject(o);
+  t2.pyr_parent = t1.id; t2.pyr_no = 2; t2.sl0 = inp.slj;   /* sl0 = SL ตอนเข้าไม้เติม (ไว้คิด R) */
+  B.trades.push(t2);
+  t1.sl = inp.slj; t1.pyr_child = t2.id;
+  saveBook(accId);
+  if(idea) sat7dWrite('satIdeas', idea.id, {accts:{[accId]:{pyr_trade_id: t2.id}}});
+  satPyrClose();
+  render();
+  return true;
+}
+/* ไม้คู่ (ไม้แรก ↔ ไม้เติม) ที่ยังเปิดอยู่ ในสมุดเดียวกัน — ใช้กับ "ใช้ SL นี้กับทั้ง 2 ไม้" */
+function satPyrSibling(t, A){
+  if(!t || t.status!=='open') return null;
+  const id = t.pyr_child || t.pyr_parent; if(!id) return null;
+  const s = getBook(A).trades.find(x=>x.id===id);
+  return s && s.status==='open' ? s : null;
+}
 /* 7E-4 — บรรทัดป้าย MR ใต้แถวไม้ Sat (ไม้ปกติ = ว่าง) */
 function satV3MrRowLine(t){
   const inc = tradeSetupInc(t) ? `<span class="tag setupinc" data-su-chip="1">Setup ไม่ครบ</span>` : '';   /* SU */
@@ -11031,12 +11200,27 @@ function satV3PlanRowsHtml(idea){
       btns:[{label:'เข้าแล้ว', onClick:`satV3RowMarkOpenAll('${escHtml(idea.id)}')`},
             {label:'ยกเลิก', onClick:`satV3RowCancelAll('${escHtml(idea.id)}')`}]}) + satV3F2cTradeLine(t0) + satV3MrRowLine(t0));
   }
-  openTrades.forEach(({accId, trade})=>{
+  const pyrOpen = satV3PyrOpenTrades(idea);
+  const shown = new Set();
+  const openRow = (accId, trade, pyr) => {
+    const btns = [{label:'ปิดไม้', onClick:`openClosePos('${escHtml(trade.id)}','${escHtml(accId)}')`},
+                  {label:'แก้ SL', onClick:`openTradeEdit('${escHtml(trade.id)}','${escHtml(accId)}')`}];
+    let after = '';
+    if(!pyr && satPyrEligible(trade)){   /* PY1 — ปุ่มเติมไม้ (ไม้แรกที่ยังไม่เคยเติม) */
+      const ck = satPyrCheck(trade, accId);
+      btns.push({label:`เติมไม้ (${satPyrPct()}%)`, onClick:`satPyrOpen('${escHtml(trade.id)}','${escHtml(accId)}')`, disabled:!ck.ok,
+                 title: ck.ok ? 'เติมไม้ครั้งเดียว' : ck.reasons.join(' · '), attr:'data-pyr-btn="1"'});
+      if(!ck.ok) after = `<div class="ui-f2c-tl" data-pyr-why="1">${ck.reasons.map(escHtml).join(' · ')}</div>`;
+    }
     rows.push(UI.row({color: acctColor(acctList.find(a=>a.id===accId)), name: sat7dLabel(idea.asset),
-      tag: trade.bias || idea.bias, detail:`เข้า ${fmt2(trade.entry)} · SL ${fmt2(trade.sl)} · TP ${trade.tp!=null?fmt2(trade.tp):'—'}`,
-      btns:[{label:'ปิดไม้', onClick:`openClosePos('${escHtml(trade.id)}','${escHtml(accId)}')`},
-            {label:'แก้ SL', onClick:`openTradeEdit('${escHtml(trade.id)}','${escHtml(accId)}')`}]}) + satV3F2cTradeLine(trade) + satV3MrRowLine(trade));
+      tag: trade.bias || idea.bias, tagHtml: pyr ? satPyrTagHtml() : '', detail:`เข้า ${fmt2(trade.entry)} · SL ${fmt2(trade.sl)} · TP ${trade.tp!=null?fmt2(trade.tp):'—'}`,
+      btns}) + after + satV3F2cTradeLine(trade) + satV3MrRowLine(trade));
+  };
+  openTrades.forEach(({accId, trade})=>{
+    openRow(accId, trade, false);
+    pyrOpen.filter(x=>x.accId===accId).forEach(x=>{ shown.add(x.trade.id); openRow(x.accId, x.trade, true); });
   });
+  pyrOpen.filter(x=>!shown.has(x.trade.id)).forEach(x=>openRow(x.accId, x.trade, true));   /* ไม้ 1 ปิดไปแล้ว — ไม้เติมยังเปิดอยู่ */
   return rows.join('');
 }
 /* การ์ดร่าง (ยังไม่ได้บันทึก order สักบัญชี) — UI.planCard + adapter Sat (sizeLine/rowExtra จาก satV3PlanAcctCalc) */
