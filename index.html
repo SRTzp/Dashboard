@@ -1819,6 +1819,21 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 .ccStat small{font-size:.72rem}
 .ccStat.warn,.ccStat.lv-warn{background:var(--amber-dim)}.ccStat.lv-warn b{color:var(--amber)}
 .ccStat.lv-over{background:var(--red-dim)}.ccStat.lv-over b{color:var(--red)}
+/* DD1 — ชิป DD บนแถบบัญชี + แถบแจ้ง + ตารางใน sheet */
+.ddChip{font:inherit;font-size:.78rem;font-weight:600;border-radius:var(--r-chip);padding:3px 10px;border:1px solid transparent;cursor:pointer;white-space:nowrap;background:var(--soft);color:var(--muted);min-height:26px;box-shadow:none}
+.ddChip.dd-reduce{background:rgba(224,181,46,.18);color:var(--amber)}
+.ddChip.dd-pause{background:var(--red-dim);color:var(--red)}
+.ddChip.dd-recover{background:var(--blue-dim);color:var(--blue)}
+.ddBar{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:.82rem;border-radius:var(--r-row);padding:7px 12px;margin:0 0 10px;line-height:1.4}
+.ddBar.dd-reduce{background:rgba(224,181,46,.16);color:var(--amber)}
+.ddBar.dd-pause{background:var(--red-dim);color:var(--red)}
+.ddBar.dd-recover{background:var(--blue-dim);color:var(--blue)}
+.ddBar .ccLnk{min-height:0;padding:0 2px;text-decoration:underline;color:inherit}
+.ddNote{font-size:.74rem;color:var(--muted);margin:0 0 6px}
+.ddTbl{width:100%;border-collapse:collapse;font-size:.8rem;margin:8px 0}
+.ddTbl th,.ddTbl td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:left}.ddTbl .r{text-align:right;font-family:var(--mono)}
+.ddWeak{margin:8px 0;padding:8px 10px;background:var(--red-dim);border-radius:var(--r-row)}.ddWeakRow{font-size:.84rem;padding:2px 0}
+#ddReview{width:100%;box-sizing:border-box;font:inherit;font-size:.86rem;padding:8px;border:1px solid var(--line);border-radius:var(--r-row);background:var(--card);color:var(--dark)}
 .ccCard{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:14px;margin-bottom:12px;min-width:0}
 .ccCard.isRed{border-color:var(--dn)}
 .ccCard.flash{box-shadow:0 0 0 3px var(--lime-dim)}
@@ -2408,6 +2423,10 @@ button.ccChip{cursor:pointer;min-height:24px}
       <div class="f"><label>บันได L: เสี่ยงเต็มบันได <span class="crUnit">% ของถัง Core</span></label><input type="number" step="any" inputmode="decimal" id="sCrLRisk" oninput="crOnInput()"><div class="crErr" data-err-for="sCrLRisk"></div></div>
       <div class="f"><label>L รวมทุกตัว <span class="crUnit">% ของถัง Core</span></label><input type="number" step="any" inputmode="decimal" id="sCrLShare" oninput="crOnInput()"><div class="crErr" data-err-for="sCrLShare"></div></div>
       <div class="f"><label>ประตู f <span class="crUnit">สัปดาห์</span></label><input type="number" step="any" inputmode="decimal" id="sCrGate" oninput="crOnInput()"><div class="crErr" data-err-for="sCrGate"></div></div>
+      <div class="f"><label>เบรก DD: ลดขนาดเมื่อ DD ถึง <span class="crUnit">% ของถัง Core</span></label><input type="number" step="any" inputmode="decimal" id="sCrDdReduce" oninput="crOnInput()"><div class="crErr" data-err-for="sCrDdReduce"></div></div>
+      <div class="f"><label>เบรก DD: พักเมื่อ DD ถึง <span class="crUnit">% ของถัง Core</span></label><input type="number" step="any" inputmode="decimal" id="sCrDdPause" oninput="crOnInput()"><div class="crErr" data-err-for="sCrDdPause"></div></div>
+      <div class="f"><label>เบรก DD: พักนาน <span class="crUnit">สัปดาห์ (1–8)</span></label><input type="number" step="1" inputmode="numeric" id="sCrDdWeeks" oninput="crOnInput()"><div class="crErr" data-err-for="sCrDdWeeks"></div></div>
+      <div class="f"><label>เบรก DD: ฟื้นตัวจบเมื่อได้คืน <span class="crUnit">R (0.5–10)</span></label><input type="number" step="any" inputmode="decimal" id="sCrDdRecoverR" oninput="crOnInput()"><div class="crErr" data-err-for="sCrDdRecoverR"></div></div>
     </div>
     <div class="divlbl crSub" data-c-tiercrit-h>เกณฑ์ Tier <span class="crUnit">ค่าเริ่มต้นตาม Damodaran · ปรับได้</span></div>
     <div class="fgrid" data-c-tiercrit>
@@ -2426,6 +2445,10 @@ button.ccChip{cursor:pointer;min-height:24px}
       <div class="f"><label>เสี่ยงต่อไม้ (ปกติ) <span class="crUnit">% ของถัง Sat</span></label><input type="number" step="any" inputmode="decimal" id="sSatRpt" oninput="crOnInput()"><div class="crErr" data-err-for="sSatRpt"></div></div>
       <div class="f"><label>เสี่ยงต่อไม้ (ผ่านเกณฑ์พิสูจน์ <span id="satProveTxt"></span>) <span class="crUnit">% ของถัง Sat</span></label><input type="number" step="any" inputmode="decimal" id="sSatRptHi" oninput="crOnInput()"><div class="crErr" data-err-for="sSatRptHi"></div></div>
       <div class="f"><label>ไม้ใหม่ต่อสัปดาห์ <span class="crUnit">ไม้ (1–10)</span></label><input type="number" step="1" inputmode="numeric" id="sSatNewMax" oninput="crOnInput()"><div class="crErr" data-err-for="sSatNewMax"></div></div>
+      <div class="f"><label>เบรก DD: ลดขนาดเมื่อ DD ถึง <span class="crUnit">% ของถัง Sat</span></label><input type="number" step="any" inputmode="decimal" id="sSatDdReduce" oninput="crOnInput()"><div class="crErr" data-err-for="sSatDdReduce"></div></div>
+      <div class="f"><label>เบรก DD: พักเมื่อ DD ถึง <span class="crUnit">% ของถัง Sat</span></label><input type="number" step="any" inputmode="decimal" id="sSatDdPause" oninput="crOnInput()"><div class="crErr" data-err-for="sSatDdPause"></div></div>
+      <div class="f"><label>เบรก DD: พักนาน <span class="crUnit">สัปดาห์ (1–8)</span></label><input type="number" step="1" inputmode="numeric" id="sSatDdWeeks" oninput="crOnInput()"><div class="crErr" data-err-for="sSatDdWeeks"></div></div>
+      <div class="f"><label>เบรก DD: ฟื้นตัวจบเมื่อได้คืน <span class="crUnit">R (0.5–10)</span></label><input type="number" step="any" inputmode="decimal" id="sSatDdRecoverR" oninput="crOnInput()"><div class="crErr" data-err-for="sSatDdRecoverR"></div></div>
     </div>
     <div class="hint" id="satHeatHint"></div>
   </div></details>
@@ -3023,12 +3046,93 @@ button.ccChip{cursor:pointer;min-height:24px}
     return isFinite(due) && isFinite(now) && now > due;
   }
 
+  /* ── DD1 · เบรกชั้น 3 (DD ของถัง) — ปกติ → ลดขนาด → พัก → ฟื้นตัว ──
+     ฟังก์ชันบริสุทธิ์: ไม่อ่านนาฬิกา (รับ weekKey = วันอาทิตย์ต้นสัปดาห์ปัจจุบัน · today = YYYY-MM-DD จากข้างนอก) · ไม่แตะ DOM/ที่เก็บข้อมูล
+     รับ {equity, peak, stage, stageSince, pauseUntil, reviewDone, recoverDd0, weekly:{weekKey:ddPct}, recoverPnl, oneR, cfg:{ddReduce,ddPause,ddPauseWeeks,ddRecoverR}, weekKey, today}
+       recoverPnl = กำไรสุทธิจากไม้ที่ปิดตั้งแต่เข้า recover (เงินเดียวกับ oneR) · oneR = 1R = RPT ปกติ × ถัง
+       belowWeeks/pauseWeeks ในเอกสาร brief: คำนวณจาก weekly + cfg.ddPauseWeeks ในฟังก์ชันนี้ (ไม่ให้ผู้เรียกนับเอง)
+     คืน state ใหม่ (peak, stage, stageSince, pauseUntil, reviewDone, recoverDd0, weekly) + {ddPct, sizeFactor, allowNew, allowLadder, reasons[], entered, info{}}
+     ตีความ (จดในรายงาน DD1):
+       · "ติดกัน 2 สัปดาห์" = สัปดาห์ที่จบแล้ว 2 สัปดาห์ล่าสุดติดกันตามปฏิทิน (weekKey−7, weekKey−14) ที่ DD < ddReduce และต้องเป็นสัปดาห์หลังสัปดาห์ที่เข้าสถานะนั้น · DD ตอนนี้ต้อง < ddReduce ด้วย (กันเด้งกลับ)
+       · พักซ้ำ (stage recover หรือ reduce ที่ต่อมาจาก recover = มี recoverDd0): DD ≥ ddPause และ DD ≥ recoverDd0 + repauseGapPct (1R เป็น % ของ RPT ปกติ · ไม่ส่ง = 0 → "ลึกกว่า recoverDd0")
+         recoverDd0 = DD ตอนออกจากพัก · เก็บตลอด recover และ reduce ที่ต่อมา · ล้างเมื่อ normal/pause — กัน deadlock ถ้าออกจากพักตอน DD ยัง ≥ 20 และกันพักซ้ำเพราะลึกขึ้นนิดเดียว
+       · ออกจาก recover (+2R หรือ 2 สัปดาห์ติดกัน): DD ≥ ddReduce → reduce ทันทีในรอบเดียวกัน (stageSince = วันนี้) · ต่ำกว่า → normal */
+  var DD_STAGES = ['normal', 'reduce', 'pause', 'recover'];
+  function ddIsDate(s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+  function ddUtc(s) { return Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)); }
+  function ddAddDays(s, n) {
+    var d = new Date(ddUtc(s) + n * 86400000), p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate());
+  }
+  function ddDaysBetween(a, b) { return Math.round((ddUtc(b) - ddUtc(a)) / 86400000); }
+  function ddWeekOf(s) { return ddAddDays(s, -new Date(ddUtc(s)).getUTCDay()); }   // อาทิตย์ต้นสัปดาห์ (ตรง wpWeekKey)
+  function ddStep(o) {
+    o = o || {};
+    if (!num(o.equity)) return fail('NO_EQUITY');
+    if (!ddIsDate(o.weekKey)) return fail('BAD_WEEK');
+    var cfg = o.cfg || {};
+    var reduceAt = num(cfg.ddReduce) ? cfg.ddReduce : 12.5, pauseAt = num(cfg.ddPause) ? cfg.ddPause : 20;
+    var pauseWeeks = num(cfg.ddPauseWeeks) ? cfg.ddPauseWeeks : 2, recoverR = num(cfg.ddRecoverR) ? cfg.ddRecoverR : 2;
+    if (!(reduceAt > 0 && reduceAt < pauseAt)) return fail('BAD_CFG');
+    var today = ddIsDate(o.today) ? o.today : o.weekKey;
+    var peak = (num(o.peak) && o.peak > 0) ? o.peak : o.equity;
+    if (o.equity > peak) peak = o.equity;
+    var ddPct = peak > 0 ? Math.max(0, (peak - o.equity) / peak * 100) : 0;
+    var HI = pauseAt - EPS, LO = reduceAt - EPS;
+    // snapshot รายสัปดาห์ (ค่าล่าสุดของสัปดาห์ชนะ · เก็บ 12 สัปดาห์ล่าสุด)
+    var weekly = {}, k, src = o.weekly || {};
+    for (k in src) if (ddIsDate(k) && num(src[k])) weekly[k] = src[k];
+    var prev1 = ddAddDays(o.weekKey, -7), prev2 = ddAddDays(o.weekKey, -14);   // อ่านก่อนเขียนสัปดาห์ปัจจุบัน
+    weekly[o.weekKey] = Math.round(ddPct * 100) / 100;
+    var keys = Object.keys(weekly).sort().reverse().slice(0, 12), w2 = {};
+    keys.forEach(function (x) { w2[x] = weekly[x]; });
+    weekly = w2;
+
+    var stage = DD_STAGES.indexOf(o.stage) >= 0 ? o.stage : 'normal';
+    var since = ddIsDate(o.stageSince) ? o.stageSince : today;
+    var pauseUntil = ddIsDate(o.pauseUntil) ? o.pauseUntil : null;
+    var reviewDone = !!o.reviewDone, dd0 = num(o.recoverDd0) ? o.recoverDd0 : null, entered = null;
+    var after = ddWeekOf(since);
+    var below2 = ddIsDate(prev1) && prev2 > after && num(src[prev1]) && num(src[prev2]) && src[prev1] < reduceAt - EPS && src[prev2] < reduceAt - EPS && ddPct < LO;
+    var gap = (num(o.repauseGapPct) && o.repauseGapPct > 0) ? o.repauseGapPct : 0;
+    var oneR = num(o.oneR) ? o.oneR : 0, rPnl = num(o.recoverPnl) ? o.recoverPnl : 0;
+    function toPause() { stage = 'pause'; since = today; pauseUntil = ddAddDays(today, 7 * pauseWeeks); reviewDone = false; dd0 = null; entered = 'pause'; }
+    function deeper() { return dd0 == null || (gap > 0 ? ddPct >= dd0 + gap - EPS : ddPct > dd0 + EPS); }
+    function to(st) { stage = st; since = today; entered = st; }
+    if (stage === 'normal') {
+      if (ddPct >= HI) toPause(); else if (ddPct >= LO) to('reduce');
+    } else if (stage === 'reduce') {
+      if (ddPct >= HI && deeper()) toPause(); else if (below2) to('normal');
+    } else if (stage === 'pause') {
+      if (!pauseUntil) pauseUntil = ddAddDays(since, 7 * pauseWeeks);
+      if (today >= pauseUntil && reviewDone) { to('recover'); dd0 = ddPct; }
+    } else {   // recover
+      if (ddPct >= HI && deeper()) toPause();
+      else if ((oneR > 0 && rPnl >= recoverR * oneR - EPS) || below2) to(ddPct >= LO ? 'reduce' : 'normal');
+    }
+    if (stage !== 'pause') pauseUntil = null;
+    if (stage !== 'recover' && stage !== 'reduce') dd0 = null;
+    var reasons = [];
+    if (stage === 'reduce') reasons.push('DD_REDUCE');
+    if (stage === 'pause') reasons.push('DD_PAUSE');
+    if (stage === 'recover') reasons.push('DD_RECOVER');
+    return {
+      ok: true, peak: peak, stage: stage, stageSince: since, pauseUntil: pauseUntil, reviewDone: stage === 'pause' ? reviewDone : false,
+      recoverDd0: dd0, weekly: weekly, ddPct: ddPct,
+      sizeFactor: stage === 'normal' ? 1 : (stage === 'pause' ? 0 : 0.5), allowNew: stage !== 'pause', allowLadder: stage === 'normal',
+      reasons: reasons, entered: entered,
+      info: { pauseLeftDays: (stage === 'pause' && pauseUntil) ? Math.max(0, ddDaysBetween(today, pauseUntil)) : null, timeDone: stage === 'pause' && !!pauseUntil && today >= pauseUntil,
+              recoverNeed: recoverR * oneR, recoverPnl: rPnl, reduceAt: reduceAt, pauseAt: pauseAt, belowWeeks: below2 }
+    };
+  }
+
   return {
     DEFAULTS: DEFAULTS, floorLot: floorLot,
     firstLot: firstLot, addLot: addLot, ladder: ladder, applyStopMove: applyStopMove,
     portfolioSplit: portfolioSplit, ladderShare: ladderShare, layer2: layer2,
     accountDrop: accountDrop, vsCost: vsCost, emergencyStop: emergencyStop, status: status,
-    openGate: openGate, canPlaceLadder: canPlaceLadder, classifyTier: classifyTier, tierBadge: tierBadge
+    openGate: openGate, canPlaceLadder: canPlaceLadder, classifyTier: classifyTier, tierBadge: tierBadge,
+    ddStep: ddStep, ddWeekOf: ddWeekOf, ddAddDays: ddAddDays, ddDaysBetween: ddDaysBetween
   };
 });
 /* === core-size.js END === */
@@ -4731,14 +4835,230 @@ function coreRiskCfg(acctId){
   /* 7E-2a-fix: maxLots = จำนวนเต็ม 1–6 เท่านั้น (ค่าอื่น → 3) */
   cfg.maxLots = (Number.isInteger(raw.maxLots) && raw.maxLots>=1 && raw.maxLots<=6) ? raw.maxLots : 3;
   cfg.market = ['US','TH','both'].includes(raw.market) ? raw.market : coreRiskDefaultMarket(a);
+  ddCfgFix(raw, cfg, 2);   /* DD1 — ddReduce/ddPause/ddPauseWeeks/ddRecoverR */
   return cfg;
 }
 /* ค่าส่งเข้า Calc.coreSize (ทศนิยม) จากค่าตั้งของบัญชี */
 function coreSizeOpts(acctId){
   const c = coreRiskCfg(acctId);
-  return {riskPct:c.riskPct/100, tierCap:{A:c.tierA/100, B:c.tierB/100}, addRatio:c.addRatio/100, layer2Cap:c.l2Cap/100, layer2Warn:c.l2Warn/100,
+  /* DD1 — riskPct ที่ส่งเข้า Calc.coreSize = riskPct × sizeFactor (ลดขนาด/ฟื้นตัว = ×0.5) · riskPctBase = ค่าปกติ (ไม้เติมไม่คูณ) · สูตรใน Calc.coreSize ไม่แตะ */
+  const ev = ddEval(acctId || acctActive, 'core'), f = (ev && ev.stage!=='pause') ? ev.sizeFactor : 1;
+  return {riskPct:c.riskPct/100*f, riskPctBase:c.riskPct/100, ddFactor:f, tierCap:{A:c.tierA/100, B:c.tierB/100}, addRatio:c.addRatio/100, layer2Cap:c.l2Cap/100, layer2Warn:c.l2Warn/100,
           emergencyPct:c.emergencyPct/100, ladderBudget:c.ladderBudget/100, ladderRiskCap:c.ladderRisk/100, ladderShareCap:c.ladderShare/100, gateStreak:c.gateWeeks,
           tierCrit:{roicMin:c.tierRoic/100, ndEbitdaMax:c.tierNd, fcfConvMin:c.tierFcf/100, growth:{revGrowthMin:c.tierRevG/100, revCagr3Min:c.tierCagr/100, ndEbitdaMax:c.tierNdG}}};
+}
+/* ═══════════════════════════════════════════════════════════════════════════
+   DD1 — เบรกชั้น 3 (DD ของถัง) · Core + Sat แยกถัง แยกบัญชี · ปกติ → ลดขนาด → พัก → ฟื้นตัว
+   ตัวคิด stage = Calc.coreSize.ddStep (core-size.js · บริสุทธิ์) · ที่นี่ = รวบรวมข้อมูล (equity ต่อถัง) + เก็บ state + บล็อก + หน้าจอ
+   state เก็บที่ settings.ddState[core|sat] = {peak, baseAt, tank, stage, stageSince, pauseUntil, review{text,at}, recoverDd0, weekly{weekKey:ddPct}, rebasedAt}
+   ddEval = อ่านล้วน (ไม่เขียน) · ddSync = เขียนเฉพาะเมื่อค่าเปลี่ยน (เรียกท้าย render หลังยืนยัน server) · แก้ทุนถัง (tank ≠ ที่เก็บ) = rebase อัตโนมัติ
+   equity — Core: ทุนถัง + P&L ไม้ Core ที่ปิดตั้งแต่ baseAt + กำไร/ขาดทุนไม้ที่ถือ (qty × (ราคาปิดสัปดาห์ − ทุนเฉลี่ย)) · ไม่มีราคา = 0 + นับ "ขาดราคา"
+            Sat : ทุนถัง + P&L ไม้ Sat ที่ปิดตั้งแต่ baseAt — ไม้ Sat ที่เปิดอยู่ไม่มีราคาสด จึงไม่นับ (ความเสี่ยงค้างคุมด้วย heat อยู่แล้ว)
+   หน่วย equity/peak = สกุลของถัง (Core ฿ · Sat ตาม PORTS.satB.cur) — DD% ของ Sat จึงไม่ขยับตามค่าเงิน */
+const DD_BUCKETS = {core:{port:'core', name:'Core'}, sat:{port:'satB', name:'Sat'}};
+const DD_REVIEW_MIN = 20;
+function ddBucketsOf(A){
+  const a = acctList.find(x=>x.id===A); if(!a) return [];
+  const out = [];
+  if((a.ports || ACCT_PORT_KEYS).includes('core')) out.push('core');
+  if(Array.isArray(a.ports) && a.ports.includes('satB')) out.push('sat');
+  return out;
+}
+/* ค่าตั้ง DD ในค่าตั้งของแต่ละถัง (raw = settings.coreRisk / settings.satRisk) · ผิดกติกา = กลับค่าเริ่มต้น */
+function ddCfgFix(raw, cfg, pauseWeeksDef){
+  const n = v => typeof v==='number' && isFinite(v);
+  let r = n(raw.ddReduce) ? raw.ddReduce : 12.5, p = n(raw.ddPause) ? raw.ddPause : 20;
+  if(!(r>0 && r<p && p<=50)){ r = 12.5; p = 20; }
+  cfg.ddReduce = r; cfg.ddPause = p;
+  cfg.ddPauseWeeks = (Number.isInteger(raw.ddPauseWeeks) && raw.ddPauseWeeks>=1 && raw.ddPauseWeeks<=8) ? raw.ddPauseWeeks : pauseWeeksDef;
+  cfg.ddRecoverR = (n(raw.ddRecoverR) && raw.ddRecoverR>=0.5 && raw.ddRecoverR<=10) ? raw.ddRecoverR : 2;
+  return cfg;
+}
+const DD_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function ddDateTxt(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); return m ? `${+m[3]} ${DD_MONTHS[+m[2]-1]}` : '—'; }
+function ddPnlTHB(t, fx){
+  if(t.status!=='closed' || !(t.exitPrice>0)) return null;
+  const p = (t.exitPrice - t.entry) * t.qty * (t.mult||1) * (t.bias==='Short' ? -1 : 1);
+  return (t.cur || PORTS[t.port].cur)==='USD' ? p*fx : p;
+}
+/* ท่อเดียว: อ่านข้อมูล → ddStep → คืนผล + state ใหม่ (ยังไม่เขียน) */
+function ddEval(A, bucket){
+  const cs = Calc.coreSize; if(!cs || !cs.ddStep || !DD_BUCKETS[bucket]) return null;
+  let B; try{ B = getBook(A); }catch(e){ return null; }
+  const st = B.settings || {}, isCore = bucket==='core', port = DD_BUCKETS[bucket].port;
+  const cfg = isCore ? coreRiskCfg(A) : satRiskCfg(A);
+  const fx = isCore ? (+st.fx || 1) : ((state && state.settings && +state.settings.fx) || +st.fx || 1);
+  const natCur = PORTS[port].cur, capNat = +(st.capital && st.capital[port]) || 0;
+  const tankTHB = capNat * (natCur==='USD' ? fx : 1), toNat = thb => natCur==='USD' ? thb/fx : thb;
+  const today = thaiToday(), weekKey = wpWeekKey();
+  const ds0 = (st.ddState && st.ddState[bucket] && typeof st.ddState[bucket]==='object') ? st.ddState[bucket] : null;
+  const rebased = !!(ds0 && typeof ds0.tank==='number' && Math.abs(ds0.tank - capNat) > 0.005);   /* แก้ทุนถัง → เริ่มนับใหม่ */
+  const base = rebased ? null : ds0;
+  const iso = s => /^\d{4}-\d{2}-\d{2}$/.test(s||'');
+  const baseAt = (base && iso(base.baseAt)) ? base.baseAt : today;
+  const trades = (B.trades || []).filter(t=>t.port===port);
+  let realized = 0, unreal = 0, missing = 0;
+  const pnlSince = d => trades.reduce((a,t)=>{ const p = ddPnlTHB(t, fx); return (p!=null && String(t.exitDate||'') >= d) ? a+p : a; }, 0);
+  realized = pnlSince(baseAt);
+  const posList = [];
+  if(isCore){
+    const day = posThaiToday();
+    trades.filter(t=>t.status==='open').forEach(t=>{
+      const c = coreCardsList.find(x=>x.trade_id===t.id);
+      const live = c && c.px>0 && cs.status({px:+c.px, pxDate:c.pxDate, today:day, stop:+t.sl}).status!=='na';
+      if(!live){ missing++; return; }
+      const r = (t.cur || PORTS.core.cur)==='USD' ? fx : 1;
+      unreal += ((+c.px) - (+t.entry)) * (+t.qty) * (t.mult||1) * r;
+      posList.push({t, c, px:+c.px, r});
+    });
+  }
+  const equityTHB = tankTHB + realized + unreal, equity = toNat(equityTHB);
+  const oneR = tankTHB * ((isCore ? cfg.riskPct : cfg.rpt) / 100);
+  const stage0 = base ? base.stage : 'normal';
+  const since0 = (base && iso(base.stageSince)) ? base.stageSince : today;
+  const recoverPnl = stage0==='recover' ? pnlSince(since0) : 0;
+  const rv = base && base.review && typeof base.review==='object' ? base.review : null;
+  const reviewDone = !!(base && stage0==='pause' && rv && String(rv.text||'').trim().length>=DD_REVIEW_MIN && String(rv.at||'').slice(0,10) >= since0);
+  const res = cs.ddStep({equity, peak: base ? base.peak : null, stage: stage0, stageSince: since0, pauseUntil: base ? base.pauseUntil : null, reviewDone,
+    recoverDd0: base ? base.recoverDd0 : null, weekly: base ? base.weekly : {}, recoverPnl, oneR, cfg, weekKey, today,
+    repauseGapPct: isCore ? cfg.riskPct : cfg.rpt});   /* DD1fix — ระยะกันพักซ้ำ = 1R เป็น % (RPT ปกติ ไม่ใช่ rptHi) */
+  if(!res || !res.ok) return null;
+  const r4 = x => Math.round(x*1e4)/1e4;
+  const next = {peak: r4(res.peak), baseAt, tank: capNat, stage: res.stage, stageSince: res.stageSince, pauseUntil: res.pauseUntil || null,
+    review: (res.stage==='pause' && rv && res.entered!=='pause') ? {text: String(rv.text||''), at: String(rv.at||'')} : null,
+    recoverDd0: res.recoverDd0==null ? null : r4(res.recoverDd0), weekly: res.weekly, rebasedAt: rebased ? today : ((base && iso(base.rebasedAt)) ? base.rebasedAt : null)};
+  const canon = s => !s ? '' : JSON.stringify([s.peak, s.baseAt, s.tank, s.stage, s.stageSince, s.pauseUntil || null, s.review ? [s.review.text, s.review.at] : null,
+    s.recoverDd0==null ? null : s.recoverDd0, Object.keys(s.weekly||{}).sort().map(k=>[k, s.weekly[k]]), s.rebasedAt || null]);
+  const R = oneR>0 ? recoverPnl/oneR : 0;
+  return {A, bucket, cfg, res, next, prev: ds0, changed: canon(next)!==canon(ds0), rebased, today, weekKey, equity, peak: res.peak, ddPct: res.ddPct, tankTHB, oneR, natCur,
+    stage: res.stage, sizeFactor: res.sizeFactor, allowNew: res.allowNew, allowLadder: res.allowLadder, pauseUntil: res.pauseUntil, entered: res.entered,
+    missing, recoverPnl, recoverRNow: R, recoverNeed: cfg.ddRecoverR, reviewDone, review: next.review, weekly: res.weekly, info: res.info, posList,
+    rebasedAt: next.rebasedAt, isCore};
+}
+let ddSyncing = false;
+/* เขียน state ที่เปลี่ยนลง settings.ddState (บัญชีละ ≤ 2 ถัง) · ไม่เขียนถ้าไม่เปลี่ยน · รอยืนยัน server ก่อนเสมอ */
+function ddSync(){
+  if(ddSyncing || acctCtx!==null || cl2aGateOn || !state || !serverConfirmed || !stateFromServer) return false;
+  ddSyncing = true; let any = false;
+  try{
+    acctList.forEach(a=>{
+      ddBucketsOf(a.id).forEach(b=>{
+        const ev = ddEval(a.id, b); if(!ev || !ev.changed) return;
+        const B = getBook(a.id);
+        B.settings.ddState = Object.assign({}, B.settings.ddState || {}, {[b]: ev.next});
+        saveBook(a.id); any = true;
+      });
+    });
+  }catch(e){ console.warn('ddSync:', e); }
+  finally{ ddSyncing = false; }
+  return any;
+}
+function ddNote(ev){   /* คำอธิบายสั้นของสถานะ (ใช้ซ้ำในแถบ/เหตุผลบล็อก) */
+  const pw = ev.pauseUntil ? ddDateTxt(ev.pauseUntil) : '—';
+  return {pause: `เบรก DD: พักถึง ${pw} — เลื่อน ${ev.isCore?'Stop':'SL'}/ขาย/เติมตัวที่กำไรได้`,
+          addOnly: ev.isCore ? 'เบรก DD: เติมได้เฉพาะตัวที่ Stop ≥ ทุน' : 'เบรก DD: เติมได้เฉพาะตัวที่ SL ≥ ทุน',
+          ladder: ev.stage==='pause' ? `เบรก DD: พักถึง ${pw} — งดเปิดบันไดใหม่` : `เบรก DD: ${ev.stage==='reduce'?'ลดขนาด':'ฟื้นตัว'} — งดเปิดบันได L ใหม่ (ระดับที่จองไว้แล้วซื้อต่อได้ตามแผน)`};
+}
+function ddChipHtml(ev){
+  if(!ev) return '';
+  const dd = fmt2(Math.round(ev.ddPct*100)/100);
+  const lbl = ev.stage==='normal' ? 'ปกติ' : ev.stage==='reduce' ? 'ลดขนาด ×0.5' : ev.stage==='pause' ? `พักถึง ${ddDateTxt(ev.pauseUntil)}`
+    : `ฟื้นตัว ${ev.recoverRNow>=0?'+':''}${(Math.round(ev.recoverRNow*10)/10).toFixed(1)}R / ${fmt2(ev.recoverNeed)}R`;
+  const miss = ev.missing>0 ? ` · ขาดราคา ${ev.missing} ตัว` : '';
+  return `<button type="button" class="ddChip dd-${ev.stage}" data-dd-chip="${ev.bucket}" data-stage="${ev.stage}" title="DD ของถัง ${DD_BUCKETS[ev.bucket].name} · กดดูรายละเอียด${escHtml(miss)}" onclick="ddSheetOpen('${escHtml(ev.A)}','${ev.bucket}')">DD ${dd}% · ${escHtml(lbl)}</button>`;
+}
+/* แถบแจ้ง 1 บรรทัด (stage ≠ normal) + ลิงก์รายละเอียด · rebase ล่าสุด = บรรทัดเล็ก */
+function ddBarHtml(ev){
+  if(!ev) return '';
+  let h = '';
+  if(ev.rebasedAt && ev.rebasedAt >= posAddDaysISO(ev.today, -7)) h += `<div class="ddNote" data-dd-rebase="${ev.bucket}">เริ่มนับ DD ใหม่ (แก้ทุนถัง)</div>`;
+  if(ev.stage==='normal') return h;
+  const c = ev.cfg, nm = DD_BUCKETS[ev.bucket].name, ladder = ev.isCore ? ' · งดเปิดบันได L ใหม่' : '';
+  const txt = ev.stage==='reduce' ? `เบรก DD ${nm}: ลดขนาด — ไม้ใหม่ ×0.5${ladder} · กลับปกติเมื่อ DD ต่ำกว่า ${fmt2(c.ddReduce)}% ติดกัน 2 สัปดาห์`
+    : ev.stage==='pause' ? `เบรก DD ${nm}: พักถึง ${ddDateTxt(ev.pauseUntil)} (อีก ${ev.info.pauseLeftDays} วัน) — ห้ามเปิดไม้ใหม่ · ${ev.reviewDone ? 'เขียนทบทวนแล้ว' : 'ต้องเขียนทบทวน'}`
+    : `เบรก DD ${nm}: ฟื้นตัว — ไม้ใหม่ ×0.5${ladder} · กำไรที่ปิดแล้ว ${ev.recoverRNow>=0?'+':''}${(Math.round(ev.recoverRNow*10)/10).toFixed(1)}R / ${fmt2(ev.recoverNeed)}R`;
+  return h + `<div class="ddBar dd-${ev.stage}" data-dd-bar="${ev.bucket}" data-stage="${ev.stage}"><span>${escHtml(txt)}</span> <button type="button" class="ccLnk" data-dd-detail onclick="ddSheetOpen('${escHtml(ev.A)}','${ev.bucket}')">รายละเอียด</button></div>`;
+}
+function posAddDaysISO(iso, n){ const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); }
+/* ตัวอ่อนสุด 3 ตัวของ Core (DD ≥ เกณฑ์พัก): ขาดทุนเป็น R มากสุด → ห่าง Stop น้อยสุด · R ของตัว = (ราคา − ทุน) × qty ÷ (|ทุน − SL ตอนเข้า| × qty) */
+function ddWeakest(ev){
+  const out = (ev.posList || []).map(p=>{
+    const t = p.t, s0 = sl0Of(t) || +t.sl, den = Math.abs((+t.entry) - s0) * (+t.qty) * (t.mult||1) * p.r;
+    const pnl = (p.px - (+t.entry)) * (+t.qty) * (t.mult||1) * p.r;
+    const rr = den>0 ? pnl/den : (ev.oneR>0 ? pnl/ev.oneR : 0);
+    return {ticker: p.c.ticker, r: rr, pnlTHB: pnl, stopDist: p.px>0 ? (p.px - (+t.sl))/p.px*100 : 0};
+  });
+  out.sort((a,b)=> (a.r - b.r) || (a.stopDist - b.stopDist));
+  return out.slice(0,3);
+}
+function ddSheetHtml(ev){
+  const c = ev.cfg, nm = DD_BUCKETS[ev.bucket].name, sym = ev.natCur==='USD' ? '$' : '฿';
+  const stTxt = {normal:'ปกติ', reduce:'ลดขนาด ×0.5', pause:`พักถึง ${ddDateTxt(ev.pauseUntil)}`, recover:'ฟื้นตัว ไม้ใหม่ ×0.5'}[ev.stage];
+  const wk = Object.keys(ev.weekly).sort().reverse();
+  const rows = wk.map(k=>`<tr data-dd-week="${k}"><td>${escHtml(ddDateTxt(k))}${k===ev.weekKey?' (สัปดาห์นี้)':''}</td><td class="r">${fmt2(ev.weekly[k])}%</td></tr>`).join('');
+  let h = `<h3>เบรก DD · ${nm} · ${escHtml((acctList.find(a=>a.id===ev.A)||{}).name||ev.A)}</h3>
+    <div class="ccSub" data-dd-state>สถานะ <b>${escHtml(stTxt)}</b> · DD <b>${fmt2(Math.round(ev.ddPct*100)/100)}%</b> · equity ${sym}${fmt0(ev.equity)} · สูงสุด ${sym}${fmt0(ev.peak)}</div>
+    <div class="ccSub" data-dd-rules>เกณฑ์: ลดขนาด ≥ ${fmt2(c.ddReduce)}% · พัก ≥ ${fmt2(c.ddPause)}% (${c.ddPauseWeeks} สัปดาห์ + เขียนทบทวน) · กลับปกติเมื่อ DD ต่ำกว่า ${fmt2(c.ddReduce)}% ติดกัน 2 สัปดาห์ · ฟื้นตัวจบเมื่อกำไรที่ปิดแล้ว ≥ ${fmt2(c.ddRecoverR)}R</div>`;
+  if(ev.missing>0) h += `<div class="ccWarn" data-dd-missing>ขาดราคา ${ev.missing} ตัว — นับเป็น 0 ใน equity (อัปเดตราคาปิดสัปดาห์ให้ครบ)</div>`;
+  if(!ev.isCore) h += `<div class="ccSub">equity Sat = ทุนถัง + P&L ไม้ที่ปิดแล้ว (ไม้ที่เปิดอยู่ไม่นับ — คุมด้วย heat)</div>`;
+  if(ev.stage==='pause'){
+    const left = ev.info.pauseLeftDays;
+    h += `<div class="ccSub" data-dd-left>${left>0 ? `เหลือเวลาพัก ${left} วัน` : 'ครบเวลาพักแล้ว'} · ${ev.reviewDone ? 'เขียนทบทวนแล้ว' : 'ยังไม่ได้เขียนทบทวน'}${(left===0 && ev.reviewDone) ? ' → เข้าสู่ฟื้นตัว' : ''}</div>
+      <div class="ccF"><label>ทบทวน: ผิดตรงไหน / จะแก้อะไร <span class="ccSub">(อย่างน้อย ${DD_REVIEW_MIN} ตัวอักษร)</span></label>
+        <textarea id="ddReview" rows="4" oninput="ddReviewIn()">${escHtml(ev.review ? ev.review.text : '')}</textarea><div class="ccErr" id="ddReviewErr" style="display:none"></div></div>`;
+  }
+  if((ev.stage==='recover' || ev.stage==='reduce') && ev.next.recoverDd0!=null){   /* DD1fix */
+    const gap = ev.isCore ? ev.cfg.riskPct : ev.cfg.rpt, re = Math.max(c.ddPause, ev.next.recoverDd0 + gap);
+    h += `<div class="ccSub" data-dd-repause>พักใหม่เมื่อ DD ≥ ${(Math.round(re*100)/100).toFixed(2)}%</div>`;
+  }
+  if(ev.stage==='recover') h += `<div class="ccSub" data-dd-rec>กำไรสุทธิที่ปิดแล้วตั้งแต่ ${escHtml(ddDateTxt(ev.next.stageSince))}: ${ev.recoverRNow>=0?'+':''}${(Math.round(ev.recoverRNow*100)/100).toFixed(2)}R / ${fmt2(ev.recoverNeed)}R (1R = ฿${fmt0(ev.oneR)})</div>`;
+  if(ev.isCore && ev.ddPct >= c.ddPause - 1e-9){
+    const w = ddWeakest(ev);
+    h += `<div class="ddWeak" data-dd-weak><div class="ccSub"><b>ตัวที่อ่อนสุด ${w.length} ตัว</b> — ทบทวน ลดตัวอ่อนสุด — คุณตัดสินใจเอง</div>${w.length ? w.map((x,i)=>`<div class="ddWeakRow" data-dd-weakrow="${i}"><b>${escHtml(x.ticker)}</b> · ${x.r>=0?'+':''}${(Math.round(x.r*100)/100).toFixed(2)}R · ห่าง Stop ${fmt2(Math.round(x.stopDist*10)/10)}%</div>`).join('') : '<div class="ccSub">ไม่มีตัวที่มีราคา</div>'}</div>`;
+  }
+  h += `<table class="ddTbl" data-dd-weekly><thead><tr><th>สัปดาห์</th><th class="r">DD</th></tr></thead><tbody>${rows || '<tr><td colspan="2" class="ccSub">ยังไม่มีข้อมูล</td></tr>'}</tbody></table>
+    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ปิด</button>${ev.stage==='pause' ? '<button type="button" class="ccBtn pri" id="ddReviewSave" data-dd-review-save onclick="ddReviewSave()" disabled>เขียนทบทวน</button>' : ''}</div>`;
+  return h;
+}
+function ddSheetOpen(A, bucket){
+  const ev = ddEval(A, bucket); if(!ev) return;
+  coreDlg = {kind:'dd', A, bucket};
+  coreSheet('dd', ddSheetHtml(ev));
+  ddReviewIn();
+}
+function ddReviewIn(){
+  const ta = coreEl('ddReview'), btn = coreEl('ddReviewSave'); if(!ta || !btn) return;
+  const n = ta.value.trim().length, er = coreEl('ddReviewErr');
+  btn.disabled = n < DD_REVIEW_MIN;
+  if(er){ er.style.display = (n>0 && n<DD_REVIEW_MIN) ? '' : 'none'; er.textContent = `ต้องมีอย่างน้อย ${DD_REVIEW_MIN} ตัวอักษร (ตอนนี้ ${n})`; }
+}
+function ddReviewSave(){
+  if(!coreDlg || coreDlg.kind!=='dd') return false;
+  const {A, bucket} = coreDlg, ta = coreEl('ddReview'); if(!ta) return false;
+  const text = ta.value.trim(); if(text.length < DD_REVIEW_MIN) return false;
+  const ev = ddEval(A, bucket); if(!ev || ev.stage!=='pause') return false;
+  const B = getBook(A);
+  B.settings.ddState = Object.assign({}, B.settings.ddState || {}, {[bucket]: Object.assign({}, ev.next, {review: {text, at: new Date().toISOString()}})});
+  saveBook(A);
+  coreSheetClose();
+  render();
+  return true;
+}
+/* ด่านเดียวของฝั่ง Core (ฟังก์ชันบันทึกเรียกซ้ำได้) → '' = ผ่าน · อื่น ๆ = เหตุผล */
+function ddCoreBlockNew(A){
+  const ev = ddEval(A, 'core'); return (ev && ev.stage==='pause') ? ddNote(ev).pause : '';
+}
+function ddCoreBlockLadder(A){
+  const ev = ddEval(A, 'core'); return (ev && ev.stage!=='normal') ? ddNote(ev).ladder : '';
+}
+/* Sat: พัก = ทุกบัญชีไม่ ready · คืนเหตุผล ('' = ผ่าน) */
+function ddSatBlock(base){
+  const ev = base && base.dd; return (ev && ev.stage==='pause') ? ddNote(ev).pause : '';
+}
+/* เติมไม้ Core: ทุก stage ทำได้ถ้า Stop ≥ ทุนเฉลี่ย · Stop < ทุน และ stage ≠ normal → บล็อก */
+function ddCoreBlockAdd(A, t){
+  const ev = ddEval(A, 'core'); if(!ev || ev.stage==='normal') return '';
+  return (+t.sl) >= (+t.entry) - 1e-9 ? '' : ddNote(ev).addOnly;
 }
 function totalTHB(){ return acctPorts().reduce((a,k)=>a+portCapTHB(k),0) + (state.settings.strategicCash||0); }
 
@@ -4770,9 +5090,19 @@ function realizedPnlTHBOf(t){
   const p = realizedPnlOf(t); if(p===null) return null;
   return tradeCur(t)==='USD' ? p*state.settings.fx : p;
 }
+/* DD1 §0 — SL ตอนเข้า (ไว้คิด R): sl0 ที่เก็บกับไม้ · ไม้ Core เก่าที่ไม่มี sl0 → Stop แรกในประวัติของการ์ด (stopHistory[0].from) · ไม่มี = null (R คิดจาก SL ปัจจุบันแบบเดิม) */
+function sl0Of(t){
+  if(t && t.sl0>0) return +t.sl0;
+  if(t && t.port==='core'){
+    const c = coreCardsList.find(x=>x.trade_id===t.id), h = c && Array.isArray(c.stopHistory) ? c.stopHistory : null;
+    if(h && h.length && +h[0].from>0) return +h[0].from;
+  }
+  return null;
+}
 function realizedROf(t){
   const pnl = realizedPnlOf(t); if(pnl===null) return null;
-  const risk = (t.pyr_parent && t.sl0>0) ? Math.abs(t.entry - t.sl0) * t.qty * (t.mult||1) : riskOf(t);   /* PY1 — ไม้เติม: R จากความเสี่ยงของตัวเอง (entry2 → SL ตอนเข้า) */
+  const s0 = sl0Of(t);   /* DD1 — R ใช้ SL ตอนเข้า (เลื่อน SL ทีหลังไม่เปลี่ยน R) · PY1 ไม้เติม = sl0 ของตัวเองอยู่แล้ว */
+  const risk = s0!=null ? Math.abs(t.entry - s0) * t.qty * (t.mult||1) : riskOf(t);
   return risk>0 ? pnl/risk : null;
 }
 function holdingDaysOf(t){
@@ -5249,7 +5579,9 @@ function coreCanPlace(A, draft, exceptId, isEdit){
   const res = cs.canPlaceLadder({tank: bx.tankTHB, tier: draft.tier, fortress: draft.fortress!==false, gate, ladder: draft.thb, wCost: coreWCost(A, bx),
     existingLadders: lad.map(x=>({heldCost:x.heldTHB, reservedCost:x.reservedTHB})), positions: l2i.positions, reserved, shareCap, l2Cap});
   if(!res.ok) return {allowed:false, reasons:[res.err], rows:[], res};
-  const reasons = isEdit ? res.reasons.filter(r=>!/^GATE_/.test(r)) : res.reasons;
+  const reasons = isEdit ? res.reasons.filter(r=>!/^GATE_/.test(r)) : res.reasons.slice();
+  const ddm = isEdit ? '' : ddCoreBlockLadder(A);   /* DD1 — ลดขนาด/พัก/ฟื้นตัว = งดเปิดบันไดใหม่ (แก้แผนเดิมไม่โดน) */
+  if(ddm) reasons.push('DD_BLOCK');
   const has = k=>reasons.indexOf(k) >= 0, bad = has('BAD_LADDER');
   const rows = [
     draft.tier==='A' && draft.fortress===false ? {k:'tier', ok:false, text:'ต้องเป็น A-Fortress · ตอนนี้ A-Growth'}
@@ -5259,7 +5591,8 @@ function coreCanPlace(A, draft, exceptId, isEdit){
     bad ? {k:'l2', ok:null, text:`ชั้น 2 รวมบันไดใหม่ — ≤ ${fmt2(cfg.l2Cap)}%`} : {k:'l2', ok:!has('LAYER2_OVER'), text:`ชั้น 2 รวมบันไดใหม่ ${fmt2(res.pctFull*100)}% ≤ ${fmt2(cfg.l2Cap)}%`},
     bad ? {k:'cash', ok:null, text:'เงินสดว่าง — ≥ —'} : {k:'cash', ok:!has('NO_CASH'), text:`เงินสดว่าง ฿${fmt0(res.cashFree)} ≥ ฿${fmt0(draft.thb.cost)}`}
   ];
-  return {allowed: reasons.length===0, reasons, rows, res, gate};
+  if(ddm) rows.push({k:'dd', ok:false, text:ddm});
+  return {allowed: reasons.length===0, reasons, rows, res, gate, ddBlock: ddm};
 }
 function coreGatesHtml(cp){
   return `<div class="ccGates" data-c-gates>${cp.rows.map(r=>`<div class="ccGate ${r.ok===null?'na':(r.na?'na':(r.ok?'ok':'no'))}" data-gate="${r.k}" data-ok="${r.ok===null?'':(r.ok?1:0)}">${r.ok===null?'·':(r.ok?'✓':'✗')} ${escHtml(r.text)}</div>`).join('')}</div>`;
@@ -5285,7 +5618,7 @@ function coreFirstLotHtml(cx, mk, tier, entry, stop, f, fLbl){
   const roundTxt = mk==='TH' ? `จาก ${fmt0(raw)} → ปัดหลัก 100 = ${fmt0(r.qty)}` : `จาก ${fmt0(raw)} → ปัด 1 หุ้น = ${fmt0(r.qty)}`;
   return `<div class="ccQty"><b data-c-qty>${fmt0(r.qty)}</b> หุ้น ${tag}</div>
     <div class="ccSub" data-c-cost>ทุน ${coreMoney(r.cost, mk, cx.fx)} (${fmt2(r.costPct*100)}% ของถัง) · เสี่ยง ${coreMoney(r.risk, mk, cx.fx)} (${fmt2(r.riskPctTank*100)}% ของถัง)</div>
-    <div class="ccSub" data-c-cash>เงินสดว่าง ฿${fmt0(cx.cashTHB)} · งบเสี่ยง ${fmt2(cx.cfg.riskPct)}% × f${fLbl?' '+escHtml(fLbl):''} = ${coreMoney(r.budget, mk, cx.fx)} (เต็ม ${coreMoney(r.budgetFull, mk, cx.fx)})</div>
+    <div class="ccSub" data-c-cash>เงินสดว่าง ฿${fmt0(cx.cashTHB)} · งบเสี่ยง ${fmt2(cx.cfg.riskPct)}%${cx.opts.ddFactor<1?` × DD ${cx.opts.ddFactor}`:''} × f${fLbl?' '+escHtml(fLbl):''} = ${coreMoney(r.budget, mk, cx.fx)} (เต็ม ${coreMoney(r.budgetFull, mk, cx.fx)})</div>
     <div class="ccSub" data-c-round>${roundTxt}</div>
     ${r.zeroLot ? (tierBinds ? `<div class="ccWarn" data-c-zero data-c-zero-tier>ราคาต่อ 1 ${mk==='TH'?'หลัก (100)':'หุ้น'} เกินเพดาน Tier ${tier} (${mk==='US'?'$':'฿'}${fmt0(cx.tankTHB/div*cx.opts.tierCap[tier])}) → ใช้ Tier A หรือข้ามตัวนี้</div>`
       : `<div class="ccWarn" data-c-zero>ต่ำกว่า 1 ${mk==='TH'?'หลัก (100)':'หุ้น'} — ขยายงบหรือเลื่อน Stop</div>`) : ''}`;
@@ -5376,7 +5709,7 @@ function coreSimCalc(v, cx){
   if(!(px>stop)) return {ok:false, msg:'ราคาเติมต้องมากกว่า Stop ใหม่', bad:true};
   const lots = v.c.lots || [], prev = lots.length ? +lots[lots.length-1].qty : v.qty;
   const r = Calc.coreSize.addLot({tank: cx.tankTHB/v.div, price:px, stop, heldQty:v.qty, avgCost:v.avg, prevLotQty:prev, f:cx.F.f, market:v.mk,
-    cash: cx.cashTHB/v.div, riskPct: cx.opts.riskPct, ratio: cx.opts.addRatio});
+    cash: cx.cashTHB/v.div, riskPct: cx.opts.riskPctBase, ratio: cx.opts.addRatio});   /* DD1 — ไม้เติมไม่คูณ DD */
   if(!r.ok) return {ok:false, msg:'คำนวณไม่สำเร็จ', bad:true};
   const blocked = [];
   if(!(v.qty>0)) blocked.push('ไม่มีหุ้นถืออยู่');
@@ -5384,6 +5717,7 @@ function coreSimCalc(v, cx){
   if(v.st && v.st.status==='yellow') blocked.push('ปิดใต้ EMA10 — งดเพิ่มไม้');
   if(v.st && v.st.status==='red') blocked.push('ปิดใต้ Stop — ขายหมด');
   if(coreLotN(v.c, v) >= cx.cfg.maxLots) blocked.push(`ครบ ${cx.cfg.maxLots} ไม้แล้ว`);
+  { const dd = v.t ? ddCoreBlockAdd(v.c.acct, v.t) : ''; if(dd) blocked.push(dd); }   /* DD1 */
   if(r.qty<=0) blocked.push('จำนวนที่เติมได้ = 0');
   if(coreErr) blocked.push(coreErr);
   return {ok:true, r, px, stop, blocked};
@@ -5475,6 +5809,7 @@ function coreLotBadge(n, N){
 function coreAddBlockReason(v, cx){
   const s = v.st && v.st.status;
   if(coreErr) return coreErr;
+  { const dd = v.t ? ddCoreBlockAdd(v.c.acct, v.t) : ''; if(dd) return dd; }   /* DD1 */
   if(s==='yellow') return 'ปิดใต้ EMA10 — งดเพิ่มไม้';
   if(s==='red') return 'ปิดใต้ Stop — ขายหมด';
   if(s==='na') return 'ไม่มีราคาปิดสัปดาห์ / ราคาเก่าเกิน 7 วัน — อัปเดตราคาก่อน';
@@ -5611,7 +5946,8 @@ function coreCardHtml(v, cx){
     const fl = (cx.tankTHB>0 && en>0 && sp>0 && en>sp) ? coreFirstLotCalc(cx, v.mk, tier, en, sp, cx.F.f) : null;
     const flOk = fl && fl.ok;
     const ctl = !flOk ? '—' : (fl.cashLimited ? 'คุมด้วยเงินสด' : (fl.capped ? `คุมด้วยเพดาน Tier ${tier} (${fmt2(capPct)}%)` : `คุมด้วยงบเสี่ยง × f ${Math.round(cx.F.f*100)}%`));
-    const blockBuy = !!coreErr || !flOk || fl.zeroLot;
+    const ddBlk = ddCoreBlockNew(c.acct);   /* DD1 — พัก = ปุ่มซื้อไม้ 1 ปิด + เหตุผล */
+    const blockBuy = !!coreErr || !flOk || fl.zeroLot || !!ddBlk;
     return `<div class="ccCard${open?' open':''}" data-core-card="${id}" data-kind="plan">
       <button type="button" class="ccRow" data-c-row aria-expanded="${open}" onclick="coreToggle('${id}')"><span class="ccIc nt" data-c-status="plan">แผน</span>
         <span class="ccTkw"><span class="ccTk" data-c-ticker>${escHtml(c.ticker)}</span>${tag}</span>
@@ -5621,7 +5957,7 @@ function coreCardHtml(v, cx){
           <div class="ccFld"><label>f ตอนนี้</label><div class="v">${Math.round(cx.F.f*100)}%</div><small>${escHtml(cx.F.src)}</small></div>
           <div class="ccFld"><label>ไม้แรก</label><div class="v">${flOk?fmt0(fl.qty):'—'} หุ้น</div><small>${escHtml(ctl)}</small></div></div>
         <div class="ccRes" data-c-first>${coreFirstLotHtml(cx, v.mk, tier, en, sp, cx.F.f, cx.F.src)}</div>
-        <div class="ccBtns"><button type="button" class="ccBtn pri" data-c-buy1 onclick="coreBuy1Open('${id}')" ${blockBuy?'disabled':''}>บันทึกซื้อไม้ 1</button>
+        <div class="ccBtns"><button type="button" class="ccBtn pri" data-c-buy1 onclick="coreBuy1Open('${id}')" ${blockBuy?'disabled':''}${ddBlk?` title="${escHtml(ddBlk)}"`:''}>บันทึกซื้อไม้ 1</button>
           <button type="button" class="ccBtn" data-c-delplan onclick="coreDelAsk('${id}')">ลบแผน</button>
           <button type="button" class="ccBtn" data-c-more aria-label="เมนู" onclick="coreMenuToggle(this,event)">⋯</button>${coreMenuHtml(v, cx, {})}</div></div></div>`;
   }
@@ -5686,10 +6022,10 @@ function coreAcctHtml(a){
   const gate = coreGate(A), sp = cx.split;
   const lPctNow = sp ? sp.lPct*100 : 0, overAmt = sp && sp.overCommitted ? (cx.wCost + sp.lUsed - cx.tankTHB) : 0;
   const mkLbl = cfg.market==='both' ? 'ทั้งคู่' : cfg.market;
-  const F = cx.F;
+  const F = cx.F, dd = ddEval(A, 'core');   /* DD1 */
   const head = `<div class="ccAcctH" data-core-head="${escHtml(A)}"><span class="acctDotC" style="--ac:${acctColor(a)}"></span><b>${escHtml(a.name)}</b>
     <span class="ccChip">${mkLbl}</span>
-    <span class="ccStat" data-c-tank>ถัง Core <b>฿${fmt0(cx.tankTHB)}</b></span>
+    <span class="ccStat" data-c-tank>ถัง Core <b>฿${fmt0(cx.tankTHB)}</b></span>${ddChipHtml(dd)}
     <span class="ccStat" data-c-cashfree>เงินสดว่าง <b>฿${fmt0(cx.cashTHB)}</b></span>${overAmt>0 ? `<span class="ccStat lv-over" data-c-overcommit>จองเกินถัง <b>฿${fmt0(overAmt)}</b></span>` : ''}
     <span class="ccStat lv-${lvl}" data-c-l2 data-level="${lvl}">ชั้น 2 <b>ตอนนี้ ${fmt2(rk?rk.layer2Pct:0)}% · เต็ม ${fmt2(rk?rk.layer2FullPct:0)}% / ${fmt2(cfg.l2Cap)}%</b></span>
     <span class="ccStat${lPctNow>cfg.ladderShare+1e-9?' lv-over':''}" data-c-lshare>L <b>${fmt2(lPctNow)}%</b> / ${fmt2(cfg.ladderShare)}%</span>
@@ -5701,7 +6037,7 @@ function coreAcctHtml(a){
   const body = list.length ? `<div class="ccList">${list.map(v=>coreCardHtml(v, cx)).join('')}</div>` : '';
   const closed = closedV.length ? `<div class="ccClosedWrap">${closedV.map(coreClosedHtml).join('')}</div>` : '';
   const empty = (list.length+closedV.length)===0 ? '<div class="ccEmpty" data-c-empty>ยังไม่มีการ์ด Core ในบัญชีนี้</div>' : '';
-  return `<div class="ccAcct" data-core-acct="${escHtml(A)}" style="--ac:${acctColor(a)}">${head}${body}${closed}${empty}
+  return `<div class="ccAcct" data-core-acct="${escHtml(A)}" style="--ac:${acctColor(a)}">${head}${ddBarHtml(dd)}${body}${closed}${empty}
     <div class="ccFoot"><button type="button" class="ccBtn" data-c-newplan onclick="coreNewOpen('${escHtml(A)}')">＋ แผน Core</button></div></div>`;
 }
 function renderCorePanel(){
@@ -6161,6 +6497,7 @@ function coreNewIn(){
     coreEl('cnRes').innerHTML = coreFirstLotHtml(cx, mk, tier, rd.entry, rd.stop, f, F.src);
     if(!(rd.entry>0) || !(rd.stop>0)) errs.push('กรอก Entry และ Stop');
     else if(!(rd.entry>rd.stop)) errs.push('Entry ต้องมากกว่า Stop');
+    { const ddm = n.mode==='new' ? ddCoreBlockNew(n.acct) : ''; if(ddm) errs.push(ddm); }   /* DD1 — พัก = บันทึกแผน W ไม่ได้ */
     coreEl('cnSave').textContent = 'บันทึกแผน';
   } else {
     coreNewInL(n, rd, cx, cfg, mk, tier, errs, fortress);
@@ -6206,7 +6543,8 @@ function coreNewInL(n, rd, cx, cfg, mk, tier, errs, fortress){
     }
   }
   coreEl('cnLgates').innerHTML = coreGatesHtml(cp);
-  if(!cp.allowed && errs.indexOf('กรอกระดับราคา · SL · งบ ให้ครบ')<0 && !(lc && !lc.nat.ok)) errs.push('ประตูวางบันไดไม่ผ่านครบ 5 ข้อ');
+  if(cp.ddBlock) errs.push(cp.ddBlock);   /* DD1 */
+  if(!cp.allowed && errs.indexOf('กรอกระดับราคา · SL · งบ ให้ครบ')<0 && !(lc && !lc.nat.ok) && (cp.reasons||[]).some(r=>r!=='DD_BLOCK')) errs.push('ประตูวางบันไดไม่ผ่านครบ 5 ข้อ');
 }
 function coreNewSave(){
   const errs = coreNewIn(); if(!errs || errs.length) return;
@@ -6266,6 +6604,7 @@ function coreToWSave(){
 /* ซื้อไม้ 1 */
 function coreBuy1Open(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c || c.status!=='plan' || c.trade_id) return;
+  if(ddCoreBlockNew(c.acct)) return;   /* DD1 — พัก = เปิดไม้ใหม่ไม่ได้ */
   const cx = coreCtx(c.acct), mk = c.market || coreMarketOf(c.ticker), tier = c.tier==='A' ? 'A' : 'B';
   const r = coreFirstLotCalc(cx, mk, tier, +c.plan.entry, +c.plan.stop, cx.F.f);
   if(!r || !r.ok || r.zeroLot) return;
@@ -6294,6 +6633,7 @@ function coreBuy1In(){
   else if(d.rawQty!==d.qty) errs.push(`จะปัดลงเป็น ${fmt0(d.qty)} ตามตลาด`);
   if(!d.date) errs.push('กรอกวันที่');
   if(coreErr) errs.push(coreErr);
+  { const ddm = ddCoreBlockNew(d.c.acct); if(ddm) errs.push(ddm); }   /* DD1 */
   const hard = errs.filter(e=>!/^จะปัดลง/.test(e));
   const er = coreEl('cbErr'); er.style.display = errs.length ? '' : 'none'; er.innerHTML = errs.map(escHtml).join('<br>');
   coreEl('cbSave').disabled = hard.length>0;
@@ -6345,6 +6685,7 @@ function coreBuyAddIn(){
   else if(d.rawQty!==d.qty) errs.push(`จะปัดลงเป็น ${fmt0(d.qty)} ตามตลาด`);
   if(!d.date) errs.push('กรอกวันที่');
   if(coreErr) errs.push(coreErr);
+  { const tt = getBook(d.c.acct).trades.find(x=>x.id===d.c.trade_id), ddm = tt ? ddCoreBlockAdd(d.c.acct, tt) : ''; if(ddm) errs.push(ddm); }   /* DD1 — เติมได้เฉพาะตัวที่ Stop ≥ ทุน */
   const hard = errs.filter(e=>!/^จะปัดลง/.test(e));
   const er = coreEl('caErr'); er.style.display = errs.length ? '' : 'none'; er.innerHTML = errs.map(escHtml).join('<br>');
   coreEl('caSave').disabled = hard.length>0;
@@ -6356,6 +6697,7 @@ function coreBuyAddSave(){
   const c = d.c, A = c.acct, B = getBook(A), cx = coreCtx(A);
   const t = B.trades.find(x=>x.id===c.trade_id); if(!t || t.status!=='open'){ coreSheetClose(); return; }
   const oldSl = +t.sl, newQty = (+t.qty) + d.qty;
+  if(!(t.sl0>0) && oldSl>0) t.sl0 = oldSl;   /* DD1 — ไม้เก่าไม่มี sl0: เก็บ Stop ก่อนย้าย */
   t.entry = ((+t.entry)*(+t.qty) + d.px*d.qty) / newQty;
   t.qty = newQty;
   t.sl = d.stop;
@@ -6505,7 +6847,7 @@ function coreStopSave(){
   if(!coreStopIn()) return;
   const c = coreCardsList.find(x=>x.id===coreDlg.id), ns = coreNum(coreEl('csStop').value); if(!c) return;
   const A = c.acct, B = getBook(A), t = B.trades.find(x=>x.id===c.trade_id); if(!t || t.status!=='open'){ coreSheetClose(); return; }
-  const old = +t.sl; t.sl = ns; saveBook(A);
+  const old = +t.sl; if(!(t.sl0>0) && old>0) t.sl0 = old; t.sl = ns; saveBook(A);   /* DD1 — sl0 ไม่ถูกแตะ (ไม้เก่าไม่มี = เก็บ Stop ก่อนย้ายครั้งแรก) */
   const hist = (c.stopHistory || []).concat([{date:posThaiToday(), from:old, to:ns}]);
   const patch = {stop:ns, stopHistory:hist};
   if(c.strategy==='L' && c.ladder){
@@ -6596,6 +6938,7 @@ function render(){
   renderAcctBar();
   try{ rsUpdatePushBadge(); }catch(err){ console.warn('push badge:', err); }
   if(!state) return;
+  try{ ddSync(); }catch(err){ console.warn('ddSync:', err); }   /* DD1 — บันทึก state เบรก DD เมื่อค่าเปลี่ยน */
   if(!state.fontSizes) state.fontSizes = {...DEFAULT_FONT_SIZES};
   applyFontSizes();
   const s = summarize();
@@ -8327,6 +8670,11 @@ function makeTradeObject(o){
     if(o[k]!==undefined) t[k] = o[k];
     else if(prevTrade && prevTrade[k]!==undefined) t[k] = prevTrade[k];
   });
+  /* DD1 §0 — sl0 = SL ตอนเข้า · ไม้ใหม่ = SL ที่ส่งมา · แก้ SL ทีหลัง (ไม้ open/closed) ไม่แตะ · แก้ไม้ plan (ยังไม่เข้า) = ตาม SL ใหม่ · ไม้เก่าไม่มี sl0 = ใช้ SL ก่อนแก้ (ถ้ามี) · o.sl0 ส่งมาเอง (ไม้เติม) ชนะ */
+  if(o.sl0>0) t.sl0 = +o.sl0;
+  else if(!prevTrade || prevTrade.status==='plan') { if(o.sl>0) t.sl0 = +o.sl; }
+  else if(prevTrade.sl0>0) t.sl0 = +prevTrade.sl0;
+  else if(prevTrade.sl>0) t.sl0 = +prevTrade.sl;
   if(status==='closed'){
     t.exitPrice = o.exitPrice;
     t.exitDate = o.exitDate || t.date;
@@ -8746,10 +9094,12 @@ function openSettings(){
    ['sCrLBudget','ladderBudget'],['sCrLRisk','ladderRisk'],['sCrLShare','ladderShare'],['sCrGate','gateWeeks'],
    ['sCrTierRoic','tierRoic'],['sCrTierNd','tierNd'],['sCrTierFcf','tierFcf'],['sCrTierRevG','tierRevG'],['sCrTierCagr','tierCagr'],['sCrTierNdG','tierNdG']].forEach(([id,k])=>{ document.getElementById(id).value = cr[k]; });
   document.getElementById('sCrMarket').value = cr.market;
+  [['sCrDdReduce','ddReduce'],['sCrDdPause','ddPause'],['sCrDdWeeks','ddPauseWeeks'],['sCrDdRecoverR','ddRecoverR']].forEach(([id,k])=>{ document.getElementById(id).value = cr[k]; });   /* DD1 */
   const sr = satRiskCfg();   /* SR1 — ความเสี่ยง Sat ของบัญชีที่เปิดอยู่ */
   document.getElementById('sSatRpt').value = sr.rpt;
   document.getElementById('sSatRptHi').value = sr.rptHi;
   document.getElementById('sSatNewMax').value = sr.newMax;
+  [['sSatDdReduce','ddReduce'],['sSatDdPause','ddPause'],['sSatDdWeeks','ddPauseWeeks'],['sSatDdRecoverR','ddRecoverR']].forEach(([id,k])=>{ document.getElementById(id).value = sr[k]; });   /* DD1 */
   document.getElementById('satProveTxt').textContent = `${SAT7D_PROVE_N} ไม้ · avg R ≥ ${SAT7D_PROVE_R}`;
   document.getElementById('sPortCore').value = cr.l2Cap;   /* ค่าเดียวกับเพดานชั้น 2 */
   updTotal();
@@ -8781,6 +9131,12 @@ function crOnInput(src){
       if(ex){ if(r>0 && Number.isInteger(mv) && mv>=1 && mv<=6){ const seq = []; let q = 100, tot = 0; for(let i=0;i<mv;i++){ seq.push(fmt2(q)); tot += q; q = q*r/100; } ex.textContent = `ตัวอย่าง: ไม้แรก ${seq.join(' → ')} (รวม ${fmt2(tot)}% ของไม้แรก)`; } else ex.textContent = ''; } }
     if(!errs.sCrTierB && !errs.sCrTierA && v('sCrTierB') > v('sCrTierA')) errs.sCrTierB = 'Tier B ต้องไม่เกิน Tier A';
     if(!errs.sCrL2Warn && !errs.sCrL2Cap && !(v('sCrL2Warn') < v('sCrL2Cap'))) errs.sCrL2Warn = 'เหลืองที่ ต้องน้อยกว่าเพดานชั้น 2';
+    { const r = v('sCrDdReduce'), p = v('sCrDdPause'), w = v('sCrDdWeeks'), rr = v('sCrDdRecoverR');   /* DD1 */
+      if(!(r>0)) errs.sCrDdReduce = 'ต้องเป็นตัวเลขมากกว่า 0';
+      if(!(p>0 && p<=50)) errs.sCrDdPause = 'ต้องมากกว่า 0 และไม่เกิน 50';
+      else if(!errs.sCrDdReduce && !(r<p)) errs.sCrDdReduce = 'ต้องน้อยกว่าเกณฑ์พัก';
+      if(!(Number.isInteger(w) && w>=1 && w<=8)) errs.sCrDdWeeks = 'ต้องเป็นจำนวนเต็ม 1–8';
+      if(!(rr>=0.5 && rr<=10)) errs.sCrDdRecoverR = 'ต้องอยู่ระหว่าง 0.5–10'; }
   }
   if(portOn('satB')){
     const v = id => { const x = g(id).value; return x==='' ? NaN : parseFloat(x); };
@@ -8789,6 +9145,12 @@ function crOnInput(src){
     if(!(h>0 && h<=5)) errs.sSatRptHi = 'ต้องมากกว่า 0 และไม่เกิน 5';
     else if(!errs.sSatRpt && h < r) errs.sSatRptHi = 'ต้องไม่น้อยกว่าเสี่ยงต่อไม้ (ปกติ)';
     if(!(Number.isInteger(nm) && nm>=1 && nm<=10)) errs.sSatNewMax = 'ต้องเป็นจำนวนเต็ม 1–10';
+    { const r = v('sSatDdReduce'), p = v('sSatDdPause'), w = v('sSatDdWeeks'), rr = v('sSatDdRecoverR');   /* DD1 */
+      if(!(r>0)) errs.sSatDdReduce = 'ต้องเป็นตัวเลขมากกว่า 0';
+      if(!(p>0 && p<=50)) errs.sSatDdPause = 'ต้องมากกว่า 0 และไม่เกิน 50';
+      else if(!errs.sSatDdReduce && !(r<p)) errs.sSatDdReduce = 'ต้องน้อยกว่าเกณฑ์พัก';
+      if(!(Number.isInteger(w) && w>=1 && w<=8)) errs.sSatDdWeeks = 'ต้องเป็นจำนวนเต็ม 1–8';
+      if(!(rr>=0.5 && rr<=10)) errs.sSatDdRecoverR = 'ต้องอยู่ระหว่าง 0.5–10'; }
   }
   document.querySelectorAll('#crSec .crErr, #satRiskSec .crErr').forEach(d=>{ d.textContent = errs[d.dataset.errFor] || ''; });
   const bad = Object.keys(errs).length > 0, btn = g('setSaveBtn');
@@ -8855,6 +9217,7 @@ function acctApplyPortVisibility(){
    ['sPortCore','core'],['sPortSatB','satB'],['sSatRpt','satB'],['sSatRptHi','satB'],['sSatNewMax','satB'],
    ['sCrMarket','core'],['sCrRisk','core'],['sCrTierA','core'],['sCrTierB','core'],['sCrAdd','core'],['sCrMaxLots','core'],['sCrL2Cap','core'],['sCrL2Warn','core'],
    ['sCrEmerg','core'],['sCrLBudget','core'],['sCrLRisk','core'],['sCrLShare','core'],['sCrGate','core'],
+   ['sCrDdReduce','core'],['sCrDdPause','core'],['sCrDdWeeks','core'],['sCrDdRecoverR','core'],['sSatDdReduce','satB'],['sSatDdPause','satB'],['sSatDdWeeks','satB'],['sSatDdRecoverR','satB'],
    ['sCrTierRoic','core'],['sCrTierNd','core'],['sCrTierFcf','core'],['sCrTierRevG','core'],['sCrTierCagr','core'],['sCrTierNdG','core']
   ].forEach(([id,port])=>{
     const el = document.getElementById(id);
@@ -8899,9 +9262,11 @@ function saveSettings(){
       const capV = parseFloat(document.getElementById('sPortCore').value)||20;
       return {riskPct:n('sCrRisk'), tierA:n('sCrTierA'), tierB:n('sCrTierB'), addRatio:n('sCrAdd'), maxLots:n('sCrMaxLots'), l2Cap:capV, l2Warn:n('sCrL2Warn'), emergencyPct:n('sCrEmerg'),
               ladderBudget:n('sCrLBudget'), ladderRisk:n('sCrLRisk'), ladderShare:n('sCrLShare'), gateWeeks:n('sCrGate'), market:document.getElementById('sCrMarket').value,
-              tierRoic:n('sCrTierRoic'), tierNd:n('sCrTierNd'), tierFcf:n('sCrTierFcf'), tierRevG:n('sCrTierRevG'), tierCagr:n('sCrTierCagr'), tierNdG:n('sCrTierNdG')};
+              tierRoic:n('sCrTierRoic'), tierNd:n('sCrTierNd'), tierFcf:n('sCrTierFcf'), tierRevG:n('sCrTierRevG'), tierCagr:n('sCrTierCagr'), tierNdG:n('sCrTierNdG'),
+              ddReduce:n('sCrDdReduce'), ddPause:n('sCrDdPause'), ddPauseWeeks:n('sCrDdWeeks'), ddRecoverR:n('sCrDdRecoverR')};   /* DD1 */
     })() : (old.coreRisk || null),
-    satRisk: portOn('satB') ? {rpt:parseFloat(document.getElementById('sSatRpt').value), rptHi:parseFloat(document.getElementById('sSatRptHi').value), newMax:parseFloat(document.getElementById('sSatNewMax').value)} : (old.satRisk || null),   /* SR1 — % ตัวเลข ต่อบัญชี */
+    satRisk: portOn('satB') ? {rpt:parseFloat(document.getElementById('sSatRpt').value), rptHi:parseFloat(document.getElementById('sSatRptHi').value), newMax:parseFloat(document.getElementById('sSatNewMax').value),
+      ddReduce:parseFloat(document.getElementById('sSatDdReduce').value), ddPause:parseFloat(document.getElementById('sSatDdPause').value), ddPauseWeeks:parseFloat(document.getElementById('sSatDdWeeks').value), ddRecoverR:parseFloat(document.getElementById('sSatDdRecoverR').value)} : (old.satRisk || null),   /* DD1 */   /* SR1 — % ตัวเลข ต่อบัญชี */
     tdKey: (document.getElementById('sTdKey').value||'').trim()
   };
   if(state.settings.coreRisk == null) delete state.settings.coreRisk;
@@ -9036,7 +9401,7 @@ function satRiskCfg(accId){
   const lp = s.limits && s.limits.port && typeof s.limits.port==='object' ? s.limits.port.satB : null;
   const heatMax = (typeof lp==='number' && isFinite(lp) && lp>0) ? lp : SAT7D_HEAT_MAX;
   const newMax = (Number.isInteger(raw.newMax) && raw.newMax>=1 && raw.newMax<=10) ? raw.newMax : SAT7D_NEW_MAX;
-  return {rpt, rptHi, heatMax, newMax};
+  return ddCfgFix(raw, {rpt, rptHi, heatMax, newMax}, 1);   /* DD1 — + ddReduce/ddPause/ddPauseWeeks/ddRecoverR */
 }
 const SATW_COMPS = ['trend','momentum','zone','sentiment','macro'];
 const SATW_COMP_LABEL = {trend:'Trend', momentum:'Momentum', zone:'Zone', sentiment:'Sentiment', macro:'Macro'};
@@ -9552,15 +9917,15 @@ function sat7dAcctBase(accId){
   const capNat = (st.capital && +st.capital.satB) || 0;
   const cap = capNat * (PORTS.satB.cur==='USD' ? fx : 1);
   const trades = (Array.isArray(B.trades) ? B.trades : []).filter(t=>t.port==='satB');
-  const toTHB = t => ((t.cur || PORTS.satB.cur)==='USD' ? fx : 1);
   const openRisk = trades.filter(t=>t.status==='open')
-    .reduce((a,t)=>a + Math.abs(t.entry - t.sl) * t.qty * (t.mult||1) * toTHB(t), 0);
+    .reduce((a,t)=>a + posOpenRisk(t, fx).thb, 0);   /* DD1 §0 — เสี่ยงค้างสูตรเดียวกับ openRiskTHB (SL เลยทุน = 0) */
   const wk = wpWeekKey();
   const nNew = Calc.newCount(trades.filter(t=>!t.pyr_parent), wk, wpOpenedKey);   /* §0.4 — ย้ายมาที่ Calc.newCount() พฤติกรรมเท่าเดิม · PY1 — ไม้เติม (pyr_parent) ไม่นับโควตาไม้ใหม่ */
   const cnt = sat7dCounter(B);
   const cfg = satRiskCfg(accId);   /* SR1 — ค่าตั้งต่อบัญชี */
   const rpt = cnt.hi ? cfg.rptHi : cfg.rpt;
-  return {B, fx, cap, trades, openRisk, nNew, cnt, rpt, heatMax: cfg.heatMax, newMax: cfg.newMax, riskTHB: cap*rpt/100, heatPct: Calc.heat(openRisk, cap)};
+  const dd = ddEval(accId, 'sat'), ddf = (dd && dd.stage!=='pause') ? dd.sizeFactor : 1;   /* DD1 — ลดขนาด/ฟื้นตัว ×0.5 (เข้า Calc.satLot ผ่าน riskTHB · สูตรไม่แตะ) · พัก = ไม่ ready (ดู ddSatBlock) */
+  return {B, fx, cap, trades, openRisk, nNew, cnt, rpt, heatMax: cfg.heatMax, newMax: cfg.newMax, riskTHB: cap*rpt/100*ddf, riskTHBFull: cap*rpt/100, dd, ddFactor: ddf, heatPct: Calc.heat(openRisk, cap)};
 }
 function sat7dSideOk(idea){
   const e = +idea.entry, s = +idea.sl;
@@ -9607,8 +9972,9 @@ function sat7dCalc(idea, accId){
     hasChosenBroker: !!chosen, hasAnyBroker: sat7dHasAnyBroker(base.B), lotMsg, hasCapital: base.cap>0
   });
   const offB = satOffBias(idea);   /* SR1 — สวน Bias สัปดาห์ = ไม่ ready ทุกบัญชี · ไม่มีทางลัด */
-  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: (offB ? [satOffBiasMsg(idea)] : []).concat(rd.reasons), ready: rd.ok && !offB, tradeExists,
-          offplan: flags.off || !rd.ok || offB, flags, offBias: offB};
+  const ddB = ddSatBlock(base);   /* DD1 — พัก = ไม่ ready ทุกบัญชี · ไม่มีทางลัด */
+  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: (ddB ? [ddB] : []).concat(offB ? [satOffBiasMsg(idea)] : [], rd.reasons), ready: rd.ok && !offB && !ddB, tradeExists,
+          offplan: flags.off || !rd.ok || offB || !!ddB, flags, offBias: offB, ddBlock: ddB};
 }
 
 /* ── การกระทำของผู้ใช้ → เขียนเอกสารที่แก้เท่านั้น ── */
@@ -9644,6 +10010,7 @@ function sat7dSaveOrder(id, accId){
   const c = sat7dCalc(idea, accId);
   if(c.lot==null) return;   /* ปุ่มถูกปิดอยู่แล้วถ้า lot คำนวณไม่ได้ — กันไว้อีกชั้น */
   if(c.offBias) return;     /* SR1 — สวน Bias สัปดาห์ = บันทึกไม่ได้ */
+  if(c.ddBlock) return;     /* DD1 — พัก = บันทึกไม่ได้ */
   const B = getBook(accId);
   const t = makeTradeObject({
     id: 't'+Date.now(),
@@ -10138,14 +10505,16 @@ function satV3AcctMetaHtml(){
     const newBad = b.nNew > b.newMax;
     const sf = k => (satStripFields(a.id).find(f=>f.key===k) || {}).suffix || '';
     const cntTxt = b.cnt.since ? `${b.cnt.n}/${SAT7D_PROVE_N}` : '—';
+    const dd = ddEval(a.id, 'sat');   /* DD1 */
     const items = [
       {label:'ถัง Sat', value: b.cap>0 ? sat7dMoney(b.cap) : '—'},
+      {label:'', value: ddChipHtml(dd)},
       {label:'heat', value:`${b.heatPct==null?'—':fmt2(Math.round(b.heatPct*100)/100)}${sf('heat')}`, warn:heatBad},
       {label:'ไม้ใหม่', value:`${b.nNew}${sf('newCount')}`, warn:newBad},
       {label:'RPT', value:`${b.rpt}%`},
       {label:'ไม้ Sat', value:cntTxt}
     ];
-    return `<div class="sumMr" data-acct="${escHtml(a.id)}"><span class="acctDotC" style="--ac:${acctColor(a)}"></span><b>${escHtml(a.name)}</b> · ${items.map(it=>`<span class="sumM${it.warn?' warn':''}">${escHtml(it.label)} <em>${it.value}</em></span>`).join(' · ')}</div>`;
+    return `<div class="sumMr" data-acct="${escHtml(a.id)}"><span class="acctDotC" style="--ac:${acctColor(a)}"></span><b>${escHtml(a.name)}</b> · ${items.map(it=>`<span class="sumM${it.warn?' warn':''}">${it.label ? escHtml(it.label)+' ' : ''}<em>${it.value}</em></span>`).join(' · ')}</div>${ddBarHtml(dd)}`;
   }).join('');
   return `<div class="sumMeta" data-sat-meta>${rows}</div>`;
 }
@@ -10829,7 +11198,8 @@ function satV3PlanAcctCalc(idea, accId, f2c){
   const mrAct = satV3MrActive(idea);
   const mrC = mrAct ? Calc.mrCheck({side: satV3SideOf(idea), entry: idea.entry, sl: idea.sl, tp: idea.tp, level: mrAct.mr_level, distPct: satMrDistPct(idea.asset)}) : null;
   const offB = satOffBias(idea);   /* SR1 — สวน Bias สัปดาห์ = ไม่ ready ทุกบัญชี · ไม่มีทางลัด */
-  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: (offB ? [satOffBiasMsg(idea)] : []).concat(rd.reasons, mrC ? mrC.reasons : []), ready: rd.ok && (!mrC || mrC.ok) && !offB, tradeExists, factor: F.factor, f2c: F, mr: !!mrAct, mrOk: mrC ? mrC.ok : true, mrCheck: mrC, offBias: offB};
+  const ddB = ddSatBlock(base);   /* DD1 — พัก = ไม่ ready ทุกบัญชี · ไม่มีทางลัด */
+  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: (ddB ? [ddB] : []).concat(offB ? [satOffBiasMsg(idea)] : [], rd.reasons, mrC ? mrC.reasons : []), ready: rd.ok && (!mrC || mrC.ok) && !offB && !ddB, tradeExists, factor: F.factor, f2c: F, mr: !!mrAct, mrOk: mrC ? mrC.ok : true, mrCheck: mrC, offBias: offB, ddBlock: ddB};
 }
 function satV3ReadyCount(idea){
   return sat7dAccts().filter(a=>{
@@ -10862,6 +11232,7 @@ function satV3SaveSlot(ideaId, accId, offplanAcct){
   const c = satV3PlanAcctCalc(idea, accId, F);
   if(c.lot==null) return;
   if(c.offBias) return;   /* SR1 — สวน Bias สัปดาห์ = บันทึกไม่ได้ ไม่มีทางลัด */
+  if(c.ddBlock) return;   /* DD1 — พัก = บันทึกไม่ได้ ไม่มีทางลัด (กันซ้ำในฟังก์ชันบันทึก) */
   if(c.mr && !c.mrOk) return;   /* 7E-4: MR ไม่ผ่านกติกา (ระยะ/SL/TP) = บันทึกไม่ได้ ไม่มีทางลัด "รวมด้วย (นอกแผน)" */
   const mrAct = satV3MrActive(idea);
   const B = getBook(accId);
@@ -10907,7 +11278,7 @@ function satV3SaveReadyAccounts(ideaId){
 function satV3SaveOffplanAccount(ideaId, accId){
   const idea = sat7dIdea(ideaId); if(!idea) return;
   const c = satV3PlanAcctCalc(idea, accId);
-  if(c.offBias) return;   /* SR1 — สวน Bias สัปดาห์ = ไม่มีทางลัดนอกแผน */
+  if(c.offBias || c.ddBlock) return;   /* SR1 — สวน Bias สัปดาห์ · DD1 — พัก = ไม่มีทางลัดนอกแผน */
   if(c.lot!=null) satV3SaveSlot(idea.id, accId, !c.ready);   /* SU — บัญชีไม่ ready = นอกแผนจริง (ธงเดิม) · Setup ไม่ครบแยกเป็น setup_incomplete ใน satV3SaveSlot */
 }
 /* ── ★ CRITICAL FIX (25 ก.ย.): plan/open row อ่านจากไม้ในสมุดจริงของแต่ละบัญชี (status plan/open ผูก port satB)
@@ -11053,7 +11424,7 @@ function satPyrCheck(t, accId){
   if(!satPyrEligible(t)) return {ok:false, reasons:['ไม้นี้เติมไม่ได้'], qty:null, minLot:null, cfg:null};
   const safe = t.bias==='Short' ? t.sl <= t.entry : t.sl >= t.entry;
   if(!(t.sl>0) || !safe) reasons.push(`ย้าย SL ไม้ 1 ไปที่ทุน (${t.entry}) หรือดีกว่าก่อน`);
-  if(satTradeOffBias(t)) reasons.push(satOffBiasMsg({asset:t.sym}));
+  if(satTradeOffBias(t)) reasons.push(`สวน Bias สัปดาห์ (ตอนนี้ ${satWeekBiasNow(t.sym)}) — เติมไม้ไม่ได้`);   /* DD1 §0.3 */
   const cfg = satPyrCfg(t, accId);
   let qty = null, minLot = null;
   if(!cfg) reasons.push('ยังไม่ตั้งขนาดสัญญา');
@@ -11078,13 +11449,14 @@ function satPyrCalc(t, accId, inp){
   }
   const base = sat7dAcctBase(accId);
   const mult = t.mult || 1, toTHB = tradeCur(t)==='USD' ? base.fx : 1;
-  const out = {errs, qty: ck.qty, cfg: ck.cfg, slErr, base, risk2THB:null, rMult:null, risk1After:null, heatPct:null, cur: tradeCur(t)};
+  const out = {errs, qty: ck.qty, cfg: ck.cfg, slErr, base, risk2THB:null, rMult:null, risk1After:null, risk1AfterTHB:null, heatPct:null, cur: tradeCur(t)};
   if(ck.qty!=null && e2>0 && sj>0 && !slErr){
     const c = ck.cfg.contract;
     out.risk2THB = ck.qty * Math.abs(e2 - sj) * c * toTHB;
-    out.rMult = base.riskTHB>0 ? out.risk2THB / base.riskTHB : null;
+    out.rMult = base.riskTHBFull>0 ? out.risk2THB / base.riskTHBFull : null;   /* DD1 — R ของ RPT ปกติ */
     out.risk1After = (long ? (e1 - sj) : (sj - e1)) * (+t.qty) * mult;   /* ≤ 0 = ล็อกกำไร */
-    const old1 = Math.abs(e1 - (+t.sl)) * (+t.qty) * mult * toTHB;
+    out.risk1AfterTHB = out.risk1After * toTHB;
+    const old1 = posOpenRisk(t, base.fx).thb;   /* DD1 §0 — SL เลยทุนแล้ว = 0 (ตรงกับ heat ในแถบบัญชี) */
     const heatTHB = base.openRisk - old1 + Math.max(0, out.risk1After) * toTHB + out.risk2THB;
     out.heatPct = Calc.heat(heatTHB, base.cap);
     if(out.heatPct!=null && out.heatPct > base.heatMax + 1e-9) errs.push('heat เกิน');   /* ไม่เช็กโควตาไม้ใหม่/สัปดาห์ */
@@ -11131,7 +11503,7 @@ function satPyrRefresh(){
   const c = satPyrCalc(t, satPyrCtx.accId, satPyrRead());
   const set = (id, v) => { const el = satPyrEl(id); if(el) el.textContent = v; };
   set('pyrRisk2', c.risk2THB!=null ? `ความเสี่ยงไม้เติม ฿${fmt0(Math.round(c.risk2THB))}${c.rMult!=null?` (${fmt2(c.rMult)}R ของ RPT)`:''}` : '');
-  set('pyrRisk1', c.risk1After!=null ? `ความเสี่ยงไม้ 1 หลังย้าย SL ร่วม: ${c.risk1After<=0 ? `${fmt0(Math.max(0, c.risk1After))} ${c.cur}${c.risk1After<0?' · ล็อกกำไร':''}` : fmt0(c.risk1After)+' '+c.cur}` : '');
+  set('pyrRisk1', c.risk1After!=null ? `ความเสี่ยงไม้ 1 หลังย้าย SL ร่วม: ${c.risk1After<=0 ? `฿${fmt0(Math.max(0, c.risk1AfterTHB))}${c.risk1After<0?' · ล็อกกำไร':''}` : '฿'+fmt0(c.risk1AfterTHB)}` : '');   /* DD1 §0.3 — แสดงเป็น ฿ */
   set('pyrHeat', c.heatPct!=null ? `heat หลังเติม ${fmt2(Math.round(c.heatPct*100)/100)}/${c.base.heatMax}%` : '');
   const er = satPyrEl('pyrErr'); if(er) er.innerHTML = c.errs.map(escHtml).join('<br>');
   const sv = satPyrEl('pyrSave'); if(sv) sv.disabled = c.errs.length>0;
@@ -11157,6 +11529,7 @@ function satPyrSave(){
   const t2 = makeTradeObject(o);
   t2.pyr_parent = t1.id; t2.pyr_no = 2; t2.sl0 = inp.slj;   /* sl0 = SL ตอนเข้าไม้เติม (ไว้คิด R) */
   B.trades.push(t2);
+  if(!(t1.sl0>0) && t1.sl>0) t1.sl0 = t1.sl;   /* DD1 — ไม้ 1 เก่าไม่มี sl0: เก็บ SL ก่อนย้ายร่วม */
   t1.sl = inp.slj; t1.pyr_child = t2.id;
   saveBook(accId);
   if(idea) sat7dWrite('satIdeas', idea.id, {accts:{[accId]:{pyr_trade_id: t2.id}}});
@@ -11235,7 +11608,8 @@ const satV3PlanAdapter = {
   rowExtra(model, a){
     const idea = model._idea, c = satV3PlanAcctCalc(idea, a.id);
     if(model._skipSet.has(a.id)) return `<button type="button" class="ui-btn" onclick="satV3SkipToggle('${escHtml(idea.id)}','${escHtml(a.id)}',false)">เอากลับ</button>`;
-    const statusHtml = c.offBias ? `<span class="ui-acct-warn" data-offbias-block="1">⚠️ ${escHtml(c.warns[0]||'')}</span>`   /* SR1 — ไม่มีปุ่มรวมด้วย (นอกแผน) */
+    const statusHtml = c.ddBlock ? `<span class="ui-acct-warn" data-dd-block="1">⚠️ ${escHtml(c.ddBlock)}</span>`   /* DD1 — พัก: ไม่มีปุ่มรวมด้วย (นอกแผน) */
+      : c.offBias ? `<span class="ui-acct-warn" data-offbias-block="1">⚠️ ${escHtml(c.warns[0]||'')}</span>`   /* SR1 — ไม่มีปุ่มรวมด้วย (นอกแผน) */
       : c.lot==null ? ''
       : c.ready ? '<span class="ui-acct-ok">✅</span>'
       : `<span class="ui-acct-warn">⚠️ ${escHtml(c.warns[0]||'')}</span>${(c.mr && !c.mrOk) ? '' : ` <button type="button" class="ui-btn" onclick="satV3SaveOffplanAccount('${escHtml(idea.id)}','${escHtml(a.id)}')">รวมด้วย (นอกแผน)</button>`}`;
