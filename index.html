@@ -1201,7 +1201,8 @@ button.acctJump:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
 @media (max-width:430px){.ltTab{padding:6px 10px;font-size:.84rem}}
 .wlAlert.ltStale{background:var(--amber-dim);color:#6b4500;cursor:default}
 .ltDecide{background:var(--blue-dim);border-radius:12px;padding:10px 14px;margin:12px 0 16px;display:grid;gap:6px;font-size:.92rem;line-height:1.5}
-.ltDecide .dr{display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px}.ltDecide .dk{font-size:.78rem;font-weight:700;color:var(--blue);padding-top:2px}
+.ltDecide .dr{display:grid;grid-template-columns:104px minmax(0,1fr);gap:10px}.ltDecide .dk{font-size:.78rem;font-weight:700;color:var(--blue);padding-top:2px}
+@media (max-width:430px){.ltDecide .dr{grid-template-columns:1fr;gap:2px}}
 .ltDecide .dr>span:last-child{overflow-wrap:anywhere}
 .ltNxc{display:block;margin-top:4px;font-size:.8rem;color:var(--text);background:var(--surface);border-radius:8px;padding:3px 8px;cursor:pointer}.ltNxc.soon{background:var(--amber-dim);color:var(--amber)}
 .ltSum{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:9px 14px;font-size:.92rem;line-height:1.55;margin:0}
@@ -1217,6 +1218,13 @@ button.acctJump:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
 .ltTw th,.ltTw td{border-bottom:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}
 .ltTw td{white-space:normal;font-family:var(--sans);overflow-wrap:anywhere}   /* ทับกฎ td รวมของแอป (nowrap · mono) — เนื้อ Thesis ต้องตัดบรรทัดได้ */
 .ltTw th{font-weight:600;color:var(--muted);font-size:.78rem;white-space:nowrap;background:var(--surface3);font-family:var(--sans);text-transform:none;letter-spacing:0}
+.ltTerm{all:unset;cursor:pointer;color:inherit;font:inherit;text-decoration:underline dotted;text-decoration-color:var(--muted);text-underline-offset:3px}
+.ltTerm:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-radius:3px}
+.ltPop{position:fixed;z-index:9999;max-width:min(280px,calc(100vw - 16px));box-sizing:border-box;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:.84rem;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,.18);overflow-wrap:anywhere}
+.ltPop b{display:block;margin-bottom:2px}
+.ltCr{color:var(--muted);font-size:.9em}
+.ltGl{margin:0;padding-left:18px;font-size:.88rem;line-height:1.6}
+.ltFoldBar .ltCnt:empty{display:none}.ltFoldBar .ltCnt:empty+.ltChev{margin-left:auto}
 .ltTg{display:inline-block;font-size:.66rem;font-weight:700;border-radius:5px;padding:0 5px;margin:0 1px;vertical-align:1px}
 .ltTg.F,.ltTg.C{background:var(--green-dim);color:var(--green)}.ltTg.M{background:var(--purple-dim);color:var(--purple)}.ltTg.I{background:var(--blue-dim);color:var(--blue)}.ltTg.A{background:rgba(196,90,18,.13);color:#c45a12}.ltTg.Q{background:var(--surface2);color:var(--muted)}
 .ltStk{border-bottom:1px solid var(--border);padding:8px 0;font-size:.88rem;line-height:1.5;overflow-wrap:anywhere}.ltStk .n{font-size:.8rem;color:var(--muted)}.ltStk .n b{color:var(--text)}
@@ -5192,6 +5200,7 @@ function switchTab(t){
   }, {passive:true});
 })();
 document.addEventListener('keydown', (e)=>{
+  if((e.key==='Escape' || e.key==='Esc') && ltPopBtn){ e.preventDefault(); ltTermClose(); return; }   /* WL3 — ปิดกล่องคำศัพท์ก่อน */
   if((e.key==='Escape' || e.key==='Esc') && activeTab==='watch' && wlResearchExpanded){
     e.preventDefault(); if(wlNarrow()) wlBack(); else wlSetSub('sum'); return;
   }
@@ -5222,7 +5231,7 @@ const KB_SUB = {
     name:'Watch',
     cycle:{list:WL_PORT_CYCLE_KB, get:()=>wlView==='cand'?'':wlPort, set:v=>wlSetPort(v), label:'วน All → Core.US → Core.TH'},
     keys:{},
-    extra:[['↑ ↓','เลื่อนหุ้นใน Watchlist'],['Esc','มือถือ: กลับจากหน้ารายตัว']]
+    extra:[['↑ ↓','เลื่อนหุ้นใน Watchlist'],['← →','เปลี่ยนแท็บการ์ด (สรุป … ออกเมื่อ)'],['Esc','มือถือ: กลับจากหน้ารายตัว']]
   }
 };
 const KB_GLOBAL = [['1–6','สลับแท็บ Today · Flow · Watch · แผน · Journal · Port'],['T','ไปหน้าแผน'],['C','Watchlist'],['V','Candidates'],['?','ดูปุ่มลัด'],['Esc','ปิดหน้าต่าง']];
@@ -5249,6 +5258,19 @@ function kbHandle(e){
   /* 7E-2: T = goPlanTop (scope หุ้น → เปิด sheet แผน Core ใหม่) */
   if(e.code==='KeyT' && !e.ctrlKey && !e.metaKey && !e.altKey){ e.preventDefault(); goPlanTop(); return; }
   if((e.key==='Escape' || e.key==='Esc') && activeTab==='watch' && wlMobOpen && wlNarrow()){ e.preventDefault(); wlBack(); return; }
+  /* WL3 — ←/→ เปลี่ยนแท็บการ์ด (สรุป … ออกเมื่อ) · หยุดที่ขอบ ไม่วน */
+  if((e.key==='ArrowLeft' || e.key==='ArrowRight') && activeTab==='watch'){
+    if(e.ctrlKey || e.metaKey || e.altKey || ltPopBtn || wlMenu || ltImp || (wlNarrow() && !wlMobOpen)) return;
+    const r = wlSel ? wlFind(wlSel) : null, it = r && r.item;
+    if(!it || !wlThesisOf(it)) return;
+    e.preventDefault();
+    const cur = LT_SUBS.indexOf(ltSub(wlSub) || ltSubMem(r.sym)), nx = Math.min(LT_SUBS.length-1, Math.max(0, cur + (e.key==='ArrowRight' ? 1 : -1)));
+    if(nx !== cur){
+      wlSetSub(LT_SUBS[nx]);
+      requestAnimationFrame(()=>{ try{ const on = document.querySelector('[data-lt-tabs] .ltTab.on'); if(on && on.scrollIntoView) on.scrollIntoView({block:'nearest', inline:'nearest'}); }catch(e){} });
+    }
+    return;
+  }
   /* ↑/↓ เลื่อนหุ้นในรายชื่อ Watch (เฉพาะจอ ≥1024) */
   if((e.key==='ArrowDown' || e.key==='ArrowUp') && activeTab==='watch' && !wlNarrow()){ e.preventDefault(); wlStep(e.key==='ArrowDown' ? 1 : -1); return; }
   const sub = KB_SUB[activeTab]; if(!sub) return;
@@ -8757,6 +8779,7 @@ function renderWatchlist(){
   const keepList = oldList ? oldList.scrollTop : 0;
   const detKey = wlSel + '|' + wlSub + '|' + wlDeep + '|' + wlView;
   const keepDet = (oldDet && host.dataset.detKey === detKey) ? oldDet.scrollTop : 0;
+  ltTermClose();
   host.innerHTML = `<div class="wlm${open?' open':''}">${list}${det}</div>`;
   host.dataset.detKey = detKey;
   initReadExpanders(host);
@@ -8963,9 +8986,22 @@ const ltIsDate = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v||''));
 const ltShort = (s, n) => { s = String(s==null?'':s); return s.length>n ? s.slice(0,n-1)+'…' : s; };
 
 /* ── Markdown เล็ก ๆ (เขียนเอง · escape HTML ก่อนเสมอ) ── */
+let ltTermMap = null;   /* WL3 — คำศัพท์ของการ์ดที่กำลังแสดง (key = escHtml(k ตัวเล็ก ตัดช่องว่าง) → ความหมาย) */
+const ltTermKey = k => escHtml(String(k==null?'':k).trim().toLowerCase());
+function ltTermsSet(th){
+  if(!th){ ltTermMap = null; return; }
+  const m = {}; (Array.isArray(th.terms) ? th.terms : []).forEach(t=>{ if(t && typeof t.k==='string' && typeof t.th==='string'){ const k = ltTermKey(t.k); if(k && !(k in m)) m[k] = t.th; } });
+  ltTermMap = m;
+}
+const LT_CRED = {Mgmt:'คำพูด/คาดการณ์ของผู้บริหาร ยังไม่เกิดจริง', Inference:'ผู้วิเคราะห์ตีความจากหลักฐาน', Assumption:'สมมติฐานเรื่องอนาคต', Unknown:'ยังไม่รู้ (ไม่เปิดเผย/หาไม่เจอ)'};
 function ltInl(s){
   return escHtml(s==null?'':String(s)).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
-    .replace(/\[(F|C|M|I|A|\?)\]/g,(m,t)=>`<span class="ltTg ${t==='?'?'Q':t}">${t}</span>`);
+    .replace(/\[(F|C|M|I|A|\?)\]/g,(m,t)=>`<span class="ltTg ${t==='?'?'Q':t}">${t}</span>`)
+    .replace(/\((Mgmt|Inference|Assumption|Unknown)(?![A-Za-z])/g,'(<span class="ltCr">$1</span>')
+    .replace(/\[\[([^\[\]]{1,40})\]\]/g,(m,t)=>{
+      const k = t.replace(/<[^>]*>/g,'').trim().toLowerCase() /* t escape แล้ว — ห้าม escape ซ้ำ (ตรงกับคีย์ของ ltTermsSet) */, th = ltTermMap && Object.prototype.hasOwnProperty.call(ltTermMap,k) ? ltTermMap[k] : null;
+      return th==null ? t : `<button type="button" class="ltTerm" data-term="${t}" title="${escHtml(th)}">${t}</button>`;
+    });
 }
 function ltMd(src){
   const L = String(src==null?'':src).split('\n'); let h = '', i = 0;
@@ -9065,6 +9101,11 @@ function ltParse(text, bound){   /* → {err} | {th, log} */
   th.sym = sym;
   ['gaps','kpi','tripwires','catalysts','evidence','sources'].forEach(k=>{ th[k] = ltArr(o[k]); });
   th.tier_inputs = (o.tier_inputs && typeof o.tier_inputs==='object' && !Array.isArray(o.tier_inputs)) ? o.tier_inputs : {};
+  { const seen = new Set(); th.terms = (Array.isArray(o.terms) ? o.terms : []).filter(t=>{
+      if(!t || typeof t!=='object' || typeof t.k!=='string' || typeof t.th!=='string') return false;
+      const k = t.k.trim(); if(!k || k.length>40 || t.th.length>200) return false;
+      const key = k.toLowerCase(); if(seen.has(key)) return false; seen.add(key); return true;
+    }).slice(0,50).map(t=>({k:t.k.trim(), th:t.th})); }
   th.summary = Object.assign({}, o.summary);
   th.summary.thesis = Array.isArray(o.summary.thesis) ? o.summary.thesis.map(x=>String(x==null?'':x)) : [];
   return {th, log: ltArr(o.log)};
@@ -9221,6 +9262,39 @@ function ltFold(sym, key, label, count, content){
   return `<div class="ltFold${o?' open':''}" data-lt-fold="${key}"><button type="button" class="ltFoldBar" aria-expanded="${o}" data-lt-foldk="${escHtml(k)}" onclick="ltFoldToggle(this.dataset.ltFoldk)"><span>${label}</span><span class="ltCnt">${count}</span><span class="ltChev" aria-hidden="true">${o?'▴':'▾'}</span></button>${o?`<div class="ltFoldBody">${content}</div>`:''}</div>`;
 }
 const ltTag = t => { t = String(t==null?'':t); return /^(F|C|M|I|A|\?)$/.test(t) ? `<span class="ltTg ${t==='?'?'Q':t}">${t}</span>` : escHtml(t); };
+function ltGlossFold(it){
+  const th = wlThesisOf(it); if(!th) return '';
+  const terms = [], seen = new Set();
+  (Array.isArray(th.terms) ? th.terms : []).forEach(t=>{ if(t && typeof t.k==='string' && typeof t.th==='string'){ const k = t.k.trim().toLowerCase(); if(k && !seen.has(k)){ seen.add(k); terms.push(t); } } });
+  let body = ''; try{ body = JSON.stringify([th.summary, th.sections, th.kpi, th.gaps, th.tripwires, th.catalysts]); }catch(e){}
+  const cred = Object.keys(LT_CRED).filter(c=>new RegExp('\\(' + c + '(?![A-Za-z])').test(body));
+  const n = terms.length + cred.length; if(!n) return '';
+  const rows = terms.slice().sort((a,b)=>a.k.localeCompare(b.k)).map(t=>`<li data-lt-gl="term"><b>${escHtml(t.k)}</b> — ${escHtml(t.th)}</li>`)
+    .concat(cred.map(c=>`<li data-lt-gl="cred"><b>${c}</b> — ${escHtml(LT_CRED[c])}</li>`)).join('');
+  const hint = '<div class="n" style="margin-top:6px">ข้อความที่ไม่มีวงเล็บ = Fact/Calc จากงบ</div>';
+  return `<div class="ltFolds">${ltFold(it.ticker, 'gl', 'คำศัพท์ · ' + n + ' คำ', '', `<ul class="ltGl">${rows}</ul>` + (cred.length ? hint : ''))}</div>`;
+}
+/* WL3 — กล่องความหมายคำศัพท์ (มีได้กล่องเดียว) */
+let ltPopBtn = null, ltPopAt = 0;
+function ltTermClose(){ const p = document.getElementById('ltTermPop'); if(p) p.remove(); ltPopBtn = null; }
+function ltTermOpen(btn){
+  if(ltPopBtn === btn){ ltTermClose(); return; }
+  ltTermClose();
+  const p = document.createElement('div'); p.id = 'ltTermPop'; p.className = 'ltPop'; p.setAttribute('role','tooltip');
+  const b = document.createElement('b'); b.textContent = btn.dataset.term || btn.textContent;
+  const m = document.createElement('div'); m.textContent = btn.getAttribute('title') || '';
+  p.appendChild(b); p.appendChild(m); document.body.appendChild(p); ltPopBtn = btn;
+  const vw = document.documentElement.clientWidth || window.innerWidth, vh = window.innerHeight, r = btn.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
+  let x = Math.min(Math.max(8, r.left), Math.max(8, vw - w - 8)), y = r.bottom + 6;
+  if(y + h > vh - 8 && r.top - h - 6 >= 8) y = r.top - h - 6;
+  p.style.left = x + 'px'; p.style.top = y + 'px'; ltPopAt = Date.now();
+}
+document.addEventListener('click', e=>{
+  const b = e.target && e.target.closest && e.target.closest('.ltTerm');
+  if(b){ e.preventDefault(); ltTermOpen(b); return; }
+  if(ltPopBtn && !(e.target.closest && e.target.closest('#ltTermPop'))) ltTermClose();
+});
+window.addEventListener('scroll', ()=>{ if(ltPopBtn && Date.now() - ltPopAt > 250) ltTermClose(); }, true);   /* เลื่อนที่เกิดจากการเปิดกล่องเอง (เช่น เบราว์เซอร์เลื่อนหาปุ่ม) ไม่นับ */
 function ltEvidFold(it){
   const th = wlThesisOf(it), ev = ltArr(th.evidence), src = ltArr(th.sources); if(!ev.length && !src.length) return '';
   const tbl = ev.length ? ltTable(['ข้อความ','แหล่ง','ช่วง','ป้าย','ข้อจำกัด'], ev.map(e=>[ltInl(e.claim), ltInl(e.src), escHtml(e.period==null?'':e.period), ltTag(e.tag), ltInl(e.limit)])) : '';
@@ -9233,6 +9307,11 @@ function ltEvidFold(it){
 
 /* ── หัวการ์ด + แท็บ ── */
 function wlDetailHtml(r){
+  const it0 = r && r.item;
+  ltTermsSet(it0 ? wlThesisOf(it0) : null);
+  try{ return wlDetailHtml0(r); }finally{ ltTermsSet(null); }
+}
+function wlDetailHtml0(r){
   if(!r) return '<div class="panel"><div class="empty">ไม่พบหุ้นตัวนี้</div></div>';
   const d = r.d, w = r.w, it = r.item, th = wlThesisOf(it);
   const rawSym = w ? w.sym : r.sym;
@@ -9285,8 +9364,8 @@ function ltGapsHtml(list){
 }
 function ltTabHtml(r, sub){
   const it = r.item, th = wlThesisOf(it), s = th.summary || {}, sym = r.sym, esc = escHtml;
-  if(sub==='biz') return `<div class="panel wlOv"><div class="ltMd" data-lt-md="s1">${ltMd(th.sections && th.sections.s1 && th.sections.s1.md)}</div>${ltEvidFold(it)}</div>`;
-  if(sub==='why') return `<div class="panel wlOv"><div class="ltMd" data-lt-md="s2">${ltMd(th.sections && th.sections.s2 && th.sections.s2.md)}</div>${ltEvidFold(it)}</div>`;
+  if(sub==='biz') return `<div class="panel wlOv"><div class="ltMd" data-lt-md="s1">${ltMd(th.sections && th.sections.s1 && th.sections.s1.md)}</div>${ltGlossFold(it)}${ltEvidFold(it)}</div>`;
+  if(sub==='why') return `<div class="panel wlOv"><div class="ltMd" data-lt-md="s2">${ltMd(th.sections && th.sections.s2 && th.sections.s2.md)}</div>${ltGlossFold(it)}${ltEvidFold(it)}</div>`;
   if(sub==='trk'){
     const mob = ltMob(), gaps = ltArr(th.gaps), must = gaps.filter(g=>g.priority==='must'), oth = gaps.filter(g=>g.priority!=='must');
     const kpi = ltArr(th.kpi), log = (it.thesis_log || []).filter(l=>l && typeof l==='object').slice().reverse();
@@ -9301,7 +9380,7 @@ function ltTabHtml(r, sub){
     return `<div class="panel wlOv">${ltNotesHtml(r)}
       ${kpi.length ? `<div class="wlSec" data-lt-sec="kpi"><div class="wlSh"><span class="ic">📊</span>KPI ที่ต้องดู</div>${kpiH}</div>` : ''}
       ${must.length ? `<div class="wlSec" data-lt-sec="must"><div class="wlSh"><span class="ic">❓</span>ยังไม่รู้ — ต้องหาคำตอบ (must)</div>${ltGapsHtml(must)}</div>` : ''}
-      ${folds.length ? `<div class="ltFolds">${folds.join('')}</div>` : ''}${ltEvidFold(it)}</div>`;
+      ${folds.length ? `<div class="ltFolds">${folds.join('')}</div>` : ''}${ltGlossFold(it)}${ltEvidFold(it)}</div>`;
   }
   if(sub==='exit'){
     const W = ltTws(it).sort((a,b)=>LT_LV_ORD[a.level]-LT_LV_ORD[b.level] || a.i-b.i), act = W.filter(x=>x.level!=='ok'), ok = W.filter(x=>x.level==='ok');
@@ -9312,7 +9391,7 @@ function ltTabHtml(r, sub){
     const folds = [];
     if(ok.length) folds.push(ltFold(sym, 'ok', '✓ ปกติ (ok)', ok.length + ' ข้อ', ok.map(card).join('')));
     if(s4) folds.push(ltFold(sym, 's4', 'วิธีอ่าน · ระดับ · เมื่อไหร่ตัดออก', '4.1–4.4', `<div class="ltMd">${ltMd(s4)}</div>`));
-    return `<div class="panel wlOv">${act.map(card).join('') || (W.length ? '<div class="wlNone" data-lt-allok>ไม่มี tripwire ระดับ watch ขึ้นไป</div>' : '<div class="wlNone">Thesis ฉบับนี้ไม่มี tripwire</div>')}${folds.length ? `<div class="ltFolds">${folds.join('')}</div>` : ''}</div>`;
+    return `<div class="panel wlOv">${act.map(card).join('') || (W.length ? '<div class="wlNone" data-lt-allok>ไม่มี tripwire ระดับ watch ขึ้นไป</div>' : '<div class="wlNone">Thesis ฉบับนี้ไม่มี tripwire</div>')}${folds.length ? `<div class="ltFolds">${folds.join('')}</div>` : ''}${ltGlossFold(it)}</div>`;
   }
   /* sum */
   const hot = ltHot(it), why = ltStaleWhy(it), row = (k,v)=> String(v==null?'':v).trim() ? `<dt>${k}</dt><dd>${v}</dd>` : '';
@@ -9324,12 +9403,12 @@ function ltTabHtml(r, sub){
     return `<span class="ltNxc${n<=7?' soon':''}" data-lt-nxc role="button" tabindex="0" onclick="wlSetSub('trk')" onkeydown="if(event.key==='Enter')wlSetSub('trk')">📅 ใกล้สุด ${c.est?'~':''}${esc(wlThDate(c.date))} · ${n>0?'อีก '+n+' วัน':'วันนี้'} — ${esc(ltShort(c.text,48))}${up.length>1 ? ` <b>+${up.length-1}</b>` : ''}</span>`; })() : '';
   const call = s.call || {};
   const dec = `<div class="ltDecide" data-lt-decide><div class="dr" data-lt-k="call"><span class="dk">ข้อสรุป</span><span><b>${esc(LT_ACTION[call.action] || call.action || '—')}</b>${call.why ? ' — ' + ltInl(call.why) : ''}</span></div>
-      <div class="dr" data-lt-k="breaker"><span class="dk">ออกถ้า</span><span>${ltInl(s.breaker) || '—'}</span></div>
+      <div class="dr" data-lt-k="breaker"><span class="dk">Thesis breaker</span><span>${ltInl(s.breaker) || '—'}</span></div>
       <div class="dr" data-lt-k="next"><span class="dk">ถัดไป</span><span>${ltInl(s.next) || '—'}${nx}</span></div></div>`;
   const thl = Array.isArray(s.thesis) && s.thesis.length ? `<ol>${s.thesis.map(t=>`<li>${ltInl(t)}</li>`).join('')}</ol>` : '';
   const w = r.w, ind = w && w.industry ? (indLink(w.industry) ? `<span class="indTxt indLinked" data-i="${esc(w.industry)}" onclick="indOpen(this.dataset.i)">${esc(w.industry)} ↗</span>` : esc(w.industry)) : '';
   const foot = [th.asOf ? `ข้อมูล ณ ${esc(wlThDate(th.asOf))}` : '', th.basis ? esc(th.basis) : '', w && w.note ? `Note: ${esc(w.note)}` : '', ind].filter(Boolean);
-  return `<div class="panel wlOv">${al}${sa}${dec}<dl class="ltSum">${row('ธุรกิจ', ltInl(s.biz))}${row('Thesis', thl)}${row('ความเสี่ยง #1', ltInl(s.risk))}${row('ราคา', ltInl(s.price))}${row('Life cycle', ltInl(s.cycle))}${row('Power', ltInl(s.power))}${row('เครื่องยนต์', ltInl(s.engine))}${row('Unknown', ltInl(s.unknown))}</dl>${ltEvidFold(it)}${foot.length ? `<div class="wlFoot">${foot.join(' · ')}</div>` : ''}</div>`;
+  return `<div class="panel wlOv">${al}${sa}${dec}<dl class="ltSum">${row('ธุรกิจ', ltInl(s.biz))}${row('Thesis', thl)}${row('ความเสี่ยง #1', ltInl(s.risk))}${row('ราคา', ltInl(s.price))}${row('Life cycle', ltInl(s.cycle))}${row('Power (moat)', ltInl(s.power))}${row('Capital allocation', ltInl(s.engine))}${row('Unknown', ltInl(s.unknown))}</dl>${ltGlossFold(it)}${ltEvidFold(it)}${foot.length ? `<div class="wlFoot">${foot.join(' · ')}</div>` : ''}</div>`;
 }
 
 /* ═══════ WL1 — Overview ใหม่: Catalysts · Blockers · Tripwire · โน้ตของฉัน ═══════ */
