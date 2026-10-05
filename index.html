@@ -2063,6 +2063,21 @@ button.ccChip{cursor:pointer;min-height:24px}
 .ideaLoseBox{background:var(--red-dim);color:var(--red);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:.88rem}.ideaLoseBox .n{color:var(--muted)}
 .ideaAsset{font:inherit;font-size:.76rem;border:0;cursor:pointer}
 .pbIdeas{margin:8px 12px 12px;font-size:.84rem}.pbIdeas summary{cursor:pointer;color:var(--muted)}.ideaPbL{all:unset;display:block;cursor:pointer;padding:4px 0;color:var(--blue)}
+/* ID3a — ร่างไอเดีย · 📋 จับคู่ list */
+.ideaDraftMsg{font-size:.88rem;color:var(--amber);background:var(--amber-dim);border-radius:10px;padding:8px 12px;margin-bottom:10px}
+.ideaQ{color:var(--amber);font-weight:700;margin-left:2px}
+.mtSum{font-size:.8rem;color:var(--muted);margin:8px 0 6px}
+.mtGrp{font-size:.84rem;background:var(--amber-dim);border-radius:10px;padding:8px 10px;margin-bottom:8px;line-height:2}.mtG{white-space:nowrap}.mtG .small{padding:1px 8px;margin-left:3px}
+.mtGroup{margin:6px 0}.mtGH,.mtGroup>summary{font-size:.82rem;font-weight:600;color:var(--muted);margin:6px 0 2px;cursor:default}.mtGroup>summary{cursor:pointer}
+.mtR{display:flex;align-items:center;gap:8px;padding:4px 2px;border-top:1px solid var(--hair);font-size:.82rem;min-width:0;white-space:nowrap}
+.mtR>*{min-width:0;overflow:hidden;text-overflow:ellipsis}.mtS{flex:0 0 auto;font-family:var(--mono)}.mtD{flex:1 1 30%}.mtI{flex:1 1 24%;color:var(--muted)}.mtX{flex:0 1 auto;max-width:42%;color:var(--muted)}.mtW{flex:0 0 auto;font-size:.66rem;padding:0 6px}
+.mtR[data-kind="ind"] .mtX{color:var(--green)}.mtR[data-kind="in"] .mtX{color:var(--blue)}
+.mtCmd{margin:12px 0 4px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.mtCut{font-size:.84rem;display:inline-flex;gap:6px;align-items:center}
+.mtImp{border-top:1px solid var(--hair);margin-top:10px;padding-top:8px}.mtImp textarea,#matchText,#ideaNewIdea,#ideaNewNote{width:100%;box-sizing:border-box;font-size:16px;font-family:var(--mono)}
+#ideaNewIdea,#ideaNewNote{font-family:var(--sans)}
+@media (max-width:480px){
+  .mtR{flex-wrap:wrap;row-gap:0}.mtD{flex:1 1 0}.mtI{flex:0 1 38%}.mtX{flex:1 0 100%;max-width:100%;font-size:.74rem}
+}
 .pxSrc{color:var(--muted)}.pxSrc.auto{color:var(--blue)}.pxSrc.warn{color:var(--amber);font-weight:600}   /* PX1 */
 .ccWarn{font-size:.8rem;color:var(--warn);margin-top:6px}
 .ccEmg{font-size:.78rem;color:var(--muted);margin:0 0 10px}
@@ -2729,6 +2744,14 @@ button.ccChip{cursor:pointer;min-height:24px}
   <div class="secbody">
     <div class="hint" style="margin:0 0 10px">ช่วงเวลาประจำวัน จ.–ศ. (เวลาไทย) ที่แสดงในแท็บ วันนี้ · ช่วงต้องไม่ทับกัน · บันทึกด้วยปุ่มของหัวข้อนี้</div>
     <div id="tdRtSet"></div>
+  </div></details>
+  <details class="setsec" id="ideaSetSec"><summary class="divlbl">Ideas — กลุ่มที่วิ่งแต่ยังไม่มีไอเดีย</summary>
+  <div class="secbody">
+    <div class="hint" style="margin:0 0 10px">ตอน 📋 จับคู่ list (หน้า Candidates): แสดงกลุ่ม Industry ที่หุ้นขึ้นพร้อมกันแต่ยังไม่มีไอเดีย · ค่านี้ใช้ร่วมทุกเครื่อง</div>
+    <div class="f"><label>จำนวนหุ้นขั้นต่ำต่อกลุ่ม (2–10)</label><input type="number" step="1" min="2" max="10" inputmode="numeric" id="ideaGroupMinIn" data-idea-set-min></div>
+    <div class="f"><label>กด ✕ (ไม่สนใจ) แล้วซ่อนกลุ่มกี่วัน (1–90)</label><input type="number" step="1" min="1" max="90" inputmode="numeric" id="ideaGroupDaysIn" data-idea-set-days></div>
+    <div class="btns" style="justify-content:flex-start;margin-top:6px"><button type="button" class="primary" data-idea-set-save onclick="ideaSetSave()">บันทึกค่า Ideas</button></div>
+    <div class="hint" id="ideaSetMsg" style="margin-top:6px"></div>
   </div></details>
   <details class="setsec"><summary class="divlbl">ขนาดตัวอักษร (rem)</summary>
   <div class="secbody">
@@ -5307,7 +5330,7 @@ function kbHandle(e){
   /* ID1 — มุมมอง Ideas: ←/→ แท็บการ์ด · ↑/↓ เลือกไอเดีย · [ ] วนตัวกรอง */
   if(activeTab==='watch' && wlView==='idea'){
     if(e.key==='ArrowLeft' || e.key==='ArrowRight'){
-      if(e.ctrlKey || e.metaKey || e.altKey || ltPopBtn || ideaMenu || ideaImp || (wlNarrow() && !wlMobOpen) || !ideaSel) return;
+      if(e.ctrlKey || e.metaKey || e.altKey || ltPopBtn || ideaMenu || ideaImp || ideaSheet || (wlNarrow() && !wlMobOpen) || !ideaSel) return;
       e.preventDefault();
       const cur = IDEA_SUBS.indexOf(ideaSubMem(ideaSel)), nx = Math.min(IDEA_SUBS.length-1, Math.max(0, cur + (e.key==='ArrowRight' ? 1 : -1)));
       if(nx !== cur) ideaSetTab(IDEA_SUBS[nx]);
@@ -8901,7 +8924,7 @@ function renderWatchlist(){
   const head = `<div class="wlHead">
       ${wlPillsHtml(A)}
       ${wlView==='wl' ? `<div class="wlPills">${pill(wlPort==='all','All',"wlSetPort('all')")}${pill(wlPort==='US','Core.US',"wlSetPort('US')")}${pill(wlPort==='TH','Core.TH',"wlSetPort('TH')")}</div>` : ''}
-      <div class="wlAdd"><button class="small" onclick="wlOpenAdd()" title="เพิ่มหุ้นเข้า Watchlist (ใช้ร่วมทุกบัญชี)">＋ เพิ่มหุ้น</button><button class="small" type="button" data-lt-import-top onclick="ltImportOpen()" title="Import Thesis (living-thesis@1) — ไม่ผูกหุ้น">📥 Import</button></div>
+      <div class="wlAdd">${wlView==='cand' ? '<button class="small" type="button" data-cand-match-top onclick="matchOpen()" title="จับคู่ list จาก TradingView กับไอเดีย">📋 จับคู่ list</button>' : ''}<button class="small" onclick="wlOpenAdd()" title="เพิ่มหุ้นเข้า Watchlist (ใช้ร่วมทุกบัญชี)">＋ เพิ่มหุ้น</button><button class="small" type="button" data-lt-import-top onclick="ltImportOpen()" title="Import Thesis (living-thesis@1) — ไม่ผูกหุ้น">📥 Import</button></div>
     </div>`;
 
   const empty = wlView==='cand'
@@ -9090,7 +9113,7 @@ function wlPillsHtml(A){
 const IDEA_VIEW_ORDER = ['wl','idea','cand'];
 function ideaCycleView(d){ const i = IDEA_VIEW_ORDER.indexOf(wlView); wlSetView(IDEA_VIEW_ORDER[(i + d + 3) % 3]); }
 /* Tab ดักเฉพาะเมื่อไม่มี sheet/overlay/กล่องคำศัพท์ · ช่องพิมพ์ถูกกรองที่ listener กลางแล้ว */
-function ideaTabBlocked(){ return !!(document.querySelector('.overlay.show, .core-sheet, #ltTermPop') || ltImp || ideaImp); }
+function ideaTabBlocked(){ return !!(document.querySelector('.overlay.show, .core-sheet, #ltTermPop') || ltImp || ideaImp || ideaSheet); }
 function ideaCycleFilter(d){
   const k = IDEA_FILTERS.map(x=>x[0]), i = k.indexOf(ideaFilter);
   ideaFilter = k[(i + d + k.length) % k.length]; ideaMenu = ''; renderWatchlist();
@@ -9160,7 +9183,7 @@ function ideaRowHtml(v){
 function ideaListHtml(rows){
   const e = escHtml;
   const head = `<div class="wlHead">${wlPillsHtml(wlRowsAll())}
-    <div class="wlAdd"><button class="small" type="button" data-idea-import-top onclick="ideaImportOpen()" title="Import ไอเดีย (idea@1)">📥 Import</button></div></div>`;
+    <div class="wlAdd"><button class="small" type="button" data-idea-new-top onclick="ideaNewOpen()" title="เพิ่มไอเดียแบบร่าง (ไม่เรียก AI)">＋ ไอเดีย</button><button class="small" type="button" data-idea-import-top onclick="ideaImportOpen()" title="Import ไอเดีย (idea@1)">📥 Import</button></div></div>`;
   const chips = `<div class="ideaFil" data-idea-filters>${IDEA_FILTERS.map(([k,n])=>`<span class="chip${ideaFilter===k?' on':''}" data-idea-f="${k}" onclick="ideaSetFilter('${k}')">${n}</span>`).join('')}<span class="kbdhint">[ ]</span></div>`;
   const err = ideaErr ? `<div class="wlStat"><span class="r">โหลด Ideas ไม่สำเร็จ (${e(ideaErr)}) — ตรวจ Firestore Rules ของ users/{uid}/ideas</span></div>` : '';
   const empty = ideaLoaded && !ideaList.length ? 'ยังไม่มีไอเดีย — รัน skill idea-scout แล้ว 📥 Import' : (ideaLoaded ? 'ไม่มีไอเดียในตัวกรองนี้' : 'กำลังโหลด…');
@@ -9222,7 +9245,7 @@ function ideaTabVc(v){
       ${tk ? `<div class="ideaTks">${tk}</div>` : ''}</div>`;
   }).join('');
   const ours = ideaOurLosers(v);
-  const loseBox = ours.length ? `<div class="ideaLoseBox" data-idea-lose>หุ้นของเราที่อยู่ฝั่งเสีย: ${ours.map(l=>`<b>${e(l.sym)}</b>${wlHoldersOf(l.sym).map(h=>`<i class="wlDotH" style="background:${h.color}" title="ถืออยู่ · ${e(h.name)}"></i>`).join('')}${l.why ? ` <span class="n">${ideaTxt(l.why)}</span>` : ''}`).join(' · ')}</div>` : '';
+  const loseBox = ours.length ? `<div class="ideaLoseBox" data-idea-lose>หุ้นของเราที่อยู่ฝั่งเสีย: ${ours.map(l=>`<b>${e(l.sym)}</b>${l.state==='screen' ? '<span class="ideaQ" data-idea-lose-q title="รอตรวจ">?</span>' : ''}${wlHoldersOf(l.sym).map(h=>`<i class="wlDotH" style="background:${h.color}" title="ถืออยู่ · ${e(h.name)}"></i>`).join('')}${l.why ? ` <span class="n">${ideaTxt(l.why)}</span>` : ''}`).join(' · ')}</div>` : '';
   return `<div class="panel wlOv">${loseBox}<div class="ideaVc" data-idea-vc>${boxes || '<div class="wlNone">ยังไม่มี value chain</div>'}</div>
     ${ideaDl([['Bottleneck', ideaTxt(ch.bottleneck)], ['AI เสนอให้ดูก่อน', ideaTxt(ch.suggest_why)], ['ยังไม่เลือกเพราะ', ideaTxt(ch.skipped)]])}</div>`;
 }
@@ -9253,16 +9276,17 @@ function ideaDetailHtml(v){
     const e = escHtml, st = IDEA_STATUS[v.status], sub = ideaSubMem(v.id), rd = ideaReady(v);
     const nHot = v.kill.filter(k=>k.level && k.level!=='ok').length, nOurs = ideaOurLosers(v).length;
     const stOpts = IDEA_SET_STATUS.map(s=>{ const bad = s==='ready' && !rd.ok; return `<button type="button" role="menuitem" data-idea-setst="${s}" ${bad?'disabled':''} onclick="ideaSetStatus('${e(v.id)}','${s}')">${e(IDEA_STATUS[s][0])}${v.status===s?' ✓':''}${bad ? `<span class="why">ยังไม่ได้: ${e(rd.missing.join(' · '))}</span>` : ''}</button>`; }).join('');
-    const canDel = v.status==='parked' || v.status==='draft';
+    const canDel = v.status==='parked' || v.status==='draft', draft = v.status==='draft';
     const more = `<span class="ltMenuWrap" data-idea-menuwrap><button class="small" type="button" data-idea-menu aria-haspopup="true" aria-expanded="${ideaMenu==='more'}" aria-label="เมนูเพิ่มเติม" onclick="ideaMenuToggle('more')">⋯</button>${ideaMenu==='more' ? `<div class="ltMenu" role="menu">
+        ${draft ? `<button type="button" role="menuitem" data-idea-copyscan-menu onclick="ideaCopyScan('${e(v.id)}')">คัดลอกคำสั่ง scan</button>` : ''}
         <button type="button" role="menuitem" data-idea-export onclick="ideaExport('${e(v.id)}')">Export JSON</button>
         <button type="button" role="menuitem" data-idea-hist onclick="ideaHistoryOpen('${e(v.id)}')">ประวัติ log</button>
         <button type="button" role="menuitem" data-idea-import onclick="ideaImportOpen()">📥 Import</button>
         <button type="button" role="menuitem" data-idea-del class="${canDel?'danger':'ideaDisabled'}" ${canDel?'':'disabled'} onclick="ideaDelOpen('${e(v.id)}')">ลบ${canDel ? '' : '<span class="why">ตั้งเป็น พัก ก่อน</span>'}</button>
         ${ideaMenuMsg ? `<div class="ltMenuMsg" data-idea-msg>${e(ideaMenuMsg)}</div>` : ''}</div>` : ''}</span>`;
-    const stBtn = `<span class="ltMenuWrap" data-idea-menuwrap><button type="button" class="ltChip ${st[1]} ideaStBtn" data-idea-status="${e(v.status)}" aria-haspopup="true" onclick="ideaMenuToggle('status')">${e(st[0])} ▾</button>${ideaMenu==='status' ? `<div class="ltMenu" role="menu" data-idea-stmenu>${stOpts}</div>` : ''}</span>`;
+    const stBtn = draft ? `<span class="ltChip ${st[1]}" data-idea-status="draft">${e(st[0])}</span>` : `<span class="ltMenuWrap" data-idea-menuwrap><button type="button" class="ltChip ${st[1]} ideaStBtn" data-idea-status="${e(v.status)}" aria-haspopup="true" onclick="ideaMenuToggle('status')">${e(st[0])} ▾</button>${ideaMenu==='status' ? `<div class="ltMenu" role="menu" data-idea-stmenu>${stOpts}</div>` : ''}</span>`;
     const tabs = `<div class="ltTabs" role="tablist" data-idea-tabs>${IDEA_TABS.map(([k,n])=>`<button type="button" role="tab" aria-selected="${sub===k}" class="ltTab${sub===k?' on':''}" data-idea-tab="${k}" onclick="ideaSetTab('${k}')">${n}${k==='evd' && nHot ? `<span class="n" data-idea-hotn>${nHot}</span>` : ''}${k==='vc' && nOurs ? `<span class="n" data-idea-vcn>${nOurs}</span>` : ''}</button>`).join('')}</div>`;
-    const body = sub==='mech' ? ideaTabMech(v) : sub==='evd' ? ideaTabEvd(v) : sub==='vc' ? ideaTabVc(v) : sub==='co' ? ideaTabCo(v) : ideaTabSum(v);
+    const body = draft ? (sub==='sum' ? ideaDraftBody(v) : ideaDraftEmpty()) : sub==='mech' ? ideaTabMech(v) : sub==='evd' ? ideaTabEvd(v) : sub==='vc' ? ideaTabVc(v) : sub==='co' ? ideaTabCo(v) : ideaTabSum(v);
     const head = `<div class="wlDHead">${wlNarrow() ? '<button class="small ghost wlBackBtn" onclick="wlBack()">‹ Ideas</button>' : ''}
       <div class="wlDTop"><div class="wlDT"><b data-idea-title>${e(v.name)}</b> ${stBtn}</div><div class="wlActs">${more}</div></div>
       <div class="wlChips ltChips" data-idea-chips><span class="ltChip">${e(v.scope.join('/') || '—')}</span>${v.inner.nature ? `<span class="ltChip">${e(IDEA_NATURE[v.inner.nature] || v.inner.nature)}</span>` : ''}<span class="ltChip" data-idea-meta>idea@1 · ${e(v.mode)} · ${e(wlThDate(v.date))}</span></div>${tabs}</div>`;
@@ -9301,7 +9325,7 @@ function ideaParse(text){   /* → {err} | {idea, log, id} */
   if(bytes > LT_MAX_BYTES) return {err:'JSON ใหญ่เกิน 200KB (' + Math.round(bytes/1024) + 'KB) — ไม่บันทึก'};
   let o; try{ o = JSON.parse(raw); }catch(e){ return {err:'อ่าน JSON ไม่ได้ — ตรวจว่าวางครบทั้งก้อน (ขึ้นต้น { ลงท้าย })'}; }
   if(!o || typeof o!=='object' || Array.isArray(o)) return {err:'JSON ต้องเป็น object ก้อนเดียว'};
-  if(o.schema==='idea-match@1') return {err:'ไฟล์จับคู่ (idea-match@1) ใช้ใน ID3 — ยังไม่รองรับตอนนี้ ไม่บันทึก'};
+  if(o.schema==='idea-match@1') return {err:'ไฟล์นี้เป็นผลจับคู่ — Import ที่ Candidates › 📋 จับคู่ list'};
   if(o.schema!=='idea@1') return {err:'schema ต้องเป็น "idea@1" (ไฟล์นี้เป็น ' + (o.schema==null ? 'ไม่ระบุ' : JSON.stringify(String(o.schema)).slice(0,60)) + ')'};
   const id = String(o.id==null?'':o.id).trim();
   if(!id) return {err:'ไม่มี id ใน JSON'};
@@ -9348,7 +9372,7 @@ function ideaImportOpen(){
   ov.classList.add('show');
   try{ document.getElementById('ideaJson').focus(); }catch(e){}
 }
-function ideaSheetClose(){ const ov = document.getElementById('ltOverlay'); if(ov) ov.classList.remove('show'); ideaImp = null; }
+function ideaSheetClose(){ const ov = document.getElementById('ltOverlay'); if(ov) ov.classList.remove('show'); ideaImp = null; ideaSheet = null; matchSt = null; }
 function ideaImpDirty(){
   if(!ideaImp) return; ideaImp.parsed = null;
   const s = document.getElementById('ideaSaveBtn'); if(s) s.style.display = 'none';
@@ -9456,7 +9480,7 @@ function ideaRels(sym){   /* ความสัมพันธ์ของหุ
   const key = wlSymKey(sym), out = []; if(!key) return out;
   ideaCounted().forEach(v=>{
     v.cands.forEach(c=>{ if(c.state!=='park' && wlSymKey(c.sym)===key) out.push({v, side:'win', c, seg:(Array.isArray(c.segments) && c.segments.length) ? String(c.segments[0]) : '', screen:c.state==='screen'}); });
-    ltArr(v.I.losers).forEach(l=>{ if(wlSymKey(l.sym)===key) out.push({v, side:'lose', l, seg:ideaLoseSeg(v), screen:false}); });
+    ltArr(v.I.losers).forEach(l=>{ if(wlSymKey(l.sym)===key) out.push({v, side:'lose', l, seg:ideaLoseSeg(v), screen:l.state==='screen'}); });   /* ID3a — loser จาก match = รอตรวจ */
   });
   return out;
 }
@@ -9475,13 +9499,13 @@ function ideaCandRows(inList, map){   /* Candidates = บริษัทฝั�
     .map(o=>({sym:o.sym, port:'cand', market:o.market, w:null, d:map[o.sym] || null, cName:o.name, cInfo:o.info}));
 }
 function candSetFilter(f){ candFilter = ['all','win','lose'].includes(f) ? f : 'all'; wlResearchExpanded = false; wlMobOpen = false; renderWatchlist(); }
-const ideaRelSym = r => r.side==='win' ? (r.screen ? '▲?' : '▲') : '▼';
+const ideaRelSym = r => (r.side==='win' ? '▲' : '▼') + (r.screen ? '?' : '');
 const ideaRelCls = r => r.side==='win' ? (r.screen ? 'q' : 'up') : 'dn';
 function ideaBadgeHtml(sym){
   const rels = ideaRels(sym); if(!rels.length) return '';
   const e = escHtml, tip = rels.map(r=>`${ideaRelSym(r)} ${r.v.name} · ${r.seg || '—'} · ${IDEA_STATUS[r.v.status][0]}`).join('\n');
   let inner;
-  if(rels.length===1){ const r = rels[0]; inner = `<span class="ideaBS${r.screen?' q':''}">${e(r.seg || '—')}${r.screen ? ' ?' : ''}</span><b class="${ideaRelCls(r)}">${ideaRelSym(r)}</b>`; }
+  if(rels.length===1){ const r = rels[0]; inner = `<span class="ideaBS${r.screen && r.side==='win' ?' q':''}">${e(r.seg || '—')}${r.screen && r.side==='win' ? ' ?' : ''}</span><b class="${ideaRelCls(r)}">${ideaRelSym(r)}</b>`; }
   else { const u = []; rels.forEach(r=>{ if(!u.some(x=>x.t===ideaRelSym(r))) u.push({t:ideaRelSym(r), c:ideaRelCls(r)}); }); inner = `<span class="ideaBS">${rels.length} ไอเดีย</span>${u.map(x=>`<b class="${x.c}">${x.t}</b>`).join(' ')}`; }
   return `<span class="ideaBdg" data-idea-badge title="${e(tip)}">${inner}</span>`;
 }
@@ -9511,7 +9535,7 @@ function ideaHandoffWin(id, sym){
     ...(qs.length ? ['คำถามให้ Thesis:'].concat(qs.map(q=>'- ' + q)) : []), ...ideaKillLines(v)]);
 }
 function ideaHandoffLose(id, sym){
-  const v = ideaFind(id), key = wlSymKey(sym), l = v && ltArr(v.I.losers).find(x=>wlSymKey(x.sym)===key); if(!l) return '';
+  const v = ideaFind(id), key = wlSymKey(sym), l = v && ltArr(v.I.losers).find(x=>wlSymKey(x.sym)===key); if(!l || l.state==='screen') return '';   /* ID3a — รอตรวจ = ยังส่งไม่ได้ */
   return ideaHandoffLines([
     `living-thesis update · ${String(l.sym).toUpperCase()} · หลักฐานฝั่ง bear จากไอเดีย`,
     `จากไอเดีย: ${v.name} (${v.id} · idea@1 ${v.date})`,
@@ -9571,8 +9595,8 @@ function ideaRelHtml(r){
     const qs = win ? (Array.isArray(x.c.questions) ? x.c.questions.map(ideaS).filter(Boolean) : []) : [];
     const det = win
       ? `<div class="ideaRelD">${x.c.rank!=null ? `#${e(x.c.rank)} · ` : ''}${e(IDEA_CSTATE[x.c.state] || x.c.state)}${qs.length ? `<details class="ideaRelQ" data-idea-rel-q><summary>คำถามให้ Thesis (${qs.length})</summary><ul>${qs.map(q=>`<li>${ideaTxt(q)}</li>`).join('')}</ul></details>` : ''}</div>`
-      : `<div class="ideaRelD">${ideaTxt(x.l.why)}</div>${r.item ? `<div class="ideaCoAct"><button type="button" class="small" data-idea-handoff-up data-id="${e(x.v.id)}" data-sym="${e(r.sym)}" onclick="ideaDoCopy('lose', this.dataset.id, this.dataset.sym)">คัดลอก Handoff (update)</button></div>${ideaCopyHtml(key)}` : ''}`;
-    return `<div class="ideaRel ${win?'win':'lose'}" data-idea-rel="${win?'win':'lose'}"><button type="button" class="ideaRelB" data-id="${e(x.v.id)}" data-tab="${tab}" onclick="ideaGo(this.dataset.id, this.dataset.tab)"><b class="${ideaRelCls(x)}">${ideaRelSym(x)}</b> · <span class="ideaRelN">${e(x.v.name)}</span> · <span class="ideaRelS${x.screen?' q':''}">${e(x.seg || '—')}</span> ›</button>${det}</div>`;
+      : `<div class="ideaRelD">${ideaTxt(x.l.why)}</div>${r.item ? `<div class="ideaCoAct"><button type="button" class="small" data-idea-handoff-up ${x.screen?'disabled':''} data-id="${e(x.v.id)}" data-sym="${e(r.sym)}" onclick="ideaDoCopy('lose', this.dataset.id, this.dataset.sym)">คัดลอก Handoff (update)</button>${x.screen ? '<span class="ideaWhy" data-idea-handoff-up-why>รอตรวจ — รัน pick ก่อน</span>' : ''}</div>${ideaCopyHtml(key)}` : ''}`;
+    return `<div class="ideaRel ${win?'win':'lose'}" data-idea-rel="${win?'win':'lose'}"><button type="button" class="ideaRelB" data-id="${e(x.v.id)}" data-tab="${tab}" onclick="ideaGo(this.dataset.id, this.dataset.tab)"><b class="${ideaRelCls(x)}">${ideaRelSym(x)}</b> · <span class="ideaRelN">${e(x.v.name)}</span> · <span class="ideaRelS${x.screen && win ?' q':''}">${e(x.seg || '—')}</span> ›</button>${det}</div>`;
   }).join('');
   return `<div class="panel ideaRels" data-idea-rels><div class="ideaRelsT">ไอเดียที่เกี่ยวข้อง</div>${rows}</div>`;
 }
@@ -9591,6 +9615,405 @@ function ideaPbFoldHtml(){
   return `<details class="pbIdeas" data-pb-ideas><summary>ไอเดียที่เกี่ยว (${ids.length})</summary>${ids.map(v=>`<button type="button" class="ideaPbL" data-id="${escHtml(v.id)}" onclick="ideaFromFlow(this.dataset.id)">${escHtml(v.name)}</button>`).join('')}</details>`;
 }
 function ideaFromFlow(id){ try{ switchTab('watch'); }catch(e){} ideaGo(id); }
+
+/* ═══════ ID3a — ＋ ไอเดีย (ร่าง) · 📋 จับคู่ list จาก TradingView (ชั้น 1 ในแอป · 0 token) · 📥 Import ผลจับคู่ (idea-match@1) ═══════
+   ไม่เรียก AI · list ที่วางไม่เก็บถาวร (อยู่ในหน่วยความจำของ sheet เท่านั้น) · เก็บแค่ผลที่ Import → idea.candidates[] / idea.losers[] (state:"screen") ของไอเดียที่นับ
+   ร่าง = idea.status:"draft" (ไม่ใช่ user.status) · Import ผล scan ทีหลัง (id เดียวกัน) แทนที่ idea → สถานะตาม JSON ใหม่ */
+let ideaSheet = null;   /* 'new' | 'match' — sheet ของ ID3a ที่เปิดอยู่ (สถานะหน้าจอล้วน) */
+let matchSt = null;     /* {text, src, rows, mode, cut, impOpen, parsed} — สถานะ sheet จับคู่ (ห้ามเก็บลง Firestore) */
+const IDEA_MATCH_MAX_ROWS = 500, IDEA_MATCH_MAX_BYTES = 300 * 1024;
+
+/* ── ค่าตั้ง (ระดับผู้ใช้ · เก็บที่ settings ของบัญชีแรกเหมือน routine) ── */
+function ideaGroupMin(){ const n = +tdSettings().ideaGroupMin; return (Number.isInteger(n) && n>=2 && n<=10) ? n : 3; }
+function ideaGroupHideDays(){ const n = +tdSettings().ideaGroupHideDays; return (Number.isInteger(n) && n>=1 && n<=90) ? n : 30; }
+function ideaSetFill(){
+  const a = document.getElementById('ideaGroupMinIn'), b = document.getElementById('ideaGroupDaysIn'), m = document.getElementById('ideaSetMsg');
+  if(a) a.value = ideaGroupMin(); if(b) b.value = ideaGroupHideDays(); if(m) m.textContent = '';
+}
+function ideaSetSave(){
+  const a = document.getElementById('ideaGroupMinIn'), b = document.getElementById('ideaGroupDaysIn'), m = document.getElementById('ideaSetMsg');
+  const say = t=>{ if(m) m.textContent = t; return false; };
+  const n1 = Number(a && a.value), n2 = Number(b && b.value);
+  if(!(Number.isInteger(n1) && n1>=2 && n1<=10)) return say('จำนวนหุ้นขั้นต่ำต้องเป็นเลขจำนวนเต็ม 2–10');
+  if(!(Number.isInteger(n2) && n2>=1 && n2<=90)) return say('จำนวนวันที่ซ่อนต้องเป็นเลขจำนวนเต็ม 1–90');
+  if(!tdCanWrite()) return say('ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง');
+  const B = getBook(tdHome()); B.settings.ideaGroupMin = n1; B.settings.ideaGroupHideDays = n2; saveBook(tdHome());
+  say('บันทึกแล้ว'); return true;
+}
+
+/* ── ＋ ไอเดีย (ร่าง) ── */
+function ideaMakeId(name){
+  const slug = String(name||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40).replace(/-+$/,'');
+  const base = (slug || 'idea') + '-' + ideaStamp();
+  let id = base, n = 2; while(ideaList.some(x=>x.id===id)){ id = base + '-' + n; n++; }
+  return id;
+}
+function ideaParseTickers(s){   /* → {list, bad} · ตัดตลาดก่อน ':' · ตัวใหญ่ · ไม่ซ้ำ (wlSymKey) */
+  const list = [], bad = [], seen = new Set();
+  String(s==null?'':s).split(/[\s,;]+/).filter(Boolean).forEach(t=>{
+    const x = wlNormTicker(t.includes(':') ? t.split(':').pop() : t);
+    if(!x || !wlValidTicker(x)){ bad.push(t); return; }
+    const k = wlSymKey(x); if(seen.has(k)) return; seen.add(k); list.push(x);
+  });
+  return {list, bad};
+}
+function ideaCreateDraft(f){   /* f = {name, idea, scope[], mechanism, tickers[], origin[]} → id */
+  const col = ideaCol(); if(!col){ alert('เข้าสู่ระบบก่อน'); return ''; }
+  const id = ideaMakeId(f.name), today = thaiToday();
+  const idea = {schema:'idea@1', id, name:f.name, date:today, mode:'draft', scope:f.scope, status:'draft',
+                user_notes:{idea:f.idea, mechanism:f.mechanism || '', tickers:f.tickers || [], unsure:''}, origin:f.origin || []};
+  const log = [{date:today, new:'สร้างร่างในแอป', changed:'-', decision:''}];
+  col.doc(id).set({idea, idea_log:log, user:{}}).catch(e=>{ alert('บันทึกไม่สำเร็จ: ' + ((e && (e.code||e.message)) || e)); });
+  ideaList = ideaList.filter(x=>x.id!==id).concat([{id, idea, log, user:{status:null, pick:{}, cand:{}, updated_at:''}}]);   /* แสดงทันที · snapshot ยืนยันทีหลัง */
+  wlView = 'idea'; ideaSel = id; ideaFilter = 'all'; ideaMenu = ''; ideaCoOpen = ''; ideaWant = id;
+  ideaSheetClose();
+  renderWatchlist();
+  return id;
+}
+function ideaNewOpen(){
+  if(!uid || !state){ alert('เข้าสู่ระบบก่อน'); return; }
+  ideaSheet = 'new'; ideaMenu = '';
+  const ov = document.getElementById('ltOverlay'); if(!ov) return;
+  document.getElementById('ltModal').innerHTML = `<h3>＋ ไอเดีย (ร่าง)</h3>
+    <div class="hint" style="margin-top:-6px;margin-bottom:10px">บันทึกเป็นร่างไว้ก่อน (ไม่เรียก AI) แล้วคัดลอกคำสั่ง scan ไปรันกับ idea-scout · Import ผลกลับด้วย id เดิม</div>
+    <div class="f"><label>ชื่อ *</label><input type="text" id="ideaNewName" data-idea-new-name maxlength="80" autocomplete="off" oninput="ideaNewDirty()"></div>
+    <div class="f"><label>ไอเดียประโยคเดียว *</label><textarea id="ideaNewIdea" data-idea-new-idea rows="2" oninput="ideaNewDirty()"></textarea></div>
+    <div class="f"><label>ตลาด</label><select id="ideaNewMkt" data-idea-new-mkt><option value="US">US</option><option value="TH">TH</option></select></div>
+    <div class="f"><label>โน้ตของฉัน</label><textarea id="ideaNewNote" data-idea-new-note rows="2"></textarea></div>
+    <div class="f"><label>หุ้นที่นึกไว้ (คั่นด้วยจุลภาค / เว้นวรรค)</label><input type="text" id="ideaNewTk" data-idea-new-tk autocomplete="off" placeholder="เช่น KLAC, AMAT"></div>
+    <div class="ltErr" id="ideaNewErr" data-idea-new-err role="alert"></div>
+    <div class="btns"><button type="button" onclick="ideaSheetClose()">ยกเลิก</button><button type="button" class="primary" id="ideaNewSave" data-idea-new-save onclick="ideaNewSave()">บันทึกร่าง</button></div>`;
+  ov.classList.add('show');
+  try{ document.getElementById('ideaNewName').focus(); }catch(e){}
+}
+function ideaNewDirty(){ const e = document.getElementById('ideaNewErr'); if(e) e.textContent = ''; }
+function ideaNewSave(){
+  const g = id=>{ const el = document.getElementById(id); return el ? String(el.value||'') : ''; }, er = document.getElementById('ideaNewErr');
+  const name = g('ideaNewName').trim(), idea = g('ideaNewIdea').trim(), tk = ideaParseTickers(g('ideaNewTk'));
+  const bad = m=>{ if(er) er.textContent = m; };
+  if(!name) return bad('ใส่ชื่อไอเดียก่อน');
+  if(!idea) return bad('ใส่ไอเดียประโยคเดียวก่อน');
+  if(tk.bad.length) return bad('หุ้นที่นึกไว้ อ่านไม่ได้: ' + tk.bad.slice(0,5).join(', '));
+  ideaCreateDraft({name, idea, scope:[g('ideaNewMkt')==='TH' ? 'TH' : 'US'], mechanism:g('ideaNewNote').trim(), tickers:tk.list, origin:[]});
+}
+function ideaScanCmd(v){
+  const n = ideaObj(v.I.user_notes) || {}, tk = (Array.isArray(n.tickers) ? n.tickers : []).map(ideaS).filter(Boolean);
+  const org = ltArr(v.I.origin).map(o=>ideaS(o && o.title)).filter(Boolean);
+  return ['idea-scout scan', ideaKV('ไอเดีย', n.idea), `ชื่อ: ${v.name} · id: ${v.id} (ใช้ id เดิม — Import แล้วแทนที่ร่างนี้)`, ideaKV('ตลาด', v.scope.join(', ')),
+          ideaKV('โน้ตของฉัน', n.mechanism), ideaKV('หุ้นที่นึกไว้', tk.join(', ')), ideaKV('ที่มา', org.join(' · '))].filter(Boolean).join('\n');
+}
+function ideaCopyTo(key, txt, okMsg, redraw){   /* คัดลอก + ข้อความผล (ใช้ร่วม scan / match) */
+  const ok = ()=>{ ideaCopyState = {key, msg:okMsg, text:''}; redraw(); };
+  const fail = ()=>{ ideaCopyState = {key, msg:'คัดลอกอัตโนมัติไม่สำเร็จ — เลือกข้อความด้านล่างแล้วคัดลอกเอง', text:txt}; redraw(); };
+  const fb = ()=>{
+    try{ const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); const done = document.execCommand('copy'); ta.remove(); done ? ok() : fail(); }
+    catch(e){ fail(); }
+  };
+  try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fb); else fb(); }catch(e){ fb(); }
+}
+function ideaCopyScan(id){
+  const v = ideaFind(id); if(!v || v.status!=='draft') return;
+  const txt = ideaScanCmd(v); window.__ideaLastScan = txt; ideaMenu = '';
+  ideaCopyTo('scan|' + id, txt, 'คัดลอกคำสั่ง scan แล้ว — วางให้ idea-scout', ()=>renderWatchlist());
+}
+function ideaDraftBody(v){
+  const e = escHtml, n = ideaObj(v.I.user_notes) || {}, tk = (Array.isArray(n.tickers) ? n.tickers : []).map(ideaS).filter(Boolean);
+  const org = ltArr(v.I.origin).map(o=>ideaS(o && o.title)).filter(Boolean);
+  return `<div class="panel wlOv" data-idea-draft><div class="ideaDraftMsg" data-idea-draft-msg>ร่าง — ยังไม่ได้รัน idea-scout</div>${ideaDl([
+    ['ไอเดีย', ideaTxt(n.idea)], ['โน้ตของฉัน', ideaTxt(n.mechanism)], ['หุ้นที่นึกไว้', tk.map(e).join(', ')], ['ที่มา', org.map(ideaTxt).join(' · ')]])}
+    <div class="ideaCoAct"><button type="button" class="small primary" data-idea-copyscan onclick="ideaCopyScan('${e(v.id)}')">คัดลอกคำสั่ง scan</button></div>${ideaCopyHtml('scan|' + v.id)}</div>`;
+}
+const ideaDraftEmpty = () => '<div class="panel wlOv"><div class="empty" data-idea-draft-empty>ยังไม่มี — รัน scan ก่อน</div></div>';
+
+/* ── 📋 จับคู่ list ── */
+function matchCsv(text){   /* ตัวอ่าน CSV (RFC 4180) · "…" และ "" · \r\n · BOM · ไม่ใช้ split(',') */
+  const s = String(text==null?'':text).replace(/^﻿/, ''), rows = []; let row = [], f = '', q = false, i = 0, any = false;
+  while(i < s.length){
+    const c = s[i];
+    if(q){
+      if(c==='"'){ if(s[i+1]==='"'){ f += '"'; i += 2; continue; } q = false; i++; continue; }
+      f += c; i++; continue;
+    }
+    if(c==='"' && f===''){ q = true; any = true; i++; continue; }
+    if(c===','){ row.push(f); f = ''; any = true; i++; continue; }
+    if(c==='\r' || c==='\n'){ if(c==='\r' && s[i+1]==='\n') i++; row.push(f); f = ''; if(any || row.length>1 || row[0]!=='') rows.push(row); row = []; any = false; i++; continue; }
+    f += c; any = true; i++;
+  }
+  if(f!=='' || row.length || any){ row.push(f); rows.push(row); }
+  return rows;
+}
+function matchParseList(text){   /* → {err} | {rows:[{sym, desc, industry, market}], mode:'csv'|'tickers'} */
+  const raw = String(text==null?'':text);
+  if(!raw.trim()) return {err:'ยังไม่ได้วาง list'};
+  let bytes = raw.length; try{ bytes = new Blob([raw]).size; }catch(e){}
+  if(bytes > IDEA_MATCH_MAX_BYTES) return {err:'list ใหญ่เกิน 300KB (' + Math.round(bytes/1024) + 'KB) — ไม่ประมวลผล'};
+  const norm = v => wlNormTicker(String(v==null?'':v).includes(':') ? String(v).split(':').pop() : v);
+  const lines = matchCsv(raw), head = lines[0] || [];
+  const col = name => head.findIndex(h=>String(h||'').trim().toLowerCase()===name);
+  const iSym = col('symbol');
+  const out = [], seen = new Set(); let n = 0;
+  if(iSym >= 0){
+    const iDesc = col('description'), iInd = col('industry'), iCur = col('price - currency');
+    const data = lines.slice(1).filter(r=>r.some(x=>String(x||'').trim()));
+    if(!data.length) return {err:'ไม่มีแถวข้อมูล — มีแค่หัวตาราง'};
+    if(data.length > IDEA_MATCH_MAX_ROWS) return {err:'list เกิน ' + IDEA_MATCH_MAX_ROWS + ' แถว (' + data.length + ' แถว) — ไม่ประมวลผล'};
+    data.forEach(r=>{
+      const sym = norm(r[iSym]); if(!sym || !wlValidTicker(sym)) return;
+      const k = wlSymKey(sym); if(seen.has(k)) return; seen.add(k);
+      const cur = iCur>=0 ? String(r[iCur]||'').trim().toUpperCase() : '';
+      out.push({sym, desc:iDesc>=0 ? String(r[iDesc]||'').trim() : '', industry:iInd>=0 ? String(r[iInd]||'').trim() : '', market:cur==='USD' ? 'US' : cur==='THB' ? 'TH' : wlGuessMarket(sym)});
+    });
+    if(!out.length) return {err:'ไม่มีแถวข้อมูล — อ่าน Symbol ไม่ได้'};
+    return {rows:out, mode:'csv'};
+  }
+  const toks = raw.split(/[\s,;]+/).filter(Boolean);
+  if(toks.length > IDEA_MATCH_MAX_ROWS) return {err:'list เกิน ' + IDEA_MATCH_MAX_ROWS + ' แถว (' + toks.length + ' ตัว) — ไม่ประมวลผล'};
+  toks.forEach(t=>{
+    const sym = norm(t); if(!sym || !wlValidTicker(sym)) return;
+    const k = wlSymKey(sym); if(seen.has(k)) return; seen.add(k);
+    out.push({sym, desc:'', industry:'', market:wlGuessMarket(sym)}); n++;
+  });
+  if(!out.length) return {err:'ไม่มีแถวข้อมูล — อ่าน ticker ไม่ได้'};
+  return {rows:out, mode:'tickers'};
+}
+const matchIndKey = s => ideaS(s).toLowerCase().replace(/\s+/g, ' ');
+function matchLayer1(rows){   /* ชั้น 1 — เทียบกับไอเดียที่นับ (รอหลักฐาน / พร้อมส่งต่อ) · 0 token */
+  const counted = ideaCounted();
+  return rows.map(r=>{
+    const key = wlSymKey(r.sym), o = Object.assign({}, r, {kind:'none', ideas:[], dir:'', nSeg:0, inWl:wlHas(r.sym)});
+    counted.forEach(v=>{
+      if(v.cands.some(c=>wlSymKey(c.sym)===key)) o.ideas.push({v, side:'win'});
+      if(ltArr(v.I.losers).some(l=>wlSymKey(l.sym)===key)) o.ideas.push({v, side:'lose'});
+    });
+    if(o.ideas.length){ o.kind = 'in'; return o; }
+    const ik = matchIndKey(r.industry); let up = false, dn = false;
+    if(ik) counted.forEach(v=>{
+      const segs = v.segs.filter(s=>ltArr(s.industries).some(x=>matchIndKey(x)===ik));
+      if(!segs.length) return;
+      o.ideas.push({v, segs}); o.nSeg += segs.length;
+      segs.forEach(s=>{ if(s.effect==='win' || s.effect==='mixed') up = true; if(s.effect==='lose' || s.effect==='mixed') dn = true; });
+    });
+    if(o.ideas.length){ o.kind = 'ind'; o.dir = (up ? '▲' : '') + (dn ? '▼' : ''); }
+    return o;
+  });
+}
+function matchResText(r){
+  const nm = r.ideas.map(x=>x.v.name);
+  if(r.kind==='in') return 'อยู่ในไอเดียแล้ว · ' + r.ideas.map(x=>`${x.v.name} ${x.side==='win' ? '▲' : '▼'}`).join(' · ');
+  if(r.kind==='ind') return 'Industry ตรง · ' + nm[0] + (nm.length>1 ? ` +${nm.length-1} ไอเดีย` : '') + ` · ${r.nSeg} ส่วน ${r.dir}`;
+  return 'ไม่ตรง';
+}
+/* กลุ่มที่วิ่งแต่ยังไม่มีไอเดีย (8d) — เฉพาะโหมด CSV · ซ่อนด้วย localStorage แยกตาม Industry ตัวเล็ก */
+function ideaGroupHideMap(){ try{ const m = JSON.parse(localStorage.getItem('ideaGroupHide') || '{}'); return (m && typeof m==='object' && !Array.isArray(m)) ? m : {}; }catch(e){ return {}; } }
+function ideaGroupHidden(key){ const u = ideaGroupHideMap()[key]; return !!u && thaiToday() < String(u); }
+function ideaGroupHide(key){
+  const until = new Date(Date.parse(thaiToday() + 'T00:00:00Z') + ideaGroupHideDays() * 864e5).toISOString().slice(0,10);
+  try{ const m = ideaGroupHideMap(); m[key] = until; localStorage.setItem('ideaGroupHide', JSON.stringify(m)); }catch(e){}
+}
+function matchGroups(L){
+  const by = {};
+  L.filter(r=>r.kind==='none' && r.industry).forEach(r=>{ const k = matchIndKey(r.industry); (by[k] || (by[k] = {key:k, name:r.industry, rows:[]})).rows.push(r); });
+  const min = ideaGroupMin();
+  return Object.values(by).filter(g=>g.rows.length >= min && !ideaGroupHidden(g.key)).sort((a,b)=>b.rows.length-a.rows.length || a.name.localeCompare(b.name)).slice(0,3);
+}
+function matchGroupMake(key){
+  if(!matchSt) return;
+  const g = matchGroups(matchLayer1(matchSt.rows)).find(x=>x.key===key); if(!g) return;
+  const today = thaiToday(), mk = []; g.rows.forEach(r=>{ if(!mk.includes(r.market)) mk.push(r.market); });
+  ideaCreateDraft({name:`${g.name} วิ่ง — เพราะอะไร?`, idea:`หุ้นกลุ่ม ${g.name} ขึ้นพร้อมกันใน screen ${today}`, scope:mk, mechanism:'', tickers:g.rows.map(r=>r.sym), origin:[{title:`TradingView screen ${today}`}]});
+}
+function matchGroupHide(key){ ideaGroupHide(key); matchRenderRes(); }
+
+function matchCmdRows(){ return matchSt ? matchLayer1(matchSt.rows).filter(r=>r.kind==='ind' || (matchSt.cut && r.kind==='none')) : []; }
+function matchCmdWhy(rows){
+  if(!ideaCounted().length) return 'ยังไม่มีไอเดียที่รอหลักฐาน / พร้อมส่งต่อ ให้จับคู่';
+  if(!rows.length) return matchSt.cut ? 'ไม่มีหุ้นที่จะส่ง' : 'ไม่มีหุ้นที่ Industry ตรง — ติ๊ก "ส่งตัวที่ถูกตัดด้วย" เพื่อให้ AI ลองจับคู่ตัวที่เหลือ';
+  return '';
+}
+function matchIdeaBrief(v){
+  const one = ideaOneLine(v).slice(0,300), seg = ef => v.segs.filter(s=>s.effect===ef).map(s=>`${ideaS(s.name)} (${ltArr(s.industries).map(ideaS).filter(Boolean).join(', ')})`).join(' ; ');
+  return [`[${v.id}] ${v.name}${one ? ' — ' + one : ''}`, [' ได้: ', seg('win')], [' เสีย: ', seg('lose')], [' ปนกัน: ', seg('mixed')]]
+    .map(x=>Array.isArray(x) ? (x[1] ? x[0] + x[1] : '') : x).filter(Boolean).join('\n');
+}
+function matchCmd(){
+  const rows = matchCmdRows(), p = x=>ideaS(x) || '—';
+  return ['idea-scout match', `วันที่: ${thaiToday()} · ที่มา: ${matchSt.src || 'TradingView screen'}`, 'หุ้น (Symbol · Description · Industry · ตลาด):']
+    .concat(rows.map(r=>`${r.sym} · ${p(r.desc)} · ${p(r.industry)} · ${r.market}`), ['สรุปไอเดียสำหรับจับคู่:'], ideaCounted().map(matchIdeaBrief)).join('\n');
+}
+function matchCopy(){
+  if(!matchSt) return;
+  const rows = matchCmdRows(); if(matchCmdWhy(rows)) return;
+  const txt = matchCmd(); window.__ideaLastMatch = txt;
+  ideaCopyTo('match', txt, 'คัดลอกคำสั่ง match แล้ว — วางให้ idea-scout', ()=>matchRenderRes());
+}
+function matchSetCut(on){ if(matchSt){ matchSt.cut = !!on; ideaCopyState = {key:'', msg:'', text:''}; matchRenderRes(); } }
+
+function matchRowHtml(r){
+  const e = escHtml, txt = matchResText(r);
+  return `<div class="mtR" data-match-row="${e(r.sym)}" data-kind="${r.kind}" data-dir="${e(r.dir)}" data-nseg="${r.nSeg}" title="${e(r.sym + ' · ' + (r.desc||'—') + ' · ' + (r.industry||'—') + ' · ' + txt)}"><b class="mtS">${e(r.sym)}</b><span class="mtD">${e(r.desc||'—')}</span><span class="mtI">${e(r.industry||'—')}</span><span class="mtX">${e(txt)}</span>${r.inWl ? '<span class="ltChip g mtW" data-match-inwl>อยู่ใน Watchlist</span>' : ''}</div>`;
+}
+function matchRenderRes(){
+  const host = document.getElementById('matchRes'); if(!host || !matchSt || !matchSt.rows) return;
+  const e = escHtml, L = matchLayer1(matchSt.rows), by = k=>L.filter(r=>r.kind===k);
+  const inn = by('in'), ind = by('ind'), non = by('none');
+  const groups = matchSt.mode==='csv' ? matchGroups(L) : [];
+  const gl = groups.length ? `<div class="mtGrp" data-match-groups>กลุ่มยังไม่มีไอเดีย: ${groups.map(g=>`<span class="mtG" data-match-group="${e(g.key)}"><b>${e(g.name)}</b> (${g.rows.length}) <button type="button" class="small" data-match-group-add data-key="${e(g.key)}" title="สร้างไอเดียร่างจากกลุ่มนี้" aria-label="สร้างไอเดียร่างจากกลุ่ม ${e(g.name)}" onclick="matchGroupMake(this.dataset.key)">＋</button><button type="button" class="small ghost" data-match-group-hide data-key="${e(g.key)}" title="ไม่สนใจ — ซ่อน ${ideaGroupHideDays()} วัน" aria-label="ไม่สนใจกลุ่ม ${e(g.name)} (ซ่อน ${ideaGroupHideDays()} วัน)" onclick="matchGroupHide(this.dataset.key)">✕</button></span>`).join(' · ')}</div>` : '';
+  const grp = (k, title, rows, fold)=>{
+    const head = `<span data-match-gh="${k}">${title} (${rows.length})</span>`, body = rows.length ? rows.map(matchRowHtml).join('') : '<div class="wlNone">ไม่มี</div>';
+    return fold ? `<details class="mtGroup" data-match-group-box="${k}"><summary>${head}</summary>${body}</details>` : `<div class="mtGroup" data-match-group-box="${k}"><div class="mtGH">${head}</div>${body}</div>`;
+  };
+  const rowsSend = matchCmdRows(), why = matchCmdWhy(rowsSend), key = 'match';
+  const cmd = `<div class="mtCmd" data-match-cmd><label class="mtCut"><input type="checkbox" data-match-cut ${matchSt.cut ? 'checked' : ''} onchange="matchSetCut(this.checked)"> ส่งตัวที่ถูกตัดด้วย</label>
+    <button type="button" class="small primary" data-match-copy ${why ? 'disabled' : ''} onclick="matchCopy()">คัดลอกคำสั่ง match${why ? '' : ` (${rowsSend.length} ตัว)`}</button>${why ? `<span class="ideaWhy" data-match-why>${e(why)}</span>` : ''}${ideaCopyHtml(key)}</div>`;
+  host.innerHTML = `<div class="mtSum" data-match-sum>อ่านได้ ${L.length} แถว · ${matchSt.mode==='csv' ? 'CSV' : 'ticker ล้วน'}${matchSt.src ? ' · ' + e(matchSt.src) : ''}</div>${gl}
+    ${grp('in', 'อยู่ในไอเดียแล้ว', inn)}${grp('ind', 'Industry ตรง', ind)}${grp('none', 'ไม่ตรง', non, true)}${cmd}`;
+}
+function matchOpen(){
+  if(!uid || !state){ alert('เข้าสู่ระบบก่อน'); return; }
+  ideaSheet = 'match'; matchSt = {text:'', src:'', rows:null, mode:'', cut:false, impOpen:false, parsed:null}; ideaMenu = ''; ideaCopyState = {key:'', msg:'', text:''};
+  const ov = document.getElementById('ltOverlay'); if(!ov) return;
+  document.getElementById('ltModal').innerHTML = `<h3>📋 จับคู่ list จาก TradingView</h3>
+    <div class="hint" style="margin-top:-6px;margin-bottom:10px">วาง CSV จาก TradingView screener (ต้องมีคอลัมน์ Symbol) หรือพิมพ์ ticker อย่างเดียว · ≤ 500 แถว · ≤ 300KB · list ไม่ถูกเก็บถาวร (เก็บแค่ผลที่ Import)</div>
+    <textarea id="matchText" data-match-text rows="6" spellcheck="false" placeholder="Symbol,Description,…  หรือ  TER, VECO, KLAC" oninput="matchDirty()"></textarea>
+    <div class="ltFileRow"><label class="small ltFileBtn">เลือกไฟล์ .csv<input type="file" id="matchFile" data-match-file accept=".csv,text/csv,text/plain" onchange="matchFileIn(this)"></label></div>
+    <div class="ltErr" id="matchErr" data-match-err role="alert"></div>
+    <div id="matchRes" data-match-res></div>
+    <div id="matchImp" data-match-imp></div>
+    <div class="btns"><button type="button" onclick="ideaSheetClose()">ปิด</button><button type="button" data-match-import-open onclick="matchImpToggle()">📥 Import ผลจับคู่</button><button type="button" class="primary" id="matchReadBtn" data-match-read onclick="matchRead()">อ่าน list</button></div>`;
+  ov.classList.add('show');
+  try{ document.getElementById('matchText').focus(); }catch(e){}
+}
+function matchDirty(){
+  if(!matchSt) return;
+  matchSt.src = ''; matchSt.rows = null; matchSt.mode = '';
+  const r = document.getElementById('matchRes'); if(r) r.innerHTML = '';
+  const er = document.getElementById('matchErr'); if(er) er.textContent = '';
+}
+function matchRead(){
+  if(!matchSt) return;
+  const ta = document.getElementById('matchText'), er = document.getElementById('matchErr'), host = document.getElementById('matchRes');
+  if(er) er.textContent = ''; if(host) host.innerHTML = '';
+  const res = matchParseList(ta ? ta.value : '');
+  if(res.err){ matchSt.rows = null; if(er) er.textContent = res.err; return; }
+  matchSt.rows = res.rows; matchSt.mode = res.mode; matchSt.cut = false; ideaCopyState = {key:'', msg:'', text:''};
+  matchRenderRes();
+}
+function matchFileIn(inp){
+  const f = inp && inp.files && inp.files[0]; if(!f || !matchSt) return;
+  const er = document.getElementById('matchErr'), host = document.getElementById('matchRes');
+  if(f.size > IDEA_MATCH_MAX_BYTES){ matchSt.rows = null; if(host) host.innerHTML = ''; if(er) er.textContent = 'ไฟล์ใหญ่เกิน 300KB (' + Math.round(f.size/1024) + 'KB) — ไม่ประมวลผล'; return; }
+  const rd = new FileReader();
+  rd.onload = ()=>{ const ta = document.getElementById('matchText'); if(ta && matchSt){ ta.value = String(rd.result||''); matchRead(); if(matchSt.rows) { matchSt.src = f.name; matchRenderRes(); } } };
+  rd.onerror = ()=>{ if(er) er.textContent = 'อ่านไฟล์ไม่สำเร็จ'; };
+  rd.readAsText(f);
+}
+
+/* ── 📥 Import ผลจับคู่ (idea-match@1) ── */
+function matchImpToggle(){
+  if(!matchSt) return;
+  matchSt.impOpen = !matchSt.impOpen; matchSt.parsed = null;
+  const host = document.getElementById('matchImp'); if(!host) return;
+  host.innerHTML = matchSt.impOpen ? `<div class="mtImp" data-match-imp-box><div class="hint" style="margin:4px 0 8px">วาง JSON ผลจับคู่ (idea-match@1) จาก idea-scout (มีข้อความหน้า/หลังหรือ \`\`\`json ได้) หรือเลือกไฟล์ .json · ผลทั้งหมดเข้าเป็น "รอตรวจ"</div>
+    <textarea id="matchJson" data-match-json rows="6" spellcheck="false" placeholder='{"schema":"idea-match@1", …}' oninput="matchImpDirty()"></textarea>
+    <div class="ltFileRow"><label class="small ltFileBtn">เลือกไฟล์ .json<input type="file" data-match-json-file accept=".json,application/json" onchange="matchImpFile(this)"></label></div>
+    <div class="ltErr" id="matchImpErr" data-match-imp-err role="alert"></div><div id="matchImpPrev"></div>
+    <div class="btns" style="margin-top:8px;padding-top:8px"><button type="button" data-match-imp-check onclick="matchImpCheck()">ตรวจ JSON</button><button type="button" class="primary" id="matchImpSave" data-match-imp-save style="display:none" onclick="matchImpSave()">บันทึก</button></div></div>` : '';
+}
+function matchImpDirty(){
+  if(!matchSt) return; matchSt.parsed = null;
+  const s = document.getElementById('matchImpSave'), p = document.getElementById('matchImpPrev'), e = document.getElementById('matchImpErr');
+  if(s) s.style.display = 'none'; if(p) p.innerHTML = ''; if(e) e.textContent = '';
+}
+function matchImpFile(inp){
+  const f = inp && inp.files && inp.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ()=>{ const ta = document.getElementById('matchJson'); if(ta){ ta.value = String(rd.result||''); matchImpCheck(); } };
+  rd.onerror = ()=>{ const e = document.getElementById('matchImpErr'); if(e) e.textContent = 'อ่านไฟล์ไม่สำเร็จ'; };
+  rd.readAsText(f);
+}
+function matchResultParse(text){   /* → {err} | {date, source, dropped, per:[{v, win:[], lose:[], skip:{in,missing,notCounted}, segCut}], skipAll} */
+  if(!String(text==null?'':text).trim()) return {err:'ยังไม่ได้วาง JSON'};
+  const raw = ltTrimJson(text);
+  let bytes = raw.length; try{ bytes = new Blob([raw]).size; }catch(e){}
+  if(bytes > LT_MAX_BYTES) return {err:'JSON ใหญ่เกิน 200KB (' + Math.round(bytes/1024) + 'KB) — ไม่บันทึก'};
+  let o; try{ o = JSON.parse(raw); }catch(e){ return {err:'อ่าน JSON ไม่ได้ — ตรวจว่าวางครบทั้งก้อน (ขึ้นต้น { ลงท้าย })'}; }
+  if(!o || typeof o!=='object' || Array.isArray(o)) return {err:'JSON ต้องเป็น object ก้อนเดียว'};
+  if(o.schema!=='idea-match@1') return {err:'schema ต้องเป็น "idea-match@1" (ไฟล์นี้เป็น ' + (o.schema==null ? 'ไม่ระบุ' : JSON.stringify(String(o.schema)).slice(0,60)) + ')'};
+  if(!Array.isArray(o.results)) return {err:'results ต้องเป็นรายการ'};
+  for(let i=0;i<o.results.length;i++){
+    const r = o.results[i], at = 'แถวที่ ' + (i+1) + ': ';
+    if(!r || typeof r!=='object' || Array.isArray(r)) return {err:at + 'ต้องเป็น object'};
+    if(!ideaS(r.sym)) return {err:at + 'sym ว่าง'};
+    if(r.side!=='win' && r.side!=='lose') return {err:at + 'side ต้องเป็น "win" หรือ "lose" (' + ideaS(r.sym).slice(0,12) + ')'};
+    if(r.fit!=='likely' && r.fit!=='unsure') return {err:at + 'fit ต้องเป็น "likely" หรือ "unsure" (' + ideaS(r.sym).slice(0,12) + ')'};
+  }
+  const per = {}, ord = [], skipAll = {in:0, missing:0, notCounted:0}, seen = new Set(); let segCut = 0;
+  o.results.forEach(r=>{
+    const sym = wlNormTicker(r.sym), key = wlSymKey(sym), iid = ideaS(r.idea), v = ideaFind(iid);
+    if(!v){ skipAll.missing++; return; }
+    if(!IDEA_COUNT.includes(v.status)){ skipAll.notCounted++; return; }
+    const P = per[iid] || (per[iid] = {v, win:[], lose:[], skip:{in:0}, segCut:0}); if(!ord.includes(iid)) ord.push(iid);
+    const dupKey = iid + '|' + r.side + '|' + key;
+    const exists = r.side==='win' ? v.cands.some(c=>wlSymKey(c.sym)===key) : ltArr(v.I.losers).some(l=>wlSymKey(l.sym)===key);
+    if(exists || seen.has(dupKey)){ P.skip.in++; skipAll.in++; return; }
+    seen.add(dupKey);
+    const names = v.segs.map(s=>String(s.name)), segsIn = (Array.isArray(r.segments) ? r.segments : []).map(x=>String(x));
+    const keep = segsIn.filter(x=>names.includes(x)); P.segCut += segsIn.length - keep.length; segCut += segsIn.length - keep.length;
+    const market = (r.market==='TH' || r.market==='US') ? r.market : wlGuessMarket(sym);
+    (r.side==='win' ? P.win : P.lose).push({sym, market, segments:keep, why:ideaS(r.why), fit:r.fit});
+  });
+  const dropped = Number.isFinite(+o.dropped) ? Math.max(0, Math.floor(+o.dropped)) : 0;
+  return {date:ideaS(o.date), source:ideaS(o.source) || 'TradingView screen', dropped, per:ord.map(k=>per[k]), skipAll, segCut, total:o.results.length};
+}
+function matchImpPrevHtml(p){
+  const e = escHtml, rows = [];
+  p.per.forEach(P=>{
+    const bits = []; if(P.win.length) bits.push(`+${P.win.length} รอตรวจ ▲`); if(P.lose.length) bits.push(`+${P.lose.length} รอตรวจ ▼`);
+    if(P.skip.in) bits.push(`ข้าม ${P.skip.in} (อยู่ในไอเดียแล้ว)`);
+    if(P.segCut) bits.push(`ตัดชื่อส่วนที่ไม่มีในไอเดีย ${P.segCut} ชื่อ`);
+    rows.push(`<b>${e(P.v.name)}</b>: ${bits.join(' · ') || 'ไม่มีอะไรเพิ่ม'}`);
+  });
+  if(p.skipAll.missing) rows.push(`ข้าม ${p.skipAll.missing} แถว: ไอเดียไม่พบ`);
+  if(p.skipAll.notCounted) rows.push(`ข้าม ${p.skipAll.notCounted} แถว: ไอเดียไม่ได้อยู่สถานะที่นับ (รอหลักฐาน / พร้อมส่งต่อ)`);
+  if(p.dropped) rows.push(`ตัดจากไฟล์เอง (dropped) ${p.dropped} ตัว`);
+  const add = p.per.reduce((s,P)=>s + P.win.length + P.lose.length, 0);
+  rows.push(add ? `จะเพิ่มทั้งหมด ${add} ตัว · ค่าที่คุณตั้ง (สถานะ · ส่วนที่เลือก · ลำดับ/สถานะบริษัท) ไม่ถูกแตะ` : 'ไม่มีอะไรให้เพิ่ม');
+  return `<div class="ltPrev" data-match-prev><b>ตรวจผ่าน — ตรวจก่อนกดบันทึก</b><ul>${rows.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+}
+function matchImpCheck(){
+  if(!matchSt) return;
+  const ta = document.getElementById('matchJson'), er = document.getElementById('matchImpErr'), pv = document.getElementById('matchImpPrev'), sv = document.getElementById('matchImpSave');
+  matchImpDirty();
+  const res = matchResultParse(ta ? ta.value : '');
+  if(res.err){ if(er) er.textContent = res.err; return; }
+  matchSt.parsed = res;
+  if(pv) pv.innerHTML = matchImpPrevHtml(res);
+  const add = res.per.reduce((s,P)=>s + P.win.length + P.lose.length, 0);
+  if(sv) sv.style.display = add ? '' : 'none';
+}
+function matchImpSave(){
+  const p = matchSt && matchSt.parsed; if(!p) return;
+  const col = ideaCol(); if(!col){ alert('เข้าสู่ระบบก่อน'); return; }
+  const names = {}; (matchSt.rows || []).forEach(r=>{ names[wlSymKey(r.sym)] = r.desc || ''; });
+  p.per.forEach(P=>{
+    const n1 = P.win.length, n2 = P.lose.length; if(!n1 && !n2) return;
+    const d = ideaList.find(x=>x.id===P.v.id); if(!d) return;
+    const idea = JSON.parse(JSON.stringify(d.idea));   /* แทนที่ field idea ทั้งก้อน · ไม่แตะ user */
+    const have = (arr, sym) => arr.some(x=>wlSymKey(x.sym)===wlSymKey(sym));
+    idea.candidates = Array.isArray(idea.candidates) ? idea.candidates : [];
+    idea.losers = Array.isArray(idea.losers) ? idea.losers : [];
+    let a = 0, b = 0;
+    P.win.forEach(w=>{ if(have(idea.candidates, w.sym)) return; idea.candidates.push({sym:w.sym, market:w.market, name:names[wlSymKey(w.sym)] || '', from:'match', segments:w.segments, why_this:w.why, fit:w.fit, state:'screen', relevance_src:'', rank:null}); a++; });
+    P.lose.forEach(l=>{ if(have(idea.losers, l.sym)) return; idea.losers.push({sym:l.sym, market:l.market, why:l.why, src:'', state:'screen'}); b++; });
+    if(!a && !b) return;
+    const line = {date:thaiToday(), new:`match: +${a} ▲ +${b} ▼ รอตรวจ (${p.source})`, changed:'-', decision:''};
+    const log = ltMergeLog(d.log, [line]);
+    d.idea = idea; d.log = log;   /* แสดงทันที · snapshot ยืนยันทีหลัง */
+    col.doc(P.v.id).update({idea, idea_log:log}).catch(e=>{ alert('Import ไม่สำเร็จ: ' + ((e && (e.code||e.message)) || e)); });
+  });
+  ideaSheetClose();
+  renderWatchlist();
+}
 
 /* ═══════ 7W — เพิ่ม / แก้ / ลบหุ้นใน Watchlist (เขียนเฉพาะ users/{uid}/watchlist/{TICKER}) ═══════ */
 let wlAddEditing = null, wlMktTouched = false;
@@ -10211,6 +10634,7 @@ function openSystemSettings(){
   bkRenderLastHint();
   renderAcctMgr();
   try{ tdSetOpen(); }catch(e){ console.warn('routine settings:', e); }   /* TD1 */
+  try{ ideaSetFill(); }catch(e){ console.warn('idea settings:', e); }   /* ID3a */
   document.getElementById('sysOverlay').classList.add('show');
 }
 function saveSystemSettings(){
