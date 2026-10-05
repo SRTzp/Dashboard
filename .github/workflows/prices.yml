@@ -1,0 +1,33 @@
+# ราคาปิดสัปดาห์ + EMA10 ของหุ้น Core → Firestore users/{uid}/prices (Dashboard · งาน PX1)
+# ใช้ secret FIREBASE_SA + FIREBASE_UID · ไม่ commit อะไรกลับ repo
+name: prices
+
+on:
+  schedule:
+    - cron: '30 23 * * 5'   # เสาร์ 06:30 น. ไทย
+    - cron: '30 23 * * 6'   # อาทิตย์ 06:30 น. ไทย
+  workflow_dispatch: {}      # กดรันเองได้ที่แท็บ Actions → prices → Run workflow
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prices
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: ติดตั้งแพ็กเกจ
+        run: pip install --quiet yfinance pandas firebase-admin
+      - name: ดึงราคา + เขียน Firestore
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          FIREBASE_UID: ${{ secrets.FIREBASE_UID }}
+        run: python scripts/build_prices.py
