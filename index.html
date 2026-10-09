@@ -329,7 +329,15 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .tdHwBtns{display:flex;gap:6px}
 .tdHb{border:1px solid var(--border);background:var(--surface);border-radius:9px;min-height:34px;padding:0 10px;font-family:inherit;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
 .tdHb.ok{color:var(--green)}.tdHb .short{display:none}
-.tdHwLine{display:block;margin-top:6px;border:0;background:none;padding:2px 4px;font-family:inherit;font-size:.78rem;color:var(--muted);cursor:pointer;text-decoration:underline;text-align:left}
+.tdHwLine{display:flex;align-items:center;gap:8px;margin-top:6px;padding:2px 4px;font-size:.78rem;color:var(--muted);min-width:0}
+.tdHwLine .tdHwTxt{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tdHwLine .tdHwParts{flex:1 1 auto;margin-top:0}
+.tdHwParts{display:flex;align-items:center;gap:4px;margin-top:6px;flex-wrap:nowrap;min-width:0}
+.tdHp{flex:1 1 0;min-width:0;min-height:32px;padding:0 4px;border:1px solid var(--border);background:var(--surface);border-radius:9px;font-family:inherit;font-size:.78rem;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tdHp.on{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.tdHwCnt{flex:none;font-size:.78rem;font-weight:700;color:var(--muted);min-width:26px;text-align:right}
+.tdSrc{font-size:.62rem;font-weight:700;border-radius:5px;padding:0 5px;margin-left:5px;background:var(--surface2);color:var(--muted);display:inline-block;vertical-align:1px}
+.tdRow[data-kind="homework"] .tdWhat>b{display:inline-block;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .tdOkLine{margin-top:16px;padding:10px 12px;border-radius:12px;background:var(--green-dim);color:var(--green);font-size:.86rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .tdOkLine.none{background:none;padding:4px 0;justify-content:flex-end}
 .tdOkLine .txt{min-width:0;overflow-wrap:anywhere}.tdOkLine .txt .short{display:none}
@@ -370,6 +378,9 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
 .glBar{position:relative;height:8px;border-radius:5px;background:var(--surface2);margin:6px 0 4px}
 .glBar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--teal)}
 .glExp{position:absolute;top:-3px;width:2px;height:14px;background:var(--ink);border-radius:1px;transform:translateX(-1px)}
+#glValBody input{font-family:var(--sans)}#glValBody input::placeholder{font-family:var(--sans)}
+.glCmp{font-size:.7rem;color:var(--muted);margin-top:4px;font-family:var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:0}
+.glCmp[data-warn="1"]{color:var(--amber)}.glCmp a{color:inherit;font-weight:700;text-decoration:underline}
 .glL3{font-size:.72rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--sans)}
 .glL3 .up,.glRow .up{color:var(--teal);font-weight:700}.glL3 .wa{color:var(--amber);font-weight:700}
 .glSeg{display:flex;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:10px}
@@ -2783,7 +2794,7 @@ button.ccChip{cursor:pointer;min-height:24px}
     <h3>กรอกค่าพอร์ต <span style="font-weight:400;color:var(--muted);font-size:.8rem">(ยอดรวมทุกโบรกของบัญชี)</span></h3>
     <div id="glValBody"></div>
     <div class="hint" id="glValMsg" data-gl-valmsg style="min-height:18px;color:var(--red)"></div>
-    <div class="hint">ช่องว่าง = ไม่บันทึกบัญชีนั้น · วันเดียวกันกรอกซ้ำ = แทนที่ · ดู/ลบประวัติได้ใน ตั้งค่าระบบ → เป้าหมาย Port</div>
+    <div class="hint" style="font-family:var(--sans)">ช่องว่าง = ไม่บันทึกบัญชีนั้น · วันเดียวกันกรอกซ้ำ = แทนที่ · ดู/ลบประวัติได้ใน ตั้งค่าระบบ → เป้าหมาย Port</div>
     <div class="btns"><button type="button" data-gl-valcancel onclick="glValClose()">ยกเลิก</button><button type="button" class="primary" data-gl-valsave onclick="glValSave()">บันทึก</button></div>
   </div>
 </div>
@@ -4716,6 +4727,15 @@ const TD_LBL = {XAUUSD:'XAU', BTC:'BTC', BTCUSD:'BTC', S50:'S50', BRENT:'Brent'}
 const tdLabel = k => satLabelCustom(k) || TD_LBL[k] || sat7dLabel(k);
 const TD_OK_WORDS = ['DD', 'heat', 'ไม้ใหม่', 'ชั้น 2', 'f', 'fundflow'];
 const TD_HW_SKIP_DAYS = 14;
+/* GL3 — การบ้านแบ่ง 5 part (ตาม Living Thesis) · id เก็บใน routineLog[วัน].hw.parts · ที่เดียว */
+const TD_HW_PARTS = [{id:'biz', n:'ธุรกิจ'}, {id:'why', n:'ทำไม'}, {id:'next', n:'Next'}, {id:'exit', n:'ออก'}, {id:'tier', n:'Tier'}];
+const TD_HW_IDS = TD_HW_PARTS.map(x=>x.id);
+/* log เก่าไม่มี parts: done:true → ครบ 5 · done:false → ว่าง (อ่านอย่างเดียว ไม่ migrate) */
+function tdHwPartsOf(h){
+  if(!h || typeof h!=='object') return [];
+  if(Array.isArray(h.parts)) return TD_HW_IDS.filter(id=>h.parts.includes(id));
+  return h.done===true ? TD_HW_IDS.slice() : [];
+}
 const TD_FOCUS_MAX = 2;   /* TD2-fix — Focus (✓) ได้วันละไม่เกิน 2 ตลาด */
 let tdLast = null, tdDraft = null, tdTimer = null, tdNumOpen = false, tdPastOpen = false, tdSatEdit = null;   /* tdSatEdit = วัน (ISO) ที่กด 'แก้' เปิดแถวเช็กแผน Sat ค้างไว้ · หน่วยความจำของหน้า */
 
@@ -4744,7 +4764,7 @@ function tdLogDay(day){
   const satState = {};
   if(d && Array.isArray(d.sat)) d.sat.forEach(id=>{ if(tdSatDef().includes(id)) satState[id] = 'ok'; });
   if(d && d.satState && typeof d.satState==='object') tdSatDef().forEach(id=>{ if(d.satState[id]==='ok' || d.satState[id]==='no') satState[id] = d.satState[id]; });
-  const hw = (d && d.hw && typeof d.hw==='object' && typeof d.hw.pick==='string' && d.hw.pick) ? {pick:d.hw.pick, done:d.hw.done===true} : null;
+  const hw = (d && d.hw && typeof d.hw==='object' && typeof d.hw.pick==='string' && d.hw.pick) ? (()=>{ const parts = tdHwPartsOf(d.hw); return {pick:d.hw.pick, done:parts.length===TD_HW_IDS.length, parts}; })() : null;
   const extra = (d && Array.isArray(d.extra)) ? d.extra.filter(x=>typeof x==='string') : [];   /* GL1 — ติ๊กงานรายวันอื่น */
   return {slots: (d && Array.isArray(d.slots)) ? d.slots.slice() : [], satState, hw, extra};
 }
@@ -4945,9 +4965,10 @@ function tdBuild(){
     let pick = log.hw ? all.find(x=>x.t===log.hw.pick) : null;
     if(!pick && okList.length) pick = okList[0];   /* ยังไม่เคยกด → คำนวณทุกครั้งที่วาด (ไม่เขียนตอนแค่เปิดดู) · เก็บ pick เมื่อกด เสร็จ/เปลี่ยนตัว */
     if(!pick) return;
-    T._hw = {t:pick.t, reason:pick.reason, done: !!(log.hw && log.hw.done && log.hw.pick===pick.t)};
+    const parts = (log.hw && log.hw.pick===pick.t) ? log.hw.parts : [];
+    T._hw = {t:pick.t, reason:pick.reason, src:pick.src, parts, done: parts.length===TD_HW_IDS.length};
     if(T._hw.done) return;
-    add('a', mkTask({kind:'homework', ico:'📚', special:'homework', html:`การบ้านหุ้นวันนี้: <b>${escHtml(pick.t)}</b>`, sub:pick.reason, tags:[tdSelTag(pick.t)], go:'ov', args:{t:pick.t}}));
+    add('a', mkTask({kind:'homework', ico:'📚', special:'homework', html:`การบ้านหุ้นวันนี้: <b>${escHtml(pick.t)}</b>`, src:pick.src, parts, sub:pick.reason, tags:[tdSelTag(pick.t)], go:'ov', args:{t:pick.t}}));
   });
   /* ── 🟡 เบรก DD พัก (ยังไม่ครบเวลา) ── */
   guard('dd-wait', ()=>(T._ddWait || []).forEach(x=>add('a', mkTask({kind:'dd-wait', ico:'⏸️', html:`เบรก DD ${x.nm}: พักถึง ${ddDateTxt(x.ev.pauseUntil)} · เขียนทบทวนได้แล้ว`, sub:`${x.a.name} · DD ${x.dd}%`,
@@ -5216,6 +5237,11 @@ function tdPastToggle(){
   if(tl) tl.classList.toggle('pastOpen', tdPastOpen);
   if(f) f.setAttribute('aria-expanded', String(tdPastOpen));
 }
+function tdHwSrcHtml(src){ return src ? `<span class="tdSrc" data-hw-src="${src}" title="${src==='C' ? 'Candidate (ยังไม่อยู่ Watchlist)' : 'Watchlist'}">${src}</span>` : ''; }
+function tdHwPartsHtml(parts){
+  const on = parts || [];
+  return `<span class="tdHwParts" data-hw-parts onclick="event.stopPropagation()">${TD_HW_PARTS.map(x=>{ const k = on.includes(x.id); return `<button type="button" class="tdHp${k ? ' on' : ''}" data-hw-part="${x.id}" aria-pressed="${k}" onclick="event.stopPropagation();tdHwPart('${x.id}')">${x.n}</button>`; }).join('')}<span class="tdHwCnt" data-hw-cnt>${on.length}/${TD_HW_IDS.length}</span></span>`;
+}
 function tdRowHtml(t){
   if(t.special==='satdaily'){
     const M = tdLast, st = M.log.satState, ids = M.rt.satDaily;
@@ -5229,7 +5255,7 @@ function tdRowHtml(t){
     return `<div class="tdRow ${t.g} noGo" data-kind="sat-daily"><span class="tdIco">${t.ico}</span><span class="tdWhat">${t.html}${tdTagHtml(t.tags)}<span class="tdCntTag${n > TD_FOCUS_MAX ? ' warn' : ''}" data-sat-count>Focus ${n}/${TD_FOCUS_MAX}</span><span class="tdWhere">${escHtml(t.sub)}</span><div class="tdSatGrid">${cells}</div>${tdSatEdit === M.today ? `<button type="button" class="tdEditDone" data-sat-edit-done onclick="tdSatEditSet(false)">เสร็จ</button>` : ''}</span><span></span></div>`;
   }
   if(t.special==='homework'){
-    return `<div class="tdRow ${t.g}" role="button" tabindex="0" data-kind="homework" data-go="${t.go}" data-args="${tdAttr(t.args)}" onclick="tdGo(this)" onkeydown="tdKey(event,this)"><span class="tdIco">${t.ico}</span><span class="tdWhat">${t.html}${tdTagHtml(t.tags)}<span class="tdWhere tdWhereKeep" data-hw-reason>${escHtml(t.sub)}</span></span><span class="tdHwBtns"><button type="button" class="tdHb ok" data-hw-done-btn onclick="event.stopPropagation();tdHwDone(true)"><span class="full">✓ เสร็จ</span><span class="short">✓</span></button><button type="button" class="tdHb" data-hw-next onclick="event.stopPropagation();tdHwNext()"><span class="full">เปลี่ยนตัว</span><span class="short">เปลี่ยน</span></button></span></div>`;
+    return `<div class="tdRow ${t.g}" role="button" tabindex="0" data-kind="homework" data-go="${t.go}" data-args="${tdAttr(t.args)}" onclick="tdGo(this)" onkeydown="tdKey(event,this)"><span class="tdIco">${t.ico}</span><span class="tdWhat">${t.html}${tdHwSrcHtml(t.src)}${tdTagHtml(t.tags)}<span class="tdWhere tdWhereKeep" data-hw-reason>${escHtml(t.sub)}</span>${tdHwPartsHtml(t.parts)}</span><span class="tdHwBtns"><button type="button" class="tdHb" data-hw-next onclick="event.stopPropagation();tdHwNext()"><span class="full">เปลี่ยนตัว</span><span class="short">เปลี่ยน</span></button></span></div>`;
   }
   return `<div class="tdRow ${t.g}" role="button" tabindex="0" data-kind="${t.kind}" data-go="${t.go}" data-args="${tdAttr(t.args)}" onclick="tdGo(this)" onkeydown="tdKey(event,this)"><span class="tdIco">${t.ico}</span><span class="tdWhat">${t.html}${tdTagHtml(t.tags)}<span class="tdWhere">${escHtml(t.sub)}</span></span><span class="tdBtn"><span class="full">${escHtml(t.btn)}</span><span class="short">→</span></span></div>`;
 }
@@ -5266,7 +5292,7 @@ function tdHtml(M){
   const chips = (c.r ? `<span class="tdCnt r" data-td-cnt="r">${c.r} ด่วน</span>` : '') + (c.a ? `<span class="tdCnt a" data-td-cnt="a">${c.a} ภายในสัปดาห์</span>` : '') + (c.b ? `<span class="tdCnt b" data-td-cnt="b">${c.b} โอกาส</span>` : '');
   const grp = g => {
     const rows = M.tasks.filter(t=>t.g===g);
-    const hwDone = (g==='a' && M.hw && M.hw.done) ? `<button type="button" class="tdHwLine" data-hw-doneline onclick="tdHwDone(false)">การบ้านวันนี้: ${escHtml(M.hw.t)} ✓</button>` : '';
+    const hwDone = (g==='a' && M.hw && M.hw.done) ? `<div class="tdHwLine" data-hw-doneline><span class="tdHwTxt" data-hw-donetxt>การบ้านวันนี้: ${escHtml(M.hw.t)}${tdHwSrcHtml(M.hw.src)} ✓</span>${tdHwPartsHtml(M.hw.parts)}</div>` : '';
     if(!rows.length && !hwDone) return '';
     const m = TD_GRP[g];
     return `<div class="tdGrp" data-td-grp="${g}">${rows.length ? `<div class="tdGh ${g}"><span class="bar"></span>${m.ico} ${m.t}${m.sub ? ` <small>${m.sub}</small>` : ''}</div>${rows.map(tdRowHtml).join('')}` : ''}${hwDone}</div>`;
@@ -5331,16 +5357,26 @@ function tdSatMark(id, v){
   if(v==='ok'){ const cur = tdLogDay(thaiToday()).satState; if(cur[id]!=='ok' && tdSatDef().filter(k=>cur[k]==='ok').length >= TD_FOCUS_MAX) return; }   /* Focus เต็ม → ไม่เขียน */
   tdLogWrite(d=>{ if(d.satState[id]===v) delete d.satState[id]; else d.satState[id] = v; }, true); }
 /* การบ้านหุ้น — ตัวเสนอของวันเก็บใน routineLog[วัน].hw (คงที่ทั้งวัน) */
-function tdHwDone(on){
+function tdHwDone(on){   /* GL3 — ติ๊กครบ 5 / ล้างทั้งหมดรวดเดียว (ปุ่ม ✓ เดียวเดิมเลิกใช้แล้ว · คงฟังก์ชันไว้) */
   const M = tdLast; if(!M) return;
   const t = (M.hw && M.hw.t) || null; if(!t) return;
-  tdLogWrite(d=>{ d.hw = {pick: t, done: !!on}; });
+  tdLogWrite(d=>{ d.hw = {pick: t, done: !!on, parts: on ? TD_HW_IDS.slice() : []}; });
+}
+function tdHwPart(id){
+  const M = tdLast; if(!M || !M.hw || !TD_HW_IDS.includes(id)) return;
+  const t = M.hw.t;
+  tdLogWrite(d=>{
+    const cur = (d.hw && d.hw.pick===t) ? tdHwPartsOf(d.hw) : [];
+    const nx = cur.includes(id) ? cur.filter(x=>x!==id) : cur.concat(id);
+    const ord = TD_HW_IDS.filter(x=>nx.includes(x));
+    d.hw = {pick: t, done: ord.length===TD_HW_IDS.length, parts: ord};   /* done คำนวณตอนเขียน — ตัวอ่านเก่าที่ดู done ทำงานเหมือนเดิม */
+  });
 }
 function tdHwNext(){
   const M = tdLast; if(!M || !M.hw) return;
   const okList = tdHomeworkCandidates().filter(x=>!x.skip); if(!okList.length) return;
   const i = okList.findIndex(x=>x.t===M.hw.t), nx = okList[(i + 1) % okList.length];
-  tdLogWrite(d=>{ d.hw = {pick: nx.t, done:false}; });
+  tdLogWrite(d=>{ d.hw = {pick: nx.t, done:false, parts:[]}; });
 }
 /* ตัวเลือกหุ้นการบ้าน (แยกไว้ที่เดียว · แก้เกณฑ์ที่นี่) — อ่านเฉพาะ ticker ใน Watchlist (ไม่รวม candidate) + Thesis (WL2) ·
    ลำดับ: (1) ยังไม่มี Thesis (ตามลำดับ Watchlist) → (2) ⚠ ควร update (ตามลำดับ Watchlist) → (3) Thesis เก่าสุดก่อน · skip=true ถ้าทำเสร็จไปแล้วใน 14 วันก่อนวันนี้ · ticker ซ้ำข้าม */
@@ -5362,6 +5398,16 @@ function tdHomeworkCandidates(){
     out.push({t, i, g, asOf, age, reason: g===0 ? 'ยังไม่มี Thesis' : g===1 ? 'ควร update: ' + why[0] : (age!=null ? `Thesis เก่า ${age} วัน` : 'Thesis เก่า'), skip: doneRecent.has(k)});
   });
   out.sort((a, b)=> (a.g - b.g) || (a.g===2 ? String(a.asOf||'').localeCompare(String(b.asOf||'')) : 0) || (a.i - b.i));
+  out.forEach(x=>{ x.src = 'W'; });
+  /* GL3 (4) — ต่อท้ายด้วย Candidates (ลำดับเดียวกับแท็บ Candidates · ที่ยังไม่อยู่ Watchlist) · กติกาข้ามเหมือนกัน */
+  try{
+    wlRowsAll().cand.forEach((r, i)=>{
+      const t = String(r.sym || '').trim(); if(!t) return;
+      const k = t.toUpperCase(); if(seen.has(k)) return; seen.add(k);
+      const nm = r.cInfo && r.cInfo[0] && r.cInfo[0].v && r.cInfo[0].v.name;
+      out.push({t, i, g:3, asOf:null, age:null, src:'C', reason: nm ? `Candidate จากไอเดีย: ${nm}` : 'Candidate จากไอเดีย', skip: doneRecent.has(k)});
+    });
+  }catch(e){ console.warn('hw cand:', e); }
   return out;
 }
 
@@ -5600,7 +5646,7 @@ function glGoalHtml(M){
 function glDayStat(day, M){
   const dw = tdDow(day); if(dw < 1 || dw > 5) return null;
   const rt = M.rt, l = day===M.today ? M.log : tdLogDay(day), ex = glExtraList();
-  const hw = day===M.today ? (M.hw ? {N:1, n:M.hw.done ? 1 : 0} : {N:0, n:0}) : (l.hw ? {N:1, n:l.hw.done ? 1 : 0} : {N:0, n:0});
+  const hwN = TD_HW_IDS.length, hw = day===M.today ? (M.hw ? {N:hwN, n:M.hw.parts.length} : {N:0, n:0}) : (l.hw ? {N:hwN, n:l.hw.parts.length} : {N:0, n:0});   /* GL3 — นับรายส่วน */
   const c = {
     slots:{n:rt.slots.filter(s=>l.slots.includes(s.id)).length, N:rt.slots.length},
     sat:{n:rt.satDaily.filter(id=>l.satState[id]==='ok' || l.satState[id]==='no').length, N:rt.satDaily.length},
@@ -5697,9 +5743,37 @@ function glValOpen(){
   const today = thaiToday();
   host.innerHTML = `<div class="f"><label>วันที่</label><input type="date" id="glValDate" data-gl-valdate value="${today}" max="${today}"></div>`
     + rows.map(x=>{ const lg = glLog(x.a.id).filter(e=>e.d <= today), lt = lg.length ? lg[lg.length-1] : null, sym = x.g.cur==='THB' ? '฿' : '$';
-      return `<div class="f"><label>${escHtml(x.a.name)} ${sym}</label><input type="text" inputmode="decimal" autocomplete="off" data-gl-valin="${escHtml(x.a.id)}" placeholder="${lt ? 'ล่าสุด ' + lt.v.toLocaleString('en-US', {maximumFractionDigits:2}) : 'ยอดรวมทุกโบรก'}"></div>`; }).join('');
+      return `<div class="f"><label>${escHtml(x.a.name)} ${sym}</label><input type="text" inputmode="decimal" autocomplete="off" data-gl-valin="${escHtml(x.a.id)}" placeholder="${lt ? 'ล่าสุด ' + lt.v.toLocaleString('en-US', {maximumFractionDigits:2}) : 'ยอดรวมทุกโบรก'}" oninput="glValCmpUpdate(this)"><div class="glCmp" data-gl-valcmp="${escHtml(x.a.id)}"></div></div>`; }).join('');
   const m = document.getElementById('glValMsg'); if(m) m.textContent = '';
   document.getElementById('glValOverlay').classList.add('show');
+}
+/* GL2 — เทียบค่าที่กรอกกับ "ทุนแอป" (mixAcctStats.cap) ของบัญชีนั้น · เตือนอย่างเดียว ไม่แก้ทุน ไม่บล็อกการบันทึก */
+const GL_CAP_WARN = 0.10;
+function glCapOf(id, cur){
+  try{
+    const e = acctAllStates().find(x=>x.acct.id===id); if(!e) return null;
+    const cap = mixAcctStats(e).cap, fx = withState(e.st, ()=>+state.settings.fx || 0);
+    const v = cur==='THB' ? cap : (fx > 0 ? cap / fx : 0);
+    return v > 0 ? v : null;
+  }catch(err){ console.warn('gl cap:', err); return null; }
+}
+function glValCmpUpdate(inp){
+  const id = inp.getAttribute('data-gl-valin'), box = document.querySelector(`[data-gl-valcmp="${id}"]`); if(!box) return;
+  const n = glNum(inp.value), g = glGoalOf(id), cap = g ? glCapOf(id, g.cur) : null;
+  if(!(n > 0) || !cap){ box.textContent = ''; box.removeAttribute('data-warn'); return; }
+  const diff = n / cap - 1, d = Math.round(diff * 1000) / 10, sg = d < 0 ? '−' : '+', pct = sg + Math.abs(d).toFixed(1) + '%';
+  const warn = Math.abs(diff) > GL_CAP_WARN + 1e-9 && Math.abs(d) > GL_CAP_WARN * 100 + 1e-9, base = 'ทุนในตั้งค่า ' + glMoney(cap, g.cur);
+  box.setAttribute('data-warn', warn ? '1' : '0');
+  box.innerHTML = warn ? `${escHtml(base)} · ต่าง ${pct} → พิจารณาปรับทุนใน <a href="#" data-gl-capgo onclick="glCapGo('${escHtml(id)}');return false">ตั้งค่า</a>` : `${escHtml(base)} (ต่าง ${pct})`;
+}
+function glCapGo(id){
+  const dirty = [...document.querySelectorAll('#glValBody [data-gl-valin]')].some(i=>i.value.trim() !== '');
+  if(dirty && !confirm('มีค่าที่ยังไม่ได้บันทึกในช่อง — ไปตั้งค่าแล้วค่าที่กรอกจะหาย ไปต่อไหม?')) return;
+  glValClose();
+  if(id !== acctActive) acctSwitch(id);
+  if(id !== acctActive) return;   /* สลับไม่สำเร็จ (ยังซิงก์ไม่เสร็จ) — acctSwitch แจ้งเตือนแล้ว */
+  openSettings();
+  const sec = document.querySelector('#setOverlay .setsec'); if(sec){ sec.open = true; try{ sec.scrollIntoView({block:'start'}); }catch(e){} }
 }
 function glValClose(){ const o = document.getElementById('glValOverlay'); if(o) o.classList.remove('show'); }
 function glValSave(){
