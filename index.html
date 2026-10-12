@@ -1287,6 +1287,8 @@ button.acctJump:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
 /* VW1 — กราฟ TradingView + โน้ต 3 มุม */
 .vwImg{box-sizing:border-box;position:relative;display:block;overflow:hidden;border-radius:10px;background:#0f1115;cursor:zoom-in;border:1px solid var(--line,var(--hair))}
 .vwImg img{width:100%;height:100%;object-fit:cover;display:block}
+.vwImg.vwFull{height:auto;min-height:48px}
+.vwImg.vwFull img{height:auto;object-fit:contain}
 .vwImg.vwSat{margin-top:6px}
 .vwImg.vwSat+.ui-tile-s,.vwSatAdd+.ui-tile-s,.vwSatF+.ui-tile-s,.vwImg.vwSat+.vwSatF{margin-top:6px}
 .vwImg .vwTag{position:absolute;left:6px;bottom:6px;font-size:11px;line-height:1.4;color:#fff;background:rgba(0,0,0,.6);border-radius:6px;padding:1px 6px}
@@ -1312,6 +1314,9 @@ button.acctJump:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
 .vwH{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:6px 0;font-size:.88rem}
 .vwHT{flex:1;min-width:0;overflow-wrap:anywhere}
 .vwHImg{flex:0 0 100%}
+.vwTop{margin:4px 0 6px}
+.vwImg.vwFull .vwBad{height:92px}
+.vwAddTv{flex:none;font:inherit;font-size:.72rem;line-height:1.3;white-space:nowrap;padding:3px 9px;min-height:26px;border:1px dashed var(--line,var(--hair));border-radius:999px;background:transparent;color:var(--muted);cursor:pointer}
 .vwDel{flex:none;border:0;background:transparent;color:var(--muted);font-size:.9rem;min-width:32px;min-height:32px;cursor:pointer}
 .vwNone{font-size:.84rem;color:var(--muted);padding:6px 0}
 .vwIn{display:flex;align-items:center;gap:8px;margin-top:6px}
@@ -1950,6 +1955,7 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
 .ui-ack{width:30px;height:30px;min-width:30px;border:1.5px solid var(--mute);border-radius:8px;background:var(--card);color:#fff;font-weight:700;font-size:15px;line-height:1;padding:0;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;cursor:pointer}
 .ui-ack.ui-on{background:var(--dark);border-color:var(--dark)}
 .ui-ack.ui-dis{background:var(--soft);border-color:var(--line);cursor:not-allowed;opacity:.7}
+.ui-adir-ro{display:inline-flex;align-items:center;justify-content:center;background:transparent;border-color:transparent;cursor:default}
 .ui-adir{width:34px;height:32px;min-width:34px;border:1px solid var(--line);border-radius:8px;background:var(--soft);font-size:14px;padding:0;cursor:pointer;flex:0 0 auto}
 .ui-ac-s{margin-top:8px;font-size:12px}
 .ui-ac-up{color:var(--up)}.ui-ac-dn{color:var(--dn)}
@@ -6142,10 +6148,7 @@ function switchTab(t){
   }, {passive:true});
 })();
 document.addEventListener('keydown', (e)=>{
-  if((e.key==='Escape' || e.key==='Esc') && ltPopBtn){ e.preventDefault(); ltTermClose(); return; }   /* WL3 — ปิดกล่องคำศัพท์ก่อน */
-  if((e.key==='Escape' || e.key==='Esc') && activeTab==='watch' && wlResearchExpanded){
-    e.preventDefault(); if(wlNarrow()) wlBack(); else wlSetSub('sum'); return;
-  }
+  if(e.key==='Escape' || e.key==='Esc') return;   /* ESC1 — Esc ทั้งหมด (รวม Watch กลับรายการ) อยู่ที่ escCloseTop() */
   if(kbEditableTarget(e.target)) return;
   if(e.isComposing || e.keyCode===229) return;
   if(e.defaultPrevented) return;
@@ -6204,7 +6207,6 @@ function kbHandle(e){
   if(e.shiftKey) return;
   /* 7E-2: T = goPlanTop (scope หุ้น → เปิด sheet แผน Core ใหม่) */
   if(e.code==='KeyT' && !e.ctrlKey && !e.metaKey && !e.altKey){ e.preventDefault(); goPlanTop(); return; }
-  if((e.key==='Escape' || e.key==='Esc') && activeTab==='watch' && wlMobOpen && wlNarrow()){ e.preventDefault(); wlBack(); return; }
   /* ID1 — มุมมอง Ideas: ←/→ แท็บการ์ด · ↑/↓ เลือกไอเดีย · [ ] วนตัวกรอง */
   if(activeTab==='watch' && wlView==='idea'){
     if(e.key==='ArrowLeft' || e.key==='ArrowRight'){
@@ -7465,7 +7467,7 @@ function coreMenuToggle(btn, ev){
   if(ev) ev.stopPropagation();
 }
 document.addEventListener('click', ()=>document.querySelectorAll('.ccMenu.on').forEach(x=>x.classList.remove('on')));
-document.addEventListener('keydown', e=>{ if(e.key==='Escape' || e.key==='Esc') document.querySelectorAll('.ccMenu.on').forEach(x=>x.classList.remove('on')); });
+/* ESC1 — Esc ปิด .ccMenu ย้ายไปอยู่ในตัวจัดการ Esc ตัวเดียว (escCloseTop) */
 
 /* 7E-2b-fix: เงินบาท → สกุลตลาดเหมือนตาราง (US: $x ≈฿y · TH: ฿y) */
 function coreMoneyDual(thb, mk, fx){ return mk==='US' ? `$${fmt0(thb/fx)} ≈฿${fmt0(thb)}` : `฿${fmt0(thb)}`; }
@@ -9824,7 +9826,8 @@ function tvSnapImg(u){
 function vwImgHtml(url, h, extra, cls){
   const src = tvSnapImg(url); if(!src) return '';
   const e = escHtml;
-  return `<span class="vwImg${cls ? ' ' + cls : ''}" data-vw-img style="height:${h}px" data-src="${e(src)}" data-url="${e(String(url).trim())}" onclick="event.stopPropagation();vwZoom(this)"><img src="${e(src)}" alt="กราฟ" loading="lazy" referrerpolicy="no-referrer" onerror="vwImgErr(this)">${extra || ''}</span>`;
+  if(!h) cls = (cls ? cls + ' ' : '') + 'vwFull';   /* ESC1 — h=0 → เห็นทั้งภาพ: กว้างเต็มช่อง · สูงตามสัดส่วนภาพ */
+  return `<span class="vwImg${cls ? ' ' + cls : ''}" data-vw-img${h ? ` style="height:${h}px"` : ''} data-src="${e(src)}" data-url="${e(String(url).trim())}" onclick="event.stopPropagation();vwZoom(this)"><img src="${e(src)}" alt="กราฟ" loading="lazy" referrerpolicy="no-referrer" onerror="vwImgErr(this)">${extra || ''}</span>`;
 }
 function vwImgErr(img){
   const p = img && img.closest ? img.closest('.vwImg') : null; if(!p) return;
@@ -9856,7 +9859,7 @@ function vwSatStripHtml(asset, w, wk){
   const editing = cur && vwSatEdit === asset;
   let h = '';
   if(ch){
-    h += vwImgHtml(ch.url, 92, `<span class="vwTag">W | D · ${e(wlThDate(ch.at))}</span>` + (cur ? `<button type="button" class="vwEd" data-vw-sat-chg onclick="event.stopPropagation();vwSatOpen('${a}')">เปลี่ยน</button>` : ''), 'vwSat');
+    h += vwImgHtml(ch.url, 0, `<span class="vwTag">W | D · ${e(wlThDate(ch.at))}</span>` + (cur ? `<button type="button" class="vwEd" data-vw-sat-chg onclick="event.stopPropagation();vwSatOpen('${a}')">เปลี่ยน</button>` : ''), 'vwSat');
   } else if(cur && !editing){
     h += `<div class="vwSatAdd" role="button" tabindex="0" data-vw-sat-add onclick="event.stopPropagation();vwSatOpen('${a}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation();event.preventDefault();vwSatOpen('${a}')}" aria-label="＋ วางลิงก์กราฟ TradingView"><span class="vwAddL">＋ วางลิงก์กราฟ TradingView</span><span class="vwAddS">＋ กราฟ TV</span></div>`;
   }
@@ -9937,18 +9940,28 @@ function vwBlockHtml(sym, ctx){
     const list = vwList(sym, k), last = list[0], isOpen = open === k;
     const lastT = last ? (last.t || (last.chart ? '(กราฟ)' : '')) : '';
     const thumb = (k==='tech' && last && last.chart) ? vwImgHtml(last.chart, 30, '', 'vwMini') : '';
-    const row = `<div class="vwRow${isOpen ? ' on' : ''}" role="button" tabindex="0" aria-expanded="${isOpen}" data-vw-row="${k}" onclick="vwToggle(this,'${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vwToggle(this,'${k}')}"><span class="vwK">${nm}</span><span class="vwT${last ? '' : ' none'}">${last ? e(lastT) : '— แตะเพื่อเพิ่ม'}</span>${thumb}<span class="vwD">${last ? e(wlThDate(last.d)) : ''}</span></div>`;
+    const addBtn = (k==='tech' && !thumb && !isOpen) ? `<button type="button" class="vwAddTv" data-vw-add-tv aria-label="＋ กราฟ TV" onclick="event.stopPropagation();vwTechAdd(this)">＋ กราฟ TV</button>` : '';   /* ESC1 — ยังไม่มีกราฟ: ปุ่มเล็กท้ายแถวตอนพับ */
+    const row = `<div class="vwRow${isOpen ? ' on' : ''}" role="button" tabindex="0" aria-expanded="${isOpen}" data-vw-row="${k}" onclick="vwToggle(this,'${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();vwToggle(this,'${k}')}"><span class="vwK">${nm}</span><span class="vwT${last ? '' : ' none'}">${last ? e(lastT) : '— แตะเพื่อเพิ่ม'}</span>${thumb}${addBtn}<span class="vwD">${last ? e(wlThDate(last.d)) : ''}</span></div>`;
     if(!isOpen) return row;
     const dk = key + '|' + k, dr = vwDraft[dk] || {t:'', url:''}, msg = vwMsg[dk] || '';
-    const hist = list.map(x=>`<div class="vwH" data-vw-item="${e(x.id)}"><span class="vwD">${e(wlThDate(x.d))}</span><span class="vwHT">${e(x.t)}</span><button type="button" class="vwDel" data-vw-del aria-label="ลบบันทึก" onclick="vwDel(this,'${e(x.id)}')">✕</button>${(k==='tech' && x.chart && tvSnapImg(x.chart)) ? `<div class="vwHImg">${vwImgHtml(x.chart, 110, `<span class="vwTag">${e(wlThDate(x.d))}</span>`)}</div>` : ''}</div>`).join('');
+    const top = k==='tech' ? list.find(x=>x.chart && tvSnapImg(x.chart)) : null;   /* ESC1 — กราฟล่าสุดเต็มกว้างบนสุดของส่วน Tech */
+    const topHtml = top ? `<div class="vwTop" data-vw-top>${vwImgHtml(top.chart, 0, `<span class="vwTag">${e(wlThDate(top.d))}</span>`)}</div>` : '';
+    const hist = list.map(x=>`<div class="vwH" data-vw-item="${e(x.id)}"><span class="vwD">${e(wlThDate(x.d))}</span><span class="vwHT">${e(x.t)}</span><button type="button" class="vwDel" data-vw-del aria-label="ลบบันทึก" onclick="vwDel(this,'${e(x.id)}')">✕</button>${(k==='tech' && x.chart && tvSnapImg(x.chart) && x!==top) ? `<div class="vwHImg">${vwImgHtml(x.chart, 110, `<span class="vwTag">${e(wlThDate(x.d))}</span>`)}</div>` : ''}</div>`).join('');
     const over = dr.t.length > VW_MAX_T;
-    return row + `<div class="vwX" data-vw-ang="${k}" data-sym="${e(sym)}" data-ctx="${ctx}">${hist || '<div class="vwNone" data-vw-none>ยังไม่มีบันทึก</div>'}
+    return row + `<div class="vwX" data-vw-ang="${k}" data-sym="${e(sym)}" data-ctx="${ctx}">${topHtml}${hist || '<div class="vwNone" data-vw-none>ยังไม่มีบันทึก</div>'}
       <div class="vwIn"><input type="text" data-vw-t autocomplete="off" placeholder="บันทึกสั้น ๆ (≤ ${VW_MAX_T} ตัว)" value="${e(dr.t)}" oninput="vwInput(this)"><span class="vwCnt${over ? ' over' : ''}" data-vw-cnt>${dr.t.length}/${VW_MAX_T}</span></div>
       ${k==='tech' ? `<div class="vwIn"><input type="text" inputmode="url" data-vw-url autocomplete="off" placeholder="ลิงก์กราฟ TradingView (ไม่ใส่ก็ได้)" value="${e(dr.url)}" oninput="vwInput(this)"></div>` : ''}
       <div class="vwAct"><button type="button" class="small primary" data-vw-save ${(over || (!dr.t.trim() && !dr.url.trim())) ? 'disabled' : ''} onclick="vwSave(this)">บันทึก</button></div>
       ${msg ? `<div class="vwErr" data-vw-msg>${e(msg)}</div>` : ''}</div>`;
   }).join('');
   return `<div class="vwBox" data-vw data-vw-ctx="${ctx}" data-sym="${e(sym)}">${rows}</div>`;
+}
+function vwTechAdd(btn){
+  const box = btn.closest('[data-vw]'); if(!box) return;
+  const ctx = box.dataset.vwCtx, sym = box.dataset.sym;
+  vwOpenAng[ctx + '|' + sym] = 'tech';
+  renderWatchlist();
+  setTimeout(()=>{ const b = document.querySelector(`[data-vw][data-vw-ctx="${ctx}"][data-sym="${CSS.escape(sym)}"] [data-vw-ang="tech"] [data-vw-url]`); if(b) b.focus(); }, 0);
 }
 function vwToggle(el, ang){
   const box = el.closest('[data-vw]'), key = box.dataset.vwCtx + '|' + box.dataset.sym;
@@ -12956,30 +12969,57 @@ document.querySelectorAll('.overlay').forEach(o=>{
   o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); });
 });
 
-/* ---- Esc = ปิด pop-up ที่เปิดอยู่บนสุด (ทำงานแม้เคอร์เซอร์อยู่ในช่องกรอก) ---- */
+/* ---- Esc = ปิด pop-up ชั้นบนสุด "ชั้นเดียว" ต่อการกด 1 ครั้ง (ทำงานแม้เคอร์เซอร์อยู่ในช่องกรอก) · ESC1 ----
+   ลำดับ: lightbox กราฟ → กล่องคำศัพท์/popover/เมนูลอย → sheet → .overlay.show → (ไม่มีอะไรเปิด) Watch กลับรายการ
+   ปิดผ่านฟังก์ชันปิดเดิมของแต่ละตัว ไม่ลบ DOM เอง */
+function escCloseTop(){
+  if(document.getElementById('vwLb')){ vwLbClose(); return true; }
+  if(typeof ltPopBtn !== 'undefined' && ltPopBtn){ ltTermClose(); return true; }
+  const pops = document.querySelectorAll('.scorePop.show');
+  if(pops.length){ pops.forEach(p=>p.classList.remove('show')); return true; }
+  const cm = document.querySelectorAll('.ccMenu.on');
+  if(cm.length){ cm.forEach(x=>x.classList.remove('on')); return true; }
+  if(phMenu){ phMenu = ''; renderWatchlist(); return true; }
+  if(wlMenu){ wlMenu = ''; wlMenuMsg = ''; renderWatchlist(); return true; }
+  if(ideaMenu){ ideaMenu = ''; ideaMenuMsg = ''; renderWatchlist(); return true; }
+  if(fltOpen){ fltOpen = false; renderWatchlist(); return true; }
+  if(wlNoteForm){ wlNoteClose(); return true; }
+  if(satV3CondTplEditor){ satV3CondTplEditorClose(); return true; }
+  if(satV3SetupEditor){ satV3SetupEditorClose(); return true; }
+  const sh = Array.from(document.querySelectorAll('.ui-sheet-backdrop')).pop();
+  if(sh){
+    const c = sh.classList;
+    if(c.contains('core-sheet')) coreSheetClose();
+    else if(c.contains('cl2a-sheet')) cl2aSheetClose();
+    else if(c.contains('s7del-sheet')) satV3ClosedDelClose();
+    else if(c.contains('pyr-sheet')) satPyrClose();
+    else if(c.contains('pb-sheet')) pbCancel();
+    else if(c.contains('bk-sheet')){ bkRsClose(); if(sh.isConnected && !(typeof bkRs !== 'undefined' && bkRs && bkRs.busy)) sh.remove(); }
+    else sh.remove();
+    return true;
+  }
+  const open = Array.from(document.querySelectorAll('.overlay.show'));
+  if(open.length){
+    const topMost = open.reduce((a,b)=>{
+      const za = parseInt(getComputedStyle(a).zIndex,10) || 0;
+      const zb = parseInt(getComputedStyle(b).zIndex,10) || 0;
+      return zb >= za ? b : a;          // z-index เท่ากัน → เอาตัวที่อยู่หลังใน DOM
+    });
+    topMost.classList.remove('show');
+    if(document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
+    return true;
+  }
+  if(activeTab==='watch' && wlResearchExpanded){ if(wlNarrow()) wlBack(); else wlSetSub('sum'); return true; }
+  if(activeTab==='watch' && wlMobOpen && wlNarrow() && !kbEditableTarget(document.activeElement)){ wlBack(); return true; }   /* เดิมอยู่ใน kbHandle */
+  return false;
+}
 document.addEventListener('keydown', (e)=>{
   if(e.key !== 'Escape' && e.key !== 'Esc') return;
   if(e.isComposing || e.keyCode === 229) return;   // กำลังพิมพ์ผ่าน IME — ปล่อยให้ IME จัดการ
-
-  // 1) ปิด popover เกณฑ์คะแนนก่อน ถ้าเปิดอยู่
-  const pops = document.querySelectorAll('.scorePop.show');
-  if(pops.length){
-    pops.forEach(p=>p.classList.remove('show'));
-    e.preventDefault();
-    return;
-  }
-
-  // 2) ปิด overlay ที่เปิดอยู่ — ถ้าซ้อนกันหลายชั้น ปิดเฉพาะชั้นบนสุด
-  const open = Array.from(document.querySelectorAll('.overlay.show'));
-  if(!open.length) return;
-  const topMost = open.reduce((a,b)=>{
-    const za = parseInt(getComputedStyle(a).zIndex,10) || 0;
-    const zb = parseInt(getComputedStyle(b).zIndex,10) || 0;
-    return zb >= za ? b : a;          // z-index เท่ากัน → เอาตัวที่อยู่หลังใน DOM
-  });
-  topMost.classList.remove('show');
-  if(document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
-  e.preventDefault();
+  if(e.defaultPrevented) return;
+  let did = false;
+  try{ did = escCloseTop(); }catch(err){ console.warn('escCloseTop', err); }
+  if(did) e.preventDefault();
 });
 
 setAuthMode('in');
@@ -14804,6 +14844,7 @@ function satAcIdeaOf(c){
 }
 /* ทิศของแถว Break: ค่าที่เก็บ หรือค่าเริ่มตามทิศของเงื่อนไข (Long = ▲ · Short = ▼) · key = 'brk_dir'|'vol_dir' */
 function satAcDir(c, key, idea){
+  key = 'brk_dir';   /* ESC1 — ทิศเดียวทั้ง Break Price + Break Vol (ข้อมูลเก่าที่ไม่ตรงกัน → ตาม brk_dir) */
   const d = c && c[key]; if(d==='up' || d==='dn') return d;
   idea = idea || satAcIdeaOf(c);
   return (idea && satV3CondSide(idea, c)==='Short') ? 'dn' : 'up';
@@ -14898,7 +14939,7 @@ function satAcSetLevel(ideaId, condId, key, val){
 }
 function satAcSetDir(ideaId, condId, key, dir){
   if((key!=='brk_dir' && key!=='vol_dir') || (dir!=='up' && dir!=='dn')) return;
-  satAcWrite(ideaId, condId, b=>{ b[key] = dir; return b; });
+  satAcWrite(ideaId, condId, b=>{ b.brk_dir = dir; b.vol_dir = dir; return b; });   /* ESC1 — เขียนค่าเดียวกันทั้งคู่ */
 }
 /* Pullback: 1–2 ตัวเลข > 0 (รับ – — - / เว้นวรรคอย่างเดียว จุลภาคหลักพัน — POL1: คีย์บอร์ด iPhone ไม่มี - ให้พิมพ์ '2405 2412' ได้) เรียงน้อย→มาก · ว่าง = ล้าง (กลับไปขยับตาม Break) · ผิดรูป = ไม่เขียน + ขอบแดง */
 function satAcParsePb(text){
@@ -14978,11 +15019,12 @@ function satAcTickHtml(idea, c, k, ok, mode){
   const id = escHtml(idea.id), cid = escHtml(c.id), on = satAcSteps(c)[k];
   return `<button type="button" class="ui-ack${on?' ui-on':''}${(ok||on)?'':' ui-dis'}" data-step="${k}" role="checkbox" aria-checked="${on}" aria-pressed="${on}" ${(ok||on)?'':`aria-disabled="true" title="${escHtml(k==='pb' ? (satAcPbBlock(c) || '') : 'กรอก Price ก่อน')}"`} onclick="satAcStep('${id}','${cid}','${k}',${!on})">${on?'✓':''}</button>`;
 }
-function satAcLvlRowHtml(idea, c, k, mode){
+function satAcLvlRowHtml(idea, c, k, mode, noBtn){
   const id = escHtml(idea.id), cid = escHtml(c.id), px = k+'_px', dr = k+'_dir';
   const v = satAcLvl(c, px), dir = satAcDir(c, dr, idea), ok = v!=null || c.legacy_ok===true;
   return `<div class="ui-acr" data-row="${k}">${satAcTickHtml(idea, c, k, ok, mode)}<span class="ui-ac-nm">${k==='brk'?'Break Price':'Break Vol'}</span>`
-    + `<button type="button" class="ui-adir" data-dir="${k}" data-dir-v="${dir}" title="สลับทิศ ▲▼" onclick="satAcSetDir('${id}','${cid}','${dr}','${dir==='up'?'dn':'up'}')">${satAcArrowHtml(dir)}</button>`
+    + (noBtn ? `<span class="ui-adir ui-adir-ro" data-dir-ro="${k}" data-dir-v="${dir}" aria-hidden="true">${satAcArrowHtml(dir)}</span>`
+      : `<button type="button" class="ui-adir" data-dir="${k}" data-dir-v="${dir}" title="สลับทิศ ▲▼ (Break Price + Vol)" onclick="satAcSetDir('${id}','${cid}','${dr}','${dir==='up'?'dn':'up'}')">${satAcArrowHtml(dir)}</button>`)
     + `<input type="text" inputmode="decimal" class="ui-ain" data-ac-px="${k}" placeholder="Price" value="${v==null?'':escHtml(String(v))}" onchange="satAcSetLevel('${id}','${cid}','${px}',this.value)"></div>`;
 }
 function satAcPbRowHtml(idea, c, mode){
@@ -15001,7 +15043,7 @@ function satAcRowHtml(idea, c, mode){
   if(sumOn('brk') && sumOn('vol')) h += satAcSumHtml(idea, c, 'break', `<span class="ui-acs-p"><b>Break</b> Price ${satAcSumLvl(c,'brk',idea)} ·</span> <span class="ui-acs-p">Vol ${satAcSumLvl(c,'vol',idea)}</span>`);   /* POL1 — 2 ส่วน nowrap ตัดบรรทัดได้ระหว่างส่วน (ไม่ตัดทิ้ง) */
   else {
     h += sumOn('brk') ? satAcSumHtml(idea, c, 'brk', `<b>Break</b> Price ${satAcSumLvl(c,'brk',idea)}`) : satAcLvlRowHtml(idea, c, 'brk', mode);
-    h += sumOn('vol') ? satAcSumHtml(idea, c, 'vol', `<b>Break</b> Vol ${satAcSumLvl(c,'vol',idea)}`) : satAcLvlRowHtml(idea, c, 'vol', mode);
+    h += sumOn('vol') ? satAcSumHtml(idea, c, 'vol', `<b>Break</b> Vol ${satAcSumLvl(c,'vol',idea)}`) : satAcLvlRowHtml(idea, c, 'vol', mode, !sumOn('brk'));   /* ESC1 — ปุ่มทิศอยู่แถว Price · Vol อ่านอย่างเดียว (ยกเว้น Price เป็นบรรทัดสรุป → ปุ่มอยู่แถว Vol) */
   }
   h += sumOn('pb') ? satAcSumHtml(idea, c, 'pb', `Pullback <b>${escHtml(satAcZoneTxt(c) || '—')}</b>`) : satAcPbRowHtml(idea, c, mode);
   if(mode!=='active'){
