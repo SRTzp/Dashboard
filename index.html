@@ -2241,6 +2241,19 @@ button.ccChip{cursor:pointer;min-height:24px}
 .trdVs tr.trdVsA td{border-top:0;padding:0 4px 6px}.trdVs tr.diff td{background:#fbe9e7}.trdVs tr.gap td{background:#fff4dc}
 .trdVs tr.trdVsR.diff+tr td,.trdVs tr.trdVsR.gap+tr td{background:inherit}
 .trdK{font-size:11px;border-radius:6px;padding:0 5px;margin-left:2px;white-space:nowrap}.trdK.w2{background:#fbe9e7;color:#D4493F}.trdK.w3{background:#fff4dc;color:#A96E06}
+/* TR1fix — AI vs เรา: ฟอนต์หลัก · ช่อง "เรา" แตะแก้ inline · ปุ่มบรรทัดเดียว · ฟอร์ม Product/ไอเดียใช้สไตล์ช่องกรอกของแอป */
+.trdVs td{font-family:var(--sans)}.trdVs td.trdVsL{padding-right:2px}
+.trdVs tr.trdVsA td{padding:0 4px 6px}.trdVs tr.trdVsR.diff td,.trdVs tr.trdVsR.gap td{border-bottom:0}
+.trdMe{display:block;cursor:text;min-height:20px;border-radius:6px;position:relative;padding-right:14px}.trdMe:hover{background:var(--surface2)}
+.trdPen{position:absolute;right:1px;top:1px;font-style:normal;font-size:.7rem;color:var(--faint);opacity:.55}
+.trdK.dim{opacity:.45}
+.trdVs .ui-in,.trdAdd input,.trdAdd select,#trdNewNews,#trdNewChain,#trdNewAsset{width:100%;box-sizing:border-box;min-height:40px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);padding:8px 10px;font-size:16px;font-family:var(--sans)}
+.trdAdd input,.trdAdd select{width:auto}
+.trdVs .ui-in:focus,.trdAdd input:focus,.trdAdd select:focus,#trdNewNews:focus,#trdNewChain:focus,#trdNewAsset:focus{outline:none;border-color:var(--teal);background:var(--surface);box-shadow:0 0 0 3px var(--teal-dim)}
+.trdVs textarea.ui-in{resize:vertical;min-height:64px}
+.trdRA{flex-wrap:nowrap}.trdRA .small{white-space:nowrap}
+@media (max-width:700px){ .sumBlk .ui-tiles .ui-tile:only-child{grid-column:1/-1} }
+@media (max-width:430px){ .sumBlk .ui-tile-th .ui-tile-a{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere} .sumBlk .ui-tile-th .ui-tile-b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere} }
 .trdNil{color:var(--muted);font-size:.78rem}.trdRA{display:flex;gap:6px;flex-wrap:wrap}.trdRA .small{min-height:32px}
 .trdEdit td{background:var(--surface2)!important}.trdEdit select,.trdEdit input,.trdEdit textarea{width:100%;box-sizing:border-box;font-size:16px}
 .trdLg{font-size:.74rem;color:var(--muted);margin-top:8px}.trdBadge{margin-left:4px}
@@ -10995,32 +11008,40 @@ function trdCell(v, r, side){
   if(Array.isArray(val)) return val.map(x=>`<div>${e(x)}</div>`).join('');
   return e(val);
 }
-function trdEditForm(v, r){
-  const e = escHtml, cur = r.me;
-  const inp = r.k==='dir' ? `<select id="trdEditIn" data-trade-edit-in><option value="">—</option><option value="long" ${cur==='long'?'selected':''}>▲ Long</option><option value="short" ${cur==='short'?'selected':''}>▼ Short</option></select>`
-    : r.k==='strength' ? `<select id="trdEditIn" data-trade-edit-in><option value="">—</option>${Object.keys(TRD_STR).map(k=>`<option value="${k}" ${cur===k?'selected':''}>${e(TRD_STR[k])}</option>`).join('')}</select>`
-    : TRD_LIST_ROWS.includes(r.k) ? `<textarea id="trdEditIn" data-trade-edit-in rows="3" placeholder="หนึ่งข้อต่อหนึ่งบรรทัด">${e((cur || []).join('\n'))}</textarea>`
-    : `<input type="text" id="trdEditIn" data-trade-edit-in value="${e(cur || '')}" maxlength="60">`;
-  return `<tr class="trdEdit"><td colspan="3">${inp}<div class="trdRA"><button type="button" class="small" data-trade-edit-save onclick="trdEditSave('${e(v.id)}','${r.k}')">บันทึก</button><button type="button" class="small" onclick="trdEditCancel()">ยกเลิก</button></div></td></tr>`;
+function trdEditForm(v, r){   /* TR1fix — ช่อง "เรา" แก้ inline: Enter/blur = บันทึก · Esc = ยกเลิก */
+  const e = escHtml, cur = r.me, isSel = r.k==='dir' || r.k==='strength', ev = `onkeydown="trdEditKey(event,'${e(v.id)}','${r.k}')" onblur="trdEditBlur('${e(v.id)}','${r.k}')"${isSel ? ` onchange="trdEditCommit('${e(v.id)}','${r.k}')"` : ''}`;
+  return r.k==='dir' ? `<select id="trdEditIn" class="ui-in" data-trade-edit-in ${ev}><option value="">—</option><option value="long" ${cur==='long'?'selected':''}>▲ Long</option><option value="short" ${cur==='short'?'selected':''}>▼ Short</option></select>`
+    : r.k==='strength' ? `<select id="trdEditIn" class="ui-in" data-trade-edit-in ${ev}><option value="">—</option>${Object.keys(TRD_STR).map(k=>`<option value="${k}" ${cur===k?'selected':''}>${e(TRD_STR[k])}</option>`).join('')}</select>`
+    : TRD_LIST_ROWS.includes(r.k) ? `<textarea id="trdEditIn" class="ui-in" data-trade-edit-in rows="3" placeholder="หนึ่งข้อต่อหนึ่งบรรทัด (Shift+Enter = ขึ้นบรรทัดใหม่)" ${ev}>${e((cur || []).join('\n'))}</textarea>`
+    : `<input type="text" id="trdEditIn" class="ui-in" data-trade-edit-in value="${e(cur || '')}" maxlength="60" ${ev}>`;
 }
+let trdEditBusy = false;
+function trdEditKey(ev, id, row){
+  if(ev.key==='Escape'){ ev.preventDefault(); trdEditBusy = true; trdEditCancel(); trdEditBusy = false; }
+  else if(ev.key==='Enter' && !(ev.shiftKey && TRD_LIST_ROWS.includes(row))){ ev.preventDefault(); trdEditCommit(id, row); }
+}
+function trdEditBlur(id, row){ if(!trdEditBusy) trdEditCommit(id, row); }
+function trdEditCommit(id, row){ if(trdEditBusy || trdEdit!==id + '|' + row) return; trdEditBusy = true; try{ trdEditSave(id, row); } finally { trdEditBusy = false; } }
 function trdTabVs(v){
   const e = escHtml;
   const rows = v.rows.map(r=>{
     const shown = r.flag && !r.acked, can = v.aiHas && r.aHas && (!r.mHas || r.flag);
-    const tag = shown ? `<span class="trdK ${r.flag==='diff' ? 'w2' : 'w3'}" data-trade-flag="${r.flag}">${r.flag==='diff' ? 'ต่าง' : 'ขาด'}</span>` : '';
-    const acts = `<div class="trdRA">${can ? `<button type="button" class="small" data-trade-use="${r.k}" onclick="trdUseAi('${e(v.id)}','${r.k}')">ใช้ข้อของ AI</button>` : ''}<button type="button" class="small" data-trade-write="${r.k}" onclick="trdEditOpen('${e(v.id)}','${r.k}')">เขียนของเรา</button>${shown ? `<button type="button" class="small" data-trade-ack="${r.k}" onclick="trdAck('${e(v.id)}','${r.k}')">รับทราบ</button>` : ''}</div>`;
-    const main = `<tr class="trdVsR ${shown ? (r.flag==='diff' ? 'diff' : 'gap') : ''}" data-trade-row="${r.k}"><td class="trdVsL">${e(r.lbl)} ${tag}</td><td>${trdCell(v, r, 'me')}</td><td>${trdCell(v, r, 'ai')}</td></tr>`;
-    const act = `<tr class="trdVsA"><td></td><td colspan="2">${acts}</td></tr>`;
-    return main + act + (trdEdit===v.id + '|' + r.k ? trdEditForm(v, r) : '');
+    const tag = shown ? `<span class="trdK ${r.flag==='diff' ? 'w2' : 'w3'}" data-trade-flag="${r.flag}">${r.flag==='diff' ? 'ต่าง' : 'ขาด'}</span>`
+      : r.flag ? `<span class="trdK dim ${r.flag==='diff' ? 'w2' : 'w3'}" data-trade-flag="${r.flag}" data-trade-decided="1">${r.flag==='diff' ? 'ต่าง' : 'ขาด'}</span>` : '';
+    const editing = trdEdit===v.id + '|' + r.k;
+    const meCell = editing ? trdEditForm(v, r) : `<span class="trdMe" role="button" tabindex="0" data-trade-me="${r.k}" onclick="trdEditOpen('${e(v.id)}','${r.k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();trdEditOpen('${e(v.id)}','${r.k}')}">${trdCell(v, r, 'me')}<i class="trdPen" aria-hidden="true">✎</i></span>`;
+    const main = `<tr class="trdVsR ${shown ? (r.flag==='diff' ? 'diff' : 'gap') : ''}" data-trade-row="${r.k}"><td class="trdVsL">${e(r.lbl)} ${tag}</td><td>${meCell}</td><td>${trdCell(v, r, 'ai')}</td></tr>`;
+    const act = shown ? `<tr class="trdVsA"><td></td><td colspan="2"><div class="trdRA">${can ? `<button type="button" class="small" data-trade-use="${r.k}" onmousedown="event.preventDefault()" onclick="trdUseAi('${e(v.id)}','${r.k}')">← ใช้ของ AI</button>` : ''}<button type="button" class="small" data-trade-ack="${r.k}" onclick="trdAck('${e(v.id)}','${r.k}')">คงของเรา</button></div></td></tr>` : '';
+    return main + act;
   }).join('');
   return `<div class="panel wlOv"><table class="trdVs" data-trade-vs><tr><th></th><th>เรา</th><th>AI (idea-scout)</th></tr>${rows}</table>
-    <div class="trdLg"><span class="trdK w2">ต่าง</span> = มองไม่ตรงกัน · <span class="trdK w3">ขาด</span> = AI เห็นแต่เรายังไม่ได้เขียน → จุดเหลืองในรายการจนกว่าจะเขียน/กด "รับทราบ"</div></div>`;
+    <div class="trdLg"><span class="trdK w2">ต่าง</span> = มองไม่ตรงกัน · <span class="trdK w3">ขาด</span> = AI เห็นแต่เรายังไม่ได้เขียน → จุดเหลืองในรายการจนกว่าจะเขียน/ตัดสิน · แตะช่อง "เรา" เพื่อแก้</div></div>`;
 }
 function trdTabProd(v){
   const e = escHtml, prods = trdProducts(v.d);
   const rows = prods.map(p=>{
     const on = v.u.product===p.name, opt = p.type==='option';
-    return `<div class="trdPr" data-trade-prod="${e(p.name)}"><b>${e(p.name)}</b>${p.lev ? `<span class="trdLev">${e(p.lev)}</span>` : ''}${p.type && TRD_PTYPES[p.type] && p.type!=='other' ? `<span class="trdLev" data-trade-ptype="${e(p.type)}">${e(TRD_PTYPES[p.type])}</span>` : ''}
+    return `<div class="trdPr" data-trade-prod="${e(p.name)}"><b>${e(p.name)}</b>${p.type && TRD_PTYPES[p.type] && p.type!=='other' ? `<span class="trdLev" data-trade-ptype="${e(p.type)}">${e(TRD_PTYPES[p.type])}</span>` : ''}${p.lev && String(p.lev).trim().toLowerCase()!==String(TRD_PTYPES[p.type] || '').toLowerCase() && String(p.lev).trim().toLowerCase()!==String(p.type || '').toLowerCase() ? `<span class="trdLev" data-trade-lev="1">${e(p.lev)}</span>` : ''}
       ${opt ? `<span class="trdTag" data-trade-opt>→ Port Option</span>` : ''}${on ? `<span class="trdTag on" data-trade-picked>เลือก</span>` : `<button type="button" class="small" data-trade-pick="${e(p.name)}" onclick="trdPickProduct('${e(v.id)}', this.dataset.tradePick)">เลือก</button>`}</div>`;
   }).join('') || '<div class="wlNone">ยังไม่มี Product — เพิ่มเองด้านล่าง หรือขอ AI มอง</div>';
   const clr = v.u.product ? `<button type="button" class="small" data-trade-pick-clear onclick="trdPickProduct('${e(v.id)}','')">ไม่เลือก</button>` : '';
@@ -14704,11 +14725,25 @@ function satWeekPickWrite(wk, list){
     st.satWeekPick = m;
   });
 }
+/* TR1fix — satWeekDrop {weekKey:[satKey…]} = Asset ที่ผู้ใช้เอาออกจากสัปดาห์เอง → auto-pick ข้าม · สัปดาห์ใหม่เริ่มว่าง · เก็บ 12 สัปดาห์ล่าสุด */
+function satWeekDropList(wk){
+  const r = tdSettings().satWeekDrop, a = (r && typeof r==='object' && !Array.isArray(r)) ? r[wk || wpWeekKey()] : null;
+  return Array.isArray(a) ? a.filter((k,i)=>typeof k==='string' && k && a.indexOf(k)===i) : [];
+}
+function satWeekDropWrite(wk, list){
+  return satSettingsWrite(st=>{
+    const m = Object.assign({}, (st.satWeekDrop && typeof st.satWeekDrop==='object') ? st.satWeekDrop : {});
+    if(list.length) m[wk] = list; else delete m[wk];
+    Object.keys(m).sort().slice(0, Math.max(0, Object.keys(m).length - SAT_WEEK_PICK_KEEP)).forEach(k=>{ delete m[k]; });
+    if(Object.keys(m).length) st.satWeekDrop = m; else delete st.satWeekDrop;
+  });
+}
 function satWeekPickAdd(key, wk){
   wk = wk || wpWeekKey();
   const l = satWeekPickList(wk);
-  if(l.includes(key)) return {ok:true, msg:''};
+  if(l.includes(key)){ if(satWeekDropList(wk).includes(key)) satWeekDropWrite(wk, satWeekDropList(wk).filter(k=>k!==key)); return {ok:true, msg:''}; }
   if(l.length >= SAT_WEEK_PICK_MAX) return {ok:false, msg:'สัปดาห์นี้ครบ 3 ตัวแล้ว — เอาตัวอื่นออกก่อน'};
+  if(satWeekDropList(wk).includes(key)) satWeekDropWrite(wk, satWeekDropList(wk).filter(k=>k!==key));
   if(!satWeekPickWrite(wk, l.concat([key]))) return {ok:false, msg:'ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง'};
   return {ok:true, msg:''};
 }
@@ -15067,7 +15102,8 @@ function waBarHtml(wk, nShown){
 function waMenuToggle(k){ waMenu = (k===null || waMenu===k) ? null : k; satV3Render(); }
 function waGoCard(k){ satV3Sel = k; satV3Render(); try{ const t = document.querySelector('#satV3Panel .ui-tile[data-key="'+k+'"]'); if(t && t.scrollIntoView) t.scrollIntoView({block:'nearest'}); }catch(e){} }
 function waRemove(k){
-  const r = satWeekPickRemove(k); waMsg = r.ok ? '' : r.msg; waMenu = null;
+  const r = satWeekPickRemove(k);
+  if(r.ok){ const wk = wpWeekKey(), d = satWeekDropList(wk); if(!d.includes(k)) satWeekDropWrite(wk, d.concat([k])); }   /* TR1fix — จำไว้ ไม่ให้ auto-pick ใส่กลับ */ waMsg = r.ok ? '' : r.msg; waMenu = null;
   if(r.ok && satV3Sel===k) satV3Sel = null;
   satV3Render(); try{ todayRefresh(); }catch(e){}
 }
@@ -15395,10 +15431,11 @@ function satCarrySync(){
   try{
     if(!tdCanWrite()) return;
     const cands = satAutoPickCands();
-    const sig = wpWeekKey() + '|' + cands.join(',');
+    const drop = satWeekDropList(wpWeekKey());
+    const sig = wpWeekKey() + '|' + cands.join(',') + '|' + drop.join(',');
     if(sig === satCarrySig) return;
     satCarrySig = sig;
-    const add = cands.filter(k=>!satIsPicked(k)).slice(0, Math.max(0, SAT_WEEK_PICK_MAX - satWeekPickList().length));
+    const add = cands.filter(k=>!satIsPicked(k) && !drop.includes(k)).slice(0, Math.max(0, SAT_WEEK_PICK_MAX - satWeekPickList().length));
     if(add.length) satWeekPickWrite(wpWeekKey(), satWeekPickList().concat(add));
   }catch(e){}
 }
