@@ -1287,8 +1287,8 @@ button.acctJump:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
 /* VW1 — กราฟ TradingView + โน้ต 3 มุม */
 .vwImg{box-sizing:border-box;position:relative;display:block;overflow:hidden;border-radius:10px;background:#0f1115;cursor:zoom-in;border:1px solid var(--line,var(--hair))}
 .vwImg img{width:100%;height:100%;object-fit:cover;display:block}
-.vwImg.vwFull{height:auto;min-height:48px}
-.vwImg.vwFull img{height:auto;object-fit:contain}
+.vwImg.vwFull{height:auto;min-height:48px;aspect-ratio:16/9}   /* RR1 — จองที่ 16:9 ก่อนภาพโหลด (หน้าไม่กระโดด) · โหลดแล้วใช้สัดส่วนจริง (inline aspect-ratio) */
+.vwImg.vwFull img{height:100%;object-fit:contain}
 .vwImg.vwSat{margin-top:6px}
 .vwImg.vwSat+.ui-tile-s,.vwSatAdd+.ui-tile-s,.vwSatF+.ui-tile-s,.vwImg.vwSat+.vwSatF{margin-top:6px}
 .vwImg .vwTag{position:absolute;left:6px;bottom:6px;font-size:11px;line-height:1.4;color:#fff;background:rgba(0,0,0,.6);border-radius:6px;padding:1px 6px}
@@ -4632,6 +4632,7 @@ function startListening(){
             (แก้อะไรก็ไม่ถูกบันทึกขึ้น server แบบเงียบๆ)
      ใส่ option นี้แล้วจะได้ callback เพิ่มตอน fromCache พลิกเป็น false ด้วย
      (อาการนี้ไม่เกี่ยวกับ Safari / long-polling / enablePersistence / security rules — ตัดออกไปหมดแล้วจากการทดสอบจริง) */
+  mainRenderSig = null;
   unsubDoc = ref.onSnapshot({ includeMetadataChanges: true }, snap=>{
     /* ต้องเช็ค serverConfirmed ก่อน pendingLocalWrite guard ข้างล่างเสมอ
        เพราะการ "ยืนยันว่าติดต่อ server ได้จริง" เป็นเรื่อง metadata ล้วนๆ ไม่ขึ้นกับว่าจะเอาข้อมูลมาใช้หรือไม่
@@ -4702,6 +4703,10 @@ function startListening(){
     /* ไม่ใช้ snap.metadata.hasPendingWrites ตัดสิน badge อีกต่อไป — พบว่าไม่นิ่งเมื่อบังคับ long-polling (ค้าง true แม้ server ยืนยันแล้วจริง)
        ถ้ายังไม่ผ่าน serverConfirmed (snapshot นี้ยังมาจาก cache เก่า) ไม่ควรขึ้น "ซิงก์แล้ว" หลอกๆ — โชว์ "กำลังบันทึก" (กำลังรอข้อมูลจริง) ไปก่อน */
     setSyncBadge(stateFromServer ? 'saved' : 'saving');
+    /* RR1 — snapshot ที่ข้อมูลเอกสารไม่เปลี่ยน (เสียงสะท้อนการเขียนตัวเอง/metadata-only/fromCache พลิก) → ไม่ render ทั้งแอปซ้ำ */
+    let rrSig = null; try{ rrSig = JSON.stringify(snap.exists ? (snap.data()||{}) : {}) + '|' + acctActive; }catch(e){}
+    if(rrSig!==null && rrSig===mainRenderSig && persistTimer===null){ autoFetchFxOnce(); return; }
+    mainRenderSig = rrSig;
     render();
     autoFetchFxOnce();
   }, err=>{
@@ -4718,6 +4723,7 @@ function startListening(){
 }
 
 let persistTimer = null;
+let mainRenderSig = null;   /* RR1 */
 /* true = state ในหน่วยความจำมีการแก้ไขที่ยังไม่ได้ถูกส่ง (issue) ไปที่ Firestore
    ใช้กันไม่ให้ onSnapshot เอาข้อมูลเก่ามาทับการแก้ไขที่ยังค้างอยู่ */
 let pendingLocalWrite = false;
@@ -5538,7 +5544,11 @@ function todayRefresh(force){
   const btn = document.getElementById('tabBtnToday'); if(btn) btn.setAttribute('aria-label', n>0 ? `วันนี้ · ${n} งานด่วน` : 'วันนี้');
   if(force || activeTab==='today'){
     const host = document.getElementById('tabToday'); if(!host) return;
-    try{ host.innerHTML = tdHtml(tdLast); }catch(e){ console.warn('today html:', e); }
+    try{
+      const h = tdHtml(tdLast);
+      if(host._rrHtml===h && host.firstChild) return;   /* RR1 — HTML เหมือนเดิมทุกตัวอักษร = ไม่แตะ DOM */
+      host.innerHTML = h; host._rrHtml = h;
+    }catch(e){ console.warn('today html:', e); }
     tdFocusFit();
   }
 }
@@ -9896,11 +9906,20 @@ function vwImgHtml(url, h, extra, cls){
   const src = tvSnapImg(url); if(!src) return '';
   const e = escHtml;
   if(!h) cls = (cls ? cls + ' ' : '') + 'vwFull';   /* ESC1 — h=0 → เห็นทั้งภาพ: กว้างเต็มช่อง · สูงตามสัดส่วนภาพ */
-  return `<span class="vwImg${cls ? ' ' + cls : ''}" data-vw-img${h ? ` style="height:${h}px"` : ''} data-src="${e(src)}" data-url="${e(String(url).trim())}" onclick="event.stopPropagation();vwZoom(this)"><img src="${e(src)}" alt="กราฟ" loading="lazy" referrerpolicy="no-referrer" onerror="vwImgErr(this)">${extra || ''}</span>`;
+  const rr = h ? 0 : vwRatio[src];   /* RR1 — รู้สัดส่วนจริงแล้ว (เคยโหลด) = จองที่ตามสัดส่วนนั้นเลย */
+  return `<span class="vwImg${cls ? ' ' + cls : ''}" data-vw-img${h ? ` style="height:${h}px"` : (rr ? ` style="aspect-ratio:${rr}"` : '')} data-src="${e(src)}" data-url="${e(String(url).trim())}" onclick="event.stopPropagation();vwZoom(this)"><img src="${e(src)}" alt="กราฟ" loading="lazy" referrerpolicy="no-referrer" onload="vwImgOk(this)" onerror="vwImgErr(this)">${extra || ''}</span>`;
+}
+const vwRatio = {};   /* RR1 — src → 'กว้าง / สูง' ของภาพจริง (จำในหน้านี้) */
+function vwImgOk(img){
+  try{
+    const p = img.closest('.vwImg.vwFull'); if(!p || !img.naturalWidth || !img.naturalHeight) return;
+    const r = img.naturalWidth + ' / ' + img.naturalHeight;
+    vwRatio[p.dataset.src] = r; p.style.aspectRatio = r;
+  }catch(e){}
 }
 function vwImgErr(img){
   const p = img && img.closest ? img.closest('.vwImg') : null; if(!p) return;
-  img.onerror = null; p.dataset.vwBad = '1';
+  img.onerror = null; p.dataset.vwBad = '1'; p.style.aspectRatio = 'auto';
   const a = document.createElement('a');
   a.className = 'vwBad'; a.href = p.dataset.url || '#'; a.target = '_blank'; a.rel = 'noopener';
   a.textContent = 'เปิดกราฟใน TradingView ↗';
@@ -15190,9 +15209,59 @@ function satV3AcctMetaHtml(){
 /* จุดเข้ารวมของหน้า Sat ใหม่ (สเปกส่วนที่ 1 ช่อง D) — ลำดับ: แถบบัญชี → Strategy (tile bar+editor) →
    Trade Plans (การ์ดร่างก่อน ตามด้วยแถว plan/open ที่ยุบแล้ว) → "แผนเดิม" (ของเก่า อ่านอย่างเดียว, พับไว้)
    เมนูเครื่องมือด้านบน (ตั้งโบรก) reuse ปุ่มเดิมของ 7D.2 ตรง ๆ ไม่สร้างใหม่ */
-function satV3Render(){
+/* RR1 — ตัวนับดีบัก (เปิดด้วย ?debug=render หรือ localStorage.dbgRender=1) · ปกติปิด ไม่มีผลกับผู้ใช้ */
+const rrDbg = {on:false, calls:0, drawn:0, skipped:0, causes:[]};
+try{ rrDbg.on = /[?&]debug=render\b/.test(location.search) || localStorage.getItem('dbgRender')==='1'; }catch(e){ rrDbg.on = /[?&]debug=render\b/.test(location.search); }
+function rrCaller(){
+  try{
+    const out = [];
+    String(new Error().stack||'').split('\n').slice(2).forEach(l=>{
+      if(out.length>=4) return;
+      let m = /at\s+(?:async\s+)?([^\s(]+)\s+\(/.exec(l) || /^\s*([^@\s]+)@/.exec(l);
+      let nm = m && m[1];
+      if(!nm || /^(Object\.|new|<anonymous>)/.test(nm) || nm==='satV3Render') nm = null;
+      if(!nm){ const a = /:(\d+):\d+\)?\s*$/.exec(l); nm = a ? 'anon@'+a[1] : null; }
+      if(nm && out[out.length-1]!==nm) out.push(nm.replace(/^Object\./,''));
+    });
+    return out.join(' < ');
+  }catch(e){ return '?'; }
+}
+function rrBadge(){
+  if(!rrDbg.on) return;
+  let b = document.getElementById('rrDbgBadge');
+  if(!b){ b = document.createElement('div'); b.id = 'rrDbgBadge'; b.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:99999;max-width:min(92vw,420px);background:rgba(0,0,0,.82);color:#9f9;font:11px/1.35 ui-monospace,Menlo,monospace;padding:5px 8px;border-radius:6px;pointer-events:none;white-space:pre-wrap;word-break:break-all'; document.body.appendChild(b); }
+  b.textContent = `satV3Render ${rrDbg.calls} (วาดจริง ${rrDbg.drawn} · ข้าม ${rrDbg.skipped})\n` + rrDbg.causes.slice(-5).reverse().join('\n');
+}
+/* RR1 — รักษา <img> กราฟเดิมไว้ (URL เดิม = node เดิม ไม่โหลดใหม่) · ทำใน <template> ที่ยังไม่ active จึงไม่ยิงโหลดภาพใหม่ */
+function rrKeepImgs(oldRoot, frag){
+  const olds = {};
+  oldRoot.querySelectorAll('.vwImg[data-src]').forEach(sp=>{
+    const k = sp.dataset.src, n = sp.querySelector('img, a.vwBad');
+    if(n) (olds[k] = olds[k] || []).push({n, bad: sp.dataset.vwBad});
+  });
+  frag.querySelectorAll('.vwImg[data-src]').forEach(sp=>{
+    const o = olds[sp.dataset.src] && olds[sp.dataset.src].shift(); if(!o) return;
+    const cur = sp.querySelector('img'); if(!cur) return;
+    cur.replaceWith(o.n);
+    if(o.bad) sp.dataset.vwBad = o.bad; else delete sp.dataset.vwBad;
+  });
+}
+function rrInputKey(x){ return x.tagName + '|' + (x.type||'') + '|' + Array.from(x.attributes).filter(a=>/^(data-|name$|id$|placeholder$)/.test(a.name)).map(a=>a.name+'='+a.value).join(';'); }
+/* RR1fix — กันเรียกซ้อน: วาดอยู่แล้วมีคนเรียกอีก (เช่น handler ของ blur/change ที่ยิงตอนช่องโฟกัสถูกถอดออก) → จดไว้แล้ววาดอีก 1 รอบหลังจบ (สูงสุด 2 รอบต่อการเรียก) */
+let rrBusy = false, rrPending = null;
+function satV3Render(opts){
+  if(rrDbg.on){ rrDbg.calls++; rrDbg.causes.push(rrCaller()); }
+  if(rrBusy){ rrPending = {force: !!(rrPending && rrPending.force) || !!(opts && opts.force)}; return; }
+  rrBusy = true;
+  try{
+    rrSatDraw(opts);
+    if(rrPending){ const o = rrPending; rrPending = null; rrSatDraw(o); }
+  }finally{ rrBusy = false; rrPending = null; }
+}
+function rrSatDraw(opts){
   const el = document.getElementById('satV3Panel');
   if(!el) return;
+  const force = !!(opts && opts.force);
   const err = (satErr ? `<div class="s7Err">โหลดไอเดีย Sat ไม่สำเร็จ (${escHtml(satErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satIdeas</div>` : '')
     + (satDelErr ? `<div class="s7Err" data-sat-del-err>ลบแผนไม่สำเร็จ (${escHtml(satDelErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satIdeas แล้วลองใหม่</div>` : '')
     + (satWeekErr ? `<div class="s7Err">โหลด Bias สัปดาห์ไม่สำเร็จ (${escHtml(satWeekErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satWeek</div>` : '')
@@ -15200,16 +15269,50 @@ function satV3Render(){
     + (satConfigTplErr ? `<div class="s7Err">อ่านรายการปุ่มลัดเงื่อนไขไม่สำเร็จ (${escHtml(satConfigTplErr)}) — ใช้ค่าเริ่มต้นไปพลาง</div>` : '');
   satCarrySync();   /* CO1 */
   const accts = sat7dAccts();
-  if(!accts.length){ el.innerHTML = '<div class="panel-head"><h2>แผนเทรด Sat</h2></div><div class="empty">ไม่มีบัญชีที่เปิดพอร์ต Sat</div>'; return; }
-  el.innerHTML = `<div class="panel-head s7Head"><h2><span class="dot" style="background:#DCA84B;display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px"></span>แผนเทรด Sat</h2>
+  let html;
+  if(!accts.length){ html = '<div class="panel-head"><h2>แผนเทรด Sat</h2></div><div class="empty">ไม่มีบัญชีที่เปิดพอร์ต Sat</div>'; }
+  else html = `<div class="panel-head s7Head"><h2><span class="dot" style="background:#DCA84B;display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px"></span>แผนเทรด Sat</h2>
       <div class="s7Tools"><button class="small ghost" onclick="sat7dBrokerOpen()">ตั้งโบรก</button></div></div>
     ${err}
     ${satV3StrategyBarHtml()}
     ${satV3PlansSectionHtml()}
     ${satV3ClosedPlansHtml()}`;
-  /* "โฟกัสช่องพิมพ์ทันที" ตอนเปิดช่องเพิ่ม/แก้ Setup ใหม่ (แทน prompt() ชั่วคราวของ Phase 3) */
-  const af = el.querySelector('[data-autofocus]');
-  if(af){ af.focus(); if(af.select) af.select(); }
+  /* RR1 — HTML เหมือนเดิมทุกตัวอักษร = ไม่แตะ DOM (กันภาพกระตุก/กราฟโหลดซ้ำ/โฟกัสหาย) · satV3Render({force:true}) บังคับวาดใหม่ */
+  const sig = html.replace(/ style="aspect-ratio:[^"]*"/g, '');   /* สัดส่วนภาพที่เพิ่งรู้ตอนโหลดไม่นับเป็นข้อมูลเปลี่ยน */
+  const same = !force && el._rrHtml === sig && el.firstChild;
+  if(same){ if(rrDbg.on){ rrDbg.skipped++; rrBadge(); } }
+  else {
+    if(rrDbg.on){ rrDbg.drawn++; }
+    /* เก็บสถานะหน้าจอก่อนวาดทับ: ช่องที่โฟกัส (+ cursor) · ค่าที่พิมพ์ค้าง · scroll */
+    const ae = document.activeElement, hadFocus = !!(ae && el.contains(ae) && ae !== el);
+    const ins = Array.from(el.querySelectorAll('input,textarea,select'));
+    const saved = ins.map(x=>({key: rrInputKey(x), value: x.value, checked: x.checked, dirty: (x.type==='checkbox'||x.type==='radio') ? x.checked!==x.defaultChecked : (x.tagName==='SELECT' ? false : x.value!==x.defaultValue)}));
+    const focusIdx = hadFocus ? ins.indexOf(ae) : -1;
+    const focusKey = hadFocus ? (focusIdx>=0 ? saved[focusIdx].key : rrInputKey(ae)) : '';
+    let sel = null; try{ if(focusIdx>=0 && ae.selectionStart!=null) sel = [ae.selectionStart, ae.selectionEnd]; }catch(e){}
+    const sy = window.scrollY, sx = window.scrollX;
+    const tpl = document.createElement('template'); tpl.innerHTML = html;
+    rrKeepImgs(el, tpl.content);
+    if(hadFocus){ try{ ae.blur(); }catch(e){} }   /* RR1fix — blur ก่อนถอดช่อง: handler ที่ยิงตอนนี้ถูกตัวกันซ้อนจดไว้ ไม่แทรกกลาง replaceChildren */
+    el.replaceChildren(tpl.content);
+    el._rrHtml = sig;
+    /* "โฟกัสช่องพิมพ์ทันที" ตอนเปิดช่องเพิ่ม/แก้ Setup ใหม่ (แทน prompt() ชั่วคราวของ Phase 3) */
+    const af = el.querySelector('[data-autofocus]');
+    if(af){ af.focus(); if(af.select) af.select(); }
+    else if(hadFocus){
+      /* คืนค่าที่พิมพ์ค้าง + โฟกัส/cursor (ช่องเดิม = key เดียวกันที่ลำดับเดิม) */
+      const nins = Array.from(el.querySelectorAll('input,textarea,select'));
+      saved.forEach((sv, i)=>{
+        const nx = nins[i]; if(!nx || rrInputKey(nx)!==sv.key || !sv.dirty) return;
+        if(nx.type==='checkbox'||nx.type==='radio') nx.checked = sv.checked; else nx.value = sv.value;
+      });
+      const tgt = (focusIdx>=0 && nins[focusIdx] && rrInputKey(nins[focusIdx])===focusKey) ? nins[focusIdx] : null;
+      if(tgt){ try{ tgt.focus({preventScroll:true}); if(sel) tgt.setSelectionRange(sel[0], sel[1]); }catch(e){} }
+    }
+    if(window.scrollY !== sy || window.scrollX !== sx){ try{ window.scrollTo(sx, sy); }catch(e){} }
+    rrBadge();
+  }
+  if(!accts.length) return;
   /* 7D.4 — เงื่อนไขที่เพิ่งเพิ่ม (ปุ่มลัด/+ เพิ่มเอง): โฟกัสช่องข้อความ วางเคอร์เซอร์ท้ายข้อความให้พิมพ์ต่อได้ทันที */
   if(satV3ScrollTo){
     const card = el.querySelector(`.ui-plan[data-id="${satV3ScrollTo}"]`);
