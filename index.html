@@ -2029,6 +2029,19 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
  body.lf-lean .wlR.ln3r .ln3-al{white-space:nowrap}
  body.lf-lean .wlDBody{overflow-wrap:anywhere}
  body.lf-lean .wlDBody :is(dd,li,p,.dr>span){max-width:72ch;overflow-wrap:anywhere}
+ /* LN3fix3b §1 — ขยายรายละเอียดเต็มจอ (body.wl-full · ตั้งจาก JS เฉพาะ Mac ≥1024 Lean) */
+ .wlXw{display:inline-flex;align-items:center;gap:6px;flex:none}
+ body .wlDHead button[data-wl-full]{min-width:39px;box-sizing:border-box;justify-content:center}
+ body.wl-full{overflow:hidden}
+ body.wl-full header,body.wl-full .topbar,body.wl-full .rail{display:none!important}
+ body.wl-full .wlm>.wlList{display:none}
+ body.wl-full .wlm{display:block;height:auto;min-height:0}
+ body.wl-full .wlDet{position:fixed;inset:0;height:auto;z-index:45;background:var(--bg);padding:14px clamp(16px,3vw,48px) 0;overflow:hidden}
+ body.wl-full .wlDPanel,body.wl-full .wlDBody>*{width:100%;max-width:104ch;margin-left:auto;margin-right:auto;box-sizing:border-box}
+ body.wl-full .wlDBody{padding-bottom:40px;overflow-x:hidden}
+ body.wl-full.lf-lean .wlDBody :is(dd,li,p,.dr>span){max-width:80ch}
+ body.wl-full .wlDBody :is(table,pre){max-width:100%}
+ body.wl-full .wlDBody .ltTw{overflow-x:auto;max-width:100%}
  /* Flow: Macro · Regime · ข่าว · บอร์ด | RRG */
  body.lf-lean #tabFlow[style*="display: block"]{display:grid!important;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
  body.lf-lean #tabFlow>*{grid-column:1/-1;min-width:0;margin-top:0!important;margin-bottom:0!important}
@@ -2038,6 +2051,14 @@ button,.chip,.tabbtn,.railbtn,.scopeBtn,.rsChip,.rsDeepBtn{touch-action:manipula
  body.lf-lean #pbPanel .pbHl{white-space:normal;overflow:visible;text-overflow:clip;font-size:16px;font-weight:700;line-height:1.4}
  body.lf-lean #pbPanel .pbThesis,body.lf-lean #pbPanel .pbScn,body.lf-lean #pbPanel .pbWatchV,body.lf-lean #pbPanel .pbWatch{font-size:15.5px;line-height:1.6}
  body.lf-lean #pbPanel .pbThesis{max-width:none}
+ /* LN3fix3b §2 — Macro: แถวหัว = ▾ ไตรมาส · ใช้จริง · ชิป Asset (ห่อบรรทัด ไม่ตัด) · headline ขึ้นบรรทัดเต็มความกว้างข้างล่าง · การ์ดมี padding ด้านในปกติ */
+ @media (min-width:1000px){
+  body.lf-lean .pbPanel.ln3-sec{padding:12px 14px 14px}
+  body.lf-lean details.pbPanel.ln3-sec[open]>summary::before{transform:none;margin-right:4px}   /* กฎ details.panel หมุน ▾ 90° จนเป็น ◂ — คงปุ่มพับไว้ แต่วาดให้ตรง */
+  body.lf-lean #pbPanel .pbHead{align-items:center;gap:6px 8px}
+  body.lf-lean #pbPanel .pbHead .pbHl{order:5;flex:0 0 100%;min-width:0;white-space:normal;overflow:visible;text-overflow:clip;font-size:16px;font-weight:700;line-height:1.4}
+  body.lf-lean #pbPanel .pbHead .pbIcos{flex:1 1 0;min-width:0;white-space:normal;overflow:visible}
+ }
  body.lf-lean #pbPanel .pbFold>summary{cursor:pointer;color:var(--mute);font-size:13px;margin:6px 0}
  body.lf-lean #pbPanel .pbRowW{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:start}
  body.lf-lean #pbPanel .pbRowW>*{min-width:0}
@@ -6680,6 +6701,7 @@ function switchTab(t){
     wlResearchExpanded=false;
     requestAnimationFrame(()=>window.scrollTo(0,wlResearchScroll));
   }
+  if(t!=='watch') wlFullOff();   /* LN3fix3b — ย่อเต็มจอทิ้งเมื่อออกจาก Watch */
   const order = TAB_ORDER;
   const fromI = order.indexOf(activeTab), toI = order.indexOf(t);
   const dir = (fromI<0 || toI<0) ? 0 : (toI > fromI ? 1 : toI < fromI ? -1 : 0); // 1 = ไปข้างหน้า (ปัดซ้าย)
@@ -6759,7 +6781,7 @@ const KB_SUB = {
     name:'Watch',
     cycle:{list:WL_PORT_CYCLE_KB, get:()=>wlView==='cand'?'':wlPort, set:v=>wlSetPort(v), label:'วน All → Core.US → Core.TH'},
     keys:{},
-    extra:[['Tab / Shift+Tab','วน Watchlist → Ideas → Candidates'],['↑ ↓','เลื่อนหุ้น/ไอเดียในรายการ'],['← →','เปลี่ยนแท็บการ์ด (Thesis: สรุป … ออกเมื่อ · Ideas: สรุป … บริษัท)'],['[ ] ใน Ideas','วนตัวกรอง ทั้งหมด → รอหลักฐาน → พร้อมส่งต่อ → พัก'],['[ ] ใน Candidates','วน ทั้งหมด → ▲ ได้ → ▼ เสีย'],['Esc','มือถือ: กลับจากหน้ารายตัว']]
+    extra:[['Tab / Shift+Tab','วน Watchlist → Ideas → Candidates'],['↑ ↓','เลื่อนหุ้น/ไอเดียในรายการ'],['F','ขยาย/ย่อ รายละเอียด (Watch)'],['← →','เปลี่ยนแท็บการ์ด (Thesis: สรุป … ออกเมื่อ · Ideas: สรุป … บริษัท)'],['[ ] ใน Ideas','วนตัวกรอง ทั้งหมด → รอหลักฐาน → พร้อมส่งต่อ → พัก'],['[ ] ใน Candidates','วน ทั้งหมด → ▲ ได้ → ▼ เสีย'],['Esc','มือถือ: กลับจากหน้ารายตัว']]
   }
 };
 const KB_GLOBAL = [['1–6','สลับแท็บ Today · Flow · Watch · แผน · Journal · Port'],['T','ไปหน้าแผน'],['C','Watchlist'],['V','Candidates'],['?','ดูปุ่มลัด'],['Esc','ปิดหน้าต่าง']];
@@ -6790,6 +6812,12 @@ function kbHandle(e){
   if(e.shiftKey) return;
   /* 7E-2: T = goPlanTop (scope หุ้น → เปิด sheet แผน Core ใหม่) */
   if(e.code==='KeyT' && !e.ctrlKey && !e.metaKey && !e.altKey){ e.preventDefault(); goPlanTop(); return; }
+  /* LN3fix3b — F ขยาย/ย่อรายละเอียด · ขยายอยู่: ↑/↓ เลื่อนข้อความอย่างเดียว (ไม่เปลี่ยนหุ้น/ไอเดีย) */
+  if(e.code==='KeyF' && activeTab==='watch'){
+    if(wlFull || (wlFullOk() && !wlFullBlocked())){ e.preventDefault(); wlFullSet(!wlFull); }
+    return;
+  }
+  if(wlFull && activeTab==='watch' && (e.key==='ArrowDown' || e.key==='ArrowUp')){ e.preventDefault(); wlFullScroll(e.key==='ArrowDown' ? 1 : -1); return; }
   /* ID1 — มุมมอง Ideas: ←/→ แท็บการ์ด · ↑/↓ เลือกไอเดีย · [ ] วนตัวกรอง */
   if(activeTab==='watch' && wlView==='idea'){
     if(e.key==='ArrowLeft' || e.key==='ArrowRight'){
@@ -11254,7 +11282,7 @@ function ln3WlDetHead(r, th, nm, tabs, tierNote){
   const tn = tierNote ? tierNote.replace('</div>', ` · ${wlRevBtnHtml(rawSym, r.market).replace('class="btnlink small"', 'class="btnlink small ln3-rev"')}</div>`) : '';
   return `<div class="wlDHead ln3-dh" data-ln3-dh="1">
       ${wlNarrow() ? '<button class="small ghost wlBackBtn" onclick="wlBack()">‹ Watchlist</button>' : ''}
-      <div class="wlDTop"><div class="wlDT"><b>${e(r.sym)}</b> <span class="nm">${e(nm)}</span> ${wlPortTag(r.port, r.market)} ${it ? wlTierChips(it, true) : ''}</div>${menu}</div>
+      <div class="wlDTop"><div class="wlDT"><b>${e(r.sym)}</b> <span class="nm">${e(nm)}</span> ${wlPortTag(r.port, r.market)} ${it ? wlTierChips(it, true) : ''}</div><span class="wlXw">${wlFullBtn('small ic')}${menu}</span></div>
       <div class="ln3-meta" data-ln3-meta="1">${meta}</div>${tn || (tierNote ? tierNote : '')}${tierNote ? '' : `<div class="ln3-meta">${wlRevBtnHtml(rawSym, r.market)}</div>`}${AB.al}${AB.sa}
       <div class="wlActs ln3-acts" data-ln3-acts="1">${main}</div>${tabs}</div>`;
 }
@@ -11280,7 +11308,7 @@ function wlFit(){
   rs.setProperty('--wl-top', Math.max(0, Math.round(top)) + 'px');
   rs.setProperty('--wl-bot', Math.round(pb + 12) + 'px');
 }
-window.addEventListener('resize', ()=>{ if(typeof activeTab!=='undefined' && activeTab==='watch') wlFit(); });
+window.addEventListener('resize', ()=>{ if(typeof activeTab!=='undefined' && activeTab==='watch'){ if(wlFull && wlNarrow()){ wlFullOff(); try{ renderWatchlist(); }catch(e){} } wlFit(); } });
 window.addEventListener('orientationchange', ()=>{ if(typeof activeTab!=='undefined' && activeTab==='watch') wlFit(); });
 try{   /* WL2 — ข้ามเส้น 430px: gaps/kpi สลับระหว่างตาราง ↔ รายการซ้อน */
   const ltMq = window.matchMedia('(max-width:430px)'), ltOnMq = ()=>{ if(typeof activeTab!=='undefined' && activeTab==='watch' && state) renderWatchlist(); };
@@ -11288,6 +11316,7 @@ try{   /* WL2 — ข้ามเส้น 430px: gaps/kpi สลับระห
 }catch(e){}
 function renderWatchlist(){
   if(!state) return;
+  if(wlFull && wlNarrow()) wlFullOff();   /* LN3fix3b */
   if(!Array.isArray(state.watchlist)) wlSyncMirror();
   const host = document.getElementById('watchGroups'); if(!host) return;
   if(wlView==='idea') return ideaRender(host);   /* ID1 */
@@ -11353,8 +11382,8 @@ function renderWatchlist(){
     if(nd) nd.scrollTop = keepDet;
   }
 }
-function wlSetView(v){ wlResearchExpanded=false; wlView = (v==='cand'?'cand': v==='idea'?'idea':'wl'); wlMobOpen = false; ideaMenu = ''; renderWatchlist(); }   /* ID1 — เพิ่ม 'idea' */
-function wlSetPort(p){ wlResearchExpanded=false; wlView = 'wl'; wlPort = WL_PORT_CYCLE.includes(p) ? p : 'all'; wlMobOpen = false; renderWatchlist(); }
+function wlSetView(v){ wlFullOff(); wlResearchExpanded=false; wlView = (v==='cand'?'cand': v==='idea'?'idea':'wl'); wlMobOpen = false; ideaMenu = ''; renderWatchlist(); }   /* ID1 — เพิ่ม 'idea' */
+function wlSetPort(p){ wlFullOff(); wlResearchExpanded=false; wlView = 'wl'; wlPort = WL_PORT_CYCLE.includes(p) ? p : 'all'; wlMobOpen = false; renderWatchlist(); }
 function wlOpen(sym, sub){
   sym = String(sym||'').toUpperCase(); if(!sym) return;
   const r = wlFind(sym);
@@ -11396,7 +11425,39 @@ function wlStep(dir){
   clearTimeout(wlStepTimer);
   wlStepTimer = setTimeout(()=>{ if(activeTab==='watch' && !wlNarrow()) renderWatchlist(); }, 80);
 }
+/* LN3fix3b §1 — ขยายรายละเอียด Watch เต็มจอ (Mac ≥1024 · Lean) · CSS ล้วน ไม่ใช้ Fullscreen API · ไม่เก็บสถานะ */
+let wlFull = false, wlFullY = 0;
+function wlFullOk(){ return ln1On() && !wlNarrow() && activeTab==='watch' && (wlView==='idea' ? !!ideaSel : !!wlSel); }
+function wlFullBlocked(){
+  return !!(ltPopBtn || wlMenu || ideaMenu || phMenu || fltOpen || wlNoteForm || ltImp || ideaImp || ideaSheet || document.getElementById('vwLb')
+    || document.querySelector('.overlay.show, .ui-sheet-backdrop, .core-sheet, #ltTermPop, .scorePop.show, .ccMenu.on'));
+}
+function wlFullBtn(cls){
+  cls = cls || 'small';
+  if(!ln1On() || wlNarrow()) return '';
+  return wlFull ? `<button class="${cls} primary" type="button" data-wl-full="1" title="ย่อกลับ (Esc)" aria-label="ย่อกลับ (Esc)" onclick="wlFullSet(false)">⤡</button>`
+                : `<button class="${cls}" type="button" data-wl-full="0" title="ขยายเต็มจอ (F)" aria-label="ขยายเต็มจอ (F)" onclick="wlFullSet(true)">⤢</button>`;
+}
+function wlFullToast(msg){
+  let el = document.getElementById('wlFullToast');
+  if(!el){ document.body.insertAdjacentHTML('beforeend', '<div id="wlFullToast" class="wtNote" role="status" aria-live="polite"></div>'); el = document.getElementById('wlFullToast'); }
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(wlFullToast.t); wlFullToast.t = setTimeout(()=>el.classList.remove('show'), 2000);
+}
+function wlFullSet(on){
+  on = !!on && wlFullOk();
+  if(on === wlFull) return;
+  if(on){ wlFullY = window.scrollY || 0; }
+  wlFull = on;
+  document.body.classList.toggle('wl-full', on);
+  renderWatchlist();
+  if(on) wlFullToast('เต็มจอ · ← → เปลี่ยนหัวข้อ · Esc = ย่อกลับ');
+  else { const y = wlFullY; requestAnimationFrame(()=>{ try{ window.scrollTo(0, y); }catch(e){} }); }
+}
+function wlFullOff(){ if(!wlFull) return; wlFull = false; document.body.classList.remove('wl-full'); }
+function wlFullScroll(dir){ const b = document.querySelector('#watchGroups .wlDBody'); if(b) b.scrollBy({top: dir * 60}); }
 function wlBack(){
+  wlFullOff();
   wlResearchExpanded = false;
   wlMobOpen = false;
   renderWatchlist();
@@ -12184,7 +12245,7 @@ function ideaDetailHtml(v){
     const tabs = `<div class="ltTabs" role="tablist" data-idea-tabs>${IDEA_TABS.map(([k,n])=>`<button type="button" role="tab" aria-selected="${sub===k}" class="ltTab${sub===k?' on':''}" data-idea-tab="${k}" onclick="ideaSetTab('${k}')">${n}${k==='evd' && nHot ? `<span class="n" data-idea-hotn>${nHot}</span>` : ''}${k==='vc' && nOurs ? `<span class="n" data-idea-vcn>${nOurs}</span>` : ''}</button>`).join('')}</div>`;
     const body = draft ? (sub==='sum' ? ideaDraftBody(v) : ideaDraftEmpty()) : sub==='mech' ? ideaTabMech(v) : sub==='evd' ? ideaTabEvd(v) : sub==='vc' ? ideaTabVc(v) : sub==='co' ? ideaTabCo(v) : ideaTabSum(v);
     const head = `<div class="wlDHead">${wlNarrow() ? '<button class="small ghost wlBackBtn" onclick="wlBack()">‹ Ideas</button>' : ''}
-      <div class="wlDTop"><div class="wlDT"><b data-idea-title>${e(v.name)}</b> ${stBtn}</div><div class="wlActs">${more}</div></div>
+      <div class="wlDTop"><div class="wlDT"><b data-idea-title>${e(v.name)}</b> ${stBtn}</div><div class="wlActs">${wlFullBtn()}${more}</div></div>
       <div class="wlChips ltChips" data-idea-chips><span class="ltChip">${e(v.scope.join('/') || '—')}</span>${v.inner.nature ? `<span class="ltChip">${e(IDEA_NATURE[v.inner.nature] || v.inner.nature)}</span>` : ''}<span class="ltChip" data-idea-meta>idea@1 · ${e(v.mode)} · ${e(wlThDate(v.date))}</span></div>${tabs}</div>`;
     return `<div class="panel wlDPanel">${head}</div><div class="wlDBody">${body}${ideaFoot(v)}</div>`;
   } finally { ltTermsSet(null); }
@@ -12612,7 +12673,7 @@ function trdDetailHtml(v){
   const tabs = `<div class="ltTabs" role="tablist" data-idea-tabs data-trade-tabs>${TRD_TABS.map(([k,n])=>`<button type="button" role="tab" aria-selected="${sub===k}" class="ltTab${sub===k?' on':''}" data-idea-tab="${k}" data-trade-tab="${k}" onclick="ideaSetTab('${k}')">${n}${k==='vs' && nb ? `<span class="n trdBadge" data-trade-badge>${nb}</span>` : ''}</button>`).join('')}</div>`;
   const body = sub==='vs' ? trdTabVs(v) : sub==='prod' ? trdTabProd(v) : sub==='go' ? trdTabGo(v) : trdTabSum(v);
   const head = `<div class="wlDHead">${wlNarrow() ? '<button class="small ghost wlBackBtn" onclick="wlBack()">‹ Ideas</button>' : ''}
-    <div class="wlDTop"><div class="wlDT"><b data-idea-title data-trade-title>${e(v.title)}</b> <span class="ltChip ${st[1]}" data-trade-status="${e(v.status)}">${e(st[0])}</span></div><div class="wlActs">${more}</div></div>
+    <div class="wlDTop"><div class="wlDT"><b data-idea-title data-trade-title>${e(v.title)}</b> <span class="ltChip ${st[1]}" data-trade-status="${e(v.status)}">${e(st[0])}</span></div><div class="wlActs">${wlFullBtn()}${more}</div></div>
     <div class="wlChips ltChips" data-trade-chips><span class="trdTag">เทรด</span><span class="${v.dir==='long' ? 'trdUp' : 'trdDn'}" style="font-weight:700">${e(trdDirTx(v.dir))}</span>${v.horizon ? `<span class="ltChip">${e(v.horizon)}</span>` : ''}${v.exp ? `<span class="ltChip" data-trade-exp-chip>หมดอายุ ${e(wlThDate(v.exp))}</span>` : ''}<span class="waMac ${v.mac.cls}" data-trade-mac="${e(v.mac.txt)}">${e(v.mac.txt)}</span></div>${tabs}</div>`;
   return `<div class="panel wlDPanel">${head}</div><div class="wlDBody">${body}</div>`;
 }
@@ -15154,6 +15215,7 @@ function escCloseTop(){
     if(document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
     return true;
   }
+  if(wlFull){ wlFullSet(false); return true; }   /* LN3fix3b — ป๊อปอัป/เมนู/sheet ข้างบนปิดก่อน · Esc ถัดไปย่อกลับ */
   if(activeTab==='watch' && wlResearchExpanded){ if(wlNarrow()) wlBack(); else wlSetSub('sum'); return true; }
   if(activeTab==='watch' && wlMobOpen && wlNarrow() && !kbEditableTarget(document.activeElement)){ wlBack(); return true; }   /* เดิมอยู่ใน kbHandle */
   return false;
@@ -16923,8 +16985,8 @@ function nwStart(){
   const gone = st.rows.filter(r=>!keep.includes(r.key)).map(r=>r.key);
   if(!satWeekPickWrite(T, keep)) return;
   satWeekDropWrite(T, gone);
-  keep.forEach(k=>{   /* มีเอกสารของสัปดาห์นี้อยู่แล้ว (เช่น ใส่กราฟ/Zone ไว้ก่อน) → ล้างช่องที่ต้องเริ่มว่าง · ไม่แตะ Macro/กราฟ */
-    if(satwWeek(T, k)) sat7dWrite('satWeek', T, {[k]: {zone_up:'', zone_dn:'', zone_bp:false, opinion_txt:'', invalidation:null, support:[], resistance:[], updated_at:new Date().toISOString()}});
+  keep.forEach(k=>{   /* LN3fix3b — ล้างช่องที่ต้องเริ่มว่างให้ "ทุก" Asset ที่เก็บ ไม่ว่าเอกสารสัปดาห์หน้าโหลดมาถึงแล้วหรือยัง (merge write · ไม่แตะ bias/Macro/กราฟ) */
+    sat7dWrite('satWeek', T, {[k]: {zone_up:'', zone_dn:'', zone_bp:false, opinion_txt:'', invalidation:null, support:[], resistance:[], updated_at:new Date().toISOString()}});
   });
   satSettingsWrite(stg=>{
     const m = Object.assign({}, (stg.satWeekStart && typeof stg.satWeekStart==='object') ? stg.satWeekStart : {});
