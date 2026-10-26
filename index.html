@@ -6404,7 +6404,7 @@ function ln3Mac(){ try{ return ln1On() && window.innerWidth >= 1000; }catch(e){ 
 function ln3TdMac(){ return ln3Mac(); }
 let pbMacPrev = null;
 let tdMacPrev = null;
-window.addEventListener('resize', ()=>{ try{ const m = ln3Mac(); if(m!==tdMacPrev && activeTab==='today') todayRefresh(true); if(m!==pbMacPrev && activeTab==='flow') pbRender(); }catch(e){} });
+window.addEventListener('resize', ()=>{ try{ tdBalanceSoon(); const m = ln3Mac(); if(m!==tdMacPrev && activeTab==='today') todayRefresh(true); if(m!==pbMacPrev && activeTab==='flow') pbRender(); }catch(e){} });
 function renderToday(){ todayRefresh(true); }
 /* คำนวณใหม่ + อัปเดตเลขแดงบนปุ่มแท็บ (ทุกแท็บ) · วาดแท็บ วันนี้ เมื่ออยู่แท็บนี้ (หรือ force) · ห้ามโยน error ออกไปทำ render() หลักพัง */
 function todayRefresh(force){
@@ -6418,12 +6418,35 @@ function todayRefresh(force){
     const host = document.getElementById('tabToday'); if(!host) return;
     try{
       const h = tdHtml(tdLast);
-      if(host._rrHtml===h && host.firstChild) return;   /* RR1 — HTML เหมือนเดิมทุกตัวอักษร = ไม่แตะ DOM */
+      if(host._rrHtml===h && host.firstChild){ tdBalance(); return; }   /* RR1 — HTML เหมือนเดิมทุกตัวอักษร = ไม่แตะ DOM (PF3: แค่ตรวจสมดุลคอลัมน์ซ้ำ — ไม่ย้ายถ้าอยู่ถูกที่แล้ว) */
       host.innerHTML = h; host._rrHtml = h;
     }catch(e){ console.warn('today html:', e); }
-    tdFocusFit();
+    tdFocusFit(); tdBalance();
   }
 }
+/* PF3 — Mac: คอลัมน์ซ้ายยาวกว่าขวาเกิน 15% (วัดที่ก้นคอลัมน์ เหมือนเทส) → ย้ายการ์ดแผน Sat ไปคอลัมน์ขวา (ต่อจากเป้าหมาย Port · ก่อนการบ้านหุ้น) · เก็บไว้เฉพาะเมื่อสมดุลดีขึ้น · iPhone/จอแคบ = ลำดับ DOM เดิม */
+const TD_BAL_MAX = 0.15; let tdBalT = 0;
+function tdBalance(){
+  try{
+    const c1 = document.querySelector('[data-td-col="1"]'), c2 = document.querySelector('[data-td-col="2"]'), sat = document.querySelector('[data-ln3-satbox]');
+    if(!c1 || !c2 || !sat) return;
+    if(!ln3Mac()){ if(sat.parentNode!==c1) c1.appendChild(sat); return; }
+    const r1 = c1.getBoundingClientRect().bottom, r2 = c2.getBoundingClientRect().bottom;
+    if(!(r1 > 0 && r2 > 0)) return;   /* แท็บยังซ่อนอยู่ (วัดไม่ได้) — ไว้วัดตอนเปิดแท็บ */
+    const cs = getComputedStyle(sat), H = sat.getBoundingClientRect().height + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+    const inC2 = sat.parentNode===c2;
+    const a = inC2 ? r1 + H : r1, b = inC2 ? r2 - H : r2;   /* ก้นซ้าย/ขวา ถ้าการ์ดอยู่ที่เดิม (ท้ายคอลัมน์ซ้าย) */
+    const d0 = a - b, q0 = Math.abs(d0) / Math.max(a, b, 1), q1 = Math.abs((a - H) - (b + H)) / Math.max(a - H, b + H, 1);
+    const want = d0 > 0 && q0 > TD_BAL_MAX && q1 < q0;
+    if(want===inC2) return;   /* อยู่ถูกที่แล้ว = ไม่แตะ DOM (ไม่กระพริบ/ไม่เสียโฟกัส) */
+    if(!want){ c1.appendChild(sat); return; }
+    const goal = c2.querySelector('[data-gl-goal]');
+    if(goal) goal.insertAdjacentElement('afterend', sat); else c2.insertBefore(sat, c2.firstChild);
+    const x1 = c1.getBoundingClientRect().bottom, x2 = c2.getBoundingClientRect().bottom;
+    if(!(Math.abs(x1 - x2) / Math.max(x1, x2, 1) < q0)) c1.appendChild(sat);   /* วัดจริงแล้วไม่ดีขึ้น = คืนที่เดิม */
+  }catch(e){}
+}
+function tdBalanceSoon(){ clearTimeout(tdBalT); tdBalT = setTimeout(()=>{ if(activeTab==='today') tdBalance(); }, 150); }
 /* มือถือ: บรรทัด Focus ยาวเกิน 1 บรรทัด → ตัด "ไม่มีแผน" ออก */
 function tdFocusFit(){
   try{
@@ -16104,9 +16127,9 @@ const Calc = {
   wiIctDate(ms){ return new Date(ms + 7*3600000).toISOString().slice(0,10); },
   wiIctHM(ms){ return new Date(ms + 7*3600000).toISOString().slice(11,16); },
   wiTiers: ['HIGH','MED','LOW'],
-  wiKinds: ['release','decision','speech','carryover'],
+  wiKinds: ['release','decision','speech','event','carryover'],
   wiTimeStatus: ['confirmed','tentative','unknown','unscheduled'],
-  wiStatus: ['scheduled','released','postponed','cancelled','ongoing'],
+  wiStatus: ['scheduled','released','ongoing','postponed','cancelled'],
   wiEvIdRe: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,59}$/,
   wiNorm(s){ return String(s==null ? '' : s).trim().toUpperCase().replace(/\s+/g,' '); },
   /* ctx.assets = [{id, name, ref_market, aliases[], active}] · คืน {id} หรือ {skip:'เหตุผล'} · ไม่ fuzzy · ไม่สร้าง Asset */
@@ -16172,15 +16195,18 @@ const Calc = {
         if(!Calc.wiStatus.includes(st)) errors.push(w+'.status: '+Calc.wiStatus.join(' / '));
         ['forecast','previous','actual'].forEach(f=>{ if(e[f]!=null && !(typeof e[f]==='number' && isFinite(e[f]))) errors.push(w+'.'+f+': ต้องเป็นตัวเลขหรือ null (ไม่ใส่ 0 แทนค่าที่ไม่มี)'); });
         if(e.previous_revised!=null && typeof e.previous_revised!=='boolean') errors.push(w+'.previous_revised: true/false/null');
+        if(e.previous_period!=null && !str(e.previous_period, 40)) errors.push(w+'.previous_period: ข้อความ ≤40 หรือ null');
+        if(e.source_refs!=null && !Array.isArray(e.source_refs)) errors.push(w+'.source_refs: ต้องเป็น array ของ id ใน sources');
+        else (e.source_refs||[]).forEach((r,i)=>{ if(!(typeof r==='string' && (obj.sources||{})[r])) errors.push(w+'.source_refs['+i+']: ต้องอ้าง id ใน sources'); });
         if(e.actual_updated_at!=null && Calc.wiTs(e.actual_updated_at)==null) errors.push(w+'.actual_updated_at: เวลา ISO พร้อม timezone');
         ['schedule','forecast','previous','actual'].forEach(f=>{ const r = e['src_'+f]; if(r!=null && !(typeof r==='string' && (obj.sources||{})[r])) errors.push(w+'.src_'+f+': ต้องอ้าง id ใน sources'); });
         if(e.actual_source!=null && !(str(e.actual_source, 500))) errors.push(w+'.actual_source: ข้อความ ≤500');
         if(tsat!=='confirmed' && ts!=null) warnings.push(w+': มี scheduled_at แต่ time_status='+tsat+' — จะไม่นับถอยหลัง');
         events[id] = {title:e.title, label_th:e.label_th||'', kind:e.kind, metric:e.metric||null, basis:e.basis||null, period:e.period||null, unit:e.unit||null,
           scheduled_at:e.scheduled_at||null, date_local:e.date_local||(ts!=null ? Calc.wiIctDate(ts) : null), time_status:tsat, occurred_at:e.occurred_at||null,
-          forecast:e.forecast==null ? null : e.forecast, previous:e.previous==null ? null : e.previous, previous_revised:e.previous_revised==null ? null : e.previous_revised,
+          forecast:e.forecast==null ? null : e.forecast, previous:e.previous==null ? null : e.previous, previous_revised:e.previous_revised==null ? null : e.previous_revised, previous_period:e.previous_period||null,
           actual:e.actual==null ? null : e.actual, actual_updated_at:e.actual_updated_at||null, actual_source:e.actual_source||null, status:st,
-          src_schedule:e.src_schedule||null, src_forecast:e.src_forecast||null, src_previous:e.src_previous||null, src_actual:e.src_actual||null};
+          src_schedule:e.src_schedule||null, src_forecast:e.src_forecast||null, src_previous:e.src_previous||null, src_actual:e.src_actual||null, source_refs:Array.isArray(e.source_refs) ? e.source_refs.filter(r=>typeof r==='string') : []};
       });
     }
     const assets = {};
@@ -16207,7 +16233,7 @@ const Calc = {
           let sc = [];
           if(it.scenarios_th!=null){
             if(!Array.isArray(it.scenarios_th)) errors.push(wi+'.scenarios_th: ต้องเป็น array [{key,label_th?,text_th}]');
-            else it.scenarios_th.forEach((s,i)=>{ if(!isObj(s) || !str(s.key, 30) || !s.key || !str(s.text_th, 600) || !s.text_th || (s.label_th!=null && !str(s.label_th, 80))) errors.push(wi+'.scenarios_th['+i+']: ต้องมี key + text_th'); else sc.push({key:s.key, label_th:s.label_th||'', text_th:s.text_th}); });
+            else it.scenarios_th.forEach((s,i)=>{ if(!isObj(s) || !str(s.key, 30) || !s.key || !str(s.text_th, 600) || !s.text_th || (s.label_th!=null && !str(s.label_th, 80))) errors.push(wi+'.scenarios_th['+i+']: ต้องมี key + text_th'); else { const lb = typeof s.label_th==='string' ? s.label_th.trim() : ''; sc.push(lb ? {key:s.key, label_th:lb, text_th:s.text_th} : {key:s.key, text_th:s.text_th}); } });
           }
           interp[eid] = {mechanism_th:it.mechanism_th||'', scenarios_th:sc, watch_th:it.watch_th||''};
         });
@@ -21395,7 +21421,10 @@ async function pbSave(){
    ข้อมูลชุดเดียวใช้ร่วมกัน: แผง Weekly Impact · ＋ Asset sheet · การ์ด Strategy · Today ข่าววันนี้ · ไม่เปลี่ยน Quarterly Macro / ไม่แตะแผน/ไม้/ขนาดไม้ · ข้อความจากภายนอกใช้ escHtml เสมอ (ไม่ใช่ HTML) */
 const WI_MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'], WI_DOW = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
 const WI_TIER_FULL = {HIGH:'HIGH (กระทบสูง)', MED:'MED (กระทบปานกลาง)', LOW:'LOW (กระทบต่ำ)'};
-const WI_SC_LBL = {above:'ถ้าสูงกว่าคาด', below:'ถ้าต่ำกว่าคาด', inline:'ถ้าใกล้เคียงคาด', post:'สิ่งที่ควรดูหลังประกาศ', hawkish:'ถ้าเข้มกว่าคาด (hawkish)', dovish:'ถ้าผ่อนคลายกว่าคาด (dovish)', expected:'ถ้าเป็นไปตามคาด'};
+const WI_SC_LBL = {above:'ถ้าสูงกว่าคาด', below:'ถ้าต่ำกว่าคาด', inline:'ถ้าใกล้เคียงคาด', occurs:'เกิดขึ้น', delayed:'เลื่อนออกไป', escalates:'ตึงเครียดขึ้น', eases:'คลี่คลายลง', post:'หลังประกาศผล', hawkish:'ถ้าเข้มกว่าคาด (hawkish)', dovish:'ถ้าผ่อนคลายกว่าคาด (dovish)', expected:'ถ้าเป็นไปตามคาด'};
+/* ป้ายสถานการณ์: label_th ที่ไม่ว่าง → ตารางไทยในตัว → 'กรณีอื่น' (ไม่โชว์ key ดิบ) */
+function wiScLabel(sc){ const l = sc && typeof sc.label_th==='string' ? sc.label_th.trim() : ''; if(l) return l; const k = sc && sc.key; return (typeof k==='string' && Object.prototype.hasOwnProperty.call(WI_SC_LBL, k) && WI_SC_LBL[k]) || 'กรณีอื่น'; }
+function wiPrevLbl(e){ return e.previous_period ? 'ครั้งก่อน (' + escHtml(e.previous_period) + ')' : 'ครั้งก่อน'; }
 const WI_BUILTIN_ALIAS = {BTCUSD:['BTC']};
 let wiDocs = {}, wiLoaded = false, wiErr = null, wiUnsub = null, wiUnsubUid = null;
 let wiOpenA = null, wiLowOpen = false, wiMsg = '', wiPaste = null, wiSaving = false, wiCardOpen = new Set(), wiTimer = 0, wiEvOpen = {};
@@ -21470,8 +21499,8 @@ function wiEventHtml(eid, assetId, doc){
   const basis = [e.metric, e.basis, e.period].filter(Boolean).map(s).join(' · ');
   const st = wiStatusTxt(e);
   const act = e.actual!=null ? `<div class="wiAct" data-wi-actual="${s(eid)}">Actual <b>${s(wiNum(e.actual, e.unit))}</b> | Forecast ${s(wiNum(e.forecast, e.unit))} | Previous ${s(wiNum(e.previous, e.unit))}${(e.forecast!=null && typeof e.actual==='number') ? ` | ผลต่าง ${s(String(Math.round((e.actual - e.forecast)*1e6)/1e6))}` : ''}${e.actual_updated_at ? `<div class="wiSm">อัปเดต ${s(wiAsofText(e.actual_updated_at))}${e.actual_source ? ' · ' + s(String(e.actual_source).slice(0, 80)) : ''}</div>` : ''}</div>`
-    : (e.forecast!=null || e.previous!=null ? `<div class="wiFp">ตลาดคาด <b>${s(wiNum(e.forecast, e.unit))}</b> | ครั้งก่อน <b>${s(wiNum(e.previous, e.unit))}</b>${e.previous_revised===true ? ' (แก้ไขแล้ว' + (e.previous_original!=null ? ' · เดิม ' + s(wiNum(e.previous_original, e.unit)) : '') + ')' : ''}</div>` : '');
-  const scen = it && it.scenarios_th && it.scenarios_th.length ? it.scenarios_th.map(sc=>`<div class="wiSc" data-wi-sc="${s(sc.key)}"><b>${s(sc.label_th || WI_SC_LBL[sc.key] || sc.key)}</b><div>${s(sc.text_th)}</div></div>`).join('') : '';
+    : (e.forecast!=null || e.previous!=null ? `<div class="wiFp">ตลาดคาด <b>${s(wiNum(e.forecast, e.unit))}</b> | ${wiPrevLbl(e)} <b>${s(wiNum(e.previous, e.unit))}</b>${e.previous_revised===true ? ' (แก้ไขแล้ว' + (e.previous_original!=null ? ' · เดิม ' + s(wiNum(e.previous_original, e.unit)) : '') + ')' : ''}</div>` : '');
+  const scen = it && it.scenarios_th && it.scenarios_th.length ? it.scenarios_th.map(sc=>`<div class="wiSc" data-wi-sc="${s(sc.key)}"><b>${s(wiScLabel(sc))}</b><div>${s(sc.text_th)}</div></div>`).join('') : '';
   const srcIds = [e.src_schedule, e.src_forecast, e.src_previous, e.src_actual].filter((v,i,a)=>v && a.indexOf(v)===i);
   const srcs = srcIds.map(i=>(doc.sources||{})[i]).filter(Boolean);
   const srcHtml = srcs.length ? `<details class="wiSrc"><summary>แหล่งที่มา (${srcs.length}) · ตรวจเมื่อ ${s(srcs[0].checked_at ? wiAsofText(srcs[0].checked_at) : '—')}</summary>${srcs.map(o=>`<div>${s(o.name)}${o.url && /^https?:\/\//i.test(o.url) ? ` · <a href="${s(o.url)}" target="_blank" rel="noopener">เปิด ↗</a>` : ''}${o.checked_at ? ' · ตรวจ ' + s(wiAsofText(o.checked_at)) : ''}</div>`).join('')}</details>` : '';
@@ -21659,7 +21688,7 @@ function wiTdRowHtml(o, past){
   else if(st.k==='postponed') tag = 'เลื่อน · รอเวลาใหม่ที่ยืนยัน';
   if(e.status==='postponed' && st.k!=='postponed') tag = 'เลื่อน · ' + tag;
   const dateTxt = past && o.day ? (o.day.split('-')[2]*1) + ' ' + WI_MON[+o.day.split('-')[1]-1] + ' · ' : '';
-  const fp = (e.forecast!=null || e.previous!=null) ? `<div class="wiSm">ตลาดคาด ${s(wiNum(e.forecast, e.unit))} | ครั้งก่อน ${s(wiNum(e.previous, e.unit))}</div>` : '';
+  const fp = (e.forecast!=null || e.previous!=null) ? `<div class="wiSm">ตลาดคาด ${s(wiNum(e.forecast, e.unit))} | ${wiPrevLbl(e)} ${s(wiNum(e.previous, e.unit))}</div>` : '';
   return `<div class="wiTd${cls}" data-wi-td="${s(o.id)}" data-wi-state="${st.k}"><div class="wiTdH"><b class="wiTdT">${s(dateTxt + hm)}</b><b>${s(e.label_th || e.title)}</b><span class="wiTdS">${s(tag)}</span></div>
     <div class="wiSm" data-wi-aff="1">กระทบ: ${o.assets.map(a=>s(sat7dLabel(a))).join(' · ')}</div>${fp}
     <div class="wiTdB"><button type="button" class="ln1-link" data-wi-read="${s(o.id)}" onclick="wiOpenResult('${s(o.id)}')">อ่านผลข่าว</button><button type="button" class="ln1-link" data-wi-upd="${s(o.id)}" onclick="wiOpenResult('${s(o.id)}', true)">อัปเดตผล</button></div></div>`;
@@ -21713,7 +21742,7 @@ function wiResultRender(){
   host.innerHTML = `<div class="pbSh" data-wi-res="${s(R.eid)}"><div class="pbShH"><b>${s(e.label_th || e.title)}</b></div>
     <div class="wiSm">กระทบ: ${aff.map(a=>s(sat7dLabel(a))).join(' · ') || '—'} · เวลา ICT</div>${detail}
     <div class="wiK">อัปเดตผล (ใส่เฉพาะที่ยืนยันแล้ว)</div>
-    <div class="wiSm">${s([e.metric, e.basis, e.period].filter(Boolean).join(' · '))}${e.unit ? ' · หน่วย ' + s(e.unit) : ''} · ตลาดคาด ${s(wiNum(e.forecast, e.unit))} | ครั้งก่อน ${s(wiNum(e.previous, e.unit))}</div>
+    <div class="wiSm">${s([e.metric, e.basis, e.period].filter(Boolean).join(' · '))}${e.unit ? ' · หน่วย ' + s(e.unit) : ''} · ตลาดคาด ${s(wiNum(e.forecast, e.unit))} | ${wiPrevLbl(e)} ${s(wiNum(e.previous, e.unit))}</div>
     <div class="wiFrm"><label>ผลจริง (Actual)${e.unit ? ' · ' + s(e.unit) : ''}<input type="text" inputmode="decimal" data-wi-in="actual" value="${s(R.actual)}" placeholder="เว้นว่าง = ยังไม่มี (ไม่ใส่ 0)" oninput="wiResult.actual=this.value"></label>
       <label>ลิงก์แหล่งที่มา<input type="url" data-wi-in="src" value="${s(R.src)}" placeholder="https://…" oninput="wiResult.src=this.value"></label>
       <label>แก้ค่า ครั้งก่อน (ถ้ามีการปรับย้อนหลัง)<input type="text" inputmode="decimal" data-wi-in="prev" value="${s(R.prev)}" placeholder="${s(e.previous!=null ? String(e.previous) : '—')}" oninput="wiResult.prev=this.value"></label>
