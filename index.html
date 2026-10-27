@@ -2348,6 +2348,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .td3-evd{padding:0 0 8px 52px;font-size:.82rem}.td3-sc{margin-top:3px}.td3-evb{display:flex;gap:12px;margin-top:4px}
 .td3-lk{border:1px dashed color-mix(in srgb,var(--muted) 38%,transparent);background:none;border-radius:99px;padding:0 8px;min-height:24px;font:inherit;font-size:11.5px;color:var(--teal);cursor:pointer;white-space:nowrap}
 .td3-lk.on{background:var(--surface2)}
+.td3-gv{grid-column:1/-1;justify-self:end;margin-top:-2px}
 .td3-goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:6px;align-items:start;margin-bottom:10px}
 .td3-acct{background:var(--surface);border-radius:var(--r-lg);min-width:0;container-type:inline-size;box-shadow:var(--sh-1)}
 .td3-acct>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,auto) minmax(36px,1fr) auto auto auto;gap:0 8px;align-items:center;padding:8px 12px;font-size:.86rem;white-space:nowrap;min-height:38px}
@@ -2365,7 +2366,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .td3-sw button.on{background:var(--text);color:var(--surface)}
 .td3-bd{font-size:11px;background:#fde8e4;color:#b3261e;border-radius:99px;padding:0 6px;margin-left:6px}
 .td3-inc{color:#b3261e;font-size:.82rem;font-weight:600;margin:0 2px 6px}
-.td3-pn{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:start}
+.td3-pn{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:start;overflow-wrap:anywhere}
 @media (min-width:1000px){.td3-pn{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .td3-p{margin:0;container-type:inline-size}.td3-p h3{margin:0 0 6px;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .td3-p .ln3-tdc{background:none;box-shadow:none;padding:0;margin:0}
@@ -2399,7 +2400,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .td3-toast{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:9999;background:var(--text);color:var(--surface);border-radius:10px;padding:8px 14px;display:none;gap:12px;align-items:center;font-size:.86rem;max-width:92vw}
 .td3-toast button{border:0;background:none;color:#9bd1ff;font:inherit;font-weight:700;cursor:pointer;min-height:28px}
 .td3-sgrow{display:grid;grid-template-columns:70px 64px repeat(5,minmax(0,1fr));gap:4px;align-items:center;margin-bottom:4px;font-size:.8rem}.td3-sgrow input,.td3-sgrow select{min-width:0;font-size:.8rem;padding:4px 6px}
-@media (max-width:640px){.td3-sgrow{grid-template-columns:repeat(2,minmax(0,1fr))}.td3-sgrow b{grid-column:1/-1}}
+@media (max-width:640px){.td3-sgrow input,.td3-sgrow select{font-size:16px;min-height:40px}.td3-sgrow{grid-template-columns:repeat(2,minmax(0,1fr))}.td3-sgrow b{grid-column:1/-1}}
 .td3-wnote{font-size:.74rem;color:var(--muted);margin-left:6px}
 .tdCols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
 .tdCol{min-width:0;display:flex;flex-direction:column;gap:0}
@@ -6689,7 +6690,7 @@ function td3EvDetail(o){
   const aid = o.assets.find(a=>wiTier(a, doc)==='HIGH') || o.assets[0], it = aid && doc.assets && doc.assets[aid] && doc.assets[aid].interp ? doc.assets[aid].interp[o.id] : null;
   const LB = {above:'Above', below:'Below', inline:'In line', hawkish:'Hawkish', dovish:'Dovish', occurs:'Occurs', delayed:'Delayed', escalates:'Escalates', eases:'Eases', post:'After', expected:'Expected'};
   const sc = it && Array.isArray(it.scenarios_th) ? it.scenarios_th.map(x=>`<div class="td3-sc"><b>${s(LB[x.key] || x.label_th || 'Other')}</b> ${s(x.text_th)}</div>`).join('') : '';
-  return `<div class="td3-evd" data-td3-evd="${s(o.id)}">${nums}${sc}<div class="td3-evb"><button type="button" class="td3-lk" data-td3-res="${s(o.id)}" onclick="wiOpenResult('${s(o.id)}')">Result ›</button><button type="button" class="td3-lk" data-td3-upd="${s(o.id)}" onclick="wiOpenResult('${s(o.id)}', true)">Update ›</button></div></div>`;
+  return `<div class="td3-evd" data-td3-evd="${s(o.id)}">${nums}${sc}<div class="td3-evb"><button type="button" class="td3-lk" data-td3-res="${s(o.id)}" data-wi-res="${s(o.id)}" onclick="wiOpenResult('${s(o.id)}')">Result ›</button><button type="button" class="td3-lk" data-td3-upd="${s(o.id)}" data-wi-upd="${s(o.id)}" onclick="wiOpenResult('${s(o.id)}', true)">Update ›</button></div></div>`;
 }
 function td3NewsHtml(){
   const N = td3NewsModel(), now = N.now, s = td3E;
@@ -6701,7 +6702,7 @@ function td3NewsHtml(){
   return `<div class="ln3-tdc td3-news${hot ? ' hot' : ''}" data-td3-news="1" data-wi-today="1">${head}${N.list.map(o=>{
     const open = td3EvOpen[o.id] != null ? td3EvOpen[o.id] : o.id === nextId, past = o.ts != null && o.ts <= now;
     const act = o.e.actual != null ? wiNum(o.e.actual, o.e.unit) : '';
-    return `<div class="td3-ev${past ? ' past' : ''}" data-td3-ev="${s(o.id)}" data-ts="${o.ts == null ? '' : o.ts}" data-act="${s(act)}" data-open="${open}"><button type="button" class="td3-evh" aria-expanded="${open}" onclick="td3EvTog('${s(o.id)}', ${open})"><span class="tm">${o.ts != null ? Calc.wiIctHM(o.ts) : '--:--'}</span><span class="nm">${s(o.e.title || o.e.label_th)} <span class="m">${o.assets.map(a=>s(tdLabel(a))).join(' · ')}</span></span><span class="rt" data-td3-rt>${td3RtHtml(o.ts, act, now)}</span></button>${open ? td3EvDetail(o) : ''}</div>`;
+    return `<div class="td3-ev${past ? ' past' : ''}" data-td3-ev="${s(o.id)}" data-wi-td="${s(o.id)}" data-wi-state="${s(o.st && o.st.k || '')}" data-ts="${o.ts == null ? '' : o.ts}" data-act="${s(act)}" data-open="${open}"><button type="button" class="td3-evh" aria-expanded="${open}" onclick="td3EvTog('${s(o.id)}', ${open})"><span class="tm">${o.ts != null ? Calc.wiIctHM(o.ts) : '--:--'}</span><span class="nm">${s(o.e.title || o.e.label_th)} <span class="m">${o.assets.map(a=>s(tdLabel(a))).join(' · ')}</span></span><span class="rt" data-td3-rt>${td3RtHtml(o.ts, act, now)}</span></button>${open ? td3EvDetail(o) : ''}</div>`;
   }).join('')}</div>`;
 }
 
@@ -6748,7 +6749,7 @@ function td3GoalsHtml(M){
       return `<div class="td3-sub" data-td3-sub="${k}"><span class="k">${k}</span>${td3BarHtml(p == null ? 0 : p)}<b>${p == null ? '—' : String(p).replace('-', '−') + '%'}</b><span class="m rg">${glMoney(g.start, g.cur, true)}→${glMoney(g.target, g.cur, true)}</span></div>`;
     }).join('');
     return `<details class="td3-acct" data-td3-acct="${s(a.id)}"${open ? ' open' : ''} ontoggle="td3GoalTog('${s(a.id)}', this.open)"><summary>${sum}</summary><div class="td3-subs">${subs}</div></details>`;
-  }).join('') + `</div>`;
+  }).join('') + `<button type="button" class="td3-lk td3-gv" data-gl-valopen onclick="glValOpen()">＋ Enter account value</button></div>`;
 }
 
 /* ── Overview ── */
