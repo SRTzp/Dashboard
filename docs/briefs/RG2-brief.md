@@ -25,7 +25,7 @@ Run on the Mac with Claude Code (tests live there). Two rounds: **RG2a = Run 1**
 | #3 | EMA backtest done (branch `claude/ema-backtest`); results in §6. |
 | #4 #6 #8 #9 #11 #24 | On hold (Thai regime, RRG source, auto EMA50/RS, auto stars, volatility, file split). |
 | #7 | Sector link: yes, + add XLK · XLI · XLY · XLP · XLRE to RRG. |
-| #10 | Limits decided (§4.5): drop Layer 2 cap, total cap A/B, Tier A/B, Macro size ×; one per-stock cap 20 % of Winner pool; new Sat trades max 4/week (Main + Tactical). |
+| #10 | Limits decided (§4.5): drop Layer 2 cap, total cap A/B, Tier A/B, Macro size ×; one per-stock cap 25 % of Winner pool; new Sat trades max 4/week (Main + Tactical). |
 | #12 | Stale tags: minimal, only when stale. |
 | #13 #14 | Journal by bucket + planned vs actual R: yes. |
 | #15 | Port: one always-visible line + collapsed bars. |
@@ -112,7 +112,7 @@ Run on the Mac with Claude Code (tests live there). Two rounds: **RG2a = Run 1**
   - Remove the shared tank logic: `portfolioSplit` shared cash, `ladderShare` 30 % cap, `L_SHARE_OVER`, and the open gate (`openGate` / `GATE_*` reasons) from `canPlaceLadder`.
   - Winner free cash = Winner pool − Winner cost. Ladder free cash = Ladder pool − held − reserved (waiting levels).
   - Ladder per-stock budget = **5 % of the account** (setting `ladderMaxAcctPct: 5`; ≈ 16.7 % of a 30 % Ladder pool). `ladderRiskCap` is % of the **Ladder pool**.
-  - Winner: **one per-stock cap = 20 % of the Winner pool** (setting, default 20). Remove Tier A/B caps and labels from Core sizing/UI (CS1 ★ already replaced Tier; keep stored keys, ignore them).
+  - Winner: **one per-stock cap = 25 % of the Winner pool** (setting, default 25). Remove Tier A/B caps and labels from Core sizing/UI (CS1 ★ already replaced Tier; keep stored keys, ignore them).
   - Remove Settings fields `ladderShare` and `gateWeeks` (keep stored keys, ignore them).
 - Sizing factor: Winner sizing × Winner factor (existing path). New ladders: budget × Ladder factor at placement.
 - Existing cards: W → Winner pool, L → Ladder pool. Nothing deleted.
@@ -144,7 +144,7 @@ Run on the Mac with Claude Code (tests live there). Two rounds: **RG2a = Run 1**
 | Limit | Decision |
 |---|---|
 | Core risk per trade (★ base) | Keep |
-| Per-stock cap | Keep as **one cap: 20 % of Winner pool**; Tier A/B removed |
+| Per-stock cap | Keep as **one cap: 25 % of Winner pool**; Tier A/B removed |
 | Regime factor 100/75/50 | Keep |
 | DD brakes (Core, Sat, Tactical) | Keep (Tactical DD converted, §4.2) |
 | Layer 2 cap 20 % | **Drop** (remove check + setting; keep stored key) |
@@ -160,7 +160,7 @@ Run on the Mac with Claude Code (tests live there). Two rounds: **RG2a = Run 1**
 ### 4.6 RG2b tests (phase113)
 - Split validation (sum 100, each 0–100), migration from old capital, notice once.
 - Winner/Ladder free cash independent; placing a ladder never reduces Winner cash and vice versa; no gate reasons; ladder budget = 5 % of account × Ladder factor.
-- Winner per-stock cap 20 % of Winner pool; no Tier labels; Layer 2 / total-cap checks gone.
+- Winner per-stock cap 25 % of Winner pool; no Tier labels; Layer 2 / total-cap checks gone.
 - Sat sizing from whole pool; preset lists; old values → defaults; caps 1.4× / 1.2× and brake 3 % (migrated from 2× / 4× / 10 %); max 4 new Sat trades/week across Main + Tactical; no Macro size ×.
 - Migration with an over-limit open position → warning only, nothing changed.
 - Ladder page at 300 / 390 / 1440; scope switch in header + mobile.
