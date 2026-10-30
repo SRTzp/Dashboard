@@ -25,15 +25,15 @@ Run on the Mac with Claude Code (tests live there). Two rounds: **RG2a = Run 1**
 | #3 | EMA backtest done (branch `claude/ema-backtest`); results in §6. |
 | #4 #6 #8 #9 #11 #24 | On hold (Thai regime, RRG source, auto EMA50/RS, auto stars, volatility, file split). |
 | #7 | Sector link: yes, + add XLK · XLI · XLY · XLP · XLRE to RRG. |
-| #10 | **Open** — user marks keep/drop on the limits table (§4.5). |
+| #10 | Limits decided (§4.5): drop Layer 2 cap, total cap A/B, Tier A/B, Macro size ×; one per-stock cap 20 % of Winner pool; new Sat trades max 4/week (Main + Tactical). |
 | #12 | Stale tags: minimal, only when stale. |
 | #13 #14 | Journal by bucket + planned vs actual R: yes. |
 | #15 | Port: one always-visible line + collapsed bars. |
 | #16 | Remove the Ladder "risk-off only" opening gate. |
-| #17 | Winner and Ladder get **separate cash pools**; drop the shared Core tank + 30 % Ladder share completely. Split = % of account, default **50 / 30 / 20** (Winner / Ladder / Sat), editable. |
-| #18 | Sat risk = % of the whole Sat pool; remove the Main/Tactical 70/30 sleeve split. Choices Main **0.5 · 0.75 · 1.0 · 1.25 · 1.5 · 2.0** (default 1.5), Tactical **0.25 · 0.5 · 0.75 · 1.0** (default 0.75). (**Open:** preset list vs free number box — default to presets.) |
+| #17 | Winner and Ladder get **separate cash pools**; drop the shared Core tank + 30 % Ladder share completely. Split = % of account, default **50 / 30 / 20** (Winner / Ladder / Sat), editable. First load re-splits the **whole** account 50/30/20 (current Sat ≈ 30 % shrinks to 20 %). Ladder: max **5 % of the account per stock**. |
+| #18 | Sat risk = % of the whole Sat pool; remove the Main/Tactical 70/30 sleeve split. Choices Main **0.5 · 0.75 · 1.0 · 1.25 · 1.5 · 2.0** (default 1.5), Tactical **0.25 · 0.5 · 0.75 · 1.0** (default 0.75). Fixed choices (no free box). Contract-value caps converted to keep today's ฿ limits: **Main 1.4× · Tactical 1.2× of the Sat pool** — editable in Settings for later tuning. |
 | #19 | Pools per account (option A) + a combined summary. |
-| #20 | Ladder page inside Plan: scope switch `Winner | Ladder | Sat`. |
+| #20 | Ladder page inside Plan: scope switch `Winner | Ladder | Sat`. Watching states: `Base · Sideways-Up · Broken` (no Uptrend — Ladder never buys an uptrend). |
 | #21 | Ladder rules: discussion only — **do not implement**. |
 | #22 | One data-freshness panel. |
 | #23 | Tests moved to git (PR #2). |
@@ -107,26 +107,30 @@ Run on the Mac with Claude Code (tests live there). Two rounds: **RG2a = Run 1**
 ### 4.1 Separate pools (#17, #19)
 - Per account in Settings › Basics: existing capital amounts stay the source of the account total. New split % `winner / ladder / sat`, default **50 / 30 / 20**, must total 100.
   - Derived: `poolWinner`, `poolLadder`, `poolSat` (฿). Option bucket and Strategic Cash stay outside the split.
-  - Migration (first load): total = core + satB; keep the current Sat share (`satB / total`) and split the rest Winner : Ladder = 50 : 30. Show a one-time notice to review the split.
+  - Migration (first load): total = core + satB; apply **50 / 30 / 20 to the whole total** (Sat shrinks from today's ≈ 30 %). Open positions are untouched; only new trades use the new pools. If existing exposure is above a new limit, show a warning — never close or resize anything. Show a one-time notice to review the split.
 - Winner tank = `poolWinner`; Ladder tank = `poolLadder`.
   - Remove the shared tank logic: `portfolioSplit` shared cash, `ladderShare` 30 % cap, `L_SHARE_OVER`, and the open gate (`openGate` / `GATE_*` reasons) from `canPlaceLadder`.
   - Winner free cash = Winner pool − Winner cost. Ladder free cash = Ladder pool − held − reserved (waiting levels).
-  - `ladderBudget` (10 %) and `ladderRiskCap` are % of the **Ladder pool**. Per-stock caps for Winner (Tier A/B, ★) are % of the **Winner pool**.
+  - Ladder per-stock budget = **5 % of the account** (setting `ladderMaxAcctPct: 5`; ≈ 16.7 % of a 30 % Ladder pool). `ladderRiskCap` is % of the **Ladder pool**.
+  - Winner: **one per-stock cap = 20 % of the Winner pool** (setting, default 20). Remove Tier A/B caps and labels from Core sizing/UI (CS1 ★ already replaced Tier; keep stored keys, ignore them).
   - Remove Settings fields `ladderShare` and `gateWeeks` (keep stored keys, ignore them).
 - Sizing factor: Winner sizing × Winner factor (existing path). New ladders: budget × Ladder factor at placement.
 - Existing cards: W → Winner pool, L → Ladder pool. Nothing deleted.
 - Rename visible `Core` scope to `Winner` where it means the Winner strategy (keep `Core` for the Port bucket name if needed).
+- **Prerequisite:** this section changes `Calc.coreSize` (`portfolioSplit`, `ladderShare`, `canPlaceLadder`, `openGate`). `core-size.js` and `tools/sync_core_size.py` must be in the repo first (user uploads them from the Mac). If they are missing when RG2b starts, stop and report — do not edit only the copy inside `index.html`.
 
 ### 4.2 Sat risk (#18)
 - Remove `mainPct / tacPct` from sizing: Main and Tactical both size from the whole Sat pool.
 - `SAT_V2_RPTS` split into Main `[0.5,0.75,1,1.25,1.5,2]` (default 1.5) and Tactical `[0.25,0.5,0.75,1]` (default 0.75). Old saved values outside the list → default + one-time notice.
-- Tactical brake DD % and contract value caps (Main 2× · Tactical 4×) now reference the whole Sat pool — **flag in the report** (looser than before); final values come from #10.
+- Keep today's ฿ limits when the base changes from sleeve to whole pool (user choice A): contract-value caps **Main 2× → 1.4×**, **Tactical 4× → 1.2×**; Tactical brake DD **10 % of Tactical → 3 % of Sat pool**. Migrate saved values the same way (× 0.7 / × 0.3). All stay editable in Settings; label them "of Sat pool".
+- New Sat trades per week: **max 4, Main + Tactical counted together** (replace the current per-week count setting with this rule; default 4).
+- Remove Macro size multipliers (`macroNeutral`, `macroAgainst`): Sat size no longer shrinks for Neutral / Against Macro. Keep the "against Macro needs a reason" rule if it exists separately.
 
 ### 4.3 Ladder page (#20)
 - Plan scope switch `Winner | Ladder | Sat` (header slot `hdrSub` and in-page). Mobile keeps two-tap-free buttons (3 short labels must fit 300 px).
 - Page:
   1. Header: Ladder pool used (held + reserved) / pool · free cash · chip `Size 100%` / `75%` / `50%`.
-  2. Watching: Watchlist items with `ladder_watch:true` (Fortress only); manual trend state select `Base · Sideways-Up · Uptrend · Broken`; optional manual distances to EMA20/50/200.
+  2. Watching: Watchlist items with `ladder_watch:true` (Fortress only); manual trend state select `Base · Sideways-Up · Broken`; optional manual distances to EMA20/50/200.
   3. Active ladders: card per stock — T1/T2/T3 rows (price, amount, status waiting/bought/cancelled), progress dots, avg cost, exit line; mobile tap → sheet.
   4. Closed ladders: short list → Journal (Ladder bucket).
   5. Actions: `+ New ladder` (from Fortress Watchlist), edit zones, mark bought, cancel level.
@@ -136,27 +140,29 @@ Run on the Mac with Claude Code (tests live there). Two rounds: **RG2a = Run 1**
 - Always visible: `Winner 48/50 · Ladder 22/30 · Sat 18/20` (actual % of account vs target); amber dot when any pool is > 5 points off.
 - Collapsed: bars + ฿ amounts. Per account; `รวม` shows the sum.
 
-### 4.5 Limits (#10) — **open, user marks before RG2b**
-| Limit | Proposal |
+### 4.5 Limits (#10) — decided
+| Limit | Decision |
 |---|---|
 | Core risk per trade (★ base) | Keep |
-| Per-stock cap 15 % / 10 % | Keep (now % of Winner pool) |
+| Per-stock cap | Keep as **one cap: 20 % of Winner pool**; Tier A/B removed |
 | Regime factor 100/75/50 | Keep |
-| DD brakes (Core, Sat, Tactical) | Keep |
-| Layer 2 cap 20 % | Drop |
-| Total cap A/B 25 % | Drop |
-| Ladder share 30 % | Removed by 4.1 |
-| Sat Open Risk 1.2 % / per product 0.6 % | Replace later with the paused 0.625 % stop-risk cap (keep for now) |
-| Core + Sat Open Risk 6 % | Drop, or keep as quiet backstop |
-| Contract value cap 2× / 4× | Keep |
-| New trades per week · Macro size × | User |
-
-If unmarked at run time: apply only the rows marked "Removed by 4.1"; leave all other limits unchanged and list them in the report.
+| DD brakes (Core, Sat, Tactical) | Keep (Tactical DD converted, §4.2) |
+| Layer 2 cap 20 % | **Drop** (remove check + setting; keep stored key) |
+| Total cap A/B 25 % | **Drop** |
+| Ladder share 30 % · Ladder gate | Removed by §4.1 |
+| Sat Open Risk 1.2 % | Keep until the paused 0.625 % stop-risk cap replaces it |
+| Open Risk per product 0.6 % | Keep |
+| Core + Sat Open Risk 6 % | Keep as a quiet backstop |
+| Contract value cap | Keep, converted to 1.4× / 1.2× of Sat pool (§4.2) |
+| New Sat trades per week | Max 4, Main + Tactical together |
+| Macro size × (Neutral / Against) | **Drop** |
 
 ### 4.6 RG2b tests (phase113)
 - Split validation (sum 100, each 0–100), migration from old capital, notice once.
-- Winner/Ladder free cash independent; placing a ladder never reduces Winner cash and vice versa; no gate reasons; budget = 10 % of Ladder pool × Ladder factor.
-- Sat sizing from whole pool; preset lists; old values → defaults.
+- Winner/Ladder free cash independent; placing a ladder never reduces Winner cash and vice versa; no gate reasons; ladder budget = 5 % of account × Ladder factor.
+- Winner per-stock cap 20 % of Winner pool; no Tier labels; Layer 2 / total-cap checks gone.
+- Sat sizing from whole pool; preset lists; old values → defaults; caps 1.4× / 1.2× and brake 3 % (migrated from 2× / 4× / 10 %); max 4 new Sat trades/week across Main + Tactical; no Macro size ×.
+- Migration with an over-limit open position → warning only, nothing changed.
 - Ladder page at 300 / 390 / 1440; scope switch in header + mobile.
 - Port line + amber threshold.
 - Existing ladder/core math byte-identical where the brief does not change it (`core_size_test.js` stays green; new cases for the pool split).
