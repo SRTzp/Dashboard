@@ -1,5 +1,5 @@
 #!/bin/bash
-# runall2.sh — ชุดเต็มแบบเร็ว: base (run_tests.py) + phase 1–111 · 2 worker ขนาน (xargs -P 2) · 1 log ต่อ suite · timeout ต่อ suite 1500 วินาที
+# runall2.sh — ชุดเต็มแบบเร็ว: base (run_tests.py) + phase 1–112 · 2 worker ขนาน (xargs -P 2) · 1 log ต่อ suite · timeout ต่อ suite 1500 วินาที
 # (timeout ของ Playwright ในแต่ละเทสไม่ถูกแก้) · ไม่ fail-fast · รันจบแล้ว suite ที่ล้มจะถูกรันซ้ำ "ทีละตัวเดี่ยว" 1 ครั้ง (กัน flake จากการขนาน) และเก็บผลการรันซ้ำ
 # false failure ที่รู้อยู่แล้ว (ไม่แก้): p13 เสมอ · p3 วันอาทิตย์ · p6 วันที่ 20
 # ใช้: caffeinate -i -s bash tests/runall2.sh   · ผลอยู่ที่ $RUNALL_OUT (ค่าเริ่มต้น ../_to_delete/runall2): logs/*.log · results.tsv (รอบขนาน) · final.tsv (หลังรันซ้ำ) · DONE
@@ -9,7 +9,7 @@ mkdir -p "$OUT/logs" "$OUT/logs_rerun"
 : > "$OUT/results.tsv"; : > "$OUT/final.tsv"; [ -e "$OUT/DONE" ] && mv "$OUT/DONE" "$OUT/DONE.$(date +%s)"
 export OUT
 
-list_suites(){ echo run_tests.py; for n in $(seq 1 111); do [ -f "run_tests_phase$n.py" ] && echo "run_tests_phase$n.py"; done; }
+list_suites(){ echo run_tests.py; for n in $(seq 1 112); do [ -f "run_tests_phase$n.py" ] && echo "run_tests_phase$n.py"; done; }
 
 # หนึ่ง suite: คืน rc (timeout 1500 วินาที ด้วย perl alarm) · ล้ม = rc ≠ 0 หรือมีบรรทัด FAIL
 run_one(){

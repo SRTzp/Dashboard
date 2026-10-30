@@ -170,7 +170,7 @@ def ff_checks(pw, w, h):
             fnow = page.evaluate("()=>{ const F = coreFNow(); const C = ffCoreNow(); const ref = Calc.ffCoreCap({acwi:C.reds && C.reds.includes('ACWI/BIL') ? false : (C.missing.includes('ACWI/BIL') ? null : true), hyg:C.reds && C.reds.includes('HYG/IEI') ? false : (C.missing.includes('HYG/IEI') ? null : true), ageDays:C.age}); return {f:F.f, ref:ref.cap/100, age:C.age, demo:C.demo, stale:C.stale}; }")
             return head, sheet, fnow
         h6, s6, f6 = cases("2026-09-23", (True, True))
-        check(f"{tag} 7 as_of 6 วันทำการก่อน → แผง Core + sheet แผนใหม่ มี '⚠ Fund-flow เก่า 6 วันทำการ · ไม่ลดขนาดไม้ (100%)'", h6 == "⚠ Fund-flow เก่า 6 วันทำการ · ไม่ลดขนาดไม้ (100%)" and s6 == h6, json.dumps([h6, s6, f6], ensure_ascii=False))
+        check(f"{tag} 7 as_of 6 วันทำการก่อน → แผง Core + sheet แผนใหม่ มี '⚠ Fund-flow เก่า 6 วันทำการ · ไม่ลดขนาดไม้ (100%)'", h6 == "⚠ Regime data is 6 business days old — size from last known state" and s6 == h6, json.dumps([h6, s6, f6], ensure_ascii=False))
         check(f"{tag} 7 f ที่ใช้คำนวณเท่าเดิม (stale → 100% = Calc.ffCoreCap)", f6["f"] == f6["ref"] == 1 and f6["age"] == 6 and f6["stale"], json.dumps(f6))
         shot(page, f"fx-newplan-ff-stale-{w}.png", ".core-sheet .ui-sheet")
         page.evaluate("coreSheetClose()")

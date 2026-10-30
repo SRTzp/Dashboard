@@ -93,7 +93,7 @@ def regime_tests(page, tag):
     set_ff(page, both, None, flip={"ACWI_BIL": 3, "HYG_IEI": 1})
     t = cellt(page, "regime")
     col = page.evaluate("() => [...document.querySelectorAll('#ffAction [data-ff=regime] [data-rg]')].map(e=>getComputedStyle(e).color)")
-    check(f"{tag} Regime: 'ACWI/BIL ↑ เขียว · 3w' + 'HYG/IEI ↓ แดง · 1w' (ป้ายสีเขียว/แดง)", "ACWI/BIL ↑ เขียว · 3w" in t and "HYG/IEI ↓ แดง · 1w" in t and col == [UP, DN], t + json.dumps(col))
+    check(f"{tag} Regime: 'ACWI/BIL ↑ เขียว · 3w' + 'HYG/IEI ↓ แดง · 1w' (ป้ายสีเขียว/แดง)", "ACWI/BIL ↑ เขียว · 3d" in t and "HYG/IEI ↓ แดง · 1d" in t and col == [UP, DN], t + json.dumps(col))
     check(f"{tag} Regime: ไม่มี prev_week → ไม่มีป้ายเพิ่งพลิก · ไม่ error", "เพิ่งพลิก" not in t)
     set_ff(page, both, {"ACWI_BIL": True, "HYG_IEI": True}, flip={"ACWI_BIL": 3, "HYG_IEI": 1})
     flips = page.evaluate("() => [...document.querySelectorAll('#ffAction [data-rg-flip]')].map(e=>e.dataset.rgFlip)")

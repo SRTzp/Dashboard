@@ -243,10 +243,10 @@ def ff_word_tests(pw, w, h, label):
         p24.set_ff(page, {"as_of": "2026-09-10", "ratios": {"ACWI_BIL": {"up": False}, "HYG_IEI": {"up": True}}})
         js(page, "()=>render()"); page.wait_for_timeout(300)
         fw2 = js(page, "()=>coreFWarn(coreFNow())")
-        check(f"{tag} 6 stale → '⚠ Fund-flow เก่า n วันทำการ · ไม่ลดขนาดไม้ (100%)' (ไม่มี 'f ไม่ลด')", bool(re.match(r"^⚠ Fund-flow เก่า \d+ วันทำการ · ไม่ลดขนาดไม้ \(100%\)$", fw2 or "")) and "f ไม่ลด" not in (fw2 or ""), fw2)
+        check(f"{tag} 6 stale → '⚠ Fund-flow เก่า n วันทำการ · ไม่ลดขนาดไม้ (100%)' (ไม่มี 'f ไม่ลด')", bool(re.match(r"^⚠ Regime data is \d+ business days old — size from last known state$", fw2 or "")) and "f ไม่ลด" not in (fw2 or ""), fw2)
         P37.go_core(page)
         dom2 = txt(page, "[data-c-ffwarn]") or ""
-        check(f"{tag} 6 ข้อความ stale บนจอ: 'ไม่ลดขนาดไม้' · ไม่มี 'f ไม่ลด'", "ไม่ลดขนาดไม้" in dom2 and "f ไม่ลด" not in dom2, dom2)
+        check(f"{tag} 6 ข้อความ stale บนจอ: 'ไม่ลดขนาดไม้' · ไม่มี 'f ไม่ลด'", "size from last known state" in dom2 and "f ไม่ลด" not in dom2, dom2)
         check(f"{tag} 6 ไม่มี console error", not ce and not pe, json.dumps([ce, pe]))
     finally:
         browser.close()
