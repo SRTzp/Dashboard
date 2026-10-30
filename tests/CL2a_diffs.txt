@@ -1,0 +1,301 @@
+### startListening  (+16 / -4)
+-      if(missedPersistBeforeConfirm){ missedPersistBeforeConfirm = false; setTimeout(schedulePersist, 0); }
++      if(missedPersistBeforeConfirm && !cl2aGateOn){ missedPersistBeforeConfirm = false; setTimeout(schedulePersist, 0); }
++    if(cl2aBusy) return;   /* CL2-a — กำลังรีเซ็ต/ลบ Sat: ผลของการเขียนตัวเองไม่ต้องประมวลผลซ้ำ (cl2aRun เปิดแอปเองตอนจบ) */
+-    acctAdoptDoc(snap.exists ? (snap.data()||{}) : {});
++    if(acctAdoptDoc(snap.exists ? (snap.data()||{}) : {}) === 'old'){
++      /* เอกสารแบนก่อน ก.ย. 2569 (ไม่มี _v≥2) — ไม่รองรับแล้ว · ห้ามเขียนอะไรทับ (state=null → schedulePersist/doPersist ไม่ทำงาน) */
++      state = null; stateFromServer = false; cl2aHideGate();
++      document.getElementById('loadingScreen').style.display='none';
++      document.getElementById('mainWrap').style.display='none';
++      document.getElementById('errorScreen').style.display='block';
++      document.getElementById('errorMsg').textContent = 'เอกสารรูปแบบเก่า (ก่อน ก.ย. 2569) — ใช้ไฟล์ backup';
++      document.getElementById('errorSub').textContent = 'ระบบไม่เขียนอะไรทับเอกสารนี้ · กู้จากไฟล์ backup ผ่านบัญชีที่ตั้งใหม่';
++      return;
++    }
++    /* CL2-a §1.3 — เอกสารมีอยู่แล้วแต่ยังไม่รีเซ็ต (ไม่มี cl2aResetAt) และ snapshot มาจาก server → gate ครั้งเดียว · ไม่ render/persist/ดึง FX ตอนเปิด */
++    if(acctDocExists && !acctExtra.cl2aResetAt && !snap.metadata.fromCache){ cl2aOpenGate(); return; }
++    if(cl2aGateOn) cl2aHideGate();
+-      const ran = {satBDefaults:ensureSatBDefaults(), tabsOffsetV2:ensureTabsOffsetV2(), r1Model:ensure1RModel(),
+-                   satBNote:ensureSatBNoteMerge(), satACap25:ensureSatACap25(), satBVolBands:ensureSatBVolBands()};
++      const ran = {r1Model:ensure1RModel()};
+### render  (+9 / -13)
++  if(cl2aGateOn) return;   /* CL2-a — gate รีเซ็ตเปิดอยู่ · กันการวาดจาก listener อื่น (wl · sat7d · pb · rrg · fx) */
+-  if(filter==='core' || filter==='satA' || filter==='satB') filter = 'all';
++  if(filter==='core' || filter==='satB') filter = 'all';
+-  const usdCap = state.settings.capital.satA + state.settings.capital.satB;
++  const usdCap = state.settings.capital.satB;
+-  /* ★ 7D.3 Phase 4: การ์ด port ของ satB ("Satellite.B — Swing" เดิม) ไม่แสดงในนี้อีกต่อไป เฉพาะตอน SAT_V3_ON=true
+-     เท่านั้น (ย้ายไปใช้ UI.acctStrip ของหน้า Sat ใหม่แทน — satV3AcctStripHtml, ดู §A ของสเปก) — SAT_V3_ON=false ต้อง
+-     "fully intact" ตามที่สั่งไว้ (regression escape hatch) จึงยังโชว์การ์ดเดิมทุกอย่างเหมือนก่อน Phase 4 ไม่ตัดออก */
+-  /* CL1: ลบหลัง 7E — ซ่อนบล็อก Sat A เมื่อทุน satA = 0 และไม่มีไม้ open/plan ค้าง (ไม่เรียกวาด) · มีไม้ค้าง → แสดงเหมือนเดิม กันข้อมูลหาย */
+-  const satAHide = !(Number(state.settings.capital.satA) > 0) && !state.trades.some(t=>t.port==='satA' && (t.status==='open'||t.status==='plan'));
+-  const portCards = portsOn().filter(([k])=>scopeK.indexOf(k)>=0 && !(k==='satB' && SAT_V3_ON) && !(k==='satA' && satAHide)).map(([k,p])=>{
++  /* CL2-a: การ์ด port ของ satB ไม่แสดงในนี้ (ใช้ UI.acctStrip ของหน้า Sat — satV3AcctStripHtml) · แสดงเฉพาะ core */
++  const portCards = portsOn().filter(([k])=>scopeK.indexOf(k)>=0 && k!=='satB').map(([k,p])=>{
+-    /* UI-1b — core/satA = ส่วนหนึ่งของ "บล็อกสรุป" ก้อนเดียว (.sumBlk) · ตัวเลข/สูตรเดิมทุกค่า เปลี่ยนแค่การจัดวางและสี · port อื่น (satB เดิมตอน SAT_V3_ON=false) ใช้กา
+-    if(k==='core'||k==='satA'){
++    /* UI-1b — core = ส่วนหนึ่งของ "บล็อกสรุป" ก้อนเดียว (.sumBlk) · ตัวเลข/สูตรเดิมทุกค่า เปลี่ยนแค่การจัดวางและสี · port อื่นใช้การ์ดเดิม */
++    if(k==='core'){
+-      const secTitle = k==='core' ? 'Core Port' : 'Sat A';
++      const secTitle = 'Core Port';
+-    /* CL1: ตัด Sat.A / Growth Gate / Setup Acc·Dist·PP ออก — ใช้ชื่อพอร์ตปัจจุบัน (Core · Sat = satB) */
++    /* ใช้ชื่อพอร์ตปัจจุบัน (Core · Sat = satB) */
+-  try{ renderSBPlan(); }catch(err){ console.warn('sat.b plan:', err); }
+### renderSat7d  (+5 / -30)
+-  const panel = document.getElementById('sat7dPanel');
+-  const show = SAT7D_ON && !!state && planScope==='future';
+-  if(v3panel) v3panel.style.display = (show && SAT_V3_ON) ? '' : 'none';
+-  if(panel) panel.style.display = (show && !SAT_V3_ON) ? '' : 'none';
++  const show = !!state && planScope==='future';
++  if(v3panel) v3panel.style.display = show ? '' : 'none';
+-  if(SAT_V3_ON){
+-    try{ satV3ConfigStart(); }catch(e){}
+-    if(v3panel && sat7dTypingGuard(v3panel)) return;
+-    try{ satV3Render(); }catch(e){ console.warn('satV3 render:', e); }
+-    return;
+-  }
+-  if(!panel) return;
+-  const accts = sat7dAccts();
+-  if(!accts.length){ panel.innerHTML = '<div class="panel-head"><h2>แผนเทรด Sat</h2></div><div class="empty">ไม่มีบัญชีที่เปิดพอร์ต Sat</div>'; return; }
+-  const err = (satErr ? `<div class="s7Err">โหลดไอเดีย Sat ไม่สำเร็จ (${escHtml(satErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satIdeas</div>` : '')
+-    + (satWeekErr ? `<div class="s7Err">โหลด Bias สัปดาห์ไม่สำเร็จ (${escHtml(satWeekErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satWeek</div>` : '');
+-  const list = satIdeasList.filter(x=>(x.status==='closed') === (satFilter==='closed'))
+-    .sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+-  const nClosed = satIdeasList.filter(x=>x.status==='closed').length, nActive = satIdeasList.length - nClosed;
+-  panel.innerHTML = `<div class="panel-head s7Head"><h2><span class="dot" style="background:#DCA84B;display:inline-block;width:9px;height:9px;border-radius:50%;margin-ri
+-      <div class="s7Tools"><select id="s7NewAsset" onchange="sat7dNewAssetChanged()">${SAT7D_ASSETS.map(a=>`<option value="${a}">${sat7dLabel(a)}</option>`).join('')}</s
+-      <select id="s7NewBias"><option>Long</option><option>Short</option></select>
+-      <button class="small primary" onclick="sat7dNew()">＋ ไอเดียใหม่</button>
+-      <button class="small ghost" onclick="sat7dBrokerOpen()">ตั้งโบรก</button></div></div>
+-    ${err}
+-    ${satwSectionHtml()}
+-    <div class="s7Sum">${sat7dSummaryHtml()}</div>
+-    <div class="filters s7Filters"><span class="chip ${satFilter==='active'?'on':''}" onclick="sat7dSetFilter('active')">ใช้งาน ${nActive}</span><span class="chip ${satF
+-    <div class="s7Ideas">${list.map(sat7dIdeaHtml).join('') || `<div class="empty">${satFilter==='closed'?'ยังไม่มีไอเดียที่ปิดแล้ว':'ยังไม่มีไอเดีย — กด ＋ ไอเดียใหม่'}<
+-    ${sat7dOldPlanHtml()}`;
+-  sat7dNewAssetChanged();
++  try{ satV3ConfigStart(); }catch(e){}
++  if(v3panel && sat7dTypingGuard(v3panel)) return;
++  try{ satV3Render(); }catch(e){ console.warn('satV3 render:', e); }
+### getBook  (+1 / -1)
+-  if(wlHasWrapper(raw)) return raw;            /* เคยสร้างไว้แล้ว (หรือเป็น state ที่เก็บไว้ตอนสลับบัญชี) */
++  if(raw && raw.__built) return raw;           /* เคยสร้างไว้แล้ว (หรือเป็น state ที่เก็บไว้ตอนสลับบัญชี) */
+### wlSyncMirror  (+1 / -1)
+-  if(!state || !wlHasWrapper(state)) return;      /* state ที่ไม่ได้ผ่าน wrapper (เช่น หลังกู้คืน backup) — ไม่แตะ */
++  if(!state || !state.__built) return;            /* state ที่ไม่ได้ผ่าน wlAttachMirror (เช่น หลังกู้คืน backup) — ไม่แตะ */
+### wlAttachMirror  (+2 / -7)
+-function wlAttachMirror(st, d){
+-  /* watchlist เดิมแบบดิบ: ถ้า d เป็น state ที่เคยผ่าน wrapper แล้ว (เช่น acctBooks[id]=state) ใช้ __legacyWatchlist
+-     ไม่งั้นใช้ d.watchlist จากก้อนที่มาจาก server */
+-  const legacy = wlHasWrapper(d) ? d.__legacyWatchlist : (d ? d.watchlist : undefined);
++function wlAttachMirror(st){
+-  hide('__legacyWatchlist', legacy);
++  hide('__built', true);                          /* ป้าย "สร้างแล้ว" — getBook/wlSyncMirror เช็คตัวนี้ */
+-  /* JSON.stringify(state) (backup ต่าง ๆ) ต้องได้ watchlist เดิมกลับไปเหมือนเดิม ไม่ใช่สำเนาใหม่ */
+-  hide('toJSON', function(){ return wlBookForWrite(this); });
+### buildStateFromBook  (+1 / -1)
+-  return wlAttachMirror(buildStateFromBookRaw(d, exists, acctIdForLog), d);
++  return wlAttachMirror(buildStateFromBookRaw(d, exists, acctIdForLog));
+### wlBookForWrite  (+1 / -4)
+-  if(!wlHasWrapper(book)) return stripTransientKeys(book);
+-  const out = Object.assign({}, book);            /* เฉพาะ enumerable → ไม่ติดสำเนา/ธง/toJSON */
+-  if(book.__legacyWatchlist !== undefined) out.watchlist = book.__legacyWatchlist;
+-  return stripTransientKeys(out);
++  return stripTransientKeys(book);
+### acctAdoptDoc  (+8 / -6)
+-    return;
++    return 'ok';
+-  /* เอกสารเก่า (หรือยังไม่มีเอกสาร) — ยกทั้งก้อนขึ้นเป็นบัญชีแรก */
+-  const hasData = raw && Object.keys(raw).length > 0;
+-  acctDocExists = !!hasData;
++  const hasData = !!raw && Object.keys(raw).length > 0;
+-  acctBooks  = hasData ? {main: raw} : {};
+-  acctExtra  = {};   /* เอกสารเก่ายกทั้งก้อนเป็นสมุดบัญชี ไม่มี key นอกระบบ */
++  acctBooks  = {};
++  if(hasData){ acctDocExists = false; acctExtra = {}; return 'old'; }
++  acctDocExists = false;
++  const now = new Date().toISOString();
++  acctExtra  = {cl2aResetAt: now, cl2aSatCleanAt: now};
++  return 'ok';
+### acctBuildBook  (+1 / -2)
+-    [ensureScoreLabels, ensureJournalView, ensureSatBDefaults, ensureTabsOffsetV2, ensure1RModel,
+-     ensureSatBNoteMerge, ensureSatACap25, ensureSatBVolBands].forEach(f=>{ try{ f(); }catch(e){ console.warn('ensure (non-active book):', e); } });
++    [ensureScoreLabels, ensureJournalView, ensure1RModel].forEach(f=>{ try{ f(); }catch(e){ console.warn('ensure (non-active book):', e); } });
+### acctSwitch  (+1 / -2)
+-  ensureSatBDefaults(); ensureTabsOffsetV2(); ensure1RModel();
+-  ensureSatBNoteMerge(); ensureSatACap25(); ensureSatBVolBands();
++  ensure1RModel();
+### populateSymbolSelect  (+8 / -8)
+-  const eligible = wlItems.map(w=>({sym:w.ticker, port:'core'}));   /* 7W — เลิกใช้ watchEligibleForTrade */
+-  const wpSyms = tradeAllowSatB ? wpEligibleSyms() : [];
+-  const all = new Set([...eligible.map(w=>w.sym), ...wpSyms]);
++  const eligible = wlItems.map(w=>({sym:w.ticker, port:'core'}));   /* 7W — รายชื่อจาก Watchlist ใหม่ */
++  /* CL2-a — ไม่มี Weekly Plan/กระสุนแล้ว: กลุ่ม Sat แสดงเฉพาะ Symbol ของไม้เดิมที่กำลังแก้ (selected) */
++  const satSyms = (tradeAllowSatB && selected) ? [selected] : [];
++  const all = new Set([...eligible.map(w=>w.sym), ...satSyms]);
+-    const syms = k==='satB' ? wpSyms : eligible.filter(w=>w.port===k).map(w=>w.sym);
++    const syms = k==='satB' ? satSyms : eligible.filter(w=>w.port===k).map(w=>w.sym);
+-      const label = k==='satB' ? `${p.name} — Weekly Plan (เหลือ ${wpBulletsLeft()}/${WP_BULLETS} นัด)` : p.name;
+-      html += `<optgroup label="${escHtml(label)}">` + syms.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('') + '</optgroup>';
++      html += `<optgroup label="${escHtml(p.name)}">` + syms.map(s=>`<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('') + '</optgroup>';
+-  if(!eligible.length && !wpSyms.length && !selected){
+-    html += '<option value="" disabled>ยังไม่มี Symbol ที่พร้อม — เพิ่ม Fundamental ใน Watchlist หรือติ๊ก Product ใน Weekly Plan ก่อน</option>';
++  if(!eligible.length && !satSyms.length && !selected){
++    html += '<option value="" disabled>ยังไม่มี Symbol ที่พร้อม — เพิ่มหุ้นใน Watchlist ก่อน</option>';
+### findWatchForSymbol  (+1 / -7)
+-  if(!sym) return null;
+-  /* Sat.B ไม่มี Watchlist แล้ว — สังเคราะห์ record จาก Weekly Plan ให้โค้ดที่เหลือใช้ต่อได้เหมือนเดิม */
+-  const S = String(sym).toUpperCase();
+-  if(SATB_PRODUCTS.includes(S) && wpIsPicked(S)){
+-    return {sym:S, port:'satB', bias:wpTrendOf(S), fundamental:'', technical:'', industry:'', __weekly:true};
+-  }
+-  /* 7W — Watchlist ใหม่ไม่มี Port/Bias ให้ล็อก → หุ้นทั่วไปไม่ผูกอะไรอัตโนมัติ (Port/Bias เลือกเอง) · เหลือเฉพาะสินค้า Sat ที่ติ๊กใน Weekly Plan */
++  /* CL2-a — ตัดทาง Weekly Plan ออกแล้ว · 7W — Watchlist ใหม่ไม่มี Port/Bias ให้ล็อก → ไม่ผูกอะไรอัตโนมัติ (Port/Bias เลือกเอง) */
+### tradeSymChanged  (+1 / -2)
+-      let tr = null; try{ tr = wpTrendOf(sym); }catch(e){}
+-      setBias(tr==='Short' ? 'Short' : 'Long');
++      setBias('Long');
+### isSatProduct  (+1 / -2)
+-  if(SATB_PRODUCTS.includes(S) || S==='BTCUSDT' || S.startsWith('S50')) return true;
+-  try{ return sbProducts().some(x=>String(x.key).toUpperCase()===S); }catch(e){ return false; }
++  return SAT7D_ASSETS.includes(S) || S==='BTCUSDT' || S.startsWith('S50');
+### buildSymDatalist  (+0 / -1)
+-  try{ sbProducts().forEach(p=>syms.add(String(p.key).toUpperCase())); }catch(e){}
+### calcHint  (+2 / -3)
+-  if(port==='satB'){
++  if(port==='satB'){   /* CL2-a — ไม่มีการ์ดขนาดไม้ Sat ในฟอร์มนี้แล้ว (ขนาดไม้ Sat อยู่ที่การ์ด Sat v3) */
+-    szRenderSatB({port, entry:e, stop:sl, mult:m, isUSD, sym, bias,
+-                  symName:curSymVal(), sizeFactor:szSizeFactor});
++    return;
+### saveTradeCompute  (+1 / -23)
+-  if(SAT7D_ON && !editId && !unplannedMode && isSatProduct(curSymVal())){
++  if(!editId && !unplannedMode && isSatProduct(curSymVal())){
+-  /* ★ ค่าบนของกรอบ SL = "ล็อกไม่ให้เทรด" จริง ๆ ไม่ใช่แค่เตือน
+-     บล็อกเฉพาะไม้ที่ยังจะเข้า (plan / open) — ไม้ที่ปิดไปแล้วต้องบันทึกได้ ไม่งั้น Journal ไม่ตรงความจริง */
+-  if(t.port==='satB' && (status==='plan' || status==='open') && szSatBBlocked(t.sym, t.entry, t.sl)){
+-    const b = szSatBBand(t.sym);
+-    if(SAT7D_ON){   /* 7D — เตือน ไม่บล็อก */
+-      if(!confirm(`ระยะ SL ของ ${t.sym} = ${Math.abs(t.entry-t.sl)} กว้างกว่าค่าบนที่ตั้งไว้ (${b.hi})\n\nบันทึกต่อหรือไม่?`)) return;
+-    } else {
+-      alert(`ระยะ SL ของ ${t.sym} = ${Math.abs(t.entry-t.sl)} กว้างกว่าค่าบนที่ตั้งไว้ (${b.hi})\n\n`
+-        + `ไม้นี้ถูกล็อกไม่ให้เทรด — รอจุดเข้าที่ SL แคบลง หรือแก้ค่าบนในหน้าตั้งค่า Port`);
+-      return;
+-    }
+-  }
+-  /* ★ กระสุนรายสัปดาห์ของ Sat.B — เตือนแบบขอคำยืนยัน ไม่ใช่บล็อกตาย
+-     เพราะบางครั้งต้องบันทึกไม้ที่ "เข้าไปแล้วจริง" ย้อนหลัง การห้ามบันทึกจะทำให้ Journal ไม่ตรงความจริง
+-     แต่ต้องกดยืนยันเอง เพื่อไม่ให้เผลอเกินโควตาโดยไม่รู้ตัว */
+-  if(!SAT7D_ON && t.port==='satB' && (status==='open' || status==='closed')){   /* 7D — กติกากระสุน 3 นัดเดิมถูกแทนด้วย ไม้ใหม่ ≤ 2/สัปดาห์ ต่อบัญชี (เตือนในการ์ด) */
+-    const wasCounted = prevTrade && (prevTrade.status==='open' || prevTrade.status==='closed')
+-                       && wpOpenedKey(prevTrade) === wpWeekKey(t.openedAt || t.date);
+-    if(!wasCounted && wpBulletsLeft() <= 0){
+-      if(!confirm(`สัปดาห์นี้ใช้กระสุนครบ ${WP_BULLETS} นัดแล้ว\n\nยืนยันจะบันทึกไม้นี้เพิ่มหรือไม่?`)) return;
+-    }
+-  }
+### tradeSymPlanHint  (+1 / -1)
+-  if(SAT7D_ON && !editId && !unplannedMode && isSatProduct(sym)){
++  if(!editId && !unplannedMode && isSatProduct(sym)){
+### openSettings  (+3 / -8)
+-  document.getElementById('sSatA').value=s.capital.satA;
+-  const portLim = s.limits.port && typeof s.limits.port==='object' ? s.limits.port : {core:s.limits.port||3,satA:s.limits.port||3,satB:s.limits.port||3};
++  const portLim = s.limits.port && typeof s.limits.port==='object' ? s.limits.port : {core:s.limits.port||3,satB:s.limits.port||3};
+-  document.getElementById('sPortSatA').value=portLim.satA;
+-  renderSbProdMgr();
+-  document.getElementById('sSatBLowRisk').value = (s.satBLowRisk>0 ? s.satBLowRisk : 1);
+-    const cc=ffDeployCap('core'), ca=ffDeployCap('satA');
+-    document.getElementById('sFfNow').innerHTML =
+-      `Core ${cc}% → 1R ${(sz.r.core*cc/100).toFixed(2)}% · Sat.A ${ca}% → 1R ${(sz.r.satA*ca/100).toFixed(2)}%`;
++    const cc=ffDeployCap('core');
++    document.getElementById('sFfNow').innerHTML = `Core ${cc}% → 1R ${(sz.r.core*cc/100).toFixed(2)}%`;
+### updTotal  (+2 / -3)
+-  const a = parseFloat(document.getElementById('sSatA').value)||0;
+-  const tot = core + (a+b)*fx + strat;
++  const tot = core + b*fx + strat;
+-    `ทุนรวม ≈ <b>฿${fmt0(tot)}</b> (฿${fmt0(core)} + $${fmt0(a+b)} × ${fmt2(fx)} + Strategic Cash ฿${fmt0(strat)})`;
++    `ทุนรวม ≈ <b>฿${fmt0(tot)}</b> (฿${fmt0(core)} + $${fmt0(b)} × ${fmt2(fx)} + Strategic Cash ฿${fmt0(strat)})`;
+### acctApplyPortVisibility  (+2 / -3)
+-  [['sCore','core'],['sSatA','satA'],['sSatB','satB'],
++  [['sCore','core'],['sSatB','satB'],
+-   ['sPortCore','core'],['sPortSatA','satA'],['sPortSatB','satB'],
+-   ['sSatBLowRisk','satB']
++   ['sPortCore','core'],['sPortSatB','satB']
+### saveSettings  (+2 / -7)
+-      satA: parseFloat(document.getElementById('sSatA').value)||0,
+-      satB: parseFloat(document.getElementById('sSatB').value)||0
++      satB: parseFloat(document.getElementById('sSatB').value)||0,
++      ...(state.settings.capital && state.settings.capital.option!=null ? {option: state.settings.capital.option} : {})   /* ถัง Option — ห้ามหายตอนกดบันทึกตั้งค่า */
+-        satA: parseFloat(document.getElementById('sPortSatA').value)||3,
+-      satA: (state.settings.posSize&&state.settings.posSize.satA)||1,
+-    satBVol: sbCollectBands(),
+-    satBLowRisk: parseFloat(document.getElementById('sSatBLowRisk').value)||1,
+-    satBVolV2: true,
+### sat7dStart  (+1 / -1)
+-  if(!SAT7D_ON || !uid || typeof db==='undefined' || !db) return;
++  if(!uid || typeof db==='undefined' || !db) return;
+### sat7dRefresh  (+2 / -2)
+-  if(!SAT7D_ON || !state) return;
+-  const panel = document.getElementById(SAT_V3_ON ? 'satV3Panel' : 'sat7dPanel'); if(!panel) return;
++  if(!state || cl2aGateOn) return;   /* CL2-a — gate รีเซ็ตเปิดอยู่ = ไม่วาด */
++  const panel = document.getElementById('satV3Panel'); if(!panel) return;
+### wlIndustryOfSym  (+1 / -6)
+-  if(it && it.industry) return it.industry;
+-  if(WL_LEGACY_INDUSTRY_BRIDGE){
+-    const w = wlLegacyList(state).find(x=>x && wlSymKey(x.sym)===k && x.industry && String(x.industry).trim());
+-    if(w) return String(w.industry).trim();
+-  }
+-  return '';
++  return (it && it.industry) || '';
+### buildStateFromBookRaw  (+5 / -14)
+-        settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], watchlist:normalizeWatchlist(d.watchlist), industries:d.industries||[],
++        settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], industries:d.industries||[],
+-        tabsOffsetV2: !!d.tabsOffsetV2,   /* เดิมไม่ได้ copy field นี้มา — ทำให้ ensureTabsOffsetV2() คิดว่าต้อง migrate ใหม่ทุกครั้งที่ sync ยิง schedulePersist() วนซ้ำ
+-        satBNoteV1: !!d.satBNoteV1,       /* ★ 31 ส.ค. 2026 — พลาดซ้ำรอยเดิมกับ tabsOffsetV2 เป๊ะ ๆ
+-             ธงนี้ถูกเซ็ตบน state (ไม่ใช่ settings) แต่ตอน rebuild จาก snapshot ไม่ได้ copy กลับมา
+-             ผล: ทุก snapshot -> satBNoteV1 undefined -> ensureSatBNoteMerge() คืน true -> schedulePersist()
+-                 -> เขียน server -> snapshot ใหม่ -> วนไม่รู้จบ badge สลับ ซิงก์แล้ว/กำลังบันทึก ทุก ~0.5 วิ
+-             (ข้อมูลไม่เสียหาย เพราะรอบสองขึ้นไป technical เป็น '' อยู่แล้ว note จึงไม่ถูกต่อทบ — แต่ยิง write รัว ๆ ตลอดเวลา)
+-             บทเรียน: ธงที่เก็บบน state ต้อง copy ที่นี่เสมอ · ธงใน settings ปลอดภัยกว่าเพราะ ...d.settings เหมาไปให้แล้ว */
++        /* บทเรียน (ธง migration แบบ tabsOffsetV2/satBNoteV1 เคยหายตอน rebuild แล้ววน persist ไม่รู้จบ): ธงที่เก็บบน state ต้อง copy ที่นี่เสมอ ·
++           ธงใน settings ปลอดภัยกว่าเพราะ ...d.settings เหมาไปให้แล้ว — CL2-a ลบ migration ตัวเก่าทั้งหมดแล้ว แต่ข้อควรระวังยังใช้ได้กับธงใหม่ */
+-        weeklyPlan: (d.weeklyPlan && typeof d.weeklyPlan==='object') ? d.weeklyPlan : {},
+-        sbPlan: (d.sbPlan && typeof d.sbPlan==='object') ? d.sbPlan : {},   /* ★ แผนเทรด Sat.B (Zone/Setup) — ต้อง copy ที่นี่เสมอ ดูบทเรียน satBNoteV1 ด้านบน */
+-        sbProducts: Array.isArray(d.sbProducts) ? d.sbProducts : null,      /* ★ รายการสินค้า Sat.B — เช่นกัน */
+-      /* sat_since/phase7mV1 — ต้อง "ไม่มี key นี้เลย" เมื่อค่าเป็น falsy (พฤติกรรมเดิมเป๊ะ) ไม่ใช่แค่เป็น undefined
++      /* sat_since — ต้อง "ไม่มี key นี้เลย" เมื่อค่าเป็น falsy (พฤติกรรมเดิมเป๊ะ) ไม่ใช่แค่เป็น undefined
+-      if(d.phase7mV1) out.phase7mV1 = true; else delete out.phase7mV1;
+-      return {settings:cloneDefaults(), trades:[], watchlist:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{..
++      return {settings:cloneDefaults(), trades:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_
+### schedulePersist  (+1 / -0)
++  if(cl2aGateOn) return;   /* CL2-a — ห้ามเขียนตอน gate เปิด (cl2aRun เรียก doPersist ตรงเอง) */
+### doPersistImpl  (+1 / -4)
+-     "เขียนบัญชีหนึ่งแล้วอีกบัญชีไม่เปลี่ยน") ใช้ได้ทั้งสร้าง doc ใหม่และอัปเดตของเดิม ไม่ต้องแยกเคส
+-     ข้อยกเว้นเดียว: เอกสารเก่ามาก (ก่อนอัปเกรดเป็นหลายบัญชี 1 ก.ย. 2026, schema แบนไม่มี _v/books) ที่ merge:true จะไม่ลบ
+-     field เก่าที่ root ให้ — ผู้ใช้ปัจจุบันผ่านจุดนั้นมานานแล้ว (_v:2 อยู่แล้วตั้งแต่ก่อน 7M) จึงไม่กระทบ แต่ถ้ามี uid ใหม่ที่ยังไม่เคย
+-     อัปเกรดมาเจอโค้ดนี้ จะเหลือ field เก่าตกค้างที่ root เป็นขยะ (ไม่กระทบการทำงาน เพราะ acctAdoptDoc เช็ค _v>=2 && books ก่อนเสมอ) */
++     "เขียนบัญชีหนึ่งแล้วอีกบัญชีไม่เปลี่ยน") ใช้ได้ทั้งสร้าง doc ใหม่และอัปเดตของเดิม ไม่ต้องแยกเคส */
+### bkRestoreRun  (+1 / -1)
+-      const st = acctBuildBook(JSON.parse(JSON.stringify(R.books[id])), id);
++      const st = acctBuildBook(cl2aStripLegacy(JSON.parse(JSON.stringify(R.books[id]))), id);   /* CL2-a — Strip (ไม่ใช่ Reset): ไม้ core/satB ในไฟล์กลับมาได้ · ไม้ Sat.
+### renderWatchlist  (+2 / -3)
+-  if(!Array.isArray(state.watchlist)) state.watchlist = normalizeWatchlist(state.watchlist);
++  if(!Array.isArray(state.watchlist)) wlSyncMirror();
+-      <div class="wlAdd"><button class="small" onclick="wlOpenAdd()" title="เพิ่มหุ้นเข้า Watchlist (ใช้ร่วมทุกบัญชี)">＋ เพิ่มหุ้น</button><button class="small ghost" on
++      <div class="wlAdd"><button class="small" onclick="wlOpenAdd()" title="เพิ่มหุ้นเข้า Watchlist (ใช้ร่วมทุกบัญชี)">＋ เพิ่มหุ้น</button></div>
+-  try{ wlGateCheck(); }catch(e){ console.warn('wl gate:', e); }
+### planThesisCell  (+1 / -1)
+-  if(!t || (t.port!=='core' && t.port!=='satA')) return '<span style="color:var(--faint)">—</span>';
++  if(!t || t.port!=='core') return '<span style="color:var(--faint)">—</span>';
+### szTradeLimit  (+0 / -5)
+-  if(port==='satA'){
+-    if(typeof ggScoreOfSym!=='function' || typeof ggRow!=='function') return 1.25;
+-    const t = sym ? ggScoreOfSym(sym) : null;
+-    return t!=null ? ggRow(t).r : 1.25;
+-  }
+### summarize  (+1 / -1)
+-  const per = {core:{open:0,plan:0},satA:{open:0,plan:0},satB:{open:0,plan:0}};
++  const per = {core:{open:0,plan:0},satB:{open:0,plan:0}};
+### journalStats  (+1 / -2)
+-  const byPort = {core:[],satA:[],satB:[]};
++  const byPort = {core:[],satB:[]};
+-    satA: statsFor(byPort.satA, portCapTHB('satA')),

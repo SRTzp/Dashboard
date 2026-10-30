@@ -1,0 +1,260 @@
+# CL2-b — diff ย่อของจุดที่ "แก้" (ไม่รวม hunk ที่ลบล้วน) · diff -u index.backup-pre-CL2b.html index.html
+
+@@ -1328,9 +1323,8 @@
+   .hbtns>button[onclick^="openSystemSettings"],
+   .hbtns>button[onclick^="openSettings"],
+   .hbtns>button[onclick^="openIndustryManager"]{flex:0 0 auto;min-width:54px;padding:8px 5px;font-size:.58rem;gap:3px}
+-  .hbtns>button[onclick^="openImportCL"]{flex:1 1 0}
+-  .hbtns>button[onclick^="openChecklist"]{flex:1.9 1 0;font-size:.72rem}   /* ＋ Add Trade — ปุ่มหลัก ให้กว้างสุด */
+-  .hbtns>button[onclick^="openChecklist"] .btnIcon{font-size:1.3rem}
++  .hbtns>button[onclick^="openTrade"]{flex:1.9 1 0;font-size:.72rem}   /* ＋ Add Trade — ปุ่มหลัก ให้กว้างสุด */
++  .hbtns>button[onclick^="openTrade"] .btnIcon{font-size:1.3rem}
+   .hbtns>button[onclick^="openIndustryManager"]::after{content:'Industry'}
+   .hbtns>button[onclick^="openSystemSettings"]{display:none}   /* ย้ายไปเมนู ⋯ เพิ่มเติม */
+   .hbtns>button[onclick^="toggleMoreMenu"]{flex:0 0 auto;min-width:54px;padding:8px 5px;font-size:.58rem;gap:3px}
+
+@@ -1882,8 +1875,7 @@
+     <button onclick="openSystemSettings()">🛠</button>
+     <button onclick="openSettings()" title="Portfolio Setting"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="11" fill="#8FD6EE" stroke="#
+     <button onclick="openIndustryManager()" title="Industry"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#
+-    <button class="iconOnlyMobile" onclick="openImportCL()" title="Import จาก Claude Checklist (วาง JSON)" aria-label="Import" hidden style="display:none"><span class="btnIcon">📥</span><span class="btnTxt"> Import</span></button>
+-    <button class="primary iconOnlyMobile" onclick="openChecklist('trade')" title="Add Trade" aria-label="Add Trade"><span class="btnIcon">＋</span><span class="btnTxt"> Add Trade</span></button>
++    <button class="primary iconOnlyMobile" onclick="openTrade()" title="Add Trade" aria-label="Add Trade"><span class="btnIcon">＋</span><span class="btnTxt"> Add Trade</span></button>
+     <button class="iconOnlyMobile" id="hdrMoreBtn" onclick="toggleMoreMenu(event)" title="เพิ่มเติม" aria-label="เพิ่มเติม" aria-haspopup="true" aria-expanded="false"><span class="btnIcon">⋯</span><span class="btnTxt"> เพิ่มเติม<
+   </div>
+ 
+
+@@ -2012,7 +1976,7 @@
+       <div id="jPeriod_cancel"></div>
+     </div>
+     <div id="jContent_cancel">
+-    <div class="hint" style="margin:-6px 0 10px">ไม้ที่ <b>ตัดสินใจไม่เข้า</b> — ต่างจาก Missed ตรงที่ Missed คือตั้งใจเข้าแล้วไม่ทัน ส่วน Cancel คือเปลี่ยนใจเอง แท็กที่ติ๊ก "หลุดวินัย" คือตัวที่ควรจับตา</div>
++    <div class="hint" style="margin:-6px 0 10px">ไม้ที่ <b>ตัดสินใจไม่เข้า</b> — แท็กที่ติ๊ก "หลุดวินัย" คือตัวที่ควรจับตา</div>
+     <div class="tablewrap">
+       <table>
+         <thead><tr>
+
+@@ -2572,7 +2395,7 @@
+       <input type="number" step="0.02" min="0.6" max="1.4" inputmode="decimal" id="sizeWl"></div>
+     <div class="f"><label>Trading Plan &amp; Positions</label>
+       <input type="number" step="0.02" min="0.6" max="1.4" inputmode="decimal" id="sizePlan"></div>
+-    <div class="f"><label>Closed Trade &amp; เหตุผลใน Missed Trade</label>
++    <div class="f"><label>Closed Trade</label>
+       <input type="number" step="0.02" min="0.6" max="1.4" inputmode="decimal" id="sizeClosed"></div>
+ 
+   </div></details>
+
+@@ -2625,7 +2448,7 @@
+   </div>
+ </div>
+ 
+-<!-- ===== Reason Tag Manager modal (ใช้ร่วม exit / cancel / missed) ===== -->
++<!-- ===== Reason Tag Manager modal (ใช้ร่วม exit / cancel) ===== -->
+ <div class="overlay" id="reasonMgrOverlay">
+   <div class="modal">
+     <h3 id="reasonMgrTitle">แท็กเหตุผล</h3>
+
+@@ -2794,7 +2595,7 @@
+ const defaultWatchSortMode = () => ({core:'date',satB:'date'});
+ const DEFAULT_FONT_SIZES = {wl:0.84, plan:0.8, closed:0.8};
+ const DEFAULT_TABS_OFFSET = 0;
+-/* ══════════ ระบบแท็กเหตุผล — ใช้ร่วมกัน 3 จุด: Closed / Cancelled / Missed ══════════
++/* ══════════ ระบบแท็กเหตุผล — ใช้ร่วมกัน 2 จุด: Closed / Cancelled ══════════
+    id      = คีย์ถาวรที่ trade เก็บไว้ ห้ามเปลี่ยน (เปลี่ยนแล้วไม้เก่าจะกำพร้า)
+    label   = ข้อความที่โชว์ แก้ได้ตลอด ไม้เก่าอัปเดตตามทันที
+    offPlan = ธงว่า "เป็นความผิดเรา ไม่ใช่ตลาด" → ขึ้นแท็กสีแดงใน Journal
+
+@@ -2805,10 +2606,9 @@
+   exit:   {title:'แท็กเหตุผลที่ออก',       offLabel:'หลุดแผน', field:'exitReason',   labelField:'exitReasonLabel',   noteField:'exitNote',
+            offHint:'ติ๊กให้แท็กที่แปลว่าคุณไม่ได้ออกตามแผน'},
+   cancel: {title:'แท็กเหตุผลที่ยกเลิก',    offLabel:'หลุดวินัย', field:'cancelTag',   labelField:'cancelTagLabel',    noteField:'cancelNote',
+-           offHint:'ติ๊กให้แท็กที่แปลว่ายกเลิกเพราะตัวเอง ไม่ใช่เพราะเงื่อนไขตลาดเปลี่ยนจริง'},
+-  missed: {title:'แท็กเหตุผลที่พลาด',      offLabel:'พลาดเอง',  field:'missedTag',   labelField:'missedTagLabel',    noteField:'missedReason',
+-           offHint:'ติ๊กให้แท็กที่แปลว่าพลาดเพราะตัวเอง (ลังเล/ลืม) ไม่ใช่เพราะราคาวิ่งหนีจริง ๆ'}
++           offHint:'ติ๊กให้แท็กที่แปลว่ายกเลิกเพราะตัวเอง ไม่ใช่เพราะเงื่อนไขตลาดเปลี่ยนจริง'}
+ };
++/* CL2-b: ไม่มีหมวด missed ในตัวจัดการแล้ว (REASON_KINDS) — DEFAULT_REASON_TAGS.missed และ state.reasonTags.missed ยังเก็บไว้ ไม่แตะ */
+ const DEFAULT_REASON_TAGS = {
+   exit: [
+     {id:'tp',      label:'ชน TP ตามแผน',        offPlan:false},
+
+@@ -3073,8 +2873,8 @@
+ const TRANSIENT_KEYS = [];
+ /* รายชื่อ field บนสุดของ "ก้อนข้อมูลบัญชี" ที่โค้ดรู้จักแล้ว ณ วันที่เขียน §0.5 (23 field ของเดิม + สอง field แบบมีเงื่อนไข) */
+ const KNOWN_BOOK_FIELDS = ['settings','trades','industries','watchSortMode','scoreCriteria','fontSizes',
+-  'checklistDrafts','ideas','watchCollapsed','tabsOffset','exitReasons','fundflow',
+-  'scoreLabels','journalView','reasonTags','industryLinks','sat_since','failLog'];
++  'watchCollapsed','tabsOffset','exitReasons','fundflow',
++  'scoreLabels','journalView','reasonTags','industryLinks','sat_since'];
+ /* กันสแปม console — log "unknown keys" ซ้ำเฉพาะตอนรายการเปลี่ยนไปจากครั้งก่อนของบัญชีเดียวกัน (ไม่ใช่ทุกครั้งที่ re-render เรียกฟังก์ชันนี้) */
+ const _unknownBookKeysLogged = new Map();   /* acctId -> JSON ของรายการล่าสุดที่ log ไปแล้ว */
+ function buildStateFromBookRaw(d, exists, acctIdForLog){
+
+@@ -3091,7 +2891,7 @@
+       const out = {...d,
+         settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], industries:d.industries||[],
+         watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
+-        fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, checklistDrafts:d.checklistDrafts||[], ideas: Array.isArray(d.ideas)?d.ideas:[], watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAU
++        fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAULT_TABS_OFFSET,
+         /* บทเรียน (ธง migration แบบ tabsOffsetV2/satBNoteV1 เคยหายตอน rebuild แล้ววน persist ไม่รู้จบ): ธงที่เก็บบน state ต้อง copy ที่นี่เสมอ ·
+            ธงใน settings ปลอดภัยกว่าเพราะ ...d.settings เหมาไปให้แล้ว — CL2-a ลบ migration ตัวเก่าทั้งหมดแล้ว แต่ข้อควรระวังยังใช้ได้กับธงใหม่ */
+         exitReasons: Array.isArray(d.exitReasons) ? d.exitReasons : null,   /* เก็บไว้ให้ ensureReasonTags ย้ายเข้า reasonTags.exit */
+
+@@ -3099,14 +2899,13 @@
+         scoreLabels: (d.scoreLabels && typeof d.scoreLabels==='object') ? d.scoreLabels : null,
+         journalView: (d.journalView && typeof d.journalView==='object') ? d.journalView : null,
+         reasonTags: (d.reasonTags && typeof d.reasonTags==='object') ? d.reasonTags : null,
+-        industryLinks: (d.industryLinks && typeof d.industryLinks==='object') ? d.industryLinks : {},  /* ★ ลิงก์ packet ของแต่ละ industry */
+-        failLog: Array.isArray(d.failLog) ? d.failLog : []};   /* เดิมไม่ได้ copy field นี้มา — ประวัติ fail-log ของ Fundamental Checklist จะหายทุกครั้งที่ sync */
++        industryLinks: (d.industryLinks && typeof d.industryLinks==='object') ? d.industryLinks : {}};  /* ★ ลิงก์ packet ของแต่ละ industry */
+       /* sat_since — ต้อง "ไม่มี key นี้เลย" เมื่อค่าเป็น falsy (พฤติกรรมเดิมเป๊ะ) ไม่ใช่แค่เป็น undefined
+          {...d} ด้านบนแปะ raw value มาให้แล้วไม่ว่า falsy หรือไม่ ต้องเช็คซ้ำแล้วลบออกเองตรงนี้ */
+       if(d.sat_since) out.sat_since = d.sat_since; else delete out.sat_since;
+       return out;
+   } else {
+-      return {settings:cloneDefaults(), trades:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, checklistDrafts:[], ideas:[], watchCollapsed:{}, tab
++      return {settings:cloneDefaults(), trades:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, r
+     }
+ }
+ 
+
+@@ -4001,7 +3800,7 @@
+   if(e.code==='KeyC'){ e.preventDefault(); kbOpenWatchView('wl'); return; }
+   if(e.code==='KeyV'){ e.preventDefault(); kbOpenWatchView('cand'); return; }
+   if(e.shiftKey) return;
+-  if(e.code==='KeyT'){ e.preventDefault(); openChecklist('trade'); return; }
++  if(e.code==='KeyT'){ e.preventDefault(); openTrade(); return; }
+   if((e.key==='Escape' || e.key==='Esc') && activeTab==='watch' && wlMobOpen && wlNarrow()){ e.preventDefault(); wlBack(); return; }
+   /* ↑/↓ เลื่อนหุ้นในรายชื่อ Watch (เฉพาะจอ ≥1024) */
+   if((e.key==='ArrowDown' || e.key==='ArrowUp') && activeTab==='watch' && !wlNarrow()){ e.preventDefault(); wlStep(e.key==='ArrowDown' ? 1 : -1); return; }
+
+@@ -4928,11 +4721,10 @@
+    เก็บใน state.journalView → sync ข้ามเครื่อง
+    เลือกเดือนได้เฉพาะเมื่อระบุปีแล้ว (เดือนลอย ๆ ข้ามปีไม่มีความหมายในการรีวิว)
+    สถิติด้านบน (Win Rate / Avg R / P&L / DD) คิดตามช่วงของพาเนล Closed เท่านั้น          */
+-const JV_KINDS = ['closed','missed','cancel'];
++const JV_KINDS = ['closed','cancel'];
+ const JV_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+ const JV_SRC = {
+   closed: {match:t=>t.status==='closed' && t.exitPrice>0, date:t=>t.exitDate||t.date},
+-  missed: {match:t=>t.status==='missed',                  date:t=>t.missedDate||t.date},
+   cancel: {match:t=>t.status==='cancelled',               date:t=>t.cancelDate||t.date}
+ };
+ function ensureJournalView(kind){
+
+@@ -5020,13 +4812,12 @@
+ }
+ /* ================= UI1 — Journal: แจ้งข้อมูลไม่ครบ (อ่านอย่างเดียว) =================
+    เกณฑ์ "ช่องจำเป็นตามสถานะ" = ช่องที่ฟอร์ม/โมดัลบังคับอยู่แล้วตอนบันทึก (ไม่มีเกณฑ์ใหม่):
+-     ทุกสถานะที่ Journal แสดง (closed/missed/cancelled): Symbol · Entry>0 · SL>0 · Qty>0 · Entry≠SL  ← saveTradeCompute
++     ทุกสถานะที่ Journal แสดง (closed/cancelled): Symbol · Entry>0 · SL>0 · Qty>0 · Entry≠SL  ← saveTradeCompute
+      closed    : Exit Price>0                                                                     ← saveTradeCompute / confirmClosePos
+-     missed    : แท็กหรือเหตุผล อย่างน้อยหนึ่งอย่าง (missedTag | missedReason)                     ← confirmMissed
+      cancelled : แท็กหรือโน้ต อย่างน้อยหนึ่งอย่าง (cancelTag | cancelNote)                          ← confirmCancel
+    plan/open ไม่อยู่ใน Journal → ไม่ตรวจ · รีวิว(วินัย/Setup)/exitReason/invalHit = ฟอร์มบอกว่าปล่อยว่างได้ → ไม่ตรวจ
+    field F2c (trend_state · macro_state · driver ฯลฯ) ไม่ใช่ช่องบังคับ → ไม่ตรวจ */
+-const JINC_STATUS = ['closed','missed','cancelled'];
++const JINC_STATUS = ['closed','cancelled'];
+ function journalMissingOf(t){
+   if(!t || !JINC_STATUS.includes(t.status)) return [];
+   const m = [], pos = v=>typeof v==='number' && v>0;
+
+@@ -5046,7 +4836,7 @@
+     try{
+       items = withAccount(a.id, ()=>state.trades.map(t=>({t, miss:journalMissingOf(t)})).filter(x=>x.miss.length).map(({t,miss})=>({
+         id:t.id, status:t.status, sym:t.sym||'', miss,
+-        date: (t.status==='closed'?t.exitDate:t.status==='missed'?t.missedDate:t.cancelDate) || t.date || ''
++        date: (t.status==='closed'?t.exitDate:t.cancelDate) || t.date || ''
+       })));
+     }catch(e){ console.warn('journal incomplete', a.id, e); }
+     items.sort((x,y)=>(y.date||'').localeCompare(x.date||''));
+
+@@ -5073,8 +4863,7 @@
+ function jIncGo(acctId, id){
+   const t = getBook(acctId).trades.find(x=>x.id===id); if(!t) return;
+   const m = withAccount(acctId, ()=>journalMissingOf(t))[0]; if(!m) return;
+-  if(t.status==='missed') openMissedModal(id, acctId);
+-  else if(t.status==='cancelled') openCancelModal(id, acctId);
++  if(t.status==='cancelled') openCancelModal(id, acctId);
+   else editTrade(id, acctId);
+   setTimeout(()=>{ const el = document.getElementById(m.el==='sym' ? (symFreeMode?'tSymFree':'tSym') : m.el); if(el && el.focus) el.focus(); }, 60);
+ }
+
+@@ -5377,8 +5166,7 @@
+     </div>`;
+   }).join('') : `<div class="empty">ยังไม่มีรายการที่ปิดไม้ — พอกด Closed ในแท็บแผนเทรด รายการจะมาโผล่ที่นี่</div>`;
+ 
+-  /* ── Missed & Cancelled ใช้โครงเดียวกันเป๊ะ ต่างแค่ kind / ฟิลด์วันที่ / ปุ่มแก้ไข ──
+-     เขียนเป็นตัวเดียวแล้วเรียกสองรอบ ดีกว่าก๊อปโค้ด 60 บรรทัดไว้สองที่แล้วลืมแก้ที่ใดที่หนึ่ง */
++  /* ── พาเนล Cancelled (เขียนเป็นฟังก์ชันรับ cfg ไว้ — ต่อยอดได้ถ้ามีพาเนลแบบเดียวกันเพิ่ม) ── */
+   function renderPlanlessPanel(cfg){
+     const all = state.trades.filter(t=>t.status===cfg.status);
+     const list = all.filter(t=>jvTradeMatch(cfg.kind, t)).slice()
+
+@@ -5447,6 +5232,8 @@
+ function escHtml(s){
+   return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ }
++/* ═══════ CL3: ลบพร้อม SZ — บล็อกที่เก็บไว้ (GG_ITEMS · GG_MAX · GG_R · ggRow · ggClampTot · ggTotal · ggDone · ggScoreOfSym · SETUPS · setupCfg · setupFactor)
++   CL2-b ลบฟอร์ม/นำเข้า/ Checklist ที่เคยเรียกใช้แล้ว เหลือแต่ตัวที่ SZ/sz* (calcHint · szRenderCard · makeTradeObject) ยังเรียก · ggClampTot ถูกเก็บด้วย เพราะ ggTotal/ggDone เรียก ═══════ */
+ /* ══════════ Growth Gate v8 — Score /9 → %Risk (Satellite.A) ══════════
+    แทนที่ fundCheck `us_g` (Gate 7 + Score 7 → Tier S/A/B/C) ที่ถูกถอดออกเมื่อ 30 ส.ค. 2026
+    เหตุผลที่เปลี่ยน: Tier เดิมเป็นป้ายเฉย ๆ ไม่ได้ผูกกับขนาดไม้เลย ต้องกรอก 14 ช่องเพื่อได้ตัวอักษร 1 ตัว
+
+@@ -5507,84 +5294,7 @@
+-  … (ลบ 78 บรรทัด — ดู index.backup-pre-CL2b.html) …
+ };
+ function setupCfg(k){ return SETUPS[k] || SETUPS.acc; }
+ function setupFactor(k){ return setupCfg(k).factor; }
++/* ═══════ จบบล็อก CL3: ลบพร้อม SZ ═══════ */
+ 
+ /* CL3: ลบพร้อม ensure1RModel — มี satA/wp ข้างใน · CL2-a ปล่อยไว้ (ไม่ทำให้พัง) */
+ function ensure1RModel(){
+
+@@ -5934,8 +5644,7 @@
+ function wlLine2(r){
+   const d = r.d || {};
+   if(r.port==='core'){
+-    const fc = r.w && r.w.fundCheck && r.w.fundCheck.note;
+-    return (d.research_card && d.research_card.business && d.research_card.business.sells) || (fc && (fc.sum||fc.biz)) || (r.w && r.w.fundamental) || '';
++    return (d.research_card && d.research_card.business && d.research_card.business.sells) || (r.w && r.w.fundamental) || '';
+   }
+   return d.summary || (d.mode_a && d.mode_a.one_liner) || '';
+ }
+
+@@ -6715,9 +6123,9 @@
+   schedulePersist();
+ }
+ 
+-/* ================= Reason tags — ตัวจัดการกลาง ใช้ได้ทั้ง exit / cancel / missed ================= */
++/* ================= Reason tags — ตัวจัดการกลาง ใช้ได้ทั้ง exit / cancel ================= */
+ /* select แต่ละ kind ผูกกับ element id ของตัวเอง */
+-const REASON_SELECT_ID = {exit:'tExitReason', cancel:'cancelTag', missed:'missedTag'};
++const REASON_SELECT_ID = {exit:'tExitReason', cancel:'cancelTag'};
+ let reasonMgrKind = 'exit';
+ 
+ function populateReasonSelect(kind, selected, tradeForFallback){
+
+@@ -6986,1024 +6394,8 @@
+-  … (ลบ 1017 บรรทัด — ดู index.backup-pre-CL2b.html) …
+   lockPortBiasFields(true, !isSwing);
+   document.getElementById('tMult').value = isSwing ? swingDefaultMult(sym) : 1;
+   return w;
+ }
++/* ===== ไม้นอกแผน (unplanned) — บันทึกย้อนหลังจาก Journal =====
+    symFreeMode = สลับช่อง Symbol จาก dropdown (Watchlist เท่านั้น) เป็นช่องพิมพ์เอง + datalist
+    ทุกจุดที่อ่านค่า Symbol ต้องผ่าน curSymVal() ไม่ใช่อ่าน #tSym ตรง ๆ ไม่งั้นโหมดพิมพ์เองจะได้ค่าว่าง */
+ let unplannedMode = false;
+
+@@ -8449,9 +6841,8 @@
+   } else {
+     t.exitPrice = null;
+     t.exitDate = null;
+-    /* เลือก Missed / Cancelled จาก dropdown ตรง ๆ — ลงวันที่ให้ ไม่งั้นแถวจะไม่มีวันที่และเรียงลำดับเพี้ยน
+-       (ปกติจะเข้าทางปุ่ม Missed/Cancel ซึ่งมีโมดัลให้กรอกเหตุผล ทางนี้เป็นทางลัดสำรอง) */
+-    if(status==='missed' && !t.missedDate)    t.missedDate = new Date().toISOString().slice(0,10);
++    /* เลือก Cancelled จาก dropdown ตรง ๆ — ลงวันที่ให้ ไม่งั้นแถวจะไม่มีวันที่และเรียงลำดับเพี้ยน
++       (ปกติจะเข้าทางปุ่ม Cancel ซึ่งมีโมดัลให้กรอกเหตุผล ทางนี้เป็นทางลัดสำรอง) */
+     if(status==='cancelled' && !t.cancelDate) t.cancelDate = new Date().toISOString().slice(0,10);
+     /* ย้ายกลับไป Plan/Open — เก็บรีวิวเดิมไว้ ไม่ล้างทิ้ง เผื่อกดผิดแล้วกดกลับ */
+     if(prevTrade){

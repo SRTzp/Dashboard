@@ -1,0 +1,182 @@
+# CL2-c — diff ย่อของจุดที่ 'แก้' (ไม่รวมการลบก้อนใหญ่: ฟอร์ม Add Trade / ฟังก์ชัน / CSS ฟอร์ม) · diff -U2 index.backup-pre-CL2c.html index.html
+--- index.backup-pre-CL2c.html	2026-09-30 16:53:17
++++ index.html	2026-09-30 16:59:25
+@@ -126,5 +126,4 @@
+ @media (min-width:481px){
+   .moreMenu{bottom:auto;top:72px;right:24px;max-height:calc(100dvh - 96px)}
+-  #hdrMoreBtn .btnTxt{display:none}
+ }
+ .moreMenu button{
+@@ -160,8 +159,5 @@
+ button.ghost:hover{background:var(--surface2);border-color:transparent}
+ 
+-/* ป้ายชื่อให้ปุ่มไอคอนบน header — เดิมเป็นไอคอนเปล่า เดาไม่ออกว่าปุ่มอะไร */
+-.hbtns>button[onclick^="openSystemSettings"]::after{content:'ระบบ'}
+-.hbtns>button[onclick^="openSettings"]::after{content:'พอร์ต'}
+-.hbtns>button[onclick^="openIndustryManager"]::after{content:'อุตสาหกรรม'}
++/* 7E-1: ปุ่มบน header เป็นไอคอนล้วนทุกขนาดจอ (ไม่มีข้อความ ::after/.btnTxt) — ชื่อปุ่มอยู่ใน title / aria-label */
+ .hbtns>button[onclick^="openSystemSettings"],
+ .hbtns>button[onclick^="openSettings"],
+@@ -229,7 +225,4 @@
+   .topbar .hbtns>button{box-shadow:none;border:none;background:transparent;min-height:34px;padding:7px 10px;border-radius:var(--r-pill)}
+   .topbar .hbtns>button:hover{background:var(--surface2)}
+-  .topbar .hbtns>button::after{content:none}   /* ไอคอนล้วน คำอธิบายอยู่ใน tooltip */
+-  .topbar .hbtns>button.primary{background:var(--ink);color:#FFF;padding:7px 15px}
+-  .topbar .hbtns>button.primary:hover{background:#2A2D34}
+   /* ให้ทุกอย่างอยู่แถวเดียว: ซ่อนเลขคีย์ลัด + บีบ padding แท็บ (คีย์ลัด 1-6 ยังกดได้เหมือนเดิม) */
+   .topbar .tabs .kbdhint{display:none}
+@@ -247,6 +240,9 @@
+ .tabbtn:active{transform:none}
+ @media (max-width:480px){
+-  .topbar{display:block;position:static;padding:0;margin-bottom:12px}
+-  .brand{margin-bottom:10px}
++  /* 7E-1: brand (ซ้าย) + กลุ่มปุ่มไอคอน (ขวา) อยู่แถวเดียวกัน · แท็บล่างเป็น fixed อยู่นอกแถว */
++  .topbar{display:flex;flex-wrap:nowrap;align-items:center;justify-content:space-between;gap:8px;position:static;padding:0;margin-bottom:12px}
++  .brand{margin-bottom:0;flex:1 1 auto;min-width:0;overflow:hidden}
++  .brandSync{flex:0 1 auto;min-width:0;overflow:hidden}
++  .brandSync #brandSyncTime{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+   .acctWrap{display:block;margin:0 0 10px}
+   .acctChip{width:100%;justify-content:flex-start}
+@@ -1313,23 +1282,14 @@
+   .stat .lbl.hasbadge{padding-right:0}
+ 
+-  /* ปุ่มบน header: ไอคอนบน + ชื่อล่าง อ่านออกว่าปุ่มอะไรโดยไม่ต้องเดา */
+-  .hbtns{width:100%;flex-wrap:nowrap;gap:6px;justify-content:space-between}
++  /* 7E-1 ปุ่มบน header: ไอคอนล้วน ≥36px · ห่างกัน ≥4px · ชิดขวาแถวเดียวกับ brand (🛠 ซ่อน → อยู่ในเมนู ⋯) */
++  .hbtns{width:auto;flex:none;flex-wrap:nowrap;gap:6px;justify-content:flex-end}
+   .hbtns>button{
+-    flex:1 1 0;min-width:0;padding:8px 4px;border-radius:10px;
+-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+-    font-size:.6rem;font-weight:600;line-height:1.15;min-height:52px;
++    flex:0 0 auto;width:40px;height:40px;min-width:36px;min-height:36px;padding:0;border-radius:12px;
++    display:inline-flex;align-items:center;justify-content:center;font-size:1.05rem;line-height:1;
+   }
+-  .hbtns>button>svg{width:19px;height:19px}
+-  .hbtns>button[onclick^="openSystemSettings"],
+-  .hbtns>button[onclick^="openSettings"],
+-  .hbtns>button[onclick^="openIndustryManager"]{flex:0 0 auto;min-width:54px;padding:8px 5px;font-size:.58rem;gap:3px}
+-  .hbtns>button[onclick^="openTrade"]{flex:1.9 1 0;font-size:.72rem}   /* ＋ Add Trade — ปุ่มหลัก ให้กว้างสุด */
+-  .hbtns>button[onclick^="openTrade"] .btnIcon{font-size:1.3rem}
+-  .hbtns>button[onclick^="openIndustryManager"]::after{content:'Industry'}
++  .hbtns>button>svg{width:20px;height:20px}
+   .hbtns>button[onclick^="openSystemSettings"]{display:none}   /* ย้ายไปเมนู ⋯ เพิ่มเติม */
+-  .hbtns>button[onclick^="toggleMoreMenu"]{flex:0 0 auto;min-width:54px;padding:8px 5px;font-size:.58rem;gap:3px}
+   .mobileOnly{display:inline-flex !important}
+-  .hbtns .iconOnlyMobile .btnIcon{display:block;font-size:1.15rem;line-height:1.1}
+-  .hbtns .iconOnlyMobile .btnTxt{display:block;font-size:.6rem}
++  .hbtns .iconOnlyMobile .btnIcon{display:block;font-size:1.25rem;line-height:1}
+ 
+   /* หัวกลุ่ม Watchlist บนมือถือ: แถวบน = ชื่อพอร์ต + ปุ่ม ＋ · แถวล่าง = ชิปเรียงลำดับ เลื่อนแนวนอนได้
+@@ -1873,9 +1829,9 @@
+ 
+   <div class="hbtns">
+-    <button onclick="openSystemSettings()">🛠</button>
+-    <button onclick="openSettings()" title="Portfolio Setting"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="11" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><path d="M18 18 L18 7 A11 11 0 0 1 27.5 13 Z" fill="#F0397A" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L27.5 13 A11 11 0 0 1 28.9 21 Z" fill="#C084F5" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L18 7 A11 11 0 0 0 9 12.5 Z" fill="#8BD450" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="6" fill="#FFDD66" stroke="#111" stroke-width="1.6"/><text x="8" y="11" font-size="8" text-anchor="middle" font-weight="800" fill="#111" font-family="Arial">$</text></svg></button>
+-    <button onclick="openIndustryManager()" title="Industry"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.4"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="16" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="20" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="24" y="23" width="3.5" height="6" fill="#8FD6EE"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="2.6" stroke-linecap="round"/></svg></button>
+-    <button class="primary iconOnlyMobile" onclick="openTrade()" title="Add Trade" aria-label="Add Trade"><span class="btnIcon">＋</span><span class="btnTxt"> Add Trade</span></button>
+-    <button class="iconOnlyMobile" id="hdrMoreBtn" onclick="toggleMoreMenu(event)" title="เพิ่มเติม" aria-label="เพิ่มเติม" aria-haspopup="true" aria-expanded="false"><span class="btnIcon">⋯</span><span class="btnTxt"> เพิ่มเติม</span></button>
++    <!-- 7E-2: เปิดใหม่ → ปุ่ม ＋ (การ์ด Core) ก่อนปุ่ม 🛠 · ลำดับ DOM: [＋] [🛠] [พอร์ต] [Industry] [⋯] -->
++    <button onclick="openSystemSettings()" title="ตั้งค่าระบบ" aria-label="ตั้งค่าระบบ">🛠</button>
++    <button onclick="openSettings()" title="ตั้งค่าพอร์ต" aria-label="ตั้งค่าพอร์ต"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="18" r="11" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><path d="M18 18 L18 7 A11 11 0 0 1 27.5 13 Z" fill="#F0397A" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L27.5 13 A11 11 0 0 1 28.9 21 Z" fill="#C084F5" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M18 18 L18 7 A11 11 0 0 0 9 12.5 Z" fill="#8BD450" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><circle cx="8" cy="8" r="6" fill="#FFDD66" stroke="#111" stroke-width="1.6"/><text x="8" y="11" font-size="8" text-anchor="middle" font-weight="800" fill="#111" font-family="Arial">$</text></svg></button>
++    <button onclick="openIndustryManager()" title="อุตสาหกรรม" aria-label="อุตสาหกรรม"><svg width="18" height="18" viewBox="0 0 32 32" style="vertical-align:-4px" xmlns="http://www.w3.org/2000/svg"><rect x="13" y="16" width="17" height="13" rx="1" fill="#3A5568" stroke="#111" stroke-width="1.4"/><polygon points="13,16 21,10 30,16" fill="#2C4256" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><rect x="15" y="6" width="3" height="10" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="20" y="3" width="3" height="13" fill="#3A5568" stroke="#111" stroke-width="1.2"/><rect x="16" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="20" y="20" width="2.5" height="2.5" fill="#8FD6EE"/><rect x="24" y="23" width="3.5" height="6" fill="#8FD6EE"/><circle cx="8" cy="20" r="5" fill="#8FD6EE" stroke="#111" stroke-width="1.6"/><line x1="4.5" y1="23.5" x2="1.5" y2="26.5" stroke="#E8483C" stroke-width="2.6" stroke-linecap="round"/></svg></button>
++    <button class="iconOnlyMobile" id="hdrMoreBtn" onclick="toggleMoreMenu(event)" title="เพิ่มเติม" aria-label="เพิ่มเติม" aria-haspopup="true" aria-expanded="false"><span class="btnIcon">⋯</span></button>
+   </div>
+ 
+@@ -1947,5 +1903,5 @@
+       <div class="filters" id="jFilters"></div>
+       <div id="jPeriod_closed"></div>
+-      <button class="small" onclick="openUnplannedClosed(jAcctId())" title="บันทึกไม้ที่เทรดจบไปแล้ว โดยไม่ได้วางแผนไว้ใน Trade-Plan ก่อน">＋ Closed นอกแผน</button>
++      <!-- 7E-2: เปิดใหม่ → การ์ด Core (ปุ่ม "＋ Closed นอกแผน"/บันทึกไม้ย้อนหลัง เดิม) -->
+     </div>
+     <div id="jContent_closed">
+@@ -3762,5 +3635,5 @@
+ /* ---- ปุ่มลัดเพิ่มเติม (เฟส 4) ----
+    ใช้ e.code (ตำแหน่งปุ่ม) ไม่ใช่ e.key → ใช้ได้แม้คีย์บอร์ดเป็นภาษาไทย
+-   ทั่วไป: T = Add Trade · ? = ดูปุ่มลัด
++   ทั่วไป: ? = ดูปุ่มลัด (7E-2 จะเปิดปุ่มลัดเพิ่มไม้ใหม่)
+    ในแท็บ: [ ] = วนหมวดย่อย · ตัวอักษรเฉพาะแท็บตาม KB_SUB
+    Watch: [ ] = วน All/Core/Sat.A · Esc = กลับ (มือถือ)
+@@ -3780,5 +3653,5 @@
+   }
+ };
+-const KB_GLOBAL = [['1–5','สลับแท็บ Flow · Port · Watch · แผน · Journal'],['C','Watchlist'],['V','Candidates'],['T','Add Trade'],['?','ดูปุ่มลัด'],['Esc','ปิดหน้าต่าง']];
++const KB_GLOBAL = [['1–5','สลับแท็บ Flow · Port · Watch · แผน · Journal'],['C','Watchlist'],['V','Candidates'],['?','ดูปุ่มลัด'],['Esc','ปิดหน้าต่าง']];
+ function kbAppReady(){ const w=document.getElementById('mainWrap'); return w && w.style.display!=='none'; }
+ function kbEditableTarget(target){
+@@ -3801,5 +3674,5 @@
+   if(e.code==='KeyV'){ e.preventDefault(); kbOpenWatchView('cand'); return; }
+   if(e.shiftKey) return;
+-  if(e.code==='KeyT'){ e.preventDefault(); openTrade(); return; }
++  /* 7E-2: เปิดใหม่ → การ์ด Core (ปุ่มลัด T เดิม = ฟอร์มเพิ่มไม้) */
+   if((e.key==='Escape' || e.key==='Esc') && activeTab==='watch' && wlMobOpen && wlNarrow()){ e.preventDefault(); wlBack(); return; }
+   /* ↑/↓ เลื่อนหุ้นในรายชื่อ Watch (เฉพาะจอ ≥1024) */
+@@ -4328,8 +4201,8 @@
+       <td class="sans">${t.imageUrl ? (imgSrc ? `<img src="${imgSrc}" class="imgthumb" onclick="window.open('${t.imageUrl}','_blank')" title="เปิดรูป">` : `<a href="${t.imageUrl}" target="_blank" class="imglink">📎 รูป</a>`) : ''}</td>
+       <td class="sans"><div class="rowbtns">
+-        ${t.status==='plan'?`<button class="small" onclick="quickOpen('${t.id}','${A}')">→Open</button>`:''}
++        ${t.status==='plan'?`<button class="small" onclick="openTradeEdit('${t.id}','${A}',{toOpen:true})">→Open</button>`:''}
+         ${t.status==='open'?`<button class="small" onclick="openClosePos('${t.id}','${A}')" title="ปิดไม้ที่ถืออยู่">Close</button>`:''}
+         <button class="small" onclick="openCancelModal('${t.id}','${A}')" title="ตัดสินใจไม่เข้าไม้นี้แล้ว">Cancel</button>
+-        <button class="small" onclick="editTrade('${t.id}','${A}')">✎</button>
++        <button class="small" onclick="openTradeEdit('${t.id}','${A}')">✎</button>
+         <button class="small danger" onclick="delTrade('${t.id}','${A}')">✕</button>
+       </div></td>
+@@ -4405,10 +4278,10 @@
+       <div class="foot">
+         <div class="rowbtns">
+-          ${t.status==='plan'?`<button class="small" onclick="quickOpen('${t.id}','${A}')">→ Open</button>`:''}
++          ${t.status==='plan'?`<button class="small" onclick="openTradeEdit('${t.id}','${A}',{toOpen:true})">→ Open</button>`:''}
+           ${t.status==='open'?`<button class="small" onclick="openClosePos('${t.id}','${A}')">Close</button>`:''}
+           <button class="small" onclick="openCancelModal('${t.id}','${A}')">Cancel</button>
+         </div>
+         <div class="rowbtns">
+-          <button class="small" onclick="editTrade('${t.id}','${A}')">แก้ไข</button>
++          <button class="small" onclick="openTradeEdit('${t.id}','${A}')">แก้ไข</button>
+           <button class="small danger" onclick="delTrade('${t.id}','${A}')">ลบ</button>
+         </div>
+@@ -4865,6 +4738,6 @@
+   const m = withAccount(acctId, ()=>journalMissingOf(t))[0]; if(!m) return;
+   if(t.status==='cancelled') openCancelModal(id, acctId);
+-  else editTrade(id, acctId);
+-  setTimeout(()=>{ const el = document.getElementById(m.el==='sym' ? (symFreeMode?'tSymFree':'tSym') : m.el); if(el && el.focus) el.focus(); }, 60);
++  else openTradeEdit(id, acctId);
++  setTimeout(()=>{ const el = document.getElementById(m.el); if(el && el.focus) el.focus(); }, 60);   /* CL2-c: Symbol แก้ในหน้าต่างแก้ไม้ไม่ได้ (อ่านอย่างเดียว) → m.el='sym' ไม่มีช่องให้โฟกัส */
+ }
+ 
+@@ -5098,5 +4971,5 @@
+       <td class="sans" style="max-width:200px;white-space:normal;font-size:var(--closed-size)">${jReasonCell(t)}</td>
+       <td class="sans"><div class="rowbtns">
+-        <button class="small" onclick="editTrade('${t.id}','${aq}')">✎</button>
++        <button class="small" onclick="openTradeEdit('${t.id}','${aq}')">✎</button>
+         <button class="small danger" onclick="delTrade('${t.id}','${aq}')">✕</button>
+       </div></td>
+@@ -5144,5 +5017,5 @@
+         <div></div>
+         <div class="rowbtns">
+-          <button class="small" onclick="editTrade('${t.id}','${aq}')">แก้ไข</button>
++          <button class="small" onclick="openTradeEdit('${t.id}','${aq}')">แก้ไข</button>
+           <button class="small danger" onclick="delTrade('${t.id}','${aq}')">ลบ</button>
+         </div>
+@@ -5878,7 +5745,6 @@
+   const esc = s=>escHtml(s);
+ 
+-  /* ปุ่มจัดการ (เฉพาะแถวใน Watchlist) */
++  /* ปุ่มจัดการ (เฉพาะแถวใน Watchlist) · 7E-2: เปิดใหม่ → การ์ด Core (ปุ่ม "เปิดแผนเทรด →" เดิมถูกซ่อน) */
+   const acts = w ? `<div class="wlActs">
+-      <button class="small primary" data-sym="${esc(rawSym)}" onclick="wlTradeFor(this.dataset.sym)">เปิดแผนเทรด →</button>
+       <button class="small" data-sym="${esc(rawSym)}" onclick="wlOpenEdit(this.dataset.sym)">✎ แก้ไข</button>
+       <button class="small danger" data-sym="${esc(rawSym)}" onclick="wlDeleteItem(this.dataset.sym)">✕ ลบ</button></div>`
+@@ -9393,5 +8644,5 @@
+ /* บรรทัด plan/open ที่ยุบแล้ว — ผ่าน UI.row (ไม่ใช่จาก idea.status ตาม fix ด้านบน)
+    plan: อาจมีหลายบัญชี → รวมเป็น 1 แถว (ตัวเลขจากบัญชีแรกที่ยังเป็น plan) + ปุ่ม [เข้าแล้ว]/[ยกเลิก] ทำทุกบัญชีที่ยัง plan
+-   open: 1 แถวต่อ 1 บัญชีที่เปิดอยู่จริง (ราคาเข้าจริงต่างกันได้ต่อบัญชี) ใช้ openClosePos/editTrade เดิมตรง ๆ */
++   open: 1 แถวต่อ 1 บัญชีที่เปิดอยู่จริง (ราคาเข้าจริงต่างกันได้ต่อบัญชี) ใช้ openClosePos/openTradeEdit ตรง ๆ */
+ function satV3RowMarkOpenAll(ideaId){
+   const idea = sat7dIdea(ideaId); if(!idea) return;
+@@ -9443,5 +8694,5 @@
+       tag: idea.bias, detail:`เข้า ${fmt2(trade.entry)} · SL ${fmt2(trade.sl)} · TP ${trade.tp!=null?fmt2(trade.tp):'—'}`,
+       btns:[{label:'ปิดไม้', onClick:`openClosePos('${escHtml(trade.id)}','${escHtml(accId)}')`},
+-            {label:'แก้ SL', onClick:`editTrade('${escHtml(trade.id)}','${escHtml(accId)}')`}]}) + satV3F2cTradeLine(trade));
++            {label:'แก้ SL', onClick:`openTradeEdit('${escHtml(trade.id)}','${escHtml(accId)}')`}]}) + satV3F2cTradeLine(trade));
+   });
+   return rows.join('');
