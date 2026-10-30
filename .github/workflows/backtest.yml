@@ -1,0 +1,28 @@
+# Regime EMA backtest (EMA10/20 vs EMA5/10) — read-only: prints a report to the run summary, commits nothing
+name: backtest-ema
+
+on:
+  workflow_dispatch: {}          # Actions → backtest-ema → Run workflow (once this file is on main)
+  push:
+    paths:
+      - scripts/backtest_ema.py
+      - .github/workflows/backtest.yml
+
+permissions:
+  contents: read
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: install yfinance
+        run: pip install --quiet yfinance
+      - name: selftest (offline)
+        run: python scripts/backtest_ema.py --selftest > /dev/null
+      - name: backtest
+        run: python scripts/backtest_ema.py
