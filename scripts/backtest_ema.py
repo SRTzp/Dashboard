@@ -21,7 +21,9 @@ import argparse, datetime, math, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_fundflow import ema, weekly_last, ratio_series   # noqa: E402
 
-VARIANTS = [('EMA10/20 (now)', 10, 20, 1), ('EMA5/10', 5, 10, 1), ('EMA5/10 + 2wk confirm', 5, 10, 2)]
+# (label, fast, slow, confirm, timeframe, raw prices) — D = daily bars, state read at each weekly close
+VARIANTS = [('EMA10/20 (now)', 10, 20, 1, 'W', False), ('EMA5/10', 5, 10, 1, 'W', False),
+            ('EMA5/10 + 2wk confirm', 5, 10, 2, 'W', False), ('Daily EMA20/50 raw (new)', 20, 50, 1, 'D', True)]
 PAIRS = [('ACWI/BIL', 'ACWI', 'BIL'), ('HYG/IEI', 'HYG', 'IEI')]
 WARMUP = 30          # weekly bars skipped before scoring (EMA settling)
 WHIPSAW = 4          # a flip that reverses within this many weeks counts as a whipsaw
@@ -42,9 +44,9 @@ def sides_of(vals, fast, slow, confirm):
     return out
 
 
-def flip_stats(sides, years):
+def flip_stats(sides, years, whip_bars=WHIPSAW):
     idx = [i for i in range(1, len(sides)) if sides[i] != sides[i - 1]]
-    whip = sum(1 for a, b in zip(idx, idx[1:]) if b - a <= WHIPSAW)
+    whip = sum(1 for a, b in zip(idx, idx[1:]) if b - a <= whip_bars)
     return {'flips_yr': len(idx) / years, 'whipsaws': whip, 'red_pct': 100.0 * sides.count(False) / len(sides)}
 
 
@@ -90,8 +92,9 @@ def sizing(acwi, bil, s_acwi, s_hyg):
     return eq, mdd * 100, chg
 
 
-def run(prices):
-    """prices = {symbol: {date: close}} → markdown report (str)"""
+def run(prices, raw=None):
+    """prices = {symbol: {date: close}} (adjusted) · raw = same with raw closes (for raw variants) → markdown report"""
+    raw = raw or prices
     series = {}
     for name, a, b in PAIRS:
         ds, r = ratio_series(prices[a], prices[b])
@@ -107,15 +110,29 @@ def run(prices):
     years = (dsc[-1] - dsc[0]).days / 365.25
     out = [f'# Regime EMA backtest\n\nWeekly bars {dsc[0]} → {dsc[-1]} ({len(dsc)} weeks · {years:.1f} yrs) · '
            f'{WARMUP} warm-up weeks skipped · whipsaw = flip reversed within {WHIPSAW} weeks\n']
-    sides = {}
-    for v, fast, slow, conf in VARIANTS:
-        for name, _, _ in PAIRS:
-            sides[(v, name)] = sides_of([series[name][d] for d in ds], fast, slow, conf)[sc]
+    sides, noise = {}, {}
+    for v, fast, slow, conf, tf, use_raw in VARIANTS:
+        for name, a, b in PAIRS:
+            src = raw if use_raw else prices
+            if tf == 'W':
+                wk = {x[0]: x[1] for x in weekly_last(*ratio_series(src[a], src[b]))}
+                sides[(v, name)] = sides_of([wk[d] for d in ds], fast, slow, conf)[sc]
+                noise[(v, name)] = flip_stats(sides[(v, name)], years)
+                continue
+            dd, dr = ratio_series(src[a], src[b])
+            dside = sides_of(dr, fast, slow, conf)
+            j, wside = 0, []
+            for d in ds:                                  # daily state at each weekly close
+                while j + 1 < len(dd) and dd[j + 1] <= d: j += 1
+                wside.append(dside[j])
+            sides[(v, name)] = wside[sc]
+            k0 = next(i for i, d in enumerate(dd) if d >= dsc[0])
+            noise[(v, name)] = flip_stats(dside[k0:], years, WHIPSAW * 5)   # counted on daily bars · whipsaw = 20 days
 
-    out.append('## 1. Signal noise\n\n| Variant | Ratio | Flips / yr | Whipsaws | % weeks red |\n|---|---|---|---|---|')
+    out.append('## 1. Signal noise\n\n| Variant | Ratio | Flips / yr | Whipsaws | % time red |\n|---|---|---|---|---|')
     for v, *_ in VARIANTS:
         for name, _, _ in PAIRS:
-            s = flip_stats(sides[(v, name)], years)
+            s = noise[(v, name)]
             out.append(f"| {v} | {name} | {s['flips_yr']:.2f} | {s['whipsaws']} | {s['red_pct']:.0f}% |")
 
     fmt = lambda x: '—' if x is None else f'{x:+.1f}%'
@@ -137,14 +154,14 @@ def run(prices):
         eq, mdd, chg = sizing(pxc, bilc, sides[(v, 'ACWI/BIL')], sides[(v, 'HYG/IEI')])
         out.append(f'| {v} | {(eq ** (1 / years) - 1) * 100:.2f}% | {mdd:.1f}% | {chg / years:.2f} |')
     out.append(f'| Buy & hold ACWI (always 100%) | {(bh_eq ** (1 / years) - 1) * 100:.2f}% | {bh_mdd:.1f}% | 0 |')
-    out.append('\nNotes: total-return prices (yfinance auto_adjust) · no costs or taxes · '
-               'the app\'s current-week bar and 5-day stale rule are not modelled.')
+    out.append('\nNotes: ACWI/BIL returns use total-return prices · signals use adjusted prices except "raw" variants · '
+               'daily variants are read at each weekly close (mid-week flips not traded) · no costs or taxes.')
     return '\n'.join(out)
 
 
-def fetch(symbols):
+def fetch(symbols, adjust=True):
     import yfinance as yf
-    df = yf.download(symbols, start='2007-01-01', interval='1d', auto_adjust=True,
+    df = yf.download(symbols, start='2007-01-01', interval='1d', auto_adjust=adjust,
                      progress=False, group_by='column', threads=False)
     close, out = df['Close'], {}
     for s in symbols:
@@ -171,6 +188,7 @@ def selftest():
     hyg = {d: path(i) ** 0.5 * 10 for i, d in enumerate(ds)}
     iei = {d: 100.0 for d in ds}
     rep = run({'ACWI': acwi, 'BIL': bil, 'HYG': hyg, 'IEI': iei})
+    assert '| Daily EMA20/50 raw (new) | ACWI/BIL |' in rep, rep
     assert '## 1. Signal noise' in rep and '## 3. Core sizing' in rep, rep
     assert rep.count('| EMA') >= 3 * len(PAIRS) + 3, rep
     # a smooth single crash: every variant turns red during the fall and green again after
@@ -201,6 +219,14 @@ def now_check():
             for i in range(len(wk) - 6, len(wk)):
                 out.append(f"| | {wk[i][0]} | {vals[i]:.5f} | {f[i]:.5f} | {s[i]:.5f} | {'🟢 up' if f[i] > s[i] else '🔴 down'} |")
             out.append('')
+        if not adj:                                   # requested rule: daily EMA20/50 on raw closes
+            for name, a, b in PAIRS:
+                ds, r = ratio_series(px[a], px[b])
+                f, s = ema(r, 20), ema(r, 50)
+                out.append(f'**{name} · DAILY EMA20/50 raw** | day | ratio | EMA20 | EMA50 | side |\n|---|---|---|---|---|---|')
+                for i in range(len(r) - 6, len(r)):
+                    out.append(f"| | {ds[i]} | {r[i]:.5f} | {f[i]:.5f} | {s[i]:.5f} | {'🟢 up' if f[i] > s[i] else '🔴 down'} |")
+                out.append('')
     return '\n'.join(out)
 
 
@@ -216,7 +242,8 @@ def main():
         if summ:
             with open(summ, 'a', encoding='utf-8') as f: f.write(rep + '\n')
         return
-    rep = run(fetch(['ACWI', 'BIL', 'HYG', 'IEI']))
+    syms = ['ACWI', 'BIL', 'HYG', 'IEI']
+    rep = run(fetch(syms), fetch(syms, adjust=False))
     print(rep)
     summ = os.environ.get('GITHUB_STEP_SUMMARY')
     if summ:
