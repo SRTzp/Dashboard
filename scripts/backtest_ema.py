@@ -23,7 +23,8 @@ from build_fundflow import ema, weekly_last, ratio_series   # noqa: E402
 
 # (label, fast, slow, confirm, timeframe, raw prices) — D = daily bars, state read at each weekly close
 VARIANTS = [('EMA10/20 (now)', 10, 20, 1, 'W', False), ('EMA5/10', 5, 10, 1, 'W', False),
-            ('EMA5/10 + 2wk confirm', 5, 10, 2, 'W', False), ('Daily EMA20/50 raw (new)', 20, 50, 1, 'D', True)]
+            ('EMA5/10 + 2wk confirm', 5, 10, 2, 'W', False), ('Daily EMA20/50 raw (Winner)', 20, 50, 1, 'D', True),
+            ('Daily EMA50/100 raw (Ladder)', 50, 100, 1, 'D', True)]
 PAIRS = [('ACWI/BIL', 'ACWI', 'BIL'), ('HYG/IEI', 'HYG', 'IEI')]
 WARMUP = 30          # weekly bars skipped before scoring (EMA settling)
 WHIPSAW = 4          # a flip that reverses within this many weeks counts as a whipsaw
@@ -188,7 +189,7 @@ def selftest():
     hyg = {d: path(i) ** 0.5 * 10 for i, d in enumerate(ds)}
     iei = {d: 100.0 for d in ds}
     rep = run({'ACWI': acwi, 'BIL': bil, 'HYG': hyg, 'IEI': iei})
-    assert '| Daily EMA20/50 raw (new) | ACWI/BIL |' in rep, rep
+    assert '| Daily EMA50/100 raw (Ladder) | ACWI/BIL |' in rep, rep
     assert '## 1. Signal noise' in rep and '## 3. Core sizing' in rep, rep
     assert rep.count('| EMA') >= 3 * len(PAIRS) + 3, rep
     # a smooth single crash: every variant turns red during the fall and green again after
