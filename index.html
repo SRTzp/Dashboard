@@ -2514,6 +2514,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .ln3-rrg{margin-top:4px}.ln3-rr{border-top:1px solid var(--hair);padding:8px 0;font-size:.82rem;min-width:0}
 .ln3-rr .l1{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}.ln3-rr .l1 .sub{color:var(--muted);font-size:.74rem}
 .ln3-rr .l2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px;margin-top:4px}.ln3-rr .g i{display:block;font-style:normal;font-size:.68rem;color:var(--faint)}
+.ln3-rr .rrgGaugeWrap{width:auto;max-width:100%}.ln3-rr .rrgGauge{width:92px;max-width:100%}   /* UI polish — label + Δ บรรทัดเดียวถ้าคอลัมน์พอ · แคบ = ตกบรรทัดเอง */
 .ln3-rr.dim{opacity:.8}
 
 /* TD3b — Sector Drivers & Evidence (Flow RRG lean + Today Sectors) */
@@ -3288,6 +3289,7 @@ button.ccChip{cursor:pointer;min-height:24px}
   body.lf-lean .topbar .hdrSub{display:flex;grid-column:3;grid-row:1;justify-self:start;align-items:center;min-width:0;max-width:100%}
   body.lf-lean .topbar .hdrSub:empty{display:none}
   body.lf-lean .topbar .hbtns{grid-column:3;grid-row:1;justify-self:end;margin-left:0}
+  #hdrSub .ln3-pseg button{padding:4px 9px}   /* UI polish — Port รวม | ● Main | ● FAM เต็มรูปที่ ≥1440 (ช่องว่าง ≈201px) */
 }
 @media (min-width:900px) and (max-width:1099px){
   body.lf-lean .topbar .tabbtn{padding:7px 10px}
@@ -3310,7 +3312,7 @@ button.ccChip{cursor:pointer;min-height:24px}
 @media (max-width:340px){
   body.lf-lean .topbar .hbtns{gap:2px}
   body.lf-lean .topbar .hbtns>button{width:36px}
-  .hdrCmp{padding:0 20px 0 8px;gap:4px}.hdrCmp:after{right:7px}
+  .hdrCmp{padding:0 16px 0 6px;gap:4px}.hdrCmp:after{right:5px}
   #hdrSub .scopeBtn{padding:4px 6px;font-size:.78rem}
   #hdrSub .scopeTabs{padding:2px;gap:1px}
   body.lf-lean .topbar{gap:4px}
@@ -7393,7 +7395,7 @@ function tdHtmlLean(M){
 /* ── TD4c — ชิปความเสี่ยงที่หัวแผง (ใช้ตัวเลข/สถานะเดิมของ tdBuild · ไม่คำนวณใหม่) ── */
 const TD4_STG = {reduce:'Reduce', pause:'Pause', recover:'Recover'};
 function td4RiskItems(M, scope){
-  const out = [], nums = (M && M.nums) || [], ac = r=>(nums.length > 1 ? ' ' + r.a.name : '');
+  const out = [], nums = (M && M.nums) || [], ac = r=>(nums.length > 1 ? ' ' + td3AcctName(r.a) : '');
   nums.forEach(r=>{
     if(scope === 'core'){
       if(r.ddCore && r.ddCore.stage && r.ddCore.stage !== 'normal') out.push({sev:r.ddCore.stage === 'pause' ? 2 : 1, t:`DD Core${ac(r)} ${r.ddCore.txt} · ${TD4_STG[r.ddCore.stage] || r.ddCore.stage}`});
@@ -10000,7 +10002,7 @@ function lfCoreRow(a){
     <div class="ln2-s">เพดานต่อตัว ≤ งบเสี่ยง × FF ${Math.round(F.f*100)}% <small>${e(F.src)}</small> · Stop ฉุกเฉิน −${fmt2(cfg.emergencyPct)}%</div>
     ${drop ? `<div class="ln2-s">${drop}</div>` : ''}`;
   const nCards = openV.length + planV.length;
-  const detH = `<div class="ln2-s" data-lf-detacc="${e(A)}"><b>${e(a.name)}</b></div>`+det;
+  const detH = `<div class="ln2-s" data-lf-detacc="${e(A)}"><b>${e(td3AcctName(a))}</b></div>`+det;
   const row = `<div class="lfa${lvl==='over'?' over':''}" data-lf-row="${e(A)}" data-lf-risk data-level="${lvl}">${nm}
       <span class="v"><span class="ln2-big" data-lf-now>${fmt2(riskNow)}%</span> <span class="ln2-cap">/ <span data-lf-lim>${fmt2(lim)}%</span></span></span> <span class="l ln2-cap" data-lf-free="${Math.round(free)}">ว่าง <b>${free<0 ? '−' : ''}฿${coreMoneyK(Math.abs(free), 'TH').slice(1)}</b></span>
       <div class="lf-bar" data-lf-bar><i style="width:${nowW}%;background:${acctColor(a)}"></i><i class="res" style="width:${resW}%"></i></div>
@@ -12702,7 +12704,7 @@ function ln3RenderPort(){
       <div><div class="k">Realized สะสม</div><div class="v" style="${sum.realized<0?'color:var(--red)':sum.realized>0?'color:var(--teal)':''}">${Math.round(sum.realized)<0?'−':''}฿${fmtPnl0(Math.abs(sum.realized))}</div><div class="k">${fmt2(pct(sum.realized,sum.cap))}% ของทุน</div></div>
     </div></div>`;
   let html = '';
-  if(nAcc > 1) html += `<div class="ln3-pseg" data-ln3-accsw="1" role="group" aria-label="เลือกบัญชี"><button type="button" class="${sel==='all' ? 'on' : ''}" data-ln3-acc="all" aria-pressed="${sel==='all'}" onclick="ln3PortSet('all')">รวม</button>${entries.map(e=>`<button type="button" class="${sel===e.acct.id ? 'on' : ''}" data-ln3-acc="${escHtml(e.acct.id)}" aria-pressed="${sel===e.acct.id}" onclick="ln3PortSet('${escHtml(e.acct.id)}')"><i class="acctDotC" data-hd-dot="1" style="--ac:${acctColor(e.acct)}"></i>${escHtml(e.acct.name)}</button>`).join('')}</div>`;
+  if(nAcc > 1) html += `<div class="ln3-pseg" data-ln3-accsw="1" role="group" aria-label="เลือกบัญชี"><button type="button" class="${sel==='all' ? 'on' : ''}" data-ln3-acc="all" aria-pressed="${sel==='all'}" onclick="ln3PortSet('all')">รวม</button>${entries.map(e=>`<button type="button" class="${sel===e.acct.id ? 'on' : ''}" data-ln3-acc="${escHtml(e.acct.id)}" aria-pressed="${sel===e.acct.id}" onclick="ln3PortSet('${escHtml(e.acct.id)}')"><i class="acctDotC" data-hd-dot="1" style="--ac:${acctColor(e.acct)}"></i>${escHtml(td3AcctName(e.acct))}</button>`).join('')}</div>`;
   if(sel!=='all'){
     const i = entries.findIndex(e=>e.acct.id===sel), s = stats[i];
     html += `<div class="ln3-pline" data-ln3-accline="1">ทุน ฿${fmt0(s.cap)} · ถือครอง ${fmt2(pct(s.held,s.cap))}% · Open Risk ${fmt2(pct(s.risk,s.cap))}%</div>`;
@@ -21194,7 +21196,7 @@ function ln2RowHtml(a){
       <span class="v"><span class="ln2-big" data-ln2-used="1">${usd(R.sat)}</span> <span class="ln2-cap">/ <span data-ln2-cap="1">${usd(CP.sat)}</span></span></span> <span class="l ln2-cap">เหลือ <b data-ln2-left="1">${usd(left)}</b></span>
       <div class="pv2bar"><i style="width:${w(R.main)}%;background:#2B5BD7"></i><i style="width:${w(R.tac)}%;background:#8a63e6"></i></div>
       <div class="ln2-s s2" data-ln2-mt="1"><span>Main <b data-ln2-main="1">${usd(R.main)}</b> · Tac<span class="tl">tical</span> <b data-ln2-tac="1">${usd(R.tac)}</b></span> <span data-ln2-ddl="1">${ddTxt}</span></div>
-      ${al.map(x=>`<div class="ln2-al" data-ln2-alert="${x.k}">⚠ ${e(x.t)}</div>`).join('')}</div>`, det: `<div class="ln2-s" data-ln2-detacc="${e(a.id)}"><b>${e(a.name)}</b><br>${det}</div>`};
+      ${al.map(x=>`<div class="ln2-al" data-ln2-alert="${x.k}">⚠ ${e(x.t)}</div>`).join('')}</div>`, det: `<div class="ln2-s" data-ln2-detacc="${e(a.id)}"><b>${e(td3AcctName(a))}</b><br>${det}</div>`};
 }
 function ln2HeaderHtml(){
   const accs = sat7dAccts(); if(!accs.length) return '';
@@ -21214,7 +21216,7 @@ function ln2FormLine(tac, idea){
   /* LN3fix3c — $ ต่อไม้ของ "ทุกบัญชี": `2% · OUN $630 · FAM $380` (RPT ต่างกัน → `OUN 2% $630 · FAM 1% $380`) · ≤340px แสดงจุดสีแทนชื่อ */
   const per = accs.map(a=>{ const M = satV2Money(a.id), cfg = M.cfg, rpt = tac ? cfg.rptTac : cfg.rptMain; return {a, rpt, usd: satV2Usd((tac ? M.tacTHB : M.mainTHB) * rpt / 100, M.fx || 1)}; });
   const same = per.every(x=>x.rpt === per[0].rpt);
-  const nm = a => `<span class="ln2-fn"><span class="dn">${e(a.name)}</span><i class="acctDotC dd" style="--ac:${acctColor(a)}"></i></span> `;
+  const nm = a => `<span class="ln2-fn"><span class="dn">${e(td3AcctName(a))}</span><i class="acctDotC dd" style="--ac:${acctColor(a)}"></i></span> `;
   const deal = multi
     ? (same ? `<b>${per[0].rpt}%</b> · ` : '') + per.map((x,i)=>`${nm(x.a)}${same ? '' : `<b>${x.rpt}%</b> `}<b data-ln2-deal="${i===0 ? '1' : '2'}" data-ln2-deal-acc="${e(x.a.id)}">${x.usd}</b>`).join(' · ')
     : `<b>${per[0].rpt}%</b> <b data-ln2-deal="1" data-ln2-deal-acc="${e(per[0].a.id)}">${per[0].usd}</b>`;
@@ -21226,14 +21228,14 @@ function ln2FormLine(tac, idea){
   }
   const brs = accs.map(a=>({a, br: satV2Brake(a.id)})), stopped = brs.find(x=>x.br.stop), sel = stopped || brs.reduce((m,x)=>x.br.streak > m.br.streak ? x : m, brs[0]), br = sel.br;
   return `<div class="ln3-st" data-ln2-form="tactical"><span data-ln3-trend="1">${trH}</span> · ${deal} · ` + (br.stop
-    ? `<span class="stop" data-ln2-pause="1">⛔ พัก Tactical${multi ? ' · ' + e(sel.a.name) : ''}</span><div class="ln2-mu" data-ln3-pause-why="1">${escHtml(br.msgLean)}</div>`
+    ? `<span class="stop" data-ln2-pause="1">⛔ พัก Tactical${multi ? ' · ' + e(td3AcctName(sel.a)) : ''}</span><div class="ln2-mu" data-ln3-pause-why="1">${escHtml(br.msgLean)}</div>`
     : `<b style="color:#1F9D6B" data-ln2-ok="1">●</b> Loss <b>${br.streak}</b>/${br.n} · DD <b>${satV2Pct1(br.ddPct)}</b>/${br.ddMax}%`) + `</div>`;
 }
 /* ── ฟอร์มแผน (การ์ดขาว หน้าเดียว ไม่มีแท็บ) ── */
 function ln1AcctStatus(idea, c, a, multi){
   const e = escHtml, m = [];
   if(c.lot==null) return {ico:'', msgs:[], off:false};
-  const add = (t, attr, ico) => m.push(`<div class="ln1-msg" data-acct="${e(a.id)}" ${attr}>${ico||'⚠️'} ${multi ? `<b>${e(a.name)}</b>: ` : ''}${e(t)}</div>`);
+  const add = (t, attr, ico) => m.push(`<div class="ln1-msg" data-acct="${e(a.id)}" ${attr}>${ico||'⚠️'} ${multi ? `<b>${e(td3AcctName(a))}</b>: ` : ''}${e(t)}</div>`);
   if(c.carryBlock) add(c.carryBlock, 'data-carry-block="1"');
   else if(c.unpickBlock) add(c.unpickBlock, 'data-unpick-block="1"');
   else if(c.noteBlock) add(c.noteBlock, 'data-note-block="1"');
@@ -21393,7 +21395,7 @@ function lfHeldRowHtml(o){
     const risk = satV2Usd(ln3TradeRiskTHB(trade, fx), fx), col = acctColor(a);
     parts.push(`<b style="color:${col}">●</b> ${satV2Lot(trade.qty)} ${risk}`);
     const d = posDaysHeld(trade, today), tid = e(trade.id), A = e(accId), ptag = (trade.pyr_parent || trade.pyr_child) ? ' ' + satPyrTagHtml(trade, accId) : '';   /* TD4b — ไม้เติมมีป้าย ไม้ n/N */
-    lines.push(`<div class="lf-pl" data-lf-trade="${tid}"><span class="a"><b style="color:${col}">●</b> ${e(a.name)} <b>${satV2Lot(trade.qty)}</b> lot${d!=null ? ` · ${d} วัน` : ''}${ptag}</span>
+    lines.push(`<div class="lf-pl" data-lf-trade="${tid}"><span class="a"><b style="color:${col}">●</b> ${e(td3AcctName(a))} <b>${satV2Lot(trade.qty)}</b> lot${d!=null ? ` · ${d} วัน` : ''}${ptag}</span>
       <span class="r">${risk} <button type="button" class="lf-ic" data-lf-tmenu aria-label="เมนูไม้" onclick="lfTradeMenu(this,event)">⋯</button><span class="lf-mn" style="display:none">
         <button type="button" data-lf-act="close" onclick="openClosePos('${tid}','${A}')">ปิด</button><button type="button" data-lf-act="edit" onclick="openTradeEdit('${tid}','${A}')">แก้</button><button type="button" data-lf-act="cancel" onclick="openCancelModal('${tid}','${A}')">ยกเลิก</button><button type="button" data-lf-act="del" class="dn" onclick="delTrade('${tid}','${A}')">ลบ</button></span></span>
       <span class="k"><span class="ek">ทุน</span> ${fmt2(trade.entry)} · <span class="ek">SL</span> ${fmt2(trade.sl)} · <span class="ek">TP</span> ${trade.tp!=null ? fmt2(trade.tp) : '—'}</span></div>`);
@@ -21482,7 +21484,7 @@ function ln1CardHtml(idea){
   /* ขนาดไม้ทุกบัญชีเรียงต่อกัน */
   const msgs = [], details = [];
   const sizes = accs.map(a=>{
-    const col = acctColor(a), nm = `<span class="ln1-an"><span class="acctDotC" style="--ac:${col}"></span><b>${e(a.name)}</b></span>`;
+    const col = acctColor(a), nm = `<span class="ln1-an"><span class="acctDotC" style="--ac:${col}"></span><b>${e(td3AcctName(a))}</b></span>`;
     if(skipSet.has(a.id)) return `<div class="ln1-sz" data-ln1-acct="${e(a.id)}">${nm}<span class="ui-hint">ข้ามบัญชีนี้</span><button type="button" class="ui-btn" onclick="satV3SkipToggle('${id}','${e(a.id)}',false)">เอากลับ</button></div>`;
     const c = satV3PlanAcctCalc(idea, a.id), st = ln1AcctStatus(idea, c, a, accs.length > 1);
     st.msgs.forEach(x=>msgs.push(x));
