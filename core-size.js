@@ -4,7 +4,9 @@
    ทุกฟังก์ชัน: รับ object เดียว → คืน object · ข้อมูลผิด/ขาด → คืน {ok:false, err:'รหัส'} ไม่ throw
    ตัวเลขเงินคืนค่าดิบ (ไม่ปัดเศษ) — ปัดที่การแสดงผล ยกเว้น "จำนวนหุ้น" ที่ปัดลงตามล็อตเสมอ
    v2 (30 ก.ย. ค่ำ): +เงินสดคุมไม้ W · L เฉพาะ Tier A · สถานะบันได bought/wait/cancelled · ยกเลิกระดับอัตโนมัติเมื่อ Stop เลย
-                      · ชั้น 2 รวมบันไดที่จอง · ประตูเปิดบันไดใหม่ (f) · งบ W/L · จัด Tier */
+                      · ชั้น 2 รวมบันไดที่จอง · ประตูเปิดบันไดใหม่ (f) · งบ W/L · จัด Tier
+   RG2b (30 ต.ค. 2026): ถัง Winner / Ladder / Sat แยกกัน — poolSplit · poolFree · ladderBudget · canPlaceLadder ไม่มีประตู f / L_SHARE_OVER / LAYER2_OVER
+                        (portfolioSplit · ladderShare · layer2 · openGate ยังอยู่เป็นฟังก์ชันบริสุทธิ์ แต่แอปไม่เรียกแล้ว) */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.CoreSize = factory();
@@ -20,7 +22,10 @@
     addRatio: 0.5,        // ไม้เติม = 50% ของไม้ก่อนหน้า
     ladderBudget: 0.10,   // L: งบเงินต่อตัว % ของถัง
     ladderRiskCap: 0.025, // L: ความเสี่ยงเต็มบันได % ของถัง
-    ladderShareCap: 0.30, // L: งบรวมทุกตัว (ถือ + จอง) % ของถัง — ตายตัว
+    ladderShareCap: 0.30, // (RG2b: ไม่ใช้แล้ว — Ladder มีถังของตัวเอง)
+    poolSplit: { winner: 50, ladder: 30, sat: 20 },   // RG2b: % ของบัญชี (รวม 100)
+    ladderMaxAcctPct: 5,  // RG2b: Ladder ต่อหุ้น ≤ 5% ของ "ทั้งบัญชี"
+    winnerStockCap: 25,   // RG2b: เพดานต่อหุ้น % ของถัง Winner (ค่าเดียว · ไม่แยก Tier)
     layer2Cap: 0.20, layer2Warn: 0.15,
     emergencyPct: 0.07,   // Stop ฉุกเฉิน = Stop × (1 − 7%)
     staleDays: 7,
@@ -295,6 +300,38 @@
     return { ok: true, status: 'green', age: age };
   }
 
+  /* ── RG2b · ถังแยก ──
+     poolSplit: total (บาท) + pct {winner, ladder, sat} (ตัวเลข % รวม 100 · แต่ละตัว 0–100) → {ok, winner, ladder, sat (บาท), pct}
+       ผิด → {ok:false, err:'NO_TOTAL' | 'BAD_PCT' | 'SUM_NOT_100'} · ไม่ส่ง pct = 50/30/20 */
+  function poolSplit(o) {
+    o = o || {};
+    if (!(num(o.total) && o.total > 0)) return fail('NO_TOTAL');
+    var p = o.pct || DEFAULTS.poolSplit, k = ['winner', 'ladder', 'sat'], i, sum = 0;
+    for (i = 0; i < 3; i++) { if (!(num(p[k[i]]) && p[k[i]] >= 0 && p[k[i]] <= 100)) return fail('BAD_PCT'); sum += p[k[i]]; }
+    if (Math.abs(sum - 100) > 1e-6) return fail('SUM_NOT_100');
+    return { ok: true, total: o.total, winner: o.total * p.winner / 100, ladder: o.total * p.ladder / 100, sat: o.total * p.sat / 100,
+      pct: { winner: p.winner, ladder: p.ladder, sat: p.sat } };
+  }
+
+  /* เงินว่างของถังเดียว = ถัง − ถือ − จอง (ไม่แตะถังอื่น) · over = ใช้เกินถัง (เตือน ไม่ปิด/ไม่ย่อ) */
+  function poolFree(o) {
+    o = o || {};
+    if (!(num(o.pool) && o.pool >= 0)) return fail('NO_POOL');
+    var held = num(o.held) ? o.held : 0, res = num(o.reserved) ? o.reserved : 0, raw = o.pool - held - res;
+    return { ok: true, pool: o.pool, held: held, reserved: res, used: held + res, free: Math.max(0, raw), over: raw < -EPS,
+      usedPct: o.pool > 0 ? (held + res) / o.pool : 0 };
+  }
+
+  /* งบ Ladder ต่อหุ้น = maxAcctPct% ของบัญชี × f (ตัวคูณ Regime ตอนวาง) · budgetPctPool = เศษส่วนของถัง Ladder (ส่งเข้า ladder() เป็น budgetPct) */
+  function ladderBudget(o) {
+    o = o || {};
+    if (!(num(o.acct) && o.acct > 0)) return fail('NO_ACCT');
+    if (!(num(o.pool) && o.pool > 0)) return fail('NO_POOL');
+    var mx = num(o.maxAcctPct) ? o.maxAcctPct : DEFAULTS.ladderMaxAcctPct, f = num(o.f) ? o.f : 1;
+    var full = o.acct * mx / 100, budget = full * f;
+    return { ok: true, full: full, budget: budget, budgetPctPool: budget / o.pool, fullPctPool: full / o.pool, f: f };
+  }
+
   /* ── ประตูเปิดบันไดใหม่ (Fund-flow) ──
      fHistory = f รายสัปดาห์ เรียง "ใหม่ → เก่า" · แต่ละค่า = 1 / 0.75 / 0.5 หรือ null (ไม่ทราบ = ไฟล์เก่า/ขาดข้อมูล — ไม่ใช่ 100%)
      เปิดได้เมื่อ f < 100% ติดกันครบ need สัปดาห์ (ค่าเริ่มต้น 2) นับจากสัปดาห์ล่าสุด · null ขาดกลาง = ตัดสาย
@@ -312,29 +349,23 @@
     return { ok: true, open: open, reason: open ? 'ok' : 'short_streak', status: 'red', streak: streak, need: need, f: newest };
   }
 
-  /* ── วางบันไดใหม่ได้ไหม (รวมทุกเงื่อนไข · คืนเหตุผลทั้งหมดที่ไม่ผ่าน) ──
-     TIER_B · NOT_FORTRESS (o.fortress === false) · GATE_<reason> · BAD_LADDER · L_SHARE_OVER (ถือ+จองรวมใหม่ > 30%) · LAYER2_OVER (ชั้น 2 รวมบันไดใหม่ > 20%) · NO_CASH (ทุนบันไดใหม่ > เงินว่าง) */
+  /* ── วางบันไดใหม่ได้ไหม (คืนเหตุผลทั้งหมดที่ไม่ผ่าน) ──   RG2b: ไม่มีประตู f · ไม่มี L_SHARE_OVER · ไม่มี LAYER2_OVER
+     tank = ถัง Ladder (บาท) · existingLadders = ladder() ที่ยังเปิด (ถือ + จอง กินถัง Ladder) · ถัง Winner ไม่เกี่ยว (wCost ไม่ใช้)
+     TIER_B · NOT_FORTRESS (o.fortress === false) · BAD_LADDER · STOCK_OVER (ทุนตัวนี้ > o.maxCost) · NO_CASH (ทุนบันไดใหม่ > เงินว่างถัง Ladder) */
   function canPlaceLadder(o) {
     o = o || {};
     var reasons = [];
     if (!(num(o.tank) && o.tank > 0)) return fail('NO_TANK');
     if (o.tier !== 'A') reasons.push('TIER_B');
     if (o.fortress === false) reasons.push('NOT_FORTRESS');   /* TIER2: L ใช้ได้เฉพาะ A-Fortress · ไม่ส่ง = true */
-    var g = o.gate || { open: false, reason: 'unknown' };
-    if (!g.open) reasons.push('GATE_' + g.reason);
     var nl = o.ladder;
     if (!nl || !nl.ok) { reasons.push('BAD_LADDER'); return { ok: true, allowed: false, reasons: reasons }; }
-    var ex = o.existingLadders || [];
-    var shareCap = num(o.shareCap) ? o.shareCap : DEFAULTS.ladderShareCap;
-    var l2Cap = num(o.l2Cap) ? o.l2Cap : DEFAULTS.layer2Cap;
-    var sp = portfolioSplit({ tank: o.tank, wCost: o.wCost, ladders: ex, capPct: shareCap });
-    if ((sp.lUsed + nl.cost) / o.tank > shareCap + EPS) reasons.push('L_SHARE_OVER');
-    var res = (o.reserved || []).slice(), i;
-    for (i = 0; i < nl.rows.length; i++) if (nl.rows[i].status === 'wait') res.push({ qty: nl.rows[i].qty, px: nl.rows[i].px, stop: nl.sl });
-    var l2 = layer2({ tank: o.tank, positions: o.positions || [], reserved: res });
-    if (l2.pctFull > l2Cap + EPS) reasons.push('LAYER2_OVER');
-    if (nl.cost > sp.cashFree + EPS) reasons.push('NO_CASH');
-    return { ok: true, allowed: reasons.length === 0, reasons: reasons, pctFull: l2.pctFull, cashFree: sp.cashFree, sharePct: (sp.lUsed + nl.cost) / o.tank };
+    var ex = o.existingLadders || [], held = 0, res = 0, i;
+    for (i = 0; i < ex.length; i++) { held += ex[i].heldCost || 0; res += ex[i].reservedCost || 0; }
+    var pf = poolFree({ pool: o.tank, held: held, reserved: res });
+    if (num(o.maxCost) && nl.cost > o.maxCost + EPS) reasons.push('STOCK_OVER');
+    if (nl.cost > pf.free + EPS) reasons.push('NO_CASH');
+    return { ok: true, allowed: reasons.length === 0, reasons: reasons, cashFree: pf.free, sharePct: (pf.used + nl.cost) / o.tank };
   }
 
   /* ── จัด Tier (2 มุม · Damodaran Corporate Life Cycle) ──
@@ -521,6 +552,7 @@
     DEFAULTS: DEFAULTS, floorLot: floorLot,
     firstLot: firstLot, addLot: addLot, ladder: ladder, applyStopMove: applyStopMove,
     portfolioSplit: portfolioSplit, ladderShare: ladderShare, layer2: layer2,
+    poolSplit: poolSplit, poolFree: poolFree, ladderBudget: ladderBudget,
     accountDrop: accountDrop, vsCost: vsCost, emergencyStop: emergencyStop, status: status,
     openGate: openGate, canPlaceLadder: canPlaceLadder, classifyTier: classifyTier, tierBadge: tierBadge,
     ddStep: ddStep, ddWeekOf: ddWeekOf, ddAddDays: ddAddDays, ddDaysBetween: ddDaysBetween
