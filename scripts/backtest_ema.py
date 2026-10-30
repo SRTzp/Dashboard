@@ -145,7 +145,7 @@ def run(prices):
 def fetch(symbols):
     import yfinance as yf
     df = yf.download(symbols, start='2007-01-01', interval='1d', auto_adjust=True,
-                     progress=False, group_by='column', threads=True)
+                     progress=False, group_by='column', threads=False)
     close, out = df['Close'], {}
     for s in symbols:
         ser = close[s].dropna() if s in close else []
@@ -183,10 +183,39 @@ def selftest():
     print('selftest OK\n'); print(rep)
 
 
+def now_check():
+    """Last 6 weekly bars of each ratio with EMA10/EMA20 — dividend-adjusted (app) vs raw close (TradingView default)"""
+    import yfinance as yf
+    out = ['# Current state check (EMA10/20 · weekly · current week incl.)\n']
+    for adj in (True, False):
+        df = yf.download(['ACWI', 'BIL', 'HYG', 'IEI'], period='3y', interval='1d', auto_adjust=adj,
+                         progress=False, group_by='column', threads=False)['Close']
+        px = {s: {ix.date(): float(v) for ix, v in df[s].dropna().items()} for s in ('ACWI', 'BIL', 'HYG', 'IEI')}
+        out.append(f"## {'Adjusted (app)' if adj else 'Raw close (TradingView default)'}\n")
+        for name, a, b in PAIRS:
+            ds, r = ratio_series(px[a], px[b])
+            wk = weekly_last(ds, r)
+            vals = [x[1] for x in wk]
+            f, s = ema(vals, 10), ema(vals, 20)
+            out.append(f'**{name}** | week ending | ratio | EMA10 | EMA20 | side |\n|---|---|---|---|---|---|')
+            for i in range(len(wk) - 6, len(wk)):
+                out.append(f"| | {wk[i][0]} | {vals[i]:.5f} | {f[i]:.5f} | {s[i]:.5f} | {'🟢 up' if f[i] > s[i] else '🔴 down'} |")
+            out.append('')
+    return '\n'.join(out)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--selftest', action='store_true')
-    if ap.parse_args().selftest: return selftest()
+    ap.add_argument('--now', action='store_true')
+    a = ap.parse_args()
+    if a.selftest: return selftest()
+    if a.now:
+        rep = now_check(); print(rep)
+        summ = os.environ.get('GITHUB_STEP_SUMMARY')
+        if summ:
+            with open(summ, 'a', encoding='utf-8') as f: f.write(rep + '\n')
+        return
     rep = run(fetch(['ACWI', 'BIL', 'HYG', 'IEI']))
     print(rep)
     summ = os.environ.get('GITHUB_STEP_SUMMARY')
