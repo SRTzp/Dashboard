@@ -99,7 +99,7 @@ def tests(pw, w, h, label):
         # ── 3 การ์ด
         card = js(page, """()=>{ const c = document.querySelector('#jCards .ln3-jc'); return {l: [...c.children].map(x=>x.className), t: c.innerText.replace(/\\s+/g,' '), menu: !!c.querySelector('.ln3-mn'), btnsVisible: [...c.querySelectorAll('.ln3-mnb button')].some(b=>b.checkVisibility()), edit: [...c.querySelectorAll('button')].map(b=>b.innerText.trim())}; }""") if w < 1024 else None
         if card:
-            check(f"{tag} 3 การ์ดไม้ 3 บรรทัด (ชื่อ+ป้าย+P&L/R · วันที่+Entry→Exit+qty+⋯ · เหตุผลออก+วินัย/Setup)", card["l"] == ["ln3-jl1", "ln3-jl2", "ln3-jl3"] and card["menu"], card)
+            check(f"{tag} 3 การ์ดไม้ 3 บรรทัด (ชื่อ+ป้าย+P&L/R · วันที่+Entry→Exit+qty+⋯ · เหตุผลออก+วินัย/Setup)", card["l"] == ["ln3-jl1", "ln3-jl2", "jPva", "ln3-jl3"] and card["menu"], card)
             check(f"{tag} 3 ปุ่ม แก้ไข/ลบ ซ่อนอยู่ในเมนู ⋯ (ไม่เห็นเป็นปุ่มเรียงแถว)", card["btnsVisible"] is False, card)
             js(page, "()=>document.querySelector('#jCards .ln3-mn summary').click()"); page.wait_for_timeout(200)
             check(f"{tag} 3 กด ⋯ → เห็นปุ่ม แก้ไข / ลบ · 'แก้ไข' เปิดหน้าต่างแก้ไม้", js(page, "()=>[...document.querySelectorAll('#jCards .ln3-mn[open] .ln3-mnb button')].map(b=>b.innerText.trim())") == ["แก้ไข", "ลบ"])

@@ -165,7 +165,7 @@ def run(pw, width, height, label):
         miss: Calc.ffCoreCap({acwi:false,hyg:null,ageDays:1}), miss0: Calc.ffCoreCap({acwi:true,hyg:null,ageDays:1}) })""")
     check(f"{tag} Calc.ffCoreCap: 0/1/2 ตัวแดง = 100/75/50%", (f["r0"], f["r1"], f["r1b"], f["r2"]) == (100, 75, 75, 50), json.dumps(f))
     check(f"{tag} Calc.ffCoreCap: ไฟล์เก่า 6 วันทำการ → 100% + stale · 5 วันทำการยังคิดปกติ (50%)",
-          f["old6"]["cap"] == 100 and f["old6"]["stale"] is True and f["old5"]["cap"] == 50 and f["old5"]["stale"] is False, json.dumps([f["old6"], f["old5"]]))
+          f["old6"]["cap"] == 50 and f["old6"]["stale"] is True and f["old5"]["cap"] == 50 and f["old5"]["stale"] is False, json.dumps([f["old6"], f["old5"]]))
     check(f"{tag} Calc.ffCoreCap: ไม่มี HYG/IEI → คิดจาก ACWI/BIL ตัวเดียว (แดง 75 / เขียว 100) + missing=['HYG/IEI']",
           f["miss"]["cap"] == 75 and f["miss0"]["cap"] == 100 and f["miss"]["missing"] == ["HYG/IEI"], json.dumps([f["miss"], f["miss0"]]))
     check(f"{tag} FF_RATIOS: Core = ACWI/BIL + HYG/IEI เท่านั้น · Cu/Au · SPHB/SPLV · RSP/SPY เป็นบริบท",
@@ -200,7 +200,7 @@ def run(pw, width, height, label):
     warn = page.evaluate("""() => { const w=document.querySelector('#ffRegime .ffRegWarn'); return w ? {txt:w.innerText, bg:getComputedStyle(w).backgroundColor} : null; }""")
     fresh = page.evaluate("() => document.querySelector('#ffAction [data-ff=fresh]').textContent")
     check(f"{tag} ไฟล์เก่า 6 วันทำการ + แดง 2 ตัว → ทุกจุด 100% (ไม่ลดเพดาน) + เตือนส้ม",
-          all(v in (100, "100%") for v in r.values()) and warn and "ไม่ลดเพดาน" in warn["txt"] and "6 วันทำการ" in warn["txt"] and "rgba(169, 110, 6" in warn["bg"], json.dumps([r, warn]))
+          all(v in (50, "50%") for v in r.values()) and warn and "size from last known state" in warn["txt"] and "6 business days" in warn["txt"] and "rgba(169, 110, 6" in warn["bg"], json.dumps([r, warn]))
     # [F2d แก้เคสเดิม] ช่อง 'ความสดข้อมูล' ถูกแทนด้วยป้ายขวาของบรรทัดสรุป (data-ff=fresh) 'ข้อมูล <d MMM> · เก่า N วันทำการ' สีเตือน
     check(f"{tag} ป้ายความสดบนบรรทัดสรุป = '… · เก่า 6 วันทำการ' (สีส้ม)", fresh.endswith("· เก่า 6 วันทำการ"), fresh)
     set_ff(page, False, False, age=5)

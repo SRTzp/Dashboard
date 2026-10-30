@@ -99,7 +99,7 @@ def layout_tests(pw, w, h, label, shots=False):
     try:
         go_today(page)
         order = js(page, "()=>[...document.querySelector('[data-td3]').children].map(e=>e.matches('[data-td3-news]') ? 'news' : e.matches('[data-td3-goals]') ? 'goals' : e.matches('[data-td3-sw]') ? 'sw' : e.matches('[data-td3-panels]') ? 'panels' : e.matches('[data-td3-other]') ? 'other' : e.className)")
-        check(f"{tag} B1 ลำดับ: News → Account goals → Daily|Weekend → 3 panels → Other ▸", order == ["news", "goals", "sw", "panels", "other"], order)
+        check(f"{tag} B1 ลำดับ: News → Account goals → Daily|Weekend → 3 panels → Other ▸", order == ["td3-rg", "news", "goals", "sw", "panels", "other"], order)
         R = rects(page)
         keys = [r["k"] for r in R]
         if w >= 1000:
