@@ -139,12 +139,12 @@ def save_checks(pw, w, h, label):
         check(f"{tag} 11 A-Fortress เก็บ tierLens 'fortress' · tierInputs.fcfPositive3y/capitalReturn true", cf and cf["tierLens"] == "fortress" and cf["tierInputs"]["fcfPositive3y"] is True and cf["tierInputs"]["capitalReturn"] is True)
         kb, cb = p24.one_card(page, "TBEE")
         check(f"{tag} 11 B เก็บ tier 'B' · tierLens null", cb and cb["tier"] == "B" and cb["tierLens"] is None)
-        check(f"{tag} 11 ไม้แรกเพดาน 10%: A-Growth = A-Fortress = 700 หุ้น · B (เพดาน 5%) = 350", qtys["TGRO"] == "700" and qtys["TFOR"] == "700" and qtys["TBEE"] == "350", json.dumps(qtys))
+        check(f"{tag} 11 ไม้แรกเพดานเดียว 25% ของถัง Winner (RG2b ไม่แยก Tier): A-Growth = A-Fortress = B = 365 หุ้น", qtys["TGRO"] == "365" and qtys["TFOR"] == "365" and qtys["TBEE"] == "365", json.dumps(qtys))
         ex(page, k)
         chip_g = txt(page, f'{card_sel(k)} [data-c-tier]') or ""
-        check(f"{tag} 11 ชิปการ์ด A-Growth = 'Tier A · Growth' + บรรทัด FF 'เพดานไม้แรก 10%' (UX2: เพดานย้ายจากชิป)", chip_g == "Tier A · Growth" and "เพดานไม้แรก 10%" in (txt(page, f'{card_sel(k)} [data-c-ff]') or ""), chip_g)
+        check(f"{tag} 11 ชิปการ์ด A-Growth = 'Tier A · Growth' + บรรทัด FF 'เพดานไม้แรก 25%' (UX2: เพดานย้ายจากชิป)", chip_g == "Tier A · Growth" and "เพดานไม้แรก 25%" in (txt(page, f'{card_sel(k)} [data-c-ff]') or ""), chip_g)
         ex(page, kf); chip_f = txt(page, f'{card_sel(kf)} [data-c-tier]') or ""
-        check(f"{tag} 11 ชิป A-Fortress = 'Tier A · Fortress' + บรรทัด FF 'เพดานไม้แรก 10%' (UX2)", chip_f == "Tier A · Fortress" and "เพดานไม้แรก 10%" in (txt(page, f'{card_sel(kf)} [data-c-ff]') or ""), chip_f)
+        check(f"{tag} 11 ชิป A-Fortress = 'Tier A · Fortress' + บรรทัด FF 'เพดานไม้แรก 25%' (UX2)", chip_f == "Tier A · Fortress" and "เพดานไม้แรก 25%" in (txt(page, f'{card_sel(kf)} [data-c-ff]') or ""), chip_f)
         check(f"{tag} 11 ป้ายแถวยุบยังเป็น A·W และ title บอกมุม", txt(page, f'{card_sel(k)} .ccTag') == "A·W" and "Tier A · Growth" in (page.get_attribute(f'{card_sel(k)} .ccTag', "title") or ""),
               page.get_attribute(f'{card_sel(k)} .ccTag', "title") or "")
         check(f"{tag} 11 ไม่มี console error", not ce and not pe, json.dumps([ce[:2], pe[:2]]))
@@ -163,7 +163,7 @@ def save_checks(pw, w, h, label):
         chips = {id: txt(page, f'{card_sel(id)} [data-c-tier]') for id in cards}
         check(f"{tag} 11 ชิปครบ 4 แบบ + การ์ดเก่า",
               chips == {"cg": "Tier A · Growth", "cf": "Tier A · Fortress", "cb": "Tier A · Fortress + Growth", "cl": "Tier A · Fortress (เดิม)", "cw": "Tier B"}
-              and {id: ("เพดานไม้แรก " + ("5%" if id == "cw" else "10%")) in (txt(page, f'{card_sel(id)} [data-c-ff]') or "") for id in cards} == {id: True for id in cards}, json.dumps(chips, ensure_ascii=False))   # UX2: เพดานไม้แรกย้ายไปบรรทัด FF
+              and {id: ("เพดานไม้แรก 25%") in (txt(page, f'{card_sel(id)} [data-c-ff]') or "") for id in cards} == {id: True for id in cards}, json.dumps(chips, ensure_ascii=False))   # UX2: เพดานไม้แรกย้ายไปบรรทัด FF
         shot(page, f"tier2-card-chip-{w}.png")
     finally:
         browser.close()

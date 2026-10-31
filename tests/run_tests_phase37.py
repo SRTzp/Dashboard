@@ -53,7 +53,7 @@ def ds0(tank, peak=None, **kw):
 
 
 def doc37(with_dd=True):
-    doc = p24.doc_with(main_trades=[], core_cap=700000, main_market="both")
+    doc = p24.doc_with(main_trades=[], core_cap=700000, main_market="both", pin_winner=False)
     for acct in ("main", "fam"):
         b = doc["books"][acct]; s = b["settings"]
         s["fx"] = 40; s["capital"]["core"] = 700000; s["capital"]["satB"] = 26000
@@ -61,6 +61,7 @@ def doc37(with_dd=True):
         s["satRisk"] = {"rpt": 1.25, "rptHi": 2, "newMax": 2}
         if with_dd: s["ddState"] = {"core": ds0(700000), "sat": ds0(26000)}
         b["trades"] = []
+    p24.pin_winner_pool(doc)   # RG2b — ถัง Winner = ทุน Core เดิม (หลังตั้ง capital ของ fixture นี้)
     return doc
 
 

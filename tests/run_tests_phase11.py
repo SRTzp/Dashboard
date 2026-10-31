@@ -272,25 +272,22 @@ def card_tests(page, tag, w):
     check(f"{tag} PF3 แผนไม่มี trend_override (ตัวเปลี่ยนถอดแล้ว ไม่มีอะไรเขียนฟิลด์นี้)", not idea(page, "iA").get("trend_override"))
     check(f"{tag} PF3 satWeek ของ Strategy ไม่ถูกแตะ (comps.trend.v เดิม 'down' ยังอยู่ในข้อมูล)", page.evaluate("() => satwWeek(wpWeekKey(),'XAUUSD').comps.trend.v") == "down")
     check(f"{tag} PF3 ไม่มีข้อความ 'เปลี่ยนจาก' / 'ยกเลิก override' ในการ์ดแผน", not any(x in (txt(page, C) or "") for x in ("เปลี่ยนจาก", "ยกเลิก override", "Trend ▲ (")), txt(page, C))
-    check(f"{tag} PF3 ขนาดไม้ตาม Macro อย่างเดียว: Macro ▼ → 'ขนาดไม้: ลด 40% (สวน Macro)' + มีสวิตช์ [ใช้ไม้เต็ม] โดยไม่ขึ้นกับ Trend", "ลด 40% (สวน Macro)" in (txt(page, f"{C} [data-f2c-row=\"size\"]") or "") and page.locator(f"{C} [data-size-switch]").count() == 1)
+    check(f"{tag} PF3 ขนาดไม้ตาม Macro อย่างเดียว: Macro ▼ → 'ขนาดไม้: ลด 40% (สวน Macro)' + มีสวิตช์ [ใช้ไม้เต็ม] โดยไม่ขึ้นกับ Trend", "ลด 40%" not in (txt(page, f"{C} [data-f2c-row=\"size\"]") or "") and page.locator(f"{C} [data-size-switch]").count() == 0)   # RG2b — ถอดตัวคูณขนาดตาม Macro: ไม่ลด 40% · ไม่มีสวิตช์
     check(f"{tag} PF3 trend_override = null/ไม่มี (ไม่มีการ override Trend ต่อแผน)", idea(page, "iA").get("trend_override") in (None, False, ""))
     # ขนาดไม้ 40% + lot
-    check(f"{tag} การ์ด: 'ขนาดไม้: ลด 40% (สวน Macro)'", "ขนาดไม้: ลด 40% (สวน Macro)" in txt(page, f'{C} [data-f2c-row="size"]'), txt(page, f'{C} [data-f2c-row="size"]'))
+    check(f"{tag} การ์ด: 'ขนาดไม้: ลด 40% (สวน Macro)'", "ขนาดไม้: เต็ม" in txt(page, f'{C} [data-f2c-row="size"]'), txt(page, f'{C} [data-f2c-row="size"]'))   # RG2b
     lot_cut = page.evaluate("() => satV3PlanAcctCalc(sat7dIdea('iA'), 'main')")
     exp = page.evaluate("""() => { const c = satV3PlanAcctCalc(sat7dIdea('iA'), 'main'); const cfg = c.chosen.cfg;
         return {expCut: Calc.satLot({riskAmount:c.riskCur*SAT_MACRO_CUT, dist:0.5, contract:cfg.contract, lotStep:cfg.lotStep, minLot:cfg.minLot}).lot,
                 full: Calc.satLot({riskAmount:c.riskCur, dist:0.5, contract:cfg.contract, lotStep:cfg.lotStep, minLot:cfg.minLot}).lot, factor:c.factor, lot:c.lot}; }""")
     check(f"{tag} lot: ลดเหลือ ~60% (riskAmount × 0.6 ผ่าน Calc.satLot เดิม) — ตัด {exp['lot']} vs เต็ม {exp['full']}",
-          exp["factor"] == 0.6 and abs(exp["lot"] - exp["expCut"]) < 1e-9 and 0.55 <= exp["lot"] / exp["full"] <= 0.65, json.dumps(exp))
+          exp["factor"] == 1 and abs(exp["lot"] - exp["full"]) < 1e-9, json.dumps(exp))   # RG2b — ไม่ลดตาม Macro: lot = เต็ม
     heat_cut = page.evaluate("() => satV3PlanAcctCalc(sat7dIdea('iA'), 'main').heatPct")
-    # สวิตช์ไม่ตามกฎ
-    page.click(f'{C} [data-size-switch]'); page.wait_for_timeout(250)
-    check(f"{tag} สวิตช์: 'ใช้ไม้เต็ม (ไม่ตามกฎ)' → idea.size_full_override = true · ป้ายส้ม 'ไม่ตามกฎ' · 'ขนาดไม้: เต็ม'",
-          idea(page, "iA").get("size_full_override") is True and page.locator(f"{C} [data-off-rule]").count() == 1 and "ขนาดไม้: เต็ม" in txt(page, f'{C} [data-f2c-row="size"]'), txt(page, f'{C} [data-f2c-row="size"]'))
+    # RG2b — สวิตช์ 'ใช้ไม้เต็ม' ถอดพร้อมตัวคูณ Macro: ไม่มีปุ่ม · lot เท่าเต็มเสมอ · ไม่มีป้าย 'ไม่ตามกฎ'
+    check(f"{tag} สวิตช์ 'ใช้ไม้เต็ม' ไม่มีแล้ว · ไม่มีป้าย 'ไม่ตามกฎ' · size_full_override ไม่ถูกตั้ง",
+          page.locator(f"{C} [data-size-switch]").count() == 0 and page.locator(f"{C} [data-off-rule]").count() == 0 and not idea(page, "iA").get("size_full_override"))
     full = page.evaluate("() => satV3PlanAcctCalc(sat7dIdea('iA'), 'main')")
-    check(f"{tag} lot: ใช้ไม้เต็ม → lot เท่าเต็ม ({full['lot']}) · heat คิดจาก lot ใหม่ (สูงกว่าตอนลด)", full["factor"] == 1 and full["lot"] == exp["full"] and (full["heatPct"] or 0) > (heat_cut or 0), f"{full['lot']} heat {full['heatPct']} vs {heat_cut}")
-    page.click(f'{C} [data-size-switch]'); page.wait_for_timeout(250)
-    check(f"{tag} สวิตช์: กดอีกครั้ง = กลับตามกฎ (override=false · ป้ายหาย · ลด 40%)", idea(page, "iA").get("size_full_override") is False and page.locator(f"{C} [data-off-rule]").count() == 0 and "ลด 40%" in txt(page, f'{C} [data-f2c-row="size"]'))
+    check(f"{tag} lot: เท่าเต็ม ({full['lot']}) · heat เท่าเดิม", full["factor"] == 1 and full["lot"] == exp["full"] and (full["heatPct"] or 0) == (heat_cut or 0), f"{full['lot']} heat {full['heatPct']} vs {heat_cut}")
     # ใต้ minLot = ข้อความเดิมของ satLot
     mkidea(page, "iA", "XAUUSD", "Long", 4700, 4000)
     msg = page.evaluate("() => satV3PlanAcctCalc(sat7dIdea('iA'), 'main').lotMsg")
@@ -399,7 +396,7 @@ def save_tests(page, tag, w):
     O = '.ui-plan[data-id="iO"]'
     # Strategy Trend ▲ + Macro ▼ (against) → override Trend ▼ → สวนทั้งคู่ · เลือก Driver P2
     page.click(f'{O} [data-driver="P2"]'); page.wait_for_timeout(250)
-    check(f"{tag} ก่อนบันทึก: ลด 40% (Macro ▼ สวน Long + Trend ▼ สวน)", "ลด 40%" in txt(page, f'{O} [data-f2c-row="size"]'))
+    check(f"{tag} ก่อนบันทึก: ไม่ลด 40% (RG2b ถอดตัวคูณ Macro · Macro ▼ สวน Long + Trend ▼ สวน)", "ลด 40%" not in txt(page, f'{O} [data-f2c-row="size"]'))
     # เปลี่ยน Playbook หลัง Activate ก่อนกดบันทึก (v002: XAUUSD ▲▬ posture) → ไม้ต้องใช้ค่าใหม่
     seed_pb(page, [base_pb, pbver(2, iso(0), x="up_flat", xa={"posture": "upside จำกัด", "drivers": ["P1", "P2"]})])
     # ค่าที่การ์ดเห็นตอน Activate = สวน · ตอนกดบันทึก = up_flat (with) → factor 1
@@ -437,16 +434,16 @@ def save_tests(page, tag, w):
     t = save_case("iCut", "Long", [pbver(1, iso(-72), x="down")], "down", driver="P2", note=None, reason="เหตุผลทดสอบ")
     got = {k: t.get(k) for k in keys}
     check(f"{tag} บันทึก order (สวนทั้งคู่): size_rule 0.6 · off_rule false · sizeFactor 0.6 · macro_state against · macro_note = สำเนา My opinion ของสัปดาห์ · macro_recent false",
-          got["size_rule"] == 0.6 and got["off_rule"] is False and got["sizeFactor"] == 0.6 and got["macro_state"] == "against" and got["macro_stance"] == "down"
+          got["size_rule"] == 1 and got["off_rule"] is False and got["sizeFactor"] is None and got["macro_state"] == "against" and got["macro_stance"] == "down"
           and got["macro_note"] == "เหตุผลทดสอบ" and got["macro_recent"] is False and got["trend_state"] is None and got["trend_changed"] is None and got["driver"] == "P2", json.dumps(got, ensure_ascii=False))
     lot_full = page.evaluate("() => { const c = satV3PlanAcctCalc(sat7dIdea('iCut'),'main',Object.assign({}, satV3F2c(sat7dIdea('iCut')), {off:true})); return c.lot; }")
-    check(f"{tag} บันทึก order (สวนทั้งคู่): qty = lot ที่ลด ~60% ({t['qty']} vs เต็ม {lot_full})", 0.55 <= t["qty"] / lot_full <= 0.65, f"{t['qty']} {lot_full}")
+    check(f"{tag} บันทึก order (สวนทั้งคู่): qty = lot ที่ลด ~60% ({t['qty']} vs เต็ม {lot_full})", t["qty"] == lot_full, f"{t['qty']} {lot_full}")   # RG2b — ไม่ลดตาม Macro
     line = f2c_line(page, t)
-    check(f"{tag} รายละเอียดไม้: 'Macro สวน (▼ v001) · Trend ตาม? …' — Long + Trend ▼ = 'Trend สวน' · Driver P2 · ลด 40% (ไม่มีป้าย)", line.startswith("Macro สวน (▼ v001) · Trend — · Driver P2 · ลด 40%") and "ไม่ตามกฎ" not in line, line)
+    check(f"{tag} รายละเอียดไม้: 'Macro สวน (▼ v001) · Trend ตาม? …' — Long + Trend ▼ = 'Trend สวน' · Driver P2 · ลด 40% (ไม่มีป้าย)", line.startswith("Macro สวน (▼ v001) · Trend — · Driver P2 · เต็ม") and "ไม่ตามกฎ" not in line, line)   # RG2b
     t = save_case("iOff", "Long", [pbver(1, iso(-72), x="down")], "down", override_full=True, reason="เหตุผลทดสอบ")
-    check(f"{tag} บันทึก order (ใช้ไม้เต็มทั้งที่กฎ 0.6): off_rule true · size_rule 0.6 · sizeFactor null", t["off_rule"] is True and t["size_rule"] == 0.6 and t["sizeFactor"] is None, json.dumps({k: t.get(k) for k in keys}, ensure_ascii=False))
+    check(f"{tag} บันทึก order (ใช้ไม้เต็มทั้งที่กฎ 0.6): off_rule true · size_rule 0.6 · sizeFactor null", t["off_rule"] is False and t["size_rule"] == 1 and t["sizeFactor"] is None, json.dumps({k: t.get(k) for k in keys}, ensure_ascii=False))
     line = f2c_line(page, t)
-    check(f"{tag} รายละเอียดไม้: มีป้าย 'ไม่ตามกฎ' เมื่อ off_rule", "ไม่ตามกฎ" in line and "· เต็ม" in line, line)
+    check(f"{tag} รายละเอียดไม้: มีป้าย 'ไม่ตามกฎ' เมื่อ off_rule", "ไม่ตามกฎ" not in line and "· เต็ม" in line, line)   # RG2b — ไม่มีกฎให้ไม่ตาม
     # ไม่มี Playbook
     t = save_case("iNone", "Long", [], "up")
     got = {k: t.get(k) for k in keys}

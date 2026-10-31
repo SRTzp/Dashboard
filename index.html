@@ -17659,7 +17659,7 @@ const SAT7D_DEFAULT_BROKERS = {
 const SAT_SETUP_PASS_DEFAULT = 0.65;   /* 7D.4 — Setup ผ่านเมื่อ ติ๊ก/ทั้งหมด ≥ ค่านี้ (แก้ได้ที่ state.settings.satSetupPassRatio) */
 /* SR1 — RPT/ไม้ใหม่ ต่อบัญชีอ่านจาก settings.satRisk ผ่าน satRiskCfg() · ค่าคงที่ตรงนี้ = ค่าเริ่มต้นเท่านั้น (heat เริ่มต้น 6 = limits.port.satB) */
 const SAT_NEW_WEEK_MAX = 4;
-const SAT7D_RPT = 1.5, SAT7D_RPT_HI = 2, SAT7D_HEAT_MAX = 6, SAT7D_NEW_MAX = 2, SAT7D_PROVE_N = 50, SAT7D_PROVE_R = 0.25;
+const SAT7D_RPT = 1.5, SAT7D_RPT_HI = 2, SAT7D_HEAT_MAX = 6, SAT7D_NEW_MAX = SAT_NEW_WEEK_MAX, SAT7D_PROVE_N = 50, SAT7D_PROVE_R = 0.25;
 function satRiskCfg(accId){
   const id = accId || acctActive;
   const st = (id===acctActive && state) ? state : (acctBooks[id] || null);
@@ -19366,7 +19366,7 @@ function satV3LevelChipsHtml(asset, field, values, readonly){
 }
 /* {badge, sub} ของช่อง — ตรงกับ tileHtml() ใน sat-mockup.html ทุกกรณี (Long/Short/งดเทรด/ยังไม่ประเมิน) */
 /* F2c — ขนาดไม้ตามกฎของสัปดาห์: Macro (Playbook) + Trend ของสัปดาห์ + ด้านของ Bias */
-function satMacroFactors(accId){ const a = accId || (sat7dAccts()[0] || {}).id, c = satRiskCfg(a); return {neutral:c.macroNeutral, against:c.macroAgainst}; }
+function satMacroFactors(accId){ const a = accId || (sat7dAccts()[0] || {}).id, c = satRiskCfg(a); return {neutral:c.macroNeutral, against:SAT_MACRO_CUT}; }   /* RG2b — ตัวคูณ Macro ของไม้ปกติถอดแล้ว (neutral/against = 1) · MR (ปิดอยู่) ยังใช้ SAT_MACRO_CUT ตายตัว */
 function satV3TileBadgeSub(asset, w, atTime){   /* PF1 — ไม่มีป้าย Bias/Trend Shift จาก Strategy แล้ว */
   const sup = satV3SupportDisplay(w), res = satV3ResistanceDisplay(w);
   const supTxt = sup.values.length ? sup.values.map(fmt2).join(', ') : '—';
@@ -20705,7 +20705,7 @@ function satV3PlanAcctCalc(idea, accId, f2c){
   const side = (e>0 && s>0) ? (satV3SideOf(idea)==='Short' ? s>e : s<e) : null;   /* 7E-4: ทิศของไม้ (MR = สวน Bias) */
   const cfgA = satRiskCfg(accId);   /* WA1 — ตัวคูณตาม Macro ต่อบัญชี */
   const ruleF = Calc.sizeRule({macroAlign: F.align, side: F.side, neutral: cfgA.macroNeutral, against: cfgA.macroAgainst}).factor;
-  const facA = F.mr ? cfgA.macroAgainst : (F.off ? 1 : ruleF);
+  const facA = F.mr ? SAT_MACRO_CUT : (F.off ? 1 : ruleF);   /* RG2b — MR ใช้ค่าตายตัว */
   const split1 = cfgA.pyrSplit[0] / 100;   /* PY2 — ไม้ 1 = n1% ของงบ */
   const dist = (e>0 && s>0) ? Math.abs(e-s) : 0;
   let lot = null, lotMsg = '', actualTHB = 0, riskCur = null;

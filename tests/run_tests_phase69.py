@@ -167,18 +167,18 @@ def tests(pw, w, h, label):
     try:
         for a in ("XAUUSD", "BRENT", "S50"): P11.wk(page, a, "Long", "up")
         L = factor(page, "XAUUSD", "Long"); S = factor(page, "XAUUSD", "Short", macro_note=NOTE)
-        check(f"{tag} 4 Playbook XAU ▲ · แผน Long (ตาม) → ×1 · แผน Short (สวน) → ×0.6", L["f"] == 1 and S["f"] == 0.6, json.dumps([L["f"], S["f"]]))
+        check(f"{tag} 4 Playbook XAU ▲ · แผน Long (ตาม) → ×1 · แผน Short (สวน) → ×1 (RG2b)", L["f"] == 1 and S["f"] == 1, json.dumps([L["f"], S["f"]]))   # RG2b — ไม่มีตัวคูณ Macro: สวน = ×1
         bn = factor(page, "BRENT", "Long")
         check(f"{tag} 4 Playbook ▬ (Neutral) → ×1.0 (ค่าเริ่ม) · ไม่ต้องกรอกเหตุผล", bn["f"] == 1 and bn["note"] == "")
         set_cfg(page, "main", macroNeutral=0.8)
         bn = factor(page, "BRENT", "Long"); out = factor(page, "S50", "Long", macro_note=NOTE)
-        check(f"{tag} 4 ตั้ง Neutral 0.8 → BRENT ×0.8 · Asset นอก Macro (S50) ×0.8 (เท่า Neutral)", bn["f"] == 0.8 and out["f"] == 0.8, json.dumps([bn["f"], out["f"]]))
+        check(f"{tag} 4 ตั้ง Neutral 0.8 → BRENT ×0.8 · Asset นอก Macro (S50) ×0.8 (เท่า Neutral)", bn["f"] == 1 and out["f"] == 1, json.dumps([bn["f"], out["f"]]))   # RG2b — ค่า Neutral ที่ตั้งไม่มีผล
         set_cfg(page, "main", macroAgainst=0.5)
         S = factor(page, "XAUUSD", "Short", macro_note=NOTE)
-        check(f"{tag} 4 ตั้ง สวน Macro 0.5 → ×0.5", S["f"] == 0.5)
+        check(f"{tag} 4 ตั้ง สวน Macro 0.5 → ไม่มีผล ×1 (RG2b)", S["f"] == 1)
         full = factor(page, "XAUUSD", "Short", macro_note=NOTE, size_full_override=True)
-        check(f"{tag} 4 ปุ่ม 'ใช้ไม้เต็ม (ไม่ตามกฎ)' ยังใช้ได้กับสวน Macro → ×1", full["f"] == 1 and full["rf"] == 0.5)
-        exp = js(page, "([c,r,f])=>Calc.satLot({riskAmount:r*f, dist:1, contract:c.contract, lotStep:c.lotStep, minLot:c.minLot}).lot", [S["cfg"], S["risk"], 0.5 * 0.5])   # ตัวคูณ Macro 0.5 × ไม้ 1 = 50% ของงบ (PY2)
+        check(f"{tag} 4 ปุ่ม 'ใช้ไม้เต็ม (ไม่ตามกฎ)' ยังใช้ได้กับสวน Macro → ×1", full["f"] == 1 and full["rf"] == 1)   # RG2b
+        exp = js(page, "([c,r,f])=>Calc.satLot({riskAmount:r*f, dist:1, contract:c.contract, lotStep:c.lotStep, minLot:c.minLot}).lot", [S["cfg"], S["risk"], 1 * 0.5])   # ตัวคูณ Macro 0.5 × ไม้ 1 = 50% ของงบ (PY2)
         check(f"{tag} 4 lot = Calc.satLot(riskAmount × ตัวคูณ) ({S['lot']} vs {exp})", S["lot"] == exp, json.dumps([S["lot"], exp]))
         # ร่วมกับ DD ×0.5 (ลดขนาด)
         ddf = js(page, "()=>{ const b = sat7dAcctBase('main'); return b.ddFactor; }")
@@ -186,9 +186,9 @@ def tests(pw, w, h, label):
         # แยกบัญชี
         set_cfg(page, "fam", macroAgainst=0.7)
         fa = js(page, "()=>[satRiskCfg('main').macroAgainst, satRiskCfg('fam').macroAgainst, satRiskCfg('fam').macroNeutral]")
-        check(f"{tag} 4 ตั้งต่อบัญชี: main สวน 0.5 · fam สวน 0.7 (Neutral fam ค่าเริ่ม 1)", fa == [0.5, 0.7, 1], json.dumps(fa))
+        check(f"{tag} 4 ตั้งต่อบัญชี: main สวน 0.5 · fam สวน 0.7 (Neutral fam ค่าเริ่ม 1)", fa == [1, 1, 1], json.dumps(fa))   # RG2b — ค่าที่ตั้งถูกเก็บไว้แต่ไม่อ่าน
         set_cfg(page, "main", macroAgainst=2)
-        check(f"{tag} 4 ค่าผิดรูปใน settings (2) → ใช้ค่าเริ่ม 0.6", js(page, "()=>satRiskCfg('main').macroAgainst") == 0.6)
+        check(f"{tag} 4 ค่าผิดรูปใน settings (2) → ไม่อ่าน = 1 (RG2b)", js(page, "()=>satRiskCfg('main').macroAgainst") == 1)
         check(f"{tag} 4 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
     finally: browser.close()
 
@@ -200,7 +200,7 @@ def tests(pw, w, h, label):
         P11.wk(page, "XAUUSD", "Short", "down")
         b = factor(page, "XAUUSD", "Short", macro_note=NOTE)
         check(f"{tag} 5 Macro ตาม + Trend สวน (Long, Trend ▼) → ×1", a["f"] == 1, json.dumps(a["f"]))
-        check(f"{tag} 5 Macro สวน + Trend ตาม (Short, Trend ▼) → ×0.6 (กติกาเปลี่ยน — เดิม ×1)", b["f"] == 0.6, json.dumps(b["f"]))
+        check(f"{tag} 5 Macro สวน + Trend ตาม (Short, Trend ▼) → ×1 (RG2b ถอดตัวคูณ Macro)", b["f"] == 1, json.dumps(b["f"]))   # RG2b
     finally: browser.close()
 
     # ── 6 เหตุผลที่เข้าสวน/นอก Macro
@@ -225,7 +225,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 6 กรอกเหตุผลแล้ว → ready · ไม่มีคำเตือน", c["ready"] is True and c["note"] == "", json.dumps(c, ensure_ascii=False))
         js(page, "()=>satV3SaveSlot('iAg','main')"); page.wait_for_timeout(350)
         t = js(page, "()=>{ const s = (sat7dIdea('iAg').accts||{}).main||{}; const t = getBook('main').trades.find(x=>x.id===s.trade_id); return t ? {note:t.macro_note, rule:t.size_rule, sf:t.sizeFactor, st:t.macro_state} : null; }")
-        check(f"{tag} 6 บันทึก order → ไม้เก็บ macro_note + macro_state against + size_rule 0.6 + sizeFactor 0.6", t and t["note"] == "เข้าสวนเพราะแนวรับแข็ง" and t["rule"] == 0.6 and t["sf"] == 0.6 and t["st"] == "against", json.dumps(t, ensure_ascii=False))
+        check(f"{tag} 6 บันทึก order → ไม้เก็บ macro_note + macro_state against + size_rule 1 + sizeFactor null", t and t["note"] == "เข้าสวนเพราะแนวรับแข็ง" and t["rule"] == 1 and t["sf"] is None and t["st"] == "against", json.dumps(t, ensure_ascii=False))
         # นอก Macro (S50)
         P51.fresh(page, None); P11.seed_pb(page, [PB])
         i2 = P51.idea_doc(asset="S50", bias="Long", entry=900, sl=890, tp=930, zone=(930, 940), iid="iOut"); i2["macro_note"] = ""

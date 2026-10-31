@@ -51,7 +51,22 @@ def open_card(id, tid, ticker="XXX.BK", acct="main", qty=700, entry=100, sl=90, 
     return card(id, acct, ticker, status="open", trade_id=tid, stop=sl, lots=lots, tier=kw.pop("tier", "A"), **kw)
 
 
-def doc_with(main_trades=None, core_cap=700000, main_market="both", fam_market=None):
+def pin_winner_pool(doc):
+    """RG2b — เทส W เก่าคิดจากถัง Core = capital.core ทั้งก้อน: ตรึงสัดส่วนถังให้ถัง Winner = ทุน Core เดิม (Ladder 0 · Sat ที่เหลือ) · ไม่แตะค่าที่คาดหวังของเคส"""
+    for b in doc["books"].values():
+        s = b["settings"]; cap = s.get("capital") or {}; fx = s.get("fx") or 1
+        core, sat = float(cap.get("core") or 0), float(cap.get("satB") or 0) * fx
+        if core <= 0: continue
+        s["pools"] = {"winner": core / (core + sat) * 100, "ladder": 0, "sat": sat / (core + sat) * 100, "mig": "RG2b", "reviewed": True}
+
+
+def doc_with(main_trades=None, core_cap=700000, main_market="both", fam_market=None, pin_winner=False):
+    doc = _doc_with(main_trades, core_cap, main_market, fam_market)
+    if pin_winner: pin_winner_pool(doc)
+    return doc
+
+
+def _doc_with(main_trades=None, core_cap=700000, main_market="both", fam_market=None):
     doc = p22.make_doc(main_trades=main_trades if main_trades is not None else [], with_legacy=False)
     doc["books"]["main"]["settings"]["capital"]["core"] = core_cap
     doc["books"]["main"]["settings"].setdefault("coreRisk", {}).update({"riskPct": 1, "tierA": 10, "tierB": 5})   # CZ1: ค่าเริ่มต้นใหม่ (1.25/15/10) → seed ค่าเดิม ให้ตัวเลขที่คาดเท่าเดิม
@@ -159,7 +174,7 @@ def sheet_open(page, kind): return page.locator(f'.core-sheet [data-core-sheet="
 # ─────────────────────────────────────────────────────────────
 def plan_sheet_checks(pw, w, h, label):
     tag = f"[chromium/{label}]"
-    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with())
+    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(pin_winner=True))
     try:
         # ＋ / T
         go_stock(page)
@@ -244,7 +259,7 @@ def plan_sheet_checks(pw, w, h, label):
 def cash_tier_checks(pw, w, h, label):
     tag = f"[chromium/{label}]"
     trades = [T("hold", "core", "open", sym="HOLD", entry=670, sl=600, qty=1000, date="2026-09-01")]
-    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(main_trades=trades))
+    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(main_trades=trades, pin_winner=True))
     try:
         go_stock(page)
         new_plan(page, "XXX.BK", 100, 90, tier="A", reason="ทดสอบ", f="1")
@@ -266,7 +281,7 @@ def buy_pyramid_checks(pw, w, h, label, mk="TH"):
     q2 = 700 + a1; e2 = (100 * 700 + 115 * a1) / q2
     q3 = q2 + a2; e3 = (e2 * q2 + 130 * a2) / q3
     S = "฿" if mk == "TH" else "$"
-    doc = doc_with()
+    doc = doc_with(pin_winner=True)
     if mk == "US": doc["books"]["main"]["settings"]["fx"] = 1
     browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc, cards={"c1": card("c1", "main", tk, tier="A", tierReason="ทดสอบ")})
     try:
@@ -354,7 +369,7 @@ def addtag_checks(pw, w, h, label):
     tag = f"[chromium/{label}]"
     # move_stop / risk_limited / too_small / cash_limited (ตัวเลขจาก tests/core_size_test.js · main = TH lot 100 · f 100%)
     def case(name, trades, cards, px, stop, want_tag, want_qty, shot_name=None):
-        browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(main_trades=trades), cards=cards)
+        browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(main_trades=trades, pin_winner=True), cards=cards)
         try:
             go_stock(page)
             open_sim(page, "c1")
@@ -396,7 +411,7 @@ def status_checks(pw, w, h, label):
         "n": open_card("n", "t_n", ticker="NX.BK", px=120, pxDate=old, emaW=110),
         "e": open_card("e", "t_e", ticker="EX.BK", px=96.5, pxDate=TODAY, emaW=None),
     }
-    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(main_trades=trades[1:]), cards=cs)
+    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(main_trades=trades[1:], pin_winner=True), cards=cs)
     try:
         go_stock(page)
         st = lambda k: page.evaluate("(k)=>{ const e = document.querySelector(`[data-core-card=\"${k}\"]`); return e && e.dataset.status; }", k)
@@ -454,8 +469,8 @@ def summary_heat_checks(pw, w, h, label):
     t_open = T("o1", "core", "open", sym="NOCARD", entry=100, sl=90, qty=1000, date="2026-09-01")
     t_loss = T("l1", "core", "closed", sym="LOSER", entry=100, sl=90, qty=1000, exitPrice=50, exitDate="2026-09-10", date="2026-09-01")
     def cell(page): return txt(page, '#portsSum [data-sum="open"]') or ""
-    b1, c1, p1, ce1, pe1, d1 = launch(pw, w, h, doc_with(main_trades=[t_open]))
-    b2, c2, p2, ce2, pe2, d2 = launch(pw, w, h, doc_with(main_trades=[t_open, t_loss]))
+    b1, c1, p1, ce1, pe1, d1 = launch(pw, w, h, doc_with(main_trades=[t_open], pin_winner=True))
+    b2, c2, p2, ce2, pe2, d2 = launch(pw, w, h, doc_with(main_trades=[t_open, t_loss], pin_winner=True))
     try:
         go_stock(p1); go_stock(p2)
         a, b = cell(p1), cell(p2)
@@ -477,7 +492,7 @@ def acct_sep_checks(pw, w, h, label):
     tag = f"[chromium/{label}]"
     tm = T("m1", "core", "open", sym="MAIN.BK", entry=100, sl=90, qty=700, date="2026-09-10")
     tf = T("f1", "core", "open", sym="FAM.BK", entry=50, sl=45, qty=1000, date="2026-09-10")
-    doc = doc_with(main_trades=[tm], fam_market="TH")
+    doc = doc_with(main_trades=[tm], fam_market="TH", pin_winner=True)
     doc["books"]["fam"]["trades"] = [tf]
     cs = {"cm": open_card("cm", "m1", ticker="MAIN.BK", px=108, pxDate=TODAY, emaW=100),
           "cf": open_card("cf", "f1", ticker="FAM.BK", acct="fam", qty=1000, entry=50, sl=45, px=None, lots=[{"n": 1, "date": "2026-09-10", "px": 50, "qty": 1000, "f": 1, "stop": 45}])}
@@ -502,7 +517,7 @@ def acct_sep_checks(pw, w, h, label):
 def tier_card_checks(pw, w, h, label):
     tag = f"[chromium/{label}]"
     t1 = T("t1", "core", "open", sym="XXX.BK", entry=100, sl=90, qty=700, date="2026-09-10")
-    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(main_trades=[t1]), cards={
+    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(main_trades=[t1], pin_winner=True), cards={
         "c1": open_card("c1", "t1", tier="B", px=110, pxDate=TODAY, emaW=100), "c2": card("c2", "main", "PLAN.BK", tier="B")})
     try:
         go_stock(page)
@@ -530,7 +545,7 @@ def tier_card_checks(pw, w, h, label):
 
 def denied_checks(pw, w, h, label):
     tag = f"[chromium/{label}]"
-    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(), deny=True)
+    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(pin_winner=True), deny=True)
     try:
         go_stock(page)
         err = txt(page, "[data-core-err]") or ""
@@ -555,7 +570,7 @@ def layout_checks(pw, w, h, label):
     t1 = T("t1", "core", "open", sym="XXX.BK", entry=100, sl=90, qty=700, date="2026-09-10")
     cs = {"c1": open_card("c1", "t1", px=108, pxDate=TODAY, emaW=104, lots=[{"n": 1, "date": "2026-09-10", "px": 100, "qty": 500, "f": 1, "stop": 90}, {"n": 2, "date": "2026-09-17", "px": 115, "qty": 200, "f": 0.75, "stop": 100}]),
           "c2": card("c2", "main", "LONGNAMEPLAN.BK", tier="A", tierReason="เหตุผลยาว ๆ ทดสอบการล้น")}
-    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(main_trades=[t1]), cards=cs)
+    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc_with(main_trades=[t1], pin_winner=True), cards=cs)
     try:
         go_stock(page)
         open_sim(page, "c1"); page.fill('[data-core-card="c1"] [data-c-simpx]', "115"); page.wait_for_timeout(150)
