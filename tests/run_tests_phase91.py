@@ -42,7 +42,7 @@ def seed(qty=80, entry=131, sl=115, lots=None, px=147, risk=1.0, tier="A", extra
 def launch(pw, w, h, **kw):
     ff = kw.pop("ff", None)
     trades, cards = seed(**kw.pop("seed_kw", {}))
-    b, page, ce, pe = C.launch2(pw, w, h, trades, cards, **kw)
+    b, page, ce, pe = C.launch2(pw, w, h, trades, cards, pin_winner=True, **kw)   # RG2b — ถัง Winner ตรึงเท่าทุน Core เดิม
     C.go_core(page)
     js(page, "()=>coreAll('main',1)"); page.wait_for_timeout(300)
     return b, page, ce, pe
@@ -290,10 +290,10 @@ def tests(pw, w, h, label):
     b, page, ce, pe = launch(pw, w, h)
     try:
         cap = txt(page, "[data-lf-cap]"); line = txt(page, "[data-lf-row=main] [data-lf-line]"); big = txt(page, "[data-lf-row=main] .v"); frl = txt(page, "[data-lf-row=main] [data-lf-free]")   # LN3fix3c: แถวต่อบัญชี · เงินว่างอยู่ท้ายบรรทัดแรก
-        check(f"{tag} 9 กล่องสรุป: 'ทุน ฿8.4M' (รวมทุกบัญชี · LN3fix3c) · 'Risk Core x% / 20%' · 'ว่าง ฿' · บรรทัด 'DD · FF · n ตัว' (ไม่มี Winners/Ladder/฿/ถ้า Ladder เต็มบนหน้า)", cap == "ทุน ฿8.4M" and "/ 20%" in big and "ถ้า Ladder เต็ม" not in big and frl.startswith("ว่าง ฿") and "DD" in line and "FF" in line and "Winners" not in line and "Ladder" not in line, [cap, big, line])
+        check(f"{tag} 9 กล่องสรุป: 'ทุน ฿9.88M' (RG2b = Winner + Ladder ของทั้ง 2 บัญชี) (รวมทุกบัญชี · LN3fix3c) · 'Risk Core x% / 20%' · 'ว่าง ฿' · บรรทัด 'DD · FF · n ตัว' (ไม่มี Winners/Ladder/฿/ถ้า Ladder เต็มบนหน้า)", cap == "ทุน ฿9.88M" and "%" in big and "ถ้า Ladder เต็ม" not in big and frl.startswith("ว่าง ฿") and "DD" in line and "FF" in line, [cap, big, line])
         js(page, "()=>document.querySelector('[data-lf-det]').open = true"); page.wait_for_timeout(200)
         det = txt(page, "[data-lf-det]")
-        check(f"{tag} 9 พับ 'รายละเอียดและกฎ' มี ฿ · ถ้า Ladder เต็ม · Winners ถือ · Ladder % · ตำแหน่ง · Ladder ใหม่ · Stop ฉุกเฉิน · บัญชีลด", all(k in det for k in ("ถ้า Ladder เต็ม", "Winners ถือ", "Ladder ", "ตำแหน่ง 1 ตัว", "Ladder ใหม่:", "Stop ฉุกเฉิน", "ถ้าทุกไม้โดน Stop บัญชีลด")), det[:300])
+        check(f"{tag} 9 พับ 'รายละเอียดและกฎ' มี ฿ · ถ้า Ladder เต็ม · Winners ถือ · Ladder % · ตำแหน่ง · Ladder ใหม่ · Stop ฉุกเฉิน · บัญชีลด", all(k in det for k in ("ถ้า Ladder เต็ม", "Winners ถือ", "Ladder ", "ตำแหน่ง 1 ตัว", "Stop ฉุกเฉิน", "ถ้าทุกไม้โดน Stop บัญชีลด")), det[:300])
         js(page, "()=>document.querySelector('[data-lf-det]').open = false")
         if CS1_RETIRED:   # CS1 — ฟอร์มแผนใหม่แบบ Risk % แก้ได้ (Tier) ถูกแทนที่ด้วย Risk จาก ★ (ครอบคลุมใน phase111)
             print("RETIRED (CS1) — ฟอร์มแผนใหม่แบบ Risk % แก้ได้ (Tier) ถูกแทนที่ด้วย Risk จาก ★ (ครอบคลุมใน phase111)")

@@ -13,6 +13,7 @@ import run_tests_phase107 as T
 
 ENGINE = base.BROWSER_ENGINE
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(os.path.join(HERE, ".."))
 SHOTS = os.path.join(HERE, "screenshots")
 results = []
 js = C.js
@@ -39,7 +40,7 @@ def shot(page, name, sel=None):
 
 def sections():
     env = os.environ.get("SECT", "").split()
-    return env or ["pools", "winner", "sat", "ladder", "port", "core47", "node"]
+    return env or ["pools", "winner", "sat", "ladder", "port", "core47", "ui5", "node"]
 
 
 def near(a, b, tol=1.0): return abs(a - b) <= tol
@@ -154,7 +155,7 @@ def winner_tests(pw):
                 const cp=coreCanPlace('main',{tier:'A',fortress:true,thb:nl},null,false); return [cp.reasons, cp.rows.map(x=>x.k), JSON.stringify(cs.canPlaceLadder({tank:1e6,tier:'A',ladder:nl}).reasons)]; }""")
             check(f"{tag} §4.1 วางบันไดไม่มีเหตุผล GATE_*/L_SHARE_OVER/LAYER2_OVER · แถวเช็กไม่มี gate/share/l2", not any(x.startswith("GATE_") or x in ("L_SHARE_OVER", "LAYER2_OVER") for x in r[0]) and not any(k in ("gate", "share", "l2") for k in r[1]), r)
             # งบบันได = 5% ของบัญชี × f
-            T.wl_seed(page, [W("FRTA")]); fort_stub(page, ["FRTA"])
+            T.wl_seed(page, [W("FRTA", ladder_watch=True, ladder_state="Base")]); fort_stub(page, ["FRTA"])
             for acwi, hyg, f in ((True, True, 1.0), (True, False, 0.75), (False, False, 0.5)):
                 set_ff(page, acwi, hyg)
                 js(page, "()=>{ ldrNew('FRTA'); }"); settle(page, 500)
@@ -503,6 +504,194 @@ def backstop_tests(pw):
         check("[backstop] §4.7 Core + Sat Open Risk 6% นับทั้ง Winner และ Ladder (10,000 + 5,000)", r[0] == 15000 and r[1] >= 15000, r)
     finally: b.close()
 
+# ───────────────────────── 7 UI 1–5 (หลังทดสอบจริง) ─────────────────────────
+def boxes_overlap(a, b): return not (a[2] <= b[0] + 0.5 or b[2] <= a[0] + 0.5 or a[3] <= b[1] + 0.5 or b[3] <= a[1] + 0.5)
+
+
+def ui_scope_tests(pw):
+    cards = {"ccLd": P24.card("ccLd", "main", "LADX", strategy="L", status="plan", tier="A",
+                              ladder={"levels": [{"px": 100, "status": "wait"}, {"px": 90, "status": "wait"}], "sl": 80, "budgetPct": 0.1667, "split": [0.5, 0.5]})}
+    for w, h in ((300, 800), (390, 844), (480, 900), (1100, 900), (1280, 900), (1440, 900)):
+        tag = f"[{ENGINE}/{w}px]"
+        b, page, ce, pe = launch(pw, w, h, [], cards)
+        try:
+            js(page, "()=>{ switchTab('plan'); }"); settle(page, 500)
+            info = js(page, """()=>{ const bs=[...document.querySelectorAll('.scopeBtn')]; const hb=document.querySelector('.topbar .hbtns').getBoundingClientRect();
+                return {n:bs.length, where:bs.map(b=>b.closest('#hdrSub')?'header':(b.closest('.planScope')?'page':'?')), box:bs.map(b=>{const r=b.getBoundingClientRect();return [r.left,r.top,r.right,r.bottom]}),
+                  vis:bs.map(b=>!!b.offsetParent), cmp:document.querySelectorAll('#hdrSub .hdrCmp, #hdrSub.cmp').length, sel:document.querySelectorAll('#hdrSub select').length, hbLeft:hb.left,
+                  txt:bs.map(b=>b.textContent.replace(/\\s+/g,' ').trim().replace(/ [SDF]$/,'')), kb:bs.map(b=>(b.querySelector('.kbdhint')||{}).textContent||'')}; }""")
+            check(f"{tag} §UI1 Plan: ปุ่ม Winner | Ladder | Sat แสดงครบ ไม่ย่อเป็น select/pill (cmp 0 · select 0)", info["n"] == 3 and all(info["vis"]) and info["cmp"] == 0 and info["sel"] == 0 and info["txt"] == ["Winner", "Ladder", "Sat"], info)
+            check(f"{tag} §UI1 อยู่ใน header หรือในหน้า (ไม่ทับปุ่มขวาของ header)", len(set(info["where"])) == 1 and info["where"][0] in ("header", "page") and (info["where"][0] == "page" or max(x[2] for x in info["box"]) <= info["hbLeft"] - 4), [info["where"], info["hbLeft"], [round(x[2]) for x in info["box"]]])
+            if w >= 1440: check(f"{tag} §UI1 จอกว้าง ≥ 1440: ปุ่มอยู่ใน header", info["where"][0] == "header", info["where"])
+            if w <= 390: check(f"{tag} §UI1 มือถือแคบ: ปุ่มอยู่ในหน้า เต็มแถว ไม่ล้น", info["where"][0] == "page" and max(x[2] for x in info["box"]) <= w, info)
+            check(f"{tag} §UI1 ปุ่มไม่ทับกัน", not any(boxes_overlap(info["box"][i], info["box"][j]) for i in range(3) for j in range(i + 1, 3)), info["box"])
+            src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+            check(f"{tag} §UI2 ป้ายคีย์ลัดในโค้ด: Winner S · Ladder D · Sat F · ไม่มี L (kbdhint + แผนที่คีย์)", 'id="scopeLadder" onclick="setPlanScope(\'ladder\')">Ladder <span class="kbdhint">D</span>' in src and "KeyD:['Ladder'" in src and "KeyL:['Ladder'" not in src and 'Ladder <span class="kbdhint">L</span>' not in src, "")
+            page.keyboard.press("d"); settle(page, 500)
+            check(f"{tag} §UI2 กด D → Ladder", js(page, "()=>planScope") == "ladder")
+            page.keyboard.press("f"); settle(page, 300)
+            check(f"{tag} §UI2 กด F → Sat", js(page, "()=>planScope") == "future")
+            page.keyboard.press("s"); settle(page, 300)
+            check(f"{tag} §UI2 กด S → Winner", js(page, "()=>planScope") == "stock")
+            page.keyboard.press("l"); settle(page, 300)
+            check(f"{tag} §UI2 กด L ไม่ทำอะไรกับ Plan (ไม่ใช่ Ladder แล้ว)", js(page, "()=>planScope") == "stock")
+            hlp = js(page, "()=>document.documentElement.innerHTML.includes(\"KeyL:['Ladder'\")")
+            check(f"{tag} §UI2 ไม่มี KeyL → Ladder ในแผนที่คีย์", hlp is False)
+            if w in (300, 1280, 1440):
+                js(page, "()=>{ document.getElementById('scopeLadder').click(); }"); settle(page, 500)
+                shot(page, f"rg2b-ui-header-{w}.png", ".topbar" if w >= 1100 else None)
+            check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
+        finally: b.close()
+
+
+def ui_layout_tests(pw):
+    cards = {"ccLd": P24.card("ccLd", "main", "LADX", strategy="L", status="plan", tier="A",
+                              ladder={"levels": [{"px": 100, "status": "bought"}, {"px": 90, "status": "wait"}, {"px": 80, "status": "cancelled"}], "sl": 70, "budgetPct": 0.1667, "split": [0.4, 0.3, 0.3]})}
+    wtr = [P13.T("tW1", "core", "open", sym="WINX", entry=100, sl=90, qty=14200, cur="THB", date="2026-09-10")]
+    for w, h in ((300, 800), (390, 844), (1280, 900), (1440, 900)):
+        tag = f"[{ENGINE}/{w}px]"
+        b, page, ce, pe = launch(pw, w, h, wtr, cards)
+        try:
+            T.wl_seed(page, [W("FRTA", ladder_watch=True, ladder_state="Base"), W("OTHR")]); fort_stub(page, ["FRTA", "OTHR"])
+            def over(label):
+                r = js(page, """()=>{ const vw = innerWidth; const bad = []; document.querySelectorAll('body *').forEach(e=>{ const cs = getComputedStyle(e); if(cs.display==='none' || cs.visibility==='hidden' || !e.offsetParent) return;
+                    if(e.closest('.hdrCmp,script,style,svg,.ui-sheet-backdrop,#setOverlay')) return; const r = e.getBoundingClientRect(); if(r.width > 0 && (r.right > vw + 1 || r.left < -1) && !e.closest('[class*=Scroll],.tdDetScroll,.ccTw,table')) bad.push((e.id || e.className || e.tagName).toString().slice(0, 40) + ':' + Math.round(r.left) + '-' + Math.round(r.right)); });
+                    return {sw: document.documentElement.scrollWidth - vw, bad: bad.slice(0, 5)}; }""")
+                check(f"{tag} §UI3 {label}: ไม่ล้นแนวนอน · ไม่มีองค์ประกอบโผล่ออกนอกจอ", r["sw"] <= 0 and not r["bad"], r)
+            # Ladder page
+            js(page, "()=>{ switchTab('plan'); setPlanScope('ladder'); render(); }"); settle(page, 600)
+            ch = js(page, """()=>[...document.querySelectorAll('.ldrHead .ln2-ab')].map(e=>{ const r=e.getBoundingClientRect(); const lh = parseFloat(getComputedStyle(e).lineHeight) || 18; return [Math.round(r.height), Math.round(lh), e.innerText.replace(/\\s+/g,' ').trim(), getComputedStyle(e).whiteSpace]; })""")
+            check(f"{tag} §UI3 Ladder: ชิปบัญชีบรรทัดเดียว (nowrap · สูง ≤ 2 บรรทัดของ padding)", len(ch) >= 2 and all(c[3] == "nowrap" and c[0] <= c[1] * 1.7 + 14 for c in ch), ch)
+            hb = js(page, """()=>[...document.querySelectorAll('.ldrHead > *')].map(e=>{ const r=e.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; })""")
+            check(f"{tag} §UI3 Ladder: ส่วนหัวไม่ทับกัน", not any(boxes_overlap(hb[i], hb[j]) for i in range(len(hb)) for j in range(i + 1, len(hb))), hb)
+            wr = js(page, """()=>{ const c = document.querySelector('[data-ldr-card]'); const g = [...c.querySelectorAll('.lv')].map(l=>[l.scrollWidth <= l.clientWidth + 1, l.getBoundingClientRect().right <= innerWidth]); return g; }""")
+            check(f"{tag} §UI3 Ladder: แถว T1–T3 ไม่ถูกตัด", all(a and b2 for a, b2 in wr), wr)
+            over("หน้า Ladder")
+            shot(page, f"rg2b-ui-ladder-{w}.png")
+            # Winner plan + New plan sheet
+            js(page, "()=>{ setPlanScope('stock'); render(); }"); settle(page, 600); over("แผน Winner")
+            shot(page, f"rg2b-ui-winner-{w}.png")
+            js(page, "()=>{ coreNewOpen('main'); }"); settle(page, 600); over("ฟอร์มแผน Winner ใหม่")
+            js(page, "()=>{ coreSheetClose(); switchTab('today'); todayRefresh(true); }"); settle(page, 600); over("Today (Core panel)")
+            pl = js(page, "()=>[...document.querySelectorAll('[data-td3-pool]')].map(e=>{ const r=e.getBoundingClientRect(); return [Math.round(r.right), Math.round(r.height)]; })")
+            check(f"{tag} §UI3 Today Core: 2 บรรทัดสั้น ไม่ตัดบรรทัด (สูง ≤ 24px)", len(pl) == 2 and all(x[0] <= w and x[1] <= 24 for x in pl), pl)
+            shot(page, f"rg2b-ui-today-{w}.png", "[data-td3-panel=core]")
+            js(page, "()=>{ switchTab('mix'); ln3PortSet('main'); renderPortfolioMix(); }"); settle(page, 600); over("Port")
+            pr = js(page, "()=>{ const e = document.querySelector('[data-pool-line] summary'); const r = e.getBoundingClientRect(); return [Math.round(r.right), Math.round(r.height)]; }")
+            check(f"{tag} §UI3 Port: เส้นถังอยู่ในจอ (ขึ้นบรรทัดใหม่ได้ ไม่ทะลุ)", pr[0] <= w and pr[1] < 70, pr)
+            shot(page, f"rg2b-ui-port-{w}.png", "[data-pool-line]")
+            js(page, "()=>{ openSettings(); }"); settle(page, 600); over("Settings")
+            js(page, "()=>{ document.getElementById('poolBlock').scrollIntoView({block:'center'}); }"); settle(page, 300)
+            shot(page, f"rg2b-ui-settings-{w}.png", "#poolBlock")
+            pw_ = js(page, "()=>[...document.querySelectorAll('#poolBlock .poolRow input')].map(e=>{ const r=e.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.right), Math.round(r.width)]; })")
+            check(f"{tag} §UI3 Settings: ช่อง Winner/Ladder/Sat กว้างพอ (≥ 56px) ไม่ซ้อนกัน", len(pw_) == 3 and all(x[2] >= 56 for x in pw_) and pw_[0][1] <= pw_[1][0] + 1 and pw_[1][1] <= pw_[2][0] + 1 and pw_[2][1] <= w, pw_)
+            check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
+        finally: b.close()
+
+
+def ui_separate_tests(pw):
+    cards = {"ccP": P24.card("ccP", "main", "PLNX", strategy="W", status="plan", tier="A", plan={"entry": 100, "stop": 90}),
+             "ccLd": P24.card("ccLd", "main", "LADX", strategy="L", status="plan", tier="A",
+                              ladder={"levels": [{"px": 100, "status": "wait"}, {"px": 90, "status": "wait"}], "sl": 80, "budgetPct": 0.1667, "split": [0.5, 0.5]})}
+    b, page, ce, pe = launch(pw, 390, 844, [], cards)
+    tag = f"[{ENGINE}/390px]"
+    try:
+        T.wl_seed(page, [W("WINA"), W("WINB", ladder_watch=False), W("LADA", ladder_watch=True, ladder_state="Base"), W("LADS", ladder_watch=True, ladder_state="Sideways-Up"), W("LADB", ladder_watch=True, ladder_state="Broken"), W("LADX"), W("PLNX")])
+        fort_stub(page, ["LADA", "LADS", "LADB", "LADX", "WINA"])
+        tr = js(page, "()=>Object.fromEntries(wlItems.map(x=>[x.ticker, wlTrackOf(x)]))")
+        check(f"{tag} §UI5 track เริ่มต้น: เอกสารเดิมไม่มีค่า = Winner · หุ้นที่มีการ์ด L (LADX) = Ladder · ladder_watch true = Ladder", tr == {"LADA": "ladder", "LADB": "ladder", "LADS": "ladder", "LADX": "ladder", "PLNX": "winner", "WINA": "winner", "WINB": "winner"}, tr)
+        # Winner: ฟอร์มไม่มีตัวเลือก W/L · ไม่มีโหมดแปลง
+        js(page, "()=>{ switchTab('plan'); setPlanScope('stock'); render(); coreNewOpen('main'); }"); settle(page, 600)
+        f = js(page, """()=>({box:!!document.getElementById('cnStratBox'), w:!!document.getElementById('cnStratW'), l:!!document.getElementById('cnStratL'), strat:coreNew.strat, mode:coreNew.mode,
+              list:[...document.querySelectorAll('#cnTickerList option')].map(o=>o.value).sort(), title:(document.querySelector('.core-sheet h3')||{}).textContent||'', wbox:document.getElementById('cnWBox').style.display, lbox:document.getElementById('cnLBox').style.display})""")
+        check(f"{tag} §UI4 ฟอร์มแผน Winner: ไม่มีตัวเลือก W/L (cnStratBox/W/L = ไม่มี) · strat W · กล่อง Winner แสดง · กล่อง Ladder ซ่อน", not f["box"] and not f["w"] and not f["l"] and f["strat"] == "W" and f["wbox"] == "" and f["lbox"] == "none", f)
+        check(f"{tag} §UI5 + New plan (Winner) แสดงเฉพาะหุ้น track Winner", f["list"] == ["PLNX", "WINA", "WINB"], f["list"])
+        js(page, "()=>{ document.getElementById('cnTicker').value='LADA'; coreNewIn(); }"); settle(page, 300)
+        er = js(page, "()=>document.getElementById('cnErr').innerText")
+        check(f"{tag} §UI5 พิมพ์หุ้น track Ladder ในฟอร์ม Winner → ไม่ให้บันทึก ('use + New ladder')", "Ladder track" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
+        js(page, "()=>{ coreSheetClose(); }")
+        # Ladder: ฟอร์มบันไดอย่างเดียว · รายชื่อเฉพาะ Base/Sideways-Up
+        js(page, "()=>{ setPlanScope('ladder'); render(); ldrNew(); }"); settle(page, 600)
+        f = js(page, """()=>({box:!!document.getElementById('cnStratBox'), strat:coreNew.strat, mode:coreNew.mode, list:[...document.querySelectorAll('#cnTickerList option')].map(o=>o.value).sort(),
+              wbox:document.getElementById('cnWBox').style.display, lbox:document.getElementById('cnLBox').style.display, tk:document.getElementById('cnTicker').value, title:(document.querySelector('.core-sheet h3')||{}).textContent||''})""")
+        check(f"{tag} §UI4 + New ladder: strat L เท่านั้น · ไม่มีตัวเลือก W/L · กล่อง Ladder แสดง · กล่อง Winner ซ่อน", not f["box"] and f["strat"] == "L" and f["wbox"] == "none" and f["lbox"] == "" and f["mode"] == "new", f)
+        check(f"{tag} §UI5 + New ladder แสดงเฉพาะหุ้น track Ladder ที่ Base / Sideways-Up (LADB Broken ไม่มี)", f["list"] == ["LADA", "LADS", "LADX"] or f["list"] == ["LADA", "LADS"], f["list"])
+        check(f"{tag} §UI5 เปิดจาก + New ladder: เติมหุ้นแรกที่ผ่านเงื่อนไขอัตโนมัติ", f["tk"] in ("LADA", "LADS"), f["tk"])
+        js(page, "()=>{ document.getElementById('cnTicker').value='WINA'; coreNewIn(); }"); settle(page, 300)
+        er = js(page, "()=>document.getElementById('cnErr').innerText")
+        check(f"{tag} §UI5 ฟอร์ม Ladder + หุ้น track Winner → ไม่ให้บันทึก", "Ladder track" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
+        js(page, "()=>{ document.getElementById('cnTicker').value='LADB'; coreNewIn(); }"); settle(page, 300)
+        er = js(page, "()=>document.getElementById('cnErr').innerText")
+        check(f"{tag} §UI5 ฟอร์ม Ladder + หุ้น Broken → ไม่ให้บันทึก", "Base or Sideways-Up" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
+        js(page, "()=>{ coreSheetClose(); }")
+        # เมนู ⋯ ของการ์ดไม่มีปุ่มสลับกลยุทธ์ · ฟังก์ชันแปลงถูกถอด
+        js(page, "()=>{ setPlanScope('stock'); render(); }"); settle(page, 500)
+        gone = js(page, "()=>[typeof coreToL, typeof coreToW, typeof coreNewStrat, document.querySelectorAll('[data-c-strat]').length]")
+        check(f"{tag} §UI4 ถอดโหมดแปลง W↔L: ไม่มี coreToL/coreToW/coreNewStrat · เมนูไม่มี [data-c-strat]", gone == ["undefined", "undefined", "undefined", 0], gone)
+        # การ์ด L เดิมยังอยู่หน้า Ladder · ไม่อยู่หน้า Winner
+        wl_ = js(page, "()=>[...document.querySelectorAll('#corePanel [data-core-card]')].map(e=>e.dataset.coreCard)")
+        check(f"{tag} §UI4 หน้า Winner ไม่แสดงการ์ด Ladder (ccLd) แต่แสดงการ์ด Winner (ccP)", "ccP" in wl_ and "ccLd" not in wl_, wl_)
+        js(page, "()=>{ setPlanScope('ladder'); render(); }"); settle(page, 500)
+        ld_ = js(page, "()=>[...document.querySelectorAll('[data-ldr-card]')].map(e=>e.dataset.ldrCard)")
+        check(f"{tag} §UI4 การ์ด L เดิมอยู่หน้า Ladder", ld_ == ["ccLd"], ld_)
+        # เปลี่ยน track: ห้ามเมื่อมีแผน/ไม้เปิดในถังปัจจุบัน
+        r1 = js(page, "()=>wlTrackBlock('LADX','winner')"); r2 = js(page, "()=>wlTrackBlock('PLNX','ladder')"); r3 = js(page, "()=>wlTrackBlock('WINB','ladder')"); r4 = js(page, "()=>wlTrackBlock('WINA','ladder')"); r5 = js(page, "()=>wlTrackBlock('LADA','winner')")
+        check(f"{tag} §UI5 เปลี่ยน track ไม่ได้ถ้ามีแผนค้างในถังเดิม (LADX มีการ์ด L · PLNX มีการ์ด W)", "open Ladder plan" in r1 and "open Winner plan" in r2, [r1, r2])
+        check(f"{tag} §UI5 ไป Ladder ต้อง Fortress ผ่าน (WINB ไม่ผ่าน → บล็อก · WINA ผ่าน → ได้) · Ladder → Winner ได้เมื่อไม่มีแผน", r3 == "Ladder needs Fortress passed" and r4 == "" and r5 == "", [r3, r4, r5])
+        ok = js(page, "()=>wlTrackSet('WINA','ladder')"); settle(page, 300)
+        tr2 = js(page, "()=>[wlTrackOf('WINA'), wlItems.find(x=>x.ticker==='WINA').ladder_state]")
+        check(f"{tag} §UI5 ย้าย WINA → Ladder สำเร็จ (state Base)", ok is True and tr2 == ["ladder", "Base"], tr2)
+        bl = js(page, "()=>[wlTrackSet('LADX','winner'), window.__trackMsg]")
+        check(f"{tag} §UI5 ย้ายกลับที่ถูกบล็อก → false + ข้อความ", bl[0] is False and "open Ladder plan" in (bl[1] or ""), bl)
+        # chips กรอง Watchlist
+        js(page, "()=>{ switchTab('watch'); wlView='wl'; renderWatchlist(); }"); settle(page, 500)
+        chips = js(page, "()=>[...document.querySelectorAll('[data-wl-trk]')].map(b=>b.dataset.wlTrk)")
+        check(f"{tag} §UI5 Watchlist มีชิปกรอง Winner · Ladder", chips == ["winner", "ladder"], chips)
+        rows = lambda: js(page, "()=>[...document.querySelectorAll('#watchGroups .wlR[data-sym]')].map(e=>e.dataset.sym).sort()")
+        allr = rows()
+        page.locator("[data-wl-trk=ladder]").first.click(); settle(page, 300)
+        lr = rows()
+        page.locator("[data-wl-trk=ladder]").first.click(); settle(page, 300)
+        page.locator("[data-wl-trk=winner]").first.click(); settle(page, 300)
+        wr_ = rows()
+        page.locator("[data-wl-trk=winner]").first.click(); settle(page, 300)
+        ar = rows()
+        check(f"{tag} §UI5 กรอง Ladder = เฉพาะ track Ladder · กรอง Winner = เฉพาะ track Winner · กดซ้ำ = ทั้งหมด", set(lr) == {"LADA", "LADB", "LADS", "LADX", "WINA"} and set(wr_) == {"PLNX", "WINB"} and ar == allr, [lr, wr_, allr])
+        badge = js(page, "()=>[...document.querySelectorAll('.wlR [data-wl-track]')].map(e=>e.closest('.wlR').dataset.sym+':'+e.dataset.wlTrack).sort()")
+        check(f"{tag} §UI5 แถว Watchlist มีป้าย W / L ตาม track", "LADA:ladder" in badge and "PLNX:winner" in badge, badge)
+        check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
+    finally: b.close()
+
+
+def ui_promote_tests(pw):
+    import run_tests_phase107 as P107
+    b, page, ce, pe = launch(pw, 390, 844)
+    tag = f"[{ENGINE}/390px]"
+    try:
+        P107.hw_inject(page)
+        js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 600)
+        syms = P107.qrows(page)
+        s1 = syms[0]
+        page.locator(f'[data-td3-cand="{s1}"]').first.click(); settle(page, 500)
+        info = js(page, "()=>{ const s=document.querySelector('[data-td4-pro-track]'); return s ? [[...s.options].map(o=>[o.value,o.disabled]), s.value] : null; }")
+        check(f"{tag} §UI5 ฟอร์ม Candidate → Watchlist มี Track: Winner / Ladder (ค่าเริ่ม Winner)", info and [o[0] for o in info[0]] == ["winner", "ladder"] and info[1] == "winner", info)
+        check(f"{tag} §UI5 Ladder เลือกไม่ได้ถ้ายังไม่ Fortress ผ่าน (disabled)", info and info[0][1][1] is True, info)
+        P107.pro_fill(page); page.click("[data-td4-pro-go]"); settle(page, 800)
+        d1 = js(page, "(s)=>{ const x = wlItems.find(w=>w.ticker===s); return x ? [x.ladder_watch, x.ladder_watch_set, wlTrackOf(x)] : null; }", s1)
+        check(f"{tag} §UI5 ย้ายเข้า Watchlist ด้วย track Winner → ladder_watch false · track Winner", d1 == [False, True, "winner"], d1)
+        js(page, "()=>{ todayRefresh(true); }"); settle(page, 500)
+        syms = P107.qrows(page); s2 = syms[0]
+        js(page, "(s)=>{ csEvalWrite(s, Object.assign({}, csEvalOf(s) || Calc.evalNorm(null), {fortress:'passed'})); todayRefresh(true); }", s2); settle(page, 400)
+        page.locator(f'[data-td3-cand="{s2}"]').first.click(); settle(page, 500)
+        en = js(page, "()=>{ const s=document.querySelector('[data-td4-pro-track]'); return [...s.options].map(o=>[o.value,o.disabled]); }")
+        check(f"{tag} §UI5 Fortress ผ่านแล้ว → เลือก Ladder ได้", en[1] == ["ladder", False], en)
+        js(page, "()=>{ const s=document.querySelector('[data-td4-pro-track]'); s.value='ladder'; s.dispatchEvent(new Event('change',{bubbles:true})); }")
+        P107.pro_fill(page); page.click("[data-td4-pro-go]"); settle(page, 800)
+        d2 = js(page, "(s)=>{ const x = wlItems.find(w=>w.ticker===s); return x ? [x.ladder_watch, x.ladder_state, wlTrackOf(x)] : null; }", s2)
+        check(f"{tag} §UI5 ย้ายเข้า Watchlist ด้วย track Ladder → ladder_watch true · state Base", d2 == [True, "Base", "ladder"], d2)
+        check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
+    finally: b.close()
+
 
 def node_tests():
     import subprocess
@@ -522,6 +711,7 @@ def main():
         if "ladder" in S: ladder_tests(pw)
         if "port" in S: port_tests(pw); multi_acct_tests(pw)
         if "core47" in S: today_tests(pw); dd_tests(pw); goals_tests(pw); backstop_tests(pw)
+        if "ui5" in S: ui_scope_tests(pw); ui_layout_tests(pw); ui_separate_tests(pw); ui_promote_tests(pw)
     if "node" in S: node_tests()
     bad = [r for r in results if not r[1]]
     print(f"\n{'PASS' if not bad else 'FAIL'}  {len(results) - len(bad)} / {len(results)}")

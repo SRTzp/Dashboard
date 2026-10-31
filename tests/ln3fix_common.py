@@ -31,10 +31,11 @@ def mutate(doc):
     P77.fixture()(doc)
 
 
-def launch(pw, w, h, cards=True, mut=None):
+def launch(pw, w, h, cards=True, mut=None, pin_winner=False):
     def m(doc):
         mutate(doc)
         if mut: mut(doc)
+        if pin_winner: P24.pin_winner_pool(doc)   # RG2b — ตรึงถัง Winner = ทุน Core เดิม
     browser, context, page, ce, pe, dl = P54.launch(pw, w, h, m)
     P51.fresh(page, None)
     if cards:
@@ -46,16 +47,17 @@ def launch(pw, w, h, cards=True, mut=None):
     return browser, page, ce, pe
 
 
-def launch2(pw, w, h, trades, cards, mut=None, fx=33, core_risk=None):
+def launch2(pw, w, h, trades, cards, mut=None, fx=33, core_risk=None, pin_winner=False):
     """LN3fix2 — ถัง Core ฿4.2M fx 33 (≈ $127k) · ค่าตั้ง Base 1.0% · เทรด/การ์ดที่กำหนดเอง (ไม่ผ่านฟอร์ม)"""
     def m(doc):
         mutate(doc)
         for a in ("main", "fam"):
             doc["books"][a]["settings"]["fx"] = fx
-        cr = {"riskA": 1.0, "riskB": 1.0, "riskPct": 1.0, "tierA": 15, "tierB": 10, "maxLots": 3, "addRatio": 50, "market": "both"}
+        cr = {"riskA": 1.0, "riskB": 1.0, "riskPct": 1.0, "tierA": 15, "winnerCap": 15, "tierB": 10, "maxLots": 3, "addRatio": 50, "market": "both"}
         cr.update(core_risk or {})
         doc["books"]["main"]["settings"].setdefault("coreRisk", {}).update(cr)
         if mut: mut(doc)
+        if pin_winner: P24.pin_winner_pool(doc)   # RG2b — ตรึงถัง Winner = ทุน Core เดิม
     browser, context, page, ce, pe, dl = P54.launch(pw, w, h, m)
     P51.fresh(page, None)
     js(page, "(t)=>{ const B=getBook('main'); B.trades=t; saveBook('main'); render(); }", trades)

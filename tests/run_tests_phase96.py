@@ -190,13 +190,13 @@ def risksat(pw, w, h, label):
         iid = P81.idea(page, sleeve="main", entry=4180, sl=4117); P81.note(page, iid)
         fm = js(page, "()=>{ const e = document.querySelector('[data-ln2-form]'); return e ? {t: e.innerText.replace(/\\s+/g,' ').trim(), deals: [...e.querySelectorAll('[data-ln2-deal-acc]')].map(x=>[x.dataset.ln2DealAcc, x.innerText.trim()]), pct: (e.innerText.match(/(\\d+)%/)||[])[1]} : null; }")
         expd = js(page, "()=>['main','fam'].map(a=>{ const M = satV2Money(a); return [a, satV2Usd(M.mainTHB*M.cfg.rptMain/100, M.fx)]; })")
-        check(f"{tag} 3 บรรทัดสถานะฟอร์ม: '2% · <บัญชี> $x · <บัญชี> $y' แสดงทั้ง 2 บัญชี (ตรงสูตรเดิม) · ส่วนอื่นเดิม (ทิศ · Macro · ไม้ใหม่)", fm and fm["deals"] == expd and fm["pct"] == "2" and fm["t"].startswith("▲ Up · Macro") and "ใหม่" in fm["t"], [fm, expd])   # PF1 — ทิศ = Trend ของแผน · มือถือย่อเป็น ใหม่
+        check(f"{tag} 3 บรรทัดสถานะฟอร์ม: '2% · <บัญชี> $x · <บัญชี> $y' แสดงทั้ง 2 บัญชี (ตรงสูตรเดิม) · ส่วนอื่นเดิม (ทิศ · Macro · ไม้ใหม่)", fm and fm["deals"] == expd and fm["pct"] == "5" and fm["t"].startswith("▲ Up · Macro") and "ใหม่" in fm["t"], [fm, expd])   # PF1 — ทิศ = Trend ของแผน · มือถือย่อเป็น ใหม่
         if w <= 340:
             dots = js(page, "()=>{ const e = document.querySelector('[data-ln2-form] .ln2-fn'); return {dn: getComputedStyle(e.querySelector('.dn')).display, dd: getComputedStyle(e.querySelector('.dd')).display}; }")
             check(f"{tag} 3 ≤340px: บรรทัดสถานะใช้จุดสีแทนชื่อบัญชี", dots == {"dn": "none", "dd": "inline-block"}, dots)
         check(f"{tag} 3 {label} ไม่ล้นแนวนอน", overflow(page) <= 1, overflow(page))
         # ไม่มีเงิน Sat → ข้อความตั้งค่า
-        js(page, "()=>{ const bk = getBook('fam'); bk.settings.capital.satB = 0; saveBook('fam'); render(); satV3Render({force:true}); }"); settle(page, 500)
+        js(page, "()=>{ const bk = getBook('fam'); bk.settings.capital.satB = 0; bk.settings.pools = {winner:62.5, ladder:37.5, sat:0, reviewed:true}; saveBook('fam');   /* RG2b — ถัง Sat = % ของบัญชี: 'ไม่ตั้งเงิน Sat' = ตั้งสัดส่วน Sat 0% */ render(); satV3Render({force:true}); }"); settle(page, 500)
         nm = js(page, "()=>{ const e = document.querySelector('[data-ln2-row=fam]'); return e ? {t: e.innerText.replace(/\\s+/g,' ').trim(), nomoney: !!e.querySelector('[data-ln2-nomoney]'), link: !!e.querySelector('[data-ln2-setup]'), mainNum: !!document.querySelector('[data-ln2-row=main] [data-ln2-used]')} : null; }")
         check(f"{tag} 3 บัญชีที่ยังไม่ตั้งเงิน Sat → แถวบอก 'ยังไม่ได้ตั้งเงิน Sat — ตั้งค่า' (มีลิงก์) · อีกบัญชียังแสดงตัวเลข", nm and nm["nomoney"] and nm["link"] and "ยังไม่ได้ตั้งเงิน Sat" in nm["t"] and nm["mainNum"], nm)
         # บัญชีเดียว
@@ -222,7 +222,7 @@ def riskcore(pw, w, h, label):
         C.go_core(page)
         js(page, "()=>window.scrollTo(0,0)")
         info = js(page, """()=>{ const rows = [...document.querySelectorAll('[data-lf-row]')]; return {ids: rows.map(r=>r.dataset.lfRow), n: rows.length, cap: (document.querySelector('[data-lf-cap]')||{}).innerText, boxes: document.querySelectorAll('[data-lf-riskbox]').length}; }""")
-        check(f"{tag} 4 Risk Core: 1 กล่อง · 2 แถว (main, fam) พร้อมกัน · หัว Core = ทุนรวม ฿8.4M", info["ids"] == ["main", "fam"] and info["boxes"] == 1 and info["cap"] == "ทุน ฿8.4M", info)
+        check(f"{tag} 4 Risk Core: 1 กล่อง · 2 แถว (main, fam) พร้อมกัน · หัว Core = ถัง Winner + Ladder รวม ฿9.6M", info["ids"] == ["main", "fam"] and info["boxes"] == 1 and info["cap"] == "ทุน ฿9.6M", info)   # RG2b — ทุน Core = ถัง Winner + Ladder (80% ของยอดบัญชี ฿12M)
         # ค่าเดียวกับกล่องเดิมของบัญชีนั้น
         for A in ("main", "fam"):
             ref = js(page, """(A)=>{ const rk = coreAcctRisk(A), cx = coreCtx(A), cfg = cx.cfg, sp = cx.split, tank = cx.tankTHB; if(!(tank > 0)) return null;

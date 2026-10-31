@@ -59,7 +59,7 @@ def doc37(with_dd=True):
         s["fx"] = 40; s["capital"]["core"] = 700000; s["capital"]["satB"] = 26000
         s.setdefault("coreRisk", {}).update({"riskPct": 1.25, "tierA": 10, "tierB": 5, "market": "both"}); s["coreRisk"]["maxLots"] = 6   # CZ1: seed เพดานไม้แรกเดิม 10/5
         s["satRisk"] = {"rpt": 1.25, "rptHi": 2, "newMax": 2}
-        if with_dd: s["ddState"] = {"core": ds0(700000), "sat": ds0(26000)}
+        if with_dd: s["ddState"] = {"winner": ds0(700000), "sat": ds0(26000)}   # RG2b §4.7 — เบรก DD ต่อถัง (Winner = ถัง Core เดิมที่ตรึงไว้)
         b["trades"] = []
     p24.pin_winner_pool(doc)   # RG2b — ถัง Winner = ทุน Core เดิม (หลังตั้ง capital ของ fixture นี้)
     return doc
@@ -92,20 +92,24 @@ def put_trades(page, acct, trades):
 
 
 def set_dd(page, acct, bucket, st):
+    bucket = "winner" if bucket == "core" else bucket   # RG2b §4.7 — เบรก DD ต่อถัง: เทสเดิมเรียก "core" = Winner
     js(page, "([a,b,s])=>{ const B=getBook(a); B.settings.ddState=Object.assign({}, B.settings.ddState||{}, {[b]:s}); saveBook(a); render(); }", [acct, bucket, st]); page.wait_for_timeout(350)
 
 
 def dd(page, acct, bucket):
+    bucket = "winner" if bucket == "core" else bucket   # RG2b §4.7 — เบรก DD ต่อถัง: เทสเดิมเรียก "core" = Winner
     return js(page, """([a,b])=>{ const e=ddEval(a,b); if(!e) return null;
         return {stage:e.stage, ddPct:e.ddPct, sizeFactor:e.sizeFactor, allowNew:e.allowNew, allowLadder:e.allowLadder, pauseUntil:e.pauseUntil, equity:e.equity, peak:e.peak,
                 missing:e.missing, recoverR:e.recoverRNow, oneR:e.oneR, reviewDone:e.reviewDone, rebased:e.rebased, rebasedAt:e.rebasedAt, weekly:e.weekly, since:e.next.stageSince, left:e.info.pauseLeftDays}; }""", [acct, bucket])
 
 
 def persisted(page, acct, bucket):
+    bucket = "winner" if bucket == "core" else bucket   # RG2b §4.7 — เบรก DD ต่อถัง: เทสเดิมเรียก "core" = Winner
     return js(page, "([a,b])=>{ const s=getBook(a).settings.ddState; return s && s[b] ? JSON.parse(JSON.stringify(s[b])) : null; }", [acct, bucket])
 
 
 def db_dd(page, acct, bucket):
+    bucket = "winner" if bucket == "core" else bucket   # RG2b §4.7 — เบรก DD ต่อถัง: เทสเดิมเรียก "core" = Winner
     return page.evaluate("([a,b])=>{ const d = window.firebase.__mockDb.__dump()['users/testuid']; const s = d.books[a].settings.ddState; return s ? s[b] : null; }", [acct, bucket])
 
 
@@ -143,11 +147,13 @@ def n_trades(page, acct="main"): return js(page, "(a)=>getBook(a).trades.length"
 
 
 def chip(page, bucket, acct=None):
-    sel = (f'[data-core-acct="{acct}"] ' if (acct and bucket == "core") else (f'[data-sat-meta] [data-acct="{acct}"] ' if acct else "")) + f'[data-dd-chip="{bucket}"]'
+    core_ = bucket == "core"; bucket = "winner" if core_ else bucket   # RG2b §4.7
+    sel = (f'[data-core-acct="{acct}"] ' if (acct and core_) else (f'[data-sat-meta] [data-acct="{acct}"] ' if acct else "")) + f'[data-dd-chip="{bucket}"]'
     return txt(page, sel) or ""
 
 
 def open_sheet(page, acct, bucket):
+    bucket = "winner" if bucket == "core" else bucket   # RG2b §4.7 — เบรก DD ต่อถัง: เทสเดิมเรียก "core" = Winner
     js(page, "([a,b])=>ddSheetOpen(a,b)", [acct, bucket]); page.wait_for_selector('.core-sheet [data-core-sheet="dd"]', timeout=3000)
 
 
@@ -250,21 +256,26 @@ def core_tests(pw, w, h, label):
         check(f"{tag} 1 บันทึก state ลง settings.ddState.core (ddSync) · stage reduce", (db_dd(page, "main", "core") or {}).get("stage") == "reduce", json.dumps(db_dd(page, "main", "core")))
         c = chip(page, "core", "main")
         check(f"{tag} 1 ชิป 'DD 12.5% · ลดขนาด ×0.5' บนแถบบัญชี Core", "DD 12.5%" in c and "ลดขนาด ×0.5" in c, c)
-        bar = txt(page, '[data-dd-bar="core"]') or ""
+        bar = txt(page, '[data-dd-bar="winner"]') or ""
         check(f"{tag} 1 แถบแจ้ง 1 บรรทัด + ลิงก์ 'รายละเอียด'", "ลดขนาด" in bar and "รายละเอียด" in bar and "งดเปิดบันได L ใหม่" in bar, bar)
         shot(page, f"dd1-strip-reduce-{label}.png", '[data-core-acct="main"]')
         bud = js(page, "()=>{ const cx=coreCtx('main'); const r=coreFirstLotCalc(cx,'TH','A',100,90,1); return {budget:r.budget, full:r.budgetFull, rp:cx.opts.riskPct, base:cx.opts.riskPctBase, ddf:cx.opts.ddFactor}; }")
         check(f"{tag} 1 ไม้ W ใหม่งบเสี่ยง = ฿4,375 (riskPct × 0.5 ส่งเข้า Calc.coreSize)", near(bud["budget"], 4375, 1e-6) and near(bud["rp"], 0.00625, 1e-12) and near(bud["base"], 0.0125, 1e-12) and bud["ddf"] == 0.5, json.dumps(bud))
+        # RG2b §4.7 — เบรกแยกต่อถัง: Winner ลดขนาดไม่บล็อกบันได → ตั้งเบรกของ Ladder เอง (DD 12.5% ของถัง Ladder) แล้วเช็กการบล็อกบันได
+        wl0 = js(page, "()=>coreCanPlace('main',{tier:'A',fortress:true,thb:{ok:false}},null,false).ddBlock")
+        check(f"{tag} 1 (RG2b) Winner ลดขนาด → ไม่บล็อกการวางบันได (เบรกคนละถัง)", not wl0, str(wl0))
+        js(page, "()=>{ const B=getBook('main'), lp=poolsOf('main').ladder, k=Object.values(B.settings.ddState).find(x=>x&&x.key)?.key||null; B.settings.ddState=Object.assign({}, B.settings.ddState, {ladder:{peak:lp/0.875, baseAt:'2026-09-01', tank:lp, key:k, stage:'normal', stageSince:'2026-09-01', pauseUntil:null, review:null, recoverDd0:null, weekly:{}, rebasedAt:null}}); saveBook('main'); render(); }"); page.wait_for_timeout(300)
         lad = js(page, "()=>{ const r=coreCanPlace('main',{tier:'A',fortress:true,thb:{ok:false}},null,false); return {allowed:r.allowed, dd:r.ddBlock, rows:r.rows.filter(x=>x.k==='dd').length}; }")
         check(f"{tag} 1 coreCanPlace: บันไดใหม่ไม่ได้ + เหตุผล 'งดเปิดบันได L ใหม่'", lad["allowed"] is False and "งดเปิดบันได L ใหม่" in lad["dd"] and lad["rows"] == 1, json.dumps(lad, ensure_ascii=False))
         ladE = js(page, "()=>{ const r=coreCanPlace('main',{tier:'A',fortress:true,thb:{ok:false}},null,true); return {dd:r.ddBlock}; }")
         check(f"{tag} 1 แก้แผนบันไดเดิม (isEdit) ไม่โดนเบรก", not ladE["dd"], json.dumps(ladE))
-        p33.new_form(page, "LTEST"); p33.fill_fortress(page); page.click("#cnStratL"); page.wait_for_timeout(200)
+        p33.new_form(page, "LTEST"); p33.fill_fortress(page); js(page, "()=>{ coreNew.strat='L'; coreNewIn(); }"); page.wait_for_timeout(200)   # RG2b — ไม่มีปุ่มเลือก L ในฟอร์มแล้ว: เปิดโหมดบันไดโดยตรง
         er = txt(page, "#cnErr") or ""
         check(f"{tag} 1 ฟอร์มแผน L: ปุ่มบันทึกปิด + เหตุผล DD ในกล่องข้อผิดพลาด", page.locator("#cnSave").first.is_disabled() and "งดเปิดบันได L ใหม่" in er and page.locator('#cnLgates [data-gate="dd"]').count() == 1, er)
-        page.click("#cnStratW"); page.fill("#cnEntry", "100"); page.fill("#cnStop", "90"); page.wait_for_timeout(200)
+        js(page, "()=>{ coreNew.strat='W'; coreNewIn(); }"); page.fill("#cnEntry", "100"); page.fill("#cnStop", "90"); page.wait_for_timeout(200)
         er = txt(page, "#cnErr") or ""
         check(f"{tag} 1 ฟอร์มแผน W ใน reduce: ไม่ถูกบล็อกด้วย DD (ลดขนาดเท่านั้น)", "เบรก DD" not in er and not page.locator("#cnSave").first.is_disabled(), er)
+        js(page, "()=>{ const B=getBook('main'); const ds=Object.assign({}, B.settings.ddState); delete ds.ladder; B.settings.ddState=ds; saveBook('main'); render(); }")   # RG2b — ล้างเบรก Ladder ที่ตั้งเพื่อเทสบล็อกบันได
         js(page, "()=>coreSheetClose()")
 
         # ── 2 Core: เพิ่ม unrealized จน DD 20% → พัก 14 วัน
@@ -281,8 +292,8 @@ def core_tests(pw, w, h, label):
         check(f"{tag} 2 เพิ่ม unrealized → equity ฿560,000 · DD 20% · stage pause", e["stage"] == "pause" and near(e["equity"], 560000, 1e-6) and near(e["ddPct"], 20, 1e-6) and e["sizeFactor"] == 0 and not e["allowNew"], json.dumps(e))
         check(f"{tag} 2 พักถึง {P14} (วันนี้ + 14)", e["pauseUntil"] == P14 and e["left"] == 14, json.dumps([e["pauseUntil"], e["left"]]))
         c = chip(page, "core", "main")
-        check(f"{tag} 2 ชิป 'พักถึง 15 ต.ค.' (สีแดง)", "พักถึง 15 ต.ค." in c and page.locator('[data-dd-chip="core"].dd-pause').count() >= 1, c)
-        check(f"{tag} 2 แถบแจ้ง: พักถึง 15 ต.ค. · ห้ามเปิดไม้ใหม่ · ต้องเขียนทบทวน", all(x in (txt(page, '[data-dd-bar="core"]') or "") for x in ("พักถึง 15 ต.ค.", "ห้ามเปิดไม้ใหม่", "ต้องเขียนทบทวน")), txt(page, '[data-dd-bar="core"]'))
+        check(f"{tag} 2 ชิป 'พักถึง 15 ต.ค.' (สีแดง)", "พักถึง 15 ต.ค." in c and page.locator('[data-dd-chip="winner"].dd-pause').count() >= 1, c)
+        check(f"{tag} 2 แถบแจ้ง: พักถึง 15 ต.ค. · ห้ามเปิดไม้ใหม่ · ต้องเขียนทบทวน", all(x in (txt(page, '[data-dd-bar="winner"]') or "") for x in ("พักถึง 15 ต.ค.", "ห้ามเปิดไม้ใหม่", "ต้องเขียนทบทวน")), txt(page, '[data-dd-bar="winner"]'))
         shot(page, f"dd1-strip-pause-{label}.png", '[data-core-acct="main"]')
         # ไม้แรกใหม่บันทึกไม่ได้
         n0 = n_cards(page)
@@ -353,7 +364,7 @@ def core_tests(pw, w, h, label):
         check(f"{tag} 3 ชิป 'ฟื้นตัว …R / 2R' · ไม้ W ใหม่ ×0.5", "ฟื้นตัว" in chip(page, "core", "main") and "R / 2R" in chip(page, "core", "main") and near(js(page, "()=>coreSizeOpts('main').riskPct"), 0.00625, 1e-12), chip(page, "core", "main"))
         # ใน recover แผน W ใหม่ไม่ถูกบล็อก (ลดขนาดเท่านั้น) · บันไดใหม่ยังงด
         lad = js(page, "()=>coreCanPlace('main',{tier:'A',fortress:true,thb:{ok:false}},null,false).ddBlock")
-        check(f"{tag} 3 recover: งดบันได L ใหม่ ('ฟื้นตัว')", "ฟื้นตัว" in lad, lad)
+        check(f"{tag} 3 recover (Winner): ไม่บล็อกบันไดใหม่ — เบรกแยกต่อถัง (RG2b §4.7)", not lad, lad)
         # ── 4 recover: ปิดไม้กำไร ฿17,500 (2R) → normal
         st = ds0(700000, stage="recover", stageSince="2026-09-28", recoverDd0=15)
         set_dd(page, "main", "core", st)
@@ -363,7 +374,7 @@ def core_tests(pw, w, h, label):
         put_trades(page, "main", [closed("c1", pnl=-70000, exit_date="2026-09-20"), closed("c2", pnl=17500, exit_date="2026-09-30")])
         e = dd(page, "main", "core")
         check(f"{tag} 4 recover: กำไรที่ปิด ฿17,500 (2R) → normal (DD เหลือ {e['ddPct']:.1f}% · ออกด้วยกฎ +2R เพราะยังไม่มี snapshot 2 สัปดาห์)", e["stage"] == "normal" and e["sizeFactor"] == 1, json.dumps(e))
-        check(f"{tag} 4 ชิป 'ปกติ' หลังออกจาก recover", "ปกติ" in chip(page, "core", "main") and page.locator('[data-dd-bar="core"]').count() == 0, chip(page, "core", "main"))
+        check(f"{tag} 4 ชิป 'ปกติ' หลังออกจาก recover", "ปกติ" in chip(page, "core", "main") and page.locator('[data-dd-bar="winner"]').count() == 0, chip(page, "core", "main"))
         # ── 5 reduce: snapshot 2 สัปดาห์ที่จบแล้ว < 12.5 → normal · สัปดาห์เดียว → ยัง reduce
         put_trades(page, "main", [closed("c1", pnl=-35000)])
         set_dd(page, "main", "core", ds0(700000, stage="reduce", stageSince="2026-09-01", weekly={"2026-09-20": 10, "2026-09-13": 11}))
@@ -382,11 +393,13 @@ def core_tests(pw, w, h, label):
         set_dd(page, "main", "core", ds0(700000))
         check(f"{tag} 9 (ก่อนแก้ทุน) reduce", dd(page, "main", "core")["stage"] == "reduce")
         js(page, "()=>openSettings()"); page.wait_for_timeout(250)
-        page.fill("#sCore", "800000"); page.wait_for_timeout(100); js(page, "()=>saveSettings()"); page.wait_for_timeout(500)
+        page.fill("#sCore", "800000"); wp_ = 800000 / (800000 + 26000 * 40) * 100
+        page.fill("#sPoolW", repr(wp_)); page.fill("#sPoolL", repr((100 - wp_) / 2)); page.fill("#sPoolS", repr((100 - wp_) / 2))   # RG2b — ตรึงถัง Winner = ทุน Core ใหม่ (800,000)
+        page.wait_for_timeout(100); js(page, "()=>saveSettings()"); page.wait_for_timeout(500)
         e = dd(page, "main", "core"); p = persisted(page, "main", "core")
         check(f"{tag} 9 แก้ทุนถัง Core 700,000 → 800,000 = rebase: DD 0 · stage normal · peak = equity ฿800,000 · baseAt วันนี้", e["stage"] == "normal" and near(e["ddPct"], 0, 1e-9) and near(p["peak"], 800000, 1e-6) and p["baseAt"] == TODAY and p["tank"] == 800000, json.dumps([e, p])[:500])
-        check(f"{tag} 9 แจ้งบรรทัดเล็ก 'เริ่มนับ DD ใหม่ (แก้ทุนถัง)'", "เริ่มนับ DD ใหม่ (แก้ทุนถัง)" in (txt(page, '[data-dd-rebase="core"]') or ""), txt(page, '[data-dd-rebase="core"]'))
-        js(page, "()=>{ const B=getBook('main'); B.settings.capital.core=700000; saveBook('main'); render(); }")
+        check(f"{tag} 9 แจ้งบรรทัดเล็ก 'เริ่มนับ DD ใหม่ (แก้ทุนถัง)'", "เริ่มนับ DD ใหม่ (แก้ทุนถัง)" in (txt(page, '[data-dd-rebase="winner"]') or ""), txt(page, '[data-dd-rebase="winner"]'))
+        js(page, "()=>{ const B=getBook('main'); B.settings.capital.core=700000; const wp=700000/(700000+26000*40)*100; B.settings.pools={winner:wp, ladder:(100-wp)/2, sat:(100-wp)/2, mig:'RG2b', reviewed:true}; saveBook('main'); render(); }")   # RG2b — คืนทุนและตรึงถังกลับ
         # ── 10 ขาดราคาปิด 1 ตัว → นับเป็น 0 + 'ขาดราคา 1 ตัว'
         clear_cards(page)
         seed_cards(page, {"cX": p24.open_card("cX", "tX", ticker="NOPX.BK", qty=500, entry=100, sl=90, tier="A"),
@@ -417,11 +430,11 @@ def core_tests(pw, w, h, label):
         check(f"{tag} 11 ข้อความ 'ทบทวน ลดตัวอ่อนสุด — คุณตัดสินใจเอง' · ไม่ขายให้ (ไม้ยังครบ)", "ทบทวน ลดตัวอ่อนสุด — คุณตัดสินใจเอง" in (txt(page, "[data-dd-weak]") or "") and js(page, "()=>getBook('main').trades.filter(t=>t.status==='open').length") == 6)
         shot(page, f"dd1-core-weakest-{label}.png", ".core-sheet .ui-sheet")
         # ตัวอ่อนสุดอาศัย sl0 / stopHistory: W6 ไม่มี sl0 ใช้ stopHistory[0].from = 90 → R −1.5 เท่ากับ W2
-        wk = js(page, "()=>ddWeakest(ddEval('main','core')).map(x=>[x.ticker, Math.round(x.r*100)/100])")
-        check(f"{tag} 11 W6 (ไม่มี sl0) ใช้ Stop แรกใน stopHistory → R −1.5", ["W6.BK", -1.5] in wk or any(x[0] == "W6.BK" for x in js(page, "()=>ddWeakest(ddEval('main','core')).map(x=>[x.ticker,x.r])")), json.dumps(wk))
+        wk = js(page, "()=>ddWeakest(ddEval('main','winner')).map(x=>[x.ticker, Math.round(x.r*100)/100])")
+        check(f"{tag} 11 W6 (ไม่มี sl0) ใช้ Stop แรกใน stopHistory → R −1.5", ["W6.BK", -1.5] in wk or any(x[0] == "W6.BK" for x in js(page, "()=>ddWeakest(ddEval('main','winner')).map(x=>[x.ticker,x.r])")), json.dumps(wk))
         js(page, "()=>coreSheetClose()")
         # ── 14 (Core) 430: ชิป/แถบ/sheet ไม่ล้น
-        bad = overflow(page, ['[data-core-head="main"]', '[data-dd-bar="core"]'])
+        bad = overflow(page, ['[data-core-head="main"]', '[data-dd-bar="winner"]'])
         open_sheet(page, "main", "core")
         bad += overflow(page, [".core-sheet .ui-sheet"])
         check(f"{tag} 14 ชิป/แถบ/sheet (Core) ไม่ล้นแนวนอน", not bad, json.dumps(bad))
@@ -470,7 +483,7 @@ def sat_tests(pw, w, h, label):
             const full = Calc.satLot({riskAmount: rc, dist, contract: cfg.contract, lotStep: cfg.lotStep, minLot: cfg.minLot}).lot;
             const half = Calc.satLot({riskAmount: rc*0.5, dist, contract: cfg.contract, lotStep: cfg.lotStep, minLot: cfg.minLot}).lot;
             return {lot:c.lot, full, half, cap:b.cap, riskTHB:b.riskTHB, factor:c.factor, ready:c.ready}; }""", idea)
-        check(f"{tag} 7 lot ใหม่ = Calc.satLot ที่ riskAmount × 0.5 ตรง ๆ (ปัดลงตาม lotStep) · ต่างจาก lot ปกติ", r["lot"] == r["half"] and r["half"] < r["full"] and r["cap"] == 1040000 and near(r["riskTHB"], 6500, 1e-6), json.dumps(r))
+        check(f"{tag} 7 lot ใหม่ = Calc.satLot ที่ riskAmount × 0.5 ตรง ๆ (ปัดลงตาม lotStep) · ต่างจาก lot ปกติ", r["lot"] == r["half"] and r["half"] < r["full"] and r["cap"] == 520000 and near(r["riskTHB"], 3250, 1e-6), json.dumps(r))   # RG2b — ถัง Sat = ครึ่งของส่วนที่เหลือ (520,000) · งบเสี่ยง 1.25% ของถัง
         check(f"{tag} 7 reduce ยัง ready ได้ (ลดขนาดเท่านั้น ไม่บล็อก)", r["ready"] is True, json.dumps(r))
         c = chip(page, "sat", "main")
         check(f"{tag} 7 ชิป Sat 'DD 12.5% · ลดขนาด ×0.5' ในแถบบัญชี Sat", "DD 12.5%" in c and "ลดขนาด ×0.5" in c, c)

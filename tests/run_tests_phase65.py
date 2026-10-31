@@ -78,12 +78,13 @@ def tests(pw, w, h, label):
     try:
         open_settings(page)
         v = vals(page)
-        check(f"{tag} 1 บัญชีไม่มี coreRisk → ตาราง A 1.25/15/25 · B 1.25/10/25", v == {"sCrRiskA": "1.25", "sCrRiskB": "1.25", "sCrTierA": "15", "sCrTierB": "10", "sCrCapTotA": "25", "sCrCapTotB": "25"}, json.dumps(v))
+        check(f"{tag} 1 บัญชีไม่มี coreRisk → ตาราง A 1.25/15/25 · B 1.25/10/25", v == {"sCrRiskA": "1.25", "sCrRiskB": "1.25", "sCrTierA": "25", "sCrTierB": "25", "sCrCapTotA": "25", "sCrCapTotB": "25"}, json.dumps(v))   # RG2b — Tier A/B ไม่แยกแล้ว (ช่องซ่อน = เพดานเดียว 25)
         hdr = js(page, "()=>[...document.querySelectorAll('[data-cr-tiertbl] thead th')].map(e=>e.textContent.trim()).join('|')")
         rows = js(page, "()=>[...document.querySelectorAll('[data-cr-tiertbl] tbody th')].map(e=>e.textContent.trim()).join('|')")
-        check(f"{tag} 1 หัวตาราง 'Risk/ไม้ · เพดานไม้แรก · เพดานรวม/หุ้น' · แถว A | B · ไม่มีช่อง sCrRisk เดิม", hdr == "|Risk/lot|1st-lot cap|Max/stock" and rows == "A|B" and js(page, "()=>!document.getElementById('sCrRisk')"), hdr + rows)
+        check(f"{tag} 1 หัวตาราง 'Risk/ไม้ · เพดานไม้แรก · เพดานรวม/หุ้น' · แถว A | B · ไม่มีช่อง sCrRisk เดิม", hdr == "" and rows == "" and js(page, "()=>!!document.getElementById('sCrWinCap')") and   # RG2b — ตาราง Tier ถูกแทนด้วยช่อง Risk/lot + เพดานต่อหุ้นค่าเดียว
+                js(page, "()=>!document.getElementById('sCrRisk')"), hdr + rows)
         fm = txt(page, "[data-cr-formula]")
-        check(f"{tag} 1 บรรทัดสูตรใต้ตาราง (ใช้ FF)", "min(Risk × FF ÷ (Entry − Stop), first-lot cap, cash)" in fm and "total cap/stock" in fm, fm)
+        check(f"{tag} 1 บรรทัดสูตรใต้ตาราง (ใช้ FF)", "min(Risk × Regime size ÷ (Entry − Stop), max per stock, free Winner cash)" in fm and "max per stock" in fm, fm)
         shot(page, f"cz1-settings-{sfx}.png", "#crSec")
         check(f"{tag} 1 ไม่มี console error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
     finally:
@@ -94,7 +95,7 @@ def tests(pw, w, h, label):
         before = dump(page)
         open_settings(page)
         v = vals(page)
-        check(f"{tag} 2 บันทึกไว้ riskPct:1.25 · tierA:12 → A Risk 1.25 · เพดานไม้แรก A 12 (คงเดิม) · B เพดานไม้แรก 10 (ใหม่) · รวม 25", v == {"sCrRiskA": "1.25", "sCrRiskB": "1.25", "sCrTierA": "12", "sCrTierB": "10", "sCrCapTotA": "25", "sCrCapTotB": "25"}, json.dumps(v))
+        check(f"{tag} 2 บันทึกไว้ riskPct:1.25 · tierA:12 → A Risk 1.25 · เพดานไม้แรก A 12 (คงเดิม) · B เพดานไม้แรก 10 (ใหม่) · รวม 25", v == {"sCrRiskA": "1.25", "sCrRiskB": "1.25", "sCrTierA": "25", "sCrTierB": "25", "sCrCapTotA": "25", "sCrCapTotB": "25"}, json.dumps(v))   # RG2b — tierA 12 ที่เก็บไว้ไม่อ่านแล้ว
         page.wait_for_timeout(600)
         check(f"{tag} 2 เปิดอ่านแล้ว Firestore ไม่ถูกเขียน", dump(page) == before)
         cfg = js(page, "()=>{ const c=coreRiskCfg('main'); return {riskPct:c.riskPct, riskA:c.riskA, riskB:c.riskB, raw:state.settings.coreRisk}; }")
@@ -105,16 +106,16 @@ def tests(pw, w, h, label):
     b, page, ce, pe = setup(pw, w, h, coreRisk={}, cards=plan_cards())
     try:
         open_settings(page)
-        fillnum(page, "sCrRiskA", 1.5); fillnum(page, "sCrRiskB", 1.0)
+        fillnum(page, "sCrRiskA", 1.5)   # RG2b — Risk B ถูกถอด (B = A)
         check(f"{tag} 3 ค่าถูกต้อง → ปุ่มบันทึกกดได้ · ไม่มีข้อความแดง", js(page, "()=>!document.getElementById('setSaveBtn').disabled && [...document.querySelectorAll('.crErr')].every(e=>!e.textContent)"))
         page.click("#setSaveBtn"); page.wait_for_timeout(1500)
         saved = js(page, "()=>window.firebase.__mockDb.__dump()['users/testuid'].books.main.settings.coreRisk")
-        check(f"{tag} 3 บันทึก → riskPct = 1.5 (= Risk A) · riskA 1.5 · riskB 1.0 · เพดานทั้งหมดครบ", saved["riskPct"] == 1.5 and saved["riskA"] == 1.5 and saved["riskB"] == 1.0 and saved["tierA"] == 15 and saved["tierB"] == 10 and saved["capTotalA"] == 25 and saved["capTotalB"] == 25, json.dumps(saved))
+        check(f"{tag} 3 บันทึก → riskPct = 1.5 (= Risk A) · riskA 1.5 · winnerCap 25 · ไม่เขียน key Tier เดิมที่ไม่เคยตั้ง (riskB/tierA/tierB/capTotal)", saved["riskPct"] == 1.5 and saved["riskA"] == 1.5 and saved["winnerCap"] == 25 and all(k not in saved for k in ("riskB", "tierA", "tierB", "capTotalA", "capTotalB")), json.dumps(saved))
         p24.go_stock(page)
         fa, fb = first_lot(page, "A", 100, 90), first_lot(page, "B", 100, 90)
         exp = js(page, "()=>{ const cx=coreCtx('main'); const o=cx.opts; const f=(t)=>Calc.coreSize.firstLot({tank:cx.tankTHB/cx.fx, entry:100, stop:90, f:cx.F.f, tier:t, market:'US', cash:cx.cashTHB/cx.fx, riskPct:o.tierRisk[t], tierCapPct:o.tierCap[t], stockCapPct:o.stockCap[t]}).qty; return {A:f('A'), B:f('B'), ra:o.tierRisk.A, rb:o.tierRisk.B}; }")
         shown = {k: js(page, "(s)=>{ const e=document.querySelector(s+' [data-c-qty]'); return e ? +e.textContent.replace(/,/g,'') : null; }", f'[data-core-card="{k}"]') for k in ("pa", "pb")}
-        check(f"{tag} 3 การ์ดแผน Tier A กับ B ราคาเดียวกัน (Entry 100 Stop 90) ได้จำนวนตามสูตร (เทียบ Calc.coreSize.firstLot ตรง) · Risk A 1.5% ≠ B 1.0% · เห็นบนการ์ด", fa["qty"] == exp["A"] and fb["qty"] == exp["B"] and exp["A"] != exp["B"] and shown["pa"] == exp["A"] and shown["pb"] == exp["B"] and abs(exp["ra"] - 0.015) < 1e-12 and abs(exp["rb"] - 0.01) < 1e-12, json.dumps([fa, fb, exp, shown]))
+        check(f"{tag} 3 การ์ดแผน Tier A กับ B ราคาเดียวกัน (Entry 100 Stop 90) ได้จำนวนตามสูตร (เทียบ Calc.coreSize.firstLot ตรง) · RG2b: Risk A = B = 1.5% จึงได้จำนวนเท่ากัน · เห็นบนการ์ด", fa["qty"] == exp["A"] and fb["qty"] == exp["B"] and exp["A"] == exp["B"] and shown["pa"] == exp["A"] and shown["pb"] == exp["B"] and abs(exp["ra"] - 0.015) < 1e-12 and abs(exp["rb"] - 0.015) < 1e-12, json.dumps([fa, fb, exp, shown]))
     finally:
         b.close()
     # ── 4 error
@@ -125,16 +126,14 @@ def tests(pw, w, h, label):
             open_settings(page); fillnum(page, id, v)
             st = js(page, "(id)=>({dis:document.getElementById('setSaveBtn').disabled, err:(document.querySelector('.crErr[data-err-for=\"'+id+'\"]')||{}).textContent||''})", id)
             check(f"{tag} 4 {name} → ข้อความแดง '{msg}' · บันทึกไม่ได้", st["dis"] and msg in st["err"], json.dumps(st, ensure_ascii=False))
-        case("sCrCapTotA", 10, "ต้องไม่น้อยกว่าเพดานไม้แรก", "เพดานรวม A (10) < เพดานไม้แรก A (15)")
+        case("sCrWinCap", 0.5, "1–100", "เพดานต่อหุ้น 0.5 (RG2b ค่าเดียว · แทนเพดานรวม A/B)")
         shot(page, f"cz1-settings-err-{sfx}.png", "#crSec")
-        case("sCrCapTotB", 5, "ต้องไม่น้อยกว่าเพดานไม้แรก", "เพดานรวม B (5) < เพดานไม้แรก B (10)")
         case("sCrRiskA", 0.05, "0.1–5", "Risk A 0.05")
-        case("sCrRiskB", 6, "0.1–5", "Risk B 6")
-        case("sCrTierA", 60, "1–50", "เพดานไม้แรก A 60")
-        case("sCrCapTotA", 120, "1–100", "เพดานรวม A 120")
-        open_settings(page); fillnum(page, "sCrCapTotA", 10)
+        case("sCrRiskA", 6, "0.1–5", "Risk 6")
+        case("sCrWinCap", 120, "1–100", "เพดานต่อหุ้น 120")
+        open_settings(page); fillnum(page, "sCrWinCap", 120)
         js(page, "()=>saveSettings()"); page.wait_for_timeout(500)
-        check(f"{tag} 4 ค่าผิด: เรียก saveSettings() ตรง ๆ ก็ไม่บันทึก", js(page, "()=>{ const d=window.firebase.__mockDb.__dump()['users/testuid'].books.main.settings.coreRisk; return !d || d.capTotalA !== 10; }"))
+        check(f"{tag} 4 ค่าผิด: เรียก saveSettings() ตรง ๆ ก็ไม่บันทึก", js(page, "()=>{ const d=window.firebase.__mockDb.__dump()['users/testuid'].books.main.settings.coreRisk; return !d || d.winnerCap !== 120; }"))
     finally:
         b.close()
     # ── 5 firstLot ชนเพดานรวม
@@ -147,7 +146,7 @@ def tests(pw, w, h, label):
         tank = js(page, "()=>coreCtx('main').tankTHB/coreCtx('main').fx")
         tag_txt = txt(page, sc + " [data-c-tag]")
         shown = js(page, "(s)=>+document.querySelector(s+' [data-c-qty]').textContent.replace(/,/g,'')", sc)
-        check(f"{tag} 5 เพดานไม้แรก 30 · รวม 25 · Stop แคบ → ป้าย 'ชนเพดานรวม/หุ้น' · จำนวน = 25% ของถัง ÷ ราคา (ปัด 1 หุ้น US)", tag_txt == "ชนเพดานรวม/หุ้น" and f["stockCapped"] and shown == int(tank * 0.25 / 100) and f["qty"] == shown, json.dumps([tag_txt, f, shown, tank * 0.25 / 100]))
+        check(f"{tag} 5 เพดานไม้แรก 30 · รวม 25 · Stop แคบ → ป้าย 'ชนเพดานรวม/หุ้น' · จำนวน = 25% ของถัง ÷ ราคา (ปัด 1 หุ้น US)", tag_txt == "ชนเพดาน Tier" and f["capped"] and shown == int(tank * 0.25 / 100) and f["qty"] == shown, json.dumps([tag_txt, f, shown, tank * 0.25 / 100]))
         howto = js(page, "(s)=>{ const e=document.querySelector(s+' [data-c-stockcap]'); return e ? e.textContent.replace(/\\s+/g,' ').trim() : null; }", sc)
         check(f"{tag} 5 'วิธีคิด' มีบรรทัด 'เพดานรวม/หุ้น 25% = $…'", howto and howto.startswith("เพดานรวม/หุ้น 25% = $"), str(howto))
         shot(page, f"cz1-core-plan-capped-{sfx}.png", sc)

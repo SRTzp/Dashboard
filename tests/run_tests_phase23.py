@@ -139,7 +139,7 @@ def calc_checks(pw, w, h, label):
         src = open(os.path.join(ROOT, "tests", "core_size_test.js"), encoding="utf-8").read()
         r = page.evaluate(NODE_SHIM, src)
         m = re.search(r"(\d+) ผ่าน · (\d+) ไม่ผ่าน", " ".join(r["last"]))
-        check(f"{tag} tests/core_size_test.js (รันบนสำเนาใน index.html ผ่านเบราว์เซอร์) = 471/471 (CZ1: +22 เคส · LN3fix2: +29 เคส · เดิม 420 ผ่านครบ) · exit 0", bool(m) and m.group(1) == "471" and m.group(2) == "0" and r["code"] == 0 and r["fails"] == 0, json.dumps(r, ensure_ascii=False))
+        check(f"{tag} tests/core_size_test.js (รันบนสำเนาใน index.html ผ่านเบราว์เซอร์) = 502/502 (RG2b: +31 เคส · เดิม 471 ผ่านครบ) · exit 0", bool(m) and m.group(1) == "502" and m.group(2) == "0" and r["code"] == 0 and r["fails"] == 0, json.dumps(r, ensure_ascii=False))
         html = open(INDEX, encoding="utf-8").read()
         B = "/* === core-size.js BEGIN (สำเนา · ห้ามแก้ที่นี่ · แก้ที่ core-size.js แล้วคัดลอกใหม่) === */\n"
         E = "/* === core-size.js END === */"
@@ -180,9 +180,10 @@ def settings_checks(pw, w, h, label):
         vals = page.evaluate("""() => { const g = id => document.getElementById(id).value; return {mk:g('sCrMarket'), ra:g('sCrRiskA'), rb:g('sCrRiskB'), a:g('sCrTierA'), b:g('sCrTierB'), ca:g('sCrCapTotA'), cb:g('sCrCapTotB'), add:g('sCrAdd'), cap:g('sCrL2Cap'), warn:g('sCrL2Warn'),
             em:g('sCrEmerg'), lb:g('sCrLBudget'), lr:g('sCrLRisk'), ls:g('sCrLShare'), gate:g('sCrGate'), heatCore:g('sPortCore'), heatSat:g('sPortSatB')}; }""")
         check(f"{tag} ตั้งค่า: ส่วนความเสี่ยง Core มีค่าเริ่มต้นครบ (CZ1: Risk A/B 1.25/1.25 · เพดานไม้แรก 15/10 · เพดานรวม 25/25 · 50 · 20 · 15 · 7 · 10 · 2.5 · 30 · 2) · main ตลาด = US",
-              vals == {"mk": "US", "ra": "1.25", "rb": "1.25", "a": "15", "b": "10", "ca": "25", "cb": "25", "add": "50", "cap": "20", "warn": "15", "em": "7", "lb": "10", "lr": "2.5", "ls": "30", "gate": "2", "heatCore": "20", "heatSat": "6"}, json.dumps(vals))
+              vals == {"mk": "US", "ra": "1.25", "rb": "1.25", "a": "25", "b": "25", "ca": "25", "cb": "25", "add": "50", "cap": "20", "warn": "15", "em": "7", "lb": "5", "lr": "4", "ls": "30", "gate": "2", "heatCore": "20", "heatSat": "6"}, json.dumps(vals))
         units = page.evaluate("() => [...document.querySelectorAll('#crSec .f')].map(f=>(f.querySelector('.crUnit')||{}).textContent||'')")
-        check(f"{tag} ตั้งค่า: ทุกช่องมีป้ายหน่วย (% ของถัง Core · % ของไม้ก่อนหน้า · ไม้ (1–6) · % ใต้ Stop · สัปดาห์) · ป้าย '% ของถัง Core' ≥ 8 ช่อง (TIER2: +6 ช่องเกณฑ์ Tier = 19 ช่อง)", len(units) == 24 and units.count("") == 1 and sum("% of Core bucket" in u for u in units) >= 8, json.dumps(units, ensure_ascii=False))
+        check(f"{tag} ตั้งค่า: ทุกช่องมีป้ายหน่วย (% ของถัง Core · % ของไม้ก่อนหน้า · ไม้ (1–6) · % ใต้ Stop · สัปดาห์) · ป้าย '% ของถัง Core' ≥ 8 ช่อง (TIER2: +6 ช่องเกณฑ์ Tier = 19 ช่อง)", len(units) == 22 and units.count("") == 1 and sum("% of Core bucket" in u for u in units) >= 3,   # RG2b — ช่อง Tier/เพดานชั้น 2/ladderShare/gateWeeks ถอด · หน่วยเปลี่ยนเป็น % ของถัง
+               json.dumps(units, ensure_ascii=False))
         mk = page.evaluate("() => ({main: coreRiskCfg('main').market, fam: coreRiskCfg('fam').market})")
         check(f"{tag} ตลาดเริ่มต้น: main = US · fam (ชื่อ Family) = TH · ชื่ออื่น = both", mk == {"main": "US", "fam": "TH"} and
               page.evaluate("() => { acctList.push({id:'zz', name:'Other', ports:['core']}); const m = coreRiskCfg('zz').market; acctList.pop(); return m; }") == "both", json.dumps(mk))
@@ -205,13 +206,13 @@ def settings_checks(pw, w, h, label):
         page.click("#setSaveBtn"); page.wait_for_timeout(1500)
         bm = dump_book(page, "main")
         check(f"{tag} แก้งบเสี่ยง 1 → 0.75 บันทึก → books.main.settings.coreRisk.riskPct = 0.75 (ครบ 19 ช่อง รวม maxLots · market US · TIER2 +6 เกณฑ์ Tier)",
-              bm["settings"]["coreRisk"]["riskPct"] == 0.75 and len(bm["settings"]["coreRisk"]) == 29 and bm["settings"]["coreRisk"]["market"] == "US", json.dumps(bm["settings"].get("coreRisk")))
+              bm["settings"]["coreRisk"]["riskPct"] == 0.75 and len(bm["settings"]["coreRisk"]) == 22 and bm["settings"]["coreRisk"]["market"] == "US", json.dumps(bm["settings"].get("coreRisk")))
         check(f"{tag} books.fam ไม่เปลี่ยน (ไม่มี coreRisk) · coreSizeOpts('main').riskPct = 0.0075",
               json.dumps(dump_book(page, "fam"), sort_keys=True) == before_fam and "coreRisk" not in dump_book(page, "fam")["settings"] and abs(page.evaluate("() => coreSizeOpts('main').riskPct") - 0.0075) < 1e-12, "")
         opts = page.evaluate("() => coreSizeOpts('main')")
         check(f"{tag} coreSizeOpts: tierCap {{A:.15,B:.10}} (CZ1) · addRatio .5 · layer2Cap .20 · Warn .15 · emergency .07 · ladderBudget .10 · ladderRiskCap .025 · ladderShareCap .30 · gateStreak 2",
-              opts["tierCap"] == {"A": 0.15, "B": 0.1} and opts["addRatio"] == 0.5 and abs(opts["layer2Cap"] - 0.2) < 1e-12 and abs(opts["layer2Warn"] - 0.15) < 1e-12 and abs(opts["emergencyPct"] - 0.07) < 1e-12
-              and abs(opts["ladderBudget"] - 0.1) < 1e-12 and abs(opts["ladderRiskCap"] - 0.025) < 1e-12 and abs(opts["ladderShareCap"] - 0.3) < 1e-12 and opts["gateStreak"] == 2, json.dumps(opts))
+              opts["tierCap"] == {"A": 0.25, "B": 0.25} and opts["addRatio"] == 0.5 and abs(opts["layer2Cap"] - 0.2) < 1e-12 and abs(opts["layer2Warn"] - 0.15) < 1e-12 and abs(opts["emergencyPct"] - 0.07) < 1e-12
+              and opts["ladderMaxAcctPct"] == 5 and abs(opts["ladderRiskCap"] - 0.04) < 1e-12 and "ladderShareCap" not in opts and "gateStreak" not in opts, json.dumps(opts))
         chk = page.evaluate("() => { const o = coreSizeOpts('main'); const r = Calc.coreSize.firstLot({tank:700000, entry:100, stop:90, f:1, tier:'A', riskPct:o.riskPct, tierCapPct:o.tierCap.A}); return r.qty; }")
         check(f"{tag} ส่งค่าตั้งเข้า Calc.coreSize: งบ 0.75% → ไม้แรก 525", chk == 525, str(chk))
         # ค่าผิด

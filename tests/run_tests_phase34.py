@@ -162,7 +162,7 @@ def ui_tests(pw, w, h, label):
         vals = page.evaluate("()=>['sSatRpt','sSatRptHi','sSatNewMax'].map(i=>document.getElementById(i).value)")
         check(f"{tag} 6 ส่วน 'ความเสี่ยง SAT — % ของถัง Sat' มี 3 ช่อง · ค่าเริ่มต้น 1.5 / 2 / 4 (ช่องไม้ใหม่ซ่อน คงที่ 4)", vals == ["1.5", "2", "4"] and "per-trade risk" in (txt(page, "#satRiskSec summary") or "").lower(), json.dumps(vals))
         check(f"{tag} 6 หน่วย: '% ของถัง Sat' · ป้ายผ่านเกณฑ์พิสูจน์ 50 ไม้ · avg R ≥ 0.25", "% of Sat bucket" in (txt(page, "#satRiskSec .f label") or "") and "50 ไม้ · avg R ≥ 0.25" in (txt(page, "#satRiskSec") or ""), txt(page, "#satRiskSec") or "")
-        check(f"{tag} 6 บรรทัดเล็ก heat: 'ตั้งที่ช่อง Sat — % ของถัง Sat (ตอนนี้ 6%)' · ไม่มีช่อง heat ซ้ำ", "ตอนนี้ 6%" in (txt(page, "#satHeatHint") or "") and js(page, "()=>document.querySelectorAll('#satRiskSec input').length") == 8, txt(page, "#satHeatHint") or "")   # PV2c: ช่องแบ่งไม้ 3 ช่องย้ายไป Sat v2 (12 → 9)
+        check(f"{tag} 6 บรรทัดเล็ก heat: 'ตั้งที่ช่อง Sat — % ของถัง Sat (ตอนนี้ 6%)' · ไม่มีช่อง heat ซ้ำ", "ตอนนี้ 6%" in (txt(page, "#satHeatHint") or "") and js(page, "()=>document.querySelectorAll('#satRiskSec input').length") == 10, txt(page, "#satHeatHint") or "")   # PV2c: ช่องแบ่งไม้ 3 ช่องย้ายไป Sat v2 (12 → 9) · RG2b: +2 ช่องซ่อน (macro ×) ที่เก็บไว้ ไม่อ่าน
         check(f"{tag} 6 ไม่มีหมายเหตุ 'ค่าคงที่ 6%' เดิมที่ช่อง heat", not js(page, "()=>{ const n=document.getElementById('satHeatNote'); return n && n.style.display!=='none'; }"))
         shot_el = lambda n: (page.evaluate("()=>document.getElementById('satRiskSec').scrollIntoView({block:'center'})"), shot(page, n))
         shot_el(f"sr1-settings-sat-{label}.png")

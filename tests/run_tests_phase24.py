@@ -52,11 +52,20 @@ def open_card(id, tid, ticker="XXX.BK", acct="main", qty=700, entry=100, sl=90, 
 
 
 def pin_winner_pool(doc):
-    """RG2b — เทส W เก่าคิดจากถัง Core = capital.core ทั้งก้อน: ตรึงสัดส่วนถังให้ถัง Winner = ทุน Core เดิม (Ladder 0 · Sat ที่เหลือ) · ไม่แตะค่าที่คาดหวังของเคส"""
+    """RG2b — เทส W เก่าคิดจากถัง Core = capital.core ทั้งก้อน: ตรึงสัดส่วนถังให้ถัง Winner = ทุน Core เดิม (ที่เหลือแบ่ง Ladder/Sat เท่ากัน) · ไม่แตะค่าที่คาดหวังของเคส"""
     for b in doc["books"].values():
         s = b["settings"]; cap = s.get("capital") or {}; fx = s.get("fx") or 1
         core, sat = float(cap.get("core") or 0), float(cap.get("satB") or 0) * fx
         if core <= 0: continue
+        wp = core / (core + sat) * 100; s["pools"] = {"winner": wp, "ladder": (100 - wp) / 2, "sat": (100 - wp) / 2, "mig": "RG2b", "reviewed": True}
+
+
+def pin_both_pools(doc):
+    """RG2b — ตรึงถัง Winner = ทุน Core เดิม และถัง Sat = ทุน Sat เดิม (Ladder 0) — เทสที่ไม่เกี่ยวกับบันได"""
+    for b in doc["books"].values():
+        s = b["settings"]; cap = s.get("capital") or {}; fx = s.get("fx") or 1
+        core, sat = float(cap.get("core") or 0), float(cap.get("satB") or 0) * fx
+        if core + sat <= 0: continue
         s["pools"] = {"winner": core / (core + sat) * 100, "ladder": 0, "sat": sat / (core + sat) * 100, "mig": "RG2b", "reviewed": True}
 
 
@@ -179,7 +188,7 @@ def plan_sheet_checks(pw, w, h, label):
         # ＋ / T
         go_stock(page)
         page.click("#hdrPlanBtn"); page.wait_for_timeout(300)
-        check(f"{tag} scope หุ้น กด ＋ → เปิด sheet 'แผน Core ใหม่'", sheet_open(page, "new") and "แผน Core ใหม่" in (txt(page, ".core-sheet h3") or ""))
+        check(f"{tag} scope หุ้น กด ＋ → เปิด sheet 'แผน Core ใหม่'", sheet_open(page, "new") and "New Winner plan" in (txt(page, ".core-sheet h3") or ""))   # RG2b — หัวฟอร์ม Winner
         page.evaluate("coreSheetClose()")
         page.evaluate("() => { switchTab('journal'); }")
         page.keyboard.press("t"); page.wait_for_timeout(300)
@@ -206,13 +215,13 @@ def plan_sheet_checks(pw, w, h, label):
         check(f"{tag} f 50% → 350 → ปัด 300", q() == "300" and "จาก 350 → ปัดหลัก 100 = 300" in txt(page, "#cnRes [data-c-round]"), txt(page, "#cnRes") or "")
         # Tier B เพดาน 5% + Entry 100 Stop 99
         page.click("#cnTierB"); page.click('#cnF button[data-f="1"]'); page.fill("#cnStop", "99")
-        check(f"{tag} Tier B เพดาน 5% (35,000) · Entry 100 Stop 99 → ชนเพดาน Tier: จาก 350 → ปัดหลัก 100 = 300 (TH)", q() == "300" and txt(page, "#cnRes [data-c-tag]") == "ชนเพดาน Tier" and "จาก 350 → ปัดหลัก 100 = 300" in txt(page, "#cnRes [data-c-round]"), txt(page, "#cnRes") or "")
+        check(f"{tag} RG2b เพดานต่อหุ้นค่าเดียว 25% ของถัง Winner (175,000) · Entry 100 Stop 99 → ชนเพดาน: 1,700 หุ้น (TH · ไม่แยก Tier B 5%)", q() == "1,700" and txt(page, "#cnRes [data-c-tag]") == "ชนเพดาน Tier", txt(page, "#cnRes") or "")
         # Entry <= Stop
         page.fill("#cnEntry", "90"); page.fill("#cnStop", "100")
         check(f"{tag} Entry ≤ Stop → 'Entry ต้องมากกว่า Stop' · บันทึกไม่ได้", "Entry ต้องมากกว่า Stop" in (txt(page, "#cnRes") or "") and page.is_disabled("#cnSave"))
         # zeroLot: Tier B Entry 1000 Stop 999 f 50% → งบ 3,500 → 3 หุ้น → 0 หลัก
         page.fill("#cnEntry", "1000"); page.fill("#cnStop", "999"); page.click('#cnF button[data-f="0.5"]')
-        check(f"{tag} zeroLot (ชนเพดาน Tier B) → 'ราคาต่อ 1 หลัก (100) เกินเพดาน Tier B (฿35,000) → ใช้ Tier A หรือข้ามตัวนี้' (7E-2a-fix §5)", "ราคาต่อ 1 หลัก (100) เกินเพดาน Tier B (฿35,000) → ใช้ Tier A หรือข้ามตัวนี้" in (txt(page, "#cnRes [data-c-zero]") or ""), txt(page, "#cnRes") or "")
+        check(f"{tag} RG2b ราคา 1,000 · Stop 999 · f 50% → 100 หุ้น (1 หลัก) ไม่ zeroLot (เพดาน 175,000 ไม่ใช่ Tier B 35,000)", q() == "100" and not txt(page, "#cnRes [data-c-zero]"), txt(page, "#cnRes") or "")
         shot(page, f"7e2a-newplan-zero-{w}.png", ".core-sheet .ui-sheet")
         # US: ticker AAPL → ปัด 1 หุ้น · สกุล $
         page.fill("#cnTicker", "AAPL"); page.click("#cnTierA"); page.fill("#cnReason", "x"); page.fill("#cnEntry", "100"); page.fill("#cnStop", "90"); page.click('#cnF button[data-f="1"]')
@@ -281,8 +290,9 @@ def buy_pyramid_checks(pw, w, h, label, mk="TH"):
     q2 = 700 + a1; e2 = (100 * 700 + 115 * a1) / q2
     q3 = q2 + a2; e3 = (e2 * q2 + 130 * a2) / q3
     S = "฿" if mk == "TH" else "$"
-    doc = doc_with(pin_winner=True)
+    doc = doc_with()
     if mk == "US": doc["books"]["main"]["settings"]["fx"] = 1
+    pin_winner_pool(doc)   # RG2b — ตรึงถัง Winner = ทุน Core หลังตั้ง fx
     browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc, cards={"c1": card("c1", "main", tk, tier="A", tierReason="ทดสอบ")})
     try:
         go_stock(page)
@@ -429,9 +439,9 @@ def status_checks(pw, w, h, label):
           return {pct:l.pct, missing:l.missing, ref:ref.pct, refMissing:ref.missing, level:l.level}; }""")
         expect = (700 * 6.5 + 0 + 700 * 30 + 700 * 6.5) / 700000
         check(f"{tag} coreLayer2 ตรง Calc.coreSize.layer2 · ⚪ ไม่นับ · ขาดราคา 1", abs(o["pct"] - o["ref"]) < 1e-12 and abs(o["pct"] - expect) < 1e-9 and o["missing"] == 1 and o["refMissing"] == 1, json.dumps(o))
-        check(f"{tag} หัวบัญชี: ชั้น 2 {expect*100:.2f}% / 20% · ขาดราคา 1", f"{f2(expect*100)}% / 20%" in (txt(page, '[data-core-head="main"] [data-c-l2]') or "") and "1" in txt(page, '[data-core-head="main"] [data-c-missing]'), txt(page, '[data-core-head="main"]') or "")
+        check(f"{tag} หัวบัญชี: ชั้น 2 ตอนนี้ {expect*100:.2f}% (RG2b ไม่มีเพดาน) · ขาดราคา 1", f"ตอนนี้ {f2(expect*100)}%" in (txt(page, '[data-core-head="main"] [data-c-l2]') or "") and "1" in txt(page, '[data-core-head="main"] [data-c-missing]'), txt(page, '[data-core-head="main"]') or "")
         cell = txt(page, '#portsSum [data-sum="open"]') or ""
-        check(f"{tag} บล็อกสรุป Port: ช่อง (a) 'จากราคาปิด' ไม่มี 'จากทุน' · ตัวเลขตรง · 'ขาดราคา 1 ตัว (ไม่นับ)'", "จากราคาปิด" in cell and "จากทุน" not in cell and f"{f2(expect*100)}% / 20%" in cell.replace(" ", "").replace("%/", "% /") + "" or (f2(expect*100) in cell and "จากทุน" not in cell and "จากราคาปิด" in cell and "ขาดราคา 1 ตัว (ไม่นับ)" in cell), cell)
+        check(f"{tag} บล็อกสรุป Port: ช่อง (a) 'จากราคาปิด' ไม่มี 'จากทุน' · ตัวเลขตรง · 'ขาดราคา 1 ตัว (ไม่นับ)'", "จากราคาปิด" in cell and "จากทุน" not in cell and f"{f2(expect*100)}%" in cell.replace(" ", "") + "" or (f2(expect*100) in cell and "จากทุน" not in cell and "จากราคาปิด" in cell and "ขาดราคา 1 ตัว (ไม่นับ)" in cell), cell)
         drop = txt(page, '#portsSum [data-sum="acctdrop"]') or ""
         check(f"{tag} 'ถ้าทุกไม้โดน Stop': (Core จากราคาปิด · Sat จากทุน) + เทียบทุน", "Core จากราคาปิด · Sat จากทุน" in drop and "เทียบทุน:" in drop, drop)
         shot(page, f"7e2a-card-status-{w}.png", "#corePanel")
@@ -504,7 +514,7 @@ def acct_sep_checks(pw, w, h, label):
         check(f"{tag} 2 บัญชี: การ์ด fam ไม่ปนกับ main", inm == ["cm"] and inf == ["cf"], f"{inm} {inf}")
         check(f"{tag} 2 บัญชี: ถัง Core แยก (main 700,000 · fam 2,000,000)", "700,000" in txt(page, '[data-core-head="main"] [data-c-tank]') and "2,000,000" in txt(page, '[data-core-head="fam"] [data-c-tank]'))
         check(f"{tag} 2 บัญชี: เงินสดว่างแยก (main 630,000 · fam 1,950,000)", "630,000" in txt(page, '[data-core-head="main"] [data-c-cashfree]') and "1,950,000" in txt(page, '[data-core-head="fam"] [data-c-cashfree]'))
-        check(f"{tag} 2 บัญชี: ชั้น 2 แยก (main 1.8% · fam ขาดราคา 1 → 0%)", "1.8% / 20%" in txt(page, '[data-core-head="main"] [data-c-l2]') and "0% / 20%" in txt(page, '[data-core-head="fam"] [data-c-l2]') and "1" in txt(page, '[data-core-head="fam"] [data-c-missing]') and "0" in txt(page, '[data-core-head="main"] [data-c-missing]'), (txt(page, '[data-core-head="main"]') or "") + " || " + (txt(page, '[data-core-head="fam"]') or ""))
+        check(f"{tag} 2 บัญชี: ชั้น 2 แยก (main 1.8% · fam ขาดราคา 1 → 0%)", "ตอนนี้ 1.8%" in txt(page, '[data-core-head="main"] [data-c-l2]') and "ตอนนี้ 0%" in txt(page, '[data-core-head="fam"] [data-c-l2]') and "1" in txt(page, '[data-core-head="fam"] [data-c-missing]') and "0" in txt(page, '[data-core-head="main"] [data-c-missing]'), (txt(page, '[data-core-head="main"]') or "") + " || " + (txt(page, '[data-core-head="fam"]') or ""))
         # ชิปบัญชีเดิม: เลือกเฉพาะ fam → แผงมีเฉพาะ fam
         page.evaluate("setPlanAcct('fam')"); page.wait_for_timeout(200)
         check(f"{tag} ตัวกรองบัญชีเดิม (ชิป) → แผง Core เหลือเฉพาะบัญชีนั้น", page.locator("[data-core-acct]").count() == 1 and page.locator('[data-core-acct="fam"]').count() == 1)
@@ -522,13 +532,13 @@ def tier_card_checks(pw, w, h, label):
     try:
         go_stock(page)
         check(f"{tag} การ์ด: ชิป ตลาด · Tier B + เพดานไม้แรก 5% · 'W' · ปุ่ม L ปิด + 'ซื้อแล้ว — ล็อกกลยุทธ์' (7E-2b-1)",
-              "TH" in txt(page, '[data-core-card="c1"] .ccChips') and "Tier B · เพดานไม้แรก 5%" in txt(page, '[data-core-card="c1"] [data-c-tier]') and page.is_disabled('[data-core-card="c1"] [data-c-strat="L"]') and "ซื้อแล้ว — ล็อกกลยุทธ์" in txt(page, '[data-core-card="c1"] .ccMenu'))
+              "TH" in txt(page, '[data-core-card="c1"] .ccChips') and "Tier B · เพดานไม้แรก 25%" in txt(page, '[data-core-card="c1"] [data-c-tier]') and page.locator('[data-core-card="c1"] [data-c-strat]').count() == 0 and "ล็อกกลยุทธ์" not in txt(page, '[data-core-card="c1"] .ccMenu'))   # RG2b — ไม่มีปุ่มสลับกลยุทธ์
         menu_click(page, "c1", '[data-c-tierbtn]'); page.wait_for_timeout(200); page.click("#cnTierA"); page.wait_for_timeout(80)   # 7E-2b-1: 'Tier…' ปุ่มเดียว + บล็อก Tier คำนวณ
         check(f"{tag} เปลี่ยน B→A (หลังซื้อแล้ว) ต้องพิมพ์เหตุผล · ว่าง = บันทึกไม่ได้", sheet_open(page, "tier") and page.is_disabled("#ctSave"))
         page.fill("#cnReason", "  "); check(f"{tag} เหตุผลเป็นช่องว่าง = บันทึกไม่ได้", page.is_disabled("#ctSave"))
         page.fill("#cnReason", "moat แข็ง"); page.click("#ctSave"); page.wait_for_timeout(500)
         k, c = one_card(page, "XXX.BK")
-        check(f"{tag} B→A พร้อมเหตุผล → tier A + tierReason · เพดานไม้แรก 10% · ชิปเหตุผล (title)", c["tier"] == "A" and c["tierReason"] == "moat แข็ง" and "เพดานไม้แรก 10%" in txt(page, '[data-core-card="c1"] [data-c-tier]') and page.get_attribute('[data-core-card="c1"] [data-c-reason-chip]', "title") == "moat แข็ง")
+        check(f"{tag} B→A พร้อมเหตุผล → tier A + tierReason · เพดานไม้แรก 25% · ชิปเหตุผล (title)", c["tier"] == "A" and c["tierReason"] == "moat แข็ง" and "เพดานไม้แรก 25%" in txt(page, '[data-core-card="c1"] [data-c-tier]') and page.get_attribute('[data-core-card="c1"] [data-c-reason-chip]', "title") == "moat แข็ง")
         ex(page, "c1"); page.click('[data-core-card="c1"] [data-c-reason-chip]'); page.wait_for_timeout(200)
         check(f"{tag} แตะชิป Tier A → กางเหตุผล", "moat แข็ง" in (txt(page, '[data-core-card="c1"] [data-c-reason]') or ""))
         menu_click(page, "c1", '[data-c-tierbtn]'); page.wait_for_timeout(200); page.click("#cnTierB"); page.click("#ctSave"); page.wait_for_timeout(500)

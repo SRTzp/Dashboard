@@ -50,8 +50,8 @@ def pin_sat_pool(doc):
 def launch(pw, w, h, mutate=None, pin_sat=False):
     doc = P38.doc38(clean=True)
     for b in doc["books"].values(): b["settings"].pop("satWeekPick", None)   # WA1fix — doc38 ใส่ pick ให้ชุดเก่า · ชุด WA1+ เริ่มจากว่าง
-    if pin_sat: pin_sat_pool(doc)
     if mutate: mutate(doc)
+    if pin_sat: pin_sat_pool(doc)   # หลัง mutate: fixture อาจตั้ง capital/fx ใหม่
     return P39.launch(pw, w, h, doc=doc, clean=True, iso=CLK, pick=False)
 
 

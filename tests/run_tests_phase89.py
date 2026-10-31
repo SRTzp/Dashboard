@@ -53,7 +53,7 @@ def tests(pw, w, h, label):
     try:
         C.go_core(page)
         sw = js(page, "()=>({a: document.getElementById('scopeStock').innerText.trim(), b: document.getElementById('scopeFuture').innerText.trim(), onA: document.getElementById('scopeStock').classList.contains('on')})")
-        check(f"{tag} 1 บนสุดปุ่ม 'Core | Sat' (ไม่มี 'Port หุ้น / Port Future') · Core ติดอยู่", sw["a"] == "Core" and sw["b"] == "Sat" and sw["onA"], sw)
+        check(f"{tag} 1 บนสุดปุ่ม 'Core | Sat' (ไม่มี 'Port หุ้น / Port Future') · Core ติดอยู่", sw["a"] == "Winner" and sw["b"] == "Sat" and sw["onA"], sw)   # RG2b — ปุ่มสามตัว Winner | Ladder | Sat
         gone = js(page, """()=>({strip: !!document.querySelector('#strip') && document.querySelector('#strip').offsetParent!==null, ports: document.getElementById('ports').children.length,
           pos: !!document.getElementById('posPanel') && document.getElementById('posPanel').offsetParent!==null, foot: document.getElementById('foot').offsetParent!==null,
           sum: document.querySelectorAll('#tabPlan [data-sum]').length, bar4: document.querySelectorAll('#tabPlan .sumBar4').length,
@@ -61,7 +61,7 @@ def tests(pw, w, h, label):
           legacyHead: document.querySelectorAll('#corePanel [data-core-head]').length})""")
         check(f"{tag} 1 ตัดออก: การ์ดบัญชี Hold/Plan · กล่อง 4 ช่อง · ชิปต่อบัญชี · Positions · บรรทัด heat ท้ายหน้า", not gone["strip"] and gone["ports"] == 0 and not gone["pos"] and not gone["foot"] and gone["sum"] == 0 and gone["bar4"] == 0 and not gone["hold"] and not gone["heat"] and gone["legacyHead"] == 0, gone)
         box = js(page, "()=>({n: document.querySelectorAll('[data-lf-box]').length, cap: document.querySelector('[data-lf-cap]').innerText.trim()})")
-        check(f"{tag} 1 กล่องมืดกล่องเดียว: 'Core' + 'ทุน ฿4.2M'", box["n"] == 1 and box["cap"] == "ทุน ฿8.4M", box)   # LN3fix3c §4: หัว Core = ทุนรวมทุกบัญชี (2 × ฿4.2M)   # LN3fix2 §2: ตัด '% ของพอร์ต'
+        check(f"{tag} 1 กล่องมืดกล่องเดียว: 'Core' + 'ทุน ฿4.2M'", box["n"] == 1 and box["cap"] == "ทุน ฿9.6M", box)   # LN3fix3c §4: หัว Core = ทุนรวมทุกบัญชี (2 × ฿4.2M)   # LN3fix2 §2: ตัด '% ของพอร์ต'
         sh = vis(page, "[data-lf-sidehint]")
         check(f"{tag} 1 ไม่มีฟอร์มเปิด: " + ("Mac คอลัมน์ขวามีการ์ดเล็ก 'ยังไม่ได้เปิดฟอร์มแผน Core' + ปุ่ม ＋ แผน Core" if w >= 1000 else "มือถือไม่มีการ์ดว่าง"), sh == (w >= 1000), sh)
         # ตัวเลข = ค่าเดิม
