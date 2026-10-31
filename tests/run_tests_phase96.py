@@ -226,10 +226,10 @@ def riskcore(pw, w, h, label):
         # ค่าเดียวกับกล่องเดิมของบัญชีนั้น
         for A in ("main", "fam"):
             ref = js(page, """(A)=>{ const rk = coreAcctRisk(A), cx = coreCtx(A), cfg = cx.cfg, sp = cx.split, tank = cx.tankTHB; if(!(tank > 0)) return null;
-              return {now: fmt2(rk.layer2Pct)+'%', lim: fmt2(cfg.l2Cap)+'%', free: Math.round(sp ? tank-cx.wCost-sp.lUsed : tank-cx.held), ff: Math.round(cx.F.f*100)+'%', dd: fmt2(Math.round(ddEval(A,'core').ddPct*100)/100)+'%'}; }""", A)
-            got = js(page, """(A)=>{ const r = document.querySelector('[data-lf-row="'+A+'"]'); return {now: r.querySelector('[data-lf-now]').innerText.trim(), lim: r.querySelector('[data-lf-lim]').innerText.trim(), free: +r.querySelector('[data-lf-free]').dataset.lfFree, line: r.querySelector('[data-lf-line]').innerText.replace(/\\s+/g,' ').trim()}; }""", A)
+              return {now: fmt2(rk.layer2Pct)+'%', free: Math.round(sp ? (sp.cashFree + sp.lCashFree) : (tank - cx.held)), ff: Math.round(cx.F.f*100)+'%', dd: fmt2(Math.round(ddEval(A,'winner').ddPct*100)/100)+'%'}; }""", A)
+            got = js(page, """(A)=>{ const r = document.querySelector('[data-lf-row="'+A+'"]'); return {now: r.querySelector('[data-lf-now]').innerText.trim(), free: +r.querySelector('[data-lf-free]').dataset.lfFree, line: r.querySelector('[data-lf-line]').innerText.replace(/\\s+/g,' ').trim()}; }""", A)
             check(f"{tag} 4 แถว {A}: Risk ชั้น 2 ตอนนี้ / เพดาน / ว่าง / DD / FF ตรงฟังก์ชันเดิม (coreAcctRisk · coreCtx · ddEval)",
-                  ref and got["now"] == ref["now"] and got["lim"] == ref["lim"] and abs(got["free"] - ref["free"]) <= 1 and f"DD {ref['dd']}" in got["line"] and ref["ff"] in got["line"], [ref, got])
+                  ref and got["now"] == ref["now"] and abs(got["free"] - ref["free"]) <= 1 and f"DD {ref['dd']}" in got["line"] and ref["ff"] in got["line"], [ref, got])
         # เตือนใต้แถวของบัญชีนั้น (NVDA ไม่มีราคา อยู่บัญชีหลัก)
         al = js(page, "()=>[...document.querySelectorAll('[data-lf-alert]')].map(e=>({k: e.dataset.lfAlert, row: e.closest('[data-lf-row]').dataset.lfRow}))")
         check(f"{tag} 4 เตือน 'ขาดราคา' อยู่ใต้แถวบัญชีหลัก (ที่มี NVDA) · ไม่มีใต้ Family", any(a["k"] == "missing" and a["row"] == "main" for a in al) and not any(a["row"] == "fam" and a["k"] == "missing" for a in al), al)

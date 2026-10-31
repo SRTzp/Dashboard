@@ -245,19 +245,11 @@ def tests(pw, w, h, label):
         err = lambda i: txt(page, f'[data-err-for="{i}"]') or ""
         dis = lambda: js(page, "()=>document.getElementById('setSaveBtn').disabled")
         bad = {}
-        for fld in ("sSatMacroNeutral", "sSatMacroAgainst"):
-            for v in ("0", "1.5", "", "0.05", "0.555"):
-                page.fill("#" + fld, v); page.wait_for_timeout(60)
-                bad[f"{fld}={v!r}"] = (err(fld) != "" and dis() is True)
-            page.fill("#" + fld, "0.8"); page.wait_for_timeout(60)
-        check(f"{tag} 7 ค่า 0 / 1.5 / ว่าง / 0.05 / 0.555 → error + ปุ่มบันทึกปิด ทั้ง 2 ช่อง", all(bad.values()), json.dumps(bad))
-        check(f"{tag} 7 ค่าถูก (0.8) → ข้อความหาย · ปุ่มบันทึกเปิด", err("sSatMacroNeutral") == "" and err("sSatMacroAgainst") == "" and dis() is False)
-        page.fill("#sSatMacroNeutral", "0.9"); page.fill("#sSatMacroAgainst", "0.4"); page.wait_for_timeout(60)
-        js(page, "()=>saveSettings()"); page.wait_for_timeout(300)
-        sv = js(page, "()=>[getBook('main').settings.satRisk, getBook('fam').settings.satRisk || null]")
-        check(f"{tag} 7 บันทึก → main macroNeutral 0.9 · macroAgainst 0.4 · fam ไม่เปลี่ยน", sv[0]["macroNeutral"] == 0.9 and sv[0]["macroAgainst"] == 0.4 and "macroNeutral" not in (sv[1] or {}) and "macroAgainst" not in (sv[1] or {}), json.dumps(sv))
+        # RG2b — ถอดตัวคูณขนาดตาม Macro (Neutral/Against) ออกจากหน้าตั้งค่า: ช่องไม่แสดงให้กรอก · ค่าที่ใช้จริง = 1 เสมอ แม้มีค่าเก่าค้างในข้อมูล
+        vis = js(page, "()=>['sSatMacroNeutral','sSatMacroAgainst'].map(i=>{ const e = document.getElementById(i); return !e || !e.offsetParent; })")
+        check(f"{tag} 7 (RG2b) ช่อง Macro Neutral/Against ไม่แสดงให้กรอก (ถอดแล้ว)", vis == [True, True], vis)
         set_cfg(page, "fam", macroNeutral=0.5)
-        check(f"{tag} 7 บัญชี Family ตั้งต่างจาก main ได้", js(page, "()=>[satRiskCfg('main').macroNeutral, satRiskCfg('fam').macroNeutral]") == [0.9, 0.5])
+        check(f"{tag} 7 (RG2b) ค่า Macro ค้างในข้อมูล (0.5) ไม่มีผล: satRiskCfg macroNeutral/Against = 1", js(page, "()=>[satRiskCfg('main').macroNeutral, satRiskCfg('fam').macroNeutral, satRiskCfg('fam').macroAgainst]") == [1, 1, 1])
         js(page, "()=>{ document.getElementById('setOverlay').classList.remove('show'); }")
         P54.opensheet(page)
         check(f"{tag} 7 ตั้งค่าสินค้า Sat: ไม่มี checkbox ซ่อน · ลบสินค้าเพิ่มเอง (XAG ที่ไม่ได้ใช้) ได้ + เอาออกจาก pick", js(page, "()=>document.querySelectorAll('#sat7dBrokerOverlay [data-as-hide]').length") == 0 and js(page, "()=>document.querySelectorAll('#sat7dBrokerOverlay [data-as-del]').length") == 2)

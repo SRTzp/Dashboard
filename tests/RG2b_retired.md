@@ -8,6 +8,7 @@ Causes (all intended by the brief):
 - **§4.7 DD per pool** (Winner / Ladder / Sat), table columns `DD W / DD L / DD S`.
 - **core_size_test.js**: 12 `canPlaceLadder` cases (gate/L_SHARE/LAYER2 removed): ชั้น 2 รวมบันไดใหม่ = 2.24% · ประตูปิด (green) · ประตูปิด (unknown) · ไม่ส่ง gate = งด · ชั้น 2 รวมบันไดใหม่เกิน 20% · เกิน → ไม่อนุญาต · ชั้น 2 นับที่จองของบันไดเดิมด้วย · เงินสดไม่พอจอง · L รวมเกิน 30% · 7E-2b-1 l2Cap 0.25 · 7E-2b-1 shareCap 0.20 · รวมเหตุผลหลายข้อ. Count 471 old + 31 new = 502.
 - **Source fixes made while retiring** (not test edits): Plan-form size row no longer shows Macro "ลด 40%" for non-MR plans; `satV2Cfg` output stamped `poolMig:'RG2b'` (re-saving a read cfg no longer re-migrates caps/brake); ≤340px plan status-line font.
+- **Also**: `satMacroFactors()` now returns `{neutral, against, mr}` (against = 1; MR keeps 0.6 via `mr`); Watchlist row shows a track badge only for Ladder (Winner = default, avoids row wrap at 355px).
 
 Per-file changes (`-` old → `+` new, shortened to 170 chars):
 
@@ -95,8 +96,7 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
     +        if pin_winner: P24.pin_winner_pool(doc)   # RG2b — ตรึงถัง Winner = ทุน Core เดิม
     -def launch2(pw, w, h, trades, cards, mut=None, fx=33, core_risk=None):
     +def launch2(pw, w, h, trades, cards, mut=None, fx=33, core_risk=None, pin_winner=False):
-    -        cr = {"riskA": 1.0, "riskB": 1.0, "riskPct": 1.0, "tierA": 15, "tierB": 10, "maxLots": 3, "addRatio": 50, "market": "both"}
-    +        cr = {"riskA": 1.0, "riskB": 1.0, "riskPct": 1.0, "tierA": 15, "winnerCap": 15, "tierB": 10, "maxLots": 3, "addRatio": 50, "market": "both"}
+    +        if pin_winner: cr["winnerCap"] = 15   # RG2b — เพดานต่อหุ้นเดิม (Tier A 15%) สำหรับเทสเก่าที่ตรึงถัง
     +        if pin_winner: P24.pin_winner_pool(doc)   # RG2b — ตรึงถัง Winner = ทุน Core เดิม
 
 ## tests/run_tests.py
@@ -113,6 +113,20 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
     -          s50_live.get("lot") == 6,
     +    check(f"[{label}] sat7dCalc (live path) S50 main/Pi -> 5 สัญญา",
     +          s50_live.get("lot") == 5,
+
+## tests/run_tests_phase106.py
+
+    -        check(f"{tag} B3 กาง: ทีละ sub-portfolio (Core.US 19% $98k→$160k · อื่น No goal set)", len(subs) == 4 and "Core.US" in subs[0] and "$98k→$160k" in subs[0] and "1
+    +        check(f"{tag} B3 กาง: ทีละ sub-portfolio (RG2b: Winner 19% $98k→$160k · อื่น No goal set)", len(subs) == 4 and "Winner" in subs[0] and "$98k→$160k" in subs[0] an
+    -        check(f"{tag} บันทึก sub-goal (Sat) ถูกเก็บ · ของเดิม (Core.US) ไม่หาย", sg and sg["main"]["Sat"]["target"] == 12000 and sg["main"]["Sat"]["now"] == 5000 and sg[
+    +        check(f"{tag} บันทึก sub-goal (Sat) ถูกเก็บ · ของเดิม (Core.US) ย้ายเป็น Winner ไม่หาย (RG2b §4.7)", sg and sg["main"]["Sat"]["target"] == 12000 and sg["main"]["
+
+## tests/run_tests_phase109.py
+
+    -      s.ddState = {core: mk(700000, cd), sat: mk(26000, sd)}; B.trades = []; saveBook(A); render(); todayRefresh(true); }""", [sat_dd, core_dd]); settle(page, 500)
+    +      s.pools = {winner: 700000/1740000*100, ladder: 0, sat: 1040000/1740000*100, mig:'RG2b', reviewed:true}; s.ddState = {core: mk(700000, cd), winner: mk(700000, cd), 
+    -        check(f"{tag} §B5b DD Core ถึงขั้น → ชิป '⚠ DD Core … ›' ที่หัว Core Port เท่านั้น (Sat กลับเป็น Risk ✓)", cc.startswith("⚠ DD Core") and "12.5%" in cc and abs(s
+    +        check(f"{tag} §B5b DD Core ถึงขั้น → ชิป ⚠ DD Winner … › ที่หัว Core Port (RG2b §4.7 ชื่อถัง) เท่านั้น (Sat กลับเป็น Risk ✓)", cc.startswith("⚠ DD Winner") and "
 
 ## tests/run_tests_phase11.py
 
@@ -154,6 +168,13 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
     +        check(f"{tag} ฟอร์มยังมี: บัญชี · Ticker · Entry · Stop · ขนาดไม้ · ปุ่มบันทึก (RG2b ถอดตัวเลือกกลยุทธ์ · ไม่มี #cnStratBox)", cnt(page, "#cnAcctBox, #cnTicker, 
     -    b, page, ce, pe = C.launch(pw, w, h, cards=cd)
     +    b, page, ce, pe = C.launch(pw, w, h, cards=cd, pin_winner=True)
+
+## tests/run_tests_phase13.py
+
+    -    page.wait_for_timeout(150)
+    +    page.wait_for_timeout(1000)   # RG2b: ddSync เขียน DD 3 ถัง → รอ echo ของ mock Firestore ก่อนอ่าน
+    +    page.wait_for_timeout(600)
+    +    seed(page, main=[T("m1", "core", "open", date="2020-01-06")], fam=[T("f1", "satB", "open", qty=1, date=__import__("datetime").date.today().isoformat())])   # RG2b: s
 
 ## tests/run_tests_phase23.py
 
@@ -260,12 +281,25 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
 
 ## tests/run_tests_phase27.py
 
+    -        check(f"{tag} 7 กฎ F2c ของ Long = 0.6 อยู่แล้ว (สวน Macro+Trend) แต่ factor ที่ใช้ยัง 0.6 · off=false", f2c == {"rule": 0.6, "factor": 0.6, "off": False, "mr": T
+    +        check(f"{tag} 7 RG2b: กฎ F2c ไม่มีตัวคูณ Macro (rule 1) แต่ MR ใช้ factor 0.6 ตายตัว · off=false", f2c == {"rule": 1, "factor": 0.6, "off": False, "mr": True}, j
     -        check(f"{tag} 9 PF1 — field F2c บันทึกตามปกติ (side = Long): macro_state=against · size_rule=0.6 · off_rule=false · trend_state=null (ไม่อ่าน Strategy)", (t or {
     +        check(f"{tag} 9 PF1 — field F2c บันทึกตามปกติ (side = Long): macro_state=against · size_rule=0.6 · off_rule=false · trend_state=null (ไม่อ่าน Strategy)", (t or {
     -        for i in (1, 2): push_trade(page, id=f"tq{i}", date=js(page, "()=>thaiToday()"), entry=2650, sl=2620, tp=2700, bias="Short", port="satB")
     +        for i in (1, 2, 3, 4): push_trade(page, id=f"tq{i}", date=js(page, "()=>thaiToday()"), entry=2650, sl=2620, tp=2700, bias="Short", port="satB")
     -        check(f"{tag} 9 โควตาไม้ใหม่เต็ม 2 → MR ก็ไม่ ready ('โควตาเต็ม')", (not a["ready"]) and "โควตาเต็ม" in a["warns"] and a["mrOk"], json.dumps(a["warns"], ensure_a
     +        check(f"{tag} 9 โควตาไม้ใหม่เต็ม 4 → MR ก็ไม่ ready ('โควตาเต็ม')", (not a["ready"]) and "โควตาเต็ม" in a["warns"] and a["mrOk"], json.dumps(a["warns"], ensure_a
+
+## tests/run_tests_phase29.py
+
+    -        go(page); ex(page, "l1")
+    -        page.click(card_sel("l1") + " [data-c-lbuy]"); page.wait_for_selector('.core-sheet [data-core-sheet="lbuy"]'); page.click("#clSave"); page.wait_for_timeout(700)
+    +        go(page); page.evaluate("()=>{ setPlanScope('ladder'); render(); }"); page.wait_for_timeout(400); ex(page, "l1")   # RG2b: การ์ด L อยู่หน้า Ladder
+    +        page.click('[data-ldr-card="l1"] [data-ldr-buy], ' + card_sel("l1") + " [data-c-lbuy]"); page.wait_for_selector('.core-sheet [data-core-sheet="lbuy"]'); page.cli
+    -        check(f"{tag} B3 การ์ด L ก็มีป้าย (A + WL B → เหลือง)", one("k9", "warn", "WL_B"), json.dumps(b("k9"), ensure_ascii=False))
+    -        w_ids = ["k1", "k2", "k3", "k8", "k9"]; m_ids = ["k4", "k5", "k6", "k7", "k10"]
+    +        check(f"{tag} B3 การ์ด L อยู่หน้า Ladder (RG2b) → ไม่มีป้าย Tier บนหน้า Winner", b("k9") == [], json.dumps(b("k9"), ensure_ascii=False))
+    +        w_ids = ["k1", "k2", "k3", "k8"]; m_ids = ["k4", "k5", "k6", "k7", "k10", "k9"]   # RG2b: k9 (การ์ด L) ย้ายไปหน้า Ladder
 
 ## tests/run_tests_phase3.py
 
@@ -280,6 +314,19 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
 
 ## tests/run_tests_phase31.py
 
+    -              and not page.is_disabled("#cnStratL"), summ(page) + "|" + line(page, "growth"))
+    +              and page.locator("#cnStratL").count() == 0, summ(page) + "|" + line(page, "growth"))   # RG2b: ไม่มีปุ่ม L ในฟอร์ม Winner
+    -        check(f"{tag} 10 ชุด Growth (rev 25 · CAGR 18 · opm 12 vs 10 · OCF ✓ · ND 2.5) → 'คำนวณได้ A · Growth' · ปุ่ม L ปิด + 'L ใช้ได้เฉพาะ A-Fortress'",
+    +        check(f"{tag} 10 ชุด Growth (rev 25 · CAGR 18 · opm 12 vs 10 · OCF ✓ · ND 2.5) → 'คำนวณได้ A · Growth' (RG2b: ไม่มีปุ่ม L ในฟอร์ม)",
+    -              and page.is_disabled("#cnStratL") and "L ใช้ได้เฉพาะ A-Fortress" in (txt(page, "#cnStratMsg") or ""), summ(page) + "|" + (txt(page, "#cnStratMsg") or ""))
+    +              and page.locator("#cnStratL").count() == 0, summ(page))   # RG2b: ไม่มีตัวเลือก W/L ในฟอร์ม
+    -        check(f"{tag} 10 ผ่านทั้งคู่ → 'คำนวณได้ A · ทั้งสองมุม' + L เปิด", "คำนวณได้ A · ทั้งสองมุม" in summ(page) and not page.is_disabled("#cnStratL") and "on" in (pa
+    +        check(f"{tag} 10 ผ่านทั้งคู่ → 'คำนวณได้ A · ทั้งสองมุม' + L เปิด", "คำนวณได้ A · ทั้งสองมุม" in summ(page) and page.locator("#cnStratL").count() == 0 and "on" i
+    -        # เปิดปุ่ม L จริง: กด L แล้วสลับไปมุม Growth อย่างเดียว → กลับเป็น W เอง
+    -        page.click("#cnStratL"); page.wait_for_timeout(60)
+    -        clear_fortress(page); put(page, "#tiNd", 2.5); page.wait_for_timeout(100)
+    -        check(f"{tag} 10 เลือก L แล้วมุม Fortress หลุด (เหลือ Growth) → กลับเป็น W เอง · L ปิด", page.is_disabled("#cnStratL") and "on" in (page.get_attribute("#cnStratW
+    +        clear_fortress(page); put(page, "#tiNd", 2.5); page.wait_for_timeout(100)   # RG2b: ถอดตัวเลือก W/L ออกจากฟอร์ม — ตัดเคส "เลือก L แล้วมุม Fortress หลุด → กลับเป็
     -        check(f"{tag} 11 ไม้แรกเพดาน 10%: A-Growth = A-Fortress = 700 หุ้น · B (เพดาน 5%) = 350", qtys["TGRO"] == "700" and qtys["TFOR"] == "700" and qtys["TBEE"] == "35
     +        check(f"{tag} 11 ไม้แรกเพดานเดียว 25% ของถัง Winner (RG2b ไม่แยก Tier): A-Growth = A-Fortress = B = 365 หุ้น", qtys["TGRO"] == "365" and qtys["TFOR"] == "365" an
     -        check(f"{tag} 11 ชิปการ์ด A-Growth = 'Tier A · Growth' + บรรทัด FF 'เพดานไม้แรก 10%' (UX2: เพดานย้ายจากชิป)", chip_g == "Tier A · Growth" and "เพดานไม้แรก 10%" i
@@ -288,6 +335,41 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
     +        check(f"{tag} 11 ชิป A-Fortress = 'Tier A · Fortress' + บรรทัด FF 'เพดานไม้แรก 25%' (UX2)", chip_f == "Tier A · Fortress" and "เพดานไม้แรก 25%" in (txt(page, f'{
     -              and {id: ("เพดานไม้แรก " + ("5%" if id == "cw" else "10%")) in (txt(page, f'{card_sel(id)} [data-c-ff]') or "") for id in cards} == {id: True for id in car
     +              and {id: ("เพดานไม้แรก 25%") in (txt(page, f'{card_sel(id)} [data-c-ff]') or "") for id in cards} == {id: True for id in cards}, json.dumps(chips, ensure_a
+    -            it = page.locator(card_sel(id) + ' .ccMenu [data-c-strat="L"]')
+    -            res[id] = (it.is_disabled(), it.inner_text())
+    +            res[id] = page.locator(card_sel(id) + ' .ccMenu [data-c-strat]').count()
+    -        check(f"{tag} 12 ⋯ A-Growth: 'เปลี่ยนเป็น L' ปิด + 'L ใช้ได้เฉพาะ A-Fortress'", res["cg"][0] is True and "L ใช้ได้เฉพาะ A-Fortress" in res["cg"][1], json.dumps(r
+    -        check(f"{tag} 12 ⋯ A-Fortress เปิด · A-ทั้งคู่ เปิด", res["cf"][0] is False and "ถัวตามแนวรับ (L)" in res["cf"][1] and res["cb"][0] is False, json.dumps(res, ens
+    +        check(f"{tag} 12 ⋯ (RG2b) เมนูการ์ด Winner ไม่มี 'เปลี่ยนเป็น L' ทั้ง A-Growth · A-Fortress · A-ทั้งคู่ (ถอดโหมดแปลง W→L)", res == {"cg": 0, "cf": 0, "cb": 0}, j
+    -        p24.menu_click(page, "old", '[data-c-strat="L"]'); page.wait_for_selector('.core-sheet [data-core-sheet="new"]')
+    -        page.fill("#cnLv0", "100"); page.fill("#cnLv1", "90"); page.fill("#cnLsl", "70"); page.wait_for_timeout(150)
+    -        g = p26.gate_row(page, "tier")
+    -        check(f"{tag} 13 การ์ดเก่าวางบันได L ได้ · ประตู Tier = 'A-Fortress' ✓", g and g["ok"] == "1" and g["t"].endswith("A-Fortress"), json.dumps(g, ensure_ascii=False
+    -        check(f"{tag} 13 ปุ่มล็อกแผนใช้ได้", not page.is_disabled("#cnSave"), txt(page, "#cnErr") or "")
+    -        page.click("#cnSave"); page.wait_for_timeout(500)
+    -        c = db_card(page, "old")
+    -        check(f"{tag} 13 บันทึก → strategy L · มี ladder · tierLens 'fortress' (บันทึกผ่านบล็อก Tier ใหม่)", c["strategy"] == "L" and c["ladder"] and c["tierLens"] == "f
+    +        # RG2b — ถอดโหมดแปลง W→L (การ์ดเก่าไม่มีเมนู 'เปลี่ยนเป็น L' · วาง Ladder ที่หน้า Ladder)
+    +        page.click(card_sel("old") + " [data-c-more]")
+    +        check(f"{tag} 13 การ์ดเก่าไม่มีเมนูเปลี่ยนเป็น L (RG2b)", page.locator(card_sel("old") + ' .ccMenu [data-c-tierbtn]').count() == 1 and page.locator(card_sel("old
+    +        page.keyboard.press("Escape")
+    -        for id in ("lp", "lo"):
+    -            p24.menu_click(page, id, "[data-c-tierbtn]"); page.wait_for_selector('.core-sheet [data-core-sheet="tier"]')
+    -            page.click("#cnTierG"); page.wait_for_timeout(60); page.fill("#cnReason", "เปลี่ยนมุมเป็น Growth"); page.wait_for_timeout(60)
+    -            page.click("#ctSave"); page.wait_for_timeout(500)
+    -        check(f"{tag} 14 บันทึกมุมเป็น Growth → tier A · tierLens growth ทั้งสองการ์ด", db_card(page, "lo")["tierLens"] == "growth" and db_card(page, "lp")["tierLens"] =
+    -        ex(page, "lo"); chip = txt(page, card_sel("lo") + " [data-c-tier]") or ""
+    -        check(f"{tag} 14 ชิปการ์ด L: 'Tier A · Growth · บันไดเดิมทำงานต่อจนออก'", chip == "Tier A · Growth · บันไดเดิมทำงานต่อจนออก", chip)
+    -        check(f"{tag} 14 บันไดเดิมยังซื้อระดับต่อได้ ('บันทึกซื้อ L2' ใช้ได้) · เลื่อน Stop ได้", txt(page, card_sel("lo") + " [data-c-lbuy]") == "บันทึกซื้อ L2" and not
+    -        page.click(card_sel("lo") + " [data-c-lbuy]"); page.wait_for_selector('.core-sheet [data-core-sheet="lbuy"]'); page.click("#clSave"); page.wait_for_timeout(500)
+    -        check(f"{tag} 14 ซื้อ L2 สำเร็จ (ระดับ bought)", db_card(page, "lo")["ladder"]["levels"][1]["status"] == "bought")
+    -        ex(page, "lp")
+    -        check(f"{tag} 14 'แก้แผนบันได' ของแผน L ที่เป็น A-Growth ปิด + ข้อความ 'แก้แผนบันไดต้องเป็น A-Fortress'",
+    -              page.is_disabled(card_sel("lp") + " [data-c-ledit]") and "แก้แผนบันไดต้องเป็น A-Fortress" in (txt(page, card_sel("lp") + " [data-c-ledit-note]") or ""))
+    +        # RG2b — การ์ด L อยู่หน้า Ladder (ไม่มีเมนู Tier…/แก้แผนบันไดในหน้า Winner) : ตัดเคสเปลี่ยนมุม Tier ของการ์ด L ออก
+    +        onwin = page.locator(card_sel("lp")).count() + page.locator(card_sel("lo")).count()
+    +        page.evaluate("()=>{ setPlanScope('ladder'); render(); }"); page.wait_for_timeout(400)
+    +        check(f"{tag} 14 (RG2b) การ์ด L ไม่อยู่หน้า Winner · อยู่หน้า Ladder ทั้ง 2 ใบ (ไม่มี Tier…)", onwin == 0 and page.locator('[data-ldr-card="lp"]').count() == 1 a
 
 ## tests/run_tests_phase34.py
 
@@ -516,6 +598,13 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
     -        check(f"{tag} 5 เพดานไม้แรก 30 · รวม 25 · Stop แคบ → ป้าย 'ชนเพดานรวม/หุ้น' · จำนวน = 25% ของถัง ÷ ราคา (ปัด 1 หุ้น US)", tag_txt == "ชนเพดานรวม/หุ้น" and f["sto
     +        check(f"{tag} 5 เพดานไม้แรก 30 · รวม 25 · Stop แคบ → ป้าย 'ชนเพดานรวม/หุ้น' · จำนวน = 25% ของถัง ÷ ราคา (ปัด 1 หุ้น US)", tag_txt == "ชนเพดาน Tier" and f["capped
 
+## tests/run_tests_phase68.py
+
+    -        check(f"{tag} 5 F2c ใช้ท่าที XAG: Long สวน Macro ▼ → align=against · ขนาด ×0.6 (WA1: ตัวคูณตาม Macro อย่างเดียว)", f["mac"] == "down" and f["align"] == "against"
+    +        check(f"{tag} 5 F2c ใช้ท่าที XAG: Long สวน Macro ▼ → align=against · ขนาด ×1 (RG2b: ไม่มีตัวคูณ Macro)", f["mac"] == "down" and f["align"] == "against" and f["lf
+    -        check(f"{tag} 5 สวน Macro + Trend สวน → ×0.6 (Trend ไม่มีผลเพิ่ม)", f == 0.6, str(f))
+    +        check(f"{tag} 5 สวน Macro + Trend สวน → ×1 (RG2b: ไม่มีตัวคูณ Macro)", f == 1, str(f))
+
 ## tests/run_tests_phase69.py
 
     -        check(f"{tag} 4 Playbook XAU ▲ · แผน Long (ตาม) → ×1 · แผน Short (สวน) → ×0.6", L["f"] == 1 and S["f"] == 0.6, json.dumps([L["f"], S["f"]]))
@@ -536,6 +625,22 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
     +        check(f"{tag} 5 Macro สวน + Trend ตาม (Short, Trend ▼) → ×1 (RG2b ถอดตัวคูณ Macro)", b["f"] == 1, json.dumps(b["f"]))   # RG2b
     -        check(f"{tag} 6 บันทึก order → ไม้เก็บ macro_note + macro_state against + size_rule 0.6 + sizeFactor 0.6", t and t["note"] == "เข้าสวนเพราะแนวรับแข็ง" and t["rul
     +        check(f"{tag} 6 บันทึก order → ไม้เก็บ macro_note + macro_state against + size_rule 1 + sizeFactor null", t and t["note"] == "เข้าสวนเพราะแนวรับแข็ง" and t["rule
+    -        for fld in ("sSatMacroNeutral", "sSatMacroAgainst"):
+    -            for v in ("0", "1.5", "", "0.05", "0.555"):
+    -                page.fill("#" + fld, v); page.wait_for_timeout(60)
+    -                bad[f"{fld}={v!r}"] = (err(fld) != "" and dis() is True)
+    -            page.fill("#" + fld, "0.8"); page.wait_for_timeout(60)
+    -        check(f"{tag} 7 ค่า 0 / 1.5 / ว่าง / 0.05 / 0.555 → error + ปุ่มบันทึกปิด ทั้ง 2 ช่อง", all(bad.values()), json.dumps(bad))
+    -        check(f"{tag} 7 ค่าถูก (0.8) → ข้อความหาย · ปุ่มบันทึกเปิด", err("sSatMacroNeutral") == "" and err("sSatMacroAgainst") == "" and dis() is False)
+    -        page.fill("#sSatMacroNeutral", "0.9"); page.fill("#sSatMacroAgainst", "0.4"); page.wait_for_timeout(60)
+    -        js(page, "()=>saveSettings()"); page.wait_for_timeout(300)
+    -        sv = js(page, "()=>[getBook('main').settings.satRisk, getBook('fam').settings.satRisk || null]")
+    -        check(f"{tag} 7 บันทึก → main macroNeutral 0.9 · macroAgainst 0.4 · fam ไม่เปลี่ยน", sv[0]["macroNeutral"] == 0.9 and sv[0]["macroAgainst"] == 0.4 and "macroNeut
+    +        # RG2b — ถอดตัวคูณขนาดตาม Macro (Neutral/Against) ออกจากหน้าตั้งค่า: ช่องไม่แสดงให้กรอก · ค่าที่ใช้จริง = 1 เสมอ แม้มีค่าเก่าค้างในข้อมูล
+    +        vis = js(page, "()=>['sSatMacroNeutral','sSatMacroAgainst'].map(i=>{ const e = document.getElementById(i); return !e || !e.offsetParent; })")
+    +        check(f"{tag} 7 (RG2b) ช่อง Macro Neutral/Against ไม่แสดงให้กรอก (ถอดแล้ว)", vis == [True, True], vis)
+    -        check(f"{tag} 7 บัญชี Family ตั้งต่างจาก main ได้", js(page, "()=>[satRiskCfg('main').macroNeutral, satRiskCfg('fam').macroNeutral]") == [0.9, 0.5])
+    +        check(f"{tag} 7 (RG2b) ค่า Macro ค้างในข้อมูล (0.5) ไม่มีผล: satRiskCfg macroNeutral/Against = 1", js(page, "()=>[satRiskCfg('main').macroNeutral, satRiskCfg('fa
 
 ## tests/run_tests_phase70.py
 
@@ -699,6 +804,45 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
     +        check(f"{tag} 1 บนสุดปุ่ม 'Core | Sat' (ไม่มี 'Port หุ้น / Port Future') · Core ติดอยู่", sw["a"] == "Winner" and sw["b"] == "Sat" and sw["onA"], sw)   # RG2b — 
     -        check(f"{tag} 1 กล่องมืดกล่องเดียว: 'Core' + 'ทุน ฿4.2M'", box["n"] == 1 and box["cap"] == "ทุน ฿8.4M", box)   # LN3fix3c §4: หัว Core = ทุนรวมทุกบัญชี (2 × ฿4.2
     +        check(f"{tag} 1 กล่องมืดกล่องเดียว: 'Core' + 'ทุน ฿4.2M'", box["n"] == 1 and box["cap"] == "ทุน ฿9.6M", box)   # LN3fix3c §4: หัว Core = ทุนรวมทุกบัญชี (2 × ฿4.2
+    -          return {now: fmt2(rk.layer2Pct)+'%', lim: fmt2(cfg.l2Cap)+'%', full: fmt2(rk.layer2FullPct)+'%', wPct: fmt2(cx.wCost/tank*100), lPct: fmt2(sp.lPct*100), lcap: 
+    -            free: '฿'+fmt0(sp ? tank-cx.wCost-sp.lUsed : tank-cx.held), ff: Math.round(cx.F.f*100)+'%', dd: fmt2(Math.round(ddEval(A,'core').ddPct*100)/100)+'%'}; }""")
+    -        got = js(page, "()=>({now: document.querySelector('[data-lf-row=main] [data-lf-now]').innerText.trim(), lim: document.querySelector('[data-lf-row=main] [data-lf-
+    -        ok = got["now"] == ref["now"] and got["lim"] == ref["lim"] and got["full"] == ref["full"] and got["wp"] == ref["wPct"] + "%" and got["lp"] == ref["lPct"] and f"L
+    +          return {now: fmt2(rk.layer2Pct)+'%', full: fmt2(rk.layer2FullPct)+'%', wPct: fmt2(cx.wCost/tank*100), lPct: fmt2(sp.lPct*100), lcap: fmt2(cfg.ladderShare),
+    +            free: '฿'+fmt0(sp ? (sp.cashFree + sp.lCashFree) : (tank-cx.held)), ff: Math.round(cx.F.f*100)+'%', dd: fmt2(Math.round(ddEval(A,'winner').ddPct*100)/100)+'%
+    +        got = js(page, "()=>({now: document.querySelector('[data-lf-row=main] [data-lf-now]').innerText.trim(), full: document.querySelector('[data-lf-full]').textConten
+    +        ok = got["now"] == ref["now"] and got["full"] == ref["full"] and got["wp"] == ref["wPct"] + "%" and got["lp"] == ref["lPct"] and f"Ladder {ref['lPct']}%" in got[
+    -        check(f"{tag} 1 พับ 'รายละเอียดและกฎ': ตำแหน่ง · Ladder ใหม่/ประตู · เพดานต่อตัว · Stop ฉุกเฉิน · ถ้าทุกไม้โดน Stop บัญชีลด", all(k in det for k in ("ตำแหน่ง 1 ต
+    +        check(f"{tag} 1 พับ 'รายละเอียดและกฎ': ตำแหน่ง · Ladder ใหม่/ประตู · เพดานต่อตัว · Stop ฉุกเฉิน · ถ้าทุกไม้โดน Stop บัญชีลด", all(k in det for k in ("ตำแหน่ง 1 ต
+    -        check(f"{tag} 1 การ์ด 2 บรรทัด: NVDA 'A · Winners' + 'ไม้ 1 · SL 115' · AVGO 'B · Winners' + 'แผน · 300 / 270 · ไม้แรก 17 หุ้น'",
+    -              nv.get("tag") == "A · Winners" and nv.get("l2") == "ไม้ 1 · SL 115" and av.get("tag") == "B · Winners" and av.get("l2") == "แผน · 300 / 270 · ไม้แรก 17 หุ้
+    +        check(f"{tag} 1 การ์ด 2 บรรทัด: NVDA 'A · Winners' + 'ไม้ 1 · SL 115' · AVGO 'B · Winners' + 'แผน · 300 / 270 · ไม้แรก 15 หุ้น' (RG2b ถัง Winner 50%)",
+    +              nv.get("tag") == "A · Winners" and nv.get("l2") == "ไม้ 1 · SL 115" and av.get("tag") == "B · Winners" and av.get("l2") == "แผน · 300 / 270 · ไม้แรก 15 หุ้
+    -            # กลยุทธ์ Winners|Ladder
+    -            page.fill("#cnTicker", "TSM"); page.fill("#cnEntry", "300"); page.fill("#cnStop", "270"); page.wait_for_timeout(250)
+    -            sg = js(page, "()=>({w: document.getElementById('cnStratW').innerText.trim(), l: document.getElementById('cnStratL').innerText.trim(), ld: document.getElemen
+    -            check(f"{tag} 2 กลยุทธ์ 'Winners | Ladder' + บรรทัด 'Ladder (ถัวตามแนวรับ) ใช้ได้เฉพาะ A Fortress' · A Fortress → Ladder กดได้", sg["w"] == "Winners" and sg[
+    +            # RG2b — ถอดตัวเลือกกลยุทธ์ Winners|Ladder ออกจากฟอร์ม (หน้า Winner สร้างแผน Winner เท่านั้น · Ladder ไปสร้างที่หน้า Ladder)
+    +            sg = js(page, "()=>({box: !!document.getElementById('cnStratBox'), w: !!document.getElementById('cnStratW'), l: !!document.getElementById('cnStratL'), strat:
+    +            check(f"{tag} 2 (RG2b) ฟอร์ม Winner ไม่มีตัวเลือก 'Winners | Ladder' และไม่มีบรรทัดอธิบาย Ladder · strat = W", sg == {"box": False, "w": False, "l": False, "
+    -            sg2 = js(page, "()=>({ld: document.getElementById('cnStratL').disabled, strat: coreNew.strat})")
+    -            check(f"{tag} 2 Tier ไม่ใช่ A Fortress → Ladder กดไม่ได้ (ปิด) · กลับเป็น Winners", sg2["ld"] and sg2["strat"] == "W", sg2)
+    +            sg2 = js(page, "()=>coreNew.strat")
+    +            check(f"{tag} 2 (RG2b) Tier ไม่ใช่ A Fortress → ยังเป็น Winners (W)", sg2 == "W", sg2)
+    -        r = js(page, "()=>{ const e = [...document.querySelectorAll('#corePanel .ccRow')].find(x=>x.querySelector('[data-c-ticker]').innerText==='ZZZ'); return e ? {tag:
+    -        check(f"{tag} 3 การ์ดแผน Ladder: ป้าย 'A · Ladder' · บรรทัด 2 'แผน · L1 … · SL …' (ไม่มีคำ 'บันได')", r is not None and r["tag"] == "A · Ladder" and r["l2"].star
+    +        onwin = js(page, "()=>[...document.querySelectorAll('#corePanel .ccRow')].some(x=>x.querySelector('[data-c-ticker]').innerText==='ZZZ')")
+    +        js(page, "()=>{ setPlanScope('ladder'); render(); }"); page.wait_for_timeout(400)
+    +        r = js(page, "()=>{ const e = document.querySelector('[data-ldr-card][data-ldr-tk=ZZZ]'); return e ? e.innerText.replace(/\\s+/g,' ') : null; }")
+    +        check(f"{tag} 3 (RG2b) การ์ดแผน Ladder ไม่อยู่หน้า Winner · อยู่หน้า Ladder (T1 … SL …)", (not onwin) and r is not None and "ZZZ" in r and "T1" in r, [onwin, r])
+    -        check(f"{tag} 3 โหมดเดิม (legacy) แผน Core เหมือนเดิม: ปุ่ม 'Port หุ้น' · การ์ดบัญชี Hold/Plan · กล่อง 4 ช่อง · Positions · หัวบัญชี Core · ไม่มีกล่อง Lean", lg[
+    +        check(f"{tag} 3 โหมดเดิม (legacy) แผน Core เหมือนเดิม: ปุ่ม 'Winner' (RG2b) · การ์ดบัญชี Hold/Plan · กล่อง 4 ช่อง · Positions · หัวบัญชี Core · ไม่มีกล่อง Lean",
+    -        lf = js(page, "()=>({w: !!document.getElementById('cnStratW'), txt: document.getElementById('cnStratW').innerText, tierbtn: !!document.getElementById('cnTierB'),
+    -        check(f"{tag} 3 ฟอร์ม legacy เหมือนเดิม: 'ระบบ Week' · ปุ่ม Tier 4 ตัวเลือก · บัญชี 'ทั้งคู่'", lf["txt"] == "ระบบ Week" and lf["tierbtn"] and not lf["lean"] and
+    +        lf = js(page, "()=>({w: !!document.getElementById('cnStratW'), txt: 'ไม่มี', tierbtn: !!document.getElementById('cnTierB'), lean: !!document.querySelector('[data
+    +        check(f"{tag} 3 ฟอร์ม legacy เหมือนเดิม: (RG2b ไม่มีตัวเลือกกลยุทธ์) · ปุ่ม Tier 4 ตัวเลือก · บัญชี 'ทั้งคู่'", not lf["w"] and lf["tierbtn"] and not lf["lean"] 
+    -        check(f"{tag} 3 สลับกลับ Lean → ปุ่ม 'Core' + กล่อง Lean กลับมา", back["a"] == "Core" and back["lf"] == 1, back)
+    +        check(f"{tag} 3 สลับกลับ Lean → ปุ่ม 'Winner' + กล่อง Lean กลับมา", back["a"] == "Winner" and back["lf"] == 1, back)
 
 ## tests/run_tests_phase91.py
 
@@ -708,6 +852,34 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
     +        check(f"{tag} 9 กล่องสรุป: 'ทุน ฿9.88M' (RG2b = Winner + Ladder ของทั้ง 2 บัญชี) (รวมทุกบัญชี · LN3fix3c) · 'Risk Core x% / 20%' · 'ว่าง ฿' · บรรทัด 'DD · FF · n
     -        check(f"{tag} 9 พับ 'รายละเอียดและกฎ' มี ฿ · ถ้า Ladder เต็ม · Winners ถือ · Ladder % · ตำแหน่ง · Ladder ใหม่ · Stop ฉุกเฉิน · บัญชีลด", all(k in det for k in ("
     +        check(f"{tag} 9 พับ 'รายละเอียดและกฎ' มี ฿ · ถ้า Ladder เต็ม · Winners ถือ · Ladder % · ตำแหน่ง · Ladder ใหม่ · Stop ฉุกเฉิน · บัญชีลด", all(k in det for k in ("
+    -        v0 = js(page, "()=>({first: document.getElementById('sCrRiskFirst').value, acc: document.getElementById('sCrRiskAcc').value, cap: document.getElementById('sCrCap
+    +        v0 = js(page, "()=>({first: document.getElementById('sCrRiskFirst').value, acc: document.getElementById('sCrRiskAcc').value, cap: document.getElementById('sCrWin
+    -        page.fill("#sCrRiskFirst", "0.5"); page.fill("#sCrCapTotA", "30"); page.wait_for_timeout(250)
+    -        e2 = js(page, "()=>document.querySelector('[data-err-for=sCrCapTotA]').innerText")
+    -        check(f"{tag} 11 เพดานเงินต่อหุ้น > 25 → ข้อความ 'ต้องอยู่ระหว่าง 1–25'", "1–25" in e2, e2)
+    -        page.fill("#sCrCapTotA", "10"); page.wait_for_timeout(250)
+    +        page.fill("#sCrRiskFirst", "0.5"); page.fill("#sCrWinCap", "101"); page.wait_for_timeout(250)
+    +        e2 = js(page, "()=>document.querySelector('[data-err-for=sCrWinCap]').innerText")
+    +        check(f"{tag} 11 เพดานเงินต่อหุ้น > 100 → ข้อความ 'ต้องอยู่ระหว่าง 1–100' (RG2b: ช่อง Max per stock ค่าเดียว)", "1–100" in e2, e2)
+    +        page.fill("#sCrWinCap", "10"); page.wait_for_timeout(250)
+    -        check(f"{tag} 11 เพดานไม้แรก (15) > เพดานต่อหุ้น (10) → บรรทัดเตือนใต้ช่อง (ไม่บล็อกการบันทึก)", "⚠" in warn and "เพดานเงินต่อหุ้น" in warn and not js(page, "()=
+    -        page.fill("#sCrCapTotA", "20"); page.fill("#sCrRiskAcc", "0.4"); page.wait_for_timeout(250)
+    +        check(f"{tag} 11 (RG2b) เพดานต่อหุ้นค่าเดียว (10) → ไม่มีบรรทัดเตือนเทียบเพดานไม้แรก · ไม่บล็อกการบันทึก", "⚠" not in warn and not js(page, "()=>document.getElem
+    +        page.fill("#sCrWinCap", "20"); page.fill("#sCrRiskAcc", "0.4"); page.wait_for_timeout(250)
+    -        cr = js(page, "()=>{ const c = getBook('main').settings.coreRisk; return {first: c.riskFirst, acc: c.riskAcc, cap: c.capTotalA, riskA: c.riskA, maxLots: c.maxLot
+    +        cr = js(page, "()=>{ const c = getBook('main').settings.coreRisk; return {first: c.riskFirst, acc: c.riskAcc, cap: c.winnerCap, riskA: c.riskA, maxLots: c.maxLot
+    -        cfg = js(page, "()=>{ const c = coreRiskCfg('main'), o = coreSizeOpts('main'); return [c.riskFirst, c.riskAcc, c.capTotalA, o.riskFirst, o.riskAcc, o.stockCap.A]
+    +        cfg = js(page, "()=>{ const c = coreRiskCfg('main'), o = coreSizeOpts('main'); return [c.riskFirst, c.riskAcc, c.winnerCap, o.riskFirst, o.riskAcc, o.stockCap.A]
+    -    b, page, ce, pe = launch(pw, w, h, core_risk={"capTotalA": 25, "capTotalB": 25, "riskFirst": 0.8})
+    +    b, page, ce, pe = launch(pw, w, h, core_risk={"winnerCap": 25, "riskFirst": 0.8})
+    -        cfg = js(page, "()=>{ const c = coreRiskCfg('main'); return [c.capTotalA, c.capTotalB, c.riskFirst, c.riskAcc]; }")
+    +        cfg = js(page, "()=>{ const c = coreRiskCfg('main'); return [c.winnerCap, c.winnerCap, c.riskFirst, c.riskAcc]; }")
+    -        cr = js(page, "()=>{ const c = getBook('main').settings.coreRisk; return [c.capTotalA, c.capTotalB, c.riskFirst]; }")
+    +        cr = js(page, "()=>{ const c = getBook('main').settings.coreRisk; return [c.winnerCap, c.winnerCap, c.riskFirst]; }")
+    -          cap: (coreRiskCfg('main').capTotalA), lots: (document.querySelector('[data-core-card=ccNV] [data-c-lotbadge]')||{innerText:''}).innerText, l2: !!document.query
+    -        check(f"{tag} 12 legacy เหมือนเดิม: การ์ดมีกริด 4 ช่อง + กล่องจำลองเติมไม้ · ไม่มีชั้น Base/เร่ง · เพดานต่อหุ้นค่าเริ่มเดิม 25 (ช่องที่ไม่เคยตั้ง) · มีกล่อง 4 ช่
+    +          cap: (coreRiskCfg('main').winnerCap), lots: (document.querySelector('[data-core-card=ccNV] [data-c-lotbadge]')||{innerText:''}).innerText, l2: !!document.query
+    +        check(f"{tag} 12 legacy เหมือนเดิม: การ์ดมีกริด 4 ช่อง + กล่องจำลองเติมไม้ · ไม่มีชั้น Base/เร่ง · เพดานต่อหุ้น 15 (ตรึงตามเทสเดิม) · มีกล่อง 4 ช่อง", lg["grid4"
 
 ## tests/run_tests_phase92.py
 
@@ -733,9 +905,17 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
     +        js(page, "()=>{ const bk = getBook('fam'); bk.settings.capital.satB = 0; bk.settings.pools = {winner:62.5, ladder:37.5, sat:0, reviewed:true}; saveBook('fam');  
     -        check(f"{tag} 4 Risk Core: 1 กล่อง · 2 แถว (main, fam) พร้อมกัน · หัว Core = ทุนรวม ฿8.4M", info["ids"] == ["main", "fam"] and info["boxes"] == 1 and info["cap"]
     +        check(f"{tag} 4 Risk Core: 1 กล่อง · 2 แถว (main, fam) พร้อมกัน · หัว Core = ถัง Winner + Ladder รวม ฿9.6M", info["ids"] == ["main", "fam"] and info["boxes"] == 
+    -              return {now: fmt2(rk.layer2Pct)+'%', lim: fmt2(cfg.l2Cap)+'%', free: Math.round(sp ? tank-cx.wCost-sp.lUsed : tank-cx.held), ff: Math.round(cx.F.f*100)+'%'
+    -            got = js(page, """(A)=>{ const r = document.querySelector('[data-lf-row="'+A+'"]'); return {now: r.querySelector('[data-lf-now]').innerText.trim(), lim: r.qu
+    +              return {now: fmt2(rk.layer2Pct)+'%', free: Math.round(sp ? (sp.cashFree + sp.lCashFree) : (tank - cx.held)), ff: Math.round(cx.F.f*100)+'%', dd: fmt2(Math.
+    +            got = js(page, """(A)=>{ const r = document.querySelector('[data-lf-row="'+A+'"]'); return {now: r.querySelector('[data-lf-now]').innerText.trim(), free: +r.
+    -                  ref and got["now"] == ref["now"] and got["lim"] == ref["lim"] and abs(got["free"] - ref["free"]) <= 1 and f"DD {ref['dd']}" in got["line"] and ref["ff"
+    +                  ref and got["now"] == ref["now"] and abs(got["free"] - ref["free"]) <= 1 and f"DD {ref['dd']}" in got["line"] and ref["ff"] in got["line"], [ref, got])
 
 ## tests/run_tests_phase97.py
 
+    -                page.locator("#hdrSub #scopeFuture").click(); settle(page, 400)
+    +                page.locator("#scopeFuture").first.click()   # RG2b: <430 ปุ่มอยู่ในหน้า; settle(page, 400)
     -            check(f"{tag} 3 {k}: ซ่อนชื่อ Trading + ข้อความซิงก์ · โลโก้ + จุดซิงก์ยังเห็น · ตัวควบคุมอยู่ในช่อง (เต็มหรือย่อ) ไม่ล้นจอ",
     -                  not r["brandNameVis"] and not r["syncTimeVis"] and r["dotVis"] and (r["fullVis"] or r["cmpVis"]) and r["slot"]["r"] <= w and r["slot"]["r"] <= r["hb"][
     +            if k.startswith("plan") and w < 430:   # RG2b — 3 ปุ่ม Winner | Ladder | Sat ไม่พอที่ใน header จอ < 430px → อยู่ในหน้า (ชื่อแอปคงอยู่ · โลโก้ + จุดซิงก์เห็น)
@@ -744,6 +924,15 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
     +            else:
     +                check(f"{tag} 3 {k}: ซ่อนชื่อ Trading + ข้อความซิงก์ · โลโก้ + จุดซิงก์ยังเห็น · ตัวควบคุมอยู่ในช่อง (เต็มหรือย่อ) ไม่ล้นจอ",
     +                      not r["brandNameVis"] and not r["syncTimeVis"] and r["dotVis"] and (r["fullVis"] or r["cmpVis"]) and r["slot"]["r"] <= w and r["slot"]["r"] <= r["h
+    -        page.mouse.click(r["dot"]["l"] + r["dot"]["w"] / 2, r["dot"]["t"] + r["dot"]["h"] / 2); settle(page, 150)
+    +        bs_ = js(page, "()=>{ const q = document.getElementById('brandSync').getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; }")   # RG2b: 
+    +        page.mouse.click(bs_[0], bs_[1]); settle(page, 150)
+    -            page.locator("#hdrSub #scopeFuture").click()
+    +            page.locator("#scopeFuture").first.click()   # RG2b: <430 ปุ่มอยู่ในหน้า
+    -            check(f"{tag} 3 Plan 390: Core|Sat เต็มรูปพอดี (ไม่ย่อ)", rows["plan-stock"]["fullVis"] and not rows["plan-stock"]["slotCmp"], rows["plan-stock"])
+    +            go(page, "plan", "stock")
+    +            inpg = js(page, "()=>['scopeStock','scopeLadder','scopeFuture'].map(i=>{ const e = document.getElementById(i); const r = e && e.getBoundingClientRect(); retu
+    +            check(f"{tag} 3 Plan 390 (RG2b): ปุ่ม Winner | Ladder | Sat เต็ม 3 ปุ่มอยู่ในหน้า (ไม่ย่อเป็น pill)", inpg == [True, True, True] and not rows["plan-stock"]["
 
 ## tests/run_tests_phase99.py
 
