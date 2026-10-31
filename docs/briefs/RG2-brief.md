@@ -35,6 +35,7 @@ Run on the Mac with Claude Code (tests live there). Two rounds: **RG2a = Run 1**
 | #19 | Pools per account (option A) + a combined summary. |
 | #20 | Ladder page inside Plan: scope switch `Winner | Ladder | Sat`. Watching states: `Base · Sideways-Up · Broken` (no Uptrend — Ladder never buys an uptrend). |
 | #21 | Ladder rules: discussion only — **do not implement**. |
+| Core split | Today Core panel shows Winner + Ladder lines · **DD brakes split per pool** · sub-goals Winner / Ladder / Sat · "Core" = umbrella name only (§4.7). |
 | #22 | One data-freshness panel. |
 | #23 | Tests moved to git (PR #2). |
 | Paused | Portfolio stop-risk / gap settings (0.625 %) — not in RG2. |
@@ -157,12 +158,19 @@ Run on the Mac with Claude Code (tests live there). Two rounds: **RG2a = Run 1**
 | New Sat trades per week | Max 4, Main + Tactical together |
 | Macro size × (Neutral / Against) | **Drop** |
 
+### 4.7 Core → Winner + Ladder across the app
+- **Today › Core panel:** keep one panel; its header shows two lines: `Winner 75% · used x%` and `Ladder 100% · used x%` (regime factor of that pool · held + reserved ÷ pool). Must fit 300 px (shorten to `W 75% · x%` ≤ 340 px).
+- **DD brakes split:** Winner and Ladder each get their own DD state (reduce / pause / recover) from their own pool equity: pool capital + realized and open P/L of that pool's trades (Ladder = trades linked to `strategy==='L'` cards, everything else Core = Winner). Same thresholds as today's Core DD settings, applied per pool. A Winner brake never blocks Ladder and vice versa. DD chips/rows show the pool name. Migration: start both pools from today's state with no carried-over pause unless today's Core DD is already in pause (then both start paused, with a one-time note).
+- **Sub-portfolio goals (Settings › Goals):** Winner / Ladder / Sat instead of Core / Sat; the old Core goal moves to Winner, Ladder starts empty.
+- **Naming:** "Core" stays only as the umbrella (Winner + Ladder) — Port bucket name and the Core + Sat Open Risk 6 % backstop (sums both pools). Everywhere the strategy is meant, show Winner / Ladder.
+
 ### 4.6 RG2b tests (phase113)
 - Split validation (sum 100, each 0–100), migration from old capital, notice once.
 - Winner/Ladder free cash independent; placing a ladder never reduces Winner cash and vice versa; no gate reasons; ladder budget = 5 % of account × Ladder factor.
 - Winner per-stock cap 25 % of Winner pool; no Tier labels; Layer 2 / total-cap checks gone.
 - Sat sizing from whole pool; preset lists; old values → defaults; caps 1.4× / 1.2× and brake 3 % (migrated from 2× / 4× / 10 %); max 4 new Sat trades/week across Main + Tactical; no Macro size ×.
 - Migration with an over-limit open position → warning only, nothing changed.
+- Today Core panel header lines at 300 / 390 / 1440; DD per pool (Winner pause does not block a Ladder placement and vice versa; pool equity math; migration from a paused Core DD); goals moved Core → Winner; 6 % backstop sums both pools.
 - Ladder page at 300 / 390 / 1440; scope switch in header + mobile.
 - Port line + amber threshold.
 - Existing ladder/core math byte-identical where the brief does not change it (`core_size_test.js` stays green; new cases for the pool split).
