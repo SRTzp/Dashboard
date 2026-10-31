@@ -53,7 +53,8 @@ def launch2(pw, w, h, trades, cards, mut=None, fx=33, core_risk=None, pin_winner
         mutate(doc)
         for a in ("main", "fam"):
             doc["books"][a]["settings"]["fx"] = fx
-        cr = {"riskA": 1.0, "riskB": 1.0, "riskPct": 1.0, "tierA": 15, "winnerCap": 15, "tierB": 10, "maxLots": 3, "addRatio": 50, "market": "both"}
+        cr = {"riskA": 1.0, "riskB": 1.0, "riskPct": 1.0, "tierA": 15, "tierB": 10, "maxLots": 3, "addRatio": 50, "market": "both"}
+        if pin_winner: cr["winnerCap"] = 15   # RG2b — เพดานต่อหุ้นเดิม (Tier A 15%) สำหรับเทสเก่าที่ตรึงถัง
         cr.update(core_risk or {})
         doc["books"]["main"]["settings"].setdefault("coreRisk", {}).update(cr)
         if mut: mut(doc)

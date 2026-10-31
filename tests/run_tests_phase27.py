@@ -185,7 +185,7 @@ def ui_tests(pw, w, h, label):
         check(f"{tag} 7 กรอก 2410/2390/(TP default 2450) → บัญชี ready · mrOk", a["ready"] and a["mr"] and a["mrOk"] and a["warns"] == [], json.dumps(a["warns"], ensure_ascii=False))
         check(f"{tag} 7 lot = Calc.satLot(riskAmount × 0.6) ตรงค่า ({a['lot']} = {exp06}) · factor 0.6 (ไม่ใช่ 0.36 แม้กฎ F2c ของ Long = 0.6 อยู่แล้ว)", a["factor"] == 0.6 and a["lot"] == exp06 and a["lot"] != lot_exp(page, a, 20, 0.36) , json.dumps({k: a[k] for k in ("lot", "factor")}))
         f2c = js(page, "()=>{ const f = satV3F2c(sat7dIdea('iM')); return {rule:f.rule.factor, factor:f.factor, off:f.off, mr:f.mr}; }")
-        check(f"{tag} 7 กฎ F2c ของ Long = 0.6 อยู่แล้ว (สวน Macro+Trend) แต่ factor ที่ใช้ยัง 0.6 · off=false", f2c == {"rule": 0.6, "factor": 0.6, "off": False, "mr": True}, json.dumps(f2c))
+        check(f"{tag} 7 RG2b: กฎ F2c ไม่มีตัวคูณ Macro (rule 1) แต่ MR ใช้ factor 0.6 ตายตัว · off=false", f2c == {"rule": 1, "factor": 0.6, "off": False, "mr": True}, json.dumps(f2c))
         size_row = txt(page, f'{C} [data-f2c-row="size"]')
         check(f"{tag} 7 บรรทัดขนาด: 'MR · ลด 40% (ตามค่า สวน Macro)' (WA1 แทน 'ตายตัว') · ไม่มีสวิตช์ขนาดเต็ม · ไม่มีบรรทัดกฎ F2c", "MR · ลด 40% (ตามค่า สวน Macro)" in size_row and "สวนทั้ง Macro" not in size_row and page.locator(f"{C} [data-size-switch]").count() == 0, size_row)
         # สวิตช์ override เก่าค้างอยู่ → ไม่มีผลกับ MR

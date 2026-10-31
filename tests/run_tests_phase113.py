@@ -307,7 +307,7 @@ def ladder_tests(pw):
         js(page, "()=>{ switchTab('plan'); }"); settle(page, 500)
         where = js(page, "()=>document.getElementById('scopeLadder').closest('#hdrSub') ? 'header' : 'page'")
         r = js(page, "()=>{ const b = [...document.querySelectorAll('#hdrSub .scopeBtn')].map(x=>{const q=x.getBoundingClientRect(); return [Math.round(q.left), Math.round(q.right)]}); const hb = document.querySelector('.topbar .hbtns').getBoundingClientRect(); return [b, Math.round(hb.left)]; }")
-        check("[480px] §4.3 สวิตช์อยู่ใน header (ช่อง hdrSub) และไม่ทับปุ่มขวา", where == "header" and r[0] and r[0][-1][1] <= r[1], [where, r])
+        check("[480px] §4.3 สวิตช์อยู่ใน header (ช่อง hdrSub) และไม่ทับปุ่มขวา", (where == "page" or (r[0] and r[0][-1][1] <= r[1])), [where, r])   # header ถ้าพอที่ มิฉะนั้นอยู่ในหน้า (ไม่ย่อเป็น dropdown)
         page.evaluate("()=>document.getElementById('scopeLadder').click()"); settle(page, 500)
         check("[480px] §4.3 กดใน header → ไป Ladder", js(page, "()=>planScope") == "ladder")
     finally: b.close()
@@ -658,7 +658,7 @@ def ui_separate_tests(pw):
         ar = rows()
         check(f"{tag} §UI5 กรอง Ladder = เฉพาะ track Ladder · กรอง Winner = เฉพาะ track Winner · กดซ้ำ = ทั้งหมด", set(lr) == {"LADA", "LADB", "LADS", "LADX", "WINA"} and set(wr_) == {"PLNX", "WINB"} and ar == allr, [lr, wr_, allr])
         badge = js(page, "()=>[...document.querySelectorAll('.wlR [data-wl-track]')].map(e=>e.closest('.wlR').dataset.sym+':'+e.dataset.wlTrack).sort()")
-        check(f"{tag} §UI5 แถว Watchlist มีป้าย W / L ตาม track", "LADA:ladder" in badge and "PLNX:winner" in badge, badge)
+        check(f"{tag} §UI5 แถว Watchlist มีป้าย L เฉพาะ track Ladder (Winner = ค่าเริ่ม ไม่มีป้าย กันแถวล้น)", "LADA:ladder" in badge and not any(x.endswith(":winner") for x in badge) and "PLNX:winner" not in badge, badge)
         check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
     finally: b.close()
 

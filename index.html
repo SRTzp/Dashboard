@@ -13370,7 +13370,7 @@ function ln3WlRowHtml(r){
   }catch(err){}
   const rc = it ? `<i class="wlDotR ${th?'ok':'wait'}" title="${th?'มี Thesis':'รอสร้าง Thesis'}"></i>` : '';
   return `<div class="wlR ln3r${wlSel===r.sym?' on':''}" data-sym="${e(r.sym)}" onclick="${r.port==='cand' ? 'candTap' : 'wlOpen'}(this.dataset.sym)">
-    <b class="wlRn">${e(r.sym)}</b>${r.port==='cand' && vwHasNotes(r.sym) ? '<i class="vwDot" data-vw-dot title="มีโน้ต">•</i>' : ''}${tier || mk}${r.item ? `<span class="wlTrkB ${wlTrackOf(r.item)}" data-wl-track="${wlTrackOf(r.item)}" title="Track: ${wlTrackOf(r.item)==='ladder' ? 'Ladder' : 'Winner'}">${wlTrackOf(r.item)==='ladder' ? 'L' : 'W'}</span>` : ''}${r.item ? sectorBadgeHtml(r.item) : ''}${r.port==='cand' ? '' : csPendHtml(r.sym)}${phChipHtml(r.sym)}${r.port==='cand' ? tqBadgeHtml(r.sym) : ''}${al}${mu}${ideaBadgeHtml(r.sym)}
+    <b class="wlRn">${e(r.sym)}</b>${r.port==='cand' && vwHasNotes(r.sym) ? '<i class="vwDot" data-vw-dot title="มีโน้ต">•</i>' : ''}${tier || mk}${r.item && wlTrackOf(r.item)==='ladder' ? `<span class="wlTrkB ${wlTrackOf(r.item)}" data-wl-track="${wlTrackOf(r.item)}" title="Track: ${wlTrackOf(r.item)==='ladder' ? 'Ladder' : 'Winner'}">${wlTrackOf(r.item)==='ladder' ? 'L' : 'W'}</span>` : ''}${r.item ? sectorBadgeHtml(r.item) : ''}${r.port==='cand' ? '' : csPendHtml(r.sym)}${phChipHtml(r.sym)}${r.port==='cand' ? tqBadgeHtml(r.sym) : ''}${al}${mu}${ideaBadgeHtml(r.sym)}
     <span class="wlRDots">${hd}${rc}${r.port==='cand' ? '' : (wlStarsOf(r) ? `<span class="wl-sd" data-wl-stars-view="${wlStarsOf(r)}">★${wlStarsOf(r)}</span>` : '')}</span>${r.port==='cand' ? td4DelBtn(r.sym) : ''}
   </div>`;
 }
@@ -19371,7 +19371,7 @@ function satV3LevelChipsHtml(asset, field, values, readonly){
 }
 /* {badge, sub} ของช่อง — ตรงกับ tileHtml() ใน sat-mockup.html ทุกกรณี (Long/Short/งดเทรด/ยังไม่ประเมิน) */
 /* F2c — ขนาดไม้ตามกฎของสัปดาห์: Macro (Playbook) + Trend ของสัปดาห์ + ด้านของ Bias */
-function satMacroFactors(accId){ const a = accId || (sat7dAccts()[0] || {}).id, c = satRiskCfg(a); return {neutral:c.macroNeutral, against:SAT_MACRO_CUT}; }   /* RG2b — ตัวคูณ Macro ของไม้ปกติถอดแล้ว (neutral/against = 1) · MR (ปิดอยู่) ยังใช้ SAT_MACRO_CUT ตายตัว */
+function satMacroFactors(accId){ const a = accId || (sat7dAccts()[0] || {}).id, c = satRiskCfg(a); return {neutral:c.macroNeutral, against:c.macroAgainst, mr:SAT_MACRO_CUT}; }   /* RG2b — ตัวคูณ Macro ของไม้ปกติถอดแล้ว (neutral/against = 1) · MR (ปิดอยู่) ยังใช้ SAT_MACRO_CUT ตายตัว */
 function satV3TileBadgeSub(asset, w, atTime){   /* PF1 — ไม่มีป้าย Bias/Trend Shift จาก Strategy แล้ว */
   const sup = satV3SupportDisplay(w), res = satV3ResistanceDisplay(w);
   const supTxt = sup.values.length ? sup.values.map(fmt2).join(', ') : '—';
@@ -20533,7 +20533,7 @@ function satV3F2c(idea, at){
   const mac = satMacroOf(asset, at);
   const align = hasTr ? Calc.pbAlign(mac.state, side) : 'neutral';   /* PF1 — ยังไม่เลือก Trend = ยังไม่เทียบ Macro */
   const fx = satMacroFactors();
-  const rule = Calc.sizeRule({macroAlign: align, trendState: trend, side, neutral:fx.neutral, against:1});
+  const rule = Calc.sizeRule({macroAlign: align, trendState: trend, side, neutral:fx.neutral, against:fx.against});
   const outside = !satPbKeyOf(asset) || (mac.versionId!=null && mac.state==='none');   /* WA1 — นอก Macro = ไม่มีใน Playbook */
   const reason = String(idea.macro_note==null ? '' : idea.macro_note).trim().slice(0, SAT_MACRO_NOTE_MAX);
   const needNote = hasTr && !mrAct && (align==='against' || outside);
@@ -20545,7 +20545,7 @@ function satV3F2c(idea, at){
   const shift = false;   /* PF1 — ไม่เทียบ Trend Shift ของ Strategy */
   const note = wk.comps && wk.comps.macro && typeof wk.comps.macro.note==='string' && wk.comps.macro.note.trim() ? wk.comps.macro.note : null;
   return {side, base, ov, trend, changed: (ov && ov.to!==base) ? {from: base, to: ov.to} : null,
-          mac, align, rule, driver, off, factor: mrAct ? fx.against : (off ? 1 : rule.factor), outside, needNote, reason, side, recent, shift, note, at, mr: !!mrAct, mrLevel: mrAct ? +mrAct.mr_level : null};
+          mac, align, rule, driver, off, factor: mrAct ? fx.mr : (off ? 1 : rule.factor), outside, needNote, reason, side, recent, shift, note, at, mr: !!mrAct, mrLevel: mrAct ? +mrAct.mr_level : null};
 }
 function satV3MacroNoteSet(ideaId, v){
   const idea = sat7dIdea(ideaId); if(!idea) return;
@@ -20577,7 +20577,7 @@ function satV3F2cHtml(idea){
   const cutTxt = `ลด ${Math.round((1-f.rule.factor)*100)}%`;
   const why = f.rule.kind==='against' ? 'สวน Macro' : (f.outside ? 'นอก Macro' : 'Macro Neutral');
   if(f.mr){
-    h += `<div class="ui-f2c-r" data-f2c-row="size" data-mr-size="1"><span>ขนาดไม้: MR · ลด ${Math.round((1-fxA.against)*100)}% (ตามค่า สวน Macro)</span></div>`;
+    h += `<div class="ui-f2c-r" data-f2c-row="size" data-mr-size="1"><span>ขนาดไม้: MR · ลด ${Math.round((1-fxA.mr)*100)}% (ตามค่า สวน Macro)</span></div>`;
   } else if(f.rule.factor<1){
     h += `<div class="ui-f2c-r" data-f2c-row="size"><span>ขนาดไม้: ${f.off ? 'เต็ม' : `${cutTxt} (${why})`}</span>`
       + (f.off ? ' <span class="ui-f2c-off" data-off-rule="1">ไม่ตามกฎ</span>' : '')
@@ -21954,7 +21954,7 @@ function ln1CardHtml(idea){
   }).join('');
   /* เหตุผลสวน/นอก Macro (เมื่อกฎเดิมบังคับ) + บรรทัด Macro · ขนาดไม้ */
   const m = F.mac;
-  const cut = F.mr ? `ลด ${Math.round((1-satMacroFactors().against)*100)}%` : (F.rule.factor<1 ? (F.off ? 'เต็ม' : `ลด ${Math.round((1-F.rule.factor)*100)}%`) : 'เต็ม');
+  const cut = F.mr ? `ลด ${Math.round((1-satMacroFactors().mr)*100)}%` : (F.rule.factor<1 ? (F.off ? 'เต็ม' : `ลด ${Math.round((1-F.rule.factor)*100)}%`) : 'เต็ม');
   const swLink = (!F.mr && F.rule.factor<1) ? ` <button type="button" class="ui-link" data-size-switch="1" onclick="satV3SizeSwitch('${id}')">${F.off ? 'กลับตามกฎ' : 'ใช้ไม้เต็ม (ไม่ตามกฎ)'}</button>${F.off ? ' <span class="ui-f2c-off" data-off-rule="1">ไม่ตามกฎ</span>' : ''}` : '';
   const macLine = `<div class="ln1-mac" data-ln1-mac="1">Macro: <b>${e(m.state==='none' ? 'ไม่มี Playbook' : Calc.pbStanceText(m.state))}</b> · ขนาดไม้ ${cut}${swLink}</div>`;
   const drivers = m.drivers && m.drivers.length ? `<div class="ui-f2c-r" data-f2c-row="driver"><span>Driver</span><span class="ui-chips">${m.drivers.map(d=>`<span class="ui-chip${d.id===F.driver ? ' ui-on' : ''}" data-driver="${e(d.id)}" onclick="satV3DriverSet('${id}','${e(d.id)}')">${e(d.id)}${d.title ? ' · ' + e(d.title) : ''}</span>`).join('')}</span></div>` : '';

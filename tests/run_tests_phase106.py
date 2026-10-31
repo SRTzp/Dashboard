@@ -211,7 +211,7 @@ def goals_tests(pw, w, h, label):
         check(f"{tag} B3 ไม่มี startDate → 'Start date not set' (ไม่เดาจากวันที่แก้)", "Start date not set" in f["t"] and "m " not in f["t"].replace("Start date", ""), f)
         js(page, "()=>document.querySelector('[data-td3-acct=\"main\"] summary').click()"); settle(page, 300)
         subs = js(page, "()=>[...document.querySelectorAll('[data-td3-acct=\"main\"] [data-td3-sub]')].map(e=>e.innerText.replace(/\\s+/g,' ').trim())")
-        check(f"{tag} B3 กาง: ทีละ sub-portfolio (Core.US 19% $98k→$160k · อื่น No goal set)", len(subs) == 4 and "Core.US" in subs[0] and "$98k→$160k" in subs[0] and "19%" in subs[0] and all("No goal set" in s_ for s_ in subs[1:]), subs)
+        check(f"{tag} B3 กาง: ทีละ sub-portfolio (RG2b: Winner 19% $98k→$160k · อื่น No goal set)", len(subs) == 4 and "Winner" in subs[0] and "$98k→$160k" in subs[0] and "19%" in subs[0] and all("No goal set" in s_ for s_ in subs[1:]), subs)
         check(f"{tag} ไม่ล้น · ไม่มี console error", ovf(page) <= 0 and not ce and not pe, [ovf(page), ce[:2], pe[:2]])
     finally: b.close()
 
@@ -228,7 +228,7 @@ def goals_settings_tests(pw):
            set('[data-sg-start]','4100'); set('[data-sg-target]','12000'); set('[data-sg-sdate]','2026-07-01'); set('[data-sg-dl]','2027-07-01'); set('[data-sg-now]','5000'); }""")
         page.locator("#glSet [data-gl-subsave]").click(); settle(page, 600)
         sg = S(page, "subGoals")
-        check(f"{tag} บันทึก sub-goal (Sat) ถูกเก็บ · ของเดิม (Core.US) ไม่หาย", sg and sg["main"]["Sat"]["target"] == 12000 and sg["main"]["Sat"]["now"] == 5000 and sg["main"]["Core.US"]["start"] == 98000, sg)
+        check(f"{tag} บันทึก sub-goal (Sat) ถูกเก็บ · ของเดิม (Core.US) ย้ายเป็น Winner ไม่หาย (RG2b §4.7)", sg and sg["main"]["Sat"]["target"] == 12000 and sg["main"]["Sat"]["now"] == 5000 and sg["main"]["Winner"]["start"] == 98000, sg)
         after = js(page, "()=>{ const s = JSON.parse(JSON.stringify(tdSettings())); delete s.subGoals; return JSON.stringify(s); }")
         check(f"{tag} ค่าตั้งอื่นทั้งหมด byte-identical (เปลี่ยนเฉพาะ subGoals)", before == after)
         js(page, """()=>{ const row = document.querySelector('#glSet [data-gl-subrow="Option"]'); row.querySelector('[data-sg-start]').value = '100'; row.querySelector('[data-sg-target]').value = '50'; }""")
