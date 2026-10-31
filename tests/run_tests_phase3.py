@@ -192,8 +192,8 @@ def run_viewport(pw, width, height, label):
 
     page.evaluate("() => { const s=getBook('main').settings; s.satRisk={rpt:1.25, rptHi:1.5}; s.satPyrSplit=[100,0,0]; }")   # SR1 — fixture: ค่าเดิม 1.25/1.5 (ตัวเลขคาดหวังเดิมคงไว้) · PY2 — 100/0/0 = ไม้ 1 เข้าเต็ม RPT
     calc_main = page.evaluate(f"() => satV3PlanAcctCalc(sat7dIdea('{plan_id}'), 'main')")
-    check(f"[{BROWSER_ENGINE}/{label}] satV3PlanAcctCalc main/XM เท่ากับ sat7dCalc เดิมทุกจุด -> lot 0.19",
-          calc_main.get("lot") is not None and abs(calc_main["lot"] - 0.19) < 1e-9, json.dumps(calc_main))
+    check(f"[{BROWSER_ENGINE}/{label}] satV3PlanAcctCalc main/XM เท่ากับ sat7dCalc เดิมทุกจุด -> lot 0.15",
+          calc_main.get("lot") is not None and abs(calc_main["lot"] - 0.15) < 1e-9, json.dumps(calc_main))
 
     # ═══════════ save flow: single button, primary account only first, cancel_level/setups carried, port satB ═══════════
 
@@ -304,6 +304,8 @@ def run_viewport(pw, width, height, label):
         const wk = wpWeekKey();
         B.trades.push({id:'quota1', date:wk+'-01'.slice(0,10), port:'satB', sym:'XAUUSD', bias:'Long', entry:2600, sl:2590, tp:null, qty:0.01, mult:100, cur:'USD', status:'closed', openedAt: new Date().toISOString().slice(0,10)});
         B.trades.push({id:'quota2', date:wk+'-01'.slice(0,10), port:'satB', sym:'XAUUSD', bias:'Long', entry:2600, sl:2590, tp:null, qty:0.01, mult:100, cur:'USD', status:'open', openedAt: new Date().toISOString().slice(0,10)});
+        B.trades.push({id:'quota3', date:wk+'-01'.slice(0,10), port:'satB', sym:'XAUUSD', bias:'Long', entry:2600, sl:2590, tp:null, qty:0.01, mult:100, cur:'USD', status:'open', openedAt: new Date().toISOString().slice(0,10)});
+        B.trades.push({id:'quota4', date:wk+'-01'.slice(0,10), port:'satB', sym:'XAUUSD', bias:'Long', entry:2600, sl:2590, tp:null, qty:0.01, mult:100, cur:'USD', status:'open', openedAt: new Date().toISOString().slice(0,10)});
         saveBook('fam');
       }
     """)
@@ -313,7 +315,7 @@ def run_viewport(pw, width, height, label):
     page.evaluate(f"() => {{ satV3PlanEdit('{plan2_id}','entry','2650'); satV3PlanEdit('{plan2_id}','sl','2630'); satV3PlanEdit('{plan2_id}','tp','2700'); }}")   # ST1: ใส่ TP แรก (R:R 2.5) — เดิมไม่มี TP
     page.wait_for_timeout(80)
     calc_fam_full = page.evaluate(f"() => satV3PlanAcctCalc(sat7dIdea('{plan2_id}'), 'fam')")
-    check(f"[{BROWSER_ENGINE}/{label}] เตรียมเคส 'รวมด้วย (นอกแผน)': fam คำนวณ lot ได้จริง แต่โควตาไม้ใหม่สัปดาห์นี้เต็ม (2/2) -> ไม่ ready",
+    check(f"[{BROWSER_ENGINE}/{label}] เตรียมเคส 'รวมด้วย (นอกแผน)': fam คำนวณ lot ได้จริง แต่โควตาไม้ใหม่สัปดาห์นี้เต็ม (4/4) -> ไม่ ready",
           calc_fam_full.get("ready") is False and calc_fam_full.get("lot") is not None
           and "โควตาเต็ม" in (calc_fam_full.get("warns") or []), json.dumps(calc_fam_full))
 

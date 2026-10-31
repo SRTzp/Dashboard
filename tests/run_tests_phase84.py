@@ -80,7 +80,7 @@ def tests(pw, w, h, label):
         # ── 5 ดูตัวเลข: Open Risk Sat
         js(page, "()=>{ tdNumOpen = true; todayRefresh(true); }"); page.wait_for_timeout(300)
         th = js(page, "()=>[...document.querySelectorAll('[data-td-nums] thead th')].map(t=>t.querySelector('.full') ? t.querySelector('.full').textContent : t.textContent)")
-        check(f"{tag} 5 ตาราง 'ดูตัวเลข': คอลัมน์ heat → 'Open Risk Sat' · ยังมี DD Core · DD Sat · ไม้ใหม่ · ชั้น 2 + ประตู FF", "Open Risk Sat" in th and not any("heat" in x for x in th) and all(k in th for k in ("DD Core", "DD Sat", "ไม้ใหม่ Sat")) and "ประตู FF" in (txt(page, "[data-td-detfoot]") or ""), th)
+        check(f"{tag} 5 ตาราง 'ดูตัวเลข': คอลัมน์ heat → 'Open Risk Sat' · ยังมี DD Core · DD Sat · ไม้ใหม่ · ชั้น 2 + ประตู FF", "Open Risk Sat" in th and not any("heat" in x for x in th) and all(k in th for k in ("DD Winner", "DD Ladder", "DD Sat", "ไม้ใหม่ Sat")) and "ประตู FF" not in (txt(page, "[data-td-detfoot]") or ""), th)
         cell = js(page, "()=>{ const r = document.querySelector('[data-num-acct=main]'); const i = [...document.querySelectorAll('[data-td-nums] thead th')].findIndex(t=>/Open Risk Sat/.test(t.textContent)); return r.children[i].innerText.trim(); }")
         e5 = js(page, "()=>{ const M = satV2Money('main'), R = satV2Risk('main'), C = satV2Caps('main'); return satV2Usd(R.sat, M.fx) + ' / ' + satV2Usd(C.sat, M.fx); }")
         check(f"{tag} 5 ค่า Open Risk Sat = ค่า/เพดานเดียวกับหัวกล่องแผน (satV2Risk / satV2Caps)", cell == e5, [cell, e5])

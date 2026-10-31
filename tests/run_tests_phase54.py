@@ -37,10 +37,21 @@ def shot(page, name, sel=None):
     except Exception as e: print("shot fail", name, e)
 
 
-def launch(pw, w, h, mutate=None):
+def pin_sat_pool(doc):
+    """RG2b — เทส Sat เก่าคิดจากถัง Sat = capital.satB ทั้งก้อน: ตรึงสัดส่วนถังให้ถัง Sat = ทุน Sat เดิม (Winner:Ladder = 5:3 ของส่วนที่เหลือ) · ไม่แตะตัวเลขที่คาดหวังของเคส"""
+    for b in doc["books"].values():
+        s = b["settings"]; cap = s.get("capital") or {}; fx = s.get("fx") or 1
+        core, sat = float(cap.get("core") or 0), float(cap.get("satB") or 0) * fx
+        if core + sat <= 0: continue
+        sp = sat / (core + sat) * 100
+        s["pools"] = {"winner": (100 - sp) * 5 / 8, "ladder": (100 - sp) * 3 / 8, "sat": sp, "mig": "RG2b", "reviewed": True}
+
+
+def launch(pw, w, h, mutate=None, pin_sat=False):
     doc = P38.doc38(clean=True)
     for b in doc["books"].values(): b["settings"].pop("satWeekPick", None)   # WA1fix — doc38 ใส่ pick ให้ชุดเก่า · ชุด WA1+ เริ่มจากว่าง
     if mutate: mutate(doc)
+    if pin_sat: pin_sat_pool(doc)   # หลัง mutate: fixture อาจตั้ง capital/fx ใหม่
     return P39.launch(pw, w, h, doc=doc, clean=True, iso=CLK, pick=False)
 
 

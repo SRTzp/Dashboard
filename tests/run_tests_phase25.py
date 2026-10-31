@@ -62,6 +62,7 @@ def data(extra_trades=None, extra_cards=None, max_lots=None, main_market="US"):
     st["capital"]["core"] = 3500000; st["fx"] = FX
     cr = st.setdefault("coreRisk", {}); cr.update({"riskPct": 1, "tierA": 10, "tierB": 5}); cr["market"] = main_market   # CZ1: ค่าเริ่มต้นใหม่ (1.25/15/10) → seed ค่าเดิม ให้ตัวเลขที่คาดเท่าเดิม
     if max_lots is not None: cr["maxLots"] = max_lots
+    p24.pin_winner_pool(doc)   # RG2b — ตรึงถัง Winner = ทุน Core เดิม (ตัวเลขขนาดไม้ W คงเดิม)
     return doc, cards
 
 
@@ -96,9 +97,9 @@ def list_checks(pw, w, h, label):
         else:
             check(f"{tag} 2 แถว AAPL (430): ไม่มี '78 @' แต่มี '#2/3'", "78 @" not in r and "#2/3" in r, r)
         rp = txt(page, row(page, "meta")) or ""
-        check(f"{tag} 2 แถวแผน META: 'แผน · Entry 600 · Stop 560 · ไม้แรก 8 หุ้น'", "แผน" in rp and "Entry 600" in rp and "Stop 560" in rp and "ไม้แรก 8 หุ้น" in rp, rp)
+        check(f"{tag} 2 แถวแผน META: 'แผน · Entry 600 · Stop 560 · ไม้แรก 26 หุ้น' (RG2b เพดานเดียว)", "แผน" in rp and "Entry 600" in rp and "Stop 560" in rp and "ไม้แรก 26 หุ้น" in rp, rp)
         check(f"{tag} 2 แถว 🔴 NVDA: 'ปิดใต้ Stop — ขายหมด' · ⚪ AMZN: 'ขาดราคา (เก่า 12 วัน)'", "ปิดใต้ Stop — ขายหมด" in txt(page, row(page, "nvda")) and "ขาดราคา (เก่า 12 วัน)" in txt(page, row(page, "amzn")))
-        check(f"{tag} 2 ป้ายสั้น B·W + title ข้อความเต็ม (US · Tier B · เพดานไม้แรก 5% · ระบบ Week)", txt(page, card(page, "aapl") + " .ccTag") == "B·W" and page.get_attribute(card(page, "aapl") + " .ccTag", "title") == "US · Tier B · เพดานไม้แรก 5% · ระบบ Week")
+        check(f"{tag} 2 ป้ายสั้น B·W + title ข้อความเต็ม (US · Tier B · เพดานไม้แรก 25% · ระบบ Week)", txt(page, card(page, "aapl") + " .ccTag") == "B·W" and page.get_attribute(card(page, "aapl") + " .ccTag", "title") == "US · Tier B · เพดานไม้แรก 25% · ระบบ Week")
         order = page.evaluate("()=>[...document.querySelectorAll('#corePanel .ccList > .ccCard')].map(e=>e.dataset.coreCard)")
         check(f"{tag} 3 ลำดับ 🔴 → 🟡 → ⚪ → 🟢 (เสี่ยงมาก→น้อย) → แผน", order == ["nvda", "msft", "amzn", "aapl", "goog", "meta"], str(order))
         shot(page, f"7e2afix-list-collapsed-{w}.png", "#corePanel")
@@ -179,7 +180,8 @@ def expand_checks(pw, w, h, label):
         # plan
         expand(page, "meta")
         pl = txt(page, card(page, "meta") + " .ccBody") or ""
-        check(f"{tag} 3 plan ขยาย: UX2 แทนกล่อง 4 ช่อง → Entry · Stop บรรทัดเดียว · FF · ไม้แรก 8 หุ้น (ตัวใหญ่) + ตัวคุมใน วิธีคิด + [บันทึกซื้อไม้ 1] [ลบแผน]", page.locator(card(page, "meta") + " .ccGrid4").count() == 0 and page.locator(card(page, "meta") + " [data-c-entry]").count() == 1 and page.locator(card(page, "meta") + " [data-c-ff]").count() == 1 and "ไม้แรก" in pl and "8 หุ้น" in pl and "คุมด้วยเพดาน Tier B (5%)" in (page.locator(card(page, "meta") + " [data-c-ctl]").text_content() or "") and page.locator(card(page, "meta") + " [data-c-buy1]").count() == 1 and page.locator(card(page, "meta") + " [data-c-delplan]").count() == 1, pl)
+        check(f"{tag} 3 plan ขยาย: UX2 แทนกล่อง 4 ช่อง → Entry · Stop บรรทัดเดียว · FF · ไม้แรก 26 หุ้น (ตัวใหญ่) + ตัวคุมใน วิธีคิด + [บันทึกซื้อไม้ 1] [ลบแผน]", page.locator(card(page, "meta") + " .ccGrid4").count() == 0 and page.locator(card(page, "meta") + " [data-c-entry]").count() == 1 and page.locator(card(page, "meta") + " [data-c-ff]").count() == 1 and "ไม้แรก" in pl and "26 หุ้น" in pl and page.locator(card(page, "meta") + " [data-c-ctl]").count() == 1   # RG2b — ตัวคุม = งบเสี่ยง (ไม่ใช่เพดาน Tier B 5% แล้ว)
+                and page.locator(card(page, "meta") + " [data-c-buy1]").count() == 1 and page.locator(card(page, "meta") + " [data-c-delplan]").count() == 1, pl)
         check(f"{tag} 1b plan ไม่มีป้าย #n/N", page.locator(card(page, "meta") + " [data-c-lotbadge]").count() == 0)
         shot(page, f"7e2afix-plan-{w}.png", card(page, "meta"))
         check(f"{tag} ไม่มี console error / pageerror", not ce and not pe, str(ce[:3] + pe[:3]))
@@ -196,8 +198,8 @@ def menu_checks(pw, w, h, label):
         page.click(c + " [data-c-more]"); page.wait_for_timeout(100)
         g = page.evaluate("(c)=>{ const m=document.querySelector(c+' .ccMenu'), r=m.getBoundingClientRect(), b=document.querySelector(c+' [data-c-more]').getBoundingClientRect(); return {on:m.classList.contains('on'), l:r.left, r:r.right, t:r.top, b:r.bottom, btop:b.top, bt:b.bottom, iw:innerWidth, txt:m.innerText.replace(/\\s+/g,' ')}; }", c)
         check(f"{tag} 8 ⋯ เปิดเมนูใต้ปุ่ม (หรือพลิกขึ้นบนถ้าที่ไม่พอ · fix2) · กรอบเมนูอยู่ในจอ (ไม่ถูกตัด)", g["on"] and g["l"] >= 0 and g["r"] <= g["iw"] and (g["t"] >= g["bt"] - 1 or g["b"] <= g["btop"] + 1) and g["t"] >= 0, json.dumps(g, ensure_ascii=False))
-        check(f"{tag} 8 เมนู: 'ดูไม้ที่ซื้อ (2)' · แก้ Entry/SL · ปิดตำแหน่ง · Tier… · ซื้อแล้ว — ล็อกกลยุทธ์ (disabled) (7E-2b-1)",
-              all(x in g["txt"] for x in ("ดูไม้ที่ซื้อ (2)", "แก้ Entry/SL", "ปิดตำแหน่ง", "Tier…", "ซื้อแล้ว — ล็อกกลยุทธ์")) and page.locator(c + " .ccMenu [data-c-strat=L]").is_disabled(), g["txt"])
+        check(f"{tag} 8 เมนู: 'ดูไม้ที่ซื้อ (2)' · แก้ Entry/SL · ปิดตำแหน่ง · Tier… · (RG2b: ไม่มีปุ่มสลับกลยุทธ์)",
+              all(x in g["txt"] for x in ("ดูไม้ที่ซื้อ (2)", "แก้ Entry/SL", "ปิดตำแหน่ง", "Tier…")) and "ล็อกกลยุทธ์" not in g["txt"] and page.locator(c + " .ccMenu [data-c-strat]").count() == 0, g["txt"])
         shot(page, f"7e2afix-menu-{w}.png", c)
         page.click(c + " .ccMenu [data-c-edit-btn]"); page.wait_for_timeout(200)
         check(f"{tag} 8 แก้ Entry/SL → openTradeEdit (#teOverlay)", page.locator("#teOverlay.show").count() == 1)
@@ -232,9 +234,9 @@ def text_checks(pw, w, h, label):
     try:
         go(page)
         page.evaluate("coreNewOpen('main')"); page.wait_for_selector('.core-sheet [data-core-sheet="new"]')
-        page.fill("#cnTicker", "XXX.BK"); page.click("#cnTierB"); page.fill("#cnEntry", "2000"); page.fill("#cnStop", "1999"); page.click('#cnF button[data-f="1"]'); page.wait_for_timeout(100)
+        page.fill("#cnTicker", "XXX.BK"); page.click("#cnTierB"); page.fill("#cnEntry", "20000"); page.fill("#cnStop", "19999"); page.click('#cnF button[data-f="1"]'); page.wait_for_timeout(100)   # RG2b — เพดานเดียว 25% ของถัง Winner (฿875,000) จึงต้องใช้ราคา 20,000 ถึงจะเป็น 0 หลัก
         z = txt(page, "#cnRes [data-c-zero]") or ""
-        check(f"{tag} 10 0 หุ้นเพราะชนเพดาน Tier (Tier B 2000/1999 TH) → 'ราคาต่อ 1 หลัก (100) เกินเพดาน Tier B (฿175,000) → ใช้ Tier A หรือข้ามตัวนี้'", z == "ราคาต่อ 1 หลัก (100) เกินเพดาน Tier B (฿175,000) → ใช้ Tier A หรือข้ามตัวนี้", z)
+        check(f"{tag} 10 0 หุ้นเพราะชนเพดาน Tier (RG2b: 20000/19999 TH) → 'ราคาต่อ 1 หลัก (100) เกินเพดาน Tier B (฿875,000) → ใช้ Tier A หรือข้ามตัวนี้'", z == "ราคาต่อ 1 หลัก (100) เกินเพดาน Tier B (฿875,000) → ใช้ Tier A หรือข้ามตัวนี้", z)
         page.click("#cnTierA"); page.fill("#cnReason", "x"); page.fill("#cnEntry", "1000"); page.fill("#cnStop", "100"); page.wait_for_timeout(100)
         z = txt(page, "#cnRes [data-c-zero]") or ""
         check(f"{tag} 10 0 หุ้นเพราะงบเสี่ยงคุม (Tier A 1000/100) → ข้อความเดิม 'ต่ำกว่า 1 หลัก (100) — ขยายงบหรือเลื่อน Stop'", z == "ต่ำกว่า 1 หลัก (100) — ขยายงบหรือเลื่อน Stop", z)
@@ -404,7 +406,7 @@ def core_size_checks(pw):
         src = open(os.path.join(ROOT, "tests", "core_size_test.js"), encoding="utf-8").read()
         rr = page.evaluate(p23.NODE_SHIM, src)
         m = re.search(r"(\d+) ผ่าน · (\d+) ไม่ผ่าน", " ".join(rr["last"]))
-        check("14 tests/core_size_test.js (รันบนสำเนาใน index.html ผ่านเบราว์เซอร์) = 471/471 (CZ1: +22 เคส · LN3fix2: +29 เคส · เดิม 420 ผ่านครบ) · exit 0", bool(m) and m.group(1) == "471" and m.group(2) == "0" and rr["code"] == 0, json.dumps(rr, ensure_ascii=False))
+        check("14 tests/core_size_test.js (รันบนสำเนาใน index.html ผ่านเบราว์เซอร์) = 502/502 (CZ1: +22 เคส · LN3fix2: +29 เคส · เดิม 420 ผ่านครบ) · exit 0", bool(m) and m.group(1) == "502" and m.group(2) == "0" and rr["code"] == 0, json.dumps(rr, ensure_ascii=False))
     finally:
         browser.close()
     check("14 core-size.js ต่างจากต้นฉบับก่อน 7E-2b-1 เฉพาะ 2 จุดตามข้อ 0 (roicMin 0.12 · canPlaceLadder shareCap/l2Cap · +TIER2 +DD1 รวม 13 hunk · CZ1 +12 = 25 · LN3fix2 +8 = 33 hunk)", core_size_only_two_spots())

@@ -261,7 +261,7 @@ def ff_tests(pw, w, h, label):
         pages["today"] = js(page, "()=>document.body.innerText")
         for k, v in pages.items():
             check(f"{tag} 10 หน้า {k}: ไม่มี 'f ตอนนี้' · '× f' · 'ประตู f' ในข้อความที่มองเห็น", bad.search(v) is None, (bad.search(v).group(0) if bad.search(v) else ""))
-        check(f"{tag} 10 มี 'FF' แทน (Core: FF x% · ตั้งค่า: ประตู FF)", "FF" in pages["core"] and "FF gate" in pages["settings"], pages["core"][:100])
+        check(f"{tag} 10 มี 'FF' แทน (Core: FF x% · ตั้งค่า: ประตู FF)", "FF" in pages["core"] and "FF gate" not in pages["settings"], pages["core"][:100])   # RG2b — ถอดประตู FF
         check(f"{tag} 10 ไม่เปลี่ยนชื่อตัวแปร/ฟังก์ชัน (cx.F.f · coreFNow · ffBizDaysSince ยังอยู่)", js(page, "()=>typeof coreFNow==='function' && typeof ffBizDaysSince==='function' && typeof coreCtx('main').F.f==='number'"))
         check(f"{tag} 10 ไม่มี console error", err_free(ce, pe))
     finally:

@@ -42,7 +42,7 @@ def shot(page, name, sel=None):
 
 
 def core(pw, w=390, h=844, trades=None, cards=None):
-    return C.launch2(pw, w, h, trades or [], cards or {})
+    return C.launch2(pw, w, h, trades or [], cards or {}, pin_winner=True)   # RG2b — ถัง Winner ตรึงเท่าทุน Core เดิม
 
 
 def ev(page, sym, f="untested", p="untested", e="untested", rs=("untested",) * 3, g5=("untested",) * 3, stars=None, date="2026-10-30"):
@@ -129,7 +129,7 @@ def size_tests(pw, w=390, h=844):
         bn = banner(page)
         check(f"{tag} บรรทัดที่ 2 = 'Fortress + Proven · RS Passed · Gate 5 clear' · งบ: Risk budget · used · this tranche (FF 100%)", bn["l2"] == "Fortress + Proven · RS Passed · Gate 5 clear" and bn["bud"].startswith("Risk budget $1,273 · used $0 · this tranche ≤ $1,273 (FF 100%)"), bn)
         check(f"{tag} ฟอร์มแผนไม่มี UI ประเมิน (Tier A/B · override · Fortress/Proven/Emerging · Gate 5 · ช่องตัวเลข fundamentals)", form(page)["tier"] == 0 and cnt(page, "#tiRoic, #tiNd, #tiFcf, [data-g5], [data-tk], #cnTierSel, #cnReason, #cnTierOnly") == 0, form(page))
-        check(f"{tag} ฟอร์มยังมี: บัญชี · Ticker · กลยุทธ์ · Entry · Stop · ขนาดไม้ · ปุ่มบันทึก", cnt(page, "#cnAcctBox, #cnTicker, #cnStratBox, #cnEntry, #cnStop, #cnRes, #cnSave") == 7, "")
+        check(f"{tag} ฟอร์มยังมี: บัญชี · Ticker · Entry · Stop · ขนาดไม้ · ปุ่มบันทึก (RG2b ถอดตัวเลือกกลยุทธ์ · ไม่มี #cnStratBox)", cnt(page, "#cnAcctBox, #cnTicker, #cnEntry, #cnStop, #cnRes, #cnSave") == 6 and cnt(page, "#cnStratBox") == 0, "")
         fx = js(page, "()=>document.getElementById('cnAcct') ? [...document.querySelectorAll('#cnAcct option')].map(o=>o.textContent) : [document.getElementById('cnAcctBox').innerText]")
         check(f"{tag} แถวบัญชีในฟอร์มแผนแสดง 'Main' (ไม่ใช่ 'บัญชีหลัก')", all("บัญชีหลัก" not in x for x in fx) and any(x.startswith("Main") for x in fx), fx)
         # บันทึก → snapshot
@@ -281,7 +281,7 @@ def budget_tests(pw, w=390, h=844):
 def legacy_tests(pw, w=390, h=844):
     tag = f"[{ENGINE}/legacy/{w}]"
     cd = C.core_cards(False)
-    b, page, ce, pe = C.launch(pw, w, h, cards=cd)
+    b, page, ce, pe = C.launch(pw, w, h, cards=cd, pin_winner=True)
     try:
         C.go_core(page)
         r = js(page, """()=>{ const c = coreCardsList.find(x=>x.id==='ccNV'); const cx = coreCtx('main'); const v = coreView(c, cx); const k = lfAddCalc(c, {acc:false, px:130, sl:120, risk:NaN, riskEdited:false});

@@ -171,10 +171,10 @@ def tests(pw, w, h, label):
         m = js(page, "()=>{ const x = satMacroOf('XAG'); return {state:x.state, v:x.versionId}; }")
         check(f"{tag} 5 satMacroOf(XAG) = ท่าที XAG ใน Playbook v2 (▼)", m["state"] == "down" and m["v"] == "2026Q4-v001", json.dumps(m))
         f = js(page, "()=>{ const mk = (b)=>({asset:'XAG', bias:b, conditions:[], accts:{}, entry:30, sl:29}); const f1 = satV3F2c(mk('Long')); return {lf:f1.factor, align:f1.align, mac:f1.mac.state}; }")
-        check(f"{tag} 5 F2c ใช้ท่าที XAG: Long สวน Macro ▼ → align=against · ขนาด ×0.6 (WA1: ตัวคูณตาม Macro อย่างเดียว)", f["mac"] == "down" and f["align"] == "against" and f["lf"] == 0.6, json.dumps(f))
+        check(f"{tag} 5 F2c ใช้ท่าที XAG: Long สวน Macro ▼ → align=against · ขนาด ×1 (RG2b: ไม่มีตัวคูณ Macro)", f["mac"] == "down" and f["align"] == "against" and f["lf"] == 1, json.dumps(f))
         js(page, "()=>satwWrite('XAG', {bias:'Long', comps:{trend:{v:'down'}}, support:[28], resistance:[33], invalidation:27})"); page.wait_for_timeout(300)
         f = js(page, "()=>satV3F2c({asset:'XAG', bias:'Long', conditions:[], accts:{}, entry:30, sl:29}).factor")
-        check(f"{tag} 5 สวน Macro + Trend สวน → ×0.6 (Trend ไม่มีผลเพิ่ม)", f == 0.6, str(f))
+        check(f"{tag} 5 สวน Macro + Trend สวน → ×1 (RG2b: ไม่มีตัวคูณ Macro)", f == 1, str(f))
         P51.fresh(page, P51.idea_doc(asset="XAG", entry=30, sl=29, tp=31.5, zone=(31.5, 33), iid="iX"))
         P11.seed_pb(page, [v2doc(assets={"XAUUSD": cell("up"), "XAG": cell("down", focus=True)})]); js(page, "()=>satV3Render()"); page.wait_for_timeout(250)
         card = txt(page, "#satV3Panel") or ""

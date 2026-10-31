@@ -3,7 +3,7 @@
 mock Firestore · Chromium 1440 + 390 · นาฬิกาปลอม 2026-10-01 ไทย · Satellite $45,000 (พอร์ตรวม $150,000 → เพดาน Sat $1,800 · ต่อสินค้า $900 · รวม $9,000)
 ภาพ tests/screenshots/pv2c-{settings-split,asset-390,header,form-v2,pyramid-block}-{1440,390}.png
 รัน: python3 run_tests_phase79.py   (วันอาทิตย์เวลาไทย: p3/p2 ล้มหลอก — ไม่เกี่ยวกับชุดนี้)"""
-import json, os
+import functools, json, os
 from playwright.sync_api import sync_playwright
 import run_tests_phase4 as base
 import run_tests_phase37 as P37
@@ -22,7 +22,7 @@ ENGINE = base.BROWSER_ENGINE
 results = []
 js = P37.js
 txt, overflow = P54.txt, P54.overflow
-launch, idea, calc = P77.launch, P77.idea, P77.calc
+launch, idea, calc = functools.partial(P77.launch, pin_sat=True), P77.idea, P77.calc
 sat_t, put, setcfg, note, trades, save, cnt = P78.sat_t, P78.put, P78.setcfg, P78.note, P78.trades, P78.save, P78.cnt
 
 

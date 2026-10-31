@@ -88,23 +88,20 @@ def form_checks(pw, w, h, label):
         fortress(page)
         check(f"{tag} 10 ชุด Fortress (ROIC 15 · ND 1.5 · FCF 90 · FCF3y ✓ · ปันผล ✓ · Gate 5 ไม่×3) → 'คำนวณได้ A · Fortress' · บรรทัด Fortress ✓ ผ่าน · ปุ่ม L เปิด",
               "คำนวณได้ A · Fortress" in summ(page) and line(page, "fortress") == "Fortress: ✓ ผ่าน" and line(page, "growth").startswith("Growth: ✗")
-              and not page.is_disabled("#cnStratL"), summ(page) + "|" + line(page, "growth"))
+              and page.locator("#cnStratL").count() == 0, summ(page) + "|" + line(page, "growth"))   # RG2b: ไม่มีปุ่ม L ในฟอร์ม Winner
         check(f"{tag} 10 ปุ่ม Tier เริ่ม = ผลคำนวณ (A · Fortress ติด) · ปุ่มมี 4 ตัว", "on" in (page.get_attribute("#cnTierA", "class") or "") and page.locator(".ccSegTier button").count() == 4)
         shot_el(page, "[data-c-tierblock]", f"tier2-block-fortress-{w}.png")
         clear_fortress(page)
         growth(page)
-        check(f"{tag} 10 ชุด Growth (rev 25 · CAGR 18 · opm 12 vs 10 · OCF ✓ · ND 2.5) → 'คำนวณได้ A · Growth' · ปุ่ม L ปิด + 'L ใช้ได้เฉพาะ A-Fortress'",
+        check(f"{tag} 10 ชุด Growth (rev 25 · CAGR 18 · opm 12 vs 10 · OCF ✓ · ND 2.5) → 'คำนวณได้ A · Growth' (RG2b: ไม่มีปุ่ม L ในฟอร์ม)",
               "คำนวณได้ A · Growth" in summ(page) and line(page, "growth") == "Growth: ✓ ผ่าน" and line(page, "fortress").startswith("Fortress: ✗")
-              and page.is_disabled("#cnStratL") and "L ใช้ได้เฉพาะ A-Fortress" in (txt(page, "#cnStratMsg") or ""), summ(page) + "|" + (txt(page, "#cnStratMsg") or ""))
+              and page.locator("#cnStratL").count() == 0, summ(page))   # RG2b: ไม่มีตัวเลือก W/L ในฟอร์ม
         shot_el(page, "[data-c-tierblock]", f"tier2-block-growth-{w}.png")
         shot(page, f"tier2-L-disabled-{w}.png")
         fortress(page, nd=1.5)   # ND ใช้ร่วม → 1.5 ผ่านทั้ง 2 มุม
-        check(f"{tag} 10 ผ่านทั้งคู่ → 'คำนวณได้ A · ทั้งสองมุม' + L เปิด", "คำนวณได้ A · ทั้งสองมุม" in summ(page) and not page.is_disabled("#cnStratL") and "on" in (page.get_attribute("#cnTierAB", "class") or ""), summ(page))
+        check(f"{tag} 10 ผ่านทั้งคู่ → 'คำนวณได้ A · ทั้งสองมุม' + L เปิด", "คำนวณได้ A · ทั้งสองมุม" in summ(page) and page.locator("#cnStratL").count() == 0 and "on" in (page.get_attribute("#cnTierAB", "class") or ""), summ(page))
         shot_el(page, "[data-c-tierblock]", f"tier2-block-both-{w}.png")
-        # เปิดปุ่ม L จริง: กด L แล้วสลับไปมุม Growth อย่างเดียว → กลับเป็น W เอง
-        page.click("#cnStratL"); page.wait_for_timeout(60)
-        clear_fortress(page); put(page, "#tiNd", 2.5); page.wait_for_timeout(100)
-        check(f"{tag} 10 เลือก L แล้วมุม Fortress หลุด (เหลือ Growth) → กลับเป็น W เอง · L ปิด", page.is_disabled("#cnStratL") and "on" in (page.get_attribute("#cnStratW", "class") or ""))
+        clear_fortress(page); put(page, "#tiNd", 2.5); page.wait_for_timeout(100)   # RG2b: ถอดตัวเลือก W/L ออกจากฟอร์ม — ตัดเคส "เลือก L แล้วมุม Fortress หลุด → กลับเป็น W" (ไม่มีให้เลือก L)
         # ไม่มีข้อมูล growth → B · บอกเหตุผล
         clear_growth(page); put(page, "#tiNd", None); page.wait_for_timeout(80)
         check(f"{tag} 10 ไม่มีข้อมูลเลย → 'คำนวณได้ B' · ปุ่ม B ติด", summ(page) == "คำนวณได้ B" and "on" in (page.get_attribute("#cnTierB", "class") or ""), summ(page))
@@ -139,12 +136,12 @@ def save_checks(pw, w, h, label):
         check(f"{tag} 11 A-Fortress เก็บ tierLens 'fortress' · tierInputs.fcfPositive3y/capitalReturn true", cf and cf["tierLens"] == "fortress" and cf["tierInputs"]["fcfPositive3y"] is True and cf["tierInputs"]["capitalReturn"] is True)
         kb, cb = p24.one_card(page, "TBEE")
         check(f"{tag} 11 B เก็บ tier 'B' · tierLens null", cb and cb["tier"] == "B" and cb["tierLens"] is None)
-        check(f"{tag} 11 ไม้แรกเพดาน 10%: A-Growth = A-Fortress = 700 หุ้น · B (เพดาน 5%) = 350", qtys["TGRO"] == "700" and qtys["TFOR"] == "700" and qtys["TBEE"] == "350", json.dumps(qtys))
+        check(f"{tag} 11 ไม้แรกเพดานเดียว 25% ของถัง Winner (RG2b ไม่แยก Tier): A-Growth = A-Fortress = B = 365 หุ้น", qtys["TGRO"] == "365" and qtys["TFOR"] == "365" and qtys["TBEE"] == "365", json.dumps(qtys))
         ex(page, k)
         chip_g = txt(page, f'{card_sel(k)} [data-c-tier]') or ""
-        check(f"{tag} 11 ชิปการ์ด A-Growth = 'Tier A · Growth' + บรรทัด FF 'เพดานไม้แรก 10%' (UX2: เพดานย้ายจากชิป)", chip_g == "Tier A · Growth" and "เพดานไม้แรก 10%" in (txt(page, f'{card_sel(k)} [data-c-ff]') or ""), chip_g)
+        check(f"{tag} 11 ชิปการ์ด A-Growth = 'Tier A · Growth' + บรรทัด FF 'เพดานไม้แรก 25%' (UX2: เพดานย้ายจากชิป)", chip_g == "Tier A · Growth" and "เพดานไม้แรก 25%" in (txt(page, f'{card_sel(k)} [data-c-ff]') or ""), chip_g)
         ex(page, kf); chip_f = txt(page, f'{card_sel(kf)} [data-c-tier]') or ""
-        check(f"{tag} 11 ชิป A-Fortress = 'Tier A · Fortress' + บรรทัด FF 'เพดานไม้แรก 10%' (UX2)", chip_f == "Tier A · Fortress" and "เพดานไม้แรก 10%" in (txt(page, f'{card_sel(kf)} [data-c-ff]') or ""), chip_f)
+        check(f"{tag} 11 ชิป A-Fortress = 'Tier A · Fortress' + บรรทัด FF 'เพดานไม้แรก 25%' (UX2)", chip_f == "Tier A · Fortress" and "เพดานไม้แรก 25%" in (txt(page, f'{card_sel(kf)} [data-c-ff]') or ""), chip_f)
         check(f"{tag} 11 ป้ายแถวยุบยังเป็น A·W และ title บอกมุม", txt(page, f'{card_sel(k)} .ccTag') == "A·W" and "Tier A · Growth" in (page.get_attribute(f'{card_sel(k)} .ccTag', "title") or ""),
               page.get_attribute(f'{card_sel(k)} .ccTag', "title") or "")
         check(f"{tag} 11 ไม่มี console error", not ce and not pe, json.dumps([ce[:2], pe[:2]]))
@@ -163,7 +160,7 @@ def save_checks(pw, w, h, label):
         chips = {id: txt(page, f'{card_sel(id)} [data-c-tier]') for id in cards}
         check(f"{tag} 11 ชิปครบ 4 แบบ + การ์ดเก่า",
               chips == {"cg": "Tier A · Growth", "cf": "Tier A · Fortress", "cb": "Tier A · Fortress + Growth", "cl": "Tier A · Fortress (เดิม)", "cw": "Tier B"}
-              and {id: ("เพดานไม้แรก " + ("5%" if id == "cw" else "10%")) in (txt(page, f'{card_sel(id)} [data-c-ff]') or "") for id in cards} == {id: True for id in cards}, json.dumps(chips, ensure_ascii=False))   # UX2: เพดานไม้แรกย้ายไปบรรทัด FF
+              and {id: ("เพดานไม้แรก 25%") in (txt(page, f'{card_sel(id)} [data-c-ff]') or "") for id in cards} == {id: True for id in cards}, json.dumps(chips, ensure_ascii=False))   # UX2: เพดานไม้แรกย้ายไปบรรทัด FF
         shot(page, f"tier2-card-chip-{w}.png")
     finally:
         browser.close()
@@ -181,11 +178,9 @@ def menu_checks(pw, w, h, label):
         res = {}
         for id in cards:
             ex(page, id); page.click(card_sel(id) + " [data-c-more]")
-            it = page.locator(card_sel(id) + ' .ccMenu [data-c-strat="L"]')
-            res[id] = (it.is_disabled(), it.inner_text())
+            res[id] = page.locator(card_sel(id) + ' .ccMenu [data-c-strat]').count()
             page.keyboard.press("Escape")
-        check(f"{tag} 12 ⋯ A-Growth: 'เปลี่ยนเป็น L' ปิด + 'L ใช้ได้เฉพาะ A-Fortress'", res["cg"][0] is True and "L ใช้ได้เฉพาะ A-Fortress" in res["cg"][1], json.dumps(res["cg"], ensure_ascii=False))
-        check(f"{tag} 12 ⋯ A-Fortress เปิด · A-ทั้งคู่ เปิด", res["cf"][0] is False and "ถัวตามแนวรับ (L)" in res["cf"][1] and res["cb"][0] is False, json.dumps(res, ensure_ascii=False))
+        check(f"{tag} 12 ⋯ (RG2b) เมนูการ์ด Winner ไม่มี 'เปลี่ยนเป็น L' ทั้ง A-Growth · A-Fortress · A-ทั้งคู่ (ถอดโหมดแปลง W→L)", res == {"cg": 0, "cf": 0, "cb": 0}, json.dumps(res))
         check(f"{tag} 12 ไม่มี console error", not ce and not pe, json.dumps([ce[:2], pe[:2]]))
     finally:
         browser.close()
@@ -206,14 +201,10 @@ def legacy_checks(pw, w, h, label):
         check(f"{tag} 13 Tier… การ์ดเก่า: ปุ่ม A · Fortress ติด · เหตุผลเดิมถูกเติม", "on" in (page.get_attribute("#cnTierA", "class") or "") and page.input_value("#cnReason") == "moat เดิม")
         page.click('.core-sheet .ccFoot button:has-text("ยกเลิก")'); page.wait_for_timeout(300)
         check(f"{tag} 13 เปิด Tier… แล้วปิดไม่บันทึก = ไม่มีอะไรเปลี่ยน (ไม่ migrate · ไม่เติม tierLens)", before == json.dumps(db_card(page, "old"), sort_keys=True) and "tierLens" not in db_card(page, "old"))
-        p24.menu_click(page, "old", '[data-c-strat="L"]'); page.wait_for_selector('.core-sheet [data-core-sheet="new"]')
-        page.fill("#cnLv0", "100"); page.fill("#cnLv1", "90"); page.fill("#cnLsl", "70"); page.wait_for_timeout(150)
-        g = p26.gate_row(page, "tier")
-        check(f"{tag} 13 การ์ดเก่าวางบันได L ได้ · ประตู Tier = 'A-Fortress' ✓", g and g["ok"] == "1" and g["t"].endswith("A-Fortress"), json.dumps(g, ensure_ascii=False))
-        check(f"{tag} 13 ปุ่มล็อกแผนใช้ได้", not page.is_disabled("#cnSave"), txt(page, "#cnErr") or "")
-        page.click("#cnSave"); page.wait_for_timeout(500)
-        c = db_card(page, "old")
-        check(f"{tag} 13 บันทึก → strategy L · มี ladder · tierLens 'fortress' (บันทึกผ่านบล็อก Tier ใหม่)", c["strategy"] == "L" and c["ladder"] and c["tierLens"] == "fortress", json.dumps(c, ensure_ascii=False))
+        # RG2b — ถอดโหมดแปลง W→L (การ์ดเก่าไม่มีเมนู 'เปลี่ยนเป็น L' · วาง Ladder ที่หน้า Ladder)
+        page.click(card_sel("old") + " [data-c-more]")
+        check(f"{tag} 13 การ์ดเก่าไม่มีเมนูเปลี่ยนเป็น L (RG2b)", page.locator(card_sel("old") + ' .ccMenu [data-c-tierbtn]').count() == 1 and page.locator(card_sel("old") + ' .ccMenu [data-c-strat]').count() == 0)
+        page.keyboard.press("Escape")
         check(f"{tag} 13 ไม่มี console error", not ce and not pe, json.dumps([ce[:2], pe[:2]]))
     finally:
         browser.close()
@@ -226,19 +217,10 @@ def ladder_keep_checks(pw, w, h, label):
     browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc26(main_trades=[p26.ltrade("lo", "LOO")]), cards=cards, ff=FF_OPEN())
     try:
         go(page)
-        for id in ("lp", "lo"):
-            p24.menu_click(page, id, "[data-c-tierbtn]"); page.wait_for_selector('.core-sheet [data-core-sheet="tier"]')
-            page.click("#cnTierG"); page.wait_for_timeout(60); page.fill("#cnReason", "เปลี่ยนมุมเป็น Growth"); page.wait_for_timeout(60)
-            page.click("#ctSave"); page.wait_for_timeout(500)
-        check(f"{tag} 14 บันทึกมุมเป็น Growth → tier A · tierLens growth ทั้งสองการ์ด", db_card(page, "lo")["tierLens"] == "growth" and db_card(page, "lp")["tierLens"] == "growth" and db_card(page, "lo")["tier"] == "A")
-        ex(page, "lo"); chip = txt(page, card_sel("lo") + " [data-c-tier]") or ""
-        check(f"{tag} 14 ชิปการ์ด L: 'Tier A · Growth · บันไดเดิมทำงานต่อจนออก'", chip == "Tier A · Growth · บันไดเดิมทำงานต่อจนออก", chip)
-        check(f"{tag} 14 บันไดเดิมยังซื้อระดับต่อได้ ('บันทึกซื้อ L2' ใช้ได้) · เลื่อน Stop ได้", txt(page, card_sel("lo") + " [data-c-lbuy]") == "บันทึกซื้อ L2" and not page.is_disabled(card_sel("lo") + " [data-c-lbuy]") and not page.is_disabled(card_sel("lo") + " [data-c-stop-btn]"))
-        page.click(card_sel("lo") + " [data-c-lbuy]"); page.wait_for_selector('.core-sheet [data-core-sheet="lbuy"]'); page.click("#clSave"); page.wait_for_timeout(500)
-        check(f"{tag} 14 ซื้อ L2 สำเร็จ (ระดับ bought)", db_card(page, "lo")["ladder"]["levels"][1]["status"] == "bought")
-        ex(page, "lp")
-        check(f"{tag} 14 'แก้แผนบันได' ของแผน L ที่เป็น A-Growth ปิด + ข้อความ 'แก้แผนบันไดต้องเป็น A-Fortress'",
-              page.is_disabled(card_sel("lp") + " [data-c-ledit]") and "แก้แผนบันไดต้องเป็น A-Fortress" in (txt(page, card_sel("lp") + " [data-c-ledit-note]") or ""))
+        # RG2b — การ์ด L อยู่หน้า Ladder (ไม่มีเมนู Tier…/แก้แผนบันไดในหน้า Winner) : ตัดเคสเปลี่ยนมุม Tier ของการ์ด L ออก
+        onwin = page.locator(card_sel("lp")).count() + page.locator(card_sel("lo")).count()
+        page.evaluate("()=>{ setPlanScope('ladder'); render(); }"); page.wait_for_timeout(400)
+        check(f"{tag} 14 (RG2b) การ์ด L ไม่อยู่หน้า Winner · อยู่หน้า Ladder ทั้ง 2 ใบ (ไม่มี Tier…)", onwin == 0 and page.locator('[data-ldr-card="lp"]').count() == 1 and page.locator('[data-ldr-card="lo"]').count() == 1, onwin)
         check(f"{tag} 14 ไม่มี console error", not ce and not pe, json.dumps([ce[:2], pe[:2]]))
     finally:
         browser.close()

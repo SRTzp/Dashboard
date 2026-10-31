@@ -53,7 +53,7 @@ def tests(pw, w, h, label):
     try:
         C.go_core(page)
         sw = js(page, "()=>({a: document.getElementById('scopeStock').innerText.trim(), b: document.getElementById('scopeFuture').innerText.trim(), onA: document.getElementById('scopeStock').classList.contains('on')})")
-        check(f"{tag} 1 บนสุดปุ่ม 'Core | Sat' (ไม่มี 'Port หุ้น / Port Future') · Core ติดอยู่", sw["a"] == "Core" and sw["b"] == "Sat" and sw["onA"], sw)
+        check(f"{tag} 1 บนสุดปุ่ม 'Core | Sat' (ไม่มี 'Port หุ้น / Port Future') · Core ติดอยู่", sw["a"] == "Winner" and sw["b"] == "Sat" and sw["onA"], sw)   # RG2b — ปุ่มสามตัว Winner | Ladder | Sat
         gone = js(page, """()=>({strip: !!document.querySelector('#strip') && document.querySelector('#strip').offsetParent!==null, ports: document.getElementById('ports').children.length,
           pos: !!document.getElementById('posPanel') && document.getElementById('posPanel').offsetParent!==null, foot: document.getElementById('foot').offsetParent!==null,
           sum: document.querySelectorAll('#tabPlan [data-sum]').length, bar4: document.querySelectorAll('#tabPlan .sumBar4').length,
@@ -61,15 +61,15 @@ def tests(pw, w, h, label):
           legacyHead: document.querySelectorAll('#corePanel [data-core-head]').length})""")
         check(f"{tag} 1 ตัดออก: การ์ดบัญชี Hold/Plan · กล่อง 4 ช่อง · ชิปต่อบัญชี · Positions · บรรทัด heat ท้ายหน้า", not gone["strip"] and gone["ports"] == 0 and not gone["pos"] and not gone["foot"] and gone["sum"] == 0 and gone["bar4"] == 0 and not gone["hold"] and not gone["heat"] and gone["legacyHead"] == 0, gone)
         box = js(page, "()=>({n: document.querySelectorAll('[data-lf-box]').length, cap: document.querySelector('[data-lf-cap]').innerText.trim()})")
-        check(f"{tag} 1 กล่องมืดกล่องเดียว: 'Core' + 'ทุน ฿4.2M'", box["n"] == 1 and box["cap"] == "ทุน ฿8.4M", box)   # LN3fix3c §4: หัว Core = ทุนรวมทุกบัญชี (2 × ฿4.2M)   # LN3fix2 §2: ตัด '% ของพอร์ต'
+        check(f"{tag} 1 กล่องมืดกล่องเดียว: 'Core' + 'ทุน ฿4.2M'", box["n"] == 1 and box["cap"] == "ทุน ฿9.6M", box)   # LN3fix3c §4: หัว Core = ทุนรวมทุกบัญชี (2 × ฿4.2M)   # LN3fix2 §2: ตัด '% ของพอร์ต'
         sh = vis(page, "[data-lf-sidehint]")
         check(f"{tag} 1 ไม่มีฟอร์มเปิด: " + ("Mac คอลัมน์ขวามีการ์ดเล็ก 'ยังไม่ได้เปิดฟอร์มแผน Core' + ปุ่ม ＋ แผน Core" if w >= 1000 else "มือถือไม่มีการ์ดว่าง"), sh == (w >= 1000), sh)
         # ตัวเลข = ค่าเดิม
         ref = js(page, """()=>{ const A='main', rk = coreAcctRisk(A), cx = coreCtx(A), cfg = cx.cfg, sp = cx.split, tank = cx.tankTHB;
-          return {now: fmt2(rk.layer2Pct)+'%', lim: fmt2(cfg.l2Cap)+'%', full: fmt2(rk.layer2FullPct)+'%', wPct: fmt2(cx.wCost/tank*100), lPct: fmt2(sp.lPct*100), lcap: fmt2(cfg.ladderShare),
-            free: '฿'+fmt0(sp ? tank-cx.wCost-sp.lUsed : tank-cx.held), ff: Math.round(cx.F.f*100)+'%', dd: fmt2(Math.round(ddEval(A,'core').ddPct*100)/100)+'%'}; }""")
-        got = js(page, "()=>({now: document.querySelector('[data-lf-row=main] [data-lf-now]').innerText.trim(), lim: document.querySelector('[data-lf-row=main] [data-lf-lim]').innerText.trim(), full: document.querySelector('[data-lf-full]').textContent.trim(), wp: document.querySelector('[data-lf-wpct]').textContent.trim(), lp: document.querySelector('[data-lf-lpct]').textContent.trim(), more: document.querySelector('[data-lf-more]').textContent.replace(/\\s+/g,' '), line: document.querySelector('[data-lf-row=main] [data-lf-line]').innerText.replace(/\\s+/g,' ').trim(), free: +document.querySelector('[data-lf-row=main] [data-lf-free]').dataset.lfFree})")
-        ok = got["now"] == ref["now"] and got["lim"] == ref["lim"] and got["full"] == ref["full"] and got["wp"] == ref["wPct"] + "%" and got["lp"] == ref["lPct"] and f"Ladder {ref['lPct']}/{ref['lcap']}%" in got["more"] and abs(got["free"] - float(ref["free"].replace("฿", "").replace(",", ""))) <= 1 and f"DD {ref['dd']}" in got["line"] and f"FF" in got["line"] and ref["ff"] in got["line"]
+          return {now: fmt2(rk.layer2Pct)+'%', full: fmt2(rk.layer2FullPct)+'%', wPct: fmt2(cx.wCost/tank*100), lPct: fmt2(sp.lPct*100), lcap: fmt2(cfg.ladderShare),
+            free: '฿'+fmt0(sp ? (sp.cashFree + sp.lCashFree) : (tank-cx.held)), ff: Math.round(cx.F.f*100)+'%', dd: fmt2(Math.round(ddEval(A,'winner').ddPct*100)/100)+'%'}; }""")
+        got = js(page, "()=>({now: document.querySelector('[data-lf-row=main] [data-lf-now]').innerText.trim(), full: document.querySelector('[data-lf-full]').textContent.trim(), wp: document.querySelector('[data-lf-wpct]').textContent.trim(), lp: document.querySelector('[data-lf-lpct]').textContent.trim(), more: document.querySelector('[data-lf-more]').textContent.replace(/\\s+/g,' '), line: document.querySelector('[data-lf-row=main] [data-lf-line]').innerText.replace(/\\s+/g,' ').trim(), free: +document.querySelector('[data-lf-row=main] [data-lf-free]').dataset.lfFree})")
+        ok = got["now"] == ref["now"] and got["full"] == ref["full"] and got["wp"] == ref["wPct"] + "%" and got["lp"] == ref["lPct"] and f"Ladder {ref['lPct']}%" in got["more"] and abs(got["free"] - float(ref["free"].replace("฿", "").replace(",", ""))) <= 1 and f"DD {ref['dd']}" in got["line"] and f"FF" in got["line"] and ref["ff"] in got["line"]
         check(f"{tag} 1 ตัวเลขเดียวกับของเดิม: Risk ชั้น 2 ตอนนี้/เต็ม/เพดาน · เงินว่าง · DD · FF (Winners/Ladder/เต็ม อยู่ในพับ · LN3fix2 §2)", ok, [ref, got])
         # ขาดราคา
         al = js(page, "()=>[...document.querySelectorAll('[data-lf-alert]')].map(e=>({k:e.dataset.lfAlert, t:e.innerText.replace(/\\s+/g,' ').trim()}))")
@@ -82,7 +82,7 @@ def tests(pw, w, h, label):
         # พับรายละเอียด
         js(page, "()=>document.querySelector('[data-lf-det]').open = true"); page.wait_for_timeout(200)
         det = txt(page, "[data-lf-det]")
-        check(f"{tag} 1 พับ 'รายละเอียดและกฎ': ตำแหน่ง · Ladder ใหม่/ประตู · เพดานต่อตัว · Stop ฉุกเฉิน · ถ้าทุกไม้โดน Stop บัญชีลด", all(k in det for k in ("ตำแหน่ง 1 ตัว", "Ladder ใหม่:", "เพดานต่อตัว", "Stop ฉุกเฉิน", "ถ้าทุกไม้โดน Stop บัญชีลด", "ล็อกกำไร")), det[:400])
+        check(f"{tag} 1 พับ 'รายละเอียดและกฎ': ตำแหน่ง · Ladder ใหม่/ประตู · เพดานต่อตัว · Stop ฉุกเฉิน · ถ้าทุกไม้โดน Stop บัญชีลด", all(k in det for k in ("ตำแหน่ง 1 ตัว", "เพดานต่อตัว", "Stop ฉุกเฉิน", "ถ้าทุกไม้โดน Stop บัญชีลด", "ล็อกกำไร")), det[:400])
         js(page, "()=>document.querySelector('[data-lf-det]').open = false")
         # สลับบัญชี + จำค่า
         js(page, "()=>document.querySelector('[data-lf-acc=fam]').click()"); page.wait_for_timeout(500)
@@ -92,8 +92,8 @@ def tests(pw, w, h, label):
         # การ์ดแถว 2 บรรทัด
         rows = js(page, "()=>[...document.querySelectorAll('#corePanel .ccRow')].map(r=>({t: r.querySelector('[data-c-ticker]').innerText, tag: (r.querySelector('[data-lf-tag]')||{innerText:''}).innerText, l2: (r.querySelector('[data-lf-l2]')||{innerText:''}).innerText}))")
         nv = next((r for r in rows if r["t"] == "NVDA"), {}); av = next((r for r in rows if r["t"] == "AVGO"), {})
-        check(f"{tag} 1 การ์ด 2 บรรทัด: NVDA 'A · Winners' + 'ไม้ 1 · SL 115' · AVGO 'B · Winners' + 'แผน · 300 / 270 · ไม้แรก 17 หุ้น'",
-              nv.get("tag") == "A · Winners" and nv.get("l2") == "ไม้ 1 · SL 115" and av.get("tag") == "B · Winners" and av.get("l2") == "แผน · 300 / 270 · ไม้แรก 17 หุ้น", rows)
+        check(f"{tag} 1 การ์ด 2 บรรทัด: NVDA 'A · Winners' + 'ไม้ 1 · SL 115' · AVGO 'B · Winners' + 'แผน · 300 / 270 · ไม้แรก 15 หุ้น' (RG2b ถัง Winner 50%)",
+              nv.get("tag") == "A · Winners" and nv.get("l2") == "ไม้ 1 · SL 115" and av.get("tag") == "B · Winners" and av.get("l2") == "แผน · 300 / 270 · ไม้แรก 15 หุ้น", rows)   # RG2b: ถัง Winner 50% → 15 หุ้น
         hdr = txt(page, "[data-lf-ch]")
         check(f"{tag} 1 หัว 'การ์ด Core · 2 ตัว · ＋ แผน Core' · ขยาย/ยุบทั้งหมดคงไว้", hdr is not None and "การ์ด Core" in hdr and "2 ตัว" in hdr and "＋ แผน Core" in hdr and vis(page, "[data-c-expandall]") and vis(page, "[data-c-collapseall]"), hdr)
         # กางการ์ด
@@ -219,13 +219,12 @@ def tests(pw, w, h, label):
             tl3 = txt(page, "[data-lf-tierline]")
             check(f"{tag} 2 เลือก Tier ที่ใช้ = B → บรรทัด Tier บอก 'เลือกเอง' · เพดาน B", tl3.startswith("Tier B") and "เลือกเอง" in tl3, tl3)
             js(page, "()=>coreTiPick('fortress')"); page.wait_for_timeout(150)
-            # กลยุทธ์ Winners|Ladder
-            page.fill("#cnTicker", "TSM"); page.fill("#cnEntry", "300"); page.fill("#cnStop", "270"); page.wait_for_timeout(250)
-            sg = js(page, "()=>({w: document.getElementById('cnStratW').innerText.trim(), l: document.getElementById('cnStratL').innerText.trim(), ld: document.getElementById('cnStratL').disabled, note: document.querySelector('[data-lf-stratnote]').innerText.trim()})")
-            check(f"{tag} 2 กลยุทธ์ 'Winners | Ladder' + บรรทัด 'Ladder (ถัวตามแนวรับ) ใช้ได้เฉพาะ A Fortress' · A Fortress → Ladder กดได้", sg["w"] == "Winners" and sg["l"] == "Ladder" and not sg["ld"] and sg["note"] == "Ladder (ถัวตามแนวรับ) ใช้ได้เฉพาะ A Fortress", sg)
+            # RG2b — ถอดตัวเลือกกลยุทธ์ Winners|Ladder ออกจากฟอร์ม (หน้า Winner สร้างแผน Winner เท่านั้น · Ladder ไปสร้างที่หน้า Ladder)
+            sg = js(page, "()=>({box: !!document.getElementById('cnStratBox'), w: !!document.getElementById('cnStratW'), l: !!document.getElementById('cnStratL'), strat: coreNew.strat, note: !!document.querySelector('[data-lf-stratnote]')})")
+            check(f"{tag} 2 (RG2b) ฟอร์ม Winner ไม่มีตัวเลือก 'Winners | Ladder' และไม่มีบรรทัดอธิบาย Ladder · strat = W", sg == {"box": False, "w": False, "l": False, "strat": "W", "note": False}, sg)
             js(page, "()=>coreTiPick('growth')"); page.wait_for_timeout(200)
-            sg2 = js(page, "()=>({ld: document.getElementById('cnStratL').disabled, strat: coreNew.strat})")
-            check(f"{tag} 2 Tier ไม่ใช่ A Fortress → Ladder กดไม่ได้ (ปิด) · กลับเป็น Winners", sg2["ld"] and sg2["strat"] == "W", sg2)
+            sg2 = js(page, "()=>coreNew.strat")
+            check(f"{tag} 2 (RG2b) Tier ไม่ใช่ A Fortress → ยังเป็น Winners (W)", sg2 == "W", sg2)
             js(page, "()=>coreTiPick('fortress')"); page.wait_for_timeout(200)
             # แถว Entry · Stop · Risk % (LN3fix2: แทนช่อง FF) + บรรทัดผล
             g3 = js(page, "()=>{ const r = ['cnEntry','cnStop','cnRisk'].map(i=>document.getElementById(i).getBoundingClientRect()); return {sameRow: r.every(x=>Math.abs(x.top - r[0].top) < 12), ff: document.getElementById('cnRisk').tagName}; }")
@@ -262,8 +261,10 @@ def tests(pw, w, h, label):
     b, page, ce, pe = C.launch(pw, w, h, cards={"ccNV": C.core_cards()["ccNV"], "ccLd": P26.lcard("ccLd", ticker="ZZZ")}, mut=mut_both)
     try:
         C.go_core(page)
-        r = js(page, "()=>{ const e = [...document.querySelectorAll('#corePanel .ccRow')].find(x=>x.querySelector('[data-c-ticker]').innerText==='ZZZ'); return e ? {tag: e.querySelector('[data-lf-tag]').innerText, l2: e.querySelector('[data-lf-l2]').innerText} : null; }")
-        check(f"{tag} 3 การ์ดแผน Ladder: ป้าย 'A · Ladder' · บรรทัด 2 'แผน · L1 … · SL …' (ไม่มีคำ 'บันได')", r is not None and r["tag"] == "A · Ladder" and r["l2"].startswith("แผน · L1 ") and "SL" in r["l2"], r)
+        onwin = js(page, "()=>[...document.querySelectorAll('#corePanel .ccRow')].some(x=>x.querySelector('[data-c-ticker]').innerText==='ZZZ')")
+        js(page, "()=>{ setPlanScope('ladder'); render(); }"); page.wait_for_timeout(400)
+        r = js(page, "()=>{ const e = document.querySelector('[data-ldr-card][data-ldr-tk=ZZZ]'); return e ? e.innerText.replace(/\\s+/g,' ') : null; }")
+        check(f"{tag} 3 (RG2b) การ์ดแผน Ladder ไม่อยู่หน้า Winner · อยู่หน้า Ladder (T1 … SL …)", (not onwin) and r is not None and "ZZZ" in r and "T1" in r, [onwin, r])
         js(page, "()=>coreAll('main',1)"); page.wait_for_timeout(300)
         t = js(page, "()=>document.getElementById('corePanel').innerText")
         check(f"{tag} 3 เนื้อการ์ด Ladder ไม่มีคำ 'บันได' / 'L' เดี่ยว", not re.findall(r"(?:(?<=[\s(·/])|^)[WL](?=[\s·/)]|$)|บันได", t), re.findall(r"(?:(?<=[\s(·/])|^)[WL](?=[\s·/)]|$)|บันได", t))
@@ -274,13 +275,13 @@ def tests(pw, w, h, label):
         js(page, "()=>{ ln1SetMode('legacy'); switchTab('plan'); setPlanScope('stock'); render(); }"); page.wait_for_timeout(600)
         lg = js(page, """()=>({a: document.getElementById('scopeStock').innerText.replace(/\\s+/g,' ').trim(), strip: document.getElementById('strip').offsetParent!==null, ports: !!document.querySelector('#portsSum'), pos: document.getElementById('posPanel').offsetParent!==null,
           head: document.querySelectorAll('#corePanel [data-core-head]').length, lf: document.querySelectorAll('[data-lf-box]').length, hasW: /ระบบ Week|·W|W /.test(document.getElementById('corePanel').innerText)})""")
-        check(f"{tag} 3 โหมดเดิม (legacy) แผน Core เหมือนเดิม: ปุ่ม 'Port หุ้น' · การ์ดบัญชี Hold/Plan · กล่อง 4 ช่อง · Positions · หัวบัญชี Core · ไม่มีกล่อง Lean", lg["a"].startswith("Port หุ้น") and lg["strip"] and lg["ports"] and lg["pos"] and lg["head"] >= 1 and lg["lf"] == 0, lg)
+        check(f"{tag} 3 โหมดเดิม (legacy) แผน Core เหมือนเดิม: ปุ่ม 'Winner' (RG2b) · การ์ดบัญชี Hold/Plan · กล่อง 4 ช่อง · Positions · หัวบัญชี Core · ไม่มีกล่อง Lean", lg["a"].startswith("Winner") and lg["strip"] and lg["ports"] and lg["pos"] and lg["head"] >= 1 and lg["lf"] == 0, lg)
         js(page, "()=>coreNewOpen('main')"); page.wait_for_timeout(400)
-        lf = js(page, "()=>({w: !!document.getElementById('cnStratW'), txt: document.getElementById('cnStratW').innerText, tierbtn: !!document.getElementById('cnTierB'), lean: !!document.querySelector('[data-lf-tier]'), opt: [...document.querySelectorAll('#cnAcct option')].map(o=>o.innerText.trim())})")
-        check(f"{tag} 3 ฟอร์ม legacy เหมือนเดิม: 'ระบบ Week' · ปุ่ม Tier 4 ตัวเลือก · บัญชี 'ทั้งคู่'", lf["txt"] == "ระบบ Week" and lf["tierbtn"] and not lf["lean"] and any("ทั้งคู่" in o for o in lf["opt"]), lf)
+        lf = js(page, "()=>({w: !!document.getElementById('cnStratW'), txt: 'ไม่มี', tierbtn: !!document.getElementById('cnTierB'), lean: !!document.querySelector('[data-lf-tier]'), opt: [...document.querySelectorAll('#cnAcct option')].map(o=>o.innerText.trim())})")
+        check(f"{tag} 3 ฟอร์ม legacy เหมือนเดิม: (RG2b ไม่มีตัวเลือกกลยุทธ์) · ปุ่ม Tier 4 ตัวเลือก · บัญชี 'ทั้งคู่'", not lf["w"] and lf["tierbtn"] and not lf["lean"] and any("ทั้งคู่" in o for o in lf["opt"]), lf)
         js(page, "()=>{ coreSheetClose(); ln1SetMode('lean'); }"); page.wait_for_timeout(500)
         back = js(page, "()=>({a: document.getElementById('scopeStock').innerText.trim(), lf: document.querySelectorAll('[data-lf-box]').length})")
-        check(f"{tag} 3 สลับกลับ Lean → ปุ่ม 'Core' + กล่อง Lean กลับมา", back["a"] == "Core" and back["lf"] == 1, back)
+        check(f"{tag} 3 สลับกลับ Lean → ปุ่ม 'Winner' + กล่อง Lean กลับมา", back["a"] == "Winner" and back["lf"] == 1, back)
     finally: b.close()
 
 
