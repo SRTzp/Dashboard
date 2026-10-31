@@ -39,7 +39,7 @@ def shot(page, name, sel=None):
 
 def sections():
     env = os.environ.get("SECT", "").split()
-    return env or ["pools", "winner", "sat", "ladder", "port", "node"]
+    return env or ["pools", "winner", "sat", "ladder", "port", "core47", "node"]
 
 
 def near(a, b, tol=1.0): return abs(a - b) <= tol
@@ -363,6 +363,147 @@ def multi_acct_tests(pw):
     finally: b.close()
 
 
+# ───────────────────────── 6 §4.7 Core → Winner + Ladder ─────────────────────────
+def today_tests(pw):
+    for w, h, label in ((300, 800, "300px"), (390, 844, "390px"), (1440, 900, "1440px")):
+        tag = f"[{ENGINE}/{label}]"
+        b, page, ce, pe = launch(pw, w, h)
+        try:
+            js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 500)
+            set_ff(page, True, False)
+            js(page, "()=>{ todayRefresh(true); }"); settle(page, 400)
+            n = cnt(page, "[data-td3-panel=core] [data-td3-pool]")
+            check(f"{tag} §4.7 Today › Core: หัวแผงมี 2 บรรทัด Winner / Ladder", n == 2 and cnt(page, "[data-td3-panel=core] [data-td3-pools]") == 1, n)
+            vis = js(page, "()=>[...document.querySelectorAll('[data-td3-pool]')].map(e=>[e.dataset.td3Pool, e.innerText.replace(/\\s+/g,' ').trim(), e.dataset.poolFactor, e.dataset.poolUsed, Math.round(e.getBoundingClientRect().right)])")
+            want_w = "W 75% · 0%" if w <= 340 else "Winner 75% · used 0%"
+            want_l = "L 75% · 0%" if w <= 340 else "Ladder 75% · used 0%"
+            check(f"{tag} §4.7 ข้อความ: '{want_w}' / '{want_l}' (ตัวคูณ Regime ของถังนั้น · ใช้จริง ÷ ถัง)", [v[1] for v in vis] == [want_w, want_l], vis)
+            check(f"{tag} §4.7 พอดีจอ (ไม่เกิน {w}px) และไม่ล้นแนวนอน", all(v[4] <= w for v in vis) and js(page, "()=>document.documentElement.scrollWidth - window.innerWidth") <= 0, vis)
+            # Winner/Ladder ใช้คู่คนละชุด (slow)
+            page.evaluate("""async ()=>{ const mk=(u,s)=>({up:u,flip_days:3,tf:'D',ema:[20,50],bar:'2026-10-01',slow:{up:s,flip_days:9,ema:[50,100]}});
+                window.__FF_JSON = {as_of:'2026-10-01', ver:2, ratios:{ACWI_BIL:mk(true,false), HYG_IEI:mk(true,true)}}; await ffLoadJson(true); todayRefresh(true); }""")
+            settle(page, 400)
+            fac = js(page, "()=>[...document.querySelectorAll('[data-td3-pool]')].map(e=>e.dataset.poolFactor)")
+            check(f"{tag} §4.7 Winner ใช้สัญญาณ EMA20/50 · Ladder ใช้ EMA50/100 → 100 / 75", fac == ["100", "75"], fac)
+            if w == 300: shot(page, "rg2b-today-core-300.png", "[data-td3-panel=core]")
+            if w == 390: shot(page, "rg2b-today-core-390.png", "[data-td3-panel=core]")
+            if w == 1440: shot(page, "rg2b-today-core-1440.png", "[data-td3-panel=core]")
+            check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
+        finally: b.close()
+    # used % : Winner ถือ ฿1.42M → 25% ของถัง ฿2.84M (บัญชีเดียวเลือก main · รวม 2 บัญชี = ถังรวม)
+    wtr = [P13.T("tW1", "core", "open", sym="WINX", entry=100, sl=90, qty=14200, cur="THB", date="2026-09-10")]
+    b, page, ce, pe = launch(pw, 390, 844, wtr, {})
+    try:
+        js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 500)
+        u = js(page, "()=>[...document.querySelectorAll('[data-td3-pool]')].map(e=>e.dataset.poolUsed)")
+        check("[used] §4.7 used% = ทุนที่ถือ ÷ ถัง (รวมทุกบัญชี Core: 1.42M ÷ 5.685M×2 ถัง Winner 2.84M×2 = 25%)", u[0] == "25" and u[1] == "0", u)
+    finally: b.close()
+
+
+def dd_tests(pw):
+    big_w = P13.T("tBW", "core", "closed", sym="LOSW", entry=100, sl=90, qty=28425, exitPrice=75, exitDate="2026-10-01", cur="THB", date="2026-09-01")   # ขาดทุน 710,625 = 25% ของถัง Winner
+    big_l = P13.T("tBL", "core", "closed", sym="LOSL", entry=100, sl=90, qty=17055, exitPrice=75, exitDate="2026-10-01", cur="THB", date="2026-09-01")   # ขาดทุน 426,375 = 25% ของถัง Ladder
+    lc = P24.card("ccLX", "main", "LOSL", strategy="L", status="closed", trade_id="tBL", tier="A")
+    tag = f"[{ENGINE}/390px]"
+    # Winner ล้ม → Winner พัก · Ladder ปกติ
+    b, page, ce, pe = launch(pw, 390, 844, [big_w], {})
+    try:
+        r = js(page, "()=>{ const w = ddEval('main','winner'), l = ddEval('main','ladder'); return [w.stage, Math.round(w.ddPct*10)/10, l.stage, Math.round(l.ddPct*10)/10, Math.round(w.tankTHB), JSON.stringify(ddBucketsOf('main'))]; }")
+        check(f"{tag} §4.7 Winner ขาดทุน 25% ของถัง → Winner พัก · DD ≈ 25% ของถัง Winner · Ladder ปกติ 0%", r[0] == "pause" and abs(r[1] - 25) < 0.2 and r[2] == "normal" and r[3] == 0, r)
+        check(f"{tag} §4.7 ถังของ DD = ถัง Winner (ไม่ใช่ capital.core) · มี 3 ถัง winner/ladder/sat", near(r[4], POOL["w"]) and r[5] == '["winner","ladder","sat"]', r)
+        blk = js(page, "()=>[ddCoreBlockNew('main','winner'), ddCoreBlockNew('main','ladder'), ddCoreBlockLadder('main')]")
+        check(f"{tag} §4.7 Winner พักไม่บล็อกการวางบันได (Ladder) · บล็อกแผน Winner ใหม่", blk[0] != "" and blk[1] == "" and blk[2] == "", blk)
+        cp = js(page, """()=>{ const cs=Calc.coreSize, bx=coreBase('main'); const nl=cs.ladder({tier:'A',tank:bx.ladderPoolTHB,sl:70,levels:[{px:100},{px:90}],budgetPct:0.05}); const c = coreCanPlace('main',{tier:'A',fortress:true,thb:nl},null,false); return [c.allowed, c.reasons]; }""")
+        check(f"{tag} §4.7 วางบันไดใหม่ได้ระหว่าง Winner พัก", cp[0] is True, cp)
+        js(page, "()=>{ openSettings(); switchTab('plan'); setPlanScope('stock'); render(); }"); settle(page, 500)
+        chips = js(page, "()=>[...document.querySelectorAll('[data-dd-chip]')].map(c=>[c.dataset.ddChip, c.dataset.stage, c.innerText.replace(/\\s+/g,' ')])")
+        check(f"{tag} §4.7 ชิป DD บอกชื่อถัง (Winner DD / Ladder DD)", any(c[0] == "winner" and c[2].startswith("Winner DD") for c in chips) and any(c[0] == "ladder" and c[2].startswith("Ladder DD") for c in chips), chips)
+        js(page, "()=>{ ddSync(); }"); settle(page, 300)
+        ds = js(page, "()=>Object.keys(getBook('main').settings.ddState||{}).sort()")
+        check(f"{tag} §4.7 เก็บ state แยก ddState.winner / ddState.ladder", "winner" in ds and "ladder" in ds, ds)
+        check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
+    finally: b.close()
+    # Ladder ล้ม → Ladder พัก · Winner ปกติ · วางบันไดบล็อก · แผน Winner ไม่บล็อก
+    b, page, ce, pe = launch(pw, 390, 844, [big_l], {"ccLX": lc})
+    try:
+        # trade ถูกใส่ก่อนการ์ดโหลด → state ของ Winner ที่เขียนไปตอนยังไม่ผูกการ์ดเป็นของปลอม: เริ่มใหม่ที่ peak = ถัง (Ladder คงที่ผ่านการ sync หลังการ์ดโหลด)
+        js(page, """()=>{ const B = getBook('main'), ds = B.settings.ddState, pw = poolsOf('main').winner, k = ds.ladder.key;
+            B.settings.ddState = Object.assign({}, ds, {winner:{peak:pw, baseAt:'2026-10-01', tank:pw, key:k, stage:'normal', stageSince:'2026-10-01', pauseUntil:null, review:null, recoverDd0:null, weekly:{}, rebasedAt:null}}); render(); }"""); settle(page, 300)
+        r = js(page, "()=>{ const w = ddEval('main','winner'), l = ddEval('main','ladder'); return [w.stage, Math.round(w.ddPct*10)/10, l.stage, Math.round(l.ddPct*10)/10, Math.round(l.tankTHB)]; }")
+        check(f"{tag} §4.7 ไม้ที่ผูกการ์ด L ขาดทุน 25% ของถัง Ladder → Ladder พัก · Winner ปกติ 0%", r[0] == "normal" and r[1] == 0 and r[2] == "pause" and abs(r[3] - 25) < 0.2 and near(r[4], POOL["l"]), r)
+        blk = js(page, "()=>[ddCoreBlockNew('main','winner'), ddCoreBlockNew('main','ladder'), ddCoreBlockLadder('main')]")
+        check(f"{tag} §4.7 Ladder พักไม่บล็อกแผน Winner · บล็อกบันไดใหม่", blk[0] == "" and blk[1] != "" and blk[2] != "", blk)
+        sz = js(page, "()=>coreSizeOpts('main').ddFactor")
+        check(f"{tag} §4.7 ขนาดไม้ Winner ไม่ลดจากเบรก Ladder (ddFactor 1)", sz == 1, sz)
+    finally: b.close()
+    # ย้าย: Core เดิมพัก → ทั้งสองถังเริ่มพัก + แจ้งครั้งเดียว · Core เดิมปกติ → ปกติ
+    def mut_pause(doc):
+        doc["books"]["main"]["settings"]["ddState"] = {"core": {"peak": 4300000, "baseAt": "2026-09-01", "tank": CORE, "stage": "pause", "stageSince": "2026-10-20", "pauseUntil": "2026-12-31", "weekly": {}}}
+    b, page, ce, pe = C.launch2(pw, 390, 844, [], {}, mut=mut_pause, fx=FX)
+    try:
+        r = js(page, "()=>{ const w = ddEval('main','winner'), l = ddEval('main','ladder'); return [w.stage, l.stage, w.pauseUntil, l.pauseUntil]; }")
+        check(f"{tag} §4.7 ย้าย: Core เดิมกำลังพัก → Winner และ Ladder เริ่มพักทั้งคู่ (วันครบเดิม)", r == ["pause", "pause", "2026-12-31", "2026-12-31"], r)
+        js(page, "()=>{ render(); ddSync(); openSettings(); }"); settle(page, 600)
+        nt = js(page, "()=>[getBook('main').settings.pools.ddNote, document.getElementById('poolNotice').innerText]")
+        check(f"{tag} §4.7 แจ้งครั้งเดียวใน Settings › Pools", nt[0] is True and "both Winner and Ladder start paused" in nt[1], nt)
+    finally: b.close()
+    def mut_ok(doc):
+        doc["books"]["main"]["settings"]["ddState"] = {"core": {"peak": 4300000, "baseAt": "2026-09-01", "tank": CORE, "stage": "normal", "stageSince": "2026-09-01", "pauseUntil": None, "weekly": {}}}
+    b, page, ce, pe = C.launch2(pw, 390, 844, [], {}, mut=mut_ok, fx=FX)
+    try:
+        r = js(page, "()=>{ const w = ddEval('main','winner'), l = ddEval('main','ladder'); return [w.stage, l.stage, getBook('main').settings.pools.ddNote || false]; }")
+        check(f"{tag} §4.7 ย้าย: Core เดิมปกติ → ทั้งสองถังเริ่มปกติ ไม่แบกพัก ไม่มีหมายเหตุ", r == ["normal", "normal", False], r)
+    finally: b.close()
+    # fx ขยับ ไม่ทำให้ DD ถูก rebase (ถังเป็น ฿ ที่ผูก fx)
+    b, page, ce, pe = launch(pw, 390, 844, [big_w], {})
+    try:
+        js(page, "()=>{ render(); ddSync(); }"); settle(page, 300)
+        js(page, "()=>{ getBook('main').settings.fx = 36; getBook('main').settings.fxChanged = 1; render(); }"); settle(page, 300)
+        r = js(page, "()=>{ const w = ddEval('main','winner'); return [w.rebased, w.stage]; }")
+        check(f"{tag} §4.7 fx เปลี่ยน → DD ไม่ถูกเริ่มนับใหม่ (rebase เฉพาะเมื่อแก้ทุน/สัดส่วนถัง)", r[0] is False, r)
+        js(page, "()=>{ getBook('main').settings.pools = Object.assign({}, getBook('main').settings.pools, {winner:45, ladder:35}); }")
+        r2 = js(page, "()=>ddEval('main','winner').rebased")
+        check(f"{tag} §4.7 แก้สัดส่วนถัง → เริ่มนับ DD ใหม่", r2 is True, r2)
+    finally: b.close()
+
+
+def goals_tests(pw):
+    def mut(doc):
+        doc["books"]["main"]["settings"]["subGoals"] = {"main": {"Core.US": {"cur": "THB", "start": 1000000, "target": 2000000, "startDate": "2026-01-01", "deadline": "2026-12-31", "now": 1500000}, "Sat": {"cur": "USD", "start": 10000, "target": 20000, "startDate": "2026-01-01", "deadline": "2026-12-31", "now": 12000}}}
+    for w, h, label in ((390, 844, "390px"), (1440, 900, "1440px")):
+        tag = f"[{ENGINE}/{label}]"
+        b, page, ce, pe = launch(pw, w, h, [], {}, mut=mut)
+        try:
+            subs = js(page, "()=>JSON.stringify(TD3_SUBS)")
+            check(f"{tag} §4.7 เป้าย่อย: Winner · Ladder · Sat (+ Option เดิม) ไม่มี Core.US/Core.TH", subs == '["Winner","Ladder","Sat","Option"]', subs)
+            r = js(page, "()=>[td3SubOf('main','Winner') && td3SubOf('main','Winner').target, td3SubOf('main','Ladder'), td3SubOf('main','Sat') && td3SubOf('main','Sat').target]")
+            check(f"{tag} §4.7 เป้า Core เดิมย้ายไป Winner · Ladder ว่าง · Sat คงเดิม", r == [2000000, None, 20000], r)
+            js(page, "()=>{ switchTab('today'); todayRefresh(true); td3GoalOpen.add('main'); todayRefresh(true); }"); settle(page, 400)
+            rows = js(page, "()=>[...document.querySelectorAll('[data-td3-acct=main] [data-td3-sub]')].map(e=>e.dataset.td3Sub+':'+(e.innerText.includes('No goal')?'none':'goal'))")
+            check(f"{tag} §4.7 Today แสดงแถวเป้า Winner (มี) · Ladder (ไม่มี) · Sat (มี)", rows[:3] == ["Winner:goal", "Ladder:none", "Sat:goal"], rows)
+            js(page, "()=>{ openSystemSettings(); glSetPick('main'); }"); settle(page, 500)
+            gr = js(page, "()=>[...document.querySelectorAll('#glSet [data-gl-subrow]')].map(e=>e.dataset.glSubrow)")
+            check(f"{tag} §4.7 Settings › Goals: แถว Winner / Ladder / Sat / Option", gr == ["Winner", "Ladder", "Sat", "Option"], gr)
+            wv = js(page, "()=>document.querySelector('#glSet [data-gl-subrow=Winner] [data-sg-target]').value")
+            check(f"{tag} §4.7 แถว Winner โชว์เป้า Core เดิม", wv == "2000000", wv)
+            js(page, "()=>{ glSubSave(); }"); settle(page, 500)
+            sv = js(page, "()=>Object.keys(tdSettings().subGoals.main).sort()")
+            check(f"{tag} §4.7 บันทึกแล้วเขียนเป็นคีย์ Winner (ไม่เขียน Core.US ต่อ)", sv == ["Sat", "Winner"], sv)
+            check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
+        finally: b.close()
+
+
+def backstop_tests(pw):
+    tr = [P13.T("tW1", "core", "open", sym="WINX", entry=100, sl=90, qty=1000, cur="THB", date="2026-09-10"),
+          P13.T("tL1", "core", "open", sym="LADY", entry=100, sl=90, qty=500, cur="THB", date="2026-09-10")]
+    cards = {"ccLY": P24.card("ccLY", "main", "LADY", strategy="L", status="open", trade_id="tL1", tier="A")}
+    b, page, ce, pe = launch(pw, 390, 844, tr, cards)
+    try:
+        r = js(page, "()=>{ const s = summarize(); return [Math.round(s.per.core.open), Math.round(s.tot.open)]; }")
+        check("[backstop] §4.7 Core + Sat Open Risk 6% นับทั้ง Winner และ Ladder (10,000 + 5,000)", r[0] == 15000 and r[1] >= 15000, r)
+    finally: b.close()
+
+
 def node_tests():
     import subprocess
     r = subprocess.run(["node", os.path.join(HERE, "core_size_test.js")], capture_output=True, text=True)
@@ -380,6 +521,7 @@ def main():
         if "sat" in S: sat_tests(pw)
         if "ladder" in S: ladder_tests(pw)
         if "port" in S: port_tests(pw); multi_acct_tests(pw)
+        if "core47" in S: today_tests(pw); dd_tests(pw); goals_tests(pw); backstop_tests(pw)
     if "node" in S: node_tests()
     bad = [r for r in results if not r[1]]
     print(f"\n{'PASS' if not bad else 'FAIL'}  {len(results) - len(bad)} / {len(results)}")
