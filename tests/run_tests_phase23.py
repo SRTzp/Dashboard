@@ -50,7 +50,11 @@ COUNT_JS = """() => { const fs = window.firebase.firestore(); const orig = fs.co
     return c; }; }"""
 
 
+REPIN_JS = "() => { const s = state.settings, c = s.capital || {}, core = +c.core || 0, sat = (+c.satB || 0) * (s.fx || 1); if (core > 0) { const wp = core / (core + sat) * 100; s.pools = {winner: wp, ladder: (100 - wp) / 2, sat: (100 - wp) / 2, mig: 'RG2b', reviewed: true}; } }"   # RG2b — ตรึงถัง Winner = ทุน Core เดิม (ใช้ซ้ำเมื่อเทสเปลี่ยนทุนกลางทาง)
+
+
 def launch(pw, w, h, doc):
+    import run_tests_phase24 as _P24; doc = copy.deepcopy(doc); _P24.pin_winner_pool(doc)   # RG2b
     """เหมือน p22.launch แต่ครอบ set() นับจำนวนครั้งที่เขียนเอกสารผู้ใช้ก่อน login (window.__setLog)"""
     lk = {"headless": True}
     if base.CHROMIUM_PATH: lk["executable_path"] = base.CHROMIUM_PATH
@@ -216,7 +220,7 @@ def settings_checks(pw, w, h, label):
         chk = page.evaluate("() => { const o = coreSizeOpts('main'); const r = Calc.coreSize.firstLot({tank:700000, entry:100, stop:90, f:1, tier:'A', riskPct:o.riskPct, tierCapPct:o.tierCap.A}); return r.qty; }")
         check(f"{tag} ส่งค่าตั้งเข้า Calc.coreSize: งบ 0.75% → ไม้แรก 525", chk == 525, str(chk))
         # ค่าผิด
-        bad = [("sCrTierB", "20", "Tier B ต้องไม่เกิน Tier A"), ("sCrL2Warn", "25", "เหลืองที่ ต้องน้อยกว่าเพดานชั้น 2"), ("sCrRiskA", "0", "มากกว่า 0"), ("sCrRiskA", "-1", "มากกว่า 0"), ("sCrAdd", "150", "1–100")]
+        bad = [("sCrRiskA", "0", "มากกว่า 0"), ("sCrRiskA", "-1", "มากกว่า 0"), ("sCrAdd", "150", "1–100"), ("sCrWinCap", "0", "มากกว่า 0")]   # RG2b: ตัดเคส Tier B>A / เหลืองที่>เพดานชั้น 2 (ช่องถอดแล้ว) · เพิ่มเพดานต่อหุ้นค่าเดียว
         for fid, v, msg in bad:
             page.evaluate("() => openSettings()"); page.wait_for_timeout(120)
             page.fill("#" + fid, v)
@@ -226,7 +230,7 @@ def settings_checks(pw, w, h, label):
         check(f"{tag} ค่าผิด: เรียก saveSettings() ตรง ๆ ก็ไม่บันทึก (ค่ายังเป็น 0.75) · ไม่ใช้ alert/confirm", dump_book(page, "main")["settings"]["coreRisk"]["riskPct"] == 0.75 and not dialogs, json.dumps(dialogs))
         # บันทึก sync cap
         page.evaluate("() => openSettings()"); page.wait_for_timeout(120)
-        page.fill("#sPortCore", "17"); page.fill("#sCrL2Warn", "12"); page.click("#setSaveBtn"); page.wait_for_timeout(1500)
+        page.fill("#sPortCore", "17"); page.click("#setSaveBtn"); page.wait_for_timeout(1500)   # RG2b: ตัดช่อง sCrL2Warn ที่ถอดแล้ว
         bm = dump_book(page, "main")["settings"]
         check(f"{tag} บันทึก: limits.port.core = coreRisk.l2Cap = 17 (ค่าเดียวกัน) · coreRiskCfg().l2Cap = 17 · heatV2 คงอยู่", bm["limits"]["port"]["core"] == 17 and bm["coreRisk"]["l2Cap"] == 17 and page.evaluate("() => coreRiskCfg().l2Cap") == 17 and bm["heatV2"] is True, json.dumps(bm["limits"]))
         # ปิด core → ซ่อนส่วน
@@ -245,9 +249,9 @@ def settings_shot(pw, w, h):
         page.evaluate("() => openSettings()"); page.wait_for_timeout(250)
         page.evaluate("() => document.querySelectorAll('#setOverlay details').forEach(d=>d.open=true)")
         page.evaluate("() => { const m=document.querySelector('#setOverlay .modal'); m.style.maxHeight='none'; m.style.overflow='visible'; }")
-        page.fill("#sCrTierB", "20"); page.wait_for_timeout(100)
+        page.fill("#sCrWinCap", "20"); page.wait_for_timeout(100)
         shot(page, f"7e1-settings-risk-{w}.png", "#crSec")
-        page.fill("#sCrTierB", "5")
+        page.fill("#sCrWinCap", "25")
         page.evaluate("() => { const s = document.getElementById('sPortCore').closest('.setsec'); s.scrollIntoView();   /* SET1 — หมวด Max Heat รวมเข้าการ์ด Core */ }")
         shot(page, f"7e1-settings-maxheat-{w}.png", "#setOverlay .setsec:has(#sTotal)")
     finally:
@@ -313,7 +317,7 @@ def formula_checks(pw, w, h, label):
         blk = page.evaluate("""() => { const q = s => document.querySelector('#portsSum '+s); const t = e => e ? e.innerText.replace(/\\s+/g,' ').trim() : null;
             return {open:t(q('[data-sum="open"]')), held:t(q('[data-sum="held"]')), pos:t(q('[data-sum="pos"]')), plan:t(q('[data-sum="plan"]')), drop:t(q('[data-sum="acctdrop"]')), head:t(q('.sumHead')), all:t(document.getElementById('portsSum'))}; }""")
         check(f"{tag} สูตรเดียว: บล็อกสรุป ความเสี่ยงค้าง Core = ฿100 (ไม่ใช่ 125) · % ของถัง = 100 ÷ ทุน Core × 100 = {f2(100/tank*100)}%",
-              "฿100 " in blk["open"] + " " and "125" not in blk["open"] and f"{f2(100/tank*100)}%" in blk["open"] and "/ 20%" in blk["open"], blk["open"])
+              "฿100 " in blk["open"] + " " and "125" not in blk["open"] and f"{f2(100/tank*100)}%" in blk["open"] and "/ 20%" not in blk["open"], blk["open"])   # RG2b: ไม่มีเพดานชั้น 2 (/ 20%)
         check(f"{tag} บล็อกสรุป: 'จากทุน' · '≈ x% ของบัญชี' = {f2(100/cap*100)}%", "จากทุน" in blk["open"] and f"≈ {f2(100/cap*100)}% ของบัญชี" in blk["open"], blk["open"])
         strip = page.evaluate("""() => { const g = document.querySelector('#strip .acctCard[data-priv="p-acct-main"] .acctGrp[data-grp="stock"]'); return {th: g && +g.dataset.openTh, txt: g && g.innerText.replace(/\\s+/g,' ')}; }""")
         possum = page.evaluate("() => { const e=document.querySelector('#planSections .acctSec[data-acct=\"main\"] [data-pos-sum]'); return e ? e.innerText.replace(/\\s+/g,' ') : ''; }")
@@ -322,7 +326,7 @@ def formula_checks(pw, w, h, label):
         rr = page.evaluate("""() => { const T = state.trades.reduce((m,t)=>(m[t.id]=t,m),{}); return {riskC: riskOf(T.tc), riskTB: riskTHBOf(T.tb), rClosed: realizedROf(T.te), sumOpen: summarize().per.core.open, ot: openRiskTHB(T.tc), oa: openRiskTHB(T.ta), od: openRiskTHB(T.td), oe: openRiskTHB(T.te)}; }""")
         check(f"{tag} riskOf/riskTHBOf/realizedROf ไม่เปลี่ยน (C riskOf = 25 · Journal R ของไม้ปิด = 2) · openRiskTHB: ล็อก = 0 · Sat open = 570×fx · plan = riskTHBOf · closed = 0",
               rr["riskC"] == 25 and rr["riskTB"] == 100 and rr["rClosed"] == 2 and rr["ot"] == 0 and abs(rr["oa"] - 570 * fx) < 1e-6 and abs(rr["od"] - 0.1 * 20 * 100 * fx) < 1e-6 and rr["oe"] == 0 and rr["sumOpen"] == 100, json.dumps(rr))
-        check(f"{tag} เงินที่ถือ: B+C = 100×10 + 200×5 = ฿2,000 · {f2(2000/tank*100)}% ของถัง · เงินว่าง = ถัง − 2,000 = ฿{tank-2000:,}", "฿2,000" in blk["held"] and f"{f2(2000/tank*100)}% ของถัง" in blk["held"] and f"เงินว่าง ฿{tank-2000:,}" in blk["held"], blk["held"])
+        check(f"{tag} เงินที่ถือ: B+C = 100×10 + 200×5 = ฿2,000 · {f2(2000/tank*100)}% ของถัง · เงินว่าง = ถัง − 2,000 = ฿{tank-2000:,}", "฿2,000" in blk["held"] and f"{f2(2000/tank*100)}% ของถัง" in blk["held"] and f"เงินว่าง Winner ฿{tank-2000:,}" in blk["held"], blk["held"])   # RG2b: เงินว่างแยก Winner · Ladder
         check(f"{tag} ตำแหน่ง: 2 ตัว · ล็อกกำไร 1 ตัว · ไม่มีช่องแผนที่รอ (ไม่มีไม้ plan ของ Core)", "2 ตัว" in blk["pos"] and "ล็อกกำไร 1 ตัว" in blk["pos"] and blk["plan"] is None, json.dumps(blk, ensure_ascii=False))
         exp = round((100 + 570 * fx) / cap * 100, 2)
         check(f"{tag} 'ถ้าทุกไม้โดน Stop บัญชีลด' = (100 + 570×fx) ÷ totalTHB × 100 = {f2(exp)}% · '(Core จากราคาปิด · Sat จากทุน)' + เทียบทุน −฿75 (7E-2: แก้ข้อความ · ตัวเลขเท่าเดิมเพราะไม่มีการ์ด = Core นับจากทุน)", f"≈ {f2(exp)}%" in blk["drop"] and "(Core จากราคาปิด · Sat จากทุน)" in blk["drop"] and "เทียบทุน: −฿75" in blk["drop"], f"{blk['drop']} exp={exp}")
@@ -342,16 +346,15 @@ def formula_checks(pw, w, h, label):
             r = page.evaluate("""() => { const c = document.querySelector('#portsSum [data-sum="open"]'); return {lv:c.dataset.level, big:(c.querySelector('.sumBig').innerText+' '+c.querySelector('[data-sum-full]').innerText).replace(/\\s+/g,' '), col:getComputedStyle(c.querySelector('.sumBig')).color, stop:!!c.querySelector('[data-stop-buy]'), txt:c.innerText}; }""")
             res[pctv] = r
             shot(page, f"7e1-portsum-{ {14.9:'ok',15:'warn',20:'over'}[pctv] }-{w}.png", "#portsSum")
-        check(f"{tag} สีช่องความเสี่ยง: 14.9% → ปกติ · 15% → เหลือง · 20% → แดง + 'งดซื้อเพิ่ม' (เฉพาะแดง)",
-              res[14.9]["lv"] == "ok" and res[15]["lv"] == "warn" and res[20]["lv"] == "over" and res[20]["stop"] and not res[14.9]["stop"] and not res[15]["stop"] and "งดซื้อเพิ่ม" in res[20]["txt"]
-              and len({res[14.9]["col"], res[15]["col"], res[20]["col"]}) == 3, json.dumps(res, ensure_ascii=False))
-        check(f"{tag} ตัวใหญ่ = % ของถัง Core ({res[15]['big']})", "15% / 20%" in res[15]["big"] and "14.9% / 20%" in res[14.9]["big"], json.dumps(res[15]))
+        check(f"{tag} สีช่องความเสี่ยง (RG2b ถอดเพดานชั้น 2): 14.9% · 15% · 20% → ปกติทั้งหมด ไม่มี 'งดซื้อเพิ่ม'",
+              all(res[k]["lv"] == "ok" and not res[k]["stop"] and "งดซื้อเพิ่ม" not in res[k]["txt"] for k in (14.9, 15, 20)) and len({res[14.9]["col"], res[15]["col"], res[20]["col"]}) == 1, json.dumps(res, ensure_ascii=False))   # RG2b: ถอดเพดาน/ระดับสีชั้น 2 — ทุกระดับเป็นปกติ ไม่งดซื้อ
+        check(f"{tag} ตัวใหญ่ = % ของถัง Core ({res[15]['big']})", "15%" in res[15]["big"] and "14.9%" in res[14.9]["big"] and "/ 20%" not in res[15]["big"], json.dumps(res[15]))
         # ถือเกินถัง / plan cell
-        page.evaluate("() => { state.settings.capital.core = 1500; state.trades = [{id:'x1', date:'2026-09-01', sym:'NVDA', port:'core', bias:'Long', entry:100, sl:90, tp:null, qty:20, mult:1, cur:'THB', status:'open'},{id:'x2', date:'2026-09-01', sym:'PLN', port:'core', bias:'Long', entry:50, sl:45, tp:null, qty:10, mult:1, cur:'THB', status:'plan'}]; render(); }")
+        page.evaluate(REPIN_JS.replace('() => {', '() => { state.settings.capital.core = 1500;', 1)); page.evaluate("() => { state.settings.capital.core = 1500; state.trades = [{id:'x1', date:'2026-09-01', sym:'NVDA', port:'core', bias:'Long', entry:100, sl:90, tp:null, qty:20, mult:1, cur:'THB', status:'open'},{id:'x2', date:'2026-09-01', sym:'PLN', port:'core', bias:'Long', entry:50, sl:45, tp:null, qty:10, mult:1, cur:'THB', status:'plan'}]; render(); }")
         r2 = page.evaluate("""() => { const q = s => document.querySelector('#portsSum '+s); const t = e => e ? e.innerText.replace(/\\s+/g,' ').trim() : null;
             return {free:t(q('[data-sum-free]')), neg:!!q('[data-sum-free].sumNeg'), col:q('[data-sum-free]') && getComputedStyle(q('[data-sum-free]')).color, plan:t(q('[data-sum="plan"]'))}; }""")
-        check(f"{tag} ถือเกินถัง (ถือ 2,000 > ถัง 1,500) → แดง 'ถือเกินถัง ฿500' · มีไม้ plan → ช่อง 'แผนที่รอ (Planned)' แสดง (1 ตัว · เสี่ยง +฿50)",
-              r2["neg"] and "ถือเกินถัง ฿500" in r2["free"] and r2["plan"] and "แผนที่รอ" in r2["plan"] and "1 ตัว" in r2["plan"] and "+฿50" in r2["plan"], json.dumps(r2, ensure_ascii=False))
+        check(f"{tag} ถือเกินถัง (ถือ 2,000 > ถัง 1,500) → แดง 'Winner เกินถัง ฿500' (RG2b เตือนเท่านั้น) · มีไม้ plan → ช่อง 'แผนที่รอ (Planned)' แสดง (1 ตัว · เสี่ยง +฿50)",
+              r2["neg"] and "Winner เกินถัง ฿500" in r2["free"] and r2["plan"] and "แผนที่รอ" in r2["plan"] and "1 ตัว" in r2["plan"] and "+฿50" in r2["plan"], json.dumps(r2, ensure_ascii=False))
         check(f"{tag} สูตรเดียว/บล็อกสรุป: ไม่มี console error", not ce and not pe, json.dumps([ce[:3], pe[:3]]))
     finally:
         browser.close()
