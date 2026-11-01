@@ -31,3 +31,14 @@ Tests: `tests/run_tests_phase*.py` (Playwright + mock Firebase), full run `tests
 
 ## Not verified
 Real Mac run, real Firestore, per-pool DD on real history (seed only), weekday re-run of date-sensitive suites.
+
+## UPDATE (after Mac run) — read this, it overrides the "Test status" above
+Cloud results were incomplete: on cloud many suites crash early because Mac-only files are missing, so they never showed their failures. On the Mac (all files present) vs main (b6df185 = RG2a merge + fundflow data commit):
+- branch fails 27 suites, main fails 16. Same failures on both: p5 p13 p23 p26 p41-p47 p66 p75 p80 p81 (p13 known false failure). p14 more fails on branch (19 vs 4).
+- REGRESSIONS TO FIX (13 suites, pass on main, fail on branch): p25 p53 p54 p55 p56 p64 p65 p79 p108 p110 p14(+) and p113 (my new suite fails on Mac, passes 336/0 on cloud).
+  - "equal to before X" checks (p25 p53 p54 p55 p56 p64 p65 p79) compare against index.backup-pre-X.html / core-size backup: numbers changed on purpose (pools 50/30/20, no gate/tier). Likely just expected-value changes → fix per brief rules (change expected values only, never delete/weaken, log in tests/RG2b_retired.md).
+  - p110 (12 fails, "Can't size: Sat capital not set", XAUUSD lot changed) and p108 (6 fails, XAUUSD size changed): determine if test data or a real app bug. If app bug: fix in index.html/core-size.js (edit core-size.js then python3 tools/sync_core_size.py).
+  - p14: "งดซื้อเพิ่ม" red-field checks are retired features → expectation change; also multi-viewport checks.
+  - p113 on Mac: read logs_rerun/run_tests_phase113.log first (maybe machine difference: fonts/width/date, or a real bug).
+- Date-sensitive suites (p3 p27 p30 p34 p36): rerun on a weekday; Thai date was Sunday during runs.
+- Work from now on happens on the Mac in ~/Dashboard-rg2b (branch claude/rg2b). Do not merge PR #5 until the above is fixed and the full suite is re-run and compared with main again. Push needs GitHub auth on the Mac.
