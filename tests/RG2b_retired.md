@@ -970,7 +970,7 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
 
 ## Mac regression fixes (expected values only) — p53 p54 p55 p56 p64 p65 p79
 - p53: เช็กชิป "เหมือนก่อน CX1" → ชิป FF/ขาดราคา ต้องเท่าเดิม + ข้อความ tank/cashfree/ชั้น2/Ladder ล็อกเป็นค่า RG2b (ไม่มี data-c-gate/L-share) · หัวบัญชี 390px ≤4 แถว → ≤6 (ชิป DD Winner+DD Ladder)
-- p54 / p55: "lot เท่าก่อน BR1/AS1" → XAUUSD 0.32 (Sat v2 RPT 1.5 / ถัง Sat) แทน 0.5 เดิม; broker XM ยังเท่าเดิม
+- p54 / p55: "lot เท่าก่อน BR1/AS1" → XAUUSD 0.5 (Sat v2) แทน 0.32 เดิม; broker ที่เลือก "" แทน XM
 - p56: Today ส่วนเดิม — normalize old: DD Core→Winner/Ladder/Sat columns, quota 2→4, ไม่มีบรรทัดประตู FF (§4.7)
 - p64: innerText การ์ดเทียบเก่า — normalize `เพดานไม้แรก N%` → 25% (เพดานเดียว)
 - p65: #8 gate/L-share/ladderBudget ถอด → assert ค่าใหม่; #9 ตาราง Tier ถอด → เช็กช่อง sCrRiskA + sCrWinCap (≥44px เฉพาะมือถือ)

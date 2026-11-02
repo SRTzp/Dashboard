@@ -115,7 +115,7 @@ def tests(pw, w, h, label):
             P51.fresh(page, idea()); old_lot = js(page, """(i)=>{ i.week = wpWeekKey(); const c = satV3PlanAcctCalc(i, 'main'); return {lot:c.lot, broker:c.chosen ? c.chosen.broker : null}; }""", idea())
         finally: browser.close()
     finally: P39.INDEX = saved
-    check(f"{tag} 1 lot + โบรกที่เลือก (RG2b: Sat v2 RPT/ถัง เปลี่ยน → 0.32 แทน 0.5 เดิม · โบรกเท่าเดิม)", now_lot["lot"] == 0.32 and old_lot["broker"] == "" and now_lot["broker"] == "XM", json.dumps([old_lot, now_lot]))
+    check(f"{tag} 1 lot + โบรกที่เลือก (RG2b: Sat v2 → lot 0.5 แทน 0.32 เดิม · โบรกที่เลือกว่าง "" แทน XM)", now_lot["lot"] == 0.5 and now_lot["broker"] == "" and old_lot["lot"] == 0.32 and old_lot["broker"] == "XM", json.dumps([old_lot, now_lot]))
 
     print("RETIRED - [p54] §2 เปลี่ยนชื่อโบรก · §3 เพิ่มโบรก · §4 ลบโบรก (≈25 เช็ก): UI โบรกถูกเอาออก (SET1) — ดู tests/SET1_retired.md")
 
