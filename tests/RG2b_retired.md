@@ -979,3 +979,13 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
 - p110: XAUUSD main → lot 0.03 / risk $441 (เดิม 0.05 / $630) · "ไม่ตั้งทุน Sat" ต้องล้าง capital.core ด้วย (ถัง Sat = 20% ของ core+satB×fx → satB=0 อย่างเดียวไม่ทำให้ไม่มีถัง — ตั้งใจตามบรีฟ ไม่ใช่บั๊ก) · OWN settings keys + "pools"
 - p108: §5 ไม้สอง Today Size 0.1 lot ×2 (0.03+0.03+0.04) · Risk $150 (main 6000, Caps เท่าเดิม, pos qty 0.07) · plan calc lot 0.03/riskUsd 441
 - p14: Sat strip/meta (ถัง 808,000/532,000, quota 4, Tactical 0.75, warn เหลือ heat), Core Port cells (Winner pool · Regime size), ไม่มีช่องแดง/ป้าย 'งดซื้อเพิ่ม' (Layer-2 cap ถอด), 'ของถัง Winner', Flow w→d (RG2a)
+
+## tests/run_tests_phase26.py — REMOVED sections (ฟอร์ม Ladder ในหน้า Core ถูกถอด/ย้ายไปหน้า Ladder · ครอบคลุมใหม่ใน p113)
+- **ไม่เรียกใน main() (ฟังก์ชันคงไว้เป็นหลักฐาน):** `ladder_checks` (ฟอร์มบันไดใน sheet Core + ประตู 5 ข้อ, `#cnStratL`) · `gate_checks` (ประตู f / L รวม / ชั้น 2 / เงินสด) · `behave_checks` (สลับกลยุทธ์ W↔L, convert)
+- **เช็กรายตัวที่เปลี่ยนเป็น `removed(...)` (พิมพ์ "REMOVED -" ไม่นับ pass/fail):**
+  - wl_checks: B8 เงินว่างร่วม W/L (×5) · B9 ไม้แรก W ตอนมีบันไดจอง · B10 แถบ 4 ส่วน / 'งบ W / L' / ช่อง 'ประตูบันได L' / 'L x% / 30%' + 'บันไดใหม่: เปิด' — เหตุผล: เงินว่าง Ladder อิสระจาก Winner, ไม่มีประตู f/L-share
+  - tier_checks: D20 (การ์ด L ลดเป็น B ×4) — การ์ด L อยู่หน้า Ladder
+  - fix_checks (430px): fix2 ×3 (sheet เลื่อน Stop/ยกเลิกระดับ TH, การ์ด L US)
+  - regress_checks: E26 (เทียบเลขหัวบัญชี "เท่าก่อนแก้" กับ backup — ตัวเลข/ป้ายถังเปลี่ยนตามบรีฟ)
+- **เปลี่ยน expected (ไม่ลบ):** core-size hunk 33→35 + ไม่มี shareCap/l2Cap · core_size_test 471→502 · D19 ตัดเงื่อนไข "เพดานไม้แรก 10%" (เพดานเดียว 25%) · fix1 ชั้น 2 "ถ้าบันไดเต็ม 4.02%" ไม่มี "/ 20%"
+- ผล: p26 = 36 pass / 0 fail (จาก crash ที่เช็กที่ 1)
