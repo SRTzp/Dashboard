@@ -978,3 +978,4 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
 - p25: hunk 33→35, shareCap/l2Cap ไม่อยู่ใน diff (ดูหัวข้อก่อนหน้า)
 - p110: XAUUSD main → lot 0.03 / risk $441 (เดิม 0.05 / $630) · "ไม่ตั้งทุน Sat" ต้องล้าง capital.core ด้วย (ถัง Sat = 20% ของ core+satB×fx → satB=0 อย่างเดียวไม่ทำให้ไม่มีถัง — ตั้งใจตามบรีฟ ไม่ใช่บั๊ก) · OWN settings keys + "pools"
 - p108: §5 ไม้สอง Today Size 0.1 lot ×2 (0.03+0.03+0.04) · Risk $150 (main 6000, Caps เท่าเดิม, pos qty 0.07) · plan calc lot 0.03/riskUsd 441
+- p14: Sat strip/meta (ถัง 808,000/532,000, quota 4, Tactical 0.75, warn เหลือ heat), Core Port cells (Winner pool · Regime size), ไม่มีช่องแดง/ป้าย 'งดซื้อเพิ่ม' (Layer-2 cap ถอด), 'ของถัง Winner', Flow w→d (RG2a)
