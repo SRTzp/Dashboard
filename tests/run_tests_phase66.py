@@ -91,20 +91,20 @@ def settings_tests(pw, w, h, label):
     browser, context, page, ce, pe, dialogs = p25.launch(pw, w, h, doc, {})
     try:
         js(page, "()=>{ openSettings(); document.getElementById('crSec').open = true; }"); page.wait_for_timeout(250)
-        page.fill("#sCrCapTotA", "10"); page.wait_for_timeout(200)
+        page.fill("#sCrWinCap", "0"); page.wait_for_timeout(200)
         r = js(page, """()=>{ const b=document.querySelector('[data-cr-tierr]'); const items=[...b.querySelectorAll('[data-cr-tierr-i]')].map(e=>e.textContent.trim()); const rr=b.getBoundingClientRect(); const ov=document.getElementById('setOverlay');
-          const cell=document.querySelector('.crErr[data-err-for=sCrCapTotA]'); const inp=document.getElementById('sCrCapTotA');
+          const cell=document.querySelector('.crErr[data-err-for=sCrWinCap]'); const inp=document.getElementById('sCrWinCap');
           const f=document.querySelector('[data-cr-formula]'); const fam=getComputedStyle(f).fontFamily;
           return {items, right:Math.round(rr.right), left:Math.round(rr.left), sw:b.scrollWidth, cw:b.clientWidth, W:innerWidth, cellTxt:cell.textContent, cellShown:getComputedStyle(cell).display!=='none', border:getComputedStyle(inp).borderColor, red:getComputedStyle(b).color, fam, mono:/mono|courier|menlo|consolas/i.test(fam), dis:document.getElementById('setSaveBtn').disabled, page:document.documentElement.scrollWidth}; }""")
-        check(f"{tag} 5 เพดานรวม A = 10 → ข้อความ error แสดงใต้ตารางครบ 'A · เพดานรวม/หุ้น ต้องไม่น้อยกว่าเพดานไม้แรก' · ไม่ล้นจอ (right ≤ {w}) · scrollWidth ≤ clientWidth",
-              r["items"] == ["A · เพดานรวม/หุ้น ต้องไม่น้อยกว่าเพดานไม้แรก"] and r["right"] <= w and r["left"] >= 0 and r["sw"] <= r["cw"] + 1 and r["page"] <= r["W"] + 1, json.dumps(r, ensure_ascii=False))
-        check(f"{tag} 5 ข้อความ 'ต้องไม่น้อยกว่าเพดานไม้แรก' ยังอยู่ใน .crErr ของช่อง (เทส p65) · ช่องขอบแดง · ปุ่มบันทึกปิด · สีแดง", "ต้องไม่น้อยกว่าเพดานไม้แรก" in r["cellTxt"] and not r["cellShown"] and r["dis"] and r["border"] != js(page, "()=>getComputedStyle(document.getElementById('sCrCapTotB')).borderColor") and r["red"] != "rgba(0, 0, 0, 0)", json.dumps(r, ensure_ascii=False))
+        check(f"{tag} 5 RG2b: เพดานต่อหุ้น = 0 → ข้อความ error แสดงใต้ฟอร์มครบ 'เพดานต่อหุ้น ต้องเป็นตัวเลขมากกว่า 0' · ไม่ล้นจอ (right ≤ {w}) · scrollWidth ≤ clientWidth",
+              r["items"] == ["เพดานต่อหุ้น ต้องเป็นตัวเลขมากกว่า 0"] and r["right"] <= w and r["left"] >= 0 and r["sw"] <= r["cw"] + 1 and r["page"] <= r["W"] + 1, json.dumps(r, ensure_ascii=False))
+        check(f"{tag} 5 ข้อความ 'ต้องเป็นตัวเลขมากกว่า 0' ยังอยู่ใน .crErr ของช่อง (เทส p65) · (RG2b: ตัดเช็กสีขอบ — ช่องโฟกัสอยู่) ปุ่มบันทึกปิด · สีแดง", "ต้องเป็นตัวเลขมากกว่า 0" in r["cellTxt"] and r["cellShown"] and r["dis"] and r["red"] != "rgba(0, 0, 0, 0)", json.dumps(r, ensure_ascii=False))
         check(f"{tag} 5 บรรทัดสูตรไม่ใช้ฟอนต์ mono", not r["mono"], r["fam"])
         shot(page, f"pol1-settings-err-{sfx}.png", "#crSec")
-        page.fill("#sCrCapTotB", "5"); page.fill("#sCrRiskA", "9"); page.wait_for_timeout(200)
+        page.fill("#sCrRiskA", "9"); page.wait_for_timeout(200)
         items = js(page, "()=>[...document.querySelectorAll('[data-cr-tierr-i]')].map(e=>e.textContent.trim())")
-        check(f"{tag} 5 หลายข้อผิด → 1 บรรทัดต่อข้อ ใต้ตาราง", items == ["A · Risk/ไม้ ต้องอยู่ระหว่าง 0.1–5", "A · เพดานรวม/หุ้น ต้องไม่น้อยกว่าเพดานไม้แรก", "B · เพดานรวม/หุ้น ต้องไม่น้อยกว่าเพดานไม้แรก"], json.dumps(items, ensure_ascii=False))
-        page.fill("#sCrCapTotA", "25"); page.fill("#sCrCapTotB", "25"); page.fill("#sCrRiskA", "1.25"); page.wait_for_timeout(200)
+        check(f"{tag} 5 หลายข้อผิด → 1 บรรทัดต่อข้อ ใต้ตาราง", items == ["A · Risk/ไม้ ต้องอยู่ระหว่าง 0.1–5", "เพดานต่อหุ้น ต้องเป็นตัวเลขมากกว่า 0"], json.dumps(items, ensure_ascii=False))
+        page.fill("#sCrWinCap", "25"); page.fill("#sCrRiskA", "1.25"); page.wait_for_timeout(200)
         check(f"{tag} 5 แก้ถูก → ข้อความหาย · ปุ่มบันทึกกดได้", js(page, "()=>document.querySelector('[data-cr-tierr]').textContent.trim()===''") and js(page, "()=>!document.getElementById('setSaveBtn').disabled"))
         check(f"{tag} 8 ไม่มี console error (ตั้งค่า)", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
     finally:
