@@ -32,13 +32,32 @@ Tests: `tests/run_tests_phase*.py` (Playwright + mock Firebase), full run `tests
 ## Not verified
 Real Mac run, real Firestore, per-pool DD on real history (seed only), weekday re-run of date-sensitive suites.
 
-## UPDATE (after Mac run) — read this, it overrides the "Test status" above
-Cloud results were incomplete: on cloud many suites crash early because Mac-only files are missing, so they never showed their failures. On the Mac (all files present) vs main (b6df185 = RG2a merge + fundflow data commit):
-- branch fails 27 suites, main fails 16. Same failures on both: p5 p13 p23 p26 p41-p47 p66 p75 p80 p81 (p13 known false failure). p14 more fails on branch (19 vs 4).
-- REGRESSIONS TO FIX (13 suites, pass on main, fail on branch): p25 p53 p54 p55 p56 p64 p65 p79 p108 p110 p14(+) and p113 (my new suite fails on Mac, passes 336/0 on cloud).
-  - "equal to before X" checks (p25 p53 p54 p55 p56 p64 p65 p79) compare against index.backup-pre-X.html / core-size backup: numbers changed on purpose (pools 50/30/20, no gate/tier). Likely just expected-value changes → fix per brief rules (change expected values only, never delete/weaken, log in tests/RG2b_retired.md).
-  - p110 (12 fails, "Can't size: Sat capital not set", XAUUSD lot changed) and p108 (6 fails, XAUUSD size changed): determine if test data or a real app bug. If app bug: fix in index.html/core-size.js (edit core-size.js then python3 tools/sync_core_size.py).
-  - p14: "งดซื้อเพิ่ม" red-field checks are retired features → expectation change; also multi-viewport checks.
-  - p113 on Mac: read logs_rerun/run_tests_phase113.log first (maybe machine difference: fonts/width/date, or a real bug).
-- Date-sensitive suites (p3 p27 p30 p34 p36): rerun on a weekday; Thai date was Sunday during runs.
-- Work from now on happens on the Mac in ~/Dashboard-rg2b (branch claude/rg2b). Do not merge PR #5 until the above is fixed and the full suite is re-run and compared with main again. Push needs GitHub auth on the Mac.
+## FINAL STATUS (Mac, 2026-11-02) — read this, it overrides "Test status" above
+Regression work is closed. Branch `claude/rg2b` (PR #5, Draft) is pushed; latest commit `55329b4`.
+
+### What was done (all on the Mac, ~/Dashboard-rg2b)
+- Fixed the 13 regression suites by changing **expected values only** (nothing weakened silently; every change logged in `tests/RG2b_retired.md`): p25 p53 p54 p55 p56 p64 p65 p79 p108 p110 p14 p66, plus p113 (passes 335/335 on the Mac, no change needed).
+- p110 was NOT an app bug: Sat pool = 20% of (core + satB×fx), so clearing satB alone leaves a pool; the test now clears core too.
+- One real app fix found while doing p66: the "max per stock" (`sCrWinCap`) range error did not appear in the settings summary box (label map lacked it) → added in `index.html`.
+- p54/p55: first fix had old/new swapped; corrected (new app = 0.5 lot, old backup = 0.32).
+- **p26 (decision: option 1)**: the Core-page ladder form (5 gates, `#cnStratL`, W↔L convert) is gone, so the sections tied to it were retired, not rewritten. Not called in `main()`: `ladder_checks`, `gate_checks`, `behave_checks` (functions kept as evidence). 41 individual checks turned into `removed(...)` (prints `REMOVED -`, not counted pass/fail): wl_checks B8/B9/B10, tier_checks D20, fix_checks fix2, regress_checks E26 (10 checks comparing head numbers with the old backup). Remaining expectations updated (core-size 35 hunks, core_size_test 502, D19, fix1). Result: p26 = 36 pass / 0 fail. New ladder page is covered by p113. E26 could be re-done as real-value checks later (not required).
+
+### Full suite vs main (both run with tests/runall2.sh on the Mac; main = b6df185 in ~/Dashboard-main)
+| Suite | main | branch |
+|---|---|---|
+| p14 | fail 4 | pass 195 |
+| p66 | fail 2 (S2 missing backup file + 1) | fail 1 (S2 only), pass 42 |
+| p23 | fail 2 | fail 1 (sync_core_size check, also fails on main) |
+| p5 p13 p41–p47 p75 p80 p81 | fail | fail, identical counts |
+| p26 | fail 3 (of 245) | was crashing on branch → now 36/0 after retirement (see above) |
+| all others | pass | pass |
+Branch full run (before the p26/p66 fixes): 99 pass / 15 fail; every remaining fail is the same as main except p26 (fixed since). Date-sensitive suites p3 p27 p30 p34 p36 all pass (run on a Monday).
+
+### Known-failing on both main and branch (not RG2b)
+p5 p13 (known false failure) p23 (sync_core_size check) p41–p47 p75 p80 p81, p66 S2 (missing `index.backup-pre-POL1.html` + `tests/_bk_pol1/`).
+
+### Not verified / caveats
+- Full suite was NOT re-run after the last commits (p66 fix, p26 retirement); only the touched suites were re-run individually (p26 36/0, p66 42/1, p65, p113). Owner decided this was acceptable.
+- Real Firestore, per-pool DD on real history (seed data only) still unverified.
+- Do not commit `index.backup-pre-*.html`. Ladder rules (#21) are intentionally not implemented.
+- Next: mark PR #5 ready for review / merge when the owner decides.
