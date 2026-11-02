@@ -291,7 +291,7 @@ def run(pw, width, height, label):
     fill_blur(page, f'{root} input[onchange*="cancel_level"]', "2600")
     page.evaluate("() => { const s=getBook('main').settings; s.satRisk={rpt:1.25, rptHi:1.5}; }")   # SR1 — fixture: ค่าเดิม 1.25/1.5 (ตัวเลขคาดหวังเดิมคงไว้)
     lot = page.evaluate(f"() => satV3PlanAcctCalc(sat7dIdea('{idea_id}'), 'main').lot")
-    check(f"{tag} §7 lot เดิมยังได้ค่าเท่าเดิม: XAUUSD main/XM = 0.19 lot", lot is not None and abs(lot - 0.19) < 1e-9, str(lot))
+    check(f"{tag} §7 lot เดิมยังได้ค่าเท่าเดิม: XAUUSD main/XM = 0.15 lot", lot is not None and abs(lot - 0.15) < 1e-9, str(lot))
     check(f"{tag} คำนวณ lot ต่อบัญชี + ปุ่ม 'บันทึก order ทุกบัญชีที่พร้อม (2)' ตามเดิม",
           "บันทึก order ทุกบัญชีที่พร้อม (2)" in page.evaluate(f"() => document.querySelector('{root} .ui-plan-cta .ui-btn-pri').innerText"))
     su_txt = page.evaluate(f"() => document.querySelector('{root} .ui-hint:not(.ui-cond-hint)') ? [...document.querySelectorAll('{root} .ui-hint')].map(e=>e.innerText).join('|') : ''")

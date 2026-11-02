@@ -4,7 +4,7 @@ mock Firestore · Chromium 1440 + 390 · นาฬิกาปลอม 2026-10-
 ภาพ tests/screenshots/ln1-{weekly,form-main,form-tactical,legacy-row,old-mode}-{1440,390}.png
 รัน: python3 run_tests_phase80.py   (วันอาทิตย์เวลาไทย: p3/p2 ล้มหลอก — ไม่เกี่ยวกับชุดนี้)"""
 from pf2_retire import retired_wm1 as retired3
-import json, os, re
+import functools, json, os, re
 import ff_stub
 ff_stub.FF_STUB = ff_stub.FF_STUB_BASE   # ชุดนี้ต้องการค่าเริ่มจริง (Lean) — ชุดเก่า seed "แบบเดิม" เอง · SET1: แฟลกนักพัฒนา dash.ln1Legacy ให้ตรวจโหมดเดิมได้
 from playwright.sync_api import sync_playwright
@@ -23,7 +23,7 @@ ENGINE = base.BROWSER_ENGINE
 results = []
 js = P37.js
 txt, overflow = P54.txt, P54.overflow
-launch, idea, calc = P77.launch, P77.idea, P77.calc
+launch, idea, calc = functools.partial(P77.launch, pin_sat=True), P77.idea, P77.calc
 put, note, trades, save, cnt = P78.put, P78.note, P78.trades, P78.save, P78.cnt
 
 

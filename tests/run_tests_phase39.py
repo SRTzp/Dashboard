@@ -49,6 +49,10 @@ TD3_OTHER_OPEN = True
 TD3_OTHER_DEV = True   # TD4b — Today ไม่มี Other ▸ แล้ว: ชุดเก่าเปิดจุดต่อ dash.td3OtherDev เพื่อยังทดสอบของเดิมใน Other ได้ (phase108 ตั้งเป็น False)
 
 
+import run_tests_phase24 as P24_
+PIN_BOTH = (__name__ == "__main__")
+
+
 def launch(pw, w, h, doc=None, cards=None, iso=CLK, clean=False, ff=None, extra=None, pick=None):
     """เหมือน P.launch แต่มี extra(page) ให้ seed เพิ่มก่อน login (watchlist/research ตามเคส)"""
     lk = {"headless": True}
@@ -71,6 +75,7 @@ def launch(pw, w, h, doc=None, cards=None, iso=CLK, clean=False, ff=None, extra=
     page.wait_for_timeout(150)
     page.evaluate("() => localStorage.setItem('bkLastBackupAt', String(Date.now()))")
     doc = doc if doc is not None else P.doc38()
+    if PIN_BOTH: P24_.pin_both_pools(doc)   # RG2b — ตรึงถัง Winner/Sat เท่าทุนเดิม (รันเป็นสคริปต์ของชุดนี้เท่านั้น)
     PK = PICK39 if pick is None else pick   # pick=False → ไม่ override (ชุด WA1+ ตั้ง pick เอง)
     if PK:   # WA1fix — Today นับเฉพาะ Asset ที่เลือกสัปดาห์นี้ (เพดาน 3): ชุดนี้ใช้ XAU · BTC · Brent (S50 ไม่ได้เลือก)
         for _b in doc["books"].values():
@@ -97,7 +102,7 @@ def launch(pw, w, h, doc=None, cards=None, iso=CLK, clean=False, ff=None, extra=
 def seed(page, path, d): page.evaluate("([p,d])=>window.firebase.__mockDb.__seedDoc(p, d)", [path, d])
 
 
-def ds_set(doc, acct, bucket, tank, **kw): doc["books"][acct]["settings"]["ddState"][bucket] = P.ds0(tank, **kw)
+def ds_set(doc, acct, bucket, tank, **kw): doc["books"][acct]["settings"]["ddState"]["winner" if bucket == "core" else bucket] = P.ds0(tank, **kw)   # RG2b §4.7 — เบรก DD ต่อถัง (core → Winner)
 
 
 def okfull(page): return js(page, "()=>{ const e = document.querySelector('[data-td-okline] .txt .full'); return e ? e.textContent.replace(/\\s+/g,' ').trim() : null; }")
@@ -148,16 +153,15 @@ def quiet_tests(pw, w, h, label):
         page.locator('[data-td-numbtn]').click(); page.wait_for_timeout(200)
         tbl = js(page, """()=>({head: [...document.querySelectorAll('[data-td-nums] thead th')].map(e=>e.innerText.trim()), rows: [...document.querySelectorAll('[data-td-nums] tbody tr')].map(r=>({a:r.dataset.numAcct, c:[...r.children].map(c=>c.innerText.trim())})),
             foot: document.querySelector('[data-td-detfoot]').innerText.trim()})""")
-        exp = js(page, """()=>acctList.map(a=>{ const bs = sat7dAcctBase(a.id), cr = coreAcctRisk(a.id), d1 = ddEval(a.id,'core'), d2 = ddEval(a.id,'sat'), f = x=>String(Math.round(x*100)/100);
-            return {a: a.id, c: [td3AcctName(a), f(d1.ddPct)+'%', f(d2.ddPct)+'%', f(bs.heatPct)+' / '+bs.heatMax+'%', bs.nNew+' / '+bs.newMax, f(cr.layer2Pct)+' / '+cr.cfg.l2Cap+'%']}; })""")
-        check(f"{tag} 2 กด 'ดูตัวเลข' → ตาราง 2 แถว (Main · Family) × 5 คอลัมน์", len(tbl["rows"]) == 2 and [r["c"][0] for r in tbl["rows"]] == ["Main", "Family"] and len(tbl["head"]) == 6 and det(), json.dumps(tbl, ensure_ascii=False))
+        exp = js(page, """()=>acctList.map(a=>{ const bs = sat7dAcctBase(a.id), cr = coreAcctRisk(a.id), d1 = ddEval(a.id,'winner'), d3 = ddEval(a.id,'ladder'), d2 = ddEval(a.id,'sat'), f = x=>String(Math.round(x*100)/100);
+            return {a: a.id, c: [td3AcctName(a), f(d1.ddPct)+'%', f(d3.ddPct)+'%', f(d2.ddPct)+'%', f(bs.heatPct)+' / '+bs.heatMax+'%', bs.nNew+' / '+bs.newMax, f(cr.layer2Pct)+'%']}   /* RG2b — DD แยก Winner/Ladder · ชั้น 2 ไม่มีเพดาน */; })""")
+        check(f"{tag} 2 กด 'ดูตัวเลข' → ตาราง 2 แถว (Main · Family) × 6 คอลัมน์ (RG2b: DD Winner · DD Ladder แยก)", len(tbl["rows"]) == 2 and [r["c"][0] for r in tbl["rows"]] == ["Main", "Family"] and len(tbl["head"]) == 7 and det(), json.dumps(tbl, ensure_ascii=False))
         check(f"{tag} 2 ค่าในตารางตรงกับฟังก์ชันเดิม (ddEval · sat7dAcctBase · coreAcctRisk)", [(r["a"], r["c"]) for r in tbl["rows"]] == [(e["a"], e["c"]) for e in exp], json.dumps([tbl["rows"], exp], ensure_ascii=False))
-        gate = js(page, "()=>coreGate('main').text")
-        check(f"{tag} 2 ใต้ตาราง 'ประตู FF: {{สถานะเดิม}} · fundflow อัปเดต 2 ต.ค.' (UX2: f→FF)", tbl["foot"] == f"ประตู FF: {gate} · fundflow อัปเดต 2 ต.ค.", tbl["foot"])
+        check(f"{tag} 2 ใต้ตาราง 'fundflow อัปเดต 2 ต.ค.' (RG2b ถอดประตู FF)", tbl["foot"] == "fundflow อัปเดต 2 ต.ค.", tbl["foot"])
         if w in (1440, 390): shot(page, f"td2-numbers-open-{label.replace('px','')}.png")
         if w <= 480:
             ov = P.overflow_x(page, ["[data-td-det]", "[data-td-nums]", ".tdWrap", ".tdOkLine"])
-            check(f"{tag} 2 มือถือ: ตารางตัวเลขไม่ล้นแนวนอน (หัวคอลัมน์ย่อ)", not ov and "DD C" in tbl["head"], json.dumps([ov, tbl["head"]], ensure_ascii=False))
+            check(f"{tag} 2 มือถือ: ตารางตัวเลขไม่ล้นแนวนอน (หัวคอลัมน์ย่อ)", not ov and "DD W" in tbl["head"], json.dumps([ov, tbl["head"]], ensure_ascii=False))
         page.locator('[data-td-numbtn]').click(); page.wait_for_timeout(150)
         check(f"{tag} 2 กดซ้ำ = พับ", not det())
         check(f"{tag} 1-2 console: ไม่มี error", not pe and not ce, "; ".join((pe + ce)[:3]))
@@ -172,9 +176,11 @@ def abnormal_doc():
     # heat Sat main 5.0/6% (ความเสี่ยงค้าง $1,300 × 40 ÷ ทุน $26,000 × 40)
     m["trades"] = [T("tsh", "satB", "open", sym="XAUUSD", entry=100, sl=90, qty=130, mult=1, cur="USD", date="2026-09-30", openedAt="2026-09-30"),
                    T("tms", "core", "open", sym="MSFT", entry=400, sl=380, qty=10, cur="USD", date="2026-09-10", openedAt="2026-09-10")]
-    # ไม้ใหม่ Family 2/2 (เสี่ยงน้อย)
+    # ไม้ใหม่ Family 4/4 (เสี่ยงน้อย)
     f["trades"] = [T("tfa", "satB", "open", sym="XAUUSD", entry=100, sl=99, qty=10, mult=1, cur="USD", date="2026-09-29", openedAt="2026-09-29"),
-                   T("tfb", "satB", "open", sym="BRENT", entry=100, sl=99, qty=10, mult=1, cur="USD", date="2026-09-30", openedAt="2026-09-30")]
+                   T("tfb", "satB", "open", sym="BRENT", entry=100, sl=99, qty=10, mult=1, cur="USD", date="2026-09-30", openedAt="2026-09-30"),
+                   T("tfc", "satB", "open", sym="BTCUSD", entry=100, sl=99, qty=10, mult=1, cur="USD", date="2026-09-30", openedAt="2026-09-30"),
+                   T("tfd", "satB", "open", sym="XAGUSD", entry=100, sl=99, qty=10, mult=1, cur="USD", date="2026-09-30", openedAt="2026-09-30")]   # RG2b: โควตาไม้ใหม่ 4/สัปดาห์ (เดิม 2)
     m["settings"].setdefault("coreRisk", {}).update({"l2Warn": 0.1, "l2Cap": 20, "gateWeeks": 1, "riskPct": 1, "tierA": 10, "tierB": 5})   # CZ1: seed ค่าเดิม   # ชั้น 2 ถึงเตือน · ประตู f เปิดเมื่อแดง 1 สัปดาห์
     ds_set(doc, "main", "core", 7000000, peak=8050000)   # DD Core main ≈ 13.04% → ลดขนาด
     return doc
@@ -189,31 +195,29 @@ def abnormal_tests(pw, w, h, label):
         ka, kb = kinds(page, "a"), kinds(page, "b")
         ta, tb = rows_text(page, "a"), rows_text(page, "b")
         j = lambda k, arr=ta, ks=ka: next((arr[i] for i, x in enumerate(ks) if x == k), "")
-        ev = js(page, "()=>{ const e = ddEval('main','core'); return [e.stage, Math.round(e.ddPct*100)/100]; }")
+        ev = js(page, "()=>{ const e = ddEval('main','winner'); return [e.stage, Math.round(e.ddPct*100)/100]; }")
         bs = js(page, "()=>{ const b = sat7dAcctBase('main'); return [Math.round(b.heatPct*100)/100, b.heatMax, b.nNew]; }")
         check(f"{tag} 3 ฐาน: DD Core main = reduce · heat main {bs[0]}/{bs[1]}% (≥ 80%)", ev[0] == "reduce" and abs(bs[0] - 5) < 0.01 and bs[1] == 6, json.dumps([ev, bs]))
         check(f"{tag} 3 heat Sat 5.0/6% → แถว 🟡 'heat Sat Main 5/6% · เหลือที่ 1%'", bool(re.search(r"heat Sat Main 5(\.0+)?/6% · เหลือที่ 1(\.0+)?%", j("heat"))) and ka.count("heat") == 1, j("heat") + str(ka))
         ol = okfull(page)
         check(f"{tag} 3 บรรทัดปกติไม่มีคำ 'heat' (แต่ยังมี fundflow)", ol is not None and "heat" not in ol and "fundflow" in ol, str(ol))
         page.locator('[data-td-numbtn]').click(); page.wait_for_timeout(200)
-        cls = js(page, "()=>{ const r = document.querySelector('[data-num-acct=\"main\"]'); return [r.children[3].className, r.children[3].innerText.trim()]; }")
+        cls = js(page, "()=>{ const r = document.querySelector('[data-num-acct=\"main\"]'); return [r.children[4].className, r.children[4].innerText.trim()]; }")
         check(f"{tag} 3 ตารางค่า heat main เป็นสีเหลือง (class a)", cls[0] == "a" and cls[1].startswith("5"), json.dumps(cls))
-        check(f"{tag} 4 ไม้ใหม่ Family 2/2 → แถว 🟡 'ไม้ใหม่ Sat Family ครบ 2/2 สัปดาห์นี้'", "ไม้ใหม่ Sat Family ครบ 2/2 สัปดาห์นี้" in j("newcnt"), j("newcnt"))
-        check(f"{tag} 4 DD Core main reduce → แถว 🟡 'เบรก DD Core Main: ลดขนาด ×0.5 · DD x%'", bool(re.search(r"เบรก DD Core Main: ลดขนาด ×0\.5 · DD 1[23]\.", j("dd-reduce"))), j("dd-reduce"))
-        check(f"{tag} 4 ชั้น 2 ถึงระดับเตือน → แถว 🟡 'ชั้น 2 Core Main a / 20%'", bool(re.search(r"ชั้น 2 Core Main 0\.\d+ / 20%", j("l2"))), j("l2") + str(ka))
-        check(f"{tag} 4 ประตู FF เปิด → แถว 🔵 'ประตู FF เปิด · วางบันได L ได้ (บัญชีหลัก)' (UX2: f→FF)", "ประตู FF เปิด · วางบันได L ได้ (บัญชีหลัก)" in j("gate", tb, kb) and "Family" not in j("gate", tb, kb), json.dumps(tb, ensure_ascii=False))
+        check(f"{tag} 4 ไม้ใหม่ Family 4/4 → แถว 🟡 'ไม้ใหม่ Sat Family ครบ 4/4 สัปดาห์นี้'", "ไม้ใหม่ Sat Family ครบ 4/4 สัปดาห์นี้" in j("newcnt"), j("newcnt"))
+        check(f"{tag} 4 DD Winner main reduce → แถว 🟡 'เบรก DD Winner Main: ลดขนาด ×0.5 · DD x%' (RG2b §4.7 แยกต่อถัง)", bool(re.search(r"เบรก DD Winner Main: ลดขนาด ×0\.5 · DD 1[23]\.", j("dd-reduce"))), j("dd-reduce"))
+        check(f"{tag} 4 ไม่มีแถวเตือนชั้น 2 (RG2b ถอดเพดานชั้น 2)", j("l2") == "", j("l2") + str(ka))
+        check(f"{tag} 4 ไม่มีแถวประตู FF เปิด (RG2b ถอดประตู)", j("gate", tb, kb) == "", json.dumps(tb, ensure_ascii=False))   # RG2b — ไม่มีแถวประตู FF
         ol = okline(page)
-        check(f"{tag} 4 บรรทัดปกติตัดคำของหมวดผิดปกติ (DD · heat · ไม้ใหม่ · ชั้น 2 · f) → เหลือ fundflow", ol == "✓ อื่น ๆ ปกติ — fundflow" or (w <= 480 and ol == "✓ อื่น ๆ ปกติ"), str(ol))
+        check(f"{tag} 4 บรรทัดปกติตัดคำของหมวดผิดปกติ (DD · heat · ไม้ใหม่ · ชั้น 2 · f) → เหลือ fundflow", ol in ("✓ อื่น ๆ ปกติ — ไม้ใหม่ · ชั้น 2 · f · fundflow", "✓ อื่น ๆ ปกติ — ชั้น 2 · f · fundflow", "✓ อื่น ๆ ปกติ — ชั้น 2 · fundflow", "✓ อื่น ๆ ปกติ — f · fundflow") or (w <= 480 and ol == "✓ อื่น ๆ ปกติ"), str(ol))   # RG2b — ชั้น 2 และ f ไม่เป็นเรื่องผิดปกติแล้ว
         row(page, "heat").click(); page.wait_for_timeout(500)
         st = js(page, "()=>({tab: activeTab, scope: planScope})")
         check(f"{tag} 4 กดแถว heat → แท็บแผน scope Future", st == {"tab": "plan", "scope": "future"}, json.dumps(st))
         go_today(page); row(page, "dd-reduce").click(); page.wait_for_timeout(400)
-        check(f"{tag} 4 กดแถวลดขนาด → sheet DD Core บัญชีหลัก", js(page, "()=>{ const h = document.querySelector('.core-sheet h3'); return !!h && /Core/.test(h.textContent) && /บัญชีหลัก/.test(h.textContent); }"))
+        check(f"{tag} 4 กดแถวลดขนาด → sheet DD Winner บัญชีหลัก", js(page, "()=>{ const h = document.querySelector('.core-sheet h3'); return !!h && /Winner/.test(h.textContent) && /บัญชีหลัก/.test(h.textContent); }"))
         js(page, "()=>coreSheetClose()"); page.wait_for_timeout(200)
-        go_today(page); row(page, "l2").click(); page.wait_for_timeout(500)
-        check(f"{tag} 4 กดแถวชั้น 2 → แท็บแผน (หุ้น) บัญชีหลัก", js(page, "()=>activeTab+'/'+planScope+'/'+planAcctFilter") == "plan/stock/main", js(page, "()=>activeTab+'/'+planScope+'/'+planAcctFilter"))
-        go_today(page); row(page, "gate").click(); page.wait_for_timeout(500)
-        check(f"{tag} 4 กดแถวประตู f → แท็บแผน (หุ้น)", js(page, "()=>activeTab+'/'+planScope") == "plan/stock")
+        go_today(page)   # RG2b — แถวชั้น 2 / ประตู FF ถอดแล้ว: ไม่มีให้กด
+        check(f"{tag} 4 ไม่มีแถวชั้น 2 และแถวประตู f ให้กด", js(page, "()=>document.querySelectorAll('[data-kind=l2],[data-kind=gate]').length") == 0)
         go_today(page)
         if w in (1440, 390): shot(page, f"td2-abnormal-{label.replace('px','')}.png")
         if w <= 480:

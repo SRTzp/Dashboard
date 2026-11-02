@@ -164,7 +164,7 @@ def tests(pw, w, h, label):
         leg = txt(page, "[data-ln3-leg=tactical]")
         check(f"{tag} 6 Tactical: บรรทัด 'TP1 4,306 (2R·50%) · TP2 4,369 (3R)'", leg is not None and leg.startswith("TP1 ") and "(2R·50%)" in leg and "TP2 " in leg and "(3R)" in leg, leg)
         st = txt(page, "[data-ln2-form=tactical]")
-        check(f"{tag} 7 สถานะ Tactical: '▲ · 2% · <บัญชี> $270 · <บัญชี> $180 · ● Loss 0/5 · DD 0/10%' (LN3fix3c: ทุกบัญชี · ≤340px แสดงจุดสีแทนชื่อ)", re.fullmatch(r"▲ Up · 2% · (?:\S+ )?\$270 · (?:\S+ )?\$180 · ● Loss 0/5 · DD 0/10%", st) is not None, st)
+        check(f"{tag} 7 สถานะ Tactical (RG2b: RPT 0.75% ของถัง Sat · DD 3%): '▲ · 0.75% · <บัญชี> $225 · <บัญชี> $203 · ● Loss 0/5 · DD 0/3%' (LN3fix3c: ทุกบัญชี · ≤340px แสดงจุดสีแทนชื่อ)", re.fullmatch(r"▲ Up · 0\.75% · (?:\S+ )?\$225 · (?:\S+ )?\$203 · ● Loss 0/5 · DD 0/3%", st) is not None, st)
         shot(page, f"ln3-plan-form-tactical-{sfx}.png", ".ui-plan")
         def tl(i, d, pnl, k="x"): return sat_t(f"{k}{i}", status="closed", sleeve="tactical", entry=4180, sl=4160, qty=0.10, exitPrice=4180 + pnl / 10.0, exitDate=d)
         put(page, [tl(i, f"2026-09-{20 + i}", -50) for i in range(1, 6)], "main")
@@ -177,7 +177,7 @@ def tests(pw, w, h, label):
     try:
         iid = idea(page, sleeve="main", entry=4180, sl=4117)
         st = txt(page, "[data-ln2-form=main]")
-        check(f"{tag} 7 สถานะ Main: '▲ · Macro ▲ · 2% · <บัญชี> $630 · <บัญชี> $420 · ไม้ใหม่ 0/5' (LN3fix3c: ทุกบัญชี)", re.fullmatch(r"▲ Up · Macro ▲ · 2% · (?:\S+ )?\$630 · (?:\S+ )?\$420 · (?:ไม้)?ใหม่ 0/5", st) is not None, st)
+        check(f"{tag} 7 สถานะ Main (RG2b: RPT 1.5% · โควตา 4): '▲ · Macro ▲ · 1.5% · <บัญชี> $450 · <บัญชี> $405 · ไม้ใหม่ 0/4' (LN3fix3c: ทุกบัญชี)", re.fullmatch(r"▲ Up · Macro ▲ · 1\.5% · (?:\S+ )?\$450 · (?:\S+ )?\$405 · (?:ไม้)?ใหม่ 0/4", st) is not None, st)
         check(f"{tag} 6 ทิศตาม Macro → ไม่มีกล่อง 'สวน Macro'", cnt(page, "[data-ln3-macro-box]") == 0)
     finally: b.close()
     # ── สวน Macro (สัปดาห์ Short · Playbook ▲ → Short สวน Macro)

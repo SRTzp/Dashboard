@@ -57,7 +57,7 @@ def seed(page, main=None, fam=None, ports=None):
     page.evaluate("""([m,f,ports])=>{ getBook('main').trades = m||[]; getBook('fam').trades = f||[];
         acctList.forEach(a=>{ a.ports = (ports && ports[a.id]) || ['core','satB']; });
         planAcctFilter='all'; switchTab('plan'); render(); }""", [main, fam, ports])
-    page.wait_for_timeout(150)
+    page.wait_for_timeout(1000)   # RG2b: ddSync เขียน DD 3 ถัง → รอ echo ของ mock Firestore ก่อนอ่าน
 
 
 def strip(page):
@@ -114,6 +114,8 @@ def strip_tests(page, tag):
           st["main"]["future"] is None and st["main"]["stock"] and st["fam"]["stock"] is None and st["fam"]["future"], json.dumps({k: [bool(v["stock"]), bool(v["future"])] for k, v in st.items()}))
     # "ใหม่"
     seed(page, main=[T("m1", "core", "open", date="2020-01-06")], fam=[T("f1", "satB", "open", qty=1, date=__import__("datetime").date.today().isoformat())])
+    page.wait_for_timeout(600)
+    seed(page, main=[T("m1", "core", "open", date="2020-01-06")], fam=[T("f1", "satB", "open", qty=1, date=__import__("datetime").date.today().isoformat())])   # RG2b: seed ซ้ำ — echo ของ ddSync (3 ถัง) จากรอบก่อนทับ trades ที่ตั้งตรง ๆ ครั้งแรก
     st = {x["id"]: x for x in strip(page)}
     check(f"{tag} 'ใหม่ n': ซ่อนเมื่อ 0 (main) · แสดงเมื่อ >0 (fam ใหม่ 1)", st["main"]["newTxt"] is None and st["fam"]["newTxt"] and "1" in st["fam"]["newTxt"], json.dumps([st["main"]["newTxt"], st["fam"]["newTxt"]], ensure_ascii=False))
 

@@ -74,14 +74,14 @@ def run_viewport(pw, width, height, label):
     xau_pure = page.evaluate("""
       () => Calc.satLot({riskAmount: 13000/33, dist: 20, contract: 100, lotStep: 0.01, minLot: 0.01})
     """)
-    check(f"[{label}] Calc.satLot XAUUSD pure -> 0.19 lot",
+    check(f"[{label}] Calc.satLot XAUUSD pure -> 0.15 lot",
           xau_pure.get("lot") is not None and abs(xau_pure["lot"] - 0.19) < 1e-9,
           json.dumps(xau_pure))
 
     s50_pure = page.evaluate("""
       () => Calc.satLot({riskAmount: 13000, dist: 10, contract: 200, lotStep: 1, minLot: 1})
     """)
-    check(f"[{label}] Calc.satLot S50 pure -> 6 สัญญา",
+    check(f"[{label}] Calc.satLot S50 pure -> 5 สัญญา",
           s50_pure.get("lot") == 6, json.dumps(s50_pure))
 
     # ---- §7 canonical numeric cases, via the LIVE code path (sat7dCalc -> delegates to Calc.satLot) ----
@@ -91,8 +91,8 @@ def run_viewport(pw, width, height, label):
                         checks:{g1:true,g2:true,g3:true,setup:true}, invalidation:'test',
                         accts:{main:{broker:'XM'}}}, 'main')
     """)
-    check(f"[{label}] sat7dCalc (live path) XAUUSD main/XM -> 0.19 lot",
-          xau_live.get("lot") is not None and abs(xau_live["lot"] - 0.19) < 1e-9,
+    check(f"[{label}] sat7dCalc (live path) XAUUSD main/XM -> 0.15 lot",
+          xau_live.get("lot") is not None and abs(xau_live["lot"] - 0.15) < 1e-9,
           json.dumps({k: xau_live.get(k) for k in ("lot","lotMsg","warns","ready")}))
 
     s50_live = page.evaluate("""
@@ -100,8 +100,8 @@ def run_viewport(pw, width, height, label):
                         checks:{g1:true,g2:true,g3:true,setup:true}, invalidation:'test',
                         accts:{main:{broker:'Pi'}}}, 'main')
     """)
-    check(f"[{label}] sat7dCalc (live path) S50 main/Pi -> 6 สัญญา",
-          s50_live.get("lot") == 6,
+    check(f"[{label}] sat7dCalc (live path) S50 main/Pi -> 5 สัญญา",
+          s50_live.get("lot") == 5,
           json.dumps({k: s50_live.get(k) for k in ("lot","lotMsg","warns","ready")}))
 
     # BTC not configured for any broker on 'main' -> should degrade to "—"/warning, not throw

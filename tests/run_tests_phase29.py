@@ -173,8 +173,8 @@ def section_A(pw, w, h, tag):
     # A3 การ์ด L ซื้อระดับแรก
     browser, context, page, ce, pe, dialogs = launch(pw, w, h, p26.doc26(), cards={"l1": p26.lcard("l1")})
     try:
-        go(page); ex(page, "l1")
-        page.click(card_sel("l1") + " [data-c-lbuy]"); page.wait_for_selector('.core-sheet [data-core-sheet="lbuy"]'); page.click("#clSave"); page.wait_for_timeout(700)
+        go(page); page.evaluate("()=>{ setPlanScope('ladder'); render(); }"); page.wait_for_timeout(400); ex(page, "l1")   # RG2b: การ์ด L อยู่หน้า Ladder
+        page.click('[data-ldr-card="l1"] [data-ldr-buy], ' + card_sel("l1") + " [data-c-lbuy]"); page.wait_for_selector('.core-sheet [data-core-sheet="lbuy"]'); page.click("#clSave"); page.wait_for_timeout(700)
         t = next((x for x in p24.book_trades(page) if x["sym"] == "ZZZ"), None)
         check(f"{tag} A3 การ์ด L ซื้อระดับแรก (coreLBuySave) → trade unplanned:false", t is not None and t["unplanned"] is False, json.dumps(t))
     finally:
@@ -250,8 +250,8 @@ def section_B_cards(pw, w, h, tag):
         check(f"{tag} B5 การ์ด B + WL A → เทา · การ์ด B + ไม่อยู่ WL → เทา · การ์ด B + WL B → ไม่มี",
               one("k6", "muted", "WL_A") and one("k7", "muted", "NOT_IN_WATCHLIST") and b("k10") == [], json.dumps([b("k6"), b("k7"), b("k10")], ensure_ascii=False))
         check(f"{tag} B6 PTT.BK บนการ์ด จับคู่ PTT ใน Watchlist (WL = B → เหลือง)", one("k8", "warn", "WL_B"), json.dumps(b("k8"), ensure_ascii=False))
-        check(f"{tag} B3 การ์ด L ก็มีป้าย (A + WL B → เหลือง)", one("k9", "warn", "WL_B"), json.dumps(b("k9"), ensure_ascii=False))
-        w_ids = ["k1", "k2", "k3", "k8", "k9"]; m_ids = ["k4", "k5", "k6", "k7", "k10"]
+        check(f"{tag} B3 การ์ด L อยู่หน้า Ladder (RG2b) → ไม่มีป้าย Tier บนหน้า Winner", b("k9") == [], json.dumps(b("k9"), ensure_ascii=False))
+        w_ids = ["k1", "k2", "k3", "k8"]; m_ids = ["k4", "k5", "k6", "k7", "k10", "k9"]   # RG2b: k9 (การ์ด L) ย้ายไปหน้า Ladder
         check(f"{tag} B7 แถวยุบ: ⚠ เมื่อมี warn (k1 k2 k3 k8 k9) · title = ข้อความ · ไม่มีเมื่อมีแค่ muted/ไม่มีป้าย",
               all(row_warn(page, i) for i in w_ids) and not any(row_warn(page, i) for i in m_ids) and row_warn(page, "k1") == "Watchlist = B · การ์ดยังเป็น A",
               json.dumps({i: row_warn(page, i) for i in w_ids + m_ids}, ensure_ascii=False))

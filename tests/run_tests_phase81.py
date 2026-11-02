@@ -50,7 +50,7 @@ def fixture(mode="diff"):
 
 
 def launch(pw, w, h, bias="Long"):
-    browser, context, page, ce, pe, dialogs = P54.launch(pw, w, h, fixture())
+    browser, context, page, ce, pe, dialogs = P54.launch(pw, w, h, fixture(), pin_sat=True)   # RG2b — ถัง Sat ตรึงเท่าทุน Sat เดิม
     dl = dialogs   # รายการข้อความ dialog ที่แอปเด้ง (launch ของ P54 กด OK ให้)
     P51.fresh(page, None)
     js(page, "(l)=>{ satWeekPickWrite(wpWeekKey(), l); }", ["XAUUSD", "BTCUSD"])
@@ -101,7 +101,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 1 ค่าเก่าที่จำไว้ไม่มีอยู่จริง → ไม่มีผล · ยัง 2 แถว แถวแรก = บัญชีแรก", hd(page)["acc"] == "main" and hd(page)["rows"] == 2)
         # พับรายละเอียด
         det = js(page, "()=>{ const d = document.querySelector('[data-ln2-det]'); d.open = true; return d.innerText.replace(/\\s+/g,' '); }")
-        check(f"{tag} 1 พับ 'รายละเอียดและกฎบัญชี': เงิน Sat · Main/Tactical · เพดาน Sat/ต่อสินค้า/Core+Sat · วิธีนับ", all(k in det for k in ("เงิน Sat", "Main 70%", "Tactical 30%", "เพดาน", "ต่อสินค้า", "Core+Sat", "Entry ถึง Stop ปัจจุบัน", "รวมแผนรอเข้า", "Stop เลยทุน = 0")), det[:300])
+        check(f"{tag} 1 พับ 'รายละเอียดและกฎบัญชี': เงิน Sat · Main/Tactical · เพดาน Sat/ต่อสินค้า/Core+Sat · วิธีนับ", all(k in det for k in ("เงิน Sat", "Main + Tactical", "เพดาน", "ต่อสินค้า", "Core+Sat", "Entry ถึง Stop ปัจจุบัน", "รวมแผนรอเข้า", "Stop เลยทุน = 0")), det[:300])
         # บัญชีเดียว
         js(page, "()=>{ acctList.find(a=>a.id==='fam').ports = ['core']; ln2Mem = null; satV3Render({force:true}); }"); page.wait_for_timeout(400)
         h2 = hd(page)
@@ -145,13 +145,13 @@ def tests(pw, w, h, label):
         ft = js(page, """()=>{ const e = document.querySelector('[data-ln2-form]'); return e ? {k: e.dataset.ln2Form, t: e.innerText.replace(/\\s+/g,' ').trim()} : null; }""")
         te = js(page, "()=>{ const M = satV2Money('main'); return satV2Usd(M.tacTHB*M.cfg.rptTac/100, M.fx); }")
         tf = js(page, "()=>{ const M = satV2Money('fam'); return satV2Usd(M.tacTHB*M.cfg.rptTac/100, M.fx); }")
-        check(f"{tag} 4 Tactical: '▲ · 2% · OUN $x · FAM $y · ● Loss 0/5 · DD 0/10%' (LN3 + LN3fix3c) · ไม่แสดงไม้ใหม่", ft and ft["k"] == "tactical" and ft["t"] == (f"▲ Up · 2% · {nmM} {te} · {nmF} {tf} · ● Loss 0/5 · DD 0/10%" if w > 480 else f"▲ Up · 2% · {te} · {tf} · ● Loss 0/5 · DD 0/10%") and "ไม้ใหม่" not in ft["t"], ft)
+        check(f"{tag} 4 Tactical: '▲ · 2% · OUN $x · FAM $y · ● Loss 0/5 · DD 0/10%' (LN3 + LN3fix3c) · ไม่แสดงไม้ใหม่", ft and ft["k"] == "tactical" and ft["t"] == (f"▲ Up · 0.75% · {nmM} {te} · {nmF} {tf} · ● Loss 0/5 · DD 0/3%" if w > 480 else f"▲ Up · 0.75% · {te} · {tf} · ● Loss 0/5 · DD 0/3%") and "ไม้ใหม่" not in ft["t"], ft)   # RG2b: RPT Tactical 0.75 · เบรก DD 3%
         shot(page, f"ln2-form-tactical-{sfx}.png", ".ui-plan")
         def tl(i, d, pnl, k="x"): return sat_t(f"{k}{i}", status="closed", sleeve="tactical", entry=4180, sl=4160, qty=0.10, exitPrice=4180 + pnl / 10.0, exitDate=d)
         put(page, [tl(i, f"2026-09-{20 + i}", -50) for i in range(1, 6)], "main")
         ft2 = js(page, "()=>{ const e = document.querySelector('[data-ln2-pause]'); return e ? e.innerText.trim() : null; }")
         why2 = js(page, "()=>document.querySelector('[data-ln3-pause-why]').innerText.trim()")
-        check(f"{tag} 4 ถึงเกณฑ์ → '⛔ พัก Tactical' (สีแดง) + 'พัก Tactical · แพ้ติด 5 ไม้ → ชนะ 1 ไม้ หรือขาดทุนลดต่ำกว่า 10% แล้วเทรดได้เอง' (LN3)", ft2 == f"⛔ พัก Tactical · {nmM}" and why2 == "พัก Tactical · แพ้ติด 5 ไม้ → ชนะ 1 ไม้ หรือขาดทุนลดต่ำกว่า 10% แล้วเทรดได้เอง" and js(page, "()=>document.querySelector('[data-ln2-pause]').classList.contains('stop')"), [ft2, why2])
+        check(f"{tag} 4 ถึงเกณฑ์ → '⛔ พัก Tactical' (สีแดง) + 'พัก Tactical · แพ้ติด 5 ไม้ → ชนะ 1 ไม้ หรือขาดทุนลดต่ำกว่า 3% แล้วเทรดได้เอง' (LN3)", ft2 == f"⛔ พัก Tactical · {nmM}" and why2 == "พัก Tactical · แพ้ติด 5 ไม้ → ชนะ 1 ไม้ หรือขาดทุนลดต่ำกว่า 3% แล้วเทรดได้เอง" and js(page, "()=>document.querySelector('[data-ln2-pause]').classList.contains('stop')"), [ft2, why2])
         # ข้อความบล็อกตอนบันทึก ใช้คำใหม่
         blk = js(page, "([i])=>{ const x = satIdeasList.find(y=>y.id===i); return satV3PlanAcctCalc(x,'main').blocks; }", [iid])
         body = js(page, "()=>document.querySelector('.ui-plan').innerText")

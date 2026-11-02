@@ -261,7 +261,7 @@ def ff_tests(pw, w, h, label):
         pages["today"] = js(page, "()=>document.body.innerText")
         for k, v in pages.items():
             check(f"{tag} 10 หน้า {k}: ไม่มี 'f ตอนนี้' · '× f' · 'ประตู f' ในข้อความที่มองเห็น", bad.search(v) is None, (bad.search(v).group(0) if bad.search(v) else ""))
-        check(f"{tag} 10 มี 'FF' แทน (Core: FF x% · ตั้งค่า: ประตู FF)", "FF" in pages["core"] and "FF gate" in pages["settings"], pages["core"][:100])
+        check(f"{tag} 10 มี 'FF' แทน (Core: FF x% · ตั้งค่า: ประตู FF)", "FF" in pages["core"] and "FF gate" not in pages["settings"], pages["core"][:100])   # RG2b — ถอดประตู FF
         check(f"{tag} 10 ไม่เปลี่ยนชื่อตัวแปร/ฟังก์ชัน (cx.F.f · coreFNow · ffBizDaysSince ยังอยู่)", js(page, "()=>typeof coreFNow==='function' && typeof ffBizDaysSince==='function' && typeof coreCtx('main').F.f==='number'"))
         check(f"{tag} 10 ไม่มี console error", err_free(ce, pe))
     finally:
@@ -292,7 +292,7 @@ def unchanged_tests(pw, w, h, label):
     finally:
         p24.INDEX = saved
     new, old = outs
-    norm = lambda t: re.sub(r"(^|[\s(])f($|[\s)<])", r"\1FF\2", t)
+    norm = lambda t: re.sub(r"เพดานไม้แรก \d+%", "เพดานไม้แรก 25%", re.sub(r"(^|[\s(])f($|[\s)<])", r"\1FF\2", t))   # RG2b: เพดานต่อหุ้นค่าเดียว 25%
     diffs = {i: [new[i][:160], old[i][:160]] for i in ids if not (new[i] and (new[i] == old[i] or new[i] == norm(old[i])))}
     check(f"{tag} 11 การ์ด open (5 ใบ: ปกติ/แดง/เตือน/ไม่มีราคา/หลายไม้) innerText เหมือนก่อน UX2 (ยกเว้น f→FF) · ไม่ว่างเปล่า", not diffs, json.dumps(diffs, ensure_ascii=False))
 

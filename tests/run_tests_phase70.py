@@ -37,7 +37,7 @@ def shot(page, name, sel=None):
 
 
 def launch(pw, w, h, mutate=None):
-    browser, context, page, ce, pe, dialogs = P54.launch(pw, w, h, mutate)
+    browser, context, page, ce, pe, dialogs = P54.launch(pw, w, h, mutate, pin_sat=True)   # RG2b — ถัง Sat ตรึงเท่าทุน Sat เดิม
     P51.fresh(page, None)
     return browser, page, ce, pe
 
@@ -89,8 +89,8 @@ def tests(pw, w, h, label):
         idea = {**P51.idea_doc(asset="XAUUSD", bias="Short", entry=2410, sl=2420, tp=2395, zone=(2395, 2380), iid="iS"), "accts": {"main": {"broker": "XM"}}}
         P51.put_idea(page, idea)
         c = js(page, "()=>{ const c = satV3PlanAcctCalc(sat7dIdea('iS'), 'main'); return {lot:c.lot, riskCur:c.riskCur, f:c.factor}; }")
-        exp = sat_lot(page, c["riskCur"] * 0.6 * 0.5, 10)
-        check(f"{tag} 1 สวน Macro (ตัวคูณ 0.6) ซ้อน 50%: riskAmount = RPT × 0.6 × 0.5 ({c['lot']} vs {exp})", c["f"] == 0.6 and c["lot"] == exp, json.dumps(c))
+        exp = sat_lot(page, c["riskCur"] * 1 * 0.5, 10)   # RG2b — ไม่มีตัวคูณ Macro
+        check(f"{tag} 1 สวน Macro (RG2b ไม่มีตัวคูณ) ซ้อน 50%: riskAmount = RPT × 0.5 ({c['lot']} vs {exp})", c["f"] == 1 and c["lot"] == exp, json.dumps(c))
         # DD ลดขนาด: riskTHB ลดครึ่ง → ไม้ 1 ลดตาม (งบรวม DD factor)
         r0 = rpt_usd(page)
         js(page, "()=>{ const B = getBook('main'); B.settings.ddState = Object.assign({}, B.settings.ddState, {sat: Object.assign({}, (B.settings.ddState||{}).sat, {stage:'reduce', stageSince:'2026-09-30'})}); saveBook('main'); }")

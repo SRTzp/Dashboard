@@ -362,26 +362,26 @@ var okGate = { open: true, reason: 'ok' };
 var NL = C.ladder({ tier: 'A', tank: 700000, sl: 70, levels: [{ px: 100 }, { px: 90 }, { px: 80 }] });
 var ok1 = C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 100000, positions: [], reserved: [] });
 eq('ผ่านทุกข้อ', ok1.allowed, true);
-near('ชั้น 2 รวมบันไดใหม่ = 2.24%', ok1.pctFull, 15680 / 700000, 1e-9);
+near('RG2b: ไม่มี pctFull (Layer 2 ถูกถอด) · sharePct = ทุนบันไดใหม่ ÷ ถัง Ladder', ok1.sharePct, NL.cost / 700000, 1e-9);
 eq('Tier B ไม่ผ่าน', C.canPlaceLadder({ tank: 700000, tier: 'B', gate: okGate, ladder: NL }).reasons.indexOf('TIER_B') >= 0, true);
-eq('ประตูปิด (green)', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: { open: false, reason: 'green' }, ladder: NL }).reasons.indexOf('GATE_green') >= 0, true);
-eq('ประตูปิด (unknown)', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: { open: false, reason: 'unknown' }, ladder: NL }).reasons.indexOf('GATE_unknown') >= 0, true);
-eq('ไม่ส่ง gate = งด', C.canPlaceLadder({ tank: 700000, tier: 'A', ladder: NL }).allowed, false);
+eq('ประตูปิด (green)', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: { open: false, reason: 'green' }, ladder: NL }).reasons.indexOf('GATE_green') >= 0, false);   /* RG2b: ไม่มีประตู f */
+eq('ประตูปิด (unknown)', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: { open: false, reason: 'unknown' }, ladder: NL }).reasons.indexOf('GATE_unknown') >= 0, false);   /* RG2b */
+eq('ไม่ส่ง gate = งด', C.canPlaceLadder({ tank: 700000, tier: 'A', ladder: NL }).allowed, true);   /* RG2b: ไม่มีประตู f */
 // ชั้น 2 เกิน 20%: ถือเสี่ยง 130,000 (18.57%) + บันไดใหม่ 15,680 (2.24%) = 20.8%
 var big = C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, positions: [{ qty: 1000, px: 200, stop: 70 }] });
-eq('ชั้น 2 รวมบันไดใหม่เกิน 20%', big.reasons.indexOf('LAYER2_OVER') >= 0, true);
-eq('เกิน → ไม่อนุญาต', big.allowed, false);
+eq('ชั้น 2 รวมบันไดใหม่เกิน 20%', big.reasons.indexOf('LAYER2_OVER') >= 0, false);   /* RG2b: ไม่มีเช็กชั้น 2 */
+eq('เกิน → ไม่อนุญาต', big.allowed, true);   /* RG2b */
 var mid = C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, positions: [{ qty: 1000, px: 170, stop: 70 }] });
 eq('เสี่ยง 100,000 (14.3%) + 2.24% = 16.5% ผ่าน', mid.allowed, true);
-eq('ชั้น 2 นับที่จองของบันไดเดิมด้วย', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, positions: [{ qty: 1000, px: 170, stop: 70 }], reserved: [{ qty: 1000, px: 150, stop: 70 }] }).reasons.indexOf('LAYER2_OVER') >= 0, true);
-eq('เงินสดไม่พอจอง', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 650000 }).reasons.indexOf('NO_CASH') >= 0, true);
-eq('L รวมเกิน 30%', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, existingLadders: [NL, NL, NL] }).reasons.indexOf('L_SHARE_OVER') >= 0, true);
+eq('ชั้น 2 นับที่จองของบันไดเดิมด้วย', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, positions: [{ qty: 1000, px: 170, stop: 70 }], reserved: [{ qty: 1000, px: 150, stop: 70 }] }).reasons.indexOf('LAYER2_OVER') >= 0, false);   /* RG2b */
+eq('เงินสดไม่พอจอง', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 650000 }).reasons.indexOf('NO_CASH') >= 0, false);   /* RG2b: ไม้ W ไม่กินถัง Ladder */
+eq('L รวมเกิน 30%', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, existingLadders: [NL, NL, NL] }).reasons.indexOf('L_SHARE_OVER') >= 0, false);   /* RG2b */
 eq('L 2 ตัวเดิม + 1 ใหม่ = 29.97% ผ่านข้อ 30%', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, existingLadders: [NL, NL] }).reasons.indexOf('L_SHARE_OVER'), -1);
-eq('7E-2b-1: ส่ง l2Cap 0.25 → เคส 20.8% ผ่านชั้น 2', big.reasons.indexOf('LAYER2_OVER') >= 0 && C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, positions: [{ qty: 1000, px: 200, stop: 70 }], l2Cap: 0.25 }).reasons.indexOf('LAYER2_OVER') < 0, true);
-eq('7E-2b-1: shareCap 0.20 → 3 ตัวเดิม+1 ใหม่ เกิน', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, existingLadders: [NL, NL], shareCap: 0.20 }).reasons.indexOf('L_SHARE_OVER') >= 0, true);
+eq('7E-2b-1: ส่ง l2Cap 0.25 → เคส 20.8% ผ่านชั้น 2', big.reasons.indexOf('LAYER2_OVER') >= 0 && C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, positions: [{ qty: 1000, px: 200, stop: 70 }], l2Cap: 0.25 }).reasons.indexOf('LAYER2_OVER') < 0, false);   /* RG2b */
+eq('7E-2b-1: shareCap 0.20 → 3 ตัวเดิม+1 ใหม่ เกิน', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, existingLadders: [NL, NL], shareCap: 0.20 }).reasons.indexOf('L_SHARE_OVER') >= 0, false);   /* RG2b */
 eq('7E-2b-1: shareCap 0.40 → 3 ตัวเดิม+1 ใหม่ ผ่าน', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: NL, wCost: 0, existingLadders: [NL, NL, NL], shareCap: 0.40 }).reasons.indexOf('L_SHARE_OVER'), -1);
 eq('บันไดเสีย → BAD_LADDER', C.canPlaceLadder({ tank: 700000, tier: 'A', gate: okGate, ladder: { ok: false } }).reasons.indexOf('BAD_LADDER') >= 0, true);
-eq('รวมเหตุผลหลายข้อ', C.canPlaceLadder({ tank: 700000, tier: 'B', gate: { open: false, reason: 'green' }, ladder: NL, wCost: 650000 }).reasons.length >= 3, true);
+eq('รวมเหตุผลหลายข้อ', C.canPlaceLadder({ tank: 700000, tier: 'B', gate: { open: false, reason: 'green' }, ladder: NL, wCost: 650000 }).reasons.length === 1, true);   /* RG2b: เหลือ TIER_B ข้อเดียว */
 
 section('จัด Tier');
 var good = { roic: 0.18, ndEbitda: 1.2, fcfConv: 0.9, fcfPositive3y: true, capitalReturn: true, gate5: { substitute: false, customerMigrating: false, singleProduct: false } };
@@ -683,6 +683,55 @@ near('layer2 riskAcc = 59×7', l2L.riskAcc, 59 * 7);
 near('layer2 riskBase = 80×32', l2L.riskBase, 80 * 32);
 var l2O = C.layer2({ tank: 700000, positions: [{ qty: 700, px: 110, stop: 100 }] });
 eq('layer2 เดิม (ไม่มี layer) riskAcc = 0 · ผลรวมเดิม', l2O.riskAcc + '|' + l2O.risk, '0|7000');
+
+/* ───────── RG2b · ถังแยก Winner / Ladder / Sat ───────── */
+section('RG2b poolSplit');
+var ps = C.poolSplit({ total: 1000000 });
+eq('poolSplit ค่าเริ่ม 50/30/20 ok', ps.ok, true);
+near('poolSplit Winner 500,000', ps.winner, 500000);
+near('poolSplit Ladder 300,000', ps.ladder, 300000);
+near('poolSplit Sat 200,000', ps.sat, 200000);
+eq('poolSplit รวม 99 → SUM_NOT_100', C.poolSplit({ total: 1e6, pct: { winner: 50, ladder: 30, sat: 19 } }).err, 'SUM_NOT_100');
+eq('poolSplit ติดลบ → BAD_PCT', C.poolSplit({ total: 1e6, pct: { winner: -10, ladder: 60, sat: 50 } }).err, 'BAD_PCT');
+eq('poolSplit เกิน 100 → BAD_PCT', C.poolSplit({ total: 1e6, pct: { winner: 101, ladder: 0, sat: -1 } }).err, 'BAD_PCT');
+eq('poolSplit 0/100/0 ผ่าน', C.poolSplit({ total: 1e6, pct: { winner: 0, ladder: 100, sat: 0 } }).ladder, 1e6);
+eq('poolSplit ไม่มียอดรวม → NO_TOTAL', C.poolSplit({ total: 0 }).err, 'NO_TOTAL');
+eq('poolSplit ค่าเริ่ม DEFAULTS.poolSplit', JSON.stringify(C.DEFAULTS.poolSplit), '{"winner":50,"ladder":30,"sat":20}');
+
+section('RG2b poolFree · ถังอิสระ');
+var pfW = C.poolFree({ pool: 500000, held: 200000 });
+near('Winner ว่าง = ถัง − ถือ', pfW.free, 300000);
+var LB = C.ladder({ tier: 'A', tank: 300000, sl: 70, levels: [{ px: 100 }, { px: 90 }, { px: 80 }], budgetPct: 0.1667 });
+var pfL0 = C.poolFree({ pool: 300000, held: 0, reserved: 0 });
+var pfL1 = C.poolFree({ pool: 300000, held: LB.heldCost, reserved: LB.reservedCost });
+near('วางบันไดแล้ว Ladder ว่างลด', pfL0.free - pfL1.free, LB.cost);
+near('วางบันไดแล้ว Winner ว่างเท่าเดิม', C.poolFree({ pool: 500000, held: 200000 }).free, pfW.free);
+eq('ใช้เกินถัง = over (เตือน ไม่ปิด)', C.poolFree({ pool: 100000, held: 150000 }).over, true);
+eq('ใช้เกินถัง ว่าง = 0', C.poolFree({ pool: 100000, held: 150000 }).free, 0);
+eq('ไม่มีถัง → NO_POOL', C.poolFree({}).err, 'NO_POOL');
+
+section('RG2b ladderBudget · 5% ของบัญชี × f');
+var lb = C.ladderBudget({ acct: 1000000, pool: 300000, f: 1 });
+near('งบเต็ม 5% ของบัญชี = 50,000', lb.full, 50000);
+near('f 100% → 50,000', lb.budget, 50000);
+near('≈ 16.67% ของถัง Ladder 30%', lb.budgetPctPool, 50000 / 300000, 1e-9);
+near('f 75% → 37,500', C.ladderBudget({ acct: 1000000, pool: 300000, f: 0.75 }).budget, 37500);
+near('f 50% → 25,000', C.ladderBudget({ acct: 1000000, pool: 300000, f: 0.5 }).budget, 25000);
+near('ตั้ง maxAcctPct 4 → 40,000', C.ladderBudget({ acct: 1000000, pool: 300000, maxAcctPct: 4 }).budget, 40000);
+eq('ไม่มีบัญชี → NO_ACCT', C.ladderBudget({ pool: 1 }).err, 'NO_ACCT');
+
+section('RG2b canPlaceLadder · ถัง Ladder อิสระ ไม่มีประตู');
+var NL2 = C.ladder({ tier: 'A', tank: 300000, sl: 70, levels: [{ px: 100 }, { px: 90 }, { px: 80 }], budgetPct: 50000 / 300000 });
+var cp0 = C.canPlaceLadder({ tank: 300000, tier: 'A', ladder: NL2, wCost: 9e9 });
+eq('ผ่านแม้ Winner ใช้เงินเต็ม (wCost ไม่เกี่ยว)', cp0.allowed, true);
+eq('ไม่มีเหตุผล GATE_*', cp0.reasons.filter(function (r) { return /^GATE_/.test(r); }).length, 0);
+var cp1 = C.canPlaceLadder({ tank: 300000, tier: 'A', ladder: NL2, existingLadders: [NL2, NL2, NL2, NL2, NL2, NL2] });
+eq('ถัง Ladder เต็ม → NO_CASH', cp1.reasons.indexOf('NO_CASH') >= 0, true);
+eq('ไม่มี L_SHARE_OVER / LAYER2_OVER', cp1.reasons.indexOf('L_SHARE_OVER') + cp1.reasons.indexOf('LAYER2_OVER'), -2);
+eq('maxCost 40,000 < ทุนบันได → STOCK_OVER', C.canPlaceLadder({ tank: 300000, tier: 'A', ladder: NL2, maxCost: 40000 }).reasons.indexOf('STOCK_OVER') >= 0, true);
+eq('maxCost 60,000 ผ่าน', C.canPlaceLadder({ tank: 300000, tier: 'A', ladder: NL2, maxCost: 60000 }).allowed, true);
+eq('Winner cap 25% ของถัง Winner: 500,000 × 25% ÷ 100 = 1,250 หุ้น', C.firstLot({ tank: 500000, entry: 100, stop: 99, f: 1, tier: 'A', tierCapPct: 1, stockCapPct: 0.25, riskPct: 0.5 }).qty, 1250);
+eq('firstLot ของ Winner ไม่กระทบถัง Ladder (ถังแยก ใส่ tank Winner)', C.firstLot({ tank: 500000, entry: 100, stop: 90, f: 1, tier: 'A', tierCapPct: 1, stockCapPct: 0.25 }).qty, 500);
 
 console.log('\n' + (fail === 0 ? 'PASS' : 'FAIL') + '  ' + pass + ' ผ่าน · ' + fail + ' ไม่ผ่าน');
 process.exit(fail === 0 ? 0 : 1);

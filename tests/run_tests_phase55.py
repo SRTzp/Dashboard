@@ -100,7 +100,7 @@ def tests(pw, w, h, label):
             P51.fresh(page, P54.idea()); lot_old = P54.lot_of(page, P54.idea())
         finally: browser.close()
     finally: P39.INDEX = saved
-    check(f"{tag} 1 lot XAUUSD เท่าก่อน AS1 (fixture เดียวกัน)", lot_old["lot"] == lot_now["lot"] and lot_old["lot"], json.dumps([lot_old, lot_now]))
+    check(f"{tag} 1 lot XAUUSD (RG2b: Sat v2 → 0.5 แทน 0.32 เดิม)", lot_now["lot"] == 0.5 and lot_old["lot"] == 0.32, json.dumps([lot_old, lot_now]))
 
     # ── 2 เพิ่ม XAG ผ่านหน้าตั้งโบรก
     browser, context, page, ce, pe, dialogs = P54.launch(pw, w, h)

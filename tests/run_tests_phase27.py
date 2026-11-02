@@ -185,7 +185,7 @@ def ui_tests(pw, w, h, label):
         check(f"{tag} 7 กรอก 2410/2390/(TP default 2450) → บัญชี ready · mrOk", a["ready"] and a["mr"] and a["mrOk"] and a["warns"] == [], json.dumps(a["warns"], ensure_ascii=False))
         check(f"{tag} 7 lot = Calc.satLot(riskAmount × 0.6) ตรงค่า ({a['lot']} = {exp06}) · factor 0.6 (ไม่ใช่ 0.36 แม้กฎ F2c ของ Long = 0.6 อยู่แล้ว)", a["factor"] == 0.6 and a["lot"] == exp06 and a["lot"] != lot_exp(page, a, 20, 0.36) , json.dumps({k: a[k] for k in ("lot", "factor")}))
         f2c = js(page, "()=>{ const f = satV3F2c(sat7dIdea('iM')); return {rule:f.rule.factor, factor:f.factor, off:f.off, mr:f.mr}; }")
-        check(f"{tag} 7 กฎ F2c ของ Long = 0.6 อยู่แล้ว (สวน Macro+Trend) แต่ factor ที่ใช้ยัง 0.6 · off=false", f2c == {"rule": 0.6, "factor": 0.6, "off": False, "mr": True}, json.dumps(f2c))
+        check(f"{tag} 7 RG2b: กฎ F2c ไม่มีตัวคูณ Macro (rule 1) แต่ MR ใช้ factor 0.6 ตายตัว · off=false", f2c == {"rule": 1, "factor": 0.6, "off": False, "mr": True}, json.dumps(f2c))
         size_row = txt(page, f'{C} [data-f2c-row="size"]')
         check(f"{tag} 7 บรรทัดขนาด: 'MR · ลด 40% (ตามค่า สวน Macro)' (WA1 แทน 'ตายตัว') · ไม่มีสวิตช์ขนาดเต็ม · ไม่มีบรรทัดกฎ F2c", "MR · ลด 40% (ตามค่า สวน Macro)" in size_row and "สวนทั้ง Macro" not in size_row and page.locator(f"{C} [data-size-switch]").count() == 0, size_row)
         # สวิตช์ override เก่าค้างอยู่ → ไม่มีผลกับ MR
@@ -215,7 +215,7 @@ def ui_tests(pw, w, h, label):
         got = {k: (t or {}).get(k) for k in ("bias", "mr", "mr_level", "plan_bias", "sizeFactor", "port", "status", "entry", "sl", "tp")}
         check(f"{tag} 9 บันทึก order: ไม้ bias Long · mr true · mr_level 2400 · plan_bias Short · sizeFactor 0.6", got == {"bias": "Long", "mr": True, "mr_level": 2400, "plan_bias": "Short", "sizeFactor": 0.6, "port": "satB", "status": "plan", "entry": 2410, "sl": 2390, "tp": 2450}, json.dumps(got))
         check(f"{tag} 9 PF3 trend_changed = null ด้วย (ไม่อ่าน Trend ของ Strategy เลย): ไม้ที่บันทึกไม่มี trend_state/trend_changed", (t or {}).get("trend_state") is None and (t or {}).get("trend_changed") is None, json.dumps({k: (t or {}).get(k) for k in ("trend_state", "trend_changed")}))
-        check(f"{tag} 9 PF1 — field F2c บันทึกตามปกติ (side = Long): macro_state=against · size_rule=0.6 · off_rule=false · trend_state=null (ไม่อ่าน Strategy)", (t or {}).get("macro_state") == "against" and (t or {}).get("size_rule") == 0.6 and (t or {}).get("off_rule") is False and (t or {}).get("trend_state") is None, json.dumps({k: (t or {}).get(k) for k in ("macro_state","size_rule","off_rule","trend_state")}))
+        check(f"{tag} 9 PF1 — field F2c บันทึกตามปกติ (side = Long): macro_state=against · size_rule=0.6 · off_rule=false · trend_state=null (ไม่อ่าน Strategy)", (t or {}).get("macro_state") == "against" and (t or {}).get("size_rule") == 1 and (t or {}).get("off_rule") is False and (t or {}).get("trend_state") is None, json.dumps({k: (t or {}).get(k) for k in ("macro_state","size_rule","off_rule","trend_state")}))
         check(f"{tag} 9 lot ที่บันทึก = lot ที่คำนวณ ({t and t.get('qty')})", t and t["qty"] == exp06)
         line = f2c_line(page, t)
         check(f"{tag} 9 บรรทัดรายละเอียดไม้: 'MR · ลด 40%' แทน 'ลด/เต็ม'", "MR · ลด 40%" in line and "· เต็ม" not in line, line)
@@ -223,11 +223,11 @@ def ui_tests(pw, w, h, label):
         # โควตา: ไม้ใหม่ ≤ 2 / สัปดาห์ → เติมให้เต็มแล้ว MR แผนใหม่ไม่ ready
         reset_ideas(page)
         js(page, """()=>{ const B = getBook('main'); B.trades = B.trades.filter(t=>!t.mr); saveBook('main'); }""")
-        for i in (1, 2): push_trade(page, id=f"tq{i}", date=js(page, "()=>thaiToday()"), entry=2650, sl=2620, tp=2700, bias="Short", port="satB")
+        for i in (1, 2, 3, 4): push_trade(page, id=f"tq{i}", date=js(page, "()=>thaiToday()"), entry=2650, sl=2620, tp=2700, bias="Short", port="satB")
         mk(page, "iQ", entry=2410, sl=2390, tp=2450)
         js(page, "()=>{ satV3Open.add('iQ'); satV3Render(); }"); page.wait_for_timeout(250)
         a = acct(page, "iQ")
-        check(f"{tag} 9 โควตาไม้ใหม่เต็ม 2 → MR ก็ไม่ ready ('โควตาเต็ม')", (not a["ready"]) and "โควตาเต็ม" in a["warns"] and a["mrOk"], json.dumps(a["warns"], ensure_ascii=False))
+        check(f"{tag} 9 โควตาไม้ใหม่เต็ม 4 → MR ก็ไม่ ready ('โควตาเต็ม')", (not a["ready"]) and "โควตาเต็ม" in a["warns"] and a["mrOk"], json.dumps(a["warns"], ensure_ascii=False))
         js(page, """()=>{ const B = getBook('main'); B.trades = B.trades.filter(t=>!/^tq/.test(t.id)); saveBook('main'); render(); }""")
         a = acct(page, "iQ")
         check(f"{tag} 9 โควตากลับว่าง → ready อีกครั้ง (heat นับเหมือนไม้ปกติ: {a['heat'] and round(a['heat'], 3)}%)", a["ready"] and a["heat"] is not None and a["heat"] > 0)

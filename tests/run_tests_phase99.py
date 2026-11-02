@@ -61,12 +61,12 @@ def go_tab(page, t):
 
 # ───────────────────────── 1 Core | Sat ─────────────────────────
 HDR = """()=>{
-  const s = document.getElementById('hdrSub'), t = s && s.querySelector('.scopeTabs');
+  const s = document.getElementById('hdrSub'), t = document.querySelector('.scopeTabs');   /* RG2b — ปุ่มอยู่ใน header (กว้างพอ) หรือในหน้า (header ไม่พอ) */
   const vis = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
   const bs = t ? [...t.querySelectorAll('button')] : [];
   const R = e => { const r = e.getBoundingClientRect(); return {l: r.left, r: r.right, w: r.width, h: r.height}; };
   const hb = document.querySelector('.topbar .hbtns');
-  return {inSlot: !!t, visible: vis(t), btns: bs.map(b => [b.textContent.trim(), vis(b), b.classList.contains('on'), R(b).w]), sel: [...s.querySelectorAll('select')].filter(vis).length,
+  return {inSlot: !!(t && s.contains(t)), visible: vis(t), btns: bs.map(b => [b.textContent.trim(), vis(b), b.classList.contains('on'), R(b).w]), sel: [...s.querySelectorAll('select')].filter(vis).length,
           cmp: s.classList.contains('cmp'), cmpVis: vis(s.querySelector('.hdrCmp')), slotCmpEls: s.querySelectorAll('.hdrCmp').length, tabs: t ? R(t) : null, slot: R(s), hb: hb ? R(hb) : null,
           clip: t ? t.scrollWidth > t.clientWidth + 1 : null, ow: document.documentElement.scrollWidth - innerWidth, scope: planScope};
 }"""
@@ -78,20 +78,20 @@ def header_tests(pw, w, h, label, shotname=None):
     try:
         go_tab(page, "plan")   # เปิดแท็บ Plan ครั้งแรก = render แรก (ไม่ต้องโต้ตอบก่อน)
         r = js(page, HDR)
-        two = [x[0] for x in r["btns"]] == ["Core", "Sat"] and all(x[1] for x in r["btns"])
-        check(f"{tag} 1 Plan ครั้งแรก: ปุ่ม Core | Sat มองเห็นทั้งสองปุ่ม ไม่มี <select>/pill ย่อ", r["inSlot"] and r["visible"] and two and r["sel"] == 0 and not r["cmp"] and not r["cmpVis"] and r["slotCmpEls"] == 0, r)
-        check(f"{tag} 1 มีปุ่ม active หนึ่งปุ่ม · ไม่ล้น/ไม่ตัด · ไม่ชน toolbar · หน้าไม่เลื่อนแนวนอน", not r["clip"] and r["ow"] <= 0 and (r["hb"] is None or r["tabs"]["r"] <= r["hb"]["l"] - 2) and r["tabs"]["r"] <= r["slot"]["r"] + 1 and sum(1 for x in r["btns"] if x[2]) == 1, r)
+        two = [x[0] for x in r["btns"]] == ["Winner", "Ladder", "Sat"] and all(x[1] for x in r["btns"])
+        check(f"{tag} 1 Plan ครั้งแรก: ปุ่ม Winner | Ladder | Sat มองเห็นครบสามปุ่ม (ใน header หรือในหน้า) ไม่มี <select>/pill ย่อ", r["visible"] and two and r["sel"] == 0 and not r["cmp"] and not r["cmpVis"] and r["slotCmpEls"] == 0, r)
+        check(f"{tag} 1 มีปุ่ม active หนึ่งปุ่ม · ไม่ล้น/ไม่ตัด · ไม่ชน toolbar · หน้าไม่เลื่อนแนวนอน", not r["clip"] and r["ow"] <= 0 and (r["hb"] is None or not r["inSlot"] or r["tabs"]["r"] <= r["hb"]["l"] - 2) and (not r["inSlot"] or r["tabs"]["r"] <= r["slot"]["r"] + 1) and sum(1 for x in r["btns"] if x[2]) == 1, r)
         if shotname: shot(page, shotname, ".topbar")
         js(page, "()=>setPlanScope('stock')"); settle(page, 400)
         rc = js(page, HDR)
-        check(f"{tag} 1 Core active หลังเลือก Core", rc["btns"][0][2] and not rc["btns"][1][2] and rc["scope"] == "stock", rc)
-        page.locator("#hdrSub .scopeBtn", has_text="Sat").click(); settle(page, 500)
+        check(f"{tag} 1 Core active หลังเลือก Core", rc["btns"][0][2] and not rc["btns"][2][2] and rc["scope"] == "stock", rc)
+        page.locator(".scopeBtn", has_text="Sat").click(); settle(page, 500)
         r2 = js(page, HDR)
-        check(f"{tag} 1 กด Sat → scope future + Sat active + ยังสองปุ่ม", r2["scope"] == "future" and r2["btns"][1][2] and not r2["btns"][0][2] and r2["sel"] == 0 and not r2["cmp"], r2)
+        check(f"{tag} 1 กด Sat → scope future + Sat active + ยังสามปุ่ม", r2["scope"] == "future" and r2["btns"][2][2] and not r2["btns"][0][2] and r2["sel"] == 0 and not r2["cmp"], r2)
         go_tab(page, "today"); go_tab(page, "flow"); go_tab(page, "plan")
         r3 = js(page, HDR)
-        check(f"{tag} 1 ไป-กลับแท็บ: ยังสองปุ่ม · จำ scope เดิม (Sat)", r3["visible"] and r3["sel"] == 0 and not r3["cmp"] and r3["btns"][1][2] and r3["scope"] == "future", r3)
-        page.locator("#hdrSub .scopeBtn", has_text="Core").click(); settle(page, 500)
+        check(f"{tag} 1 ไป-กลับแท็บ: ยังสามปุ่ม · จำ scope เดิม (Sat)", r3["visible"] and r3["sel"] == 0 and not r3["cmp"] and r3["btns"][2][2] and r3["scope"] == "future", r3)
+        page.locator(".scopeBtn", has_text="Winner").click(); settle(page, 500)
         r4 = js(page, HDR)
         check(f"{tag} 1 กด Core กลับ → scope stock + Core active", r4["scope"] == "stock" and r4["btns"][0][2] and r4["sel"] == 0, r4)
         # resize ลง/ขึ้น: ไม่หลุดเป็น select
@@ -99,12 +99,12 @@ def header_tests(pw, w, h, label, shotname=None):
             page.set_viewport_size({"width": ww, "height": h}); settle(page, 400)
             rr = js(page, HDR)
             if w <= 480:
-                check(f"{tag} 1 ปรับความกว้าง {ww}px: ยังสองปุ่ม ไม่มี select ไม่ล้น", rr["visible"] and rr["sel"] == 0 and not rr["cmp"] and not rr["clip"] and rr["ow"] <= 0, rr)
+                check(f"{tag} 1 ปรับความกว้าง {ww}px: ยังสามปุ่ม ไม่มี select ไม่ล้น", rr["visible"] and rr["sel"] == 0 and not rr["cmp"] and not rr["clip"] and rr["ow"] <= 0, rr)
         # โหลดซ้ำ (หน้าเดิม ไม่ล้าง mock): ซ่อน-แสดง Plan ผ่าน re-render
         page.set_viewport_size({"width": w, "height": h}); settle(page, 300)
         js(page, "()=>{ render(); hdrSubSync(); }"); settle(page, 400)
         r5 = js(page, HDR)
-        check(f"{tag} 1 render ซ้ำ: ยังสองปุ่ม", r5["visible"] and r5["sel"] == 0 and not r5["cmp"], r5)
+        check(f"{tag} 1 render ซ้ำ: ยังสามปุ่ม", r5["visible"] and r5["sel"] == 0 and not r5["cmp"], r5)
         check(f"{tag} 1 ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
     finally: b.close()
 
@@ -115,7 +115,7 @@ def mac_header(pw, w, h, label):
     try:
         go_tab(page, "plan")
         r = js(page, HDR)
-        check(f"{tag} 1 Mac: Core | Sat สองปุ่มใน header เหมือนเดิม (สูง 38px · ไม่ย่อ)", r["visible"] and [x[0] for x in r["btns"]] == ["Core", "Sat"] and abs(r["tabs"]["h"] - 38) <= 1 and not r["cmp"] and r["sel"] == 0, r)
+        check(f"{tag} 1 Mac: Winner | Ladder | Sat สามปุ่ม (ใน header สูง 38px หรือในหน้า · ไม่ย่อ)", r["visible"] and [x[0] for x in r["btns"]] == ["Winner", "Ladder", "Sat"] and (abs(r["tabs"]["h"] - 38) <= 1 or not r["inSlot"]) and not r["cmp"] and r["sel"] == 0, r)
     finally: b.close()
 
 

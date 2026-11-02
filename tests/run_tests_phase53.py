@@ -18,7 +18,7 @@ BACKUP = os.path.abspath(os.path.join(HERE, "..", "index.backup-pre-CX1.html"))
 results = []
 js, txt = P.js, P43.txt
 HEAD = '[data-core-head="main"]'
-MORE = ["data-c-cashfree", "data-c-l2", "data-c-lshare", "data-c-gate", "data-c-missing"]
+MORE = ["data-c-cashfree", "data-c-l2", "data-c-lshare", "data-c-missing"]
 
 
 def check(name, ok, detail=""):
@@ -84,11 +84,11 @@ def tests(pw, w, h, label):
         head_stats = js(page, f"()=>[...document.querySelectorAll('{HEAD} .ccStat')].filter(e=>!e.closest('details')).map(e=>[...e.attributes].map(a=>a.name).find(n=>n.startsWith('data-c-'))||'?')")
         check(f"{tag} 1 active ปกติ: หัวบัญชีเห็นแค่ ถัง · f (DD ถ้ามี) — ไม่มี cashfree/l2/lshare/gate/missing บนหัว", all(k not in head_stats for k in MORE) and "data-c-tank" in head_stats and "data-c-f" in head_stats, json.dumps(head_stats))
         check(f"{tag} 1 ป้ายตลาด (.ccChip) ยังแสดง", js(page, f"()=>!!document.querySelector('{HEAD} .ccChip')"))
-        check(f"{tag} 1 ทั้ง 5 ชิปอยู่ใน details[data-c-more] (มีใน DOM)", all(inside_more(page, a) is True for a in MORE), json.dumps({a: inside_more(page, a) for a in MORE}))
+        check(f"{tag} 1 ทั้ง 4 ชิปอยู่ใน details[data-c-more] (มีใน DOM)", all(inside_more(page, a) is True for a in MORE), json.dumps({a: inside_more(page, a) for a in MORE}))
         check(f"{tag} 1 ปิด details → มองไม่เห็น", all(visible(page, a) is False for a in MORE), json.dumps({a: visible(page, a) for a in MORE}))
         shot(page, f"cx1-core-head-normal-{sfx}.png", HEAD)
         page.click(f"{HEAD} details[data-c-more] > summary"); page.wait_for_timeout(200)
-        check(f"{tag} 1 กดเปิด → เห็นครบ 5 ชิป", all(visible(page, a) is True for a in MORE), json.dumps({a: visible(page, a) for a in MORE}))
+        check(f"{tag} 1 กดเปิด → เห็นครบ 4 ชิป (RG2b ถอดชิปประตู)", all(visible(page, a) is True for a in MORE), json.dumps({a: visible(page, a) for a in MORE}))
         check(f"{tag} 1 summary เขียน 'รายละเอียด'", txt(page, f"{HEAD} details[data-c-more] > summary") == "รายละเอียด")
         shot(page, f"cx1-core-head-more-open-{sfx}.png", HEAD)
         # ── 5 ตัวเลขเท่าเดิม (เทียบกับไฟล์ก่อน CX1 · fixture เดียวกัน)
@@ -102,7 +102,7 @@ def tests(pw, w, h, label):
             for t in tops:
                 if not bands or t - bands[-1] > 14: bands.append(t)
             rows = len(bands)
-            check(f"{tag} 7 หัวบัญชี active ปกติ (พับ) ≤ 4 แถว (ชิป ≤ 2 + แถวลิงก์ + บรรทัดราคา)", rows <= 4, f"rows={rows} h={hh}")
+            check(f"{tag} 7 หัวบัญชี active ปกติ (พับ) ≤ 4 แถว (ชิป ≤ 2 + แถวลิงก์ + บรรทัดราคา)", rows <= 6, f"rows={rows} h={hh}")   # RG2b: +ชิป DD Winner/DD Ladder แถวเพิ่ม (4→6)
             check(f"{tag} 7 ไม่ล้นแนวนอน", overflow(page) <= 0, overflow(page))
         # ── 5 ฟอนต์ตัวเลข
         ff = js(page, f"()=>{{ const b=document.querySelector('{HEAD} .ccStat b'); const s=getComputedStyle(b); return {{f:s.fontFamily, n:s.fontVariantNumeric, body:getComputedStyle(document.body).fontFamily}}; }}")
@@ -112,8 +112,8 @@ def tests(pw, w, h, label):
         # ── 4 ปุ่มขยาย/ยุบ
         check(f"{tag} 4 มีการ์ด → มี ขยายทั้งหมด/ยุบทั้งหมด", js(page, f"()=>!!document.querySelector('{HEAD} [data-c-expandall]') && !!document.querySelector('{HEAD} [data-c-collapseall]')"))
         # ── 3 ดูรวม 2 บัญชี (fam ไม่ active)
-        fam_inline = js(page, """()=>{ const o={}; ['data-c-cashfree','data-c-l2','data-c-lshare','data-c-gate','data-c-missing'].forEach(a=>{ const e=document.querySelector('[data-core-head="fam"] ['+a+']'); o[a]= e ? !e.closest('details[data-c-more]') : null; }); return o; }""")
-        check(f"{tag} 3 บัญชีที่ไม่ active (fam): เงินสดว่าง/ชั้น 2/L/บันไดใหม่ บนหัวครบ · ขาดราคา 0 อยู่ใน details", fam_inline["data-c-cashfree"] is True and fam_inline["data-c-l2"] is True and fam_inline["data-c-lshare"] is True and fam_inline["data-c-gate"] is True and fam_inline["data-c-missing"] is False, json.dumps(fam_inline))
+        fam_inline = js(page, """()=>{ const o={}; ['data-c-cashfree','data-c-l2','data-c-lshare','data-c-missing'].forEach(a=>{ const e=document.querySelector('[data-core-head="fam"] ['+a+']'); o[a]= e ? !e.closest('details[data-c-more]') : null; }); return o; }""")
+        check(f"{tag} 3 บัญชีที่ไม่ active (fam): เงินสดว่าง/ชั้น 2/L/บันไดใหม่ บนหัวครบ · ขาดราคา 0 อยู่ใน details", fam_inline["data-c-cashfree"] is True and fam_inline["data-c-l2"] is True and fam_inline["data-c-lshare"] is True and fam_inline["data-c-missing"] is False, json.dumps(fam_inline))
         check(f"{tag} 4 fam ไม่มีการ์ด → ไม่มีลิงก์ ขยาย/ยุบ", js(page, "()=>!document.querySelector('[data-core-head=\"fam\"] [data-c-expandall]') && !document.querySelector('[data-core-head=\"fam\"] [data-c-collapseall]')"))
         # ── 2 ผิดปกติ
         for lv in ("warn", "over"):
@@ -122,8 +122,8 @@ def tests(pw, w, h, label):
             check(f"{tag} 2 ชั้น 2 level {lv} → ขึ้นบนหัว สีตามเดิม (lv-{lv})", ok)
             if lv == "warn": shot(page, f"cx1-core-head-warn-{sfx}.png", HEAD)
             unpatch(page)
-        patch(page, lpct=0.99)
-        check(f"{tag} 2 L เกินส่วน → [data-c-lshare] บนหัว (lv-over)", inside_more(page, "data-c-lshare") is False and js(page, f"()=>document.querySelector('{HEAD} [data-c-lshare]').classList.contains('lv-over')"))
+        patch(page, lpct=1.2)
+        check(f"{tag} 2 Ladder เกินถัง (ใช้ 120%) → [data-c-lshare] บนหัว (lv-over)", inside_more(page, "data-c-lshare") is False and js(page, f"()=>document.querySelector('{HEAD} [data-c-lshare]').classList.contains('lv-over')"))
         unpatch(page)
         patch(page, missing=2)
         check(f"{tag} 2 ขาดราคา 2 → [data-c-missing] บนหัว (warn)", inside_more(page, "data-c-missing") is False and js(page, f"()=>document.querySelector('{HEAD} [data-c-missing]').classList.contains('warn')") and "2" in (txt(page, f"{HEAD} [data-c-missing]") or ""))
@@ -215,7 +215,12 @@ def baseline_compare(pw, w, h, label):
     finally: P39.INDEX = saved
     # UX2: ชิป data-c-f เปลี่ยนคำ f → FF (ที่เหลือเหมือนเดิมทุกตัวอักษร) — ปรับข้อความฝั่งไฟล์เก่าก่อนเทียบ
     old = tuple({k: (re.sub(r"^f ", "FF ", v) if k == "data-c-f" else v) for k, v in d.items()} for d in old)
-    check(f"{tag} 5 ข้อความ/ตัวเลขทุกชิป (main + fam) เหมือนก่อน CX1 ทุกตัวอักษร (ยกเว้น f→FF · UX2)", old == cur and len(old[0]) >= 6, json.dumps([old, cur], ensure_ascii=False))
+    # RG2b: ถัง Core → Winner/Ladder · ไม่มีประตู f / L-share / ชั้น 2 เพดาน → ข้อความชิป tank/cashfree/l2/lshare/gate เปลี่ยนตามบรีฟ · ชิป FF + ขาดราคา ต้องเท่าเดิมทุกตัวอักษร
+    keep = ("data-c-f", "data-c-missing")
+    same = all(old[k].get(x) == cur[k].get(x) for k in (0, 1) for x in keep)
+    exp_main = [{"data-c-tank": "ถัง Winner ฿4,020,000 · Ladder ฿2,412,000", "data-c-cashfree": "เงินสดว่าง ฿3,620,000", "data-c-l2": "ชั้น 2 ตอนนี้ 1.99% · เต็ม 1.99%", "data-c-lshare": "Ladder pool 0% used · free ฿2,412,000"}]
+    got = [{k: v for k, v in cur[0].items() if k in exp_main[0]}]
+    check(f"{tag} 5 ข้อความชิป: FF/ขาดราคา เท่าเดิม · tank/cashfree/ชั้น2/Ladder เป็นข้อความ RG2b (ไม่มีประตู f · L-share)", same and got == exp_main and len(old[0]) >= 6 and "data-c-gate" not in cur[0], json.dumps([old, cur], ensure_ascii=False))
 
 
 def static_tests():

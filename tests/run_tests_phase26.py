@@ -27,6 +27,13 @@ def check(name, ok, detail=""):
     print(("PASS" if ok else "FAIL") + " - " + name + (("  :: " + d) if (d and not ok) else ""))
 
 
+REMOVED_LOG = []
+def removed(name, ok=None, detail=""):
+    """RG2b REMOVED: เช็กของฟีเจอร์ที่ถูกถอด/ย้าย (เงินสด W/L ร่วม · ประตู f/L รวม · การ์ด L ในหน้า Core) — ไม่นับ pass/fail · พิมพ์ไว้เป็นหลักฐาน · ดู tests/RG2b_retired.md"""
+    REMOVED_LOG.append(name)
+    print("REMOVED - " + name)
+
+
 def shot(page, name):
     """ภาพเต็มจอ: sheet (ซ้อนทับหน้า) = เต็มหน้าต่าง · นอกนั้น = เต็มหน้า · รอ animation จบก่อนถ่าย"""
     page.wait_for_timeout(600)
@@ -160,7 +167,8 @@ def core_size_checks(pw):
     ch = [l for l in difflib.unified_diff(a, b, lineterm="", n=0) if (l.startswith("+") or l.startswith("-")) and not l.startswith("+++") and not l.startswith("---")]
     hunks = [l for l in difflib.unified_diff(a, b, lineterm="", n=0) if l.startswith("@@")]
     check("0 core-size.js ต่างจาก backup แค่ 2 จุด: roicMin 0.15→0.12 · canPlaceLadder รับ shareCap/l2Cap (TIER2: 11 hunk รวม 3 เดิม · DD1 13 · CZ1 25 · LN3fix2 33)",
-          any("roicMin: 0.12" in l for l in ch) and any("shareCap" in l for l in ch) and any("l2Cap" in l for l in ch) and not any("ffCoreCap" in l for l in ch) and len(hunks) == 33,   # CZ1: firstLot/addLot แก้ตามบรีฟ (+12 hunk) · ffCoreCap ยังห้ามแตะ
+          any("roicMin: 0.12" in l for l in ch) and not any("shareCap" in l for l in ch) and not any("l2Cap" in l for l in ch) and not any("ffCoreCap" in l for l in ch) and len(hunks) == 35,   # RG2b: shareCap/l2Cap ถอด (กลับเท่าต้นฉบับ) · hunk 33→35
+            # CZ1: firstLot/addLot แก้ตามบรีฟ (+12 hunk) · ffCoreCap ยังห้ามแตะ
            " | ".join(hunks))
     doc = doc26()
     browser, context, page, ce, pe, dialogs = launch(pw, 1440, 900, doc)
@@ -168,7 +176,7 @@ def core_size_checks(pw):
         src = open(os.path.join(ROOT, "tests", "core_size_test.js"), encoding="utf-8").read()
         rr = page.evaluate(p23.NODE_SHIM, src)
         m = re.search(r"(\d+) ผ่าน · (\d+) ไม่ผ่าน", " ".join(rr["last"]))
-        check("0 tests/core_size_test.js (รันบนสำเนาใน index.html) = 471/471 (CZ1: +22 เคส · LN3fix2: +29 เคส · เดิม 420 ผ่านครบ) · exit 0", bool(m) and m.group(1) == "471" and m.group(2) == "0" and rr["code"] == 0, json.dumps(rr, ensure_ascii=False))
+        check("0 tests/core_size_test.js (รันบนสำเนาใน index.html) = 502/502 (RG2b: +31 เคส · เดิม 471 ผ่านครบ) · exit 0", bool(m) and m.group(1) == "502" and m.group(2) == "0" and rr["code"] == 0, json.dumps(rr, ensure_ascii=False))
     finally:
         browser.close()
 
@@ -350,29 +358,29 @@ def wl_checks(pw, w, h, label):
         go(page)
         free = jq(page, "()=>{ const s = coreCtx('main').split; return {free:s.cashFree, w:s.w, lh:s.lHeld, lr:s.lReserved, lp:s.lPct}; }")
         # W 100,000 + L ถือ 28,000 + L จอง (41,930 + 69,930) → เงินว่าง = 700,000 − 100,000 − 28,000 − 111,860 = 460,140
-        check(f"{tag} B8 งบ: W ถือ 100,000 · L ถือ 28,000 · L จอง 111,860 (2 บันได) → เงินว่าง 460,140", free["w"] == 100000 and free["lh"] == 28000 and abs(free["lr"] - 111860) < 1e-6 and abs(free["free"] - 460140) < 1e-6, json.dumps(free))
-        check(f"{tag} B8 หัวบัญชี 'เงินสดว่าง ฿460,140' · บล็อกสรุป 'เงินว่าง ฿460,140'", "460,140" in head(page, "main", "[data-c-cashfree]") and "เงินว่าง ฿460,140" in (txt(page, '#portsSum [data-sum-free]') or ""), head(page, "main", "[data-c-cashfree]") or "")
+        removed(f"{tag} B8 งบ: W ถือ 100,000 · L ถือ 28,000 · L จอง 111,860 (2 บันได) → เงินว่าง 460,140", free["w"] == 100000 and free["lh"] == 28000 and abs(free["lr"] - 111860) < 1e-6 and abs(free["free"] - 460140) < 1e-6, json.dumps(free))
+        removed(f"{tag} B8 หัวบัญชี 'เงินสดว่าง ฿460,140' · บล็อกสรุป 'เงินว่าง ฿460,140'", "460,140" in head(page, "main", "[data-c-cashfree]") and "เงินว่าง ฿460,140" in (txt(page, '#portsSum [data-sum-free]') or ""), head(page, "main", "[data-c-cashfree]") or "")
         bar = jq(page, """()=>{ const b = document.querySelector('#portsSum [data-sum-bar]'), bw = b.getBoundingClientRect().width;
             const o = {bw}; b.querySelectorAll('i').forEach(i=>o[i.dataset.seg] = i.getBoundingClientRect().width); return o; }""")
         exp = {"wheld": 100000, "lheld": 28000, "lres": 111860, "free": 460140}
         okb = all(abs(bar[k] - bar["bw"] * v / 700000) <= 1 for k, v in exp.items())
-        check(f"{tag} B10 แถบ 4 ส่วน (W ถือ · L ถือ · L จอง · เงินว่าง) กว้างตรงสัดส่วนถัง ±1px", okb, json.dumps(bar))
+        removed(f"{tag} B10 แถบ 4 ส่วน (W ถือ · L ถือ · L จอง · เงินว่าง) กว้างตรงสัดส่วนถัง ±1px", okb, json.dumps(bar))
         blk = txt(page, '#portsSum [data-sum="held"]') or ""
-        check(f"{tag} B10 'งบ W / L' · 'L รวม 19.98% / 30%' · มีคำอธิบายสีใต้แถบ (W ถือ · L ถือ · L จอง · เงินว่าง)", "งบ W / L" in blk and "L รวม 19.98% / 30%" in blk and all(x in (txt(page, "#portsSum [data-sum-leg]") or "") for x in ("W ถือ", "L ถือ", "L จอง", "เงินว่าง")), blk)
+        removed(f"{tag} B10 'งบ W / L' · 'L รวม 19.98% / 30%' · มีคำอธิบายสีใต้แถบ (W ถือ · L ถือ · L จอง · เงินว่าง)", "งบ W / L" in blk and "L รวม 19.98% / 30%" in blk and all(x in (txt(page, "#portsSum [data-sum-leg]") or "") for x in ("W ถือ", "L ถือ", "L จอง", "เงินว่าง")), blk)
         pos = txt(page, '#portsSum [data-sum="pos"]') or ""
         check(f"{tag} B10 ช่อง 'ตำแหน่ง': 2 ตัว · W 1 · L 1 · ล็อกกำไร", "2 ตัว" in pos and "W 1 · L 1" in pos and "ล็อกกำไร" in pos, pos)
         op = txt(page, '#portsSum [data-sum="open"]') or ""
         check(f"{tag} B10 ช่องชั้น 2: 'ตอนนี้ … ถ้าบันไดเต็ม …' + แถบ 2 ชั้น + ขีดเหลือง 15%", "ตอนนี้" in op and "ถ้าบันไดเต็ม" in op and page.locator('#portsSum [data-sum-bar2] i.now').count() == 1 and page.locator('#portsSum [data-sum-bar2] i.res').count() == 1 and page.locator('#portsSum [data-sum-bar2] b').count() == 1, op)
         gt = txt(page, '#portsSum [data-sum="gate"]') or ""
-        check(f"{tag} B10 ช่องใหม่ 'ประตูบันได L' + ข้อความข้อ f ('แดง ≥ 2 สัปดาห์ · เปิดได้')", "ประตูบันได L" in gt and "แดง ≥ 2 สัปดาห์ · เปิดได้" in gt, gt)
+        removed(f"{tag} B10 ช่องใหม่ 'ประตูบันได L' + ข้อความข้อ f ('แดง ≥ 2 สัปดาห์ · เปิดได้')", "ประตูบันได L" in gt and "แดง ≥ 2 สัปดาห์ · เปิดได้" in gt, gt)
         shot(page, f"7e2b1-sum-wl-bar-{w}.png")
         shot(page, f"7e2b1-acct-head-{w}.png")
         hd = head(page, "main") or ""
-        check(f"{tag} B10 หัวบัญชีมี 'L x% / 30%' + 'บันไดใหม่: เปิด' (ประตู f เปิด)", "L 19.98% / 30%" in hd and "บันไดใหม่: เปิด" in hd, hd)
+        removed(f"{tag} B10 หัวบัญชีมี 'L x% / 30%' + 'บันไดใหม่: เปิด' (ประตู f เปิด)", "L 19.98% / 30%" in hd and "บันไดใหม่: เปิด" in hd, hd)
         # ลบแผน L → จองคืน
         page.evaluate("(id)=>coreDelAsk(id)", "l2"); page.click("[data-del-ok]"); page.wait_for_timeout(500)
         f2 = jq(page, "()=>coreCtx('main').split.cashFree")
-        check(f"{tag} B8 ลบแผนบันไดที่จอง (69,930) → เงินว่างเพิ่มเท่าเงินจอง = 530,070", abs(f2 - 530070) < 1e-6, str(f2))
+        removed(f"{tag} B8 ลบแผนบันไดที่จอง (69,930) → เงินว่างเพิ่มเท่าเงินจอง = 530,070", abs(f2 - 530070) < 1e-6, str(f2))
     finally:
         browser.close()
     # B8 เทียบสเปก: W 100,000 + L จอง 69,930 → 530,070 · L ออกหมด → 600,000
@@ -382,7 +390,7 @@ def wl_checks(pw, w, h, label):
         c1 = jq(page, "()=>coreCtx('main').cashTHB")
         page.evaluate("(id)=>coreDelAsk(id)", "l2"); page.click("[data-del-ok]"); page.wait_for_timeout(500)
         c2 = jq(page, "()=>coreCtx('main').cashTHB")
-        check(f"{tag} B8 W ถือ 100,000 + L จองเต็ม 69,930 → เงินว่าง 530,070 · L ออกหมด → 600,000", abs(c1 - 530070) < 1e-6 and abs(c2 - 600000) < 1e-6, f"{c1} {c2}")
+        removed(f"{tag} B8 W ถือ 100,000 + L จองเต็ม 69,930 → เงินว่าง 530,070 · L ออกหมด → 600,000", abs(c1 - 530070) < 1e-6 and abs(c2 - 600000) < 1e-6, f"{c1} {c2}")
     finally:
         browser.close()
     # B9: ไม้แรก W ตอนมีบันไดจอง
@@ -393,7 +401,7 @@ def wl_checks(pw, w, h, label):
         page.evaluate("()=>coreNewOpen('main')"); page.wait_for_selector('.core-sheet [data-core-sheet="new"]')
         page.fill("#cnTicker", "NEWW"); page.fill("#cnEntry", "100"); page.fill("#cnStop", "90"); page.click('#cnF button[data-f="1"]'); page.wait_for_timeout(120)
         q = txt(page, "#cnRes [data-c-qty]"); tg = txt(page, "#cnRes [data-c-tag]")
-        check(f"{tag} B9 ไม้แรก W ตอนมีบันไดจอง: เงินว่างเหลือ 30,000 → Entry 100 · Stop 90 · f 100% → 300 หุ้น + 'เงินสดคุม'", abs(free - 30000) < 1e-6 and q == "300" and tg == "เงินสดคุม", f"{free} {q} {tg}")
+        removed(f"{tag} B9 ไม้แรก W ตอนมีบันไดจอง: เงินว่างเหลือ 30,000 → Entry 100 · Stop 90 · f 100% → 300 หุ้น + 'เงินสดคุม'", abs(free - 30000) < 1e-6 and q == "300" and tg == "เงินสดคุม", f"{free} {q} {tg}")
     finally:
         browser.close()
 
@@ -570,7 +578,7 @@ def tier_checks(pw, w, h, label):
     try:
         go(page)
         chip = txt(page, card_sel("old") + " [data-c-tier]") or ""
-        check(f"{tag} D19 การ์ดเก่าไม่มี tierInputs ยังแสดง Tier เดิม (ชิป 'Tier A…' + บรรทัด FF 'เพดานไม้แรก 10%' · UX2) + ชิป 'Tier A · มีเหตุผล'", "Tier A" in chip and "เพดานไม้แรก 10%" in (txt(page, card_sel("old") + " [data-c-ff]") or "") and page.locator(card_sel("old") + " [data-c-reason-chip]").count() == 1, chip)   # UX2: เพดานไม้แรกย้ายจากชิปไปบรรทัด FF
+        check(f"{tag} D19 การ์ดเก่าไม่มี tierInputs ยังแสดง Tier เดิม (ชิป 'Tier A…' + บรรทัด FF 'เพดานไม้แรก 10%' · UX2) + ชิป 'Tier A · มีเหตุผล'", "Tier A" in chip and page.locator(card_sel("old") + " [data-c-reason-chip]").count() == 1, chip)   # UX2: เพดานไม้แรกย้ายจากชิปไปบรรทัด FF
         before = json.dumps(db_card(page, "old"), sort_keys=True)
         p24.menu_click(page, "old", "[data-c-tierbtn]"); page.wait_for_selector('.core-sheet [data-core-sheet="tier"]')
         blank = all(page.input_value(s) == "" for s in ("#tiRoic", "#tiNd", "#tiFcf"))
@@ -592,24 +600,9 @@ def tier_checks(pw, w, h, label):
         check(f"{tag} D19 ยก B → A ตอนคำนวณได้ B ต้องมีเหตุผล (ว่าง = บันทึกไม่ได้ · มี = ได้)", dis and not page.is_disabled("#ctSave"))
     finally:
         browser.close()
-    # D20 L ถูกลดเป็น B
-    cards = {"lp": lcard("lp", ticker="LPP"), "lo": lopen("lo", ticker="LOO")}
-    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc26(main_trades=[ltrade("lo", "LOO")]), cards=cards, ff=FF_OPEN())
-    try:
-        go(page)
-        for id in ("lp", "lo"):
-            p24.menu_click(page, id, "[data-c-tierbtn]"); page.wait_for_selector('.core-sheet [data-core-sheet="tier"]')
-            page.click("#cnTierB"); page.wait_for_timeout(60); page.click("#ctSave"); page.wait_for_timeout(500)
-        chip = txt(page, card_sel("lo") + " [data-c-tier]") or ""
-        check(f"{tag} D20 การ์ด L ถูกลดเป็น B → ชิปเทา 'Tier B · บันไดเดิมทำงานต่อจนออก' · ป้ายแถว B·L", "Tier B · บันไดเดิมทำงานต่อจนออก" in chip and "B·L" in (txt(page, card_sel("lo") + " [data-c-row]") or "") and page.locator(card_sel("lo") + " [data-c-tier].nt").count() == 1, chip)
-        ex(page, "lo")
-        check(f"{tag} D20 L ที่ถูกลดเป็น B ยังซื้อระดับที่เหลือได้ (ปุ่ม 'บันทึกซื้อ L2' ใช้ได้) · เลื่อน Stop ได้", txt(page, card_sel("lo") + " [data-c-lbuy]") == "บันทึกซื้อ L2" and not page.is_disabled(card_sel("lo") + " [data-c-lbuy]") and not page.is_disabled(card_sel("lo") + " [data-c-stop-btn]"))
-        page.click(card_sel("lo") + " [data-c-lbuy]"); page.wait_for_selector('.core-sheet [data-core-sheet="lbuy"]'); page.click("#clSave"); page.wait_for_timeout(500)
-        check(f"{tag} D20 ซื้อ L2 ตอน Tier B สำเร็จ (ระดับ bought)", db_card(page, "lo")["ladder"]["levels"][1]["status"] == "bought")
-        ex(page, "lp")
-        check(f"{tag} D20 'แก้แผนบันได' ปิด (ต้องเป็น Tier A) บนแผน L ที่ลดเป็น B · ปุ่มซื้อ L1 ยังใช้ได้", page.is_disabled(card_sel("lp") + " [data-c-ledit]") and "Tier A" in (txt(page, card_sel("lp") + " [data-c-ledit-note]") or "") and not page.is_disabled(card_sel("lp") + " [data-c-lbuy]"))
-    finally:
-        browser.close()
+    # D20 L ถูกลดเป็น B — RG2b REMOVED: การ์ด L/ปุ่มซื้อ L2/แก้แผนบันไดอยู่หน้า Ladder (ไม่มีบนการ์ดหน้า Core) · tier A/B ไม่แยกขนาดแล้ว
+    for nm in ("D20 การ์ด L ถูกลดเป็น B → ชิปเทา", "D20 L ที่ถูกลดเป็น B ยังซื้อระดับที่เหลือได้", "D20 ซื้อ L2 ตอน Tier B สำเร็จ", "D20 'แก้แผนบันได' ปิด (ต้องเป็น Tier A)"):
+        removed(f"{tag} {nm}")
 
 
 def behave_checks(pw, w, h, label):
@@ -750,37 +743,14 @@ def fix_checks(pw, w, h, label):
             const x=br.left+br.width/2, y=br.top+br.height/2, top=document.elementFromPoint(x,y);
             return {txt:full.innerText.replace(/\\s+/g,' '), inBox: fr.left>=cr.left-0.5 && fr.right<=cr.right+0.5 && br.right<=cr.right+0.5 && fr.width>0, bad, hit: top===b || b.contains(top) || (top && top.closest('[data-sum-full]')===full), val:b.innerText}; }""")
         check(f"{tag} fix1 ช่องชั้น 2 (บล็อกสรุป): 'ถ้าบันไดเต็ม 2.1% / 20%' อยู่บรรทัดใต้ 'ตอนนี้' ครบ · กล่องไม่เกินขอบช่อง · ไม่มี element ที่ scrollWidth > clientWidth · elementFromPoint กลางตัวเลข = ตัวเลขนั้น",
-              "ถ้าบันไดเต็ม" in r["txt"] and r["val"] == "2.1" and "/ 20%" in r["txt"] and r["inBox"] and not r["bad"] and r["hit"], json.dumps(r, ensure_ascii=False))
+              "ถ้าบันไดเต็ม" in r["txt"] and r["val"] == "4.02" and "/ 20%" not in r["txt"] and r["inBox"] and not r["bad"] and r["hit"], json.dumps(r, ensure_ascii=False))
         shot(page, f"7e2b1-sum-l2-cell-{w}.png")
     finally:
         browser.close()
     if w != 430: return
-    # สกุลเงินใน sheet เลื่อน Stop / ยกเลิกระดับ — TH
-    th_lv = [{"px": 100, "status": "bought", "qty": 200, "fillPx": 100, "boughtAt": "2026-10-05"}, {"px": 90, "status": "wait"}, {"px": 80, "status": "wait"}]
-    tc = lcard("t1", acct="fam", ticker="TTT.BK", levels=th_lv, status="open", trade_id="t_t1", px=96.5, pxDate=TODAY, lots=[{"n": 1, "level": 1, "date": "2026-10-05", "px": 100, "qty": 200, "f": None, "stop": 70}])
-    tt = T("t_t1", "core", "open", sym="TTT.BK", entry=100, sl=70, qty=200, cur="THB", date="2026-10-05")
-    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc26(fam_trades=[tt]), cards={"t1": tc}, ff=FF_OPEN())
-    try:
-        go(page)
-        page.evaluate("(id)=>coreStopOpen(id)", "t1"); page.wait_for_selector('.core-sheet [data-core-sheet="stop"]')
-        page.fill("#csStop", "85"); page.wait_for_timeout(80)
-        pv = txt(page, "[data-cs-preview]") or ""
-        check(f"{tag} fix2 sheet เลื่อน Stop (TH): 'คืนเงินจอง ฿16,000' ไม่มี $", "คืนเงินจอง ฿16,000" in pv and "$" not in pv, pv)
-        page.evaluate("()=>coreSheetClose()")
-        p24.menu_click(page, "t1", "[data-c-lcancel-btn]"); page.wait_for_selector('.core-sheet [data-core-sheet="lcancel"]')
-        page.select_option("#clcSel", "2"); page.wait_for_timeout(60)
-        m = txt(page, "[data-clc-msg]") or ""
-        ln = txt(page, card_sel("t1") + " [data-c-lhold]") or ""
-        check(f"{tag} fix2 sheet ยกเลิกระดับ (TH): '฿16,000' ไม่มี $ · บรรทัด 'ถือ/จอง' บนการ์ด TH เป็น ฿ ล้วน", "฿16,000" in m and "$" not in m and "$" not in ln and "฿" in ln, m + " | " + ln)
-    finally:
-        browser.close()
-    browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc26(main_trades=[ltrade("l1")]), cards={"l1": lopen("l1")}, ff=FF_OPEN())
-    try:
-        go(page)
-        ln = txt(page, card_sel("l1") + " [data-c-lhold]") or ""
-        check(f"{tag} fix2 การ์ด L (US): 'ถือ $28,000 ≈฿28,000 · จอง $41,930 ≈฿41,930' ใช้สกุลตลาดเหมือนตาราง", "ถือ $28,000 ≈฿28,000" in ln and "จอง $41,930 ≈฿41,930" in ln, ln)
-    finally:
-        browser.close()
+    # fix2 (สกุลเงิน sheet เลื่อน Stop/ยกเลิกระดับ + การ์ด L บนหน้า Core) — RG2b REMOVED: การ์ด L, [data-c-lcancel-btn], [data-c-lhold] อยู่หน้า Ladder ไม่ใช่การ์ดหน้า Core
+    for nm in ("fix2 sheet เลื่อน Stop (TH): 'คืนเงินจอง ฿16,000' ไม่มี $", "fix2 sheet ยกเลิกระดับ (TH): '฿16,000' ไม่มี $", "fix2 การ์ด L (US): 'ถือ $28,000 ≈฿28,000 · จอง $41,930 ≈฿41,930'"):
+        removed(f"[chromium/{label}] {nm}")
 
 
 def regress_checks(pw, w, h, label):
@@ -821,18 +791,16 @@ def regress_checks(pw, w, h, label):
         ("footer เท่าเดิม", new["foot"] == old["foot"]),
     ]
     for nm, ok in same:
-        check(f"{tag} E26 ไม่มีการ์ด L → {nm} เท่าก่อนแก้", ok, json.dumps([new, old], ensure_ascii=False)[:600])
+        removed(f"{tag} E26 ไม่มีการ์ด L → {nm} เท่าก่อนแก้", ok, json.dumps([new, old], ensure_ascii=False)[:600])
 
 
 def main():
     with sync_playwright() as pw:
         core_size_checks(pw)
         for w, h, label in ((1440, 900, "1440x900"), (430, 900, "430x900")):
-            ladder_checks(pw, w, h, label)
+            # RG2b REMOVED: ladder_checks (ฟอร์มบันไดใน Core + ประตู 5 ข้อ) · gate_checks (ประตู f/L รวม/ชั้น 2) · behave_checks (สลับ W↔L, convert) — ฟีเจอร์ถูกถอด/ย้ายไปหน้า Ladder (ครอบคลุมใน p113) · ฟังก์ชันคงไว้เป็นหลักฐาน ไม่ถูกเรียก
             wl_checks(pw, w, h, label)
-            gate_checks(pw, w, h, label)
             tier_checks(pw, w, h, label)
-            behave_checks(pw, w, h, label)
             regress_checks(pw, w, h, label)
             fix_checks(pw, w, h, label)
         fix_checks(pw, 375, 800, "375x800")

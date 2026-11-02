@@ -55,8 +55,9 @@ def fixture(opt=0):
     return m
 
 
-def launch(pw, w, h, pb=False, opt=0, bias="Long"):
-    browser, context, page, ce, pe, dialogs = P54.launch(pw, w, h, fixture(opt))
+def launch(pw, w, h, pb=False, opt=0, bias="Long", pin_sat=None):
+    if pin_sat is None: pin_sat = (__name__ == "__main__")   # RG2b — เมื่อรันชุดนี้เอง ตรึงถัง Sat = ทุน Sat เดิม (30%) · ชุดอื่นที่ใช้ launcher นี้ไม่ตรึงเว้นแต่ขอ
+    browser, context, page, ce, pe, dialogs = P54.launch(pw, w, h, fixture(opt), pin_sat=pin_sat)
     P51.fresh(page, None)
     if pb: P11.seed_pb(page, [P69.PB])
     js(page, "(l)=>{ satWeekPickWrite(wpWeekKey(), l); }", ["XAUUSD", "BTCUSD"])
@@ -99,22 +100,22 @@ def tests(pw, w, h, label):
     try:
         js(page, "()=>{ openSettings(); document.getElementById('satV2Sec').open = true; }"); page.wait_for_timeout(400)
         vals = js(page, "()=>Object.fromEntries(SAT_V2_FIELDS.map(([id,k])=>[k, document.getElementById(id).value]))")
-        exp = {"mainPct": "70", "tacPct": "30", "rptMain": "2", "rptTac": "2", "maxDd": "20", "capMain": "2", "capTac": "4", "brkN": "5", "brkDd": "10", "tp1R": "2", "tp1Pct": "50", "tp2R": "3",
+        exp = {"rptMain": "1.5", "rptTac": "0.75", "maxDd": "20", "capMain": "1.4", "capTac": "1.2", "brkN": "5", "brkDd": "3", "tp1R": "2", "tp1Pct": "50", "tp2R": "3",
                "tfMain": "D", "tfTac": "4H", "setupsMain": "Break EMA20\nBreak PoC Week", "setupsTac": "Break EMA50\nPoC Support", "orSat": "1.2", "orAsset": "0.6", "orTot": "6", "splitMain": "50/30/20", "splitTac": "100"}   # PV2c: + แบ่งไม้ Main/Tactical
-        check(f"{tag} 1 ตั้งค่า › Sat v2: ค่าเริ่มต้นครบ 21 ช่อง (PV2c: เดิม 19)", vals == exp, vals)
+        check(f"{tag} 1 ตั้งค่า › Sat v2: ค่าเริ่มต้นครบ 19 ช่อง (RG2b: ถอด Main%/Tactical% · RPT 1.5/0.75 · cap 1.4×/1.2× · เบรก 3%)", vals == exp, vals)
         hint = lambda i: txt(page, f'[data-v2-hint="{i}"]')
-        check(f"{tag} 1 ข้างช่องแสดง % ของพอร์ตรวม: Main 21% · Tactical 9% · RPT 0.42% / 0.18% · Max DD = 6% · เบรก DD = 0.9%",
-              (hint("sV2Main"), hint("sV2Tac"), hint("sV2RptMain"), hint("sV2RptTac"), hint("sV2MaxDd"), hint("sV2BrkDd")) ==
-              ("= 21% ของพอร์ตรวม", "= 9% ของพอร์ตรวม", "= 0.42% ของพอร์ตรวม", "= 0.18% ของพอร์ตรวม", "= 6% ของพอร์ตรวม", "= 0.9% ของพอร์ตรวม"),
-              [hint(i) for i in ("sV2Main", "sV2Tac", "sV2RptMain", "sV2RptTac", "sV2MaxDd", "sV2BrkDd")])
+        check(f"{tag} 1 ข้างช่องแสดง % ของพอร์ตรวม (RG2b ถัง Sat 30% ตรึง): RPT 0.45% / 0.23% · Max DD = 6% · เบรก DD = 0.9%",
+              (hint("sV2RptMain"), hint("sV2RptTac"), hint("sV2MaxDd"), hint("sV2BrkDd")) ==
+              ("= 0.45% ของพอร์ตรวม", "= 0.23% ของพอร์ตรวม", "= 6% ของพอร์ตรวม", "= 0.9% ของพอร์ตรวม"),
+              [hint(i) for i in ("sV2RptMain", "sV2RptTac", "sV2MaxDd", "sV2BrkDd")])
         shot(page, f"pv2a-settings-{sfx}.png", "#satV2Sec")
-        page.fill("#sV2Main", "60"); page.fill("#sV2Tac", "40"); page.wait_for_timeout(200)
-        check(f"{tag} 1 แก้ 60:40 → Main 18% · Tactical 12% · ปุ่มบันทึกใช้ได้", hint("sV2Main") == "= 18% ของพอร์ตรวม" and hint("sV2Tac") == "= 12% ของพอร์ตรวม" and not js(page, "()=>document.getElementById('setSaveBtn').disabled"), [hint("sV2Main"), hint("sV2Tac")])
-        check(f"{tag} 1 RPT เลือกได้ 4 ค่า 1 · 1.25 · 1.5 · 2", js(page, "()=>[...document.querySelectorAll('#sV2RptMain option')].map(o=>o.value)") == ["1", "1.25", "1.5", "2"] and js(page, "()=>[...document.querySelectorAll('#sV2RptTac option')].map(o=>o.value)") == ["1", "1.25", "1.5", "2"])
-        page.fill("#sV2Tac", "50"); page.wait_for_timeout(200)
-        err = txt(page, '[data-err-for="sV2Tac"]') or ""
-        check(f"{tag} 1 สัดส่วนรวม ≠ 100 → error + บันทึกไม่ได้", "100" in err and js(page, "()=>document.getElementById('setSaveBtn').disabled"), err)
-        page.fill("#sV2Tac", "40")
+        page.select_option("#sV2RptMain", "1.25"); page.wait_for_timeout(200)   # RG2b — ไม่มีสัดส่วน Main/Tactical แล้ว: เปลี่ยน RPT Main แทน
+        check(f"{tag} 1 แก้ RPT Main 1.25 → 0.375% ของพอร์ตรวม · ปุ่มบันทึกใช้ได้", hint("sV2RptMain") == "= 0.38% ของพอร์ตรวม" and not js(page, "()=>document.getElementById('setSaveBtn').disabled"), hint("sV2RptMain"))
+        check(f"{tag} 1 RPT เลือกได้: Main 0.5 · 0.75 · 1 · 1.25 · 1.5 · 2 / Tactical 0.25 · 0.5 · 0.75 · 1 (RG2b)", js(page, "()=>[...document.querySelectorAll('#sV2RptMain option')].map(o=>o.value)") == ["0.5", "0.75", "1", "1.25", "1.5", "2"] and js(page, "()=>[...document.querySelectorAll('#sV2RptTac option')].map(o=>o.value)") == ["0.25", "0.5", "0.75", "1"])
+        pl_old = page.input_value("#sPoolS"); page.fill("#sPoolS", "25"); page.wait_for_timeout(200)
+        err = txt(page, '[data-err-for="sPoolS"]') or ""
+        check(f"{tag} 1 สัดส่วนถังรวม ≠ 100 → error + บันทึกไม่ได้ (RG2b: แทนสัดส่วน Main/Tactical)", "100" in err and js(page, "()=>document.getElementById('setSaveBtn').disabled"), err)
+        page.fill("#sPoolS", pl_old)
         for fid, val, why in (("sV2Tp1Pct", "100", "TP1% นอก 1–99"), ("sV2Tp1Pct", "0", "TP1% = 0"), ("sV2MaxDd", "0", "Max DD ≤ 0"), ("sV2BrkN", "2.5", "เสียติดไม่ใช่จำนวนเต็ม"), ("sV2TfMain", "", "TF ว่าง"), ("sV2CapTac", "-1", "เพดาน < 0"), ("sV2Tp2R", "1", "TP2 ไม่ไกลกว่า TP1")):
             old = page.input_value("#" + fid); (fillx if fid in ("sV2TfMain",) else (lambda p,s_,v: p.fill(s_, v)))(page, "#" + fid, val); page.wait_for_timeout(120)
             check(f"{tag} 1 ค่าผิด ({why}) → error + ปุ่มบันทึกถูกล็อก", js(page, "()=>document.getElementById('setSaveBtn').disabled") and (txt(page, f'[data-err-for="{fid}"]') or "") != "", txt(page, f'[data-err-for="{fid}"]'))
@@ -123,32 +124,33 @@ def tests(pw, w, h, label):
         check(f"{tag} 1 รายการ Setup ว่าง → error", js(page, "()=>document.getElementById('setSaveBtn').disabled"))
         fillx(page, "#sV2SetupsMain", "Break EMA20\nBreak EMA20"); page.wait_for_timeout(100)
         check(f"{tag} 1 ป้าย Setup ซ้ำ → error", js(page, "()=>document.getElementById('setSaveBtn').disabled"))
-        fillx(page, "#sV2SetupsMain", "Break EMA20\nแนวรับ Day"); page.select_option("#sV2RptTac", "1.25"); fillx(page, "#sV2Tf" + "Tac", "15m"); page.wait_for_timeout(150)
+        fillx(page, "#sV2SetupsMain", "Break EMA20\nแนวรับ Day"); page.select_option("#sV2RptTac", "1"); fillx(page, "#sV2Tf" + "Tac", "15m"); page.wait_for_timeout(150)
         page.click("#setSaveBtn"); page.wait_for_timeout(500)
         cfg = js(page, "()=>satV2Cfg('main')")
-        check(f"{tag} 1 บันทึกแล้วอ่านกลับได้ (60:40 · RPT Tactical 1.25 · TF 15m · Setup Main แก้ชื่อ/ลบ/เพิ่ม)", (cfg["mainPct"], cfg["tacPct"], cfg["rptTac"], cfg["tfTac"], cfg["setupsMain"]) == (60, 40, 1.25, "15m", ["Break EMA20", "แนวรับ Day"]), cfg)
-        check(f"{tag} 1 บัญชี Family ยังเป็นค่าเริ่มต้น (ตั้งต่างบัญชีได้)", js(page, "()=>{ const c = satV2Cfg('fam'); return [c.mainPct, c.rptTac, c.tfTac]; }") == [70, 2, "4H"])
+        check(f"{tag} 1 บันทึกแล้วอ่านกลับได้ (RPT Main 1.25 · RPT Tactical 1 · TF 15m · Setup Main แก้ชื่อ/ลบ/เพิ่ม)", (cfg["rptMain"], cfg["rptTac"], cfg["tfTac"], cfg["setupsMain"]) == (1.25, 1, "15m", ["Break EMA20", "แนวรับ Day"]), cfg)
+        check(f"{tag} 1 บัญชี Family ยังเป็นค่าเริ่มต้น (ตั้งต่างบัญชีได้)", js(page, "()=>{ const c = satV2Cfg('fam'); return [c.rptMain, c.rptTac, c.tfTac]; }") == [1.5, 0.75, "4H"])
         js(page, "()=>{ acctSwitch('fam'); }"); page.wait_for_timeout(500)
         js(page, "()=>{ openSettings(); document.getElementById('satV2Sec').open = true; }"); page.wait_for_timeout(300)
-        check(f"{tag} 1 เปิดตั้งค่าบัญชี Family → เห็นค่าของ Family (70:30 · 4H)", page.input_value("#sV2Main") == "70" and page.input_value("#sV2TfTac") == "4H")
-        page.fill("#sV2Main", "80"); page.fill("#sV2Tac", "20"); page.wait_for_timeout(150); page.click("#setSaveBtn"); page.wait_for_timeout(500)
-        check(f"{tag} 1 Family ตั้ง 80:20 ได้ แยกจากบัญชีหลัก (60:40)", js(page, "()=>[satV2Cfg('fam').mainPct, satV2Cfg('main').mainPct]") == [80, 60])
+        check(f"{tag} 1 เปิดตั้งค่าบัญชี Family → เห็นค่าของ Family (RPT Main 1.5 · 4H)", page.input_value("#sV2RptMain") == "1.5" and page.input_value("#sV2TfTac") == "4H")
+        page.select_option("#sV2RptMain", "2"); page.wait_for_timeout(150); page.click("#setSaveBtn"); page.wait_for_timeout(500)
+        check(f"{tag} 1 Family ตั้ง RPT Main 2 ได้ แยกจากบัญชีหลัก (1.25)", js(page, "()=>[satV2Cfg('fam').rptMain, satV2Cfg('main').rptMain]") == [2, 1.25])
         check(f"{tag} 1 ไม่มี console error · ไม่ล้นแนวนอน", not P63.P60.real_errs(ce) if hasattr(P63.P60, "real_errs") else not ce, ce[:3] + pe[:3])
     finally: browser.close()
 
     # 2 Port
     browser, page, ce, pe = launch(pw, w, h, opt=50000)
     try:
-        js(page, "()=>switchTab('mix')"); page.wait_for_timeout(500)
-        segs = js(page, "()=>Object.fromEntries([...document.querySelectorAll('[data-pv2-port=main] [data-pv2-seg]')].map(e=>[e.dataset.pv2Seg, +e.dataset.pct]))")
-        check(f"{tag} 2 Port: Core 70 · Main 21 · Tactical 9", segs == {"core": 70, "main": 21, "tactical": 9}, segs)
-        rows = js(page, "()=>[...document.querySelectorAll('[data-pv2-port=main] [data-pv2-row]')].map(e=>e.dataset.pv2Row)")
-        t = txt(page, "[data-pv2-port=main]") or ""
-        check(f"{tag} 2 ไม่มี Option ในการแบ่งเงิน (บัญชีหลักไม่มีแถว อื่น ๆ) · มีเงินแต่ละส่วน", rows == ["core", "main", "tactical"] and "Option" not in t and "$31,500" in t and "$13,500" in t and "฿4,200,000" in t, t)
-        shot(page, f"pv2a-port-{sfx}.png", "[data-pv2-port=main]")
-        js(page, "()=>acctSwitch('fam')"); page.wait_for_timeout(500); js(page, "()=>switchTab('mix')"); page.wait_for_timeout(400)
-        lg = txt(page, "[data-pv2-port=fam] [data-pv2-row=legacy]") or ""
-        check(f"{tag} 2 ข้อมูล Option เดิม (Family ฿50,000) → 'อื่น ๆ (เดิม)' อ่านอย่างเดียว ไม่นับในแถบ", "อื่น ๆ (เดิม)" in lg and "50,000" in lg and js(page, "()=>document.querySelectorAll('[data-pv2-port=fam] [data-pv2-seg]').length") == 3, lg)
+        js(page, "()=>{ switchTab('mix'); ln3PortSet('main'); renderPortfolioMix(); }"); page.wait_for_timeout(500)
+        line = txt(page, "[data-pool-txt]") or ""
+        check(f"{tag} 2 Port (RG2b เส้นถัง แทนแถบ Core/Main/Tactical): เป้า Winner · Ladder · Sat 30 (ตรึงเท่าทุน Sat เดิม)", line.endswith("Sat 0/30") and "Winner 0/44" in line and "Ladder 0/26" in line, line)
+        js(page, "()=>{ document.querySelector('[data-pool-line]').open = true; }")
+        rows = js(page, "()=>[...document.querySelectorAll('[data-pool-line] [data-pool-bar]')].map(e=>e.dataset.poolBar)")
+        t = txt(page, "[data-pool-line]") or ""
+        check(f"{tag} 2 ไม่มี Option ในการแบ่งเงิน (บัญชีหลักไม่มีแถว อื่น ๆ) · มีเงินแต่ละถัง", rows[:3] == ["winner", "ladder", "sat"] and len(rows) % 3 == 0 and "Option" not in t and "฿1,800,000" in t, [rows, t])
+        shot(page, f"pv2a-port-{sfx}.png", "[data-pool-line]")
+        js(page, "()=>acctSwitch('fam')"); page.wait_for_timeout(500); js(page, "()=>{ switchTab('mix'); ln3PortSet('fam'); renderPortfolioMix(); document.querySelector('[data-pool-line]').open = true; }"); page.wait_for_timeout(400)
+        lg = js(page, "()=>{ const e = document.querySelector('[data-pool-line] [data-pv2-row=legacy]'); return e ? e.textContent : ''; }")
+        check(f"{tag} 2 ข้อมูล Option เดิม (Family ฿50,000) → 'อื่น ๆ (เดิม)' อ่านอย่างเดียว ไม่นับในแถบ", "อื่น ๆ (เดิม)" in lg and "50,000" in lg and js(page, "()=>document.querySelectorAll('[data-pool-line] [data-pool-bar]').length") % 3 == 0, lg)
         check(f"{tag} 2 ไม่มี console error · ไม่ล้นแนวนอน", not ce and not pe and overflow(page) <= 1, [ce[:2], pe[:2], overflow(page)])
     finally: browser.close()
 
@@ -157,10 +159,10 @@ def tests(pw, w, h, label):
     try:
         iid = idea(page, sleeve="tactical", entry=4240, sl=4260)
         c = calc(page, iid)
-        check(f"{tag} 3 Tactical: lot ตาม Risk 0.135 · เพดาน 4× → ใช้ 0.12 (จำกัดโดยเพดานมูลค่า)", abs(c["rawRisk"] - 0.135) < 1e-6 and c["limit"] == "cap" and c["lot"] == 0.12 and c["deal"] == 0.12, c)
+        check(f"{tag} 3 Tactical: lot ตาม Risk 0.169 · เพดาน 1.2× → ใช้ 0.12 (จำกัดโดยเพดานมูลค่า)", abs(c["rawRisk"] - 0.16875) < 1e-6 and c["limit"] == "cap" and c["lot"] == 0.12 and c["deal"] == 0.12, c)
         check(f"{tag} 3 TP1 4,200 / TP2 4,180 (2R 50% · 3R)", c["tp1"] == 4200 and c["tp2"] == 4180, c)
         sz = txt(page, "[data-v2-size=tactical]") or ""
-        check(f"{tag} 3 ตารางขนาดไม้บอก RPT $270 → 0.135 · เพดาน 0.127 · ใช้ 0.12 · 'เพดานมูลค่า'", "$270" in sz and "0.135" in sz and "0.12" in sz and "เพดานมูลค่า" in sz and cnt(page, "[data-v2-limit=cap]") >= 1, sz)
+        check(f"{tag} 3 ตารางขนาดไม้บอก RPT $338 → 0.169 · เพดาน 0.127 · ใช้ 0.12 · 'เพดานมูลค่า'", "$338" in sz and "0.1688" in sz and "0.12" in sz and "เพดานมูลค่า" in sz and cnt(page, "[data-v2-limit=cap]") >= 1, sz)
         check(f"{tag} 3 การ์ด: ปุ่ม Main|Tactical (Tactical เปิดอยู่) · TF 4H · Setup ค่าเริ่ม Tactical · TP แสดงราคา", js(page, "()=>document.querySelector('[data-sleeve=tactical]').getAttribute('aria-pressed')") == "true"
               and page.input_value("[data-v2-tf]") == "4H" and js(page, "()=>[...document.querySelectorAll('[data-v2-setup]')].map(e=>e.dataset.v2Setup)") == ["Break EMA50", "PoC Support"] and "4,200" in (txt(page, "[data-v2-tp]") or "") and "4,180" in (txt(page, "[data-v2-tp]") or ""), txt(page, "[data-v2-tp]"))
         check(f"{tag} 3 ไม่มีช่อง Break Price / Break Vol / Pullback / ปุ่ม TF 4H·D·W ในแผนใหม่", cnt(page, ".ui-plan [data-ac-px]") == 0 and cnt(page, ".ui-plan [data-ac-pb]") == 0 and cnt(page, ".ui-plan [data-ac-tf]") == 0 and cnt(page, "[data-v2-card] .ui-acr") == 0)
@@ -177,7 +179,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 4 Main: ไม้ 1 = 50% ของดีล (PY2 ใช้ต่อ) = 0.05 · ไม่มีกล่อง 'จำกัดโดยเพดาน'", c["lot"] == 0.05 and c["split1"] == 0.5 and cnt(page, "[data-v2-limit]") == 0, c)
         check(f"{tag} 4 Main: TF ค่าเริ่ม D · Setup ค่าเริ่ม Main · TP กรอกเองได้ไม่บังคับ", page.input_value("[data-v2-tf]") == "D" and js(page, "()=>[...document.querySelectorAll('[data-v2-setup]')].map(e=>e.dataset.v2Setup)") == ["Break EMA20", "Break PoC Week"] and cnt(page, "input[data-v2-tp=main]") == 1)
         sz = txt(page, "[data-v2-size=main]") or ""
-        check(f"{tag} 4 ตารางขนาดไม้: RPT Main 2% $630 → 0.1 · ใช้ 0.1 lot · Risk $630", "$630" in sz and "0.1" in sz and "RPT Main 2%" in sz, sz)
+        check(f"{tag} 4 ตารางขนาดไม้: RPT Main 1.5% $675 → 0.107 · ใช้ 0.1 lot · Risk $630", "$630" in sz and "0.1071" in sz and "RPT Main 1.5%" in sz, sz)
         shot(page, f"pv2a-form-main-{sfx}.png", ".ui-pcell")
         js(page, "([i])=>satV2SetSleeve(i,'tactical')", [iid]); page.wait_for_timeout(600)
         check(f"{tag} 4 สลับ Tactical → TF เปลี่ยนเป็น 4H · Setup ของ Tactical", page.input_value("[data-v2-tf]") == "4H" and js(page, "()=>[...document.querySelectorAll('[data-v2-setup]')].map(e=>e.dataset.v2Setup)")[0] == "Break EMA50")
@@ -219,8 +221,8 @@ def tests(pw, w, h, label):
     try:
         iid = idea(page, sleeve="tactical", entry=4240, sl=4260)
         c = calc(page, iid)
-        check(f"{tag} 6 สวน Macro (Short vs Playbook ▲) → ตัวคูณ ×0.6 ใช้กับ Tactical: Risk $162 → 0.081", c["factor"] == 0.6 and abs(c["rawRisk"] - 0.081) < 1e-6 and c["lot"] == 0.08, c)
-        check(f"{tag} 6 สวน Macro ต้องเขียนเหตุผลก่อน (ไม่ ready) · บอก 'ลด 40%'", not c["ready"] and "ลด 40%" in (txt(page, "[data-f2c-row=size]") or ""), [c["ready"], txt(page, "[data-f2c-row=size]")])
+        check(f"{tag} 6 สวน Macro (Short vs Playbook ▲) → RG2b ไม่มีตัวคูณ Macro (×1): Risk $338 → 0.169 (ติดเพดาน 0.12)", c["factor"] == 1 and abs(c["rawRisk"] - 0.16875) < 1e-6 and c["lot"] == 0.12, c)
+        check(f"{tag} 6 สวน Macro ต้องเขียนเหตุผลก่อน (ไม่ ready) · ไม่มีข้อความ 'ลด 40%' (RG2b)", not c["ready"] and "ลด 40%" not in (txt(page, "[data-f2c-row=size]") or ""), [c["ready"], txt(page, "[data-f2c-row=size]")])
     finally: browser.close()
 
     # 7 บันทึกไม้ → field ใหม่ครบ

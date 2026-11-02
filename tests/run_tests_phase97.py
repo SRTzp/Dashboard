@@ -88,7 +88,7 @@ def desk(pw, w, h):
             # คลิก Sat/Core เหมือนปุ่มเดิม
             go(page, "plan", "stock")
             if r["fullVis"]:
-                page.locator("#hdrSub #scopeFuture").click(); settle(page, 400)
+                page.locator("#scopeFuture").first.click()   # RG2b: <430 ปุ่มอยู่ในหน้า; settle(page, 400)
                 s1 = js(page, "()=>({ps: planScope, cls: document.getElementById('tabPlan').className, on: document.getElementById('scopeFuture').classList.contains('on')})")
                 page.locator("#hdrSub #scopeStock").click(); settle(page, 400)
                 s2 = js(page, "()=>({ps: planScope, cls: document.getElementById('tabPlan').className, on: document.getElementById('scopeStock').classList.contains('on')})")
@@ -203,8 +203,12 @@ def phone(pw, w, h):
         check(f"{tag} 3 ความสูง top bar Plan/Port = Today (± 1px) · Journal/Flow/Watch เท่ากัน · ไม่ล้นแนวนอน", all(near(r["top"]["h"], t0, 1) and r["ow"] <= 1 for r in rows.values()), {k: [r["top"]["h"], r["ow"]] for k, r in rows.items()})
         for k in ("plan-stock", "plan-future", "mix"):
             r = rows[k]
-            check(f"{tag} 3 {k}: ซ่อนชื่อ Trading + ข้อความซิงก์ · โลโก้ + จุดซิงก์ยังเห็น · ตัวควบคุมอยู่ในช่อง (เต็มหรือย่อ) ไม่ล้นจอ",
-                  not r["brandNameVis"] and not r["syncTimeVis"] and r["dotVis"] and (r["fullVis"] or r["cmpVis"]) and r["slot"]["r"] <= w and r["slot"]["r"] <= r["hb"]["l"] + 0.5, r)
+            if k.startswith("plan") and w < 430:   # RG2b — 3 ปุ่ม Winner | Ladder | Sat ไม่พอที่ใน header จอ < 430px → อยู่ในหน้า (ชื่อแอปคงอยู่ · โลโก้ + จุดซิงก์เห็น)
+                where_ = page.evaluate("()=>[...document.querySelectorAll('.scopeBtn')].map(b=>b.closest('.planScope') ? 'page' : 'hdr')")
+                check(f"{tag} 3 {k}: RG2b ปุ่ม 3 ตัวอยู่ในหน้า (header ไม่พอ) · โลโก้ + จุดซิงก์ยังเห็น · ไม่ล้นจอ", r["dotVis"] and where_ == ["page", "page", "page"] and r["hb"]["r"] <= w, [r, where_])
+            else:
+                check(f"{tag} 3 {k}: ซ่อนชื่อ Trading + ข้อความซิงก์ · โลโก้ + จุดซิงก์ยังเห็น · ตัวควบคุมอยู่ในช่อง (เต็มหรือย่อ) ไม่ล้นจอ",
+                      not r["brandNameVis"] and not r["syncTimeVis"] and r["dotVis"] and (r["fullVis"] or r["cmpVis"]) and r["slot"]["r"] <= w and r["slot"]["r"] <= r["hb"]["l"] + 0.5, r)
         for k in ("today", "flow", "watch", "journal"):
             r = rows[k]
             check(f"{tag} 3 {k}: top bar เหมือนเดิม (เห็น Trading + ข้อความซิงก์ · ช่องว่าง)", r["brandNameVis"] and r["slotEmpty"], r)
@@ -213,7 +217,8 @@ def phone(pw, w, h):
         go(page, "plan", "stock")
         page.evaluate("()=>{ const b = document.getElementById('brandSync'); b.removeAttribute('onclick'); b.onclick = ()=>window.retrySync(); }")
         r = rows["plan-stock"]
-        page.mouse.click(r["dot"]["l"] + r["dot"]["w"] / 2, r["dot"]["t"] + r["dot"]["h"] / 2); settle(page, 150)
+        bs_ = js(page, "()=>{ const q = document.getElementById('brandSync').getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; }")   # RG2b: <430 Plan ไม่ใช้ hd-sub แล้ว (ปุ่มอยู่ในหน้า) → แตะกลางปุ่มซิงก์ (เท่าหน้าอื่น)
+        page.mouse.click(bs_[0], bs_[1]); settle(page, 150)
         rs = js(page, "()=>window.__rs")
         check(f"{tag} 3 แตะจุดซิงก์ที่โลโก้ → เรียก retrySync()", rs == 1, rs)
         # เลือกจากช่อง
@@ -221,7 +226,7 @@ def phone(pw, w, h):
         if js(page, "()=>!!document.querySelector('#hdrSub .hdrCmp') && document.querySelector('#hdrSub').classList.contains('cmp')"):
             page.locator("#hdrSub .hdrCmp select").select_option(index=1)
         else:
-            page.locator("#hdrSub #scopeFuture").click()
+            page.locator("#scopeFuture").first.click()   # RG2b: <430 ปุ่มอยู่ในหน้า
         settle(page, 400); a = js(page, "()=>planScope")
         go(page, "mix")
         if js(page, "()=>document.querySelector('#hdrSub').classList.contains('cmp')"):
@@ -231,7 +236,9 @@ def phone(pw, w, h):
         settle(page, 450); c = js(page, "()=>[ln3PortSel(), acctList.map(a=>a.id), document.querySelectorAll('[data-ln3-accsw]').length]")
         check(f"{tag} 3 เลือก Sat / FAM จากช่องใน top bar ได้ · node เดียว", a == "future" and c[0] == c[1][1] and c[2] == 1, [a, c])
         if w == 390:
-            check(f"{tag} 3 Plan 390: Core|Sat เต็มรูปพอดี (ไม่ย่อ)", rows["plan-stock"]["fullVis"] and not rows["plan-stock"]["slotCmp"], rows["plan-stock"])
+            go(page, "plan", "stock")
+            inpg = js(page, "()=>['scopeStock','scopeLadder','scopeFuture'].map(i=>{ const e = document.getElementById(i); const r = e && e.getBoundingClientRect(); return !!(e && e.offsetParent && r.width > 20 && r.right <= innerWidth); })")
+            check(f"{tag} 3 Plan 390 (RG2b): ปุ่ม Winner | Ladder | Sat เต็ม 3 ปุ่มอยู่ในหน้า (ไม่ย่อเป็น pill)", inpg == [True, True, True] and not rows["plan-stock"]["slotCmp"], [inpg, rows["plan-stock"]["slotCmp"]])
         if w == 300:
             check(f"{tag} 3 Port 300: รูปย่อ pill", rows["mix"]["cmpVis"] and not rows["mix"]["fullVis"], rows["mix"])
         if w in (390, 300):

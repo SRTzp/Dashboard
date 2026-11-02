@@ -3,7 +3,7 @@
 mock Firestore · Chromium 1440 + 390 · นาฬิกาปลอม 2026-10-01 ไทย · Satellite $45,000 (พอร์ตรวม $150,000)
 ภาพ tests/screenshots/pv2b-{header,asset-hedge,blocks,brake}-{1440,390}.png
 รัน: python3 run_tests_phase78.py"""
-import json, os
+import functools, json, os
 from playwright.sync_api import sync_playwright
 import run_tests_phase4 as base
 import run_tests_phase22 as p22
@@ -19,7 +19,7 @@ ENGINE = base.BROWSER_ENGINE
 results = []
 js = P37.js
 txt, overflow = P54.txt, P54.overflow
-launch, idea = P77.launch, P77.idea
+launch, idea = functools.partial(P77.launch, pin_sat=True), P77.idea
 T = p22.T
 
 
@@ -49,7 +49,8 @@ def cnt(page, sel): return page.locator(sel).count()
 
 
 def sat_t(id, status="open", sym="XAUUSD", bias="Long", entry=4180, sl=4117, qty=0.10, sleeve="main", **kw):
-    return T(id, "satB", status, sym=sym, bias=bias, entry=entry, sl=sl, qty=qty, mult=100 if sym == "XAUUSD" else 1, cur="USD", sleeve=sleeve, date="2026-09-29", openedAt="2026-09-29", **kw)
+    kw.setdefault("date", "2026-09-29"); kw.setdefault("openedAt", kw["date"])
+    return T(id, "satB", status, sym=sym, bias=bias, entry=entry, sl=sl, qty=qty, mult=100 if sym == "XAUUSD" else 1, cur="USD", sleeve=sleeve, **kw)
 
 
 def put(page, trades, acct="main"):
@@ -214,7 +215,7 @@ def tests(pw, w, h, label):
         setcfg(page, maxDd=20)
         js(page, "()=>{ const s = getBook('main').settings; s.ddState.sat = %s; saveBook('main'); render(); }" % json.dumps(P37.ds0(45000))); page.wait_for_timeout(300)   # ล้างสถานะพักที่แอปจดไว้ (ระบบเดิม: พักจนครบกำหนด + รีวิว)
         # เบรก Tactical: เสียติด 5 ไม้
-        def tl(i, d, pnl_usd, k="x"): return sat_t(f"{k}{i}", status="closed", sleeve="tactical", entry=4180, sl=4160, qty=0.10, exitPrice=4180 + pnl_usd / 10.0, exitDate=d)
+        def tl(i, d, pnl_usd, k="x"): return sat_t(f"{k}{i}", status="closed", sleeve="tactical", entry=4180, sl=4160, qty=0.10, exitPrice=4180 + pnl_usd / 10.0, exitDate=d, date="2026-09-%02d" % (int(d[-2:]) - 14), openedAt="2026-09-%02d" % (int(d[-2:]) - 14))   # RG2b: ไม้ปิดแล้วเปิดก่อนสัปดาห์นี้ — ไม่กินโควตาไม้ใหม่ 4/สัปดาห์
         losses = [tl(i, f"2026-09-{20 + i}", -50) for i in range(1, 6)]
         put(page, losses)
         cM, cT = calc(page, iidM), calc(page, iidT)
@@ -229,10 +230,10 @@ def tests(pw, w, h, label):
         put(page, [tl(1, "2026-09-21", -700), tl(2, "2026-09-22", -700)])
         br = js(page, "()=>{ const b = satV2Brake('main'); return [b.streak, b.stop, Math.round(b.ddPct*10)/10, b.msg]; }")
         cT = calc(page, iidT)
-        check(f"{tag} 5 DD Tactical 10.4% ≥ 10% (เสียติดแค่ 2) → หยุด · ข้อความ DD", br[1] and br[0] == 2 and br[2] == 10.4 and "DD 10.4%/10%" in br[3] and not cT["ready"], br)
+        check(f"{tag} 5 DD Sat 3.1% ≥ 3% (เสียติดแค่ 2 · RG2b เบรก DD ฐานถัง Sat) → หยุด · ข้อความ DD", br[1] and br[0] == 2 and br[2] == 3.1 and "DD 3.1%/3%" in br[3] and not cT["ready"], br)
         put(page, [tl(1, "2026-09-21", -700), tl(2, "2026-09-22", -700), tl(3, "2026-09-23", 300, "w")])
         br = js(page, "()=>satV2Brake('main').stop")
-        check(f"{tag} 5 ชนะ 1 ไม้ (DD เหลือ 8.1% < 10%) → ปลด", br is False)
+        check(f"{tag} 5 ชนะ 1 ไม้ (DD เหลือ 2.4% < 3%) → ปลด", br is False)
         setcfg(page, brkN=2, brkDd=50)
         put(page, [tl(1, "2026-09-21", -100), tl(2, "2026-09-22", -100)])
         check(f"{tag} 5 เปลี่ยนเบรก 5 → 2 ไม้ → แพ้ 2 ติดก็หยุด (ตามค่าตั้งใหม่)", js(page, "()=>satV2Brake('main').stop") is True)
