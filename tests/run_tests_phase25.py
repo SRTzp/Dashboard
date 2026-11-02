@@ -419,7 +419,7 @@ def core_size_only_two_spots():
     b = open(os.path.join(ROOT, "core-size.js"), encoding="utf-8").read().splitlines()
     d = list(difflib.unified_diff(a, b, lineterm="", n=0))
     ch = [l for l in d if (l.startswith("+") or l.startswith("-")) and not l.startswith("+++") and not l.startswith("---")]
-    return sum(1 for l in d if l.startswith("@@")) == 33 and any("roicMin: 0.12" in l for l in ch) and any("shareCap" in l for l in ch) and any("l2Cap" in l for l in ch)
+    return sum(1 for l in d if l.startswith("@@")) == 35 and any("roicMin: 0.12" in l for l in ch) and not any("shareCap" in l for l in ch) and not any("l2Cap" in l for l in ch)   # RG2b: shareCap/l2Cap ถูกถอด (กลับเท่าต้นฉบับ) · hunk 33→35
 
 def main():
     with sync_playwright() as pw:

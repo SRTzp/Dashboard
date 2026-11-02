@@ -292,7 +292,7 @@ def unchanged_tests(pw, w, h, label):
     finally:
         p24.INDEX = saved
     new, old = outs
-    norm = lambda t: re.sub(r"(^|[\s(])f($|[\s)<])", r"\1FF\2", t)
+    norm = lambda t: re.sub(r"เพดานไม้แรก \d+%", "เพดานไม้แรก 25%", re.sub(r"(^|[\s(])f($|[\s)<])", r"\1FF\2", t))   # RG2b: เพดานต่อหุ้นค่าเดียว 25%
     diffs = {i: [new[i][:160], old[i][:160]] for i in ids if not (new[i] and (new[i] == old[i] or new[i] == norm(old[i])))}
     check(f"{tag} 11 การ์ด open (5 ใบ: ปกติ/แดง/เตือน/ไม่มีราคา/หลายไม้) innerText เหมือนก่อน UX2 (ยกเว้น f→FF) · ไม่ว่างเปล่า", not diffs, json.dumps(diffs, ensure_ascii=False))
 

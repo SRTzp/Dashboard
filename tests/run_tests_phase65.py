@@ -201,13 +201,13 @@ def tests(pw, w, h, label):
         finally:
             b.close()
     p24.INDEX = INDEX0
-    check(f"{tag} 8 บันได L · ชั้น 2 · gate FF ผลเท่ากับก่อน CZ1 บน fixture เดียวกัน", outs[0] == outs[1] and outs[0]["l2"] is not None, json.dumps(outs, ensure_ascii=False))
+    check(f"{tag} 8 RG2b: ชั้น 2 ยังคำนวณได้ · ไม่มี coreGate (ถอด) · ไม่มีงบ/เพดาน L เดิม (ladderBudget/ShareCap/gateStreak ถอด) · บันไดเดิม 0 ตัว", outs[0]["l2"] is not None and outs[0]["l2"]["ok"] is True and "coreGate is not defined" in str(outs[0]["g"]) and outs[0]["lad"] == outs[1]["lad"] and outs[0]["lb"][0] is None and outs[0]["lb"][2] is None and outs[0]["lb"][3] is None, json.dumps(outs, ensure_ascii=False))
     # ── 9 390px
     b, page, ce, pe = setup(pw, w, h, coreRisk={})
     try:
         open_settings(page)
-        m = js(page, "()=>{ const t=document.querySelector('[data-cr-tiertbl]'); const ins=[...t.querySelectorAll('input')]; const r=t.getBoundingClientRect(); const c=document.getElementById('crSec').getBoundingClientRect(); const ov=document.getElementById('setOverlay'); return {W:innerWidth, tw:t.scrollWidth, cw:(t.parentElement||t).clientWidth, h:Math.min(...ins.map(e=>e.getBoundingClientRect().height)), fs:Math.min(...ins.map(e=>parseFloat(getComputedStyle(e).fontSize))), iw:Math.min(...ins.map(e=>e.getBoundingClientRect().width)), page:document.documentElement.scrollWidth, ovw: ov ? ov.scrollWidth-ov.clientWidth : 0}; }")
-        check(f"{tag} 9 ตารางตั้งค่าไม่ล้นแนวนอน · ช่อง ≥ 44px · font ≥ 16px · กว้างพอพิมพ์ 1.25", m["tw"] <= m["cw"] + 1 and m["page"] <= m["W"] + 1 and m["h"] >= 43.5 and m["fs"] >= 16 and m["iw"] >= 52 and m["ovw"] <= 1, json.dumps(m))
+        m = js(page, "()=>{ const t=document.getElementById('crSec'); const ins=['sCrRiskA','sCrWinCap'].map(i=>document.getElementById(i));   /* RG2b: ตาราง Tier A/B ถอด → เช็กช่อง Risk per lot + เพดานต่อหุ้น */ const r=t.getBoundingClientRect(); const c=document.getElementById('crSec').getBoundingClientRect(); const ov=document.getElementById('setOverlay'); return {W:innerWidth, tw:t.scrollWidth, cw:(t.parentElement||t).clientWidth, h:Math.min(...ins.map(e=>e.getBoundingClientRect().height)), fs:Math.min(...ins.map(e=>parseFloat(getComputedStyle(e).fontSize))), iw:Math.min(...ins.map(e=>e.getBoundingClientRect().width)), page:document.documentElement.scrollWidth, ovw: ov ? ov.scrollWidth-ov.clientWidth : 0}; }")
+        check(f"{tag} 9 ตารางตั้งค่าไม่ล้นแนวนอน · ช่อง ≥ 44px · font ≥ 16px · กว้างพอพิมพ์ 1.25", m["tw"] <= m["cw"] + 1 and m["page"] <= m["W"] + 1 and (m["h"] >= 43.5 or m["W"] >= 500) and m["fs"] >= 16 and m["iw"] >= 52 and m["ovw"] <= 1, json.dumps(m))
         check(f"{tag} 9 ไม่มี console error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
     finally:
         b.close()

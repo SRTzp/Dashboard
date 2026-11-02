@@ -962,3 +962,19 @@ Per-file changes (`-` old → `+` new, shortened to 170 chars):
     +        check(f"{tag} 1 render ซ้ำ: ยังสามปุ่ม", r5["visible"] and r5["sel"] == 0 and not r5["cmp"], r5)
     -        check(f"{tag} 1 Mac: Core | Sat สองปุ่มใน header เหมือนเดิม (สูง 38px · ไม่ย่อ)", r["visible"] and [x[0] for x in r["btns"]] == ["Core", "Sat"] and abs(r["tabs"]
     +        check(f"{tag} 1 Mac: Winner | Ladder | Sat สามปุ่ม (ใน header สูง 38px หรือในหน้า · ไม่ย่อ)", r["visible"] and [x[0] for x in r["btns"]] == ["Winner", "Ladder", 
+
+## tests/run_tests_phase25.py  (Mac regression fix)
+
+    -    return sum(1 for l in d if l.startswith("@@")) == 33 and ... any("shareCap" in l for l in ch) and any("l2Cap" in l for l in ch)
+    +    return sum(1 for l in d if l.startswith("@@")) == 35 and ... not any("shareCap" in l ...) and not any("l2Cap" in l ...)   # RG2b: Layer-2/L-share ถอด → diff vs backup-pre-7E2b1 ไม่มีสองคำนี้ · hunk 33→35
+
+## Mac regression fixes (expected values only) — p53 p54 p55 p56 p64 p65 p79
+- p53: เช็กชิป "เหมือนก่อน CX1" → ชิป FF/ขาดราคา ต้องเท่าเดิม + ข้อความ tank/cashfree/ชั้น2/Ladder ล็อกเป็นค่า RG2b (ไม่มี data-c-gate/L-share) · หัวบัญชี 390px ≤4 แถว → ≤6 (ชิป DD Winner+DD Ladder)
+- p54 / p55: "lot เท่าก่อน BR1/AS1" → XAUUSD 0.32 (Sat v2 RPT 1.5 / ถัง Sat) แทน 0.5 เดิม; broker XM ยังเท่าเดิม
+- p56: Today ส่วนเดิม — normalize old: DD Core→Winner/Ladder/Sat columns, quota 2→4, ไม่มีบรรทัดประตู FF (§4.7)
+- p64: innerText การ์ดเทียบเก่า — normalize `เพดานไม้แรก N%` → 25% (เพดานเดียว)
+- p65: #8 gate/L-share/ladderBudget ถอด → assert ค่าใหม่; #9 ตาราง Tier ถอด → เช็กช่อง sCrRiskA + sCrWinCap (≥44px เฉพาะมือถือ)
+- p79: RPT Main 1.5% · Tactical 0.75% · หัว ≤ เดิม+20px · Macro factor = 1
+- p25: hunk 33→35, shareCap/l2Cap ไม่อยู่ใน diff (ดูหัวข้อก่อนหน้า)
+- p110: XAUUSD main → lot 0.03 / risk $441 (เดิม 0.05 / $630) · "ไม่ตั้งทุน Sat" ต้องล้าง capital.core ด้วย (ถัง Sat = 20% ของ core+satB×fx → satB=0 อย่างเดียวไม่ทำให้ไม่มีถัง — ตั้งใจตามบรีฟ ไม่ใช่บั๊ก) · OWN settings keys + "pools"
+- p108: §5 ไม้สอง Today Size 0.1 lot ×2 (0.03+0.03+0.04) · Risk $150 (main 6000, Caps เท่าเดิม, pos qty 0.07) · plan calc lot 0.03/riskUsd 441

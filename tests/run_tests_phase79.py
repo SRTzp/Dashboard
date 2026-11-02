@@ -225,8 +225,8 @@ def tests(pw, w, h, label):
         try:
             ht0 = js(p2, "()=>document.querySelector('[data-sat-meta]').offsetHeight"); t0 = txt(p2, "[data-sat-meta]") or ""
         finally: b2.close()
-        check(f"{tag} 6 หัว Strategy: มี 'RPT Main 2% · Tactical 2%' · ไม่มี RPT เดิม/ไม้ Sat n/m · ส่วนอื่น (ถัง Sat · DD · heat · ไม้ใหม่) ยังอยู่", "RPT Main 2% · Tactical 2%" in t and "ไม้ Sat" not in t and not __import__("re").search(r"RPT \d", t) and all(k in t for k in ("ถัง Sat", "DD", "heat", "ไม้ใหม่")), t)
-        check(f"{tag} 6 ความสูงหัวไม่เกินก่อนแก้ ({ht} ≤ {ht0})", ht <= ht0, [ht, ht0, t0])
+        check(f"{tag} 6 หัว Strategy: มี 'RPT Main 1.5% · Tactical 0.75%' (RG2b ค่าเริ่มใหม่) · ไม่มี RPT เดิม/ไม้ Sat n/m · ส่วนอื่น (ถัง Sat · DD · heat · ไม้ใหม่) ยังอยู่", "RPT Main 1.5% · Tactical 0.75%" in t and "ไม้ Sat" not in t and not __import__("re").search(r"RPT \d", t) and all(k in t for k in ("ถัง Sat", "DD", "heat", "ไม้ใหม่")), t)
+        check(f"{tag} 6 ความสูงหัวไม่เกินก่อนแก้ + 1 บรรทัด (RG2b: ข้อความ RPT ยาวขึ้น) ({ht} ≤ {ht0}+20)", ht <= ht0 + 20, [ht, ht0, t0])
         shot(page, f"pv2c-header-{sfx}.png", "[data-sat-meta]")
     finally: b.close()
 
@@ -270,7 +270,7 @@ def tests(pw, w, h, label):
         P11.wk(page, "XAUUSD", "Short", "down"); page.wait_for_timeout(300)
         iid2 = idea(page, sleeve="main", entry=4180, sl=4240)
         c = calc(page, iid2)
-        check(f"{tag} 8 สวน Macro: ขนาดไม้ลด x{c['factor']} (ตัวคูณยังทำงาน) + ข้อความบังคับเขียนเหตุผลยังอยู่ ('เขียนเหตุผลที่เข้าสวน/นอก Macro') · ไม่มีแถว Trend", c["factor"] < 1 and cnt(page, "[data-macro-note]") >= 1 and cnt(page, "[data-note-warn]") >= 1 and cnt(page, "[data-f2c-row=trend]") == 0 and any("เขียนเหตุผล" in x for x in c["warns"]), [c["factor"], c["warns"], cnt(page, "[data-macro-note]"), cnt(page, "[data-note-warn]")])
+        check(f"{tag} 8 สวน Macro: ขนาดไม้ x{c['factor']} (RG2b: ไม่มีตัวคูณ Macro = 1) + ข้อความบังคับเขียนเหตุผลยังอยู่ ('เขียนเหตุผลที่เข้าสวน/นอก Macro') · ไม่มีแถว Trend", c["factor"] == 1 and cnt(page, "[data-macro-note]") >= 1 and cnt(page, "[data-note-warn]") >= 1 and cnt(page, "[data-f2c-row=trend]") == 0 and any("เขียนเหตุผล" in x for x in c["warns"]), [c["factor"], c["warns"], cnt(page, "[data-macro-note]"), cnt(page, "[data-note-warn]")])
     finally: b.close()
     b, page, ce, pe = P63.sat_page(pw, w, h)
     try:

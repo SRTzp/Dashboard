@@ -114,7 +114,7 @@ def plan_tests(pw, w, h, label, shots=False):
         finally:
             bo.close()
         LOG["xau_before_after"] = {"old": old, "new": new}
-        check(f"{tag} §sizing XAUUSD main 4180/4117: ก่อน = หลัง (lot, risk $)", old == new and new[0] > 0, {"old": old, "new": new})
+        check(f"{tag} §sizing XAUUSD main 4180/4117: RG2b: Sat v2 → lot 0.03 · risk $441 (เดิม 0.05 · $630)", list(new) == [0.03, 441] and abs(list(old)[0] - 0.05) < 1e-9 and abs(list(old)[1] - 630) < 1e-6, {"old": old, "new": new})
         iid = P79.idea(page, sleeve="main", entry=4180, sl=4117)
         js(page, "(i)=>{ if(satActiveDraft!==i) ln3ToggleDraft(i); }", iid); settle(page, 400)
         t = js(page, "()=>document.getElementById('satV3Panel').innerText")
@@ -150,11 +150,11 @@ def plan_tests(pw, w, h, label, shots=False):
         c = js(page, "(i)=>{ const x = satIdeasList.find(y=>y.id===i); const c = satV3PlanAcctCalc(x,'main'); return {lot:c.lot, msg:c.lotMsg}; }", br)
         check(f"{tag} Brent หลังมีสเปค → คำนวณ lot ได้", c["lot"] and c["lot"] > 0, c)
         # ทุนหาย → Can't size: Sat capital not set (Main)
-        js(page, "()=>{ getBook('main').settings.capital.satB = 0; render(); satV3Render({force:true}); }"); settle(page, 500)
+        js(page, "()=>{ window.__core0 = getBook('main').settings.capital.core; getBook('main').settings.capital.satB = 0; getBook('main').settings.capital.core = 0; render(); satV3Render({force:true}); }"); settle(page, 500)   # RG2b: ถัง Sat = 20% ของ (core + satB×fx) → ต้องล้างทั้งสองถึงจะ 'ไม่มีทุน'
         t = js(page, "()=>document.getElementById('satV3Panel').innerText")
         check(f"{tag} ไม่ตั้งทุน Sat → \"Can't size: Sat capital not set (Main)\"", "Can't size: Sat capital not set (Main)" in t, t[:300])
         js(page, "(i)=>satV3PlanEdit(i,'sl','80')", br); settle(page, 500)
-        js(page, "()=>{ getBook('main').settings.capital.satB = 45000; satV3Render({force:true}); }"); settle(page, 400)
+        js(page, "()=>{ getBook('main').settings.capital.satB = 45000; getBook('main').settings.capital.core = window.__core0; satV3Render({force:true}); }"); settle(page, 400)
         t = js(page, "()=>document.getElementById('satV3Panel').innerText")
         check(f"{tag} Entry = SL → \"Can't size: Entry = SL\"", "Can't size: Entry = SL" in t, t[:300])
         check(f"{tag} ไม่ overflow แนวนอน (หน้า plan)", hover(page) <= 1, hover(page))
@@ -190,7 +190,7 @@ def settings_tests(pw, w, h, label, shots=False):
         js(page, "()=>{ document.querySelector('[data-set1-adv=core]').open = true; saveSettings(); }"); settle(page, 500)
         after = js(page, "()=>JSON.stringify(Object.assign({}, state.settings, {_k:0}))")
         bo, ao = json.loads(before), json.loads(after)
-        OWN = {"capital", "fx", "fxAuto", "strategicCash", "limits", "coreRisk", "satRisk", "satV2", "tdKey"}   # ฟิลด์ที่ Settings เป็นเจ้าของ (บันทึกเติมค่าเริ่มต้นได้)
+        OWN = {"capital", "fx", "fxAuto", "strategicCash", "limits", "coreRisk", "satRisk", "satV2", "tdKey", "pools"}   # RG2b: pools (migrate) · ฟิลด์ที่ Settings เป็นเจ้าของ (บันทึกเติมค่าเริ่มต้นได้)
         diff = [k for k in set(bo) | set(ao) if k not in OWN and bo.get(k) != ao.get(k)]
         lost = [k for k in OWN if k in bo and k not in ao]
         sub = all(all(ao[k].get(kk) == vv for kk, vv in bo[k].items()) for k in ("satV2", "satRisk", "coreRisk") if isinstance(bo.get(k), dict) and isinstance(ao.get(k), dict))

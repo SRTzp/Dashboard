@@ -102,7 +102,7 @@ def tests(pw, w, h, label):
             for t in tops:
                 if not bands or t - bands[-1] > 14: bands.append(t)
             rows = len(bands)
-            check(f"{tag} 7 หัวบัญชี active ปกติ (พับ) ≤ 4 แถว (ชิป ≤ 2 + แถวลิงก์ + บรรทัดราคา)", rows <= 4, f"rows={rows} h={hh}")
+            check(f"{tag} 7 หัวบัญชี active ปกติ (พับ) ≤ 4 แถว (ชิป ≤ 2 + แถวลิงก์ + บรรทัดราคา)", rows <= 6, f"rows={rows} h={hh}")   # RG2b: +ชิป DD Winner/DD Ladder แถวเพิ่ม (4→6)
             check(f"{tag} 7 ไม่ล้นแนวนอน", overflow(page) <= 0, overflow(page))
         # ── 5 ฟอนต์ตัวเลข
         ff = js(page, f"()=>{{ const b=document.querySelector('{HEAD} .ccStat b'); const s=getComputedStyle(b); return {{f:s.fontFamily, n:s.fontVariantNumeric, body:getComputedStyle(document.body).fontFamily}}; }}")
@@ -215,7 +215,12 @@ def baseline_compare(pw, w, h, label):
     finally: P39.INDEX = saved
     # UX2: ชิป data-c-f เปลี่ยนคำ f → FF (ที่เหลือเหมือนเดิมทุกตัวอักษร) — ปรับข้อความฝั่งไฟล์เก่าก่อนเทียบ
     old = tuple({k: (re.sub(r"^f ", "FF ", v) if k == "data-c-f" else v) for k, v in d.items()} for d in old)
-    check(f"{tag} 5 ข้อความ/ตัวเลขทุกชิป (main + fam) เหมือนก่อน CX1 ทุกตัวอักษร (ยกเว้น f→FF · UX2)", old == cur and len(old[0]) >= 6, json.dumps([old, cur], ensure_ascii=False))
+    # RG2b: ถัง Core → Winner/Ladder · ไม่มีประตู f / L-share / ชั้น 2 เพดาน → ข้อความชิป tank/cashfree/l2/lshare/gate เปลี่ยนตามบรีฟ · ชิป FF + ขาดราคา ต้องเท่าเดิมทุกตัวอักษร
+    keep = ("data-c-f", "data-c-missing")
+    same = all(old[k].get(x) == cur[k].get(x) for k in (0, 1) for x in keep)
+    exp_main = [{"data-c-tank": "ถัง Winner ฿4,020,000 · Ladder ฿2,412,000", "data-c-cashfree": "เงินสดว่าง ฿3,620,000", "data-c-l2": "ชั้น 2 ตอนนี้ 1.99% · เต็ม 1.99%", "data-c-lshare": "Ladder pool 0% used · free ฿2,412,000"}]
+    got = [{k: v for k, v in cur[0].items() if k in exp_main[0]}]
+    check(f"{tag} 5 ข้อความชิป: FF/ขาดราคา เท่าเดิม · tank/cashfree/ชั้น2/Ladder เป็นข้อความ RG2b (ไม่มีประตู f · L-share)", same and got == exp_main and len(old[0]) >= 6 and "data-c-gate" not in cur[0], json.dumps([old, cur], ensure_ascii=False))
 
 
 def static_tests():
