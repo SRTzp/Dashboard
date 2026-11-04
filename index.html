@@ -2506,6 +2506,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .td4-rem .tx{flex:1;min-width:0}.td4-rem button{border:0;background:none;font:inherit;color:inherit;text-decoration:underline dotted;cursor:pointer;padding:0;min-height:24px}.td4-rem .x{text-decoration:none;font-size:1rem;min-width:28px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .td4-rem{background:#3a2e12;color:#f0d58a;border-color:#6b5520}}
 :root[data-theme="dark"] .td4-rem{background:#3a2e12;color:#f0d58a;border-color:#6b5520}
+.cpSh{display:flex;flex-direction:column;gap:10px;max-height:82vh}.cpRows{overflow:auto;display:flex;flex-direction:column;gap:10px;min-height:0}.cpRow{border:1px solid var(--line,#ddd);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}.cpRow.bad{border-color:var(--red,#c33)}.cpHd{display:flex;align-items:center;gap:8px}.cpHd .ccLnk{margin-left:auto}.cpChips{display:flex;flex-wrap:wrap;gap:6px}.cpNote{display:flex;gap:6px;flex-wrap:wrap}.cpNote input{flex:1 1 140px;min-width:0;font-size:16px}.cpErr,.cpMsg{color:var(--red,#c33);font-size:.82rem}.cpAll{display:flex;flex-direction:column;gap:6px;padding-bottom:8px;border-bottom:1px solid var(--line,#ddd)}.crsRow{display:flex;gap:8px;align-items:center;margin:4px 0}.crsRow input[type=text]{flex:1 1 auto;min-width:0}.crsOn{white-space:nowrap;font-size:.84rem}
 .wlRsSel{font:inherit;font-size:.78rem;padding:2px 4px;border:1px solid var(--line,#ccc);border-radius:6px;background:var(--bg,#fff);color:inherit;min-height:34px}
 .wl-star{display:inline-flex;flex:none;white-space:nowrap}.wl-star button{border:0;background:none;font:inherit;font-size:1.05rem;font-weight:700;line-height:1;color:var(--faint);min-width:32px;min-height:34px;cursor:pointer;padding:0}.wl-star button.on{color:var(--amber)}.wl-sd{font-size:.78rem;font-weight:700;color:var(--amber);flex:none}
 .wl-exp{border:1px solid var(--border);background:var(--surface);border-radius:8px;font:inherit;font-size:.78rem;font-weight:600;color:var(--teal);padding:0 10px;min-height:32px;cursor:pointer;white-space:nowrap}
@@ -3995,6 +3996,11 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
   <div class="secbody">
     <div class="hint" style="margin:0 0 10px">Goals are per account (not combined) · shown at the top of the Today tab · % counts from the start value to the due date · portfolio values are entered by hand from the broker (＋ Enter portfolio value on the Today tab) · save/delete apply immediately</div>
     <div id="glSet"></div>
+  </div></details>
+  <details class="setsec" id="crsSetSec"><summary class="divlbl">Candidate reasons</summary>
+  <div class="secbody">
+    <div class="hint" style="margin:0 0 10px">Reasons you can pick when adding a candidate · rename or deactivate any time (never deleted — old records keep their reason)</div>
+    <div id="crsSet"></div>
   </div></details>
   <details class="setsec" id="tdSetSec"><summary class="divlbl">Daily routine</summary>
   <div class="secbody">
@@ -6819,45 +6825,182 @@ function td4SetScrMk(mk){ td4ScrMk = mk==='TH' ? 'TH' : 'US'; td4Save('dash.td4S
 function td4AddIn(v){ td4Draft = String(v == null ? '' : v); td4Save('dash.td4Draft', td4Draft); }
 function td4AddLog(day){ const r = tdSettings().candAddLog, a = (r && typeof r==='object' && !Array.isArray(r)) ? r[day || thaiToday()] : null; return Array.isArray(a) ? a.filter(x=>typeof x==='string' && x) : []; }
 function td4InIdeas(key){ return ideaList.some(d=>d.idea && ltArr(d.idea.candidates).some(c=>wlSymKey(c.sym)===key)); }
-function td4AddCands(){
-  const today = thaiToday(), mk = td4Mk, msgs = [], keep = [], add = [], batch = new Set();
-  const toks = String(td4Draft || '').toUpperCase().split(/[\s,;]+/).filter(Boolean);
-  const done = () => { td3Msg.add = msgs.join(' · '); todayRefresh(true); return add.length > 0; };
-  if(!toks.length){ msgs.push('Type a ticker first'); return done(); }
-  if(!tdCanWrite()){ msgs.push('Not synced with the server yet — try again'); return done(); }
-  const log = td4AddLog(today), cand = new Set(wlRowsAll().cand.map(r=>wlSymKey(r.sym)));
-  let room = TD4_MAX - log.length, limit = false;
-  toks.forEach(raw=>{
-    let t = raw;
-    if(mk==='TH') t = t.replace(/\.BK$/, '');
-    else if(/\.BK$/.test(t)){ msgs.push(`${t}: use the TH toggle`); keep.push(raw); return; }
-    if(!TD4_RE[mk].test(t)){ msgs.push(`${raw}: not a valid ${mk} ticker`); keep.push(raw); return; }
-    const sym = mk==='TH' ? t + '.BK' : t, key = wlSymKey(sym);
-    if(batch.has(key)) return;
-    batch.add(key);
-    const m = td3MetaOf(sym);
-    if(wlHas(sym)){ msgs.push(`${t} is already in Watchlist`); return; }
-    if(cand.has(key)){ msgs.push(`${t} is already a Candidate`); return; }
-    if(!m.dismissed && td4InIdeas(key)){ msgs.push(`${t} is already in Ideas`); return; }
-    if(room <= 0){ limit = true; keep.push(raw); return; }
-    add.push({sym, key}); room--;
-  });
-  if(limit) msgs.push(`Daily limit ${TD4_MAX} reached`);
-  if(add.length){
-    const now = new Date().toISOString();
-    glWrite(S=>{
-      const cm = Object.assign({}, (S.candMeta && typeof S.candMeta==='object' && !Array.isArray(S.candMeta)) ? S.candMeta : {});
-      const al = Object.assign({}, (S.candAddLog && typeof S.candAddLog==='object' && !Array.isArray(S.candAddLog)) ? S.candAddLog : {});
-      add.forEach(a=>{ cm[a.key] = {manual:true, sym:a.sym, market:mk, cand_at:now}; });   /* เพิ่มซ้ำตัวที่เคยลบ (dismissed) = ล้างสถานะ dismissed ด้วย */
-      al[today] = (Array.isArray(al[today]) ? al[today] : []).concat(add.map(a=>a.key));
-      Object.keys(al).sort().slice(0, Math.max(0, Object.keys(al).length - 7)).forEach(k=>{ delete al[k]; });
-      S.candMeta = cm; S.candAddLog = al;
-    });
+/* ══ PL1·A1 — Candidate reasons (Settings) + Add popup (Today & Watch ใช้ flow เดียวกัน) ══
+   ข้อมูล: settings.candReasons[{id,label,active}] (ไม่มี = ค่าเริ่ม 6 ข้อ) · candMeta[KEY] เพิ่ม track('winner'|'ladder') · reasons[id] · note · link
+   เอกสารเก่าไม่มีฟิลด์ใหม่ = "Unspecified" · เหตุผลปิดใช้งานได้ ไม่ลบ (ระเบียนเก่าเก็บ id เดิม) */
+const CRS_DEFAULT = [['strong-rs', 'Strong RS'], ['volume-spike', 'Volume Spike'], ['earnings-spike', 'Earnings Spike'], ['break-52w-high', 'Break 52W High'], ['legendary-copy', 'Legendary Copy'], ['investing-copy', 'Investing Copy']];
+let crsMsg = '';
+function crsList(){
+  const raw = tdSettings().candReasons;
+  if(Array.isArray(raw) && raw.length){
+    const out = [], seen = new Set();
+    raw.forEach(r=>{ if(r && typeof r.id==='string' && r.id && typeof r.label==='string' && r.label.trim() && !seen.has(r.id)){ seen.add(r.id); out.push({id:r.id, label:r.label.trim(), active:r.active!==false}); } });
+    if(out.length) return out;
   }
-  td4AddIn(keep.join(' '));
-  const r = done();
+  return CRS_DEFAULT.map(x=>({id:x[0], label:x[1], active:true}));
+}
+function crsActive(){ return crsList().filter(r=>r.active); }
+function crsLabel(id){ const r = crsList().find(x=>x.id===id); return r ? r.label : String(id); }
+function crsWrite(list, okMsg){
+  const ok = glWrite(S=>{ S.candReasons = list; });
+  crsMsg = ok ? okMsg : 'Not synced with the server yet — try again';
+  crsSetRender();
+  return ok;
+}
+function crsSlug(label){ const b = String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'reason'; return b; }
+function crsAdd(){
+  const el = document.getElementById('crsNew'), label = String(el ? el.value : '').trim();
+  const list = crsList();
+  if(!label){ crsMsg = 'Type a reason name first'; return crsSetRender(); }
+  if(label.length > 30){ crsMsg = 'Max 30 characters'; return crsSetRender(); }
+  if(list.some(r=>r.label.toLowerCase()===label.toLowerCase())){ crsMsg = 'That reason already exists'; return crsSetRender(); }
+  let id = crsSlug(label) + '-' + Date.now().toString(36).slice(-4);
+  list.push({id, label, active:true});
+  crsWrite(list, 'Reason added');
+}
+function crsRename(id, v){
+  const label = String(v || '').trim(), list = crsList(), r = list.find(x=>x.id===id); if(!r) return;
+  if(!label){ crsMsg = 'A reason needs a name'; return crsSetRender(); }
+  if(label.length > 30){ crsMsg = 'Max 30 characters'; return crsSetRender(); }
+  if(list.some(x=>x.id!==id && x.label.toLowerCase()===label.toLowerCase())){ crsMsg = 'That reason already exists'; return crsSetRender(); }
+  if(label===r.label) return;
+  r.label = label; crsWrite(list, 'Renamed');
+}
+function crsToggle(id, on){
+  const list = crsList(), r = list.find(x=>x.id===id); if(!r) return;
+  if(!on && list.filter(x=>x.active && x.id!==id).length === 0){ crsMsg = 'Keep at least one active reason'; return crsSetRender(); }
+  r.active = !!on; crsWrite(list, on ? 'Reason activated' : 'Reason deactivated (old records keep it)');
+}
+function crsSetRender(){
+  const host = document.getElementById('crsSet'); if(!host) return;
+  const e = escHtml;
+  host.innerHTML = crsList().map(r=>`<div class="crsRow" data-crs-row="${e(r.id)}"><input type="text" maxlength="30" data-crs-name value="${e(r.label)}" aria-label="Reason name" onchange="crsRename('${e(r.id)}', this.value)"><label class="crsOn"><input type="checkbox" data-crs-on${r.active ? ' checked' : ''} onchange="crsToggle('${e(r.id)}', this.checked)"> Active</label></div>`).join('')
+    + `<div class="crsRow"><input type="text" id="crsNew" maxlength="30" data-crs-new placeholder="New reason" aria-label="New reason" onkeydown="if(event.key==='Enter'){event.preventDefault();crsAdd();}"><button type="button" class="small" data-crs-add onclick="crsAdd()">＋ Add</button></div>`
+    + `<div class="hint" data-crs-msg style="margin-top:6px">${e(crsMsg)}</div>`;
+  crsMsg = '';
+}
+/* ── Add popup ── */
+let candPop = null, candPopMem = {};
+try{ const m = JSON.parse(localStorage.getItem('dash.candPopMem') || 'null'); if(m && typeof m==='object' && !Array.isArray(m)) candPopMem = m; }catch(e){}
+function candPopSaveMem(){ try{ localStorage.setItem('dash.candPopMem', JSON.stringify(candPopMem)); }catch(e){} }
+function candPopStash(){ if(!candPop) return; candPop.rows.forEach(r=>{ if(r.key) candPopMem[r.key] = {track:r.track, reasons:r.reasons.slice(), note:r.note, link:r.link}; }); candPopSaveMem(); }
+function candRowsCheck(rows, mk, tried){
+  const log = td4AddLog(thaiToday()), cand = new Set(wlRowsAll().cand.map(r=>wlSymKey(r.sym)));
+  let room = TD4_MAX - log.length;
+  rows.forEach(r=>{
+    r.err = ''; r.fatal = false;
+    let t = r.raw;
+    if(mk==='TH') t = t.replace(/\.BK$/, ''); else if(/\.BK$/.test(t)){ r.err = 'use the TH toggle'; r.fatal = true; return; }
+    if(!TD4_RE[mk].test(t)){ r.err = `not a valid ${mk} ticker`; r.fatal = true; return; }
+    r.sym = mk==='TH' ? t + '.BK' : t; r.key = wlSymKey(r.sym);
+    const m = td3MetaOf(r.sym);
+    if(wlHas(r.sym)){ r.err = 'already in Watchlist'; r.fatal = true; return; }
+    if(cand.has(r.key)){ r.err = 'already a Candidate'; r.fatal = true; return; }
+    if(!m.dismissed && td4InIdeas(r.key)){ r.err = 'already in Ideas'; r.fatal = true; return; }
+  });
+  rows.forEach(r=>{
+    if(r.fatal) return;
+    if(tried && !r.track) r.err = 'Pick a track';
+    else if(tried && !r.reasons.length) r.err = 'Pick at least one reason';
+  });
+  rows.forEach(r=>{   /* โควตานับเฉพาะแถวที่จะบันทึกจริง */
+    if(r.fatal || !r.track || !r.reasons.length) return;
+    if(room <= 0){ r.err = `Daily limit ${TD4_MAX} reached`; r.fatal = true; return; }
+    room--;
+  });
+}
+function td4AddCands(){
+  const mk = td4Mk, msgs = [];
+  const toks = String(td4Draft || '').toUpperCase().split(/[\s,;]+/).filter(Boolean);
+  const done = (ok) => { td3Msg.add = msgs.join(' · '); todayRefresh(true); try{ if(activeTab==='watch') renderWatchlist(); }catch(e){} return !!ok; };
+  if(!toks.length){ msgs.push('Type a ticker first'); return done(false); }
+  if(!tdCanWrite()){ msgs.push('Not synced with the server yet — try again'); return done(false); }
+  const rows = [], seen = new Set();
+  toks.forEach(raw=>{
+    let t = mk==='TH' ? raw.replace(/\.BK$/, '') : raw;
+    const key = wlSymKey(mk==='TH' ? t + '.BK' : t) || raw;
+    if(seen.has(key)) return; seen.add(key);
+    const mem = candPopMem[key] || {};
+    rows.push({raw, sym:'', key, track:(mem.track==='winner'||mem.track==='ladder') ? mem.track : '', reasons:Array.isArray(mem.reasons) ? mem.reasons.filter(x=>typeof x==='string') : [], note:String(mem.note||''), link:String(mem.link||''), err:'', fatal:false});
+  });
+  candPop = {rows, mk, tried:false, msg:''};
+  td3Msg.add = '';
+  candPopRender();
+  return true;
+}
+function candPopClose(){ candPopStash(); candPop = null; document.querySelectorAll('.cp-sheet').forEach(el=>el.remove()); try{ todayRefresh(true); }catch(e){} }
+function candPopRender(){
+  if(!candPop) return;
+  const P = candPop, e = escHtml, reasons = crsActive();
+  candRowsCheck(P.rows, P.mk, P.tried);
+  const trackSeg = (cur, click)=>`<span class="td4-seg" role="group" aria-label="Track">${[['winner','Momentum'],['ladder','Compounder']].map(([k,n])=>`<button type="button" class="${cur===k ? 'on' : ''}" aria-pressed="${cur===k}" data-cp-track="${k}" onclick="${click(k)}">${n}</button>`).join('')}</span>`;
+  const allSel = P.rows.length && P.rows.every(r=>r.reasons.length) ? P.rows[0].reasons.filter(x=>P.rows.every(r=>r.reasons.includes(x))) : [];
+  const allTrack = P.rows.length && P.rows.every(r=>r.track===P.rows[0].track) ? P.rows[0].track : '';
+  const okN = P.rows.filter(r=>!r.err && r.track && r.reasons.length).length;
+  const rowsHtml = P.rows.map((r,i)=>`<div class="cpRow${r.err ? ' bad' : ''}" data-cp-row="${e(r.key)}"><div class="cpHd"><b>${e(r.raw)}</b>${r.sym ? `<span class="mut">${P.mk}</span>` : ''}<button type="button" class="ccLnk" data-cp-rm aria-label="Remove ${e(r.raw)}" onclick="candPopRemove(${i})">✕</button></div>
+      <div class="cpCtl">${trackSeg(r.track, k=>`candPopTrack(${i},'${k}')`)}</div>
+      <div class="cpChips">${reasons.map(rs=>`<button type="button" class="chip${r.reasons.includes(rs.id) ? ' on' : ''}" aria-pressed="${r.reasons.includes(rs.id)}" data-cp-reason="${e(rs.id)}" onclick="candPopReason(${i},'${e(rs.id)}')">${e(rs.label)}</button>`).join('')}</div>
+      <div class="cpNote"><input type="text" maxlength="200" data-cp-note placeholder="Note (optional)" aria-label="Note" value="${e(r.note)}" oninput="candPopIn(${i},'note',this.value)"><input type="url" inputmode="url" maxlength="300" data-cp-link placeholder="Link (optional)" aria-label="Link" value="${e(r.link)}" oninput="candPopIn(${i},'link',this.value)"></div>
+      ${r.err ? `<div class="cpErr" data-cp-err role="alert">${e(r.err)}</div>` : ''}</div>`).join('');
+  const html = `<div class="cpSh" data-cp-sheet><div class="csHd"><b>Add candidates · ${P.rows.length}</b><button type="button" class="ccLnk" data-cp-x aria-label="Close" onclick="candPopClose()">✕</button></div>
+    <div class="cpAll" data-cp-all><div class="mut">Apply to all</div><div>${[['winner','Momentum'],['ladder','Compounder']].map(([k,n])=>`<button type="button" class="chip${allTrack===k ? ' on' : ''}" data-cp-all-track="${k}" onclick="candPopAllTrack('${k}')">${n}</button>`).join('')}</div><div class="cpChips">${reasons.map(rs=>`<button type="button" class="chip${allSel.includes(rs.id) ? ' on' : ''}" data-cp-all-reason="${e(rs.id)}" onclick="candPopAllReason('${e(rs.id)}')">${e(rs.label)}</button>`).join('')}</div></div>
+    <div class="cpRows">${rowsHtml || '<div class="mut">No tickers</div>'}</div>
+    ${P.msg ? `<div class="cpMsg" data-cp-msg role="alert">${e(P.msg)}</div>` : ''}
+    <div class="csFoot"><button type="button" class="ccBtn" data-cp-cancel onclick="candPopClose()">Cancel</button><button type="button" class="ccBtn pri" data-cp-save onclick="candPopSave()">Save${okN ? ' ' + okN : ''}</button></div></div>`;
+  document.querySelectorAll('.cp-sheet').forEach(el=>el.remove());
+  document.body.insertAdjacentHTML('beforeend', UI.sheet(html).replace('ui-sheet-backdrop', 'ui-sheet-backdrop cp-sheet'));
+}
+function candPopRemove(i){ if(!candPop) return; candPop.rows.splice(i, 1); candPopStash(); candPopRender(); }
+function candPopTrack(i, k){ if(!candPop || !candPop.rows[i]) return; candPop.rows[i].track = k; candPopStash(); candPopRender(); }
+function candPopReason(i, id){ if(!candPop || !candPop.rows[i]) return; const a = candPop.rows[i].reasons, j = a.indexOf(id); if(j>=0) a.splice(j,1); else a.push(id); candPopStash(); candPopRender(); }
+function candPopIn(i, k, v){ if(!candPop || !candPop.rows[i]) return; candPop.rows[i][k] = String(v||''); candPopStash(); }
+function candPopAllTrack(k){ if(!candPop) return; candPop.rows.forEach(r=>{ r.track = k; }); candPopStash(); candPopRender(); }
+function candPopAllReason(id){ if(!candPop) return; const all = candPop.rows.every(r=>r.reasons.includes(id)); candPop.rows.forEach(r=>{ const j = r.reasons.indexOf(id); if(all){ if(j>=0) r.reasons.splice(j,1); } else if(j<0) r.reasons.push(id); }); candPopStash(); candPopRender(); }
+function candPopSave(){
+  const P = candPop; if(!P) return;
+  P.tried = true; P.msg = '';
+  if(!tdCanWrite()){ P.msg = 'Not synced with the server yet — nothing saved, your entries are kept'; candPopRender(); return; }
+  candRowsCheck(P.rows, P.mk, true);
+  const add = P.rows.filter(r=>!r.err && r.track && r.reasons.length);
+  if(!add.length){
+    if(P.rows.length && P.rows.every(r=>r.fatal)){ candPopFinish(P.rows, 0); return; }   /* ทุกแถวแก้ไม่ได้ (ผิดรูปแบบ/ซ้ำ/โควตาเต็ม) → ปิด · แสดงข้อความ · ticker ค้างในกล่อง */
+    P.msg = 'Nothing to save yet — fix the rows marked below'; candPopRender(); return;
+  }
+  const today = thaiToday(), now = new Date().toISOString();
+  const ok = glWrite(S=>{
+    const cm = Object.assign({}, (S.candMeta && typeof S.candMeta==='object' && !Array.isArray(S.candMeta)) ? S.candMeta : {});
+    const al = Object.assign({}, (S.candAddLog && typeof S.candAddLog==='object' && !Array.isArray(S.candAddLog)) ? S.candAddLog : {});
+    add.forEach(a=>{
+      const rec = {manual:true, sym:a.sym, market:P.mk, cand_at:now, track:a.track, reasons:a.reasons.slice()};
+      if(a.note.trim()) rec.note = a.note.trim().slice(0, 200);
+      if(a.link.trim()) rec.link = a.link.trim().slice(0, 300);
+      cm[a.key] = rec;   /* เพิ่มซ้ำตัวที่เคยลบ (dismissed) = ล้างสถานะ dismissed ด้วย */
+    });
+    al[today] = (Array.isArray(al[today]) ? al[today] : []).concat(add.map(a=>a.key));
+    Object.keys(al).sort().slice(0, Math.max(0, Object.keys(al).length - 7)).forEach(k=>{ delete al[k]; });
+    S.candMeta = cm; S.candAddLog = al;
+  });
+  if(!ok){ P.msg = 'Could not save — nothing was added, your entries are kept'; candPopRender(); return; }
+  /* สำเร็จหลัง glWrite คืน true เท่านั้น */
+  const savedKeys = new Set(add.map(a=>a.key));
+  add.forEach(a=>{ delete candPopMem[a.key]; }); candPopSaveMem();
+  const remaining = P.rows.filter(r=>!savedKeys.has(r.key));
+  td4AddIn(remaining.filter(r=>!/^already /.test(r.err)).map(r=>r.raw).join(' '));   /* ซ้ำ/มีอยู่แล้ว = ตัดออกจากกล่อง (เหมือนเดิม) · ผิดรูปแบบ/โควตา = ค้างไว้ */
+  td3Msg.add = '';
+  const n = add.length;
+  try{ wlAddCMsg = `Added ${n} to Candidates`; }catch(e){}
+  if(remaining.length && !remaining.every(r=>r.fatal)){ P.rows = remaining; P.msg = `Saved ${n} · ${remaining.length} left need fixing`; candPopRender(); }
+  else candPopFinish(remaining, n);
+  try{ todayRefresh(true); }catch(e){}
   try{ if(activeTab==='watch') renderWatchlist(); }catch(e){}
-  return r;
+}
+function candPopFinish(rest, n){   /* ปิด popup · ข้อความสรุป (ตัวที่ไม่ได้บันทึก + เหตุผล) แสดงที่ Today / แผง Watch */
+  const why = rest.filter(r=>r.err).map(r=>`${r.raw}: ${r.err}`).join(' · ');
+  candPopStash(); candPop = null; document.querySelectorAll('.cp-sheet').forEach(el=>el.remove());
+  td3Msg.add = why;
+  try{ wlAddCMsg = [n > 0 ? `Added ${n} to Candidates` : '', why].filter(Boolean).join(' · '); }catch(e){}
+  try{ todayRefresh(true); }catch(e){}
+  try{ if(activeTab==='watch') renderWatchlist(); }catch(e){}
 }
 /* ── Delete (Candidates) ── */
 function td4CandDelete(sym){
@@ -10095,6 +10238,7 @@ function coreCardHtmlBase(v, cx){
       <div class="ccBody">${planChips}${warnLine}${reasonBox}
         <div class="ccEntry" data-c-entry>Entry <b>${fmt2(en)}</b> · Stop <b>${fmt2(sp)}</b></div>
         <div class="ccRes ccRes2" data-c-first>${coreFirstLotPlanHtml(cx, v.mk, tier, en, sp, cx.F.f, cx.F.src, capPct, ctl, coreFirstRisk(c, cx, tier), c.cs ? `Base ${c.cs.baseRiskPct.toFixed(2)}% ${c.cs.stars>0 ? '(' + csStarTxt(c.cs.stars) + ' snapshot)' : '(snapshot)'} · budget ${csMoney(c.cs.budget, v.mk)} · risk ${csMoney(c.cs.riskAmt, v.mk)}` : '')}</div>
+        ${(!c.cs && c.strategy!=='L') ? '<div class="ccSub" data-c-oldrisk>Old risk rule — re-save as new plan to use Base 1%</div>' : ''}
         <div class="ccBtns"><button type="button" class="ccBtn pri" data-c-buy1 onclick="coreBuy1Open('${id}')" ${blockBuy?'disabled':''}${ddBlk?` title="${escHtml(ddBlk)}"`:''}>บันทึกซื้อไม้ 1</button>
           <button type="button" class="ccBtn" data-c-delplan onclick="coreDelAsk('${id}')">ลบแผน</button>
           <button type="button" class="ccBtn" data-c-more aria-label="เมนู" onclick="coreMenuToggle(this,event)">⋯</button>${coreMenuHtml(v, cx, {})}</div></div></div>`;
@@ -16395,6 +16539,7 @@ function openSystemSettings(){
   renderAcctMgr();
   try{ tdSetOpen(); }catch(e){ console.warn('routine settings:', e); }   /* TD1 */
   try{ glSetRender(); }catch(e){ console.warn('goal settings:', e); }   /* GL1 */
+  try{ crsSetRender(); }catch(e){ console.warn('reasons settings:', e); }   /* PL1·A1 */
   try{ newsSetRender(); }catch(e){ console.warn('news settings:', e); }   /* ST1 */
   try{ ideaSetFill(); }catch(e){ console.warn('idea settings:', e); }   /* ID3a */
   document.getElementById('sysOverlay').classList.add('show');

@@ -43,3 +43,11 @@ Winner/Winners → **Momentum**, Ladder → **Compounder** in user-visible text 
 ## Step 2c — "Core" → "Momentum" where it means the Momentum bucket/page (display only)
 Renamed: "การ์ด Core" (cards/empty state/confirm sheets), "ถัง Core" (no-tank messages, `% ของถัง Core` summary), "Core · การ์ดตำแหน่ง", Settings units `% of Core bucket` → `% of Momentum bucket` (first-lot / accelerator / layer-2 fields), pool summary heads `Core Port` → `Momentum Port` (Plan summary + Plan header). Kept: port name `Core Port` (Settings/PORTS), Max Heat row `Core — % of Core bucket`, `Core.US`/`Core.TH`, Settings port toggle, Today `Core ·` subtitles + `Core Port` panel head (A7 replaces them).
 Suites with updated expectations: phase14, 22, 23, 29, 83, 89. phase43 `index.backup-pre-PX1.html + tests/_bk_px1/` fails on main too (backup folder not in repo).
+
+## Step 3 — A1 Add popup + Candidate reasons
+| Suite | Check / area | Change | Why |
+|---|---|---|---|
+| phase107 `add()` helper | Add wrote candidates directly | after clicking Add, test fills Track `winner` + reason `strong-rs` on every popup row and Saves (`candPopSave`) | Add now opens the popup (Track + ≥1 reason required) |
+| phase108 §B6b (Watch Add on candidate) | same direct-add flow (4 spots) | same helper step; message texts unchanged (`Added 2 to Candidates`, `already a Candidate`, `Daily limit 10 reached`, `already in Watchlist`) | same |
+| phase108 §B6b | NEW1 form memory check expected `stars: 2` and clicked `[data-td4-star]` | `stars: 0`, no star click | Step 2 removed the ★ control (missed in Step 2) |
+| New | `tests/run_tests_phase115.py` (52 checks: reasons settings, popup rows/Apply-to-all/override/remove, required Track + reason inline errors (no alert), partial save, quota counts saved rows only, Cancel keeps draft, glWrite=false keeps entries, refresh keeps picks, legacy "Old risk rule" hint) | — | A1 |

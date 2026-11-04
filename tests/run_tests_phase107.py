@@ -290,6 +290,8 @@ def reminder_none_tests(pw):
 def add(page, text, mk=None):
     if mk: page.locator(f'[data-td4-mk="{mk}"]').click(); settle(page, 150)
     page.fill("[data-td4-add]", text); page.locator("[data-td4-add-go]").click(); settle(page, 450)
+    # PL1·A1 — Add เปิด popup: เติม Track/เหตุผลให้ทุกแถว แล้ว Save (ตัวที่ไม่ผ่านถูกข้ามพร้อมข้อความเดิม)
+    js(page, "()=>{ if(typeof candPop!=='undefined' && candPop){ candPop.rows.forEach(r=>{ r.track='winner'; r.reasons=['strong-rs']; }); candPopSave(); } }"); settle(page, 450)
 
 
 def meta(page): return S(page, "candMeta") or {}
