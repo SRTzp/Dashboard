@@ -3842,14 +3842,14 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
       <div class="f"><label><span class="lfOld">Add-ons</span><span class="lfNew">Warn when adding Base ></span> <span class="crUnit">% of previous lot</span></label><input type="number" step="any" inputmode="decimal" id="sCrAdd" oninput="crOnInput()"><div class="crErr" data-err-for="sCrAdd"></div></div>
       <div class="f"><label><span class="lfOld">Max lots</span><span class="lfNew">Max Base lots</span> <span class="crUnit">(1–6)</span></label><input type="number" step="1" inputmode="numeric" id="sCrMaxLots" oninput="crOnInput()"><div class="crErr" data-err-for="sCrMaxLots"></div></div>
       <div class="hint" id="crLotsEx" style="grid-column:1 / -1"></div>
-      <div class="f crLeanF"><label>First-lot risk (form default) <span class="crUnit">% of Core bucket</span></label><input type="number" step="any" inputmode="decimal" id="sCrRiskFirst" oninput="crOnInput()"><div class="crErr" data-err-for="sCrRiskFirst"></div><div class="hint" data-cr-firsthint></div></div>
-      <div class="f crLeanF"><label>Accelerator risk budget <span class="crUnit">% of Core bucket</span></label><input type="number" step="any" inputmode="decimal" id="sCrRiskAcc" oninput="crOnInput()"><div class="crErr" data-err-for="sCrRiskAcc"></div><div class="hint">Separate from the Base budget · suggested ≈ 1/3 of Base</div></div>
+      <div class="f crLeanF"><label>First-lot risk (form default) <span class="crUnit">% of Momentum bucket</span></label><input type="number" step="any" inputmode="decimal" id="sCrRiskFirst" oninput="crOnInput()"><div class="crErr" data-err-for="sCrRiskFirst"></div><div class="hint" data-cr-firsthint></div></div>
+      <div class="f crLeanF"><label>Accelerator risk budget <span class="crUnit">% of Momentum bucket</span></label><input type="number" step="any" inputmode="decimal" id="sCrRiskAcc" oninput="crOnInput()"><div class="crErr" data-err-for="sCrRiskAcc"></div><div class="hint">Separate from the Base budget · suggested ≈ 1/3 of Base</div></div>
       <div class="f"><label>Emergency stop <span class="crUnit">% below Stop</span></label><input type="number" step="any" inputmode="decimal" id="sCrEmerg" oninput="crOnInput()"><div class="crErr" data-err-for="sCrEmerg"></div></div>
       <div class="f"><label>Compounder L: max per stock <span class="crUnit">% of ACCOUNT (default 5)</span></label><input type="number" step="any" inputmode="decimal" id="sCrLBudget" oninput="crOnInput()"><div class="crErr" data-err-for="sCrLBudget"></div></div>
       <div class="f"><label>Compounder L: full-ladder risk <span class="crUnit">% of Compounder pool</span></label><input type="number" step="any" inputmode="decimal" id="sCrLRisk" oninput="crOnInput()"><div class="crErr" data-err-for="sCrLRisk"></div></div>
       <div class="f"><label>DD brake: pause length <span class="crUnit">weeks (1–8)</span></label><input type="number" step="1" inputmode="numeric" id="sCrDdWeeks" oninput="crOnInput()"><div class="crErr" data-err-for="sCrDdWeeks"></div></div>
       <div class="f"><label>DD brake: recovery ends after regaining <span class="crUnit">R (0.5–10)</span></label><input type="number" step="any" inputmode="decimal" id="sCrDdRecoverR" oninput="crOnInput()"><div class="crErr" data-err-for="sCrDdRecoverR"></div></div>
-      <div style="display:none" data-set1-merged="l2cap"><div class="f"><label>Layer-2 cap <span class="crUnit">% of Core bucket</span></label><input type="number" step="any" inputmode="decimal" id="sCrL2Cap" oninput="crOnInput('cap')"><div class="crErr" data-err-for="sCrL2Cap"></div></div></div>
+      <div style="display:none" data-set1-merged="l2cap"><div class="f"><label>Layer-2 cap <span class="crUnit">% of Momentum bucket</span></label><input type="number" step="any" inputmode="decimal" id="sCrL2Cap" oninput="crOnInput('cap')"><div class="crErr" data-err-for="sCrL2Cap"></div></div></div>
     </div>
 <div class="divlbl crSub" data-c-tiercrit-h>Tier criteria <span class="crUnit">Damodaran defaults · adjustable</span></div>
     <div class="fgrid" data-c-tiercrit>
@@ -9168,7 +9168,7 @@ function posBtns(t, A){
   /* 7E-2b-2 · ไม้ที่ผูกการ์ด Core: [แก้] เปิดการ์ดแทน · [ยกเลิก]/[ลบ] ยืนยันก่อนแล้วปิดการ์ดด้วย · [ปิด] เหมือนเดิม */
   const linked = !!coreCardOfTrade(t, A);
   return `<button class="small" onclick="openClosePos('${t.id}','${A}')" title="ปิดไม้ที่ถืออยู่">ปิด</button>
-        <button class="small" ${linked?`data-pos-linked onclick="coreOpenCardOfTrade('${t.id}','${A}')" title="แก้ผ่านการ์ด Core"`:`onclick="openTradeEdit('${t.id}','${A}')"`}>แก้</button>
+        <button class="small" ${linked?`data-pos-linked onclick="coreOpenCardOfTrade('${t.id}','${A}')" title="แก้ผ่านการ์ด Momentum"`:`onclick="openTradeEdit('${t.id}','${A}')"`}>แก้</button>
         <button class="small" onclick="${linked?`coreLinkAsk('cancel','${t.id}','${A}')`:`openCancelModal('${t.id}','${A}')`}" title="ตัดสินใจไม่เข้าไม้นี้แล้ว">ยกเลิก</button>
         <button class="small danger" onclick="delTrade('${t.id}','${A}')">ลบ</button>`;
 }
@@ -9322,7 +9322,7 @@ function planSectionHtml(a, b){
   const color = acctColor(a);
   const head = `<div class="acctSecHead"><span class="acctDotC" style="--ac:${color}"></span><b>${escHtml(a.name)}</b></div>`;
   if(!b) return `<div class="acctSec" data-acct="${escHtml(a.id)}" style="--ac:${color}">${head}<div class="acctSecEmpty">คำนวณไม่สำเร็จ</div></div>`;
-  if(!b.sec.n) return `<div class="acctSec" data-acct="${escHtml(a.id)}" style="--ac:${color}">${head}<div class="acctSecEmpty" data-pos-empty>ยังไม่มีไม้ที่ถืออยู่ — ไม้ Sat เปิดจากการ์ดในหน้า Sat · ไม้ Core เปิดจากการ์ด Core (กด ＋ หรือ T ในแท็บแผน)</div></div>`;
+  if(!b.sec.n) return `<div class="acctSec" data-acct="${escHtml(a.id)}" style="--ac:${color}">${head}<div class="acctSecEmpty" data-pos-empty>ยังไม่มีไม้ที่ถืออยู่ — ไม้ Sat เปิดจากการ์ดในหน้า Sat · ไม้ Momentum เปิดจากการ์ด Momentum (กด ＋ หรือ T ในแท็บแผน)</div></div>`;
   return `<div class="acctSec" data-acct="${escHtml(a.id)}" style="--ac:${color}">${head}
     <div class="tablewrap"><table>
       <thead><tr>
@@ -9688,7 +9688,7 @@ function coreFirstLotCalc(cx, mk, tier, entry, stop, f, lotRisk){
 /* ผลไม้แรก (สด) — ใช้ทั้ง sheet แผนใหม่และการ์ด plan */
 function coreFirstLotHtml(cx, mk, tier, entry, stop, f, fLbl, lotRisk, starTxt){
   if(!Calc.coreSize) return '<div class="ccWarn">ไม่พบเครื่องคิดขนาดไม้ (Calc.coreSize)</div>';
-  if(!(cx.tankTHB>0)) return '<div class="ccWarn" data-c-msg>ยังไม่ได้ตั้งถัง Core ของบัญชีนี้</div>';
+  if(!(cx.tankTHB>0)) return '<div class="ccWarn" data-c-msg>ยังไม่ได้ตั้งถัง Momentum ของบัญชีนี้</div>';
   if(!(entry>0) || !(stop>0)) return '<div class="ccSub" data-c-msg>กรอก Entry และ Stop</div>';
   if(!(entry>stop)) return '<div class="ccWarn" data-c-msg>Entry ต้องมากกว่า Stop</div>';
   const r = coreFirstLotCalc(cx, mk, tier, entry, stop, f, lotRisk);
@@ -9711,7 +9711,7 @@ function coreFirstLotHtml(cx, mk, tier, entry, stop, f, fLbl, lotRisk, starTxt){
 function coreMoneyK(v, mk){ return Math.abs(v) < 1000 ? coreMoneyS(v, mk) : glMoney(v, mk==='US' ? 'USD' : 'THB', true); }
 function coreFirstLotPlanHtml(cx, mk, tier, entry, stop, f, fLbl, capPct, ctl, lotRisk, starTxt){
   if(!Calc.coreSize) return '<div class="ccWarn">ไม่พบเครื่องคิดขนาดไม้ (Calc.coreSize)</div>';
-  if(!(cx.tankTHB>0)) return '<div class="ccWarn" data-c-msg>ยังไม่ได้ตั้งถัง Core ของบัญชีนี้</div>';
+  if(!(cx.tankTHB>0)) return '<div class="ccWarn" data-c-msg>ยังไม่ได้ตั้งถัง Momentum ของบัญชีนี้</div>';
   if(!(entry>0) || !(stop>0)) return '<div class="ccSub" data-c-msg>กรอก Entry และ Stop</div>';
   if(!(entry>stop)) return '<div class="ccWarn" data-c-msg>Entry ต้องมากกว่า Stop</div>';
   const r = coreFirstLotCalc(cx, mk, tier, entry, stop, f, lotRisk);
@@ -10212,7 +10212,7 @@ function coreAcctHtml(a){
   const list = openV.concat(planV);
   const body = list.length ? `<div class="ccList">${list.map(v=>coreCardHtml(v, cx)).join('')}</div>` : '';
   const closed = closedV.length ? `<details class="ccClosedWrap" data-c-closedgroup><summary>ปิดแล้ว ${closedV.length} ตัว</summary>${closedV.map(coreClosedHtml).join('')}</details>` : '';
-  const empty = (list.length+closedV.length)===0 ? '<div class="ccEmpty" data-c-empty>ยังไม่มีการ์ด Core ในบัญชีนี้</div>' : '';
+  const empty = (list.length+closedV.length)===0 ? '<div class="ccEmpty" data-c-empty>ยังไม่มีการ์ด Momentum ในบัญชีนี้</div>' : '';
   return `<div class="ccAcct" data-core-acct="${escHtml(A)}" style="--ac:${acctColor(a)}">${head}${ddBarHtml(dd)}${body}${closed}${empty}
     <div class="ccFoot"><button type="button" class="ccBtn" data-c-newplan onclick="coreNewOpen('${escHtml(A)}')">＋ แผน Core</button></div></div>`;
 }
@@ -10273,7 +10273,7 @@ function lfCoreRow(a){
   const A = a.id, cx = coreCtx(A), rk = coreAcctRisk(A), cfg = cx.cfg, tank = cx.tankTHB + cx.ladderPoolTHB, e = escHtml;   /* RG2b — ทุน Core = ถัง Winner + Ladder */
   const dot = `<i class="acctDotC" style="--ac:${acctColor(a)}"></i>`;
   const nm = `<span class="nm">${dot}<b>${e(td3AcctName(a))}</b><span class="rs"> · Risk Core</span></span>`;
-  if(!(tank>0)) return {tank:0, row:`<div class="lfa nomoney" data-lf-row="${e(A)}">${nm}<div class="ln2-al" data-lf-alert="notank">⚠ ยังไม่ได้ตั้งถัง Core — <a href="#" class="ln2-lnk" data-lf-setup onclick="openSettings();return false">ตั้งค่า › Core</a></div></div>`, det:'', lvl:'ok'};
+  if(!(tank>0)) return {tank:0, row:`<div class="lfa nomoney" data-lf-row="${e(A)}">${nm}<div class="ln2-al" data-lf-alert="notank">⚠ ยังไม่ได้ตั้งถัง Momentum — <a href="#" class="ln2-lnk" data-lf-setup onclick="openSettings();return false">ตั้งค่า › Core</a></div></div>`, det:'', lvl:'ok'};
   let capTot = 0, sumS = null;
   try{ sumS = withAccount(A, ()=>summarize()); capTot = sumS.cap; }catch(err){ console.warn('lf core cap:', err); }
   const lim = cfg.l2Cap, warnAt = Math.min(cfg.l2Warn, lim);
@@ -10338,11 +10338,11 @@ function lfCoreCardsHtml(a){
   const planV = views.filter(v=>v.kind==='plan').sort((x,y)=>String(y.c.created_at||'').localeCompare(String(x.c.created_at||'')));
   const closedV = views.filter(v=>v.kind==='closed');
   const list = openV.concat(planV), n = list.length;
-  const body = n ? `<div class="ccList">${list.map(v=>coreCardHtml(v, cx)).join('')}</div>` : '<div class="ccEmpty" data-c-empty>ยังไม่มีการ์ด Core ในบัญชีนี้</div>';
+  const body = n ? `<div class="ccList">${list.map(v=>coreCardHtml(v, cx)).join('')}</div>` : '<div class="ccEmpty" data-c-empty>ยังไม่มีการ์ด Momentum ในบัญชีนี้</div>';
   const closed = closedV.length ? `<details class="ccClosedWrap" data-c-closedgroup><summary>ปิดแล้ว ${closedV.length} ตัว</summary>${closedV.map(coreClosedHtml).join('')}</details>` : '';
   const all = n ? `<span class="ccAll"><button type="button" class="ccLnk" data-c-expandall onclick="coreAll('${escHtml(A)}',1)">ขยายทั้งหมด</button> · <button type="button" class="ccLnk" data-c-collapseall onclick="coreAll('${escHtml(A)}',0)">ยุบทั้งหมด</button></span>` : '';
   return `<div class="panel lf-cards" data-lf-cards><div class="ccAcct" data-core-acct="${escHtml(A)}" style="--ac:${acctColor(a)}">
-    <div class="lf-ch" data-lf-ch><b>การ์ด Core</b><span class="mut"><span data-lf-n>${n} ตัว</span> · <a href="#" data-c-newplan data-lf-newplan onclick="coreNewOpen('${escHtml(A)}');return false">＋ แผน Core</a></span></div>
+    <div class="lf-ch" data-lf-ch><b>การ์ด Momentum</b><span class="mut"><span data-lf-n>${n} ตัว</span> · <a href="#" data-c-newplan data-lf-newplan onclick="coreNewOpen('${escHtml(A)}');return false">＋ แผน Core</a></span></div>
     ${all ? `<div class="ccAcctH">${all}</div>` : ''}${body}${closed}${lfOrphansHtml(A)}</div></div>`;
 }
 /* ไม้ Core ที่ไม่มีการ์ด (ข้อมูลเก่า) — เดิมจัดการใน Positions · Lean เก็บไว้ในพับนี้ (ปิด/แก้/ยกเลิก/ลบ) */
@@ -10509,7 +10509,7 @@ function renderCorePanel(){
   const parts = accts.map(a=>{
     try{ return coreAcctHtml(a); }catch(e){ console.warn('core acct', a.id, e); return `<div class="ccAcct"><div class="ccEmpty">คำนวณไม่สำเร็จ · ${escHtml(a.name)}</div></div>`; }
   });
-  host.innerHTML = `<div class="panel"><div class="panel-head"><h2>Core · การ์ดตำแหน่ง</h2></div><div class="ccNote">ขาดทุนสูงสุดต่อตัว ≤ งบเสี่ยง × FF เสมอ</div>
+  host.innerHTML = `<div class="panel"><div class="panel-head"><h2>Momentum · การ์ดตำแหน่ง</h2></div><div class="ccNote">ขาดทุนสูงสุดต่อตัว ≤ งบเสี่ยง × FF เสมอ</div>
     ${coreErr ? `<div class="ccErr" data-core-err>${escHtml(coreErr)}</div>` : ''}${parts.join('')}</div>`;
 }
 /* ดูไม้ที่ซื้อ — sheet เล็ก (ตาราง pyramid ย้ายมาจากการ์ด) */
@@ -10532,7 +10532,7 @@ function coreLinkAsk(mode, id, A){
   if(!t) return;
   { const cc = coreCardOfTrade(t, A); if(!cc || cc.acc_trade_id===t.id){ if(mode==='cancel') openCancelModal(id, A); else delTradeDo(id, A); return; } }   /* LN3fix2 — ไม้เร่ง = ยกเลิก/ลบเฉพาะไม้เร่ง */
   const sym = escHtml(t.sym);
-  const msg = mode==='cancel' ? `ยกเลิกไม้ ${sym} จะปิดการ์ด Core ${sym} ด้วย (ประวัติไม้ในการ์ดยังอยู่)` : `ลบไม้ ${sym} จะปิดการ์ด Core ${sym} ด้วย`;
+  const msg = mode==='cancel' ? `ยกเลิกไม้ ${sym} จะปิดการ์ด Momentum ${sym} ด้วย (ประวัติไม้ในการ์ดยังอยู่)` : `ลบไม้ ${sym} จะปิดการ์ด Momentum ${sym} ด้วย`;
   coreSheet('link', `<h3>${mode==='cancel'?'ยกเลิกไม้':'ลบไม้'} · ${sym}</h3><div class="ccSub" data-c-link-msg>${msg}</div>
     <div class="ccFoot"><button type="button" class="ccBtn" data-c-link-no onclick="coreSheetClose()">ไม่ทำต่อ</button><button type="button" class="ccBtn pri dn" data-c-link-ok onclick="coreLinkGo()">ยืนยัน</button></div>`);
   coreDlg = {kind:'link', mode, id, A};
@@ -11302,7 +11302,7 @@ function coreNewRead(){
   return {ticker, mk, entry:coreNum(coreEl('cnEntry').value), stop:coreNum(coreEl('cnStop').value), ti,
     lv: n.lv.slice(0, n.nlv).map(coreNum), sl: coreNum(coreEl('cnLsl').value), bud: coreNum(coreEl('cnLbud').value)};
 }
-const CORE_LERR = {LEVELS_NOT_DESC:'ระดับต้องเรียงจากสูงไปต่ำ', LEVEL_BELOW_SL:'ทุกระดับต้องสูงกว่า SL', NO_TANK:'ยังไม่ได้ตั้งถัง Core ของบัญชีนี้', BAD_SL:'กรอก SL', BAD_LEVEL:'กรอกราคาทุกระดับ', BAD_SPLIT:'สัดส่วนเงินไม่ถูกต้อง'};
+const CORE_LERR = {LEVELS_NOT_DESC:'ระดับต้องเรียงจากสูงไปต่ำ', LEVEL_BELOW_SL:'ทุกระดับต้องสูงกว่า SL', NO_TANK:'ยังไม่ได้ตั้งถัง Momentum ของบัญชีนี้', BAD_SL:'กรอก SL', BAD_LEVEL:'กรอกราคาทุกระดับ', BAD_SPLIT:'สัดส่วนเงินไม่ถูกต้อง'};
 function coreNewLdraft(n, rd, cx){
   const split = n.nlv===3 ? [0.4,0.3,0.3] : [0.5,0.5];
   return {levels: rd.lv.map(px=>({px, status:'wait'})), sl: rd.sl, budgetPct: rd.bud/100, budgetTHB: rd.bud/100*cx.ladderPoolTHB, split};
@@ -11360,7 +11360,7 @@ function coreNewIn(){
   if(ti && ti.needReason && !ti.reason) errs.push('Tier A ต้องมีเหตุผล');
   if(n.mode==='edit' && tier!=='A') errs.push('แก้แผนบันไดต้องเป็น Tier A');
   else if(n.mode==='edit' && !fortress) errs.push('แก้แผนบันไดต้องเป็น A-Fortress');
-  if(!(cx.tankTHB>0)) errs.push('ยังไม่ได้ตั้งถัง Core ของบัญชีนี้');
+  if(!(cx.tankTHB>0)) errs.push('ยังไม่ได้ตั้งถัง Momentum ของบัญชีนี้');
   if(coreErr) errs.push(coreErr);
   const mk = rd.mk || (cfg.market==='TH' ? 'TH' : 'US');
   if(!isL){
@@ -11903,9 +11903,9 @@ function render(){
       const bar2 = `<div class="sumBar2" data-sum-bar2><i class="now" style="width:${nowW}%"></i><i class="res" style="width:${resW}%"></i><b style="left:${warnX}%"></b></div>`;
       const freeTxt = (spS && (spS.overCommitted || spS.lOver)) ? `${spS.lOver ? 'Compounder เกินถัง' : 'Momentum เกินถัง'} ฿${fmt0(spS.lOver ? spS.lOverAmt : spS.overAmt)} (เตือนเท่านั้น)` : `เงินว่าง Momentum ฿${fmt0(freeW)} · Compounder ฿${fmt0(freeL)}`;
       const sec = `<div class="sumSec" data-priv="p-port-${k}" data-sum-sec="${k}">
-        <div class="sumHead"><div class="sumT">Core Port</div><span class="sumPill nt" data-sum-mkt>${mktLbl}</span><span class="sumR" data-priv-anchor><span class="sumNw">ทุน ${capLine}</span> · <span class="sumNw">${fmt2(pct(capTH,cap))}% ของทุนรวม</span></span></div>
+        <div class="sumHead"><div class="sumT">Momentum Port</div><span class="sumPill nt" data-sum-mkt>${mktLbl}</span><span class="sumR" data-priv-anchor><span class="sumNw">ทุน ${capLine}</span> · <span class="sumNw">${fmt2(pct(capTH,cap))}% ของทุนรวม</span></span></div>
         <div class="sumGrid sumG3">
-          <div class="sumCell sumLv-${lvl}" data-sum="open" data-level="${lvl}"><div class="sumL">ความเสี่ยงถึง Stop (ชั้น 2 · จากราคาปิด) · % ของถัง Core</div><div class="sumBig sumNw" data-sum-now><small>ตอนนี้ </small>${fmt2(riskNow)}<small>%</small></div><div class="sumFull" data-sum-full><small>ถ้าบันไดเต็ม </small><b>${fmt2(riskTank)}</b><small>%</small></div>${bar2}<div class="sumSub">฿${fmt0(riskTHBv)} · ≈ ${fmt2(pct(riskTHBv,cap))}% ของบัญชี</div>${cr && cr.missing>0?`<div class="sumSub" data-sum-missing>ขาดราคา ${cr.missing} ตัว (ไม่นับ)</div>`:''}${cr && cr.nNoCard>0?`<div class="sumSub" data-sum-nocard>ไม่มีการ์ด ${cr.nNoCard} ตัว (นับจากทุน)</div>`:''}${lvl==='over'?'<div class="sumSub"><span class="sumPill dn" data-stop-buy>งดซื้อเพิ่ม</span></div>':''}</div>
+          <div class="sumCell sumLv-${lvl}" data-sum="open" data-level="${lvl}"><div class="sumL">ความเสี่ยงถึง Stop (ชั้น 2 · จากราคาปิด) · % ของถัง Momentum</div><div class="sumBig sumNw" data-sum-now><small>ตอนนี้ </small>${fmt2(riskNow)}<small>%</small></div><div class="sumFull" data-sum-full><small>ถ้าบันไดเต็ม </small><b>${fmt2(riskTank)}</b><small>%</small></div>${bar2}<div class="sumSub">฿${fmt0(riskTHBv)} · ≈ ${fmt2(pct(riskTHBv,cap))}% ของบัญชี</div>${cr && cr.missing>0?`<div class="sumSub" data-sum-missing>ขาดราคา ${cr.missing} ตัว (ไม่นับ)</div>`:''}${cr && cr.nNoCard>0?`<div class="sumSub" data-sum-nocard>ไม่มีการ์ด ${cr.nNoCard} ตัว (นับจากทุน)</div>`:''}${lvl==='over'?'<div class="sumSub"><span class="sumPill dn" data-stop-buy>งดซื้อเพิ่ม</span></div>':''}</div>
           <div class="sumCell" data-sum="held"><div class="sumL">Momentum pool · เงินที่ถือ</div><div class="sumBig sumNw">${fmt2(pct(wHeldS,tankW))}<small>% ของถัง Momentum</small></div><div class="sumSub sumNw">฿${fmt0(wHeldS)} / ฿${fmt0(tankW)}</div>${bar4}<div class="sumSub${spS&&spS.lOver?' sumNeg':''}" data-sum-l>Compounder ${fmt2(lPctS)}% ของถัง Compounder ฿${fmt0(tankL)}</div><div class="sumSub${spS&&(spS.overCommitted||spS.lOver)?' sumNeg':''}" data-sum-free>${freeTxt}</div></div>
           <div class="sumCell" data-sum="pos"><div class="sumL">ตำแหน่ง</div><div class="sumBig sumNw">${nOpen}<small> ตัว</small></div><div class="sumSub sumNw" data-sum-wl>W ${nW} · L ${nL}</div><div class="sumSub sumNw">ล็อกกำไร ${nLock} ตัว</div></div>
           <div class="sumCell" data-sum="pools"><div class="sumL">Regime size</div><div class="sumBig sumNw">${Math.round(coreFNow().f*100)}<small>%</small></div><div class="sumSub">Compounder pool free ฿${fmt0(freeL)}</div></div>
@@ -13092,7 +13092,7 @@ function ln3RenderPort(){
   const coreIds = ids.filter(id=>(acctList.find(a=>a.id===id)||{}).ports.includes('core'));
   if(coreIds.length){
     const dd = coreIds.map(id=>{ const evs = [ddEval(id, 'winner'), ddEval(id, 'ladder')].filter(Boolean); return evs.length ? (coreIds.length>1 ? `<span class="hint" style="margin:0">${escHtml(td3AcctName(acctList.find(a=>a.id===id)))}</span> ` : '') + evs.map(ddChipHtml).join(' ') : ''; }).filter(Boolean).join(' ');
-    html += `<div class="panel ln3-pcard" data-ln3-core="1"><div class="ln3-ph"><b>Core Port</b><span data-ln3-ddc="1">${dd}</span></div>
+    html += `<div class="panel ln3-pcard" data-ln3-core="1"><div class="ln3-ph"><b>Momentum Port</b><span data-ln3-ddc="1">${dd}</span></div>
       <div class="ln3-pseg" style="margin-top:8px" data-ln3-pieby="1"><button type="button" class="${ln3PieBy==='sym' ? 'on' : ''}" data-ln3-by="sym" aria-pressed="${ln3PieBy==='sym'}" onclick="ln3PieSet('sym')">หุ้น</button><button type="button" class="${ln3PieBy==='ind' ? 'on' : ''}" data-ln3-by="ind" aria-pressed="${ln3PieBy==='ind'}" onclick="ln3PieSet('ind')">Industry</button></div>
       <div class="pierow">${mixPieBlock('ln3core', ln3PieBy==='sym' ? 'สัดส่วนหุ้น' : 'สัดส่วน Industry')}</div>
       <details data-ln3-riskfold="1"${ln3PortRiskOpen ? ' open' : ''} ontoggle="ln3PortRiskOpen=this.open"><summary>ความเสี่ยง Core (ชั้น 2 · W/L · บันได)</summary>${coreIds.map(ln3CoreRiskLines).join('')}</details></div>`;
@@ -17031,7 +17031,7 @@ function jBackfillOpen(){
   const accts = acctList.filter(a=>(a.ports || ACCT_PORT_KEYS).some(k=>k==='core'||k==='satB'));
   if(!accts.length){ alert('ไม่มีบัญชีที่เปิด port Core/Sat'); return; }
   const a0 = accts.some(a=>a.id===acctActive) ? acctActive : accts[0].id;
-  coreSheet('backfill', `<h3>บันทึกไม้ย้อนหลัง</h3><div class="ccSub">ไม้ที่ปิดไปแล้ว · ติดป้าย "นอกแผน" · ไม่สร้างการ์ด Core</div>
+  coreSheet('backfill', `<h3>บันทึกไม้ย้อนหลัง</h3><div class="ccSub">ไม้ที่ปิดไปแล้ว · ติดป้าย "นอกแผน" · ไม่สร้างการ์ด Momentum</div>
     <div class="ccPair"><div class="ccF"><label>บัญชี</label><select id="bfAcct" onchange="jBackfillIn(true)">${accts.map(a=>`<option value="${escHtml(a.id)}"${a.id===a0?' selected':''}>${escHtml(a.name)}</option>`).join('')}</select></div>
       <div class="ccF"><label>Port</label><select id="bfPort" onchange="jBackfillIn(true)"></select></div></div>
     <div class="ccPair"><div class="ccF"><label>Ticker / Asset</label><input type="text" id="bfSym" autocomplete="off" autocapitalize="characters" oninput="jBackfillIn(true)"></div>

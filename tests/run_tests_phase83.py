@@ -96,7 +96,7 @@ def tests(pw, w, h, label):
         page.locator('[data-ln3-acc="main"]').dispatch_event('click'); page.wait_for_timeout(500)
         # ── 4 Core
         core = js(page, """()=>{ const c = document.querySelector('[data-ln3-core]'); const h = c.querySelector('.ln3-ph'); return {head: h.innerText.replace(/\\s+/g,' ').trim(), pies: c.querySelectorAll('.piechart').length, seg: [...c.querySelectorAll('[data-ln3-by]')].map(b=>[b.dataset.ln3By, b.classList.contains('on')]), leg: c.querySelector('.pielegend').innerText.replace(/\\s+/g,' '), fold: c.querySelector('[data-ln3-riskfold] summary').innerText}; }""")
-        check(f"{tag} 4 การ์ด Core: หัว 'Core Port · DD x% · สถานะ' ไม่ซ้ำทุน (ไม่มีคำว่า ทุน/฿ ในหัว)", core["head"].startswith("Core Port") and "DD" in core["head"] and "ปกติ" in core["head"] and "ทุน" not in core["head"] and "฿" not in core["head"], core["head"])
+        check(f"{tag} 4 การ์ด Momentum: หัว 'Momentum Port · DD x% · สถานะ' ไม่ซ้ำทุน (ไม่มีคำว่า ทุน/฿ ในหัว)", core["head"].startswith("Momentum Port") and "DD" in core["head"] and "ปกติ" in core["head"] and "ทุน" not in core["head"] and "฿" not in core["head"], core["head"])
         check(f"{tag} 4 วงกลมเดียว · ปุ่มสลับ หุ้น | Industry (ค่าเริ่ม หุ้น) · legend แสดงหุ้นที่ถือ + เงินสด", core["pies"] == 1 and core["seg"] == [["sym", True], ["ind", False]] and "NVDA" in core["leg"] and "AVGO" in core["leg"] and "เงินสด" in core["leg"], core)
         page.locator('[data-ln3-by="ind"]').click(); page.wait_for_timeout(400)
         leg2 = body(page, "[data-ln3-core] .pielegend")

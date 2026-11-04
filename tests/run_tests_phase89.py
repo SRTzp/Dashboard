@@ -95,7 +95,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 1 การ์ด 2 บรรทัด: NVDA 'A · Momentum' + 'ไม้ 1 · SL 115' · AVGO 'B · Momentum' + 'แผน · 300 / 270 · ไม้แรก 15 หุ้น' (RG2b ถัง Momentum 50%)",
               nv.get("tag") == "A · Momentum" and nv.get("l2") == "ไม้ 1 · SL 115" and av.get("tag") == "B · Momentum" and av.get("l2") == "แผน · 300 / 270 · ไม้แรก 15 หุ้น", rows)   # RG2b: ถัง Winner 50% → 15 หุ้น
         hdr = txt(page, "[data-lf-ch]")
-        check(f"{tag} 1 หัว 'การ์ด Core · 2 ตัว · ＋ แผน Core' · ขยาย/ยุบทั้งหมดคงไว้", hdr is not None and "การ์ด Core" in hdr and "2 ตัว" in hdr and "＋ แผน Core" in hdr and vis(page, "[data-c-expandall]") and vis(page, "[data-c-collapseall]"), hdr)
+        check(f"{tag} 1 หัว 'การ์ด Momentum · 2 ตัว · ＋ แผน Core' · ขยาย/ยุบทั้งหมดคงไว้", hdr is not None and "การ์ด Momentum" in hdr and "2 ตัว" in hdr and "＋ แผน Core" in hdr and vis(page, "[data-c-expandall]") and vis(page, "[data-c-collapseall]"), hdr)
         # กางการ์ด
         js(page, "()=>coreAll('main', 1)"); page.wait_for_timeout(300)
         body = js(page, "()=>document.querySelector('[data-core-card=ccNV]').innerText.replace(/\\s+/g,' ')")
@@ -136,7 +136,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 1 ปิดไม้ Core ผ่าน ⋯ (Lean) = ผลเดียวกับ Positions เดิม: ไม้ closed @140 · การ์ด closed", rl == rg and rl["st"] == "closed" and rl["exit"] == 140, [rl, rg])
         js(page, "()=>{ coreMenuToggle(document.querySelector('[data-core-card=ccNV] [data-c-more]'), null); document.querySelector('[data-core-card=ccNV] [data-c-lcancel-pos]').click(); }"); page.wait_for_timeout(400)
         lk = txt(page, "[data-c-link-msg]")
-        check(f"{tag} 1 ⋯ › ยกเลิก → sheet ยืนยัน 'ยกเลิกไม้ NVDA จะปิดการ์ด Core NVDA ด้วย' (เหมือน Positions เดิม)", lk is not None and "ยกเลิกไม้ NVDA" in lk and "ปิดการ์ด Core NVDA" in lk, lk)
+        check(f"{tag} 1 ⋯ › ยกเลิก → sheet ยืนยัน 'ยกเลิกไม้ NVDA จะปิดการ์ด Momentum NVDA ด้วย' (เหมือน Positions เดิม)", lk is not None and "ยกเลิกไม้ NVDA" in lk and "ปิดการ์ด Momentum NVDA" in lk, lk)
         js(page, "()=>coreSheetClose()")
         js(page, "()=>{ coreMenuToggle(document.querySelector('[data-core-card=ccNV] [data-c-more]'), null); document.querySelector('[data-core-card=ccNV] [data-c-del-pos]').click(); }"); page.wait_for_timeout(400)
         lk2 = txt(page, "[data-c-link-msg]")

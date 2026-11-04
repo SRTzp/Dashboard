@@ -186,7 +186,7 @@ def settings_checks(pw, w, h, label):
         check(f"{tag} ตั้งค่า: ส่วนความเสี่ยง Core มีค่าเริ่มต้นครบ (CZ1: Risk A/B 1.25/1.25 · เพดานไม้แรก 15/10 · เพดานรวม 25/25 · 50 · 20 · 15 · 7 · 10 · 2.5 · 30 · 2) · main ตลาด = US",
               vals == {"mk": "US", "ra": "1", "rb": "1.25", "a": "25", "b": "25", "ca": "25", "cb": "25", "add": "50", "cap": "20", "warn": "15", "em": "7", "lb": "5", "lr": "4", "ls": "30", "gate": "2", "heatCore": "20", "heatSat": "6"}, json.dumps(vals))
         units = page.evaluate("() => [...document.querySelectorAll('#crSec .f')].map(f=>(f.querySelector('.crUnit')||{}).textContent||'')")
-        check(f"{tag} ตั้งค่า: ทุกช่องมีป้ายหน่วย (% ของถัง Core · % ของไม้ก่อนหน้า · ไม้ (1–6) · % ใต้ Stop · สัปดาห์) · ป้าย '% ของถัง Core' ≥ 8 ช่อง (TIER2: +6 ช่องเกณฑ์ Tier = 19 ช่อง)", len(units) == 22 and units.count("") == 1 and sum("% of Core bucket" in u for u in units) >= 3,   # RG2b — ช่อง Tier/เพดานชั้น 2/ladderShare/gateWeeks ถอด · หน่วยเปลี่ยนเป็น % ของถัง
+        check(f"{tag} ตั้งค่า: ทุกช่องมีป้ายหน่วย (% ของถัง Momentum · % ของไม้ก่อนหน้า · ไม้ (1–6) · % ใต้ Stop · สัปดาห์) · ป้าย '% ของถัง Momentum' ≥ 8 ช่อง (TIER2: +6 ช่องเกณฑ์ Tier = 19 ช่อง)", len(units) == 22 and units.count("") == 1 and sum("% of Momentum bucket" in u for u in units) >= 3,   # RG2b — ช่อง Tier/เพดานชั้น 2/ladderShare/gateWeeks ถอด · หน่วยเปลี่ยนเป็น % ของถัง
                json.dumps(units, ensure_ascii=False))
         mk = page.evaluate("() => ({main: coreRiskCfg('main').market, fam: coreRiskCfg('fam').market})")
         check(f"{tag} ตลาดเริ่มต้น: main = US · fam (ชื่อ Family) = TH · ชื่ออื่น = both", mk == {"main": "US", "fam": "TH"} and
@@ -330,7 +330,7 @@ def formula_checks(pw, w, h, label):
         check(f"{tag} ตำแหน่ง: 2 ตัว · ล็อกกำไร 1 ตัว · ไม่มีช่องแผนที่รอ (ไม่มีไม้ plan ของ Core)", "2 ตัว" in blk["pos"] and "ล็อกกำไร 1 ตัว" in blk["pos"] and blk["plan"] is None, json.dumps(blk, ensure_ascii=False))
         exp = round((100 + 570 * fx) / cap * 100, 2)
         check(f"{tag} 'ถ้าทุกไม้โดน Stop บัญชีลด' = (100 + 570×fx) ÷ totalTHB × 100 = {f2(exp)}% · '(Core จากราคาปิด · Sat จากทุน)' + เทียบทุน −฿75 (7E-2: แก้ข้อความ · ตัวเลขเท่าเดิมเพราะไม่มีการ์ด = Core นับจากทุน)", f"≈ {f2(exp)}%" in blk["drop"] and "(Core จากราคาปิด · Sat จากทุน)" in blk["drop"] and "เทียบทุน: −฿75" in blk["drop"], f"{blk['drop']} exp={exp}")
-        check(f"{tag} หัวบล็อก: 'Core Port' · ทุน ฿ · ≈ % ของทุนรวม · ป้ายตลาด US", "Core Port" in blk["head"] and "ทุน ฿100,000" in blk["head"] and "ของทุนรวม" in blk["head"] and "US" in blk["head"], blk["head"])
+        check(f"{tag} หัวบล็อก: 'Momentum Port' · ทุน ฿ · ≈ % ของทุนรวม · ป้ายตลาด US", "Momentum Port" in blk["head"] and "ทุน ฿100,000" in blk["head"] and "ของทุนรวม" in blk["head"] and "US" in blk["head"], blk["head"])
         check(f"{tag} ตัดของเดิม: ไม่มีป้าย 'เกิน limit' · ไม่มี Open Risk/Planned แบบเดิม · ไม่มีบรรทัด Positions n open", "เกิน limit" not in blk["all"] and "Open Risk" not in blk["all"] and "Planned" not in blk["all"] and " open" not in blk["all"].replace("ล็อก", ""), blk["all"])
         foot = page.evaluate("() => document.getElementById('foot').innerText")
         expF = f"heat: Core {f2(100/tank*100)}% / 20% ของถัง · Sat {f2(570*fx/(st['sat']*fx)*100)}% / 6% ของถัง · รวม {f2(exp)}% ของบัญชี (ฐาน THB @ {f2(fx)}) — sync ผ่าน Firestore"

@@ -39,3 +39,7 @@ Winner/Winners → **Momentum**, Ladder → **Compounder** in user-visible text 
 | phase106, 109, 112, 113, 89, 91, 83, 84, 77, 53, 39, 14, 23, 24, 56, 99 | expected strings `Winner(s)`→`Momentum`, `Ladder`→`Compounder` (verdict line, pool lines, DD chips/rows, scope buttons, tags `A · Momentum`, Settings pool row, DD table headers, `New Momentum plan`, track-change errors) | label rename |
 | phase23 | `sCrRiskA` default 1; save writes `coreRisk.baseRisk` (no `riskPct`/`riskA`); `coreSizeOpts` check reads `coreRiskCfg().baseRisk` | A4 (Step 2) |
 | phase97, 99, 113 (§UI1/§UI3) | no expectation change — header scope tabs tightened (`#hdrSub .scopeBtn` 4px/.76rem, hint hidden; in-page ≤480px padding/font; `#ldrAddSel{max-width:100%}`) so longer labels still fit | layout |
+
+## Step 2c — "Core" → "Momentum" where it means the Momentum bucket/page (display only)
+Renamed: "การ์ด Core" (cards/empty state/confirm sheets), "ถัง Core" (no-tank messages, `% ของถัง Core` summary), "Core · การ์ดตำแหน่ง", Settings units `% of Core bucket` → `% of Momentum bucket` (first-lot / accelerator / layer-2 fields), pool summary heads `Core Port` → `Momentum Port` (Plan summary + Plan header). Kept: port name `Core Port` (Settings/PORTS), Max Heat row `Core — % of Core bucket`, `Core.US`/`Core.TH`, Settings port toggle, Today `Core ·` subtitles + `Core Port` panel head (A7 replaces them).
+Suites with updated expectations: phase14, 22, 23, 29, 83, 89. phase43 `index.backup-pre-PX1.html + tests/_bk_px1/` fails on main too (backup folder not in repo).
