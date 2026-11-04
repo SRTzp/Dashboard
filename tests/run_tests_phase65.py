@@ -84,7 +84,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 1 หัวตาราง 'Risk/ไม้ · เพดานไม้แรก · เพดานรวม/หุ้น' · แถว A | B · ไม่มีช่อง sCrRisk เดิม", hdr == "" and rows == "" and js(page, "()=>!!document.getElementById('sCrWinCap')") and   # RG2b — ตาราง Tier ถูกแทนด้วยช่อง Risk/lot + เพดานต่อหุ้นค่าเดียว
                 js(page, "()=>!document.getElementById('sCrRisk')"), hdr + rows)
         fm = txt(page, "[data-cr-formula]")
-        check(f"{tag} 1 บรรทัดสูตรใต้ตาราง (ใช้ FF)", "min(Risk × Regime size ÷ (Entry − Stop), max per stock, free Winner cash)" in fm and "max per stock" in fm, fm)
+        check(f"{tag} 1 บรรทัดสูตรใต้ตาราง (ใช้ FF)", "min(Risk × Regime size ÷ (Entry − Stop), max per stock, free Momentum cash)" in fm and "max per stock" in fm, fm)
         shot(page, f"cz1-settings-{sfx}.png", "#crSec")
         check(f"{tag} 1 ไม่มี console error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
     finally:

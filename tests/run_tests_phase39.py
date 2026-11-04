@@ -205,7 +205,7 @@ def abnormal_tests(pw, w, h, label):
         cls = js(page, "()=>{ const r = document.querySelector('[data-num-acct=\"main\"]'); return [r.children[4].className, r.children[4].innerText.trim()]; }")
         check(f"{tag} 3 ตารางค่า heat main เป็นสีเหลือง (class a)", cls[0] == "a" and cls[1].startswith("5"), json.dumps(cls))
         check(f"{tag} 4 ไม้ใหม่ Family 4/4 → แถว 🟡 'ไม้ใหม่ Sat Family ครบ 4/4 สัปดาห์นี้'", "ไม้ใหม่ Sat Family ครบ 4/4 สัปดาห์นี้" in j("newcnt"), j("newcnt"))
-        check(f"{tag} 4 DD Winner main reduce → แถว 🟡 'เบรก DD Winner Main: ลดขนาด ×0.5 · DD x%' (RG2b §4.7 แยกต่อถัง)", bool(re.search(r"เบรก DD Winner Main: ลดขนาด ×0\.5 · DD 1[23]\.", j("dd-reduce"))), j("dd-reduce"))
+        check(f"{tag} 4 DD Momentum main reduce → แถว 🟡 'เบรก DD Momentum Main: ลดขนาด ×0.5 · DD x%' (RG2b §4.7 แยกต่อถัง)", bool(re.search(r"เบรก DD Momentum Main: ลดขนาด ×0\.5 · DD 1[23]\.", j("dd-reduce"))), j("dd-reduce"))
         check(f"{tag} 4 ไม่มีแถวเตือนชั้น 2 (RG2b ถอดเพดานชั้น 2)", j("l2") == "", j("l2") + str(ka))
         check(f"{tag} 4 ไม่มีแถวประตู FF เปิด (RG2b ถอดประตู)", j("gate", tb, kb) == "", json.dumps(tb, ensure_ascii=False))   # RG2b — ไม่มีแถวประตู FF
         ol = okline(page)
@@ -214,7 +214,7 @@ def abnormal_tests(pw, w, h, label):
         st = js(page, "()=>({tab: activeTab, scope: planScope})")
         check(f"{tag} 4 กดแถว heat → แท็บแผน scope Future", st == {"tab": "plan", "scope": "future"}, json.dumps(st))
         go_today(page); row(page, "dd-reduce").click(); page.wait_for_timeout(400)
-        check(f"{tag} 4 กดแถวลดขนาด → sheet DD Winner บัญชีหลัก", js(page, "()=>{ const h = document.querySelector('.core-sheet h3'); return !!h && /Winner/.test(h.textContent) && /บัญชีหลัก/.test(h.textContent); }"))
+        check(f"{tag} 4 กดแถวลดขนาด → sheet DD Momentum บัญชีหลัก", js(page, "()=>{ const h = document.querySelector('.core-sheet h3'); return !!h && /Momentum/.test(h.textContent) && /บัญชีหลัก/.test(h.textContent); }"))
         js(page, "()=>coreSheetClose()"); page.wait_for_timeout(200)
         go_today(page)   # RG2b — แถวชั้น 2 / ประตู FF ถอดแล้ว: ไม่มีให้กด
         check(f"{tag} 4 ไม่มีแถวชั้น 2 และแถวประตู f ให้กด", js(page, "()=>document.querySelectorAll('[data-kind=l2],[data-kind=gate]').length") == 0)

@@ -150,7 +150,7 @@ def factor_tests(pw):
             js(page, "()=>{ ln3FlowOpen.regime = true; switchTab('flow'); ffRenderRegime(); }"); settle(page, 400)
             chips = js(page, "()=>[...document.querySelectorAll('#ffRegime .ffRegChip')].slice(0,2).map(e=>e.innerText.replace(/\\s+/g,' ').trim())")
             check(f"{tag} §3.2 ชิป ACWI/HYG ใช้ suffix d (daily)", len(chips) == 2 and all(c.split(' ')[-1].endswith("d") or "12d" in c for c in chips), chips)
-            check(f"{tag} §3.2 Flow แสดง Ladder factor แยก", "Ladder 75%" in (txt(page, "#ffRegime") or ""), txt(page, "#ffRegime"))
+            check(f"{tag} §3.2 Flow แสดง Compounder factor แยก", "Compounder 75%" in (txt(page, "#ffRegime") or ""), txt(page, "#ffRegime"))
             check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
         finally: b.close()
 
@@ -170,7 +170,7 @@ def verdict_tests(pw):
                 js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 500)
                 wcap = {(True, True): 100, (True, False): 75, (False, True): 75, (False, False): 50}[(a, hh)]
                 t = txt(page, "[data-td3-rg]")
-                exp = f"{lab} · Winner {wcap}% · Ladder 100%" if w > 460 else f"{lab} · W {wcap} · L 100"
+                exp = f"{lab} · Momentum {wcap}% · Compounder 100%" if w > 460 else f"{lab} · W {wcap} · L 100"
                 check(f"{tag} §3.2 verdict {lab}: '{exp}'", t == exp, t)
             # บรรทัดเดียว + ไม่ล้น
             m = js(page, """()=>{ const b = document.querySelector('[data-td3-rg]'); const r = b.getBoundingClientRect(); const t = b.querySelector('.t'); const vis = [...b.querySelectorAll('.rg-f,.rg-s')].filter(e=>e.offsetParent!==null);
@@ -181,7 +181,7 @@ def verdict_tests(pw):
             set_ff(page, ff(True, False, True, True, as_of="2026-09-28"))
             js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 500)
             t = txt(page, "[data-td3-rg]")
-            exp = "Caution · Winner 75% · Ladder 100% · data 3d old" if w > 460 else "Caution · W 75 · L 100 · 3d old"
+            exp = "Caution · Momentum 75% · Compounder 100% · data 3d old" if w > 460 else "Caution · W 75 · L 100 · 3d old"
             check(f"{tag} §3.2 verdict stale ต่อท้ายสีแดง: '{exp}'", t == exp and js(page, "()=>getComputedStyle(document.querySelector('[data-td3-rg] .st')).color") not in ("", None), t)
             m = js(page, "()=>{ const b = document.querySelector('[data-td3-rg]'); return {h:Math.round(b.getBoundingClientRect().height), sw:b.scrollWidth, cw:b.clientWidth, ovf:document.documentElement.scrollWidth-window.innerWidth}; }")
             check(f"{tag} §3.2 verdict + stale ยังบรรทัดเดียว ไม่ล้น", m["h"] <= 40 and m["sw"] <= m["cw"] + 1 and m["ovf"] <= 0, m)
@@ -310,7 +310,7 @@ def bucket_tests(pw):
             # ── UI ──
             js(page, "()=>{ switchTab('journal'); renderJournal(); }"); settle(page, 600)
             chips = js(page, "()=>[...document.querySelectorAll('#jBuckets .chip')].map(e=>e.innerText.trim())")
-            check(f"{tag} §3.4 ชิป: All · Winner · Ladder · Sat Main · Sat Tactical", chips == ["All", "Winner", "Ladder", "Sat Main", "Sat Tactical"], chips)
+            check(f"{tag} §3.4 ชิป: All · Momentum · Compounder · Sat Main · Sat Tactical", chips == ["All", "Momentum", "Compounder", "Sat Main", "Sat Tactical"], chips)
             tb = js(page, "()=>[...document.querySelectorAll('#jBucketTbl tbody tr')].map(r=>[r.dataset.jbkt, ...[...r.children].slice(1).map(c=>c.innerText.trim())])")
             check(f"{tag} §3.4 ตาราง 4 แถว (trades · win · avg R · P/L · max DD)", len(tb) == 4 and [r[0] for r in tb] == ["winner", "ladder", "main", "tactical"], tb)
             d = dict((r[0], r[1:]) for r in tb)

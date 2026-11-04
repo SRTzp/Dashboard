@@ -218,9 +218,9 @@ def baseline_compare(pw, w, h, label):
     # RG2b: ถัง Core → Winner/Ladder · ไม่มีประตู f / L-share / ชั้น 2 เพดาน → ข้อความชิป tank/cashfree/l2/lshare/gate เปลี่ยนตามบรีฟ · ชิป FF + ขาดราคา ต้องเท่าเดิมทุกตัวอักษร
     keep = ("data-c-f", "data-c-missing")
     same = all(old[k].get(x) == cur[k].get(x) for k in (0, 1) for x in keep)
-    exp_main = [{"data-c-tank": "ถัง Winner ฿4,020,000 · Ladder ฿2,412,000", "data-c-cashfree": "เงินสดว่าง ฿3,620,000", "data-c-l2": "ชั้น 2 ตอนนี้ 1.99% · เต็ม 1.99%", "data-c-lshare": "Ladder pool 0% used · free ฿2,412,000"}]
+    exp_main = [{"data-c-tank": "ถัง Momentum ฿4,020,000 · Compounder ฿2,412,000", "data-c-cashfree": "เงินสดว่าง ฿3,620,000", "data-c-l2": "ชั้น 2 ตอนนี้ 1.99% · เต็ม 1.99%", "data-c-lshare": "Compounder pool 0% used · free ฿2,412,000"}]
     got = [{k: v for k, v in cur[0].items() if k in exp_main[0]}]
-    check(f"{tag} 5 ข้อความชิป: FF/ขาดราคา เท่าเดิม · tank/cashfree/ชั้น2/Ladder เป็นข้อความ RG2b (ไม่มีประตู f · L-share)", same and got == exp_main and len(old[0]) >= 6 and "data-c-gate" not in cur[0], json.dumps([old, cur], ensure_ascii=False))
+    check(f"{tag} 5 ข้อความชิป: FF/ขาดราคา เท่าเดิม · tank/cashfree/ชั้น2/Compounder เป็นข้อความ RG2b (ไม่มีประตู f · L-share)", same and got == exp_main and len(old[0]) >= 6 and "data-c-gate" not in cur[0], json.dumps([old, cur], ensure_ascii=False))
 
 
 def static_tests():

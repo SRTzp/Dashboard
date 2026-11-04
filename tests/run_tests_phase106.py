@@ -211,7 +211,7 @@ def goals_tests(pw, w, h, label):
         check(f"{tag} B3 ไม่มี startDate → 'Start date not set' (ไม่เดาจากวันที่แก้)", "Start date not set" in f["t"] and "m " not in f["t"].replace("Start date", ""), f)
         js(page, "()=>document.querySelector('[data-td3-acct=\"main\"] summary').click()"); settle(page, 300)
         subs = js(page, "()=>[...document.querySelectorAll('[data-td3-acct=\"main\"] [data-td3-sub]')].map(e=>e.innerText.replace(/\\s+/g,' ').trim())")
-        check(f"{tag} B3 กาง: ทีละ sub-portfolio (RG2b: Winner 19% $98k→$160k · อื่น No goal set)", len(subs) == 4 and "Winner" in subs[0] and "$98k→$160k" in subs[0] and "19%" in subs[0] and all("No goal set" in s_ for s_ in subs[1:]), subs)
+        check(f"{tag} B3 กาง: ทีละ sub-portfolio (RG2b: Momentum 19% $98k→$160k · อื่น No goal set)", len(subs) == 4 and "Momentum" in subs[0] and "$98k→$160k" in subs[0] and "19%" in subs[0] and all("No goal set" in s_ for s_ in subs[1:]), subs)
         check(f"{tag} ไม่ล้น · ไม่มี console error", ovf(page) <= 0 and not ce and not pe, [ovf(page), ce[:2], pe[:2]])
     finally: b.close()
 

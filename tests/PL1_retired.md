@@ -30,3 +30,12 @@ Phase A, Step 2 (A4 single Base Risk + A3 manual RS stars)
 
 ## New suite
 - `tests/run_tests_phase114.py` — A4 (Calc.riskBudget, flat 1%, Settings label/default/save, old plan snapshot untouched) + A3 (rs_stars Unrated≠0, rank-only, old `stars` ignored) + interim note-only promote form
+
+## Step 2b — label rename (display text only · keys `winner`/`ladder`/`Winner`/`Ladder` kept)
+Winner/Winners → **Momentum**, Ladder → **Compounder** in user-visible text (scope tabs, Settings, Today pools/verdict/DD chips, Journal buckets, plan-form titles/errors, Watchlist track pills, Goals rows via `TD3_SUB_LBL`). "Core" wording is untouched (awaiting user decision).
+
+| Suite(s) | Change | Why |
+|---|---|---|
+| phase106, 109, 112, 113, 89, 91, 83, 84, 77, 53, 39, 14, 23, 24, 56, 99 | expected strings `Winner(s)`→`Momentum`, `Ladder`→`Compounder` (verdict line, pool lines, DD chips/rows, scope buttons, tags `A · Momentum`, Settings pool row, DD table headers, `New Momentum plan`, track-change errors) | label rename |
+| phase23 | `sCrRiskA` default 1; save writes `coreRisk.baseRisk` (no `riskPct`/`riskA`); `coreSizeOpts` check reads `coreRiskCfg().baseRisk` | A4 (Step 2) |
+| phase97, 99, 113 (§UI1/§UI3) | no expectation change — header scope tabs tightened (`#hdrSub .scopeBtn` 4px/.76rem, hint hidden; in-page ≤480px padding/font; `#ldrAddSel{max-width:100%}`) so longer labels still fit | layout |

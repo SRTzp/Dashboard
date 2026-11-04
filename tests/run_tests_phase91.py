@@ -293,7 +293,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 9 กล่องสรุป: 'ทุน ฿9.88M' (RG2b = Winner + Ladder ของทั้ง 2 บัญชี) (รวมทุกบัญชี · LN3fix3c) · 'Risk Core x% / 20%' · 'ว่าง ฿' · บรรทัด 'DD · FF · n ตัว' (ไม่มี Winners/Ladder/฿/ถ้า Ladder เต็มบนหน้า)", cap == "ทุน ฿9.88M" and "%" in big and "ถ้า Ladder เต็ม" not in big and frl.startswith("ว่าง ฿") and "DD" in line and "FF" in line, [cap, big, line])
         js(page, "()=>document.querySelector('[data-lf-det]').open = true"); page.wait_for_timeout(200)
         det = txt(page, "[data-lf-det]")
-        check(f"{tag} 9 พับ 'รายละเอียดและกฎ' มี ฿ · ถ้า Ladder เต็ม · Winners ถือ · Ladder % · ตำแหน่ง · Ladder ใหม่ · Stop ฉุกเฉิน · บัญชีลด", all(k in det for k in ("ถ้า Ladder เต็ม", "Winners ถือ", "Ladder ", "ตำแหน่ง 1 ตัว", "Stop ฉุกเฉิน", "ถ้าทุกไม้โดน Stop บัญชีลด")), det[:300])
+        check(f"{tag} 9 พับ 'รายละเอียดและกฎ' มี ฿ · ถ้า Compounder เต็ม · Momentum ถือ · Compounder % · ตำแหน่ง · Compounder ใหม่ · Stop ฉุกเฉิน · บัญชีลด", all(k in det for k in ("ถ้า Compounder เต็ม", "Momentum ถือ", "Compounder ", "ตำแหน่ง 1 ตัว", "Stop ฉุกเฉิน", "ถ้าทุกไม้โดน Stop บัญชีลด")), det[:300])
         js(page, "()=>document.querySelector('[data-lf-det]').open = false")
         if CS1_RETIRED:   # CS1 — ฟอร์มแผนใหม่แบบ Risk % แก้ได้ (Tier) ถูกแทนที่ด้วย Risk จาก ★ (ครอบคลุมใน phase111)
             print("RETIRED (CS1) — ฟอร์มแผนใหม่แบบ Risk % แก้ได้ (Tier) ถูกแทนที่ด้วย Risk จาก ★ (ครอบคลุมใน phase111)")

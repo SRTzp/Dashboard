@@ -354,7 +354,7 @@ def risk_tests(pw, w, h, label, shots=False):
         set_dd(page, core_dd=12.5); go_today(page)
         cc = txt(page, '[data-td4-risk="core"]') or ""
         same = js(page, "()=>{ const h = document.querySelector('[data-td4-ph=\"core\"] h3').getBoundingClientRect(), c = document.querySelector('[data-td4-risk=\"core\"]').getBoundingClientRect(); return [Math.round(h.top), Math.round(c.top)]; }")
-        check(f"{tag} §B5b DD Core ถึงขั้น → ชิป ⚠ DD Winner … › ที่หัว Core Port (RG2b §4.7 ชื่อถัง) เท่านั้น (Sat กลับเป็น Risk ✓)", cc.startswith("⚠ DD Winner") and "12.5%" in cc and abs(same[0] - same[1]) <= 14 and (txt(page, '[data-td4-risk="sat"]') or "") == "Risk ✓", [cc, txt(page, '[data-td4-risk="sat"]')])
+        check(f"{tag} §B5b DD Core ถึงขั้น → ชิป ⚠ DD Momentum … › ที่หัว Core Port (RG2b §4.7 ชื่อถัง) เท่านั้น (Sat กลับเป็น Risk ✓)", cc.startswith("⚠ DD Momentum") and "12.5%" in cc and abs(same[0] - same[1]) <= 14 and (txt(page, '[data-td4-risk="sat"]') or "") == "Risk ✓", [cc, txt(page, '[data-td4-risk="sat"]')])
         if shots and label == "1440px": C.shot(page, "td4c-today-1440.png", full=True)
         if shots and label == "390px": C.shot(page, "td4c-today-390.png", full=True)
         check(f"{tag} ไม่ล้นแนวนอน · ไม่มี console error", ovf(page) <= 0 and not ce and not pe, [ovf(page), ce[:2], pe[:2]])

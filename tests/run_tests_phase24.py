@@ -188,7 +188,7 @@ def plan_sheet_checks(pw, w, h, label):
         # ＋ / T
         go_stock(page)
         page.click("#hdrPlanBtn"); page.wait_for_timeout(300)
-        check(f"{tag} scope หุ้น กด ＋ → เปิด sheet 'แผน Core ใหม่'", sheet_open(page, "new") and "New Winner plan" in (txt(page, ".core-sheet h3") or ""))   # RG2b — หัวฟอร์ม Winner
+        check(f"{tag} scope หุ้น กด ＋ → เปิด sheet 'แผน Core ใหม่'", sheet_open(page, "new") and "New Momentum plan" in (txt(page, ".core-sheet h3") or ""))   # RG2b — หัวฟอร์ม Winner
         page.evaluate("coreSheetClose()")
         page.evaluate("() => { switchTab('journal'); }")
         page.keyboard.press("t"); page.wait_for_timeout(300)

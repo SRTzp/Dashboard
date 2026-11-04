@@ -78,8 +78,8 @@ def header_tests(pw, w, h, label, shotname=None):
     try:
         go_tab(page, "plan")   # เปิดแท็บ Plan ครั้งแรก = render แรก (ไม่ต้องโต้ตอบก่อน)
         r = js(page, HDR)
-        two = [x[0] for x in r["btns"]] == ["Winner", "Ladder", "Sat"] and all(x[1] for x in r["btns"])
-        check(f"{tag} 1 Plan ครั้งแรก: ปุ่ม Winner | Ladder | Sat มองเห็นครบสามปุ่ม (ใน header หรือในหน้า) ไม่มี <select>/pill ย่อ", r["visible"] and two and r["sel"] == 0 and not r["cmp"] and not r["cmpVis"] and r["slotCmpEls"] == 0, r)
+        two = [x[0] for x in r["btns"]] == ["Momentum", "Compounder", "Sat"] and all(x[1] for x in r["btns"])
+        check(f"{tag} 1 Plan ครั้งแรก: ปุ่ม Momentum | Compounder | Sat มองเห็นครบสามปุ่ม (ใน header หรือในหน้า) ไม่มี <select>/pill ย่อ", r["visible"] and two and r["sel"] == 0 and not r["cmp"] and not r["cmpVis"] and r["slotCmpEls"] == 0, r)
         check(f"{tag} 1 มีปุ่ม active หนึ่งปุ่ม · ไม่ล้น/ไม่ตัด · ไม่ชน toolbar · หน้าไม่เลื่อนแนวนอน", not r["clip"] and r["ow"] <= 0 and (r["hb"] is None or not r["inSlot"] or r["tabs"]["r"] <= r["hb"]["l"] - 2) and (not r["inSlot"] or r["tabs"]["r"] <= r["slot"]["r"] + 1) and sum(1 for x in r["btns"] if x[2]) == 1, r)
         if shotname: shot(page, shotname, ".topbar")
         js(page, "()=>setPlanScope('stock')"); settle(page, 400)
@@ -91,7 +91,7 @@ def header_tests(pw, w, h, label, shotname=None):
         go_tab(page, "today"); go_tab(page, "flow"); go_tab(page, "plan")
         r3 = js(page, HDR)
         check(f"{tag} 1 ไป-กลับแท็บ: ยังสามปุ่ม · จำ scope เดิม (Sat)", r3["visible"] and r3["sel"] == 0 and not r3["cmp"] and r3["btns"][2][2] and r3["scope"] == "future", r3)
-        page.locator(".scopeBtn", has_text="Winner").click(); settle(page, 500)
+        page.locator(".scopeBtn", has_text="Momentum").click(); settle(page, 500)
         r4 = js(page, HDR)
         check(f"{tag} 1 กด Core กลับ → scope stock + Core active", r4["scope"] == "stock" and r4["btns"][0][2] and r4["sel"] == 0, r4)
         # resize ลง/ขึ้น: ไม่หลุดเป็น select
@@ -115,7 +115,7 @@ def mac_header(pw, w, h, label):
     try:
         go_tab(page, "plan")
         r = js(page, HDR)
-        check(f"{tag} 1 Mac: Winner | Ladder | Sat สามปุ่ม (ใน header สูง 38px หรือในหน้า · ไม่ย่อ)", r["visible"] and [x[0] for x in r["btns"]] == ["Winner", "Ladder", "Sat"] and (abs(r["tabs"]["h"] - 38) <= 1 or not r["inSlot"]) and not r["cmp"] and r["sel"] == 0, r)
+        check(f"{tag} 1 Mac: Momentum | Compounder | Sat สามปุ่ม (ใน header สูง 38px หรือในหน้า · ไม่ย่อ)", r["visible"] and [x[0] for x in r["btns"]] == ["Momentum", "Compounder", "Sat"] and (abs(r["tabs"]["h"] - 38) <= 1 or not r["inSlot"]) and not r["cmp"] and r["sel"] == 0, r)
     finally: b.close()
 
 

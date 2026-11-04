@@ -109,7 +109,7 @@ def tests(pw, w, h, label):
         go(page)
         js(page, "()=>{ const d = document.querySelector('[data-ln3-riskfold]'); d.open = true; }"); page.wait_for_timeout(200)
         rk = body(page, "[data-ln3-riskfold]")
-        check(f"{tag} 4 พับ 'ความเสี่ยง Core (ชั้น 2 · W/L · บันได)': ถึง Stop ตอนนี้ · เต็ม · Ladder · เงินว่าง (RG2b: ไม่มีเพดานรวม/L รวม/บันไดใหม่)", all(k in rk for k in ("ถึง Stop ตอนนี้", "เต็ม", "Ladder", "เงินว่าง")) and "ความเสี่ยง Core (ชั้น 2 · W/L · บันได)" in rk, rk)
+        check(f"{tag} 4 พับ 'ความเสี่ยง Core (ชั้น 2 · W/L · บันได)': ถึง Stop ตอนนี้ · เต็ม · Compounder · เงินว่าง (RG2b: ไม่มีเพดานรวม/L รวม/บันไดใหม่)", all(k in rk for k in ("ถึง Stop ตอนนี้", "เต็ม", "Compounder", "เงินว่าง")) and "ความเสี่ยง Core (ชั้น 2 · W/L · บันได)" in rk, rk)
         # ── 5 Sat
         sat = js(page, "()=>{ const c = document.querySelector('[data-ln3-sat]'); return {head: c.querySelector('.ln3-ph').innerText.replace(/\\s+/g,' ').trim(), t: c.innerText.replace(/\\s+/g,' '), pies: c.querySelectorAll('.piechart').length}; }")
         check(f"{tag} 5 การ์ด Sat: หัว 'Sat · DD x%' ไม่ซ้ำทุน · มีไม้ฟิวเจอร์ค้าง = ไม่มีวงกลม · ชี้ไปดูที่แท็บแผน", sat["head"].startswith("Sat") and "DD" in sat["head"] and "ทุน" not in sat["head"] and "ไม้ค้าง 1 ไม้" in sat["t"] and "แท็บแผน" in sat["t"] and sat["pies"] == 0, sat)
