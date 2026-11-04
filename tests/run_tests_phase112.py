@@ -391,7 +391,7 @@ def sector_tests(pw):
             check(f"{tag} §3.5 เลือก none → ล้างเป็น ''", js(page, "()=>wlItems.find(x=>x.ticker==='AAPL').sector_etf") == "")
             # promote form
             js(page, "()=>{ document.getElementById('wlAddOverlay').classList.remove('show'); }")
-            has_sel = js(page, "()=>{ const p = {sym:'ZZ', key:'zz', note:'n', sector:'XLK', tier:false, rs:false, stars:1}; return td4ProFormHtml({sym:'ZZ', market:'US'}, p).includes('data-td4-pro-sector') && td4ProFormHtml({sym:'ZZ', market:'US'}, p).includes('value=\"XLK\" selected'); }")
+            has_sel = js(page, "()=>{ scrOpen('ZZ'); const ok = !!document.querySelector('[data-scr-sector]'); scrClose(); return ok; }")   # PL1 Step 4 — Sector ETF อยู่ใน screening modal
             check(f"{tag} §3.5 ฟอร์ม Move to Watchlist มีช่อง Sector ETF", has_sel)
             check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
         finally: b.close()

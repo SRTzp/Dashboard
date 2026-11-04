@@ -51,3 +51,23 @@ Suites with updated expectations: phase14, 22, 23, 29, 83, 89. phase43 `index.ba
 | phase108 §B6b (Watch Add on candidate) | same direct-add flow (4 spots) | same helper step; message texts unchanged (`Added 2 to Candidates`, `already a Candidate`, `Daily limit 10 reached`, `already in Watchlist`) | same |
 | phase108 §B6b | NEW1 form memory check expected `stars: 2` and clicked `[data-td4-star]` | `stars: 0`, no star click | Step 2 removed the ★ control (missed in Step 2) |
 | New | `tests/run_tests_phase115.py` (52 checks: reasons settings, popup rows/Apply-to-all/override/remove, required Track + reason inline errors (no alert), partial save, quota counts saved rows only, Cancel keeps draft, glWrite=false keeps entries, refresh keeps picks, legacy "Old risk rule" hint) | — | A1 |
+
+## Step 4 — A2 screening modal + A5 Ready rule
+| Suite | Check / area | Change | Why |
+|---|---|---|---|
+| shared `tests/ff_stub.py` | init script | adds `READY_STUB` — after page load `wlReady()` returns true unless `window.__READY_REAL` is set | legacy suites open plans for arbitrary tickers; the Ready rule is tested for real only in phase116 |
+| new `tests/scr_helper.py` | `promote(page, sym, track, why)` | sets candMeta track if missing, opens the modal, Proven Pass + Trend Pass + Why, saves | replaces `td4ProSave()` / the inline Move form in legacy suites |
+| phase61, 62 | direct `td4Pro = {...}; td4ProSave()` | `scr_helper.promote(...)` (Tier/Phase carry unchanged) | inline form removed |
+| phase107 §3 | form with Note / Sector / Track / Need-hint / Move button, `promoted_by ['rs']`, `note` = typed note | form = summary + `Screen ›` + `Not passed`; Move happens in the modal (`onboarding.why_watch`, `note` carried from candMeta) | A2 |
+| phase107 `pro_fill` | typed Note + clicked Move | promotes via the modal | A2 |
+| phase107 §3 | RS-Leader promote `promoted_by ['rs']` | `promoted_by` empty; `onboarding.why_watch`; `rs_stars` Unrated | RS removed from screening |
+| phase108 §B6b | NEW1 form memory (Note · Tier · ★) | memory check moved to the modal (`scr.why`, `scr.proven`, `scrMem`) | A2 |
+| phase109 §3 | typed into `[data-td4-pro-note]` | clicks the summary line (form no longer has a Note) | A2 |
+| phase111 width | `.csSh` evaluation sheet overflow | `.scrSh` screening sheet | evaluation sheet replaced |
+| phase112 §3.5 | `td4ProFormHtml` contains `data-td4-pro-sector` | Sector ETF select lives in the modal (`[data-scr-sector]`) | A2 |
+| phase113 §4.3 | ladder Add select lists Fortress-passed stocks only (`["", "FRTA"]`) | lists all Momentum-track stocks (`["", "FRTA", "NOFT"]`) | Fortress gate dropped (user decision) |
+| phase113 §UI5 | "Compounder needs Fortress passed" block; Track select in the Candidate form (disabled Ladder until Fortress) | not blocked; Track chosen in the modal (no default) | same |
+| phase114 | note-only interim promote form | `Screen ›` button + modal | interim rule replaced |
+| phase33 | `[data-cs-sheet]`, `csEvalClose()` | `[data-scr-sheet]`, `scrClose()` | sheet replaced |
+| New | `tests/run_tests_phase116.py` (65 checks): modal rules (Trend label by Track, only Pass counts, Fail stays a Candidate, exception path, Proven-only Compounder, legacy no-Track asks inline, carry of Track/Reasons/Note/Link/add date, onboarding timestamp), write failure keeps entries, draft survives refresh, Fortress gate gone, Ready rule (needs ① and ④, AI thesis ignored, archived/not-on-Watchlist blocked, RS never counts, save guard, edit mode unaffected, card editor, Onboarding Data card) | — | A2 + A5 |
+Known failures also on main: phase45 (`_bk_id2/`), phase47 (`_bk_id3a/`).

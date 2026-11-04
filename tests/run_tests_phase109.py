@@ -127,7 +127,7 @@ def cand_tests(pw, w, h, label):
         check(f"{tag} §3 แถวพับเป็นปุ่มทั้งแถว (role=button · aria-expanded=false) · ปุ่ม Screen › ยังเห็น", js(page, "(s)=>{ const e=document.querySelector(s); return e.getAttribute('role')+'|'+e.getAttribute('aria-expanded'); }", row) == "button|false" and "Screen ›" in (txt(page, row) or ""), txt(page, row))
         page.locator(row + " b").click(); settle(page, 300)
         check(f"{tag} §3 แตะตัวอักษรชื่อหุ้น (ไม่ใช่ปุ่ม) → ฟอร์มเปิด · aria-expanded=true · ปุ่มเป็น 'Close ‹'", cnt(page, f'[data-td4-pro="{first}"]') == 1 and js(page, "(s)=>document.querySelector(s).getAttribute('aria-expanded')", row) == "true" and "Close ‹" in (txt(page, row) or ""), txt(page, row))
-        page.locator("[data-td4-pro-note]").click(); page.fill("[data-td4-pro-note]", "keep me"); T.ev_pass(page); settle(page, 200)   # PL1 — ไม่มีปุ่ม ★ ในฟอร์มแล้ว
+        page.locator(f'[data-td4-pro="{first}"] [data-cs-line]').click(); settle(page, 200)   # PL1 Step 4 — ไม่มีช่อง Note ในฟอร์มแล้ว (ย้ายไป screening modal) · คลิกข้อความสรุปในฟอร์ม
         check(f"{tag} §3 คลิกข้างในฟอร์ม (โน้ต/ติ๊ก/ดาว) → ฟอร์มไม่ปิด", cnt(page, f'[data-td4-pro="{first}"]') == 1)
         row2 = f'[data-td3-cand="{rows[1]}"] [data-td4-row]'
         page.locator(row2).click(position={"x": 12, "y": 10}); settle(page, 300)

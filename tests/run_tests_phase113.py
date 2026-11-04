@@ -287,7 +287,7 @@ def ladder_tests(pw):
             # Watching: ต้องผ่าน Fortress · เลือกสถานะ · ระยะ EMA
             T.wl_seed(page, [W("FRTA"), W("NOFT")]); fort_stub(page, ["FRTA"]); js(page, "()=>{ render(); }"); settle(page, 400)
             opts = js(page, "()=>[...document.querySelectorAll('#ldrAddSel option')].map(o=>o.value)")
-            check(f"{tag} §4.3 เลือกเข้า Watching ได้เฉพาะหุ้นที่ Fortress ผ่าน", opts == ["", "FRTA"], opts)
+            check(f"{tag} §4.3 เลือกเข้า Watching ได้ทุกหุ้น track Momentum (PL1: ไม่ต้อง Fortress ผ่านแล้ว)", opts == ["", "FRTA", "NOFT"], opts)
             js(page, "()=>{ document.getElementById('ldrAddSel').value='FRTA'; ldrWatchAdd(); }"); settle(page, 300)
             w1 = js(page, "()=>{ const e = document.querySelector('[data-ldr-w=FRTA]'); return e ? [[...e.querySelector('[data-ldr-state]').options].map(o=>o.value), e.querySelector('[data-ldr-state]').value, e.querySelectorAll('[data-ldr-dist]').length] : null; }")
             check(f"{tag} §4.3 Watching: สถานะ Base · Sideways-Up · Broken (ไม่มี Uptrend) + ช่อง EMA20/50/200", w1 == [["Base", "Sideways-Up", "Broken"], "Base", 3], w1)
@@ -637,7 +637,7 @@ def ui_separate_tests(pw):
         # เปลี่ยน track: ห้ามเมื่อมีแผน/ไม้เปิดในถังปัจจุบัน
         r1 = js(page, "()=>wlTrackBlock('LADX','winner')"); r2 = js(page, "()=>wlTrackBlock('PLNX','ladder')"); r3 = js(page, "()=>wlTrackBlock('WINB','ladder')"); r4 = js(page, "()=>wlTrackBlock('WINA','ladder')"); r5 = js(page, "()=>wlTrackBlock('LADA','winner')")
         check(f"{tag} §UI5 เปลี่ยน track ไม่ได้ถ้ามีแผนค้างในถังเดิม (LADX มีการ์ด L · PLNX มีการ์ด W)", "open Compounder plan" in r1 and "open Momentum plan" in r2, [r1, r2])
-        check(f"{tag} §UI5 ไป Compounder ต้อง Fortress ผ่าน (WINB ไม่ผ่าน → บล็อก · WINA ผ่าน → ได้) · Compounder → Momentum ได้เมื่อไม่มีแผน", r3 == "Compounder needs Fortress passed" and r4 == "" and r5 == "", [r3, r4, r5])
+        check(f"{tag} §UI5 ไป Compounder ไม่ต้อง Fortress ผ่านแล้ว (PL1: WINB ไม่ผ่าน Fortress ก็ไปได้) · Compounder → Momentum ได้เมื่อไม่มีแผน", r3 == "" and r4 == "" and r5 == "", [r3, r4, r5])
         ok = js(page, "()=>wlTrackSet('WINA','ladder')"); settle(page, 300)
         tr2 = js(page, "()=>[wlTrackOf('WINA'), wlItems.find(x=>x.ticker==='WINA').ladder_state]")
         check(f"{tag} §UI5 ย้าย WINA → Ladder สำเร็จ (state Base)", ok is True and tr2 == ["ladder", "Base"], tr2)
@@ -673,20 +673,18 @@ def ui_promote_tests(pw):
         syms = P107.qrows(page)
         s1 = syms[0]
         page.locator(f'[data-td3-cand="{s1}"]').first.click(); settle(page, 500)
-        info = js(page, "()=>{ const s=document.querySelector('[data-td4-pro-track]'); return s ? [[...s.options].map(o=>[o.value,o.disabled]), s.value] : null; }")
-        check(f"{tag} §UI5 ฟอร์ม Candidate → Watchlist มี Track: Winner / Ladder (ค่าเริ่ม Winner)", info and [o[0] for o in info[0]] == ["winner", "ladder"] and info[1] == "winner", info)
-        check(f"{tag} §UI5 Ladder เลือกไม่ได้ถ้ายังไม่ Fortress ผ่าน (disabled)", info and info[0][1][1] is True, info)
-        P107.pro_fill(page); page.click("[data-td4-pro-go]"); settle(page, 800)
+        # PL1 Step 4 — Track เลือกใน screening modal (ติดมาจาก candMeta หรือถามใน modal) · ไม่มี Fortress gate
+        import scr_helper
+        js(page, "(s)=>scrOpen(s)", s1); settle(page, 300)
+        info = js(page, "()=>[[...document.querySelectorAll('[data-scr-track-btn]')].map(b=>b.dataset.scrTrackBtn), scr.track]")
+        check(f"{tag} §UI5 modal ของ Candidate มี Track: Momentum / Compounder (ไม่มีค่าเริ่ม ต้องเลือก)", info == [["winner", "ladder"], ""], info)
+        page.locator("[data-scr-x]").click(); settle(page, 200)
+        scr_helper.promote(page, s1, track="winner", wait=800)
         d1 = js(page, "(s)=>{ const x = wlItems.find(w=>w.ticker===s); return x ? [x.ladder_watch, x.ladder_watch_set, wlTrackOf(x)] : null; }", s1)
         check(f"{tag} §UI5 ย้ายเข้า Watchlist ด้วย track Winner → ladder_watch false · track Winner", d1 == [False, True, "winner"], d1)
         js(page, "()=>{ todayRefresh(true); }"); settle(page, 500)
         syms = P107.qrows(page); s2 = syms[0]
-        js(page, "(s)=>{ csEvalWrite(s, Object.assign({}, csEvalOf(s) || Calc.evalNorm(null), {fortress:'passed'})); todayRefresh(true); }", s2); settle(page, 400)
-        page.locator(f'[data-td3-cand="{s2}"]').first.click(); settle(page, 500)
-        en = js(page, "()=>{ const s=document.querySelector('[data-td4-pro-track]'); return [...s.options].map(o=>[o.value,o.disabled]); }")
-        check(f"{tag} §UI5 Fortress ผ่านแล้ว → เลือก Ladder ได้", en[1] == ["ladder", False], en)
-        js(page, "()=>{ const s=document.querySelector('[data-td4-pro-track]'); s.value='ladder'; s.dispatchEvent(new Event('change',{bubbles:true})); }")
-        P107.pro_fill(page); page.click("[data-td4-pro-go]"); settle(page, 800)
+        scr_helper.promote(page, s2, track="ladder", wait=800)   # PL1: ไม่ต้อง Fortress ผ่านก่อนเลือก Compounder
         d2 = js(page, "(s)=>{ const x = wlItems.find(w=>w.ticker===s); return x ? [x.ladder_watch, x.ladder_state, wlTrackOf(x)] : null; }", s2)
         check(f"{tag} §UI5 ย้ายเข้า Watchlist ด้วย track Ladder → ladder_watch true · state Base", d2 == [True, "Base", "ladder"], d2)
         check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])

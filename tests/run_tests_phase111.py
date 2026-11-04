@@ -386,9 +386,9 @@ def width_tests(pw):
                 if w == 390 and sym == "VIS1": shot(page, "cs1-plan-390.png", ".ccSh")
                 if w == 1440 and sym == "VIS1": shot(page, "cs1-plan-1440.png")
             js(page, "()=>csEvalOpen('VIS2')"); settle(page, 400)
-            o = C.overflow(page); inner = js(page, "()=>{ const s = document.querySelector('.csSh'); return s ? s.scrollWidth - s.clientWidth : -1; }")
-            check(f"{tag} ชีต Edit Stock Evaluation ไม่ล้นแนวนอน", not o and inner <= 1, [o, inner])
-            if w == 390: shot(page, "cs1-eval-390.png", ".csSh")
+            o = C.overflow(page); inner = js(page, "()=>{ const s = document.querySelector('.scrSh'); return s ? s.scrollWidth - s.clientWidth : -1; }")
+            check(f"{tag} ชีต Screening (PL1) ไม่ล้นแนวนอน", not o and inner <= 1, [o, inner])
+            if w == 390: shot(page, "cs1-eval-390.png", ".scrSh")
             check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
         finally: b.close()
     # gate ภาพ

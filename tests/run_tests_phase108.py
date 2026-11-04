@@ -311,12 +311,14 @@ def today_tests(pw, w, h, label, shots=False):
         if shots: C.shot(page, "td4b-today-core-390.png", '[data-td3-sec="screen"]')
         page.locator('[data-td3-cand="NEW1"] [data-td4-promote]').click(); settle(page, 250)
         check(f"{tag} §B6b แตะ Screen › เปิดฟอร์มของใบนั้น (ใบเดียว)", cnt(page, '[data-td4-pro="NEW1"]') == 1 and cnt(page, "[data-td4-pro]") == 1, cnt(page, "[data-td4-pro]"))
-        page.fill("[data-td4-pro-note]", "typed in NEW1"); T.ev_pass(page); settle(page, 150)   # PL1 — ไม่มีปุ่ม ★ ในฟอร์ม
+        page.locator("[data-td4-pro-go]").click(); settle(page, 300)   # PL1 Step 4 — กรอกใน screening modal แล้วปิด (ค่าเก็บในหน่วยความจำ scrMem)
+        page.fill("[data-scr-why]", "typed in NEW1"); page.select_option('[data-scr-in="proven"]', "passed"); settle(page, 150); page.locator("[data-scr-x]").click(); settle(page, 150)
         page.locator('[data-td3-cand="OLD1"] [data-td4-promote]').click(); settle(page, 250)
         check(f"{tag} §B6b เปิดใบอื่น (OLD1) → ใบแรกพับ · เปิดได้ทีละใบ", cnt(page, '[data-td4-pro="OLD1"]') == 1 and cnt(page, '[data-td4-pro="NEW1"]') == 0 and cnt(page, "[data-td4-pro]") == 1, [cnt(page, "[data-td4-pro]")])
         page.locator('[data-td3-cand="NEW1"] [data-td4-promote]').click(); settle(page, 250)
-        kept = js(page, "()=>({note: document.querySelector('[data-td4-pro-note]').value, tier: Calc.evalRsPassed(csEvalOf('NEW1')), stars: document.querySelectorAll('[data-td4-star].on').length})")
-        check(f"{tag} §B6b กลับมาเปิด NEW1 → ค่าที่พิมพ์ค้างอยู่ครบ (Note · Tier · ดาว) เพราะเก็บในหน่วยความจำ", kept == {"note": "typed in NEW1", "tier": True, "stars": 0}, kept)
+        page.locator("[data-td4-pro-go]").click(); settle(page, 300)
+        kept = js(page, "()=>({why: scr.why, proven: scr.proven})"); page.locator("[data-scr-x]").click(); settle(page, 150)
+        check(f"{tag} §B6b กลับมาเปิด NEW1 → ค่าที่พิมพ์ใน screening modal ค้างอยู่ครบ (Why · Proven) เพราะเก็บในหน่วยความจำ", kept == {"why": "typed in NEW1", "proven": "passed"}, kept)
         js(page, "()=>{ switchTab('watch'); }"); settle(page, 300); js(page, "()=>{ switchTab('today'); }"); settle(page, 500)
         check(f"{tag} §B6b ออกไปแท็บอื่นแล้วกลับ Today → การ์ดพับหมดอีกครั้ง", cnt(page, "[data-td4-pro]") == 0 and all(x == "0" for x in js(page, "()=>[...document.querySelectorAll('[data-td3-cand]')].map(e=>e.dataset.open)")), cnt(page, "[data-td4-pro]"))
         # Not passed → Undo

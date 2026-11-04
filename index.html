@@ -2507,6 +2507,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .td4-rem{background:#3a2e12;color:#f0d58a;border-color:#6b5520}}
 :root[data-theme="dark"] .td4-rem{background:#3a2e12;color:#f0d58a;border-color:#6b5520}
 .cpSh{display:flex;flex-direction:column;gap:10px;max-height:82vh}.cpRows{overflow:auto;display:flex;flex-direction:column;gap:10px;min-height:0}.cpRow{border:1px solid var(--line,#ddd);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}.cpRow.bad{border-color:var(--red,#c33)}.cpHd{display:flex;align-items:center;gap:8px}.cpHd .ccLnk{margin-left:auto}.cpChips{display:flex;flex-wrap:wrap;gap:6px}.cpNote{display:flex;gap:6px;flex-wrap:wrap}.cpNote input{flex:1 1 140px;min-width:0;font-size:16px}.cpErr,.cpMsg{color:var(--red,#c33);font-size:.82rem}.cpAll{display:flex;flex-direction:column;gap:6px;padding-bottom:8px;border-bottom:1px solid var(--line,#ddd)}.crsRow{display:flex;gap:8px;align-items:center;margin:4px 0}.crsRow input[type=text]{flex:1 1 auto;min-width:0}.crsOn{white-space:nowrap;font-size:.84rem}
+.scrSh{display:flex;flex-direction:column;gap:8px;max-height:84vh;overflow:auto}.scrSh .csR{display:flex;align-items:center;gap:8px;justify-content:space-between}.scrSh .csR.col{flex-direction:column;align-items:stretch}.scrSh textarea{width:100%;font-size:16px;box-sizing:border-box}.wlMt{display:flex;flex-direction:column;gap:6px;margin:10px 0;padding:8px;border:1px solid var(--line,#ddd);border-radius:10px}.wlMt label{display:flex;flex-direction:column;gap:2px;font-size:.82rem}.wlMt textarea{width:100%;font-size:16px;box-sizing:border-box}.wlMtSt{font-size:.78rem;color:var(--muted)}.wlMtSt.ok{color:var(--green,#2a7)}.wlMtF{display:flex;align-items:center;gap:8px}.wlOnb{font-size:.8rem;margin-top:4px}
 .wlRsSel{font:inherit;font-size:.78rem;padding:2px 4px;border:1px solid var(--line,#ccc);border-radius:6px;background:var(--bg,#fff);color:inherit;min-height:34px}
 .wl-star{display:inline-flex;flex:none;white-space:nowrap}.wl-star button{border:0;background:none;font:inherit;font-size:1.05rem;font-weight:700;line-height:1;color:var(--faint);min-width:32px;min-height:34px;cursor:pointer;padding:0}.wl-star button.on{color:var(--amber)}.wl-sd{font-size:.78rem;font-weight:700;color:var(--amber);flex:none}
 .wl-exp{border:1px solid var(--border);background:var(--surface);border-radius:8px;font:inherit;font-size:.78rem;font-weight:600;color:var(--teal);padding:0 10px;min-height:32px;cursor:pointer;white-space:nowrap}
@@ -4967,6 +4968,7 @@ function wlTrackOf(x){
   if(it && it.ladder_watch_set) return it.ladder_watch ? 'ladder' : 'winner';
   return coreCardsList.some(c=>c.strategy==='L' && coreNorm(c.ticker)===t) ? 'ladder' : 'winner';
 }
+/* PL1·A2 — ไม่ใช้เป็นเงื่อนไขอีกแล้ว (แสดงผลเท่านั้น) */
 function wlTrackIsFortress(sym){ try{ const ev = csEvalOf(sym); return !!(ev && ev.fortress==='passed'); }catch(e){ return false; } }
 function wlLadderEligible(it){ return wlTrackOf(it)==='ladder' && (it.ladder_state==='Base' || it.ladder_state==='Sideways-Up'); }
 /* คืนข้อความเหตุผลที่เปลี่ยน track ไม่ได้ ('' = เปลี่ยนได้) */
@@ -4974,7 +4976,6 @@ function wlTrackBlock(sym, to){
   const t = coreNorm(sym), from = wlTrackOf(t); if(from===to) return '';
   const open = coreCardsList.some(c=>coreNorm(c.ticker)===t && coreEff(c).kind!=='closed' && (from==='ladder' ? c.strategy==='L' : c.strategy!=='L'));
   if(open) return `${t} still has an open ${from==='ladder' ? 'Compounder' : 'Momentum'} plan or position — close or cancel it before changing the track`;
-  if(to==='ladder' && !wlTrackIsFortress(t)) return 'Compounder needs Fortress passed';
   return '';
 }
 function wlTrackMsg(m){ try{ if(typeof sdToast==='function') sdToast(m); else alert(m); }catch(e){} window.__trackMsg = m; }
@@ -5008,7 +5009,8 @@ function wlStart(){
               tier_inputs:(x.tier_inputs && typeof x.tier_inputs==='object' && !Array.isArray(x.tier_inputs)) ? x.tier_inputs : null,
               tier_computed:(x.tier_computed==='A'||x.tier_computed==='B') ? x.tier_computed : null,
               tier_reason:(typeof x.tier_reason==='string' && x.tier_reason.trim()) ? x.tier_reason : null,
-              promoted_by:td4PromBy(x.promoted_by), promoted_at:typeof x.promoted_at==='string' ? x.promoted_at : null, promote_reason:(typeof x.promote_reason==='string' && x.promote_reason.trim()) ? x.promote_reason : null, stars:(x.stars===1||x.stars===2||x.stars===3) ? x.stars : 0, rs_stars:(x.rs_stars===0||x.rs_stars===1||x.rs_stars===2||x.rs_stars===3) ? x.rs_stars : null, rs_rated_at:/^\d{4}-\d{2}-\d{2}$/.test(String(x.rs_rated_at||'')) ? x.rs_rated_at : null,   /* PL1·A3 — RS manual: null=Unrated ≠ 0 · `stars` เดิมเก็บไว้ ไม่แสดงเป็น RS */    /* TD3a · TD4a: promoted_by = array tier/rs (string เดิมอ่านได้) · promote_reason · stars 0–3 */
+              promoted_by:td4PromBy(x.promoted_by), promoted_at:typeof x.promoted_at==='string' ? x.promoted_at : null, promote_reason:(typeof x.promote_reason==='string' && x.promote_reason.trim()) ? x.promote_reason : null, stars:(x.stars===1||x.stars===2||x.stars===3) ? x.stars : 0, reasons:Array.isArray(x.reasons) ? x.reasons.filter(r=>typeof r==='string') : [], link:typeof x.link==='string' ? x.link : '', cand_added_at:typeof x.cand_added_at==='string' ? x.cand_added_at : '', onboarding:(x.onboarding && typeof x.onboarding==='object' && !Array.isArray(x.onboarding)) ? x.onboarding : null, my_thesis:(x.my_thesis && typeof x.my_thesis==='object' && !Array.isArray(x.my_thesis)) ? x.my_thesis : null, archived:x.archived===true,   /* PL1·A2/A5 */
+              rs_stars:(x.rs_stars===0||x.rs_stars===1||x.rs_stars===2||x.rs_stars===3) ? x.rs_stars : null, rs_rated_at:/^\d{4}-\d{2}-\d{2}$/.test(String(x.rs_rated_at||'')) ? x.rs_rated_at : null,   /* PL1·A3 — RS manual: null=Unrated ≠ 0 · `stars` เดิมเก็บไว้ ไม่แสดงเป็น RS */    /* TD3a · TD4a: promoted_by = array tier/rs (string เดิมอ่านได้) · promote_reason · stars 0–3 */
               my_notes:wlNormNotes(x.my_notes),   /* WL1 */
               thesis:(x.thesis && typeof x.thesis==='object' && !Array.isArray(x.thesis)) ? x.thesis : null,   /* WL2 · living-thesis@1 (ไม่มี log) · ≠ tier_inputs ของ WT1 */
               thesis_log:Array.isArray(x.thesis_log) ? x.thesis_log : [],
@@ -7103,7 +7105,6 @@ function td4Queue(mk, today){
 const TD4_MIN_ADD = 3, TD4_MIN_SCR = 3, TD4_BATCH = 3;
 let td4Moved = null, td4MovedT = 0, td4BatchTo = 0;
 try{ const b = JSON.parse(localStorage.getItem('dash.td4Batch') || 'null'); if(b && b.day === thaiToday()) td4BatchTo = +b.to || 0; }catch(e){}
-function td4ProMissing(p){ const m = []; if(!String(p.note || '').trim()) m.push('note'); return m; }   // PL1 interim — replaced in Step 4 (A2: Trend 40 EMA + lens/Why Watch). Note only; ★/RS/Gate 5 never block
 /* TD4b — การ์ด Candidate → Watchlist เริ่มพับทั้งหมด · แตะ Screen › เปิดได้ทีละใบ (เปิดใบอื่น = ใบแรกพับ แต่ค่าที่พิมพ์ค้างอยู่ใน td4ProMem) · เข้า Today ใหม่ = พับหมด */
 let td4ProMem = {}, td4Np = null, td4NpT = 0;
 function td4ProStash(){ if(td4Pro) td4ProMem[td4Pro.key] = td4Pro; }
@@ -7112,7 +7113,7 @@ function td4ProCur(queue){ return (td4Pro && queue.some(c=>c.key === td4Pro.key)
 function td4ProPick(sym){
   const c = td3Cands(thaiToday()).find(x=>x.key===wlSymKey(sym)); if(!c) return;
   if(td4Pro && td4Pro.key===c.key){ td4ProClose(); todayRefresh(true); return; }   /* แตะใบที่เปิดอยู่ = พับ */
-  td4ProStash(); td4Pro = td4ProMem[c.key] || {sym:c.sym, key:c.key, note:c.note || '', sector:'', tier:false, rs:false, track:'winner'};
+  td4ProStash(); td4Pro = td4ProMem[c.key] || {sym:c.sym, key:c.key};
   todayRefresh(true);
 }
 /* B0 — ปุ่ม "เปิดฟอร์มย้ายเข้า Watchlist" จากข้อความที่ปฏิเสธ ＋ ของ Candidate: ไป Today แล้วกางฟอร์มของตัวนั้น */
@@ -7122,28 +7123,6 @@ function td4OpenMove(sym){
   td4ScrMk = c.market==='TH' ? 'TH' : 'US'; td4Save('dash.td4ScrMk', td4ScrMk);
   switchTab('today'); td4ProClose(); td4ProPick(c.sym);
   setTimeout(()=>{ const el = document.querySelector(`[data-td3-cand="${c.sym}"]`); if(el && el.scrollIntoView) el.scrollIntoView({block:'center'}); }, 60);
-}
-function td4ProSync(){
-  const p = td4Pro; if(!p) return;
-  { const ln = document.querySelector('[data-td4-pro] [data-cs-line]'); if(ln) ln.textContent = csLine(p.sym); }
-  const m = td4ProMissing(p), nd = document.querySelector('[data-td4-need]'), go = document.querySelector('[data-td4-pro-go]');
-  if(nd){ nd.textContent = m.length ? 'Need: ' + m.join(' · ') : 'Ready'; nd.classList.toggle('ready', !m.length); }
-  if(go) go.disabled = m.length > 0;
-}
-function td4ProIn(k, v){ if(td4Pro){ td4Pro[k] = (k==='tier' || k==='rs') ? !!v : String(v == null ? '' : v); td4ProSync(); } }
-function td4ProSave(){
-  const p = td4Pro; if(!p || td4ProMissing(p).length) return;
-  const today = thaiToday(), c = td3Cands(today).find(x=>x.key===p.key); if(!c){ td4Pro = null; todayRefresh(true); return; }
-  const col = wlCol();
-  if(!col || !tdCanWrite()){ td3Msg.core = 'Not synced with the server yet — try again'; todayRefresh(true); return; }
-  const t = wlNormTicker(c.sym), now = new Date().toISOString(), carry = tqCarryOf(t) || {}, by = Calc.evalRsPassed(csEvalOf(t)) ? ['rs'] : [];
-  const trk = (p.track==='ladder' && wlTrackIsFortress(t)) ? 'ladder' : 'winner';   /* RG2b — Ladder เลือกได้เมื่อ Fortress ผ่านเท่านั้น */
-  const doc = Object.assign({ticker:t, market:c.market, port:'core', note:String(p.note).trim().slice(0, 500), industry:'', sector_etf:(sectorValid(p.sector) ? p.sector : ''), ladder_watch:trk==='ladder', ladder_state:'Base', added_at:now, promoted_by:by, promoted_at:now}, carry)   /* PL1·A3 — ไม่เขียน stars (RS manual ตั้งที่ Watchlist) */;
-  const pr = col.doc(t).set(doc);   /* path เดียวกับ wlAddSave (ไม่ await) — ทางเดียวที่สร้างเอกสาร Watchlist ใหม่ได้ */
-  pr.catch(e=>{ alert('Could not save to Watchlist: ' + ((e && (e.code || e.message)) || e)); });
-  td3Undo = {t}; td4Moved = {t}; delete td4ProMem[p.key]; td4Pro = null; td3Msg.core = '';
-  clearTimeout(td4MovedT); td4MovedT = setTimeout(()=>{ td4Moved = null; td3Undo = null; todayRefresh(true); }, 5000);
-  todayRefresh(true);
 }
 function td4NextBatch(x){ td4BatchTo = Math.max(TD4_MIN_SCR, td4BatchTo) + TD4_BATCH; try{ localStorage.setItem('dash.td4Batch', JSON.stringify({day:thaiToday(), to:td4BatchTo})); }catch(e){} todayRefresh(true); }
 /* ═══ TD4a — Watchlist: pipeline (Candidate ก่อน) · ★ 1–3 · เรียง · Export .txt ═══
@@ -7180,6 +7159,46 @@ function wlStarHtml(r){   /* PL1·A3 — RS (manual · rank only): Unrated · 0 
   const n = wlStarsOf(r), e = escHtml(r.sym), dt = r.item && r.item.rs_rated_at ? ' · rated ' + r.item.rs_rated_at : '';
   const opt = [['', 'RS: Unrated'], ['0', 'RS: 0'], ['1', 'RS: ★'], ['2', 'RS: ★★'], ['3', 'RS: ★★★']];
   return `<span class="wl-star${n ? ' on' : ''}" data-wl-star="${e}" data-stars="${n==null ? '' : n}" title="${escHtml('★ starting to outperform · ★★ consistently beats market · ★★★ clear leader' + dt)}"><select class="wlRsSel" data-wl-rs aria-label="RS rating" onclick="event.stopPropagation()" onchange="event.stopPropagation();wlStarSet(this.parentNode.dataset.wlStar,this.value)">${opt.map(o=>`<option value="${o[0]}"${String(n==null ? '' : n)===o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></span>`;
+}
+/* ══ PL1·A5 — Ready rule + My Thesis (ขั้นต่ำ: ① Why buy · ④ Wrong if) ══
+   เก็บที่ watchlist/{T}.my_thesis {why, exit, updated_at} (ข้อความล้วน · Phase B ขยายเป็น 5 ส่วนโดยใช้ field เดิม: ① = why · ④ = exit)
+   Thesis นำเข้าจาก AI (watchlist/{T}.thesis) ไม่นับเป็น Ready · Ready = อยู่ใน Watchlist (ไม่ archive) + why + exit ไม่ว่าง */
+let wlMtDraft = {}, wlMtMsg = {};
+function wlItemOf(sym){ const k = wlSymKey(sym); return k ? wlItems.find(x=>wlSymKey(x.ticker)===k) : null; }
+function wlMyThesis(it){ const m = (it && it.my_thesis) || {}; return {why:String(m.why || ''), exit:String(m.exit || '')}; }
+function wlReady(sym){ const it = wlItemOf(sym); if(!it || it.archived === true) return false; const m = wlMyThesis(it); return !!m.why.trim() && !!m.exit.trim(); }
+function wlReadyMsg(sym){
+  const t = wlNormTicker(sym), it = wlItemOf(sym);
+  if(!it) return `${t} is not on the Watchlist — screen it into the Watchlist first`;
+  if(it.archived === true) return `${t} is archived — restore it to open a plan`;
+  const m = wlMyThesis(it), miss = [];
+  if(!m.why.trim()) miss.push('① Why buy'); if(!m.exit.trim()) miss.push('④ Wrong if');
+  return miss.length ? `Not ready — fill ${miss.join(' and ')} in My Thesis (Watchlist card)` : '';
+}
+function wlMtIn(sym, k, v){ const t = wlNormTicker(sym); wlMtDraft[t] = Object.assign({}, wlMtDraft[t] || {}, {[k]: String(v == null ? '' : v)}); }
+function wlMtSave(sym){
+  const t = wlNormTicker(sym), it = wlItemOf(t), col = wlCol(); if(!it || !col) return;
+  const d = wlMtDraft[t] || {}, cur = wlMyThesis(it);
+  const why = String(d.why != null ? d.why : cur.why).trim().slice(0, 2000), exit = String(d.exit != null ? d.exit : cur.exit).trim().slice(0, 2000);
+  wlMtMsg[t] = '';
+  Promise.resolve(col.doc(t).update({my_thesis:{why, exit, updated_at:new Date().toISOString()}})).then(()=>{ delete wlMtDraft[t]; wlMtMsg[t] = 'Saved'; try{ renderWatchlist(); }catch(e){} })
+    .catch(err=>{ wlMtMsg[t] = 'Could not save — your text is kept (' + ((err && (err.code || err.message)) || err) + ')'; try{ renderWatchlist(); }catch(e){} });
+}
+function wlOnbHtml(it){
+  const e = escHtml, ob = it.onboarding;
+  if(!ob) return `<div class="wlOnb" data-wl-onb><b>Onboarding Data</b> <span class="mut">Unspecified</span></div>`;
+  const st = v=>(SCR_ST.find(x=>x[0]===v) || [0, 'Not Evaluated'])[1], basis = ob.trend_basis==='monthly' ? 'Monthly' : 'Weekly';
+  return `<div class="wlOnb" data-wl-onb><b>Onboarding Data</b> <span class="mut">${e(String(ob.at || '').slice(0, 10))}</span>
+    <div class="mut">Fortress ${st(ob.fortress)} · Proven ${st(ob.proven)} · Emerging ${st(ob.emerging)} · ${basis} 40 EMA ${st(ob.trend40)}</div>
+    ${ob.why_watch ? `<div>Why watch: ${e(ob.why_watch)}</div>` : ''}${ob.concerns ? `<div class="mut">Concerns: ${e(ob.concerns)}</div>` : ''}${ob.exception ? `<div class="mut">Exception: ${e(ob.exception)}</div>` : ''}</div>`;
+}
+function wlMtHtml(it){
+  if(!it) return '';
+  const e = escHtml, t = it.ticker, m = wlMyThesis(it), d = wlMtDraft[t] || {}, why = d.why != null ? d.why : m.why, ex = d.exit != null ? d.exit : m.exit, ready = wlReady(t), msg = wlMtMsg[t] || '';
+  return `<div class="wlMt" data-wl-mt="${e(t)}"><div class="wlMtH"><b>My Thesis</b> <span class="wlMtSt ${ready ? 'ok' : ''}" data-wl-ready>${ready ? 'Ready ✓' : 'Drafting thesis'}</span></div>
+    <label>① Why buy<textarea rows="2" maxlength="2000" data-wl-mt-why placeholder="What is improving and not yet priced in?" oninput="wlMtIn('${e(t)}','why',this.value)">${e(why)}</textarea></label>
+    <label>④ Wrong if<textarea rows="2" maxlength="2000" data-wl-mt-exit placeholder="What breaks the thesis (data, event, or time limit)?" oninput="wlMtIn('${e(t)}','exit',this.value)">${e(ex)}</textarea></label>
+    <div class="wlMtF"><button type="button" class="small" data-wl-mt-save onclick="wlMtSave('${e(t)}')">Save</button><span class="mut" data-wl-mt-msg>${e(msg)}</span></div>${wlOnbHtml(it)}</div>`;
 }
 function wlStarSet(sym, v){   /* PL1·A3 — เขียน rs_stars + rs_rated_at ที่ Watchlist doc เท่านั้น (ไม่แตะ eval/stars เดิม) */
   const t = wlNormTicker(sym), it = wlItems.find(x=>x.ticker===t), col = wlCol(); if(!it || !col) return;
@@ -7467,13 +7486,9 @@ function td4SegHtml(kind, cur, onfn, extra){
 }
 function td4RevShort(sym, market){ return wlRevBtnHtml(sym, market).replace('📊 รายได้แยกส่วน', 'Revenue ↗'); }   /* ลิงก์เดิมของ Watchlist · ย่อป้ายให้กระชับ */
 function td4ProFormHtml(c, p){
-  const s = td3E, m = td4ProMissing(p);
+  const s = td3E;
   return `<div class="td4-pro" data-td4-pro="${s(c.sym)}"><div class="td3-chk">${csEvalRowHtml(c.sym)}<span class="td4-rev">${td4RevShort(c.sym, c.market)}</span></div>
-    <textarea rows="2" data-td4-pro-note maxlength="500" placeholder="Note — why it passed / thoughts" aria-label="Note" oninput="td4ProIn('note',this.value)">${s(p.note)}</textarea>
-    <div class="td4-sec" data-td4-sec-row><label>Sector ETF <select data-td4-pro-sector aria-label="Sector ETF" onchange="td4ProIn('sector',this.value)">${sectorOptionsHtml(sectorValid(p.sector) ? p.sector : '')}</select></label></div>
-    <div class="td4-trk3" data-td4-track-row><label>Track <select data-td4-pro-track aria-label="Track" onchange="td4ProIn('track',this.value)"><option value="winner"${(p.track||'winner')==='winner' ? ' selected' : ''}>Momentum</option><option value="ladder"${p.track==='ladder' ? ' selected' : ''}${wlTrackIsFortress(c.sym) ? '' : ' disabled'}>Compounder${wlTrackIsFortress(c.sym) ? '' : ' (needs Fortress passed)'}</option></select></label></div>
-    <div class="td4-r3"><span class="td4-need${m.length ? '' : ' ready'}" data-td4-need>${m.length ? 'Need: ' + m.join(' · ') : 'Ready'}</span></div>
-    <div class="td4-r4"><button type="button" class="td3-lk" data-td3-np onclick="td3NotPassed('${s(c.sym)}')">Not passed</button><span class="sp"></span><button type="button" class="ui-btn" data-td4-pro-go onclick="td4ProSave()"${m.length ? ' disabled' : ''}>Move to Watchlist</button></div></div>`;
+    <div class="td4-r4"><button type="button" class="td3-lk" data-td3-np onclick="td3NotPassed('${s(c.sym)}')">Not passed</button><span class="sp"></span><button type="button" class="ui-btn" data-td4-pro-go onclick="scrOpen('${s(c.sym)}')">Screen ›</button></div></div>`;
 }
 function td3CoreDaily(M){
   const today = M.today, s = td3E, C = td3Cands(today), prom = td3Promoted(today), notp = C.filter(c=>c.screened===today);
@@ -7497,7 +7512,7 @@ function td3CoreDaily(M){
   h += `<div class="td3-sec" data-td3-sec="hw"><div class="td3-th">Deep dive ${td4SegHtml('hwmk', effMk, 'td4HwSetMk')}<span class="td3-cnt td4-trk" data-td4-hwc>${['US', 'TH'].map(mk=>`<span data-td4-hwc="${mk}">${cnt(mk)}</span>`).join(' · ')}</span></div>${t1}${nextBtn}</div>`;
   /* 2 · Candidate → Watchlist (ขั้นต่ำ 3 ต่อวัน · ทำต่อได้) */
   const npRow = c=>(td4Np && td4Np.key===c.key) ? `<div class="td3-it done np" data-td4-np="${s(c.sym)}">✕ <b>${s(c.sym)}</b> · Not passed · <button type="button" class="td3-lk" data-td4-npundo onclick="td4NpUndo()">Undo</button></div>` : `<div class="td3-it done" data-td3-done="notpassed">✓ <b>${s(c.sym)}</b> · Not passed</div>`;
-  const doneRows = prom.map(w=>`<div class="td3-it done" data-td3-done="promoted">✓ <b>${s(w.ticker)}</b> → Watchlist · ${(w.promoted_by || []).map(x=>x==='rs' ? 'RS Leader' : 'Tier passed').join(' + ') || 'Tier passed'}${w.stars ? ' · ' + '★'.repeat(w.stars) : ''}</div>`).concat(notp.map(npRow)).join('');
+  const doneRows = prom.map(w=>`<div class="td3-it done" data-td3-done="promoted">✓ <b>${s(w.ticker)}</b> → Watchlist · ${w.onboarding ? 'Screened' : ((w.promoted_by || []).map(x=>x==='rs' ? 'RS Leader' : 'Tier passed').join(' + ') || 'Tier passed')}</div>`).concat(notp.map(npRow)).join('');
   const moved = td4Moved ? `<div class="td3-it done" data-td4-moved>✓ <b>${s(td4Moved.t)}</b> → Watchlist · <button type="button" class="td3-lk" data-td3-undo onclick="td3UndoDo()">Undo</button></div>` : '';
   const vis = openRows ? queue.slice(0, TD4_BATCH) : [];
   const pro = vis.length ? td4ProCur(vis) : null;
@@ -10574,7 +10589,7 @@ function ldrDistSet(sym, k, v){
 function ldrNew(sym){   /* จากหุ้น Fortress ใน Watchlist (ตัวที่ Watching ก่อน · ไม่ระบุ = ตัวแรกที่ Fortress ผ่าน) · ฟอร์มและกติกาเดิมของแผนบันได */
   const a = lfCoreAcc(); if(!a) return;
   try{
-    const pick = sym ? wlNormTicker(sym) : ((wlItems.find(x=>wlLadderEligible(x) && wlTrackIsFortress(x.ticker)) || {}).ticker || '');   /* RG2b — เฉพาะ track Ladder ที่ Base / Sideways-Up */
+    const pick = sym ? wlNormTicker(sym) : ((wlItems.find(x=>wlLadderEligible(x)) || {}).ticker || '');   /* RG2b — เฉพาะ track Ladder ที่ Base / Sideways-Up */
     coreNewOpen(a.id, pick ? {ticker:pick, strat:'L'} : {strat:'L'});
     const inp = coreEl('cnTicker'); if(inp && pick){ inp.value = pick; coreNewIn(); }
   }catch(e){ console.warn('ldrNew:', e); }
@@ -10607,7 +10622,7 @@ function ldrHtml(a){
   const head = `<div class="ldrHead" data-ldr-head><b>Compounder</b>${lfCoreSwHtml(a)}<span data-ldr-used>Pool <b>฿${fmt0(used)}</b> / ฿${fmt0(pool)}</span><span data-ldr-free>Free <b>฿${fmt0(free)}</b></span>${chip}</div><div class="ldrBar" data-ldr-bar><i style="width:${w}%" class="${sp&&sp.lOver?'over':''}"></i></div>${pool>0 ? '' : '<div class="ccWarn" data-ldr-nopool>No Compounder pool yet — set the split in Settings › Pools.</div>'}`;
   /* Watching */
   const watched = wlItems.filter(x=>wlTrackOf(x)==='ladder');
-  const cand = wlItems.filter(x=>wlTrackOf(x)==='winner' && wlTrackIsFortress(x.ticker) && !wlTrackBlock(x.ticker, 'ladder'));
+  const cand = wlItems.filter(x=>wlTrackOf(x)==='winner' && !wlTrackBlock(x.ticker, 'ladder')   /* PL1·A2 — ตัดเงื่อนไข Fortress ออก */);
   const wRows = watched.map(x=>{
     const d = x.ladder_dist || {}, ti = e(x.ticker);
     const inp = k=>`<label class="mu">EMA${k.slice(3)} %<input type="number" step="any" inputmode="decimal" data-ldr-dist="${k}" value="${d[k]!=null ? e(String(d[k])) : ''}" onchange="ldrDistSet('${ti}','${k}',this.value)"></label>`;
@@ -11496,6 +11511,7 @@ function coreNewIn(){
   if(rd.ticker) dup = coreCardsList.find(c=>c.id!==n.id && c.acct===n.acct && coreNorm(c.ticker)===rd.ticker && coreEff(c).kind!=='closed') || null;
   if(!rd.ticker) errs.push('กรอก Ticker');
   if(dup) errs.push(`มีการ์ด ${rd.ticker} อยู่แล้ว`);
+  if(rd.ticker && n.mode==='new' && !wlReady(rd.ticker)) errs.push(wlReadyMsg(rd.ticker));   /* PL1·A5 — Ready = Watchlist (ไม่ archive) + ① Why buy + ④ Wrong if · แผน/ไม้ที่เปิดอยู่ไม่โดน */
   if(rd.ticker && n.mode==='new'){   /* RG2b — หุ้น 1 ตัว = 1 track */
     const wi = coreWlItem(rd.ticker), trk = wi ? wlTrackOf(wi) : 'winner';
     if(n.strat==='L'){ if(!wi || !wlLadderEligible(wi)) errs.push('Pick a stock on the Compounder track (Base or Sideways-Up)'); }
@@ -11587,6 +11603,7 @@ function coreNewInL(n, rd, cx, cfg, mk, tier, errs, fortress){
 function coreNewSave(){
   const errs = coreNewIn(); if(!errs || errs.length) return;
   const n = coreNew, rd = coreNewRead(), cur = n.id ? coreCardsList.find(x=>x.id===n.id) : null;
+  if(n.mode==='new' && !wlReady(rd.ticker)) return;   /* PL1·A5 — กันทางลัด */
   const now = new Date().toISOString();
   const tfields = rd.ti ? {tier: rd.ti.tier, tierLens: rd.ti.lens || null, tierComputed: rd.ti.computed, tierInputs: rd.ti.inputs, tierReason: rd.ti.reason || null} : {};
   /* CS1 — snapshot ของการประเมิน/★/Base risk/ตัวปรับ ณ วันบันทึก · แก้การประเมินทีหลังไม่แตะแผน/ไม้ที่บันทึกแล้ว · ตรวจด่านซ้ำที่นี่อีกชั้น */
@@ -13511,7 +13528,7 @@ function ln3WlRowHtml(r){
   } else if(it) mu = `<span class="mut" data-ln3-nothesis="1">รอสร้าง Thesis</span>`;
   try{   /* TD3a — Candidate: โน้ตของเรา 1 บรรทัด · Watchlist: via Tier / via RS */
     if(r.port==='cand'){ const nt = (typeof td3MetaOf==='function') ? td3MetaOf(r.sym).note : ''; if(nt) mu += `<span class="mut td3-wnote" data-td3-wnote>${e(ltShort(nt, 40))}</span>`; }
-    else if(it && it.promoted_by) mu += `<span class="mut td3-wnote" data-td3-via>via ${it.promoted_by.map(x=>x==='rs' ? 'RS' : 'Tier').join(' + ')}</span>`;
+    else if(it && it.promoted_by && it.promoted_by.length) mu += `<span class="mut td3-wnote" data-td3-via>via ${it.promoted_by.map(x=>x==='rs' ? 'RS' : 'Tier').join(' + ')}</span>`;
   }catch(err){}
   const rc = it ? `<i class="wlDotR ${th?'ok':'wait'}" title="${th?'มี Thesis':'รอสร้าง Thesis'}"></i>` : '';
   return `<div class="wlR ln3r${wlSel===r.sym?' on':''}" data-sym="${e(r.sym)}" onclick="${r.port==='cand' ? 'candTap' : 'wlOpen'}(this.dataset.sym)">
@@ -13547,7 +13564,7 @@ function ln3WlDetHead(r, th, nm, tabs, tierNote){
       ${wlNarrow() ? '<button class="small ghost wlBackBtn" onclick="wlBack()">‹ Watchlist</button>' : ''}
       <div class="wlDTop"><div class="wlDT"><b>${e(r.sym)}</b> <span class="nm">${e(nm)}</span> ${wlPortTag(r.port, r.market)} ${it ? wlTierChips(it, true) : ''}${it ? wlStarHtml(r) : ''}</div><span class="wlXw">${wlFullBtn('small ic')}${menu}</span></div>
       <div class="ln3-meta" data-ln3-meta="1">${meta}</div>${tn || (tierNote ? tierNote : '')}${tierNote ? '' : `<div class="ln3-meta">${wlRevBtnHtml(rawSym, r.market)}</div>`}${AB.al}${AB.sa}
-      <div class="wlActs ln3-acts" data-ln3-acts="1">${main}</div>${tabs}</div>`;
+      <div class="wlActs ln3-acts" data-ln3-acts="1">${main}</div>${tabs}${it ? wlMtHtml(it) : ''}</div>`;
 }
 function wlRowHtml(r){
   if(ln1On()) return ln3WlRowHtml(r);   /* LN3 — Lean */
@@ -14079,7 +14096,7 @@ function csFundTxt(ev){ const l = ev ? CS_FUND.filter(f=>ev[f[0]]==='passed').ma
 function csLine(sym){ return csFundTxt(csEvalOf(sym)); }   /* PL1 — ตัด ★/RS/Gate 5 ออกจากสรุปการประเมิน */
 function csEvalRowHtml(sym){
   const e = escHtml(sym);
-  return `<div class="csRow" data-cs-row data-sym="${e}" onclick="event.stopPropagation()"><span class="csLn" data-cs-line>${escHtml(csLine(sym))}</span><button type="button" class="small" data-cs-edit data-sym="${e}" onclick="event.stopPropagation();csEvalOpen(this.dataset.sym)">Edit Stock Evaluation ›</button></div>`;
+  return `<div class="csRow" data-cs-row data-sym="${e}" onclick="event.stopPropagation()"><span class="csLn" data-cs-line>${escHtml(csLine(sym))}</span><button type="button" class="small" data-cs-edit data-sym="${e}" onclick="event.stopPropagation();scrOpen(this.dataset.sym)">${wlHas(sym) ? 'Edit screening ›' : 'Screen ›'}</button></div>`;
 }
 function csEvalWrite(sym, ev, noMirror){
   const k = snKey(sym), c = snCol();
@@ -14088,40 +14105,96 @@ function csEvalWrite(sym, ev, noMirror){
 }
 function csAfter(){
   try{ if(coreNew && coreEl('cnTicker')) coreNewIn(); }catch(e){ console.warn('cs after plan', e); }
-  try{ if(td4Pro) td4ProSync(); }catch(e){}
   try{ todayRefresh(true); }catch(e){}
   try{ if(typeof activeTab!=='undefined' && activeTab==='watch') renderWatchlist(); }catch(e){}
 }
 /* ── ฟอร์ม Edit Stock Evaluation (sheet เดียว · ใช้จาก Candidate / Watchlist / Today / ฟอร์มแผน) ── */
-function csSelHtml(path, cur){ return `<select class="csSel" data-cs-in="${path}" onchange="csEvalSet('${path}', this.value)">${Calc.EVAL_ST.map(v=>`<option value="${v}"${cur===v ? ' selected' : ''}>${CS_ST_LBL[v]}</option>`).join('')}</select>`; }
-function csEvalOpen(sym){
+/* ══ PL1·A2 — Screening modal (Candidate → Watchlist) · ใช้ร่วม Today / Watch ══
+   กฎเข้า Watchlist: Trend 40 EMA = Pass (บังคับ) AND (≥1 lens Pass + Why Watch · หรือ ไม่มี lens Pass + Why Watch + Exception Reason)
+   Weekly 40 EMA = Momentum · Monthly 40 EMA = Compounder (ป้ายตาม Track ที่ติดมาจาก candMeta) · เฉพาะ Pass นับว่าผ่าน
+   บันทึก: watchlist/{T}.onboarding {at, fortress, proven, emerging, trend40, why_watch, concerns, exception, track} + ติด track/reasons/note/link/วันที่เพิ่มมาจาก candMeta */
+const SCR_ST = [['untested', 'Not Evaluated'], ['passed', 'Pass'], ['failed', 'Fail'], ['insufficient', 'Insufficient Data'], ['na', 'N/A']];
+const SCR_LENS = [['fortress', 'Fortress'], ['proven', 'Proven Growth'], ['emerging', 'Emerging Growth']];
+let scr = null, scrMem = {};
+try{ const m = JSON.parse(localStorage.getItem('dash.scrMem') || 'null'); if(m && typeof m==='object' && !Array.isArray(m)) scrMem = m; }catch(e){}
+function scrStash(){ if(!scr || scr.edit) return; scrMem[scr.key] = {track:scr.track, fortress:scr.fortress, proven:scr.proven, emerging:scr.emerging, trend:scr.trend, why:scr.why, concerns:scr.concerns, exception:scr.exception, sector:scr.sector}; try{ localStorage.setItem('dash.scrMem', JSON.stringify(scrMem)); }catch(e){} }
+function scrTrendLbl(track){ return track==='ladder' ? 'Trend · Monthly 40 EMA' : track==='winner' ? 'Trend · Weekly 40 EMA' : 'Trend · 40 EMA'; }
+function scrLensPass(S){ return SCR_LENS.some(l=>S[l[0]]==='passed'); }
+function scrErrs(S){
+  const e = {};
+  if(!S.edit){
+    if(!S.track) e.track = 'Pick a track';
+    if(S.trend !== 'passed') e.trend = 'Trend 40 EMA must be Pass to enter the Watchlist (otherwise it stays in Candidates)';
+    if(!S.why.trim()) e.why = 'Why Watch is required';
+    if(!scrLensPass(S) && !S.exception.trim()) e.exception = 'No lens passed — an Exception Reason is required';
+  }
+  return e;
+}
+function scrOpen(sym){
   const t = wlNormTicker(sym); if(!t) return;
-  const ev = JSON.parse(JSON.stringify(csEvalOf(t) || Calc.evalNorm(null)));
-  csDraft = {sym:t, ev};
-  csEvalClose(true);
+  const it = wlItems.find(x=>x.ticker===t), edit = !!it, key = wlSymKey(t), m = td3MetaOf(t), ev = csEvalOf(t) || Calc.evalNorm(null), ob = (it && it.onboarding) || {}, mem = (!edit && scrMem[key]) || {};
+  const pick = (k, d)=>Calc.EVAL_ST.includes(mem[k]) ? mem[k] : d;
+  scr = {sym:t, key, edit, market: it ? it.market : (m.market || coreMarketOf(t)), track: edit ? wlTrackOf(it) : ((m.track==='winner' || m.track==='ladder') ? m.track : (mem.track==='winner' || mem.track==='ladder' ? mem.track : '')),
+    fortress: pick('fortress', Calc.EVAL_ST.includes(ob.fortress) ? ob.fortress : ev.fortress), proven: pick('proven', Calc.EVAL_ST.includes(ob.proven) ? ob.proven : ev.proven), emerging: pick('emerging', Calc.EVAL_ST.includes(ob.emerging) ? ob.emerging : ev.emerging),
+    trend: pick('trend', Calc.EVAL_ST.includes(ob.trend40) ? ob.trend40 : 'untested'), why: String(mem.why != null ? mem.why : (ob.why_watch || '')), concerns: String(mem.concerns != null ? mem.concerns : (ob.concerns || '')), exception: String(mem.exception != null ? mem.exception : (ob.exception || '')),
+    sector: String(mem.sector != null ? mem.sector : (it ? it.sector_etf : '')) || '', tried:false, busy:false, msg:''};
   try{ const ov = document.getElementById('wlAddOverlay'); if(ov && ov.classList.contains('show')) wlAddClose(); }catch(e){}
-  const mk = coreMarketOf(t), e = escHtml, d = csDraft;
-  const row = (lbl, ctl)=>`<div class="csR"><label>${lbl}</label>${ctl}</div>`;
-  const html = `<div class="csSh" data-cs-sheet data-sym="${e(t)}"><div class="csHd"><b>Edit Stock Evaluation · ${e(t)} <span class="mut">${mk}</span></b><button type="button" class="ccLnk" data-cs-x aria-label="Close" onclick="csEvalClose()">✕</button></div>
-    <div class="csSec">Fundamentals</div>${CS_FUND.map(f=>row(f[1], csSelHtml(f[0], d.ev[f[0]]))).join('')}
-    <div class="csFoot"><button type="button" class="ccBtn" data-cs-cancel onclick="csEvalClose()">Cancel</button><button type="button" class="ccBtn pri" data-cs-save onclick="csEvalSave()">Save</button></div></div>`;
-  document.body.insertAdjacentHTML('beforeend', UI.sheet(html).replace('ui-sheet-backdrop', 'ui-sheet-backdrop cs-sheet'));
-  const el = document.body.lastElementChild; el.addEventListener('click', ev2=>{ if(ev2.target===el) csEvalClose(); });
+  scrRender();
 }
-function csEvalClose(keep){
-  document.querySelectorAll('.cs-sheet').forEach(el=>el.remove());
-  if(!keep) csDraft = null;
+const csEvalOpen = scrOpen;   /* ชื่อเดิม (ปุ่ม Edit Stock Evaluation / wlTierSet) */
+function scrClose(){ scrStash(); scr = null; document.querySelectorAll('.scr-sheet').forEach(el=>el.remove()); }
+function scrRender(){
+  const S = scr; if(!S) return;
+  const e = escHtml, errs = scrErrs(S), show = S.tried, mk = S.market;
+  const sel = (field, cur)=>`<select class="csSel" data-scr-in="${field}" onchange="scrSet('${field}', this.value)">${SCR_ST.map(o=>`<option value="${o[0]}"${cur===o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>`;
+  const row = (lbl, ctl, err)=>`<div class="csR"><label>${lbl}</label>${ctl}</div>${err && show ? `<div class="cpErr" data-scr-err role="alert">${e(err)}</div>` : ''}`;
+  const trackCtl = S.edit ? `<span class="mut" data-scr-track>${S.track==='ladder' ? 'Compounder' : 'Momentum'}</span>` : `<span class="td4-seg" role="group" aria-label="Track">${[['winner', 'Momentum'], ['ladder', 'Compounder']].map(([k, n])=>`<button type="button" class="${S.track===k ? 'on' : ''}" aria-pressed="${S.track===k}" data-scr-track-btn="${k}" onclick="scrSet('track','${k}')">${n}</button>`).join('')}</span>`;
+  const needEx = !scrLensPass(S) && !S.edit;
+  const html = `<div class="scrSh" data-scr-sheet data-sym="${e(S.sym)}"><div class="csHd"><b>${S.edit ? 'Edit screening' : 'Screen'} · ${e(S.sym)} <span class="mut">${mk}</span></b><button type="button" class="ccLnk" data-scr-x aria-label="Close" onclick="scrClose()">✕</button></div>
+    ${row('Track', trackCtl, errs.track)}
+    <div class="csSec">Lens <span class="mut">only Pass counts</span></div>${SCR_LENS.map(l=>row(l[1], sel(l[0], S[l[0]]))).join('')}
+    ${row(scrTrendLbl(S.track), sel('trend', S.trend), errs.trend)}
+    <div class="csR col"><label>Why Watch <span class="mut">required</span></label><textarea rows="2" maxlength="500" data-scr-why aria-label="Why Watch" oninput="scrIn('why', this.value)">${e(S.why)}</textarea></div>${errs.why && show ? `<div class="cpErr" data-scr-err role="alert">${e(errs.why)}</div>` : ''}
+    <div class="csR col"><label>Concerns <span class="mut">optional</span></label><textarea rows="2" maxlength="500" data-scr-concerns aria-label="Concerns" oninput="scrIn('concerns', this.value)">${e(S.concerns)}</textarea></div>
+    ${needEx ? `<div class="csR col" data-scr-exrow><label>Exception Reason <span class="mut">required — no lens passed</span></label><textarea rows="2" maxlength="500" data-scr-exception aria-label="Exception Reason" oninput="scrIn('exception', this.value)">${e(S.exception)}</textarea></div>${errs.exception && show ? `<div class="cpErr" data-scr-err role="alert">${e(errs.exception)}</div>` : ''}` : ''}
+    ${S.edit ? '' : `<div class="csR"><label>Sector ETF</label><select data-scr-sector aria-label="Sector ETF" onchange="scrIn('sector', this.value)">${sectorOptionsHtml(sectorValid(S.sector) ? S.sector : '')}</select></div>`}
+    ${S.msg ? `<div class="cpMsg" data-scr-msg role="alert">${e(S.msg)}</div>` : ''}
+    <div class="csFoot"><button type="button" class="ccBtn" data-scr-cancel onclick="scrClose()">Cancel</button><button type="button" class="ccBtn pri" data-scr-save${S.busy ? ' disabled' : ''} onclick="scrSave()">${S.edit ? 'Save' : 'Move to Watchlist'}</button></div></div>`;
+  document.querySelectorAll('.scr-sheet').forEach(el=>el.remove());
+  document.body.insertAdjacentHTML('beforeend', UI.sheet(html).replace('ui-sheet-backdrop', 'ui-sheet-backdrop scr-sheet'));
 }
-function csEvalSet(path, val){
-  const d = csDraft; if(!d || !Calc.EVAL_ST.includes(val)) return;
-  d.ev[path] = val;
-}
-function csEvalSave(){
-  const d = csDraft; if(!d) return;
-  const ev = Calc.evalNorm(Object.assign({}, d.ev, {date:thaiToday()}));   /* PL1 — ไม่เขียน ★ ในเรคคอร์ดประเมินอีก (ค่าเก่าคงอยู่ใน data) */
-  csEvalWrite(d.sym, ev);
-  csEvalClose();
-  csAfter();
+function scrSet(k, v){ if(!scr) return; if(k==='track'){ if(v==='winner' || v==='ladder') scr.track = v; } else if(Calc.EVAL_ST.includes(v)) scr[k] = v; scrStash(); scrRender(); }
+function scrIn(k, v){ if(!scr) return; scr[k] = String(v == null ? '' : v); scrStash(); }
+function scrSave(){
+  const S = scr; if(!S || S.busy) return;
+  S.tried = true; S.msg = '';
+  const errs = scrErrs(S);
+  if(Object.keys(errs).length){ scrRender(); return; }
+  const col = wlCol();
+  if(!col || !tdCanWrite()){ S.msg = 'Not synced with the server yet — nothing saved, your entries are kept'; scrRender(); return; }
+  const t = S.sym, now = new Date().toISOString(), lens = scrLensPass(S);
+  const ev = Calc.evalNorm(Object.assign({}, csEvalOf(t) || Calc.evalNorm(null), {fortress:S.fortress, proven:S.proven, emerging:S.emerging, date:thaiToday()}));
+  const onboarding = {at:now, fortress:S.fortress, proven:S.proven, emerging:S.emerging, trend40:S.trend, trend_basis: S.track==='ladder' ? 'monthly' : 'weekly', why_watch:S.why.trim().slice(0, 500), concerns:S.concerns.trim().slice(0, 500), exception: lens ? '' : S.exception.trim().slice(0, 500), track:S.track};
+  S.busy = true; scrRender();
+  let pr;
+  if(S.edit){ pr = col.doc(t).update({onboarding, sector_etf: sectorValid(S.sector) ? S.sector : ''}); }
+  else {
+    const m = td3MetaOf(t), carry = tqCarryOf(t) || {};
+    const doc = Object.assign({ticker:t, market:S.market, port:'core', note:String(m.note || '').trim().slice(0, 500), industry:'', sector_etf:(sectorValid(S.sector) ? S.sector : ''), ladder_watch:S.track==='ladder', ladder_state:'Base', added_at:now, cand_added_at:String(m.cand_at || ''),
+      reasons:Array.isArray(m.reasons) ? m.reasons.slice() : [], link:String(m.link || ''), onboarding, promoted_by:[], promoted_at:now}, carry);
+    pr = col.doc(t).set(doc);   /* path เดียวกับ wlAddSave — ทางเดียวที่สร้างเอกสาร Watchlist ใหม่ได้ */
+  }
+  Promise.resolve(pr).then(()=>{
+    try{ csEvalWrite(t, ev, true); }catch(e){}
+    const wasEdit = S.edit;
+    delete scrMem[S.key]; try{ localStorage.setItem('dash.scrMem', JSON.stringify(scrMem)); }catch(e){}
+    scr = null; document.querySelectorAll('.scr-sheet').forEach(el=>el.remove());
+    if(!wasEdit){ td3Undo = {t}; td4Moved = {t}; td4Pro = null; delete td4ProMem[wlSymKey(t)]; td3Msg.core = ''; clearTimeout(td4MovedT); td4MovedT = setTimeout(()=>{ td4Moved = null; td3Undo = null; todayRefresh(true); }, 5000); }
+    csAfter();
+  }).catch(err=>{
+    if(!scr) return;
+    scr.busy = false; scr.msg = 'Could not save — nothing was added, your entries are kept (' + ((err && (err.code || err.message)) || err) + ')'; scrRender();
+  });
 }
 /* ── ขนาดไม้จาก ★ ── */
 /* เสี่ยงที่ใช้/จองแล้วของหุ้นตัวเดียวกัน + บัญชีเดียวกัน (สกุลของตลาดหุ้น) · ไม่รวมการ์ด exceptId (กันนับซ้ำตอนแก้) · การ์ดปิดแล้ว = 0 */

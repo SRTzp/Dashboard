@@ -92,7 +92,7 @@ def tests(pw, w, h, label):
         set_tier(page, "CAMT", "AF")
         check(f"{tag} 3 A-F → tier A / fortress", note_tier(page, "CAMT") == {"tier": "A", "tier_lens": "fortress", "tier_set_at": TODAY}, json.dumps(note_tier(page, "CAMT")))
         page.locator('[data-cand-x] [data-c-add]').click(); wait(page, 400)
-        js(page, "(s)=>{ ltSheetClose(); const c = td3Cands(thaiToday()).find(x=>x.key===wlSymKey(s)); csEvalWrite(c.sym, Calc.evalNorm({rs:{sustained:'passed'}, gate5:['passed','passed','passed'], stars:1})); td4Pro = {sym:c.sym, key:c.key, note:'x', tier:true, rs:false, stars:1}; td4ProSave(); }", "CAMT")   # TD4b: ＋ ของ Candidate ไม่เพิ่มตรงแล้ว → ย้ายด้วยฟอร์ม Move (td4ProSave · ค่า Tier/Phase ตามไปเหมือนเดิม); wait(page, 800)
+        import scr_helper; scr_helper.promote(page, "CAMT")   # PL1 Step 4: ย้ายด้วย screening modal (เดิม td4ProSave) — ค่า Tier/Phase ตามไปเหมือนเดิม
         d = wl_doc(page, "CAMT") or {}
         check(f"{tag} 3 ＋ เพิ่มเข้า Watchlist → watchlist doc มี tier A / fortress / tier_set_at", d.get("tier") == "A" and d.get("tier_lens") == "fortress" and d.get("tier_set_at") == TODAY, json.dumps(d, ensure_ascii=False)[:300])
         go(page, "wl")
@@ -128,7 +128,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 4 ยกเลิก → ไม่เปิดฟอร์มเพิ่ม · ไม่เพิ่ม", not js(page, "()=>document.getElementById('wlAddOverlay').classList.contains('show')") and wl_doc(page, "ONTO") is None)
         js(page, "()=>{ window.__cfAns=true; }")
         page.locator('[data-cand-x] [data-c-add]').click(); wait(page, 400)
-        js(page, "(s)=>{ ltSheetClose(); const c = td3Cands(thaiToday()).find(x=>x.key===wlSymKey(s)); csEvalWrite(c.sym, Calc.evalNorm({rs:{sustained:'passed'}, gate5:['passed','passed','passed'], stars:1})); td4Pro = {sym:c.sym, key:c.key, note:'x', tier:true, rs:false, stars:1}; td4ProSave(); }", "ONTO")   # TD4b: ＋ ของ Candidate ไม่เพิ่มตรงแล้ว → ย้ายด้วยฟอร์ม Move (td4ProSave · ค่า Tier/Phase ตามไปเหมือนเดิม); wait(page, 800)
+        import scr_helper; scr_helper.promote(page, "ONTO")   # PL1 Step 4: ย้ายด้วย screening modal (เดิม td4ProSave) — ค่า Tier/Phase ตามไปเหมือนเดิม
         d = wl_doc(page, "ONTO") or {}
         check(f"{tag} 4 ตกลง = เพิ่ม · watchlist doc ไม่มี tier (ไม่คัดลอก fail)", d.get("ticker") == "ONTO" and "tier" not in d and "tier_set_at" not in d, json.dumps(d, ensure_ascii=False)[:300])
         check(f"{tag} 4 stockNotes ยังเก็บ fail ไว้ (ไม่ลบ)", (note_tier(page, "ONTO") or {}).get("tier") == "fail")

@@ -498,10 +498,10 @@ def ev_pass(page, sym=None):
 
 
 def pro_fill(page, tier=True, rs=False, note="why it passed", stars=2):
-    if tier or rs: ev_pass(page)
-    if note is not None: page.fill("[data-td4-pro-note]", note)
-    # PL1·A3 — ไม่มีปุ่ม ★ ในฟอร์มแล้ว (stars ถูกเพิกเฉย) · ดู tests/PL1_retired.md
-    settle(page, 120)
+    """PL1 Step 4 — ย้ายตัวที่เปิดฟอร์มอยู่เข้า Watchlist ผ่าน screening modal (เติม Proven Pass + Trend Pass + Why แล้ว Save)"""
+    import scr_helper
+    sym = page.evaluate("()=>document.querySelector('[data-td4-pro]').dataset.td4Pro")
+    scr_helper.promote(page, sym, why=note or "screened", wait=800)
 
 
 def trk(page): return txt(page, '[data-td3-cnt="screen"]')
@@ -526,27 +526,18 @@ def homework_tests(pw, w, h, label, shots=False):
         page.locator('[data-td4-scrmk="US"]').click(); settle(page, 300)
         open_card(page, "NEW1")
         frm = txt(page, '[data-td4-pro="NEW1"]') or ""
-        check(f"{tag} §3 ฟอร์มของตัวแรกเปิดรออยู่: Edit Stock Evaluation · Revenue ↗ · Note · hint · Not passed · Move to Watchlist · ไม่มีช่อง Reason", all(x in frm for x in ["Edit Stock Evaluation", "Revenue ↗", "Ready", "Not passed", "Move to Watchlist"]) and cnt(page, "[data-td4-pro-reason]") == 0 and cnt(page, "[data-td4-star]") == 0 and js(page, "()=>document.querySelector('[data-td4-pro-note]').value") == "fresh note", frm)
-        lay = js(page, """()=>{ const q = s => document.querySelector(s).getBoundingClientRect(); const cb = q('[data-td4-pro] [data-cs-edit]'), rev = q('.td4-rev a'), nt = q('[data-td4-pro-note]'), nd = q('[data-td4-need]'), np = q('[data-td4-pro] [data-td3-np]'), go = q('[data-td4-pro-go]');
-          return {row1: cb.top < nt.top && rev.top < nt.top, noteBelow: nt.top > cb.bottom - 2, hint: nd.top >= nt.bottom - 2, btns: np.top >= nd.bottom - 2 && Math.abs(np.top - go.top) < 12 && np.left < go.left}; }""")
-        check(f"{tag} §3 เลย์เอาต์ตามสเปก: แถว 1 Tier·RS·Revenue · แถว 2 Note · แถว 3 hint (PL1: ไม่มี ★) · แถว 4 Not passed ซ้าย / Move to Watchlist ขวา", all(lay.values()), lay)
+        check(f"{tag} §3 ฟอร์มของตัวแรกเปิดรออยู่ (PL1): สรุปการประเมิน · Revenue ↗ · ปุ่ม Screen › · Not passed · ไม่มีช่อง Note/Track/Reason (ย้ายไป screening modal)", all(x in frm for x in ["Screen ›", "Revenue ↗", "Not passed"]) and cnt(page, "[data-td4-pro-note]") == 0 and cnt(page, "[data-td4-pro-reason]") == 0 and cnt(page, "[data-td4-pro-track]") == 0, frm)
+        lay = js(page, """()=>{ const q = s => document.querySelector(s).getBoundingClientRect(); const cb = q('[data-td4-pro] [data-cs-edit]'), rev = q('.td4-rev a'), np = q('[data-td4-pro] [data-td3-np]'), go = q('[data-td4-pro-go]');
+          return {row1: Math.abs(cb.top - rev.top) < 30, btns: np.top >= cb.bottom - 2 && Math.abs(np.top - go.top) < 12 && np.left < go.left}; }""")
+        check(f"{tag} §3 เลย์เอาต์ (PL1): แถว 1 สรุป·Screen ›·Revenue · แถว 2 Not passed ซ้าย / Screen › ขวา", all(lay.values()), lay)
         if shots: C.shot(page, "td4a-promote-390.png", '[data-td3-sec="screen"]')
         rev = js(page, "()=>{ const a = document.createElement('div'); a.innerHTML = wlRevBtnHtml('NEW1', 'US'); const x = a.firstElementChild, y = document.querySelector('[data-td4-pro] [data-rev-btn]'); return [x.href === y.href, x.className === y.className, x.title === y.title, x.target === y.target, y.innerText.trim()]; }")
         check(f"{tag} §3 ลิงก์ Revenue ↗ คือองค์ประกอบ wlRevBtnHtml เดิมของ Watchlist (href/class/title/target เหมือนกัน · ป้ายย่อ)", rev == [True, True, True, True, "Revenue ↗"], rev)
-        dis = lambda: js(page, "()=>document.querySelector('[data-td4-pro-go]').disabled")
-        check(f"{tag} §3 เริ่ม: Move to Watchlist ปิด (disabled) · hint เฉพาะที่ขาด (Note เติมโน้ตเดิมไว้แล้ว)", dis() is False and txt(page, "[data-td4-need]") == "Ready", txt(page, "[data-td4-need]"))   # PL1 interim: note only (fresh note seeded) — ★/RS/Gate 5 ไม่ปิดปุ่มแล้ว
-        ev_pass(page); settle(page, 100)
-        print("RETIRED (PL1) - §3 ประเมิน RS + Gate 5 แล้วยังปิด (ขาดดาว) — ★ ไม่ใช่เงื่อนไขอีกแล้ว (tests/PL1_retired.md)")
-        page.fill("[data-td4-pro-note]", "   "); settle(page, 100)
-        check(f"{tag} §3 Note ว่าง (เว้นวรรคล้วน) ยังปิด · hint 'Need: note'", dis() is True and txt(page, "[data-td4-need]") == "Need: note", txt(page, "[data-td4-need]"))
-        print("RETIRED (PL1) - §3 แตะดาวเดิมซ้ำ = ล้าง (ไม่มีปุ่ม ★ ในฟอร์มแล้ว · tests/PL1_retired.md)")
-        page.fill("[data-td4-pro-note]", "edited note"); settle(page, 100)
-        check(f"{tag} §3 มี Note → hint 'Ready' (PL1: ไม่มี ★) · ปุ่มเปิดใช้", dis() is False and txt(page, "[data-td4-need]") == "Ready", txt(page, "[data-td4-need]"))
-        js(page, "()=>todayRefresh(true)"); settle(page, 300)
-        check(f"{tag} §3 ฟอร์มและค่าที่กรอกค้างอยู่หลัง re-render", js(page, "()=>document.querySelector('[data-td4-pro-note]').value") == "edited note" and dis() is False)
-        page.locator("[data-td4-pro-go]").click(); settle(page, 700)
+        page.locator("[data-td4-pro-go]").click(); settle(page, 400)
+        check(f"{tag} §3 กด Screen › → เปิด screening modal ของ NEW1 (PL1: ฟอร์มย้ายเข้า Watchlist อยู่ในโมดัลเดียว)", js(page, "()=>!!document.querySelector('[data-scr-sheet]') && scr.sym") == "NEW1", "")
+        import scr_helper; scr_helper.promote(page, "NEW1", why="edited note", wait=800)
         wl = wl_doc(page, "NEW1")
-        check(f"{tag} §3 Move: Watchlist มี NEW1 · note · promoted_by ['tier','rs'] · promoted_at · stars=2 (= ดาวใน Watchlist) · market", wl and wl["note"] == "edited note" and wl["promoted_by"] == ["rs"] and wl["promoted_at"] and wl["stars"] == 0 and wl["market"] == "US" and not wl.get("promote_reason"), wl)
+        check(f"{tag} §3 Move (PL1): Watchlist มี NEW1 · note ที่ติดมาจาก Candidate · onboarding.why_watch · promoted_at · stars=0 · market", wl and wl["note"] == "fresh note" and wl["onboarding"]["why_watch"] == "edited note" and wl["promoted_at"] and wl["stars"] == 0 and wl["market"] == "US" and not wl.get("promote_reason"), wl)
         mv = txt(page, "[data-td4-moved]") or ""
         check(f"{tag} §3 การ์ดยุบทันทีเป็น '✓ NEW1 → Watchlist · ★★ · Undo' · ฟอร์มหาย · ตัวถัดไปขึ้น · tracker 'US 1 · TH 0 · 1/3'", mv.startswith("✓ NEW1 → Watchlist") and "★" not in mv and "Undo" in mv and cnt(page, '[data-td4-pro="NEW1"]') == 0 and cnt(page, "[data-td4-pro]") == 0 and trk(page) == "US 1 · TH 0 · 1/3", [mv, trk(page)])
         page.locator("[data-td3-undo]").click(); settle(page, 700)
@@ -579,11 +570,10 @@ def tier_only_tests(pw):
     try:
         hw_inject(page); go_today(page)
         open_first(page)
-        pro_fill(page, tier=False, rs=True, note="rs leader", stars=3)
-        page.locator("[data-td4-pro-go]").click(); settle(page, 700)
+        import scr_helper; scr_helper.promote(page, "NEW1", why="rs leader", wait=800)
         wl = wl_doc(page, "NEW1") or {}
-        check(f"{tag} §3 RS Leader อย่างเดียว + Note → promoted_by ['rs'] · stars 0 (PL1: ไม่เขียนดาว)", wl.get("promoted_by") == ["rs"] and wl.get("stars") == 0 and wl.get("note") == "rs leader", wl)
-        check(f"{tag} §3 ดาวที่ให้ตอน Promote = ดาวใน Watchlist (เรียงอันดับต้น ๆ)", js(page, "()=>wlRowsView ? 1 : 0") == 1 and (go_watch(page, "wl") or True) and rows(page)[0] == "NEW1", rows(page))
+        check(f"{tag} §3 (PL1) ย้ายด้วย screening modal → onboarding.why_watch · promoted_by ว่าง (ไม่มี RS) · stars 0 · rs_stars Unrated", wl.get("onboarding", {}).get("why_watch") == "rs leader" and not wl.get("promoted_by") and wl.get("stars") == 0 and wl.get("rs_stars") is None, wl)
+        check(f"{tag} §3 ตัวที่ย้ายแล้วอยู่ใน Watchlist", (go_watch(page, "wl") or True) and "NEW1" in rows(page), rows(page))
         check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
     finally: b.close()
 
