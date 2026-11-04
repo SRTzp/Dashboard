@@ -129,3 +129,9 @@ Plans (Momentum · Compounder · Sat; Draft | Open; ≤5 rows per group then "+N
 | phase109 §4 | "+n in the row expands the list, no navigation" | **RETIRED** | expander removed from Today |
 | phase109 §B5b | Sat risk chip must not overflow `[data-td3-panel="sat"]` | measured against the Plans panel (`[data-td3-panels] > [data-td3-panel]:last-child`) | the Sat group sits inside the Plans panel |
 | New | `tests/run_tests_phase119.py` (26 checks): Plans replaces old drafts; Open order red → yellow → green; archived-with-open-position still Open; Draft text (missing / Ready to enter); 5-row cap + "+1 more ›"; Compounder group; legacy `strategy:'L'` excluded; tap targets (`coreOpenCardOfTrade` for Open, `coreOpenCard` for Draft, "+N more" → Plan tab on the group's page); empty Momentum/Compounder groups hidden | — | A7 |
+
+## End of Phase A — fix found by the full run
+| Suite | Check / area | Change | Why |
+|---|---|---|---|
+| phase94 #3 (real regression, fixed in code) | Watch row "BRK.B-style" must stay on one line | row status is now a coloured dot with tooltip/aria-label (`wlStatusDotHtml`); the full "Drafting Thesis / Awaiting Setup / Plan Ready" tag stays on the card | the A6 text tag wrapped the row to two lines |
+| phase117 | row status label read from `innerText` | read from the dot's `title` | same |
