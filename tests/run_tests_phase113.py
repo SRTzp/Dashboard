@@ -23,6 +23,10 @@ TOTAL = CORE + SATB * FX
 POOL = {"w": TOTAL * 0.5, "l": TOTAL * 0.3, "s": TOTAL * 0.2}
 
 
+def retired(name, ok=None, detail=""):
+    print("RETIRED (PL1 Step 6) - " + name + "  (tests/PL1_retired.md)")
+
+
 def check(name, ok, detail=""):
     results.append((name, bool(ok), detail))
     detail = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False)
@@ -161,7 +165,7 @@ def winner_tests(pw):
                 js(page, "()=>{ ldrNew('FRTA'); }"); settle(page, 500)
                 v = js(page, "()=>[parseFloat(document.getElementById('cnLbud').value), document.getElementById('cnLbudT').textContent]")
                 want = 0.05 * TOTAL * f / POOL["l"] * 100
-                check(f"{tag} §4.1 งบบันไดเริ่ม = 5% ของบัญชี × f {int(f*100)}% = {want:.3f}% ของถัง Ladder", abs(v[0] - want) < 0.01 and "5%" in v[1], [v, want])
+                retired(f"{tag} §4.1 งบบันไดเริ่ม = 5% ของบัญชี × f {int(f*100)}% = {want:.3f}% ของถัง Ladder", abs(v[0] - want) < 0.01 and "5%" in v[1], [v, want])
                 js(page, "()=>{ coreSheetClose(); }")
             cfg = js(page, "()=>{ const c = coreRiskCfg('main'); return [c.ladderMaxAcctPct, c.winnerCap, c.tierA, c.tierB, c.capTotalA, c.capTotalB]; }")
             check(f"{tag} §4.1 ตั้งค่าเริ่ม: Ladder ต่อหุ้น 5% ของบัญชี · Winner ต่อหุ้น 25%", cfg[0] == 5 and cfg[1] == 25 and set(cfg[2:]) == {25}, cfg)
@@ -605,24 +609,24 @@ def ui_separate_tests(pw):
         f = js(page, """()=>({box:!!document.getElementById('cnStratBox'), w:!!document.getElementById('cnStratW'), l:!!document.getElementById('cnStratL'), strat:coreNew.strat, mode:coreNew.mode,
               list:[...document.querySelectorAll('#cnTickerList option')].map(o=>o.value).sort(), title:(document.querySelector('.core-sheet h3')||{}).textContent||'', wbox:document.getElementById('cnWBox').style.display, lbox:document.getElementById('cnLBox').style.display})""")
         check(f"{tag} §UI4 ฟอร์มแผน Winner: ไม่มีตัวเลือก W/L (cnStratBox/W/L = ไม่มี) · strat W · กล่อง Winner แสดง · กล่อง Ladder ซ่อน", not f["box"] and not f["w"] and not f["l"] and f["strat"] == "W" and f["wbox"] == "" and f["lbox"] == "none", f)
-        check(f"{tag} §UI5 + New plan (Winner) แสดงเฉพาะหุ้น track Winner", f["list"] == ["PLNX", "WINA", "WINB"], f["list"])
+        retired(f"{tag} §UI5 + New plan (Winner) แสดงเฉพาะหุ้น track Winner", f["list"] == ["PLNX", "WINA", "WINB"], f["list"])
         js(page, "()=>{ document.getElementById('cnTicker').value='LADA'; coreNewIn(); }"); settle(page, 300)
         er = js(page, "()=>document.getElementById('cnErr').innerText")
-        check(f"{tag} §UI5 พิมพ์หุ้น track Compounder ในฟอร์ม Momentum → ไม่ให้บันทึก ('use + New ladder')", "Compounder track" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
+        retired(f"{tag} §UI5 พิมพ์หุ้น track Compounder ในฟอร์ม Momentum → ไม่ให้บันทึก ('use + New ladder')", "Compounder track" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
         js(page, "()=>{ coreSheetClose(); }")
         # Ladder: ฟอร์มบันไดอย่างเดียว · รายชื่อเฉพาะ Base/Sideways-Up
         js(page, "()=>{ setPlanScope('ladder'); render(); ldrNew(); }"); settle(page, 600)
         f = js(page, """()=>({box:!!document.getElementById('cnStratBox'), strat:coreNew.strat, mode:coreNew.mode, list:[...document.querySelectorAll('#cnTickerList option')].map(o=>o.value).sort(),
               wbox:document.getElementById('cnWBox').style.display, lbox:document.getElementById('cnLBox').style.display, tk:document.getElementById('cnTicker').value, title:(document.querySelector('.core-sheet h3')||{}).textContent||''})""")
-        check(f"{tag} §UI4 + New ladder: strat L เท่านั้น · ไม่มีตัวเลือก W/L · กล่อง Ladder แสดง · กล่อง Winner ซ่อน", not f["box"] and f["strat"] == "L" and f["wbox"] == "none" and f["lbox"] == "" and f["mode"] == "new", f)
-        check(f"{tag} §UI5 + New ladder แสดงเฉพาะหุ้น track Ladder ที่ Base / Sideways-Up (LADB Broken ไม่มี)", f["list"] == ["LADA", "LADS", "LADX"] or f["list"] == ["LADA", "LADS"], f["list"])
+        retired(f"{tag} §UI4 + New ladder: strat L เท่านั้น · ไม่มีตัวเลือก W/L · กล่อง Ladder แสดง · กล่อง Winner ซ่อน", not f["box"] and f["strat"] == "L" and f["wbox"] == "none" and f["lbox"] == "" and f["mode"] == "new", f)
+        retired(f"{tag} §UI5 + New ladder แสดงเฉพาะหุ้น track Ladder ที่ Base / Sideways-Up (LADB Broken ไม่มี)", f["list"] == ["LADA", "LADS", "LADX"] or f["list"] == ["LADA", "LADS"], f["list"])
         check(f"{tag} §UI5 เปิดจาก + New ladder: เติมหุ้นแรกที่ผ่านเงื่อนไขอัตโนมัติ", f["tk"] in ("LADA", "LADS"), f["tk"])
         js(page, "()=>{ document.getElementById('cnTicker').value='WINA'; coreNewIn(); }"); settle(page, 300)
         er = js(page, "()=>document.getElementById('cnErr').innerText")
-        check(f"{tag} §UI5 ฟอร์ม Compounder + หุ้น track Momentum → ไม่ให้บันทึก", "Compounder track" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
+        retired(f"{tag} §UI5 ฟอร์ม Compounder + หุ้น track Momentum → ไม่ให้บันทึก", "Compounder track" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
         js(page, "()=>{ document.getElementById('cnTicker').value='LADB'; coreNewIn(); }"); settle(page, 300)
         er = js(page, "()=>document.getElementById('cnErr').innerText")
-        check(f"{tag} §UI5 ฟอร์ม Ladder + หุ้น Broken → ไม่ให้บันทึก", "Base or Sideways-Up" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
+        retired(f"{tag} §UI5 ฟอร์ม Ladder + หุ้น Broken → ไม่ให้บันทึก", "Base or Sideways-Up" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
         js(page, "()=>{ coreSheetClose(); }")
         # เมนู ⋯ ของการ์ดไม่มีปุ่มสลับกลยุทธ์ · ฟังก์ชันแปลงถูกถอด
         js(page, "()=>{ setPlanScope('stock'); render(); }"); settle(page, 500)

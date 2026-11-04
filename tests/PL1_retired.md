@@ -85,3 +85,13 @@ Known failures also on main: phase45 (`_bk_id2/`), phase47 (`_bk_id3a/`).
 | phase85 | card ⋯ menu `✎ แก้ไข · 📥 Import · Export JSON · ทบทวน · ✕ ลบ` | `🗄 Archive… · ✎ แก้ไข · 📥 Import · Export JSON · ทบทวน` — `✕ ลบ` only shows for a stock with no My Thesis / AI thesis / notes / versions (the test stock has a thesis) | user decision (Delete only for typo tickers) |
 | New | `tests/run_tests_phase117.py` (56 checks): status tags, Next check (row + sort), Last-updated sort, RS/Track/Reason filters (Unrated ≠ 0), "My Thesis updated … / AI Thesis imported | data as of …" lines, Archive requires a reason, archived hidden + `Archived (n)` + excluded from Today deep-dive queue, Restore, Delete visibility, Candidate rows show Track + Reasons and filter by Track/Reason | — | A6 |
 | phase116 | added assertion that the real `wlReady` runs (stub off) | — | note 2 |
+
+## Step 6 part 1 — Compounder = Momentum-layout card (strategy 'W' + track:'ladder')
+Engine/data/status/sizing only; the Compounder *page* switch and ladder-page retirement are part 2. Stored `strategy:'L'` cards and ladder data are untouched.
+| Suite | Check / area | Change | Why |
+|---|---|---|---|
+| phase113 §4.1 (×3 FF levels) | "ladder budget starts at 5% of account × f% of the Compounder pool" (ladder form `cnLbud`) | **RETIRED** (`retired(...)`) | new Compounder plans no longer use the ladder-budget form; size = Base 1% of the Compounder pool, cap 5% of account (covered by phase118) |
+| phase113 §UI4 | "+ New ladder: strat L only · no W/L choice · Ladder box shown · Winner box hidden" | **RETIRED** | ＋ in the Compounder scope opens the normal plan form with Track = Compounder |
+| phase113 §UI5 | "+ New ladder lists Ladder-track stocks in Base/Sideways-Up only" · "+ New plan (Winner) lists Winner-track stocks only" | **RETIRED** | the ticker list shows all non-archived Watchlist stocks; Track comes from the Watchlist |
+| phase113 §UI5 | "Momentum form + Compounder-track ticker → blocked ('use + New ladder')" · "Compounder form + Momentum-track ticker → blocked" · "Ladder form + Broken stock → blocked" | **RETIRED** | single rule: a new plan uses the stock's Watchlist Track (one stock = one track) |
+| New | `tests/run_tests_phase118.py` (40 checks): Base 1% of the Compounder pool + cap 5% of account (banner + first-lot qty), Momentum unchanged, saved card = strategy 'W' + track 'ladder', scope switches to Compounder, per-track card lists, per-track holdings/pool split, DD bucket = ladder, 40W EMA status (green/yellow/red, empty = Stop only), cap on plan card, price sheet saves `emaW40`, legacy `strategy:'L'` data untouched | — | A8 |

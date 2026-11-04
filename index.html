@@ -4967,7 +4967,7 @@ const LDR_STATES = ['Base', 'Sideways-Up', 'Broken'];   /* RG2b #20 — Ladder �
 function wlTrackOf(x){
   const t = coreNorm(typeof x==='string' ? x : (x && x.ticker)), it = (typeof x==='string') ? coreWlItem(x) : x;
   if(it && it.ladder_watch_set) return it.ladder_watch ? 'ladder' : 'winner';
-  return coreCardsList.some(c=>c.strategy==='L' && coreNorm(c.ticker)===t) ? 'ladder' : 'winner';
+  return coreCardsList.some(c=>coreTrackOfCard(c)==='ladder' && coreNorm(c.ticker)===t) ? 'ladder' : 'winner';
 }
 /* PL1·A2 — ไม่ใช้เป็นเงื่อนไขอีกแล้ว (แสดงผลเท่านั้น) */
 function wlTrackIsFortress(sym){ try{ const ev = csEvalOf(sym); return !!(ev && ev.fortress==='passed'); }catch(e){ return false; } }
@@ -4975,7 +4975,7 @@ function wlLadderEligible(it){ return wlTrackOf(it)==='ladder' && (it.ladder_sta
 /* คืนข้อความเหตุผลที่เปลี่ยน track ไม่ได้ ('' = เปลี่ยนได้) */
 function wlTrackBlock(sym, to){
   const t = coreNorm(sym), from = wlTrackOf(t); if(from===to) return '';
-  const open = coreCardsList.some(c=>coreNorm(c.ticker)===t && coreEff(c).kind!=='closed' && (from==='ladder' ? c.strategy==='L' : c.strategy!=='L'));
+  const open = coreCardsList.some(c=>coreNorm(c.ticker)===t && coreEff(c).kind!=='closed' && coreTrackOfCard(c)===from);
   if(open) return `${t} still has an open ${from==='ladder' ? 'Compounder' : 'Momentum'} plan or position — close or cancel it before changing the track`;
   return '';
 }
@@ -9010,9 +9010,9 @@ function ddPnlTHB(t, fx){
 }
 /* ท่อเดียว: อ่านข้อมูล → ddStep → คืนผล + state ใหม่ (ยังไม่เขียน) */
 /* RG2b §4.7 — เบรก DD ต่อถัง: 'winner' | 'ladder' (ทุน = ถังของมัน + P&L ที่ปิดแล้ว/ที่ถือของไม้ในถังนั้น · Ladder = ไม้ที่ผูกการ์ด strategy L · ที่เหลือใน Core = Winner) · 'sat' เดิม · 'core' = ชื่อเก่า → winner */
-function ddLadderTradeIds(A){ return new Set(coreCardsList.filter(c=>c.acct===A && c.strategy==='L' && c.trade_id).map(c=>c.trade_id)); }
+function ddLadderTradeIds(A){ return coreTradeIdsOfTrack(A, 'ladder'); }   /* PL1·A8 — รวมการ์ด Compounder แบบ W */
 function ddTradePool(A, t){ return ddLadderTradeIds(A).has(t.id) ? 'ladder' : 'winner'; }
-function ddPoolOfCard(c){ return c && c.strategy==='L' ? 'ladder' : 'winner'; }
+function ddPoolOfCard(c){ return coreTrackOfCard(c); }
 function ddEval(A, bucket){
   if(bucket==='core') bucket = 'winner';
   const cs = Calc.coreSize; if(!cs || !cs.ddStep || !DD_BUCKETS[bucket]) return null;
@@ -9272,7 +9272,7 @@ function jBucketOf(t, card){
   if(!t) return 'winner';
   if(t.port==='satB') return t.sleeve==='tactical' ? 'tactical' : 'main';
   const c = card===undefined ? (()=>{ try{ return coreCardOfTrade(t); }catch(e){ return null; } })() : card;
-  return (c && c.strategy==='L') ? 'ladder' : 'winner';
+  return coreTrackOfCard(c);
 }
 /* planned vs actual: R ของแผน = 1R · target = |TP−entry| / |entry−SL ตอนเข้า| · got = R ที่ได้จริง · Stop respected = ขาดทุนไม่เกิน −1.25R
    ไม่มี SL → ทุกช่อง null (แสดง —) · ไม่มี TP → target null */
@@ -9635,10 +9635,10 @@ function coreApplyPx(){
     const ok = a && !a.suspect && +a.close>0 && a.closeDate && (!c.pxDate || String(a.closeDate) > String(c.pxDate));
     if(!ok){
       /* PX2 — กรอกเอง + W + EMA ว่าง + auto วันเดียวกัน (ไม่ suspect · ema10w>0) → เติม EMA จาก auto (แสดงผลเท่านั้น · px ยังเป็นค่าที่กรอกเอง) */
-      const fill = c.pxDate && c.strategy!=='L' && !(+c.emaW>0) && a && !a.suspect && +a.ema10w>0 && a.closeDate && String(a.closeDate)===String(c.pxDate);
+      const fill = c.pxDate && coreTrackOfCard(c)==='winner' && !(+c.emaW>0) && a && !a.suspect && +a.ema10w>0 && a.closeDate && String(a.closeDate)===String(c.pxDate);
       return Object.assign({}, c, {pxSrc: c.pxDate ? 'manual' : null, _pxSuspect: !!(a && a.suspect)}, fill ? {_pxMan:{px:c.px, pxDate:c.pxDate, emaW:c.emaW}, emaW:+a.ema10w, emaSrc:'auto'} : {});
     }
-    return Object.assign({}, c, {_pxMan:{px:c.px, pxDate:c.pxDate, emaW:c.emaW}, px:+a.close, pxDate:String(a.closeDate), emaW: c.strategy==='L' ? c.emaW : (+a.ema10w>0 ? +a.ema10w : null), pxSrc:'auto', _pxSuspect:false});
+    return Object.assign({}, c, {_pxMan:{px:c.px, pxDate:c.pxDate, emaW:c.emaW}, px:+a.close, pxDate:String(a.closeDate), emaW: coreTrackOfCard(c)!=='winner' ? c.emaW : (+a.ema10w>0 ? +a.ema10w : null), pxSrc:'auto', _pxSuspect:false});
   });
 }
 function pxStart(){
@@ -9855,8 +9855,31 @@ function coreLadders(A, exceptId, bx){
   return out;
 }
 /* ทุนของ trade Core ที่เปิดอยู่ที่ไม่ผูกกับการ์ด L (ไม้ W + ไม้ไม่มีการ์ด) */
+/* ══ PL1·A8 — Compounder = การ์ดแบบ Momentum (strategy 'W') + track:'ladder' · การ์ด strategy 'L' เดิมเก็บข้อมูลไว้ (ไม่ render เป็นการ์ดใช้งานแล้ว) ══ */
+function coreTrackOfCard(c){ return (c && (c.strategy==='L' || c.track==='ladder')) ? 'ladder' : 'winner'; }
+function coreTradeIdsOfTrack(A, trk){ const set = new Set(); coreCardsList.forEach(c=>{ if(c.acct===A && coreTrackOfCard(c)===trk){ if(c.trade_id) set.add(c.trade_id); if(c.acc_trade_id) set.add(c.acc_trade_id); } }); return set; }
+function coreCCost(A, bx){   /* ทุนที่ถือของการ์ด Compounder (แบบ W) · นับเข้าถัง Compounder */
+  const ids = new Set(); coreCardsList.forEach(c=>{ if(c.acct===A && c.strategy!=='L' && c.track==='ladder'){ if(c.trade_id) ids.add(c.trade_id); if(c.acc_trade_id) ids.add(c.acc_trade_id); } });
+  return bx.B.trades.filter(t=>t.port==='core' && t.status==='open' && ids.has(t.id)).reduce((a,t)=>a + (+t.entry||0)*(+t.qty||0)*(t.mult||1)*(tradeCur(t)==='USD'?bx.fx:1), 0);
+}
+/* บริบทของการ์ด Compounder: ถัง = ถัง Compounder · เงินสด = เงินว่างถัง Compounder · FF = สัญญาณ ladder (EMA50/100) · DD = เบรกของถัง ladder · เพดานต่อหุ้น = ladderMaxAcctPct % ของ "ทั้งบัญชี" (แปลงเป็นเศษส่วนของถัง Compounder) */
+function coreCtxTrack(cx, trk){
+  if(trk!=='ladder') return cx;
+  if(cx._lad) return cx._lad;
+  const C = ffPoolFactor('ladder'), cap = C.cap, f = cap>=100 ? 1 : (cap>=75 ? 0.75 : 0.5);
+  let src = C.stale ? 'Regime เก่า · ใช้ค่าล่าสุด' : (C.red===0 ? 'เขียวทั้งคู่' : `แดง ${C.red} ตัว`);
+  if(C.missing && C.missing.length) src += ' · ไม่มีข้อมูล ' + C.missing.join('/');
+  const F = {f, src, stale:!!C.stale, missing:C.missing||[], age:C.age, demo:!!C.demo};
+  let dd = 1; try{ const ev = ddEval(cx.A, 'ladder'); dd = (ev && ev.stage!=='pause') ? ev.sizeFactor : 1; }catch(e){}
+  const capAcct = +cx.cfg.ladderMaxAcctPct > 0 ? +cx.cfg.ladderMaxAcctPct : 5, capFrac = cx.ladderPoolTHB>0 ? (cx.acctTHB*capAcct/100)/cx.ladderPoolTHB : 0;
+  const opts = Object.assign({}, cx.opts, {ddFactor:dd, tierCap:{A:capFrac, B:capFrac}, stockCap:{A:capFrac, B:capFrac}});
+  const out = Object.assign({}, cx, {tankTHB:cx.ladderPoolTHB, cashTHB:cx.lCashTHB, F, opts, track:'ladder', capAcctPct:capAcct});
+  cx._lad = out; return out;
+}
+function coreCxFor(c, cx){ return (c && c.strategy!=='L' && c.track==='ladder') ? coreCtxTrack(cx, 'ladder') : cx; }
+function coreCtxC(c){ return coreCxFor(c, coreCtx(c.acct)); }
 function coreWCost(A, bx){
-  const lTid = new Set(coreCardsList.filter(c=>c.acct===A && c.strategy==='L' && c.trade_id).map(c=>c.trade_id));
+  const lTid = coreTradeIdsOfTrack(A, 'ladder');
   return bx.B.trades.filter(t=>t.port==='core' && t.status==='open' && !lTid.has(t.id))
     .reduce((a,t)=>a + (+t.entry||0)*(+t.qty||0)*(t.mult||1)*(tradeCur(t)==='USD'?bx.fx:1), 0);
 }
@@ -9864,13 +9887,13 @@ function coreCtx(A){
   const bx = coreBase(A), B = bx.B, fx = bx.fx, tankTHB = bx.tankTHB;
   const openTr = B.trades.filter(t=>t.port==='core' && t.status==='open');
   const held = openTr.reduce((a,t)=>a + (+t.entry||0)*(+t.qty||0)*(t.mult||1)*(tradeCur(t)==='USD'?fx:1), 0);
-  const wCost = coreWCost(A, bx), ladders = coreLadders(A, null, bx);
-  const cs = Calc.coreSize, lHeld = ladders.reduce((x,y)=>x + y.heldTHB, 0), lRes = ladders.reduce((x,y)=>x + y.reservedTHB, 0);
+  const wCost = coreWCost(A, bx), ladders = coreLadders(A, null, bx), cCost = coreCCost(A, bx);
+  const cs = Calc.coreSize, lHeld = ladders.reduce((x,y)=>x + y.heldTHB, 0) + cCost, lRes = ladders.reduce((x,y)=>x + y.reservedTHB, 0);
   /* RG2b — ถังแยก: Winner ว่าง = ถัง Winner − ไม้ W · Ladder ว่าง = ถัง Ladder − ถือ − จอง (ไม่หักข้ามถัง) */
   const wp = cs ? cs.poolFree({pool:tankTHB, held:wCost}) : null, lp = cs ? cs.poolFree({pool:bx.ladderPoolTHB, held:lHeld, reserved:lRes}) : null;
   const split = wp && wp.ok && lp && lp.ok ? {w:wCost, lHeld, lReserved:lRes, lUsed:lHeld+lRes, lPct: lp.usedPct, lPool:bx.ladderPoolTHB, cashFree: wp.free, lCashFree: lp.free,
     overCommitted: wp.over, overAmt: Math.max(0, wCost - tankTHB), lOver: lp.over, lOverAmt: Math.max(0, lHeld + lRes - bx.ladderPoolTHB)} : null;
-  return {A, B, fx, tankTHB, ladderPoolTHB: bx.ladderPoolTHB, acctTHB: bx.acctTHB, pools: bx.pools, held, wCost, ladders, split, cashTHB: split ? split.cashFree : Math.max(0, tankTHB-wCost),
+  return {A, B, fx, tankTHB, cCost, ladderPoolTHB: bx.ladderPoolTHB, acctTHB: bx.acctTHB, pools: bx.pools, held, wCost, ladders, split, cashTHB: split ? split.cashFree : Math.max(0, tankTHB-wCost),
     lCashTHB: split ? split.lCashFree : bx.ladderPoolTHB, cfg: bx.cfg, opts: bx.opts, F: coreFNow()};
 }
 /* RG2b — ไม่มีประตู f แล้ว (ขนาดบันไดใหม่ = งบ × ตัวคูณ Regime ของ Ladder ตอนวาง) */
@@ -10020,6 +10043,7 @@ function coreAcctRisk(A){
 
 /* ── มุมมองต่อการ์ด ── */
 function coreView(c, cx){
+  cx = coreCxFor(c, cx);   /* PL1·A8 — การ์ด Compounder ใช้บริบทของถังตัวเอง */
   const cs = Calc.coreSize, e = coreEff(c), mk = c.market || coreMarketOf(c.ticker), div = mk==='US' ? cx.fx : 1;
   const v = {c, kind:e.kind, t:e.t, mk, div, F:cx.F, sym: mk==='US' ? '$' : '฿', riskTHB:0, st:null};
   if(c.strategy==='L'){ v.lc = coreLadderCalc(c.ladder, mk, cx); v.lad = (cx.ladders||[]).find(x=>x.c.id===c.id) || null; }
@@ -10027,7 +10051,8 @@ function coreView(c, cx){
   const t = e.t; if(!t) return v;
   v.qty = +t.qty; v.stop = +t.sl; v.avg = +t.entry;
   v.px = c.px>0 ? +c.px : null;
-  v.ema = (c.strategy!=='L' && c.emaW>0) ? +c.emaW : null;   /* L ไม่ใช้ EMA10 (7E-2b-1) */
+  v.trk = coreTrackOfCard(c);
+  v.ema = c.strategy==='L' ? null : (v.trk==='ladder' ? (c.emaW40>0 ? +c.emaW40 : null) : (c.emaW>0 ? +c.emaW : null));   /* L ไม่ใช้ EMA10 (7E-2b-1) · PL1·A8 Compounder = 40W EMA กรอกเอง (ว่าง = สถานะจาก Stop อย่างเดียว) */
   v.st = cs.status({px:v.px, pxDate:c.pxDate, today:posThaiToday(), stop:v.stop, ema10:v.ema==null?undefined:v.ema});
   v.live = v.st.status!=='na';
   v.riskPx = v.live ? v.qty*Math.max(0, v.px-v.stop) : null;          /* เสี่ยงถึง Stop จากราคา (สกุลตลาด) */
@@ -10070,7 +10095,7 @@ function coreSimCalc(v, cx){
   const blocked = [];
   if(!(v.qty>0)) blocked.push('ไม่มีหุ้นถืออยู่');
   if(stop < v.stop - 1e-9) blocked.push('Stop ใหม่ต่ำกว่า Stop เดิม');
-  if(v.st && v.st.status==='yellow') blocked.push('ปิดใต้ EMA10 — งดเพิ่มไม้');
+  if(v.st && v.st.status==='yellow') blocked.push(v.trk==='ladder' ? 'ปิดใต้ 40W EMA — งดเพิ่มไม้' : 'ปิดใต้ EMA10 — งดเพิ่มไม้');
   if(v.st && v.st.status==='red') blocked.push('ปิดใต้ Stop — ขายหมด');
   if(coreLotN(v.c, v) >= cx.cfg.maxLots) blocked.push(`ครบ ${cx.cfg.maxLots} ไม้แล้ว`);
   { const dd = v.t ? ddCoreBlockAdd(v.c.acct, v.t) : ''; if(dd) blocked.push(dd); }   /* DD1 */
@@ -10097,7 +10122,7 @@ function coreSimIn(id, key, val){
   coreSim[id] = coreSim[id] || {}; coreSim[id][key] = val;
   const c = coreCardsList.find(x=>x.id===id), el = document.querySelector(`[data-sim-res="${id}"]`);
   if(!c || !el) return;
-  try{ const cx = coreCtx(c.acct); el.innerHTML = coreSimHtml(coreView(c, cx), cx); }catch(e){ console.warn('coreSimIn', e); }
+  try{ const cx = coreCtxC(c); el.innerHTML = coreSimHtml(coreView(c, cx), cx); }catch(e){ console.warn('coreSimIn', e); }
 }
 
 /* ── วาดแผง ── */
@@ -10166,16 +10191,17 @@ function coreLotBadge(n, N){
 }
 /* เหตุผลที่ปุ่ม [เติมไม้] กดไม่ได้ (ว่าง = กดได้) */
 function coreAddBlockReason(v, cx){
+  cx = coreCxFor(v.c, cx);
   const s = v.st && v.st.status;
   if(coreErr) return coreErr;
   { const dd = v.t ? ddCoreBlockAdd(v.c.acct, v.t) : ''; if(dd) return dd; }   /* DD1 */
-  if(s==='yellow') return 'ปิดใต้ EMA10 — งดเพิ่มไม้';
+  if(s==='yellow') return v.trk==='ladder' ? 'ปิดใต้ 40W EMA — งดเพิ่มไม้' : 'ปิดใต้ EMA10 — งดเพิ่มไม้';
   if(s==='red') return 'ปิดใต้ Stop — ขายหมด';
   if(s==='na') return 'ไม่มีราคาปิดสัปดาห์ / ราคาเก่าเกิน 7 วัน — อัปเดตราคาก่อน';
   const n = coreLotN(v.c, v), N = cx.cfg.maxLots;
   if(n >= N) return `ครบ ${N} ไม้แล้ว`;
   { const cap = cx.opts.stockCap[csTier(v.c)];   /* CZ1 — ถือครบเพดานรวม/หุ้น (ทุน) → เติมไม่ได้ */
-    if(cx.tankTHB>0 && v.qty>0 && v.avg>0 && v.qty*v.avg >= cx.tankTHB/v.div*cap - 1e-6) return `ถือครบเพดานรวม/หุ้น ${fmt2(cap*100)}% แล้ว`; }
+    if(cx.tankTHB>0 && v.qty>0 && v.avg>0 && v.qty*v.avg >= cx.tankTHB/v.div*cap - 1e-6) return cx.track==='ladder' ? `ถือครบเพดาน ${fmt2(cx.capAcctPct)}% ของบัญชีแล้ว` : `ถือครบเพดานรวม/หุ้น ${fmt2(cap*100)}% แล้ว`; }
   return '';
 }
 function coreMenuHtml(v, cx, opts){
@@ -10289,6 +10315,7 @@ function coreLCardHtml(v, cx){
       <div class="ccBtns">${first}${stopBtn}${moreBtn}${coreMenuHtml(v, cx, {lots:true, cancel:true, close:!red})}</div></div></div>`;
 }
 function coreCardHtmlBase(v, cx){
+  cx = coreCxFor(v.c, cx);
   if(v.c.strategy==='L') return coreLCardHtml(v, cx);
   if(ln1On() && v.kind==='open') return lfOpenCardHtml(v, cx);   /* LN3fix2 — การ์ด Winners ที่ถืออยู่ = ตัวเลขน้อย + ชั้น Base/เร่ง */
   const c = v.c, id = escHtml(c.id), cfg = cx.cfg, tier = csTier(c);
@@ -10556,9 +10583,15 @@ function lfCoreSwHtml(cur){
   const accs = lfCoreAccts(), e = escHtml; if(accs.length<2) return '';
   return `<div class="ln2-seg lf-cardsw" data-lf-accsw role="group" aria-label="เลือกบัญชีของการ์ด">${accs.map(x=>`<button type="button" class="ln2-ab${x.id===cur.id?' on':''}" data-lf-acc="${e(x.id)}" aria-pressed="${x.id===cur.id}" onclick="lfCoreSetAcc('${e(x.id)}')"><span class="acctDotC" style="--ac:${acctColor(x)}"></span>${e(x.name)} · <span data-lf-accn="${e(x.id)}">${lfCoreNCards(x.id)} ตัว</span></button>`).join('')}</div>`;
 }
-function lfCoreCardsHtml(a){
+function lfCoreLegacyRowsHtml(A, cx){   /* PL1·A8 — การ์ด strategy 'L' เดิม: แถวอ่านอย่างเดียว (ไม่มีปุ่มซื้อ/ยกเลิก) */
+  const rows = coreCardsList.filter(c=>c.acct===A && c.strategy==='L' && coreEff(c).kind==='open').map(c=>coreView(c, cx)).filter(v=>v.kind==='open');
+  if(!rows.length) return '';
+  return `<div class="lfLegacy" data-lf-legacy><div class="mut">Legacy ladder (read-only)</div>${rows.map(v=>`<div class="lfLegacyRow" data-lf-legacy-row="${escHtml(v.c.id)}"><b>${escHtml(v.c.ticker)}</b> · qty ${fmt0(v.qty)} · avg ${fmt2(v.avg)} · stop ${fmt2(v.stop)}</div>`).join('')}</div>`;
+}
+function lfCoreCardsHtml(a, trk){
+  trk = trk==='ladder' ? 'ladder' : 'winner';
   const A = a.id, cx = coreCtx(A);
-  const views = coreCardsList.filter(c=>c.acct===A && c.strategy!=='L').map(c=>coreView(c, cx));
+  const views = coreCardsList.filter(c=>c.acct===A && c.strategy!=='L' && coreTrackOfCard(c)===trk).map(c=>coreView(c, cx));
   const openV = views.filter(v=>v.kind==='open').sort((x,y)=>{
     const d = CORE_ST_ORDER[x.st.status] - CORE_ST_ORDER[y.st.status];
     return d || (y.riskTHB - x.riskTHB);
@@ -10566,12 +10599,12 @@ function lfCoreCardsHtml(a){
   const planV = views.filter(v=>v.kind==='plan').sort((x,y)=>String(y.c.created_at||'').localeCompare(String(x.c.created_at||'')));
   const closedV = views.filter(v=>v.kind==='closed');
   const list = openV.concat(planV), n = list.length;
-  const body = n ? `<div class="ccList">${list.map(v=>coreCardHtml(v, cx)).join('')}</div>` : '<div class="ccEmpty" data-c-empty>ยังไม่มีการ์ด Momentum ในบัญชีนี้</div>';
+  const body = n ? `<div class="ccList">${list.map(v=>coreCardHtml(v, cx)).join('')}</div>` : `<div class="ccEmpty" data-c-empty>ยังไม่มีการ์ด ${trk==='ladder' ? 'Compounder' : 'Momentum'} ในบัญชีนี้</div>`;
   const closed = closedV.length ? `<details class="ccClosedWrap" data-c-closedgroup><summary>ปิดแล้ว ${closedV.length} ตัว</summary>${closedV.map(coreClosedHtml).join('')}</details>` : '';
   const all = n ? `<span class="ccAll"><button type="button" class="ccLnk" data-c-expandall onclick="coreAll('${escHtml(A)}',1)">ขยายทั้งหมด</button> · <button type="button" class="ccLnk" data-c-collapseall onclick="coreAll('${escHtml(A)}',0)">ยุบทั้งหมด</button></span>` : '';
   return `<div class="panel lf-cards" data-lf-cards><div class="ccAcct" data-core-acct="${escHtml(A)}" style="--ac:${acctColor(a)}">
-    <div class="lf-ch" data-lf-ch><b>การ์ด Momentum</b><span class="mut"><span data-lf-n>${n} ตัว</span> · <a href="#" data-c-newplan data-lf-newplan onclick="coreNewOpen('${escHtml(A)}');return false">＋ แผน Core</a></span></div>
-    ${all ? `<div class="ccAcctH">${all}</div>` : ''}${body}${closed}${lfOrphansHtml(A)}</div></div>`;
+    <div class="lf-ch" data-lf-ch><b>การ์ด ${trk==='ladder' ? 'Compounder' : 'Momentum'}</b><span class="mut"><span data-lf-n>${n} ตัว</span> · <a href="#" data-c-newplan data-lf-newplan onclick="coreNewOpen('${escHtml(A)}');return false">＋ แผน Core</a></span></div>
+    ${all ? `<div class="ccAcctH">${all}</div>` : ''}${body}${closed}${trk==='ladder' ? lfCoreLegacyRowsHtml(A, cx) : lfOrphansHtml(A)}</div></div>`;
 }
 /* ไม้ Core ที่ไม่มีการ์ด (ข้อมูลเก่า) — เดิมจัดการใน Positions · Lean เก็บไว้ในพับนี้ (ปิด/แก้/ยกเลิก/ลบ) */
 function lfOrphansHtml(A){
@@ -10601,19 +10634,23 @@ function lfCardRow(h, v, cx){
     l2 = `ไม้ ${n} · SL ${fmt2(v.stop)}` + (v.accT ? ` · เร่ง ${fmt2(v.accStop)}` : '') + (st==='red' ? ' · ปิดใต้ SL — ขายหมด' : (st==='yellow' ? ' · ปิดใต้ EMA10' : ''));   /* LN3fix2 */
     if(st==='na') warn = '<span class="lf-warnchip" data-lf-warn>⚠ ขาดราคา</span>';
   }
-  const tag = `<span class="ccTag" data-lf-tag title="${escHtml(c.cs ? `${mk} · ${csLbl(c)}` : `${mk} · Tier ${tier}`)}">${c.cs ? (c.cs.stars>0 ? csStarTxt(c.cs.stars) : 'Base ' + c.cs.baseRiskPct.toFixed(2) + '%') : tier} · ${isL ? 'Compounder' : 'Momentum'}</span>`;
+  const tag = `<span class="ccTag" data-lf-tag title="${escHtml(c.cs ? `${mk} · ${csLbl(c)}` : `${mk} · Tier ${tier}`)}">${c.cs ? (c.cs.stars>0 ? csStarTxt(c.cs.stars) : 'Base ' + c.cs.baseRiskPct.toFixed(2) + '%') : tier} · ${(isL || c.track==='ladder') ? 'Compounder' : 'Momentum'}</span>`;
   const row = `<button type="button" class="ccRow lfRow" data-c-row aria-expanded="${open}" onclick="coreToggle('${id}')">${ic}<span class="ccTkw"><span class="ccTk" data-c-ticker>${escHtml(c.ticker)}</span>${tag}${warn}</span><span class="ccChev">›</span><span class="lfL2" data-lf-l2>${escHtml(l2)}</span></button>`;
   return h.replace(/<button type="button" class="ccRow"[\s\S]*?<\/button>/, ()=>row);
 }
+function coreLadderTrackWords(h, cx){   /* PL1·A8 — การ์ด Compounder แบบ W: EMA10 → 40W EMA · เพดานแสดงเป็น % ของบัญชี */
+  return h.replace(/EMA10/g, '40W EMA').replace(/เพดานไม้แรก\s*[\d.]+%/g, `เพดาน ${fmt2(cx.capAcctPct || 5)}% ของบัญชี`).replace(/ยังไม่กรอก 40W EMA/g, 'ยังไม่กรอก 40W EMA — ใช้ Stop อย่างเดียว');
+}
 function coreCardHtml(v, cx){
-  const h = coreCardHtmlBase(v, cx);
-  if(!ln1On()) return h;
-  try{ return lfCardRow(h, v, cx); }catch(e){ console.warn('lf card row:', e); return h; }
+  let h = coreCardHtmlBase(v, cx);
+  if(ln1On()){ try{ h = lfCardRow(h, v, cx); }catch(e){ console.warn('lf card row:', e); } }
+  if(v.c.strategy!=='L' && v.c.track==='ladder') h = coreLadderTrackWords(h, coreCxFor(v.c, cx));
+  return h;
 }
 /* คำในโหมด Lean: W → Winners · L / บันได → Ladder · ระบบ Week → Winners (แก้เฉพาะข้อความที่เห็น ไม่แตะ attribute/ค่าเก็บ) */
 function lfWordsStr(s){
   return s.replace(/(?<!Compounder \()ถัวตามแนวรับ(?:\s*\(L\))?/g, 'Compounder').replace(/ระบบ Week/g, 'Momentum').replace(/บันไดถัว|บันได/g, 'Compounder')
-    .replace(/(^|[\s(·/])W(?=$|[\s·/)])/g, '$1Winners').replace(/(^|[\s(·/])L(?=$|[\s·/)])/g, '$1Ladder');
+    .replace(/(^|[\s(·/])W(?=$|[\s·/)])/g, '$1Momentum').replace(/(^|[\s(·/])L(?=$|[\s·/)])/g, '$1Compounder');
 }
 function lfWords(root){
   if(!root || !ln1On()) return;
@@ -10858,7 +10895,7 @@ function lfAddPrev(v, layer){
 }
 function lfAddCalc(c, o){
   /* o = {acc:bool, px, sl, risk (% ที่ใส่ · NaN = ยังไม่ใส่), riskEdited} → {r, v, cx, maxRiskPct, defRiskPct, blocked[], warns[], why[]} */
-  const cx = coreCtx(c.acct), v = coreView(c, cx), tier = csTier(c), mk = v.mk, acc = !!o.acc;
+  const cx = coreCtxC(c), v = coreView(c, cx), tier = csTier(c), mk = v.mk, acc = !!o.acc;
   const out = {v, cx, acc, blocked:[], warns:[], why:[], r:null, tier};
   if(v.kind!=='open'){ out.blocked.push('ไม่มีหุ้นถืออยู่'); return out; }
   const tankN = cx.tankTHB / v.div, cashN = cx.cashTHB / v.div;
@@ -10889,7 +10926,7 @@ function lfAddCalc(c, o){
   if(!(v.qty>0)) out.blocked.push('ไม่มีหุ้นถืออยู่');
   if(!acc && o.sl < v.stop - 1e-9) out.blocked.push('SL Base ใหม่ต่ำกว่า SL เดิม');
   if(acc && v.accT && o.sl < v.accStop - 1e-9) out.blocked.push('SL เร่งใหม่ต่ำกว่า SL เร่งเดิม');
-  if(v.st && v.st.status==='yellow') out.blocked.push('ปิดใต้ EMA10 — งดเพิ่มไม้');
+  if(v.st && v.st.status==='yellow') out.blocked.push(v.trk==='ladder' ? 'ปิดใต้ 40W EMA — งดเพิ่มไม้' : 'ปิดใต้ EMA10 — งดเพิ่มไม้');
   if(v.st && v.st.status==='red') out.blocked.push('ปิดใต้ SL Base — ขายหมด');
   if(!acc && coreLotN(c, v) >= cx.cfg.maxLots) out.blocked.push(`ครบ ${cx.cfg.maxLots} ไม้ Base แล้ว`);
   { const dd = v.t ? ddCoreBlockAdd(c.acct, v.t) : ''; if(dd) out.blocked.push(dd); }
@@ -10906,7 +10943,7 @@ function lfAddCalc(c, o){
 let lfAddSt = null;   /* {id, acc, riskEdited, slEdited} */
 function lfAddOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
-  const cx = coreCtx(c.acct), v = coreView(c, cx); if(v.kind!=='open') return;
+  const cx = coreCtxC(c), v = coreView(c, cx); if(v.kind!=='open') return;
   if(lfAddBlockReason(v, cx)) return;
   lfAddSt = {id, acc:false, riskEdited:false, slEdited:false};
   coreDlg = {kind:'lfadd', id};
@@ -10925,7 +10962,7 @@ function lfAddOpen(id){
 function lfAddLayer(on){
   if(!lfAddSt) return;
   const c = coreCardsList.find(x=>x.id===lfAddSt.id); if(!c) return;
-  const v = coreView(c, coreCtx(c.acct));
+  const v = coreView(c, coreCtxC(c));
   lfAddSt.acc = !!on; lfAddSt.riskEdited = false; lfAddSt.slEdited = false;
   const sl = coreEl('lfaSl'); sl.value = on ? (v.accT ? String(v.accStop) : '') : String(v.stop);
   lfAddIn();
@@ -10969,7 +11006,7 @@ function lfAddIn(){
 function lfAddSave(){
   const k = lfAddIn(); if(!k || !k.r || k.blocked.length) return;
   const d = lfAddRead(); if(!d) return;
-  const c = d.c, A = c.acct, B = getBook(A), cx = coreCtx(A), v = k.v, qty = k.r.qty, date = posThaiToday();
+  const c = d.c, A = c.acct, B = getBook(A), cx = coreCtxC(c), v = k.v, qty = k.r.qty, date = posThaiToday();
   const t = B.trades.find(x=>x.id===c.trade_id); if(!t || t.status!=='open'){ coreSheetClose(); return; }
   const lots = (c.lots || []).slice(), hist = (c.stopHistory || []).slice();
   const lot = {n:lots.length+1, date, px:d.px, qty, f:cx.F.f, stop:d.sl, layer:d.acc ? 'acc' : 'base', risk:+(k.riskPct).toFixed(4)};
@@ -11006,7 +11043,7 @@ function lfAddSave(){
 /* ── เลื่อน Stop (Lean) · Base | เร่ง | ทั้งคู่ ── */
 function lfStopOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
-  const v = coreView(c, coreCtx(c.acct)); if(v.kind!=='open') return;
+  const v = coreView(c, coreCtxC(c)); if(v.kind!=='open') return;
   coreDlg = {kind:'stop', id, lean:true, layer:'base', cur:v.stop};
   coreSheet('stop', `<h3>เลื่อน Stop · ${escHtml(c.ticker)}</h3>
     <div class="ccSub" data-lf-stopcur>SL Base ${fmt2(v.stop)}${v.accT ? ` · SL เร่ง ${fmt2(v.accStop)}` : ''} · เลื่อนขึ้นได้อย่างเดียว</div>
@@ -11023,7 +11060,7 @@ function lfStopLayer(l){
 }
 function lfStopIn(){
   const d = coreDlg, c = coreCardsList.find(x=>x.id===d.id); if(!c) return false;
-  const v = coreView(c, coreCtx(c.acct));
+  const v = coreView(c, coreCtxC(c));
   const ns = coreNum(coreEl('csStop').value), er = coreEl('csErr');
   const curs = d.layer==='base' ? [v.stop] : (d.layer==='acc' ? [v.accStop] : [v.stop, v.accStop]);
   let msg = '';
@@ -11055,7 +11092,7 @@ function lfStopSave(){
 }
 function coreEmgOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
-  const cx = coreCtx(c.acct), v = coreView(c, cx); if(v.kind!=='open') return;
+  const cx = coreCtxC(c), v = coreView(c, cx); if(v.kind!=='open') return;
   coreSheet('emg', `<h3>${escHtml(c.ticker)} · Stop ฉุกเฉิน</h3><div class="ccSub">ต่ำกว่า SL ของแต่ละชั้น −${fmt2(cx.cfg.emergencyPct)}% · ตั้งคำสั่งฉุกเฉินที่โบรกเอง</div>
     <div class="ccTw"><table class="ccTbl" data-lf-emg><thead><tr><th>ชั้น</th><th>SL</th><th>ฉุกเฉิน</th></tr></thead><tbody>
       <tr><td>Base</td><td>${fmt2(v.stop)}</td><td>${v.emg!=null ? fmt2(v.emg) : '—'}</td></tr>
@@ -11064,7 +11101,7 @@ function coreEmgOpen(id){
 }
 function coreLotsOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
-  const cx = coreCtx(c.acct), v = coreView(c, cx); if(v.kind!=='open') return;
+  const cx = coreCtxC(c), v = coreView(c, cx); if(v.kind!=='open') return;
   const lots = c.lots || []; if(!lots.length) return;
   if(ln1On()){   /* LN3fix2 — รายไม้ + ชั้น + Risk ที่ใส่ */
     coreSheet('lots', `<h3>${escHtml(c.ticker)} · ไม้ที่ซื้อ</h3><div class="ccSub">Base ${fmt0(v.qty)} @ ${fmt2(v.avg)} · SL ${fmt2(v.stop)}${v.accT ? ` · เร่ง ${fmt0(v.accQty)} @ ${fmt2(v.accAvg)} · SL ${fmt2(v.accStop)}` : ''}</div>
@@ -11473,7 +11510,7 @@ function coreNewOpen(acct, opt){
   const cur = opt.id ? coreCardsList.find(x=>x.id===opt.id) : null;
   const mode = cur ? opt.mode : 'new';
   const a0 = cur ? cur.acct : ((acct && list.some(a=>a.id===acct)) ? acct : (list.some(a=>a.id===acctActive) ? acctActive : list[0].id));
-  coreNew = {acct:a0, strat: mode==='new' ? (opt.strat==='L' ? 'L' : 'W') : 'L', mode,   /* RG2b — Winner กับ Ladder แยกหน้า: กลยุทธ์กำหนดจากหน้าที่เปิด (ไม่มีตัวเลือก W/L ในฟอร์ม · ไม่มีโหมดแปลง) */
+  coreNew = {acct:a0, strat: mode==='new' ? 'W' : 'L', track: mode==='new' ? ((opt.strat==='L' || planScope==='ladder') ? 'ladder' : 'winner') : 'ladder', mode,   /* RG2b — Winner กับ Ladder แยกหน้า: กลยุทธ์กำหนดจากหน้าที่เปิด (ไม่มีตัวเลือก W/L ในฟอร์ม · ไม่มีโหมดแปลง) */
    id: cur ? cur.id : null, f:null, showAll:false, nlv:2, lv:['','',''], sl:'', budEdited:false};
   coreTi = coreTiState(cur);
   if(cur) coreTi.pick = coreTiPickOf(cur);
@@ -11487,8 +11524,8 @@ function coreNewOpen(acct, opt){
     coreNew.sl = String(cur.ladder.sl); coreNew.budEdited = true; { const bx0 = coreBase(cur.acct), bt0 = coreLadderBudgetTHB(cur.ladder, bx0); coreNew.bud = bx0.ladderPoolTHB>0 ? String(+(bt0/bx0.ladderPoolTHB*100).toFixed(6)) : '0'; }   /* RG2b — % ของถัง Ladder (งบ ฿ เดิมคงที่) */
   }
   const cfg0 = coreRiskCfg(a0);
-  const wl = [...new Set((typeof wlItems!=='undefined' ? wlItems : []).filter(w=>w.archived!==true && (coreNew.strat==='L' ? wlLadderEligible(w) : wlTrackOf(w)==='winner')).map(w=>coreNorm(w.ticker)).filter(Boolean))];   /* RG2b — Winner: หุ้น track Winner · Ladder: track Ladder ที่ Base / Sideways-Up */
-  const title = mode==='edit' ? `แก้แผนบันได · ${escHtml(cur.ticker)}` : (coreNew.strat==='L' ? 'New ladder' : 'New Momentum plan');
+  const wl = [...new Set((typeof wlItems!=='undefined' ? wlItems : []).filter(w=>w.archived!==true && (coreNew.strat==='L' ? wlLadderEligible(w) : true)).map(w=>coreNorm(w.ticker)).filter(Boolean))];   /* RG2b — Winner: หุ้น track Winner · Ladder: track Ladder ที่ Base / Sideways-Up */
+  const title = mode==='edit' ? `แก้แผนบันได · ${escHtml(cur.ticker)}` : (coreNew.strat==='L' ? 'New ladder' : (coreNew.track==='ladder' ? 'New Compounder plan' : 'New Momentum plan'));
   const legacyHtml = `<h3>${title}</h3>
     <div class="ccF"><label>บัญชี</label><div id="cnAcctBox"></div></div>
     <div class="ccF"><label>Ticker</label><input type="text" id="cnTicker" list="cnTickerList" autocomplete="off" autocapitalize="characters" placeholder="เช่น AAPL หรือ XXX.BK" value="${cur?escHtml(cur.ticker):escHtml(coreNorm(opt.ticker||''))}" ${cur?'readonly':''} oninput="coreNewIn()">
@@ -11563,7 +11600,9 @@ function coreNewIn(){
     : `<select id="cnAcct" onchange="coreNewPick(this.value)">${shown.map(a=>`<option value="${escHtml(a.id)}"${a.id===n.acct?' selected':''}>${escHtml(td3AcctName(a))} · ${coreRiskCfg(a.id).market==='both'?(ln1On()?'US+TH':'ทั้งคู่'):coreRiskCfg(a.id).market}</option>`).join('')}</select>`
     + (hidden>0 && !n.showAll ? ` <button type="button" class="ccBtn" id="cnShowAll" onclick="coreNewShowAll()">แสดงบัญชีอื่น</button> <span class="ccSub">ซ่อน ${hidden} บัญชีที่ตลาดไม่ตรงกับ ticker</span>` : '');
   if(box.dataset.h !== html){ box.innerHTML = html; box.dataset.h = html; }
-  const cx = coreCtx(n.acct), cfg = cx.cfg;
+  const cx0 = coreCtx(n.acct), cfg = cx0.cfg;
+  if(n.mode==='new'){ const wi0 = coreWlItem(rd.ticker); n.track = wi0 ? wlTrackOf(wi0) : (n.track || 'winner'); }   /* PL1·A8 — Track มาจาก Watchlist (หุ้น 1 ตัว = 1 track) */
+  const cx = n.mode==='new' ? coreCtxTrack(cx0, n.track) : cx0;
   /* Tier: แก้ได้ทุกโหมดยกเว้นแก้แผนบันได (ใช้ Tier ของการ์ด) */
   const ti = rd.ti, star = !!coreEl('cnStarBox'), mk0 = rd.mk || (cfg.market==='TH' ? 'TH' : 'US');
   /* CS1 — แผนใหม่: ★/ประเมินจาก stockNotes.eval ของ ticker นี้ (คำนวณสดทุกครั้ง · ไม่เก็บค่าของหุ้นตัวก่อน) · แก้/แปลงแผนเดิม: ใช้การ์ดเดิม */
@@ -11582,14 +11621,12 @@ function coreNewIn(){
   if(dup) errs.push(`มีการ์ด ${rd.ticker} อยู่แล้ว`);
   if(rd.ticker && n.mode==='new' && !wlReady(rd.ticker)) errs.push(wlReadyMsg(rd.ticker));   /* PL1·A5 — Ready = Watchlist (ไม่ archive) + ① Why buy + ④ Wrong if · แผน/ไม้ที่เปิดอยู่ไม่โดน */
   if(rd.ticker && n.mode==='new'){   /* RG2b — หุ้น 1 ตัว = 1 track */
-    const wi = coreWlItem(rd.ticker), trk = wi ? wlTrackOf(wi) : 'winner';
-    if(n.strat==='L'){ if(!wi || !wlLadderEligible(wi)) errs.push('Pick a stock on the Compounder track (Base or Sideways-Up)'); }
-    else if(trk==='ladder') errs.push(`${rd.ticker} is on the Compounder track — use + New ladder`);
+    /* PL1·A8 — ไม่มีข้อจำกัดหน้า/track อีกต่อไป: แผนใหม่ใช้ Track ของหุ้นใน Watchlist */
   }
   if(ti && ti.needReason && !ti.reason) errs.push('Tier A ต้องมีเหตุผล');
   if(n.mode==='edit' && tier!=='A') errs.push('แก้แผนบันไดต้องเป็น Tier A');
   else if(n.mode==='edit' && !fortress) errs.push('แก้แผนบันไดต้องเป็น A-Fortress');
-  if(!(cx.tankTHB>0)) errs.push('ยังไม่ได้ตั้งถัง Momentum ของบัญชีนี้');
+  if(!(cx.tankTHB>0)) errs.push(`ยังไม่ได้ตั้งถัง ${n.track==='ladder' ? 'Compounder' : 'Momentum'} ของบัญชีนี้`);
   if(coreErr) errs.push(coreErr);
   const mk = rd.mk || (cfg.market==='TH' ? 'TH' : 'US');
   if(!isL){
@@ -11618,7 +11655,7 @@ function coreNewIn(){
       const re = coreEl('cnRes'); if(re.dataset.h !== rh){ re.innerHTML = rh; re.dataset.h = rh; } }
     if(!(rd.entry>0) || !(rd.stop>0)) errs.push('กรอก Entry และ Stop');
     else if(!(rd.entry>rd.stop)) errs.push('Entry ต้องมากกว่า Stop');
-    { const ddm = n.mode==='new' ? ddCoreBlockNew(n.acct, n.strat==='L' ? 'ladder' : 'winner') : ''; if(ddm) errs.push(ddm); }   /* DD1 — พัก = บันทึกแผน W ไม่ได้ */
+    { const ddm = n.mode==='new' ? ddCoreBlockNew(n.acct, n.track==='ladder' ? 'ladder' : 'winner') : ''; if(ddm) errs.push(ddm); }   /* DD1 — พัก = บันทึกแผน W ไม่ได้ */
     coreEl('cnSave').textContent = 'บันทึกแผน';
   } else {
     coreNewInL(n, rd, cx, cfg, mk, tier, errs, fortress);
@@ -11678,7 +11715,7 @@ function coreNewSave(){
   /* CS1 — snapshot ของการประเมิน/★/Base risk/ตัวปรับ ณ วันบันทึก · แก้การประเมินทีหลังไม่แตะแผน/ไม้ที่บันทึกแล้ว · ตรวจด่านซ้ำที่นี่อีกชั้น */
   let csn = null;
   if(coreEl('cnStarBox') && n.mode==='new'){
-    const cx0 = coreCtx(n.acct), mk1 = rd.mk || coreMarketOf(rd.ticker), csx = csPlanState(rd.ticker, n.acct, cx0, mk1);
+    const cx0 = coreCtxTrack(coreCtx(n.acct), n.track), mk1 = rd.mk || coreMarketOf(rd.ticker), csx = csPlanState(rd.ticker, n.acct, cx0, mk1);
     if(n.strat!=='L' && !(csx.lotRisk>0)) return;   /* PL1·A4 — ไม่มีด่าน ★/RS/Gate 5 แล้ว (Ready rule มาใน A5) */
     let ra = null;
     if(n.strat!=='L'){ const fl = coreFirstLotCalc(cx0, mk1, CS_CAP_KEY, rd.entry, rd.stop, cx0.F.f, csx.lotRisk); ra = fl && fl.ok ? fl.risk : 0; }
@@ -11695,9 +11732,10 @@ function coreNewSave(){
     return;
   }
   const id = coreNewId();
-  const card = Object.assign({acct:n.acct, ticker:rd.ticker, market:rd.mk, strategy:'W', plan:Object.assign({entry:rd.entry, stop:rd.stop}, (coreEl('cnRisk') && coreNum(coreEl('cnRisk').value)>0) ? {risk:+coreNum(coreEl('cnRisk').value)} : {}), stop:rd.stop, stopHistory:[], px:null, pxDate:null, emaW:null, lots:[], trade_id:null, status:'plan', created_at:now}, tfields, csf);
+  const card = Object.assign({acct:n.acct, ticker:rd.ticker, market:rd.mk, strategy:'W', ...(n.track==='ladder' ? {track:'ladder'} : {}), plan:Object.assign({entry:rd.entry, stop:rd.stop}, (coreEl('cnRisk') && coreNum(coreEl('cnRisk').value)>0) ? {risk:+coreNum(coreEl('cnRisk').value)} : {}), stop:rd.stop, stopHistory:[], px:null, pxDate:null, emaW:null, lots:[], trade_id:null, status:'plan', created_at:now}, tfields, csf);
   coreSheetClose();
   coreWrite(id, card);
+  { const want = n.track==='ladder' ? 'ladder' : 'stock'; if(planScope!==want && (planScope==='stock' || planScope==='ladder')) setPlanScope(want); }   /* PL1·A8 — โชว์การ์ดใหม่ในหน้าของ track ตัวเอง */
 }
 function coreLEditOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c || c.status!=='plan' || c.strategy!=='L' || !coreIsFortress(c)) return;
@@ -11708,7 +11746,7 @@ function coreLEditOpen(id){
 function coreBuy1Open(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c || c.status!=='plan' || c.trade_id) return;
   if(ddCoreBlockNew(c.acct, ddPoolOfCard(c))) return;   /* DD1 — พัก = เปิดไม้ใหม่ไม่ได้ */
-  const cx = coreCtx(c.acct), mk = c.market || coreMarketOf(c.ticker), tier = csTier(c);
+  const cx = coreCtxC(c), mk = c.market || coreMarketOf(c.ticker), tier = csTier(c);
   const r = coreFirstLotCalc(cx, mk, tier, +c.plan.entry, +c.plan.stop, cx.F.f, coreFirstRisk(c, cx, tier));
   if(!r || !r.ok || r.zeroLot) return;
   coreDlg = {kind:'buy1', id, rec:r.qty};
@@ -11746,7 +11784,7 @@ function coreBuy1Save(){
   if(coreBuy1In().length) return;
   const d = coreBuy1Read(); if(!d) return;
   const c = d.c; if(c.status!=='plan' || c.trade_id){ coreSheetClose(); return; }
-  const A = c.acct, B = getBook(A), cx = coreCtx(A);
+  const A = c.acct, B = getBook(A), cx = coreCtxC(c);
   const tid = 't' + Date.now() + Math.floor(Math.random()*1000);
   const t = makeTradeObject({id:tid, date:d.date, sym:c.ticker, port:'core', bias:'Long', entry:d.px, sl:d.stop, qty:d.qty, mult:1,
     cur: d.mk==='TH' ? 'THB' : 'USD', status:'open', fromCard:true});
@@ -11762,7 +11800,7 @@ function coreBuy1Save(){
 /* ซื้อไม้เติม */
 function coreBuyAddOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
-  const cx = coreCtx(c.acct), v = coreView(c, cx); if(v.kind!=='open') return;
+  const cx = coreCtxC(c), v = coreView(c, cx); if(v.kind!=='open') return;
   const s = coreSimCalc(v, cx); if(!s.ok || s.blocked.length) return;
   coreDlg = {kind:'buyadd', id, stop:s.stop, rec:s.r.qty};
   coreSheet('buyadd', `<h3>บันทึกซื้อไม้เติม · ${escHtml(c.ticker)}</h3>
@@ -11797,7 +11835,7 @@ function coreBuyAddIn(){
 function coreBuyAddSave(){
   if(coreBuyAddIn().length) return;
   const d = coreBuyAddRead(); if(!d) return;
-  const c = d.c, A = c.acct, B = getBook(A), cx = coreCtx(A);
+  const c = d.c, A = c.acct, B = getBook(A), cx = coreCtxC(c);
   const t = B.trades.find(x=>x.id===c.trade_id); if(!t || t.status!=='open'){ coreSheetClose(); return; }
   const oldSl = +t.sl, newQty = (+t.qty) + d.qty;
   if(!(t.sl0>0) && oldSl>0) t.sl0 = oldSl;   /* DD1 — ไม้เก่าไม่มี sl0: เก็บ Stop ก่อนย้าย */
@@ -11817,7 +11855,7 @@ function coreBuyAddSave(){
 /* 7E-2b-1 · บันทึกซื้อระดับ Lk (ระดับ wait ตัวแรกเท่านั้น) */
 function coreLBuyOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c || c.strategy!=='L' || !c.ladder) return;
-  const cx = coreCtx(c.acct), v = coreView(c, cx); if(v.kind==='closed') return;
+  const cx = coreCtxC(c), v = coreView(c, cx); if(v.kind==='closed') return;
   if(v.kind==='open' && v.st && v.st.status==='red') return;
   const nat = v.lc && v.lc.nat; if(!nat || !nat.ok) return;
   const k = (c.ladder.levels||[]).findIndex(l=>l.status==='wait'); if(k<0) return;
@@ -11882,7 +11920,7 @@ function coreLBuySave(){
 /* 7E-2b-1 · ยกเลิกระดับที่จอง (มือ) — ไม่กระจายเงินไประดับอื่น */
 function coreLCancelOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c || c.strategy!=='L' || !c.ladder) return;
-  const cx = coreCtx(c.acct), v = coreView(c, cx); if(v.kind!=='open' || !v.lc || !v.lc.thb.ok) return;
+  const cx = coreCtxC(c), v = coreView(c, cx); if(v.kind!=='open' || !v.lc || !v.lc.thb.ok) return;
   const opts = (c.ladder.levels||[]).map((l,i)=>({i, l, row:v.lc.thb.rows[i]})).filter(x=>x.l.status==='wait');
   if(!opts.length) return;
   coreDlg = {kind:'lcancel', id};
@@ -11912,7 +11950,7 @@ function coreLCancelSave(){
 function coreStopOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
   if(ln1On() && c.strategy!=='L') return lfStopOpen(id);   /* LN3fix2 */
-  const v = coreView(c, coreCtx(c.acct)); if(v.kind!=='open') return;
+  const v = coreView(c, coreCtxC(c)); if(v.kind!=='open') return;
   coreDlg = {kind:'stop', id, cur:v.stop};
   coreSheet('stop', `<h3>เลื่อน Stop · ${escHtml(c.ticker)}</h3><div class="ccSub">Stop ปัจจุบัน ${fmt2(v.stop)} · เลื่อนขึ้นได้อย่างเดียว</div>
     <div class="ccF"><label>Stop ใหม่</label><input type="text" inputmode="decimal" id="csStop" oninput="coreStopIn()"></div>
@@ -11941,7 +11979,7 @@ function coreStopIn(){
 }
 /* ตัวอย่างสด: ระดับที่จะถูกยกเลิกเมื่อเลื่อน Stop (applyStopMove) · เงินคืนเป็นบาท */
 function coreStopPreview(c, ns){
-  const cx = coreCtx(c.acct), mk = c.market || coreMarketOf(c.ticker), ld = c.ladder;
+  const cx = coreCtxC(c), mk = c.market || coreMarketOf(c.ticker), ld = c.ladder;
   const mv = Calc.coreSize.applyStopMove({sl:+ld.sl, newSl:ns, levels:ld.levels});
   if(!mv.ok || !mv.cancelled.length) return {text:'ไม่มีระดับที่ถูกยกเลิก', idx:[]};
   const lc = coreLadderCalc(ld, mk, cx);
@@ -11979,7 +12017,7 @@ function corePxOpen(id){
     ${useBtn}
     <div class="ccF"><label>ราคาปิด</label><input type="text" inputmode="decimal" id="cpxPx" value="${man.px>0?escHtml(String(man.px)):''}" oninput="corePxIn()"></div>
     <div class="ccF"><label>วันที่ (ศุกร์ล่าสุด)</label><input type="date" id="cpxDate" value="${escHtml(fillDate)}" oninput="corePxIn()"></div>
-    ${c.strategy==='L' ? '' : `<div class="ccF"><label>EMA10 รายสัปดาห์ (ว่างได้)</label><input type="text" inputmode="decimal" id="cpxEma" value="${man.emaW>0?escHtml(String(man.emaW)):''}" oninput="corePxIn()"></div>`}
+    ${c.strategy==='L' ? '' : (c.track==='ladder' ? `<div class="ccF"><label>40W EMA รายสัปดาห์ (ว่างได้ · ว่าง = ใช้ Stop อย่างเดียว)</label><input type="text" inputmode="decimal" id="cpxEma" data-cpx-ema40 value="${c.emaW40>0?escHtml(String(c.emaW40)):''}" oninput="corePxIn()"></div>` : `<div class="ccF"><label>EMA10 รายสัปดาห์ (ว่างได้)</label><input type="text" inputmode="decimal" id="cpxEma" value="${man.emaW>0?escHtml(String(man.emaW)):''}" oninput="corePxIn()"></div>`)}
     <div class="ccErr" id="cpxErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="cpxSave" data-cpx-save onclick="corePxSave()" disabled>บันทึก</button></div>`);
   corePxIn();
@@ -12008,7 +12046,7 @@ function corePxIn(){
   let msg = '';
   if(!(px>0)) msg = 'กรอกราคาปิด';
   else if(!d) msg = 'กรอกวันที่';
-  else if(ema!==null && !(ema>0)) msg = 'EMA10 ต้องมากกว่า 0 (หรือเว้นว่าง)';
+  else if(ema!==null && !(ema>0)) msg = (coreCardsList.find(x=>x.id===coreDlg.id) || {}).track==='ladder' ? '40W EMA ต้องมากกว่า 0 (หรือเว้นว่าง)' : 'EMA10 ต้องมากกว่า 0 (หรือเว้นว่าง)';
   else if(coreErr) msg = coreErr;
   const er = coreEl('cpxErr'); er.style.display = msg && px>0 ? '' : 'none'; er.textContent = msg;
   coreEl('cpxSave').disabled = !!msg;
@@ -12019,8 +12057,10 @@ function corePxSave(){
   const id = coreDlg.id, px = coreNum(coreEl('cpxPx').value), d = coreEl('cpxDate').value;
   const emaEl = coreEl('cpxEma');
   const ema = (!emaEl || emaEl.value.trim()==='') ? null : coreNum(emaEl.value);
+  const c40 = coreCardsList.find(x=>x.id===id);
   coreSheetClose();
-  coreWrite(id, {px, pxDate:d, emaW:ema});
+  if(c40 && c40.strategy!=='L' && c40.track==='ladder') coreWrite(id, {px, pxDate:d, emaW40:ema});   /* PL1·A8 — 40W EMA กรอกเอง */
+  else coreWrite(id, {px, pxDate:d, emaW:ema});
 }
 
 /* Tier… (⋯ ทั้ง W และ L) — บล็อก Tier เดียวกับแผนใหม่ · ยก A ตอนคำนวณได้ B ต้องมีเหตุผล · ลด A → B ได้เสมอ · ปิดโดยไม่บันทึก = ไม่มีอะไรเปลี่ยน */
@@ -14308,14 +14348,14 @@ function csAddRisk(c, cx, tier, tankN){
 }
 function csPlanState(ticker, acct, cx, mk){
   const ev = csEvalOf(ticker), div = mk==='US' ? cx.fx : 1;
-  const out = {ticker, ev, fortress: !!(ev && ev.fortress==='passed'), base: cx.cfg.baseRisk, sb:null, lotRisk:NaN, used:0, equity:0, how:''};   /* PL1·A4 — Base Risk ค่าเดียวจาก Settings */
+  const out = {pool: cx.track==='ladder' ? 'Compounder' : 'Momentum', capAcct: cx.capAcctPct || 0, ticker, ev, fortress: !!(ev && ev.fortress==='passed'), base: cx.cfg.baseRisk, sb:null, lotRisk:NaN, used:0, equity:0, how:''};   /* PL1·A4 — Base Risk ค่าเดียวจาก Settings */
   if(cx.tankTHB>0 && ticker){
     const equity = cx.tankTHB / div, used = csUsedOther(acct, ticker, null);
     out.equity = equity; out.used = used;
     out.sb = Calc.riskBudget({base:out.base, equity, f:cx.F.f, dd:cx.opts.ddFactor, used});
     if(out.sb.ok){
       out.lotRisk = out.sb.left / equity;
-      out.how = `Base ${out.base.toFixed(2)}% × Momentum pool ${csMoney(equity, mk)} = ${csMoney(out.sb.full, mk)} × FF ${Math.round(out.sb.f*100)}%${out.sb.dd<1 ? ' × DD ' + out.sb.dd : ''} = ${csMoney(out.sb.adj, mk)} − used ${csMoney(used, mk)} = ${csMoney(out.sb.left, mk)}`;
+      out.how = `Base ${out.base.toFixed(2)}% × ${cx.track==='ladder' ? 'Compounder' : 'Momentum'} pool ${csMoney(equity, mk)} = ${csMoney(out.sb.full, mk)} × FF ${Math.round(out.sb.f*100)}%${out.sb.dd<1 ? ' × DD ' + out.sb.dd : ''} = ${csMoney(out.sb.adj, mk)} − used ${csMoney(used, mk)} = ${csMoney(out.sb.left, mk)}`;
     }
   }
   return out;
@@ -14329,7 +14369,7 @@ function csBannerPaint(n, csx, mk, ticker){
   const box = coreEl('cnStarBox'); if(!box) return;
   if(!csx || !ticker){ box.style.display = 'none'; box.dataset.h = ''; box.innerHTML = ''; return; }
   const e = escHtml;
-  const l1 = `Base risk ${csx.base.toFixed(2)}% of Momentum pool`;
+  const l1 = `Base risk ${csx.base.toFixed(2)}% of ${csx.pool} pool` + (csx.pool==='Compounder' ? ` · cap ${fmt2(csx.capAcct)}% of account` : '');
   const l3 = (csx.sb && csx.sb.ok) ? `Risk budget ${csMoney(csx.sb.adj, mk)} · used ${csMoney(csx.sb.used, mk)} · this tranche ≤ ${csMoney(csx.sb.left, mk)} (FF ${Math.round(csx.sb.f*100)}%${csx.sb.dd<1 ? ' · DD ×' + csx.sb.dd : ''})` : '';
   const html = `<div class="csb1" data-cs-l1>${e(l1)}</div>${l3 ? `<div class="csb3" data-cs-budget>${e(l3)}</div>` : ''}`;
   box.style.display = ''; box.dataset.ok = '1';
