@@ -137,6 +137,8 @@ def ready_tests(pw, w, h):
     b, page, ce, pe = P111.core(pw, w, h)
     try:
         js(page, "()=>{ window.__READY_REAL = true; }")
+        real = js(page, "()=>[window.__READY_REAL === true, wlReady('NOT_ON_WATCHLIST')]")
+        check(f"{tag} ยืนยัน: phase116 ใช้ wlReady ตัวจริง (ปิด stub ใน tests/ff_stub.py) — ticker ที่ไม่อยู่ใน Watchlist ได้ false", real == [True, False], real)
         col = lambda t, **kw: js(page, "([t,kw])=>wlCol().doc(t).set(Object.assign({ticker:t, market:'US', port:'core', note:'', added_at:'2026-10-01T00:00:00Z'}, kw))", [t, kw])
         col("RDY0"); col("RDY1", my_thesis={"why": "improving margins", "exit": ""}); col("RDY2", my_thesis={"why": "improving margins", "exit": "loses 200d MA"})
         col("RDY3", thesis={"sections": {"s2": {"md": "AI why"}, "s4": {"md": "AI exit"}}}); col("RDY4", archived=True, my_thesis={"why": "a", "exit": "b"}); settle(page, 500)

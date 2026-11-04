@@ -71,3 +71,17 @@ Suites with updated expectations: phase14, 22, 23, 29, 83, 89. phase43 `index.ba
 | phase33 | `[data-cs-sheet]`, `csEvalClose()` | `[data-scr-sheet]`, `scrClose()` | sheet replaced |
 | New | `tests/run_tests_phase116.py` (65 checks): modal rules (Trend label by Track, only Pass counts, Fail stays a Candidate, exception path, Proven-only Compounder, legacy no-Track asks inline, carry of Track/Reasons/Note/Link/add date, onboarding timestamp), write failure keeps entries, draft survives refresh, Fortress gate gone, Ready rule (needs ① and ④, AI thesis ignored, archived/not-on-Watchlist blocked, RS never counts, save guard, edit mode unaffected, card editor, Onboarding Data card) | — | A2 + A5 |
 Known failures also on main: phase45 (`_bk_id2/`), phase47 (`_bk_id3a/`).
+
+## TEST STUBS (for the final review)
+| Stub | Where | What it does | Who runs the real thing |
+|---|---|---|---|
+| `READY_STUB` | `tests/ff_stub.py` (appended to `FF_STUB` / `FF_STUB_BASE`, so every launcher gets it) | after `load`, replaces `wlReady(sym)` with `window.__READY_REAL ? realWlReady(sym) : true` | `tests/run_tests_phase116.py` (ready_tests) sets `window.__READY_REAL = true` and asserts it (`wlReady('NOT_ON_WATCHLIST') === false`) |
+| `scr_helper.promote` | `tests/scr_helper.py` | drives the real screening modal via JS (`scrOpen` → set Proven/Trend/Why → `scrSave`) for legacy suites that only need a stock on the Watchlist | UI path tested in phase116 (screening_tests) |
+
+## Step 5 — A6 Watchlist management
+| Suite | Check / area | Change | Why |
+|---|---|---|---|
+| phase64 | Filter ▾ panel groups `Idea · Tier · Phase · เรียง` / `Phase · เรียง` / `Idea` | now include `Track · Reason` (and `RS · Sort` on the Watchlist view) | new filter groups |
+| phase85 | card ⋯ menu `✎ แก้ไข · 📥 Import · Export JSON · ทบทวน · ✕ ลบ` | `🗄 Archive… · ✎ แก้ไข · 📥 Import · Export JSON · ทบทวน` — `✕ ลบ` only shows for a stock with no My Thesis / AI thesis / notes / versions (the test stock has a thesis) | user decision (Delete only for typo tickers) |
+| New | `tests/run_tests_phase117.py` (56 checks): status tags, Next check (row + sort), Last-updated sort, RS/Track/Reason filters (Unrated ≠ 0), "My Thesis updated … / AI Thesis imported | data as of …" lines, Archive requires a reason, archived hidden + `Archived (n)` + excluded from Today deep-dive queue, Restore, Delete visibility, Candidate rows show Track + Reasons and filter by Track/Reason | — | A6 |
+| phase116 | added assertion that the real `wlReady` runs (stub off) | — | note 2 |

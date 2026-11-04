@@ -104,7 +104,7 @@ def tests(pw, w, h, label):
         shot(page, f"ln3-watch-detail-{sfx}.png", ".wlDPanel")   # LN3fix — ถ่ายก่อนกดเปิดแผน Core (ภาพไม่ถูกฟอร์มบัง)
         page.locator("[data-lt-menu]").click(); page.wait_for_timeout(300)
         items = js(page, "()=>[...document.querySelectorAll('.ltMenu [role=menuitem]')].map(b=>b.innerText.replace(/\\s+/g,' ').trim())")
-        check(f"{tag} 2 เมนู ⋯: ✎ แก้ไข · 📥 Import · Export JSON · ทบทวน (ประวัติ) · ✕ ลบ", len(items) == 5 and items[0].startswith("✎ แก้ไข") and "Import" in items[1] and items[2] == "Export JSON" and items[3].startswith("ทบทวน") and items[4].startswith("✕ ลบ"), items)
+        check(f"{tag} 2 เมนู ⋯: Archive · ✎ แก้ไข · 📥 Import · Export JSON · ทบทวน (ประวัติ) — ✕ ลบ ซ่อนเมื่อมี thesis", len(items) == 5 and items[0].startswith("🗄 Archive") and items[1].startswith("✎ แก้ไข") and "Import" in items[2] and items[3] == "Export JSON" and items[4].startswith("ทบทวน"), items)   # PL1·A6: Archive แรก · ลบ แสดงเฉพาะหุ้นที่ไม่มี thesis/โน้ต/เวอร์ชัน
         js(page, "()=>{ wlMenu=''; renderWatchlist(); }")
         page.locator("[data-c-open-plan]").click(); page.wait_for_timeout(600)
         check(f"{tag} 2 'เปิดแผน Core →' พาไปแท็บแผน (Core)", js(page, "()=>activeTab") == "plan")

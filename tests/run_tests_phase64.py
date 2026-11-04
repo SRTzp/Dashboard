@@ -65,7 +65,7 @@ def filter_tests(pw, w, h, label):
         # ── 2 กาง
         flt_open(page)
         gl = js(page, "()=>[...document.querySelectorAll('[data-flt-panel] .fltGl')].map(e=>e.firstChild.textContent.trim())")
-        check(f"{tag} 2 กางแผง → กลุ่ม Idea · Tier · Phase · เรียง · ปุ่มเป็น ▴", gl == ["Idea", "Tier", "Phase", "เรียง"] and txt(page, "[data-flt-btn]").endswith("▴"), json.dumps(gl, ensure_ascii=False))
+        check(f"{tag} 2 กางแผง → กลุ่ม Idea · Tier · Phase · เรียง · ปุ่มเป็น ▴", gl == ["Idea", "Tier", "Track", "Reason", "Phase", "เรียง"] and txt(page, "[data-flt-btn]").endswith("▴"), json.dumps(gl, ensure_ascii=False))
         check(f"{tag} 2 ชิปในแผง: Idea [▲ ได้ ▼ เสีย] · Tier [ผ่าน ไม่ผ่าน ยังไม่ Check] · เรียง [ตาม Idea | Phase] (ตัดชิป 'ทั้งหมด')",
               js(page, "()=>[...document.querySelectorAll('[data-flt-panel] [data-cand-f]')].map(e=>e.textContent.trim())") == ["▲ ได้", "▼ เสีย"]
               and js(page, "()=>[...document.querySelectorAll('[data-flt-panel] [data-tq-f]')].map(e=>e.textContent.trim())") == ["ผ่าน", "ไม่ผ่าน", "ยังไม่ Check"]
@@ -108,7 +108,7 @@ def filter_tests(pw, w, h, label):
         check(f"{tag} 4 Watchlist: ปุ่ม Filter 1 ปุ่ม · ไม่มีแถวชิป Phase เดิม", cnt(page, "[data-flt-btn]") == 1 and cnt(page, "[data-ph-filters]") == 0)
         flt_open(page)
         gl = js(page, "()=>[...document.querySelectorAll('[data-flt-panel] .fltGl')].map(e=>e.firstChild.textContent.trim())")
-        check(f"{tag} 4 แผงมีแค่ Phase + เรียง · เรียง = ปกติ | Phase", gl == ["Phase", "เรียง"] and js(page, "()=>[...document.querySelectorAll('[data-flt-panel] [data-ph-sort]')].map(e=>e.textContent.trim())") == ["ปกติ", "Phase"], json.dumps(gl, ensure_ascii=False))
+        check(f"{tag} 4 แผงมีแค่ Phase + เรียง · เรียง = ปกติ | Phase", gl == ["Track", "Reason", "RS", "Sort", "Phase", "เรียง"] and js(page, "()=>[...document.querySelectorAll('[data-flt-panel] [data-ph-sort]')].map(e=>e.textContent.trim())") == ["ปกติ", "Phase"], json.dumps(gl, ensure_ascii=False))
         pills = js(page, "()=>{ const p=[...document.querySelectorAll('.wlPills')].map(e=>e.innerText.replace(/\\s+/g,' ')); return {pills:p, inFlt:!!document.querySelector('[data-flt] .wlPills')}; }")
         check(f"{tag} 4 ปุ่ม Port (All · Core.US · Core.TH) ยังอยู่เดิมนอกแผง", any("Core.US" in x and "Core.TH" in x for x in pills["pills"]) and not pills["inFlt"], json.dumps(pills, ensure_ascii=False))
         page.locator('[data-ph-f="up"]').click(); wait(page, 250); flt_open(page)
@@ -137,7 +137,7 @@ def filter_tests(pw, w, h, label):
         check(f"{tag} 4 ไม่มีสิทธิ์อ่าน stockNotes → Watchlist ไม่มี Filter (ไม่มี Phase ให้กรอง) · แถวยังครบ", cnt(page, "[data-flt]") == 0 and len(syms(page)) == 3)
         go(page, "cand"); flt_open(page)
         gl = js(page, "()=>[...document.querySelectorAll('[data-flt-panel] .fltGl')].map(e=>e.firstChild.textContent.trim())")
-        check(f"{tag} 4 Candidates (ไม่มีสิทธิ์) → แผงมีเฉพาะ Idea", gl == ["Idea"], json.dumps(gl))
+        check(f"{tag} 4 Candidates (ไม่มีสิทธิ์) → แผงมีเฉพาะ Idea", gl == ["Idea", "Track", "Reason"], json.dumps(gl))
     finally:
         b.close()
 
