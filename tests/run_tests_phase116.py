@@ -167,11 +167,11 @@ def ready_tests(pw, w, h):
         check(f"{tag} A5: RS ★★★ ไม่ทำให้ Ready (ต้อง ①④ เท่านั้น)", f6["save"] is True and "Not ready" in f6["err"], f6)
         # editor บน Watchlist card
         js(page, "()=>{ coreSheetClose(); switchTab('watch'); wlSetView('wl'); renderWatchlist(); wlOpen('RDY1'); }"); settle(page, 600)
-        st = js(page, "()=>(document.querySelector('[data-wl-ready]')||{}).innerText||''")
-        check(f"{tag} A5: การ์ด Watchlist มีช่อง My Thesis ① Why buy / ④ Wrong if · สถานะ 'Drafting thesis' เมื่อยังไม่ครบ", st == "Drafting thesis" and cnt(page, "[data-wl-mt-why]") == 1 and cnt(page, "[data-wl-mt-exit]") == 1, st)
+        st = js(page, "()=>document.querySelectorAll('.wlMtH [data-wl-status]').length+'|'+document.querySelectorAll('[data-wl-ready]').length+'|'+wlReady('RDY1')")
+        check(f"{tag} A5: การ์ด Watchlist มีช่อง My Thesis ① Why buy / ④ Wrong if · มีแท็กสถานะเดียว (ไม่มีป้าย Ready ซ้ำ) · wlReady = false เมื่อยังไม่ครบ", st == "1|0|false" and cnt(page, "[data-wl-mt-why]") == 1 and cnt(page, "[data-wl-mt-exit]") == 1, st)
         page.fill("[data-wl-mt-exit]", "guidance cut"); page.locator("[data-wl-mt-save]").click(); settle(page, 600)
-        st2 = js(page, "()=>(document.querySelector('[data-wl-ready]')||{}).innerText||''")
-        check(f"{tag} A5: กรอก ④ แล้ว Save → my_thesis เก็บถาวร · สถานะ 'Ready ✓' · wlReady = true", st2 == "Ready ✓" and js(page, "()=>wlReady('RDY1')") is True and (wl(page, "RDY1")["my_thesis"]["exit"] == "guidance cut"), [st2, wl(page, "RDY1")["my_thesis"]])
+        st2 = js(page, "()=>document.querySelectorAll('.wlMtH [data-wl-status]').length+'|'+document.querySelectorAll('[data-wl-ready]').length")
+        check(f"{tag} A5: กรอก ④ แล้ว Save → my_thesis เก็บถาวร · แท็กสถานะเดียว · wlReady = true", st2 == "1|0" and js(page, "()=>wlReady('RDY1')") is True and (wl(page, "RDY1")["my_thesis"]["exit"] == "guidance cut"), [st2, wl(page, "RDY1")["my_thesis"]])
         ob = js(page, "()=>(document.querySelector('[data-wl-onb]')||{}).innerText||''")
         check(f"{tag} การ์ด Watchlist เก่า (ไม่มี onboarding) แสดง 'Onboarding Data … Unspecified'", "Onboarding Data" in ob and "Unspecified" in ob, ob)
         # การ์ด/ไม้ที่เปิดอยู่ไม่โดน

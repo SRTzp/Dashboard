@@ -213,7 +213,7 @@ def checks(pw, w, h, label):
         page.click("#wlAddBtn"); page.wait_for_timeout(400)
         page.evaluate("()=>wlOpen('AVGO')"); page.wait_for_timeout(300)
         chip = txt(page, ".wlDT [data-wl-tier-set]") or ""
-        check(f"{tag} 8 หลังล้าง ชิปกลับเป็น 'ตั้ง Tier' (จาง) · รายการซ้ายไม่มีชิป Tier", chip == "ตั้ง Tier" and page.locator('.wlR[data-sym="AVGO"] [data-wl-tier]').count() == 0, chip)
+        check(f"{tag} 8 หลังล้าง ไม่มีชิป 'ตั้ง Tier' แล้ว (PL1 polish) · รายการซ้ายไม่มีชิป Tier", chip == "" and page.locator('.wlR[data-sym="AVGO"] [data-wl-tier]').count() == 0, chip)
         page.evaluate("()=>{ window.firebase.__mockDb.__seedDoc(['users','testuid','watchlist','NEWY'], {ticker:'NEWY', market:'US', port:'core', note:'', industry:'', added_at:new Date().toISOString()}); wlStop(); wlStart(); }"); page.wait_for_timeout(500)   # TD4a: ต้องอยู่ใน Watchlist ก่อน
         page.evaluate("()=>wlOpenAdd('NEWY')"); page.wait_for_timeout(150)
         hid = not vis(page, "#wlAddTierBox") and page.locator("#wlAddTier").count() == 0

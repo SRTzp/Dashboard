@@ -95,7 +95,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 1 การ์ด 2 บรรทัด: NVDA 'A · Momentum' + 'ไม้ 1 · SL 115' · AVGO 'B · Momentum' + 'แผน · 300 / 270 · ไม้แรก 15 หุ้น' (RG2b ถัง Momentum 50%)",
               nv.get("tag") == "A · Momentum" and nv.get("l2") == "ไม้ 1 · SL 115" and av.get("tag") == "B · Momentum" and av.get("l2") == "แผน · 300 / 270 · ไม้แรก 15 หุ้น", rows)   # RG2b: ถัง Winner 50% → 15 หุ้น
         hdr = txt(page, "[data-lf-ch]")
-        check(f"{tag} 1 หัว 'การ์ด Momentum · 2 ตัว · ＋ แผน Core' · ขยาย/ยุบทั้งหมดคงไว้", hdr is not None and "การ์ด Momentum" in hdr and "2 ตัว" in hdr and "＋ แผน Core" in hdr and vis(page, "[data-c-expandall]") and vis(page, "[data-c-collapseall]"), hdr)
+        check(f"{tag} 1 หัว 'การ์ด Momentum · 2 ตัว · ＋ แผน' · ขยาย/ยุบทั้งหมดคงไว้", hdr is not None and "การ์ด Momentum" in hdr and "2 ตัว" in hdr and "＋ แผน" in hdr and "แผน Core" not in hdr and vis(page, "[data-c-expandall]") and vis(page, "[data-c-collapseall]"), hdr)
         # กางการ์ด
         js(page, "()=>coreAll('main', 1)"); page.wait_for_timeout(300)
         body = js(page, "()=>document.querySelector('[data-core-card=ccNV]').innerText.replace(/\\s+/g,' ')")

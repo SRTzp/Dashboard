@@ -80,7 +80,8 @@ def run(pw, w, h):
         js(page, "()=>{ ln1SetMode('lean'); switchTab('plan'); setPlanScope('ladder'); render(); }"); settle(page, 800)
         snap(page, "compounder-page-lean", w, "#tabPlan")
         T.go_today(page); settle(page, 600)
-        snap(page, "today-plans", w, '[data-td3-panel="plans"]')
+        js(page, "()=>{ window.scrollTo(0, document.documentElement.scrollHeight); }"); settle(page, 500)   # PL1 polish — เลื่อนสุดหน้าเพื่อโชว์ว่าปุ่ม ↑ ไม่ทับ Create plan ›
+        snap(page, "today-plans", w, None if w < 600 else '[data-td3-panel="plans"]')
     finally: b.close()
 
 
