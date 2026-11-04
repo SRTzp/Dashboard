@@ -249,14 +249,12 @@ def budget_tests(pw, w=390, h=844):
         open_form(page, "AAPL"); setpx(page, 100, 90)
         js(page, "()=>{ document.getElementById('cnTicker').value = 'MSFT'; coreNewIn(); }"); settle(page, 300)
         bn, fm = banner(page), form(page)
-        check(f"{tag} สลับ AAPL → MSFT: ★/Risk คำนวณใหม่ทั้งหมด (★★ · 0.75% · used $0 · ไม่ค้าง $600/★★★ ของ AAPL)", bn["l1"].startswith("★★ · Base risk 0.75%") and "used $0" in bn["bud"] and abs(float(fm["risk"]) - 0.75) < 1e-3, [bn, fm])
-        js(page, "()=>{ document.getElementById('cnTicker').value = 'ZZZ'; coreNewIn(); }"); settle(page, 300)
-        bn, fm = banner(page), form(page)
-        check(f"{tag} สลับไปหุ้นที่ไม่มีดาว → ล้างหมด (No stars · Risk ว่าง · ไม่มีงบ)", bn["l1"] == "No stars · Unassigned" and fm["risk"] == "" and bn["bud"] == "", [bn, fm])
+        check(f"{tag} สลับ AAPL → MSFT: Risk คำนวณใหม่ (PL1: Base 1% ค่าเดียว · used $0 · ไม่ค้าง $600 ของ AAPL)", bn["l1"].startswith("Base risk 1.00%") and "used $0" in bn["bud"] and abs(float(fm["risk"]) - 1.0) < 1e-3, [bn, fm])   # PL1 — was ★★ 0.75%
+        # PL1 — เดิมตรงนี้ตรวจ 'หุ้นไม่มีดาว → No stars · Unassigned' (RETIRED: ดาวไม่ผูกกับ risk แล้ว · ดู tests/PL1_retired.md)
         # reload keeps eval
         js(page, "()=>{ snStop(); snMap = {}; snStart(); }"); settle(page, 800)
         e = js(page, "()=>csEvalOf('AAPL')")
-        check(f"{tag} โหลดซ้ำ (ฟังข้อมูลใหม่จากเซิร์ฟเวอร์) → การประเมินของ AAPL ยังอยู่ครบ", e and e["fortress"] == "passed" and e["stars"] == 3 and e["gate5"] == ["passed"] * 3 and e["date"] == "2026-10-30", e)
+        check(f"{tag} โหลดซ้ำ (ฟังข้อมูลใหม่จากเซิร์ฟเวอร์) → การประเมินของ AAPL ยังอยู่ครบ", e and e["fortress"] == "passed" and e["date"] == "2026-10-30", e)
         # การ์ดที่บันทึกแล้ว + เติมไม้ใช้งบร่วม + snapshot ไม่เปลี่ยน
         card = {"acct": "main", "ticker": "AAPL", "market": "US", "strategy": "W", "plan": {"entry": 100, "stop": 90, "risk": 1.0}, "stop": 90, "stopHistory": [], "px": 100, "pxDate": "2026-10-29", "emaW": 95,
                 "lots": [{"n": 1, "date": "2026-10-20", "px": 100, "qty": 60, "f": 1, "stop": 90}], "trade_id": "tB1", "acc_trade_id": None, "status": "open", "created_at": "2026-10-20T00:00:00Z",
@@ -401,10 +399,16 @@ def width_tests(pw):
     finally: b.close()
 
 
+def pl1_retired(name):
+    def _r(pw): print("RETIRED (PL1) - phase111 section '%s' tested ★→Base risk / evalGate which PL1 A3+A4 removed · see tests/PL1_retired.md" % name)
+    return _r
+
+
 SECTIONS = {
-    "calc": calc_tests,
-    "size": lambda pw: [size_tests(pw, 390), size_tests(pw, 1440, 900)],
-    "gate": lambda pw: [gate_tests(pw, 390), gate_tests(pw, 1440, 900), today_gate_tests(pw, 390)],
+    "calc": pl1_retired("calc"),     # PL1 — starsFromEval/evalGate/starBudget removed (Calc.riskBudget covered in phase114)
+    "size": pl1_retired("size"),     # PL1 — size by ★ retired; flat 1% covered in phase114
+    "gate": pl1_retired("gate"),     # PL1 — ★/RS/Gate 5 open-plan + move gates removed; Ready rule arrives in Step 4
+
     "budget": lambda pw: budget_tests(pw, 390),
     "legacy": lambda pw: legacy_tests(pw, 390),
     "sat": lambda pw: [sat_tests(pw, 390), sat_tests(pw, 1440, 900)],

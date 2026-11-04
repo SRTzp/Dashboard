@@ -59,6 +59,7 @@ def wl_seed(page, items):
 def W(t, mk="US", **kw):
     d = {"ticker": t, "market": mk, "port": "core", "note": "", "industry": "", "added_at": "2026-09-01T00:00:00.000Z"}
     d.update(kw)
+    if "stars" in kw and "rs_stars" not in kw: d["rs_stars"] = kw["stars"]   # PL1·A3 — fixture ★ เดิม = RS manual ใหม่ (เรียง/กรองใช้ rs_stars)
     return d
 
 
@@ -497,7 +498,7 @@ def ev_pass(page, sym=None):
 def pro_fill(page, tier=True, rs=False, note="why it passed", stars=2):
     if tier or rs: ev_pass(page)
     if note is not None: page.fill("[data-td4-pro-note]", note)
-    if stars: page.locator(f'[data-td4-star="{stars}"]').click()
+    # PL1·A3 — ไม่มีปุ่ม ★ ในฟอร์มแล้ว (stars ถูกเพิกเฉย) · ดู tests/PL1_retired.md
     settle(page, 120)
 
 
@@ -523,31 +524,29 @@ def homework_tests(pw, w, h, label, shots=False):
         page.locator('[data-td4-scrmk="US"]').click(); settle(page, 300)
         open_card(page, "NEW1")
         frm = txt(page, '[data-td4-pro="NEW1"]') or ""
-        check(f"{tag} §3 ฟอร์มของตัวแรกเปิดรออยู่: Edit Stock Evaluation · Revenue ↗ · Note · hint · ☆☆☆ · Not passed · Move to Watchlist · ไม่มีช่อง Reason", all(x in frm for x in ["Edit Stock Evaluation", "Revenue ↗", "Need: Stars · RS · Gate 5 (0/3)", "Not passed", "Move to Watchlist"]) and cnt(page, "[data-td4-pro-reason]") == 0 and cnt(page, "[data-td4-star]") == 3 and js(page, "()=>document.querySelector('[data-td4-pro-note]').value") == "fresh note", frm)
-        lay = js(page, """()=>{ const q = s => document.querySelector(s).getBoundingClientRect(); const cb = q('[data-td4-pro] [data-cs-edit]'), rev = q('.td4-rev a'), nt = q('[data-td4-pro-note]'), nd = q('[data-td4-need]'), st = q('.td4-stars'), np = q('[data-td4-pro] [data-td3-np]'), go = q('[data-td4-pro-go]');
-          return {row1: cb.top < nt.top && rev.top < nt.top, noteBelow: nt.top > cb.bottom - 2, hint: nd.top >= nt.bottom - 2 && Math.abs(nd.top - st.top) < 26 && st.left > nd.left, btns: np.top >= nd.bottom - 2 && Math.abs(np.top - go.top) < 12 && np.left < go.left}; }""")
-        check(f"{tag} §3 เลย์เอาต์ตามสเปก: แถว 1 Tier·RS·Revenue · แถว 2 Note · แถว 3 hint ซ้าย + ☆☆☆ ขวา · แถว 4 Not passed ซ้าย / Move to Watchlist ขวา", all(lay.values()), lay)
+        check(f"{tag} §3 ฟอร์มของตัวแรกเปิดรออยู่: Edit Stock Evaluation · Revenue ↗ · Note · hint · Not passed · Move to Watchlist · ไม่มีช่อง Reason", all(x in frm for x in ["Edit Stock Evaluation", "Revenue ↗", "Ready", "Not passed", "Move to Watchlist"]) and cnt(page, "[data-td4-pro-reason]") == 0 and cnt(page, "[data-td4-star]") == 0 and js(page, "()=>document.querySelector('[data-td4-pro-note]').value") == "fresh note", frm)
+        lay = js(page, """()=>{ const q = s => document.querySelector(s).getBoundingClientRect(); const cb = q('[data-td4-pro] [data-cs-edit]'), rev = q('.td4-rev a'), nt = q('[data-td4-pro-note]'), nd = q('[data-td4-need]'), np = q('[data-td4-pro] [data-td3-np]'), go = q('[data-td4-pro-go]');
+          return {row1: cb.top < nt.top && rev.top < nt.top, noteBelow: nt.top > cb.bottom - 2, hint: nd.top >= nt.bottom - 2, btns: np.top >= nd.bottom - 2 && Math.abs(np.top - go.top) < 12 && np.left < go.left}; }""")
+        check(f"{tag} §3 เลย์เอาต์ตามสเปก: แถว 1 Tier·RS·Revenue · แถว 2 Note · แถว 3 hint (PL1: ไม่มี ★) · แถว 4 Not passed ซ้าย / Move to Watchlist ขวา", all(lay.values()), lay)
         if shots: C.shot(page, "td4a-promote-390.png", '[data-td3-sec="screen"]')
         rev = js(page, "()=>{ const a = document.createElement('div'); a.innerHTML = wlRevBtnHtml('NEW1', 'US'); const x = a.firstElementChild, y = document.querySelector('[data-td4-pro] [data-rev-btn]'); return [x.href === y.href, x.className === y.className, x.title === y.title, x.target === y.target, y.innerText.trim()]; }")
         check(f"{tag} §3 ลิงก์ Revenue ↗ คือองค์ประกอบ wlRevBtnHtml เดิมของ Watchlist (href/class/title/target เหมือนกัน · ป้ายย่อ)", rev == [True, True, True, True, "Revenue ↗"], rev)
         dis = lambda: js(page, "()=>document.querySelector('[data-td4-pro-go]').disabled")
-        check(f"{tag} §3 เริ่ม: Move to Watchlist ปิด (disabled) · hint เฉพาะที่ขาด (Note เติมโน้ตเดิมไว้แล้ว)", dis() is True and txt(page, "[data-td4-need]") == "Need: Stars · RS · Gate 5 (0/3)", txt(page, "[data-td4-need]"))
+        check(f"{tag} §3 เริ่ม: Move to Watchlist ปิด (disabled) · hint เฉพาะที่ขาด (Note เติมโน้ตเดิมไว้แล้ว)", dis() is False and txt(page, "[data-td4-need]") == "Ready", txt(page, "[data-td4-need]"))   # PL1 interim: note only (fresh note seeded) — ★/RS/Gate 5 ไม่ปิดปุ่มแล้ว
         ev_pass(page); settle(page, 100)
-        check(f"{tag} §3 ประเมิน RS + Gate 5 แล้วยังปิด (ขาดดาว) · hint เหลือเฉพาะที่ขาด", dis() is True and txt(page, "[data-td4-need]") == "Need: Stars", txt(page, "[data-td4-need]"))
-        page.locator('[data-td4-star="3"]').click(); settle(page, 100)
+        print("RETIRED (PL1) - §3 ประเมิน RS + Gate 5 แล้วยังปิด (ขาดดาว) — ★ ไม่ใช่เงื่อนไขอีกแล้ว (tests/PL1_retired.md)")
         page.fill("[data-td4-pro-note]", "   "); settle(page, 100)
         check(f"{tag} §3 Note ว่าง (เว้นวรรคล้วน) ยังปิด · hint 'Need: note'", dis() is True and txt(page, "[data-td4-need]") == "Need: note", txt(page, "[data-td4-need]"))
-        page.locator('[data-td4-star="3"]').click(); settle(page, 100)
-        check(f"{tag} §3 แตะดาวเดิมซ้ำ = ล้าง (0 ดาว)", js(page, "()=>document.querySelectorAll('[data-td4-star].on').length") == 0)
-        page.locator('[data-td4-star="2"]').click(); page.fill("[data-td4-pro-note]", "edited note"); settle(page, 100)
-        check(f"{tag} §3 ครบ Tier + 2 ดาว + Note → hint 'Ready' · ปุ่มเปิดใช้", dis() is False and txt(page, "[data-td4-need]") == "Ready", txt(page, "[data-td4-need]"))
+        print("RETIRED (PL1) - §3 แตะดาวเดิมซ้ำ = ล้าง (ไม่มีปุ่ม ★ ในฟอร์มแล้ว · tests/PL1_retired.md)")
+        page.fill("[data-td4-pro-note]", "edited note"); settle(page, 100)
+        check(f"{tag} §3 มี Note → hint 'Ready' (PL1: ไม่มี ★) · ปุ่มเปิดใช้", dis() is False and txt(page, "[data-td4-need]") == "Ready", txt(page, "[data-td4-need]"))
         js(page, "()=>todayRefresh(true)"); settle(page, 300)
-        check(f"{tag} §3 ฟอร์มและค่าที่กรอกค้างอยู่หลัง re-render", js(page, "()=>document.querySelector('[data-td4-pro-note]').value") == "edited note" and js(page, "()=>document.querySelectorAll('[data-td4-star].on').length") == 2 and dis() is False)
+        check(f"{tag} §3 ฟอร์มและค่าที่กรอกค้างอยู่หลัง re-render", js(page, "()=>document.querySelector('[data-td4-pro-note]').value") == "edited note" and dis() is False)
         page.locator("[data-td4-pro-go]").click(); settle(page, 700)
         wl = wl_doc(page, "NEW1")
-        check(f"{tag} §3 Move: Watchlist มี NEW1 · note · promoted_by ['tier','rs'] · promoted_at · stars=2 (= ดาวใน Watchlist) · market", wl and wl["note"] == "edited note" and wl["promoted_by"] == ["rs"] and wl["promoted_at"] and wl["stars"] == 2 and wl["market"] == "US" and not wl.get("promote_reason"), wl)
+        check(f"{tag} §3 Move: Watchlist มี NEW1 · note · promoted_by ['tier','rs'] · promoted_at · stars=2 (= ดาวใน Watchlist) · market", wl and wl["note"] == "edited note" and wl["promoted_by"] == ["rs"] and wl["promoted_at"] and wl["stars"] == 0 and wl["market"] == "US" and not wl.get("promote_reason"), wl)
         mv = txt(page, "[data-td4-moved]") or ""
-        check(f"{tag} §3 การ์ดยุบทันทีเป็น '✓ NEW1 → Watchlist · ★★ · Undo' · ฟอร์มหาย · ตัวถัดไปขึ้น · tracker 'US 1 · TH 0 · 1/3'", mv.startswith("✓ NEW1 → Watchlist · ★★") and "Undo" in mv and cnt(page, '[data-td4-pro="NEW1"]') == 0 and cnt(page, "[data-td4-pro]") == 0 and trk(page) == "US 1 · TH 0 · 1/3", [mv, trk(page)])
+        check(f"{tag} §3 การ์ดยุบทันทีเป็น '✓ NEW1 → Watchlist · ★★ · Undo' · ฟอร์มหาย · ตัวถัดไปขึ้น · tracker 'US 1 · TH 0 · 1/3'", mv.startswith("✓ NEW1 → Watchlist") and "★" not in mv and "Undo" in mv and cnt(page, '[data-td4-pro="NEW1"]') == 0 and cnt(page, "[data-td4-pro]") == 0 and trk(page) == "US 1 · TH 0 · 1/3", [mv, trk(page)])
         page.locator("[data-td3-undo]").click(); settle(page, 700)
         check(f"{tag} §3 Undo: NEW1 กลับเป็น Candidate (ไม่มีใน Watchlist) · tracker 0/3", wl_doc(page, "NEW1") is None and "NEW1" in qrows(page) and trk(page) == "US 0 · TH 0 · 0/3", [qrows(page), trk(page)])
         # ตัวที่ 2 (ไม่ใช่ตัวแรก) กด Promote… → ฟอร์มย้ายมา
@@ -581,7 +580,7 @@ def tier_only_tests(pw):
         pro_fill(page, tier=False, rs=True, note="rs leader", stars=3)
         page.locator("[data-td4-pro-go]").click(); settle(page, 700)
         wl = wl_doc(page, "NEW1") or {}
-        check(f"{tag} §3 RS Leader อย่างเดียว + 3 ดาว + Note → promoted_by ['rs'] · stars 3", wl.get("promoted_by") == ["rs"] and wl.get("stars") == 3 and wl.get("note") == "rs leader", wl)
+        check(f"{tag} §3 RS Leader อย่างเดียว + Note → promoted_by ['rs'] · stars 0 (PL1: ไม่เขียนดาว)", wl.get("promoted_by") == ["rs"] and wl.get("stars") == 0 and wl.get("note") == "rs leader", wl)
         check(f"{tag} §3 ดาวที่ให้ตอน Promote = ดาวใน Watchlist (เรียงอันดับต้น ๆ)", js(page, "()=>wlRowsView ? 1 : 0") == 1 and (go_watch(page, "wl") or True) and rows(page)[0] == "NEW1", rows(page))
         check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
     finally: b.close()
@@ -666,14 +665,15 @@ def wl_tests(pw, w, h, label, shots=False):
         page.locator('.wlR[data-sym="AAPL"]').click(); settle(page, 400)
         bb = js(page, "()=>{ const r = document.querySelector('.wlDT [data-wl-star=\"AAPL\"]').getBoundingClientRect(); return [r.width, r.height]; }")
         check(f"{tag} §4 ปุ่มดาว (หัวการ์ดรายละเอียด) มี hit area ≥ 32px", bb[0] >= 32 and bb[1] >= 32, bb)
+        # PL1·A3 — ปุ่ม ★ 1→2→3 (TD4c) ถูกแทนด้วย dropdown RS · เขียน rs_stars (ดู tests/PL1_retired.md)
         seq = []
-        for k in (1, 2, 3, 3):   # TD4c: แตะดวงที่ n = ตั้งเป็น n ตรง ๆ · แตะดวงเดิมซ้ำ = 0 (เดิม: ปุ่มเดียววนทีละ 1)
-            page.locator(f'.wlDT [data-wl-star="AAPL"] [data-wl-star-n="{k}"]').click(); settle(page, 500)
-            seq.append(wl_doc(page, "AAPL")["stars"])
-        check(f"{tag} §4 แตะดวง 1→2→3→3 ซ้ำ = 1,2,3,0 (เก็บที่ watchlist doc: stars)", seq == [1, 2, 3, 0], seq)
-        page.locator('.wlDT [data-wl-star="AAPL"] [data-wl-star-n="1"]').click(); settle(page, 500)
-        check(f"{tag} §4 ★1 ของ AAPL ขึ้นเหนือ MSFT★1 (ชื่อ) และอยู่หลัง ★3 · เก็บถาวร", rows(page)[:4] == ["NVDA", "PTT.BK", "AAPL", "MSFT"] and page.evaluate("()=>window.firebase.__mockDb.__getDoc(['users','testuid','watchlist','AAPL'])")["stars"] == 1, rows(page))
-        check(f"{tag} §4 แถวในลิสต์แสดงดาวที่ให้แล้วเป็น ★n (กะทัดรัด · ไม่ให้แถวหนาแน่นล้น)", js(page, "()=>document.querySelector('.wlR[data-sym=\"NVDA\"] [data-wl-stars-view]').innerText") == "★3" and cnt(page, '.wlR[data-sym="TSLA"] [data-wl-stars-view]') == 0)
+        for k in ("1", "2", "3", ""):
+            page.select_option('.wlDT [data-wl-star="AAPL"] [data-wl-rs]', k); settle(page, 500)
+            seq.append(wl_doc(page, "AAPL")["rs_stars"])
+        check(f"{tag} §4 (PL1) เลือก RS ★ / ★★ / ★★★ / Unrated = 1,2,3,null (เก็บที่ watchlist doc: rs_stars)", seq == [1, 2, 3, None], seq)
+        page.select_option('.wlDT [data-wl-star="AAPL"] [data-wl-rs]', "1"); settle(page, 500)
+        check(f"{tag} §4 RS ★1 ของ AAPL ขึ้นเหนือ MSFT★1 (ชื่อ) และอยู่หลัง ★3 · เก็บถาวร", rows(page)[:4] == ["NVDA", "PTT.BK", "AAPL", "MSFT"] and page.evaluate("()=>window.firebase.__mockDb.__getDoc(['users','testuid','watchlist','AAPL'])")["rs_stars"] == 1, rows(page))
+        check(f"{tag} §4 แถวในลิสต์แสดง RS ที่ให้แล้วเป็น 'RS ★n' (กะทัดรัด) · ยังไม่ให้ (Unrated) ไม่แสดง", js(page, "()=>document.querySelector('.wlR[data-sym=\"NVDA\"] [data-wl-stars-view]').innerText") == "RS ★★★" and cnt(page, '.wlR[data-sym="TSLA"] [data-wl-stars-view]') == 0)
         P44.reload_keep(page); P106.P37.set_clock(page, NOW); hook_confirm(page); go_watch(page, "wl")
         check(f"{tag} §4 รีโหลดแล้วดาว/ลำดับคงอยู่", rows(page)[:4] == ["NVDA", "PTT.BK", "AAPL", "MSFT"], rows(page))
         if shots: C.shot(page, "td4a-watchlist-1440.png", full=False)

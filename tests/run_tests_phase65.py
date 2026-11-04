@@ -78,7 +78,7 @@ def tests(pw, w, h, label):
     try:
         open_settings(page)
         v = vals(page)
-        check(f"{tag} 1 บัญชีไม่มี coreRisk → ตาราง A 1.25/15/25 · B 1.25/10/25", v == {"sCrRiskA": "1.25", "sCrRiskB": "1.25", "sCrTierA": "25", "sCrTierB": "25", "sCrCapTotA": "25", "sCrCapTotB": "25"}, json.dumps(v))   # RG2b — Tier A/B ไม่แยกแล้ว (ช่องซ่อน = เพดานเดียว 25)
+        check(f"{tag} 1 บัญชีไม่มี coreRisk → ตาราง A 1.25/15/25 · B 1.25/10/25", v == {"sCrRiskA": "1", "sCrRiskB": "1.25", "sCrTierA": "25", "sCrTierB": "25", "sCrCapTotA": "25", "sCrCapTotB": "25"}, json.dumps(v))   # RG2b — Tier A/B ไม่แยกแล้ว (ช่องซ่อน = เพดานเดียว 25)
         hdr = js(page, "()=>[...document.querySelectorAll('[data-cr-tiertbl] thead th')].map(e=>e.textContent.trim()).join('|')")
         rows = js(page, "()=>[...document.querySelectorAll('[data-cr-tiertbl] tbody th')].map(e=>e.textContent.trim()).join('|')")
         check(f"{tag} 1 หัวตาราง 'Risk/ไม้ · เพดานไม้แรก · เพดานรวม/หุ้น' · แถว A | B · ไม่มีช่อง sCrRisk เดิม", hdr == "" and rows == "" and js(page, "()=>!!document.getElementById('sCrWinCap')") and   # RG2b — ตาราง Tier ถูกแทนด้วยช่อง Risk/lot + เพดานต่อหุ้นค่าเดียว
@@ -95,7 +95,7 @@ def tests(pw, w, h, label):
         before = dump(page)
         open_settings(page)
         v = vals(page)
-        check(f"{tag} 2 บันทึกไว้ riskPct:1.25 · tierA:12 → A Risk 1.25 · เพดานไม้แรก A 12 (คงเดิม) · B เพดานไม้แรก 10 (ใหม่) · รวม 25", v == {"sCrRiskA": "1.25", "sCrRiskB": "1.25", "sCrTierA": "25", "sCrTierB": "25", "sCrCapTotA": "25", "sCrCapTotB": "25"}, json.dumps(v))   # RG2b — tierA 12 ที่เก็บไว้ไม่อ่านแล้ว
+        check(f"{tag} 2 บันทึกไว้ riskPct:1.25 · tierA:12 → A Risk 1.25 · เพดานไม้แรก A 12 (คงเดิม) · B เพดานไม้แรก 10 (ใหม่) · รวม 25", v == {"sCrRiskA": "1", "sCrRiskB": "1.25", "sCrTierA": "25", "sCrTierB": "25", "sCrCapTotA": "25", "sCrCapTotB": "25"}, json.dumps(v))   # RG2b — tierA 12 ที่เก็บไว้ไม่อ่านแล้ว
         page.wait_for_timeout(600)
         check(f"{tag} 2 เปิดอ่านแล้ว Firestore ไม่ถูกเขียน", dump(page) == before)
         cfg = js(page, "()=>{ const c=coreRiskCfg('main'); return {riskPct:c.riskPct, riskA:c.riskA, riskB:c.riskB, raw:state.settings.coreRisk}; }")
@@ -110,12 +110,12 @@ def tests(pw, w, h, label):
         check(f"{tag} 3 ค่าถูกต้อง → ปุ่มบันทึกกดได้ · ไม่มีข้อความแดง", js(page, "()=>!document.getElementById('setSaveBtn').disabled && [...document.querySelectorAll('.crErr')].every(e=>!e.textContent)"))
         page.click("#setSaveBtn"); page.wait_for_timeout(1500)
         saved = js(page, "()=>window.firebase.__mockDb.__dump()['users/testuid'].books.main.settings.coreRisk")
-        check(f"{tag} 3 บันทึก → riskPct = 1.5 (= Risk A) · riskA 1.5 · winnerCap 25 · ไม่เขียน key Tier เดิมที่ไม่เคยตั้ง (riskB/tierA/tierB/capTotal)", saved["riskPct"] == 1.5 and saved["riskA"] == 1.5 and saved["winnerCap"] == 25 and all(k not in saved for k in ("riskB", "tierA", "tierB", "capTotalA", "capTotalB")), json.dumps(saved))
+        check(f"{tag} 3 บันทึก → baseRisk = 1.5 (PL1) · ไม่เขียน riskA/riskPct · winnerCap 25 · ไม่เขียน key Tier เดิมที่ไม่เคยตั้ง (riskB/tierA/tierB/capTotal)", saved["baseRisk"] == 1.5 and "riskA" not in saved and "riskPct" not in saved and saved["winnerCap"] == 25 and all(k not in saved for k in ("riskB", "tierA", "tierB", "capTotalA", "capTotalB")), json.dumps(saved))
         p24.go_stock(page)
         fa, fb = first_lot(page, "A", 100, 90), first_lot(page, "B", 100, 90)
         exp = js(page, "()=>{ const cx=coreCtx('main'); const o=cx.opts; const f=(t)=>Calc.coreSize.firstLot({tank:cx.tankTHB/cx.fx, entry:100, stop:90, f:cx.F.f, tier:t, market:'US', cash:cx.cashTHB/cx.fx, riskPct:o.tierRisk[t], tierCapPct:o.tierCap[t], stockCapPct:o.stockCap[t]}).qty; return {A:f('A'), B:f('B'), ra:o.tierRisk.A, rb:o.tierRisk.B}; }")
         shown = {k: js(page, "(s)=>{ const e=document.querySelector(s+' [data-c-qty]'); return e ? +e.textContent.replace(/,/g,'') : null; }", f'[data-core-card="{k}"]') for k in ("pa", "pb")}
-        check(f"{tag} 3 การ์ดแผน Tier A กับ B ราคาเดียวกัน (Entry 100 Stop 90) ได้จำนวนตามสูตร (เทียบ Calc.coreSize.firstLot ตรง) · RG2b: Risk A = B = 1.5% จึงได้จำนวนเท่ากัน · เห็นบนการ์ด", fa["qty"] == exp["A"] and fb["qty"] == exp["B"] and exp["A"] == exp["B"] and shown["pa"] == exp["A"] and shown["pb"] == exp["B"] and abs(exp["ra"] - 0.015) < 1e-12 and abs(exp["rb"] - 0.015) < 1e-12, json.dumps([fa, fb, exp, shown]))
+        check(f"{tag} 3 การ์ดแผน Tier A กับ B ราคาเดียวกัน (Entry 100 Stop 90) ได้จำนวนตามสูตร (เทียบ Calc.coreSize.firstLot ตรง) · RG2b/PL1: Risk A = B (legacy riskA ที่เก็บไว้ · ไม่ตามช่อง Base Risk) จึงได้จำนวนเท่ากัน · เห็นบนการ์ด", fa["qty"] == exp["A"] and fb["qty"] == exp["B"] and exp["A"] == exp["B"] and shown["pa"] == exp["A"] and shown["pb"] == exp["B"] and abs(exp["ra"] - exp["rb"]) < 1e-12 and exp["ra"] > 0, json.dumps([fa, fb, exp, shown]))
     finally:
         b.close()
     # ── 4 error
