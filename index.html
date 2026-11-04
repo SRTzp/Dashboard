@@ -3230,7 +3230,6 @@ button.ccChip{cursor:pointer;min-height:24px}
 .ldrC{cursor:pointer}.ldrC .lv{display:grid;grid-template-columns:2.2em minmax(0,6.5em) minmax(0,8em) auto;justify-content:start;gap:4px 10px;font-size:.82rem;margin-top:4px}.ldrC .lv .st{font-weight:600}.ldrC .lv .st.bought{color:var(--up,#2f9e63)}.ldrC .lv .st.cancelled{color:var(--muted);text-decoration:line-through}
 .ldrDots{display:inline-flex;gap:4px;vertical-align:middle}.ldrDots i{width:9px;height:9px;border-radius:50%;border:1px solid var(--muted);display:inline-block}.ldrDots i.b{background:var(--up,#2f9e63);border-color:var(--up,#2f9e63)}.ldrDots i.c{background:var(--line)}
 .ldrAct{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.ldrAct button{min-width:0}
-#tabPlan.scope-ladder>*:not(.planScope):not(#ladderPanel):not(#strip){display:none !important}
 .td3-pools{margin:2px 0 6px;font-size:.85rem;font-weight:600}.td3-pool{white-space:nowrap}.td3-pool .short{display:none}.td3-pst{color:#d4403a;font-weight:500}
 @media (max-width:340px){.td3-pool .full{display:none}.td3-pool .short{display:inline}}
 .wlTrkChips{display:inline-flex;gap:6px;margin-left:8px;flex-wrap:wrap}.wlTrkB{display:inline-block;min-width:16px;text-align:center;font-size:.68rem;font-weight:700;border-radius:4px;padding:0 4px;margin-left:4px;border:1px solid var(--line);color:var(--muted)}.wlTrkB.ladder{color:#2B5BD7;border-color:#2B5BD7}
@@ -3507,7 +3506,6 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
   </div>
 
   <div id="corePanel" class="corePanel" style="display:none"></div>
-  <div id="ladderPanel" class="panel ldrPage" data-ladder-page style="display:none"></div>
   <div id="lfCoreSide" class="lf-side"></div>
 
   <div class="panel" id="posPanel">
@@ -5337,7 +5335,6 @@ function setPlanScope(s){
   document.getElementById('scopeStock').classList.toggle('on', s==='stock');
   document.getElementById('scopeLadder').classList.toggle('on', s==='ladder');
   document.getElementById('scopeFuture').classList.toggle('on', s==='future');
-  const tpS = document.getElementById('tabPlan'); if(tpS) tpS.classList.toggle('scope-ladder', s==='ladder');
   render();
   hdrSubSync();
 }
@@ -6015,8 +6012,7 @@ function goPlanTop(){
   closeMoreMenu();
   switchTab('plan');
   window.scrollTo(0,0);
-  if(planScope==='stock'){ try{ coreNewOpen(); }catch(e){ console.warn('coreNewOpen:', e); } }
-  else if(planScope==='ladder'){ try{ ldrNew(); }catch(e){ console.warn('ldrNew:', e); } }   /* RG2b — ＋ ในหน้า Ladder = แผนบันไดใหม่ */
+  if(planScope==='stock' || planScope==='ladder'){ try{ coreNewOpen(); }catch(e){ console.warn('coreNewOpen:', e); } }   /* PL1·A8 — ＋ ในหน้า Compounder = แผน Compounder ใหม่ (Track มาจาก Watchlist) */   /* RG2b — ＋ ในหน้า Ladder = แผนบันไดใหม่ */
 }
 function closeMoreMenu(){
   const m = document.getElementById('moreMenu'); if(m) m.classList.remove('show');
@@ -7250,8 +7246,8 @@ function wlArchRender(){
   const html = `<div class="wlaSh" data-wla-sheet><div class="csHd"><b>Archive · ${e(A.sym)}</b><button type="button" class="ccLnk" data-wla-x aria-label="Close" onclick="wlArchClose()">✕</button></div>
     <div class="mut">Thesis, notes, reasons and versions are kept. You can restore it any time.</div>
     <div class="csR col"><label>Reason <span class="mut">required</span></label><textarea rows="2" maxlength="120" data-wla-reason aria-label="Archive reason" oninput="wlArch.reason=this.value">${e(A.reason)}</textarea></div>
-    ${A.tried && !A.reason.trim() ? '<div class="cpErr" data-wla-err role="alert">Give a short reason</div>' : ''}${A.msg ? `<div class="cpMsg" data-wla-msg role="alert">${e(A.msg)}</div>` : ''}
-    <div class="csFoot"><button type="button" class="ccBtn" onclick="wlArchClose()">Cancel</button><button type="button" class="ccBtn pri" data-wla-save${A.busy ? ' disabled' : ''} onclick="wlArchSave()">Archive</button></div></div>`;
+    ${A.tried && !A.reason.trim() ? '<div class="cpErr" data-wla-err role="alert">Give a short reason</div>' : ''}${A.warned ? '<div class="cpMsg" data-wla-warn role="alert">Has an open position/plan — archive anyway? (the plan or trade is not changed)</div>' : ''}${A.msg ? `<div class="cpMsg" data-wla-msg role="alert">${e(A.msg)}</div>` : ''}
+    <div class="csFoot"><button type="button" class="ccBtn" onclick="wlArchClose()">Cancel</button><button type="button" class="ccBtn pri" data-wla-save${A.busy ? ' disabled' : ''} onclick="wlArchSave()">${A.warned ? 'Archive anyway' : 'Archive'}</button></div></div>`;
   document.querySelectorAll('.wla-sheet').forEach(el=>el.remove());
   document.body.insertAdjacentHTML('beforeend', UI.sheet(html).replace('ui-sheet-backdrop', 'ui-sheet-backdrop wla-sheet'));
 }
@@ -7259,6 +7255,7 @@ function wlArchSave(){
   const A = wlArch, col = wlCol(); if(!A || A.busy) return;
   A.tried = true; A.msg = '';
   if(!A.reason.trim()){ wlArchRender(); return; }
+  if(wlPlanExists(A.sym) && !A.warned){ A.warned = true; wlArchRender(); return; }   /* PL1·A6 — มีแผน/ไม้ค้าง: เตือนก่อน · กดอีกครั้งเพื่อยืนยัน · ไม่แตะแผน/ไม้ */
   if(!col){ A.msg = 'Not synced with the server yet — nothing saved'; wlArchRender(); return; }
   A.busy = true; wlArchRender();
   Promise.resolve(col.doc(A.sym).update({archived:true, archived_reason:A.reason.trim().slice(0, 120), archived_at:new Date().toISOString()})).then(()=>{ wlArchClose(); try{ renderWatchlist(); }catch(e){} })
@@ -10433,7 +10430,7 @@ function coreDeleteClosed(id){
 }
 function coreAcctHtml(a){
   const A = a.id, cx = coreCtx(A), rk = coreAcctRisk(A), cfg = cx.cfg;
-  const views = coreCardsList.filter(c=>c.acct===A && c.strategy!=='L').map(c=>coreView(c, cx));
+  const views = coreCardsList.filter(c=>c.acct===A && c.strategy!=='L' && coreTrackOfCard(c)===(planScope==='ladder' ? 'ladder' : 'winner')).map(c=>coreView(c, cx));
   const openV = views.filter(v=>v.kind==='open').sort((x,y)=>{
     const d = CORE_ST_ORDER[x.st.status] - CORE_ST_ORDER[y.st.status];
     return d || (y.riskTHB - x.riskTHB);
@@ -10499,14 +10496,14 @@ function lfPlanChrome(){
   const lean = ln1On();
   document.body.classList.toggle('lf-lean', lean);
   tp.classList.toggle('lf-on', lean);
-  tp.classList.toggle('lf-stock', lean && planScope==='stock');
+  tp.classList.toggle('lf-stock', lean && (planScope==='stock' || planScope==='ladder'));   /* PL1·A8 — Compounder ใช้เลย์เอาต์เดียวกับ Momentum */
   tp.classList.toggle('lf-future', lean && planScope==='future');
   const a = document.getElementById('scopeStock'), b = document.getElementById('scopeFuture'), l3 = document.getElementById('scopeLadder');
   if(a && b){
     if(lean){ if(a.dataset.lf!=='1'){ a.dataset.lf = '1'; a.textContent = 'Momentum'; b.textContent = 'Sat'; if(l3) l3.textContent = 'Compounder'; } }
     else if(a.dataset.lf==='1'){ a.dataset.lf = ''; a.innerHTML = 'Momentum <span class="kbdhint">S</span>'; b.innerHTML = 'Sat <span class="kbdhint">F</span>'; if(l3) l3.innerHTML = 'Compounder <span class="kbdhint">D</span>'; }
   }
-  tp.classList.toggle('scope-ladder', planScope==='ladder');  try{ hdrSubSync(); hdrSubLater(); }catch(e){}   /* PF2 — ซิงก์ทันทีตั้งแต่ render แรก (ไม่รอ rAF/fonts) */
+  try{ hdrSubSync(); hdrSubLater(); }catch(e){}   /* PF2 — ซิงก์ทันทีตั้งแต่ render แรก (ไม่รอ rAF/fonts) */
 }
 /* Mac: คอลัมน์ขวาของแผน Core ตอนยังไม่เปิดฟอร์ม = การ์ดเล็ก + ปุ่มลัด (ฟอร์มเปิดแล้วถูกแทนที่ใน coreSheet) */
 function lfSideHint(){
@@ -10566,10 +10563,11 @@ function lfCoreRow(a){
       ${al.join('')}</div>`;
   return {tank, row, det: detH, lvl};
 }
-function lfCoreBoxHtml(a){
+function lfCoreBoxHtml(a, trk){
   const e = escHtml, accs = lfCoreAccts(), cur = a || lfCoreAcc(); if(!cur) return '';
   const rs = accs.map(lfCoreRow), tankSum = rs.reduce((t,r)=>t + (r.tank||0), 0);
-  const head = `<div class="sumHead"><div class="sumT">Momentum</div><span class="mu lf-cap" data-lf-cap>ทุน ${coreMoneyK(tankSum, 'TH')}</span></div>`;
+  const poolSum = trk==='ladder' ? accs.reduce((t, x)=>{ try{ return t + coreCtx(x.id).ladderPoolTHB; }catch(e){ return t; } }, 0) : tankSum;
+  const head = `<div class="sumHead"><div class="sumT">${trk==='ladder' ? 'Compounder' : 'Momentum'}</div><span class="mu lf-cap" data-lf-cap>ทุน ${coreMoneyK(poolSum, 'TH')}</span></div>`;
   const dets = rs.map(r=>r.det).filter(Boolean).join('');
   return `<div class="sumBlk ln1-blk lf-core-box" data-lf-box="${e(cur.id)}">${head}
     <div class="ln2-box lf-multi${accs.length===1 ? ' one' : ''}${rs.some(r=>r.lvl==='over') ? ' over' : ''}" data-lf-riskbox data-lf-rows="${accs.length}">
@@ -10584,9 +10582,9 @@ function lfCoreSwHtml(cur){
   return `<div class="ln2-seg lf-cardsw" data-lf-accsw role="group" aria-label="เลือกบัญชีของการ์ด">${accs.map(x=>`<button type="button" class="ln2-ab${x.id===cur.id?' on':''}" data-lf-acc="${e(x.id)}" aria-pressed="${x.id===cur.id}" onclick="lfCoreSetAcc('${e(x.id)}')"><span class="acctDotC" style="--ac:${acctColor(x)}"></span>${e(x.name)} · <span data-lf-accn="${e(x.id)}">${lfCoreNCards(x.id)} ตัว</span></button>`).join('')}</div>`;
 }
 function lfCoreLegacyRowsHtml(A, cx){   /* PL1·A8 — การ์ด strategy 'L' เดิม: แถวอ่านอย่างเดียว (ไม่มีปุ่มซื้อ/ยกเลิก) */
-  const rows = coreCardsList.filter(c=>c.acct===A && c.strategy==='L' && coreEff(c).kind==='open').map(c=>coreView(c, cx)).filter(v=>v.kind==='open');
+  const rows = coreCardsList.filter(c=>c.acct===A && c.strategy==='L' && coreEff(c).kind!=='closed').map(c=>coreView(c, cx));
   if(!rows.length) return '';
-  return `<div class="lfLegacy" data-lf-legacy><div class="mut">Legacy ladder (read-only)</div>${rows.map(v=>`<div class="lfLegacyRow" data-lf-legacy-row="${escHtml(v.c.id)}"><b>${escHtml(v.c.ticker)}</b> · qty ${fmt0(v.qty)} · avg ${fmt2(v.avg)} · stop ${fmt2(v.stop)}</div>`).join('')}</div>`;
+  return `<div class="lfLegacy" data-lf-legacy><div class="mut">Legacy ladder (read-only)</div>${rows.map(v=>`<div class="lfLegacyRow" data-lf-legacy-row="${escHtml(v.c.id)}"><b>${escHtml(v.c.ticker)}</b> · ${v.kind==='open' ? `qty ${fmt0(v.qty)} · avg ${fmt2(v.avg)} · stop ${fmt2(v.stop)}` : `plan · stop ${fmt2(+(v.c.ladder && v.c.ladder.sl))}`}</div>`).join('')}</div>`;
 }
 function lfCoreCardsHtml(a, trk){
   trk = trk==='ladder' ? 'ladder' : 'winner';
@@ -10676,93 +10674,18 @@ function ldrWlSet(sym, patch){
   const t = wlNormTicker(sym), col = wlCol(); if(!t || !col) return;
   const it = wlItems.find(x=>x.ticker===t); if(it) Object.assign(it, patch);   /* ให้หน้าตอบสนองทันที · listener ยืนยันซ้ำ */
   col.doc(t).update(patch).catch(e=>{ alert('Could not save: ' + ((e && (e.code || e.message)) || e)); });
-  if(patch.ladder_state === undefined && patch.ladder_dist !== undefined) return;   /* กรอกตัวเลข: ไม่วาดใหม่ (กัน focus หลุด) */
-  renderLadderPanel();
-}
-function ldrWatchAdd(){
-  const sel = document.getElementById('ldrAddSel'); if(!sel || !sel.value) return;
-  wlTrackSet(sel.value, 'ladder');   /* RG2b — ย้ายหุ้นเข้า track Ladder (ต้อง Fortress ผ่าน · ไม่มีแผน Winner ค้าง) */
-  renderLadderPanel();
-}
-function ldrWatchDel(sym){ wlTrackSet(sym, 'winner'); renderLadderPanel(); }
-function ldrStateSet(sym, v){ if(LDR_STATES.includes(v)) ldrWlSet(sym, {ladder_state:v}); }
-function ldrDistSet(sym, k, v){
-  const t = wlNormTicker(sym), it = wlItems.find(x=>x.ticker===t); if(!it) return;
-  const d = Object.assign({}, it.ladder_dist || {}), n = parseFloat(v);
-  if(isFinite(n)) d[k] = n; else delete d[k];
-  ldrWlSet(sym, {ladder_dist:d});
-}
-function ldrNew(sym){   /* จากหุ้น Fortress ใน Watchlist (ตัวที่ Watching ก่อน · ไม่ระบุ = ตัวแรกที่ Fortress ผ่าน) · ฟอร์มและกติกาเดิมของแผนบันได */
-  const a = lfCoreAcc(); if(!a) return;
-  try{
-    const pick = sym ? wlNormTicker(sym) : ((wlItems.find(x=>wlLadderEligible(x)) || {}).ticker || '');   /* RG2b — เฉพาะ track Ladder ที่ Base / Sideways-Up */
-    coreNewOpen(a.id, pick ? {ticker:pick, strat:'L'} : {strat:'L'});
-    const inp = coreEl('cnTicker'); if(inp && pick){ inp.value = pick; coreNewIn(); }
-  }catch(e){ console.warn('ldrNew:', e); }
-}
-function ldrOpenSheet(id){
-  const A = (coreCardsList.find(c=>c.id===id) || {}).acct; if(!A) return;
-  const cx = coreCtx(A), c = coreCardsList.find(x=>x.id===id), v = coreView(c, cx);
-  coreSheet('ldr', `<div class="ccSh">${coreLCardHtml(v, cx)}<div class="ccFoot"><button type="button" class="ccBtn" data-ldr-sheet-close onclick="coreSheetClose()">ปิด</button></div></div>`);
-}
-function ldrCardHtml(v, cx){
-  const c = v.c, id = escHtml(c.id), ld = c.ladder || {levels:[], sl:0}, lv = ld.levels || [], mk = v.mk, sym = v.sym;
-  const nat = (v.lc && v.lc.nat && v.lc.nat.ok) ? v.lc.nat : null;
-  const rows = nat ? nat.rows : [];
-  const st = i=>{ const x = lv[i] ? (lv[i].status || 'wait') : 'wait'; return x==='bought' ? 'bought' : x==='cancelled' ? 'cancelled' : 'wait'; };
-  const dots = lv.map((_, i)=>`<i class="${st(i)==='bought' ? 'b' : st(i)==='cancelled' ? 'c' : ''}" data-ldr-dot="${st(i)}"></i>`).join('');
-  const lvRows = lv.map((l, i)=>{
-    const r = rows[i] || {cost:0}, s = st(i);
-    return `<div class="lv" data-ldr-lv="${i+1}" data-ldr-st="${s}"><span><b>T${i+1}</b></span><span>${sym}${fmt2(+l.px)}</span><span>${coreMoneyS(r.cost || 0, mk)}</span><span class="st ${s}">${s==='bought' ? 'bought' : s==='cancelled' ? 'cancelled' : 'waiting'}</span></div>`; }).join('');
-  const nb = lv.filter((_, i)=>st(i)==='bought').length;
-  const avg = nat && nat.avgCost ? `${sym}${fmt2(nat.avgCost)}` : '—';
-  const exitL = `Exit: SL ${sym}${fmt2(+ld.sl)}`;
-  const btns = (()=>{ const fw = lv.findIndex((_, i)=>st(i)==='wait');
-    return `<div class="ldrAct" data-ldr-act onclick="event.stopPropagation()">${fw>=0 ? `<button type="button" class="ccBtn pri" data-ldr-buy onclick="coreLBuyOpen('${id}')">Mark T${fw+1} bought</button><button type="button" class="ccBtn" data-ldr-cancel onclick="coreLCancelOpen('${id}')">Cancel level</button>` : ''}<button type="button" class="ccBtn" data-ldr-edit onclick="coreLEditOpen('${id}')">Edit zones</button></div>`; })();
-  return `<div class="ldrC" data-ldr-card="${id}" data-ldr-tk="${escHtml(c.ticker)}" onclick="ldrOpenSheet('${id}')"><div class="row"><b>${escHtml(c.ticker)}</b> <span class="ldrDots">${dots}</span> <span class="mu">${nb}/${lv.length} bought · avg ${avg}</span></div>${lvRows}<div class="mu" style="font-size:.8rem;margin-top:4px">${exitL}</div>${btns}</div>`;
-}
-function ldrHtml(a){
-  const A = a.id, cx = coreCtx(A), sp = cx.split, e = escHtml, F = ffPoolFactor('ladder');
-  const used = sp ? sp.lUsed : 0, pool = cx.ladderPoolTHB, free = sp ? sp.lCashFree : pool, w = pool>0 ? Math.min(100, used/pool*100) : 0;
-  const cap = F.cap || 100, chip = `<span class="ldrChip r${cap}" data-ldr-size>Size ${cap}%</span>${F.stale ? `<span class="ldrChip" data-ldr-stale style="color:#d4403a">data ${F.age==null?'—':F.age}d old</span>` : ''}`;
-  const head = `<div class="ldrHead" data-ldr-head><b>Compounder</b>${lfCoreSwHtml(a)}<span data-ldr-used>Pool <b>฿${fmt0(used)}</b> / ฿${fmt0(pool)}</span><span data-ldr-free>Free <b>฿${fmt0(free)}</b></span>${chip}</div><div class="ldrBar" data-ldr-bar><i style="width:${w}%" class="${sp&&sp.lOver?'over':''}"></i></div>${pool>0 ? '' : '<div class="ccWarn" data-ldr-nopool>No Compounder pool yet — set the split in Settings › Pools.</div>'}`;
-  /* Watching */
-  const watched = wlItems.filter(x=>wlTrackOf(x)==='ladder');
-  const cand = wlItems.filter(x=>wlTrackOf(x)==='winner' && !wlTrackBlock(x.ticker, 'ladder')   /* PL1·A2 — ตัดเงื่อนไข Fortress ออก */);
-  const wRows = watched.map(x=>{
-    const d = x.ladder_dist || {}, ti = e(x.ticker);
-    const inp = k=>`<label class="mu">EMA${k.slice(3)} %<input type="number" step="any" inputmode="decimal" data-ldr-dist="${k}" value="${d[k]!=null ? e(String(d[k])) : ''}" onchange="ldrDistSet('${ti}','${k}',this.value)"></label>`;
-    return `<div class="ldrW" data-ldr-w="${ti}"><div class="row"><b>${ti}</b><select data-ldr-state aria-label="Trend state ${ti}" onchange="ldrStateSet('${ti}',this.value)">${LDR_STATES.map(sx=>`<option value="${sx}"${sx===x.ladder_state?' selected':''}>${sx}</option>`).join('')}</select><button type="button" class="ccBtn" data-ldr-unwatch onclick="ldrWatchDel('${ti}')" aria-label="Move ${ti} back to Momentum" title="Move back to Momentum track">✕</button></div><div class="row" style="margin-top:4px">${inp('ema20')}${inp('ema50')}${inp('ema200')}</div></div>`; }).join('');
-  const addRow = `<div class="row ldrAdd" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><select id="ldrAddSel" data-ldr-addsel aria-label="Add a Fortress stock"><option value="">${cand.length ? '+ Move a Fortress stock to Compounder…' : 'No Fortress-passed Momentum stock to move'}</option>${cand.map(x=>`<option value="${e(x.ticker)}">${e(x.ticker)}</option>`).join('')}</select><button type="button" class="ccBtn" data-ldr-add onclick="ldrWatchAdd()"${cand.length ? '' : ' disabled'}>Watch</button></div>`;
-  const hint = (cand.length || watched.length) ? '' : '<div class="ccWarn" data-ldr-howto>No stock is ready for a Compounder yet. A Compounder only works for a stock marked <b>Fortress passed</b>: go to Watch → open the stock → Edit Stock Evaluation → set Fortress to passed. It then appears in the list below.</div>';
-  const watching = `${hint}<h3>Watching <span class="mu" data-ldr-nwatch>${watched.length}</span></h3>${wRows || '<div class="mu" data-ldr-nowatch>Nothing watched yet.</div>'}${addRow}`;
-  /* Active + Closed */
-  const views = coreCardsList.filter(c=>c.acct===A && c.strategy==='L' && c.ladder).map(c=>coreView(c, cx));
-  const act = views.filter(v=>v.kind==='open' || v.kind==='plan'), closed = views.filter(v=>v.kind==='closed');
-  const active = `<h3>Active ladders <span class="mu" data-ldr-nact>${act.length}</span></h3>${act.map(v=>ldrCardHtml(v, cx)).join('') || '<div class="mu" data-ldr-noact>No active ladder.</div>'}`;
-  const cl = `<h3>Closed ladders <span class="mu">${closed.length}</span></h3>${closed.length ? closed.map(v=>`<div class="ldrC" data-ldr-closed="${e(v.c.id)}" style="cursor:default"><b>${e(v.c.ticker)}</b> <span class="mu">${e(v.c.closed_at || (v.t && v.t.exitDate) || '')}</span></div>`).join('') : '<div class="mu">None yet.</div>'}<div class="ldrAct"><button type="button" class="ccBtn" data-ldr-journal onclick="ldrToJournal()">Open in Journal (Compounder bucket) ›</button></div>`;
-  return head + watching + active + cl + `<div class="ldrAct"><button type="button" class="ccBtn pri" data-ldr-new onclick="ldrNew()">+ New ladder</button></div>`;
-}
-function ldrToJournal(){ try{ switchTab('journal'); setJBucket('ladder'); }catch(err){ console.warn('ldrToJournal:', err); } }
-function renderLadderPanel(){
-  const host = document.getElementById('ladderPanel'); if(!host) return;
-  if(planScope!=='ladder' || !Calc.coreSize){ host.style.display = 'none'; return; }
-  const a = lfCoreAcc();
-  if(!a){ host.style.display = 'none'; return; }
-  host.style.display = '';
-  let h = ''; try{ h = ldrHtml(a); }catch(err){ console.warn('ldrHtml:', err); h = '<div class="ccEmpty">Could not build the Compounder page.</div>'; }
-  host.innerHTML = h;
 }
 function renderCorePanel(){
   const host = document.getElementById('corePanel'); if(!host) return;
-  if(planScope!=='stock' || !Calc.coreSize){ host.style.display = 'none'; return; }
+  if((planScope!=='stock' && planScope!=='ladder') || !Calc.coreSize){ host.style.display = 'none'; return; }
+  const trk = planScope==='ladder' ? 'ladder' : 'winner';   /* PL1·A8 — Compounder = ส่วนประกอบเดียวกับ Momentum กรองตาม track */
   if(ln1On()){
     const a = lfCoreAcc();
     if(!a){ host.style.display = 'none'; return; }
     host.style.display = '';
     const keep = host.querySelector('[data-lf-box]') ? null : 1; void keep;
     let h = '';
-    try{ h = lfCoreBoxHtml(a) + (coreErr ? `<div class="ccErr" data-core-err>${escHtml(coreErr)}</div>` : '') + lfCoreSwHtml(a) + lfCoreCardsHtml(a); }
+    try{ h = lfCoreBoxHtml(a, trk) + (coreErr ? `<div class="ccErr" data-core-err>${escHtml(coreErr)}</div>` : '') + lfCoreSwHtml(a) + lfCoreCardsHtml(a, trk); }
     catch(err){ console.warn('lf core', err); h = `<div class="ccAcct"><div class="ccEmpty">คำนวณไม่สำเร็จ · ${escHtml(a.name)}</div></div>`; }
     host.innerHTML = h;
     lfWords(host); lfWordsWatch(host); lfSideHint();
@@ -10774,8 +10697,9 @@ function renderCorePanel(){
   const parts = accts.map(a=>{
     try{ return coreAcctHtml(a); }catch(e){ console.warn('core acct', a.id, e); return `<div class="ccAcct"><div class="ccEmpty">คำนวณไม่สำเร็จ · ${escHtml(a.name)}</div></div>`; }
   });
-  host.innerHTML = `<div class="panel"><div class="panel-head"><h2>Momentum · การ์ดตำแหน่ง</h2></div><div class="ccNote">ขาดทุนสูงสุดต่อตัว ≤ งบเสี่ยง × FF เสมอ</div>
-    ${coreErr ? `<div class="ccErr" data-core-err>${escHtml(coreErr)}</div>` : ''}${parts.join('')}</div>`;
+  const legacyL = trk==='ladder' ? accts.map(a=>{ try{ return lfCoreLegacyRowsHtml(a.id, coreCtx(a.id)); }catch(e){ return ''; } }).join('') : '';
+  host.innerHTML = `<div class="panel"><div class="panel-head"><h2>${trk==='ladder' ? 'Compounder' : 'Momentum'} · การ์ดตำแหน่ง</h2></div><div class="ccNote">ขาดทุนสูงสุดต่อตัว ≤ งบเสี่ยง × FF เสมอ</div>
+    ${coreErr ? `<div class="ccErr" data-core-err>${escHtml(coreErr)}</div>` : ''}${parts.join('')}${legacyL}</div>`;
 }
 /* ดูไม้ที่ซื้อ — sheet เล็ก (ตาราง pyramid ย้ายมาจากการ์ด) */
 /* ── 7E-2b-2 · ไม้ที่ผูกการ์ด ── */
@@ -10785,7 +10709,7 @@ function coreOpenCardOfTrade(tid, A){
   let t = null; try{ t = getBook(A).trades.find(x=>x.id===tid) || null; }catch(e){}
   const c = t && coreCardOfTrade(t, A); if(!c) return false;
   if(activeTab!=='plan') switchTab('plan');
-  setPlanScope('stock');
+  setPlanScope(coreTrackOfCard(c)==='ladder' ? 'ladder' : 'stock');
   lfCoreEnsureAcc(c.acct);
   coreExpand(c.id); coreGoto(c.id);
   return true;
@@ -12217,7 +12141,6 @@ function render(){
 
   try{ renderPlanSections(); }catch(err){ console.warn('plan sections:', err); }
   try{ renderCorePanel(); }catch(err){ console.warn('core panel:', err); }   /* 7E-2 */
-  try{ renderLadderPanel(); }catch(err){ console.warn('ladder page:', err); }   /* RG2b */
 
   document.getElementById('foot').textContent =
     /* ใช้ชื่อพอร์ตปัจจุบัน (Core · Sat = satB) */
@@ -16201,7 +16124,7 @@ function wlAddSave(){
 function wlOpenCorePlan(sym){
   const t = wlNormTicker(sym); if(!t) return;
   switchTab('plan');
-  setPlanScope('stock');
+  { const w0 = wlItemOf(t); setPlanScope(w0 && wlTrackOf(w0)==='ladder' ? 'ladder' : 'stock'); }
   coreNewOpen(null, {ticker:t});
 }
 function wlDeleteItem(sym){

@@ -95,3 +95,24 @@ Engine/data/status/sizing only; the Compounder *page* switch and ladder-page ret
 | phase113 §UI5 | "+ New ladder lists Ladder-track stocks in Base/Sideways-Up only" · "+ New plan (Winner) lists Winner-track stocks only" | **RETIRED** | the ticker list shows all non-archived Watchlist stocks; Track comes from the Watchlist |
 | phase113 §UI5 | "Momentum form + Compounder-track ticker → blocked ('use + New ladder')" · "Compounder form + Momentum-track ticker → blocked" · "Ladder form + Broken stock → blocked" | **RETIRED** | single rule: a new plan uses the stock's Watchlist Track (one stock = one track) |
 | New | `tests/run_tests_phase118.py` (40 checks): Base 1% of the Compounder pool + cap 5% of account (banner + first-lot qty), Momentum unchanged, saved card = strategy 'W' + track 'ladder', scope switches to Compounder, per-track card lists, per-track holdings/pool split, DD bucket = ladder, 40W EMA status (green/yellow/red, empty = Stop only), cap on plan card, price sheet saves `emaW40`, legacy `strategy:'L'` data untouched | — | A8 |
+
+## Step 6 part 2 — Compounder page = Momentum components; ladder page retired
+Removed from the UI/code: `ldrHtml`, `ldrCardHtml`, `renderLadderPanel`, `ldrNew`, `ldrOpenSheet`, `ldrWatchAdd/Del`, `ldrStateSet`, `ldrDistSet`, `ldrToJournal`, the `#ladderPanel` host and the `scope-ladder` CSS rule. Kept: `ldrWlSet` (used by the Watchlist Track switch), stored `strategy:'L'` cards / `ladder*` fields / ladder settings, `coreLadderCalc` / `canPlaceLadder` (Calc tests untouched), `coreLCardHtml` (dormant). `core_size_test.js` unchanged (502/502).
+Legacy `strategy:'L'` cards show as one read-only line on the Compounder page (`ticker · qty · avg · stop`, or `plan · stop` for an unbought plan) with no buy/cancel actions.
+| Suite | Check / area | Change | Why |
+|---|---|---|---|
+| phase113 §4.1 | "ladder budget starts at 5% of account × f%" (3 FF levels, `ldrNew` + `cnLbud`) | **RETIRED** (prints RETIRED) | see part 1 |
+| phase113 §4.3 | header: Pool used/total, Free, Size chip (`[data-ldr-head]`, `[data-ldr-used]`, `[data-ldr-size]`) · Size 100/75/50 chip per FF level | **RETIRED** | ladder page header gone; FF/pool shown by the Momentum box and phase118 |
+| phase113 §4.3 | ladder card: T1 bought / T2 waiting / T3 cancelled + progress dots; avg cost + `Exit: SL` line; buttons mark-bought / cancel-level / edit-zones | **RETIRED** | ladder-level table/card removed |
+| phase113 §4.3 | `+ New ladder` button and Journal link; tap card → detail sheet; Mark T2 bought → ladder buy form | **RETIRED** | no ladder page / ladder buy form in the UI |
+| phase113 §4.3 | Watching table: add-select (`#ldrAddSel`), state select Base/Sideways-Up/Broken, EMA20/50/200 distance fields; set state + EMA distance | **RETIRED** | Watchlist + Track filter replaces it; `ladder_state` / `ladder_dist` data kept (not rendered) |
+| phase113 §4.3 | `scopeLadder` click → "ladder page shown, Winner/Sat panels hidden" | rewritten: Compounder scope shows `corePanel` with a Compounder head, no `#ladderPanel`; legacy ladder = read-only row without buttons; no overflow | A8 |
+| phase113 §UI3 | ladder page: account chips on one line, header not overlapping, T1–T3 rows not clipped | **RETIRED** (overflow check kept as "หน้า Compounder") | ladder page gone |
+| phase113 §UI4/§UI5 | legacy L card appears on the Ladder page | now: appears as a read-only legacy row on the Compounder page | A8 |
+| phase113 §UI5 | opening from `+ New ladder` pre-fills the first eligible ladder stock | **RETIRED** | no ladder form |
+| phase29 A3 | legacy L card: buy first level (`[data-ldr-buy]` / `coreLBuySave`) → trade `unplanned:false` | **RETIRED** | ladder buy UI removed |
+| phase31 #14 | L cards not on Winner page, shown on the Ladder page (`[data-ldr-card]`) | now `[data-lf-legacy-row]` on the Compounder page | A8 |
+| phase89 #3 | L plan card on the Ladder page with `T1 … SL …` | now read-only legacy row (`ZZZ … plan · stop`) | A8 |
+| New | phase118 `page_tests`: Compounder page (Lean) = Momentum box/cards filtered by track, legacy read-only row (no buttons), Momentum page unaffected, `＋ แผน` opens "New Compounder plan" | — | A8 |
+| New | phase117 `archive_warn_tests`: archiving a stock with an open plan → inline "Has an open position/plan — archive anyway?", button becomes "Archive anyway", second tap archives, the plan is untouched; stock without a plan archives in one tap | — | A6 add-on |
+Pre-existing/known: phase23 (sync_core_size check), phase45/47/66/43 (missing backup folders) fail on main too. phase25 passed on a solo rerun after one load-related timeout in the parallel batch.

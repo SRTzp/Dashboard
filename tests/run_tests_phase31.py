@@ -220,7 +220,7 @@ def ladder_keep_checks(pw, w, h, label):
         # RG2b — การ์ด L อยู่หน้า Ladder (ไม่มีเมนู Tier…/แก้แผนบันไดในหน้า Winner) : ตัดเคสเปลี่ยนมุม Tier ของการ์ด L ออก
         onwin = page.locator(card_sel("lp")).count() + page.locator(card_sel("lo")).count()
         page.evaluate("()=>{ setPlanScope('ladder'); render(); }"); page.wait_for_timeout(400)
-        check(f"{tag} 14 (RG2b) การ์ด L ไม่อยู่หน้า Winner · อยู่หน้า Ladder ทั้ง 2 ใบ (ไม่มี Tier…)", onwin == 0 and page.locator('[data-ldr-card="lp"]').count() == 1 and page.locator('[data-ldr-card="lo"]').count() == 1, onwin)
+        check(f"{tag} 14 (RG2b) การ์ด L ไม่อยู่หน้า Winner · อยู่หน้า Ladder ทั้ง 2 ใบ (ไม่มี Tier…)", onwin == 0 and page.locator('[data-lf-legacy-row="lp"]').count() == 1 and page.locator('[data-lf-legacy-row="lo"]').count() == 1, onwin)   # PL1 Step 6: แถวอ่านอย่างเดียวหน้า Compounder
         check(f"{tag} 14 ไม่มี console error", not ce and not pe, json.dumps([ce[:2], pe[:2]]))
     finally:
         browser.close()

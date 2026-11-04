@@ -118,6 +118,26 @@ def mgmt_tests(pw, w, h):
     finally: b.close()
 
 
+def archive_warn_tests(pw, w, h):
+    tag = f"[{ENGINE}/archwarn/{w}]"
+    cards = {"ccW": {"acct": "main", "ticker": "PLN", "market": "US", "strategy": "W", "plan": {"entry": 100, "stop": 90}, "stop": 90, "stopHistory": [], "px": 100, "pxDate": "2026-10-29", "emaW": 95, "lots": [], "trade_id": None, "acc_trade_id": None, "status": "plan", "created_at": "2026-10-20T00:00:00Z", "tier": "A"}}
+    b, page, ce, pe = P111.core(pw, w, h, cards=cards)
+    try:
+        put(page, "PLN", my_thesis={"why": "w", "exit": "x", "updated_at": "2026-10-01T00:00:00Z"}); put(page, "NOPLAN", my_thesis={"why": "w", "exit": "x", "updated_at": "2026-10-01T00:00:00Z"}); settle(page, 500)
+        js(page, "()=>wlArchiveOpen('PLN')"); settle(page, 300)
+        page.fill("[data-wla-reason]", "rotating out"); page.locator("[data-wla-save]").click(); settle(page, 400)
+        w1 = js(page, "()=>({warn:(document.querySelector('[data-wla-warn]')||{}).innerText||'', btn:document.querySelector('[data-wla-save]').innerText, archived:wlItemOf('PLN').archived, card:coreCardsList.find(c=>c.ticker==='PLN').status})")
+        check(f"{tag} A6: หุ้นมีแผนค้าง → ครั้งแรกขึ้นเตือน 'Has an open position/plan — archive anyway?' · ปุ่มเป็น 'Archive anyway' · ยังไม่ archive", "Has an open position/plan" in w1["warn"] and w1["btn"] == "Archive anyway" and w1["archived"] is False, w1)
+        page.locator("[data-wla-save]").click(); settle(page, 600)
+        w2 = js(page, "()=>({archived:wlItemOf('PLN').archived, reason:wlItemOf('PLN').archived_reason, card:coreCardsList.find(c=>c.ticker==='PLN').status, plan:coreCardsList.find(c=>c.ticker==='PLN').plan})")
+        check(f"{tag} A6: แตะอีกครั้ง → archive สำเร็จ · แผน (PLN) ไม่ถูกแตะ (status plan · entry/stop เดิม)", w2["archived"] is True and w2["reason"] == "rotating out" and w2["card"] == "plan" and w2["plan"] == {"entry": 100, "stop": 90}, w2)
+        js(page, "()=>wlArchiveOpen('NOPLAN')"); settle(page, 300)
+        page.fill("[data-wla-reason]", "done"); page.locator("[data-wla-save]").click(); settle(page, 600)
+        check(f"{tag} A6: หุ้นที่ไม่มีแผน/ไม้ → archive ครั้งเดียว ไม่มีคำเตือน", js(page, "()=>wlItemOf('NOPLAN').archived") is True, "")
+        check(f"{tag} ไม่ล้นแนวนอน · ไม่มี console error", not C.overflow(page) and not ce and not pe, [ce[:2], pe[:2]])
+    finally: b.close()
+
+
 def cand_rows_tests(pw, w, h):
     tag = f"[{ENGINE}/candrows/{w}]"
     b, page, ce, pe = T.launch(pw, w, h)
@@ -140,7 +160,7 @@ def cand_rows_tests(pw, w, h):
 def main():
     with sync_playwright() as pw:
         for w, h in ((390, 844), (1440, 900)):
-            mgmt_tests(pw, w, h); cand_rows_tests(pw, w, h)
+            mgmt_tests(pw, w, h); cand_rows_tests(pw, w, h); archive_warn_tests(pw, w, h)
     p = sum(1 for r in results if r[1]); f = len(results) - p
     print(f"\nสรุป: PASS {p} / FAIL {f} (รวม {len(results)})")
     raise SystemExit(1 if f else 0)

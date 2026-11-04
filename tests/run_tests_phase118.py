@@ -69,7 +69,7 @@ def pool_status_tests(pw, w, h):
     tr = [P13.T("tM", "core", "open", sym="MOMX", entry=100, sl=90, qty=50, cur="USD", date="2026-10-20"), P13.T("tC", "core", "open", sym="CMPX", entry=100, sl=90, qty=40, cur="USD", date="2026-10-20")]
     cards = {"ccM": card(ticker="MOMX", trade_id="tM", status="open", lots=[{"n": 1, "date": "2026-10-20", "px": 100, "qty": 50, "f": 1, "stop": 90}], px=100, emaW=95),
              "ccC": card(ticker="CMPX", track="ladder", trade_id="tC", status="open", lots=[{"n": 1, "date": "2026-10-20", "px": 100, "qty": 40, "f": 1, "stop": 90}], px=100, emaW40=98),
-             "ccL": card(ticker="OLDL", strategy="L", plan=None, ladder={"levels": [{"px": 50, "status": "bought"}], "sl": 45, "budgetPct": 0.1, "budgetTHB": 1000, "split": [1]}, status="open", trade_id=None)}
+             "ccL": card(ticker="OLDL", strategy="L", plan=None, ladder={"levels": [{"px": 50, "status": "wait"}], "sl": 45, "budgetPct": 0.1, "budgetTHB": 1000, "split": [1]}, status="plan", trade_id=None)}
     b, page, ce, pe = P111.core(pw, w, h, tr, cards)
     try:
         r = js(page, """()=>{ const cx = coreCtx('main'), A = 'main'; return {w:cx.wCost, c:cx.cCost, wpool:ddPoolOfCard(coreCardsList.find(c=>c.id==='ccM')), cpool:ddPoolOfCard(coreCardsList.find(c=>c.id==='ccC')),
@@ -99,18 +99,42 @@ def pool_status_tests(pw, w, h):
         js(page, "()=>{ document.getElementById('cpxPx').value = '101'; document.getElementById('cpxEma').value = '99.5'; corePxIn(); corePxSave(); }"); settle(page, 600)
         sv = js(page, "()=>{ const c = coreCardsList.find(x=>x.id==='ccC'); return [c.emaW40, c.emaW, c.px]; }")
         check(f"{tag} A8: บันทึกราคา + 40W EMA → emaW40 = 99.5 (emaW เดิมไม่ถูกแตะ)", sv[0] == 99.5 and sv[1] in (None, 0) and sv[2] == 101, sv)
-        leg = js(page, "()=>{ const a = lfCoreAcc(); return lfCoreCardsHtml(a, 'ladder').match(/data-lf-legacy-row/g) ? lfCoreCardsHtml(a, 'ladder').includes('OLDL') : false; }")
-        check(f"{tag} A8: การ์ด strategy 'L' เดิม (ที่มีไม้) ยังเก็บข้อมูลไว้ — แต่การ์ดที่ยังไม่มีไม้ไม่แสดงเป็นแถว legacy (แสดงเฉพาะที่ถืออยู่)", leg is False, leg)
+        leg = js(page, "()=>{ const a = lfCoreAcc(); return lfCoreCardsHtml(a, 'ladder').includes('OLDL'); }")
+        check(f"{tag} A8: การ์ด strategy 'L' เดิมแสดงเป็นแถว legacy อ่านอย่างเดียวในรายการ Compounder", leg is True, leg)
         d0 = js(page, "()=>JSON.stringify(coreCardsList.find(c=>c.id==='ccL').ladder)")
         check(f"{tag} A8: ข้อมูล ladder เดิมไม่ถูกแตะ", '"sl":45' in d0 and '"budgetTHB":1000' in d0, d0)
         check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
     finally: b.close()
 
 
+def page_tests(pw, w, h):
+    tag = f"[{ENGINE}/page/{w}]"
+    tr = [P13.T("tM", "core", "open", sym="MOMX", entry=100, sl=90, qty=50, cur="USD", date="2026-10-20"), P13.T("tC", "core", "open", sym="CMPX", entry=100, sl=90, qty=40, cur="USD", date="2026-10-20")]
+    cards = {"ccM": card(ticker="MOMX", trade_id="tM", status="open", lots=[{"n": 1, "date": "2026-10-20", "px": 100, "qty": 50, "f": 1, "stop": 90}], px=100, emaW=95),
+             "ccC": card(ticker="CMPX", track="ladder", trade_id="tC", status="open", lots=[{"n": 1, "date": "2026-10-20", "px": 100, "qty": 40, "f": 1, "stop": 90}], px=100, emaW40=98),
+             "ccL": card(ticker="OLDL", strategy="L", plan=None, ladder={"levels": [{"px": 50, "status": "wait"}], "sl": 45, "budgetPct": 0.1, "budgetTHB": 1000, "split": [1]}, status="plan")}
+    b, page, ce, pe = P111.core(pw, w, h, tr, cards)
+    try:
+        js(page, "()=>{ ln1SetMode('lean'); switchTab('plan'); setPlanScope('ladder'); render(); }"); settle(page, 700)
+        r = js(page, """()=>({head:(document.querySelector('[data-lf-box] .sumT')||{}).innerText, ch:(document.querySelector('[data-lf-cards] .lf-ch b')||{}).innerText, cards:[...document.querySelectorAll('#corePanel [data-core-card]')].map(e=>e.dataset.coreCard), legacy:[...document.querySelectorAll('[data-lf-legacy-row]')].map(e=>e.innerText.replace(/\\s+/g,' ')), ladderPanel:!!document.getElementById('ladderPanel'), btns:document.querySelectorAll('[data-lf-legacy] button').length, tag:(document.querySelector('[data-core-card=ccC] [data-lf-tag]')||{}).innerText||''})""")
+        check(f"{tag} A8: หน้า Compounder (Lean) ใช้กล่องเดียวกับ Momentum: หัว 'Compounder' · 'การ์ด Compounder' · แสดงเฉพาะการ์ด track ladder (ccC) · ไม่มี #ladderPanel", r["head"] == "Compounder" and r["ch"] == "การ์ด Compounder" and r["cards"] == ["ccC"] and r["ladderPanel"] is False, r)
+        check(f"{tag} A8: แถวบันไดเดิม (OLDL) = แถวอ่านอย่างเดียว 'plan · stop 45' ไม่มีปุ่ม", len(r["legacy"]) == 1 and "OLDL" in r["legacy"][0] and "stop 45" in r["legacy"][0] and r["btns"] == 0, r)
+        check(f"{tag} A8: ป้ายการ์ด Compounder = '… · Compounder'", "Compounder" in r["tag"], r["tag"])
+        js(page, "()=>{ setPlanScope('stock'); render(); }"); settle(page, 500)
+        m = js(page, """()=>({head:(document.querySelector('[data-lf-box] .sumT')||{}).innerText, cards:[...document.querySelectorAll('#corePanel [data-core-card]')].map(e=>e.dataset.coreCard), legacy:document.querySelectorAll('[data-lf-legacy-row]').length})""")
+        check(f"{tag} A8: หน้า Momentum แสดงเฉพาะการ์ด Momentum (ccM) · ไม่มีแถว legacy ladder", m["head"] == "Momentum" and m["cards"] == ["ccM"] and m["legacy"] == 0, m)
+        js(page, "()=>{ setPlanScope('ladder'); render(); }"); settle(page, 500)
+        js(page, "()=>document.querySelector('[data-lf-newplan]').click()"); settle(page, 600)
+        t_ = js(page, "()=>(document.querySelector('.core-sheet h3')||{}).textContent||''")
+        check(f"{tag} A8: ＋ แผน ในหน้า Compounder → ฟอร์มแผนใหม่ 'New Compounder plan' (ฟอร์มเดียวกับ Momentum)", t_ == "New Compounder plan", t_)
+        check(f"{tag} ไม่ล้นแนวนอน · ไม่มี console error", not C.overflow(page) and not ce and not pe, [ce[:2], pe[:2]])
+    finally: b.close()
+
+
 def main():
     with sync_playwright() as pw:
         for w, h in ((390, 844), (1440, 900)):
-            plan_tests(pw, w, h); pool_status_tests(pw, w, h)
+            plan_tests(pw, w, h); pool_status_tests(pw, w, h); page_tests(pw, w, h)
     p = sum(1 for r in results if r[1]); f = len(results) - p
     print(f"\nสรุป: PASS {p} / FAIL {f} (รวม {len(results)})")
     raise SystemExit(1 if f else 0)

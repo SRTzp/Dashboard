@@ -170,15 +170,8 @@ def section_A(pw, w, h, tag):
     finally:
         browser.close()
 
-    # A3 การ์ด L ซื้อระดับแรก
-    browser, context, page, ce, pe, dialogs = launch(pw, w, h, p26.doc26(), cards={"l1": p26.lcard("l1")})
-    try:
-        go(page); page.evaluate("()=>{ setPlanScope('ladder'); render(); }"); page.wait_for_timeout(400); ex(page, "l1")   # RG2b: การ์ด L อยู่หน้า Ladder
-        page.click('[data-ldr-card="l1"] [data-ldr-buy], ' + card_sel("l1") + " [data-c-lbuy]"); page.wait_for_selector('.core-sheet [data-core-sheet="lbuy"]'); page.click("#clSave"); page.wait_for_timeout(700)
-        t = next((x for x in p24.book_trades(page) if x["sym"] == "ZZZ"), None)
-        check(f"{tag} A3 การ์ด L ซื้อระดับแรก (coreLBuySave) → trade unplanned:false", t is not None and t["unplanned"] is False, json.dumps(t))
-    finally:
-        browser.close()
+    # A3 การ์ด L ซื้อระดับแรก — RETIRED (PL1 Step 6): หน้า Ladder/ปุ่มซื้อระดับเลิกแล้ว · การ์ดบันไดเดิมเป็นแถวอ่านอย่างเดียว (tests/PL1_retired.md)
+    print(f"RETIRED (PL1 Step 6) - {tag} A3 การ์ด L ซื้อระดับแรก (coreLBuySave) → trade unplanned:false")
 
 
 # ───────────────────────── B · Watchlist Tier ─────────────────────────
