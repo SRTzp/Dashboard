@@ -116,3 +116,16 @@ Legacy `strategy:'L'` cards show as one read-only line on the Compounder page (`
 | New | phase118 `page_tests`: Compounder page (Lean) = Momentum box/cards filtered by track, legacy read-only row (no buttons), Momentum page unaffected, `＋ แผน` opens "New Compounder plan" | — | A8 |
 | New | phase117 `archive_warn_tests`: archiving a stock with an open plan → inline "Has an open position/plan — archive anyway?", button becomes "Archive anyway", second tap archives, the plan is untouched; stock without a plan archives in one tap | — | A6 add-on |
 Pre-existing/known: phase23 (sync_core_size check), phase45/47/66/43 (missing backup folders) fail on main too. phase25 passed on a solo rerun after one load-related timeout in the parallel batch.
+
+## Step 7 — A7 Today › Plans block
+Plans (Momentum · Compounder · Sat; Draft | Open; ≤5 rows per group then "+N more ›"; empty groups hidden) takes the Satellite panel's position in Daily mode (Weekend unchanged). The Sat group keeps `data-td3-panel="sat"` + its risk chip; Core Port keeps its risk/pool lines; the old Core Port "drafts" section and `td3CoreDrafts()` are gone.
+| Suite | Check / area | Change | Why |
+|---|---|---|---|
+| phase106 B1 | panel keys `ov · core · sat` (3 columns / stacked) | `ov · core · plans`; `rects()` counts only top-level panels (`[data-td3-panels] > [data-td3-panel]`) | Plans panel replaces the Satellite panel |
+| phase106 B7 | "+n" expander expands remaining pending items | **RETIRED** | expander lives on the Sat plan card only |
+| phase106 B7 | Saved row: `Entry 4,180 Size 0.3 lot SL 4,117 TP 4,300` one-line strip; strip font/one line/narrow hides SL/TP | now `Saved · Entry · SL · TP · Open ›` (no Size); strip checks **RETIRED** | one-line Sat row (user decision) |
+| phase108 §5 | Today Sat row context line `Main · 4H · Long · Zone …` | **RETIRED** | context line only on the Sat plan card |
+| phase108 §5 | Today Sat shows `Size 0.1 lot ×2` | row shows `Open · Entry · SL · TP`, no Size | same |
+| phase109 §4 | "+n in the row expands the list, no navigation" | **RETIRED** | expander removed from Today |
+| phase109 §B5b | Sat risk chip must not overflow `[data-td3-panel="sat"]` | measured against the Plans panel (`[data-td3-panels] > [data-td3-panel]:last-child`) | the Sat group sits inside the Plans panel |
+| New | `tests/run_tests_phase119.py` (26 checks): Plans replaces old drafts; Open order red → yellow → green; archived-with-open-position still Open; Draft text (missing / Ready to enter); 5-row cap + "+1 more ›"; Compounder group; legacy `strategy:'L'` excluded; tap targets (`coreOpenCardOfTrade` for Open, `coreOpenCard` for Draft, "+N more" → Plan tab on the group's page); empty Momentum/Compounder groups hidden | — | A7 |

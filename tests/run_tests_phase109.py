@@ -182,10 +182,7 @@ def sat_cards_tests(pw, w, h, label, shots=False):
             js(page, "()=>{ window.__act = []; }")
             page.locator(sel + " [data-td3-sat-link]").evaluate("e=>e.click()"); settle(page, 150)
             check(f"{tag} §4 {k}: กดปุ่มลิงก์ทำงานครั้งเดียว (ไม่ซ้ำจากการ์ด)", len(js(page, "()=>window.__act.slice()")) == 1)
-            if state in ("pending", "incomplete") and cnt(page, sel + " [data-td3-more]"):
-                js(page, "()=>{ window.__act = []; }"); page.locator(sel + " [data-td3-more]").click(); settle(page, 250)
-                check(f"{tag} §4 {k}: ปุ่ม +n ในการ์ดกางรายการ ไม่ไปหน้าอื่น", js(page, "()=>window.__act.slice()") == [])
-                go_today(page); js(page, SPY)
+            # PL1 Step 7 — ปุ่ม +n expander ถูกถอดจากแถว Today (อยู่ที่การ์ดแผน Sat เท่านั้น) · tests/PL1_retired.md
             done += 1
             js(page, "()=>{ window.__act = []; }")
         kb = js(page, "()=>{ const e = document.querySelector('[data-td3-sat-card]'); return e ? [e.getAttribute('role'), e.getAttribute('tabindex')] : null; }")
@@ -343,7 +340,7 @@ def risk_tests(pw, w, h, label, shots=False):
         same = js(page, "()=>{ const h = document.querySelector('[data-td4-ph=\"sat\"] h3').getBoundingClientRect(), c = document.querySelector('[data-td4-risk=\"sat\"]').getBoundingClientRect(); return [Math.round(h.top), Math.round(c.top)]; }")
         check(f"{tag} §B5b DD Sat 12.5% (Reduce) → '⚠ DD Sat … 12.5% · Reduce ›' ที่หัว Satellite · amber", chip.startswith("⚠ DD Sat") and "12.5%" in chip and "Reduce" in chip and chip.endswith("›") and st == "amber", [chip, st])
         check(f"{tag} §B5b ชิป DD Sat อยู่แถวเดียวกับหัวแผง", abs(same[0] - same[1]) <= 14, same)
-        wid = js(page, "()=>{ const c = document.querySelector('[data-td4-risk=\"sat\"]'), p = c.parentNode; return [c.scrollWidth <= c.clientWidth + 1 || getComputedStyle(c.querySelector('.t')).textOverflow === 'ellipsis', c.getBoundingClientRect().right <= document.querySelector('[data-td3-panel=\"sat\"]').getBoundingClientRect().right + 1, !!c.querySelector('.g')]; }")
+        wid = js(page, "()=>{ const c = document.querySelector('[data-td4-risk=\"sat\"]'), p = c.parentNode; return [c.scrollWidth <= c.clientWidth + 1 || getComputedStyle(c.querySelector('.t')).textOverflow === 'ellipsis', c.getBoundingClientRect().right <= document.querySelector('[data-td3-panels] > [data-td3-panel]:last-child').getBoundingClientRect().right + 1, !!c.querySelector('.g')]; }")
         check(f"{tag} §B5b ชิปไม่ล้นแถว · › ยังเห็น", all(wid), wid)
         if shots and label == "390px": scroll_to_sel(page, '[data-td4-ph="sat"]'); C.shot(page, "td4c-risk-390.png", sel='[data-td4-ph="sat"]')
         page.locator('[data-td4-risk="sat"]').click(); settle(page, 300)

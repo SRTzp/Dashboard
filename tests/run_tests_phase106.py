@@ -89,7 +89,7 @@ def inject(page, o): js(page, "(o)=>{ Object.assign(tdSettings(), o); todayRefre
 
 def rects(page):
     return js(page, """()=>{ const r = e => { const b = e.getBoundingClientRect(); return {t:Math.round(b.top+scrollY), l:Math.round(b.left), w:Math.round(b.width), b:Math.round(b.bottom+scrollY)}; };
-      return [...document.querySelectorAll('[data-td3-panel]')].map(e=>Object.assign({k:e.dataset.td3Panel}, r(e))); }""")
+      return [...document.querySelectorAll('[data-td3-panels] > [data-td3-panel]')].map(e=>Object.assign({k:e.dataset.td3Panel}, r(e))); }""")
 
 
 # ───────────────────────── 1 layout ─────────────────────────
@@ -104,9 +104,9 @@ def layout_tests(pw, w, h, label, shots=False):
         keys = [r["k"] for r in R]
         if w >= 1000:
             check(f"{tag} B1 ≥1000px: 3 คอลัมน์เท่ากัน จัดบนสุดเท่ากัน (ซ้าย→ขวา Overview · Core · Satellite)",
-                  keys == ["ov", "core", "sat"] and len({r["t"] for r in R}) == 1 and R[0]["l"] < R[1]["l"] < R[2]["l"] and max(r["w"] for r in R) - min(r["w"] for r in R) <= 2, R)
+                  keys == ["ov", "core", "plans"] and len({r["t"] for r in R}) == 1 and R[0]["l"] < R[1]["l"] < R[2]["l"] and max(r["w"] for r in R) - min(r["w"] for r in R) <= 2, R)
         else:
-            check(f"{tag} B1 <1000px: ซ้อนแนวตั้ง Overview → Core → Satellite ความกว้างเท่ากัน", keys == ["ov", "core", "sat"] and R[0]["b"] <= R[1]["t"] + 1 and R[1]["b"] <= R[2]["t"] + 1 and len({r["l"] for r in R}) == 1, R)
+            check(f"{tag} B1 <1000px: ซ้อนแนวตั้ง Overview → Core → Satellite ความกว้างเท่ากัน", keys == ["ov", "core", "plans"] and R[0]["b"] <= R[1]["t"] + 1 and R[1]["b"] <= R[2]["t"] + 1 and len({r["l"] for r in R}) == 1, R)
         check(f"{tag} ไม่ล้นแนวนอน · ไม่มี console error", ovf(page) <= 0 and not ce and not pe, [ovf(page), ce[:2], pe[:2]])
         if shots: C.shot(page, f"td3a-today-{label.replace('px', '')}.png", full=True)
     finally: b.close()
@@ -440,9 +440,7 @@ def sat_tests(pw, w, h, label, shots=False):
         check(f"{tag} B7 Draft เกณฑ์ไม่ครบ → 'Pending' (amber) · 'Setup: MA Align Overlap · +1' · ไม่อ้างว่าตลาดไม่เกิด · Criteria ›", main["st"] == "pending" and "Pending" in main["t"] and "Setup: MA Align Overlap" in main["t"] and "+1" in main["t"] and "Criteria ›" in main["t"] and "on minor" not in main["t"], main)
         check(f"{tag} B7 Main/Tactical ของ asset เดียวกัน แยกกัน 2 แถว (ป้าย Main / Tactical)", main["sleeve"] == "main" and tac["sleeve"] == "tactical" and "Main" in main["t"] and "Tactical" in tac["t"])
         check(f"{tag} B7 เกณฑ์ครบ ขาดช่อง → 'Incomplete' · 'SL / TP missing' · Continue ›", tac["st"] == "incomplete" and "SL / TP missing" in tac["t"] and "Continue ›" in tac["t"], tac)
-        page.locator('[data-td3-sat="XAUUSD"][data-sleeve="main"] [data-td3-more]').click(); settle(page, 300)
-        main = [x for x in sat_state(page) if x["k"] == "XAUUSD" and x["sleeve"] == "main"][0]
-        check(f"{tag} B7 '+n' กางรายการที่เหลือ (MA Align Overlap · MMT Shift Pivot)", "MA Align Overlap · MMT Shift Pivot" in main["t"], main)
+        print("RETIRED (PL1 Step 7) - B7 '+n' expands the remaining pending items (the expander lives on the Sat plan card only — tests/PL1_retired.md)")
         # Incomplete with 3+ missing → first two + n
         put_idea(page, "iX3", "BTCUSD", setup_ck=["in_zone", "align_ma50", "mmt_shift_pivot"])
         go_today(page)
@@ -459,12 +457,8 @@ def sat_tests(pw, w, h, label, shots=False):
         js(page, "()=>sat7dWrite('satIdeas','iX1',{status:'closed'})"); settle(page, 500)   # ปิดร่างเก่า → ไม่มีแถว
         go_today(page)
         sv = [x for x in sat_state(page) if x["st"] == "saved"]
-        check(f"{tag} B7 บันทึกแล้ว → 'Saved' (เขียว) + 'Entry 4,180 Size 0.3 lot SL 4,117 TP 4,300' บรรทัดเดียว · Open ›", len(sv) == 1 and all(v in sv[0]["t"] for v in (("Entry 4,180", "Size 0.3 lot", "Open ›") + (("SL 4,117", "TP 4,300") if w >= 1000 else ()))), sv)
-        kv = js(page, "()=>{ const e = document.querySelector('[data-td3-kv]'); const fs = [...e.querySelectorAll('span')].map(s=>getComputedStyle(s).fontSize); const r = e.getBoundingClientRect(); return {one: [...e.querySelectorAll('span')].filter(s=>s.getClientRects().length).every(s=>Math.abs(s.getBoundingClientRect().top - e.querySelector('span').getBoundingClientRect().top) < 3), sizes:[...new Set(fs)], h:r.height}; }")
-        check(f"{tag} B7 Saved: ทุกค่าบรรทัดเดียว ขนาดฟอนต์เท่ากัน", kv["one"] and len(kv["sizes"]) == 1, kv)
-        vis = js(page, "()=>{ const e = document.querySelector('[data-td3-kv]'); return ['p1','p2','p3'].map(c=>[...e.querySelectorAll('.'+c)].some(s=>s.getClientRects().length>0)); }")
-        check(f"{tag} B7 Entry/Size เห็นเสมอ" + (" · แคบ: ซ่อน SL แล้ว TP" if w <= 330 else ""), vis[0] and (w > 330 and vis[1] or w <= 330 and not vis[1] and not vis[2] or True), vis)
-        if w <= 330: check(f"{tag} B7 แผงแคบ: ซ่อน SL/TP เหลือ Entry + Size", vis == [True, False, False], vis)
+        check(f"{tag} B7 (PL1) บันทึกแล้ว → 'Saved' + 'Entry 4,180 · SL 4,117 · TP 4,300' บรรทัดเดียว · Open › (Size อยู่ที่การ์ดแผน Sat)", len(sv) == 1 and all(v in sv[0]["t"] for v in ("Saved", "Entry 4,180", "SL 4,117", "TP 4,300", "Open ›")) and "Size" not in sv[0]["t"], sv)
+        print("RETIRED (PL1 Step 7) - B7 Saved: kv strip one line / same font size / Entry-Size always visible / narrow hides SL-TP (the Entry/Size/SL/TP strip now lives on the Sat plan card only — tests/PL1_retired.md)")
         # cancelled/closed
         js(page, "()=>sat7dWrite('satIdeas','iX4',{status:'closed'})"); settle(page, 500); go_today(page)
         u = [x for x in sat_state(page) if x["k"] == "USDJPY"]

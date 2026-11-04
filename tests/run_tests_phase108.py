@@ -141,7 +141,7 @@ def ctx_pin_tests(pw, w, h, label, shots=False):
         t1 = today_sat(page)
         check(f"{tag} §5 Today (★ BTC): BTC ขึ้นบนสุด แล้ว XAU Main · XAU Tactical", t1 == ["BTCUSD:main", "XAUUSD:main", "XAUUSD:tactical"] and cnt(page, "[data-td3-sat=\"BTCUSD\"] [data-sat-pinmk]") == 1, t1)
         tc = txt(page, '[data-td3-sat="XAUUSD"][data-sleeve="main"] [data-sat-ctx]') or ""
-        check(f"{tag} §5 Today แถว XAU Main มีบรรทัดบริบทเดียวกับ Plan: 'Main · 4H · Long · Zone 4,230–4,250'", tc == "Main · 4H · Long · Zone 4,230–4,250", tc)
+        print(f"RETIRED (PL1 Step 7) - {tag} §5 Today row has the same context line as Plan (context line now lives on the Sat plan card only — tests/PL1_retired.md)")
         # persist ผ่านการบันทึกตั้งค่า (brInit → brCfgClean ต้องไม่ทำ pinned หาย)
         keep = js(page, "()=>{ brInit(); const o = brCfgClean(brDraft.cfg.BTCUSD); brDraft = null; return o; }")
         check(f"{tag} §5 ★ รอดการบันทึก ตั้งค่าโบรก/สินค้า (brInit → brCfgClean ยังเก็บ pinned)", keep == {"pinned": True}, keep)
@@ -185,7 +185,7 @@ def tranche_tests(pw, w, h, label, shots=False):
         finally: b.close()
     o, n = out["old"], out["new"]
     check(f"{tag} §5 ไม้สอง (Main): เติมไม้ได้ · มี 2 ไม้ open · หัวแถวแผน 'เข้าแล้ว 2' · มี 2 บรรทัดไม้ใน Plan · แต่ละไม้มีป้าย 'ไม้ 1/3' · 'ไม้ 2/3'", n["ok"] and n["n"] == 2 and n["head"].startswith("เข้าแล้ว 2") and len(n["lines"]) == 2 and "ไม้ 1/3" in n["lines"][0] and "ไม้ 2/3" in n["lines"][1], [n["ok"], n["n"], n["head"], n["lines"]])
-    check(f"{tag} §5 Today Satellite นับไม้สอง: RG2b: Size = 0.1 lot (0.03 + 0.03 Family + 0.04 ไม้สอง) · '×2' (ก่อนแก้ Size 0.1 และไม่มีไม้สอง)", "Size 0.1 lot ×2" in n["today"] and "Size 0.1 lot" in o["today"] and "×" not in o["today"], [n["today"], o["today"]])
+    check(f"{tag} §5 (PL1) Today Plans แถว Sat บรรทัดเดียว: Open · Saved · Entry · SL · TP (Size/×2 อยู่ที่การ์ดแผน Sat)", "Open" in n["today"] and "Entry 4,180" in n["today"] and "SL" in n["today"] and "TP" in n["today"] and "Size" not in n["today"], [n["today"], o["today"]])
     LOG["tranche_old_today"] = o["today"]; LOG["tranche_new_today"] = n["today"]
     check(f"{tag} §5 นับ Risk/ตำแหน่ง (RG2b: Sat v2 ขนาดไม้เล็กลง) · Caps เท่าเดิม · MainPos 2 ไม้ qty 0.07 · Risk รวมสองไม้ ${n['usd']:.0f} (ก่อนแก้ ${o['usd']:.0f})", json.loads(n["rk"])["c"] == json.loads(o["rk"])["c"] and json.loads(n["rk"])["r"]["main"] == 6000 and abs(n["usd"] - 150) < 1e-6 and json.loads(n["rk"])["pos"]["n"] == 2 and abs(json.loads(n["rk"])["pos"]["qty"] - 0.07) < 1e-9, [n["rk"][:200], o["rk"][:200], n["usd"], o["usd"]])
     check(f"{tag} §5 ขนาดไม้/ตัวเลขแผน (RG2b: lot 0.03 · riskUsd 441 · deal 0.07 · ready) (satV3PlanAcctCalc)", json.loads(n["calc"]) == {"blocks": [], "dd": "", "deal": 0.07, "limit": "risk", "lot": 0.03, "msg": "", "offBias": None, "rawHedge": None, "ready": True, "riskUsd": 441, "softWarn": "", "tacType": None, "warns": []}, [n["calc"][:200], o["calc"][:200]])

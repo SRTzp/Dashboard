@@ -2509,6 +2509,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .cpSh{display:flex;flex-direction:column;gap:10px;max-height:82vh}.cpRows{overflow:auto;display:flex;flex-direction:column;gap:10px;min-height:0}.cpRow{border:1px solid var(--line,#ddd);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}.cpRow.bad{border-color:var(--red,#c33)}.cpHd{display:flex;align-items:center;gap:8px}.cpHd .ccLnk{margin-left:auto}.cpChips{display:flex;flex-wrap:wrap;gap:6px}.cpNote{display:flex;gap:6px;flex-wrap:wrap}.cpNote input{flex:1 1 140px;min-width:0;font-size:16px}.cpErr,.cpMsg{color:var(--red,#c33);font-size:.82rem}.cpAll{display:flex;flex-direction:column;gap:6px;padding-bottom:8px;border-bottom:1px solid var(--line,#ddd)}.crsRow{display:flex;gap:8px;align-items:center;margin:4px 0}.crsRow input[type=text]{flex:1 1 auto;min-width:0}.crsOn{white-space:nowrap;font-size:.84rem}
 .scrSh{display:flex;flex-direction:column;gap:8px;max-height:84vh;overflow:auto}.scrSh .csR{display:flex;align-items:center;gap:8px;justify-content:space-between}.scrSh .csR.col{flex-direction:column;align-items:stretch}.scrSh textarea{width:100%;font-size:16px;box-sizing:border-box}.wlMt{display:flex;flex-direction:column;gap:6px;margin:10px 0;padding:8px;border:1px solid var(--line,#ddd);border-radius:10px}.wlMt label{display:flex;flex-direction:column;gap:2px;font-size:.82rem}.wlMt textarea{width:100%;font-size:16px;box-sizing:border-box}.wlMtSt{font-size:.78rem;color:var(--muted)}.wlMtSt.ok{color:var(--green,#2a7)}.wlMtF{display:flex;align-items:center;gap:8px}.wlOnb{font-size:.8rem;margin-top:4px}
 .wlSt{font-size:.7rem;padding:1px 6px;border-radius:999px;border:1px solid var(--line,#ccc);white-space:nowrap}.wlSt.st-drafting{color:var(--muted)}.wlSt.st-awaiting{color:var(--amber,#b80)}.wlSt.st-plan{color:var(--green,#2a7)}.wlSt.st-archived{color:var(--muted);border-style:dashed}.wlTg{font-size:.68rem;padding:0 6px;border-radius:999px;background:var(--surface2,#eee);white-space:nowrap}.wlTg.trk{font-weight:600}.wlNc{white-space:nowrap}.wlNcRow{display:flex;gap:8px;flex-wrap:wrap}.wlNcRow label{display:flex;flex-direction:column;gap:2px;font-size:.82rem}.wlNcRow label.grow{flex:1 1 140px}.wlNcRow input{font-size:16px;min-width:0}.wlaSh{display:flex;flex-direction:column;gap:8px}.wlDates{font-size:.78rem}
+.td3-pg{margin:0 0 6px}.td3-pgh{font-size:.74rem;font-weight:600;color:var(--muted);margin:4px 0 2px;display:flex;align-items:center;gap:8px}.td3-pgh h3{font-size:.74rem;margin:0}.td3-pr{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}.td3-pr b{flex:none}.td3-pr .ln{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:.8rem}.td3-sr.td3-pr .l1{flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow:hidden}.td3-sr.td3-pr .l1 .nm{flex:none}.td3-sr.td3-pr .l1 .ln{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:.8rem}.td3-sr.td3-pr .l1 .td3-lk{flex:none;margin-left:auto}.td3-dk{font-size:.7rem;padding:0 6px;border-radius:999px;border:1px solid var(--line,#ccc);color:var(--muted);flex:none}.td3-dot{flex:none}.td3-pmore{margin:2px 0}
 .wlRsSel{font:inherit;font-size:.78rem;padding:2px 4px;border:1px solid var(--line,#ccc);border-radius:6px;background:var(--bg,#fff);color:inherit;min-height:34px}
 .wl-star{display:inline-flex;flex:none;white-space:nowrap}.wl-star button{border:0;background:none;font:inherit;font-size:1.05rem;font-weight:700;line-height:1;color:var(--faint);min-width:32px;min-height:34px;cursor:pointer;padding:0}.wl-star button.on{color:var(--amber)}.wl-sd{font-size:.78rem;font-weight:700;color:var(--amber);flex:none}
 .wl-exp{border:1px solid var(--border);background:var(--surface);border-radius:8px;font:inherit;font-size:.78rem;font-weight:600;color:var(--teal);padding:0 10px;min-height:32px;cursor:pointer;white-space:nowrap}
@@ -7302,9 +7303,6 @@ function td4NpUndo(){
   td4Np = null; clearTimeout(td4NpT);
   td3MetaWrite(u.sym, {screened_at: u.prev});
 }
-function td3CoreDrafts(){
-  return coreCardsList.filter(c=>c.status==='plan' && c.strategy!=='L' && !(c.plan && +c.plan.entry > 0 && +c.plan.stop > 0));
-}
 function td3DraftMissing(c){ const m = []; if(!(c.plan && +c.plan.entry > 0)) m.push('Entry'); if(!(c.plan && +c.plan.stop > 0)) m.push('SL'); return m; }
 function td3PlanCore(sym, market){
   const A = tdCoreAcctFor(market || wlGuessMarket(sym)) || acctList.find(a=>(a.ports || ACCT_PORT_KEYS).includes('core')) || null;
@@ -7591,8 +7589,6 @@ function td3CoreDaily(M){
   /* If time permits */
   const nx = qAll[0];
   if(hwDone && scrDone && addLog.length >= TD4_MIN_ADD && nx && !openRows) h += `<div class="td3-next" data-td3-next><div class="td3-th">If time permits</div><div><b>${s(nx.sym)}</b> · Candidate ${nx.ageD == null ? '—' : nx.ageD + 'd'}</div><div class="td3-acts"><button type="button" class="td3-lk" data-td3-nx-screen onclick="td3Screen('${s(nx.sym)}')">Screen ›</button><button type="button" class="td3-lk" data-td3-nx-plan onclick="td3PlanCore('${s(nx.sym)}','${s(nx.market)}')">Draft plan ›</button></div></div>`;
-  const dr = td3CoreDrafts();
-  if(dr.length) h += `<div class="td3-sec" data-td3-sec="drafts">${dr.map(c=>`<div class="td3-it" data-td3-draft="${s(c.ticker)}"><b>${s(c.ticker)}</b> · Draft plan · ${td3DraftMissing(c).join(' / ')} missing<span class="td3-acts"><button type="button" class="td3-lk" onclick="td3PlanCore('${s(c.ticker)}','${s(c.market || '')}')">Continue ›</button></span></div>`).join('')}</div>`;
   try{ const d = stkLatest(); if(d && !stkIsRead(d.id)){ const n = stkModel(d).news; h += `<div class="td3-wn m" data-td3-wnews>Weekly News · ${n} update${n===1 ? '' : 's'} unread · <button type="button" class="td3-lk" onclick="stkOpenView()">Read ›</button></div>`; } }catch(e){}
   return h;
 }
@@ -7661,24 +7657,87 @@ function td3SatSaved(idea){
   const f = (l, v, c)=>`<span class="${c}"><i>${l} </i>${v}</span>`;
   return `<div class="td3-kv" data-td3-kv>${f('Entry', +idea.entry > 0 ? td3Num(idea.entry) : '—', 'p1')}${f('Size', qty > 0 ? `${td3Num(qty)} ${u}${nT > 1 ? ' ×' + nT : ''}` : '—', 'p1')}${f('SL', +idea.sl > 0 ? td3Num(idea.sl) : '—', 'p2')}${f('TP', +idea.tp > 0 ? td3Num(idea.tp) : '—', 'p3')}</div>`;
 }
+function td3SatInfo(r){
+  const s = td3E, L = (r.st && r.st.list) || [], num = v=>(+v > 0 ? td3Num(v) : '—');
+  if(r.k==='noplan') return 'Selected this week';
+  if(r.k==='pending') return (/^Needs /.test(L[0] || '') ? '' : 'Setup: ') + s(L[0] || '') + (L.length > 1 ? ` · +${L.length - 1}` : '');
+  if(r.k==='incomplete'){ if(r.st.hint) return s(r.st.hint); return s(L.slice(0, 2).join(' / ')) + ' missing' + (L.length > 2 ? ` · +${L.length - 2}` : ''); }
+  if(r.k==='saved'){ const i = r.idea, rs = satV3PlanRowState(i); return (rs==='open' ? '' : 'Ready to enter · ') + `Entry ${num(i.entry)} · SL ${num(i.sl)} · TP ${num(i.tp)}`; }
+  return '';
+}
+/* PL1·A7 — แถว Sat บรรทัดเดียว: ASSET · Main|Tactical · Draft|Open · pill · ข้อมูลสั้น (กดได้ทั้งแถวเหมือนเดิม · แถบ Entry/Size/SL/TP, บรรทัด context และ expander อยู่ที่การ์ดแผน Sat เท่านั้น) */
 function td3SatDaily(M){
   const rows = td3SatRows(), s = td3E;
   if(!satAssets().length) return `<div class="m" data-td3-satnone>No assets selected this week</div><button type="button" class="td3-lk" data-td3-satpick onclick="td3WeekGo('plan')">Pick assets ›</button>`;
   return rows.map(r=>{
     const [pt, pc] = TD3_PILL[r.k], nm = s(tdLabel(r.key)), sl = r.multi ? `<span class="sl">${r.sleeve==='tactical' ? 'Tactical' : 'Main'}</span>` : '';
-    let l2 = '', lk = '';
-    if(r.k==='nt') { l2 = ''; }
-    else if(r.k==='noplan'){ l2 = `<span class="ln">Selected this week</span>`; lk = `<button type="button" class="td3-lk" data-td3-sat-link onclick="td3SatCreate('${s(r.key)}','main')">Create plan ›</button>`; }
-    else if(r.k==='pending'){ const L = r.st.list, id = r.idea.id, ex = td3Exp.has(id); l2 = `<span class="ln">${/^Needs /.test(L[0]) ? '' : 'Setup: '}${s(ex ? L.join(' · ') : L[0])}${L.length > 1 && !ex ? ` · <button type="button" class="td3-more" data-td3-more onclick="td3SatExp('${id}')">+${L.length - 1}</button>` : ''}</span>`; lk = `<button type="button" class="td3-lk" data-td3-sat-link onclick="td3SatOpen('${id}','setup')">Criteria ›</button>`; }
-    else if(r.k==='incomplete'){ const L = r.st.list, id = r.idea.id, ex = td3Exp.has(id), first = L[0] || '';
-      l2 = r.st.hint ? `<span class="ln">${s(r.st.hint)}</span>` : `<span class="ln">${s(ex ? L.join(' / ') : L.slice(0, 2).join(' / '))} missing${L.length > 2 && !ex ? ` · <button type="button" class="td3-more" data-td3-more onclick="td3SatExp('${id}')">+${L.length - 2}</button>` : ''}</span>`;
-      lk = `<button type="button" class="td3-lk" data-td3-sat-link onclick="td3SatOpen('${id}','${s(first)}')">Continue ›</button>`; }
-    else if(r.k==='ready'){ l2 = `<span class="ln"></span>`; lk = `<button type="button" class="td3-lk" data-td3-sat-link onclick="td3SatOpen('${r.idea.id}','')">Open ›</button>`; }
-    else if(r.k==='saved'){ l2 = td3SatSaved(r.idea); lk = `<button type="button" class="td3-lk" data-td3-sat-link onclick="td3SatOpen('${r.idea.id}','')">Open ›</button>`; }
-    const ctx = (r.idea && r.k!=='nt') ? satCtxHtml(r.idea, 'td4-ctx') : '';
-    const go = r.k==='nt' ? '' : ` role="button" tabindex="0" data-td3-sat-card onclick="td3SatCardGo(event,this)" onkeydown="td3SatCardKey(event,this)"`;   /* TD4c — ทั้งการ์ดกดได้ = ลิงก์ของการ์ด (ปุ่มยังอยู่เป็นป้าย) · Not trading = ไม่กด */
-    return `<div class="td3-sr${go ? ' td4-cardbtn' : ''}"${go} data-td3-sat="${s(r.key)}" data-sleeve="${r.sleeve || ''}" data-state="${r.k}"><div class="l1">${satPinMk(r.key)}<b class="nm">${nm}</b>${sl}<span class="td3-pill ${pc}">${pt}</span></div>${ctx}${r.k==='nt' ? '' : `<div class="l2">${l2}${lk}</div>`}</div>`;
+    let lk = '';
+    if(r.k==='noplan') lk = `<button type="button" class="td3-lk" data-td3-sat-link onclick="td3SatCreate('${s(r.key)}','main')">Create plan ›</button>`;
+    else if(r.k==='pending') lk = `<button type="button" class="td3-lk" data-td3-sat-link onclick="td3SatOpen('${r.idea.id}','setup')">Criteria ›</button>`;
+    else if(r.k==='incomplete') lk = `<button type="button" class="td3-lk" data-td3-sat-link onclick="td3SatOpen('${r.idea.id}','${s((r.st.list || [])[0] || '')}')">Continue ›</button>`;
+    else if(r.k==='ready' || r.k==='saved') lk = `<button type="button" class="td3-lk" data-td3-sat-link onclick="td3SatOpen('${r.idea.id}','')">Open ›</button>`;
+    const dk = (r.k==='nt' || r.k==='noplan') ? '' : ((r.k==='saved' && satV3PlanRowState(r.idea)==='open') ? 'Open' : 'Draft');
+    const go = r.k==='nt' ? '' : ` role="button" tabindex="0" data-td3-sat-card onclick="td3SatCardGo(event,this)" onkeydown="td3SatCardKey(event,this)"`;
+    return `<div class="td3-sr td3-pr${go ? ' td4-cardbtn' : ''}"${go} data-td3-sat="${s(r.key)}" data-sleeve="${r.sleeve || ''}" data-state="${r.k}"><div class="l1">${satPinMk(r.key)}<b class="nm">${nm}</b>${sl}${dk ? `<span class="td3-dk" data-td3-dk>${dk}</span>` : ''}<span class="td3-pill ${pc}">${pt}</span><span class="ln">${td3SatInfo(r)}</span>${lk}</div></div>`;
   }).join('');
+}
+/* ══ PL1·A7 — Today › Plans: Momentum · Compounder · Sat (Draft | Open) ══ */
+const TD3_PLAN_MAX = 5;
+function coreOpenCard(id){
+  const c = coreCardsList.find(x=>x.id===id); if(!c) return false;
+  if(activeTab!=='plan') switchTab('plan');
+  setPlanScope(coreTrackOfCard(c)==='ladder' ? 'ladder' : 'stock');
+  lfCoreEnsureAcc(c.acct);
+  coreExpand(c.id); coreGoto(c.id);
+  return true;
+}
+function td3PlanRowGo(id){
+  const c = coreCardsList.find(x=>x.id===id); if(!c) return;
+  if(c.trade_id && coreEff(c).kind==='open' && coreOpenCardOfTrade(c.trade_id, c.acct)) return;
+  coreOpenCard(id);
+}
+function td3PlansMore(grp){ switchTab('plan'); setPlanScope(grp==='ladder' ? 'ladder' : grp==='sat' ? 'future' : 'stock'); }
+function td3PlansModel(){
+  const out = {winner:[], ladder:[]};
+  coreCardsList.forEach(c=>{
+    if(c.strategy==='L') return;
+    let v; try{ v = coreView(c, coreCtx(c.acct)); }catch(e){ return; }
+    if(v.kind!=='open' && v.kind!=='plan') return;
+    out[coreTrackOfCard(c)].push({c, v, open: v.kind==='open'});
+  });
+  ['winner', 'ladder'].forEach(k=>out[k].sort((a, b)=>{
+    if(a.open !== b.open) return a.open ? -1 : 1;
+    if(a.open) return (CORE_ST_ORDER[a.v.st.status] - CORE_ST_ORDER[b.v.st.status]) || (b.v.riskTHB - a.v.riskTHB);
+    return String(b.c.created_at || '').localeCompare(String(a.c.created_at || ''));
+  }));
+  return out;
+}
+function td3PlanRowHtml(r){
+  const s = td3E, c = r.c;
+  const info = r.open ? `<span class="td3-dot" data-td3-dot="${r.v.st.status}" title="${s(CORE_ST[r.v.st.status].txt)}">${CORE_ST[r.v.st.status].ico}</span>` : `<span class="ln">${td3DraftMissing(c).length ? td3DraftMissing(c).join(' / ') + ' missing' : 'Ready to enter'}</span>`;
+  return `<div class="td3-it td3-pr td4-cardbtn" role="button" tabindex="0" data-td3-plan="${s(c.ticker)}" data-kind="${r.open ? 'open' : 'draft'}" onclick="td3PlanRowGo('${s(c.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();td3PlanRowGo('${s(c.id)}')}"><b>${s(c.ticker)}</b><span class="td3-dk" data-td3-dk>${r.open ? 'Open' : 'Draft'}</span>${info}</div>`;
+}
+function td3PlansHtml(M){
+  const mdl = td3PlansModel(), s = td3E;
+  const grp = (k, name, rows)=>{
+    if(!rows.length) return '';
+    const shown = rows.slice(0, TD3_PLAN_MAX), more = rows.length - shown.length;
+    return `<div class="td3-pg" data-td3-pg="${k}"><div class="td3-pgh">${name}</div>${shown.map(td3PlanRowHtml).join('')}${more > 0 ? `<button type="button" class="td3-lk td3-pmore" data-td3-pmore="${k}" onclick="td3PlansMore('${k}')">+${more} more ›</button>` : ''}</div>`;
+  };
+  let satRows = [], satHtml = '';
+  try{ satRows = td3SatRows(); satHtml = td3SatDaily(M); }catch(e){ console.warn('td3 sat plans:', e); }
+  const satShown = satRows.length ? satRows.slice(0, 0) : [];   /* ค่าเริ่ม: แสดงทุกแถว Sat · จำกัด 5 ด้านล่าง */
+  void satShown;
+  let sat = '';
+  if(satHtml){
+    if(satRows.length > TD3_PLAN_MAX){
+      const all = satRows, keep = all.slice(0, TD3_PLAN_MAX), el = document.createElement('div'); el.innerHTML = satHtml;
+      const kids = [...el.children].slice(0, TD3_PLAN_MAX);
+      satHtml = kids.map(x=>x.outerHTML).join('') + `<button type="button" class="td3-lk td3-pmore" data-td3-pmore="sat" onclick="td3PlansMore('sat')">+${all.length - keep.length} more ›</button>`;
+    }
+    sat = `<div class="td3-pg" data-td3-pg="sat" data-td3-panel="sat"><div class="td4-ph" data-td4-ph="sat"><h3>Satellite</h3>${td4RiskChipHtml('sat', M)}</div>${satHtml}</div>`;
+  }
+  return grp('winner', 'Momentum', mdl.winner) + grp('ladder', 'Compounder', mdl.ladder) + sat;
 }
 
 /* ── Other ▸ (วาดเฉพาะตอนเปิด) ── */
@@ -7808,7 +7867,7 @@ function tdHtmlLean(M){
   let ov = '', core = '', sat = '';
   try{
     if(wk){ ov = td3WeekPanel('ov', W); core = td3WeekPanel('core', W); sat = td3WeekPanel('sat', W); }
-    else { ov = td3OverviewDaily(M); core = td3CoreDaily(M); sat = td3SatDaily(M); }
+    else { ov = td3OverviewDaily(M); core = td3CoreDaily(M); sat = td3PlansHtml(M); }   /* PL1·A7 — Plans แทนแผง Satellite ในโหมด Daily */
   }catch(e){ console.warn('td3 panels:', e); }
   const P = (k, t, b)=>{ const chip = k === 'sat' ? td4RiskChipHtml('sat', M) : k === 'core' ? td4RiskChipHtml('core', M) : ''; let pl = ''; if(k === 'core'){ try{ pl = td3PoolLinesHtml(); }catch(e){ console.warn('td3 pool lines:', e); } } return `<div class="ln3-tdc td3-p" data-td3-panel="${k}">${chip ? `<div class="td4-ph" data-td4-ph="${k}"><h3>${t}</h3>${chip}</div>` : `<h3>${t}</h3>`}${pl}${b}</div>`; };   /* RG2b §4.7 — หัวแผง Core: 2 บรรทัด Winner / Ladder */   /* TD4c — ชิปความเสี่ยงอยู่แถวเดียวกับหัวแผง */
   const banner = (wk && !W.complete) ? `<div class="td3-inc" data-td3-incomplete>This week's review is incomplete</div>` : '';
@@ -7819,7 +7878,7 @@ function tdHtmlLean(M){
     if(td3OtherOpen){ try{ other += `<div class="td3-ob" data-td3-ob>${td3OtherBody(M)}</div>`; }catch(e){ console.warn('td3 other:', e); } }
     other += `</details>`;
   } }catch(e){}
-  return `<div class="tdWrap td3" data-td-wrap data-ln3-today="1" data-td3="1">${td4RemBanner(M)}${(()=>{ try{ return tdRegimeVerdict(); }catch(e){ console.warn('td regime verdict:', e); return ''; } })()}${news}${goals}${sw}${banner}<div class="td3-pn" data-td3-panels>${P('ov', 'Overview', ov)}${P('core', 'Core Port', core)}${P('sat', 'Satellite', sat)}</div>${other}</div>`;
+  return `<div class="tdWrap td3" data-td-wrap data-ln3-today="1" data-td3="1">${td4RemBanner(M)}${(()=>{ try{ return tdRegimeVerdict(); }catch(e){ console.warn('td regime verdict:', e); return ''; } })()}${news}${goals}${sw}${banner}<div class="td3-pn" data-td3-panels>${P('ov', 'Overview', ov)}${P('core', 'Core Port', core)}${wk ? P('sat', 'Satellite', sat) : (sat ? P('plans', 'Plans', sat) : '')}</div>${other}</div>`;
 }
 /* ── TD4c — ชิปความเสี่ยงที่หัวแผง (ใช้ตัวเลข/สถานะเดิมของ tdBuild · ไม่คำนวณใหม่) ── */
 const TD4_STG = {reduce:'Reduce', pause:'Pause', recover:'Recover'};
