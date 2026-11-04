@@ -3,7 +3,7 @@
 > **Summary (5 lines)**
 > 1. **Built:** Phase A (A1–A8) on `claude/pl1-phase-a` — Add popup + Candidate reasons, screening modal (Trend 40 EMA must-pass), Ready rule (My Thesis ①/④), RS stars, flat 1% Base Risk, Watchlist management + Archive, Compounder = Momentum card layout, Today Plans block; Winner→Momentum / Ladder→Compounder labels. Phase B not started.
 > 2. **Tests vs main:** 120 suites on the branch vs 114 on main (+6 new suites: 114–119). Branch: 105 pass / 15 fail → after the one real regression found (phase94, fixed) **all 14 remaining failures also fail on main** (same FAIL lines). PASS lines 12449 (branch) vs 11980 (main).
-> 3. **PR:** PR_LINK_PLACEHOLDER (Draft — not merged).
+> 3. **PR:** https://github.com/SRTzp/Dashboard/pull/6 (Draft — not merged).
 > 4. **Overnight decisions:** 8 small ones, listed below (e.g. Watchlist row status is a dot + tooltip; Sat prompt row kept).
 > 5. **Needs SRTp:** dormant ladder-code cleanup PR (~2 weeks after merge), review of the 14 known-failing suites, and your eyes on the screenshots in `docs/briefs/PL1-screens/`.
 
