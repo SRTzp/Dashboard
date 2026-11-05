@@ -178,6 +178,44 @@ def item6(pw, w=390, h=844):
         C.shot(page, "pl2-sat-verify-390.png")
     finally: b.close()
 
+# ── Item 5: trade summary ──
+def item5(pw, w=390, h=844):
+    tag = f"[{ENGINE}/summary/{w}]"
+    b, page, ce, pe = P111.core(pw, w, h)
+    try:
+        P111.ok_ev(page, "S3", stars=3)
+        P111.open_form(page, "S3"); P111.setpx(page, 100, 90)
+        S = """()=>({txt: document.getElementById('cnSum').innerText.replace(/\\s+/g,' ').trim(), n: document.querySelectorAll('#cnSum [data-cs-sum]').length,
+            qty: (document.querySelector('[data-lf-qty]')||{}).innerText||'', risk: (document.querySelector('[data-lf-first] [data-lf-risk]')||{}).innerText||'',
+            sEntry: (document.querySelector('[data-cs-sum=entry] b')||{}).innerText||'', sSl: (document.querySelector('[data-cs-sum=sl] b')||{}).innerText||'', sSize: (document.querySelector('[data-cs-sum=size] b')||{}).innerText||'',
+            sRisk: (document.querySelector('[data-cs-sum=risk]')||{}).innerText||'', rs: (document.querySelector('[data-cs-rs]')||{}).innerText||'', miss: [...document.querySelectorAll('#cnSum [data-cs-miss]')].map(x=>x.innerText),
+            fe: document.getElementById('cnEntry').value, fs: document.getElementById('cnStop').value})"""
+        r = js(page, S)
+        check(f"{tag} summary shows 6 parts (Entry · Size · SL · Risk · RS · reasons)", r["n"] == 6, r)
+        check(f"{tag} summary == plan form: Entry/SL = inputs, Size = first-lot qty, Risk = first-lot risk", r["sEntry"].replace(",", "") == "100.00" and r["fe"] == "100" and r["sSl"] == "90.00" and r["fs"] == "90" and r["sSize"].replace(",", "") == r["qty"].replace(",", "") and r["qty"] != "" and r["risk"] in r["sRisk"], r)
+        check(f"{tag} risk shows money + '% of pool'", "% of pool" in r["sRisk"], r["sRisk"])
+        check(f"{tag} RS not rated → 'RS: Unrated' · no reasons → 'No reason tags'", r["rs"] == "RS: Unrated" and "No reason tags" in r["txt"], r)
+        # watchlist item with RS stars + reasons
+        js(page, "()=>{ wlItems.push({ticker:'S3', market:'US', rs_stars:2, reasons:['strong-rs','volume-spike'], port:'core'}); coreNewIn(); }"); settle(page, 300)
+        r2 = js(page, S)
+        tags = js(page, "()=>[...document.querySelectorAll('#cnSum [data-cs-reason]')].map(x=>x.innerText)")
+        check(f"{tag} RS ★★ + reason labels from the candidate reasons (Strong RS, Volume Spike)", r2["rs"] == "RS ★★☆" and tags == ["Strong RS", "Volume Spike"], [r2["rs"], tags])
+        # missing inputs
+        js(page, "()=>{ document.getElementById('cnEntry').value = ''; coreNewIn(); }"); settle(page, 300)
+        r3 = js(page, S)
+        check(f"{tag} no Entry → 'Missing: Entry' for Entry; Size/Risk 'Missing: Entry' (no invented numbers)", "Missing: Entry" in r3["miss"] and r3["sSize"] == "" and r3["sEntry"] == "" and len([m for m in r3["miss"] if "Entry" in m]) >= 3, r3)
+        js(page, "()=>{ document.getElementById('cnEntry').value = '100'; document.getElementById('cnStop').value = ''; coreNewIn(); }"); settle(page, 300)
+        r4 = js(page, S)
+        check(f"{tag} no SL → 'Missing: SL'", "Missing: SL" in r4["miss"] and r4["sSize"] == "", r4)
+        js(page, "()=>{ document.getElementById('cnStop').value = '110'; coreNewIn(); }"); settle(page, 300)
+        r5 = js(page, S)
+        check(f"{tag} Entry below SL → size says 'Missing: Entry above SL' (not a number)", any("Entry above SL" in m for m in r5["miss"]) and r5["sSize"] == "", r5)
+        # compounder track
+        js(page, "()=>{ document.getElementById('cnEntry').value = '100'; document.getElementById('cnStop').value = '90'; coreNewIn(); }"); settle(page, 300)
+        check(f"{tag} no overflow · no console errors", not C.overflow(page) and not ce and not pe, [C.overflow(page), ce[:2], pe[:2]])
+        C.shot(page, "pl2-trade-summary-390.png")
+    finally: b.close()
+
 
 if __name__ == "__main__":
     import sys
@@ -185,6 +223,7 @@ if __name__ == "__main__":
         item41(pw)
         item2(pw)
         item6(pw)
+        item5(pw)
     bad = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(bad)}/{len(results)} PASS")
     sys.exit(1 if bad else 0)

@@ -2351,6 +2351,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 @media(max-width:310px){.ln1-form .ln3-st{font-size:10.5px;word-spacing:-2.5px}.ln3-st .ln2-fn .dd{width:6px;height:6px}.ln3-st .ln2-chip{padding:0 3px;font-size:10px}}
 .vwImg .vwDel{top:auto;bottom:6px;right:6px}
 .pf-r1 .pf-tf select{padding:0 4px}
+.csSum{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fafaf7;font-size:13px}.csSum:empty{display:none}.csSum .cs-sc i{font-style:normal;color:var(--mute);font-size:12px;margin-right:2px}.csSum .miss{color:#a96e06;font-weight:600}.csSum .cs-tg{flex-basis:100%}
 .pf-r1 .pf-vf{display:flex;flex-direction:column;gap:3px}.pf-r1 .pf-vf label{margin:0;font-size:12px}.pf-r1 .pf-vf .pf-vc{display:flex;align-items:center;gap:6px;min-height:24px;color:var(--dark);font-size:13px;white-space:nowrap;cursor:pointer}.pf-vf .pf-vc input{width:18px;height:18px;margin:0}.pf-vf .pf-vr{font-weight:700;margin-left:4px}.pf-vf .pf-vr.c-gr{color:#1F9D6B}.pf-vf .pf-vr.c-rd{color:#d0453a}.pf-vf .pf-vr.c-ye{color:#a96e06}.pf-vf .pf-vleg{font-size:11px;color:#a96e06}
 .vwImg .vwTag[data-ln1-cap]{max-width:calc(100% - 84px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:340px){.vwImg .vwTag[data-ln1-cap] small{display:none}}
@@ -11499,6 +11500,25 @@ function lfFirstLine(cx, mk, tier, entry, stop, f, fLbl, acct, lotRisk, csx){
   return `<div class="size lf-size" data-lf-first><span data-lf-acct style="color:${acctColor(a)}">● ${escHtml(td3AcctName(a))}</span><b>ไม้แรก <span data-lf-qty>${fmt0(r.qty)}</span> หุ้น · เสี่ยง <span data-lf-risk>${coreMoneyK(r.risk, mk)}</span> ${ok ? '✅' : '⚠'}</b></div>
     <details class="ccHow lf-how"><summary>วิธีคิด</summary>${full}</details>`;
 }
+/* PL2·5 — สรุปเทรด (Momentum/Compounder): Entry · Size · SL · Risk (฿/$ + % ของถัง) · RS · Reason — ค่าชุดเดียวกับฟอร์มแผน/ผลคำนวณไม้แรก
+   ไม่มี flag "ผ่านเงื่อนไข" ให้ใช้ → แสดงเสมอ · ช่องที่ไม่มีค่า = "Missing: …" · ไม่แต่งตัวเลข */
+function csReasonIds(ticker){ const w = coreWlItem(ticker); if(w && Array.isArray(w.reasons) && w.reasons.length) return w.reasons.filter(x=>typeof x==='string'); const m = td3MetaOf(ticker); return Array.isArray(m.reasons) ? m.reasons.filter(x=>typeof x==='string') : []; }
+function csSummaryHtml(o){
+  const e = escHtml, miss = t=>`<span class="miss" data-cs-miss>Missing: ${e(t)}</span>`;
+  const okE = o.entry > 0, okS = o.stop > 0, badOrder = okE && okS && !(o.entry > o.stop);
+  const sizeMiss = [];
+  if(!okE) sizeMiss.push('Entry'); if(!okS) sizeMiss.push('SL'); if(badOrder) sizeMiss.push('Entry above SL');
+  if(!(o.poolOk)) sizeMiss.push('Pool'); if(!(o.lotRisk > 0)) sizeMiss.push('Risk budget');
+  const r = (!sizeMiss.length && o.r && o.r.ok) ? o.r : null;
+  const cell = (k, lab, html)=>`<span class="cs-sc" data-cs-sum="${k}">${lab ? `<i>${lab}</i> ` : ''}${html}</span>`;
+  const pct = r && o.equity > 0 ? r.risk / o.equity * 100 : null;
+  const size = r ? (r.zeroLot ? `<b>0</b> <span class="mut">(budget too small)</span>` : `<b>${fmt0(r.qty)}</b> sh`) : miss(sizeMiss.length ? sizeMiss.join(' / ') : 'Size');
+  const risk = r ? `<b>${coreMoneyK(r.risk, o.mk)}</b>${pct != null ? ` <span class="mut">(${pct.toFixed(2)}% of pool)</span>` : ''}` : miss(sizeMiss.length ? sizeMiss.join(' / ') : 'Risk');
+  const rs = o.stars == null ? 'RS: Unrated' : 'RS ' + '★'.repeat(o.stars) + '☆'.repeat(3 - o.stars);
+  const tags = (o.reasons || []).map(id=>`<span class="wlTg" data-cs-reason>${e(crsLabel(id))}</span>`).join('') || '<span class="mut" data-cs-noreason>No reason tags</span>';
+  return cell('entry', 'Entry', okE ? `<b>${e(coreP(o.entry))}</b>` : miss('Entry')) + cell('size', 'Size', size) + cell('sl', 'SL', okS ? `<b>${e(coreP(o.stop))}</b>` : miss('SL')) + cell('risk', 'Risk', risk)
+    + cell('rs', '', `<b data-cs-rs>${e(rs)}</b>`) + `<span class="cs-sc cs-tg" data-cs-sum="reasons">${tags}</span>`;
+}
 function lfFormHtml(o){
   const {mode, cur, opt, cfg0, wl, wl0, title} = o;
   const tkv = cur ? escHtml(cur.ticker) : escHtml(coreNorm(opt.ticker||''));
@@ -11512,7 +11532,7 @@ function lfFormHtml(o){
       <div class="ccF"><label>Risk %</label><input type="text" inputmode="decimal" id="cnRisk" oninput="coreNewRisk()"><span id="cnFsrc" hidden></span></div></div>
       <div class="ccSub" id="cnRiskHint" data-lf-riskhint style="margin:-4px 0 6px"></div>
       <div class="ccFfWarn ccStat warn" id="cnFwarn" data-cn-ffwarn style="display:none;margin-bottom:6px"></div>
-      <div class="ccRes lf-res" id="cnRes"></div></div>
+      <div class="ccRes lf-res" id="cnRes"></div><div class="csSum" id="cnSum" data-cs-summary></div></div>
     <div id="cnLBox" style="display:none"><div class="ccF"><label>ระดับราคา (เรียงจากสูงไปต่ำ · 2–3 ระดับ)</label><div id="cnLvBox"></div><button type="button" class="ccBtn" id="cnLadd" onclick="coreNewLvAdd()">＋ ระดับ 3</button></div>
       <div class="ccPair"><div class="ccF"><label>SL (ต่ำกว่าระดับสุดท้าย)</label><input type="text" inputmode="decimal" id="cnLsl" value="${escHtml(coreNew.sl)}" oninput="coreNewIn()"></div>
         <div class="ccF"><label>งบ % ของถัง Compounder <span class="ccSub" id="cnLbudT"></span></label><input type="text" inputmode="decimal" id="cnLbud" value="${coreNew.bud!=null?escHtml(coreNew.bud):''}" oninput="coreNewBud()"></div></div>
@@ -11674,6 +11694,14 @@ function coreNewIn(){
     }
     { const rh = (csx && !(lotRisk>0)) ? '' : ln1On() ? lfFirstLine(cx, mk, tier, rd.entry, rd.stop, f, F.src, n.acct, lotRisk, csx) : coreFirstLotHtml(cx, mk, tier, rd.entry, rd.stop, f, F.src);
       const re = coreEl('cnRes'); if(re.dataset.h !== rh){ re.innerHTML = rh; re.dataset.h = rh; } }
+    { const se = coreEl('cnSum');   /* PL2·5 */
+      if(se){
+        const div = mk==='US' ? cx.fx : 1, poolOk = cx.tankTHB > 0, okIn = rd.entry > rd.stop && rd.stop > 0 && poolOk && lotRisk > 0;
+        const wi = rd.ticker ? coreWlItem(rd.ticker) : null;
+        const sh = rd.ticker ? csSummaryHtml({ticker:rd.ticker, mk, entry:rd.entry, stop:rd.stop, lotRisk, poolOk, equity: poolOk ? cx.tankTHB/div : 0, r: okIn ? coreFirstLotCalc(cx, mk, tier, rd.entry, rd.stop, f, lotRisk) : null,
+          stars: wlStarsOf({item:wi}), reasons: csReasonIds(rd.ticker)}) : '';
+        if(se.dataset.h !== sh){ se.innerHTML = sh; se.dataset.h = sh; }
+      } }
     if(!(rd.entry>0) || !(rd.stop>0)) errs.push('กรอก Entry และ Stop');
     else if(!(rd.entry>rd.stop)) errs.push('Entry ต้องมากกว่า Stop');
     { const ddm = n.mode==='new' ? ddCoreBlockNew(n.acct, n.track==='ladder' ? 'ladder' : 'winner') : ''; if(ddm) errs.push(ddm); }   /* DD1 — พัก = บันทึกแผน W ไม่ได้ */
