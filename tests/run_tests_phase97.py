@@ -68,7 +68,7 @@ def desk(pw, w, h):
         rows = {}
         for tab, sc in TABS:
             go(page, tab, sc); rows[f"{tab}{'-' + sc if sc else ''}"] = probe(page)
-        ks = list(rows)
+        ks_all = list(rows); ks = [k for k in ks_all if not k.startswith("plan")]   # PL2c·10 — บนหน้า แผน แท็บหลักเลื่อนซ้ายเพื่อให้ที่สวิตช์ Momentum|Compounder|Sat ใน header (ตรวจแยกด้านล่าง)
         cen = {k: (r["nav"]["l"] + r["nav"]["r"]) / 2 for k, r in rows.items()}
         check(f"{tag} 2 ทุกแท็บ: กึ่งกลาง #tabsMain = กึ่งกลาง container (± 0.5px)", all(near(cen[k], rows[k]["wrapC"], 0.5) for k in ks), {k: [round(cen[k], 1), rows[k]["wrapC"]] for k in ks})
         check(f"{tag} 2 ทุกแท็บ: x ซ้ายของ nav เท่ากัน (± 0.5px) · x ซ้ายของ brand · x ขวาของ toolbar เท่ากัน",
@@ -135,6 +135,8 @@ def desk(pw, w, h):
             txt: document.getElementById('jSum').innerText, slotEmpty: document.getElementById('hdrSub').children.length === 0})""")
         check(f"{tag} 4 Journal: การ์ดสรุปมี OUN|FAM · รวม|Core|Sat · ทุกปี/ทุกเดือน · แถบเตือน/ข้อความตัดสิน เหมือนเดิม · ช่อง header ว่าง",
               jr["acct"] == 2 and jr["scopes"] == 3 and jr["dec"] and "ทุกปี" in jr["txt"] and "ทุกเดือน" in jr["txt"] and jr["slotEmpty"], jr)
+        pl = [rows[k]["nav"]["l"] for k in ks_all if k.startswith("plan")]
+        check(f"{tag} 2b PL2c·10 หน้า แผน: แท็บหลักเลื่อนซ้ายกว่าหน้าอื่น (≥1000px; ต่ำกว่านั้นสวิตช์อยู่ในหน้า) ", w < 1000 or bool(pl) and all(l < rows["today"]["nav"]["l"] - 20 for l in pl), {k: round(rows[k]["nav"]["l"], 1) for k in ks_all})
         if w in (1280, 1440, 1920):
             go(page, "plan", "stock")
             if w in (1280, 1440): C.shot(page, f"hd1-plan-{w}.png", full=False)
@@ -147,7 +149,9 @@ def desk(pw, w, h):
         # สลับไปมา 3 รอบ
         base_l = rows["today"]["nav"]["l"]; drift = []
         for _ in range(3):
-            for tab, sc in TABS: go(page, tab, sc); drift.append(abs(probe(page)["nav"]["l"] - base_l))
+            for tab, sc in TABS:
+                if tab == "plan": continue   # PL2c·10 — หน้า แผน เลื่อนซ้ายโดยตั้งใจ
+                go(page, tab, sc); drift.append(abs(probe(page)["nav"]["l"] - base_l))
         check(f"{tag} 2 สลับแท็บไปมา 3 รอบ: nav ไม่ขยับ (≤ 0.5px) · ไม่มี console error", max(drift) <= 0.5 and not ce and not pe, [max(drift), ce[:2], pe[:2]])
     finally: b.close()
 
