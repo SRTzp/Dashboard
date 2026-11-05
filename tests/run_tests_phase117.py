@@ -78,10 +78,10 @@ def mgmt_tests(pw, w, h):
         check(f"{tag} A6: แผง Filter ▾ มีกลุ่ม Track · Reason · RS · Sort", fl == [True, True, True, True], fl)
         js(page, "()=>{ fltOpen = false; renderWatchlist(); }")
         # card: dates + next check editor
-        js(page, "()=>wlOpen('CCC')"); settle(page, 500)
+        js(page, "()=>{ wlOpen('CCC'); wlSetSub('view'); }"); settle(page, 500)   # PL2·3: editor + dates now live in the My Thesis tab
         d1 = js(page, "()=>(document.querySelector('[data-wl-dates]')||{}).innerText||''")
         check(f"{tag} A6: การ์ดแสดง 'My Thesis' และ 'AI Thesis' แยกกัน — CCC: My —, AI imported 2026-10-20", "My Thesis: —" in d1 and "AI Thesis: imported 2026-10-20" in d1, d1)
-        js(page, "()=>wlOpen('DDD')"); settle(page, 500)
+        js(page, "()=>{ wlOpen('DDD'); wlSetSub('view'); }"); settle(page, 500)
         d2 = js(page, "()=>(document.querySelector('[data-wl-dates]')||{}).innerText||''")
         check(f"{tag} A6: ข้อมูลเก่า (ไม่มี thesis_imported_at) → 'data as of 2026-08-15' (ไม่เขียนว่า updated) · My Thesis updated 2026-09-01", "AI Thesis: data as of 2026-08-15" in d2 and "My Thesis: updated 2026-09-01" in d2, d2)
         js(page, "()=>wlOpen('FFF')"); settle(page, 400)

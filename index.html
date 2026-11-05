@@ -2351,6 +2351,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 @media(max-width:310px){.ln1-form .ln3-st{font-size:10.5px;word-spacing:-2.5px}.ln3-st .ln2-fn .dd{width:6px;height:6px}.ln3-st .ln2-chip{padding:0 3px;font-size:10px}}
 .vwImg .vwDel{top:auto;bottom:6px;right:6px}
 .pf-r1 .pf-tf select{padding:0 4px}
+.mtWrap{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}.mtAi{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fafaf7;font-size:13px;align-self:start}.mtAi .mtAiT{margin:6px 0}@media(min-width:1000px){.mtWrap{grid-template-columns:minmax(0,1fr) 280px}}.mtGal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.mtImg{position:relative}.mtImg .vwDel{position:absolute;top:4px;right:4px;background:rgba(255,255,255,.9);border-radius:6px;min-width:28px;min-height:28px}.wlMtSm{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:13px}.wlMtSm .wlMtL1{flex-basis:100%}.vwW{margin:2px 0}
 .csSum{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fafaf7;font-size:13px}.csSum:empty{display:none}.csSum .cs-sc i{font-style:normal;color:var(--mute);font-size:12px;margin-right:2px}.csSum .miss{color:#a96e06;font-weight:600}.csSum .cs-tg{flex-basis:100%}
 .pf-r1 .pf-vf{display:flex;flex-direction:column;gap:3px}.pf-r1 .pf-vf label{margin:0;font-size:12px}.pf-r1 .pf-vf .pf-vc{display:flex;align-items:center;gap:6px;min-height:24px;color:var(--dark);font-size:13px;white-space:nowrap;cursor:pointer}.pf-vf .pf-vc input{width:18px;height:18px;margin:0}.pf-vf .pf-vr{font-weight:700;margin-left:4px}.pf-vf .pf-vr.c-gr{color:#1F9D6B}.pf-vf .pf-vr.c-rd{color:#d0453a}.pf-vf .pf-vr.c-ye{color:#a96e06}.pf-vf .pf-vleg{font-size:11px;color:#a96e06}
 .vwImg .vwTag[data-ln1-cap]{max-width:calc(100% - 84px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -7184,6 +7185,51 @@ function wlMtSave(sym){
   const ncDate = String(d.nc_date != null ? d.nc_date : (it.next_check_date || '')), ncNote = String(d.nc_note != null ? d.nc_note : (it.next_check_note || '')).trim().slice(0, 120);
   Promise.resolve(col.doc(t).update({my_thesis:{why, exit, updated_at:new Date().toISOString()}, next_check_date:/^\d{4}-\d{2}-\d{2}$/.test(ncDate) ? ncDate : '', next_check_note:ncNote})).then(()=>{ delete wlMtDraft[t]; wlMtMsg[t] = 'Saved'; try{ renderWatchlist(); }catch(e){} })
     .catch(err=>{ wlMtMsg[t] = 'Could not save — your text is kept (' + ((err && (err.code || err.message)) || err) + ')'; try{ renderWatchlist(); }catch(e){} });
+}
+/* ══ PL2·3 — My Thesis (แท็บเดียว) : ข้อความของฉัน + รูปกราฟ + โน้ตเดิม · AI Thesis แยกต่างหาก (การ์ดตัวอย่างข้าง ๆ) ══
+   เก็บ: watchlist/{T}.my_thesis + next_check_* (เดิม) · รูป/โน้ตเดิม = stockNotes (vwList/vwWrite เดิม ไม่มีที่เก็บใหม่) · บันทึก My Thesis ไม่แตะข้อมูล AI และนำเข้า AI ไม่แตะ My Thesis */
+function wlMtSummaryHtml(it){
+  if(!it) return '';
+  const e = escHtml, t = it.ticker, m = wlMyThesis(it), first = String(m.why || '').split(/\n/)[0].trim();
+  return `<div class="wlMt wlMtSm" data-wl-mt-sum="${e(t)}"><b>My Thesis</b> ${wlStatusHtml(it) || ''}${wlNextHtml(it)}
+    <div class="wlMtL1" data-wl-mt-l1>${first ? '① ' + e(ltShort(first, 120)) : '<span class="mut">① Why buy — not written yet</span>'}</div>
+    <button type="button" class="ccLnk" data-wl-mt-edit onclick="wlSetSub('view')">Edit in My Thesis ›</button></div>`;
+}
+function vwDelImg(btn, id){   /* ลบเฉพาะรูป · ข้อความของโน้ตเดิมอยู่ครบ (ถ้าโน้ตมีแต่รูป = ลบทั้งแถว) */
+  const x = btn.closest('[data-vw-ang]'), box = btn.closest('[data-vw]'); if(!x || !box) return;
+  const sym = box.dataset.sym, ang = x.dataset.vwAng, dk = box.dataset.vwCtx + '|' + sym + '|' + ang;
+  if(!confirm('Remove this image?')) return;
+  const arr = vwList(sym, ang).map(n=>{ if(n.id !== id) return n; if(!String(n.t || '').trim()) return null; const c = Object.assign({}, n); delete c.chart; return c; }).filter(Boolean);
+  vwWrite(sym, ang, arr, dk);
+}
+function vwThesisHtml(sym){
+  const e = escHtml;
+  if(snErr) return `<div class="vwErr" data-vw-err>ยังอ่านโน้ตไม่ได้ (ต้องเพิ่ม Firestore rule stockNotes)</div>`;
+  const key = 'mt|' + sym + '|tech', dr = vwDraft[key] || {t:'', url:''}, msg = vwMsg[key] || '', over = dr.t.length > VW_MAX_T;
+  const imgs = vwList(sym, 'tech').filter(x=>x.chart && tvSnapImg(x.chart));
+  const gal = imgs.length ? imgs.map(x=>`<div class="mtImg" data-mt-img="${e(x.id)}" data-vw-ang="tech">${vwImgHtml(x.chart, 0, `<span class="vwTag">${e(wlThDate(x.d))}</span>`)}<button type="button" class="vwDel" data-mt-imgdel aria-label="Remove image" onclick="vwDelImg(this,'${e(x.id)}')">✕</button></div>`).join('') : '<div class="vwNone" data-mt-noimg>No chart images yet</div>';
+  const prev = [];
+  VW_ANGLES.forEach(([k, nm])=>vwList(sym, k).forEach(x=>{ if(String(x.t || '').trim()) prev.push({k, nm, x}); }));
+  prev.sort((a, b)=>String(b.x.d || '').localeCompare(String(a.x.d || '')));
+  const pl = prev.length ? prev.map(p=>`<div class="vwW" data-vw-ang="${p.k}"><div class="vwH" data-vw-item="${e(p.x.id)}" data-mt-note="${p.k}"><span class="vwTag">${e(p.nm)}</span><span class="vwD">${e(wlThDate(p.x.d))}</span><span class="vwHT">${e(p.x.t)}</span><button type="button" class="vwDel" data-vw-del aria-label="ลบบันทึก" onclick="vwDel(this,'${e(p.x.id)}')">✕</button></div></div>`).join('') : '<div class="vwNone" data-mt-nonotes>No previous notes</div>';
+  return `<div class="vwBox mtImgs" data-vw data-vw-ctx="mt" data-sym="${e(sym)}">
+    <div class="wlSh"><span class="ic">🖼</span>Charts</div><div class="mtGal" data-mt-gallery>${gal}</div>
+    <div class="vwX" data-vw-ang="tech" data-sym="${e(sym)}" data-ctx="mt"><div class="vwIn"><input type="text" inputmode="url" data-vw-url autocomplete="off" placeholder="Add chart: paste TradingView link" value="${e(dr.url)}" oninput="vwInput(this)"></div>
+      <div class="vwIn"><input type="text" data-vw-t autocomplete="off" placeholder="Short note (optional, ≤ ${VW_MAX_T})" value="${e(dr.t)}" oninput="vwInput(this)"><span class="vwCnt${over ? ' over' : ''}" data-vw-cnt>${dr.t.length}/${VW_MAX_T}</span></div>
+      <div class="vwAct"><button type="button" class="small primary" data-vw-save ${(over || (!dr.t.trim() && !dr.url.trim())) ? 'disabled' : ''} onclick="vwSave(this)">Add</button></div>${msg ? `<div class="vwErr" data-vw-msg>${e(msg)}</div>` : ''}</div>
+    <div class="wlSh" style="margin-top:10px"><span class="ic">🗒</span>Previous notes</div><div data-mt-prev>${pl}</div></div>`;
+}
+function wlMtAiCardHtml(r){
+  const e = escHtml, it = r.item, th = it ? wlThesisOf(it) : null, rawSym = r.w ? r.w.sym : r.sym;
+  if(!th) return `<div class="mtAi" data-mt-ai="empty"><b>AI Thesis</b><div class="mut" data-lt-empty>No AI Thesis yet — run living-thesis, then import it.</div><button class="small" type="button" data-lt-import data-sym="${e(rawSym)}" onclick="ltImportOpen(this.dataset.sym)">📥 Import</button></div>`;
+  const s = th.summary || {}, call = s.call || {}, txt = String(call.why || s.biz || '').replace(/\s+/g, ' ').trim();
+  const dt = it.thesis_imported_at ? 'imported ' + String(it.thesis_imported_at).slice(0, 10) : 'data as of ' + String(th.date || '—').slice(0, 10);
+  return `<div class="mtAi" data-mt-ai="full"><b>AI Thesis</b> <span class="mut" data-mt-ai-date>${e(dt)}</span>${txt ? `<div class="mtAiT" data-mt-ai-sum>${e(ltShort(txt, 160))}</div>` : ''}<button class="small" type="button" data-mt-ai-view onclick="wlSetSub('sum')">View AI analysis</button></div>`;
+}
+function wlMyThesisTabHtml(r){
+  const it = r.item;
+  if(!it) return `<div class="panel wlOv" data-mt-none><div class="empty">Add this stock to the Watchlist to write My Thesis.</div></div>`;
+  return `<div class="panel wlOv mtWrap" data-mt-wrap><div class="mtMain">${wlMtHtml(it)}${vwThesisHtml(r.sym)}</div>${wlMtAiCardHtml(r)}</div>`;
 }
 function wlOnbHtml(it){
   const e = escHtml, ob = it.onboarding;
@@ -13726,7 +13772,7 @@ function ln3WlDetHead(r, th, nm, tabs, tierNote){
       ${wlNarrow() ? '<button class="small ghost wlBackBtn" onclick="wlBack()">‹ Watchlist</button>' : ''}
       <div class="wlDTop"><div class="wlDT"><b>${e(r.sym)}</b> <span class="nm">${e(nm)}</span> ${wlPortTag(r.port, r.market)} ${it ? wlTierChips(it, true) : ''}${it ? wlStarHtml(r) : ''}</div><span class="wlXw">${wlFullBtn('small ic')}${menu}</span></div>
       <div class="ln3-meta" data-ln3-meta="1">${meta}</div>${tn || (tierNote ? tierNote : '')}${tierNote ? '' : `<div class="ln3-meta">${wlRevBtnHtml(rawSym, r.market)}</div>`}${AB.al}${AB.sa}
-      <div class="wlActs ln3-acts" data-ln3-acts="1">${main}</div>${tabs}${it ? wlMtHtml(it) : ''}</div>`;
+      <div class="wlActs ln3-acts" data-ln3-acts="1">${main}</div>${tabs}${it ? wlMtSummaryHtml(it) : ''}</div>`;
 }
 function wlRowHtml(r){
   if(ln1On()) return ln3WlRowHtml(r);   /* LN3 — Lean */
@@ -14440,7 +14486,7 @@ function candTap(sym){
 }
 function candXHtml(r){
   const e = escHtml;
-  return `<div class="candX" data-cand-x data-sym="${e(r.sym)}">${tqRowHtml(r.sym)}${snErr ? '' : csEvalRowHtml(r.sym)}${vwBlockHtml(r.sym, 'cand')}<div class="candXAct" onclick="event.stopPropagation()">${ideaCandAddBtn(r)}<button type="button" class="small" data-cand-opencard data-sym="${e(r.sym)}" onclick="wlOpen(this.dataset.sym)">เปิดการ์ด ›</button></div></div>`;
+  return `<div class="candX" data-cand-x data-sym="${e(r.sym)}">${tqRowHtml(r.sym)}${snErr ? '' : csEvalRowHtml(r.sym)}<div class="candXAct" onclick="event.stopPropagation()">${ideaCandAddBtn(r)}<button type="button" class="small" data-cand-opencard data-sym="${e(r.sym)}" onclick="wlOpen(this.dataset.sym)">เปิดการ์ด ›</button></div></div>`;
 }
 
 /* ═══════ ID1 — แท็บ Ideas (อ่านอย่างเดียว + Import) · users/{uid}/ideas/{id} ═══════
@@ -16268,7 +16314,7 @@ const LT_STATUS = {screen:['คัดกรอง',''], watch:['เฝ้าด�
 const LT_ACTION = {study:'ศึกษาต่อ', wait_evidence:'รอหลักฐาน', wait_price:'รอราคา', drop:'ตัดออก', watch:'เฝ้าดู', buy_plan:'วางแผนซื้อ'};
 const LT_LV = {ok:'g', watch:'a', review:'o', broken:'r'};
 const LT_LV_ORD = {broken:0, review:1, watch:2, ok:3};
-const LT_TABS = [['sum','สรุป'], ['view','มุมมอง'], ['biz','ธุรกิจ'], ['why','ทำไมซื้อ'], ['trk','ติดตาม'], ['exit','ออกเมื่อ']];
+const LT_TABS = [['sum','สรุป'], ['view','My Thesis'], ['biz','ธุรกิจ'], ['why','ทำไมซื้อ'], ['trk','ติดตาม'], ['exit','ออกเมื่อ']];
 const LT_SUBS = ['sum','view','biz','why','trk','exit'];
 let wlWant = '';           /* ticker ที่เพิ่ง Import (ยังรอแถวจาก snapshot) */
 let wlFold = {};           /* สถานะแถบพับ (ในหน่วยความจำของหน้า) · key = TICKER:ชื่อแถบ */
@@ -16639,7 +16685,7 @@ function wlDetailHtml0(r){
     body = ltTabHtml(r, sub);
   } else {
     chips = (it || r.port==='cand') ? `<div class="wlChips ltChips" data-lt-chips>${wlIndChip(r)}</div>` : '';
-    body = `<div class="panel"><div class="empty" data-lt-empty>ยังไม่มี Thesis — รัน living-thesis แล้ว 📥 Import</div></div>` + (it ? `<div class="panel wlOv ltNotes">${ltNotesHtml(r)}</div><div class="panel wlOv" data-vw-panel><div class="wlSh"><span class="ic">👁</span>มุมมอง</div>${vwBlockHtml(r.sym, 'wl')}</div>` : '');
+    body = it ? wlMyThesisTabHtml(r) + `<div class="panel wlOv ltNotes">${ltNotesHtml(r)}</div>` : `<div class="panel"><div class="empty" data-lt-empty>ยังไม่มี Thesis — รัน living-thesis แล้ว 📥 Import</div></div>`;   /* PL2·3 — ไม่มี AI Thesis: My Thesis + empty state ของ AI พร้อมปุ่ม Import เดิม */
   }
   const head = ln1On() ? ln3WlDetHead(r, th, nm, tabs, tierNote) : `<div class="wlDHead">
       ${wlNarrow() ? '<button class="small ghost wlBackBtn" onclick="wlBack()">‹ Watchlist</button>' : ''}
@@ -16667,7 +16713,7 @@ function ltGapsHtml(list){
 }
 function ltTabHtml(r, sub){
   const it = r.item, th = wlThesisOf(it), s = th.summary || {}, sym = r.sym, esc = escHtml;
-  if(sub==='view') return `<div class="panel wlOv" data-vw-panel>${vwBlockHtml(sym, 'wl')}</div>`;
+  if(sub==='view') return wlMyThesisTabHtml(r);
   if(sub==='biz') return `<div class="panel wlOv"><div class="ltMd" data-lt-md="s1">${ltMd(th.sections && th.sections.s1 && th.sections.s1.md)}</div>${ltGlossFold(it)}${ltEvidFold(it)}</div>`;
   if(sub==='why') return `<div class="panel wlOv"><div class="ltMd" data-lt-md="s2">${ltMd(th.sections && th.sections.s2 && th.sections.s2.md)}</div>${ltGlossFold(it)}${ltEvidFold(it)}</div>`;
   if(sub==='trk'){

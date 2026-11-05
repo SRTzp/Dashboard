@@ -185,7 +185,7 @@ def metrics_checks(pw, w, h, label):
         r = page.evaluate("""()=>({metrics: document.querySelectorAll('.rcMetric, .rcTierTag, .rcCard').length, bracket: document.getElementById('tabWatch').innerText.includes('[T:'),
           tabs: [...document.querySelectorAll('.wlDHead .ltTab')].map(b=>b.textContent.trim()), research: [...document.querySelectorAll('.wlDHead button')].some(b=>/^Research$/.test(b.textContent.trim())), sub: wlSub})""")
         check(f"{tag} 8 แท็บ Research / การ์ด metric / ชิป 'Tier' ไม่มีแล้ว (WL2) · wlSetSub('rs') = แท็บ สรุป · ไม่มี '[T:' บนจอ",
-              r["metrics"] == 0 and not r["bracket"] and not r["research"] and r["tabs"] == ["สรุป", "มุมมอง", "ธุรกิจ", "ทำไมซื้อ", "ติดตาม", "ออกเมื่อ"] and r["sub"] == "sum", json.dumps(r, ensure_ascii=False))
+              r["metrics"] == 0 and not r["bracket"] and not r["research"] and r["tabs"] == ["สรุป", "My Thesis", "ธุรกิจ", "ทำไมซื้อ", "ติดตาม", "ออกเมื่อ"] and r["sub"] == "sum", json.dumps(r, ensure_ascii=False))
         check(f"{tag} 8 ไม่มีฟังก์ชัน/ตัวแปร Research Card เหลือในหน้า (rcTierMetrics · rcCardHtml · rcMerge)", page.evaluate("()=>typeof rcTierMetrics==='undefined' && typeof rcCardHtml==='undefined' && typeof rcMerge==='undefined' && typeof rcTrimJson==='undefined'"))
         shot_el(page, ".wlDBody", f"rc2-research-metrics-{w}.png")
         if w <= 700:

@@ -147,7 +147,7 @@ def run(pw, width, height, label):
     wl = page.evaluate("""() => ({strip: !!document.querySelector('.wlNewsStrip,.wlNs'), n: !!document.querySelector('.wlNewsN'),
         subs: [...document.querySelectorAll('.wlDHead .ltTab')].map(b=>b.textContent.trim().replace(/\\d+$/,'')), txt: document.getElementById('tabWatch').innerText})""")
     check(f"{tag} Watchlist: ไม่มีแถบ 'ข่าวที่ต้องดู' / ตัวนับข่าวในแถว / แท็บ News ในหน้าหุ้น (WL2 · แท็บ สรุป มุมมอง ธุรกิจ ทำไมซื้อ ติดตาม ออกเมื่อ (VW1 เพิ่ม มุมมอง) แทน Overview/Research)",
-          not wl["strip"] and not wl["n"] and wl["subs"] == ["สรุป", "มุมมอง", "ธุรกิจ", "ทำไมซื้อ", "ติดตาม", "ออกเมื่อ"] and "ข่าว" not in wl["txt"], json.dumps({k: wl[k] for k in ("strip", "n", "subs")}, ensure_ascii=False))
+          not wl["strip"] and not wl["n"] and wl["subs"] == ["สรุป", "My Thesis", "ธุรกิจ", "ทำไมซื้อ", "ติดตาม", "ออกเมื่อ"] and "ข่าว" not in wl["txt"], json.dumps({k: wl[k] for k in ("strip", "n", "subs")}, ensure_ascii=False))
     page.evaluate("() => wlSetSub('exit')")
     page.wait_for_timeout(200)
     tw = page.evaluate("""() => { const w=[...document.querySelectorAll('.ltTwr')]; return {n:w.length, first:w[0]?w[0].innerText:'',

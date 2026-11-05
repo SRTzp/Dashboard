@@ -11,6 +11,7 @@ import run_tests_phase38 as P38
 import run_tests_phase100 as P100
 import run_tests_phase107 as P107
 import run_tests_phase111 as P111
+import run_tests_phase44 as P44
 
 ENGINE = base.BROWSER_ENGINE
 results = []
@@ -216,6 +217,73 @@ def item5(pw, w=390, h=844):
         C.shot(page, "pl2-trade-summary-390.png")
     finally: b.close()
 
+# ── Item 3: My Thesis ──
+TV = "https://www.tradingview.com/x/AbCdEfGh/"
+def item3(pw, w=1440, h=900):
+    tag = f"[{ENGINE}/mythesis/{w}]"
+    b, page, ce, pe = P111.core(pw, w, h)
+    try:
+        js(page, "()=>{ window.__READY_REAL = true; }")
+        ai = {"date": "2026-09-01", "mode": "full", "summary": {"status": "ok", "biz": "AI business summary text", "call": {"action": "hold", "why": "AI says wait"}}}
+        js(page, "([a])=>wlCol().doc('MTA').set({ticker:'MTA', market:'US', port:'core', note:'', added_at:'2026-10-01T00:00:00Z', my_thesis:{why:'my why line one\\nsecond', exit:'my exit', updated_at:'2026-10-02T00:00:00Z'}, thesis:a, thesis_imported_at:'2026-10-20T00:00:00Z'})", [ai])
+        js(page, "()=>wlCol().doc('MTB').set({ticker:'MTB', market:'US', port:'core', note:'', added_at:'2026-10-01T00:00:00Z'})")
+        # legacy notes + image seeded in stockNotes (old Event/Fund./Tech)
+        page.evaluate("""()=>window.firebase.__mockDb.__seedDoc(['users','testuid','stockNotes','MTA'], {event:[{id:'e1', d:'2026-09-10', t:'old event note'}], fund:[{id:'f1', d:'2026-09-11', t:'old fund note'}], tech:[{id:'t1', d:'2026-09-12', t:'old tech note', chart:'%s'}], updated_at:'2026-09-12'})""" % TV)
+        P44.reload_keep(page)
+        js(page, "()=>{ switchTab('watch'); wlSetView('wl'); }"); settle(page, 600)
+        js(page, "()=>wlOpen('MTA')"); settle(page, 700)
+        tabs = js(page, "()=>[...document.querySelectorAll('[data-lt-tab]')].map(t=>t.innerText.replace(/\\d+$/, '').trim())")
+        check(f"{tag} tab 'มุมมอง' renamed to 'My Thesis'; AI tabs unchanged", "My Thesis" in tabs and "มุมมอง" not in tabs and all(x in tabs for x in ["สรุป", "ธุรกิจ", "ทำไมซื้อ", "ติดตาม", "ออกเมื่อ"]), tabs)
+        sm = js(page, "()=>({sum: !!document.querySelector('[data-wl-mt-sum]'), editor: document.querySelectorAll('[data-wl-mt-why]').length, edit: !!document.querySelector('[data-wl-mt-edit]'), l1: (document.querySelector('[data-wl-mt-l1]')||{}).innerText||''})")
+        check(f"{tag} Watchlist card head: compact READ-ONLY summary (first line of ①) + 'Edit in My Thesis ›'; no editable copy", sm["sum"] and sm["editor"] == 0 and sm["edit"] and "my why line one" in sm["l1"] and "second" not in sm["l1"], sm)
+        js(page, "()=>wlSetSub('view')"); settle(page, 500)
+        st = js(page, """()=>({editor: document.querySelectorAll('[data-wl-mt-why]').length, legacyRows: document.querySelectorAll('[data-vw-row]').length, aiCard: (document.querySelector('[data-mt-ai]')||{}).dataset ? document.querySelector('[data-mt-ai]').dataset.mtAi : null,
+          aiDate: (document.querySelector('[data-mt-ai-date]')||{}).innerText||'', aiSum: (document.querySelector('[data-mt-ai-sum]')||{}).innerText||'', gal: document.querySelectorAll('[data-mt-img]').length,
+          notes: [...document.querySelectorAll('[data-mt-note]')].map(n=>n.dataset.mtNote+':'+n.innerText.replace(/\\s+/g,' ').trim()),
+          sideBySide: (()=>{ const a = document.querySelector('.mtMain'), c = document.querySelector('.mtAi'); if(!a||!c) return false; const ra = a.getBoundingClientRect(), rc = c.getBoundingClientRect(); return rc.left >= ra.right - 2; })()})""")
+        check(f"{tag} My Thesis tab: one editor, no legacy Event/Fund./Tech rows", st["editor"] == 1 and st["legacyRows"] == 0, st)
+        check(f"{tag} legacy image shows in the My Thesis gallery", st["gal"] == 1, st)
+        check(f"{tag} legacy notes listed with original tag + date (Event · Fund. · Tech)", len(st["notes"]) == 3 and any(n.startswith("event:") and "Event" in n and "old event note" in n for n in st["notes"]) and any(n.startswith("fund:") and "Fund." in n for n in st["notes"]) and any(n.startswith("tech:") and "Tech" in n for n in st["notes"]), st["notes"])
+        check(f"{tag} wide screen: AI Thesis preview beside My Thesis with 'imported <date>' + summary", st["aiCard"] == "full" and st["aiDate"] == "imported 2026-10-20" and "AI says wait" in st["aiSum"] and st["sideBySide"], st)
+        # edit text + add image -> persists after reload
+        page.fill("[data-wl-mt-why]", "edited why"); page.dispatch_event("[data-wl-mt-why]", "input")
+        js(page, "()=>wlMtSave('MTA')"); settle(page, 500)
+        page.fill("[data-vw-ctx=mt] [data-vw-url]", "https://www.tradingview.com/x/ZzYyXxWw/"); page.dispatch_event("[data-vw-ctx=mt] [data-vw-url]", "input")
+        page.locator("[data-vw-ctx=mt] [data-vw-save]").click(); settle(page, 600)
+        P44.reload_keep(page)
+        js(page, "()=>{ switchTab('watch'); wlSetView('wl'); }"); settle(page, 500)
+        js(page, "()=>{ wlOpen('MTA'); wlSetSub('view'); }"); settle(page, 700)
+        after = js(page, "()=>({why: document.querySelector('[data-wl-mt-why]').value, gal: document.querySelectorAll('[data-mt-img]').length, stored: wlItemOf('MTA').my_thesis.why})")
+        check(f"{tag} after reload: edited text and both images persist", after["why"] == "edited why" and after["stored"] == "edited why" and after["gal"] == 2, after)
+        # import AI -> My Thesis untouched
+        before = js(page, "()=>JSON.stringify([wlItemOf('MTA').my_thesis, wlItemOf('MTA').next_check_date||'', snMap['MTA'].tech.map(x=>x.id)])")
+        js(page, "([a])=>wlCol().doc('MTA').update({thesis:Object.assign({}, a, {date:'2026-10-25'}), thesis_imported_at:'2026-10-26T00:00:00Z'})", [ai]); settle(page, 600)
+        after2 = js(page, "()=>JSON.stringify([wlItemOf('MTA').my_thesis, wlItemOf('MTA').next_check_date||'', snMap['MTA'].tech.map(x=>x.id)])")
+        check(f"{tag} AI import leaves My Thesis text/dates/images untouched", before == after2, [before[:120], after2[:120]])
+        # saving My Thesis never touches AI data
+        thb = js(page, "()=>JSON.stringify(wlItemOf('MTA').thesis)+wlItemOf('MTA').thesis_imported_at")
+        page.fill("[data-wl-mt-why]", "edited again"); page.dispatch_event("[data-wl-mt-why]", "input"); js(page, "()=>wlMtSave('MTA')"); settle(page, 500)
+        tha = js(page, "()=>JSON.stringify(wlItemOf('MTA').thesis)+wlItemOf('MTA').thesis_imported_at")
+        check(f"{tag} saving My Thesis leaves AI Thesis data untouched", thb == tha, [thb[:60], tha[:60]])
+        # remove one image -> note text kept
+        js(page, "()=>{ window.confirm = ()=>true; }")
+        n0 = js(page, "()=>document.querySelectorAll('[data-mt-img]').length")
+        page.locator("[data-mt-imgdel]").first.click(); settle(page, 600)
+        n1 = js(page, "()=>[document.querySelectorAll('[data-mt-img]').length, snMap['MTA'].tech.map(x=>x.t+'|'+(x.chart?'img':''))]")
+        check(f"{tag} remove image works; the note text of that entry stays", n0 == 2 and n1[0] == 1 and any(x.startswith("old tech note") for x in n1[1]), [n0, n1])
+        # View AI analysis -> same full AI view
+        page.locator("[data-mt-ai-view]").click(); settle(page, 500)
+        check(f"{tag} 'View AI analysis' opens the AI summary tab", js(page, "()=>wlSub") == "sum" and js(page, "()=>!!document.querySelector('[data-lt-decide]')"))
+        # no AI thesis -> empty state with import action
+        js(page, "()=>{ wlOpen('MTB'); wlSetSub('view'); }"); settle(page, 600)
+        e = js(page, "()=>({state: (document.querySelector('[data-mt-ai]')||{dataset:{}}).dataset.mtAi, imp: !!document.querySelector('.mtAi [data-lt-import]'), tabs: document.querySelectorAll('[data-lt-tab]').length, editor: document.querySelectorAll('[data-wl-mt-why]').length, legacy: document.querySelectorAll('[data-vw-row]').length})")
+        check(f"{tag} no AI thesis: empty state + existing Import action; My Thesis editor still there", e["state"] == "empty" and e["imp"] and e["editor"] == 1 and e["legacy"] == 0, e)
+        # candidate card has no legacy block
+        js(page, "()=>{ switchTab('watch'); wlSetView('cand'); }"); settle(page, 500)
+        check(f"{tag} Candidate cards no longer show the Event/Fund./Tech block", js(page, "()=>document.querySelectorAll('[data-vw-row]').length") == 0)
+        check(f"{tag} no overflow · no console errors", not C.overflow(page) and not ce and not pe, [C.overflow(page), ce[:2], pe[:2]])
+    finally: b.close()
+
 
 if __name__ == "__main__":
     import sys
@@ -224,6 +292,7 @@ if __name__ == "__main__":
         item2(pw)
         item6(pw)
         item5(pw)
+        item3(pw)
     bad = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(bad)}/{len(results)} PASS")
     sys.exit(1 if bad else 0)
