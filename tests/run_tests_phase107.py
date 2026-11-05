@@ -369,6 +369,7 @@ def idea_doc(cands, name="Theme TD4", date="2026-09-20", status="need_evidence",
 def seed_idea(page, idea, imported_at="2026-09-20T00:00:00.000Z"):
     doc = {"idea": {k: v for k, v in idea.items() if k != "log"}, "idea_log": idea.get("log", []), "user": {}, "imported_at": imported_at}
     page.evaluate("([p,d])=>{ window.firebase.__mockDb.__seedDoc(p, d); ideaStop(); ideaStart(); }", [["users", "testuid", "ideas", idea["id"]], doc]); settle(page, 800)
+    page.evaluate("()=>{ glWrite(S=>{ delete S.candFromIdeasDone; }); plIdeasMigrate(); }"); settle(page, 400)   # PL2·7: Ideas that exist before the one-time migration become Candidates
 
 
 def cands_tests(pw, w, h, label, shots=False):

@@ -284,6 +284,57 @@ def item3(pw, w=1440, h=900):
         check(f"{tag} no overflow · no console errors", not C.overflow(page) and not ce and not pe, [C.overflow(page), ce[:2], pe[:2]])
     finally: b.close()
 
+# ── Item 7: Candidate-first workflow ──
+def item7(pw, w=1440, h=900):
+    import run_tests_phase59 as P59
+    tag = f"[{ENGINE}/candidate-first/{w}]"
+    ideas = [P59.idea([P59.cand("MIGA", "A", 1, "study"), P59.cand("MIGB", "B", 2, "wait"), P59.cand("PARKX", "P", 3, "park"), P59.cand("BAD!!", "X", 4, "wait"),
+                       P59.cand("INWL", "W", 5, "study"), P59.cand("EXIST", "E", 6, "study"), P59.cand("DELX", "D", 7, "study")], iid="i1"),
+             P59.idea([], iid="i2"), dict(P59.idea([P59.cand("NOTCNT", "N", 1, "study")], iid="i3"), status="exploring")]
+    def mut(doc):
+        for bk in doc["books"].values():
+            st = bk.setdefault("settings", {})
+            st["candMeta"] = {"EXIST": {"manual": True, "sym": "EXIST", "market": "US", "cand_at": "2026-10-01T00:00:00Z"}, "DELX": {"manual": True, "sym": "DELX", "market": "US", "dismissed": True, "dismissed_at": "2026-10-02T00:00:00Z"}}
+    b, c, page, ce, pe, dl, env = P59.launch(pw, w, h, mut=mut, wl=[("INWL", None, {"tier": "A", "tier_set_at": "2026-01-01"})], ideas=ideas)
+    try:
+        settle(page, 1500)
+        rep = js(page, "()=>tdSettings().candFromIdeasDone || null")
+        cm = js(page, "()=>tdSettings().candMeta || {}")
+        print("MIGRATION REPORT:", json.dumps(rep, ensure_ascii=False))
+        check(f"{tag} migration ran once: migrated MIGA + MIGB only (source 'From Ideas', manual)", rep and rep["migrated"] == 2 and all(cm.get(k, {}).get("source") == "From Ideas" and cm[k].get("manual") is True for k in ("MIGA", "MIGB")), [rep, list(cm)])
+        rs = (rep or {}).get("reasons", {})
+        check(f"{tag} skipped with reasons: parked, invalid ticker, in Watchlist, already Candidate, deleted, thematic-only, not-counted idea", all(any(k.startswith(p) for k in rs) for p in ("company parked", "no valid ticker", "already in Watchlist", "already in Candidates", "previously deleted", "thematic only", "idea status not counted")), rs)
+        check(f"{tag} no skipped ticker was written (PARKX BAD INWL NOTCNT absent)", not any(k in cm for k in ("PARKX", "BAD!!", "INWL", "NOTCNT")) and cm["EXIST"].get("source") is None, list(cm))
+        check(f"{tag} Ideas records untouched (3 docs, candidates intact)", js(page, "()=>[ideaList.length, ideaList.find(d=>d.id==='i1').idea.candidates.length]") == [3, 7])
+        rows = js(page, "()=>wlRowsAll().cand.map(r=>r.sym).sort()")
+        check(f"{tag} Candidates now = migrated + existing manual (no longer derived from Ideas)", rows == ["EXIST", "MIGA", "MIGB"], rows)
+        again = js(page, "()=>{ const n0 = Object.keys(tdSettings().candMeta).length; const r = plIdeasMigrate(); return [r, n0, Object.keys(tdSettings().candMeta).length]; }")
+        check(f"{tag} idempotent: second run does nothing", again[0] is None and again[1] == again[2], again)
+        P44.reload_keep(page); settle(page, 1200)
+        cm2 = js(page, "()=>Object.keys(tdSettings().candMeta).sort()")
+        check(f"{tag} after reload: still 3 + DELX (no duplicates)", cm2 == ["DELX", "EXIST", "MIGA", "MIGB"], cm2)
+        # gate gone: ticker that appears in an Idea can be added as a Candidate
+        r = js(page, "()=>{ switchTab('today'); td4Mk='US'; td4AddIn('PARKX'); td4AddCands(); return candPop ? candPop.rows.map(x=>[x.sym, x.err||'']) : null; }")
+        check(f"{tag} 'already in Ideas' gate removed (PARKX accepted in the Add Candidate popup)", r and r[0][0] == "PARKX" and r[0][1] == "", r)
+        js(page, "()=>candPopClose()")
+        # no Ideas stage artefacts
+        js(page, "()=>{ switchTab('watch'); wlSetView('cand'); }"); settle(page, 500)
+        st = js(page, """()=>({back: document.querySelectorAll('[data-td4-backchip],[data-td4-back]').length, pill: [...document.querySelectorAll('.wlPills *')].map(e=>e.innerText).join('|'),
+           tqf: document.querySelectorAll('[data-tq-filters],[data-tq-f]').length, tierChip: document.querySelectorAll('[data-wl-tier]').length, tqrow: document.querySelectorAll('[data-tq-row]').length})""")
+        check(f"{tag} no 'Back in Ideas', no Tier filter chips, no Tier badges; Ideas pill has no counter", st["back"] == 0 and st["tqf"] == 0 and st["tierChip"] == 0 and "Ideas" in st["pill"] and not any(ch.isdigit() for ch in st["pill"].split("Ideas")[1].split("|")[0]), st)
+        js(page, "()=>{ wlSetView('wl'); wlOpen('INWL'); }"); settle(page, 500)
+        js(page, "()=>wlOpenEdit('INWL')"); settle(page, 300)
+        ed = js(page, "()=>({tierbox: document.querySelectorAll('#wlAddTierBox, [data-wl-tierbtn]').length, chips: document.querySelectorAll('[data-wl-tier]').length, stored: wlItemOf('INWL').tier})")
+        check(f"{tag} Edit modal: no Tier selector/button; stored tier data kept; no tier badge on the card", ed["tierbox"] == 0 and ed["chips"] == 0 and ed["stored"] == "A", ed)
+        js(page, "()=>wlAddClose()")
+        tasks = js(page, "()=>JSON.stringify((tdLast&&tdLast.tasks)||[]).includes('idea-study') || JSON.stringify((tdLast&&tdLast.tasks)||[]).includes('idea-recheck')")
+        check(f"{tag} Today has no 'idea-study' / 'idea-recheck' reminders", tasks is False)
+        hw = js(page, "()=>[TD_HW_IDS.slice(), TD_HW_SHOW.map(x=>x.id)]")
+        check(f"{tag} Deep dive checklist has 4 parts (Business · Why · Monitor · Exit) — no Tier part", hw == [["biz", "why", "next", "exit"], ["biz", "why", "next", "exit"]], hw)
+        check(f"{tag} Satellite data untouched (satIdeasList is separate)", js(page, "()=>Array.isArray(satIdeasList)"))
+        check(f"{tag} no console errors", not ce and not pe, [ce[:2], pe[:2]])
+    finally: b.close()
+
 
 if __name__ == "__main__":
     import sys
@@ -293,6 +344,7 @@ if __name__ == "__main__":
         item6(pw)
         item5(pw)
         item3(pw)
+        item7(pw)
     bad = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(bad)}/{len(results)} PASS")
     sys.exit(1 if bad else 0)

@@ -94,7 +94,7 @@ def watch(pw, w, h, label):
           const tops = kids.map(e=>{ const q = e.getBoundingClientRect(); return Math.round(q.top + q.height/2); }); return {w: Math.round(l.width), txt: r.innerText.replace(/\\s+/g,' ').trim(), spread: Math.max(...tops) - Math.min(...tops), dots: r.querySelectorAll('.wlDotH, .wlDotR').length, rowOv: r.scrollWidth > r.clientWidth + 1}; }""")
         if mac:
             check(f"{tag} 3 Watch: ลิสต์กว้าง 355px (±1)", abs(g["w"] - 355) <= 1, g)
-            check(f"{tag} 3 Watch: แถวแบบ BRK.B (Tier A · Phase · ⛔ Tripwire · ควร update · 3 จุด) อยู่บรรทัดเดียว ไม่ล้น", "⛔ Tripwire" in g["txt"] and "ควร update" in g["txt"] and g["dots"] == 3 and g["spread"] <= 6 and not g["rowOv"], g)
+            check(f"{tag} 3 Watch: แถวแบบ BRK.B (Tier A · Phase · ⛔ Tripwire · ควร update · 3 จุด) อยู่บรรทัดเดียว ไม่ล้น", "⛔ Tripwire" in g["txt"] and "ควร update" in g["txt"] and g["dots"] == 3 and "Tier" not in g["txt"]  # PL2·7: no Tier badge in the row and g["spread"] <= 6 and not g["rowOv"], g)
         else:
             check(f"{tag} 3 มือถือไม่เปลี่ยน: ลิสต์ไม่ใช่ 355px แบบ Mac · ไม่ล้น", not g["rowOv"] and overflow(page) <= 0, g)
         det = js(page, """()=>{ const body = document.querySelector('.wlDBody'); const probe = document.createElement('div'); probe.style.cssText = 'position:absolute;visibility:hidden;width:72ch;font:inherit'; body.appendChild(probe); const max = probe.getBoundingClientRect().width; probe.remove();

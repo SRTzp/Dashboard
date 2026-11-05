@@ -3960,10 +3960,7 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
           <option value="TH">TH → Core.TH</option>
         </select></div>
     </div>
-    <div class="f" id="wlAddTierBox" data-wl-tierbox><label>Tier <span style="font-weight:400;color:var(--muted)">(ตั้งจากฟอร์มแผน Core · เก็บที่ Watchlist)</span></label>
-      <div class="wlTierSt"><span id="wlAddTierSt" data-wl-tierst></span>
-        <button type="button" class="small" id="wlAddTierBtn" data-wl-tierbtn onclick="wlTierSet()" style="display:none">ตั้ง Tier…</button>
-        <a href="#" id="wlAddTierClr" data-wl-tierclr role="button" onclick="wlTierClear();return false">ล้าง Tier</a></div></div>
+    <!-- PL2·7 — กล่อง Tier ถอดแล้ว (ข้อมูล tier ที่เก็บไว้ไม่แตะ) -->
     <div class="f" id="wlAddEvalBox" data-wl-evalbox style="display:none"><label>Stock evaluation</label><div id="wlAddEvalLn"></div></div>
     <div class="f"><label>Industry <span style="font-weight:400;color:var(--muted)">(ไม่บังคับ — ว่าง = ไม่ระบุ)</span></label>
       <input type="text" id="wlAddInd" list="wlIndList" placeholder="เช่น Semis" autocomplete="off"><datalist id="wlIndList"></datalist></div>
@@ -6066,9 +6063,9 @@ const tdLabel = k => satLabelCustom(k) || TD_LBL[k] || sat7dLabel(k);
 const TD_OK_WORDS = ['DD', 'heat', 'ไม้ใหม่', 'ชั้น 2', 'f', 'fundflow'];
 const TD_HW_SKIP_DAYS = 14;
 /* GL3 — การบ้านแบ่ง 5 part (ตาม Living Thesis) · id เก็บใน routineLog[วัน].hw.parts · ที่เดียว */
-const TD_HW_PARTS = [{id:'biz', n:'ธุรกิจ'}, {id:'why', n:'ทำไม'}, {id:'next', n:'ติดตาม'}, {id:'exit', n:'ออก'}, {id:'tier', n:'Tier'}];
+const TD_HW_PARTS = [{id:'biz', n:'ธุรกิจ'}, {id:'why', n:'ทำไม'}, {id:'next', n:'ติดตาม'}, {id:'exit', n:'ออก'}];   /* PL2·7 — ถอดส่วน Tier ออกจากการบ้าน Deep dive (บันทึกเก่าที่มี 'tier' ใน parts ถูกอ่านข้าม · ไม่ถูกแก้) */
 const TD_HW_IDS = TD_HW_PARTS.map(x=>x.id);
-const TD_HW_SHOW = ['tier','biz','why','next','exit'].map(id=>TD_HW_PARTS.find(x=>x.id===id));   /* TQ1 — ลำดับแสดง: Tier ก่อน (id/ลำดับเก็บใน log เดิม) */
+const TD_HW_SHOW = ['biz','why','next','exit'].map(id=>TD_HW_PARTS.find(x=>x.id===id));   /* TQ1 — ลำดับแสดง: Tier ก่อน (id/ลำดับเก็บใน log เดิม) */
 /* log เก่าไม่มี parts: done:true → ครบ 5 · done:false → ว่าง (อ่านอย่างเดียว ไม่ migrate) */
 function tdHwPartsOf(h){
   if(!h || typeof h!=='object') return [];
@@ -6083,7 +6080,6 @@ function tdHwThesisParts(t){
   const th = (it.thesis && typeof it.thesis === 'object') ? it.thesis : null, out = [];
   const md = n=>!!(th && th.sections && th.sections[n] && String(th.sections[n].md == null ? '' : th.sections[n].md).trim());
   const arr = v=>Array.isArray(v) && v.some(x=>x && typeof x === 'object');
-  if(it.tier === 'A' || it.tier === 'B') out.push('tier');
   if(md('s1')) out.push('biz');
   if(md('s2')) out.push('why');
   if(th && (arr(th.kpi) || arr(th.gaps) || md('s3'))) out.push('next');
@@ -6545,32 +6541,7 @@ function tdBuild(){
         capped.push({o:0, t:mkTask({kind:'idea-held', ico:'💡', html:`<b>${escHtml(sym)}</b> ▼ ${escHtml(nm(v))} — update Thesis`, sub:ltShort(ideaS(l.why), 80), go:'wl', args:{t:sym, sub:'sum'}, btn:'เปิด →'}), g:'a'});
       });
     });
-    /* C — บริษัทฝั่งได้ state ศึกษา + มีแหล่งยืนยัน · ยังไม่อยู่ Watchlist · 1 แถวต่อบริษัท (ไอเดียที่ rank ดีสุด) */
-    const cm = {};
-    vs.forEach(v=>v.cands.forEach(c=>{
-      if(c.state!=='study' || !ideaS(c.relevance_src)) return;
-      const k = wlSymKey(c.sym); if(!k || wlHas(c.sym)) return;
-      const rk = c.rank==null ? 9999 : c.rank;
-      if(!cm[k] || rk < cm[k].rk) cm[k] = {v, c, rk, sym:String(c.sym).toUpperCase()};
-    }));
-    Object.values(cm).sort((a,b)=>a.rk-b.rk || a.sym.localeCompare(b.sym)).forEach(x=>{
-      const tg = x.c.market==='TH' ? 'selTH' : x.c.market==='US' ? 'selUS' : tdSelTag(x.sym);
-      capped.push({o:1, g:'b', t:mkTask({kind:'idea-study', ico:'💡', html:`ส่งต่อ <b>${escHtml(x.sym)}</b> → Watchlist`, sub:x.v.name, tags:[tg], go:'idea', args:{id:x.v.id, tab:'co'}, btn:'เปิด →'})});
-    });
-    /* D — รอหลักฐาน ถึงวันนัด หรือไอเดียเก่ากว่า 30 วัน · 1 แถว/วัน */
-    const dd = vs.filter(v=>{
-      if(v.status!=='need_evidence') return false;
-      const rc = ideaObj(v.I.recheck), due = rc && /^\d{4}-\d{2}-\d{2}/.test(String(rc.date||'')) && String(rc.date).slice(0,10) <= today;
-      return due || (/^\d{4}-\d{2}-\d{2}/.test(v.date) && dayN(v.date) > 30);
-    }).sort((p,q)=>{
-      const rp = ideaObj(p.I.recheck), rq = ideaObj(q.I.recheck);
-      return String(rp && rp.date || '9999').localeCompare(String(rq && rq.date || '9999')) || String(p.date).localeCompare(String(q.date));
-    })[0];
-    if(dd){
-      const rc = ideaObj(dd.I.recheck), what = rc && ideaS(rc.what) ? ` (${escHtml(ltShort(ideaS(rc.what), 22))})` : '';
-      const sc = dd.scope[0], tg = sc==='TH' ? ['selTH'] : sc==='US' ? ['selUS'] : [];
-      capped.push({o:2, g:'a', t:mkTask({kind:'idea-recheck', ico:'💡', html:`เช็คหลักฐาน: <b>${escHtml(nm(dd))}</b>${what}`, sub:'Ideas · หลักฐาน', tags:tg, go:'idea', args:{id:dd.id, tab:'evd'}, btn:'เปิด →'})});
-    }
+    /* PL2·7 — ตัดเตือน C (ส่งต่อ → Watchlist) และ D (เช็คหลักฐาน): Ideas ไม่ใช่ขั้นบังคับก่อน Candidate แล้ว · เหลือ A (สัญญาณพักชน) และ B (ถือฝั่ง ▼) */
     capped.slice(0, 2).forEach(x=>add(x.g, x.t));
   });
 
@@ -6899,7 +6870,6 @@ function candRowsCheck(rows, mk, tried){
     const m = td3MetaOf(r.sym);
     if(wlHas(r.sym)){ r.err = 'already in Watchlist'; r.fatal = true; return; }
     if(cand.has(r.key)){ r.err = 'already a Candidate'; r.fatal = true; return; }
-    if(!m.dismissed && td4InIdeas(r.key)){ r.err = 'already in Ideas'; r.fatal = true; return; }
   });
   rows.forEach(r=>{
     if(r.fatal) return;
@@ -7023,6 +6993,7 @@ function td4CandDelete(sym){
 function td4IdeaStamp(d){ const I = d.idea || {}, l = (d.log || []).map(x=>String((x && x.date) || '')).sort().pop() || ''; return String(d.imported_at || I.imported_at || I.updated_at || I.as_of || I.date || l || ''); }
 function td4Newer(stamp, ref){ const a = String(stamp || ''), b = String(ref || ''); if(!a) return false; if(!b) return true; return a.length <= 10 ? a > b.slice(0, 10) : a > b; }
 function td4BackList(){
+  return [];   /* PL2·7 — ไม่มี "Back in Ideas" แล้ว (Ideas ไม่ใช่ขั้นบังคับ) · ข้อมูล dismissed ใน candMeta ยังอยู่ */
   const cm = td3Meta(), out = [];
   Object.keys(cm).forEach(k=>{
     const m = cm[k]; if(!m || m.dismissed !== true || wlHas(k)) return;
@@ -7082,6 +7053,7 @@ function td4BackApply(mode){
 /* Import preview (idea-scout): ticker ที่เคยลบและอยู่ในไอเดียนี้ — ใช้ตอนกดบันทึก */
 function td4BackPrev(p){
   try{
+    return '';   /* PL2·7 */
     const cm = td3Meta(), inc = new Set(ltArr(p.idea && p.idea.candidates).filter(c=>c && c.state!=='park').map(c=>wlSymKey(c.sym)));
     const L = Object.keys(cm).filter(k=>cm[k] && cm[k].dismissed===true && inc.has(k) && !wlHas(k)).map(k=>({key:k, sym:String(cm[k].sym || k).toUpperCase(), market:cm[k].market==='TH' ? 'TH' : 'US', dismissed_at:cm[k].dismissed_at || '', from:String((p.idea && p.idea.name) || p.id || '')}));
     if(!L.length) return '';
@@ -7141,7 +7113,7 @@ function td4NoAddOpen(sym){
   const t = wlNormTicker(sym);
   if(t && td4IsCand(t)){
     document.getElementById('ltModal').innerHTML = `<h3 data-td4-noadd data-td4-usemove>Use Move to Watchlist</h3>
-    <div class="hint" style="margin-top:-6px;margin-bottom:10px">${escHtml(t)} is a Candidate. Use Move to Watchlist (Tier/RS · rating · note) — that form is the only way into the Watchlist.</div>
+    <div class="hint" style="margin-top:-6px;margin-bottom:10px">${escHtml(t)} is a Candidate. Use Move to Watchlist (RS · rating · note) — that form is the only way into the Watchlist.</div>
     <div class="btns"><button type="button" onclick="ltSheetClose()">Close</button><button type="button" class="primary" data-td4-open-move onclick="td4OpenMove('${escHtml(t)}')">Open move form</button></div>`;
     ov.classList.add('show'); return;
   }
@@ -7616,15 +7588,15 @@ function td3CoreDaily(M){
   if(hw){
     const parts = hw.parts || [], miss = TD_HW_SHOW.filter(x=>!parts.includes(x.id)), first = miss[0];
     hwDone = !!hw.done;
-    t1 = hw.done ? `<div class="td3-it done" data-td3-hw="done">✓ <b>${s(hw.t)}</b> · Thesis ${parts.length}/5</div>`
-      : `<div class="td3-it" data-td3-hw="open"><b>${s(hw.t)}</b> · Thesis ${parts.length}/5 · <span data-td4-hwmiss>Missing: ${miss.map(x=>TD3_HW_N[x.id]).join(' · ')}</span><span class="td3-acts"><button type="button" class="td3-lk" data-td3-hwgo onclick="td3HwGo('${s(hw.t)}','${s(hw.src || 'W')}','${first ? (TD3_HW_SUB[first.id] || '') : ''}')">Continue ›</button><button type="button" class="td3-lk" data-td3-hwnext onclick="tdHwNext()">Change</button></span></div>`;
+    t1 = hw.done ? `<div class="td3-it done" data-td3-hw="done">✓ <b>${s(hw.t)}</b> · Thesis ${parts.length}/${TD_HW_IDS.length}</div>`
+      : `<div class="td3-it" data-td3-hw="open"><b>${s(hw.t)}</b> · Thesis ${parts.length}/${TD_HW_IDS.length} · <span data-td4-hwmiss>Missing: ${miss.map(x=>TD3_HW_N[x.id]).join(' · ')}</span><span class="td3-acts"><button type="button" class="td3-lk" data-td3-hwgo onclick="td3HwGo('${s(hw.t)}','${s(hw.src || 'W')}','${first ? (TD3_HW_SUB[first.id] || '') : ''}')">Continue ›</button><button type="button" class="td3-lk" data-td3-hwnext onclick="tdHwNext()">Change</button></span></div>`;
   } else t1 = `<div class="m" data-td3-hw="none">No stock to deep-dive today</div>`;
   const nxW = by[effMk] && nOf(effMk) >= 1 ? td4HwNextWlPick(effMk) : null;
   const nextBtn = nxW ? `<div class="m td4-nx" data-td4-hwnx>${effMk} done · <button type="button" class="td3-lk" data-td4-hwnext-wl onclick="td4HwNextWl('${effMk}')">Next from Watchlist ›</button></div>` : '';
   h += `<div class="td3-sec" data-td3-sec="hw"><div class="td3-th">Deep dive ${td4SegHtml('hwmk', effMk, 'td4HwSetMk')}<span class="td3-cnt td4-trk" data-td4-hwc>${['US', 'TH'].map(mk=>`<span data-td4-hwc="${mk}">${cnt(mk)}</span>`).join(' · ')}</span></div>${t1}${nextBtn}</div>`;
   /* 2 · Candidate → Watchlist (ขั้นต่ำ 3 ต่อวัน · ทำต่อได้) */
   const npRow = c=>(td4Np && td4Np.key===c.key) ? `<div class="td3-it done np" data-td4-np="${s(c.sym)}">✕ <b>${s(c.sym)}</b> · Not passed · <button type="button" class="td3-lk" data-td4-npundo onclick="td4NpUndo()">Undo</button></div>` : `<div class="td3-it done" data-td3-done="notpassed">✓ <b>${s(c.sym)}</b> · Not passed</div>`;
-  const doneRows = prom.map(w=>`<div class="td3-it done" data-td3-done="promoted">✓ <b>${s(w.ticker)}</b> → Watchlist · ${w.onboarding ? 'Screened' : ((w.promoted_by || []).map(x=>x==='rs' ? 'RS Leader' : 'Tier passed').join(' + ') || 'Tier passed')}</div>`).concat(notp.map(npRow)).join('');
+  const doneRows = prom.map(w=>`<div class="td3-it done" data-td3-done="promoted">✓ <b>${s(w.ticker)}</b> → Watchlist · ${w.onboarding ? 'Screened' : ((w.promoted_by || []).map(x=>x==='rs' ? 'RS Leader' : 'Screened').join(' + ') || 'Screened')}</div>`).concat(notp.map(npRow)).join('');
   const moved = td4Moved ? `<div class="td3-it done" data-td4-moved>✓ <b>${s(td4Moved.t)}</b> → Watchlist · <button type="button" class="td3-lk" data-td3-undo onclick="td3UndoDo()">Undo</button></div>` : '';
   const vis = openRows ? queue.slice(0, TD4_BATCH) : [];
   const pro = vis.length ? td4ProCur(vis) : null;
@@ -8066,6 +8038,7 @@ function renderToday(){ todayRefresh(true); }
 /* คำนวณใหม่ + อัปเดตเลขแดงบนปุ่มแท็บ (ทุกแท็บ) · วาดแท็บ วันนี้ เมื่ออยู่แท็บนี้ (หรือ force) · ห้ามโยน error ออกไปทำ render() หลักพัง */
 function todayRefresh(force){
   if(!state || cl2aGateOn) return;
+  try{ plIdeasMigrate(); }catch(e){}   /* PL2·7 */
   try{ tdLast = tdBuild(); }catch(e){ console.warn('today build:', e); return; }
   const n = tdLast.counts.r, b = document.getElementById('tabBadgeToday');
   if(b){ b.style.display = n>0 ? '' : 'none'; b.textContent = n>0 ? String(n) : ''; }
@@ -8209,9 +8182,8 @@ function tdHomeworkCandidates(){
     wlRowsAll().cand.forEach((r, i)=>{
       const t = String(r.sym || '').trim(); if(!t) return;
       const k = t.toUpperCase(); if(seen.has(k)) return; seen.add(k);
-      if(tqCode(t)==='fail') return;   /* TQ1 — ไม่ผ่าน Tier = ไม่เสนอ */
       const nm = r.cInfo && r.cInfo[0] && r.cInfo[0].v && r.cInfo[0].v.name;
-      cs.push({t, i, g: tqCode(t)==='none' ? 3 : 4, asOf:null, age:null, src:'C', mk:r.market==='TH' ? 'TH' : 'US', reason: nm ? `Candidate จากไอเดีย: ${nm}` : 'Candidate จากไอเดีย', skip: doneRecent.has(k), cmp:false});
+      cs.push({t, i, g: 3, asOf:null, age:null, src:'C', mk:r.market==='TH' ? 'TH' : 'US', reason: nm ? `Candidate จากไอเดีย: ${nm}` : 'Candidate จากไอเดีย', skip: doneRecent.has(k), cmp:false});
     });
     cs.sort((a, b)=>(a.g - b.g) || (a.i - b.i));   /* TQ1 — ยังไม่เช็ก Tier มาก่อนที่ผ่านแล้ว */
     cs.forEach(x=>out.push(x));
@@ -10360,7 +10332,6 @@ function coreMenuHtml(v, cx, opts){
     ${(ln1On() && t) ? `<button type="button" data-c-emg onclick="coreEmgOpen('${id}')">Stop ฉุกเฉิน</button>` : ''}
     ${(ln1On() && v.accT) ? `<button type="button" data-c-close-acc onclick="openClosePos('${escHtml(v.accT.id)}','${escHtml(v.c.acct)}')">ปิดไม้เร่ง</button>` : ''}
     ${ln1On() ? ((v.c.stopHistory||[]).length ? `<button type="button" data-c-stophist onclick="coreStopHistOpen('${id}')">ประวัติ Stop (${(v.c.stopHistory||[]).length})</button>` : '<button type="button" class="dis" data-c-stophist disabled>ประวัติ Stop (ยังไม่เคยเลื่อน)</button>') : ''}
-    <button type="button" data-c-tierbtn onclick="coreTierOpen('${id}')">Tier…</button>
     ${strat}</div>`;
 }
 /* 7E-2b-1 — ชิ้นส่วนกลางของตารางบันได (รับแค่ข้อมูล · ไม่อ่านการ์ด · 7E-3 ใช้ซ้ำได้)
@@ -13650,8 +13621,9 @@ function wlTierLabel(it){
 function wlTierStText(it){ return 'Tier ' + wlTierLabel(it) + (it.tier_set_at ? ' · ตั้งเมื่อ ' + it.tier_set_at : ''); }
 function wlTierChips(it, long){
   if(!it) return '';
+  return '';   /* PL2·7 — ไม่มีป้าย Tier A/B ใน Watchlist/Candidates แล้ว (ข้อมูล tier ที่เก็บไว้ไม่แตะ) */
   if(it.tier!=='A' && it.tier!=='B'){
-    return '';   /* PL1 polish — ตัดชิป "ตั้ง Tier" (ระบบ Tier เดิม · ข้อมูลที่เก็บไว้ไม่แตะ) */
+    return '';
   }
   const tip = wlTierStText(it);
   return `<span class="wlTier ${it.tier}${long?' wlTierGo':''}" data-wl-tier="${it.tier}"${long?` data-wl-tier-lens="${it.tier_lens||(it.tier==='A'?'legacy':'')}" data-sym="${escHtml(it.ticker)}" role="button" tabindex="0" onclick="wlOpenCorePlan(this.dataset.sym)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();wlOpenCorePlan(this.dataset.sym)}"`:''} title="${escHtml(tip)}">${long ? escHtml(wlTierLabel(it)) : it.tier}</span>`
@@ -13735,7 +13707,7 @@ function ln3WlRowHtml(r){
   }catch(err){}
   try{   /* TD3a — Candidate: โน้ตของเรา 1 บรรทัด · Watchlist: via Tier / via RS */
     if(r.port==='cand'){ const nt = (typeof td3MetaOf==='function') ? td3MetaOf(r.sym).note : ''; if(nt) mu += `<span class="mut td3-wnote" data-td3-wnote>${e(ltShort(nt, 40))}</span>`; }
-    else if(it && it.promoted_by && it.promoted_by.length) mu += `<span class="mut td3-wnote" data-td3-via>via ${it.promoted_by.map(x=>x==='rs' ? 'RS' : 'Tier').join(' + ')}</span>`;
+    else if(it && it.promoted_by && it.promoted_by.length) mu += `<span class="mut td3-wnote" data-td3-via>via ${it.promoted_by.map(x=>x==='rs' ? 'RS' : 'Screened').join(' + ')}</span>`;
   }catch(err){}
   const rc = it ? `<i class="wlDotR ${th?'ok':'wait'}" title="${th?'มี Thesis':'รอสร้าง Thesis'}"></i>` : '';
   return `<div class="wlR ln3r${wlSel===r.sym?' on':''}" data-sym="${e(r.sym)}" onclick="${r.port==='cand' ? 'candTap' : 'wlOpen'}(this.dataset.sym)">
@@ -13833,7 +13805,7 @@ function renderWatchlist(){
     </div>`;
 
   const empty = wlView==='cand'
-    ? 'ยังไม่มี Candidates — บริษัทจากไอเดีย (รอหลักฐาน / พร้อมส่งต่อ) ที่ยังไม่อยู่ Watchlist จะขึ้นที่นี่'
+    ? 'No Candidates yet — add one with ＋ Add Candidate, then Evaluate it and promote to the Watchlist.'
     : (wlStoreErr ? 'โหลด Watchlist ไม่สำเร็จ' : 'ยังไม่มีรายการ — กด ＋ เพิ่มหุ้น เพื่อเริ่ม Watchlist ใหม่ (ใช้ร่วมทุกบัญชี)');
   const legend = rows.some(r=>ideaRels(r.sym).length) ? '<div class="ideaLegend" data-idea-legend>▲ ได้ประโยชน์ · ▼ เสียประโยชน์ · ? รอตรวจ</div>' : '';
   const list = `<div class="panel wlList"><div class="wlListHead">${head}${ln1On() ? '' : fltHtml()}${status}</div>
@@ -14249,7 +14221,7 @@ function phCoreWarn(sym){
 /* ══ TQ1 — ด่าน Tier เร็วที่แถว Candidate · stockNotes/{SYM}.tier = {tier:'A'|'B'|'fail', tier_lens:'fortress'|'growth'|null, tier_set_at} · ไม่มีค่า = ยังไม่เช็ก ══ */
 const TQ_OPTS = [['AF','A-F','A','fortress'], ['AG','A-G','A','growth'], ['B','B','B',null], ['fail','ไม่ผ่าน','fail',null]];
 let tqFilter = new Set();   /* 'pass' | 'fail' | 'none' — ตัวกรอง Candidates (หน่วยความจำ + localStorage) */
-try{ const a = JSON.parse(localStorage.getItem('dash.tqFilter') || '[]'); if(Array.isArray(a)) a.forEach(k=>{ if(['pass','fail','none'].includes(k)) tqFilter.add(k); }); }catch(e){}
+/* PL2·7 — ตัวกรอง Tier ถอดแล้ว: ไม่อ่านค่าที่เคยเก็บ (ค่าใน localStorage ไม่ถูกลบ) */ try{ const a = []; if(Array.isArray(a)) a.forEach(k=>{ if(['pass','fail','none'].includes(k)) tqFilter.add(k); }); }catch(e){}
 function tqSave(){ try{ localStorage.setItem('dash.tqFilter', JSON.stringify([...tqFilter])); }catch(e){} }
 function tqOf(sym){ const d = snMap[snKey(sym)]; return (d && d.tier) || null; }
 function tqCode(sym){ const t = tqOf(sym); if(!t) return 'none'; if(t.tier==='fail') return 'fail'; if(t.tier==='B') return 'B'; return t.tier_lens==='growth' ? 'AG' : 'AF'; }
@@ -14473,7 +14445,8 @@ function tqApply(rows){
   if(snErr || !tqFilter.size) return rows;
   return rows.filter(x=>tqFilter.has(tqGroup(x.sym)));
 }
-function tqFilterHtml(){
+function tqFilterHtml(){ return '';   /* PL2·7 */
+
   if(snErr) return '';
   return `<div class="ideaFil tqFil" data-tq-filters>${[['pass','ผ่าน Tier'], ['fail','ไม่ผ่าน'], ['none','ยังไม่เช็ก']].map(([k, n])=>`<span class="chip${tqFilter.has(k) ? ' on' : ''}" data-tq-f="${k}" role="button" tabindex="0" onclick="tqToggleFilter('${k}')">${n}</span>`).join('')}</div>`;
 }
@@ -14486,7 +14459,7 @@ function candTap(sym){
 }
 function candXHtml(r){
   const e = escHtml;
-  return `<div class="candX" data-cand-x data-sym="${e(r.sym)}">${tqRowHtml(r.sym)}${snErr ? '' : csEvalRowHtml(r.sym)}<div class="candXAct" onclick="event.stopPropagation()">${ideaCandAddBtn(r)}<button type="button" class="small" data-cand-opencard data-sym="${e(r.sym)}" onclick="wlOpen(this.dataset.sym)">เปิดการ์ด ›</button></div></div>`;
+  return `<div class="candX" data-cand-x data-sym="${e(r.sym)}">${snErr ? '' : csEvalRowHtml(r.sym)}<div class="candXAct" onclick="event.stopPropagation()">${ideaCandAddBtn(r)}<button type="button" class="small" data-cand-opencard data-sym="${e(r.sym)}" onclick="wlOpen(this.dataset.sym)">เปิดการ์ด ›</button></div></div>`;
 }
 
 /* ═══════ ID1 — แท็บ Ideas (อ่านอย่างเดียว + Import) · users/{uid}/ideas/{id} ═══════
@@ -14507,7 +14480,7 @@ const IDEA_GST = {open:'เปิดอยู่', answered:'ตอบแล้�
 let candMk = 'all';   /* TD4a — ตัวกรองตลาดของ Candidates: all | US | TH */
 function candSetMk(m){ candMk = (m==='US' || m==='TH') ? m : 'all'; wlResearchExpanded = false; wlMobOpen = false; renderWatchlist(); }
 let candFilter = 'all';   /* ID2 — ตัวกรอง Candidates: all | win | lose */
-let ideaList = [], ideaUnsub = null, ideaUnsubUid = null, ideaErr = null, ideaLoaded = false;
+let ideaSrvOk = false, ideaList = [], ideaUnsub = null, ideaUnsubUid = null, ideaErr = null, ideaLoaded = false;
 let ideaSel = '', ideaFilter = 'all', ideaMenu = '', ideaMenuMsg = '', ideaCoOpen = '', ideaImp = null, ideaWant = '';   /* ideaWant = id ที่เพิ่ง Import · รอ snapshot ส่งแถวมาก่อนค่อยเปิดการ์ด */
 
 function ideaCol(){ return (uid && typeof db!=='undefined' && db) ? db.collection('users').doc(uid).collection('ideas') : null; }
@@ -14527,15 +14500,15 @@ function ideaStart(){
       const isTr = d=>((d.data() || {}).kind==='trade');   /* TR1 — ไอเดียเทรดแยกรายการ · ideaList (ลงทุน) ไม่เห็น */
       ideaList = snap.docs.filter(d=>!isTr(d)).map(ideaNorm).filter(d=>d.idea);
       tradeList = snap.docs.filter(isTr).map(trdNorm);
-      ideaLoaded = true; ideaErr = null; ideaRefresh();
+      ideaSrvOk = !(snap.metadata && snap.metadata.fromCache); ideaLoaded = true; ideaErr = null; ideaRefresh();   /* PL2·7 — ย้ายไอเดีย→Candidates เฉพาะหลังได้ข้อมูลจาก server (ไม่ใช่ cache ว่าง) */
     }, err=>{ console.warn('ideas listener:', err); ideaErr = (err && (err.code || err.message)) || String(err); ideaLoaded = true; ideaRefresh(); });
   }catch(e){ ideaErr = (e && (e.code || e.message)) || String(e); }
 }
 function ideaStop(){
   if(ideaUnsub){ try{ ideaUnsub(); }catch(e){} }
-  ideaUnsub = null; ideaUnsubUid = null; ideaList = []; tradeList = []; ideaErr = null; ideaLoaded = false;
+  ideaUnsub = null; ideaUnsubUid = null; ideaList = []; tradeList = []; ideaErr = null; ideaLoaded = false; ideaSrvOk = false;
 }
-function ideaRefresh(){ if(!state || cl2aGateOn) return; try{ if(typeof activeTab!=='undefined' && activeTab==='watch') renderWatchlist(); }catch(e){} try{ todayRefresh(); }catch(e){} }   /* ID4 — Today ตามไอเดีย */
+function ideaRefresh(){ if(!state || cl2aGateOn) return; try{ plIdeasMigrate(); }catch(e){} try{ if(typeof activeTab!=='undefined' && activeTab==='watch') renderWatchlist(); }catch(e){} try{ todayRefresh(); }catch(e){} }   /* ID4 — Today ตามไอเดีย */
 
 /* ── มุมมองที่แสดงจริง = idea ทับด้วย user ── */
 function ideaView(d){
@@ -14588,7 +14561,7 @@ function ideaSubSave(id, s){ try{ const m = JSON.parse(localStorage.getItem('ide
 /* ── pills ลำดับ Watchlist · Ideas · Candidates ── */
 function wlPillsHtml(A){
   const pill = (on,txt,fn,kb)=>`<button type="button" class="rsDeepBtn ${on?'on':''}" data-wl-view="${fn}" onclick="wlSetView('${fn}')">${txt}${kb?` <span class="kbdhint">${kb}</span>`:''}</button>`;
-  return `<div class="wlPills">${pill(wlView==='idea',`Ideas ${ideaList.length + tradeList.length}`,'idea')}${pill(wlView==='cand',`Candidates ${A.cand.length}`,'cand','V')}${pill(wlView==='wl',`Watchlist ${A.wl.length}`,'wl','C')}</div>`;   /* TD4a — ลำดับ Ideas → Candidates → Watchlist */
+  return `<div class="wlPills">${pill(wlView==='idea','Ideas','idea')}${pill(wlView==='cand',`Candidates ${A.cand.length}`,'cand','V')}${pill(wlView==='wl',`Watchlist ${A.wl.length}`,'wl','C')}</div>`;   /* TD4a — ลำดับ Ideas → Candidates → Watchlist */
 }
 const IDEA_VIEW_ORDER = ['idea','cand','wl'];
 function ideaCycleView(d){ const i = IDEA_VIEW_ORDER.indexOf(wlView); wlSetView(IDEA_VIEW_ORDER[(i + d + 3) % 3]); }
@@ -15574,10 +15547,48 @@ function ideaRels(sym){   /* ความสัมพันธ์ของหุ
   return out;
 }
 function ideaOurLosers(v){ return ltArr(v.I.losers).filter(l=>ideaS(l.sym) && wlHas(l.sym)); }
+/* PL2·7 — Ideas → Candidates (ครั้งเดียว อัตโนมัติ · เพิ่มอย่างเดียว ไม่ลบ/แก้ Ideas) : เฉพาะหุ้นในไอเดียที่นับ (need_evidence/ready) ที่ state ≠ park และ ticker ถูกรูปแบบ
+   ข้าม: ไม่มี ticker ที่ถูกรูปแบบ · อยู่ใน Watchlist · อยู่ใน Candidates (candMeta) แล้ว/เคยลบ (dismissed) · ไอเดียที่ไม่นับ/ธีมล้วน · เก็บผลที่ settings.candFromIdeasDone {at, migrated, skipped, reasons}
+   ระหว่างยังไม่ migrate (หรือเขียนไม่ได้) ยังแสดงจากไอเดียเหมือนเดิม กันรายการหาย */
+function plIdeasMigrated(){ try{ const d = tdSettings().candFromIdeasDone; return !!(d && typeof d==='object' && d.at); }catch(e){ return false; } }
+function plIdeasMigrate(){
+  try{
+    if(plIdeasMigrated() || !ideaLoaded || !ideaSrvOk || ideaErr || !wlStoreReady || !tdCanWrite()) return null;
+    const cm0 = tdSettings().candMeta, cm = (cm0 && typeof cm0==='object' && !Array.isArray(cm0)) ? cm0 : {};
+    const add = {}, reasons = {}, seen = new Set(); let skipped = 0;
+    const skip = r=>{ skipped++; reasons[r] = (reasons[r] || 0) + 1; };
+    ideaList.forEach(d=>{
+      if(!d.idea){ return; }
+      const v = ideaView(d);
+      if(!IDEA_COUNT.includes(v.status)){ if(v.cands.length) v.cands.forEach(()=>skip('idea status not counted (exploring / parked)')); else skip('thematic only (no companies)'); return; }
+      if(!v.cands.length){ skip('thematic only (no companies)'); return; }
+      v.cands.forEach(c=>{
+        if(c.state==='park'){ skip('company parked in idea'); return; }
+        const raw = String(c.sym == null ? '' : c.sym).trim().toUpperCase(), key = wlSymKey(raw);
+        const mk = (c.market==='TH' || c.market==='US') ? c.market : wlGuessMarket(raw), t = mk==='TH' ? raw.replace(/\.BK$/, '') : raw;
+        if(!key || !TD4_RE[mk].test(t)){ skip('no valid ticker'); return; }
+        if(wlHas(raw)){ skip('already in Watchlist'); return; }
+        if(cm[key]){ skip(cm[key].dismissed===true ? 'previously deleted from Candidates' : 'already in Candidates'); return; }
+        if(seen.has(key)){ skip('duplicate inside Ideas'); return; }
+        seen.add(key);
+        const at = /^\d{4}-\d{2}-\d{2}$/.test(v.date) ? v.date + 'T00:00:00.000Z' : new Date().toISOString();
+        add[key] = {manual:true, sym: mk==='TH' ? t + '.BK' : t, market:mk, cand_at:at, source:'From Ideas', idea_id:v.id, note:('From idea: ' + v.name).slice(0, 200)};
+      });
+    });
+    const n = Object.keys(add).length, rep = {at:new Date().toISOString(), migrated:n, skipped, reasons};
+    const ok = glWrite(S=>{
+      const m = Object.assign({}, (S.candMeta && typeof S.candMeta==='object' && !Array.isArray(S.candMeta)) ? S.candMeta : {});
+      Object.keys(add).forEach(k=>{ if(!m[k]) m[k] = add[k]; });
+      S.candMeta = m; S.candFromIdeasDone = rep;
+    });
+    if(ok) console.info('PL2 Ideas→Candidates migration:', JSON.stringify(rep));
+    return ok ? rep : null;
+  }catch(e){ console.warn('ideas migrate:', e); return null; }
+}
 function ideaCandRows(inList){   /* Candidates = บริษัทฝั่งได้จากไอเดียที่นับ ที่ยังไม่อยู่ Watchlist · ตัดซ้ำด้วย wlSymKey */
   const by = {}, ord = {study:0, wait:1, screen:2}, dis = {};
   try{ const cm0 = tdSettings().candMeta; if(cm0 && typeof cm0==='object') Object.keys(cm0).forEach(k=>{ if(cm0[k] && cm0[k].dismissed===true) dis[k] = true; }); }catch(e){}
-  ideaCounted().forEach(v=>v.cands.forEach(c=>{
+  (plIdeasMigrated() ? [] : ideaCounted()).forEach(v=>v.cands.forEach(c=>{
     if(c.state==='park') return;
     const k = wlSymKey(c.sym); if(!k || inList[k]) return;
     if(dis[k]) return;   /* TD4a — Delete แล้ว (dismissed) = ซ่อนจาก Candidates */
@@ -15621,7 +15632,6 @@ function fltHtmlX(split){   /* LN3 — split = {bar, panel, n} ให้แถ�
   let panel = '';
   if(open){
     if(cand) panel += grp('Idea', [['win','▲ ได้'],['lose','▼ เสีย']].map(([k, t])=>chip(candFilter===k, `data-cand-f="${k}"`, `candFilterTap('${k}')`, t)).join(''), ' <span class="kbdhint">[ ]</span>');
-    if(cand && !snErr) panel += grp('Tier', ['pass','fail','none'].map(k=>chip(tqFilter.has(k), `data-tq-f="${k}"`, `tqToggleFilter('${k}')`, FLT_TIER_NAMES[k])).join(''));
     panel += grp('Track', [['winner', 'Momentum'], ['ladder', 'Compounder']].map(([k, t])=>chip(wlTrackF===k, `data-wl-ftrack="${k}"`, `wlSetTrack('${k}')`, t)).join(''));
     panel += grp('Reason', crsList().map(r=>chip(wlReasonF.has(r.id), `data-wl-freason="${escHtml(r.id)}"`, `wlToggleReason('${escHtml(r.id)}')`, escHtml(r.label))).join(''));
     if(!cand) panel += grp('RS', [['u', 'Unrated'], ['0', '0'], ['1', '★'], ['2', '★★'], ['3', '★★★']].map(([k, t])=>chip(wlRsF.has(k), `data-wl-frs="${k}"`, `wlToggleRs('${k}')`, t)).join(''));
@@ -15729,7 +15739,6 @@ function ideaCandAddBtn(r){
 function ideaCandAdd(sym){
   const r = wlRowsAll().cand.find(x=>x.sym===String(sym).toUpperCase()); if(!r) return;
   const ok = (r.cInfo || []).find(x=>ideaS(x.c.relevance_src) && x.c.state!=='screen'); if(!ok) return;
-  if(tqCode(r.sym)==='fail' && !confirm(r.sym + ' ไม่ผ่าน Tier — เพิ่มเข้า Watchlist ต่อไหม')) return;   /* TQ1 */
   wlOpenAdd(r.sym, {market:r.market, note:'จากไอเดีย: ' + ok.v.name});
 }
 /* ── ส่วน "ไอเดียที่เกี่ยวข้อง" บนการ์ดหุ้น ── */
@@ -16206,7 +16215,6 @@ function wlOpenAdd(sym, opts){
   document.getElementById('wlAddNote').value = '';
   document.getElementById('wlAddInd').value = '';
   wlSectorFill('');
-  document.getElementById('wlAddTierBox').style.display = 'none';   /* WT1 · เพิ่มหุ้นใหม่ = ไม่มีส่วน Tier */
   document.getElementById('wlAddEvalBox').style.display = 'none';
   wlIndFill();
   document.getElementById('wlAddHint').textContent = '';
@@ -16225,7 +16233,6 @@ function wlOpenEdit(sym){
   document.getElementById('wlAddNote').value = it.note || '';
   document.getElementById('wlAddInd').value = it.industry || '';
   wlSectorFill(it.sector_etf || '');
-  document.getElementById('wlAddTierBox').style.display = '';
   { const eb = document.getElementById('wlAddEvalBox'); eb.style.display = ''; document.getElementById('wlAddEvalLn').innerHTML = csEvalRowHtml(t); }   /* CS1 */
   wlTierStPaint(it);
   wlIndFill();
@@ -16245,6 +16252,7 @@ function wlSectorHint(){
 }
 /* WT1 · บรรทัดสถานะ Tier ในโมดัลแก้ไข + ปุ่มตั้ง/ล้าง */
 function wlTierStPaint(it){
+  if(!document.getElementById('wlAddTierSt')) return;   /* PL2·7 — กล่อง Tier ถอดออกจากโมดัลแล้ว */
   const has = !!(it && (it.tier==='A' || it.tier==='B'));
   document.getElementById('wlAddTierSt').textContent = has ? wlTierStText(it) : 'ยังไม่ตั้ง Tier';
   document.getElementById('wlAddTierClr').style.display = has ? '' : 'none';
@@ -16280,7 +16288,7 @@ function wlAddSave(){
   const sector_etf = (v=>sectorValid(v) ? v : '')(String((document.getElementById('wlAddSector')||{}).value || ''));
   const col = wlCol(); if(!col){ alert('เข้าสู่ระบบก่อน'); return; }
   const exists = wlItems.some(x=>x.ticker===ticker);
-  if(!exists && !td4MayAdd(ticker)){ h.style.color='var(--red)'; h.textContent = td4IsCand(ticker) ? 'Use Move to Watchlist (Tier/RS · rating · note) — ' + ticker + ' is a Candidate' : 'Add it as a Candidate first — ' + ticker + ' is not a Candidate yet'; return; }   /* TD4a · TD4b */
+  if(!exists && !td4MayAdd(ticker)){ h.style.color='var(--red)'; h.textContent = td4IsCand(ticker) ? 'Use Move to Watchlist (RS · rating · note) — ' + ticker + ' is a Candidate' : 'Add it as a Candidate first — ' + ticker + ' is not a Candidate yet'; return; }   /* TD4a · TD4b */
   const ref = col.doc(ticker);
   /* ไม่ await — Firestore อัปเดตหน้าจอทันทีจากแคชในเครื่อง · ถ้าเซิร์ฟเวอร์ปฏิเสธ (เช่น Rules) จะแจ้งเตือนและลิสต์ย้อนกลับเอง */
   /* WT1 · ไม่เขียนฟิลด์ Tier ที่นี่แล้ว — ตั้งผ่านปุ่ม "บันทึกเฉพาะ Tier" ในฟอร์มแผน Core · ล้างผ่าน wlTierClear */
