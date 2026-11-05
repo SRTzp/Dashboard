@@ -35,3 +35,4 @@
 | run_tests_phase64.py | UX2 filter panel groups | `Idea · Tier · Track · Reason · Phase · เรียง` + Tier chips | `Idea · Track · Reason · Phase · เรียง`, no Tier chips | PL2 item 7 |
 | run_tests_phase73.py | `pill Ideas 2` | Ideas pill shows a count | pill shows `Ideas` without a number | PL2 item 7 (counters removed) |
 | run_tests_phase59.py | §9 homework chips | `["Tier","ธุรกิจ","ทำไม","ติดตาม","ออก"]` | `["ธุรกิจ","ทำไม","ติดตาม","ออก"]` | PL2 item 7 |
+| run_tests_phase40.py / run_tests_phase85.py | Candidate card actions | primary button `＋ เพิ่มเข้า Watchlist` present | no such button on any Candidate card (only Import / ⋯ menu); the Watchlist is reached only through Evaluate (screening modal) | PL2 decision 5 (2026-11-05) |

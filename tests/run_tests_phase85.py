@@ -124,7 +124,7 @@ def tests(pw, w, h, label):
         go(page, "cand")
         js(page, "()=>wlOpen('CAND1')"); page.wait_for_timeout(500)
         cd = js(page, """()=>{ const h = document.querySelector('[data-ln3-dh]'); return h ? {btns: [...h.querySelectorAll('.wlActs button')].map(b=>b.innerText.trim()), dis: [...h.querySelectorAll('.wlActs button')].map(b=>b.disabled), menu: !!h.querySelector('[data-lt-menu]')} : null; }""")
-        check(f"{tag} 3 Candidate: ปุ่มหลัก '＋ เพิ่มเข้า Watchlist' · ⋯ เมนู · แถวลิสต์มี CAND", cd and cd["btns"] == ["＋ เพิ่มเข้า Watchlist"] and cd["menu"] and any("CAND" in x["t"] for x in rows(page)), cd)
+        check(f"{tag} 3 Candidate: ไม่มีปุ่มหลัก ＋ เพิ่มเข้า Watchlist (PL2) · ⋯ เมนู · แถวลิสต์มี CAND", cd and cd["btns"] == [] and cd["menu"] and any("CAND" in x["t"] for x in rows(page)), cd)
         # ── 4 Ideas (แบบเดิม)
         go(page, "idea")
         check(f"{tag} 4 หน้า Ideas ใช้แบบเดิม (แท็บ Watchlist/Ideas/Cand. ยังสลับได้)", cnt(page, ".wlm") == 1 and cnt(page, "[data-wl-view]") == 3)

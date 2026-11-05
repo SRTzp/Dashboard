@@ -498,7 +498,7 @@ def nothesis_tests(pw, w, h, label):
         js(page, "()=>wlSetView('cand')"); page.wait_for_timeout(200); js(page, "()=>wlOpen('CAND1')"); page.wait_for_timeout(250)
         t2 = txt_of(page, "[data-lt-empty]") or ""
         btns = js(page, "()=>[...document.querySelectorAll('.wlActs button')].map(e=>e.innerText.trim())")
-        check(f"{tag} 14 Candidates กดเข้า = การ์ด 'ยังไม่มี Thesis' + ปุ่ม ＋ เพิ่มเข้า Watchlist + 📥 Import", "ยังไม่มี Thesis" in t2 and any("เพิ่มเข้า Watchlist" in b for b in btns) and any("Import" in b for b in btns), json.dumps([t2, btns], ensure_ascii=False))
+        check(f"{tag} 14 Candidates กดเข้า = การ์ด 'ยังไม่มี Thesis' + 📥 Import (PL2: ไม่มีปุ่ม ＋ เพิ่มเข้า Watchlist)", "ยังไม่มี Thesis" in t2 and not any("เพิ่มเข้า Watchlist" in b for b in btns) and any("Import" in b for b in btns), json.dumps([t2, btns], ensure_ascii=False))
         # Import จาก Candidates → ต้องเป็นของ ticker นั้น
         err, prev = import_via_ui(page, json.dumps(fx("AVGO")), top=False, bound_sym="CAND1", save=False)
         check(f"{tag} 14 Import จากการ์ด CAND1 แต่ JSON เป็น AVGO → error JSON นี้เป็นของ AVGO ไม่ใช่ CAND1", "JSON นี้เป็นของ AVGO ไม่ใช่ CAND1" in err, err)
