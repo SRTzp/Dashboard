@@ -35,7 +35,10 @@ Branch `claude/pl2` (based on `claude/pl1-phase-a` — PR #6 is not merged into 
 
 **Only a real iPhone can confirm** (checklist for you): (1) a swipe starting in the 16px landscape gutters — iOS may take the Safari back/forward edge gesture instead (as agreed, no workaround); (2) swipe from the bottom nav near the home indicator; (3) momentum/rubber-band feel while scrolling the Value Chain row and Evidence table, and that a diagonal start inside them never changes the tab; (4) a rotation mid-gesture; (5) that a swipe ending on a button never taps it on real touch; (6) Safari URL-bar collapse does not change which zone is "bottom nav"; (7) My Thesis image viewer (pinch/zoom) on a real TradingView snapshot (emulation used placeholders).
 
-## 3. Unresolved trading-rule / product decisions
+## 3. Decisions
+**Resolved by SRTp (2026-11-05):** 1 (4-part homework OK) · 2 (keep plan-card Tier… + Settings tier criteria/caps until legacy plans close) · 4 · 5 (**＋ เพิ่มเข้า Watchlist hidden on ALL Candidate cards — Evaluate/screening modal is the only path**; done in the last commit) · 6 · 7 · 8 · 9 — all OK. The list below is kept for the record.
+
+### Original list
 1. **Daily-goal numbers changed**: removing the Tier part makes the Deep-dive homework 4 parts, so Daily goal totals (e.g. `10/15 → 9/14`) and past-day percentages (e.g. 60% → 57%) shift. Old routine logs are not edited (stored `tier` entries are ignored). Confirm this is acceptable.
 2. **Plan-card `Tier…` button** (existing plans) and **Settings › Tier criteria / tier caps** were kept: legacy plans still size from their stored tier. Remove them too, or keep until legacy plans are closed?
 3. **Sizing for new plans** was already tier-free (PL1: `CS_CAP_KEY='A'`); nothing in PL2 changed sizing math.
