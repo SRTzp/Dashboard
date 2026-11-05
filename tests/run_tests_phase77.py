@@ -142,7 +142,7 @@ def tests(pw, w, h, label):
     try:
         js(page, "()=>{ switchTab('mix'); ln3PortSet('main'); renderPortfolioMix(); }"); page.wait_for_timeout(500)
         line = txt(page, "[data-pool-txt]") or ""
-        check(f"{tag} 2 Port (RG2b เส้นถัง แทนแถบ Core/Main/Tactical): เป้า Winner · Ladder · Sat 30 (ตรึงเท่าทุน Sat เดิม)", line.endswith("Sat 0/30") and "Winner 0/44" in line and "Ladder 0/26" in line, line)
+        check(f"{tag} 2 Port (RG2b เส้นถัง แทนแถบ Core/Main/Tactical): เป้า Momentum · Compounder · Sat 30 (ตรึงเท่าทุน Sat เดิม)", line.endswith("Sat 0/30") and "Momentum 0/44" in line and "Compounder 0/26" in line, line)
         js(page, "()=>{ document.querySelector('[data-pool-line]').open = true; }")
         rows = js(page, "()=>[...document.querySelectorAll('[data-pool-line] [data-pool-bar]')].map(e=>e.dataset.poolBar)")
         t = txt(page, "[data-pool-line]") or ""

@@ -135,7 +135,7 @@ def tests(pw, w, h, label):
     finally: P39.INDEX = saved
     txt_old = re.sub(r"ประตู f(?![A-Za-z])", "ประตู FF", re.sub(r"ค่า f/", "ค่า FF/", txt_old))   # UX2: f → FF ทั้ง UI (Today: ประตู FF · ค่า FF/ประตู)
     # RG2b §4.7 — ตาราง DD ต่อถัง (Winner/Ladder/Sat) · โควตาไม้ใหม่ 4 · ไม่มีบรรทัดประตู FF
-    txt_old = txt_old.replace("DD CoreDD CDD SatDD S", "DD WinnerDD WDD LadderDD LDD SatDD S").replace("0%0%0 / 6%0 / 20 / 20%", "0%0%0%0 / 6%0 / 40%").replace("ประตู FF: แดง 1 สัปดาห์ · ยังไม่เปิด · ", "")
+    txt_old = txt_old.replace("DD CoreDD CDD SatDD S", "DD MomentumDD WDD CompounderDD LDD SatDD S").replace("0%0%0 / 6%0 / 20 / 20%", "0%0%0%0 / 6%0 / 40%").replace("ประตู FF: แดง 1 สัปดาห์ · ยังไม่เปิด · ", "")
     txt_old = txt_old.replace("บัญชีหลัก", "Main")   # SET1 — ตารางตัวเลขใน Today แสดง "Main" แทน "บัญชีหลัก" (ตั้งใจ)
     check(f"{tag} PF3 1 Today ส่วนเดิม ([data-td-wrap]) ข้อความเหมือนก่อน GL1 (ยกเว้นชื่องาน Weekly ข้อแรก 'ทำแผน Sat สัปดาห์นี้' แทน 'ตั้ง Bias สัปดาห์ Sat ครบ' · ต้องทำ 3→2 · ตัวนับ Trading Plan US 2→1 เพราะงาน Today 'Bias ยังไม่ประเมิน' ถอด)", txt_now == txt_old.replace("ตั้ง Bias สัปดาห์ Sat ครบ", "ทำแผน Sat สัปดาห์นี้").replace("ต้องทำ3", "ต้องทำ2").replace("Trading Plan US2", "Trading Plan US1"), (lambda x, y: (lambda i: x[max(0, i - 40):i + 420] + " || " + y[max(0, i - 40):i + 420])(next((k for k, (p, q) in enumerate(zip(x, y)) if p != q), min(len(x), len(y)))))(txt_now, txt_old.replace("ตั้ง Bias สัปดาห์ Sat ครบ", "ทำแผน Sat สัปดาห์นี้").replace("ต้องทำ3", "ต้องทำ2").replace("Trading Plan US2", "Trading Plan US1")))
     check(f"{tag} 1 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))

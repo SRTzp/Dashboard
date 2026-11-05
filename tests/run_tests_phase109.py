@@ -96,23 +96,22 @@ def stars_tests(pw, w, h, label, shots=False):
         wl_seed(page, [W("AAPL"), W("MSFT", stars=1)])
         go_watch(page, "wl")
         page.locator('.wlR[data-sym="AAPL"]').click(); settle(page, 400)
-        sel = lambda k: f'.wlDT [data-wl-star="AAPL"] [data-wl-star-n="{k}"]'
-        bb = js(page, "()=>[...document.querySelectorAll('.wlDT [data-wl-star=\"AAPL\"] [data-wl-star-n]')].map(e=>{ const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })")
-        check(f"{tag} §2 ดาว 3 ดวง แต่ละดวงกดได้ ≥ 32px", len(bb) == 3 and all(x[0] >= 32 and x[1] >= 32 for x in bb), bb)
-        page.locator(sel(3)).click(); settle(page, 500)
-        s1 = wl_doc(page, "AAPL")["stars"]
-        check(f"{tag} §2 แตะดวงที่ 3 → ตั้งเป็น 3 ทันที (ไม่ใช่ +1)", s1 == 3, s1)
+        # PL1·A3 — ปุ่ม ★ 3 ดวง (TD4c) ถูกแทนด้วย dropdown RS (Unrated · 0 · ★ · ★★ · ★★★) · เขียน rs_stars + rs_rated_at (ดู tests/PL1_retired.md)
+        selr = '.wlDT [data-wl-star="AAPL"] [data-wl-rs]'
+        bb = js(page, "()=>{ const e = document.querySelector('.wlDT [data-wl-star=\"AAPL\"] [data-wl-rs]'); const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }")
+        check(f"{tag} §2 (PL1) dropdown RS กดได้ ≥ 30px สูง", bb[1] >= 30 and bb[0] >= 60, bb)
+        page.select_option(selr, "3"); settle(page, 500)
+        s1 = wl_doc(page, "AAPL")["rs_stars"]
+        check(f"{tag} §2 (PL1) เลือก ★★★ → rs_stars=3", s1 == 3, s1)
         if shots and label == "390px": C.shot(page, "td4c-watch-stars-390.png", sel=".wlDT")
-        page.locator(sel(3)).click(); settle(page, 500)
-        s2 = wl_doc(page, "AAPL")["stars"]
-        check(f"{tag} §2 แตะดวงที่ 3 ซ้ำ → 0", s2 == 0, s2)
-        page.locator(sel(3)).click(); settle(page, 500); page.locator(sel(1)).click(); settle(page, 500)
-        s3 = wl_doc(page, "AAPL")["stars"]
-        check(f"{tag} §2 จาก 3 แตะดวงที่ 1 → 1", s3 == 1, s3)
-        page.locator(sel(2)).click(); settle(page, 500)
-        check(f"{tag} §2 จาก 1 แตะดวงที่ 2 → 2 · ดาว aria-pressed ตรงค่า", wl_doc(page, "AAPL")["stars"] == 2 and js(page, "()=>document.querySelector('.wlDT [data-wl-star=\"AAPL\"] [data-wl-star-n=\"2\"]').getAttribute('aria-pressed')") == "true")
+        page.select_option(selr, "0"); settle(page, 500)
+        check(f"{tag} §2 (PL1) เลือก 0 → rs_stars=0 (ไม่ใช่ Unrated)", wl_doc(page, "AAPL")["rs_stars"] == 0, wl_doc(page, "AAPL"))
+        page.select_option(selr, ""); settle(page, 500)
+        check(f"{tag} §2 (PL1) เลือก Unrated → rs_stars=null", wl_doc(page, "AAPL")["rs_stars"] is None, wl_doc(page, "AAPL"))
+        page.select_option(selr, "2"); settle(page, 500)
+        check(f"{tag} §2 (PL1) เลือก ★★ → rs_stars=2 · rs_rated_at มีค่า · stars เดิมของ MSFT (1) ไม่ถูกแตะ", wl_doc(page, "AAPL")["rs_stars"] == 2 and bool(wl_doc(page, "AAPL")["rs_rated_at"]) and wl_doc(page, "MSFT")["stars"] == 1)
         P44.reload_keep(page); T.P106.P37.set_clock(page, NOW); T.hook_confirm(page); go_watch(page, "wl")
-        check(f"{tag} §2 รีโหลดแล้วค่าคงอยู่ (AAPL=2 · MSFT=1)", wl_doc(page, "AAPL")["stars"] == 2 and wl_doc(page, "MSFT")["stars"] == 1)
+        check(f"{tag} §2 รีโหลดแล้วค่าคงอยู่ (PL1: AAPL rs=2 · MSFT stars เดิม=1 ยังอยู่ใน data)", wl_doc(page, "AAPL")["rs_stars"] == 2 and wl_doc(page, "MSFT")["stars"] == 1)
         check(f"{tag} ไม่ล้นแนวนอน · ไม่มี console error", ovf(page) <= 0 and not ce and not pe, [ovf(page), ce[:2], pe[:2]])
     finally: b.close()
 
@@ -128,7 +127,7 @@ def cand_tests(pw, w, h, label):
         check(f"{tag} §3 แถวพับเป็นปุ่มทั้งแถว (role=button · aria-expanded=false) · ปุ่ม Screen › ยังเห็น", js(page, "(s)=>{ const e=document.querySelector(s); return e.getAttribute('role')+'|'+e.getAttribute('aria-expanded'); }", row) == "button|false" and "Screen ›" in (txt(page, row) or ""), txt(page, row))
         page.locator(row + " b").click(); settle(page, 300)
         check(f"{tag} §3 แตะตัวอักษรชื่อหุ้น (ไม่ใช่ปุ่ม) → ฟอร์มเปิด · aria-expanded=true · ปุ่มเป็น 'Close ‹'", cnt(page, f'[data-td4-pro="{first}"]') == 1 and js(page, "(s)=>document.querySelector(s).getAttribute('aria-expanded')", row) == "true" and "Close ‹" in (txt(page, row) or ""), txt(page, row))
-        page.locator("[data-td4-pro-note]").click(); page.fill("[data-td4-pro-note]", "keep me"); T.ev_pass(page); page.locator('[data-td4-star="2"]').click(); settle(page, 200)
+        page.locator(f'[data-td4-pro="{first}"] [data-cs-line]').click(); settle(page, 200)   # PL1 Step 4 — ไม่มีช่อง Note ในฟอร์มแล้ว (ย้ายไป screening modal) · คลิกข้อความสรุปในฟอร์ม
         check(f"{tag} §3 คลิกข้างในฟอร์ม (โน้ต/ติ๊ก/ดาว) → ฟอร์มไม่ปิด", cnt(page, f'[data-td4-pro="{first}"]') == 1)
         row2 = f'[data-td3-cand="{rows[1]}"] [data-td4-row]'
         page.locator(row2).click(position={"x": 12, "y": 10}); settle(page, 300)
@@ -183,10 +182,7 @@ def sat_cards_tests(pw, w, h, label, shots=False):
             js(page, "()=>{ window.__act = []; }")
             page.locator(sel + " [data-td3-sat-link]").evaluate("e=>e.click()"); settle(page, 150)
             check(f"{tag} §4 {k}: กดปุ่มลิงก์ทำงานครั้งเดียว (ไม่ซ้ำจากการ์ด)", len(js(page, "()=>window.__act.slice()")) == 1)
-            if state in ("pending", "incomplete") and cnt(page, sel + " [data-td3-more]"):
-                js(page, "()=>{ window.__act = []; }"); page.locator(sel + " [data-td3-more]").click(); settle(page, 250)
-                check(f"{tag} §4 {k}: ปุ่ม +n ในการ์ดกางรายการ ไม่ไปหน้าอื่น", js(page, "()=>window.__act.slice()") == [])
-                go_today(page); js(page, SPY)
+            # PL1 Step 7 — ปุ่ม +n expander ถูกถอดจากแถว Today (อยู่ที่การ์ดแผน Sat เท่านั้น) · tests/PL1_retired.md
             done += 1
             js(page, "()=>{ window.__act = []; }")
         kb = js(page, "()=>{ const e = document.querySelector('[data-td3-sat-card]'); return e ? [e.getAttribute('role'), e.getAttribute('tabindex')] : null; }")
@@ -344,7 +340,7 @@ def risk_tests(pw, w, h, label, shots=False):
         same = js(page, "()=>{ const h = document.querySelector('[data-td4-ph=\"sat\"] h3').getBoundingClientRect(), c = document.querySelector('[data-td4-risk=\"sat\"]').getBoundingClientRect(); return [Math.round(h.top), Math.round(c.top)]; }")
         check(f"{tag} §B5b DD Sat 12.5% (Reduce) → '⚠ DD Sat … 12.5% · Reduce ›' ที่หัว Satellite · amber", chip.startswith("⚠ DD Sat") and "12.5%" in chip and "Reduce" in chip and chip.endswith("›") and st == "amber", [chip, st])
         check(f"{tag} §B5b ชิป DD Sat อยู่แถวเดียวกับหัวแผง", abs(same[0] - same[1]) <= 14, same)
-        wid = js(page, "()=>{ const c = document.querySelector('[data-td4-risk=\"sat\"]'), p = c.parentNode; return [c.scrollWidth <= c.clientWidth + 1 || getComputedStyle(c.querySelector('.t')).textOverflow === 'ellipsis', c.getBoundingClientRect().right <= document.querySelector('[data-td3-panel=\"sat\"]').getBoundingClientRect().right + 1, !!c.querySelector('.g')]; }")
+        wid = js(page, "()=>{ const c = document.querySelector('[data-td4-risk=\"sat\"]'), p = c.parentNode; return [c.scrollWidth <= c.clientWidth + 1 || getComputedStyle(c.querySelector('.t')).textOverflow === 'ellipsis', c.getBoundingClientRect().right <= document.querySelector('[data-td3-panels] > [data-td3-panel]:last-child').getBoundingClientRect().right + 1, !!c.querySelector('.g')]; }")
         check(f"{tag} §B5b ชิปไม่ล้นแถว · › ยังเห็น", all(wid), wid)
         if shots and label == "390px": scroll_to_sel(page, '[data-td4-ph="sat"]'); C.shot(page, "td4c-risk-390.png", sel='[data-td4-ph="sat"]')
         page.locator('[data-td4-risk="sat"]').click(); settle(page, 300)
@@ -355,7 +351,7 @@ def risk_tests(pw, w, h, label, shots=False):
         set_dd(page, core_dd=12.5); go_today(page)
         cc = txt(page, '[data-td4-risk="core"]') or ""
         same = js(page, "()=>{ const h = document.querySelector('[data-td4-ph=\"core\"] h3').getBoundingClientRect(), c = document.querySelector('[data-td4-risk=\"core\"]').getBoundingClientRect(); return [Math.round(h.top), Math.round(c.top)]; }")
-        check(f"{tag} §B5b DD Core ถึงขั้น → ชิป ⚠ DD Winner … › ที่หัว Core Port (RG2b §4.7 ชื่อถัง) เท่านั้น (Sat กลับเป็น Risk ✓)", cc.startswith("⚠ DD Winner") and "12.5%" in cc and abs(same[0] - same[1]) <= 14 and (txt(page, '[data-td4-risk="sat"]') or "") == "Risk ✓", [cc, txt(page, '[data-td4-risk="sat"]')])
+        check(f"{tag} §B5b DD Core ถึงขั้น → ชิป ⚠ DD Momentum … › ที่หัว Core Port (RG2b §4.7 ชื่อถัง) เท่านั้น (Sat กลับเป็น Risk ✓)", cc.startswith("⚠ DD Momentum") and "12.5%" in cc and abs(same[0] - same[1]) <= 14 and (txt(page, '[data-td4-risk="sat"]') or "") == "Risk ✓", [cc, txt(page, '[data-td4-risk="sat"]')])
         if shots and label == "1440px": C.shot(page, "td4c-today-1440.png", full=True)
         if shots and label == "390px": C.shot(page, "td4c-today-390.png", full=True)
         check(f"{tag} ไม่ล้นแนวนอน · ไม่มี console error", ovf(page) <= 0 and not ce and not pe, [ovf(page), ce[:2], pe[:2]])

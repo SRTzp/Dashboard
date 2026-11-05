@@ -103,7 +103,7 @@ def settings_tests(pw, w, h, label):
         shot(page, f"pol1-settings-err-{sfx}.png", "#crSec")
         page.fill("#sCrRiskA", "9"); page.wait_for_timeout(200)
         items = js(page, "()=>[...document.querySelectorAll('[data-cr-tierr-i]')].map(e=>e.textContent.trim())")
-        check(f"{tag} 5 หลายข้อผิด → 1 บรรทัดต่อข้อ ใต้ตาราง", items == ["A · Risk/ไม้ ต้องอยู่ระหว่าง 0.1–5", "เพดานต่อหุ้น ต้องเป็นตัวเลขมากกว่า 0"], json.dumps(items, ensure_ascii=False))
+        check(f"{tag} 5 หลายข้อผิด → 1 บรรทัดต่อข้อ ใต้ตาราง", items == ["Base Risk per trade ต้องอยู่ระหว่าง 0.1–5", "เพดานต่อหุ้น ต้องเป็นตัวเลขมากกว่า 0"], json.dumps(items, ensure_ascii=False))
         page.fill("#sCrWinCap", "25"); page.fill("#sCrRiskA", "1.25"); page.wait_for_timeout(200)
         check(f"{tag} 5 แก้ถูก → ข้อความหาย · ปุ่มบันทึกกดได้", js(page, "()=>document.querySelector('[data-cr-tierr]').textContent.trim()===''") and js(page, "()=>!document.getElementById('setSaveBtn').disabled"))
         check(f"{tag} 8 ไม่มี console error (ตั้งค่า)", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))

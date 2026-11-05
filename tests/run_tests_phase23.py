@@ -184,9 +184,9 @@ def settings_checks(pw, w, h, label):
         vals = page.evaluate("""() => { const g = id => document.getElementById(id).value; return {mk:g('sCrMarket'), ra:g('sCrRiskA'), rb:g('sCrRiskB'), a:g('sCrTierA'), b:g('sCrTierB'), ca:g('sCrCapTotA'), cb:g('sCrCapTotB'), add:g('sCrAdd'), cap:g('sCrL2Cap'), warn:g('sCrL2Warn'),
             em:g('sCrEmerg'), lb:g('sCrLBudget'), lr:g('sCrLRisk'), ls:g('sCrLShare'), gate:g('sCrGate'), heatCore:g('sPortCore'), heatSat:g('sPortSatB')}; }""")
         check(f"{tag} ตั้งค่า: ส่วนความเสี่ยง Core มีค่าเริ่มต้นครบ (CZ1: Risk A/B 1.25/1.25 · เพดานไม้แรก 15/10 · เพดานรวม 25/25 · 50 · 20 · 15 · 7 · 10 · 2.5 · 30 · 2) · main ตลาด = US",
-              vals == {"mk": "US", "ra": "1.25", "rb": "1.25", "a": "25", "b": "25", "ca": "25", "cb": "25", "add": "50", "cap": "20", "warn": "15", "em": "7", "lb": "5", "lr": "4", "ls": "30", "gate": "2", "heatCore": "20", "heatSat": "6"}, json.dumps(vals))
+              vals == {"mk": "US", "ra": "1", "rb": "1.25", "a": "25", "b": "25", "ca": "25", "cb": "25", "add": "50", "cap": "20", "warn": "15", "em": "7", "lb": "5", "lr": "4", "ls": "30", "gate": "2", "heatCore": "20", "heatSat": "6"}, json.dumps(vals))
         units = page.evaluate("() => [...document.querySelectorAll('#crSec .f')].map(f=>(f.querySelector('.crUnit')||{}).textContent||'')")
-        check(f"{tag} ตั้งค่า: ทุกช่องมีป้ายหน่วย (% ของถัง Core · % ของไม้ก่อนหน้า · ไม้ (1–6) · % ใต้ Stop · สัปดาห์) · ป้าย '% ของถัง Core' ≥ 8 ช่อง (TIER2: +6 ช่องเกณฑ์ Tier = 19 ช่อง)", len(units) == 22 and units.count("") == 1 and sum("% of Core bucket" in u for u in units) >= 3,   # RG2b — ช่อง Tier/เพดานชั้น 2/ladderShare/gateWeeks ถอด · หน่วยเปลี่ยนเป็น % ของถัง
+        check(f"{tag} ตั้งค่า: ทุกช่องมีป้ายหน่วย (% ของถัง Momentum · % ของไม้ก่อนหน้า · ไม้ (1–6) · % ใต้ Stop · สัปดาห์) · ป้าย '% ของถัง Momentum' ≥ 8 ช่อง (TIER2: +6 ช่องเกณฑ์ Tier = 19 ช่อง)", len(units) == 22 and units.count("") == 1 and sum("% of Momentum bucket" in u for u in units) >= 3,   # RG2b — ช่อง Tier/เพดานชั้น 2/ladderShare/gateWeeks ถอด · หน่วยเปลี่ยนเป็น % ของถัง
                json.dumps(units, ensure_ascii=False))
         mk = page.evaluate("() => ({main: coreRiskCfg('main').market, fam: coreRiskCfg('fam').market})")
         check(f"{tag} ตลาดเริ่มต้น: main = US · fam (ชื่อ Family) = TH · ชื่ออื่น = both", mk == {"main": "US", "fam": "TH"} and
@@ -209,15 +209,15 @@ def settings_checks(pw, w, h, label):
         check(f"{tag} ค่าถูกต้อง → ปุ่มบันทึกกดได้ · ไม่มีข้อความแดง", page.evaluate("() => !document.getElementById('setSaveBtn').disabled && [...document.querySelectorAll('.crErr')].every(e=>!e.textContent)"))
         page.click("#setSaveBtn"); page.wait_for_timeout(1500)
         bm = dump_book(page, "main")
-        check(f"{tag} แก้งบเสี่ยง 1 → 0.75 บันทึก → books.main.settings.coreRisk.riskPct = 0.75 (ครบ 19 ช่อง รวม maxLots · market US · TIER2 +6 เกณฑ์ Tier)",
-              bm["settings"]["coreRisk"]["riskPct"] == 0.75 and len(bm["settings"]["coreRisk"]) == 22 and bm["settings"]["coreRisk"]["market"] == "US", json.dumps(bm["settings"].get("coreRisk")))
-        check(f"{tag} books.fam ไม่เปลี่ยน (ไม่มี coreRisk) · coreSizeOpts('main').riskPct = 0.0075",
-              json.dumps(dump_book(page, "fam"), sort_keys=True) == before_fam and "coreRisk" not in dump_book(page, "fam")["settings"] and abs(page.evaluate("() => coreSizeOpts('main').riskPct") - 0.0075) < 1e-12, "")
+        check(f"{tag} แก้งบเสี่ยง 1 → 0.75 บันทึก → books.main.settings.coreRisk.baseRisk = 0.75 (PL1 · ครบ 19 ช่อง รวม maxLots · market US · TIER2 +6 เกณฑ์ Tier)",
+              bm["settings"]["coreRisk"]["baseRisk"] == 0.75 and "riskPct" not in bm["settings"]["coreRisk"] and len(bm["settings"]["coreRisk"]) == 21 and bm["settings"]["coreRisk"]["market"] == "US", json.dumps(bm["settings"].get("coreRisk")))
+        check(f"{tag} books.fam ไม่เปลี่ยน (ไม่มี coreRisk) · coreRiskCfg('main').baseRisk = 0.75",
+              json.dumps(dump_book(page, "fam"), sort_keys=True) == before_fam and "coreRisk" not in dump_book(page, "fam")["settings"] and abs(page.evaluate("() => coreRiskCfg('main').baseRisk") - 0.75) < 1e-12, "")
         opts = page.evaluate("() => coreSizeOpts('main')")
         check(f"{tag} coreSizeOpts: tierCap {{A:.15,B:.10}} (CZ1) · addRatio .5 · layer2Cap .20 · Warn .15 · emergency .07 · ladderBudget .10 · ladderRiskCap .025 · ladderShareCap .30 · gateStreak 2",
               opts["tierCap"] == {"A": 0.25, "B": 0.25} and opts["addRatio"] == 0.5 and abs(opts["layer2Cap"] - 0.2) < 1e-12 and abs(opts["layer2Warn"] - 0.15) < 1e-12 and abs(opts["emergencyPct"] - 0.07) < 1e-12
               and opts["ladderMaxAcctPct"] == 5 and abs(opts["ladderRiskCap"] - 0.04) < 1e-12 and "ladderShareCap" not in opts and "gateStreak" not in opts, json.dumps(opts))
-        chk = page.evaluate("() => { const o = coreSizeOpts('main'); const r = Calc.coreSize.firstLot({tank:700000, entry:100, stop:90, f:1, tier:'A', riskPct:o.riskPct, tierCapPct:o.tierCap.A}); return r.qty; }")
+        chk = page.evaluate("() => { const o = coreSizeOpts('main'); const r = Calc.coreSize.firstLot({tank:700000, entry:100, stop:90, f:1, tier:'A', riskPct:coreRiskCfg('main').baseRisk/100, tierCapPct:o.tierCap.A}); return r.qty; }")
         check(f"{tag} ส่งค่าตั้งเข้า Calc.coreSize: งบ 0.75% → ไม้แรก 525", chk == 525, str(chk))
         # ค่าผิด
         bad = [("sCrRiskA", "0", "มากกว่า 0"), ("sCrRiskA", "-1", "มากกว่า 0"), ("sCrAdd", "150", "1–100"), ("sCrWinCap", "0", "มากกว่า 0")]   # RG2b: ตัดเคส Tier B>A / เหลืองที่>เพดานชั้น 2 (ช่องถอดแล้ว) · เพิ่มเพดานต่อหุ้นค่าเดียว
@@ -227,7 +227,7 @@ def settings_checks(pw, w, h, label):
             st = page.evaluate("(id)=>({dis:document.getElementById('setSaveBtn').disabled, err:(document.querySelector('.crErr[data-err-for=\"'+id+'\"]')||{}).textContent||'', red:getComputedStyle(document.querySelector('.crErr[data-err-for=\"'+id+'\"]')).color})", fid)
             check(f"{tag} ค่าผิด {fid}={v} → ข้อความแดงใต้ช่อง ('{msg}') + ปุ่มบันทึกกดไม่ได้", st["dis"] and msg in st["err"] and st["red"] != "rgba(0, 0, 0, 0)", json.dumps(st, ensure_ascii=False))
         page.evaluate("() => saveSettings()"); page.wait_for_timeout(600)
-        check(f"{tag} ค่าผิด: เรียก saveSettings() ตรง ๆ ก็ไม่บันทึก (ค่ายังเป็น 0.75) · ไม่ใช้ alert/confirm", dump_book(page, "main")["settings"]["coreRisk"]["riskPct"] == 0.75 and not dialogs, json.dumps(dialogs))
+        check(f"{tag} ค่าผิด: เรียก saveSettings() ตรง ๆ ก็ไม่บันทึก (ค่ายังเป็น 0.75) · ไม่ใช้ alert/confirm", dump_book(page, "main")["settings"]["coreRisk"]["baseRisk"] == 0.75 and not dialogs, json.dumps(dialogs))
         # บันทึก sync cap
         page.evaluate("() => openSettings()"); page.wait_for_timeout(120)
         page.fill("#sPortCore", "17"); page.click("#setSaveBtn"); page.wait_for_timeout(1500)   # RG2b: ตัดช่อง sCrL2Warn ที่ถอดแล้ว
@@ -326,11 +326,11 @@ def formula_checks(pw, w, h, label):
         rr = page.evaluate("""() => { const T = state.trades.reduce((m,t)=>(m[t.id]=t,m),{}); return {riskC: riskOf(T.tc), riskTB: riskTHBOf(T.tb), rClosed: realizedROf(T.te), sumOpen: summarize().per.core.open, ot: openRiskTHB(T.tc), oa: openRiskTHB(T.ta), od: openRiskTHB(T.td), oe: openRiskTHB(T.te)}; }""")
         check(f"{tag} riskOf/riskTHBOf/realizedROf ไม่เปลี่ยน (C riskOf = 25 · Journal R ของไม้ปิด = 2) · openRiskTHB: ล็อก = 0 · Sat open = 570×fx · plan = riskTHBOf · closed = 0",
               rr["riskC"] == 25 and rr["riskTB"] == 100 and rr["rClosed"] == 2 and rr["ot"] == 0 and abs(rr["oa"] - 570 * fx) < 1e-6 and abs(rr["od"] - 0.1 * 20 * 100 * fx) < 1e-6 and rr["oe"] == 0 and rr["sumOpen"] == 100, json.dumps(rr))
-        check(f"{tag} เงินที่ถือ: B+C = 100×10 + 200×5 = ฿2,000 · {f2(2000/tank*100)}% ของถัง · เงินว่าง = ถัง − 2,000 = ฿{tank-2000:,}", "฿2,000" in blk["held"] and f"{f2(2000/tank*100)}% ของถัง" in blk["held"] and f"เงินว่าง Winner ฿{tank-2000:,}" in blk["held"], blk["held"])   # RG2b: เงินว่างแยก Winner · Ladder
+        check(f"{tag} เงินที่ถือ: B+C = 100×10 + 200×5 = ฿2,000 · {f2(2000/tank*100)}% ของถัง · เงินว่าง = ถัง − 2,000 = ฿{tank-2000:,}", "฿2,000" in blk["held"] and f"{f2(2000/tank*100)}% ของถัง" in blk["held"] and f"เงินว่าง Momentum ฿{tank-2000:,}" in blk["held"], blk["held"])   # RG2b: เงินว่างแยก Momentum · Compounder
         check(f"{tag} ตำแหน่ง: 2 ตัว · ล็อกกำไร 1 ตัว · ไม่มีช่องแผนที่รอ (ไม่มีไม้ plan ของ Core)", "2 ตัว" in blk["pos"] and "ล็อกกำไร 1 ตัว" in blk["pos"] and blk["plan"] is None, json.dumps(blk, ensure_ascii=False))
         exp = round((100 + 570 * fx) / cap * 100, 2)
         check(f"{tag} 'ถ้าทุกไม้โดน Stop บัญชีลด' = (100 + 570×fx) ÷ totalTHB × 100 = {f2(exp)}% · '(Core จากราคาปิด · Sat จากทุน)' + เทียบทุน −฿75 (7E-2: แก้ข้อความ · ตัวเลขเท่าเดิมเพราะไม่มีการ์ด = Core นับจากทุน)", f"≈ {f2(exp)}%" in blk["drop"] and "(Core จากราคาปิด · Sat จากทุน)" in blk["drop"] and "เทียบทุน: −฿75" in blk["drop"], f"{blk['drop']} exp={exp}")
-        check(f"{tag} หัวบล็อก: 'Core Port' · ทุน ฿ · ≈ % ของทุนรวม · ป้ายตลาด US", "Core Port" in blk["head"] and "ทุน ฿100,000" in blk["head"] and "ของทุนรวม" in blk["head"] and "US" in blk["head"], blk["head"])
+        check(f"{tag} หัวบล็อก: 'Momentum Port' · ทุน ฿ · ≈ % ของทุนรวม · ป้ายตลาด US", "Momentum Port" in blk["head"] and "ทุน ฿100,000" in blk["head"] and "ของทุนรวม" in blk["head"] and "US" in blk["head"], blk["head"])
         check(f"{tag} ตัดของเดิม: ไม่มีป้าย 'เกิน limit' · ไม่มี Open Risk/Planned แบบเดิม · ไม่มีบรรทัด Positions n open", "เกิน limit" not in blk["all"] and "Open Risk" not in blk["all"] and "Planned" not in blk["all"] and " open" not in blk["all"].replace("ล็อก", ""), blk["all"])
         foot = page.evaluate("() => document.getElementById('foot').innerText")
         expF = f"heat: Core {f2(100/tank*100)}% / 20% ของถัง · Sat {f2(570*fx/(st['sat']*fx)*100)}% / 6% ของถัง · รวม {f2(exp)}% ของบัญชี (ฐาน THB @ {f2(fx)}) — sync ผ่าน Firestore"
@@ -353,8 +353,8 @@ def formula_checks(pw, w, h, label):
         page.evaluate(REPIN_JS.replace('() => {', '() => { state.settings.capital.core = 1500;', 1)); page.evaluate("() => { state.settings.capital.core = 1500; state.trades = [{id:'x1', date:'2026-09-01', sym:'NVDA', port:'core', bias:'Long', entry:100, sl:90, tp:null, qty:20, mult:1, cur:'THB', status:'open'},{id:'x2', date:'2026-09-01', sym:'PLN', port:'core', bias:'Long', entry:50, sl:45, tp:null, qty:10, mult:1, cur:'THB', status:'plan'}]; render(); }")
         r2 = page.evaluate("""() => { const q = s => document.querySelector('#portsSum '+s); const t = e => e ? e.innerText.replace(/\\s+/g,' ').trim() : null;
             return {free:t(q('[data-sum-free]')), neg:!!q('[data-sum-free].sumNeg'), col:q('[data-sum-free]') && getComputedStyle(q('[data-sum-free]')).color, plan:t(q('[data-sum="plan"]'))}; }""")
-        check(f"{tag} ถือเกินถัง (ถือ 2,000 > ถัง 1,500) → แดง 'Winner เกินถัง ฿500' (RG2b เตือนเท่านั้น) · มีไม้ plan → ช่อง 'แผนที่รอ (Planned)' แสดง (1 ตัว · เสี่ยง +฿50)",
-              r2["neg"] and "Winner เกินถัง ฿500" in r2["free"] and r2["plan"] and "แผนที่รอ" in r2["plan"] and "1 ตัว" in r2["plan"] and "+฿50" in r2["plan"], json.dumps(r2, ensure_ascii=False))
+        check(f"{tag} ถือเกินถัง (ถือ 2,000 > ถัง 1,500) → แดง 'Momentum เกินถัง ฿500' (RG2b เตือนเท่านั้น) · มีไม้ plan → ช่อง 'แผนที่รอ (Planned)' แสดง (1 ตัว · เสี่ยง +฿50)",
+              r2["neg"] and "Momentum เกินถัง ฿500" in r2["free"] and r2["plan"] and "แผนที่รอ" in r2["plan"] and "1 ตัว" in r2["plan"] and "+฿50" in r2["plan"], json.dumps(r2, ensure_ascii=False))
         check(f"{tag} สูตรเดียว/บล็อกสรุป: ไม่มี console error", not ce and not pe, json.dumps([ce[:3], pe[:3]]))
     finally:
         browser.close()

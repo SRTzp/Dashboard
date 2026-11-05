@@ -202,9 +202,9 @@ def checks(pw, w, h, label):
         check(f"{tag} 8 โมดัลแก้ไข AVGO: ไม่มี dropdown A/B · สถานะ 'Tier A · Fortress · ตั้งเมื่อ {TODAY}' · มีปุ่ม 'ตั้ง Tier…' + ลิงก์ 'ล้าง Tier'",
               page.locator("#wlAddTier").count() == 0 and st == f"Tier A · Fortress · ตั้งเมื่อ {TODAY}" and not vis(page, "#wlAddTierBtn") and vis(page, "#wlAddEvalBox [data-cs-edit]") and vis(page, "#wlAddTierClr"), st)   # CS1 — ปุ่ม ตั้ง Tier… ถูกแทนที่ด้วย Edit Stock Evaluation
         shot_el(page, "#wlAddOverlay .modal", f"wt1-wl-edit-{w}.png")
-        page.click("#wlAddEvalBox [data-cs-edit]"); page.wait_for_selector("[data-cs-sheet]"); page.wait_for_timeout(200)
-        check(f"{tag} 8 'ตั้ง Tier…' → โมดัลปิด · เปิดฟอร์มแผนใหม่ ticker AVGO", not page.locator("#wlAddOverlay.show").count() and page.evaluate("()=>document.querySelector('[data-cs-sheet]').dataset.sym") == "AVGO")   # CS1
-        page.evaluate("()=>{ coreSheetClose(); csEvalClose(); }")
+        page.click("#wlAddEvalBox [data-cs-edit]"); page.wait_for_selector("[data-scr-sheet]"); page.wait_for_timeout(200)
+        check(f"{tag} 8 'ตั้ง Tier…' → โมดัลปิด · เปิดฟอร์มแผนใหม่ ticker AVGO", not page.locator("#wlAddOverlay.show").count() and page.evaluate("()=>document.querySelector('[data-scr-sheet]').dataset.sym") == "AVGO")   # CS1
+        page.evaluate("()=>{ coreSheetClose(); scrClose(); }")
         page.evaluate("()=>{ switchTab('watch'); wlOpen('AVGO'); wlOpenEdit('AVGO'); }"); page.wait_for_timeout(200)
         page.click("#wlAddTierClr"); page.wait_for_timeout(400)
         d = wl_doc(page, "AVGO") or {}
@@ -213,7 +213,7 @@ def checks(pw, w, h, label):
         page.click("#wlAddBtn"); page.wait_for_timeout(400)
         page.evaluate("()=>wlOpen('AVGO')"); page.wait_for_timeout(300)
         chip = txt(page, ".wlDT [data-wl-tier-set]") or ""
-        check(f"{tag} 8 หลังล้าง ชิปกลับเป็น 'ตั้ง Tier' (จาง) · รายการซ้ายไม่มีชิป Tier", chip == "ตั้ง Tier" and page.locator('.wlR[data-sym="AVGO"] [data-wl-tier]').count() == 0, chip)
+        check(f"{tag} 8 หลังล้าง ไม่มีชิป 'ตั้ง Tier' แล้ว (PL1 polish) · รายการซ้ายไม่มีชิป Tier", chip == "" and page.locator('.wlR[data-sym="AVGO"] [data-wl-tier]').count() == 0, chip)
         page.evaluate("()=>{ window.firebase.__mockDb.__seedDoc(['users','testuid','watchlist','NEWY'], {ticker:'NEWY', market:'US', port:'core', note:'', industry:'', added_at:new Date().toISOString()}); wlStop(); wlStart(); }"); page.wait_for_timeout(500)   # TD4a: ต้องอยู่ใน Watchlist ก่อน
         page.evaluate("()=>wlOpenAdd('NEWY')"); page.wait_for_timeout(150)
         hid = not vis(page, "#wlAddTierBox") and page.locator("#wlAddTier").count() == 0

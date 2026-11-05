@@ -194,7 +194,7 @@ def empty_checks(pw, w, h, label):
     browser, context, page, ce, pe, dialogs = launch(pw, w, h, doc)
     try:
         go_plan(page)
-        msg = "ยังไม่มีไม้ที่ถืออยู่ — ไม้ Sat เปิดจากการ์ดในหน้า Sat · ไม้ Core เปิดจากการ์ด Core (กด ＋ หรือ T ในแท็บแผน)"
+        msg = "ยังไม่มีไม้ที่ถืออยู่ — ไม้ Sat เปิดจากการ์ดในหน้า Sat · ไม้ Momentum เปิดจากการ์ด Momentum (กด ＋ หรือ T ในแท็บแผน)"
         got = page.evaluate("() => [...document.querySelectorAll('#planSections .acctSec [data-pos-empty]')].map(e=>e.innerText.trim())")
         check(f"{tag} ว่าง: บัญชีที่ไม่มีไม้ open → ข้อความ §1.4 ทั้ง 2 บัญชี · ไม่มีตาราง", got == [msg, msg] and not present(page, "#planSections table"), json.dumps(got, ensure_ascii=False))
         shot(page, f"cl2d-positions-empty-{w}.png", "#tabPlan .panel:has(#planSections)")

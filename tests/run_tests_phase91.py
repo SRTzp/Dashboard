@@ -293,7 +293,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 9 กล่องสรุป: 'ทุน ฿9.88M' (RG2b = Winner + Ladder ของทั้ง 2 บัญชี) (รวมทุกบัญชี · LN3fix3c) · 'Risk Core x% / 20%' · 'ว่าง ฿' · บรรทัด 'DD · FF · n ตัว' (ไม่มี Winners/Ladder/฿/ถ้า Ladder เต็มบนหน้า)", cap == "ทุน ฿9.88M" and "%" in big and "ถ้า Ladder เต็ม" not in big and frl.startswith("ว่าง ฿") and "DD" in line and "FF" in line, [cap, big, line])
         js(page, "()=>document.querySelector('[data-lf-det]').open = true"); page.wait_for_timeout(200)
         det = txt(page, "[data-lf-det]")
-        check(f"{tag} 9 พับ 'รายละเอียดและกฎ' มี ฿ · ถ้า Ladder เต็ม · Winners ถือ · Ladder % · ตำแหน่ง · Ladder ใหม่ · Stop ฉุกเฉิน · บัญชีลด", all(k in det for k in ("ถ้า Ladder เต็ม", "Winners ถือ", "Ladder ", "ตำแหน่ง 1 ตัว", "Stop ฉุกเฉิน", "ถ้าทุกไม้โดน Stop บัญชีลด")), det[:300])
+        check(f"{tag} 9 พับ 'รายละเอียดและกฎ' มี ฿ · ถ้า Compounder เต็ม · Momentum ถือ · Compounder % · ตำแหน่ง · Compounder ใหม่ · Stop ฉุกเฉิน · บัญชีลด", all(k in det for k in ("ถ้า Compounder เต็ม", "Momentum ถือ", "Compounder ", "ตำแหน่ง 1 ตัว", "Stop ฉุกเฉิน", "ถ้าทุกไม้โดน Stop บัญชีลด")), det[:300])
         js(page, "()=>document.querySelector('[data-lf-det]').open = false")
         if CS1_RETIRED:   # CS1 — ฟอร์มแผนใหม่แบบ Risk % แก้ได้ (Tier) ถูกแทนที่ด้วย Risk จาก ★ (ครอบคลุมใน phase111)
             print("RETIRED (CS1) — ฟอร์มแผนใหม่แบบ Risk % แก้ได้ (Tier) ถูกแทนที่ด้วย Risk จาก ★ (ครอบคลุมใน phase111)")
@@ -344,7 +344,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 11 ป้ายใหม่ 'ไม้ Base สูงสุด' · 'เตือนเมื่อเติม Base >'", "Max Base lots" in v0["lots"] and "Max lots" not in v0["lots"].replace("Max Base lots", "") and "Warn when adding Base" in v0["add"], v0)   # SET1 — หัวหมวดสรุป LN3 ("Base 1% … ต่อหุ้น ≤ 15%") ถูกเอาออก · ป้ายช่องยังตรวจครบ
         page.fill("#sCrRiskFirst", "1.5"); page.wait_for_timeout(250)
         e1 = js(page, "()=>({err: document.querySelector('[data-err-for=sCrRiskFirst]').innerText, dis: document.getElementById('setSaveBtn') ? document.getElementById('setSaveBtn').disabled : null})")
-        check(f"{tag} 11 Risk ไม้แรก เกินงบ Base → ข้อความ 'ต้องไม่เกินงบเสี่ยง Base'", "ไม่เกินงบเสี่ยง Base" in e1["err"], e1)
+        print("RETIRED (PL1) - %s 11 Risk ไม้แรก เกินงบ Base → ข้อความ (riskFirst ไม่ผูกกับ Base Risk ใหม่แล้ว · tests/PL1_retired.md)" % tag)
         page.fill("#sCrRiskFirst", "0.5"); page.fill("#sCrWinCap", "101"); page.wait_for_timeout(250)
         e2 = js(page, "()=>document.querySelector('[data-err-for=sCrWinCap]').innerText")
         check(f"{tag} 11 เพดานเงินต่อหุ้น > 100 → ข้อความ 'ต้องอยู่ระหว่าง 1–100' (RG2b: ช่อง Max per stock ค่าเดียว)", "1–100" in e2, e2)

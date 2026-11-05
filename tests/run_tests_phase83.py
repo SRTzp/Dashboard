@@ -96,7 +96,7 @@ def tests(pw, w, h, label):
         page.locator('[data-ln3-acc="main"]').dispatch_event('click'); page.wait_for_timeout(500)
         # ── 4 Core
         core = js(page, """()=>{ const c = document.querySelector('[data-ln3-core]'); const h = c.querySelector('.ln3-ph'); return {head: h.innerText.replace(/\\s+/g,' ').trim(), pies: c.querySelectorAll('.piechart').length, seg: [...c.querySelectorAll('[data-ln3-by]')].map(b=>[b.dataset.ln3By, b.classList.contains('on')]), leg: c.querySelector('.pielegend').innerText.replace(/\\s+/g,' '), fold: c.querySelector('[data-ln3-riskfold] summary').innerText}; }""")
-        check(f"{tag} 4 การ์ด Core: หัว 'Core Port · DD x% · สถานะ' ไม่ซ้ำทุน (ไม่มีคำว่า ทุน/฿ ในหัว)", core["head"].startswith("Core Port") and "DD" in core["head"] and "ปกติ" in core["head"] and "ทุน" not in core["head"] and "฿" not in core["head"], core["head"])
+        check(f"{tag} 4 การ์ด Momentum: หัว 'Momentum Port · DD x% · สถานะ' ไม่ซ้ำทุน (ไม่มีคำว่า ทุน/฿ ในหัว)", core["head"].startswith("Momentum Port") and "DD" in core["head"] and "ปกติ" in core["head"] and "ทุน" not in core["head"] and "฿" not in core["head"], core["head"])
         check(f"{tag} 4 วงกลมเดียว · ปุ่มสลับ หุ้น | Industry (ค่าเริ่ม หุ้น) · legend แสดงหุ้นที่ถือ + เงินสด", core["pies"] == 1 and core["seg"] == [["sym", True], ["ind", False]] and "NVDA" in core["leg"] and "AVGO" in core["leg"] and "เงินสด" in core["leg"], core)
         page.locator('[data-ln3-by="ind"]').click(); page.wait_for_timeout(400)
         leg2 = body(page, "[data-ln3-core] .pielegend")
@@ -109,7 +109,7 @@ def tests(pw, w, h, label):
         go(page)
         js(page, "()=>{ const d = document.querySelector('[data-ln3-riskfold]'); d.open = true; }"); page.wait_for_timeout(200)
         rk = body(page, "[data-ln3-riskfold]")
-        check(f"{tag} 4 พับ 'ความเสี่ยง Core (ชั้น 2 · W/L · บันได)': ถึง Stop ตอนนี้ · เต็ม · Ladder · เงินว่าง (RG2b: ไม่มีเพดานรวม/L รวม/บันไดใหม่)", all(k in rk for k in ("ถึง Stop ตอนนี้", "เต็ม", "Ladder", "เงินว่าง")) and "ความเสี่ยง Core (ชั้น 2 · W/L · บันได)" in rk, rk)
+        check(f"{tag} 4 พับ 'ความเสี่ยง Core (ชั้น 2 · W/L · บันได)': ถึง Stop ตอนนี้ · เต็ม · Compounder · เงินว่าง (RG2b: ไม่มีเพดานรวม/L รวม/บันไดใหม่)", all(k in rk for k in ("ถึง Stop ตอนนี้", "เต็ม", "Compounder", "เงินว่าง")) and "ความเสี่ยง Core (ชั้น 2 · W/L · บันได)" in rk, rk)
         # ── 5 Sat
         sat = js(page, "()=>{ const c = document.querySelector('[data-ln3-sat]'); return {head: c.querySelector('.ln3-ph').innerText.replace(/\\s+/g,' ').trim(), t: c.innerText.replace(/\\s+/g,' '), pies: c.querySelectorAll('.piechart').length}; }")
         check(f"{tag} 5 การ์ด Sat: หัว 'Sat · DD x%' ไม่ซ้ำทุน · มีไม้ฟิวเจอร์ค้าง = ไม่มีวงกลม · ชี้ไปดูที่แท็บแผน", sat["head"].startswith("Sat") and "DD" in sat["head"] and "ทุน" not in sat["head"] and "ไม้ค้าง 1 ไม้" in sat["t"] and "แท็บแผน" in sat["t"] and sat["pies"] == 0, sat)

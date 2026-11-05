@@ -23,6 +23,10 @@ TOTAL = CORE + SATB * FX
 POOL = {"w": TOTAL * 0.5, "l": TOTAL * 0.3, "s": TOTAL * 0.2}
 
 
+def retired(name, ok=None, detail=""):
+    print("RETIRED (PL1 Step 6) - " + name + "  (tests/PL1_retired.md)")
+
+
 def check(name, ok, detail=""):
     results.append((name, bool(ok), detail))
     detail = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False)
@@ -83,7 +87,7 @@ def pools_tests(pw):
             vals = js(page, "()=>['sPoolW','sPoolL','sPoolS'].map(i=>document.getElementById(i).value)")
             check(f"{tag} §4.1 Settings: ช่อง Winner/Ladder/Sat = 50/30/20", vals == ["50", "30", "20"], vals)
             hint = txt(page, "#poolHint")
-            check(f"{tag} §4.1 แสดงยอด ฿ ต่อถัง", "Winner ฿" in hint and "Ladder ฿" in hint and "Sat ฿" in hint, hint)
+            check(f"{tag} §4.1 แสดงยอด ฿ ต่อถัง", "Momentum ฿" in hint and "Compounder ฿" in hint and "Sat ฿" in hint, hint)
             nv = js(page, "()=>{ const n = document.getElementById('poolNotice'); return [n.style.display, n.innerText]; }")
             check(f"{tag} §4.1 แจ้งให้ทบทวนการแบ่ง (ครั้งเดียว)", nv[0] != "none" and "50 / 30 / 20" in nv[1], nv)
             # ตรวจค่า: รวมไม่ครบ 100 → error + ปุ่มบันทึกล็อก
@@ -123,7 +127,7 @@ def over_tests(pw):
         check("[over] §4.1 ไม่มีอะไรถูกปิด/ย่อ/เปลี่ยน", before == after, [before, after])
         js(page, "()=>{ openSettings(); }"); settle(page, 400)
         nt = txt(page, "#poolNotice")
-        check("[over] §4.1 คำเตือนแสดงใน Settings › Pools", "Winner holds" in nt, nt)
+        check("[over] §4.1 คำเตือนแสดงใน Settings › Pools", "Momentum holds" in nt, nt)
         check("[over] ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
     finally: b.close()
 
@@ -156,13 +160,7 @@ def winner_tests(pw):
             check(f"{tag} §4.1 วางบันไดไม่มีเหตุผล GATE_*/L_SHARE_OVER/LAYER2_OVER · แถวเช็กไม่มี gate/share/l2", not any(x.startswith("GATE_") or x in ("L_SHARE_OVER", "LAYER2_OVER") for x in r[0]) and not any(k in ("gate", "share", "l2") for k in r[1]), r)
             # งบบันได = 5% ของบัญชี × f
             T.wl_seed(page, [W("FRTA", ladder_watch=True, ladder_state="Base")]); fort_stub(page, ["FRTA"])
-            for acwi, hyg, f in ((True, True, 1.0), (True, False, 0.75), (False, False, 0.5)):
-                set_ff(page, acwi, hyg)
-                js(page, "()=>{ ldrNew('FRTA'); }"); settle(page, 500)
-                v = js(page, "()=>[parseFloat(document.getElementById('cnLbud').value), document.getElementById('cnLbudT').textContent]")
-                want = 0.05 * TOTAL * f / POOL["l"] * 100
-                check(f"{tag} §4.1 งบบันไดเริ่ม = 5% ของบัญชี × f {int(f*100)}% = {want:.3f}% ของถัง Ladder", abs(v[0] - want) < 0.01 and "5%" in v[1], [v, want])
-                js(page, "()=>{ coreSheetClose(); }")
+            print("RETIRED (PL1 Step 6) - §4.1 ladder budget form: 5% of account × f%% of the Compounder pool (cnLbud) — Compounder now sizes Base 1%% of its pool with a 5%% of account cap (phase118) (tests/PL1_retired.md)")
             cfg = js(page, "()=>{ const c = coreRiskCfg('main'); return [c.ladderMaxAcctPct, c.winnerCap, c.tierA, c.tierB, c.capTotalA, c.capTotalB]; }")
             check(f"{tag} §4.1 ตั้งค่าเริ่ม: Ladder ต่อหุ้น 5% ของบัญชี · Winner ต่อหุ้น 25%", cfg[0] == 5 and cfg[1] == 25 and set(cfg[2:]) == {25}, cfg)
             ov = js(page, "()=>{ const o = coreSizeOpts('main'); return [o.stockCap.A, o.stockCap.B, o.tierCap.A, o.tierCap.B]; }")
@@ -244,7 +242,7 @@ def ladder_tests(pw):
         try:
             js(page, "()=>{ switchTab('plan'); }"); settle(page, 400)
             ids = js(page, "()=>[...document.querySelectorAll('.scopeBtn')].map(b=>b.id+':'+b.textContent.replace(/\\s+/g,' ').trim().replace(/ [SLF]$/,''))")
-            check(f"{tag} §4.3 สวิตช์ 3 ปุ่ม Winner | Ladder | Sat", ids == ["scopeStock:Winner", "scopeLadder:Ladder", "scopeFuture:Sat"], ids)
+            check(f"{tag} §4.3 สวิตช์ 3 ปุ่ม Momentum | Compounder | Sat", ids == ["scopeStock:Momentum", "scopeLadder:Compounder", "scopeFuture:Sat"], ids)
             where = js(page, "()=>document.getElementById('scopeLadder').closest('#hdrSub') ? 'header' : (document.getElementById('scopeLadder').closest('.planScope') ? 'page' : '?')")
             if w <= 390: check(f"{tag} §4.3 จอแคบ: 3 ปุ่มเต็มอยู่ในหน้า (ไม่ใช้ select · ไม่ทับปุ่ม header)", where == "page", where)
             # ห้ามทับ / ล้น
@@ -252,50 +250,18 @@ def ladder_tests(pw):
             cmp_ = js(page, "()=>!!document.querySelector('#hdrSub.cmp .hdrCmp select')")
             if cmp_:
                 lab = js(page, "()=>[...document.querySelector('#hdrSub .hdrCmp select').options].map(o=>o.textContent.replace(/\\s+/g,' ').trim().replace(/ [SLF]$/,''))")
-                check(f"{tag} §4.3 header แคบ: รูปย่อ (select) มี Winner · Ladder · Sat", lab == ["Winner", "Ladder", "Sat"], lab)
+                check(f"{tag} §4.3 header แคบ: รูปย่อ (select) มี Momentum · Compounder · Sat", lab == ["Momentum", "Compounder", "Sat"], lab)
             vis = cmp_ or (all(r[2] > 20 for r in box) and (box[2][1] <= w if where == "page" else True))
             check(f"{tag} §4.3 ปุ่มทั้งสามมองเห็น/อยู่ในจอ", vis, box)
             if w == 300: shot(page, "rg2b-scope-page-300.png", "#tabPlan .planScope")
             # สลับ
             page.evaluate("()=>document.getElementById('scopeLadder').click()"); settle(page, 600)
-            check(f"{tag} §4.3 กด Ladder → planScope=ladder · หน้า Ladder แสดง · แผง Winner/Sat ซ่อน", js(page, "()=>planScope") == "ladder" and js(page, "()=>document.getElementById('ladderPanel').style.display") == "" and js(page, "()=>document.getElementById('corePanel').offsetParent") is None)
-            hd = txt(page, "[data-ldr-head]")
-            check(f"{tag} §4.3 หัวหน้า: Pool ใช้/ถัง · Free · Size chip", "Pool" in hd and "Free" in hd and "Size" in hd, hd)
-            pool = js(page, "()=>{ const t = document.querySelector('[data-ldr-used]').textContent; return t; }")
-            check(f"{tag} §4.3 Pool = ถัง Ladder ฿{POOL['l']:,.0f}", f"{POOL['l']:,.0f}" in pool, pool)
-            chip = txt(page, "[data-ldr-size]")
-            check(f"{tag} §4.3 chip Size 100/75/50 (ไม่มีข้อมูล = 100)", chip in ("Size 100%", "Size 75%", "Size 50%"), chip)
-            for acwi, hyg, f in ((True, True, 100), (True, False, 75), (False, False, 50)):
-                set_ff(page, acwi, hyg); js(page, "()=>{ render(); }"); settle(page, 300)
-                check(f"{tag} §4.3 chip = Size {f}%", txt(page, "[data-ldr-size]") == f"Size {f}%", txt(page, "[data-ldr-size]"))
-            # การ์ด: T1..T3 · สถานะ · progress dots · avg · exit
-            card = js(page, """()=>{ const c = document.querySelector('[data-ldr-card=ccLd]'); if(!c) return null;
-                return {lv:[...c.querySelectorAll('[data-ldr-lv]')].map(x=>x.dataset.ldrSt), dots:[...c.querySelectorAll('[data-ldr-dot]')].map(x=>x.dataset.ldrDot), txt:c.innerText.replace(/\\s+/g,' ')}; }""")
-            check(f"{tag} §4.3 การ์ด Active: T1 bought · T2 waiting · T3 cancelled + จุดความคืบหน้า", card and card["lv"] == ["bought", "wait", "cancelled"] and card["dots"] == ["bought", "wait", "cancelled"], card)
-            check(f"{tag} §4.3 การ์ดมี avg cost + บรรทัด Exit (SL)", card and "avg" in card["txt"] and "Exit: SL" in card["txt"], card and card["txt"])
-            acts = js(page, "()=>[...document.querySelectorAll('[data-ldr-card=ccLd] [data-ldr-act] button')].map(b=>b.dataset.ldrBuy!==undefined?'buy':b.dataset.ldrCancel!==undefined?'cancel':b.dataset.ldrEdit!==undefined?'edit':'?')")
-            check(f"{tag} §4.3 ปุ่ม: mark bought · cancel level · edit zones", acts == ["buy", "cancel", "edit"], acts)
-            check(f"{tag} §4.3 ปุ่ม + New ladder และลิงก์ Journal (Ladder bucket) มีอยู่", cnt(page, "[data-ldr-new]") == 1 and cnt(page, "[data-ldr-journal]") == 1)
-            # แตะการ์ด → sheet (มือถือ/ทุกจอ)
-            page.locator("[data-ldr-card=ccLd]").first.click(position={"x": 8, "y": 8}); settle(page, 500)
-            check(f"{tag} §4.3 แตะการ์ด → เปิด sheet รายละเอียด", cnt(page, ".core-sheet [data-core-card]") == 1 or cnt(page, ".core-sheet [data-ldr-sheet-close]") == 1)
-            js(page, "()=>{ coreSheetClose(); }")
-            # ปุ่ม mark bought เปิดฟอร์มเดิม (ไม่มีกติกาใหม่)
-            page.locator("[data-ldr-card=ccLd] [data-ldr-buy]").first.click(); settle(page, 500)
-            check(f"{tag} §4.3 Mark T2 bought → ฟอร์มซื้อ L เดิม", cnt(page, ".core-sheet") >= 1 and "T2" in js(page, "()=>document.querySelector('.core-sheet').innerText + 'T2'"))
-            js(page, "()=>{ coreSheetClose(); }")
-            # Watching: ต้องผ่าน Fortress · เลือกสถานะ · ระยะ EMA
-            T.wl_seed(page, [W("FRTA"), W("NOFT")]); fort_stub(page, ["FRTA"]); js(page, "()=>{ render(); }"); settle(page, 400)
-            opts = js(page, "()=>[...document.querySelectorAll('#ldrAddSel option')].map(o=>o.value)")
-            check(f"{tag} §4.3 เลือกเข้า Watching ได้เฉพาะหุ้นที่ Fortress ผ่าน", opts == ["", "FRTA"], opts)
-            js(page, "()=>{ document.getElementById('ldrAddSel').value='FRTA'; ldrWatchAdd(); }"); settle(page, 300)
-            w1 = js(page, "()=>{ const e = document.querySelector('[data-ldr-w=FRTA]'); return e ? [[...e.querySelector('[data-ldr-state]').options].map(o=>o.value), e.querySelector('[data-ldr-state]').value, e.querySelectorAll('[data-ldr-dist]').length] : null; }")
-            check(f"{tag} §4.3 Watching: สถานะ Base · Sideways-Up · Broken (ไม่มี Uptrend) + ช่อง EMA20/50/200", w1 == [["Base", "Sideways-Up", "Broken"], "Base", 3], w1)
-            js(page, "()=>{ ldrStateSet('FRTA','Broken'); ldrDistSet('FRTA','ema50','-4.5'); }"); settle(page, 600)
-            w2 = js(page, "()=>{ const it = wlItems.find(x=>x.ticker==='FRTA'); return [it.ladder_state, it.ladder_dist.ema50, it.ladder_watch]; }")
-            check(f"{tag} §4.3 ตั้งสถานะ + ระยะ EMA เอง", w2 == ["Broken", -4.5, True], w2)
+            # PL1 Step 6 — หน้า Compounder ใช้ส่วนประกอบเดียวกับ Momentum (หน้า Ladder เดิมเลิกแล้ว · ดู tests/PL1_retired.md)
+            check(f"{tag} §4.3 (PL1) กด Compounder → planScope=ladder · แผงการ์ด (corePanel) แสดงหัว Compounder · ไม่มี #ladderPanel/[data-ldr-*]", js(page, "()=>planScope") == "ladder" and js(page, "()=>document.getElementById('corePanel').style.display") != "none" and "Compounder" in (js(page, "()=>document.getElementById('corePanel').innerText") or "") and cnt(page, "#ladderPanel, [data-ldr-card], [data-ldr-new]") == 0, js(page, "()=>document.getElementById('corePanel').innerText.slice(0,120)"))
+            lg = js(page, "()=>{ const r = document.querySelector('[data-lf-legacy-row=ccLd]'); return r ? [r.innerText, r.querySelectorAll('button').length] : null; }")
+            check(f"{tag} §4.3 (PL1) การ์ดบันไดเดิม (strategy L) แสดงเป็นแถวอ่านอย่างเดียว ไม่มีปุ่ม ซื้อ/ยกเลิก", lg is not None and lg[1] == 0 and "FRTX" not in lg[0], lg)
             ov = js(page, "()=>document.documentElement.scrollWidth - window.innerWidth")
-            check(f"{tag} §4.3 หน้า Ladder ไม่ล้นแนวนอน", ov <= 0, ov)
+            check(f"{tag} §4.3 หน้า Compounder ไม่ล้นแนวนอน", ov <= 0, ov)
             js(page, "()=>{ window.csEvalOf = window.__csOrig; render(); }"); settle(page, 300)
             shot(page, f"rg2b-ladder-{w}.png")
             if w == 1440: shot(page, "rg2b-scope-hdr-1440.png", ".topbar")
@@ -324,7 +290,7 @@ def port_tests(pw):
             js(page, "()=>{ switchTab('mix'); ln3PortSet('main'); renderPortfolioMix(); }"); settle(page, 600)
             line = txt(page, "[data-pool-txt]")
             wp = round(1420000 / TOTAL * 100)
-            check(f"{tag} §4.4 บรรทัดถัง: Winner {wp}/50 · Ladder 0/30 · Sat 0/20", line == f"Winner {wp}/50 · Ladder 0/30 · Sat 0/20", line)
+            check(f"{tag} §4.4 บรรทัดถัง: Momentum {wp}/50 · Compounder 0/30 · Sat 0/20", line == f"Momentum {wp}/50 · Compounder 0/30 · Sat 0/20", line)
             check(f"{tag} §4.4 จุดเหลืองเมื่อถังใดห่างเป้า > 5 จุด", cnt(page, "[data-pool-dot].amb") == 1, js(page, "()=>document.querySelector('[data-pool-line]').dataset.amber"))
             closed = js(page, "()=>document.querySelector('[data-pool-line]').open")
             check(f"{tag} §4.4 แถบ/฿ พับไว้ (บรรทัดเห็นเสมอ)", closed is False and js(page, "()=>document.querySelector('[data-pool-txt]').offsetParent !== null") is True)
@@ -355,7 +321,7 @@ def multi_acct_tests(pw):
     try:
         js(page, "()=>{ switchTab('mix'); ln3PortSet('all'); renderPortfolioMix(); }"); settle(page, 600)
         n = cnt(page, "[data-pool-line]"); line = txt(page, "[data-pool-txt]")
-        check("[all] §4.4 โหมด 'รวม' = บรรทัดเดียวรวมยอดทุกบัญชี", n == 1 and line.startswith("Winner "), [n, line])
+        check("[all] §4.4 โหมด 'รวม' = บรรทัดเดียวรวมยอดทุกบัญชี", n == 1 and line.startswith("Momentum "), [n, line])
         js(page, "()=>{ document.querySelector('[data-pool-line]').open = true; }"); settle(page, 200)
         na = cnt(page, "[data-pool-line] [data-pool-acct]")
         check("[all] §4.4 รายละเอียดแยกต่อบัญชี", na == 2, na)
@@ -376,8 +342,8 @@ def today_tests(pw):
             n = cnt(page, "[data-td3-panel=core] [data-td3-pool]")
             check(f"{tag} §4.7 Today › Core: หัวแผงมี 2 บรรทัด Winner / Ladder", n == 2 and cnt(page, "[data-td3-panel=core] [data-td3-pools]") == 1, n)
             vis = js(page, "()=>[...document.querySelectorAll('[data-td3-pool]')].map(e=>[e.dataset.td3Pool, e.innerText.replace(/\\s+/g,' ').trim(), e.dataset.poolFactor, e.dataset.poolUsed, Math.round(e.getBoundingClientRect().right)])")
-            want_w = "W 75% · 0%" if w <= 340 else "Winner 75% · used 0%"
-            want_l = "L 75% · 0%" if w <= 340 else "Ladder 75% · used 0%"
+            want_w = "W 75% · 0%" if w <= 340 else "Momentum 75% · used 0%"
+            want_l = "L 75% · 0%" if w <= 340 else "Compounder 75% · used 0%"
             check(f"{tag} §4.7 ข้อความ: '{want_w}' / '{want_l}' (ตัวคูณ Regime ของถังนั้น · ใช้จริง ÷ ถัง)", [v[1] for v in vis] == [want_w, want_l], vis)
             check(f"{tag} §4.7 พอดีจอ (ไม่เกิน {w}px) และไม่ล้นแนวนอน", all(v[4] <= w for v in vis) and js(page, "()=>document.documentElement.scrollWidth - window.innerWidth") <= 0, vis)
             # Winner/Ladder ใช้คู่คนละชุด (slow)
@@ -418,7 +384,7 @@ def dd_tests(pw):
         check(f"{tag} §4.7 วางบันไดใหม่ได้ระหว่าง Winner พัก", cp[0] is True, cp)
         js(page, "()=>{ openSettings(); switchTab('plan'); setPlanScope('stock'); render(); }"); settle(page, 500)
         chips = js(page, "()=>[...document.querySelectorAll('[data-dd-chip]')].map(c=>[c.dataset.ddChip, c.dataset.stage, c.innerText.replace(/\\s+/g,' ')])")
-        check(f"{tag} §4.7 ชิป DD บอกชื่อถัง (Winner DD / Ladder DD)", any(c[0] == "winner" and c[2].startswith("Winner DD") for c in chips) and any(c[0] == "ladder" and c[2].startswith("Ladder DD") for c in chips), chips)
+        check(f"{tag} §4.7 ชิป DD บอกชื่อถัง (Momentum DD / Compounder DD)", any(c[0] == "winner" and c[2].startswith("Momentum DD") for c in chips) and any(c[0] == "ladder" and c[2].startswith("Compounder DD") for c in chips), chips)
         js(page, "()=>{ ddSync(); }"); settle(page, 300)
         ds = js(page, "()=>Object.keys(getBook('main').settings.ddState||{}).sort()")
         check(f"{tag} §4.7 เก็บ state แยก ddState.winner / ddState.ladder", "winner" in ds and "ladder" in ds, ds)
@@ -446,7 +412,7 @@ def dd_tests(pw):
         check(f"{tag} §4.7 ย้าย: Core เดิมกำลังพัก → Winner และ Ladder เริ่มพักทั้งคู่ (วันครบเดิม)", r == ["pause", "pause", "2026-12-31", "2026-12-31"], r)
         js(page, "()=>{ render(); ddSync(); openSettings(); }"); settle(page, 600)
         nt = js(page, "()=>[getBook('main').settings.pools.ddNote, document.getElementById('poolNotice').innerText]")
-        check(f"{tag} §4.7 แจ้งครั้งเดียวใน Settings › Pools", nt[0] is True and "both Winner and Ladder start paused" in nt[1], nt)
+        check(f"{tag} §4.7 แจ้งครั้งเดียวใน Settings › Pools", nt[0] is True and "both Momentum and Compounder start paused" in nt[1], nt)
     finally: b.close()
     def mut_ok(doc):
         doc["books"]["main"]["settings"]["ddState"] = {"core": {"peak": 4300000, "baseAt": "2026-09-01", "tank": CORE, "stage": "normal", "stageSince": "2026-09-01", "pauseUntil": None, "weekly": {}}}
@@ -520,13 +486,13 @@ def ui_scope_tests(pw):
                 return {n:bs.length, where:bs.map(b=>b.closest('#hdrSub')?'header':(b.closest('.planScope')?'page':'?')), box:bs.map(b=>{const r=b.getBoundingClientRect();return [r.left,r.top,r.right,r.bottom]}),
                   vis:bs.map(b=>!!b.offsetParent), cmp:document.querySelectorAll('#hdrSub .hdrCmp, #hdrSub.cmp').length, sel:document.querySelectorAll('#hdrSub select').length, hbLeft:hb.left,
                   txt:bs.map(b=>b.textContent.replace(/\\s+/g,' ').trim().replace(/ [SDF]$/,'')), kb:bs.map(b=>(b.querySelector('.kbdhint')||{}).textContent||'')}; }""")
-            check(f"{tag} §UI1 Plan: ปุ่ม Winner | Ladder | Sat แสดงครบ ไม่ย่อเป็น select/pill (cmp 0 · select 0)", info["n"] == 3 and all(info["vis"]) and info["cmp"] == 0 and info["sel"] == 0 and info["txt"] == ["Winner", "Ladder", "Sat"], info)
+            check(f"{tag} §UI1 Plan: ปุ่ม Momentum | Compounder | Sat แสดงครบ ไม่ย่อเป็น select/pill (cmp 0 · select 0)", info["n"] == 3 and all(info["vis"]) and info["cmp"] == 0 and info["sel"] == 0 and info["txt"] == ["Momentum", "Compounder", "Sat"], info)
             check(f"{tag} §UI1 อยู่ใน header หรือในหน้า (ไม่ทับปุ่มขวาของ header)", len(set(info["where"])) == 1 and info["where"][0] in ("header", "page") and (info["where"][0] == "page" or max(x[2] for x in info["box"]) <= info["hbLeft"] - 4), [info["where"], info["hbLeft"], [round(x[2]) for x in info["box"]]])
             if w >= 1440: check(f"{tag} §UI1 จอกว้าง ≥ 1440: ปุ่มอยู่ใน header", info["where"][0] == "header", info["where"])
             if w <= 390: check(f"{tag} §UI1 มือถือแคบ: ปุ่มอยู่ในหน้า เต็มแถว ไม่ล้น", info["where"][0] == "page" and max(x[2] for x in info["box"]) <= w, info)
             check(f"{tag} §UI1 ปุ่มไม่ทับกัน", not any(boxes_overlap(info["box"][i], info["box"][j]) for i in range(3) for j in range(i + 1, 3)), info["box"])
             src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
-            check(f"{tag} §UI2 ป้ายคีย์ลัดในโค้ด: Winner S · Ladder D · Sat F · ไม่มี L (kbdhint + แผนที่คีย์)", 'id="scopeLadder" onclick="setPlanScope(\'ladder\')">Ladder <span class="kbdhint">D</span>' in src and "KeyD:['Ladder'" in src and "KeyL:['Ladder'" not in src and 'Ladder <span class="kbdhint">L</span>' not in src, "")
+            check(f"{tag} §UI2 ป้ายคีย์ลัดในโค้ด: Momentum S · Compounder D · Sat F · ไม่มี L (kbdhint + แผนที่คีย์)", 'id="scopeLadder" onclick="setPlanScope(\'ladder\')">Compounder <span class="kbdhint">D</span>' in src and "KeyD:['Compounder'" in src and "KeyL:['Compounder'" not in src and 'Compounder <span class="kbdhint">L</span>' not in src, "")
             page.keyboard.press("d"); settle(page, 500)
             check(f"{tag} §UI2 กด D → Ladder", js(page, "()=>planScope") == "ladder")
             page.keyboard.press("f"); settle(page, 300)
@@ -560,13 +526,8 @@ def ui_layout_tests(pw):
                 check(f"{tag} §UI3 {label}: ไม่ล้นแนวนอน · ไม่มีองค์ประกอบโผล่ออกนอกจอ", r["sw"] <= 0 and not r["bad"], r)
             # Ladder page
             js(page, "()=>{ switchTab('plan'); setPlanScope('ladder'); render(); }"); settle(page, 600)
-            ch = js(page, """()=>[...document.querySelectorAll('.ldrHead .ln2-ab')].map(e=>{ const r=e.getBoundingClientRect(); const lh = parseFloat(getComputedStyle(e).lineHeight) || 18; return [Math.round(r.height), Math.round(lh), e.innerText.replace(/\\s+/g,' ').trim(), getComputedStyle(e).whiteSpace]; })""")
-            check(f"{tag} §UI3 Ladder: ชิปบัญชีบรรทัดเดียว (nowrap · สูง ≤ 2 บรรทัดของ padding)", len(ch) >= 2 and all(c[3] == "nowrap" and c[0] <= c[1] * 1.7 + 14 for c in ch), ch)
-            hb = js(page, """()=>[...document.querySelectorAll('.ldrHead > *')].map(e=>{ const r=e.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; })""")
-            check(f"{tag} §UI3 Ladder: ส่วนหัวไม่ทับกัน", not any(boxes_overlap(hb[i], hb[j]) for i in range(len(hb)) for j in range(i + 1, len(hb))), hb)
-            wr = js(page, """()=>{ const c = document.querySelector('[data-ldr-card]'); const g = [...c.querySelectorAll('.lv')].map(l=>[l.scrollWidth <= l.clientWidth + 1, l.getBoundingClientRect().right <= innerWidth]); return g; }""")
-            check(f"{tag} §UI3 Ladder: แถว T1–T3 ไม่ถูกตัด", all(a and b2 for a, b2 in wr), wr)
-            over("หน้า Ladder")
+            print("RETIRED (PL1 Step 6) - §UI3 Ladder page: account chips on one line / header not overlapping / T1-T3 rows not clipped (the ladder page is gone — tests/PL1_retired.md)")
+            over("หน้า Compounder")
             shot(page, f"rg2b-ui-ladder-{w}.png")
             # Winner plan + New plan sheet
             js(page, "()=>{ setPlanScope('stock'); render(); }"); settle(page, 600); over("แผน Winner")
@@ -605,24 +566,24 @@ def ui_separate_tests(pw):
         f = js(page, """()=>({box:!!document.getElementById('cnStratBox'), w:!!document.getElementById('cnStratW'), l:!!document.getElementById('cnStratL'), strat:coreNew.strat, mode:coreNew.mode,
               list:[...document.querySelectorAll('#cnTickerList option')].map(o=>o.value).sort(), title:(document.querySelector('.core-sheet h3')||{}).textContent||'', wbox:document.getElementById('cnWBox').style.display, lbox:document.getElementById('cnLBox').style.display})""")
         check(f"{tag} §UI4 ฟอร์มแผน Winner: ไม่มีตัวเลือก W/L (cnStratBox/W/L = ไม่มี) · strat W · กล่อง Winner แสดง · กล่อง Ladder ซ่อน", not f["box"] and not f["w"] and not f["l"] and f["strat"] == "W" and f["wbox"] == "" and f["lbox"] == "none", f)
-        check(f"{tag} §UI5 + New plan (Winner) แสดงเฉพาะหุ้น track Winner", f["list"] == ["PLNX", "WINA", "WINB"], f["list"])
+        retired(f"{tag} §UI5 + New plan (Winner) แสดงเฉพาะหุ้น track Winner", f["list"] == ["PLNX", "WINA", "WINB"], f["list"])
         js(page, "()=>{ document.getElementById('cnTicker').value='LADA'; coreNewIn(); }"); settle(page, 300)
         er = js(page, "()=>document.getElementById('cnErr').innerText")
-        check(f"{tag} §UI5 พิมพ์หุ้น track Ladder ในฟอร์ม Winner → ไม่ให้บันทึก ('use + New ladder')", "Ladder track" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
+        retired(f"{tag} §UI5 พิมพ์หุ้น track Compounder ในฟอร์ม Momentum → ไม่ให้บันทึก ('use + New ladder')", "Compounder track" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
         js(page, "()=>{ coreSheetClose(); }")
         # Ladder: ฟอร์มบันไดอย่างเดียว · รายชื่อเฉพาะ Base/Sideways-Up
-        js(page, "()=>{ setPlanScope('ladder'); render(); ldrNew(); }"); settle(page, 600)
+        js(page, "()=>{ setPlanScope('ladder'); render(); coreNewOpen('main'); }"); settle(page, 600)
         f = js(page, """()=>({box:!!document.getElementById('cnStratBox'), strat:coreNew.strat, mode:coreNew.mode, list:[...document.querySelectorAll('#cnTickerList option')].map(o=>o.value).sort(),
               wbox:document.getElementById('cnWBox').style.display, lbox:document.getElementById('cnLBox').style.display, tk:document.getElementById('cnTicker').value, title:(document.querySelector('.core-sheet h3')||{}).textContent||''})""")
-        check(f"{tag} §UI4 + New ladder: strat L เท่านั้น · ไม่มีตัวเลือก W/L · กล่อง Ladder แสดง · กล่อง Winner ซ่อน", not f["box"] and f["strat"] == "L" and f["wbox"] == "none" and f["lbox"] == "" and f["mode"] == "new", f)
-        check(f"{tag} §UI5 + New ladder แสดงเฉพาะหุ้น track Ladder ที่ Base / Sideways-Up (LADB Broken ไม่มี)", f["list"] == ["LADA", "LADS", "LADX"] or f["list"] == ["LADA", "LADS"], f["list"])
-        check(f"{tag} §UI5 เปิดจาก + New ladder: เติมหุ้นแรกที่ผ่านเงื่อนไขอัตโนมัติ", f["tk"] in ("LADA", "LADS"), f["tk"])
+        retired(f"{tag} §UI4 + New ladder: strat L เท่านั้น · ไม่มีตัวเลือก W/L · กล่อง Ladder แสดง · กล่อง Winner ซ่อน", not f["box"] and f["strat"] == "L" and f["wbox"] == "none" and f["lbox"] == "" and f["mode"] == "new", f)
+        retired(f"{tag} §UI5 + New ladder แสดงเฉพาะหุ้น track Ladder ที่ Base / Sideways-Up (LADB Broken ไม่มี)", f["list"] == ["LADA", "LADS", "LADX"] or f["list"] == ["LADA", "LADS"], f["list"])
+        print("RETIRED (PL1 Step 6) - §UI5 opening from + New ladder pre-fills the first eligible ladder stock (no ladder form any more — tests/PL1_retired.md)")
         js(page, "()=>{ document.getElementById('cnTicker').value='WINA'; coreNewIn(); }"); settle(page, 300)
         er = js(page, "()=>document.getElementById('cnErr').innerText")
-        check(f"{tag} §UI5 ฟอร์ม Ladder + หุ้น track Winner → ไม่ให้บันทึก", "Ladder track" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
+        retired(f"{tag} §UI5 ฟอร์ม Compounder + หุ้น track Momentum → ไม่ให้บันทึก", "Compounder track" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
         js(page, "()=>{ document.getElementById('cnTicker').value='LADB'; coreNewIn(); }"); settle(page, 300)
         er = js(page, "()=>document.getElementById('cnErr').innerText")
-        check(f"{tag} §UI5 ฟอร์ม Ladder + หุ้น Broken → ไม่ให้บันทึก", "Base or Sideways-Up" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
+        retired(f"{tag} §UI5 ฟอร์ม Ladder + หุ้น Broken → ไม่ให้บันทึก", "Base or Sideways-Up" in er and js(page, "()=>document.getElementById('cnSave').disabled") is True, er)
         js(page, "()=>{ coreSheetClose(); }")
         # เมนู ⋯ ของการ์ดไม่มีปุ่มสลับกลยุทธ์ · ฟังก์ชันแปลงถูกถอด
         js(page, "()=>{ setPlanScope('stock'); render(); }"); settle(page, 500)
@@ -632,17 +593,17 @@ def ui_separate_tests(pw):
         wl_ = js(page, "()=>[...document.querySelectorAll('#corePanel [data-core-card]')].map(e=>e.dataset.coreCard)")
         check(f"{tag} §UI4 หน้า Winner ไม่แสดงการ์ด Ladder (ccLd) แต่แสดงการ์ด Winner (ccP)", "ccP" in wl_ and "ccLd" not in wl_, wl_)
         js(page, "()=>{ setPlanScope('ladder'); render(); }"); settle(page, 500)
-        ld_ = js(page, "()=>[...document.querySelectorAll('[data-ldr-card]')].map(e=>e.dataset.ldrCard)")
-        check(f"{tag} §UI4 การ์ด L เดิมอยู่หน้า Ladder", ld_ == ["ccLd"], ld_)
+        ld_ = js(page, "()=>[...document.querySelectorAll('[data-lf-legacy-row]')].map(e=>e.dataset.lfLegacyRow)")
+        check(f"{tag} §UI4 การ์ด L เดิมอยู่หน้า Compounder เป็นแถวอ่านอย่างเดียว (PL1)", ld_ == ["ccLd"], ld_)
         # เปลี่ยน track: ห้ามเมื่อมีแผน/ไม้เปิดในถังปัจจุบัน
         r1 = js(page, "()=>wlTrackBlock('LADX','winner')"); r2 = js(page, "()=>wlTrackBlock('PLNX','ladder')"); r3 = js(page, "()=>wlTrackBlock('WINB','ladder')"); r4 = js(page, "()=>wlTrackBlock('WINA','ladder')"); r5 = js(page, "()=>wlTrackBlock('LADA','winner')")
-        check(f"{tag} §UI5 เปลี่ยน track ไม่ได้ถ้ามีแผนค้างในถังเดิม (LADX มีการ์ด L · PLNX มีการ์ด W)", "open Ladder plan" in r1 and "open Winner plan" in r2, [r1, r2])
-        check(f"{tag} §UI5 ไป Ladder ต้อง Fortress ผ่าน (WINB ไม่ผ่าน → บล็อก · WINA ผ่าน → ได้) · Ladder → Winner ได้เมื่อไม่มีแผน", r3 == "Ladder needs Fortress passed" and r4 == "" and r5 == "", [r3, r4, r5])
+        check(f"{tag} §UI5 เปลี่ยน track ไม่ได้ถ้ามีแผนค้างในถังเดิม (LADX มีการ์ด L · PLNX มีการ์ด W)", "open Compounder plan" in r1 and "open Momentum plan" in r2, [r1, r2])
+        check(f"{tag} §UI5 ไป Compounder ไม่ต้อง Fortress ผ่านแล้ว (PL1: WINB ไม่ผ่าน Fortress ก็ไปได้) · Compounder → Momentum ได้เมื่อไม่มีแผน", r3 == "" and r4 == "" and r5 == "", [r3, r4, r5])
         ok = js(page, "()=>wlTrackSet('WINA','ladder')"); settle(page, 300)
         tr2 = js(page, "()=>[wlTrackOf('WINA'), wlItems.find(x=>x.ticker==='WINA').ladder_state]")
         check(f"{tag} §UI5 ย้าย WINA → Ladder สำเร็จ (state Base)", ok is True and tr2 == ["ladder", "Base"], tr2)
         bl = js(page, "()=>[wlTrackSet('LADX','winner'), window.__trackMsg]")
-        check(f"{tag} §UI5 ย้ายกลับที่ถูกบล็อก → false + ข้อความ", bl[0] is False and "open Ladder plan" in (bl[1] or ""), bl)
+        check(f"{tag} §UI5 ย้ายกลับที่ถูกบล็อก → false + ข้อความ", bl[0] is False and "open Compounder plan" in (bl[1] or ""), bl)
         # chips กรอง Watchlist
         js(page, "()=>{ switchTab('watch'); wlView='wl'; renderWatchlist(); }"); settle(page, 500)
         chips = js(page, "()=>[...document.querySelectorAll('[data-wl-trk]')].map(b=>b.dataset.wlTrk)")
@@ -673,20 +634,18 @@ def ui_promote_tests(pw):
         syms = P107.qrows(page)
         s1 = syms[0]
         page.locator(f'[data-td3-cand="{s1}"]').first.click(); settle(page, 500)
-        info = js(page, "()=>{ const s=document.querySelector('[data-td4-pro-track]'); return s ? [[...s.options].map(o=>[o.value,o.disabled]), s.value] : null; }")
-        check(f"{tag} §UI5 ฟอร์ม Candidate → Watchlist มี Track: Winner / Ladder (ค่าเริ่ม Winner)", info and [o[0] for o in info[0]] == ["winner", "ladder"] and info[1] == "winner", info)
-        check(f"{tag} §UI5 Ladder เลือกไม่ได้ถ้ายังไม่ Fortress ผ่าน (disabled)", info and info[0][1][1] is True, info)
-        P107.pro_fill(page); page.click("[data-td4-pro-go]"); settle(page, 800)
+        # PL1 Step 4 — Track เลือกใน screening modal (ติดมาจาก candMeta หรือถามใน modal) · ไม่มี Fortress gate
+        import scr_helper
+        js(page, "(s)=>scrOpen(s)", s1); settle(page, 300)
+        info = js(page, "()=>[[...document.querySelectorAll('[data-scr-track-btn]')].map(b=>b.dataset.scrTrackBtn), scr.track]")
+        check(f"{tag} §UI5 modal ของ Candidate มี Track: Momentum / Compounder (ไม่มีค่าเริ่ม ต้องเลือก)", info == [["winner", "ladder"], ""], info)
+        page.locator("[data-scr-x]").click(); settle(page, 200)
+        scr_helper.promote(page, s1, track="winner", wait=800)
         d1 = js(page, "(s)=>{ const x = wlItems.find(w=>w.ticker===s); return x ? [x.ladder_watch, x.ladder_watch_set, wlTrackOf(x)] : null; }", s1)
         check(f"{tag} §UI5 ย้ายเข้า Watchlist ด้วย track Winner → ladder_watch false · track Winner", d1 == [False, True, "winner"], d1)
         js(page, "()=>{ todayRefresh(true); }"); settle(page, 500)
         syms = P107.qrows(page); s2 = syms[0]
-        js(page, "(s)=>{ csEvalWrite(s, Object.assign({}, csEvalOf(s) || Calc.evalNorm(null), {fortress:'passed'})); todayRefresh(true); }", s2); settle(page, 400)
-        page.locator(f'[data-td3-cand="{s2}"]').first.click(); settle(page, 500)
-        en = js(page, "()=>{ const s=document.querySelector('[data-td4-pro-track]'); return [...s.options].map(o=>[o.value,o.disabled]); }")
-        check(f"{tag} §UI5 Fortress ผ่านแล้ว → เลือก Ladder ได้", en[1] == ["ladder", False], en)
-        js(page, "()=>{ const s=document.querySelector('[data-td4-pro-track]'); s.value='ladder'; s.dispatchEvent(new Event('change',{bubbles:true})); }")
-        P107.pro_fill(page); page.click("[data-td4-pro-go]"); settle(page, 800)
+        scr_helper.promote(page, s2, track="ladder", wait=800)   # PL1: ไม่ต้อง Fortress ผ่านก่อนเลือก Compounder
         d2 = js(page, "(s)=>{ const x = wlItems.find(w=>w.ticker===s); return x ? [x.ladder_watch, x.ladder_state, wlTrackOf(x)] : null; }", s2)
         check(f"{tag} §UI5 ย้ายเข้า Watchlist ด้วย track Ladder → ladder_watch true · state Base", d2 == [True, "Base", "ladder"], d2)
         check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])

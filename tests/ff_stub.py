@@ -25,3 +25,9 @@ FF_STUB_BASE = SET1_DEV_FLAGS + FF_STUB
 LN1_LEGACY_SEED = "try{ localStorage.setItem('ln1_plan_view','legacy'); }catch(e){}\n"
 FF_STUB = LN1_LEGACY_SEED + FF_STUB_BASE
 
+
+# PL1·A5 — กฎ Ready (Watchlist + ① Why buy + ④ Wrong if) บล็อกการเปิดแผนใหม่ · suite เก่าที่ไม่ได้ทดสอบกฎนี้เปิดแผนจาก ticker อะไรก็ได้
+# → ผ่าน init script นี้ stub wlReady()/wlReadyMsg() หลังโหลดหน้า · suite ที่ทดสอบกฎจริง (phase116) ตั้ง window.__READY_REAL = true ตอนรัน
+READY_STUB = "window.addEventListener('load', function(){ var o = window.wlReady; if(typeof o === 'function'){ window.wlReady = function(s){ return window.__READY_REAL ? o(s) : true; }; } });\n"
+FF_STUB = FF_STUB + READY_STUB
+FF_STUB_BASE = FF_STUB_BASE + READY_STUB

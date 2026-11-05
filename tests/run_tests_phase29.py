@@ -170,15 +170,8 @@ def section_A(pw, w, h, tag):
     finally:
         browser.close()
 
-    # A3 การ์ด L ซื้อระดับแรก
-    browser, context, page, ce, pe, dialogs = launch(pw, w, h, p26.doc26(), cards={"l1": p26.lcard("l1")})
-    try:
-        go(page); page.evaluate("()=>{ setPlanScope('ladder'); render(); }"); page.wait_for_timeout(400); ex(page, "l1")   # RG2b: การ์ด L อยู่หน้า Ladder
-        page.click('[data-ldr-card="l1"] [data-ldr-buy], ' + card_sel("l1") + " [data-c-lbuy]"); page.wait_for_selector('.core-sheet [data-core-sheet="lbuy"]'); page.click("#clSave"); page.wait_for_timeout(700)
-        t = next((x for x in p24.book_trades(page) if x["sym"] == "ZZZ"), None)
-        check(f"{tag} A3 การ์ด L ซื้อระดับแรก (coreLBuySave) → trade unplanned:false", t is not None and t["unplanned"] is False, json.dumps(t))
-    finally:
-        browser.close()
+    # A3 การ์ด L ซื้อระดับแรก — RETIRED (PL1 Step 6): หน้า Ladder/ปุ่มซื้อระดับเลิกแล้ว · การ์ดบันไดเดิมเป็นแถวอ่านอย่างเดียว (tests/PL1_retired.md)
+    print(f"RETIRED (PL1 Step 6) - {tag} A3 การ์ด L ซื้อระดับแรก (coreLBuySave) → trade unplanned:false")
 
 
 # ───────────────────────── B · Watchlist Tier ─────────────────────────
@@ -407,7 +400,7 @@ def section_D(pw, w, h, tag):
         go_plan(page)
         # 11 [แก้]
         lk = pos_btn(page, "lk3", "แก้")
-        check(f"{tag} D11 ปุ่ม [แก้] ของไม้ผูกการ์ด: title 'แก้ผ่านการ์ด Core' · ไม้ไม่ผูก = ไม่มี title นี้", lk.get_attribute("title") == "แก้ผ่านการ์ด Core" and pos_btn(page, "nl1", "แก้").get_attribute("title") is None)
+        check(f"{tag} D11 ปุ่ม [แก้] ของไม้ผูกการ์ด: title 'แก้ผ่านการ์ด Momentum' · ไม้ไม่ผูก = ไม่มี title นี้", lk.get_attribute("title") == "แก้ผ่านการ์ด Momentum" and pos_btn(page, "nl1", "แก้").get_attribute("title") is None)
         lk.click(); page.wait_for_timeout(1200)
         st = page.evaluate("""()=>{ const c = document.querySelector('[data-core-card="ck3"]'), r = c.getBoundingClientRect(), el = document.elementFromPoint(r.left + r.width/2, Math.min(Math.max(r.top + r.height/2, 1), innerHeight - 1));
           return {modal: document.getElementById('teOverlay').classList.contains('show'), open: c.classList.contains('open'), hit: el && el.closest('[data-core-card]') ? el.closest('[data-core-card]').dataset.coreCard : null, scope: planScope}; }""")
@@ -425,7 +418,7 @@ def section_D(pw, w, h, tag):
         # 12 [ยกเลิก]
         go_plan(page); pos_btn(page, "lk1", "ยกเลิก").click(); page.wait_for_selector('.core-sheet [data-core-sheet="link"]')
         msg = txt(page, "[data-c-link-msg]") or ""
-        check(f"{tag} D12 [ยกเลิก] ไม้ผูกการ์ด → sheet ยืนยัน 'ยกเลิกไม้ LNK1 จะปิดการ์ด Core LNK1 ด้วย (ประวัติไม้ในการ์ดยังอยู่)'", msg == "ยกเลิกไม้ LNK1 จะปิดการ์ด Core LNK1 ด้วย (ประวัติไม้ในการ์ดยังอยู่)", msg)
+        check(f"{tag} D12 [ยกเลิก] ไม้ผูกการ์ด → sheet ยืนยัน 'ยกเลิกไม้ LNK1 จะปิดการ์ด Momentum LNK1 ด้วย (ประวัติไม้ในการ์ดยังอยู่)'", msg == "ยกเลิกไม้ LNK1 จะปิดการ์ด Momentum LNK1 ด้วย (ประวัติไม้ในการ์ดยังอยู่)", msg)
         check(f"{tag} 16 sheet ยืนยัน: ปุ่มครบในจอ", in_view(page, "[data-c-link-ok]") and in_view(page, "[data-c-link-no]"))
         shot(page, f"7e2b2-pos-link-confirm-{w}.png")
         before = (trade_of(page, "lk1")["status"], p24.cards_db(page)["ck1"]["status"])
@@ -447,7 +440,7 @@ def section_D(pw, w, h, tag):
         go_plan(page); nd0 = len(dialogs)
         pos_btn(page, "lk2", "ลบ").click(); page.wait_for_selector('.core-sheet [data-core-sheet="link"]')
         msg = txt(page, "[data-c-link-msg]") or ""
-        check(f"{tag} D13 [ลบ] ไม้ผูกการ์ด → sheet 'ลบไม้ LNK2 จะปิดการ์ด Core LNK2 ด้วย' · ไม่มี confirm() ของเบราว์เซอร์", msg == "ลบไม้ LNK2 จะปิดการ์ด Core LNK2 ด้วย" and len(dialogs) == nd0, f"{msg} {dialogs}")
+        check(f"{tag} D13 [ลบ] ไม้ผูกการ์ด → sheet 'ลบไม้ LNK2 จะปิดการ์ด Momentum LNK2 ด้วย' · ไม่มี confirm() ของเบราว์เซอร์", msg == "ลบไม้ LNK2 จะปิดการ์ด Momentum LNK2 ด้วย" and len(dialogs) == nd0, f"{msg} {dialogs}")
         page.click("[data-c-link-ok]"); page.wait_for_timeout(600)
         c2 = p24.cards_db(page)["ck2"]
         check(f"{tag} D13 ยืนยัน → ไม้ถูกลบ · การ์ด closed · closedBy 'delete' · ไม่มี confirm()", trade_of(page, "lk2") is None and c2["status"] == "closed" and c2.get("closedBy") == "delete" and len(dialogs) == nd0, json.dumps(c2)[:300])

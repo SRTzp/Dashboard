@@ -124,7 +124,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 3 Candidate CAMT = Up → stockNotes/CAMT.phase = up", note_phase(page, "CAMT") == {"v": "up", "at": TODAY}, json.dumps(note_phase(page, "CAMT")))
         page.locator('.wlR[data-sym="CAMT"] .wlRn').click(); wait(page, 400)
         page.locator('[data-cand-x] [data-c-add]').click(); wait(page, 400)
-        js(page, "(s)=>{ ltSheetClose(); const c = td3Cands(thaiToday()).find(x=>x.key===wlSymKey(s)); csEvalWrite(c.sym, Calc.evalNorm({rs:{sustained:'passed'}, gate5:['passed','passed','passed'], stars:1})); td4Pro = {sym:c.sym, key:c.key, note:'x', tier:true, rs:false, stars:1}; td4ProSave(); }", "CAMT")   # TD4b: ＋ ของ Candidate ไม่เพิ่มตรงแล้ว → ย้ายด้วยฟอร์ม Move (td4ProSave · ค่า Tier/Phase ตามไปเหมือนเดิม); wait(page, 700)
+        import scr_helper; scr_helper.promote(page, "CAMT")   # PL1 Step 4: ย้ายด้วย screening modal (เดิม td4ProSave) — ค่า Tier/Phase ตามไปเหมือนเดิม
         go(page, "wl")
         cs = {x["s"]: x["ph"] for x in chips(page)}
         check(f"{tag} 3 ＋ เพิ่มเข้า Watchlist → แถว Watchlist CAMT แสดง Up", cs.get("CAMT") == "up", json.dumps(cs))

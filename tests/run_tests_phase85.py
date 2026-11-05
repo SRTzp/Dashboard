@@ -97,14 +97,14 @@ def tests(pw, w, h, label):
         # ── 2 รายละเอียด
         js(page, "()=>{ wlOpen('AVGO','sum'); }"); page.wait_for_timeout(500)
         dh = js(page, """()=>{ const h = document.querySelector('[data-ln3-dh]'); if(!h) return null; return {t: h.innerText.replace(/\\s+/g,' ').trim(), btns: [...h.querySelectorAll('.wlActs button')].map(b=>b.innerText.trim()), menu: !!h.querySelector('[data-lt-menu]'), tabs: [...h.querySelectorAll('[data-lt-tab]')].map(b=>b.dataset.ltTab), meta: (h.querySelector('[data-ln3-meta]')||{}).innerText, alert: h.querySelectorAll('[data-wl-alert]').length, nxc: h.querySelectorAll('[data-lt-nxc]').length, rev: h.querySelectorAll('[data-rev-btn]').length, vis: [...h.querySelectorAll('button,a')].filter(b=>b.offsetParent && /แก้ไข|ลบ|Import/.test(b.innerText) && !b.closest('.ltMenu')).map(b=>b.innerText.trim())}; }""")
-        check(f"{tag} 2 หัวรายละเอียด: ปุ่มหลักปุ่มเดียว 'เปิดแผน Core →' · ⋯ อยู่มุมขวา · ไม่มีปุ่ม แก้ไข/ลบ/Import เรียงแถว", dh and dh["btns"] == ["เปิดแผน Core →"] and dh["menu"] and dh["vis"] == [], dh)
+        check(f"{tag} 2 หัวรายละเอียด: ปุ่มหลักปุ่มเดียว 'เปิดแผน →' · ⋯ อยู่มุมขวา · ไม่มีปุ่ม แก้ไข/ลบ/Import เรียงแถว", dh and dh["btns"] == ["เปิดแผน →"] and dh["menu"] and dh["vis"] == [], dh)
         check(f"{tag} 2 มี 6 แท็บเดิม (สรุป · มุมมอง/กราฟ · ธุรกิจ · ทำไม · ติดตาม · ออก)", dh["tabs"] == ["sum", "view", "biz", "why", "trk", "exit"], dh["tabs"])
         check(f"{tag} 2 บรรทัดข้อมูลเดียว: Industry · Phase · Thesis (โหมด · วันที่) · สถานะ · ถือ: บัญชี (n ไม้)", dh["meta"] and "Semis" in dh["meta"] and "Thesis lite · 28 ก.ย." in dh["meta"] and "ถือ:" in dh["meta"] and "1 ไม้" in dh["meta"], dh["meta"])
         check(f"{tag} 2 เตือน Tripwire ในหัว (1 แถบ) · ไม่ซ้ำในแท็บสรุป · 📅 ใกล้สุด · ลิงก์รายได้แยกส่วน", dh["alert"] == 1 and cnt(page, ".wlOv [data-wl-alert]") == 0 and dh["nxc"] == 1 and dh["rev"] == 1, dh)
         shot(page, f"ln3-watch-detail-{sfx}.png", ".wlDPanel")   # LN3fix — ถ่ายก่อนกดเปิดแผน Core (ภาพไม่ถูกฟอร์มบัง)
         page.locator("[data-lt-menu]").click(); page.wait_for_timeout(300)
         items = js(page, "()=>[...document.querySelectorAll('.ltMenu [role=menuitem]')].map(b=>b.innerText.replace(/\\s+/g,' ').trim())")
-        check(f"{tag} 2 เมนู ⋯: ✎ แก้ไข · 📥 Import · Export JSON · ทบทวน (ประวัติ) · ✕ ลบ", len(items) == 5 and items[0].startswith("✎ แก้ไข") and "Import" in items[1] and items[2] == "Export JSON" and items[3].startswith("ทบทวน") and items[4].startswith("✕ ลบ"), items)
+        check(f"{tag} 2 เมนู ⋯: Archive · ✎ แก้ไข · 📥 Import · Export JSON · ทบทวน (ประวัติ) — ✕ ลบ ซ่อนเมื่อมี thesis", len(items) == 5 and items[0].startswith("🗄 Archive") and items[1].startswith("✎ แก้ไข") and "Import" in items[2] and items[3] == "Export JSON" and items[4].startswith("ทบทวน"), items)   # PL1·A6: Archive แรก · ลบ แสดงเฉพาะหุ้นที่ไม่มี thesis/โน้ต/เวอร์ชัน
         js(page, "()=>{ wlMenu=''; renderWatchlist(); }")
         page.locator("[data-c-open-plan]").click(); page.wait_for_timeout(600)
         check(f"{tag} 2 'เปิดแผน Core →' พาไปแท็บแผน (Core)", js(page, "()=>activeTab") == "plan")
