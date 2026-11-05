@@ -115,7 +115,7 @@ def tests(pw, w, h, label):
         import_save(page)
         d = idb(page, "cxmt-kospi-2026-10")
         check(f"{tag} 1 บันทึก → kind:'trade' · ai เก็บ JSON · me ว่าง · สถานะ ร่าง", d and d["kind"] == "trade" and d["ai"]["title"].startswith("CXMT") and d["me"] == {} and d["user"].get("status") == "draft" and len(d["idea_log"]) == 1, json.dumps(d, ensure_ascii=False)[:300])
-        check(f"{tag} 1 แถวขึ้นในรายการ · ป้าย 'เทรด' · Short · AI · pill Ideas 2", "cxmt-kospi-2026-10" in rows(page) and js(page, "()=>ideaKind") == "trade" and "Ideas 2" in txt(page, ".wlPills"), rows(page))
+        check(f"{tag} 1 แถวขึ้นในรายการ · ป้าย 'เทรด' · Short · AI · pill Ideas (PL2·7: ไม่มีตัวเลข)", "cxmt-kospi-2026-10" in rows(page) and js(page, "()=>ideaKind") == "trade" and "Ideas" in txt(page, ".wlPills") and "Ideas 2" not in txt(page, ".wlPills"), rows(page))
         js(page, "()=>ideaSetKind('inv')"); page.wait_for_timeout(250)
         check(f"{tag} 1 ตัวกรอง ลงทุน → เห็นเฉพาะไอเดีย idea@1 เดิม (ไม่มีแถวเทรด)", rows(page) == ["semis-ai-memory-2026"] and cnt(page, "[data-trade]") == 0, rows(page))
         js(page, "()=>ideaSetKind('trade')"); page.wait_for_timeout(250)

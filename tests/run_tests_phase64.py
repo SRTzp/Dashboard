@@ -65,10 +65,10 @@ def filter_tests(pw, w, h, label):
         # ── 2 กาง
         flt_open(page)
         gl = js(page, "()=>[...document.querySelectorAll('[data-flt-panel] .fltGl')].map(e=>e.firstChild.textContent.trim())")
-        check(f"{tag} 2 กางแผง → กลุ่ม Idea · Tier · Phase · เรียง · ปุ่มเป็น ▴", gl == ["Idea", "Tier", "Track", "Reason", "Phase", "เรียง"] and txt(page, "[data-flt-btn]").endswith("▴"), json.dumps(gl, ensure_ascii=False))
+        check(f"{tag} 2 กางแผง → กลุ่ม Idea · Track · Reason · Phase (PL2·7: ไม่มี Tier) · เรียง · ปุ่มเป็น ▴", gl == ["Idea", "Track", "Reason", "Phase", "เรียง"] and txt(page, "[data-flt-btn]").endswith("▴"), json.dumps(gl, ensure_ascii=False))
         check(f"{tag} 2 ชิปในแผง: Idea [▲ ได้ ▼ เสีย] · Tier [ผ่าน ไม่ผ่าน ยังไม่ Check] · เรียง [ตาม Idea | Phase] (ตัดชิป 'ทั้งหมด')",
               js(page, "()=>[...document.querySelectorAll('[data-flt-panel] [data-cand-f]')].map(e=>e.textContent.trim())") == ["▲ ได้", "▼ เสีย"]
-              and js(page, "()=>[...document.querySelectorAll('[data-flt-panel] [data-tq-f]')].map(e=>e.textContent.trim())") == ["ผ่าน", "ไม่ผ่าน", "ยังไม่ Check"]
+              and js(page, "()=>[...document.querySelectorAll('[data-flt-panel] [data-tq-f]')].map(e=>e.textContent.trim())") == []
               and js(page, "()=>[...document.querySelectorAll('[data-flt-panel] [data-ph-sort]')].map(e=>e.textContent.trim())") == ["ตาม Idea", "Phase"])
         shot(page, f"ux2-filter-open-{sfx}.png", ".wlList")
         page.locator('[data-cand-f="win"]').click(); wait(page, 300)

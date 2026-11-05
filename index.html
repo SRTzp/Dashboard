@@ -7193,7 +7193,7 @@ function vwThesisHtml(sym){
 }
 function wlMtAiCardHtml(r){
   const e = escHtml, it = r.item, th = it ? wlThesisOf(it) : null, rawSym = r.w ? r.w.sym : r.sym;
-  if(!th) return `<div class="mtAi" data-mt-ai="empty"><b>AI Thesis</b><div class="mut" data-lt-empty>ยังไม่มี Thesis — รัน living-thesis แล้ว 📥 Import</div><button class="small" type="button" data-lt-import data-sym="${e(rawSym)}" onclick="ltImportOpen(this.dataset.sym)">📥 Import</button></div>`;
+  if(!th) return `<div class="mtAi" data-mt-ai="empty"><b>AI Thesis</b><div class="mut" data-lt-empty>ยังไม่มี Thesis — รัน living-thesis แล้ว 📥 Import</div><button class="small" type="button" data-mt-import data-sym="${e(rawSym)}" onclick="ltImportOpen(this.dataset.sym)">📥 Import</button></div>`;
   const s = th.summary || {}, call = s.call || {}, txt = String(call.why || s.biz || '').replace(/\s+/g, ' ').trim();
   const dt = it.thesis_imported_at ? 'imported ' + String(it.thesis_imported_at).slice(0, 10) : 'data as of ' + String(th.date || '—').slice(0, 10);
   return `<div class="mtAi" data-mt-ai="full"><b>AI Thesis</b> <span class="mut" data-mt-ai-date>${e(dt)}</span>${txt ? `<div class="mtAiT" data-mt-ai-sum>${e(ltShort(txt, 160))}</div>` : ''}<button class="small" type="button" data-mt-ai-view onclick="wlSetSub('sum')">View AI analysis</button></div>`;
@@ -22152,6 +22152,7 @@ function pfTrendSet(ideaId, v){ satV2SetDir(ideaId, v==='up' ? 'Long' : v==='dn'
 function pfVerifySet(ideaId, key, on){   /* PL2·6 — เขียน 2 boolean (อีกช่องคงค่าเดิม) · ไม่แตะ classify เดิม */
   if(key !== 'ema50_ok' && key !== 'structure_ok') return;
   const idea = sat7dIdea(ideaId); if(!idea) return;
+  if(!on && !satVerifySaved(idea)) return;   /* ยังไม่เคยบันทึก Verify: การ "ไม่ติ๊ก" ไม่ใช่การกระทำจริง (กัน change event เปล่าทำให้แผนเก่าหลุดสถานะเดิม) */
   const o = {ema50_ok: idea.ema50_ok === true, structure_ok: idea.structure_ok === true}; o[key] = !!on;
   satV3IdeaWrite(ideaId, o); satV3Render({force:true});
 }

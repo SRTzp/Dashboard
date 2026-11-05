@@ -17,7 +17,7 @@ results = G.results
 check, js, txt, count, wait, shot = G.check, G.js, G.txt, G.count, G.wait, G.shot
 TODAY = G.TODAY
 BACKUP = os.path.abspath(os.path.join(HERE, "..", "index.backup-pre-GL3.html"))
-PARTS = ["biz", "why", "next", "exit", "tier"]
+PARTS = ["biz", "why", "next", "exit"]   # PL2·7: Tier part removed
 
 
 def wl_doc(t, **kw): return P38.wl_th(t, **kw)
@@ -63,40 +63,39 @@ def tests(pw, w, h, label):
     try:
         G.go_today(p2); old = js(p2, "()=>{ const r=document.querySelector('.tdRow[data-kind=\"homework\"]'); return r ? r.querySelector('.tdWhat>b').textContent : null; }"); oreason = txt(p2, "[data-hw-reason]")
     finally: b2.close()
-    check(f"{tag} 1 ไม่มีข้อมูลใหม่ → เสนอตัวเดิมเหมือนก่อน GL3 (ABC · เหตุผลเดิม) + ป้าย W", new and old and new["t"] == old == "ABC" and reason == oreason and new["src"] == "W" and new["cnt"] == "0/5", json.dumps([new, old, reason, oreason], ensure_ascii=False))
+    check(f"{tag} 1 ไม่มีข้อมูลใหม่ → เสนอตัวเดิมเหมือนก่อน GL3 (ABC · เหตุผลเดิม) + ป้าย W", new and old and new["t"] == old == "ABC" and reason == oreason and new["src"] == "W" and new["cnt"] == "0/4", json.dumps([new, old, reason, oreason], ensure_ascii=False))
 
     # ── 2-3 ติ๊ก part
     b, c, page, ce, pe, _ = launch(pw, w, h)
     try:
         G.go_today(page)
         names = js(page, "()=>[...document.querySelectorAll('.tdRow[data-kind=homework] [data-hw-part]')].map(e=>e.innerText.trim())")
-        check(f"{tag} 2 ชิปติ๊ก 5 ตัว ธุรกิจ · ทำไม · ติดตาม · ออก · Tier แทนปุ่ม ✓ เดิม (VW1 ข้อ 0: Next → ติดตาม)", names == ["Tier", "ธุรกิจ", "ทำไม", "ติดตาม", "ออก"] and count(page, "[data-hw-done-btn]") == 0, json.dumps(names, ensure_ascii=False))
+        check(f"{tag} 2 ชิปติ๊ก 4 ตัว ธุรกิจ · ทำไม · ติดตาม · ออก (PL2·7: ไม่มี Tier) แทนปุ่ม ✓ เดิม (VW1 ข้อ 0: Next → ติดตาม)", names == ["ธุรกิจ", "ทำไม", "ติดตาม", "ออก"] and count(page, "[data-hw-done-btn]") == 0, json.dumps(names, ensure_ascii=False))
         for p in ("biz", "why", "next"): tick(page, p)
         lg = hw_log(page); row = hw_row(page)
-        check(f"{tag} 2 ติ๊ก biz why next → parts 3 ตัว · done:false · ตัวนับ 3/5", lg == {"pick": "ABC", "done": False, "parts": ["biz", "why", "next"]} and row["cnt"] == "3/5" and row["on"] == ["biz", "why", "next"], json.dumps([lg, row]))
-        check(f"{tag} 2 Daily ชิป 'การบ้าน 3/5'", "การบ้าน 3/5" in chips(page), json.dumps(chips(page), ensure_ascii=False))
+        check(f"{tag} 2 ติ๊ก biz why next → parts 3 ตัว · done:false · ตัวนับ 3/4", lg == {"pick": "ABC", "done": False, "parts": ["biz", "why", "next"]} and row["cnt"] == "3/4" and row["on"] == ["biz", "why", "next"], json.dumps([lg, row]))
+        check(f"{tag} 2 Daily ชิป 'การบ้าน 3/4'", "การบ้าน 3/4" in chips(page), json.dumps(chips(page), ensure_ascii=False))
         tick(page, "why")
-        check(f"{tag} 2 กดซ้ำ = ยกเลิก (why ออก → 2/5)", hw_log(page)["parts"] == ["biz", "next"] and hw_row(page)["cnt"] == "2/5")
+        check(f"{tag} 2 กดซ้ำ = ยกเลิก (why ออก → 2/4)", hw_log(page)["parts"] == ["biz", "next"] and hw_row(page)["cnt"] == "2/4")
         tick(page, "why")
         # ครบ 5
         shot(page, f"gl3-hw-{sfx}.png", ".tdRow[data-kind=homework]")
         hh = js(page, "()=>{ const r=document.querySelector('.tdRow[data-kind=homework]'); const bs=[...r.querySelectorAll('.tdHp')].map(b=>b.getBoundingClientRect()); const cnt=r.querySelector('[data-hw-cnt]').getBoundingClientRect(); const nm=r.querySelector('.tdWhat>b'); return {minH:Math.min(...bs.map(b=>b.height)), tops:(()=>{ const cs=bs.concat([cnt]).map(b=>b.top+b.height/2); return Math.max(...cs)-Math.min(...cs) < 4 ? 1 : 2; })(), ovf: document.documentElement.scrollWidth - innerWidth, trunc:getComputedStyle(nm).textOverflow, clipped: bs.some(b=>b.right > r.getBoundingClientRect().right)}; }")
         check(f"{tag} 8 ชิปสูง ≥ 32px · ชิป 5 + ตัวนับอยู่บรรทัดเดียว · ไม่ล้นแนวนอน · ชื่อหุ้น … เมื่อยาว", hh["minH"] >= 32 and hh["tops"] == 1 and hh["ovf"] <= 0 and hh["trunc"] == "ellipsis" and not hh["clipped"], json.dumps(hh))
+        check(f"{tag} 3 ก่อนครบ (3/4) → done:false · แถวยังอยู่", hw_log(page)["done"] is False and hw_row(page) is not None)
         tick(page, "exit")
-        check(f"{tag} 3 ก่อนครบ (4/5) → done:false · แถวยังอยู่", hw_log(page)["done"] is False and hw_row(page) is not None)
-        tick(page, "tier")
         lg = hw_log(page)
         line = txt(page, "[data-hw-doneline]")
-        check(f"{tag} 3 ติ๊กครบ 5 → done:true · แถวการบ้านหายเป็นสถานะเสร็จ (บรรทัด 'การบ้านวันนี้: ABC ✓' + ชิป 5/5)", lg["done"] is True and sorted(lg["parts"]) == sorted(PARTS) and hw_row(page) is None and line and line.startswith("การบ้านวันนี้: ABC") and count(page, "[data-hw-doneline] .tdHp.on") == 5 and "5/5" in line, json.dumps([lg, line], ensure_ascii=False))
-        check(f"{tag} 3 Daily ชิป 'การบ้าน 5/5'", "การบ้าน 5/5" in chips(page))
+        check(f"{tag} 3 ติ๊กครบ 4 → done:true · แถวการบ้านหายเป็นสถานะเสร็จ (บรรทัด 'การบ้านวันนี้: ABC ✓' + ชิป 4/4)", lg["done"] is True and sorted(lg["parts"]) == sorted(PARTS) and hw_row(page) is None and line and line.startswith("การบ้านวันนี้: ABC") and count(page, "[data-hw-doneline] .tdHp.on") == 4 and "4/4" in line, json.dumps([lg, line], ensure_ascii=False))
+        check(f"{tag} 3 Daily ชิป 'การบ้าน 4/4'", "การบ้าน 4/4" in chips(page))
         js(page, "()=>{ switchTab('flow'); switchTab('today'); }"); wait(page, 300)
-        page.locator('[data-hw-doneline] [data-hw-part="tier"]').click(); wait(page, 400)
+        page.locator('[data-hw-doneline] [data-hw-part="exit"]').click(); wait(page, 400)
         lg = hw_log(page)
-        check(f"{tag} 3 กด tier ออก → done:false · แถวกลับมา 4/5", lg["done"] is False and "tier" not in lg["parts"] and hw_row(page)["cnt"] == "4/5" and count(page, "[data-hw-doneline]") == 0, json.dumps(lg))
+        check(f"{tag} 3 กด exit ออก → done:false · แถวกลับมา 3/4", lg["done"] is False and "exit" not in lg["parts"] and hw_row(page)["cnt"] == "3/4" and count(page, "[data-hw-doneline]") == 0, json.dumps(lg))
         # ── 7 เปลี่ยนตัว → parts ว่าง
         page.locator("[data-hw-next]").click(); wait(page, 400)
         lg = hw_log(page); row = hw_row(page)
-        check(f"{tag} 7 เปลี่ยนตัว (ABC→DEF) → parts ว่าง · done:false · 0/5", lg == {"pick": "DEF", "done": False, "parts": []} and row["t"] == "DEF" and row["cnt"] == "0/5", json.dumps([lg, row]))
+        check(f"{tag} 7 เปลี่ยนตัว (ABC→DEF) → parts ว่าง · done:false · 0/4", lg == {"pick": "DEF", "done": False, "parts": []} and row["t"] == "DEF" and row["cnt"] == "0/4", json.dumps([lg, row]))
         # เปิดการ์ด
         page.locator(".tdRow[data-kind=homework] .tdWhat").click(); wait(page, 500)
         st = js(page, "()=>({tab:activeTab, sel:wlSel, view:wlView})")
@@ -116,17 +115,17 @@ def tests(pw, w, h, label):
     try:
         G.go_today(page)
         c7 = js(page, "()=>glDayStat('2026-10-07', tdLast).c.hw"); c6 = js(page, "()=>glDayStat('2026-10-06', tdLast).c.hw")
-        check(f"{tag} 4 log เก่า {{pick, done:true}} ไม่มี parts → วันนั้นนับ 5/5 · done:false → 0/5", c7 == {"n": 5, "N": 5} and c6 == {"n": 0, "N": 5}, json.dumps([c7, c6]))
-        check(f"{tag} 4 วันนี้เป็น log เก่า done:true → Daily 'การบ้าน 5/5' · แสดงสถานะเสร็จ", "การบ้าน 5/5" in chips(page) and count(page, "[data-hw-doneline]") == 1)
+        check(f"{tag} 4 log เก่า {{pick, done:true}} ไม่มี parts → วันนั้นนับ 5/5 · done:false → 0/5", c7 == {"n": 4, "N": 4} and c6 == {"n": 0, "N": 4}, json.dumps([c7, c6]))
+        check(f"{tag} 4 วันนี้เป็น log เก่า done:true → Daily 'การบ้าน 4/4' · แสดงสถานะเสร็จ", "การบ้าน 4/4" in chips(page) and count(page, "[data-hw-doneline]") == 1)
         raw = G.settings(page, "routineLog")
         check(f"{tag} 4 อ่านอย่างเดียว ไม่ migrate (log เดิมไม่ถูกเขียนทับ)", raw["2026-10-07"]["hw"] == {"pick": "ABC", "done": True} and raw[TODAY]["hw"] == {"pick": "ABC", "done": True})
         # แก้ part ของ log เก่า → ถือว่า 5 ครบเดิม แล้วเอาออก 1
         tick(page, "biz")
         lg = hw_log(page)
-        check(f"{tag} 4 log เก่า done:true แล้วเอา part ออก → parts 4 ตัว (ไม่มี biz) · done:false", lg["done"] is False and lg["parts"] == ["why", "next", "exit", "tier"], json.dumps(lg))
+        check(f"{tag} 4 log เก่า done:true แล้วเอา part ออก → parts 4 ตัว (ไม่มี biz) · done:false", lg["done"] is False and lg["parts"] == ["why", "next", "exit"], json.dumps(lg))
     finally: b.close()
 
-    # ── 5 Daily ตัวอย่าง 7/11 · 64% (WA1fix: เดิม 7/12 · 58%)
+    # ── 5 Daily ตัวอย่าง 7/10 · 70% (WA1fix: เดิม 7/12 · 58%)
     def sample(doc):
         s = doc["books"]["main"]["settings"]
         s["routine"] = {"slots": [{"id": "s1", "start": "09:00", "end": "09:30", "name": "ก", "link": "none"}, {"id": "s2", "start": "17:30", "end": "18:00", "name": "ข", "link": "none"}], "satDaily": ["XAUUSD", "BTC", "S50", "BRENT"]}
@@ -136,7 +135,7 @@ def tests(pw, w, h, label):
     try:
         G.go_today(page)
         head = txt(page, "[data-gl-dpct]")
-        check(f"{tag} 5 Daily: ช่วงเวลา 1/2 · Sat 2/3 (ok 1 no 1) · การบ้าน 3/5 · งานอื่น 1/1 → '7/11 · 64%' [WA1fix: Sat 3 ตลาดที่เลือก]", head == "7/11 · 64%" and chips(page) == ["ช่วงเวลา 1/2", "เช็กแผน Sat 2/3", "การบ้าน 3/5", "งานอื่น 1/1"], json.dumps([head, chips(page)], ensure_ascii=False))
+        check(f"{tag} 5 Daily: ช่วงเวลา 1/2 · Sat 2/3 (ok 1 no 1) · การบ้าน 3/4 · งานอื่น 1/1 → '7/10 · 70%' [WA1fix: Sat 3 ตลาดที่เลือก]", head == "7/10 · 70%" and chips(page) == ["ช่วงเวลา 1/2", "เช็กแผน Sat 2/3", "การบ้าน 3/4", "งานอื่น 1/1"], json.dumps([head, chips(page)], ensure_ascii=False))
         shot(page, f"gl3-daily-{sfx}.png", "[data-gl-pd]") if narrow else None
     finally: b.close()
 

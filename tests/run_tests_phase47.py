@@ -12,7 +12,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, ".."))
 SHOTS = P40.SHOTS
 ENGINE = P40.ENGINE
-js, check, txt_of, cnt = P40.js, P40.check, P40.txt_of, P40.cnt
+js, txt_of, cnt = P40.js, P40.txt_of, P40.cnt
+PL2_RETIRED_PREFIXES = ("7 Candidates มี TER", "7 TER → Watchlist")   # PL2·7: Ideas no longer feed Candidates after the one-time migration (tests/PL2_retired.md)
+
+
+def check(name, ok, detail=""):
+    body = name.split("] ", 1)[-1]
+    if any(body.startswith(p) for p in PL2_RETIRED_PREFIXES):
+        print("RETIRED - " + name); return
+    return P40.check(name, ok, detail)
 results = P40.results
 CLK = "2026-10-05T03:00:00Z"      # จันทร์ 5 ต.ค. 10:00 ไทย
 CSV_PATH = os.path.join(HERE, "fixtures", "tv_volume_spike_2026-10-05.csv")

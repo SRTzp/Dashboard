@@ -276,7 +276,7 @@ def item3(pw, w=1440, h=900):
         check(f"{tag} 'View AI analysis' opens the AI summary tab", js(page, "()=>wlSub") == "sum" and js(page, "()=>!!document.querySelector('[data-lt-decide]')"))
         # no AI thesis -> empty state with import action
         js(page, "()=>{ wlOpen('MTB'); wlSetSub('view'); }"); settle(page, 600)
-        e = js(page, "()=>({state: (document.querySelector('[data-mt-ai]')||{dataset:{}}).dataset.mtAi, imp: !!document.querySelector('.mtAi [data-lt-import]'), tabs: document.querySelectorAll('[data-lt-tab]').length, editor: document.querySelectorAll('[data-wl-mt-why]').length, legacy: document.querySelectorAll('[data-vw-row]').length})")
+        e = js(page, "()=>({state: (document.querySelector('[data-mt-ai]')||{dataset:{}}).dataset.mtAi, imp: !!document.querySelector('.mtAi [data-mt-import]'), tabs: document.querySelectorAll('[data-lt-tab]').length, editor: document.querySelectorAll('[data-wl-mt-why]').length, legacy: document.querySelectorAll('[data-vw-row]').length})")
         check(f"{tag} no AI thesis: empty state + existing Import action; My Thesis editor still there", e["state"] == "empty" and e["imp"] and e["editor"] == 1 and e["legacy"] == 0, e)
         # candidate card has no legacy block
         js(page, "()=>{ switchTab('watch'); wlSetView('cand'); }"); settle(page, 500)
