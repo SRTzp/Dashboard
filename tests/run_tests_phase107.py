@@ -376,8 +376,8 @@ def cands_tests(pw, w, h, label, shots=False):
     tag = f"[{ENGINE}/{label}]"
     b, page, ce, pe = launch(pw, w, h)
     try:
-        seed_idea(page, idea_doc([P44.cand("KLAC", "KLA", 1, "study"), P44.cand("AMAT", "Applied", 2, "wait")]))
         inject(page, {"candMeta": {"MSFT": cm("MSFT", 3, "n1"), "PTT": dict(cm("PTT.BK", 2, "n2"), market="TH")}})
+        seed_idea(page, idea_doc([P44.cand("KLAC", "KLA", 1, "study"), P44.cand("AMAT", "Applied", 2, "wait")]))   # PL2·7: inject first (it replaces candMeta), then the Ideas→Candidates migration adds KLAC/AMAT
         go_watch(page, "cand")
         pills = js(page, "()=>[...document.querySelectorAll('[data-cand-mk] button')].map(e=>e.innerText.trim())")
         check(f"{tag} §3 Candidates มีตัวกรอง All | US | TH (เหมือน Watchlist)", pills == ["All", "US", "TH"], pills)
@@ -395,7 +395,7 @@ def cands_tests(pw, w, h, label, shots=False):
         check(f"{tag} §3 Delete (Candidate เพิ่มเอง) → confirm แล้ว ลบรายการออกจริง (ไม่เหลือใน candMeta)", "MSFT" not in meta(page) and "MSFT" not in rows(page) and any("Remove MSFT" in d for d in dlg(page)), [list(meta(page)), dlg(page)])
         page.locator('.wlR[data-sym="KLAC"] [data-td4-del]').click(); settle(page, 500)
         k = meta(page).get("KLAC", {})
-        check(f"{tag} §3 Delete (Candidate จากไอเดีย) → dismissed:true + dismissed_at · ซ่อนจากรายการ · Idea ไม่ถูกแตะ", k.get("dismissed") is True and k.get("dismissed_at") and "KLAC" not in rows(page) and js(page, "()=>ideaList.length") == 1, k)
+        check(f"{tag} §3 Delete (Candidate จากไอเดีย → PL2·7: ย้ายเป็น Candidate เพิ่มเองแล้ว) → ลบรายการออกจริง · ซ่อนจากรายการ · Idea ไม่ถูกแตะ", "KLAC" not in k and "KLAC" not in rows(page) and js(page, "()=>ideaList.length") == 1, k)
         check(f"{tag} §3 AMAT (ตัวอื่นในไอเดียเดียวกัน) ยังอยู่", "AMAT" in rows(page))
         check(f"{tag} ไม่ล้นแนวนอน · ไม่มี console error", ovf(page) <= 0 and not ce and not pe, [ovf(page), ce[:2], pe[:2]])
     finally: b.close()
@@ -407,6 +407,7 @@ def back_list(page): return js(page, "()=>td4BackList().map(x=>x.sym)")
 
 
 def reask_tests(pw):
+    return   # PL2·7 RETIRED: "Back in Ideas" removed (tests/PL2_retired.md)
     tag = f"[{ENGINE}/1440px]"
     b, page, ce, pe = launch(pw, 1440, 900)
     try:
@@ -462,6 +463,7 @@ def rows_cand(page): return js(page, "()=>wlRowsAll().cand.map(r=>r.sym)")
 
 
 def reask_later_tests(pw):
+    return   # PL2·7 RETIRED: "Back in Ideas" removed (tests/PL2_retired.md)
     """Later ใน preview ('Ask me later') = ไม่ตัดสินใจ → ชิปขึ้นหลังบันทึก · ติ๊กใน preview = นำกลับตอนบันทึก"""
     tag = f"[{ENGINE}/1440px]"
     b, page, ce, pe = launch(pw, 1440, 900)
@@ -604,7 +606,7 @@ def deepdive_tests(pw, w, h, label):
         go_today(page)
         h0 = dd_head(page)
         check(f"{tag} §6 หัว 'Deep dive [US|TH]' + tracker 'US 0/1 · TH 0/1' + ปุ่มสลับ US/TH", h0 == "US 0/1 · TH 0/1" and cnt(page, "[data-td4-hwmk]") == 2 and txt(page, '[data-td3-sec="hw"] .td3-th').startswith("Deep dive"), h0)
-        check(f"{tag} §6 ค่าเริ่มต้นโชว์หุ้น US (หนึ่งตัวต่อวัน)", re_in(hw_row(page), ["MSFT", "NVDA"]) and "Thesis 0/5" in hw_row(page), hw_row(page))
+        check(f"{tag} §6 ค่าเริ่มต้นโชว์หุ้น US (หนึ่งตัวต่อวัน)", re_in(hw_row(page), ["MSFT", "NVDA"]) and "Thesis 0/4" in hw_row(page), hw_row(page))
         us_pick = js(page, "()=>tdLast.hwm.US.t"); th_pick = js(page, "()=>tdLast.hwm.TH.t")
         check(f"{tag} §6 เสนอ 1 ตัวต่อตลาด (US และ TH คนละตัว · TH เป็น .BK)", us_pick in ("MSFT", "NVDA") and th_pick in ("PTT.BK", "CPALL.BK"), [us_pick, th_pick])
         page.locator('[data-td4-hwmk="TH"]').click(); settle(page, 400)
@@ -616,7 +618,7 @@ def deepdive_tests(pw, w, h, label):
         js(page, "()=>tdHwPart('biz')"); settle(page, 500)
         L = log_today(page)
         check(f"{tag} §6 สลับ US แล้วติ๊ก 'biz' → hwm.US แยกจาก TH · หัว US 1/1 · TH 1/1", L["hwm"]["US"] == {"pick": us_pick, "parts": ["biz"]} and L["hwm"]["TH"]["parts"] == ["why"] and dd_head(page) == "US 1/1 ✓ · TH 1/1 ✓", [L, dd_head(page)])
-        check(f"{tag} §6 กติกา 'ทำแล้ว' = บันทึกส่วน Thesis ≥ 1 ส่วนของตลาดนั้นวันนี้ (ไม่ต้องครบ 5)", "Thesis 1/5" in hw_row(page))
+        check(f"{tag} §6 กติกา 'ทำแล้ว' = บันทึกส่วน Thesis ≥ 1 ส่วนของตลาดนั้นวันนี้ (ไม่ต้องครบ 5)", "Thesis 1/4" in hw_row(page))
         check(f"{tag} §6 ทำครบขั้นต่ำของตลาดแล้ว → มี 'Next from Watchlist ›'", cnt(page, "[data-td4-hwnext-wl]") == 1, cnt(page, "[data-td4-hwnext-wl]"))
         page.locator("[data-td4-hwnext-wl]").click(); settle(page, 500)
         L = log_today(page); n2 = L["hwm"]["US"]

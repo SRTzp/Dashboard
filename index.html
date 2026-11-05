@@ -2352,7 +2352,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .vwImg .vwDel{top:auto;bottom:6px;right:6px}
 .pf-r1 .pf-tf select{padding:0 4px}
 .mtWrap{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}.mtAi{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fafaf7;font-size:13px;align-self:start}.mtAi .mtAiT{margin:6px 0}@media(min-width:1000px){.mtWrap{grid-template-columns:minmax(0,1fr) 280px}}.mtGal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.mtImg{position:relative}.mtImg .vwDel{position:absolute;top:4px;right:4px;background:rgba(255,255,255,.9);border-radius:6px;min-width:28px;min-height:28px}.wlMtSm{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:13px}.wlMtSm .wlMtL1{flex-basis:100%}.vwW{margin:2px 0}
-.csSum{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fafaf7;font-size:13px}.csSum:empty{display:none}.csSum .cs-sc i{font-style:normal;color:var(--mute);font-size:12px;margin-right:2px}.csSum .miss{color:#a96e06;font-weight:600}.csSum .cs-tg{flex-basis:100%}
+.csSum{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fafaf7;font-size:13px}.csSum:empty{display:none}.csSum .cs-sc i{font-style:normal;color:var(--mute);font-size:12px;margin-right:2px}.csSum b{color:var(--dark)}.csSum .miss{color:#a96e06;font-weight:600}.csSum .cs-tg{flex-basis:100%}
 .pf-r1 .pf-vf{display:flex;flex-direction:column;gap:3px}.pf-r1 .pf-vf label{margin:0;font-size:12px}.pf-r1 .pf-vf .pf-vc{display:flex;align-items:center;gap:6px;min-height:24px;color:var(--dark);font-size:13px;white-space:nowrap;cursor:pointer}.pf-vf .pf-vc input{width:18px;height:18px;margin:0}.pf-vf .pf-vr{font-weight:700;margin-left:4px}.pf-vf .pf-vr.c-gr{color:#1F9D6B}.pf-vf .pf-vr.c-rd{color:#d0453a}.pf-vf .pf-vr.c-ye{color:#a96e06}.pf-vf .pf-vleg{font-size:11px;color:#a96e06}
 .vwImg .vwTag[data-ln1-cap]{max-width:calc(100% - 84px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:340px){.vwImg .vwTag[data-ln1-cap] small{display:none}}
@@ -7193,7 +7193,7 @@ function vwThesisHtml(sym){
 }
 function wlMtAiCardHtml(r){
   const e = escHtml, it = r.item, th = it ? wlThesisOf(it) : null, rawSym = r.w ? r.w.sym : r.sym;
-  if(!th) return `<div class="mtAi" data-mt-ai="empty"><b>AI Thesis</b><div class="mut" data-lt-empty>No AI Thesis yet — run living-thesis, then import it.</div><button class="small" type="button" data-lt-import data-sym="${e(rawSym)}" onclick="ltImportOpen(this.dataset.sym)">📥 Import</button></div>`;
+  if(!th) return `<div class="mtAi" data-mt-ai="empty"><b>AI Thesis</b><div class="mut" data-lt-empty>ยังไม่มี Thesis — รัน living-thesis แล้ว 📥 Import</div><button class="small" type="button" data-lt-import data-sym="${e(rawSym)}" onclick="ltImportOpen(this.dataset.sym)">📥 Import</button></div>`;
   const s = th.summary || {}, call = s.call || {}, txt = String(call.why || s.biz || '').replace(/\s+/g, ' ').trim();
   const dt = it.thesis_imported_at ? 'imported ' + String(it.thesis_imported_at).slice(0, 10) : 'data as of ' + String(th.date || '—').slice(0, 10);
   return `<div class="mtAi" data-mt-ai="full"><b>AI Thesis</b> <span class="mut" data-mt-ai-date>${e(dt)}</span>${txt ? `<div class="mtAiT" data-mt-ai-sum>${e(ltShort(txt, 160))}</div>` : ''}<button class="small" type="button" data-mt-ai-view onclick="wlSetSub('sum')">View AI analysis</button></div>`;
@@ -10332,6 +10332,7 @@ function coreMenuHtml(v, cx, opts){
     ${(ln1On() && t) ? `<button type="button" data-c-emg onclick="coreEmgOpen('${id}')">Stop ฉุกเฉิน</button>` : ''}
     ${(ln1On() && v.accT) ? `<button type="button" data-c-close-acc onclick="openClosePos('${escHtml(v.accT.id)}','${escHtml(v.c.acct)}')">ปิดไม้เร่ง</button>` : ''}
     ${ln1On() ? ((v.c.stopHistory||[]).length ? `<button type="button" data-c-stophist onclick="coreStopHistOpen('${id}')">ประวัติ Stop (${(v.c.stopHistory||[]).length})</button>` : '<button type="button" class="dis" data-c-stophist disabled>ประวัติ Stop (ยังไม่เคยเลื่อน)</button>') : ''}
+    <button type="button" data-c-tierbtn onclick="coreTierOpen('${id}')">Tier…</button>   <!-- PL2·7 — คงไว้: ปุ่มของการ์ดแผนเดิม (ไม่ใช่ขั้นคัดหุ้น) · แผนเดิมใช้ Tier ที่เก็บไว้ -->
     ${strat}</div>`;
 }
 /* 7E-2b-1 — ชิ้นส่วนกลางของตารางบันได (รับแค่ข้อมูล · ไม่อ่านการ์ด · 7E-3 ใช้ซ้ำได้)
@@ -15566,7 +15567,7 @@ function plIdeasMigrate(){
         if(c.state==='park'){ skip('company parked in idea'); return; }
         const raw = String(c.sym == null ? '' : c.sym).trim().toUpperCase(), key = wlSymKey(raw);
         const mk = (c.market==='TH' || c.market==='US') ? c.market : wlGuessMarket(raw), t = mk==='TH' ? raw.replace(/\.BK$/, '') : raw;
-        if(!key || !TD4_RE[mk].test(t)){ skip('no valid ticker'); return; }
+        if(!key || !/^[A-Z0-9][A-Z0-9.\-]{0,9}$/.test(t)){ skip('no valid ticker'); return; }   /* ตรวจรูปแบบสัญลักษณ์แบบกว้าง (มีตัวเลขได้) — ไม่ตัด Candidate ที่เคยเห็นอยู่ */
         if(wlHas(raw)){ skip('already in Watchlist'); return; }
         if(cm[key]){ skip(cm[key].dismissed===true ? 'previously deleted from Candidates' : 'already in Candidates'); return; }
         if(seen.has(key)){ skip('duplicate inside Ideas'); return; }

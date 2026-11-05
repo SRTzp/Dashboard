@@ -20,6 +20,9 @@ OK_LINE = "[data-td-okline]"
 IDEA_KINDS = ("idea-kill", "idea-held", "idea-study", "idea-recheck")
 
 
+PL2_IDEA_REMINDERS_REMOVED = True
+
+
 def chk(name, ok, detail=""): check(name, ok, detail)
 
 
@@ -157,85 +160,86 @@ def tests(pw, w, h, label):
         chk(f"{tag} 2 loser ที่ไม่ได้ถือ (ไม่มีการ์ด Core open) → ไม่มี B", len(rows(page, "idea-held")) == 0)
     finally: b.close()
 
-    # ───── 3 · C: ส่งต่อ → Watchlist ─────
-    ideas = [idea("c1", "ไอเดียส่งต่อบริษัท", cands=[cand("NEWC", 1), cand("WAITC", 2, state="wait"), cand("NOSRC", 3, src=""), cand("INWL", 4), cand("THCO.BK", 5, market="TH")], date="2026-10-04")]
-    b, c, page, ce, pe, dl = launcher(pw, w, h, ideas, wl=(("HELD", "2026-09-20"), ("INWL", None)))
-    try:
-        r = rows(page, "idea-study")
-        names = [x["t"] for x in r]
-        chk(f"{tag} 3 C: study + relevance_src + ไม่อยู่ WL → NEWC และ THCO.BK (WAITC wait · NOSRC ไม่มีแหล่ง · INWL อยู่ WL แล้ว = ไม่มี)", len(r) == 2 and "ส่งต่อ NEWC → Watchlist" in names[0] and "ส่งต่อ THCO.BK → Watchlist" in names[1] and all(x["grp"] == "b" and x["full"].startswith("💡") for x in r), json.dumps(r, ensure_ascii=False)[:500])
-        chk(f"{tag} 3 sub = ชื่อไอเดีย", all("ไอเดียส่งต่อบริษัท" in x["sub"] for x in r))
-        tg = tags(page, "idea-study")
-        chk(f"{tag} 3 tag selUS (NEWC) / selTH (THCO.BK)", tg == [["selUS"], ["selTH"]], json.dumps(tg))
-        tap(page, "idea-study", 0)
-        a = at_idea(page, "c1", "co")
-        chk(f"{tag} 3 แตะ → Ideas › การ์ดนั้น › แท็บ บริษัท", a["tab"] == "watch" and a["view"] == "idea" and a["sel"] == "c1" and a["sub"] == "co", json.dumps(a))
-        js(page, "()=>switchTab('today')"); page.wait_for_timeout(300)
-        seed_wl_live = lambda s: page.evaluate("(s)=>firebase.firestore().collection('users').doc('testuid').collection('watchlist').doc(s).set({ticker:s,market:'US',port:'core',note:'',industry:'',added_at:'2026-10-05T00:00:00.000Z'})", s)
-        seed_wl_live("NEWC"); page.wait_for_timeout(500)
-        chk(f"{tag} 3 เพิ่ม NEWC เข้า WL → แถวหาย (เหลือ THCO.BK)", [x["t"] for x in rows(page, "idea-study")] == ["💡 ส่งต่อ THCO.BK → Watchlist"] or len(rows(page, "idea-study")) == 1 and "THCO.BK" in rows(page, "idea-study")[0]["t"], json.dumps(rows(page, "idea-study"), ensure_ascii=False)[:300])
-        chk(f"{tag} 7 (3) ไม่ล้นแนวนอน · ไม่มี console error", overflow(page) <= 0 and not ce and not pe, json.dumps([overflow(page), ce, pe]))
-    finally: b.close()
-    # บริษัทเดียวอยู่หลายไอเดีย → 1 แถว (ไอเดียที่ rank ดีสุด)
-    ideas = [idea("m1", "ไอเดียแรก", cands=[cand("DUP", 3)]), idea("m2", "ไอเดียสอง", cands=[cand("DUP", 1)])]
-    b, c, page, ce, pe, dl = launcher(pw, w, h, ideas)
-    try:
-        r = rows(page, "idea-study")
-        chk(f"{tag} 3 บริษัทเดียวอยู่ 2 ไอเดีย → 1 แถว · sub = ไอเดียที่ rank ดีสุด (ไอเดียสอง)", len(r) == 1 and "ไอเดียสอง" in r[0]["sub"], json.dumps(r, ensure_ascii=False)[:300])
-    finally: b.close()
+    if not PL2_IDEA_REMINDERS_REMOVED:   # PL2·7: idea-study / idea-recheck reminders removed (Ideas is no longer a required stage) — retired, see tests/PL2_retired.md
+        # ───── 3 · C: ส่งต่อ → Watchlist ─────
+        ideas = [idea("c1", "ไอเดียส่งต่อบริษัท", cands=[cand("NEWC", 1), cand("WAITC", 2, state="wait"), cand("NOSRC", 3, src=""), cand("INWL", 4), cand("THCO.BK", 5, market="TH")], date="2026-10-04")]
+        b, c, page, ce, pe, dl = launcher(pw, w, h, ideas, wl=(("HELD", "2026-09-20"), ("INWL", None)))
+        try:
+            r = rows(page, "idea-study")
+            names = [x["t"] for x in r]
+            chk(f"{tag} 3 C: study + relevance_src + ไม่อยู่ WL → NEWC และ THCO.BK (WAITC wait · NOSRC ไม่มีแหล่ง · INWL อยู่ WL แล้ว = ไม่มี)", len(r) == 2 and "ส่งต่อ NEWC → Watchlist" in names[0] and "ส่งต่อ THCO.BK → Watchlist" in names[1] and all(x["grp"] == "b" and x["full"].startswith("💡") for x in r), json.dumps(r, ensure_ascii=False)[:500])
+            chk(f"{tag} 3 sub = ชื่อไอเดีย", all("ไอเดียส่งต่อบริษัท" in x["sub"] for x in r))
+            tg = tags(page, "idea-study")
+            chk(f"{tag} 3 tag selUS (NEWC) / selTH (THCO.BK)", tg == [["selUS"], ["selTH"]], json.dumps(tg))
+            tap(page, "idea-study", 0)
+            a = at_idea(page, "c1", "co")
+            chk(f"{tag} 3 แตะ → Ideas › การ์ดนั้น › แท็บ บริษัท", a["tab"] == "watch" and a["view"] == "idea" and a["sel"] == "c1" and a["sub"] == "co", json.dumps(a))
+            js(page, "()=>switchTab('today')"); page.wait_for_timeout(300)
+            seed_wl_live = lambda s: page.evaluate("(s)=>firebase.firestore().collection('users').doc('testuid').collection('watchlist').doc(s).set({ticker:s,market:'US',port:'core',note:'',industry:'',added_at:'2026-10-05T00:00:00.000Z'})", s)
+            seed_wl_live("NEWC"); page.wait_for_timeout(500)
+            chk(f"{tag} 3 เพิ่ม NEWC เข้า WL → แถวหาย (เหลือ THCO.BK)", [x["t"] for x in rows(page, "idea-study")] == ["💡 ส่งต่อ THCO.BK → Watchlist"] or len(rows(page, "idea-study")) == 1 and "THCO.BK" in rows(page, "idea-study")[0]["t"], json.dumps(rows(page, "idea-study"), ensure_ascii=False)[:300])
+            chk(f"{tag} 7 (3) ไม่ล้นแนวนอน · ไม่มี console error", overflow(page) <= 0 and not ce and not pe, json.dumps([overflow(page), ce, pe]))
+        finally: b.close()
+        # บริษัทเดียวอยู่หลายไอเดีย → 1 แถว (ไอเดียที่ rank ดีสุด)
+        ideas = [idea("m1", "ไอเดียแรก", cands=[cand("DUP", 3)]), idea("m2", "ไอเดียสอง", cands=[cand("DUP", 1)])]
+        b, c, page, ce, pe, dl = launcher(pw, w, h, ideas)
+        try:
+            r = rows(page, "idea-study")
+            chk(f"{tag} 3 บริษัทเดียวอยู่ 2 ไอเดีย → 1 แถว · sub = ไอเดียที่ rank ดีสุด (ไอเดียสอง)", len(r) == 1 and "ไอเดียสอง" in r[0]["sub"], json.dumps(r, ensure_ascii=False)[:300])
+        finally: b.close()
 
-    # ───── 4 · D: เช็คหลักฐาน ─────
-    ideas = [idea("d_today", "ถึงวันนัด", recheck={"date": "2026-10-05", "what": "ยอดขาย Q3"}),
-             idea("d_future", "นัดอนาคต", date="2026-10-04", recheck={"date": "2026-10-20", "what": "ยังไม่ถึง"}),
-             idea("d_ready", "พร้อมส่งต่อแต่ถึงนัด", status="ready", recheck={"date": "2026-10-01", "what": "ไม่นับ"})]
-    b, c, page, ce, pe, dl = launcher(pw, w, h, ideas)
-    try:
-        r = rows(page, "idea-recheck")
-        chk(f"{tag} 4 D: recheck = วันนี้ → 1 แถว (นัดอนาคต · ไอเดียพร้อมส่งต่อ = ไม่มี) กลุ่ม a", len(r) == 1 and r[0]["grp"] == "a", json.dumps(r, ensure_ascii=False)[:300])
-        chk(f"{tag} 4 ข้อความ '💡 เช็คหลักฐาน: ถึงวันนัด (ยอดขาย Q3)' · tag selUS · แตะ → หลักฐาน", r and r[0]["full"].startswith("💡") and "เช็คหลักฐาน: ถึงวันนัด (ยอดขาย Q3)" in r[0]["t"] and tags(page, "idea-recheck") == [["selUS"]], json.dumps([r, tags(page, "idea-recheck")], ensure_ascii=False)[:300])
-        tap(page, "idea-recheck")
-        a = at_idea(page, "d_today", "evd")
-        chk(f"{tag} 4 แตะ → Ideas › การ์ดนั้น › แท็บ หลักฐาน", a["tab"] == "watch" and a["view"] == "idea" and a["sel"] == "d_today" and a["sub"] == "evd", json.dumps(a))
-    finally: b.close()
-    ideas = [idea("o31", "เก่า 31 วัน", date="2026-09-04", scope=("TH",), recheck={"date": "2026-12-31", "what": "ไกล"}), idea("o30", "เก่า 30 วัน", date="2026-09-05"),
-             idea("nw", "ไม่มี what", date="2026-10-04", recheck={"date": "2026-10-05"})]
-    b, c, page, ce, pe, dl = launcher(pw, w, h, ideas)
-    try:
-        r = rows(page, "idea-recheck")
-        chk(f"{tag} 4 date เก่า 31 วัน → มี · 30 วัน → ไม่มี · 2 ไอเดียเข้าเงื่อนไข → แสดง 1 (recheck เก่าสุดก่อน = 'ไม่มี what')", len(r) == 1 and "ไม่มี what" in r[0]["t"] and "(" not in r[0]["t"], json.dumps(r, ensure_ascii=False)[:300])
-    finally: b.close()
-    b, c, page, ce, pe, dl = launcher(pw, w, h, [ideas[0], ideas[1]])
-    try:
-        r = rows(page, "idea-recheck")
-        chk(f"{tag} 4 เหลือ o31 (เก่า 31 วัน) → 1 แถว tag selTH ตาม scope[0] · o30 ไม่ขึ้น", len(r) == 1 and "เก่า 31 วัน" in r[0]["t"] and tags(page, "idea-recheck") == [["selTH"]], json.dumps([r, tags(page, "idea-recheck")], ensure_ascii=False)[:300])
-    finally: b.close()
+        # ───── 4 · D: เช็คหลักฐาน ─────
+        ideas = [idea("d_today", "ถึงวันนัด", recheck={"date": "2026-10-05", "what": "ยอดขาย Q3"}),
+                 idea("d_future", "นัดอนาคต", date="2026-10-04", recheck={"date": "2026-10-20", "what": "ยังไม่ถึง"}),
+                 idea("d_ready", "พร้อมส่งต่อแต่ถึงนัด", status="ready", recheck={"date": "2026-10-01", "what": "ไม่นับ"})]
+        b, c, page, ce, pe, dl = launcher(pw, w, h, ideas)
+        try:
+            r = rows(page, "idea-recheck")
+            chk(f"{tag} 4 D: recheck = วันนี้ → 1 แถว (นัดอนาคต · ไอเดียพร้อมส่งต่อ = ไม่มี) กลุ่ม a", len(r) == 1 and r[0]["grp"] == "a", json.dumps(r, ensure_ascii=False)[:300])
+            chk(f"{tag} 4 ข้อความ '💡 เช็คหลักฐาน: ถึงวันนัด (ยอดขาย Q3)' · tag selUS · แตะ → หลักฐาน", r and r[0]["full"].startswith("💡") and "เช็คหลักฐาน: ถึงวันนัด (ยอดขาย Q3)" in r[0]["t"] and tags(page, "idea-recheck") == [["selUS"]], json.dumps([r, tags(page, "idea-recheck")], ensure_ascii=False)[:300])
+            tap(page, "idea-recheck")
+            a = at_idea(page, "d_today", "evd")
+            chk(f"{tag} 4 แตะ → Ideas › การ์ดนั้น › แท็บ หลักฐาน", a["tab"] == "watch" and a["view"] == "idea" and a["sel"] == "d_today" and a["sub"] == "evd", json.dumps(a))
+        finally: b.close()
+        ideas = [idea("o31", "เก่า 31 วัน", date="2026-09-04", scope=("TH",), recheck={"date": "2026-12-31", "what": "ไกล"}), idea("o30", "เก่า 30 วัน", date="2026-09-05"),
+                 idea("nw", "ไม่มี what", date="2026-10-04", recheck={"date": "2026-10-05"})]
+        b, c, page, ce, pe, dl = launcher(pw, w, h, ideas)
+        try:
+            r = rows(page, "idea-recheck")
+            chk(f"{tag} 4 date เก่า 31 วัน → มี · 30 วัน → ไม่มี · 2 ไอเดียเข้าเงื่อนไข → แสดง 1 (recheck เก่าสุดก่อน = 'ไม่มี what')", len(r) == 1 and "ไม่มี what" in r[0]["t"] and "(" not in r[0]["t"], json.dumps(r, ensure_ascii=False)[:300])
+        finally: b.close()
+        b, c, page, ce, pe, dl = launcher(pw, w, h, [ideas[0], ideas[1]])
+        try:
+            r = rows(page, "idea-recheck")
+            chk(f"{tag} 4 เหลือ o31 (เก่า 31 วัน) → 1 แถว tag selTH ตาม scope[0] · o30 ไม่ขึ้น", len(r) == 1 and "เก่า 31 วัน" in r[0]["t"] and tags(page, "idea-recheck") == [["selTH"]], json.dumps([r, tags(page, "idea-recheck")], ensure_ascii=False)[:300])
+        finally: b.close()
 
-    # ───── 5 · เพดาน 2 แถว/วัน ─────
-    ideas = [idea("ca1", "ด่วนหนึ่ง", kill_level="hit"), idea("ca2", "ด่วนสอง", kill_level="hit"),
-             idea("cb", "ไอเดีย B", status="ready", date="2026-10-02", losers=[loser("HELD")]),
-             idea("cc", "ไอเดีย C", cands=[cand("CAND1", 1), cand("CAND2", 2), cand("CAND3", 3)]),
-             idea("cd", "ไอเดีย D", recheck={"date": "2026-10-05", "what": "นัดวันนี้"})]
-    b, c, page, ce, pe, dl = launcher(pw, w, h, ideas)
-    try:
-        rr = all_idea_rows(page)
-        urgent = [x for x in rr if x["g"] == "r"]; other = [x for x in rr if x["g"] != "r"]
-        chk(f"{tag} 5 นอกด่วน: แถว 💡 แค่ 2 · B ก่อน แล้ว C ตัวแรก (CAND2/CAND3/D ถูกตัด · ไม่มีข้อความ 'อีก n')", [x["k"] for x in other] == ["idea-held", "idea-study"] and "CAND1" in other[1]["t"], json.dumps(other, ensure_ascii=False))
-        chk(f"{tag} 5 A 2 ไอเดีย → ด่วนมี 2 แถว (ไม่นับเพดาน)", [x["k"] for x in urgent] == ["idea-kill", "idea-kill"], json.dumps(urgent, ensure_ascii=False))
-        body = js(page, "()=>document.querySelector('[data-td-wrap]').innerText")
-        chk(f"{tag} 5 ไม่มีข้อความ 'อีก n' ของแถวที่ถูกตัด", "CAND2" not in body and "CAND3" not in body and "นัดวันนี้" not in body and "อีก 3" not in body)
-        shot(page, f"id4-today-cap-{sfx}.png")
-        ol = one_line(page)
-        chk(f"{tag} 5 ทุกแถว 💡 บรรทัดเดียว (4 แถว)", len(ol) == 4 and all(x["ok"] for x in ol), json.dumps(ol))
-        chk(f"{tag} 7 (5) ไม่ล้นแนวนอน · ไม่มี console error", overflow(page) <= 0 and not ce and not pe, json.dumps([overflow(page), ce, pe]))
-    finally: b.close()
-    # ชื่อยาว → ตัด …
-    longname = "ไอเดียที่ชื่อยาวมากมายก่อนจะถึงคำว่าสัญญาณพักชนแน่นอนแน่ๆ ยาวต่อไปอีกหลายสิบตัวอักษร"
-    b, c, page, ce, pe, dl = launcher(pw, w, h, [idea("lg", longname, kill_level="hit")])
-    try:
-        r = rows(page, "idea-kill")
-        ol = one_line(page)
-        chk(f"{tag} 5 ชื่อไอเดียยาว → ตัด '…' · ไม่ล้นบรรทัดเดียว", len(r) == 1 and "…" in r[0]["t"] and longname not in r[0]["t"] and all(x["ok"] for x in ol), json.dumps([r, ol], ensure_ascii=False)[:400])
-    finally: b.close()
+        # ───── 5 · เพดาน 2 แถว/วัน ─────
+        ideas = [idea("ca1", "ด่วนหนึ่ง", kill_level="hit"), idea("ca2", "ด่วนสอง", kill_level="hit"),
+                 idea("cb", "ไอเดีย B", status="ready", date="2026-10-02", losers=[loser("HELD")]),
+                 idea("cc", "ไอเดีย C", cands=[cand("CAND1", 1), cand("CAND2", 2), cand("CAND3", 3)]),
+                 idea("cd", "ไอเดีย D", recheck={"date": "2026-10-05", "what": "นัดวันนี้"})]
+        b, c, page, ce, pe, dl = launcher(pw, w, h, ideas)
+        try:
+            rr = all_idea_rows(page)
+            urgent = [x for x in rr if x["g"] == "r"]; other = [x for x in rr if x["g"] != "r"]
+            chk(f"{tag} 5 นอกด่วน: แถว 💡 แค่ 2 · B ก่อน แล้ว C ตัวแรก (CAND2/CAND3/D ถูกตัด · ไม่มีข้อความ 'อีก n')", [x["k"] for x in other] == ["idea-held", "idea-study"] and "CAND1" in other[1]["t"], json.dumps(other, ensure_ascii=False))
+            chk(f"{tag} 5 A 2 ไอเดีย → ด่วนมี 2 แถว (ไม่นับเพดาน)", [x["k"] for x in urgent] == ["idea-kill", "idea-kill"], json.dumps(urgent, ensure_ascii=False))
+            body = js(page, "()=>document.querySelector('[data-td-wrap]').innerText")
+            chk(f"{tag} 5 ไม่มีข้อความ 'อีก n' ของแถวที่ถูกตัด", "CAND2" not in body and "CAND3" not in body and "นัดวันนี้" not in body and "อีก 3" not in body)
+            shot(page, f"id4-today-cap-{sfx}.png")
+            ol = one_line(page)
+            chk(f"{tag} 5 ทุกแถว 💡 บรรทัดเดียว (4 แถว)", len(ol) == 4 and all(x["ok"] for x in ol), json.dumps(ol))
+            chk(f"{tag} 7 (5) ไม่ล้นแนวนอน · ไม่มี console error", overflow(page) <= 0 and not ce and not pe, json.dumps([overflow(page), ce, pe]))
+        finally: b.close()
+        # ชื่อยาว → ตัด …
+        longname = "ไอเดียที่ชื่อยาวมากมายก่อนจะถึงคำว่าสัญญาณพักชนแน่นอนแน่ๆ ยาวต่อไปอีกหลายสิบตัวอักษร"
+        b, c, page, ce, pe, dl = launcher(pw, w, h, [idea("lg", longname, kill_level="hit")])
+        try:
+            r = rows(page, "idea-kill")
+            ol = one_line(page)
+            chk(f"{tag} 5 ชื่อไอเดียยาว → ตัด '…' · ไม่ล้นบรรทัดเดียว", len(r) == 1 and "…" in r[0]["t"] and longname not in r[0]["t"] and all(x["ok"] for x in ol), json.dumps([r, ol], ensure_ascii=False)[:400])
+        finally: b.close()
 
     # ───── 6 · ไม่มีไอเดียเข้าเงื่อนไข / อ่านไม่ได้ ─────
     ideas = [idea("q1", "ร่าง", status="draft", kill_level="hit"), idea("q2", "สำรวจ", status="exploring", kill_level="hit"), idea("q3", "พัก", status="parked", kill_level="hit"),
@@ -251,16 +255,17 @@ def tests(pw, w, h, label):
         chk(f"{tag} 6 ideas อ่านไม่ได้ (rules) → ไม่มีแถวจากไอเดีย · Today ยังวาด · ไม่มี pageerror", len(all_idea_rows(page)) == 0 and page.locator("[data-td-wrap]").count() == 1 and not pe, json.dumps([all_idea_rows(page), pe]))
     finally: b.close()
 
-    # ───── 7 · Routine Selection นับ C/D ที่ tag selUS ─────
-    ideas = [idea("s1", "ไอเดียส่งต่อ", cands=[cand("SELX", 1)]), idea("s2", "ไอเดียเช็ค", recheck={"date": "2026-10-05", "what": "ตรวจ"}, date="2026-10-04")]
-    b, c, page, ce, pe, dl = launcher(pw, w, h, ideas)
-    try:
-        info = js(page, """()=>{ const n = tdLast.tasks.filter(t=>(t.tags||[]).includes('selUS')).length, idea = tdLast.tasks.filter(t=>(t.tags||[]).includes('selUS') && t.kind.startsWith('idea-')).length;
-          const slots = tdLast.rt.slots.filter(s=>tdSlotTag(s)==='selUS').map(s=>{ const e = document.querySelector('[data-slot-n="'+s.id+'"]'); return e ? +e.textContent : 0; }); return {n, idea, slots}; }""")
-        chk(f"{tag} 7 ช่อง Routine Selection US นับรวมแถว C/D ที่ tag selUS (ไอเดีย 2 แถว)", info["idea"] == 2 and info["slots"] and all(s == info["n"] for s in info["slots"]), json.dumps(info))
-        ol = one_line(page)
-        chk(f"{tag} 7 แถวไอเดียทุกแถวบรรทัดเดียว · ไม่ล้นแนวนอน · ไม่มี console error", len(ol) == 2 and all(x["ok"] for x in ol) and overflow(page) <= 0 and not ce and not pe, json.dumps([ol, overflow(page), ce, pe]))
-    finally: b.close()
+    if not PL2_IDEA_REMINDERS_REMOVED:   # PL2·7: idea-study / idea-recheck reminders removed (Ideas is no longer a required stage) — retired, see tests/PL2_retired.md
+        # ───── 7 · Routine Selection นับ C/D ที่ tag selUS ─────
+        ideas = [idea("s1", "ไอเดียส่งต่อ", cands=[cand("SELX", 1)]), idea("s2", "ไอเดียเช็ค", recheck={"date": "2026-10-05", "what": "ตรวจ"}, date="2026-10-04")]
+        b, c, page, ce, pe, dl = launcher(pw, w, h, ideas)
+        try:
+            info = js(page, """()=>{ const n = tdLast.tasks.filter(t=>(t.tags||[]).includes('selUS')).length, idea = tdLast.tasks.filter(t=>(t.tags||[]).includes('selUS') && t.kind.startsWith('idea-')).length;
+              const slots = tdLast.rt.slots.filter(s=>tdSlotTag(s)==='selUS').map(s=>{ const e = document.querySelector('[data-slot-n="'+s.id+'"]'); return e ? +e.textContent : 0; }); return {n, idea, slots}; }""")
+            chk(f"{tag} 7 ช่อง Routine Selection US นับรวมแถว C/D ที่ tag selUS (ไอเดีย 2 แถว)", info["idea"] == 2 and info["slots"] and all(s == info["n"] for s in info["slots"]), json.dumps(info))
+            ol = one_line(page)
+            chk(f"{tag} 7 แถวไอเดียทุกแถวบรรทัดเดียว · ไม่ล้นแนวนอน · ไม่มี console error", len(ol) == 2 and all(x["ok"] for x in ol) and overflow(page) <= 0 and not ce and not pe, json.dumps([ol, overflow(page), ce, pe]))
+        finally: b.close()
 
 
 def main():

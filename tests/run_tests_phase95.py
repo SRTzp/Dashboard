@@ -37,7 +37,8 @@ def wlaunch(pw, w, h):
     p24.set_ff(page, P35.FF_OPEN()); P35.seed(page)
     page.evaluate("()=>{ window.__MOCK_UID='testuid'; }")
     P44.seed_idea(page, P44.semis())
-    js(page, "()=>{ ideaStop(); ideaStart(); }"); page.wait_for_timeout(500)   # __seedDoc ไม่แจ้ง listener → เริ่ม listener ใหม่ให้เห็นไอเดีย
+    js(page, "()=>{ ideaStop(); ideaStart(); }"); page.wait_for_timeout(500)
+    js(page, "()=>{ glWrite(S=>{ delete S.candFromIdeasDone; }); plIdeasMigrate(); }"); page.wait_for_timeout(400)   # PL2·7: Ideas existing before the one-time migration become Candidates   # __seedDoc ไม่แจ้ง listener → เริ่ม listener ใหม่ให้เห็นไอเดีย
     return browser, page, ce, pe
 
 

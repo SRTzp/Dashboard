@@ -26,6 +26,9 @@ ROOT = '.ui-plan[data-id="iD"]'
 TV1, TV2, TV3 = P59.TV1, P59.TV2, "https://www.tradingview.com/x/Cc56Dd78/"
 
 
+PL2_LEGACY_VW_REMOVED = True
+
+
 def check(name, ok, detail=""):
     results.append((name, bool(ok), detail))
     detail = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False)
@@ -166,38 +169,40 @@ def watch_esc(pw, w, h, label):
         esc(page); z2 = (cnt(page, "#ltTermPop"), cnt(page, "[data-ph-menu]"))
         check(f"{tag} 2 กล่องคำศัพท์ + เมนู phase: Esc#1 ปิดกล่องคำศัพท์ · Esc#2 ปิดเมนู", z0 == (1, 1) and z1 == (0, 1) and z2 == (0, 0), json.dumps([z0, z1, z2]))
         # lightbox จากแท็บ มุมมอง
-        js(page, "()=>wlOpen('AVGO','view')"); wait(page, 400)
-        page.locator(".wlDBody [data-vw-row=tech]").click(); wait(page, 300)
-        top = ".wlDBody [data-vw-ang=tech] .vwTop .vwImg"
-        wait(page, 400)
-        rt = fit_ratio(page, top)
-        check(f"{tag} 4 มุมมอง · Tech กาง: กราฟล่าสุดเต็มกว้างบนสุด · object-fit contain · สูง ≈ กว้าง × สัดส่วนจริง (±2px) · ไม่ครอป", ratio_ok(rt) and cnt(page, ".wlDBody [data-vw-ang=tech] > :first-child.vwTop") == 1, json.dumps(rt))
-        if label == "390px":
-            check(f"{tag} 4 มุมมอง 390: ภาพไม่ล้นแนวนอน", overflow(page) <= 0 and rt["boxW"] <= rt["vw"], json.dumps([overflow(page), rt]))
-        shot(page, f"esc1-vw-tech-open-{sfx}.png", ".wlDBody")
-        page.locator(top).click(); wait(page, 300)
-        l0 = cnt(page, "#vwLb")
-        esc(page)
-        check(f"{tag} 1 lightbox กราฟ (จากแท็บ มุมมอง): เปิด ({l0}) → Esc → ปิด ({cnt(page, '#vwLb')}) · ไม่มี error", l0 == 1 and cnt(page, "#vwLb") == 0)
-        # โฟกัสอยู่ที่ <a> ใน lightbox / ช่องกรอก → Esc ยังปิด
-        page.locator(top).click(); wait(page, 250)
-        page.locator("#vwLb a").focus()
-        esc(page)
-        check(f"{tag} 1 lightbox: โฟกัสอยู่ที่ลิงก์ 'เปิดใน TV' → Esc ปิดได้", cnt(page, "#vwLb") == 0)
-        # ประวัติ 2 ข้อ → ข้อเก่ายังเป็นภาพย่อ 110px
-        js(page, "()=>vwWrite('AVGO','tech',[{id:'t2',d:'2026-10-09',t:'ใหม่',chart:'" + TV3 + "'},{id:'t1',d:'2026-10-08',t:'เก่า',chart:'" + TV2 + "'}])"); wait(page, 400)
-        hi = js(page, "()=>[...document.querySelectorAll('.wlDBody [data-vw-ang=tech] .vwHImg .vwImg')].map(e=>Math.round(e.getBoundingClientRect().height))")
-        tp = js(page, "()=>document.querySelector('.wlDBody [data-vw-ang=tech] .vwTop .vwImg img').getAttribute('src')")
-        check(f"{tag} 4 ประวัติ Tech ข้อเก่ายังเป็นภาพย่อสูง 110px (1 ภาพ) · กราฟล่าสุดอยู่บนสุดเต็มกว้าง", hi == [110] and tp.endswith("/C/Cc56Dd78.png".lower() if False else "Cc56Dd78.png"), json.dumps([hi, tp]))
-        # แถวมินิ 54×30 คงเดิม (พับ)
-        page.locator(".wlDBody [data-vw-row=tech]").click(); wait(page, 300)
-        mini = js(page, "()=>{ const e=document.querySelector('.wlDBody [data-vw-row=tech] .vwMini'); if(!e) return null; const r=e.getBoundingClientRect(); return {w:r.width,h:r.height,fit:getComputedStyle(e.querySelector('img')).objectFit,add:document.querySelectorAll('.wlDBody [data-vw-add-tv]').length}; }")
-        check(f"{tag} 2 รูปจิ๋วในแถว (vwMini) คง 54×30 · ครอปได้ (cover) · มีกราฟแล้ว → ไม่มีปุ่ม ＋ กราฟ TV", mini and mini["w"] == 54 and mini["h"] == 30 and mini["fit"] == "cover" and mini["add"] == 0, json.dumps(mini))
+        if not PL2_LEGACY_VW_REMOVED:   # PL2·3/D2: legacy มุมมอง block removed from UI — retired, see tests/PL2_retired.md
+            js(page, "()=>wlOpen('AVGO','view')"); wait(page, 400)
+            page.locator(".wlDBody [data-vw-row=tech]").click(); wait(page, 300)
+            top = ".wlDBody [data-vw-ang=tech] .vwTop .vwImg"
+            wait(page, 400)
+            rt = fit_ratio(page, top)
+            check(f"{tag} 4 มุมมอง · Tech กาง: กราฟล่าสุดเต็มกว้างบนสุด · object-fit contain · สูง ≈ กว้าง × สัดส่วนจริง (±2px) · ไม่ครอป", ratio_ok(rt) and cnt(page, ".wlDBody [data-vw-ang=tech] > :first-child.vwTop") == 1, json.dumps(rt))
+            if label == "390px":
+                check(f"{tag} 4 มุมมอง 390: ภาพไม่ล้นแนวนอน", overflow(page) <= 0 and rt["boxW"] <= rt["vw"], json.dumps([overflow(page), rt]))
+            shot(page, f"esc1-vw-tech-open-{sfx}.png", ".wlDBody")
+            page.locator(top).click(); wait(page, 300)
+            l0 = cnt(page, "#vwLb")
+            esc(page)
+            check(f"{tag} 1 lightbox กราฟ (จากแท็บ มุมมอง): เปิด ({l0}) → Esc → ปิด ({cnt(page, '#vwLb')}) · ไม่มี error", l0 == 1 and cnt(page, "#vwLb") == 0)
+            # โฟกัสอยู่ที่ <a> ใน lightbox / ช่องกรอก → Esc ยังปิด
+            page.locator(top).click(); wait(page, 250)
+            page.locator("#vwLb a").focus()
+            esc(page)
+            check(f"{tag} 1 lightbox: โฟกัสอยู่ที่ลิงก์ 'เปิดใน TV' → Esc ปิดได้", cnt(page, "#vwLb") == 0)
+            # ประวัติ 2 ข้อ → ข้อเก่ายังเป็นภาพย่อ 110px
+            js(page, "()=>vwWrite('AVGO','tech',[{id:'t2',d:'2026-10-09',t:'ใหม่',chart:'" + TV3 + "'},{id:'t1',d:'2026-10-08',t:'เก่า',chart:'" + TV2 + "'}])"); wait(page, 400)
+            hi = js(page, "()=>[...document.querySelectorAll('.wlDBody [data-vw-ang=tech] .vwHImg .vwImg')].map(e=>Math.round(e.getBoundingClientRect().height))")
+            tp = js(page, "()=>document.querySelector('.wlDBody [data-vw-ang=tech] .vwTop .vwImg img').getAttribute('src')")
+            check(f"{tag} 4 ประวัติ Tech ข้อเก่ายังเป็นภาพย่อสูง 110px (1 ภาพ) · กราฟล่าสุดอยู่บนสุดเต็มกว้าง", hi == [110] and tp.endswith("/C/Cc56Dd78.png".lower() if False else "Cc56Dd78.png"), json.dumps([hi, tp]))
+            # แถวมินิ 54×30 คงเดิม (พับ)
+            page.locator(".wlDBody [data-vw-row=tech]").click(); wait(page, 300)
+            mini = js(page, "()=>{ const e=document.querySelector('.wlDBody [data-vw-row=tech] .vwMini'); if(!e) return null; const r=e.getBoundingClientRect(); return {w:r.width,h:r.height,fit:getComputedStyle(e.querySelector('img')).objectFit,add:document.querySelectorAll('.wlDBody [data-vw-add-tv]').length}; }")
+            check(f"{tag} 2 รูปจิ๋วในแถว (vwMini) คง 54×30 · ครอปได้ (cover) · มีกราฟแล้ว → ไม่มีปุ่ม ＋ กราฟ TV", mini and mini["w"] == 54 and mini["h"] == 30 and mini["fit"] == "cover" and mini["add"] == 0, json.dumps(mini))
         check(f"{tag} 1 console ไม่มี error (Watch)", not real(ce) and not pe, json.dumps(real(ce)[:3] + pe[:3], ensure_ascii=False))
     finally: b.close()
 
 
 def tech_add(pw, w, h, label):
+    return   # PL2·3/D2 RETIRED: tests the legacy Event/Fund./Tech block (removed from UI) — tests/PL2_retired.md
     tag = f"[{ENGINE}/{label}]"; sfx = label.replace("px", "")
     from run_tests_phase59 import idea, cand
     ideas = [idea([cand("CAA", "Cand A", 1, "study")])]

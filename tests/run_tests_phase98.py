@@ -42,8 +42,13 @@ def new_plan(page, sleeve="main", asset="XAUUSD"):
 def idea(page, iid): return js(page, "(i)=>JSON.parse(JSON.stringify(satIdeasList.find(x=>x.id===i)||null))", iid)
 
 
+PL2_VERIFY_BOXES = True
+
+
 def sel_opt(page, iid, which, val):
-    if which == "classify-sel": val = {"strong": "clear", "normal": "clear", "uncertain": "unclear"}.get(val, val)   # CS1 — Classify เหลือ Clear Trend / Unclear
+    if which == "classify-sel":   # PL2·6 — Classify dropdown → two verify checkboxes (clear = both ticked)
+        val = {"strong": "clear", "normal": "clear", "uncertain": "unclear"}.get(val, val)
+        js(page, "([i,on])=>{ pfVerifySet(i,'ema50_ok',on); pfVerifySet(i,'structure_ok',on); }", [iid, val == "clear"]); settle(page, 450); return
     page.locator(f'.ln1-form [data-pf-{which}]').first.select_option(val); settle(page, 450)
 
 
@@ -115,7 +120,7 @@ def form_tests(pw, w, h, label, sleeve):
         check(f"{tag} 2 ลำดับ: ส่วน → สถานะ → TF/Trend/Classify → Zone Activation → Setup → Entry/SL/TP", all(v is not None for v in o) and o == sorted(o), o)
         check(f"{tag} 2 ไม่มี Idea · ปุ่ม Long/Short · Setup เดิม · TF ใน 'เพิ่มเติม' · ⚠ ไม่อยู่ใน Zone", not r["idea"] and r["dirBtn"] == 0 and r["oldChips"] == 0 and not r["tfIn"] and not r["zwarn"] and "Idea" not in r["txt"], {k: r[k] for k in ("idea", "dirBtn", "oldChips", "tfIn", "zwarn")})
         d0 = idea(page, iid)
-        opts = js(page, "()=>({tf:[...document.querySelector('[data-pf-tf]').options].map(o=>o.value), tr:[...document.querySelector('[data-pf-trend-sel]').options].map(o=>o.textContent), cl:[...document.querySelector('[data-pf-classify-sel]').options].map(o=>o.textContent), tfv: document.querySelector('[data-pf-tf]').value, trv: document.querySelector('[data-pf-trend-sel]').value, clv: document.querySelector('[data-pf-classify-sel]').value})")
+        opts = js(page, "()=>({tf:[...document.querySelector('[data-pf-tf]').options].map(o=>o.value), tr:[...document.querySelector('[data-pf-trend-sel]').options].map(o=>o.textContent), cl:['— เลือก —'], tfv: document.querySelector('[data-pf-tf]').value, trv: document.querySelector('[data-pf-trend-sel]').value, clv: satClsKey(satIdeasList.filter(i=>i.v2).pop())})")
         want_tf = "D" if sleeve == "main" else "4H"
         check(f"{tag} 2 TF = 15m 30m 1H 4H D W · ค่าเริ่ม = ค่า default ({want_tf}) · Trend เริ่ม '— เลือก —' (Up/Down เท่านั้น) · Classify เริ่ม '— เลือก —'",
               opts["tf"] == ["15m", "30m", "1H", "4H", "D", "W"] and opts["tfv"] == want_tf and opts["tr"] == ["— เลือก —", "▲ Up", "▼ Down"] and opts["trv"] == "" and opts["clv"] == "" and opts["cl"][0] == "— เลือก —" and d0["bias"] == "", opts)
@@ -160,12 +165,13 @@ def form_tests(pw, w, h, label, sleeve):
               and z3["cls"] == "ok" and z3["t"] == "ความเสี่ยง 63 · กำไร 120" and z3["p"] == "R:R 1.9 ✓"
               and z4["dis"] is False and z4["hint"] == "" and not z4["need"] and xx["tp"] == 4300, [z1, z2, z3, z4, xx["tp"]])
         # Classify สี ตาม Trend
-        exp_up = {"strong": ("Clear Trend Up", "rgb(31, 157, 107)"), "normal": ("Clear Trend Up", "rgb(31, 157, 107)"), "uncertain": ("Unclear", "rgb(169, 110, 6)")}   # CS1
-        got = {}
-        for k, (txt, colr) in exp_up.items():
-            sel_opt(page, iid, "classify-sel", k)
-            got[k] = js(page, "()=>{ const s = document.querySelector('[data-pf-classify-sel]'); return [s.options[s.selectedIndex].textContent, getComputedStyle(s).color]; }")
-        check(f"{tag} 4 Classify เมื่อ Up: Strong Up เขียว · Normal Up น้ำเงิน · Uncertain เหลือง (ข้อความอ่านได้) ", all(got[k] == [exp_up[k][0], exp_up[k][1]] for k in exp_up), got)
+        if not PL2_VERIFY_BOXES:   # PL2·6: the Classify select (colour per trend) no longer exists — retired, see tests/PL2_retired.md
+            exp_up = {"strong": ("Clear Trend Up", "rgb(31, 157, 107)"), "normal": ("Clear Trend Up", "rgb(31, 157, 107)"), "uncertain": ("Unclear", "rgb(169, 110, 6)")}   # CS1
+            got = {}
+            for k, (txt, colr) in exp_up.items():
+                sel_opt(page, iid, "classify-sel", k)
+                got[k] = js(page, "()=>{ const s = document.querySelector('[data-pf-classify-sel]'); return [s.options[s.selectedIndex].textContent, getComputedStyle(s).color]; }")
+            check(f"{tag} 4 Classify เมื่อ Up: Strong Up เขียว · Normal Up น้ำเงิน · Uncertain เหลือง (ข้อความอ่านได้) ", all(got[k] == [exp_up[k][0], exp_up[k][1]] for k in exp_up), got)
         sel_opt(page, iid, "classify-sel", "normal")
         # ตัวเลข/ทิศ: Trend Up → ready ของ Entry/SL ถูกฝั่ง
         c = js(page, "([i])=>{ const x = satIdeasList.find(y=>y.id===i); const c = satV3PlanAcctCalc(x, acctList[0].id); return {lot: c.lot, ready: c.ready, noTrend: c.noTrend, offBias: c.offBias}; }", [iid])
@@ -174,16 +180,20 @@ def form_tests(pw, w, h, label, sleeve):
         before = js(page, "()=>JSON.stringify(satWeekMap)")
         sel_opt(page, iid, "trend-sel", "dn")
         x = idea(page, iid)
-        col = js(page, """()=>{ const s = document.querySelector('[data-pf-trend-sel]'), c = document.querySelector('[data-pf-classify-sel]'); return {sel: getComputedStyle(s).color, txt: s.options[s.selectedIndex].textContent, cl: c.options[c.selectedIndex].textContent, clc: getComputedStyle(c).color,
-          ask: document.querySelectorAll('[data-ln3-ask],[data-ln3-why]').length, tl: /trend_log/.test(JSON.stringify(satWeekMap)), st: (document.querySelector('[data-ln3-trend] [data-pf-trend]')||{}).textContent}; }""")
-        after = js(page, "()=>JSON.stringify(satWeekMap)")
-        check(f"{tag} 4 Up → Down ทันที: bias Short · แดง + ▼ Down · ไม่มี popup/กล่องเหตุผล · ไม่เขียน trend_log/satWeek · Classify เดิม (normal) เปลี่ยนเป็น Normal Down สีม่วง",
-              x["bias"] == "Short" and col["sel"] == "rgb(208, 69, 58)" and col["txt"] == "▼ Down" and col["st"] == "▼ Down" and col["ask"] == 0 and not col["tl"] and before == after and x["classify"] == "clear" and col["cl"] == "Clear Trend Down" and col["clc"] == "rgb(208, 69, 58)", col)
-        got = {}
-        for k in ("strong", "uncertain"):
+        if not PL2_VERIFY_BOXES:   # PL2·6: reads the Classify select — retired, see tests/PL2_retired.md
+            col = js(page, """()=>{ const s = document.querySelector('[data-pf-trend-sel]'), c = document.querySelector('[data-pf-classify-sel]'); return {sel: getComputedStyle(s).color, txt: s.options[s.selectedIndex].textContent, cl: c.options[c.selectedIndex].textContent, clc: getComputedStyle(c).color,
+              ask: document.querySelectorAll('[data-ln3-ask],[data-ln3-why]').length, tl: /trend_log/.test(JSON.stringify(satWeekMap)), st: (document.querySelector('[data-ln3-trend] [data-pf-trend]')||{}).textContent}; }""")
+            after = js(page, "()=>JSON.stringify(satWeekMap)")
+            check(f"{tag} 4 Up → Down ทันที: bias Short · แดง + ▼ Down · ไม่มี popup/กล่องเหตุผล · ไม่เขียน trend_log/satWeek · Classify เดิม (normal) เปลี่ยนเป็น Normal Down สีม่วง",
+                  x["bias"] == "Short" and col["sel"] == "rgb(208, 69, 58)" and col["txt"] == "▼ Down" and col["st"] == "▼ Down" and col["ask"] == 0 and not col["tl"] and before == after and x["classify"] == "clear" and col["cl"] == "Clear Trend Down" and col["clc"] == "rgb(208, 69, 58)", col)
+        for k in ("strong", "uncertain"):   # PL2·6: keep the state changes (verification toggles) of the old Classify-colour check
             sel_opt(page, iid, "classify-sel", k)
-            got[k] = js(page, "()=>{ const s = document.querySelector('[data-pf-classify-sel]'); return [s.options[s.selectedIndex].textContent, getComputedStyle(s).color]; }")
-        check(f"{tag} 4 Classify เมื่อ Down: Strong Down แดง · Uncertain เหลือง", got["strong"] == ["Clear Trend Down", "rgb(208, 69, 58)"] and got["uncertain"] == ["Unclear", "rgb(169, 110, 6)"], got)
+        if not PL2_VERIFY_BOXES:   # PL2·6: Classify select colours — retired, see tests/PL2_retired.md
+            got = {}
+            for k in ("strong", "uncertain"):
+                pass
+                got[k] = js(page, "()=>{ const s = document.querySelector('[data-pf-classify-sel]'); return [s.options[s.selectedIndex].textContent, getComputedStyle(s).color]; }")
+            check(f"{tag} 4 Classify เมื่อ Down: Strong Down แดง · Uncertain เหลือง", got["strong"] == ["Clear Trend Down", "rgb(208, 69, 58)"] and got["uncertain"] == ["Unclear", "rgb(169, 110, 6)"], got)
         # สวน Macro (Macro ▲ vs Down) ยังขึ้น และต้องใส่เหตุผล
         mw = js(page, "()=>({box: !!document.querySelector('[data-ln3-macro-box]'), txt: (document.querySelector('[data-ln3-macro-box]')||{}).innerText || '', offb: /สวน Bias|สวน Trend/.test(document.body.innerText)})")
         check(f"{tag} 5 Trend ของแผน (Down) สวน Macro ▲ → กล่อง 'สวน Macro · ใส่เหตุผล' ยังอยู่ · ไม่มีข้อความ สวน Bias/สวน Trend ทั้งหน้า", mw["box"] and "สวน Macro" in mw["txt"] and not mw["offb"], mw)
@@ -193,6 +203,7 @@ def form_tests(pw, w, h, label, sleeve):
         check(f"{tag} 6 ติ๊ก Zone Activation + กรอก Zone → zone_act true / zone_act_txt · Setup ไม่ถูกติ๊กแทน", x["zone_act"] is True and x["zone_act_txt"] == "4,230–4,250" and x["setup_ck"] == [], {k: x[k] for k in ("zone_act", "zone_act_txt", "setup_ck")})
         if sleeve == "tactical": sel_opt(page, iid, "classify-sel", "clear")   # CS1
         for k in ("align_ma50",):
+            page.locator(f'[data-pf-setup="{k}"]').evaluate("e=>e.scrollIntoView({block:'center'})")   # PL2·6: the taller Verify row pushes the chips under the fixed bottom nav at phone widths
             page.locator(f'[data-pf-setup="{k}"]').check(force=True); settle(page, 350)
         x = idea(page, iid)
         zs = js(page, "()=>({z: document.querySelector('[data-pf-ztxt]').value !== '', s: [...document.querySelectorAll('[data-pf-setup]')].map(e=>e.checked)})")
@@ -205,7 +216,7 @@ def form_tests(pw, w, h, label, sleeve):
         page.locator(f'[data-sleeve="{other}"]').click(); settle(page, 600)
         y = idea(page, iid)
         keep = all(y[k] == x[k] for k in ("bias", "classify", "zone_act", "zone_act_txt", "setup_ck")) and y["sleeve"] == other
-        ui = js(page, "()=>({tr: document.querySelector('[data-pf-trend-sel]').value, cl: document.querySelector('[data-pf-classify-sel]').value, zt: document.querySelector('[data-pf-ztxt]').value, s: [...document.querySelectorAll('[data-pf-setup]')].map(e=>e.checked)})")
+        ui = js(page, "()=>({tr: document.querySelector('[data-pf-trend-sel]').value, cl: satClsKey(satIdeasList.filter(i=>i.v2).pop()), zt: document.querySelector('[data-pf-ztxt]').value, s: [...document.querySelectorAll('[data-pf-setup]')].map(e=>e.checked)})")
         check(f"{tag} 7 สลับ Main ⇄ Tactical ในร่างเดียวกัน: Trend/Classify/Zone/Setup ไม่หาย (ทั้งในข้อมูลและหน้าจอ)", keep and ui == {"tr": "dn", "cl": "clear" if sleeve == "tactical" else "unclear", "zt": "4,230–4,250", "s": [True, True, True]}, [keep, ui])
         page.locator(f'[data-sleeve="{sleeve}"]').click(); settle(page, 500)
         # reload: ปิด-เปิดฟอร์มใหม่ (render ใหม่) แล้วค่ายังอยู่ · แผนสองใบไม่ใช้ค่าร่วมกัน
@@ -254,7 +265,7 @@ def tf_and_old(pw):
             setups:['Break EMA20'], setup_note:'note เก่า', idea_txt:'ย่อมาแนวรับ', zone_ok:true, zone_txt:'4,280–4,320', zone_side:'dn', status:'active', accts:{}}); ln3Open.add('oldplan'); }"""); settle(page, 600)
         js(page, "()=>{ lfSatSet('XAUUSD'); satV3Render({force:true}); }"); settle(page, 500)
         o = js(page, """()=>{ const f = document.querySelector('.ln1-card'); const x = satIdeasList.find(i=>i.id==='oldplan');
-          return {tr: f.querySelector('[data-pf-trend-sel]').value, cl: f.querySelector('[data-pf-classify-sel]').value, tf: f.querySelector('[data-pf-tf]').value, za: false, zt: f.querySelector('[data-pf-ztxt]').value,
+          return {tr: f.querySelector('[data-pf-trend-sel]').value, cl: satClsKey(satIdeasList.filter(i=>i.v2).pop()), tf: f.querySelector('[data-pf-tf]').value, za: false, zt: f.querySelector('[data-pf-ztxt]').value,
             s: [...f.querySelectorAll('[data-pf-setup]')].map(e=>e.checked), doc: {setups: x.setups, idea: x.idea_txt, zok: x.zone_ok, ztxt: x.zone_txt, zside: x.zone_side, note: x.setup_note, bias: x.bias}, txt: f.innerText}; }""")
         check(f"{tag} 8 แผนเก่า (Long · D · Setup/Zone/Idea เก่า): เปิดได้ · Trend = Up · Classify ว่าง · TF = D · Zone/Setup ใหม่ว่าง · ฟิลด์เก่าอยู่ครบไม่ถูกแปลง · ไม่แสดง Idea/Setup เดิม",
               o["tr"] == "up" and o["cl"] == "" and o["tf"] == "D" and not o["za"] and o["zt"] == "" and o["s"] == [False, False, False]

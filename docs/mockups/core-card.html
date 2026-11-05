@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>7E mockup — การ์ดตำแหน่ง Core ต่อบัญชี</title>
+<style>
+/* token คัดจาก index.html (:root ~26–100 และ .sumBlk ~646) — ใช้ค่าเดียวกัน */
+:root{
+  --bg:#EEF0F3;--card:#fff;--line:#E3E6EA;--soft:#F5F6F8;--mute:#7B818C;--dark:#1D2025;
+  --up:#1F9D6B;--dn:#D4493F;--flat:#9AA0A8;--warn:#C98A12;
+  --r-card:12px;--r-row:10px;--r-btn:8px;--r-chip:999px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'Manrope','IBM Plex Sans Thai',-apple-system,'Segoe UI',sans-serif;
+  --sum-bg:#16191E;--sum-cell:#262A31;--sum-line:#3A3F48;--sum-fg:#F4F5F7;--sum-strong:#fff;--sum-soft:#D9DDE3;--sum-muted:#B4BAC4;
+  --sum-up:#6EE7A0;--sum-dn:#FCA5A5;--sum-warn:#FCD34D;--sum-warn-val:#F2B84B;
+  --sum-pill-up-bg:rgba(74,222,128,.16);--sum-pill-dn-bg:rgba(248,113,113,.16);--sum-pill-warn-bg:rgba(252,211,77,.16);
+  --sum-pill-nt-bg:rgba(255,255,255,.08);--sum-pill-nt:#B4BAC4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:17px;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--dark);font-family:var(--sans);line-height:1.5;padding:16px;max-width:980px;margin:0 auto}
+h1{font-size:1.05rem;margin-bottom:4px}
+.note{font-size:.8rem;color:var(--mute);margin-bottom:14px}
+.acctH{display:flex;align-items:center;gap:8px;margin:22px 0 8px;font-weight:700;font-size:.95rem}
+.acctH i{width:4px;height:18px;border-radius:2px;background:var(--c)}
+.acctH small{font-weight:400;color:var(--mute);font-size:.78rem}
+
+/* บล็อกสรุปเข้ม (.sumBlk) */
+.sumBlk{background:var(--sum-bg);color:var(--sum-fg);border-radius:var(--r-card);padding:14px;margin-bottom:12px}
+.sumHead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:12px}
+.sumT{font-size:1rem;font-weight:600}.sumR{font-size:.8rem;color:var(--sum-soft);white-space:nowrap}
+.sumGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media(max-width:700px){.sumGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sumCell{background:var(--sum-cell);border-radius:12px;padding:12px;min-width:0}
+.sumL{font-size:.8rem;color:var(--sum-muted);font-weight:500;margin-bottom:6px}
+.sumBig{font-size:1.6rem;font-weight:700;line-height:1.1;overflow-wrap:anywhere}
+.sumBig small{font-size:.8rem;color:var(--sum-muted);font-weight:500}
+.sumCell.warn .sumBig{color:var(--sum-warn-val)}
+.sumSub{font-size:.78rem;color:var(--sum-soft);margin-top:4px}
+.sumPill{display:inline-block;font-size:.74rem;font-weight:600;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.sumPill.up{background:var(--sum-pill-up-bg);color:var(--sum-up)}.sumPill.dn{background:var(--sum-pill-dn-bg);color:var(--sum-dn)}
+.sumPill.warn{background:var(--sum-pill-warn-bg);color:var(--sum-warn)}.sumPill.nt{background:var(--sum-pill-nt-bg);color:var(--sum-pill-nt)}
+.bar{height:5px;border-radius:3px;background:var(--sum-line);margin-top:8px;position:relative;overflow:hidden}
+.bar b{position:absolute;left:0;top:0;bottom:0;background:var(--sum-up)}
+.bar em{position:absolute;top:-1px;bottom:-1px;width:2px;background:var(--sum-warn)}
+
+/* การ์ดตำแหน่ง */
+.pos{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:14px;margin-bottom:12px;min-width:0}
+.pHead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 10px;align-items:center}
+.tk{font-size:1.15rem;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
+.chip{font-size:.72rem;padding:2px 8px;border-radius:var(--r-chip);border:1px solid var(--line);color:var(--dark);background:var(--card);white-space:nowrap}
+.chip.a{border-color:var(--dark)}
+.st{font-size:.8rem;font-weight:600;white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-btn);overflow:hidden;margin:12px 0 10px}
+.seg button{border:0;background:var(--card);padding:6px 12px;font:inherit;font-size:.8rem;color:var(--dark);cursor:pointer;min-height:34px}
+.seg button.on{background:var(--dark);color:#fff}
+.mode[hidden]{display:none}
+.priceRow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+@media(max-width:700px){.priceRow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.fld{background:var(--soft);border-radius:var(--r-row);padding:8px 10px;min-width:0}
+.fld label{display:block;font-size:.7rem;color:var(--mute)}
+.fld input{width:100%;border:0;background:transparent;font:inherit;font-family:var(--mono);font-size:.95rem;font-weight:600;color:var(--dark);outline:0;padding:0}
+.fld .v{font-family:var(--mono);font-weight:600;font-size:.95rem}
+.fld small{display:block;font-size:.68rem;color:var(--mute)}
+.fld.warn .v,.fld.warn small{color:var(--warn)}
+.fBtns{display:flex;gap:4px;flex-wrap:wrap}
+.fBtns button{border:1px solid var(--line);background:var(--card);border-radius:var(--r-btn);padding:3px 9px;font:inherit;font-size:.78rem;cursor:pointer;min-height:30px}
+.fBtns button.on{background:var(--dark);color:#fff;border-color:var(--dark)}
+.res{border:1px solid var(--line);border-radius:var(--r-row);padding:10px 12px;margin-bottom:10px}
+.res h4{font-size:.78rem;color:var(--mute);font-weight:600;margin-bottom:6px}
+.big{font-family:var(--mono);font-size:1.25rem;font-weight:700}
+.sub{font-size:.8rem;color:var(--mute)}
+.tag{display:inline-block;font-size:.72rem;padding:2px 8px;border-radius:var(--r-chip);border:1px solid var(--warn);color:var(--warn);margin-left:6px}
+.tag.up{border-color:var(--up);color:var(--up)}.tag.dn{border-color:var(--dn);color:var(--dn)}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{font-size:.7rem;color:var(--mute);font-weight:500;text-align:right;padding:4px 6px;border-bottom:1px solid var(--line)}
+td{text-align:right;padding:6px;border-bottom:1px solid var(--soft);font-family:var(--mono);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;font-family:var(--sans)}
+td.g{color:var(--mute)}
+.tw{overflow-x:auto}
+.warnLine{font-size:.8rem;color:var(--warn);margin-top:6px}
+.okLine{font-size:.8rem;color:var(--up);margin-top:6px}
+.foot{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:var(--r-btn);padding:6px 12px;font:inherit;font-size:.8rem;cursor:pointer;min-height:36px;color:var(--dark)}
+.btn.pri{background:var(--dark);color:#fff;border-color:var(--dark)}
+.emg{font-size:.78rem;color:var(--mute);margin-top:8px}
+.emg b{color:var(--dn);font-family:var(--mono)}
+.sim{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px}
+.legend{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:12px 14px;font-size:.82rem}
+.legend div{padding:3px 0}
+</style>
+</head>
+<body>
+<h1>7E — การ์ดตำแหน่ง Core ต่อบัญชี (mockup)</h1>
+<p class="note">ตัวเลข = ตัวอย่างจาก core-risk-framework · ชื่อหุ้น/ราคาเป็นของสมมติ · ช่องที่กรอกได้ในการ์ด W คำนวณจริง (ดูสูตรใน 7E-card-spec.md) · ไม่มีการเก็บข้อมูล</p>
+
+<!-- ═══════════ บัญชี Family · TH · การ์ด W ═══════════ -->
+<div class="acctH"><i style="--c:#C2410C"></i>Family <small>ตลาด Core = TH · ถัง Core ฿700,000</small></div>
+
+<div class="sumBlk" aria-label="สรุป Core · Family">
+  <div class="sumHead"><span class="sumT">Core · Family</span><span class="sumR">ราคาปิดสัปดาห์ล่าสุด 27 ก.ย. (3 วัน)</span></div>
+  <div class="sumGrid">
+    <div class="sumCell"><div class="sumL">ถัง Core</div><div class="sumBig">฿700,000</div><div class="sumSub">≈ 70% ของบัญชี</div></div>
+    <div class="sumCell"><div class="sumL">ตำแหน่ง</div><div class="sumBig">1 <small>ตัว</small></div><div class="sumSub">W 1 · L 0 · <span class="sumPill nt">ขาดราคา 0</span></div></div>
+    <div class="sumCell"><div class="sumL">ชั้น 2 · เสี่ยงถึง Stop</div><div class="sumBig">1.3% <small>/ 20%</small></div>
+      <div class="bar"><b style="width:6.5%"></b><em style="left:75%"></em></div><div class="sumSub">฿9,000 · เหลืองที่ 15%</div></div>
+    <div class="sumCell"><div class="sumL">ถ้าทุกไม้โดน Stop</div><div class="sumBig">−0.9% <small>ของบัญชี</small></div><div class="sumSub">คิดจากราคาปัจจุบัน</div></div>
+  </div>
+</div>
+
+<div class="pos" id="cW">
+  <div class="pHead">
+    <span class="tk">AAA.BK</span>
+    <div class="chips"><span class="chip">Family</span><span class="chip">TH</span><span class="chip a">Tier A · เพดานไม้แรก 10%</span><span class="chip">W</span></div>
+    <span class="st" style="color:var(--up)">🟢 ปกติ</span>
+  </div>
+  <div class="seg" role="tablist"><button class="on" data-m="W">ระบบ Week</button><button data-m="L">ถัวตามแนวรับ</button></div>
+
+  <div class="mode" data-mode="W">
+    <div class="priceRow">
+      <div class="fld"><label>Entry ไม้แรก</label><input id="wEntry" type="number" inputmode="decimal" value="100"></div>
+      <div class="fld"><label>Stop (เดียวทั้งตำแหน่ง)</label><input id="wStop" type="number" inputmode="decimal" value="90"></div>
+      <div class="fld"><label>Fund-flow f <span id="wFsrc" style="color:var(--mute)">(แดง 1 ตัว)</span></label>
+        <div class="fBtns" id="wF"><button data-f="1">100%</button><button data-f="0.75" class="on">75%</button><button data-f="0.5">50%</button></div></div>
+      <div class="fld"><label>งบเสี่ยง 1% × f</label><div class="v" id="wBudget">฿5,250</div><small>เต็ม ฿7,000</small></div>
+    </div>
+
+    <div class="res">
+      <h4>ไม้แรก</h4>
+      <div><span class="big" id="wQty1">500</span> หุ้น <span class="tag" id="wTag1">f 75%</span></div>
+      <div class="sub" id="wSub1">ทุน ฿50,000 (7.1% ของถัง) · เสี่ยง ฿5,000 (0.71% ของถัง) · จากงบเสี่ยง 525 → ปัดหลัก 100 = 500 · เพดาน Tier 700</div>
+    </div>
+
+    <div class="res">
+      <h4>ไม้เติม (จำลองก่อนซื้อ) — เติมได้เมื่อ ค้าง + ไม้ใหม่ ≤ งบเสี่ยง × f</h4>
+      <div class="sim">
+        <div class="fld"><label>ราคาเติม</label><input id="aPx" type="number" inputmode="decimal" value="115"></div>
+        <div class="fld"><label>Stop ใหม่</label><input id="aStop" type="number" inputmode="decimal" value="100"></div>
+      </div>
+      <div><span class="big" id="aQty">200</span> หุ้น <span class="tag up" id="aTag">ปกติ</span></div>
+      <div class="sub" id="aSub"></div>
+      <div class="warnLine" id="aWarn" hidden></div>
+    </div>
+
+    <div class="res">
+      <h4>ลำดับ pyramid (ตัวอย่าง ราคา 100 → 115 → 130 · เลื่อน Stop 90 → 100 → 112)</h4>
+      <div class="tw"><table>
+        <tr><th>ไม้</th><th>ราคา</th><th>Stop</th><th>ค้าง</th><th>ใหม่</th><th>หุ้น</th><th>รวม</th></tr>
+        <tr><td>1</td><td>100</td><td>90</td><td class="g">0</td><td>5,000</td><td>500</td><td>500</td></tr>
+        <tr><td>2 (50%)</td><td>115</td><td>100</td><td class="g">0</td><td>3,000</td><td>200 <span class="sub">(250 ปัด)</span></td><td>700</td></tr>
+        <tr><td>3 (50%)</td><td>130</td><td>112</td><td class="g">0</td><td>1,800</td><td>100</td><td>800</td></tr>
+      </table></div>
+      <div class="okLine">ขาดทุนสูงสุดต่อตัว ≤ ฿5,250 เสมอ ไม่ว่าจะเติมกี่ไม้ (Stop เลยทุนเฉลี่ย = ค้าง 0)</div>
+    </div>
+  </div>
+
+  <div class="mode" data-mode="L" hidden>
+    <p class="sub" style="margin-bottom:8px">บันได L ยังไม่ได้ล็อก — กรอก 2–3 ระดับ + Stop ตัวเดียว แล้วกด "ล็อกแผน" (ดูตัวอย่างเต็มในบัญชีหลักด้านล่าง)</p>
+  </div>
+
+  <div class="priceRow" style="margin-top:2px">
+    <div class="fld"><label>ราคาปิดสัปดาห์</label><div class="v">108.00</div><small>27 ก.ย. · 3 วัน</small></div>
+    <div class="fld"><label>EMA10 รายสัปดาห์</label><div class="v">104.20</div><small>ปิดเหนือ = ยังเติมได้</small></div>
+    <div class="fld"><label>Stop ปัจจุบัน</label><div class="v">90.00</div><small>ปิดสัปดาห์ใต้นี้ = ขาย</small></div>
+    <div class="fld"><label>เสี่ยงถึง Stop</label><div class="v">฿9,000</div><small>500 × (108 − 90) · 1.3%</small></div>
+  </div>
+  <div class="emg">Stop ฉุกเฉินกลางสัปดาห์ (−7%): <b>83.70</b> → ตั้งคำสั่งที่โบรกเอง</div>
+  <div class="foot"><button class="btn pri">บันทึกซื้อไม้…</button><button class="btn">แก้ Stop / Entry</button><button class="btn">อัปเดตราคาปิดสัปดาห์</button><button class="btn">ปิดตำแหน่ง</button></div>
+</div>
+
+<!-- ═══════════ บัญชีหลัก · US · การ์ด L ═══════════ -->
+<div class="acctH"><i style="--c:#1D4ED8"></i>หลัก <small>ตลาด Core = US · ถัง Core $700,000 (ตัวอย่าง)</small></div>
+
+<div class="sumBlk" aria-label="สรุป Core · หลัก">
+  <div class="sumHead"><span class="sumT">Core · หลัก</span><span class="sumR">ราคาปิดสัปดาห์ล่าสุด 27 ก.ย. (3 วัน)</span></div>
+  <div class="sumGrid">
+    <div class="sumCell"><div class="sumL">ถัง Core</div><div class="sumBig">$700,000</div><div class="sumSub">≈ 70% ของบัญชี</div></div>
+    <div class="sumCell"><div class="sumL">ตำแหน่ง</div><div class="sumBig">1 <small>ตัว</small></div><div class="sumSub">W 0 · L 1 (10.0% / 30%) · <span class="sumPill nt">ขาดราคา 0</span></div></div>
+    <div class="sumCell warn"><div class="sumL">ชั้น 2 · เสี่ยงถึง Stop</div><div class="sumBig">16.2% <small>/ 20%</small></div>
+      <div class="bar"><b style="width:81%;background:var(--sum-warn-val)"></b><em style="left:75%"></em></div><div class="sumSub">เกิน 15% → งดซื้อเพิ่ม (ตัวอย่างเตือนสีเหลือง)</div></div>
+    <div class="sumCell"><div class="sumL">ถ้าทุกไม้โดน Stop</div><div class="sumBig">−1.1% <small>ของบัญชี</small></div><div class="sumSub">คิดจากราคาปัจจุบัน</div></div>
+  </div>
+</div>
+
+<div class="pos" id="cL">
+  <div class="pHead">
+    <span class="tk">XYZ</span>
+    <div class="chips"><span class="chip">หลัก</span><span class="chip">US</span><span class="chip">ถัวตามแนวรับ (L)</span><span class="chip">งบ 10% = $70,000</span></div>
+    <span class="st" style="color:var(--warn)">🟡 ปิดใต้ EMA10 · งดเพิ่ม</span>
+  </div>
+  <div class="seg"><button data-m="W">ระบบ Week</button><button class="on" data-m="L">ถัวตามแนวรับ</button></div>
+
+  <div class="mode" data-mode="W" hidden>
+    <p class="sub">ตำแหน่งนี้ล็อกเป็น L แล้ว — สลับกลับ W ได้เฉพาะตอนยังไม่ซื้อไม้แรก</p>
+  </div>
+
+  <div class="mode" data-mode="L">
+    <div class="res">
+      <h4>บันไดถัวเฉลี่ย (ล็อกแล้ว · แก้แผน = คิดความเสี่ยงใหม่) · แบ่งเงิน 40 / 30 / 30</h4>
+      <div class="tw"><table>
+        <tr><th>ระดับ</th><th>ราคา</th><th>เงิน</th><th>หุ้น</th><th>เสี่ยงถึง SL</th><th>สถานะ</th></tr>
+        <tr><td>L1</td><td>100</td><td>$28,000</td><td>280</td><td>$8,400</td><td><span class="sumPill up" style="background:rgba(31,157,107,.14);color:var(--up)">ซื้อแล้ว</span></td></tr>
+        <tr><td>L2</td><td>90</td><td>$21,000</td><td>233</td><td>$4,660</td><td class="g">รอ</td></tr>
+        <tr><td>L3</td><td>80</td><td>$21,000</td><td>262</td><td>$2,620</td><td class="g">รอ</td></tr>
+        <tr><td><b>รวม</b></td><td class="g">เฉลี่ย 90.23</td><td>$69,930</td><td><b>775</b></td><td><b>$15,680</b></td><td></td></tr>
+      </table></div>
+      <div class="priceRow" style="margin-top:10px;margin-bottom:0">
+        <div class="fld"><label>SL ตัวเดียว (ใต้ L3)</label><div class="v">70.00</div><small>ปิดสัปดาห์ใต้ = ขายหมด</small></div>
+        <div class="fld"><label>เสี่ยงเต็มบันได</label><div class="v">$15,680</div><small>2.24% / เพดาน 2.5% ✓</small></div>
+        <div class="fld"><label>ซื้อแค่ L1</label><div class="v">$8,400</div><small>1.2% ของถัง</small></div>
+        <div class="fld"><label>สัดส่วนของตัวนี้</label><div class="v">10.0%</div><small>L รวม 10.0% / 30%</small></div>
+      </div>
+      <div class="okLine">ไม่ใช้เพดาน Fund-flow (มีเพดาน 2.5% และ 30% คุมแล้ว)</div>
+    </div>
+    <div class="priceRow">
+      <div class="fld"><label>ราคาปิดสัปดาห์</label><div class="v">96.50</div><small>27 ก.ย. · 3 วัน</small></div>
+      <div class="fld"><label>EMA10 รายสัปดาห์</label><div class="v">99.10</div><small>ปิดใต้ → งดเติมระดับใหม่</small></div>
+      <div class="fld"><label>เสี่ยงถึง Stop (ถือ L1)</label><div class="v">$7,420</div><small>280 × (96.50 − 70) · 1.06%</small></div>
+      <div class="fld"><label>Stop ฉุกเฉิน (−7%)</label><div class="v" style="color:var(--dn)">65.10</div><small>ตั้งที่โบรกเอง</small></div>
+    </div>
+  </div>
+  <div class="foot"><button class="btn pri">บันทึกซื้อระดับ L2…</button><button class="btn">แก้แผนบันได</button><button class="btn">แก้ Stop</button><button class="btn">อัปเดตราคาปิดสัปดาห์</button><button class="btn">ปิดตำแหน่ง</button></div>
+</div>
+
+<div class="legend">
+  <b>ป้ายสถานะ (คิดจากราคาปิดสัปดาห์ที่กรอก)</b>
+  <div>🟢 ปกติ — ปิดเหนือ EMA10 และเหนือ Stop</div>
+  <div>🟡 ปิดใต้ EMA10 — งดเพิ่มไม้ (ไม่ขาย)</div>
+  <div>🔴 ปิดใต้ Stop — ขายหมด</div>
+  <div>⚪ ราคาเก่า &gt; 7 วัน หรือยังไม่มีราคา — ไม่นับในชั้น 2</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+const lot=100; // TH ปัดลงหลัก 100 (US = 1)
+const floorLot=(q,l)=>Math.floor(q/l)*l;
+let f=0.75;
+const TANK=700000,RISK=.01,CAP=.10,CURR='฿';
+function calcFirst(){
+  const e=+$('wEntry').value,s=+$('wStop').value;
+  if(!(e>s&&s>0)){$('wQty1').textContent='—';$('wSub1').textContent='Entry ต้องมากกว่า Stop';return null}
+  const rb=TANK*RISK*f;
+  $('wBudget').textContent=CURR+fmt(rb);
+  const byRisk=rb/(e-s),byCap=TANK*CAP/e;
+  const q=floorLot(Math.min(byRisk,byCap),lot);
+  const cost=q*e,risk=q*(e-s);
+  $('wQty1').textContent=fmt(q);
+  $('wTag1').textContent=(byCap<byRisk?'ชนเพดาน Tier':'f '+Math.round(f*100)+'%');
+  $('wSub1').textContent=`ทุน ${CURR}${fmt(cost)} (${(cost/TANK*100).toFixed(1)}% ของถัง) · เสี่ยง ${CURR}${fmt(risk)} (${(risk/TANK*100).toFixed(2)}% ของถัง) · จากงบเสี่ยง ${Math.floor(byRisk)} หุ้น · เพดาน Tier ${Math.floor(byCap)} → ปัดหลัก ${lot} = ${fmt(q)}`;
+  return {q,e,s,rb};
+}
+function calcAdd(){
+  const b=calcFirst(); if(!b){return}
+  const px=+$('aPx').value,st=+$('aStop').value;
+  const w=$('aWarn'),tag=$('aTag');w.hidden=true;
+  if(!(px>st&&st>0)){$('aQty').textContent='—';$('aSub').textContent='ราคาเติมต้องมากกว่า Stop';return}
+  const carry=Math.max(0,b.e-st)*b.q;           // ความเสี่ยงค้างจากทุนเฉลี่ย (ไม้เดียว = Entry)
+  const room=b.rb-carry, per=px-st;
+  const target=b.q*0.5;
+  const byRisk=room>0?room/per:0;
+  const q=floorLot(Math.min(target,byRisk),lot);
+  $('aQty').textContent=fmt(q);
+  const newRisk=q*per;
+  $('aSub').textContent=`ค้าง ${CURR}${fmt(carry)} + ไม้ใหม่ ${CURR}${fmt(newRisk)} = ${CURR}${fmt(carry+newRisk)} ≤ ${CURR}${fmt(b.rb)} · เป้า 50% = ${fmt(target)} · คุมด้วยความเสี่ยงได้ ${Math.floor(byRisk)}`;
+  if(q===0){tag.className='tag dn';tag.textContent='เลื่อน Stop ขึ้นก่อน';w.hidden=false;w.textContent='ความเสี่ยงค้างกินงบหมด/เหลือไม่ถึง 1 หลัก (100) — เลื่อน Stop ขึ้นหรือรอก่อน'}
+  else if(byRisk<target){tag.className='tag';tag.textContent='ความเสี่ยงคุม'}
+  else{tag.className='tag up';tag.textContent='ปกติ'}
+}
+document.querySelectorAll('#wF button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#wF button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  f=+b.dataset.f;$('wFsrc').textContent=f===1?'(เขียวทั้งคู่)':f===.75?'(แดง 1 ตัว)':'(แดง 2 ตัว)';calcAdd()});
+['wEntry','wStop','aPx','aStop'].forEach(id=>$(id).addEventListener('input',calcAdd));
+document.querySelectorAll('.pos').forEach(card=>{
+  card.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{
+    card.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===b));
+    card.querySelectorAll('.mode').forEach(m=>m.hidden=m.dataset.mode!==b.dataset.m)});
+});
+calcAdd();
+</script>
+</body>
+</html>

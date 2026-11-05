@@ -1,0 +1,54 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>หัวกล่อง LN2</title>
+<style>
+:root{--bg:#f4f5f7;--dk:#1b1f26;--dk2:#252b34;--dl:#3a414c;--tx:#e8eaee;--mu:#9aa1ad;--b:#2B5BD7;--p:#8a63e6;--g:#1F9D6B;--r:#d0453a;--y:#e0a530}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px/1.45 system-ui,sans-serif}
+.w{max-width:420px;margin:0 auto;padding:12px 16px 40px}
+.note{background:#fff8e6;border:1px dashed #e6c46b;border-radius:10px;padding:8px 10px;font-size:13px;margin:6px 0 10px}
+.dk{background:var(--dk);color:var(--tx);border-radius:14px;padding:12px}
+.hd{display:flex;justify-content:space-between;align-items:baseline}.mu{color:var(--mu);font-size:13px}
+.seg{display:flex;gap:6px;margin:10px 0}.seg button{flex:1;border:1px solid var(--dl);background:transparent;color:var(--tx);border-radius:8px;padding:7px;font:inherit;font-size:14px}
+.seg .on{background:var(--tx);color:#111}
+.box{background:var(--dk2);border:1px solid var(--dl);border-radius:12px;padding:10px}
+.big{font-size:20px;font-weight:700}
+.bar{height:8px;background:rgba(255,255,255,.12);border-radius:9px;overflow:hidden;display:flex;margin:6px 0 4px}
+.sm{font-size:13px;color:#c9ced6;margin-top:6px}
+details summary{cursor:pointer;color:#8fb0ff;font-size:13px;margin-top:8px}
+.alert{background:#3a2a10;border:1px solid #6b4a12;color:#ffd58a;border-radius:8px;padding:6px 8px;font-size:13px;margin-top:8px}
+h3{font-size:13px;color:#6b7280;margin:18px 0 6px}
+.card{background:#fff;border:1px solid #e3e5e9;border-radius:12px;padding:12px}
+.chip{display:inline-block;font-size:12px;border-radius:99px;padding:2px 9px;background:#eef0f3;margin-right:4px}
+.ok{background:#e7f6ef;color:#1F9D6B}.st{background:#fbe9e7;color:#8f2a22}
+.sb{display:flex;gap:4px}.sb button{border:1px solid #e3e5e9;background:#fff;border-radius:8px;padding:5px 12px;font:inherit;font-size:14px}.sb .on{background:#16191e;color:#fff}
+</style></head><body><div class="w">
+<div class="note">ม็อกอัปหัวกล่อง Strategy (LN2) · ตัวเลขสมมติ · กดเลือกบัญชี / Main-Tactical ได้</div>
+
+<div class="dk">
+ <div class="hd"><b style="font-size:17px">Strategy สัปดาห์นี้</b><span class="mu">อา. 18 – ส. 24 ต.ค. ▾</span></div>
+ <div class="seg"><button class="on" onclick="acc(0,this)">● บัญชีหลัก</button><button onclick="acc(1,this)">● Family</button></div>
+
+ <div class="box">
+  <div class="mu">ความเสี่ยง Sat (ถ้าโดน Stop ทุกไม้)</div>
+  <div class="hd"><span class="big" id="used">$880</span><span class="mu">/ $1,800 · เหลือ <b id="left" style="color:var(--tx)">$920</b></span></div>
+  <div class="bar"><i id="bm" style="width:35%;background:var(--b)"></i><i id="bt" style="width:14%;background:var(--p)"></i></div>
+  <div class="mu"><span style="color:#8fb0ff">■</span> Main <span id="m">$630</span> · <span style="color:#b9a0f5">■</span> Tactical <span id="t">$250</span></div>
+  <div class="sm">DD Sat <b id="dd">0%</b> (หยุดที่ 20%) · Core+Sat <b id="cs">$3,880</b> / $9,000</div>
+  <div class="alert" id="al" style="display:none">⚠ พัก Tactical: แพ้ติด 5 ไม้ · Main ยังเปิดได้</div>
+  <details><summary>รายละเอียดและกฎบัญชี</summary><div class="mu" style="margin-top:4px">เงิน Sat ฿1,800,000 ($54,000) · Main 70% · Tactical 30%<br>เพดาน: Sat 1.2% · ต่อสินค้า 0.6% · Core+Sat 6% ของพอร์ตรวม<br>วัดจาก Entry ถึง Stop ปัจจุบัน · รวมแผนรอเข้า · Stop เลยทุน = 0</div></details>
+ </div>
+</div>
+
+<h3>ในฟอร์มแผน — แสดงเฉพาะส่วนที่เลือก</h3>
+<div class="card">
+ <div class="sb"><button class="on" onclick="sl(0,this)">Main</button><button onclick="sl(1,this)">Tactical</button></div>
+ <div id="fm" style="margin-top:8px;font-size:14px">เสี่ยงต่อดีล <b>2%</b> = $630 · <span class="chip ok">ไม้ใหม่ 1/5</span></div>
+ <div id="ft" style="margin-top:8px;font-size:14px;display:none">เสี่ยงต่อดีล <b>2%</b> = $270 · <span class="chip ok">Tactical เทรดได้</span> <span class="mu">แพ้ติด 0/5 · ขาดทุน 0%/10%</span></div>
+ <div class="mu" style="margin-top:8px">… Setup · Entry/SL/TP · ขนาดไม้ทุกบัญชี (เหมือน LN1)</div>
+</div>
+</div>
+<script>
+const D=[{u:'$880',l:'$920',m:'$630',t:'$250',bm:35,bt:14,dd:'0%',cs:'$3,880',al:0},{u:'$315',l:'$1,485',m:'$315',t:'$0',bm:18,bt:0,dd:'4%',cs:'$2,100',al:1}];
+function acc(i,b){b.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');const d=D[i];
+used.textContent=d.u;left.textContent=d.l;m.textContent=d.m;t.textContent=d.t;bm.style.width=d.bm+'%';bt.style.width=d.bt+'%';dd.textContent=d.dd;cs.textContent=d.cs;al.style.display=d.al?'block':'none'}
+function sl(i,b){b.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');fm.style.display=i?'none':'block';ft.style.display=i?'block':'none'}
+</script></body></html>

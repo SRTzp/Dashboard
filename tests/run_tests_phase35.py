@@ -81,6 +81,8 @@ def seed(page):
     put_research(page, "CAND1", {"ticker": "CAND1", "name": "Cand One", "mode_a": {"score": 9, "max": 15, "rank": 3, "one_liner": "ผู้สมัครตัวอย่าง"}})
     page.evaluate("(d)=>window.firebase.__mockDb.__seedDoc(['users','testuid','ideas','cand-fixture'], d)", IDEA_CAND1)   # ID2 — Candidates มาจากไอเดีย: ให้ CAND1 เป็นบริษัทในไอเดีย (เคสเดิมตรวจสิ่งเดิม)
     page.evaluate("() => rsLoad(true)"); page.wait_for_timeout(300)
+    page.evaluate("()=>{ ideaStop(); ideaStart(); }"); page.wait_for_timeout(500)
+    page.evaluate("()=>{ glWrite(S=>{ delete S.candFromIdeasDone; }); plIdeasMigrate(); }"); page.wait_for_timeout(300)   # PL2·7: Ideas that exist before the one-time migration become Candidates
 
 
 def _wlx(tk, t, **kw):
@@ -99,7 +101,7 @@ def open_cand(page, tk):
     page.evaluate("(t)=>{ switchTab('watch'); wlSetView('cand'); wlOpen(t); }", tk); page.wait_for_timeout(350)
 
 
-def ov(page): return txt(page, ".wlOv") or ""
+def ov(page): return page.evaluate("()=>[...document.querySelectorAll('.wlOv')].map(e=>e.innerText.replace(/\\s+/g,' ').trim()).join(' | ')") or ""   # PL2·3: no-AI card has a My Thesis panel before the notes panel
 def n(page, sel): return page.locator(sel).count()
 def wl_doc(page, t): return p29.wl_doc(page, t)
 def dump(page): return p29.dump(page)

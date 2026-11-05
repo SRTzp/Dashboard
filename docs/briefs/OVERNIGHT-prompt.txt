@@ -1,0 +1,24 @@
+Overnight chained run — do these rounds in order, one at a time:
+1) PF1 finish (skip if docs/reports/PF1-report.md already exists): check the earlier full-run results if any; run phase98; retake all 7 pf1-* screenshots after the latest edits (A3/A4) and open them. Fix only if a test fails.
+2) PF2: docs/briefs/PF2-brief.md (+ mockups pf2-mockup.html, pf2-flowchips-mockup.html).
+3) WM1 + WM1b: docs/briefs/WM1-brief.md, then docs/briefs/WM1b-brief.md (same round, WM1b after WM1's tests pass). For this run the user waives WM1's "verified on the cloud" gate: the gate is PF1 + PF2 finished with their new + related tests passing locally.
+4) SN1: docs/briefs/SN1-brief.md (Today order confirmed in docs/mockups/today-order-mockup.html).
+
+For every round:
+- Re-read that round's brief before starting; put a ≤ 8-bullet plan in its report (do not wait for approval).
+- Make its backups (index.backup-pre-<ROUND>.html, tests/_bk_<round>/) before editing.
+- Run that round's new tests + related old suites until they pass. Do NOT run the full suite between rounds.
+- Write the round's "Report back" to docs/reports/<ROUND>-report.md before starting the next round.
+- Follow docs/briefs/STANDING-rules.md. After the round's tests pass, run `bash tests/make_verify.sh <ROUND>` (write it first if missing) to produce docs/reports/<ROUND>-verify.txt.
+- If a round cannot be made to pass, stop the whole run and report — do not start the next round.
+- The user is asleep: do not ask questions; decide by the brief and list every decision in the report.
+- Firestore rules (weeklyImpact, stockNews): only show the blocks in the reports — never deploy.
+
+At the end — fast full run:
+- Write tests/runall2.sh: run base + phase 1–102 with 2 parallel workers (xargs -P 2), one log per suite, per-suite timeout 1500 s (keep Playwright's own timeouts as they are), no fail-fast.
+- After all suites: rerun each failed suite once, alone (parallel flakes), and keep the rerun result.
+- Known false failures (do not fix): p13 always; p3 on Sundays; p6 on the 20th.
+- Start it once in the background under caffeinate -i -s and wait for a single completion signal (one Monitor, long timeout) — no progress polling or status messages in between.
+- After the full run, re-run make_verify.sh for the last round so its verify file holds the full-run counts.
+- Write docs/reports/RUN-summary.md with only: totals, failing suites (after rerun) with their FAIL lines, per-round results, and decisions made.
+Temp files → _to_delete/ · never rm · no push.

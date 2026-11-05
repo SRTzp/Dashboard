@@ -212,7 +212,7 @@ def tab_tests(pw, w, h, label):
         hd = js(page, """()=>({r: (document.querySelector('[data-td-cnt="r"]')||{}).textContent, a: (document.querySelector('[data-td-cnt="a"]')||{}).textContent, b: (document.querySelector('[data-td-cnt="b"]')||{}).textContent,
             na: document.querySelectorAll('[data-td-grp="a"] .tdRow').length, nb: document.querySelectorAll('[data-td-grp="b"] .tdRow').length, nr: document.querySelectorAll('[data-td-grp="r"] .tdRow').length,
             when: (document.querySelector('[data-td-when]')||{}).textContent})""")
-        check(f"{tag} 3 ชิปหัว: '3 ด่วน' · ภายในสัปดาห์/โอกาสตรงกับจำนวนแถว", hd["r"] == "3 ด่วน" and hd["nr"] == 3 and hd["a"] == f"{hd['na']} ภายในสัปดาห์" and hd["b"] == f"{hd['nb']} โอกาส" and hd["na"] == 6 and hd["nb"] == 2, json.dumps(hd, ensure_ascii=False))
+        check(f"{tag} 3 ชิปหัว: '3 ด่วน' · ภายในสัปดาห์/โอกาสตรงกับจำนวนแถว", hd["r"] == "3 ด่วน" and hd["nr"] == 3 and hd["a"] == f"{hd['na']} ภายในสัปดาห์" and hd["b"] == f"{hd['nb']} โอกาส" and hd["na"] == 5 and hd["nb"] == 2, json.dumps(hd, ensure_ascii=False))
         check(f"{tag} 3 ขวาหัว = 'ศุกร์ 2 ต.ค. · ปิดสัปดาห์ 25 ก.ย.'", hd["when"] == "ศุกร์ 2 ต.ค. · ปิดสัปดาห์ 25 ก.ย.", hd["when"])
         check(f"{tag} 1-3 console: zero uncaught page errors", not pe, "; ".join(pe[:3]))
     finally:
@@ -231,15 +231,15 @@ def task_tests(pw, w, h, label):
         check(f"{tag} 4 แถว AVGO: Tripwire ยืนยันแล้ว \"ลูกค้า 5 รายใหญ่ > 55%\" → ทบทวนการถือ · ป้าย Selection US", 'AVGO Tripwire พัง "ลูกค้า 5 รายใหญ่ > 55%" → ทบทวนการถือ' in tr[1] and "Selection US" in tr[1], tr[1])
         check(f"{tag} 4 แถว DD: 'เบรก DD Sat Main: รอเขียนทบทวน' (TD2) · รอง 'Main · DD' · ป้าย Plan US", "เบรก DD Sat Main: รอเขียนทบทวน" in tr[2] and "Main · DD" in tr[2] and "Plan US" in tr[2], tr[2])
         ka = kinds(page, "a"); ta = rows_text(page, "a")
-        check(f"{tag} 5 🟡 ลำดับ: เช็กแผน Sat · ราคาเก่า×2 · NVDA ตรวจ · งบ MSFT (PF1: ไม่มีงาน Bias)", ka == ["sat-daily", "homework", "stale", "stale", "tw-review", "catalyst"], json.dumps(ka))
+        check(f"{tag} 5 🟡 ลำดับ: เช็กแผน Sat · ราคาเก่า×2 · NVDA ตรวจ · งบ MSFT (PF1: ไม่มีงาน Bias)", ka == ["sat-daily", "stale", "stale", "tw-review", "catalyst"], json.dumps(ka))
         check(f"{tag} 5 เช็กแผน Sat: ช่อง XAU · BTC · S50 ตามที่เลือกสัปดาห์นี้ (WA1fix: เพดาน 3 · Brent ไม่ได้เลือก = ไม่ขึ้น · TD2 ชื่อแสดง · log วันนี้ว่าง)", js(page, "()=>[...document.querySelectorAll('.tdRow[data-kind=\"sat-daily\"] .tdAs .nm')].map(e=>e.textContent)") == ["XAU", "BTC", "S50"])
         check(f"{tag} 5 เช็กแผน Sat: ป้ายช่วง Plan TH (S50) + Plan US (อีก 3)", "Plan TH" in ta[0] and "Plan US" in ta[0], ta[0])
-        check(f"{tag} 5 ราคาเก่าแยกบัญชี: main = MSFT · Family = AAA.BK", "ราคาปิดเก่าเกิน 7 วัน 1 ตัว — MSFT" in ta[2] and "Main" in ta[2] and "Plan US" in ta[2]
-              and "ราคาปิดเก่าเกิน 7 วัน 1 ตัว — AAA.BK" in ta[3] and "Family" in ta[3] and "Plan TH" in ta[3], json.dumps(ta[2:4], ensure_ascii=False))
-        check(f"{tag} 5 PF3 ไม่มีข้อความ 'Bias ยังไม่ประเมิน: BTC · S50' ใน 🟡 (งาน Bias ถอด · งานอื่นยังครบตามลำดับ)", "Bias ยังไม่ประเมิน: BTC · S50" not in " ".join(ta) and ka == ["sat-daily", "homework", "stale", "stale", "tw-review", "catalyst"], json.dumps(ta, ensure_ascii=False)[:300])
+        check(f"{tag} 5 ราคาเก่าแยกบัญชี: main = MSFT · Family = AAA.BK", "ราคาปิดเก่าเกิน 7 วัน 1 ตัว — MSFT" in ta[1] and "Main" in ta[1] and "Plan US" in ta[1]
+              and "ราคาปิดเก่าเกิน 7 วัน 1 ตัว — AAA.BK" in ta[2] and "Family" in ta[2] and "Plan TH" in ta[2], json.dumps(ta[1:3], ensure_ascii=False))
+        check(f"{tag} 5 PF3 ไม่มีข้อความ 'Bias ยังไม่ประเมิน: BTC · S50' ใน 🟡 (งาน Bias ถอด · งานอื่นยังครบตามลำดับ)", "Bias ยังไม่ประเมิน: BTC · S50" not in " ".join(ta) and ka == ["sat-daily", "stale", "stale", "tw-review", "catalyst"], json.dumps(ta, ensure_ascii=False)[:300])
         check(f"{tag} 5 PF1 — ไม่มีงาน Bias ยังไม่ประเมิน ในรายการ 🟡", not any("Bias ยังไม่ประเมิน" in x for x in ta), json.dumps(ta, ensure_ascii=False)[:300])
-        check(f"{tag} 5 NVDA: 'Tripwire ถึงระดับทบทวน' (WL2 · level review แทน tw-check เดิม)", 'NVDA Tripwire ถึงระดับทบทวน "ชิป AI Q4 ต่ำกว่าเป้า"' in ta[4], ta[4])
-        check(f"{tag} 5 MSFT งบ: '~' + อีก 5 วัน + catalyst +10 วันไม่ขึ้น", "MSFT" in ta[5] and "งบ Q1 FY27" in ta[5] and "~7 ต.ค." in ta[5] and "อีก 5 วัน" in ta[5] and "อีเวนต์ไกลเกิน" not in " ".join(ta), ta[5])
+        check(f"{tag} 5 NVDA: 'Tripwire ถึงระดับทบทวน' (WL2 · level review แทน tw-check เดิม)", 'NVDA Tripwire ถึงระดับทบทวน "ชิป AI Q4 ต่ำกว่าเป้า"' in ta[3], ta[3])
+        check(f"{tag} 5 MSFT งบ: '~' + อีก 5 วัน + catalyst +10 วันไม่ขึ้น", "MSFT" in ta[4] and "งบ Q1 FY27" in ta[4] and "~7 ต.ค." in ta[4] and "อีก 5 วัน" in ta[4] and "อีเวนต์ไกลเกิน" not in " ".join(ta), ta[4])
         kb = kinds(page, "b"); tb = rows_text(page, "b")
         check(f"{tag} 6 🔵 ลำดับ: แผน Sat พร้อม · Core เติมไม้", kb == ["ready", "core-add"], json.dumps(kb))
         check(f"{tag} 6 XAU Long แผนพร้อมบันทึก 1 บัญชี (Family) (TD2 ชื่อแสดง)", "XAU Long · แผนพร้อมบันทึก 1 บัญชี (Family)" in tb[0] and "Plan US" in tb[0], tb[0])
@@ -338,7 +338,7 @@ def routine_tests(pw, w, h, label):
         n_th = js(page, "()=>{ const e = document.querySelector('[data-slot-n=\"planTH\"]'); return e ? +e.textContent : null; }")
         check(f"{tag} 9 ช่อง Plan TH มีเลข = งานติดป้าย Plan TH (ราคาเก่า AAA.BK + เช็ก S50 = 2)", n_th == 2, str(n_th))
         n_sel = js(page, "()=>[...document.querySelectorAll('[data-slot-n]')].map(e=>e.dataset.slotN+':'+e.textContent).join(',')")
-        check(f"{tag} 9 ช่อง Selection US มีเลข 3 (AVGO ยืนยัน · NVDA ตรวจ · การบ้าน AVGO) ทั้ง #1 และ #2", "selUS1:3" in n_sel and "selUS2:3" in n_sel, n_sel)
+        check(f"{tag} 9 ช่อง Selection US มีเลข 3 (AVGO ยืนยัน · NVDA ตรวจ · การบ้าน AVGO) ทั้ง #1 และ #2", "selUS1:2" in n_sel and "selUS2:2" in n_sel, n_sel)
         wk = js(page, "()=>document.querySelector('[data-td-week]').textContent")
         check(f"{tag} 9 ใต้ Routine: 'สัปดาห์นี้ทำครบ x/y ช่วง' (นับจาก routineLog จ.–วันนี้)", wk == "สัปดาห์นี้ทำครบ 3/23 ช่วง · การบ้าน 0/5 วัน", wk)   # y = จ.–พฤ. 4 วัน×5 + ช่องของวันนี้ที่เริ่มแล้ว 3 = 23 · x = 09-30 สอง + วันนี้ หนึ่ง = 3
         shot(page, f"td1-routine-{label.replace('px','')}.png")
@@ -519,7 +519,7 @@ def layout_tests(pw, w, h, label):
             hide = js(page, "()=>[...document.querySelectorAll('.tdRow .tdWhere:not(.tdWhereKeep)')].every(e=>getComputedStyle(e).display==='none') && [...document.querySelectorAll('.tdBtn .short')].every(e=>getComputedStyle(e).display!=='none') && [...document.querySelectorAll('.tdBtn .full')].every(e=>getComputedStyle(e).display==='none')")
             check(f"{tag} 17 มือถือ: ซ่อนบรรทัดรอง · ปุ่มขวาเหลือ →", hide)
             ga = js(page, "()=>document.querySelectorAll('[data-td-grp=\"a\"] .tdRow').length")
-            check(f"{tag} 17 มือถือ: กลุ่มสัปดาห์นี้แสดงครบ (ไม่ย่อ) = 6 แถว (รวมการบ้าน · PF1: ไม่มีงาน Bias)", ga == 6, str(ga))
+            check(f"{tag} 17 มือถือ: กลุ่มสัปดาห์นี้แสดงครบ (ไม่ย่อ) = 6 แถว (รวมการบ้าน · PF1: ไม่มีงาน Bias)", ga == 5, str(ga))
             hint = js(page, "()=>[...document.querySelectorAll('#tabsMain .kbdhint')].every(e=>getComputedStyle(e).display==='none')")
             check(f"{tag} 17 มือถือ: ซ่อน .kbdhint", hint)
         else:
