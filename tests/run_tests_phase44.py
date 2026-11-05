@@ -266,15 +266,16 @@ def tests(pw, w, h, label):
     try:
         go_ideas(page, "semis-ai-memory-2026")
         page.click("[data-idea-menu]"); page.wait_for_selector("[data-idea-export]")
-        with page.expect_download() as dl:
-            page.click("[data-idea-export]")
-        fn = dl.value.suggested_filename
+        dls = []
+        page.on("download", lambda d: dls.append(d.suggested_filename))
+        page.click("[data-idea-export]")
+        fn = dls[0] if dls else ""
         page.wait_for_timeout(300)
         o = json.loads(js(page, "()=>window.__ideaLastExport"))
         seg = [s for s in o["chain"]["segments"] if s["name"] == SEG][0]
         lr = [c for c in o["candidates"] if c["sym"] == "LRCX"][0]
         check(f"{tag} 7 Export → parse ได้ · มี log · pick:true ตามที่ติ๊ก · rank/state ตามที่แก้", len(o["log"]) == 1 and seg["pick"] is True and lr["rank"] == 1 and lr["state"] == "study" and o["status"] == "need_evidence", json.dumps({"log": len(o["log"]), "pick": seg["pick"], "lr": [lr["rank"], lr["state"]]}))
-        check(f"{tag} 7 ดาวน์โหลดไฟล์ {{id}}_idea_YYYYMMDD.json · ข้อความ 'คัดลอกแล้ว — แนบให้ idea-scout pick/update'", fn == "semis-ai-memory-2026_idea_20261003.json" and "คัดลอกแล้ว — แนบให้ idea-scout pick/update" in (txt_of(page, "[data-idea-msg]") or ""), fn + " | " + str(txt_of(page, "[data-idea-msg]")))
+        check(f"{tag} 7 Export = คัดลอกอย่างเดียว ไม่ดาวน์โหลดไฟล์ · ข้อความ 'คัดลอกแล้ว — แนบให้ idea-scout pick/update'", fn == "" and "คัดลอกแล้ว — แนบให้ idea-scout pick/update" in (txt_of(page, "[data-idea-msg]") or ""), fn + " | " + str(txt_of(page, "[data-idea-msg]")))
         check(f"{tag} 7 Export ไม่แก้ doc ใน Firestore (idea เดิมไม่มีธง pick)", all(not s.get("pick") for s in idb(page)["idea"]["chain"]["segments"]))
         check(f"{tag} 12 ไม่มี console error (Export)", not ce and not pe, json.dumps([ce, pe]))
     finally:
