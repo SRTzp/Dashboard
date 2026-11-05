@@ -15113,11 +15113,19 @@ function ideaExport(id){
   const txt = JSON.stringify(ideaExportObj(d), null, 2);
   window.__ideaLastExport = txt;
   const done = ()=>{ ideaMenuMsg = 'คัดลอกแล้ว — แนบให้ idea-scout pick/update'; renderWatchlist(); };
-  const fb = ()=>{
-    try{ const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); }
-    catch(e){ ideaMenuMsg = 'คัดลอกไม่สำเร็จ'; renderWatchlist(); }
+  const manual = ()=>{
+    document.getElementById('ltModal').innerHTML = `<h3>คัดลอกเอง · ${escHtml(ideaView(d).name)}</h3><div class="hint" style="margin-top:-6px;margin-bottom:10px">คัดลอกอัตโนมัติไม่สำเร็จ — เลือกข้อความด้านล่างแล้วคัดลอกเอง</div>
+      <textarea data-idea-export-ta readonly style="width:100%;min-height:200px;font-family:monospace;font-size:12px" onfocus="this.select()">${escHtml(txt)}</textarea><div class="btns"><button type="button" onclick="ideaSheetClose()">ปิด</button></div>`;
+    ideaImp = null; ideaMenu = '';
+    document.getElementById('ltOverlay').classList.add('show');
+    renderWatchlist();
+    try{ const ta = document.querySelector('[data-idea-export-ta]'); if(ta) ta.select(); }catch(e){}
   };
-  ideaDownload(id + '_idea_' + ideaStamp() + '.json', txt);
+  const fb = ()=>{
+    let ok = false;
+    try{ const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove(); }catch(e){ ok = false; }
+    if(ok) done(); else manual();
+  };
   try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fb); else fb(); }catch(e){ fb(); }
 }
 function ideaHistoryOpen(id){
