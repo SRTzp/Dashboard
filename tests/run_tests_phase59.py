@@ -448,7 +448,7 @@ def gl3_tests(pw, w, h, label):
     try:
         G.go_today(page)
         names = js(page, "()=>[...document.querySelectorAll('.tdRow[data-kind=homework] [data-hw-part]')].map(e=>e.innerText.trim())")
-        check(f"{tag} 9 ชิปการบ้านครบ 5: ธุรกิจ · ทำไม · ติดตาม · ออก · Tier (part ที่ 3 = 'ติดตาม')", names == ["Tier", "ธุรกิจ", "ทำไม", "ติดตาม", "ออก"], json.dumps(names, ensure_ascii=False))
+        check(f"{tag} 9 ชิปการบ้านครบ 4: ธุรกิจ · ทำไม · ติดตาม · ออก (PL2·7: ไม่มี Tier) (part ที่ 3 = 'ติดตาม')", names == ["ธุรกิจ", "ทำไม", "ติดตาม", "ออก"], json.dumps(names, ensure_ascii=False))
         m = js(page, "()=>{ const bs=[...document.querySelectorAll('.tdRow[data-kind=homework] .tdHp')]; const cs=bs.map(b=>b.getBoundingClientRect()); const mid=cs.map(r=>r.top+r.height/2); return {clip:bs.map(b=>b.scrollWidth>b.clientWidth+0.5), ell:bs.map(b=>getComputedStyle(b).textOverflow), oneRow:Math.max(...mid)-Math.min(...mid)<4, ovf:document.documentElement.scrollWidth-innerWidth, cntClip:(()=>{const r=document.querySelector('.tdRow[data-kind=homework]').getBoundingClientRect(); return cs.some(x=>x.right>r.right+0.5);})()}; }")
         check(f"{tag} 9 ชิป 5 ตัวแถวเดียว · ข้อความชิปไม่ถูกตัด (scrollWidth ≤ clientWidth) · ไม่ล้นแนวนอน", m["oneRow"] and not any(m["clip"]) and m["ovf"] <= 0 and not m["cntClip"], json.dumps(m))
         check(f"{tag} 9 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
