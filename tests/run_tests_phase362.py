@@ -234,8 +234,8 @@ def item3(pw, w=1440, h=900):
         js(page, "()=>wlOpen('MTA')"); settle(page, 700)
         tabs = js(page, "()=>[...document.querySelectorAll('[data-lt-tab]')].map(t=>t.innerText.replace(/\\d+$/, '').trim())")
         check(f"{tag} tab 'มุมมอง' renamed to 'My Thesis'; AI tabs unchanged", "My Thesis" in tabs and "มุมมอง" not in tabs and all(x in tabs for x in ["สรุป", "ธุรกิจ", "ทำไมซื้อ", "ติดตาม", "ออกเมื่อ"]), tabs)
-        sm = js(page, "()=>({sum: !!document.querySelector('[data-wl-mt-sum]'), editor: document.querySelectorAll('[data-wl-mt-why]').length, edit: !!document.querySelector('[data-wl-mt-edit]'), l1: (document.querySelector('[data-wl-mt-l1]')||{}).innerText||''})")
-        check(f"{tag} Watchlist card head: compact READ-ONLY summary (first line of ①) + 'Edit in My Thesis ›'; no editable copy", sm["sum"] and sm["editor"] == 0 and sm["edit"] and "my why line one" in sm["l1"] and "second" not in sm["l1"], sm)
+        sm = js(page, "()=>({sum: !!document.querySelector('[data-wl-mt-sum]'), editor: document.querySelectorAll('[data-wl-mt-why]').length})")
+        check(f"{tag} Watchlist header has no duplicate My Thesis summary or editor", not sm["sum"] and sm["editor"] == 0, sm)
         js(page, "()=>wlSetSub('view')"); settle(page, 500)
         st = js(page, """()=>({editor: document.querySelectorAll('[data-wl-mt-why]').length, legacyRows: document.querySelectorAll('[data-vw-row]').length, aiCard: (document.querySelector('[data-mt-ai]')||{}).dataset ? document.querySelector('[data-mt-ai]').dataset.mtAi : null,
           aiDate: (document.querySelector('[data-mt-ai-date]')||{}).innerText||'', aiSum: (document.querySelector('[data-mt-ai-sum]')||{}).innerText||'', gal: document.querySelectorAll('[data-mt-img]').length,
