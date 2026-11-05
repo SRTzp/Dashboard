@@ -175,6 +175,9 @@ def section_A(pw, w, h, tag):
 
 
 # ───────────────────────── B · Watchlist Tier ─────────────────────────
+PL2_TIER_UI_REMOVED = True
+
+
 def section_B_watch(pw, w, h, tag):
     wl = {"WLA": {"tier": "A", "tier_set_at": "2026-01-05", "note": "เดิม"},
           "WLOLD": {"tier": "A", "tier_set_at": "2025-09-30"}, "WLNEW": {"tier": "A", "tier_set_at": "2025-10-01"},
@@ -184,11 +187,11 @@ def section_B_watch(pw, w, h, tag):
         page.evaluate("()=>switchTab('watch')"); page.wait_for_timeout(400)
         # ชิปในรายการ
         r = lambda s, sel: page.locator(f'.wlR[data-sym="{s}"] {sel}').count()
-        check(f"{tag} B2 รายการ Watchlist: ชิป A/B แสดง · ยังไม่ตั้ง = ไม่แสดง · Tier A เกิน 12 เดือน (2025-09-30) = ชิปเทา 'ทบทวน' · 2025-10-01 = ไม่มี",
-              r("WLA", '[data-wl-tier="A"]') == 1 and r("WLB", '[data-wl-tier="B"]') == 1 and r("WLNO", "[data-wl-tier]") == 0
-              and r("WLOLD", "[data-wl-tier-review]") == 1 and r("WLNEW", "[data-wl-tier-review]") == 0 and r("WLA", "[data-wl-tier-review]") == 0, "")
+        check(f"{tag} B2 รายการ Watchlist: PL2·7: ไม่มีชิป Tier A/B หรือ 'ทบทวน' ในรายการแล้ว (ข้อมูล tier ยังเก็บไว้)",
+              r("WLA", "[data-wl-tier]") == 0 and r("WLB", "[data-wl-tier]") == 0 and r("WLNO", "[data-wl-tier]") == 0
+              and r("WLOLD", "[data-wl-tier-review]") == 0 and r("WLNEW", "[data-wl-tier-review]") == 0 and r("WLA", "[data-wl-tier-review]") == 0, "")
         page.evaluate("()=>wlOpen('WLOLD')"); page.wait_for_timeout(300)
-        check(f"{tag} B2 หัวรายละเอียด: ชิป Tier A + 'ทบทวน' ข้าง CORE tag", page.locator('.wlDT [data-wl-tier="A"]').count() == 1 and page.locator(".wlDT [data-wl-tier-review]").count() == 1)
+        check(f"{tag} B2 หัวรายละเอียด: ไม่มีชิป Tier A / 'ทบทวน' (PL2·7)", page.locator('.wlDT [data-wl-tier], .wlDT [data-wl-tier-review]').count() == 0)
         # (a) WT1: โมดัลเพิ่มไม่มีส่วน Tier · เพิ่มใหม่ไม่เขียนฟิลด์ tier (ตั้งผ่านปุ่ม "บันทึกเฉพาะ Tier" ในฟอร์มแผน Core)
         page.evaluate("()=>{ window.firebase.__mockDb.__seedDoc(['users','testuid','watchlist','NEWT'], {ticker:'NEWT', market:'US', port:'core', note:'', industry:'', added_at:new Date().toISOString()}); wlStop(); wlStart(); }"); page.wait_for_timeout(500)   # TD4b: Candidate ก็เพิ่มตรงไม่ได้แล้ว → seed เป็นตัวที่อยู่ใน Watchlist ก่อน
         page.evaluate("()=>{ window.firebase.__mockDb.__seedDoc(['users','testuid','watchlist','NEWU'], {ticker:'NEWU', market:'US', port:'core', note:'', industry:'', added_at:new Date().toISOString()}); wlStop(); wlStart(); }"); page.wait_for_timeout(500)   # TD4b: Candidate ก็เพิ่มตรงไม่ได้แล้ว → seed เป็นตัวที่อยู่ใน Watchlist ก่อน
@@ -200,23 +203,24 @@ def section_B_watch(pw, w, h, tag):
         page.evaluate("()=>wlOpenAdd('NEWU')"); page.click("#wlAddBtn"); page.wait_for_timeout(300)
         d = wl_doc(page, "NEWU")
         check(f"{tag} B2 เพิ่มใหม่ ไม่ตั้ง Tier → ไม่มีฟิลด์ tier/tier_set_at", d and "tier" not in d and "tier_set_at" not in d, json.dumps(d))
-        # (b) แก้ Note อย่างเดียว
-        page.evaluate("()=>wlOpenEdit('WLA')"); page.wait_for_timeout(150)
-        st = page.inner_text("#wlAddTierSt")
-        check(f"{tag} B2 [WT1] โมดัลแก้ไข: บรรทัดสถานะ 'Tier A · Fortress (เดิม) · ตั้งเมื่อ 2026-01-05' (เดิม: dropdown = A)", "Tier A" in st and "2026-01-05" in st and page.locator("#wlAddTier").count() == 0, st)
-        shot(page, f"7e2b2-wl-tier-modal-{w}.png")
-        page.fill("#wlAddNote", "แก้โน้ต"); page.click("#wlAddBtn"); page.wait_for_timeout(400)
-        d = wl_doc(page, "WLA")
-        check(f"{tag} B2 แก้ Note อย่างเดียว → tier 'A' · tier_set_at ไม่เปลี่ยน (2026-01-05)", d["note"] == "แก้โน้ต" and d["tier"] == "A" and d["tier_set_at"] == "2026-01-05", json.dumps(d))
-        # (c) WT1: เปลี่ยนเป็น B = seed ฟิลด์ใน doc ตรง ๆ (เดิม: เลือก B ใน dropdown) → โมดัลแก้ไขแสดง 'Tier B'
-        page.evaluate("([t])=>window.firebase.__mockDb.collection('users').doc('testuid').collection('watchlist').doc('WLA').update({tier:'B', tier_set_at:t})", [TODAY]); page.wait_for_timeout(300)
-        page.evaluate("()=>wlOpenEdit('WLA')"); page.wait_for_timeout(150)
-        d = wl_doc(page, "WLA"); st = page.inner_text("#wlAddTierSt")
-        check(f"{tag} B2 [WT1] doc tier 'B' · tier_set_at = วันนี้ → โมดัลแก้ไขแสดง 'Tier B'", d["tier"] == "B" and d["tier_set_at"] == TODAY and st.startswith("Tier B"), json.dumps(d) + st)
-        # (d) WT1: ล้าง Tier (เดิม: เลือก 'ยังไม่ตั้ง')
-        page.click("#wlAddTierClr"); page.wait_for_timeout(400)
-        d = wl_doc(page, "WLA")
-        check(f"{tag} B2 [WT1] กด 'ล้าง Tier' → ลบฟิลด์ tier/tier_set_at (mock รองรับ FieldValue.delete)", d and d.get("tier") is None and d.get("tier_set_at") is None, json.dumps(d))
+        if not PL2_TIER_UI_REMOVED:   # PL2·7: Tier box removed from the Edit modal — retired, see tests/PL2_retired.md
+            # (b) แก้ Note อย่างเดียว
+            page.evaluate("()=>wlOpenEdit('WLA')"); page.wait_for_timeout(150)
+            st = page.inner_text("#wlAddTierSt")
+            check(f"{tag} B2 [WT1] โมดัลแก้ไข: บรรทัดสถานะ 'Tier A · Fortress (เดิม) · ตั้งเมื่อ 2026-01-05' (เดิม: dropdown = A)", "Tier A" in st and "2026-01-05" in st and page.locator("#wlAddTier").count() == 0, st)
+            shot(page, f"7e2b2-wl-tier-modal-{w}.png")
+            page.fill("#wlAddNote", "แก้โน้ต"); page.click("#wlAddBtn"); page.wait_for_timeout(400)
+            d = wl_doc(page, "WLA")
+            check(f"{tag} B2 แก้ Note อย่างเดียว → tier 'A' · tier_set_at ไม่เปลี่ยน (2026-01-05)", d["note"] == "แก้โน้ต" and d["tier"] == "A" and d["tier_set_at"] == "2026-01-05", json.dumps(d))
+            # (c) WT1: เปลี่ยนเป็น B = seed ฟิลด์ใน doc ตรง ๆ (เดิม: เลือก B ใน dropdown) → โมดัลแก้ไขแสดง 'Tier B'
+            page.evaluate("([t])=>window.firebase.__mockDb.collection('users').doc('testuid').collection('watchlist').doc('WLA').update({tier:'B', tier_set_at:t})", [TODAY]); page.wait_for_timeout(300)
+            page.evaluate("()=>wlOpenEdit('WLA')"); page.wait_for_timeout(150)
+            d = wl_doc(page, "WLA"); st = page.inner_text("#wlAddTierSt")
+            check(f"{tag} B2 [WT1] doc tier 'B' · tier_set_at = วันนี้ → โมดัลแก้ไขแสดง 'Tier B'", d["tier"] == "B" and d["tier_set_at"] == TODAY and st.startswith("Tier B"), json.dumps(d) + st)
+            # (d) WT1: ล้าง Tier (เดิม: เลือก 'ยังไม่ตั้ง')
+            page.click("#wlAddTierClr"); page.wait_for_timeout(400)
+            d = wl_doc(page, "WLA")
+            check(f"{tag} B2 [WT1] กด 'ล้าง Tier' → ลบฟิลด์ tier/tier_set_at (mock รองรับ FieldValue.delete)", d and d.get("tier") is None and d.get("tier_set_at") is None, json.dumps(d))
         check(f"{tag} B2 ไม่มี console error / alert", not ce and not pe and not dialogs, json.dumps([ce[:2], pe[:2], dialogs[:2]]))
     finally:
         browser.close()

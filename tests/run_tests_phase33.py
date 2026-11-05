@@ -25,6 +25,9 @@ BASE = json.load(open(os.path.join(HERE, "..", "avgo-research-card-th.json"), en
 TH_FX = json.load(open(os.path.join(HERE, "fixtures", "avgo_thesis.json"), encoding="utf-8"))   # WL2
 
 
+PL2_TIER_UI_REMOVED = True
+
+
 def check(name, ok, detail=""):
     results.append((name, bool(ok), detail))
     d = (detail[:700] + "...(truncated)") if (detail and len(detail) > 700) else detail
@@ -156,9 +159,9 @@ def checks(pw, w, h, label):
         # 4 ─ Overview AVGO: ชิป → ฟอร์มแผนใหม่ + กล่อง Tier มีค่า
         page.evaluate("()=>{ switchTab('watch'); wlOpen('AVGO'); }"); page.wait_for_timeout(400)
         chip = txt(page, ".wlDT [data-wl-tier]") or ""
-        check(f"{tag} 4 Overview AVGO: ชิป 'A · Fortress'", chip == "A · Fortress", chip)
+        check(f"{tag} 4 Overview AVGO: PL2·7 ไม่มีชิป Tier ในหัวการ์ดแล้ว (เดิมชิป 'A · Fortress') · ข้อมูล tier ยังเก็บไว้", chip == "" and page.evaluate("()=>wlItemOf('AVGO').tier") == "A")
         shot_el(page, ".wlDT", f"wt1-wl-chip-{w}.png")
-        page.click(".wlDT [data-wl-tier]"); page.wait_for_selector('.core-sheet [data-core-sheet="new"]'); page.wait_for_timeout(200)
+        page.evaluate("()=>wlOpenCorePlan('AVGO')"); page.wait_for_selector('.core-sheet [data-core-sheet="new"]')   # PL2·7: chip removed — same entry via the card's 'เปิดแผน →' action; page.wait_for_timeout(200)
         pk = page.evaluate("()=>[...document.querySelectorAll('.ccSegTier button.on')].map(b=>b.dataset.pick)")
         info = txt(page, "#tiWlInfo") or ""
         check(f"{tag} 4 กดชิป → ฟอร์มแผนใหม่ ticker AVGO · กล่อง Tier มีค่าครบ (24.5 · -0.3 · 92 · ติ๊ก · Gate 5 ไม่ ×3)",
@@ -196,44 +199,45 @@ def checks(pw, w, h, label):
         page.fill("#cnTicker", "AVGO"); page.wait_for_timeout(100)
         check(f"{tag} 7 แตะกล่อง Tier แล้วเปลี่ยน ticker → ค่าที่กรอกไม่หาย (ROIC 7)", val(page, "#tiRoic") == "7" and (txt(page, "#tiWlInfo") or "").startswith("Watchlist:"), val(page, "#tiRoic") + (txt(page, "#tiWlInfo") or ""))
         # 8 ─ โมดัลแก้ไข AVGO
-        page.evaluate("()=>coreSheetClose()")
-        page.evaluate("()=>{ switchTab('watch'); wlOpen('AVGO'); wlOpenEdit('AVGO'); }"); page.wait_for_timeout(300)
-        st = txt(page, "#wlAddTierSt") or ""
-        check(f"{tag} 8 โมดัลแก้ไข AVGO: ไม่มี dropdown A/B · สถานะ 'Tier A · Fortress · ตั้งเมื่อ {TODAY}' · มีปุ่ม 'ตั้ง Tier…' + ลิงก์ 'ล้าง Tier'",
-              page.locator("#wlAddTier").count() == 0 and st == f"Tier A · Fortress · ตั้งเมื่อ {TODAY}" and not vis(page, "#wlAddTierBtn") and vis(page, "#wlAddEvalBox [data-cs-edit]") and vis(page, "#wlAddTierClr"), st)   # CS1 — ปุ่ม ตั้ง Tier… ถูกแทนที่ด้วย Edit Stock Evaluation
-        shot_el(page, "#wlAddOverlay .modal", f"wt1-wl-edit-{w}.png")
-        page.click("#wlAddEvalBox [data-cs-edit]"); page.wait_for_selector("[data-scr-sheet]"); page.wait_for_timeout(200)
-        check(f"{tag} 8 'ตั้ง Tier…' → โมดัลปิด · เปิดฟอร์มแผนใหม่ ticker AVGO", not page.locator("#wlAddOverlay.show").count() and page.evaluate("()=>document.querySelector('[data-scr-sheet]').dataset.sym") == "AVGO")   # CS1
-        page.evaluate("()=>{ coreSheetClose(); scrClose(); }")
-        page.evaluate("()=>{ switchTab('watch'); wlOpen('AVGO'); wlOpenEdit('AVGO'); }"); page.wait_for_timeout(200)
-        page.click("#wlAddTierClr"); page.wait_for_timeout(400)
-        d = wl_doc(page, "AVGO") or {}
-        gone = all(d.get(f) is None for f in ("tier", "tier_set_at", "tier_lens", "tier_inputs", "tier_computed", "tier_reason"))
-        check(f"{tag} 8 'ล้าง Tier' → 6 ฟิลด์หาย/null · บรรทัดสถานะ 'ยังไม่ตั้ง Tier'", gone and (txt(page, "#wlAddTierSt") or "") == "ยังไม่ตั้ง Tier" and not vis(page, "#wlAddTierClr"), json.dumps(d, ensure_ascii=False))
-        page.click("#wlAddBtn"); page.wait_for_timeout(400)
-        page.evaluate("()=>wlOpen('AVGO')"); page.wait_for_timeout(300)
-        chip = txt(page, ".wlDT [data-wl-tier-set]") or ""
-        check(f"{tag} 8 หลังล้าง ไม่มีชิป 'ตั้ง Tier' แล้ว (PL1 polish) · รายการซ้ายไม่มีชิป Tier", chip == "" and page.locator('.wlR[data-sym="AVGO"] [data-wl-tier]').count() == 0, chip)
-        page.evaluate("()=>{ window.firebase.__mockDb.__seedDoc(['users','testuid','watchlist','NEWY'], {ticker:'NEWY', market:'US', port:'core', note:'', industry:'', added_at:new Date().toISOString()}); wlStop(); wlStart(); }"); page.wait_for_timeout(500)   # TD4a: ต้องอยู่ใน Watchlist ก่อน
-        page.evaluate("()=>wlOpenAdd('NEWY')"); page.wait_for_timeout(150)
-        hid = not vis(page, "#wlAddTierBox") and page.locator("#wlAddTier").count() == 0
-        page.click("#wlAddBtn"); page.wait_for_timeout(400)
-        d = wl_doc(page, "NEWY") or {}
-        check(f"{tag} 8 โมดัลเพิ่มหุ้นใหม่ไม่มีส่วน Tier · บันทึกแล้ว doc ไม่มีฟิลด์ tier", hid and d.get("ticker") == "NEWY" and not any(f in d for f in ("tier", "tier_set_at", "tier_lens", "tier_inputs", "tier_computed", "tier_reason")), json.dumps(d))
-        # ชิปมุม
-        page.evaluate("()=>switchTab('watch')")
-        out = {}
-        for s in ("GROW", "BOTH", "BEE"):
-            page.evaluate("(s)=>wlOpen(s)", s); page.wait_for_timeout(200)
-            out[s] = [txt(page, ".wlDT [data-wl-tier]"), txt(page, f'.wlR[data-sym="{s}"] [data-wl-tier]')]
-        check(f"{tag} 4 ชิปแบบ long: A · Growth / A · ทั้งคู่ / B · แบบสั้นในรายการ = A / A / B", out == {"GROW": ["A · Growth", "A"], "BOTH": ["A · ทั้งคู่", "A"], "BEE": ["B", "B"]}, json.dumps(out, ensure_ascii=False))
+        if not PL2_TIER_UI_REMOVED:   # PL2·7: Tier box removed from the Edit modal — retired, see tests/PL2_retired.md
+            page.evaluate("()=>coreSheetClose()")
+            page.evaluate("()=>{ switchTab('watch'); wlOpen('AVGO'); wlOpenEdit('AVGO'); }"); page.wait_for_timeout(300)
+            st = txt(page, "#wlAddTierSt") or ""
+            check(f"{tag} 8 โมดัลแก้ไข AVGO: ไม่มี dropdown A/B · สถานะ 'Tier A · Fortress · ตั้งเมื่อ {TODAY}' · มีปุ่ม 'ตั้ง Tier…' + ลิงก์ 'ล้าง Tier'",
+                  page.locator("#wlAddTier").count() == 0 and st == f"Tier A · Fortress · ตั้งเมื่อ {TODAY}" and not vis(page, "#wlAddTierBtn") and vis(page, "#wlAddEvalBox [data-cs-edit]") and vis(page, "#wlAddTierClr"), st)   # CS1 — ปุ่ม ตั้ง Tier… ถูกแทนที่ด้วย Edit Stock Evaluation
+            shot_el(page, "#wlAddOverlay .modal", f"wt1-wl-edit-{w}.png")
+            page.click("#wlAddEvalBox [data-cs-edit]"); page.wait_for_selector("[data-scr-sheet]"); page.wait_for_timeout(200)
+            check(f"{tag} 8 'ตั้ง Tier…' → โมดัลปิด · เปิดฟอร์มแผนใหม่ ticker AVGO", not page.locator("#wlAddOverlay.show").count() and page.evaluate("()=>document.querySelector('[data-scr-sheet]').dataset.sym") == "AVGO")   # CS1
+            page.evaluate("()=>{ coreSheetClose(); scrClose(); }")
+            page.evaluate("()=>{ switchTab('watch'); wlOpen('AVGO'); wlOpenEdit('AVGO'); }"); page.wait_for_timeout(200)
+            page.click("#wlAddTierClr"); page.wait_for_timeout(400)
+            d = wl_doc(page, "AVGO") or {}
+            gone = all(d.get(f) is None for f in ("tier", "tier_set_at", "tier_lens", "tier_inputs", "tier_computed", "tier_reason"))
+            check(f"{tag} 8 'ล้าง Tier' → 6 ฟิลด์หาย/null · บรรทัดสถานะ 'ยังไม่ตั้ง Tier'", gone and (txt(page, "#wlAddTierSt") or "") == "ยังไม่ตั้ง Tier" and not vis(page, "#wlAddTierClr"), json.dumps(d, ensure_ascii=False))
+            page.click("#wlAddBtn"); page.wait_for_timeout(400)
+            page.evaluate("()=>wlOpen('AVGO')"); page.wait_for_timeout(300)
+            chip = txt(page, ".wlDT [data-wl-tier-set]") or ""
+            check(f"{tag} 8 หลังล้าง ไม่มีชิป 'ตั้ง Tier' แล้ว (PL1 polish) · รายการซ้ายไม่มีชิป Tier", chip == "" and page.locator('.wlR[data-sym="AVGO"] [data-wl-tier]').count() == 0, chip)
+            page.evaluate("()=>{ window.firebase.__mockDb.__seedDoc(['users','testuid','watchlist','NEWY'], {ticker:'NEWY', market:'US', port:'core', note:'', industry:'', added_at:new Date().toISOString()}); wlStop(); wlStart(); }"); page.wait_for_timeout(500)   # TD4a: ต้องอยู่ใน Watchlist ก่อน
+            page.evaluate("()=>wlOpenAdd('NEWY')"); page.wait_for_timeout(150)
+            hid = not vis(page, "#wlAddTierBox") and page.locator("#wlAddTier").count() == 0
+            page.click("#wlAddBtn"); page.wait_for_timeout(400)
+            d = wl_doc(page, "NEWY") or {}
+            check(f"{tag} 8 โมดัลเพิ่มหุ้นใหม่ไม่มีส่วน Tier · บันทึกแล้ว doc ไม่มีฟิลด์ tier", hid and d.get("ticker") == "NEWY" and not any(f in d for f in ("tier", "tier_set_at", "tier_lens", "tier_inputs", "tier_computed", "tier_reason")), json.dumps(d))
+            # ชิปมุม
+            page.evaluate("()=>switchTab('watch')")
+            out = {}
+            for s in ("GROW", "BOTH", "BEE"):
+                page.evaluate("(s)=>wlOpen(s)", s); page.wait_for_timeout(200)
+                out[s] = [txt(page, ".wlDT [data-wl-tier]"), txt(page, f'.wlR[data-sym="{s}"] [data-wl-tier]')]
+            check(f"{tag} 4 ชิปแบบ long: A · Growth / A · ทั้งคู่ / B · แบบสั้นในรายการ = A / A / B", out == {"GROW": ["A · Growth", "A"], "BOTH": ["A · ทั้งคู่", "A"], "BEE": ["B", "B"]}, json.dumps(out, ensure_ascii=False))
         # 9 ─ OLDA
         page.evaluate("()=>wlOpen('OLDA')"); page.wait_for_timeout(250)
         chip = txt(page, ".wlDT [data-wl-tier]") or ""
         new_form(page, "OLDA")
         info = txt(page, "#tiWlInfo") or ""
-        check(f"{tag} 9 OLDA → ชิป 'A · Fortress (เดิม)' · แผนใหม่ OLDA กล่อง Tier ว่าง · ข้อความเดิม 'Watchlist: Tier A …'",
-              chip == "A · Fortress (เดิม)" and val(page, "#tiRoic") == "" and tkv(page, "fcf3y") is None and info.startswith("Watchlist: Tier A"), chip + " | " + info)
+        check(f"{tag} 9 OLDA → (PL2·7 ไม่มีชิป) · แผนใหม่ OLDA กล่อง Tier ว่าง · ข้อความเดิม 'Watchlist: Tier A …'",
+              chip == "" and val(page, "#tiRoic") == "" and tkv(page, "fcf3y") is None and info.startswith("Watchlist: Tier A"), chip + " | " + info)
         # 10 ─ PTT.BK
         page.evaluate("()=>coreSheetClose()")
         new_form(page, "PTT.BK", acct="fam")
@@ -266,8 +270,9 @@ def checks(pw, w, h, label):
             check(f"{tag} 12 430px: ปุ่ม + บรรทัดเล็กไม่ล้นแนวนอน (เช็กราย element)", ov == [], json.dumps(ov))
             page.evaluate("()=>coreSheetClose()")
             page.evaluate("()=>{ switchTab('watch'); wlOpen('BEE'); wlOpenEdit('BEE'); }"); page.wait_for_timeout(250)
-            ov2 = overflow(page, ["#wlAddTierBox", "#wlAddTierSt", "#wlAddTierBtn"])
-            check(f"{tag} 12 430px: โมดัลแก้ไข ส่วน Tier ไม่ล้นแนวนอน", ov2 == [], json.dumps(ov2))
+            if not PL2_TIER_UI_REMOVED:   # PL2·7: Tier box removed from the Edit modal — retired
+                ov2 = overflow(page, ["#wlAddTierBox", "#wlAddTierSt", "#wlAddTierBtn"])
+                check(f"{tag} 12 430px: โมดัลแก้ไข ส่วน Tier ไม่ล้นแนวนอน", ov2 == [], json.dumps(ov2))
         else:
             ok = page.evaluate("""()=>{ const s = document.querySelector('.core-sheet').getBoundingClientRect(), r = document.querySelector('[data-c-tieronlybox]').getBoundingClientRect(); return r.left >= s.left - 1 && r.right <= s.right + 1; }""")
             check(f"{tag} 12 1440px: ปุ่ม + บรรทัดเล็กอยู่ในกรอบ sheet", ok)

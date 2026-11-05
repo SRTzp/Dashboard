@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GL1 mockup — เป้าหมาย + % งาน (Today)</title>
+<style>
+:root{--bg:#EEF0F3;--surface:#fff;--surface2:#F3F4F6;--border:#E3E6EA;--text:#141518;--muted:#7B818C;--faint:#9AA0A9;--lime:#A3E635;--ink:#16181D;--teal:#0E8F6F;--teal-dim:rgba(14,143,111,.12);--red:#C93B37;--red-dim:rgba(201,59,55,.11);--amber:#A96E06;--amber-dim:rgba(169,110,6,.12);
+--sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans Thai",sans-serif;--mono:ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:var(--sans);color:var(--text);font-size:15px;line-height:1.5}
+.wrap{max-width:420px;margin:0 auto;padding:12px 12px 40px}
+.note{font-size:12px;color:var(--muted);background:#fff8e6;border:1px dashed #e5c56b;border-radius:8px;padding:8px 10px;margin-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.h{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px;margin-bottom:8px}
+.h .act{font-weight:600;font-size:12px;color:var(--teal);border:1px solid var(--border);background:var(--surface2);border-radius:8px;padding:4px 10px;cursor:pointer;min-height:32px}
+.g{padding:8px 0;border-top:1px solid var(--border)}.g:first-of-type{border-top:0}
+.g1{display:flex;justify-content:space-between;align-items:baseline;gap:8px;white-space:nowrap}
+.g1 b{font-size:14px}.g1 .num{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.pct{font-weight:800;font-size:16px}
+.bar{position:relative;height:8px;border-radius:5px;background:var(--surface2);margin:6px 0 4px;overflow:visible}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--teal)}
+.bar .exp{position:absolute;top:-3px;width:2px;height:14px;background:var(--ink);border-radius:1px}
+.g2{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.up{color:var(--teal);font-weight:700}.dn{color:var(--red);font-weight:700}.wa{color:var(--amber);font-weight:700}
+.seg{display:flex;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:10px}
+.seg button{flex:1;border:0;background:transparent;border-radius:8px;padding:8px 0;font:600 14px var(--sans);color:var(--muted);cursor:pointer;min-height:40px}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.row{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--border);font-size:14px;white-space:nowrap}
+.row:first-child{border-top:0}.row .nm{flex:1;overflow:hidden;text-overflow:ellipsis}.row .r{font-size:12px;color:var(--muted)}
+.ck{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--faint);display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:none;cursor:pointer}
+.ck.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.ck.auto{border-style:dashed}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}
+.chip{font-size:12px;background:var(--surface2);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.days{display:flex;gap:6px;margin-top:8px}
+.day{flex:1;text-align:center;font-size:11px;color:var(--muted)}
+.day .col{height:44px;background:var(--surface2);border-radius:6px;position:relative;overflow:hidden;margin-bottom:3px}
+.day .col i{position:absolute;left:0;right:0;bottom:0;background:var(--teal)}
+.day .col i.lo{background:var(--amber)}
+.day.today{color:var(--text);font-weight:700}
+.sub{font-size:12px;color:var(--muted);margin-top:4px}
+.sheet{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-top:16px}
+.sheet h4{margin:0 0 8px;font-size:14px}
+.in{display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:14px}
+.in label{width:62px;color:var(--muted)}
+.in input,.in select{flex:1;min-width:0;font:16px var(--sans);padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}
+.btn{display:block;width:100%;border:0;border-radius:10px;background:var(--ink);color:#fff;font:600 15px var(--sans);padding:11px;min-height:44px}
+.lbl{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;margin:18px 0 6px}
+.rest{opacity:.45;font-size:13px;text-align:center;padding:18px;border:1px dashed var(--border);border-radius:14px}
+</style></head><body><div class="wrap">
+
+<div class="note">ขีดดำบนแถบ = ควรอยู่ตรงนี้วันนี้ถ้าตามเส้นทาง · ม็อกอัป GL1 · ตัวเลขสมมติ · กว้าง 390px · ส่วนล่างของ Today (ช่วงเวลา / เช็กแผน Sat / การบ้าน) อยู่เหมือนเดิม</div>
+
+<!-- ① เป้าหมาย -->
+<div class="card">
+  <div class="h">🎯 เป้าหมาย Port <button class="act">＋ กรอกค่าพอร์ต</button></div>
+
+  <div class="g">
+    <div class="g1"><b>main</b><span class="num">$145.0k → $250k · 31 ธ.ค. 70</span><span class="pct">24%</span></div>
+    <div class="bar"><i style="width:24%"></i><span class="exp" style="left:29%"></span></div>
+    <div class="g2"><span class="wa">ช้ากว่าเส้นทาง −4.8%</span> · ต้องโต 55.7%/ปี จากนี้ · กรอก 4 ต.ค.</div>
+  </div>
+
+  <div class="g">
+    <div class="g1"><b>Family</b><span class="num">฿2.38M → ฿4M · 31 ธ.ค. 71</span><span class="pct">19%</span></div>
+    <div class="bar"><i style="width:19%"></i><span class="exp" style="left:19.3%"></span></div>
+    <div class="g2">ตามเส้นทาง (−0.3%) · ต้องโต 26.2%/ปี จากนี้ · <span class="wa">กรอก 26 ก.ย. (12 วัน)</span></div>
+  </div>
+</div>
+
+<!-- ② % งาน -->
+<div class="seg" id="seg">
+  <button class="on" data-t="d">Daily · 50%</button>
+  <button data-t="w">Weekly · 50%</button>
+</div>
+
+<div class="card" id="pd">
+  <div class="g1"><b>วันนี้ พฤ. 8 ต.ค.</b><span class="pct">6/12 · 50%</span></div>
+  <div class="bar"><i style="width:50%"></i></div>
+  <div class="chips">
+    <span class="chip">ช่วงเวลา 2/5</span>
+    <span class="chip">เช็กแผน Sat 2/4 <span style="color:var(--faint)">(✓ หรือ ✕ = ดูแล้ว)</span></span>
+    <span class="chip">การบ้าน 1/1</span><span class="chip">งานอื่น 1/2</span>
+  </div>
+  <div class="lbl" style="margin-top:8px">งานอื่นวันนี้</div>
+  <div class="row"><span class="ck on">✓</span><span class="nm">อ่านข่าวเช้า 15 นาที</span></div>
+  <div class="row"><span class="ck"></span><span class="nm">จด Journal ไม้ที่ปิดวันนี้</span></div>
+  <div class="sub">ตั้งรายการได้ที่ ตั้งค่าระบบ → Daily routine</div>
+</div>
+
+<div class="card" id="pw" style="display:none">
+  <div class="g1"><b>สัปดาห์นี้ 5–11 ต.ค.</b><span class="pct">2/4 · 50%</span></div>
+  <div class="bar"><i style="width:50%"></i></div>
+  <div class="row"><span class="ck on auto">✓</span><span class="nm">ตั้ง Bias สัปดาห์ Sat ครบ</span><span class="r">4/4 · อัตโนมัติ</span></div>
+  <div class="row"><span class="ck auto"></span><span class="nm">กรอกค่าพอร์ต + ทบทวน Core</span><span class="r">1/2 บัญชี</span></div>
+  <div class="row"><span class="ck on">✓</span><span class="nm">ทบทวน Journal สัปดาห์นี้</span><span class="r">กดเอง</span></div>
+  <div class="row"><span class="ck auto"></span><span class="nm">Daily ครบ ≥ 4/5 วัน</span><span class="r">2/4 · วัน ≥ 80%</span></div>
+  <div class="days">
+    <div class="day"><div class="col"><i style="height:100%"></i></div>จ.</div>
+    <div class="day"><div class="col"><i style="height:86%"></i></div>อ.</div>
+    <div class="day"><div class="col"><i class="lo" style="height:43%"></i></div>พ.</div>
+    <div class="day today"><div class="col"><i class="lo" style="height:50%"></i></div>พฤ.</div>
+    <div class="day"><div class="col"></div>ศ.</div>
+  </div>
+</div>
+
+<div class="rest">… ส่วนเดิมของ Today (ช่วงเวลา · เช็กแผน Sat · การบ้าน · catalyst) …</div>
+
+<!-- sheet กรอกค่าพอร์ต -->
+<div class="lbl">แผ่นที่เปิดเมื่อกด ＋ กรอกค่าพอร์ต</div>
+<div class="sheet">
+  <h4>กรอกค่าพอร์ต (ยอดรวมทุกโบรกของบัญชี)</h4>
+  <div class="in"><label>วันที่</label><input type="date" value="2026-10-08"></div>
+  <div class="in"><label>main $</label><input inputmode="decimal" value="145,000"></div>
+  <div class="in"><label>Family ฿</label><input inputmode="decimal" placeholder="ล่าสุด 2,380,000"></div>
+  <button class="btn">บันทึก</button>
+  <div class="sub">ช่องว่าง = ไม่บันทึกบัญชีนั้น · วันเดียวกันกรอกซ้ำ = แทนที่ · ดู/ลบประวัติได้ใน ตั้งค่าระบบ → เป้าหมาย</div>
+</div>
+
+<div class="lbl">ตั้งค่าระบบ → เป้าหมาย (ต่อบัญชี)</div>
+<div class="sheet">
+  <div class="in"><label>บัญชี</label><select><option>main</option><option>Family</option></select></div>
+  <div class="in"><label>สกุล</label><select><option>$ USD</option><option>฿ THB</option></select></div>
+  <div class="in"><label>เป้า</label><input value="250,000"></div>
+  <div class="in"><label>ครบ</label><input type="date" value="2027-12-31"></div>
+  <div class="in"><label>เริ่ม</label><input value="112,000"><input type="date" value="2026-01-02" style="flex:.9"></div>
+  <button class="btn">บันทึกเป้า</button>
+  <div class="sub">ค่าเริ่ม = ยอดตอนตั้งเป้า (ใส่ย้อนหลังได้) · ไม่ตั้งเป้า = บัญชีนั้นไม่แสดงแถว</div>
+</div>
+
+</div>
+<script>
+document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on',x===b));
+  document.getElementById('pd').style.display=b.dataset.t==='d'?'':'none';
+  document.getElementById('pw').style.display=b.dataset.t==='w'?'':'none';
+});
+</script>
+</body></html>

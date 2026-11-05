@@ -315,7 +315,7 @@ def sat_tests(pw, w, h, label):
         check(f"{tag} 7 ✓ ครบ 2 → แถวเช็กแผน Sat หายจากรายการ · บรรทัด Focus ยังอยู่ (WA1fix: ไม่มีตัวที่ยังไม่ดูเหลือ — S50 ไม่ได้เลือก)", "sat-daily" not in ka and fc is not None and "XAU" in fc and "ไม่มีแผน: Brent" in fc, json.dumps([ka, fc], ensure_ascii=False))
         if w > 480: check(f"{tag} 7 Focus: 'Focus วันนี้: XAU BTC · ไม่มีแผน: Brent แก้'", fc == "Focus วันนี้: XAU BTC · ไม่มีแผน: Brent แก้", str(fc))
         ta = rows_text(page, "a"); bi = next((ta[i] for i, k in enumerate(ka) if k == "bias"), "")
-        check(f"{tag} 7 PF3 ✕ Brent: ไม่มีแถว Bias ในรายการ (งานถอดแล้ว) · แถวงานอื่นที่เหลือยังอยู่ครบลำดับ (การบ้าน · ราคาเก่า×2 · NVDA ตรวจ · งบ)", "bias" not in ka and ka == ["homework", "stale", "stale", "tw-review", "catalyst"], json.dumps(ka))
+        check(f"{tag} 7 PF3 ✕ Brent: ไม่มีแถว Bias ในรายการ (งานถอดแล้ว) · แถวงานอื่นที่เหลือยังอยู่ครบลำดับ (การบ้าน · ราคาเก่า×2 · NVDA ตรวจ · งบ)", "bias" not in ka and ka == ["stale", "stale", "tw-review", "catalyst"], json.dumps(ka))
         check(f"{tag} 7 PF1 — ✕ Brent ไม่กระทบงานอื่น: ไม่มีแถว Bias", bi == "", bi)
         shot(page, f"td2-sat-focus-{label.replace('px','')}.png") if w in (1440, 390) else None
         page.wait_for_timeout(700)
@@ -369,7 +369,10 @@ def hw_extra(page):
     """WL2 — การบ้านดู Thesis ใน watchlist/{T} (เดิมดู research_card.as_of ใน research/{T}) · date = วันที่ Thesis"""
     dates = {"OLD": "2026-08-03", "MID": "2026-09-02", "DONE": "2026-07-01"}
     for tk in ("NOCARD", "OLD", "MID", "DONE"):
-        seed(page, ["users", "testuid", "watchlist", tk], P.wl_th(tk, P.th(tk, date=dates[tk]) if tk in dates else None))
+        th_ = P.th(tk, date=dates[tk]) if tk in dates else None
+        if th_ and tk != "DONE":   # PL2·7: without the Tier part a full Thesis counts as complete — keep OLD/MID incomplete (no Exit section) so they stay in the rotation
+            th_.get("sections", {}).pop("s4", None); th_["tripwires"] = []
+        seed(page, ["users", "testuid", "watchlist", tk], P.wl_th(tk, th_))
 
 
 def hw_doc(log=None):
@@ -386,7 +389,7 @@ def hw_tests(pw, w, h, label):
         p0 = pick()
         r0 = txt_of(page, '.tdRow[data-kind="homework"]')
         check(f"{tag} 10 เสนอ NOCARD + เหตุผล 'ยังไม่มี Thesis' (ไม่เสนอ DONE ที่ทำเมื่อ 3 วันก่อน)", p0 == ["NOCARD", "ยังไม่มี Thesis"] and ["DONE", True, "Thesis เก่า 93 วัน"] in cand, json.dumps([p0, cand], ensure_ascii=False))
-        check(f"{tag} 10 แถว: '📚 การบ้านหุ้นวันนี้: NOCARD' + ป้ายช่วง Selection US + ปุ่ม ✓ เสร็จ · เปลี่ยนตัว [GL3: ปุ่ม ✓ เดียว → ปุ่ม 5 part ธุรกิจ/ทำไม/Next/ออก/Tier]", "การบ้านหุ้นวันนี้: NOCARD" in r0 and "Selection US" in r0 and js(page, "()=>document.querySelectorAll('[data-hw-part]').length===5 && !!document.querySelector('[data-hw-next]')"), r0)
+        check(f"{tag} 10 แถว: '📚 การบ้านหุ้นวันนี้: NOCARD' + ป้ายช่วง Selection US + ปุ่ม ✓ เสร็จ · เปลี่ยนตัว [GL3: ปุ่ม ✓ เดียว → ปุ่ม 5 part ธุรกิจ/ทำไม/Next/ออก/Tier]", "การบ้านหุ้นวันนี้: NOCARD" in r0 and "Selection US" in r0 and js(page, "()=>document.querySelectorAll('[data-hw-part]').length===4 && !!document.querySelector('[data-hw-next]')"), r0)
         ka = kinds(page, "a")
         check(f"{tag} 10 แถวการบ้านอยู่ในกลุ่ม 🟡 ใต้เช็กแผน Sat", ka[:2] == ["sat-daily", "homework"], json.dumps(ka))
         seq = [p0]
@@ -406,12 +409,12 @@ def hw_tests(pw, w, h, label):
         go_today(page)
         # ── 11 ติ๊กเสร็จ ──
         wk0 = txt_of(page, "[data-td-hwweek]")
-        for pid in ["biz", "why", "next", "exit", "tier"]:   # GL3: ติ๊กครบ 5 part แทนปุ่ม ✓ เดียว
+        for pid in ["biz", "why", "next", "exit"]:   # GL3: ติ๊กครบทุก part (PL2·7: 4 parts, no Tier)
             page.locator(f'[data-hw-part="{pid}"]').first.click(); page.wait_for_timeout(300)
         page.wait_for_timeout(600)
         hw = settings_db(page)["routineLog"][TODAY]["hw"]
         line = txt_of(page, "[data-hw-donetxt]")
-        check(f"{tag} 11 ✓ เสร็จ → แถวหาย · เหลือบรรทัด 'การบ้านวันนี้: OLD ✓' · hw.done = true", "homework" not in kinds(page, "a") and line == "การบ้านวันนี้: OLDW ✓" and hw == {"pick": "OLD", "done": True, "parts": ["biz", "why", "next", "exit", "tier"]}, json.dumps([kinds(page, "a"), line, hw], ensure_ascii=False))
+        check(f"{tag} 11 ✓ เสร็จ → แถวหาย · เหลือบรรทัด 'การบ้านวันนี้: OLD ✓' · hw.done = true", "homework" not in kinds(page, "a") and line == "การบ้านวันนี้: OLDW ✓" and hw == {"pick": "OLD", "done": True, "parts": ["biz", "why", "next", "exit"]}, json.dumps([kinds(page, "a"), line, hw], ensure_ascii=False))
         wk1 = txt_of(page, "[data-td-hwweek]")
         check(f"{tag} 11 ใต้ Routine 'การบ้าน x/y วัน' (สัปดาห์นี้ จ.–วันนี้ · อังคารทำไปแล้ว 1): 1/5 → 2/5", wk0 == "· การบ้าน 1/5 วัน" and wk1 == "· การบ้าน 2/5 วัน", json.dumps([wk0, wk1], ensure_ascii=False))
         shot(page, f"td2-homework-done-{label.replace('px','')}.png") if w == 1440 else None
@@ -487,6 +490,7 @@ def mobile_tests(pw, w, h, label):
     tag = f"[{ENGINE}/{label}]"
     browser, context, page, ce, pe, dialogs = launch(pw, w, h)
     try:
+        seed(page, ["users", "testuid", "watchlist", "NOCARD"], P.wl_th("NOCARD", None))   # PL2·7: AVGO's homework is now complete without a Tier part — add an incomplete stock so the homework row exists
         go_today(page)
         vs = vis_slots(page)
         fold = txt_of(page, "[data-td-fold]")
@@ -506,7 +510,7 @@ def mobile_tests(pw, w, h, label):
         sz = js(page, "()=>[...document.querySelectorAll('.tdAs .b, .tdHb')].map(e=>{ const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })")
         check(f"{tag} 13 ปุ่ม ✓ ✕ และการบ้านสูง ≥ 34px · กว้าง ≥ 34px", len(sz) >= 7 and all(s[0] >= 34 and s[1] >= 34 for s in sz), json.dumps(sz))   # GL3: ปุ่ม ✓ เดียวหาย → 9 ปุ่ม (Sat 8 + เปลี่ยนตัว) · WA1fix: Sat 3 ตลาด = 6 + เปลี่ยนตัว = 7
         szp = js(page, "()=>[...document.querySelectorAll('.tdHp')].map(e=>{ const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })")
-        check(f"{tag} 13 [GL3] ปุ่ม part ทั้ง 5 สูง ≥ 32px · กว้าง > 0", len(szp) == 5 and all(s[0] > 0 and s[1] >= 32 for s in szp), json.dumps(szp))
+        check(f"{tag} 13 [GL3] ปุ่ม part ทั้ง 4 (PL2·7: ไม่มี Tier) สูง ≥ 32px · กว้าง > 0", len(szp) == 4 and all(s[0] > 0 and s[1] >= 32 for s in szp), json.dumps(szp))
         hit = js(page, """()=>[...document.querySelectorAll('.tdAs .b, .tdHb')].map(b=>{ b.scrollIntoView({block:'center'}); const r = b.getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width/2, r.top + r.height/2); return !!e && (e === b || b.contains(e)); })""")
         check(f"{tag} 13 elementFromPoint ของปุ่ม ✓ ✕ เสร็จ เปลี่ยน = ปุ่มนั้น", hit and all(hit), json.dumps(hit))
         ov = P.overflow_x(page, [".tdWrap", ".tdRow", ".tdRt", ".tdSs", ".tdAs", ".tdWhat", ".tdFocus", ".tdOkLine", ".tdHwBtns"])

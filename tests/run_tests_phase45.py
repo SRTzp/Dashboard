@@ -13,7 +13,15 @@ import run_tests_phase11 as P11
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHOTS = P40.SHOTS
 ENGINE = P40.ENGINE
-js, check, txt_of, cnt = P40.js, P40.check, P40.txt_of, P40.cnt
+js, txt_of, cnt = P40.js, P40.txt_of, P40.cnt
+PL2_RETIRED_PREFIXES = ('1 ไม่มีไอเดีย → ว่าง', '2 กรอง ▼', '2 เรียง ศึกษา', '5 Candidates detail', '8b ไอเดียพักแล้ว', '9 Import ไอเดียซ้ำ')   # PL2·7: Ideas no longer feed Candidates after the one-time migration — these checks test the removed derivation (tests/PL2_retired.md)
+
+
+def check(name, ok, detail=""):
+    body = name.split("] ", 1)[-1]
+    if any(body.startswith(p) for p in PL2_RETIRED_PREFIXES):
+        print("RETIRED - " + name); return
+    return P40.check(name, ok, detail)
 results = P40.results
 CLK = P41.CLK
 SEG = P44.SEG

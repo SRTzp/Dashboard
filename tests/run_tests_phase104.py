@@ -139,7 +139,7 @@ FORM = """()=>{ const f = document.querySelector('#satV3Panel .ln1-card'); if(!f
 
 
 def fill_active(page, entry, sl, tp, note, ck_keys):
-    js(page, "()=>{ const i = satIdeasList.find(x=>x.id===satActiveDraft); if(i && satV2Sleeve(i)==='tactical' && pfClsKey(i.classify)!=='clear') satV3IdeaWrite(i.id,{classify:'clear'}); }"); settle(page, 500)   # CS1 — Tactical ต้อง Clear Trend
+    js(page, "()=>{ const i = satIdeasList.find(x=>x.id===satActiveDraft); if(i && satV2Sleeve(i)==='tactical' && satClsKey(i)!=='clear'){ pfVerifySet(i.id,'ema50_ok',true); pfVerifySet(i.id,'structure_ok',true); } }"); settle(page, 500)   # CS1 — Tactical ต้อง Clear Trend
     f = page.locator("#satV3Panel .ln1-card").first
     f.locator("[data-v2-entry]").fill(str(entry)); f.locator("[data-v2-sl]").fill(str(sl)); f.locator("[data-v2-tp]").fill(str(tp))
     f.locator("[data-v2-tp]").press("Tab"); settle(page, 300)

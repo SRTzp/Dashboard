@@ -19,6 +19,7 @@ import run_tests_phase55 as P55
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHOTS = os.path.join(HERE, "screenshots"); os.makedirs(SHOTS, exist_ok=True)
 ENGINE = base.BROWSER_ENGINE
+PL2_LEGACY_VW_REMOVED = True   # PL2·3/D2
 BACKUP = os.path.abspath(os.path.join(HERE, "..", "index.backup-pre-VW1.html"))
 results = []
 js = P37.js
@@ -306,100 +307,103 @@ def wl_tests(pw, w, h, label):
     try:
         open_card(page, "AVGO", "sum")
         tabs = js(page, "()=>[...document.querySelectorAll('[data-lt-tab]')].map(e=>[e.dataset.ltTab, e.innerText.trim()])")
-        check(f"{tag} 5 แท็บการ์ด 6 แท็บ: สรุป · มุมมอง · ธุรกิจ · ทำไมซื้อ · ติดตาม · ออกเมื่อ (มุมมองเป็นแท็บที่ 2)", [t[0] for t in tabs] == ["sum", "view", "biz", "why", "trk", "exit"] and tabs[1][1] == "มุมมอง" and tabs[0][1] == "สรุป", json.dumps(tabs, ensure_ascii=False))
+        check(f"{tag} 5 แท็บการ์ด 6 แท็บ: สรุป · มุมมอง · ธุรกิจ · ทำไมซื้อ · ติดตาม · ออกเมื่อ (มุมมองเป็นแท็บที่ 2)", [t[0] for t in tabs] == ["sum", "view", "biz", "why", "trk", "exit"] and tabs[1][1] == "My Thesis" and tabs[0][1] == "สรุป", json.dumps(tabs, ensure_ascii=False))
         tb = js(page, "()=>{ const t=document.querySelector('[data-lt-tabs]'); return {sw:t.scrollWidth, cw:t.clientWidth, ovf:document.documentElement.scrollWidth-innerWidth, right:t.getBoundingClientRect().right, vw:innerWidth}; }")
         check(f"{tag} 5 แถบแท็บไม่ล้นหน้า (เกินให้เลื่อนในแถบเอง)", tb["ovf"] <= 0 and tb["right"] <= tb["vw"] + 1, json.dumps(tb))
         check(f"{tag} 5 ป้าย 'สรุป' ของการ์ดไม่เปลี่ยน", tabs[0] == ["sum", "สรุป"])
-        page.locator('[data-lt-tab="view"]').click(); wait(page, 300)
-        r0 = rows(page)
-        check(f"{tag} 5 ว่าง → 3 แถว Event · Fund. · Tech ทุกแถว '— แตะเพื่อเพิ่ม'", len(r0) == 3 and all("— แตะเพื่อเพิ่ม" in x for x in r0) and r0[0].startswith("Event") and r0[1].startswith("Fund.") and r0[2].startswith("Tech"), json.dumps(r0, ensure_ascii=False))
-        shot(page, f"vw1-wl-view-{sfx}.png", ".wlDBody")
-        # Event 2 รายการ คนละวัน
-        add(page, "event", "ดีล custom ASIC รายใหม่")
-        js(page, "(iso)=>(" + P38.CLOCK_JS + ")(iso)", "2026-10-10T05:00:00Z"); wait(page, 100)
-        add(page, "event", "รอยืนยัน capex")
-        ev = notes_of(page).get("event", [])
-        r1 = rows(page)
-        check(f"{tag} 5 เพิ่ม Event 2 รายการ (คนละวัน) → doc stockNotes/AVGO.event 2 รายการ ใหม่อยู่หน้า (d 10-10 แล้ว 10-09)", [(x["d"], x["t"]) for x in ev] == [("2026-10-10", "รอยืนยัน capex"), (TODAY, "ดีล custom ASIC รายใหม่")], json.dumps(ev, ensure_ascii=False))
-        check(f"{tag} 5 แถว Event โชว์ล่าสุด + วัน (10 ต.ค.) · ประวัติเรียงใหม่ก่อน", "รอยืนยัน capex" in r1[0] and "10 ต.ค." in r1[0] and js(page, "()=>[...document.querySelectorAll('.wlDBody [data-vw-ang=event] [data-vw-item] .vwHT')].map(e=>e.innerText)") == ["รอยืนยัน capex", "ดีล custom ASIC รายใหม่"], json.dumps(r1, ensure_ascii=False))
-        # Tech + ลิงก์กราฟ
-        add(page, "tech", "พักใกล้ EMA10 W", TV2)
-        thumb = js(page, "()=>{ const e=document.querySelector('.wlDBody [data-vw-row=tech] .vwMini'); if(!e) return null; const r=e.getBoundingClientRect(); return {w:r.width, h:r.height, src:e.querySelector('img').getAttribute('src')}; }")
-        tech = notes_of(page).get("tech", [])
-        check(f"{tag} 5 Tech + ลิงก์กราฟ → เก็บลิงก์ใน tech[0].chart · ภาพย่อ 54×30 ในแถว", tech and tech[0].get("chart") == TV2 and thumb and thumb["w"] == 54 and thumb["h"] == 30 and thumb["src"].endswith("/a/Ab12Cd34.png"), json.dumps([tech, thumb], ensure_ascii=False))
-        hi = rect(page, ".wlDBody [data-vw-ang=tech] .vwTop .vwImg")
-        rth = js(page, "(s)=>{ const i=document.querySelector(s+' img'); const w=i.getBoundingClientRect(); return {fit:getComputedStyle(i).objectFit, w:w.width, h:w.height, exp:w.width*i.naturalHeight/i.naturalWidth, nw:i.naturalWidth}; }", ".wlDBody [data-vw-ang=tech] .vwTop .vwImg")
-        check(f"{tag} 5 [ESC1] แตะแถว Tech ที่มีกราฟ → กราฟล่าสุดเต็มกว้างบนสุด สูงตามสัดส่วนภาพ (เดิมภาพย่อ 110px ในประวัติ)", hi and rth["fit"] == "contain" and abs(rth["h"] - rth["exp"]) <= 2, json.dumps([hi, rth]))
-        shot(page, f"vw1-wl-tech-open-{sfx}.png", ".wlDBody")
-        # ลิงก์ผิดใน Tech
-        page.locator('.wlDBody [data-vw-ang=tech] [data-vw-t]').fill("ทดสอบลิงก์ผิด"); page.locator('.wlDBody [data-vw-ang=tech] [data-vw-url]').fill("https://google.com/x/abc")
-        page.locator('.wlDBody [data-vw-ang=tech] [data-vw-save]').click(); wait(page, 300)
-        check(f"{tag} 5 ลิงก์กราฟผิด → '{BAD_MSG}' · ไม่บันทึก (tech ยัง 1 รายการ)", txt(page, ".wlDBody [data-vw-msg]") == BAD_MSG and len(notes_of(page).get("tech", [])) == 1, txt(page, ".wlDBody [data-vw-msg]") or "")
-        # 141 ตัว
-        page.locator('.wlDBody [data-vw-ang=tech] [data-vw-url]').fill("")
-        page.locator('.wlDBody [data-vw-ang=tech] [data-vw-t]').fill("x" * 141); wait(page, 100)
-        st = js(page, "()=>({dis:document.querySelector('.wlDBody [data-vw-ang=tech] [data-vw-save]').disabled, cnt:document.querySelector('.wlDBody [data-vw-ang=tech] [data-vw-cnt]').innerText, over:document.querySelector('.wlDBody [data-vw-ang=tech] [data-vw-cnt]').classList.contains('over')})")
-        js(page, "()=>document.querySelector('.wlDBody [data-vw-ang=tech] [data-vw-save]').click()"); wait(page, 250)
-        check(f"{tag} 5 141 ตัว → ตัวนับ 141/140 สีเตือน · ปุ่มบันทึกกดไม่ได้ · ไม่เขียน", st == {"dis": True, "cnt": "141/140", "over": True} and len(notes_of(page).get("tech", [])) == 1, json.dumps(st))
-        page.locator('.wlDBody [data-vw-ang=tech] [data-vw-t]').fill("x" * 140); wait(page, 100)
-        check(f"{tag} 5 140 ตัวพอดี → กดบันทึกได้ (140/140)", js(page, "()=>!document.querySelector('.wlDBody [data-vw-ang=tech] [data-vw-save]').disabled") and txt(page, ".wlDBody [data-vw-ang=tech] [data-vw-cnt]") == "140/140")
-        # ลบ (ยืนยัน)
-        n_dl = len(dl)
-        page.locator('.wlDBody [data-vw-ang=tech] [data-vw-item]').first.locator("[data-vw-del]").click(); wait(page, 400)
-        check(f"{tag} 5 ลบรายการ → ถามยืนยัน (confirm) แล้วลบออกจาก doc", len(dl) == n_dl + 1 and notes_of(page).get("tech") == [] and "— แตะเพื่อเพิ่ม" in rows(page)[2], json.dumps([dl[n_dl:], notes_of(page).get("tech")], ensure_ascii=False))
-        check(f"{tag} 5 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
+        if not PL2_LEGACY_VW_REMOVED:   # PL2·3/D2: legacy block removed from UI — retired, see tests/PL2_retired.md
+            page.locator('[data-lt-tab="view"]').click(); wait(page, 300)
+            r0 = rows(page)
+            check(f"{tag} 5 ว่าง → 3 แถว Event · Fund. · Tech ทุกแถว '— แตะเพื่อเพิ่ม'", len(r0) == 3 and all("— แตะเพื่อเพิ่ม" in x for x in r0) and r0[0].startswith("Event") and r0[1].startswith("Fund.") and r0[2].startswith("Tech"), json.dumps(r0, ensure_ascii=False))
+            shot(page, f"vw1-wl-view-{sfx}.png", ".wlDBody")
+            # Event 2 รายการ คนละวัน
+            add(page, "event", "ดีล custom ASIC รายใหม่")
+            js(page, "(iso)=>(" + P38.CLOCK_JS + ")(iso)", "2026-10-10T05:00:00Z"); wait(page, 100)
+            add(page, "event", "รอยืนยัน capex")
+            ev = notes_of(page).get("event", [])
+            r1 = rows(page)
+            check(f"{tag} 5 เพิ่ม Event 2 รายการ (คนละวัน) → doc stockNotes/AVGO.event 2 รายการ ใหม่อยู่หน้า (d 10-10 แล้ว 10-09)", [(x["d"], x["t"]) for x in ev] == [("2026-10-10", "รอยืนยัน capex"), (TODAY, "ดีล custom ASIC รายใหม่")], json.dumps(ev, ensure_ascii=False))
+            check(f"{tag} 5 แถว Event โชว์ล่าสุด + วัน (10 ต.ค.) · ประวัติเรียงใหม่ก่อน", "รอยืนยัน capex" in r1[0] and "10 ต.ค." in r1[0] and js(page, "()=>[...document.querySelectorAll('.wlDBody [data-vw-ang=event] [data-vw-item] .vwHT')].map(e=>e.innerText)") == ["รอยืนยัน capex", "ดีล custom ASIC รายใหม่"], json.dumps(r1, ensure_ascii=False))
+            # Tech + ลิงก์กราฟ
+            add(page, "tech", "พักใกล้ EMA10 W", TV2)
+            thumb = js(page, "()=>{ const e=document.querySelector('.wlDBody [data-vw-row=tech] .vwMini'); if(!e) return null; const r=e.getBoundingClientRect(); return {w:r.width, h:r.height, src:e.querySelector('img').getAttribute('src')}; }")
+            tech = notes_of(page).get("tech", [])
+            check(f"{tag} 5 Tech + ลิงก์กราฟ → เก็บลิงก์ใน tech[0].chart · ภาพย่อ 54×30 ในแถว", tech and tech[0].get("chart") == TV2 and thumb and thumb["w"] == 54 and thumb["h"] == 30 and thumb["src"].endswith("/a/Ab12Cd34.png"), json.dumps([tech, thumb], ensure_ascii=False))
+            hi = rect(page, ".wlDBody [data-vw-ang=tech] .vwTop .vwImg")
+            rth = js(page, "(s)=>{ const i=document.querySelector(s+' img'); const w=i.getBoundingClientRect(); return {fit:getComputedStyle(i).objectFit, w:w.width, h:w.height, exp:w.width*i.naturalHeight/i.naturalWidth, nw:i.naturalWidth}; }", ".wlDBody [data-vw-ang=tech] .vwTop .vwImg")
+            check(f"{tag} 5 [ESC1] แตะแถว Tech ที่มีกราฟ → กราฟล่าสุดเต็มกว้างบนสุด สูงตามสัดส่วนภาพ (เดิมภาพย่อ 110px ในประวัติ)", hi and rth["fit"] == "contain" and abs(rth["h"] - rth["exp"]) <= 2, json.dumps([hi, rth]))
+            shot(page, f"vw1-wl-tech-open-{sfx}.png", ".wlDBody")
+            # ลิงก์ผิดใน Tech
+            page.locator('.wlDBody [data-vw-ang=tech] [data-vw-t]').fill("ทดสอบลิงก์ผิด"); page.locator('.wlDBody [data-vw-ang=tech] [data-vw-url]').fill("https://google.com/x/abc")
+            page.locator('.wlDBody [data-vw-ang=tech] [data-vw-save]').click(); wait(page, 300)
+            check(f"{tag} 5 ลิงก์กราฟผิด → '{BAD_MSG}' · ไม่บันทึก (tech ยัง 1 รายการ)", txt(page, ".wlDBody [data-vw-msg]") == BAD_MSG and len(notes_of(page).get("tech", [])) == 1, txt(page, ".wlDBody [data-vw-msg]") or "")
+            # 141 ตัว
+            page.locator('.wlDBody [data-vw-ang=tech] [data-vw-url]').fill("")
+            page.locator('.wlDBody [data-vw-ang=tech] [data-vw-t]').fill("x" * 141); wait(page, 100)
+            st = js(page, "()=>({dis:document.querySelector('.wlDBody [data-vw-ang=tech] [data-vw-save]').disabled, cnt:document.querySelector('.wlDBody [data-vw-ang=tech] [data-vw-cnt]').innerText, over:document.querySelector('.wlDBody [data-vw-ang=tech] [data-vw-cnt]').classList.contains('over')})")
+            js(page, "()=>document.querySelector('.wlDBody [data-vw-ang=tech] [data-vw-save]').click()"); wait(page, 250)
+            check(f"{tag} 5 141 ตัว → ตัวนับ 141/140 สีเตือน · ปุ่มบันทึกกดไม่ได้ · ไม่เขียน", st == {"dis": True, "cnt": "141/140", "over": True} and len(notes_of(page).get("tech", [])) == 1, json.dumps(st))
+            page.locator('.wlDBody [data-vw-ang=tech] [data-vw-t]').fill("x" * 140); wait(page, 100)
+            check(f"{tag} 5 140 ตัวพอดี → กดบันทึกได้ (140/140)", js(page, "()=>!document.querySelector('.wlDBody [data-vw-ang=tech] [data-vw-save]').disabled") and txt(page, ".wlDBody [data-vw-ang=tech] [data-vw-cnt]") == "140/140")
+            # ลบ (ยืนยัน)
+            n_dl = len(dl)
+            page.locator('.wlDBody [data-vw-ang=tech] [data-vw-item]').first.locator("[data-vw-del]").click(); wait(page, 400)
+            check(f"{tag} 5 ลบรายการ → ถามยืนยัน (confirm) แล้วลบออกจาก doc", len(dl) == n_dl + 1 and notes_of(page).get("tech") == [] and "— แตะเพื่อเพิ่ม" in rows(page)[2], json.dumps([dl[n_dl:], notes_of(page).get("tech")], ensure_ascii=False))
+            check(f"{tag} 5 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
     finally: b.close()
     # รายการที่ 51
     seed50 = {"AVGO": {"event": [{"id": f"e{i}", "d": "2026-09-01", "t": f"เก่า {i}"} for i in range(50)], "fund": [], "tech": [], "updated_at": "2026-09-01T00:00:00Z"}}
-    b, c, page, ce, pe, dl, env = launch(pw, w, h, wl=[("AVGO", AVGO_TH, {})], notes=seed50)
-    try:
-        open_card(page)
-        add(page, "event", "รายการที่ 51")
-        ev = notes_of(page).get("event", [])
-        check(f"{tag} 5 รายการที่ 51 → ตัดเก่าสุดทิ้ง เหลือ 50 (ใหม่อยู่หน้า · e49 หาย · e48 ยังอยู่)", len(ev) == 50 and ev[0]["t"] == "รายการที่ 51" and ev[-1]["id"] == "e48" and not any(x["id"] == "e49" for x in ev), json.dumps([len(ev), ev[0], ev[-1]], ensure_ascii=False))
-        check(f"{tag} 5 ประวัติบนจอแสดงครบ 50 รายการ", cnt(page, ".wlDBody [data-vw-ang=event] [data-vw-item]") == 50)
-    finally: b.close()
+    if not PL2_LEGACY_VW_REMOVED:   # PL2·3/D2: tests the removed Event/Fund./Tech block — retired, see tests/PL2_retired.md
+        b, c, page, ce, pe, dl, env = launch(pw, w, h, wl=[("AVGO", AVGO_TH, {})], notes=seed50)
+        try:
+            open_card(page)
+            add(page, "event", "รายการที่ 51")
+            ev = notes_of(page).get("event", [])
+            check(f"{tag} 5 รายการที่ 51 → ตัดเก่าสุดทิ้ง เหลือ 50 (ใหม่อยู่หน้า · e49 หาย · e48 ยังอยู่)", len(ev) == 50 and ev[0]["t"] == "รายการที่ 51" and ev[-1]["id"] == "e48" and not any(x["id"] == "e49" for x in ev), json.dumps([len(ev), ev[0], ev[-1]], ensure_ascii=False))
+            check(f"{tag} 5 ประวัติบนจอแสดงครบ 50 รายการ", cnt(page, ".wlDBody [data-vw-ang=event] [data-vw-item]") == 50)
+        finally: b.close()
 
     # ── 6 Candidates
     ideas = [idea([cand("CAA", "Cand A", 1, "study"), cand("CBB", "Cand B", 2, "wait")])]
-    b, c, page, ce, pe, dl, env = launch(pw, w, h, ideas=ideas)
-    try:
-        P40.go_watch(page); js(page, "()=>wlSetView('cand')"); wait(page, 350)
-        h_rows = js(page, "()=>[...document.querySelectorAll('.wlRows .wlR')].map(e=>Math.round(e.getBoundingClientRect().height))")
-        one_line = js(page, "()=>[...document.querySelectorAll('.wlRows .wlR')].every(e=>{ const kids=[...e.children].filter(k=>k.getBoundingClientRect().height>0); const tops=kids.map(k=>k.getBoundingClientRect().top+k.getBoundingClientRect().height/2); return Math.max(...tops)-Math.min(...tops) < 6; })")
-        check(f"{tag} 6 Candidates: แถวบรรทัดเดียว (ID2) ก่อนแตะ · ยังไม่มีแถวขยาย", len(h_rows) == 2 and one_line and cnt(page, "[data-cand-x]") == 0, json.dumps([h_rows, one_line]))
-        page.locator('.wlRows .wlR[data-sym="CAA"]').click(); wait(page, 400)
-        check(f"{tag} 6 แตะแถว CAA → ขยายลงมา 3 แถว (Event · Fund. · Tech)", cnt(page, "[data-cand-x]") == 1 and js(page, "()=>document.querySelector('[data-cand-x]').dataset.sym") == "CAA" and js(page, "()=>[...document.querySelectorAll('[data-cand-x] [data-vw-row]')].map(e=>e.innerText.replace(/\\s+/g,' ').trim().split(' ')[0])") == ["Event", "Fund.", "Tech"])
-        after = js(page, "()=>{ const r=document.querySelector('.wlRows .wlR[data-sym=CAA]'), x=document.querySelector('[data-cand-x]'); return r.nextElementSibling===x; }")
-        check(f"{tag} 6 แถวขยายอยู่ใต้แถวที่แตะ", after)
-        page.locator('.wlRows .wlR[data-sym="CBB"]').click(); wait(page, 350)
-        check(f"{tag} 6 แตะแถวอื่น → เปิดได้ทีละแถว (CAA พับ · CBB ขยาย)", cnt(page, "[data-cand-x]") == 1 and js(page, "()=>document.querySelector('[data-cand-x]').dataset.sym") == "CBB")
-        page.locator('.wlRows .wlR[data-sym="CBB"]').click(); wait(page, 300)
-        check(f"{tag} 6 แตะหัวแถวซ้ำ → พับ", cnt(page, "[data-cand-x]") == 0)
-        page.locator('.wlRows .wlR[data-sym="CAA"]').click(); wait(page, 350)
-        page.locator('[data-cand-x] [data-vw-row="fund"]').click(); wait(page, 200)
-        page.locator('[data-cand-x] [data-vw-ang="fund"] [data-vw-t]').fill("backlog โต · margin 50%")
-        page.locator('[data-cand-x] [data-vw-ang="fund"] [data-vw-save]').click(); wait(page, 450)
-        d = doc_of(page, "stockNotes", "CAA") or {}
-        check(f"{tag} 6 บันทึก Fund. ในแถวขยาย → stockNotes/CAA.fund 1 รายการ", len(d.get("fund", [])) == 1 and d["fund"][0]["t"] == "backlog โต · margin 50%" and d["fund"][0]["d"] == TODAY, json.dumps(d, ensure_ascii=False))
-        shot(page, f"vw1-cand-open-{sfx}.png")
-        dot = js(page, "()=>({caa:!!document.querySelector('.wlRows .wlR[data-sym=CAA] [data-vw-dot]'), cbb:!!document.querySelector('.wlRows .wlR[data-sym=CBB] [data-vw-dot]'), h:Math.round(document.querySelector('.wlRows .wlR[data-sym=CAA]').getBoundingClientRect().height), h2:Math.round(document.querySelector('.wlRows .wlR[data-sym=CBB]').getBoundingClientRect().height)})")
-        check(f"{tag} 6 แถวที่มีโน้ตมีจุด • หลังชื่อ (CAA มี · CBB ไม่มี) · แถวยังบรรทัดเดียว สูงเท่ากัน", dot["caa"] and not dot["cbb"] and abs(dot["h"] - dot["h2"]) <= 2, json.dumps(dot))
-        before = js(page, "()=>document.querySelector('[data-cand-x]') ? document.querySelector('[data-cand-x]').dataset.sym : null")
-        page.locator('[data-cand-x] [data-c-add]').click(); wait(page, 350)
-        ov = js(page, "()=>({um: !!document.querySelector('[data-td4-usemove]'), show:document.getElementById('wlAddOverlay').classList.contains('show'), x:document.querySelector('[data-cand-x]') ? document.querySelector('[data-cand-x]').dataset.sym : null})")
-        check(f"{tag} 6 กด ＋ เพิ่มเข้า Watchlist ที่ Candidate → TD4b: ข้อความ 'Use Move to Watchlist' (ไม่เปิดฟอร์มเพิ่ม) · แถวไม่ถูกสลับขยาย/พับ", ov == {"um": True, "show": False, "x": before == "CAA" and "CAA" or None}, json.dumps([before, ov]))
-        js(page, "()=>ltSheetClose()")
-        page.evaluate("()=>{ window.firebase.__mockDb.__seedDoc(['users','testuid','watchlist','CAA'], {ticker:'CAA', market:'US', port:'core', note:'', industry:'', added_at:new Date().toISOString()}); wlStop(); wlStart(); }"); wait(page, 600)   # TD4b: ย้ายเข้า Watchlist ได้ทางเดียวคือฟอร์ม Move — ในเทสนี้ seed ตรง ๆ
-        check(f"{tag} 6 เพิ่มเข้า Watchlist แล้ว (CAA อยู่ใน Watchlist)", js(page, "()=>wlHas('CAA')"))
-        open_card(page, "CAA", "view")
-        r_ = rows(page)
-        check(f"{tag} 6 เปิดการ์ด CAA → แท็บ มุมมอง เห็นโน้ตเดิมทันที (Fund. 'backlog โต · margin 50%')", len(r_) == 3 and "backlog โต · margin 50%" in r_[1], json.dumps(r_, ensure_ascii=False))
-        js(page, "()=>wlDeleteItem('CAA')"); wait(page, 600)
-        d = doc_of(page, "stockNotes", "CAA") or {}
-        check(f"{tag} 6 ลบ CAA ออกจาก Watchlist → ไม่ลบ stockNotes (ยังมี fund 1 รายการ)", not js(page, "()=>wlHas('CAA')") and len(d.get("fund", [])) == 1, json.dumps(d, ensure_ascii=False))
-        check(f"{tag} 6 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
-    finally: b.close()
+    if not PL2_LEGACY_VW_REMOVED:   # PL2·3/D2: tests the removed Event/Fund./Tech block — retired, see tests/PL2_retired.md
+        b, c, page, ce, pe, dl, env = launch(pw, w, h, ideas=ideas)
+        try:
+            P40.go_watch(page); js(page, "()=>wlSetView('cand')"); wait(page, 350)
+            h_rows = js(page, "()=>[...document.querySelectorAll('.wlRows .wlR')].map(e=>Math.round(e.getBoundingClientRect().height))")
+            one_line = js(page, "()=>[...document.querySelectorAll('.wlRows .wlR')].every(e=>{ const kids=[...e.children].filter(k=>k.getBoundingClientRect().height>0); const tops=kids.map(k=>k.getBoundingClientRect().top+k.getBoundingClientRect().height/2); return Math.max(...tops)-Math.min(...tops) < 6; })")
+            check(f"{tag} 6 Candidates: แถวบรรทัดเดียว (ID2) ก่อนแตะ · ยังไม่มีแถวขยาย", len(h_rows) == 2 and one_line and cnt(page, "[data-cand-x]") == 0, json.dumps([h_rows, one_line]))
+            page.locator('.wlRows .wlR[data-sym="CAA"]').click(); wait(page, 400)
+            check(f"{tag} 6 แตะแถว CAA → ขยายลงมา 3 แถว (Event · Fund. · Tech)", cnt(page, "[data-cand-x]") == 1 and js(page, "()=>document.querySelector('[data-cand-x]').dataset.sym") == "CAA" and js(page, "()=>[...document.querySelectorAll('[data-cand-x] [data-vw-row]')].map(e=>e.innerText.replace(/\\s+/g,' ').trim().split(' ')[0])") == ["Event", "Fund.", "Tech"])
+            after = js(page, "()=>{ const r=document.querySelector('.wlRows .wlR[data-sym=CAA]'), x=document.querySelector('[data-cand-x]'); return r.nextElementSibling===x; }")
+            check(f"{tag} 6 แถวขยายอยู่ใต้แถวที่แตะ", after)
+            page.locator('.wlRows .wlR[data-sym="CBB"]').click(); wait(page, 350)
+            check(f"{tag} 6 แตะแถวอื่น → เปิดได้ทีละแถว (CAA พับ · CBB ขยาย)", cnt(page, "[data-cand-x]") == 1 and js(page, "()=>document.querySelector('[data-cand-x]').dataset.sym") == "CBB")
+            page.locator('.wlRows .wlR[data-sym="CBB"]').click(); wait(page, 300)
+            check(f"{tag} 6 แตะหัวแถวซ้ำ → พับ", cnt(page, "[data-cand-x]") == 0)
+            page.locator('.wlRows .wlR[data-sym="CAA"]').click(); wait(page, 350)
+            page.locator('[data-cand-x] [data-vw-row="fund"]').click(); wait(page, 200)
+            page.locator('[data-cand-x] [data-vw-ang="fund"] [data-vw-t]').fill("backlog โต · margin 50%")
+            page.locator('[data-cand-x] [data-vw-ang="fund"] [data-vw-save]').click(); wait(page, 450)
+            d = doc_of(page, "stockNotes", "CAA") or {}
+            check(f"{tag} 6 บันทึก Fund. ในแถวขยาย → stockNotes/CAA.fund 1 รายการ", len(d.get("fund", [])) == 1 and d["fund"][0]["t"] == "backlog โต · margin 50%" and d["fund"][0]["d"] == TODAY, json.dumps(d, ensure_ascii=False))
+            shot(page, f"vw1-cand-open-{sfx}.png")
+            dot = js(page, "()=>({caa:!!document.querySelector('.wlRows .wlR[data-sym=CAA] [data-vw-dot]'), cbb:!!document.querySelector('.wlRows .wlR[data-sym=CBB] [data-vw-dot]'), h:Math.round(document.querySelector('.wlRows .wlR[data-sym=CAA]').getBoundingClientRect().height), h2:Math.round(document.querySelector('.wlRows .wlR[data-sym=CBB]').getBoundingClientRect().height)})")
+            check(f"{tag} 6 แถวที่มีโน้ตมีจุด • หลังชื่อ (CAA มี · CBB ไม่มี) · แถวยังบรรทัดเดียว สูงเท่ากัน", dot["caa"] and not dot["cbb"] and abs(dot["h"] - dot["h2"]) <= 2, json.dumps(dot))
+            before = js(page, "()=>document.querySelector('[data-cand-x]') ? document.querySelector('[data-cand-x]').dataset.sym : null")
+            page.locator('[data-cand-x] [data-c-add]').click(); wait(page, 350)
+            ov = js(page, "()=>({um: !!document.querySelector('[data-td4-usemove]'), show:document.getElementById('wlAddOverlay').classList.contains('show'), x:document.querySelector('[data-cand-x]') ? document.querySelector('[data-cand-x]').dataset.sym : null})")
+            check(f"{tag} 6 กด ＋ เพิ่มเข้า Watchlist ที่ Candidate → TD4b: ข้อความ 'Use Move to Watchlist' (ไม่เปิดฟอร์มเพิ่ม) · แถวไม่ถูกสลับขยาย/พับ", ov == {"um": True, "show": False, "x": before == "CAA" and "CAA" or None}, json.dumps([before, ov]))
+            js(page, "()=>ltSheetClose()")
+            page.evaluate("()=>{ window.firebase.__mockDb.__seedDoc(['users','testuid','watchlist','CAA'], {ticker:'CAA', market:'US', port:'core', note:'', industry:'', added_at:new Date().toISOString()}); wlStop(); wlStart(); }"); wait(page, 600)   # TD4b: ย้ายเข้า Watchlist ได้ทางเดียวคือฟอร์ม Move — ในเทสนี้ seed ตรง ๆ
+            check(f"{tag} 6 เพิ่มเข้า Watchlist แล้ว (CAA อยู่ใน Watchlist)", js(page, "()=>wlHas('CAA')"))
+            open_card(page, "CAA", "view")
+            r_ = rows(page)
+            check(f"{tag} 6 เปิดการ์ด CAA → แท็บ มุมมอง เห็นโน้ตเดิมทันที (Fund. 'backlog โต · margin 50%')", len(r_) == 3 and "backlog โต · margin 50%" in r_[1], json.dumps(r_, ensure_ascii=False))
+            js(page, "()=>wlDeleteItem('CAA')"); wait(page, 600)
+            d = doc_of(page, "stockNotes", "CAA") or {}
+            check(f"{tag} 6 ลบ CAA ออกจาก Watchlist → ไม่ลบ stockNotes (ยังมี fund 1 รายการ)", not js(page, "()=>wlHas('CAA')") and len(d.get("fund", [])) == 1, json.dumps(d, ensure_ascii=False))
+            check(f"{tag} 6 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
+        finally: b.close()
 
     # ── 7 ไม่มีสิทธิ์อ่าน stockNotes
     ideas = [idea([cand("CAA", "Cand A", 1, "study")])]
@@ -409,7 +413,8 @@ def wl_tests(pw, w, h, label):
         check(f"{tag} 7 mock ปฏิเสธ stockNotes → จุดโน้ตแสดง '{RULE_MSG}'", txt(page, ".wlDBody [data-vw-err]") == RULE_MSG and cnt(page, "[data-vw-row]") == 0, txt(page, ".wlDBody [data-vw-err]") or "")
         js(page, "()=>wlSetView('cand')"); wait(page, 300)
         page.locator('.wlRows .wlR[data-sym="CAA"]').click(); wait(page, 300)
-        check(f"{tag} 7 Candidates ทำงานปกติ: แถวขยายแสดงข้อความ rule · ปุ่ม ＋ เพิ่มเข้า Watchlist ยังอยู่", txt(page, "[data-cand-x] [data-vw-err]") == RULE_MSG and cnt(page, "[data-cand-x] [data-c-add]") == 1)
+        if not PL2_LEGACY_VW_REMOVED:  # PL2·3/D2: Candidate cards no longer have the legacy block — retired
+            check(f"{tag} 7 Candidates ทำงานปกติ: แถวขยายแสดงข้อความ rule · ปุ่ม ＋ เพิ่มเข้า Watchlist ยังอยู่", txt(page, "[data-cand-x] [data-vw-err]") == RULE_MSG and cnt(page, "[data-cand-x] [data-c-add]") == 1)
         js(page, "()=>wlSetView('wl')"); wait(page, 250)
         check(f"{tag} 7 Watchlist ปกติ (AVGO ในรายการ · เปลี่ยนแท็บอื่นได้)", cnt(page, '.wlRows .wlR[data-sym="AVGO"]') == 1)
         go_sat(page)
@@ -421,19 +426,20 @@ def wl_tests(pw, w, h, label):
     finally: b.close()
 
     # ── 8 TH: PTT.BK = PTT
-    b, c, page, ce, pe, dl, env = launch(pw, w, h, wl=[("PTT.BK", None, {"market": "TH"})])
-    try:
-        P40.go_watch(page)
-        sym = js(page, "()=>wlRowsAll().wl.map(r=>r.sym)")[0]
-        js(page, "([s])=>wlOpen(s,'view')", [sym]); wait(page, 350)
-        check(f"{tag} 8 การ์ด PTT.BK ไม่มี Thesis → ยังมีส่วน มุมมอง ให้บันทึก (3 แถว)", len(rows(page)) == 3, json.dumps([sym, rows(page)], ensure_ascii=False))
-        add(page, "fund", "ปันผลสม่ำเสมอ")
-        d1 = doc_of(page, "stockNotes", "PTT") or {}
-        d2 = doc_of(page, "stockNotes", "PTT.BK")
-        same = js(page, "()=>JSON.stringify(vwList('PTT','fund'))===JSON.stringify(vwList('PTT.BK','fund')) && vwList('PTT','fund').length===1")
-        check(f"{tag} 8 PTT.BK กับ PTT ใช้โน้ตชุดเดียวกัน (doc stockNotes/PTT เท่านั้น · ไม่มี PTT.BK)", len(d1.get("fund", [])) == 1 and d2 is None and same, json.dumps([d1, d2], ensure_ascii=False))
-        check(f"{tag} 8 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
-    finally: b.close()
+    if not PL2_LEGACY_VW_REMOVED:   # PL2·3/D2: tests the removed Event/Fund./Tech block — retired, see tests/PL2_retired.md
+        b, c, page, ce, pe, dl, env = launch(pw, w, h, wl=[("PTT.BK", None, {"market": "TH"})])
+        try:
+            P40.go_watch(page)
+            sym = js(page, "()=>wlRowsAll().wl.map(r=>r.sym)")[0]
+            js(page, "([s])=>wlOpen(s,'view')", [sym]); wait(page, 350)
+            check(f"{tag} 8 การ์ด PTT.BK ไม่มี Thesis → ยังมีส่วน มุมมอง ให้บันทึก (3 แถว)", len(rows(page)) == 3, json.dumps([sym, rows(page)], ensure_ascii=False))
+            add(page, "fund", "ปันผลสม่ำเสมอ")
+            d1 = doc_of(page, "stockNotes", "PTT") or {}
+            d2 = doc_of(page, "stockNotes", "PTT.BK")
+            same = js(page, "()=>JSON.stringify(vwList('PTT','fund'))===JSON.stringify(vwList('PTT.BK','fund')) && vwList('PTT','fund').length===1")
+            check(f"{tag} 8 PTT.BK กับ PTT ใช้โน้ตชุดเดียวกัน (doc stockNotes/PTT เท่านั้น · ไม่มี PTT.BK)", len(d1.get("fund", [])) == 1 and d2 is None and same, json.dumps([d1, d2], ensure_ascii=False))
+            check(f"{tag} 8 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
+        finally: b.close()
 
 
 def gl3_tests(pw, w, h, label):
@@ -442,7 +448,7 @@ def gl3_tests(pw, w, h, label):
     try:
         G.go_today(page)
         names = js(page, "()=>[...document.querySelectorAll('.tdRow[data-kind=homework] [data-hw-part]')].map(e=>e.innerText.trim())")
-        check(f"{tag} 9 ชิปการบ้านครบ 5: ธุรกิจ · ทำไม · ติดตาม · ออก · Tier (part ที่ 3 = 'ติดตาม')", names == ["Tier", "ธุรกิจ", "ทำไม", "ติดตาม", "ออก"], json.dumps(names, ensure_ascii=False))
+        check(f"{tag} 9 ชิปการบ้านครบ 4: ธุรกิจ · ทำไม · ติดตาม · ออก (PL2·7: ไม่มี Tier) (part ที่ 3 = 'ติดตาม')", names == ["ธุรกิจ", "ทำไม", "ติดตาม", "ออก"], json.dumps(names, ensure_ascii=False))
         m = js(page, "()=>{ const bs=[...document.querySelectorAll('.tdRow[data-kind=homework] .tdHp')]; const cs=bs.map(b=>b.getBoundingClientRect()); const mid=cs.map(r=>r.top+r.height/2); return {clip:bs.map(b=>b.scrollWidth>b.clientWidth+0.5), ell:bs.map(b=>getComputedStyle(b).textOverflow), oneRow:Math.max(...mid)-Math.min(...mid)<4, ovf:document.documentElement.scrollWidth-innerWidth, cntClip:(()=>{const r=document.querySelector('.tdRow[data-kind=homework]').getBoundingClientRect(); return cs.some(x=>x.right>r.right+0.5);})()}; }")
         check(f"{tag} 9 ชิป 5 ตัวแถวเดียว · ข้อความชิปไม่ถูกตัด (scrollWidth ≤ clientWidth) · ไม่ล้นแนวนอน", m["oneRow"] and not any(m["clip"]) and m["ovf"] <= 0 and not m["cntClip"], json.dumps(m))
         check(f"{tag} 9 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
@@ -454,34 +460,35 @@ def narrow_tests(pw, w, h, label):
     ideas = [idea([cand("CAA", "Cand A", 1, "study"), cand("CBB", "Cand B", 2, "wait")])]
     notes = {"AVGO": {"event": [{"id": "e1", "d": "2026-10-07", "t": "ประกาศดีล custom ASIC รายใหม่ · รอยืนยัน capex และวันที่ส่งมอบจริงจากผู้บริหารรอบหน้า"}], "fund": [], "tech": [{"id": "t1", "d": "2026-10-08", "t": "พักใกล้ EMA10 W · รอ break 380 และต้องดูปริมาณซื้อขายประกอบด้วย", "chart": TV2}], "updated_at": "x"},
              "CAA": {"event": [], "fund": [{"id": "f1", "d": "2026-10-09", "t": "backlog โต · margin 50% ซึ่งสูงกว่าคู่แข่งในกลุ่มอย่างมีนัย"}], "tech": [], "updated_at": "x"}}
-    b, c, page, ce, pe, dl, env = launch(pw, w, h, wl=[("AVGO", AVGO_TH, {})], ideas=ideas, notes=notes)
-    try:
-        P40.go_watch(page); js(page, "()=>wlOpen('AVGO','view')"); wait(page, 400)
-        rows_h = js(page, "()=>[...document.querySelectorAll('.wlDBody [data-vw-row]')].map(e=>{ const kids=[...e.children]; const mid=kids.map(k=>k.getBoundingClientRect().top+k.getBoundingClientRect().height/2); return {h:Math.round(e.getBoundingClientRect().height), one:Math.max(...mid)-Math.min(...mid)<8, ell:getComputedStyle(e.querySelector('.vwT')).textOverflow, ws:getComputedStyle(e).whiteSpace}; })")
-        check(f"{tag} 10 แถวมุมมองบรรทัดเดียว (ข้อความยาว → …) ทั้ง 3 แถว", all(r["one"] and r["ell"] == "ellipsis" and r["ws"] == "nowrap" for r in rows_h) and len(rows_h) == 3, json.dumps(rows_h))
-        tb = js(page, "()=>{ const t=document.querySelector('[data-lt-tabs]'); return {ovf:document.documentElement.scrollWidth-innerWidth, sw:t.scrollWidth, cw:t.clientWidth}; }")
-        check(f"{tag} 10 แถบแท็บการ์ดไม่ล้นหน้า (6 แท็บ เลื่อนในแถบเอง)", tb["ovf"] <= 0 and tb["sw"] >= tb["cw"], json.dumps(tb))
-        page.locator('.wlDBody [data-vw-row="tech"]').click(); wait(page, 300)
-        fs = js(page, "()=>[...document.querySelectorAll('.wlDBody .vwX input')].map(i=>parseFloat(getComputedStyle(i).fontSize))")
-        check(f"{tag} 10 ช่องกรอกโน้ต/ลิงก์ font ≥ 16px (ไม่ซูมบน iOS)", len(fs) == 2 and all(x >= 16 for x in fs), json.dumps(fs))
-        bad = js(page, "()=>{ const W=innerWidth; return [...document.querySelectorAll('.wlDBody *')].filter(e=>{ const r=e.getBoundingClientRect(); return r.width>0 && (r.right>W+1 || r.left<-1); }).slice(0,5).map(e=>e.className+':'+Math.round(e.getBoundingClientRect().right)); }")
-        check(f"{tag} 10 ไม่ล้นแนวนอนราย element ในการ์ด (เปิดมุม Tech + ภาพ 110px)", not bad and overflow(page) <= 0, json.dumps(bad))
-        js(page, "()=>wlSetView('cand')"); wait(page, 300)
-        page.locator('.wlRows .wlR[data-sym="CAA"]').click(); wait(page, 400)
-        rh = js(page, "()=>[...document.querySelectorAll('.wlRows .wlR')].map(e=>{ const mid=[...e.children].filter(k=>k.getBoundingClientRect().height>0).map(k=>k.getBoundingClientRect().top+k.getBoundingClientRect().height/2); return {sym:e.dataset.sym, h:Math.round(e.getBoundingClientRect().height), one:Math.max(...mid)-Math.min(...mid)<6}; })")
-        check(f"{tag} 10 แถว Candidate บรรทัดเดียว (มี • และกำลังขยาย)", all(r["one"] and r["h"] <= 52 for r in rh), json.dumps(rh))
-        bad2 = js(page, "()=>{ const W=innerWidth; return [...document.querySelectorAll('.wlRows *')].filter(e=>{ const r=e.getBoundingClientRect(); return r.width>0 && (r.right>W+1 || r.left<-1); }).slice(0,5).map(e=>e.className+':'+Math.round(e.getBoundingClientRect().right)); }")
-        rows_c = js(page, "()=>[...document.querySelectorAll('[data-cand-x] [data-vw-row]')].map(e=>{ const mid=[...e.children].map(k=>k.getBoundingClientRect().top+k.getBoundingClientRect().height/2); return Math.max(...mid)-Math.min(...mid)<8; })")
-        check(f"{tag} 10 แถวขยายใน Candidate: 3 แถวบรรทัดเดียว · ไม่ล้นแนวนอน", not bad2 and all(rows_c) and len(rows_c) == 3 and overflow(page) <= 0, json.dumps([bad2, rows_c]))
-        go_sat(page)
-        js(page, "()=>satwWrite('XAUUSD', {chart:{url:'" + TV1 + "', at:'2026-10-09'}})"); wait(page, 500)
-        bad3 = js(page, "()=>{ const W=innerWidth; return [...document.querySelectorAll('#satV3Sum *')].filter(e=>{ const r=e.getBoundingClientRect(); return r.width>0 && (r.right>W+1 || r.left<-1); }).slice(0,5).map(e=>e.className+':'+Math.round(e.getBoundingClientRect().right)); }")
-        check(f"{tag} 10 Sat Strategy มีแถบกราฟ ไม่ล้นแนวนอนราย element · หน้าไม่ล้น", not bad3 and overflow(page) <= 0, json.dumps(bad3))
-        page.locator(".ui-tile[data-key=BTCUSD] [data-vw-sat-add]").click(); wait(page, 250)
-        fs3 = js(page, "()=>parseFloat(getComputedStyle(document.querySelector('[data-vw-sat-in]')).fontSize)")
-        check(f"{tag} 10 ช่องวางลิงก์กราฟ Sat font ≥ 16px", fs3 >= 16, str(fs3))
-        check(f"{tag} 10 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
-    finally: b.close()
+    if not PL2_LEGACY_VW_REMOVED:   # PL2·3/D2: tests the removed Event/Fund./Tech block — retired, see tests/PL2_retired.md
+        b, c, page, ce, pe, dl, env = launch(pw, w, h, wl=[("AVGO", AVGO_TH, {})], ideas=ideas, notes=notes)
+        try:
+            P40.go_watch(page); js(page, "()=>wlOpen('AVGO','view')"); wait(page, 400)
+            rows_h = js(page, "()=>[...document.querySelectorAll('.wlDBody [data-vw-row]')].map(e=>{ const kids=[...e.children]; const mid=kids.map(k=>k.getBoundingClientRect().top+k.getBoundingClientRect().height/2); return {h:Math.round(e.getBoundingClientRect().height), one:Math.max(...mid)-Math.min(...mid)<8, ell:getComputedStyle(e.querySelector('.vwT')).textOverflow, ws:getComputedStyle(e).whiteSpace}; })")
+            check(f"{tag} 10 แถวมุมมองบรรทัดเดียว (ข้อความยาว → …) ทั้ง 3 แถว", all(r["one"] and r["ell"] == "ellipsis" and r["ws"] == "nowrap" for r in rows_h) and len(rows_h) == 3, json.dumps(rows_h))
+            tb = js(page, "()=>{ const t=document.querySelector('[data-lt-tabs]'); return {ovf:document.documentElement.scrollWidth-innerWidth, sw:t.scrollWidth, cw:t.clientWidth}; }")
+            check(f"{tag} 10 แถบแท็บการ์ดไม่ล้นหน้า (6 แท็บ เลื่อนในแถบเอง)", tb["ovf"] <= 0 and tb["sw"] >= tb["cw"], json.dumps(tb))
+            page.locator('.wlDBody [data-vw-row="tech"]').click(); wait(page, 300)
+            fs = js(page, "()=>[...document.querySelectorAll('.wlDBody .vwX input')].map(i=>parseFloat(getComputedStyle(i).fontSize))")
+            check(f"{tag} 10 ช่องกรอกโน้ต/ลิงก์ font ≥ 16px (ไม่ซูมบน iOS)", len(fs) == 2 and all(x >= 16 for x in fs), json.dumps(fs))
+            bad = js(page, "()=>{ const W=innerWidth; return [...document.querySelectorAll('.wlDBody *')].filter(e=>{ const r=e.getBoundingClientRect(); return r.width>0 && (r.right>W+1 || r.left<-1); }).slice(0,5).map(e=>e.className+':'+Math.round(e.getBoundingClientRect().right)); }")
+            check(f"{tag} 10 ไม่ล้นแนวนอนราย element ในการ์ด (เปิดมุม Tech + ภาพ 110px)", not bad and overflow(page) <= 0, json.dumps(bad))
+            js(page, "()=>wlSetView('cand')"); wait(page, 300)
+            page.locator('.wlRows .wlR[data-sym="CAA"]').click(); wait(page, 400)
+            rh = js(page, "()=>[...document.querySelectorAll('.wlRows .wlR')].map(e=>{ const mid=[...e.children].filter(k=>k.getBoundingClientRect().height>0).map(k=>k.getBoundingClientRect().top+k.getBoundingClientRect().height/2); return {sym:e.dataset.sym, h:Math.round(e.getBoundingClientRect().height), one:Math.max(...mid)-Math.min(...mid)<6}; })")
+            check(f"{tag} 10 แถว Candidate บรรทัดเดียว (มี • และกำลังขยาย)", all(r["one"] and r["h"] <= 52 for r in rh), json.dumps(rh))
+            bad2 = js(page, "()=>{ const W=innerWidth; return [...document.querySelectorAll('.wlRows *')].filter(e=>{ const r=e.getBoundingClientRect(); return r.width>0 && (r.right>W+1 || r.left<-1); }).slice(0,5).map(e=>e.className+':'+Math.round(e.getBoundingClientRect().right)); }")
+            rows_c = js(page, "()=>[...document.querySelectorAll('[data-cand-x] [data-vw-row]')].map(e=>{ const mid=[...e.children].map(k=>k.getBoundingClientRect().top+k.getBoundingClientRect().height/2); return Math.max(...mid)-Math.min(...mid)<8; })")
+            check(f"{tag} 10 แถวขยายใน Candidate: 3 แถวบรรทัดเดียว · ไม่ล้นแนวนอน", not bad2 and all(rows_c) and len(rows_c) == 3 and overflow(page) <= 0, json.dumps([bad2, rows_c]))
+            go_sat(page)
+            js(page, "()=>satwWrite('XAUUSD', {chart:{url:'" + TV1 + "', at:'2026-10-09'}})"); wait(page, 500)
+            bad3 = js(page, "()=>{ const W=innerWidth; return [...document.querySelectorAll('#satV3Sum *')].filter(e=>{ const r=e.getBoundingClientRect(); return r.width>0 && (r.right>W+1 || r.left<-1); }).slice(0,5).map(e=>e.className+':'+Math.round(e.getBoundingClientRect().right)); }")
+            check(f"{tag} 10 Sat Strategy มีแถบกราฟ ไม่ล้นแนวนอนราย element · หน้าไม่ล้น", not bad3 and overflow(page) <= 0, json.dumps(bad3))
+            page.locator(".ui-tile[data-key=BTCUSD] [data-vw-sat-add]").click(); wait(page, 250)
+            fs3 = js(page, "()=>parseFloat(getComputedStyle(document.querySelector('[data-vw-sat-in]')).fontSize)")
+            check(f"{tag} 10 ช่องวางลิงก์กราฟ Sat font ≥ 16px", fs3 >= 16, str(fs3))
+            check(f"{tag} 10 console ไม่มี error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
+        finally: b.close()
 
 
 def main():

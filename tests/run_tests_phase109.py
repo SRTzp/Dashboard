@@ -212,7 +212,7 @@ def deep_tests(pw, w, h, label, shots=False):
     try:
         deep_fixture(page); go_today(page)
         comp = js(page, "()=>({avgo: tdHwComplete('AVGO', []), part: tdHwComplete('PART', []), parts: tdHwThesisParts('AVGO'), partP: tdHwThesisParts('PART'), msft: tdHwThesisParts('MSFT')})")
-        check(f"{tag} §5 ครบ 5 ส่วนจาก Thesis นำเข้า + Tier: AVGO ครบ · PART ไม่ครบ (Monitor/Exit ว่าง) · MSFT ไม่มีอะไร", comp["avgo"] is True and comp["part"] is False and sorted(comp["partP"]) == ["biz", "tier", "why"] and comp["msft"] == [], comp)
+        check(f"{tag} §5 ครบ 5 ส่วนจาก Thesis นำเข้า + Tier: AVGO ครบ · PART ไม่ครบ (Monitor/Exit ว่าง) · MSFT ไม่มีอะไร", comp["avgo"] is True and comp["part"] is False and sorted(comp["partP"]) == ["biz", "why"] and comp["msft"] == [], comp)
         pk = js(page, "()=>[tdLast.hwm.US.t, tdLast.hwm.TH.t]")
         check(f"{tag} §5 AVGO ไม่ถูกเสนอเป็นตัวของวัน (ตัว US ≠ AVGO)", pk[0] != "AVGO" and "AVGO" not in (txt(page, "[data-td3-hw]") or ""), pk)
         cands = js(page, "()=>tdHomeworkCandidates().filter(x=>x.mk==='US').map(x=>[x.t, !!x.cmp])")
@@ -220,7 +220,7 @@ def deep_tests(pw, w, h, label, shots=False):
         # AVGO เป็นตัวที่เลือกไว้เดิม → ครบ = ถือว่าทำแล้ว · Next จาก Watchlist ไม่เสนอ AVGO
         js(page, "()=>tdLogWrite(d=>{ td4HwSet(d, 'US', 'AVGO', []); d.hw = {pick:'AVGO', done:false, parts:[]}; })"); settle(page, 500)
         r = txt(page, "[data-td3-hw]") or ""
-        check(f"{tag} §5 pick เดิมเป็น AVGO (ครบแล้ว) → แถวเป็น ✓ 'Thesis 5/5' · วัน US นับว่าทำแล้ว · ไม่มี Missing", "AVGO" in r and "5/5" in r and "Missing" not in r and T.dd_head(page).startswith("US 1/1"), [r, T.dd_head(page)])
+        check(f"{tag} §5 pick เดิมเป็น AVGO (ครบแล้ว) → แถวเป็น ✓ 'Thesis 5/5' · วัน US นับว่าทำแล้ว · ไม่มี Missing", "AVGO" in r and "4/4" in r and "Missing" not in r and T.dd_head(page).startswith("US 1/1"), [r, T.dd_head(page)])
         check(f"{tag} §5 มีปุ่ม 'Next from Watchlist ›'", cnt(page, "[data-td4-hwnext-wl]") == 1)
         nx = js(page, "()=>{ const p = td4HwNextWlPick('US'); return p && p.t; }")
         check(f"{tag} §5 ตัวที่เสนอต่อไม่ใช่ AVGO / ไม่ใช่ตัวครบ", nx not in (None, "AVGO"), nx)
@@ -230,12 +230,12 @@ def deep_tests(pw, w, h, label, shots=False):
         # PART: ขาด Monitor · Exit
         js(page, "()=>tdLogWrite(d=>{ td4HwSet(d, 'US', 'PART', []); d.hw = {pick:'PART', done:false, parts:[]}; })"); settle(page, 500)
         r3 = txt(page, "[data-td3-hw]") or ""
-        check(f"{tag} §5 หุ้นไม่ครบแสดงชื่อส่วนที่ว่างตรง ๆ: 'Missing: Monitor · Exit' + 'Thesis 3/5'", "Missing: Monitor · Exit" in r3 and "Thesis 3/5" in r3 and "Left:" not in r3 and "0/5" not in r3, r3)
+        check(f"{tag} §5 หุ้นไม่ครบแสดงชื่อส่วนที่ว่างตรง ๆ: 'Missing: Monitor · Exit' + 'Thesis 3/5'", "Missing: Monitor · Exit" in r3 and "Thesis 2/4" in r3 and "Left:" not in r3 and "0/4" not in r3, r3)
         if shots and label == "390px": scroll_to_sel(page, '[data-td3-sec="hw"]'); C.shot(page, "td4c-deepdive-390.png", sel='[data-td3-sec="hw"]')
         # MSFT ไม่มีอะไร → Missing ครบ 5
         js(page, "()=>tdLogWrite(d=>{ td4HwSet(d, 'US', 'MSFT', []); d.hw = {pick:'MSFT', done:false, parts:[]}; })"); settle(page, 500)
         r4 = txt(page, "[data-td3-hw]") or ""
-        check(f"{tag} §5 ว่างทั้งหมด → 'Missing: Tier · Business · Why · Monitor · Exit'", "Missing: Tier · Business · Why · Monitor · Exit" in r4, r4)
+        check(f"{tag} §5 ว่างทั้งหมด → 'Missing: Tier · Business · Why · Monitor · Exit'", "Missing: Business · Why · Monitor · Exit" in r4, r4)
         # Change: ไม่วน AVGO
         seen = set()
         for _ in range(4):

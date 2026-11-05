@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Core Card Compact</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ln:#e6e8ec;--tx:#16181d;--mu:#6b7280;--soft:#f3f4f6;--up:#16a34a;--warn:#ca8a04;--dn:#dc2626;--nt:#9ca3af;--ink:#111827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 -apple-system,"Sukhumvit Set","Noto Sans Thai",system-ui,sans-serif}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.bar{display:flex;gap:8px;align-items:center;padding:12px 16px;flex-wrap:wrap}
+.bar b{margin-right:8px}.seg{display:inline-flex;border:1px solid var(--ln);border-radius:10px;overflow:hidden;background:#fff}
+.seg button{border:0;background:none;padding:6px 12px;font:inherit;cursor:pointer}.seg button.on{background:var(--ink);color:#fff}
+.wrap{max-width:1180px;margin:0 auto 40px;padding:0 16px;transition:max-width .2s}
+.wrap.phone{max-width:400px}
+.panel{background:#fff;border:1px solid var(--ln);border-radius:16px;padding:14px}
+h2{font-size:16px;margin:0 0 2px}.note{color:var(--mu);font-size:12px;margin-bottom:10px}
+.acctH{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+.dot{width:9px;height:9px;border-radius:50%;background:#2563eb}.chip{border:1px solid var(--ln);border-radius:999px;padding:2px 9px;font-size:12px}
+.stat{background:var(--soft);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--mu)}.stat b{color:var(--tx)}
+.lnk{margin-left:auto;font-size:12px;color:#2563eb;background:none;border:0;cursor:pointer;padding:4px}
+.list{border:1px solid var(--ln);border-radius:12px}.card:first-child{border-radius:12px 12px 0 0}.card:last-child{border-radius:0 0 12px 12px}
+.card{border-top:1px solid var(--ln)}.card:first-child{border-top:0}
+.card.red{background:#fef2f2}
+.row{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:22px minmax(64px,90px) 44px 1fr 18px;align-items:center;gap:8px;padding:10px 12px;cursor:pointer}
+.row:hover{background:#fafafa}.card.red .row:hover{background:#fde8e8}
+.row:focus-visible{outline:2px solid #2563eb;outline-offset:-2px}
+.tk{font-weight:700;font-size:15px}.tag{font-size:11px;border:1px solid var(--ln);border-radius:6px;padding:0 5px;text-align:center;color:var(--mu)}
+.nums{display:flex;gap:14px;flex-wrap:wrap;color:var(--mu);font-size:13px;white-space:nowrap}
+.nums b{color:var(--tx);font-weight:600}.nums .hold{margin-left:auto}
+.nums .dnT{color:var(--dn);font-weight:600}.nums .ntT{color:var(--nt)}
+.chev{color:var(--mu);transition:transform .15s}.card.open .chev{transform:rotate(90deg)}
+.body{display:none;padding:0 12px 12px 42px}.card.open .body{display:block}
+.full{font-size:12px;color:var(--mu);margin-bottom:8px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.f{background:var(--soft);border-radius:10px;padding:8px 10px}.card.red .f{background:#fff}
+.f label{display:block;font-size:11.5px;color:var(--mu)}.f .v{font-size:16px;font-weight:700}.f .v span{font-weight:400;font-size:13px;color:var(--mu)}
+.f small{display:block;font-size:11.5px;color:var(--mu)}
+.btns{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;position:relative}
+.b{border:1px solid var(--ln);background:#fff;border-radius:9px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.b.pri{background:var(--ink);color:#fff;border-color:var(--ink)}.b.dnB{background:var(--dn);border-color:var(--dn);color:#fff}
+.b:disabled{opacity:.45;cursor:not-allowed}
+.menu{display:none;position:absolute;top:36px;right:0;background:#fff;border:1px solid var(--ln);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.08);min-width:210px;z-index:5;padding:4px}
+.menu.on{display:block}.menu button{all:unset;display:block;width:100%;box-sizing:border-box;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px}
+.menu button:hover{background:var(--soft)}.menu .dis{color:var(--nt);cursor:default}.menu .dis:hover{background:none}.menu hr{border:0;border-top:1px solid var(--ln);margin:4px 0}
+.sim{display:none;margin-top:10px;border:1px dashed var(--ln);border-radius:10px;padding:10px}.sim.on{display:block}
+.sim .in{display:flex;gap:8px}.sim input{width:100%;border:1px solid var(--ln);border-radius:8px;padding:6px 8px;font:inherit}
+.sim .res{margin-top:8px;font-size:13px}.ok{color:var(--up);border:1px solid #bbf7d0;border-radius:999px;padding:0 8px;font-size:11.5px}
+details{margin-top:10px}summary{cursor:pointer;font-size:13px;color:var(--mu)}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:12.5px;margin-top:6px}th,td{text-align:right;padding:4px 8px;border-bottom:1px solid var(--ln);white-space:nowrap}th:first-child,td:first-child{text-align:left}th{color:var(--mu);font-weight:500}
+.foot{margin-top:10px}.hint{font-size:12px;color:var(--mu);margin:14px 4px 0}
+/* มือถือ */
+.phone .row{grid-template-columns:22px 1fr 18px;grid-template-areas:"ic tk ch" "ic nu ch";row-gap:2px}
+.phone .row .ic{grid-area:ic}.phone .row .tkw{grid-area:tk;display:flex;gap:6px;align-items:center}.phone .row .nums{grid-area:nu;gap:10px;font-size:12.5px}
+.phone .row .chev{grid-area:ch}.phone .nums .hold{display:none}.phone .body{padding-left:12px}
+.phone .grid{grid-template-columns:1fr 1fr}
+.tkw{display:contents}
+.vB details{display:none}.onlyB{display:none}.vB .onlyB{display:block}
+.sheetBg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:20;align-items:center;justify-content:center;padding:16px}.sheetBg.on{display:flex}
+.sheet{background:#fff;border-radius:14px;padding:14px;width:100%;max-width:520px}.sheet h3{margin:0 0 4px;font-size:15px}
+.phone .btns{flex-wrap:nowrap}.phone .btns .b{padding:6px 8px;font-size:12.5px;white-space:nowrap}
+@media (max-width:700px){.wrap{max-width:none}.row{grid-template-columns:22px 1fr 18px;grid-template-areas:"ic tk ch" "ic nu ch";row-gap:2px}.row .ic{grid-area:ic}.row .tkw{grid-area:tk;display:flex;gap:6px;align-items:center}.row .nums{grid-area:nu;gap:10px;font-size:12.5px}.row .chev{grid-area:ch}.nums .hold{display:none}.body{padding-left:12px}.grid{grid-template-columns:1fr 1fr}.btns{flex-wrap:nowrap}.btns .b{padding:6px 8px;font-size:12.5px;white-space:nowrap}}
+</style></head><body>
+<div class="bar"><b>Mockup · การ์ด Core แบบย่อ</b>
+  <div class="seg"><button class="on" onclick="view(0,this)">Desktop</button><button onclick="view(1,this)">มือถือ</button></div>
+  <div class="seg"><button class="on" onclick="vr(0,this)">A · ตารางพับท้ายการ์ด</button><button onclick="vr(1,this)">B · ตารางอยู่ใน ⋯</button></div>
+  <span class="note" style="margin:0">กดแถวเพื่อขยาย · ลองกด เติมไม้ / ⋯ / ไม้ที่ซื้อ</span></div>
+<div class="wrap" id="wrap"><div class="panel">
+  <h2>Core · การ์ดตำแหน่ง</h2><div class="note">ขาดทุนสูงสุดต่อตัว ≤ งบเสี่ยง × f เสมอ</div>
+  <div class="acctH"><span class="dot"></span><b>บัญชีหลัก</b><span class="chip">US</span>
+    <span class="stat">ถัง Core <b class="mono">฿3,500,000</b></span><span class="stat">เงินสดว่าง <b class="mono">฿3,231,038</b></span>
+    <span class="stat">ชั้น 2 <b class="mono">1.43% / 20%</b></span><span class="stat">f <b>100%</b></span><span class="stat">ขาดราคา <b>1</b></span>
+    <button class="lnk" onclick="all(1)">ขยายทั้งหมด</button><button class="lnk" style="margin-left:0" onclick="all(0)">ยุบทั้งหมด</button></div>
+  <div class="list" id="list">
+
+  <!-- 🔴 -->
+  <div class="card red open"><button class="row" aria-expanded="true" onclick="tg(this)"><span class="ic">🔴</span><span class="tkw"><span class="tk">NVDA</span><span class="tag" title="Tier A · เพดานไม้แรก 10% · ระบบ Week">A·W</span></span>
+    <span class="nums"><span>ปิด <b class="mono">118</b></span><span>Stop <b class="mono">120</b></span><span class="dnT">ปิดใต้ Stop — ขายหมด</span><span class="hold mono">40 @ 125</span></span><span class="chev">›</span></button>
+    <div class="body"><div class="full">US · Tier A · เพดานไม้แรก 10% · ระบบ Week</div><div class="grid">
+      <div class="f"><label>ราคาปิด · EMA10</label><div class="v mono">118 <span>· 124</span></div><small>2026-09-25 · อายุ 5 วัน</small></div>
+      <div class="f"><label>Stop · ฉุกเฉิน</label><div class="v mono">120 <span>· 111.6</span></div><small>ปิดใต้ Stop = ขายหมด</small></div>
+      <div class="f"><label>ถือ / ทุนเฉลี่ย</label><div class="v mono">40 @ 125</div></div>
+      <div class="f"><label>เสี่ยงถึง Stop</label><div class="v mono">$0</div><small>จากทุน $200</small></div></div>
+      <div class="btns"><button class="b dnB">ปิดตำแหน่ง</button><button class="b">อัปเดตราคา</button><button class="b">เลื่อน Stop</button><button class="b" onclick="mn(this)">⋯</button>
+        <div class="menu"><button>แก้ Entry/SL</button><hr><button>Tier B</button><button>Tier A ✓</button><button class="dis">ถัวตามแนวรับ (L) — มาใน 7E-2b</button></div></div></div></div>
+
+  <!-- 🟡 -->
+  <div class="card"><button class="row" aria-expanded="false" onclick="tg(this)"><span class="ic">🟡</span><span class="tkw"><span class="tk">MSFT</span><span class="tag" title="Tier B · เพดานไม้แรก 5% · ระบบ Week">B·W</span></span>
+    <span class="nums"><span>ปิด <b class="mono">412</b></span><span>Stop <b class="mono">380</b></span><span>เสี่ยง <b class="mono">$640</b> 0.61%</span><span class="hold mono">20 @ 395</span></span><span class="chev">›</span></button>
+    <div class="body"><div class="full">US · Tier B · เพดานไม้แรก 5% · ระบบ Week · 🟡 ปิดใต้ EMA10 — งดเพิ่มไม้</div><div class="grid">
+      <div class="f"><label>ราคาปิด · EMA10</label><div class="v mono">412 <span>· 418</span></div><small>2026-09-25 · อายุ 5 วัน</small></div>
+      <div class="f"><label>Stop · ฉุกเฉิน</label><div class="v mono">380 <span>· 353.4</span></div><small>ปิดใต้ Stop = ขายหมด</small></div>
+      <div class="f"><label>ถือ / ทุนเฉลี่ย</label><div class="v mono">20 @ 395</div></div>
+      <div class="f"><label>เสี่ยงถึง Stop</label><div class="v mono">$640</div><small>0.61% ของถัง · จากทุน $300</small></div></div>
+      <div class="btns"><button class="b" disabled title="ปิดใต้ EMA10 — งดเพิ่มไม้">เติมไม้</button><button class="b">อัปเดตราคา</button><button class="b">เลื่อน Stop</button><button class="b" onclick="mn(this)">⋯</button>
+        <div class="menu"><button>แก้ Entry/SL</button><button>ปิดตำแหน่ง</button><hr><button>Tier B ✓</button><button>Tier A</button><button class="dis">ถัวตามแนวรับ (L) — มาใน 7E-2b</button></div></div></div></div>
+
+  <!-- ⚪ -->
+  <div class="card"><button class="row" aria-expanded="false" onclick="tg(this)"><span class="ic">⚪</span><span class="tkw"><span class="tk">AMZN</span><span class="tag">B·W</span></span>
+    <span class="nums"><span class="ntT">ขาดราคา (เก่า 12 วัน)</span><span>Stop <b class="mono">170</b></span><span class="hold mono">50 @ 180</span></span><span class="chev">›</span></button>
+    <div class="body"><div class="grid">
+      <div class="f"><label>ราคาปิด · EMA10</label><div class="v mono">— </div><small>ราคาเก่าเกิน 7 วัน → กดอัปเดตราคา</small></div>
+      <div class="f"><label>Stop · ฉุกเฉิน</label><div class="v mono">170 <span>· 158.1</span></div></div>
+      <div class="f"><label>ถือ / ทุนเฉลี่ย</label><div class="v mono">50 @ 180</div></div>
+      <div class="f"><label>เสี่ยงถึง Stop</label><div class="v mono">—</div><small>นับจากทุน $500</small></div></div>
+      <div class="btns"><button class="b pri">อัปเดตราคา</button><button class="b" disabled>เติมไม้</button><button class="b">เลื่อน Stop</button><button class="b" onclick="mn(this)">⋯</button>
+        <div class="menu"><button>แก้ Entry/SL</button><button>ปิดตำแหน่ง</button><hr><button>Tier B ✓</button><button>Tier A</button></div></div></div></div>
+
+  <!-- 🟢 AAPL -->
+  <div class="card"><button class="row" aria-expanded="false" onclick="tg(this)"><span class="ic">🟢</span><span class="tkw"><span class="tk">AAPL</span><span class="tag" title="Tier B · เพดานไม้แรก 5% · ระบบ Week">B·W</span></span>
+    <span class="nums"><span>ปิด <b class="mono">101</b></span><span>Stop <b class="mono">90</b></span><span>เสี่ยง <b class="mono">$858</b> 0.82%</span><span class="hold mono">78 @ 103.33</span></span><span class="chev">›</span></button>
+    <div class="body"><div class="full">US · Tier B · เพดานไม้แรก 5% · ระบบ Week</div><div class="grid">
+      <div class="f"><label>ราคาปิด · EMA10</label><div class="v mono">101 <span>· 90</span></div><small>2026-09-25 · อายุ 5 วัน</small></div>
+      <div class="f"><label>Stop · ฉุกเฉิน</label><div class="v mono">90 <span>· 83.7</span></div><small>ปิดใต้ Stop = ขายหมด</small></div>
+      <div class="f"><label>ถือ / ทุนเฉลี่ย</label><div class="v mono">78 @ 103.33</div></div>
+      <div class="f"><label>เสี่ยงถึง Stop</label><div class="v mono">$858</div><small>0.82% ของถัง ≈฿28,631 · จากทุน $1,040</small></div></div>
+      <div class="btns"><button class="b pri" onclick="sim(this)">เติมไม้</button><button class="b">อัปเดตราคา</button><button class="b">เลื่อน Stop</button><button class="b" onclick="mn(this)">⋯</button>
+        <div class="menu"><button class="onlyB" onclick="sh(1)">ดูไม้ที่ซื้อ (2)</button><button>แก้ Entry/SL</button><button>ปิดตำแหน่ง</button><hr><button>Tier B ✓</button><button>Tier A</button><button class="dis">ถัวตามแนวรับ (L) — มาใน 7E-2b</button></div></div>
+      <div class="sim"><div class="in"><label style="flex:1;font-size:12px;color:var(--mu)">ราคาเติม<input class="mono" value="115"></label><label style="flex:1;font-size:12px;color:var(--mu)">Stop ใหม่<input class="mono" value="100"></label></div>
+        <div class="res"><b class="mono" style="font-size:18px">13</b> หุ้น <span class="ok">ปกติ</span><div style="color:var(--mu);font-size:12.5px">ค้าง $260 + ใหม่ $195 = $455 ≤ $1,049 · เป้า 50% ของไม้ก่อน = 13</div>
+        <button class="b pri" style="margin-top:8px">บันทึกซื้อไม้เติม</button> <button class="b" onclick="sim(this.closest('.body').querySelector('.b.pri'))">ยกเลิก</button></div></div>
+      <details><summary>ไม้ที่ซื้อ 2 ›</summary><div class="tw"><table><thead><tr><th>ไม้</th><th>วันที่</th><th>ราคา</th><th>หุ้น</th><th>f</th><th>Stop</th></tr></thead>
+        <tbody class="mono"><tr><td>1</td><td>2026-09-30</td><td>100</td><td>52</td><td>100%</td><td>90</td></tr><tr><td>2</td><td>2026-09-30</td><td>110</td><td>26</td><td>100%</td><td>90</td></tr></tbody></table></div></details></div></div>
+
+  <!-- แผน -->
+  <div class="card"><button class="row" aria-expanded="false" onclick="tg(this)"><span class="ic" style="font-size:11px;color:var(--mu)">แผน</span><span class="tkw"><span class="tk">META</span><span class="tag">B·W</span></span>
+    <span class="nums"><span>Entry <b class="mono">600</b></span><span>Stop <b class="mono">560</b></span><span>ไม้แรก <b class="mono">8</b> หุ้น</span></span><span class="chev">›</span></button>
+    <div class="body"><div class="grid">
+      <div class="f"><label>Entry แผน</label><div class="v mono">600</div></div><div class="f"><label>Stop แผน</label><div class="v mono">560</div></div>
+      <div class="f"><label>f ตอนนี้</label><div class="v mono">100%</div><small>เขียวทั้งคู่</small></div>
+      <div class="f"><label>ไม้แรก</label><div class="v mono">8 หุ้น</div><small>คุมด้วยเพดาน Tier B (5%)</small></div></div>
+      <div class="btns"><button class="b pri">บันทึกซื้อไม้ 1</button><button class="b">ลบแผน</button></div></div></div>
+  </div>
+  <div class="foot"><button class="b">＋ แผน Core</button></div>
+</div>
+<p class="hint">ตัวเลข AAPL = ของจริงจากเว็บ · ตัวอื่นเป็นตัวอย่าง · ลำดับ 🔴 → 🟡 → ⚪ → 🟢 → แผน · 🔴 ขยายเองอัตโนมัติ</p></div>
+<div class="sheetBg" id="sb" onclick="if(event.target===this)sh(0)"><div class="sheet"><h3>AAPL · ไม้ที่ซื้อ</h3><div class="note">ถือ 78 @ 103.33 · Stop ปัจจุบัน 90</div>
+<div class="tw"><table><thead><tr><th>ไม้</th><th>วันที่</th><th>ราคา</th><th>หุ้น</th><th>f</th><th>Stop</th></tr></thead><tbody class="mono"><tr><td>1</td><td>2026-09-30</td><td>100</td><td>52</td><td>100%</td><td>90</td></tr><tr><td>2</td><td>2026-09-30</td><td>110</td><td>26</td><td>100%</td><td>90</td></tr></tbody></table></div>
+<div style="text-align:right;margin-top:10px"><button class="b" onclick="sh(0)">ปิด</button></div></div></div>
+<script>
+function vr(v,b){document.getElementById('wrap').classList.toggle('vB',!!v);b.parentElement.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))}
+function sh(o){document.getElementById('sb').classList.toggle('on',!!o)}
+function tg(b){const c=b.closest('.card');const o=c.classList.toggle('open');b.setAttribute('aria-expanded',o)}
+function all(o){document.querySelectorAll('.card').forEach(c=>{c.classList.toggle('open',!!o);c.querySelector('.row').setAttribute('aria-expanded',!!o)})}
+function mn(b){const m=b.parentElement.querySelector('.menu');document.querySelectorAll('.menu.on').forEach(x=>x!==m&&x.classList.remove('on'));m.style.right='auto';m.style.left=Math.max(0,Math.min(b.offsetLeft,b.parentElement.clientWidth-215))+'px';m.classList.toggle('on');event.stopPropagation()}
+document.addEventListener('click',()=>document.querySelectorAll('.menu.on').forEach(x=>x.classList.remove('on')));
+function sim(b){b.closest('.body').querySelector('.sim').classList.toggle('on')}
+function view(p,b){document.getElementById('wrap').classList.toggle('phone',!!p);b.parentElement.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))}
+</script></body></html>

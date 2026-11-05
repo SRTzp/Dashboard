@@ -123,7 +123,7 @@ def tests(pw, w, h, label):
         pick(page, "CAMT", "up")
         check(f"{tag} 3 Candidate CAMT = Up → stockNotes/CAMT.phase = up", note_phase(page, "CAMT") == {"v": "up", "at": TODAY}, json.dumps(note_phase(page, "CAMT")))
         page.locator('.wlR[data-sym="CAMT"] .wlRn').click(); wait(page, 400)
-        page.locator('[data-cand-x] [data-c-add]').click(); wait(page, 400)
+        # PL2·7: migrated Candidates have no Ideas source info, so the '＋ เพิ่มเข้า Watchlist' button is disabled — promotion starts from the screening modal (scr_helper.promote)
         import scr_helper; scr_helper.promote(page, "CAMT")   # PL1 Step 4: ย้ายด้วย screening modal (เดิม td4ProSave) — ค่า Tier/Phase ตามไปเหมือนเดิม
         go(page, "wl")
         cs = {x["s"]: x["ph"] for x in chips(page)}

@@ -1,0 +1,123 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LN3fix3b mockup</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eceef1;color:#16191e;font:15px/1.5 system-ui,sans-serif}
+.w{max-width:1360px;margin:0 auto;padding:20px 28px 60px}
+h2{font-size:14px;color:#6b7280;margin:28px 0 10px;font-weight:600}
+.note{background:#fff8e6;border:1px dashed #e6c46b;border-radius:10px;padding:8px 12px;font-size:13px;margin:8px 0}
+.c{background:#fff;border:1px solid #e3e5e9;border-radius:14px;padding:14px 16px;min-width:0}
+.mut{color:#6b7280;font-size:13px}.u{color:#1F9D6B}.d{color:#d0453a}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.tag{font-size:12px;border-radius:6px;padding:1px 6px;white-space:nowrap;background:#eef0f3}
+.red{background:#fbe9e7;color:#c0392b}.amb{background:#fff4dc;color:#a96e06}.grn{background:#e3f6ec;color:#1F9D6B}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}.ctl button{border:1px solid #cfd3da;background:#fff;border-radius:8px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer}.ctl button.on{background:#16191e;color:#fff;border-color:#16191e}
+/* fake app */
+.app{position:relative;background:#eceef1;border:1px solid #d5d8de;border-radius:14px;height:640px;overflow:hidden;display:flex;flex-direction:column}
+.top{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;flex:none}
+.nav{background:#fff;border-radius:99px;padding:4px;display:flex;gap:2px}.nav span{padding:4px 12px;border-radius:99px;font-size:14px;color:#6b7280}.nav .on{background:#16191e;color:#fff}
+.body{flex:1;min-height:0;display:grid;grid-template-columns:355px 1fr;gap:14px;padding:0 16px 16px;transition:grid-template-columns .2s}
+.list{background:#fff;border-radius:14px;padding:10px;overflow:auto}
+.li{display:flex;gap:6px;align-items:center;padding:9px 6px;border-top:1px solid #f0f1f3;cursor:pointer;flex-wrap:wrap}.li.on{background:#f3f6ff;border-left:3px solid #2B5BD7}
+.li b{font-size:15px}
+.det{background:#fff;border-radius:14px;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.dh{padding:14px 16px 8px;border-bottom:1px solid #f0f1f3;flex:none}
+.xb{border:1px solid #cfd3da;background:#fff;border-radius:8px;height:30px;padding:0 10px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.xb.pri{background:#16191e;color:#fff;border-color:#16191e}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;background:#f3f4f6;border-radius:12px;padding:4px;margin-top:10px}.tabs span{padding:5px 12px;border-radius:9px;font-size:14px;color:#6b7280;cursor:pointer}.tabs .on{background:#fff;color:#16191e;font-weight:600}
+.scr{flex:1;min-height:0;overflow:auto;padding:14px 16px}
+.art{font-size:16px;line-height:1.65;max-width:72ch}
+.wide{overflow-x:auto;border:1px solid #eef0f3;border-radius:10px;margin:12px 0}
+table{border-collapse:collapse;font-size:14px;white-space:nowrap}td,th{padding:6px 12px;border-bottom:1px solid #f0f1f3;text-align:right}th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:#fff}
+.hint{font-size:12px;color:#6b7280}
+/* expanded states */
+.app.exB{position:fixed;inset:0;height:auto;border:0;border-radius:0;z-index:50}.app.exA .body{grid-template-columns:1fr;gap:0}.app.exA .list{display:none}
+.app.exB .top{display:none}.app.exB .body{grid-template-columns:1fr;gap:0;padding:0}.app.exB .list{display:none}.app.exB .det{border-radius:0}
+.app.exA .art,.app.exB .art{max-width:80ch;margin:0 auto}.app.exA .wide,.app.exB .wide{max-width:none}
+.ebar{display:none;background:#eef4ff;color:#2B5BD7;font-size:12.5px;padding:5px 16px;border-bottom:1px solid #dbe5ff;flex:none}
+
+.toast{position:absolute;right:16px;bottom:16px;background:#16191e;color:#fff;font-size:13px;border-radius:8px;padding:6px 10px;opacity:0;transition:opacity .2s;pointer-events:none}.toast.on{opacity:.9}
+/* flow */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pbh{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid #e3e5e9;border-radius:10px;min-width:0}
+.chips{display:flex;gap:4px 8px;flex-wrap:wrap;font-size:13px;font-weight:600}
+.hl{font-weight:700;font-size:16px;line-height:1.4}
+@media(max-width:900px){.cmp{grid-template-columns:1fr}}
+</style></head><body><div class="w">
+<div class="note"><b>LN3fix3b · rough mockup.</b> <b>User chose Full screen.</b> Section ① is clickable. Click an asset (or the box), press <b>⤢</b> or <b>F</b>, try <b>← →</b> (switch sections), <b>↑ ↓</b> (in normal view = change asset · expanded = scroll text only), <b>Esc</b> = back. Numbers are examples.</div>
+
+<h2>① Watch · expand the right column (Mac ≥1000px)</h2>
+
+
+<div class="app" id="app" tabindex="0">
+ <div class="top"><b>▮ Trading</b><div class="nav"><span>Today</span><span>Flow</span><span class="on">Watch</span><span>แผน</span><span>Journal</span><span>Port</span></div><span class="mut">＋ ⚙ ⋯</span></div>
+ <div class="body">
+  <div class="list" id="list"></div>
+  <div class="det">
+   <div class="ebar" id="ebar">ขยายอยู่ · ← → เปลี่ยนหัวข้อ · ↑ ↓ เลื่อนอ่าน (ไม่เปลี่ยนหุ้น) · Esc = ย่อกลับ</div>
+   <div class="dh">
+    <div class="row"><div><b style="font-size:20px" id="sym">AVGO</b> <span class="mut" id="nm">Broadcom Inc.</span> <span class="tag grn">CORE.US</span></div>
+     <div style="display:flex;gap:6px"><button class="xb" id="xbtn" title="ขยายเต็มจอ (F)">⤢</button><button class="xb">⋯</button></div></div>
+    <div class="tabs" id="tabs"></div>
+   </div>
+   <div class="scr" id="scr"></div>
+  </div>
+ </div>
+ <div class="toast" id="toast"></div>
+</div>
+<div class="note">
+<b>Behaviour</b><br>
+• Icon button <b>⤢</b> (tooltip "ขยายเต็มจอ (F)") next to ⋯ · shortcut <b>F</b> · when expanded it becomes <b>⤡</b> · a 2-second toast shows the keys (no permanent hint bar) · no browser Fullscreen API.<br>
+• <b>Esc</b> or <b>⤡</b> = back to list + detail, same asset, same section, same scroll position.<br>
+• Expanded: list hidden · <b>↑ ↓ / wheel / trackpad</b> scroll the text only — <b>never change asset</b> · <b>← →</b> still switch sections (สรุป → มุมมอง → …) · wide tables scroll left/right inside their box.<br>
+• Text stays readable: max ~80ch, centred. Wide tables (e.g. รายได้แยกส่วน) scroll left/right inside their own box.<br>
+• Same for Watchlist, Ideas and Candidates (same layout). Mobile (&lt;1000px) unchanged — detail is already full width there.<br>
+• Expanded state is not saved — reopening the app / switching tab = normal view.
+</div>
+
+<h2>② Flow · Macro card head (Mac) — left: now · right: fix</h2>
+<div class="cmp">
+ <div class="c"><b class="mut">Now (LN3fix3)</b>
+  <div class="pbh" style="margin-top:8px;max-width:640px"><span class="mut">▾ 2026Q4</span><span class="hl" style="flex:1;min-width:0;font-size:15px">Real Rates Are the Tax, Hormuz Is the Swing — หัวข้อยาวมากเพื่อทดสอบว่าไม่ถูกตัด</span><span class="tag" style="background:#16191e;color:#fff">ใช้จริง</span><span class="chips" style="flex-wrap:nowrap;overflow:hidden;max-width:230px"><span class="u">★XAU ▲</span><span class="u">★XAG ▲</span><span class="d">USDJPY ▼</span><span class="u">BTC ▲▬</span><span class="mut">BR</span></span></div>
+  <div class="mut" style="margin-top:6px">✗ headline squeezed into 4 short lines · ✗ last chip (BRENT) cut off</div>
+ </div>
+ <div class="c"><b class="mut">Fix</b>
+  <div style="border:1px solid #e3e5e9;border-radius:10px;padding:9px 10px;margin-top:8px;max-width:640px">
+   <div class="row" style="justify-content:flex-start"><span class="mut">▾ 2026Q4</span><span class="tag" style="background:#16191e;color:#fff">ใช้จริง</span><span class="chips"><span class="u">★XAU ▲</span><span class="u">★XAG ▲</span><span class="d">USDJPY ▼</span><span class="u">BTC ▲▬</span><span class="mut">BRENT ▬</span></span></div>
+   <div class="hl" style="margin-top:6px">Real Rates Are the Tax, Hormuz Is the Swing — หัวข้อยาวมากเพื่อทดสอบว่าไม่ถูกตัด</div>
+  </div>
+  <div class="mut" style="margin-top:6px">✓ headline on its own full-width line · ✓ chips wrap, none cut · ✓ card content gets the normal inner padding (now flush to the edge)</div>
+ </div>
+</div>
+
+<h2>③ New week · bug fix (no UI change)</h2>
+<div class="c">When you press <b>เริ่มสัปดาห์</b>, kept assets now <b>always</b> start with empty Zone ▲/▼ · Shift · My opinion · B&P — even if next week's data hasn't finished loading. (Today it only clears data already loaded, so old values could survive.)</div>
+</div>
+<script>
+const A=[["AVGO","Broadcom Inc.",["A","Start▲"],["⛔ Tripwire","ควร update"]],["NOCARD","—",["—"],["รอสร้าง Thesis"]],["CALM","Cal-Maine Foods",["—"],["ควร update"]],["MSFT","Microsoft",["A","Hold"],[]],["ASML","ASML Holding",["B","Watch"],[]]];
+const T=["สรุป","มุมมอง","ธุรกิจ","ทำไมซื้อ","ติดตาม","ออกเมื่อ"];
+let ai=0,ti=0,ex=false,mode="B";
+const $=id=>document.getElementById(id),app=$("app");
+function toast(s){const t=$("toast");t.textContent=s;t.classList.add("on");clearTimeout(t._);t._=setTimeout(()=>t.classList.remove("on"),2000)}
+function body(){let p="";for(let i=1;i<=7;i++)p+=`<p>${T[ti]} · ย่อหน้า ${i} — AI XPU + networking โตต่อ: AI rev Q3 $16.7B, guide Q4 $21.7B · Software เป็นเครื่องเงินสด segment margin 83.7% จ่ายหนี้และปันผล · ตัวพลิกคือ hyperscaler ลด capex หรือ customer concentration &gt; 55%.</p>`+(i==2?`<div class="wide"><table><tr><th>รายได้แยกส่วน ($B)</th>${["Q1 FY25","Q2 FY25","Q3 FY25","Q4 FY25","Q1 FY26","Q2 FY26","Q3 FY26","Q4 FY26e","Q1 FY27e","Q2 FY27e","Q3 FY27e"].map(x=>`<th>${x}</th>`).join("")}</tr>${[["AI semis",4.1,4.4,5.2,6.5,8.2,10.9,16.7,21.7,24,26,28],["Non-AI semis",4.2,4.1,4.0,4.1,4.0,4.2,4.3,4.4,4.5,4.6,4.7],["Infra software",6.7,6.6,6.8,6.9,7.0,7.1,7.2,7.3,7.4,7.5,7.6]].map(r=>`<tr>${r.map((c,j)=>j?`<td>${c}</td>`:`<td>${c}</td>`).join("")}</tr>`).join("")}</table></div><div class="hint">↔ wide table scrolls sideways inside its box</div>`:"");return `<div class="art">${p}</div>`}
+function render(){
+ $("list").innerHTML=`<div class="mut" style="margin-bottom:6px">Watchlist ${A.length}</div>`+A.map((a,i)=>`<div class="li${i==ai?" on":""}" data-i="${i}"><b>${a[0]}</b>${a[2].map(x=>`<span class="tag">${x}</span>`).join("")}${a[3].map(x=>`<span class="tag ${x.startsWith("⛔")?"red":"amb"}">${x}</span>`).join("")}</div>`).join("");
+ $("sym").textContent=A[ai][0];$("nm").textContent=A[ai][1];
+ $("tabs").innerHTML=T.map((t,i)=>`<span class="${i==ti?"on":""}" data-t="${i}">${t}</span>`).join("");
+ $("scr").innerHTML=body();
+ app.className="app"+(ex?" ex"+mode:"");
+ $("xbtn").textContent=ex?"⤡":"⤢";$("xbtn").title=ex?"ย่อกลับ (Esc)":"ขยายเต็มจอ (F)";$("xbtn").classList.toggle("pri",ex);
+}
+function setEx(v){const s=$("scr").scrollTop;ex=v;render();$("scr").scrollTop=s;toast(v?"เต็มจอ · ← → เปลี่ยนหัวข้อ · Esc = ย่อกลับ":"ย่อกลับ")}
+$("list").onclick=e=>{const r=e.target.closest(".li");if(r){ai=+r.dataset.i;render()}};
+$("tabs").onclick=e=>{const t=e.target.closest("[data-t]");if(t){ti=+t.dataset.t;render()}};
+$("xbtn").onclick=()=>setEx(!ex);
+document.querySelectorAll(".ctl button").forEach(b=>b.onclick=()=>{if(ex)setEx(false);mode=b.dataset.m;document.querySelectorAll(".ctl button").forEach(x=>x.classList.toggle("on",x==b));render()});
+document.addEventListener("keydown",e=>{
+ if(e.key==="Escape"&&ex){e.preventDefault();setEx(false);return}
+ if((e.key==="f"||e.key==="F")&&!e.metaKey&&!e.ctrlKey){setEx(!ex);return}
+ if(e.key==="ArrowLeft"||e.key==="ArrowRight"){e.preventDefault();ti=Math.max(0,Math.min(T.length-1,ti+(e.key==="ArrowRight"?1:-1)));const s=$("scr").scrollTop;render();return}
+ if(e.key==="ArrowUp"||e.key==="ArrowDown"){e.preventDefault();
+  if(ex){$("scr").scrollBy({top:e.key==="ArrowDown"?60:-60})}
+  else{ai=Math.max(0,Math.min(A.length-1,ai+(e.key==="ArrowDown"?1:-1)));render()}}
+});
+render();
+</script></body></html>

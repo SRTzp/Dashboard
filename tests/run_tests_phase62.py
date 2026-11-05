@@ -63,6 +63,7 @@ def errs(ce, pe): return not VW.real_errs(ce) and not pe
 
 
 def tests(pw, w, h, label):
+    return   # PL2·7 RETIRED: Candidate Tier quick-check row / filter / badges removed (tests/PL2_retired.md)
     tag = f"[{ENGINE}/{label}]"; sfx = label.replace("px", "")
     # ── 1 Candidate ใหม่ · เกณฑ์อ่านจากค่าตั้ง
     b, c, page, ce, pe, dl = launch(pw, w, h)
