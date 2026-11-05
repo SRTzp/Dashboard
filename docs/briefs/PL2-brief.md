@@ -51,16 +51,19 @@ File: repo `index.html` (the user called it "index-3.html").
 - Any missing input → show "Missing: Entry / SL / …" instead of a value. RS Unrated → "RS: Unrated". Never invent numbers.
 - Same values as the saved plan (test: summary == plan form values).
 
-## 6. Sat: Classify dropdown → 2 checkboxes
-- Replace `Classify` (Clear Trend / Unclear) in the TF | Trend | Classify row with two checkboxes: **EMA50 Verify** and **Structure Verify**, each saved as its own boolean on the idea.
-- **Rule (decided by SRTp): both checked = the old "Clear Trend".** Every place that checks `pfClsKey(idea.classify)==='clear'` (incl. `satTacLock`, `td3PlanStatus` "Needs Clear Trend", readiness, badges, summaries) uses `ema50_ok && structure_ok` instead.
-- Migration: old `classify` value stays stored but is NOT treated as verified. Old plans start with both boxes unchecked. Plans/trades already entered are unaffected (the lock only applies to unentered Tactical plans, as today). Rename "Needs Clear Trend" message → "Needs EMA50 + Structure verify".
-- Test: each box persists after reload; Tactical unlocks only with both; existing entered trades unchanged.
+## 6. Sat: Classify dropdown → 2 checkboxes  (UPDATED 2026-11-05 — supersedes earlier text)
+- Replace `Classify` in the TF | Trend | Classify row with two independently saved checkboxes: **EMA50 Verify** and **Structure Verify** (own booleans `ema50_ok`, `structure_ok` on the idea).
+- Derived classification: both checked = **Clear Trend**; one or none = **Unclear**. Use this derived value everywhere the system reads classify (badges, readiness, `satTacLock`, `td3PlanStatus`, summaries). All other trading conditions unchanged.
+- Legacy plans: keep using the stored `classify` until verification is saved through the new controls. Do NOT auto-tick both boxes from an old "Clear Trend". Show "Legacy classification — verification pending" on these.
+- Once saved through the new controls, the checkboxes are the source of truth.
+- Message "Needs Clear Trend" → "Needs EMA50 + Structure verify".
+- Never alter recorded trades (lock still applies only to unentered Tactical plans).
+- Test: each box persists after reload; Tactical unlocks only with both (new) / legacy clear still unlocks until saved; entered trades unchanged.
 
 ## 7. Candidate-first workflow (no Ideas stage, no Tier A/B)
 - Flow: Add Candidate → Evaluate (screening modal) → Promote to Watchlist → Thesis + plan.
 - Remove the stock **Ideas** stage as a required step before Candidate (nav, counters, reminders, "Back in Ideas", onboarding text).
-  - Migrate remaining stock Ideas candidates into Candidates (keep notes, skip duplicates already in Candidates/Watchlist, mark source "From Ideas"). Keep the old data stored.
+  - Migration (D6, automatic once): migrate only stock ideas with a valid ticker into Candidates (keep notes, mark source "From Ideas"). Skip thematic-only records and tickers already in Candidates/Watchlist. Satellite `satIdeas*` untouched. Completion flag + idempotent (safe re-run, no duplicates). Keep all source records. Final report: migrated count, skipped count, skip reasons.
   - Do NOT touch Satellite trade ideas (`satIdeas*`, `ideaList` usage for Sat, etc.) even if names contain "idea".
 - Remove Tier A/B everywhere in stock selection: badges, selectors ("ตั้ง Tier…" in the Edit modal), filters, sorts, promotion checks, and any sizing/eligibility that still reads tier for NEW plans. Stored tier data stays; old plans/trades keep their stored numbers.
   - If removing tier would change sizing math for new plans, STOP and report — don't change it.
