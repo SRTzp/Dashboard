@@ -7941,10 +7941,46 @@ function td4RemBanner(M){
   }catch(e){ console.warn('td4 rem:', e); return ''; }
 }
 function td4RemDismiss(){ td4RemSet('dash.td4RemDismiss', thaiToday()); todayRefresh(true); }
+/* PL2·2 — ปุ่มใน "Unfinished today" พาไปทำงานจริง (ไม่ใช่แค่เลื่อนจอ) · หาเป้าไม่เจอ = toast เสมอ ไม่เงียบ */
 function td4RemGo(sec, mk){
-  if(mk && mk !== td4HwMk){ td4HwMk = mk; td4RemSet('dash.td4HwMk', mk); todayRefresh(true); }
-  const el = sec === 'sat' ? document.querySelector('[data-td3-panel="sat"]') : document.querySelector(`[data-td3-sec="${sec}"]`);
-  if(el) el.scrollIntoView({behavior:'auto', block:'center'});
+  const fail = what=>{ try{ sdToast("Couldn't open " + what); }catch(e){ console.warn("td4 rem go:", what); } return false; };
+  const focusEl = (el, foc)=>{ if(!el) return false; el.scrollIntoView({behavior:'auto', block:'center'}); if(foc){ try{ el.focus(); }catch(e){} } return true; };
+  try{
+    if(activeTab !== 'today') switchTab('today');
+    if(mk && mk !== td4HwMk){ td4HwMk = mk; td4RemSet('dash.td4HwMk', mk); }
+    todayRefresh(true);
+    const M = tdLast || tdBuild(), today = M.today;
+    if(sec === 'hw'){
+      const x = M.hwm && M.hwm[mk || td4HwMk];
+      if(!x || !x.t) return fail('Deep dive ' + (mk || td4HwMk));
+      const miss = TD_HW_SHOW.filter(p=>!(x.parts || []).includes(p.id))[0];
+      td3HwGo(x.t, x.src || 'W', miss ? (TD3_HW_SUB[miss.id] || '') : '');
+      return true;
+    }
+    if(sec === 'screen'){
+      const C = td3Cands(today), pend = c=>c.screened !== today;
+      let q = td4Queue(td4ScrMk, today);
+      if(!q || !q.length) q = C.filter(pend);
+      const c = q && q[0];
+      if(!c || !c.sym) return fail('Candidate screening');
+      switchTab('watch'); try{ wlSetView('cand'); }catch(e){}
+      wlOpen(c.sym); scrOpen(c.sym);
+      return true;
+    }
+    if(sec === 'add'){
+      const el = document.querySelector('[data-td4-add]');
+      return focusEl(el, true) || fail('Add Candidate');
+    }
+    if(sec === 'sat'){
+      const rows = td3SatRows().filter(r=>r.k !== 'saved' && r.k !== 'nt');
+      const r = rows[0];
+      if(r && r.idea){ td3SatOpen(r.idea.id); return true; }
+      if(r && r.key){ switchTab('plan'); setPlanScope('future'); lfSatSet(r.key); return true; }
+      const el = document.querySelector('[data-td3-panel="sat"], [data-td3-pg="sat"], [data-td3-panel="plans"]');
+      return focusEl(el, false) || fail('Satellite');
+    }
+    return focusEl(document.querySelector(`[data-td3-sec="${sec}"]`), false) || fail(String(sec));
+  }catch(e){ console.warn('td4 rem go:', e); return fail(String(sec)); }
 }
 function td4RemCheck(){
   try{
