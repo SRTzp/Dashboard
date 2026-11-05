@@ -68,3 +68,53 @@ Per brief: 4+1 → 2 → 6 → 5 → 3 → 7. Backup `index.backup-pre-PL2.html`
 ## Questions blocking edits
 D1 Saturday roll-forward (Weekly Impact) · D2 remove legacy view block from Candidate cards too · D3 keep compact My Thesis on the Watchlist card · D4 definition of "setup qualifies" for stock plans · D5 scope of "Ideas stage" removal · D6 migration trigger.
 No sizing change is required by any item as audited (item 7 sizing already tier-free for new plans).
+
+---
+
+# PL2b audit — items 8 (swipe zones) and 9 ("เลือกศึกษา") — read-only, no code changed
+
+Read the brief incl. the "Additions (2026-11-05)" block; those override the earlier text.
+
+## 8. Main-tab swipe
+
+**Current code** (`index.html` ~8785, one global IIFE): `touchstart` records the start point unless an overlay is open or the target is inside `.dragHandle, .tablewrap, input, textarea, select, .scorePop`. `touchend` switches tab when |dx| ≥ 60 and |dx| ≥ 1.5·|dy|, order = `visibleTabs()`, left = next, right = previous. No zone check, passive listeners.
+- Gaps vs the brief: swipes starting on ANY content (cards, `.ltTw` Evidence table, `.ideaVc` Value Chain row, `.ltTabs` detail strips, Watch lists…) switch tabs — only `.tablewrap` is excluded. Horizontal scroll at its scroll end therefore also changes tab.
+- No click suppression: a swipe that ends on a button can fire `click` (touchend→click only happens for taps, so low risk with real touch, but needs a test; a click-capture guard is cheap).
+
+**Layout facts measured with Playwright (Chromium, data = one sample idea)**
+- Portrait 390×844: `.tabs` is `position:fixed; bottom:0` (CSS `@media (max-width:480px)`) — this is the "bottom nav". Header `.topbar` ≈ 40px; `.wrap`/panels span x = 16…374 (body padding 16px).
+- Landscape 844×390: width > 480px so the nav is NOT a bottom bar: `.tabs` is a static pill in the top header (`.topbar`, ≈114px tall incl. sync status / hdrSub). `.wrap` spans x = 16…828, i.e. visible side gutters are only **16px** each (body padding), no content overlap. They exist but are thin; iOS reserves roughly the outer ~20px for the back/forward edge gesture, so a swipe starting in a 16px gutter may be taken by the OS on a real iPhone (cannot be confirmed in emulation).
+- Orientation: `matchMedia('(orientation: portrait)')` = true at 390×844, false at 844×390 (works in emulation).
+- `.ideaVc` (Value Chain row): `overflow-x:auto; max-width:100%`. `.ltTw` (Evidence table wrapper): `overflow-x:auto`. `.ltTabs`: `overflow-x:auto`. No `overflow:hidden` parent found in the computed chain, `touch-action: auto` on all three. Their scroll widths measured 0 in this probe because the Ideas detail was not open at phone width (list view is shown first) — I will re-measure with the detail open at the start of the build and fix anything that is clipped.
+
+**Planned implementation** (global handler only, no new gesture libs)
+1. At `touchstart`, compute `eligible` once from the start point: portrait → start point's element is inside `#tabsMain` (bottom nav) only; landscape → inside `.topbar` (header/nav/sync area, incl. empty space around the nav) OR in a gutter = start x < left edge or > right edge of `#mainWrap`'s content box (only if that gutter is ≥ 8px wide at the current width; otherwise no gutter zone) AND the touch target is `html/body` background (never a card). Not eligible → `tracking=false` (a gesture that starts in content can never become a swipe, even if it ends in a zone).
+2. Re-evaluate orientation at each touchstart (`matchMedia` read live) so rotation/resize switches zones; also listen to `change` for a cached value.
+3. Keep exclusions (overlay open, inputs, `.tablewrap`…) and add `.ltTw, .ideaVc, .ltTabs, [data-idea-tabs]` as explicit never-start zones (redundant under the zone rule but documented).
+4. Swallow the synthetic click after a recognised swipe (capture-phase one-shot listener, cleared by a short timeout) so a swipe ending on a button does not click it; taps unaffected.
+5. Do not shrink/truncate text; if Value Chain/Evidence are clipped, fix with `overflow-x:auto`/`min-width:0` on the wrapper only.
+
+**Tests**: new `tests/run_tests_phase363.py` — Playwright **WebKit with iPhone emulation** (`playwright.devices['iPhone 13']` + landscape variant, touch via CDP-less `touchscreen`/dispatched TouchEvents since WebKit lacks CDP) for: portrait bottom-nav swipe changes tab; swipe on content / Value Chain / Evidence / detail tab strip does not (and element scrolls); landscape header, sync area, each gutter change tab; cards/table do not; start in content → end in zone does not; rotation (viewport swap + orientationchange) switches zones; swipe ending on a button fires no click, tap fires click. Chromium touch emulation as a second run if WebKit lacks a needed API.
+**Only a real iPhone can confirm**: OS edge-swipe conflicts in the 16px gutters (Safari back/forward), rubber-band/overscroll feel, the home-indicator zone under the bottom nav, momentum scrolling in the Value Chain row, and that WebKit touch emulation matches real touch event ordering.
+
+## 9. "เลือกศึกษา" — verified against the code
+
+**Confirmed as described in the brief**
+- UI: checkbox in each Value Chain card (`ideaTabVc`, ~14837, `data-idea-pick`), handler `ideaPick(id, name, on)` → `ideaUserPatch(id, {pick:{[name]:bool}})` → `ideas/{id}.user.pick[<segment name>]` (merge write). The AI's own `idea.chain.segments[].pick` is never written by the dashboard.
+- `ideaView()` (~14544): `pick = user.pick has the name ? !!user value : !!s.pick`.
+- Only consumer of the result: `ideaExportObj()` (~15025) copies the merged value into the exported `chain.segments[].pick`. No other code reads `.pick`/`user.pick` (grep: checkbox state, export, and `ideaView` only). Nothing in the dashboard generates picks; it is a saved selection handed to the `idea-scout` `pick` mode.
+
+**Things to report (they matter for the "separate from AI" addition)**
+1. **AI fields that exist today:** (a) `segments[].pick` = the AI's pick, (b) `segments[].suggest` = shown as the orange chip "AI เสนอ" next to the segment effect chip (`data-idea-suggest`). The chip and the checkbox are already separate UI elements.
+2. **Fallback problem — confirmed:** when the user has not touched a segment, the checkbox is rendered *ticked* from the AI's `pick`, so an AI value looks like the user's own selection. Stored data never mixes (user value in `user.pick`, AI value in `idea.chain.segments[].pick`; neither overwrites the other), but the export writes the merged value, so an untouched AI-ticked segment is exported as `pick:true` without the user ever ticking it.
+3. Ordering by the displayed ticks would therefore move AI-ticked cards to the front too.
+
+**Planned implementation (display only)**: new `ideaVcOrder(v)` returns segment indexes: ticked first, stable inside both groups; `ideaTabVc` renders in that order but keeps the original index in `data-idea-seg` / `data-idea-pick`; `v.segs` / `idea.chain.segments` / export order untouched. After a tick, scroll only the `.ideaVc` row: `row.scrollTo({left: box.offsetLeft - row.offsetLeft, behavior:'auto'})` (never `scrollIntoView`, page `scrollY` asserted unchanged). Reload rebuilds the order from the saved `user.pick`.
+**Tests**: tick → card in left group + visible in the row + `scrollY` unchanged; untick → back to original relative place; reload → order rebuilt; export JSON segment order identical to `idea.chain.segments` order; AI-vs-user separation checks per the decision below.
+
+## Decisions needed before I build item 9 (and one for item 8)
+- **D8** How to treat an AI-ticked segment the user has not touched? 
+  - **A (recommended):** the checkbox shows ONLY the user's choice (unticked until the user acts); the AI's value appears as a separate chip "AI pick" (next to the existing "AI เสนอ"). Ordering and "ticked first" use the user's choice only. Export is unchanged (an untouched AI pick is still exported as `pick:true`), and I add one small hint line under the row: "Export includes AI picks you haven't changed". Never overwrites either value.
+  - **B:** keep today's behaviour (checkbox shows the merged value), only add the "AI pick" chip on segments whose tick comes from the AI. Ordering uses the merged value.
+- **D9** Landscape gutters are only 16px wide here (and collide with the iOS edge gesture). OK to implement them as specified (zone exists only when ≥ 8px visible), knowing a real iPhone may not deliver those touches to the page?
+- Item 8 build also touches only the one global handler; no other tab code changes.
