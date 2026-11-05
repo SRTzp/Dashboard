@@ -40,6 +40,7 @@ def run(pw, w, h):
         P44.reload_keep(page)
         js(page, "()=>{ switchTab('watch'); wlSetView('wl'); }"); settle(page, 500)
         js(page, "()=>{ wlOpen('MTA'); wlSetSub('view'); }"); settle(page, 900); snap(page, "my-thesis", w)
+        js(page, "()=>{ const m = document.querySelector('.mtWrap'); if(m) m.scrollIntoView({block:'start'}); }"); settle(page, 600); snap(page, "my-thesis-images", w)
     finally: b.close()
     # 3 Sat plan row (verify checkboxes) + 4 trade summary
     b, page, ce, pe = P111.sat_launch(pw, w, h)
