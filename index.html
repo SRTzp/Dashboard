@@ -2351,6 +2351,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 @media(max-width:310px){.ln1-form .ln3-st{font-size:10.5px;word-spacing:-2.5px}.ln3-st .ln2-fn .dd{width:6px;height:6px}.ln3-st .ln2-chip{padding:0 3px;font-size:10px}}
 .vwImg .vwDel{top:auto;bottom:6px;right:6px}
 .pf-r1 .pf-tf select{padding:0 4px}
+.pf-r1 .pf-vf{display:flex;flex-direction:column;gap:3px}.pf-r1 .pf-vf label{margin:0;font-size:12px}.pf-r1 .pf-vf .pf-vc{display:flex;align-items:center;gap:6px;min-height:24px;color:var(--dark);font-size:13px;white-space:nowrap;cursor:pointer}.pf-vf .pf-vc input{width:18px;height:18px;margin:0}.pf-vf .pf-vr{font-weight:700;margin-left:4px}.pf-vf .pf-vr.c-gr{color:#1F9D6B}.pf-vf .pf-vr.c-rd{color:#d0453a}.pf-vf .pf-vr.c-ye{color:#a96e06}.pf-vf .pf-vleg{font-size:11px;color:#a96e06}
 .vwImg .vwTag[data-ln1-cap]{max-width:calc(100% - 84px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:340px){.vwImg .vwTag[data-ln1-cap] small{display:none}}
 .vwImg .vwTag small{opacity:.75;font-size:10px}
@@ -7599,7 +7600,7 @@ function td3PlanStatus(idea){
   const rs = satV3PlanRowState(idea);
   if(rs==='closed') return null;
   if(rs==='plan' || rs==='open') return {k:'saved'};
-  if(satV2Sleeve(idea)==='tactical' && pfClsKey(idea.classify)!=='clear') return {k:'pending', list:['Needs Clear Trend']};   /* CS1 */
+  if(satV2Sleeve(idea)==='tactical' && satClsKey(idea)!=='clear') return {k:'pending', list:['Needs EMA50 + Structure verify']};   /* CS1 */
   const ck = Array.isArray(idea.setup_ck) ? idea.setup_ck : [], crit = PF_SETUP_CK.filter(x=>!ck.includes(x[0])).map(x=>x[1]);
   if(crit.length) return {k:'pending', list:crit};
   const miss = []; if(!pfHasTrend(idea)) miss.push('Trend'); if(!(+idea.entry > 0)) miss.push('Entry'); if(!(+idea.sl > 0)) miss.push('SL'); if(!(+idea.tp > 0)) miss.push('TP');
@@ -21604,9 +21605,14 @@ function pfTfNorm(v){ const t = String(v==null ? '' : v).trim(), m = {daily:'D',
 const PF_CLS = {clear:'Clear Trend', unclear:'Unclear'};
 const PF_CLS_COL = {up:{clear:'gr', unclear:'ye'}, dn:{clear:'rd', unclear:'ye'}};
 function pfClsKey(v){ return (v==='clear' || v==='strong' || v==='normal') ? 'clear' : ((v==='unclear' || v==='uncertain') ? 'unclear' : ''); }
+/* PL2·6 — Verify 2 ช่อง (EMA50 Verify · Structure Verify) เก็บเป็น boolean ของแผนเอง · ผลสรุป: ครบ 2 = Clear Trend · ขาด = Unclear
+   แผนเก่า: ใช้ classify ที่เก็บไว้ต่อจนกว่าจะบันทึก Verify ผ่านปุ่มใหม่ (ไม่ติ๊กให้เอง) · บันทึกแล้ว ช่องติ๊กเป็นต้นทาง · ไม้ที่บันทึกแล้วไม่ถูกแตะ */
+function satVerifySaved(idea){ return !!idea && (typeof idea.ema50_ok === 'boolean' || typeof idea.structure_ok === 'boolean'); }
+function satClsKey(idea){ if(!idea) return ''; if(satVerifySaved(idea)) return (idea.ema50_ok === true && idea.structure_ok === true) ? 'clear' : 'unclear'; return pfClsKey(idea.classify); }
+function satClsLegacy(idea){ return !!idea && !satVerifySaved(idea) && pfClsKey(idea.classify) !== ''; }
 function pfClassifyText(trend, key){ return !PF_CLS[key] ? '' : key==='unclear' || !trend ? PF_CLS[key] : PF_CLS[key] + (trend==='up' ? ' Up' : ' Down'); }
 function pfClassifyCls(trend, key){ return (trend && PF_CLS_COL[trend] && PF_CLS_COL[trend][key]) ? 'c-' + PF_CLS_COL[trend][key] : ''; }
-function pfClassifyHtml(idea){ const t = pfTrendKey(idea), k = pfClsKey(idea && idea.classify); return PF_CLS[k] ? `<span class="pf-cl ${pfClassifyCls(t, k)}" data-pf-classify="${k}">${pfClassifyText(t, k)}</span>` : ''; }
+function pfClassifyHtml(idea){ const t = pfTrendKey(idea), k = satClsKey(idea); return PF_CLS[k] ? `<span class="pf-cl ${pfClassifyCls(t, k)}" data-pf-classify="${k}"${satClsLegacy(idea) ? ' data-pf-legacy="1" title="Legacy classification — verification pending"' : ''}>${pfClassifyText(t, k)}</span>` : ''; }
 function satV2PlanCalc(idea, accId, f2c){
   const base = sat7dAcctBase(accId), cfg = satV2Cfg(accId), sv = satV2Sleeve(idea), tac = sv==='tactical';
   const F = f2c || satV3F2c(idea);
@@ -21668,7 +21674,7 @@ function satV2PlanCalc(idea, accId, f2c){
   }
   if(tac && !tradeExists){ const br = satV2Brake(accId); if(br.stop) blocks.push(br.msg); }
   /* CS1 — Tactical ต้อง Clear Trend (มี/ไม่มี Main ก็เหมือนกัน) · Main สร้างไม่ได้ขณะมี Tactical ที่เข้าแล้วและไม่มี Main · ไม้ที่บันทึกแล้ว/การเติมไม้ Main เดิมไม่โดน */
-  const clsB = (tac && !tradeExists && pfClsKey(idea.classify)!=='clear') ? 'Tactical needs Clear Trend' : '';
+  const clsB = (tac && !tradeExists && satClsKey(idea)!=='clear') ? 'Tactical needs EMA50 + Structure verify' : '';
   const mainB = (!tac && !tradeExists && mp.n===0 && satTacHeldNoMain(accId, idea.asset)) ? satMainBlockMsg(idea.asset) : '';
   if(clsB) blocks.push(clsB);
   if(mainB) blocks.push(mainB);
@@ -22003,7 +22009,7 @@ function ln1AcctStatus(idea, c, a, multi){
    ค่าทั้งหมดเป็นของแผนนั้น (satIdeas) · Trend = idea.bias (Up=Long · Down=Short) · Classify/Zone/Setup เป็นข้อมูลประกอบ ไม่เปลี่ยนสูตร Risk/ไม้/บล็อก */
 /* CS1 — กฎ Tactical / Main (Plan › Sat) */
 function satIdeaHasTrade(idea){ return Object.values((idea && idea.accts) || {}).some(x=>x && x.trade_id); }
-function satTacLock(idea, tac){ return !!tac && pfClsKey(idea && idea.classify)!=='clear' && !satIdeaHasTrade(idea); }
+function satTacLock(idea, tac){ return !!tac && satClsKey(idea)!=='clear' && !satIdeaHasTrade(idea); }
 /* Tactical ที่เข้าแล้ว (open) แต่ไม่มี Main ถืออยู่ในบัญชีนั้น · แผน Tactical ที่ยังไม่เข้าไม่นับ */
 function satTacHeldNoMain(accId, asset){
   if(!accId) return false;
@@ -22014,7 +22020,7 @@ function satMainBlockedFor(asset){ try{ return sat7dAccts().some(a=>satTacHeldNo
 function satMainBlockMsg(asset){ return 'Close the Tactical (' + ((typeof IDEA_ASSET_LBL!=='undefined' && IDEA_ASSET_LBL[asset]) || sat7dLabel(asset)) + ') first'; }
 const PF_SETUP_CK = [['in_zone', 'In the zone'], ['align_ma50', 'MA Align Overlap'], ['mmt_shift_pivot', 'MMT Shift Pivot']];
 function pfAssessHtml(idea, tac, cfg){
-  const e = escHtml, id = e(idea.id), tk = pfTrendKey(idea), cl = pfClsKey(idea.classify);
+  const e = escHtml, id = e(idea.id), tk = pfTrendKey(idea), cl = satClsKey(idea);
   const lock = satTacLock(idea, tac);   /* CS1 — Tactical ต้อง Clear Trend ก่อนวาง Setup */
   const tf = pfTfNorm(idea.tf) || pfTfNorm(tac ? cfg.tfTac : cfg.tfMain);
   const tfOpts = PF_TF_OPTS.includes(tf) ? PF_TF_OPTS : PF_TF_OPTS.concat([tf]);
@@ -22022,7 +22028,7 @@ function pfAssessHtml(idea, tac, cfg){
   return `<div class="pf-blk" data-pf-assess="1"><div class="pf-lab">Trade Overview (ภาพหลัก)</div><div class="pf-r1" data-pf-row="1">
       <div class="pf-tf"><label for="pf-tf-${id}">TF</label><select id="pf-tf-${id}" data-pf-tf aria-label="TF" onchange="satV2Edit('${id}','tf',this.value)">${tfOpts.map(o=>`<option value="${e(o)}"${o===tf ? ' selected' : ''}>${e(o)}</option>`).join('')}</select></div>
       <div><label for="pf-tr-${id}">Trend</label><select id="pf-tr-${id}" data-pf-trend-sel class="${tk}" aria-label="Trend" onchange="pfTrendSet('${id}',this.value)"><option value=""${tk==='' ? ' selected' : ''}>— เลือก —</option><option value="up"${tk==='up' ? ' selected' : ''}>▲ Up</option><option value="dn"${tk==='dn' ? ' selected' : ''}>▼ Down</option></select></div>
-      <div><label for="pf-cl-${id}">Classify</label><select id="pf-cl-${id}" data-pf-classify-sel class="${cl ? pfClassifyCls(tk, cl) : ''}" aria-label="Classify" onchange="pfClassifySet('${id}',this.value)"><option value=""${cl==='' ? ' selected' : ''}>— เลือก —</option>${Object.keys(PF_CLS).map(k=>`<option value="${k}"${k===cl ? ' selected' : ''}>${pfClassifyText(tk, k)}</option>`).join('')}</select></div>
+      <div class="pf-vf" data-pf-verify="1"><label class="pf-vl" id="pf-vl-${id}">Verify${cl ? ` <span class="pf-vr ${pfClassifyCls(tk, cl)}" data-pf-verify-res="${cl}">${e(pfClassifyText(tk, cl))}</span>` : ''}</label><label class="pf-vc"><input type="checkbox" data-pf-ema50 ${idea.ema50_ok === true ? 'checked' : ''} onchange="pfVerifySet('${id}','ema50_ok',this.checked)">EMA50 Verify</label><label class="pf-vc"><input type="checkbox" data-pf-structure ${idea.structure_ok === true ? 'checked' : ''} onchange="pfVerifySet('${id}','structure_ok',this.checked)">Structure Verify</label>${satClsLegacy(idea) ? '<div class="pf-vleg" data-pf-legacy-note="1">Legacy classification — verification pending</div>' : ''}</div>
     </div>
     <div class="pf-r2" data-pf-row="2"><label class="pf-zl" for="pf-z-${id}">Zone</label><input type="text" id="pf-z-${id}" data-pf-ztxt maxlength="60" placeholder="เช่น 4,230–4,250" aria-label="Zone" value="${e(idea.zone_act_txt || '')}" onchange="pfZoneTxt('${id}',this.value)"></div></div>
     <div class="pf-blk" data-pf-row="3"><div class="pf-lab">Setup on minor</div><div class="pf-chips" data-pf-setups="1">${PF_SETUP_CK.map(([k, lab])=>`<label class="pf-chip"><input type="checkbox" data-pf-setup="${k}" ${ck.includes(k) ? 'checked' : ''}${lock ? ' disabled' : ''} onchange="pfSetupCk('${id}','${k}',this.checked)">${e(lab)}</label>`).join('')}</div></div>`;
@@ -22060,7 +22066,12 @@ function pfRrLive(inp){
   const tp = f.querySelector('[data-pf-tp]'); if(tp) tp.classList.toggle('pf-need', !(+idea.tp > 0));
 }
 function pfTrendSet(ideaId, v){ satV2SetDir(ideaId, v==='up' ? 'Long' : v==='dn' ? 'Short' : ''); satV3Render({force:true}); }
-function pfClassifySet(ideaId, v){ satV3IdeaWrite(ideaId, {classify: PF_CLS[v] ? v : ''}); satV3Render({force:true}); }
+function pfVerifySet(ideaId, key, on){   /* PL2·6 — เขียน 2 boolean (อีกช่องคงค่าเดิม) · ไม่แตะ classify เดิม */
+  if(key !== 'ema50_ok' && key !== 'structure_ok') return;
+  const idea = sat7dIdea(ideaId); if(!idea) return;
+  const o = {ema50_ok: idea.ema50_ok === true, structure_ok: idea.structure_ok === true}; o[key] = !!on;
+  satV3IdeaWrite(ideaId, o); satV3Render({force:true});
+}
 function pfZoneAct(ideaId, on){ satV3IdeaWrite(ideaId, {zone_act: !!on}); }
 function pfZoneTxt(ideaId, v){ const t = String(v==null ? '' : v).trim().slice(0, 60); satV3IdeaWrite(ideaId, {zone_act_txt: t, zone_act: t !== ''}); }   /* TD4b — ไม่มีช่องติ๊ก Zone Activation แล้ว: ช่อง Zone ไม่ว่าง = ตั้ง Zone (เก็บ zone_act ตามเดิมให้ข้อมูลเก่าอ่านได้) */
 function pfSetupCk(ideaId, key, on){
@@ -22227,7 +22238,7 @@ function ln1CardHtml(idea){
     + (mainBlk ? `<div class="ui-hint" data-cs-main-block="1">${e(satMainBlockMsg(idea.asset))}</div>` : '')
     + ln2FormLine(tac, idea)
     + pfAssessHtml(idea, tac, cfg)
-    + (tacLock ? '<div class="ui-hint" data-cs-tac-hint="1">Tactical needs Clear Trend</div>' : '')
+    + (tacLock ? '<div class="ui-hint" data-cs-tac-hint="1">Tactical needs EMA50 + Structure verify</div>' : '')
     + ln3MacroBoxHtml(idea, F)
     + (tac && tyInfo.type ? row('ประเภท', `<span class="ui-f2c-tag" data-v2-type="${tyInfo.type}">${SAT_V2_TYPE[tyInfo.type]} (อัตโนมัติ)</span>${tyInfo.softWarn ? ` <span class="ui-hint" data-v2-range-warn="1">${e(tyInfo.softWarn)}</span>` : ''}`) : '')
     + `<div class="ln1-g3" data-ln1-prices="1"><div><label>Entry</label>${inp('entry', idea.entry, 'data-v2-entry placeholder="Entry" oninput="pfRrLive(this)"' + lkA)}</div><div><label>SL</label>${inp('sl', idea.sl, 'data-v2-sl placeholder="SL" oninput="pfRrLive(this)"' + lkA)}</div>`

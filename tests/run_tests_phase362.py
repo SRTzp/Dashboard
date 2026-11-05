@@ -10,6 +10,7 @@ import run_tests_phase54 as P54
 import run_tests_phase38 as P38
 import run_tests_phase100 as P100
 import run_tests_phase107 as P107
+import run_tests_phase111 as P111
 
 ENGINE = base.BROWSER_ENGINE
 results = []
@@ -131,12 +132,59 @@ def item2(pw, w=1440, h=900):
         js(page, "()=>{ document.querySelectorAll('[data-td4-add]').forEach(e=>e.remove()); td4RemGo('add', ''); }"); settle(page, 200)
     finally: b.close()
 
+# ── Item 6: Sat Verify checkboxes ──
+def item6(pw, w=390, h=844):
+    tag = f"[{ENGINE}/sat-verify/{w}]"
+    b, page, ce, pe = P111.sat_launch(pw, w, h)
+    try:
+        tid = js(page, "()=>satV2NewPlan('XAUUSD','tactical')"); settle(page, 500)
+        js(page, "([i])=>{ satV2SetDir(i,'Long'); }", [tid]); settle(page, 300)
+        info = """([i])=>{ const x = satIdeasList.find(y=>y.id===i); const f = document.querySelector('[data-v2-card="tactical"]');
+          return {cls: satClsKey(x), legacy: satClsLegacy(x), lock: satTacLock(x, true), ema: x.ema50_ok, st: x.structure_ok, classify: x.classify,
+                  ckE: !!(f && f.querySelector('[data-pf-ema50]') && f.querySelector('[data-pf-ema50]').checked), ckS: !!(f && f.querySelector('[data-pf-structure]') && f.querySelector('[data-pf-structure]').checked),
+                  hint: (f && f.querySelector('[data-cs-tac-hint]')) ? f.querySelector('[data-cs-tac-hint]').innerText : null, dropdown: document.querySelectorAll('[data-pf-classify-sel]').length,
+                  stat: (td3PlanStatus(x)||{}).list}; }"""
+        r = js(page, info, [tid])
+        check(f"{tag} new Tactical plan: both boxes empty → locked, no dropdown, hint 'Tactical needs EMA50 + Structure verify'", r["lock"] and r["dropdown"] == 0 and r["hint"] == "Tactical needs EMA50 + Structure verify" and r["stat"] == ["Needs EMA50 + Structure verify"], r)
+        page.locator("[data-pf-ema50]").first.check(); settle(page, 400)
+        r = js(page, info, [tid])
+        check(f"{tag} EMA50 only → saved as own boolean, still Unclear + locked", r["ema"] is True and r["st"] is False and r["cls"] == "unclear" and r["lock"] and r["ckE"] and not r["ckS"], r)
+        doc = js(page, "([i])=>{ const d = window.firebase.__mockDb; return null; }", [tid])
+        page.locator("[data-pf-structure]").first.check(); settle(page, 400)
+        r = js(page, info, [tid])
+        check(f"{tag} both boxes → Clear Trend, Tactical unlocked, both persisted on the idea", r["ema"] is True and r["st"] is True and r["cls"] == "clear" and not r["lock"] and r["ckE"] and r["ckS"] and r["hint"] is None, r)
+        page.locator("[data-pf-ema50]").first.uncheck(); settle(page, 400)
+        r = js(page, info, [tid])
+        check(f"{tag} un-ticking one box → Unclear again + locked (structure box keeps its value)", r["cls"] == "unclear" and r["lock"] and r["st"] is True and r["ema"] is False and not r["ckE"] and r["ckS"], r)
+        saved = js(page, "([i])=>sat7dIdea(i) && {e: sat7dIdea(i).ema50_ok, s: sat7dIdea(i).structure_ok}", [tid])
+        check(f"{tag} booleans survive a re-render from the stored idea", saved == {"e": False, "s": True}, saved)
+        # legacy plan: stored classify=clear, no verification saved → keeps working + shows legacy note; not auto-ticked
+        lid = js(page, "()=>satV2NewPlan('BTCUSD','tactical')"); settle(page, 500)
+        js(page, "([i])=>{ satV2SetDir(i,'Long'); satV3IdeaWrite(i,{classify:'clear'}); satV3Render({force:true}); }", [lid]); settle(page, 400)
+        r = js(page, info, [lid])
+        note = js(page, "()=>document.querySelector('[data-pf-legacy-note]') ? document.querySelector('[data-pf-legacy-note]').innerText : null")
+        check(f"{tag} legacy classify=clear: still Clear Trend/unlocked · boxes NOT auto-ticked · 'Legacy classification — verification pending' shown", r["cls"] == "clear" and not r["lock"] and r["legacy"] and not r["ckE"] and not r["ckS"] and r["ema"] is None and note == "Legacy classification — verification pending", [r, note])
+        page.locator("[data-pf-ema50]").last.check(); settle(page, 400)
+        r = js(page, info, [lid])
+        check(f"{tag} legacy: once saved via the new controls the boxes are the source of truth (EMA50 only → Unclear, locked); old classify value left stored", r["cls"] == "unclear" and r["lock"] and not r["legacy"] and r["classify"] == "clear", r)
+        # recorded trades untouched
+        P78 = __import__("run_tests_phase78")
+        P78.put(page, [P78.sat_t("tr1", "open", sleeve="tactical", qty=0.05)])
+        t0 = js(page, "()=>JSON.stringify(getBook('main').trades.filter(t=>t.id==='tr1'))")
+        js(page, "([i])=>{ pfVerifySet(i,'ema50_ok',false); pfVerifySet(i,'structure_ok',false); }", [lid]); settle(page, 300)
+        t1 = js(page, "()=>JSON.stringify(getBook('main').trades.filter(t=>t.id==='tr1'))")
+        check(f"{tag} changing verification never alters a recorded trade", t0 == t1 and t0 != "[]", [t0[:80], t1[:80]])
+        check(f"{tag} no overflow · no console errors", not C.overflow(page) and not ce and not pe, [C.overflow(page), ce[:2], pe[:2]])
+        C.shot(page, "pl2-sat-verify-390.png")
+    finally: b.close()
+
 
 if __name__ == "__main__":
     import sys
     with sync_playwright() as pw:
         item41(pw)
         item2(pw)
+        item6(pw)
     bad = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(bad)}/{len(results)} PASS")
     sys.exit(1 if bad else 0)
