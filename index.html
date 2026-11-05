@@ -7149,13 +7149,15 @@ function wlStarHtml(r){   /* PL1·A3 — RS (manual · rank only): Unrated · 0 
 let wlMtDraft = {}, wlMtMsg = {};
 function wlItemOf(sym){ const k = wlSymKey(sym); return k ? wlItems.find(x=>wlSymKey(x.ticker)===k) : null; }
 function wlMyThesis(it){ const m = (it && it.my_thesis) || {}; return {why:String(m.why || ''), exit:String(m.exit || '')}; }
-function wlReady(sym){ const it = wlItemOf(sym); if(!it || it.archived === true) return false; const m = wlMyThesis(it); return !!m.why.trim() && !!m.exit.trim(); }
+/* BUGHUNT — ว่าง = หลังตัดช่องว่าง + zero-width (\u200B-\u200D, \uFEFF) แล้วไม่เหลืออะไร */
+function wlBlank(v){ return String(v==null?'':v).replace(/[\s\u200B-\u200D\uFEFF]/g,'')===''; }
+function wlReady(sym){ const it = wlItemOf(sym); if(!it || it.archived === true) return false; const m = wlMyThesis(it); return !wlBlank(m.why) && !wlBlank(m.exit); }
 function wlReadyMsg(sym){
   const t = wlNormTicker(sym), it = wlItemOf(sym);
   if(!it) return `${t} is not on the Watchlist — screen it into the Watchlist first`;
   if(it.archived === true) return `${t} is archived — restore it to open a plan`;
   const m = wlMyThesis(it), miss = [];
-  if(!m.why.trim()) miss.push('① Why buy'); if(!m.exit.trim()) miss.push('④ Wrong if');
+  if(wlBlank(m.why)) miss.push('① Why buy'); if(wlBlank(m.exit)) miss.push('④ Wrong if');
   return miss.length ? `Not ready — fill ${miss.join(' and ')} in My Thesis (Watchlist card)` : '';
 }
 function wlMtIn(sym, k, v){ const t = wlNormTicker(sym); wlMtDraft[t] = Object.assign({}, wlMtDraft[t] || {}, {[k]: String(v == null ? '' : v)}); }
