@@ -3096,7 +3096,7 @@ button.ccChip{cursor:pointer;min-height:24px}
 .ideaVcBox{flex:0 0 220px;border:1px solid var(--border);border-top:4px solid #c9ccd2;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;font-size:.84rem;background:var(--surface)}
 .ideaVcBox.win{border-top-color:var(--green)}.ideaVcBox.lose{border-top-color:var(--red)}.ideaVcBox.mixed{border-top-color:var(--amber)}
 .ideaVcN{font-size:.9rem;overflow-wrap:anywhere}.ideaVcR{color:var(--muted);overflow-wrap:anywhere}.ideaTrap{color:#c45a12;overflow-wrap:anywhere}
-.ideaPick{font-size:.76rem;color:var(--muted);display:flex;gap:6px;align-items:center;cursor:pointer}
+.ideaVcBox.picked{box-shadow:0 0 0 2px var(--green) inset}.ideaPick{font-size:.76rem;color:var(--muted);display:flex;gap:6px;align-items:center;cursor:pointer}
 .ideaTks{display:flex;flex-wrap:wrap;gap:4px}.ideaTk{font-size:.76rem;font-weight:600;background:var(--green-dim);color:var(--green);border-radius:6px;padding:1px 7px}.ideaTk.q{background:var(--amber-dim);color:var(--amber)}
 .ideaCo{border-top:1px solid var(--hair)}.ideaCoR{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;width:100%;padding:9px 4px;cursor:pointer;white-space:nowrap;overflow:hidden}
 .ideaCoR:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}.ideaCoK{flex:0 0 22px;text-align:center;color:var(--muted);font-size:.8rem}.ideaCoN{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:.84rem}.ideaCoS{flex:0 1 30%;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:.76rem}
@@ -8782,13 +8782,36 @@ function switchTab(t){
   }
 }
 
-/* ---- swipe ซ้าย/ขวาเปลี่ยน tab (มือถือ) — วนเฉพาะแท็บในโหมดปัจจุบัน ---- */
+/* ---- swipe ซ้าย/ขวาเปลี่ยน tab (มือถือ) — วนเฉพาะแท็บในโหมดปัจจุบัน ----
+   PL2b·8 — ตัดสินสิทธิ์ที่ touchstart จากจุดเริ่มเท่านั้น (ท่าที่เริ่มในเนื้อหาไม่มีวันกลายเป็น swipe เปลี่ยนแท็บ แม้ไปจบในโซน):
+   • แนวตั้ง (portrait): เริ่มในแถบนำทางล่าง #tabsMain เท่านั้น (ไม่ใช่หัวหน้า/ขอบข้าง)
+   • แนวนอน (landscape): เริ่มในแถบหัว .topbar (รวมสถานะซิงก์/พื้นที่ว่างรอบเมนู) หรือ "ขอบข้าง" = พื้นหลังว่างนอก #mainWrap ที่มองเห็น ≥ 8px (ไม่ทับการ์ด/ตาราง · ไม่มีขอบมองเห็น = ไม่มีโซนขอบ)
+   • แถบแท็บย่อย/ตาราง/แถว Value Chain = เนื้อหาที่เลื่อนได้ → ไม่เป็นจุดเริ่ม · swipe ที่รู้จักแล้วจะกลืน click ที่ตามมา · ใช้ขอบที่มองเห็นของแอปเท่านั้น (ไม่แย่งท่า OS/เบราว์เซอร์) */
+const SWIPE_NEVER_SEL = '.dragHandle, .tablewrap, .ltTw, .ideaVc, .ltTabs, [data-idea-tabs], input, textarea, select, .scorePop';
+let swPortrait = true;
+try{ const mq = window.matchMedia('(orientation: portrait)'); swPortrait = mq.matches; const on = ()=>{ swPortrait = mq.matches; }; if(mq.addEventListener) mq.addEventListener('change', on); else if(mq.addListener) mq.addListener(on); }catch(e){}
+function swipeStartOk(e, t){
+  try{
+    if(document.querySelector('.overlay.show')) return false;
+    const tg = e.target;
+    if(!tg || !tg.closest) return false;
+    if(tg.closest(SWIPE_NEVER_SEL)) return false;
+    let portrait = swPortrait;
+    try{ portrait = window.matchMedia('(orientation: portrait)').matches; }catch(_){}
+    if(portrait) return !!tg.closest('#tabsMain');
+    if(tg.closest('.topbar')) return true;
+    const w = document.getElementById('mainWrap');
+    if(!w || (tg !== document.body && tg !== document.documentElement)) return false;
+    const r = w.getBoundingClientRect(), vw = document.documentElement.clientWidth || window.innerWidth;
+    return (r.left >= 8 && t.clientX < r.left) || (vw - r.right >= 8 && t.clientX > r.right);
+  }catch(err){ return false; }
+}
 (function(){
   let sx=0, sy=0, tracking=false;
+  const eatClick = ev=>{ ev.stopPropagation(); ev.preventDefault(); };
   document.addEventListener('touchstart', (e)=>{
-    if(document.querySelector('.overlay.show')) { tracking=false; return; }
-    if(e.target.closest('.dragHandle, .tablewrap, input, textarea, select, .scorePop')) { tracking=false; return; }
     const t = e.touches[0];
+    if(!t || e.touches.length > 1 || !swipeStartOk(e, t)) { tracking=false; return; }
     sx = t.clientX; sy = t.clientY; tracking = true;
   }, {passive:true});
   document.addEventListener('touchend', (e)=>{
@@ -8800,8 +8823,13 @@ function switchTab(t){
     const ord = visibleTabs();
     const i = ord.indexOf(activeTab);
     if(i < 0) return;
-    if(dx < 0 && i < ord.length-1) switchTab(ord[i+1]);               // ปัดซ้าย → ไปแท็บถัดไป
-    else if(dx > 0 && i > 0) switchTab(ord[i-1]);                     // ปัดขวา → ย้อนแท็บก่อนหน้า
+    let to = null;
+    if(dx < 0 && i < ord.length-1) to = ord[i+1];               // ปัดซ้าย → ไปแท็บถัดไป
+    else if(dx > 0 && i > 0) to = ord[i-1];                     // ปัดขวา → ย้อนแท็บก่อนหน้า
+    if(!to) return;
+    document.addEventListener('click', eatClick, true);        // swipe ที่รู้จักแล้ว ต้องไม่ยิง click ที่ปลายทาง
+    setTimeout(()=>document.removeEventListener('click', eatClick, true), 400);
+    switchTab(to);
   }, {passive:true});
 })();
 document.addEventListener('keydown', (e)=>{
@@ -14515,7 +14543,7 @@ function ideaRefresh(){ if(!state || cl2aGateOn) return; try{ plIdeasMigrate(); 
 function ideaView(d){
   const I = d.idea || {}, u = d.user || {};
   const status = IDEA_STATUS[u.status] ? u.status : (IDEA_STATUS[I.status] ? I.status : 'exploring');
-  const segs = ltArr(I.chain && I.chain.segments).map(s=>Object.assign({}, s, {pick: (u.pick && Object.prototype.hasOwnProperty.call(u.pick, s.name)) ? !!u.pick[s.name] : !!s.pick}));
+  const segs = ltArr(I.chain && I.chain.segments).map(s=>Object.assign({}, s, {pick: !!(u.pick && Object.prototype.hasOwnProperty.call(u.pick, s.name) && u.pick[s.name] === true), aiPick: s.pick === true}));   /* PL2b·9 — pick = ตัวเลือกของผู้ใช้เท่านั้น (user.pick) · ค่า AI (segments[].pick) เก็บแยกเป็น aiPick แสดงเป็นชิป ไม่ถูกนับเป็นการเลือก */
   const cands = ltArr(I.candidates).map(c=>{
     const uc = ideaObj(u.cand && u.cand[c.sym]) || {};
     const rank = ('rank' in uc) ? (uc.rank==null ? null : +uc.rank) : (c.rank==null ? null : +c.rank);
@@ -14612,7 +14640,20 @@ function ideaSetStatus(id, st){
   if(st==='ready' && !ideaReady(v).ok) return;   /* บังคับด้วยโครงสร้าง — เรียกตรงก็ไม่ผ่าน */
   ideaMenu = ''; ideaUserPatch(id, {status:st});
 }
-function ideaPick(id, name, on){ if(!ideaFind(id)) return; ideaUserPatch(id, {pick:{[String(name)]:!!on}}); }
+function ideaPick(id, name, on){
+  if(!ideaFind(id)) return;
+  const y = window.scrollY, rowOld = document.querySelector('.ideaVc'), sl = rowOld ? rowOld.scrollLeft : 0;
+  ideaUserPatch(id, {pick:{[String(name)]:!!on}});
+  /* PL2b·9 — เลื่อน "แถว" ตามแนวนอนให้เห็นการ์ดที่เพิ่งติ๊ก (scrollTo บนแถวเท่านั้น · ไม่ scrollIntoView · หน้าไม่ขยับแนวตั้ง) */
+  try{
+    const row = document.querySelector('.ideaVc'); if(!row) return;
+    if(on){
+      const box = [...row.querySelectorAll('[data-idea-seg]')].find(b=>{ const i = b.querySelector('[data-idea-pick]'); return i && i.dataset.name === String(name); });
+      if(box) row.scrollTo({left: Math.max(0, box.offsetLeft - row.offsetLeft), behavior:'auto'});
+    } else row.scrollLeft = sl;
+    if(window.scrollY !== y) window.scrollTo(window.scrollX, y);
+  }catch(e){}
+}
 function ideaCoState(id, sym, st){
   const v = ideaFind(id), c = v && v.cands.find(x=>x.sym===sym); if(!c || !['study','wait','park'].includes(st)) return;
   if(st==='study' && !String(c.relevance_src||'').trim()) return;   /* ไม่มี relevance_src = ตั้ง "ศึกษา" ไม่ได้ */
@@ -14835,15 +14876,30 @@ function ideaGapReopenGo(){
   if(!g || !g.by_user) return;
   ideaUserPatch(id, {gaps:{[String(gid)]:{__isDel:true}}});
 }
+/* PL2b·9 — ลำดับการ์ด Value Chain (แสดงผลล้วน): ที่ติ๊ก "เลือกศึกษา" ไว้ก่อน (ซ้ายสุด) · ลำดับสัมพัทธ์เดิมคงเดิมทั้งสองกลุ่ม · ไม่แตะ chain.segments / ลำดับตอน export */
+function ideaVcOrder(v){
+  const idx = v.segs.map((s, i)=>i);
+  return idx.filter(i=>v.segs[i].pick).concat(idx.filter(i=>!v.segs[i].pick));
+}
+/* PL2b·9 — สถิติ: segment ที่ AI ตั้ง pick:true แต่ผู้ใช้ยังไม่ได้เลือก (เรียกจาก console: plAiPickStats()) */
+function plAiPickStats(){
+  let aiTrue = 0, untouched = 0, total = 0;
+  (ideaList || []).forEach(d=>{
+    const segs = ltArr(d.idea && d.idea.chain && d.idea.chain.segments), u = (d.user && d.user.pick) || {};
+    segs.forEach(s=>{ total++; if(s && s.pick === true){ aiTrue++; if(!Object.prototype.hasOwnProperty.call(u, s.name)) untouched++; } });
+  });
+  return {segments: total, aiPickTrue: aiTrue, aiPickTrueNoUserChoice: untouched};
+}
 function ideaTabVc(v){
   const e = escHtml, ch = ideaObj(v.I.chain) || {};
-  const boxes = v.segs.map((s,i)=>{
+  const boxes = ideaVcOrder(v).map(i=>{
+    const s = v.segs[i];
     const ef = IDEA_EFFECT[s.effect] || [s.effect||'—',''];
     const tk = v.cands.filter(c=>Array.isArray(c.segments) && c.segments.includes(s.name)).map(c=>{ const q = c.state==='screen' || c.from==='match'; return `<span class="ideaTk${q?' q':''}" data-idea-tk="${e(c.sym)}">${e(c.sym)}${q?' ?':''}</span>`; }).join('');
-    return `<div class="ideaVcBox ${e(s.effect||'')}" data-idea-seg="${i}">
+    return `<div class="ideaVcBox ${e(s.effect||'')}${s.pick ? ' picked' : ''}" data-idea-seg="${i}">
       <label class="ideaPick"><input type="checkbox" data-idea-pick="${i}" ${s.pick?'checked':''} onchange="ideaPick('${e(v.id)}', this.dataset.name, this.checked)" data-name="${e(s.name)}"> เลือกศึกษา</label>
       <b class="ideaVcN">${ideaTxt(s.name)}</b>
-      <span class="ltChip ${ef[1]}">${e(ef[0])}</span>${s.suggest ? '<span class="ltChip o" data-idea-suggest>AI เสนอ</span>' : ''}
+      <span class="ltChip ${ef[1]}">${e(ef[0])}</span>${s.suggest ? '<span class="ltChip o" data-idea-suggest>AI เสนอ</span>' : ''}${s.aiPick ? '<span class="ltChip o" data-idea-aipick title="AI ตั้งค่า pick ไว้ — ไม่ใช่การเลือกของคุณ">AI pick</span>' : ''}
       <div class="ideaVcR">${ideaTxt(s.role)}</div>
       ${s.trap ? `<div class="ideaTrap">⚠ ${ideaTxt(s.trap)}</div>` : ''}
       ${tk ? `<div class="ideaTks">${tk}</div>` : ''}</div>`;
@@ -15026,7 +15082,7 @@ function ideaImpSave(){
 function ideaExportObj(d){   /* idea + log + ค่าจาก user ทับลงใน field จริง */
   const v = ideaView(d), o = JSON.parse(JSON.stringify(d.idea));
   o.status = v.status;
-  if(o.chain && Array.isArray(o.chain.segments)) o.chain.segments.forEach(s=>{ const m = v.segs.find(x=>x.name===s.name); s.pick = m ? !!m.pick : !!s.pick; });
+  if(o.chain && Array.isArray(o.chain.segments)) o.chain.segments.forEach(s=>{ const m = v.segs.find(x=>x.name===s.name); s.pick = !!(m && m.pick); });   /* PL2b·9 — export = ตัวเลือกของผู้ใช้เท่านั้น (ไม่รวมค่า AI) */
   if(Array.isArray(o.candidates)) o.candidates.forEach(c=>{ const m = v.cands.find(x=>x.sym===c.sym); if(m){ c.rank = m.rank; c.state = m.state; } });
   if(Array.isArray(o.gaps)) o.gaps.forEach(g=>{ const m = v.gaps.find(x=>String(x.id)===String(g.id)); if(m && m.by_user){ g.status = 'unanswerable'; g.answer = m.answer; g.answer_src = 'ผู้ใช้'; g.answered_at = m.answered_at; } });   /* ID3b — ให้ skill เห็นข้อที่ผู้ใช้ปิดเอง */
   o.log = d.log;
