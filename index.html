@@ -4959,7 +4959,9 @@ function wlRevBtnHtml(sym, market){
 function wlGuessMarket(t){ return /\.BK$/i.test(t) ? 'TH' : 'US'; }
 function wlValidTicker(t){ return /^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(t); }
 function wlSymKey(v){ return wlNormTicker(v).replace(/\.BK$/,''); }       /* จับคู่ PTT กับ PTT.BK ได้ */
-function wlHas(sym){ const k = wlSymKey(sym); return !!k && wlItems.some(w=>wlSymKey(w.ticker)===k); }
+/* BUGHUNT — เทียบ BRK.B = BRK-B = BRK/B เท่านั้น (ใช้ในการเทียบ/ค้นหา) · ห้ามใช้เป็นคีย์เก็บข้อมูล: ยังใช้ wlSymKey เป็นคีย์ */
+function wlSymCmp(v){ return wlSymKey(v).replace(/[.\-\/ _]([A-Z]{1,2})$/, '$1'); }
+function wlHas(sym){ const k = wlSymCmp(sym); return !!k && wlItems.some(w=>wlSymCmp(w.ticker)===k); }
 function wlCol(){ return (uid && typeof db!=='undefined' && db) ? db.collection('users').doc(uid).collection('watchlist') : null; }
 
 function td4PromBy(v){ const a = Array.isArray(v) ? v : (v==='tier' || v==='rs') ? [v] : []; const o = ['tier', 'rs'].filter(k=>a.includes(k)); return o.length ? o : null; }
@@ -6451,7 +6453,7 @@ function tdBuild(){
     const tickers = held.map(h=>h.c.ticker).concat(wlRows.map(r=>r.sym));
     tickers.forEach(t=>{
       const k = String(t).toUpperCase(); if(seen.has(k)) return; seen.add(k);
-      const it = wlItems.find(w=>wlSymKey(w.ticker)===wlSymKey(t)); if(!it) return;
+      const it = wlItems.find(w=>wlSymCmp(w.ticker)===wlSymCmp(t)); if(!it) return;
       ltCats(it).forEach(x=>{
         if(!x.date || x.date < today || x.date > end) return;
         list.push({t:k, date:x.date, est:x.est, ev:String(x.text||''), me:x.me});
@@ -6539,12 +6541,12 @@ function tdBuild(){
     });
     const capped = [];
     /* B — ถืออยู่ฝั่ง ▼ ของไอเดียพร้อมส่งต่อ · Thesis เก่ากว่าไอเดีย/ยังไม่มี */
-    const heldKeys = new Set(held.map(h=>wlSymKey(h.c.ticker)));
+    const heldKeys = new Set(held.map(h=>wlSymCmp(h.c.ticker)));
     vs.filter(v=>v.status==='ready').sort((p,q)=>String(q.date).localeCompare(String(p.date))).forEach(v=>{
       const seen = new Set();
       ltArr(v.I.losers).forEach(l=>{
-        const k = wlSymKey(l.sym); if(!k || l.state==='screen' || seen.has(k) || !heldKeys.has(k)) return;
-        const it = wlItems.find(w=>wlSymKey(w.ticker)===k), th = wlThesisOf(it);
+        const k = wlSymCmp(l.sym); if(!k || l.state==='screen' || seen.has(k) || !heldKeys.has(k)) return;
+        const it = wlItems.find(w=>wlSymCmp(w.ticker)===k), th = wlThesisOf(it);
         if(th && String(th.date||'').slice(0,10) >= String(v.date).slice(0,10) && th.date) return;
         seen.add(k);
         const sym = String(l.sym).toUpperCase();
@@ -7111,7 +7113,7 @@ function td4NextBatch(x){ td4BatchTo = Math.max(TD4_MIN_SCR, td4BatchTo) + TD4_B
 /* ═══ TD4a — Watchlist: pipeline (Candidate ก่อน) · ★ 1–3 · เรียง · Export .txt ═══
    ทางเข้าที่ปิด: ＋ เพิ่มหุ้น (wlOpenAdd/wlAddSave) · Import Thesis ของตัวใหม่ (ltImpCheck/ltImpSave) · "บันทึกเฉพาะ Tier" ของตัวใหม่ (coreTierOnlySave)
    ทางเดียวที่สร้างเอกสาร Watchlist ใหม่ = Promote จาก Candidate (Today ▸ Candidate → Watchlist หรือปุ่ม ＋ เพิ่มเข้า Watchlist บนการ์ด Candidate) */
-function td4IsCand(sym){ const k = wlSymKey(sym); return !!k && wlRowsAll().cand.some(r=>wlSymKey(r.sym)===k); }
+function td4IsCand(sym){ const k = wlSymCmp(sym); return !!k && wlRowsAll().cand.some(r=>wlSymCmp(r.sym)===k); }
 function td4MayAdd(sym){ const t = wlNormTicker(sym); return !!t && wlHas(t); }   /* TD4b (B0) — เอกสาร Watchlist ใหม่สร้างได้ทางเดียว: ฟอร์ม Move to Watchlist (td4ProSave) · Candidate ผ่าน ＋ ตรง ๆ ไม่ได้ */
 function td4PipeMsg(sym, via){
   const t = wlNormTicker(sym);
@@ -7147,7 +7149,7 @@ function wlStarHtml(r){   /* PL1·A3 — RS (manual · rank only): Unrated · 0 
    เก็บที่ watchlist/{T}.my_thesis {why, exit, updated_at} (ข้อความล้วน · Phase B ขยายเป็น 5 ส่วนโดยใช้ field เดิม: ① = why · ④ = exit)
    Thesis นำเข้าจาก AI (watchlist/{T}.thesis) ไม่นับเป็น Ready · Ready = อยู่ใน Watchlist (ไม่ archive) + why + exit ไม่ว่าง */
 let wlMtDraft = {}, wlMtMsg = {};
-function wlItemOf(sym){ const k = wlSymKey(sym); return k ? wlItems.find(x=>wlSymKey(x.ticker)===k) : null; }
+function wlItemOf(sym){ const k = wlSymCmp(sym); return k ? wlItems.find(x=>wlSymCmp(x.ticker)===k) : null; }
 function wlMyThesis(it){ const m = (it && it.my_thesis) || {}; return {why:String(m.why || ''), exit:String(m.exit || '')}; }
 /* BUGHUNT — ว่าง = หลังตัดช่องว่าง + zero-width (\u200B-\u200D, \uFEFF) แล้วไม่เหลืออะไร */
 function wlBlank(v){ return String(v==null?'':v).replace(/[\s\u200B-\u200D\uFEFF]/g,'')===''; }
@@ -11233,12 +11235,12 @@ const CORE_G5 = [['substitute','ของแทนที่ถูกกว่า
 function coreTiFmt(v, mul){ return (typeof v==='number' && isFinite(v)) ? String(+(v*(mul||1)).toFixed(6)) : ''; }
 /* 7E-2b-2 · ข้อมูล Watchlist ของ ticker (จับคู่ด้วย wlSymKey · PTT = PTT.BK) · loaded = โหลดเสร็จและไม่ error — ไม่ใช่ = ไม่แสดงอะไรเกี่ยวกับ Watchlist */
 function coreWatchInfo(ticker){
-  const loaded = !!wlStoreReady && !wlStoreErr, k = wlSymKey(ticker);
-  const it = (loaded && k) ? wlItems.find(w=>wlSymKey(w.ticker)===k) : null;
+  const loaded = !!wlStoreReady && !wlStoreErr, k = wlSymCmp(ticker);
+  const it = (loaded && k) ? wlItems.find(w=>wlSymCmp(w.ticker)===k) : null;
   return {loaded, found:!!it, tier: it ? it.tier : null, setAt: it ? it.tier_set_at : null};
 }
 /* WT1 · รายการ Watchlist ของ ticker (จับคู่ด้วย wlSymKey) — ไม่ผูกกับสถานะโหลด */
-function coreWlItem(ticker){ const k = wlSymKey(ticker); return k ? (wlItems.find(w=>wlSymKey(w.ticker)===k) || null) : null; }
+function coreWlItem(ticker){ const k = wlSymCmp(ticker); return k ? (wlItems.find(w=>wlSymCmp(w.ticker)===k) || null) : null; }
 /* ป้ายเทียบ Tier การ์ด ↔ Watchlist (Calc.coreSize.tierBadge) · ไม่ล็อกปุ่ม ไม่เปลี่ยน Tier */
 function coreTierBadges(c, tier){
   const cs = Calc.coreSize; if(!cs || !cs.tierBadge) return [];
@@ -13569,7 +13571,7 @@ function wlRowsAll(){
   const wl = wlItems.filter(w=>w.ticker)
     .map(w=>({sym:w.ticker, port:'core', market:w.market, w:wlToLegacyShape(w), item:w, d:null}));   /* WL4 — ไม่ join research (d = null เสมอ) */
   /* 7W — Candidates = research ทุกตัวที่ "ไม่อยู่ใน Watchlist ใหม่" · ไม่พึ่งธง in_watchlist (กันหน้าจอผิดตอน pusher ยังไม่อัปเดตธง) */
-  const inList = {}; wl.forEach(r=>{ inList[wlSymKey(r.sym)] = true; });
+  const inList = {}; wl.forEach(r=>{ inList[wlSymKey(r.sym)] = true; inList[wlSymCmp(r.sym)] = true; });
   const cand = ideaCandRows(inList);   /* ID2 — Candidates = บริษัทฝั่งได้จากไอเดีย (รอหลักฐาน/พร้อมส่งต่อ) ที่ยังไม่อยู่ Watchlist · เลิกอ่าน research เป็นแหล่ง */
   return {wl, cand};
 }
@@ -13665,12 +13667,12 @@ function wlTierChips(it, long){
 }
 /* 7W — ป้าย "ถืออยู่" + ชิปสีของบัญชีที่มีไม้เปิดอยู่ของหุ้นตัวนี้ (คำนวณตอนแสดงผลจากชื่อหุ้น · ไม่เก็บ/ไม่เขียนกลับ) */
 function wlHoldersOf(sym){
-  const key = wlSymKey(sym), out = [];
+  const key = wlSymCmp(sym), out = [];
   if(!key) return out;
   (acctList||[]).forEach((a,i)=>{
     const book = a.id===acctActive ? state : (acctBooks||{})[a.id];
     const trades = book && Array.isArray(book.trades) ? book.trades : [];
-    const n = trades.filter(t=>t && t.status==='open' && wlSymKey(t.sym)===key).length;
+    const n = trades.filter(t=>t && t.status==='open' && wlSymCmp(t.sym)===key).length;
     if(n) out.push({id:a.id, name:a.name, n, color:acctColor(a)});   /* จุด/ชิป "ถืออยู่" ใช้สีประจำบัญชีเดียวกับหน้าแผน */
   });
   return out;
@@ -14421,12 +14423,12 @@ function scrSave(){
 /* ── ขนาดไม้จาก ★ ── */
 /* เสี่ยงที่ใช้/จองแล้วของหุ้นตัวเดียวกัน + บัญชีเดียวกัน (สกุลของตลาดหุ้น) · ไม่รวมการ์ด exceptId (กันนับซ้ำตอนแก้) · การ์ดปิดแล้ว = 0 */
 function csUsedOther(acct, ticker, exceptId){
-  const key = wlSymKey(ticker); if(!key) return 0;
+  const key = wlSymCmp(ticker); if(!key) return 0;
   let cx = null; try{ cx = coreCtx(acct); }catch(e){ return 0; }
   const mk = coreMarketOf(ticker), div = mk==='US' ? cx.fx : 1, inCard = new Set();
   let used = 0;
   coreCardsList.forEach(c=>{
-    if(c.acct!==acct || wlSymKey(c.ticker)!==key) return;
+    if(c.acct!==acct || wlSymCmp(c.ticker)!==key) return;
     if(c.trade_id) inCard.add(c.trade_id);
     if(c.acc_trade_id) inCard.add(c.acc_trade_id);
     if(c.id===exceptId) return;
@@ -14443,7 +14445,7 @@ function csUsedOther(acct, ticker, exceptId){
       if(v.accT) used += v.accQty * Math.max(0, v.accAvg - v.accStop);
     }
   });
-  try{ getBook(acct).trades.forEach(t=>{ if(t.port==='core' && t.status==='open' && !inCard.has(t.id) && wlSymKey(t.sym || t.ticker)===key) used += (+t.qty || 0) * Math.max(0, (+t.entry || 0) - (+t.sl || 0)) * (t.mult || 1); }); }catch(e){}
+  try{ getBook(acct).trades.forEach(t=>{ if(t.port==='core' && t.status==='open' && !inCard.has(t.id) && wlSymCmp(t.sym || t.ticker)===key) used += (+t.qty || 0) * Math.max(0, (+t.entry || 0) - (+t.sl || 0)) * (t.mult || 1); }); }catch(e){}
   return used;
 }
 /* Base risk ของไม้เติม: การ์ดที่มี snapshot ★ = Base% ของ snapshot (ไม่ผูก ★ ปัจจุบัน) หักเสี่ยงของตำแหน่งอื่นในหุ้นเดียวกัน · การ์ดเก่า = ตาม Tier เดิม */
@@ -15619,8 +15621,8 @@ function ideaLoseSeg(v){ const s = v.segs.find(x=>x.effect==='lose'); return s ?
 function ideaRels(sym){   /* ความสัมพันธ์ของหุ้นตัวนี้กับไอเดียที่นับ */
   const key = wlSymKey(sym), out = []; if(!key) return out;
   ideaCounted().forEach(v=>{
-    v.cands.forEach(c=>{ if(c.state!=='park' && wlSymKey(c.sym)===key) out.push({v, side:'win', c, seg:(Array.isArray(c.segments) && c.segments.length) ? String(c.segments[0]) : '', screen:c.state==='screen'}); });
-    ltArr(v.I.losers).forEach(l=>{ if(wlSymKey(l.sym)===key) out.push({v, side:'lose', l, seg:ideaLoseSeg(v), screen:l.state==='screen'}); });   /* ID3a — loser จาก match = รอตรวจ */
+    v.cands.forEach(c=>{ if(c.state!=='park' && wlSymCmp(c.sym)===key) out.push({v, side:'win', c, seg:(Array.isArray(c.segments) && c.segments.length) ? String(c.segments[0]) : '', screen:c.state==='screen'}); });
+    ltArr(v.I.losers).forEach(l=>{ if(wlSymCmp(l.sym)===key) out.push({v, side:'lose', l, seg:ideaLoseSeg(v), screen:l.state==='screen'}); });   /* ID3a — loser จาก match = รอตรวจ */
   });
   return out;
 }
@@ -15668,7 +15670,7 @@ function ideaCandRows(inList){   /* Candidates = บริษัทฝั่ง�
   try{ const cm0 = tdSettings().candMeta; if(cm0 && typeof cm0==='object') Object.keys(cm0).forEach(k=>{ if(cm0[k] && cm0[k].dismissed===true) dis[k] = true; }); }catch(e){}
   (plIdeasMigrated() ? [] : ideaCounted()).forEach(v=>v.cands.forEach(c=>{
     if(c.state==='park') return;
-    const k = wlSymKey(c.sym); if(!k || inList[k]) return;
+    const k = wlSymKey(c.sym); if(!k || inList[k] || inList[wlSymCmp(c.sym)]) return;
     if(dis[k]) return;   /* TD4a — Delete แล้ว (dismissed) = ซ่อนจาก Candidates */
     const sym = String(c.sym).toUpperCase();
     const o = by[k] || (by[k] = {sym, market:(c.market==='TH' || c.market==='US') ? c.market : wlGuessMarket(sym), name:'', best:9, rank:9999, info:[]});
@@ -15757,7 +15759,7 @@ function ideaHandoffLines(rows){ return rows.filter(r=>r!=null && r!=='').join('
 function ideaKillLines(v){ const k = v.kill.filter(x=>ideaS(x.signal)); return k.length ? ['สัญญาณพักของไอเดีย:'].concat(k.map(x=>`- ${ideaS(x.signal)}${ideaS(x.level) ? ' (' + ideaS(x.level) + ')' : ''}`)) : []; }
 const ideaKV = (k, val) => ideaS(val) ? `${k}: ${ideaS(val)}` : '';
 function ideaHandoffWin(id, sym){
-  const v = ideaFind(id), key = wlSymKey(sym), c = v && v.cands.find(x=>wlSymKey(x.sym)===key); if(!c) return '';
+  const v = ideaFind(id), key = wlSymCmp(sym), c = v && v.cands.find(x=>wlSymCmp(x.sym)===key); if(!c) return '';
   const segs = (Array.isArray(c.segments) ? c.segments : []).map(ideaS).filter(Boolean).join(' · ');
   const qs = (Array.isArray(c.questions) ? c.questions : []).map(ideaS).filter(Boolean);
   return ideaHandoffLines([
@@ -15768,7 +15770,7 @@ function ideaHandoffWin(id, sym){
     ...(qs.length ? ['คำถามให้ Thesis:'].concat(qs.map(q=>'- ' + q)) : []), ...ideaKillLines(v)]);
 }
 function ideaHandoffLose(id, sym){
-  const v = ideaFind(id), key = wlSymKey(sym), l = v && ltArr(v.I.losers).find(x=>wlSymKey(x.sym)===key); if(!l || l.state==='screen') return '';   /* ID3a — รอตรวจ = ยังส่งไม่ได้ */
+  const v = ideaFind(id), key = wlSymCmp(sym), l = v && ltArr(v.I.losers).find(x=>wlSymCmp(x.sym)===key); if(!l || l.state==='screen') return '';   /* ID3a — รอตรวจ = ยังส่งไม่ได้ */
   return ideaHandoffLines([
     `living-thesis update · ${String(l.sym).toUpperCase()} · หลักฐานฝั่ง bear จากไอเดีย`,
     `จากไอเดีย: ${v.name} (${v.id} · idea@1 ${v.date})`,
@@ -15804,7 +15806,7 @@ function ideaCoSendHtml(v, c){
   return `<div class="ideaCoAct" data-idea-send>${first}<button type="button" class="small" data-idea-handoff data-id="${e(v.id)}" data-sym="${e(c.sym)}" onclick="ideaDoCopy('win', this.dataset.id, this.dataset.sym)">คัดลอก Handoff</button></div>${ideaCopyHtml(key)}`;
 }
 function ideaToWatchlist(id, sym){
-  const v = ideaFind(id), key = wlSymKey(sym), c = v && v.cands.find(x=>wlSymKey(x.sym)===key);
+  const v = ideaFind(id), key = wlSymCmp(sym), c = v && v.cands.find(x=>wlSymCmp(x.sym)===key);
   if(!c || c.state==='screen' || !ideaS(c.relevance_src) || wlHas(c.sym)) return;
   wlOpenAdd(String(c.sym).toUpperCase(), {market:c.market, note:'จากไอเดีย: ' + v.name});
 }
@@ -15887,7 +15889,7 @@ function ideaParseTickers(s){   /* → {list, bad} · ตัดตลาดก�
   String(s==null?'':s).split(/[\s,;]+/).filter(Boolean).forEach(t=>{
     const x = wlNormTicker(t.includes(':') ? t.split(':').pop() : t);
     if(!x || !wlValidTicker(x)){ bad.push(t); return; }
-    const k = wlSymKey(x); if(seen.has(k)) return; seen.add(k); list.push(x);
+    const k = wlSymCmp(x); if(seen.has(k)) return; seen.add(k); list.push(x);
   });
   return {list, bad};
 }
@@ -15993,7 +15995,7 @@ function matchParseList(text){   /* → {err} | {rows:[{sym, desc, industry, mar
     if(data.length > IDEA_MATCH_MAX_ROWS) return {err:'list เกิน ' + IDEA_MATCH_MAX_ROWS + ' แถว (' + data.length + ' แถว) — ไม่ประมวลผล'};
     data.forEach(r=>{
       const sym = norm(r[iSym]); if(!sym || !wlValidTicker(sym)) return;
-      const k = wlSymKey(sym); if(seen.has(k)) return; seen.add(k);
+      const k = wlSymCmp(sym); if(seen.has(k)) return; seen.add(k);
       const cur = iCur>=0 ? String(r[iCur]||'').trim().toUpperCase() : '';
       out.push({sym, desc:iDesc>=0 ? String(r[iDesc]||'').trim() : '', industry:iInd>=0 ? String(r[iInd]||'').trim() : '', market:cur==='USD' ? 'US' : cur==='THB' ? 'TH' : wlGuessMarket(sym)});
     });
@@ -16004,7 +16006,7 @@ function matchParseList(text){   /* → {err} | {rows:[{sym, desc, industry, mar
   if(toks.length > IDEA_MATCH_MAX_ROWS) return {err:'list เกิน ' + IDEA_MATCH_MAX_ROWS + ' แถว (' + toks.length + ' ตัว) — ไม่ประมวลผล'};
   toks.forEach(t=>{
     const sym = norm(t); if(!sym || !wlValidTicker(sym)) return;
-    const k = wlSymKey(sym); if(seen.has(k)) return; seen.add(k);
+    const k = wlSymCmp(sym); if(seen.has(k)) return; seen.add(k);
     out.push({sym, desc:'', industry:'', market:wlGuessMarket(sym)}); n++;
   });
   if(!out.length) return {err:'ไม่มีแถวข้อมูล — อ่าน ticker ไม่ได้'};
@@ -16192,12 +16194,12 @@ function matchResultParse(text){   /* → {err} | {date, source, dropped, per:[{
   }
   const per = {}, ord = [], skipAll = {in:0, missing:0, notCounted:0}, seen = new Set(); let segCut = 0;
   o.results.forEach(r=>{
-    const sym = wlNormTicker(r.sym), key = wlSymKey(sym), iid = ideaS(r.idea), v = ideaFind(iid);
+    const sym = wlNormTicker(r.sym), key = wlSymCmp(sym), iid = ideaS(r.idea), v = ideaFind(iid);
     if(!v){ skipAll.missing++; return; }
     if(!IDEA_COUNT.includes(v.status)){ skipAll.notCounted++; return; }
     const P = per[iid] || (per[iid] = {v, win:[], lose:[], skip:{in:0}, segCut:0}); if(!ord.includes(iid)) ord.push(iid);
     const dupKey = iid + '|' + r.side + '|' + key;
-    const exists = r.side==='win' ? v.cands.some(c=>wlSymKey(c.sym)===key) : ltArr(v.I.losers).some(l=>wlSymKey(l.sym)===key);
+    const exists = r.side==='win' ? v.cands.some(c=>wlSymCmp(c.sym)===key) : ltArr(v.I.losers).some(l=>wlSymCmp(l.sym)===key);
     if(exists || seen.has(dupKey)){ P.skip.in++; skipAll.in++; return; }
     seen.add(dupKey);
     const names = v.segs.map(s=>String(s.name)), segsIn = (Array.isArray(r.segments) ? r.segments : []).map(x=>String(x));
@@ -16242,7 +16244,7 @@ function matchImpSave(){
     const n1 = P.win.length, n2 = P.lose.length; if(!n1 && !n2) return;
     const d = ideaList.find(x=>x.id===P.v.id); if(!d) return;
     const idea = JSON.parse(JSON.stringify(d.idea));   /* แทนที่ field idea ทั้งก้อน · ไม่แตะ user */
-    const have = (arr, sym) => arr.some(x=>wlSymKey(x.sym)===wlSymKey(sym));
+    const have = (arr, sym) => arr.some(x=>wlSymCmp(x.sym)===wlSymCmp(sym));
     idea.candidates = Array.isArray(idea.candidates) ? idea.candidates : [];
     idea.losers = Array.isArray(idea.losers) ? idea.losers : [];
     let a = 0, b = 0;
@@ -16530,7 +16532,7 @@ function ltParse(text, bound){   /* → {err} | {th, log} */
   for(const k of ['s1','s2','s3','s4']){
     if(!sec[k] || typeof sec[k]!=='object' || typeof sec[k].md!=='string') return {err:'sections.' + k + '.md ต้องเป็นข้อความ'};
   }
-  if(bound && wlSymKey(sym) !== wlSymKey(bound)) return {err:'JSON นี้เป็นของ ' + sym + ' ไม่ใช่ ' + bound};
+  if(bound && wlSymCmp(sym) !== wlSymCmp(bound)) return {err:'JSON นี้เป็นของ ' + sym + ' ไม่ใช่ ' + bound};
   const th = {}; Object.keys(o).forEach(k=>{ if(k!=='log') th[k] = o[k]; });
   th.sym = sym;
   ['gaps','kpi','tripwires','catalysts','evidence','sources'].forEach(k=>{ th[k] = ltArr(o[k]); });
@@ -16620,7 +16622,7 @@ function ltImpCheck(){
   ltImpDirty();
   const res = ltParse(ta ? ta.value : '', ltImp.bound);
   if(res.err){ if(er) er.textContent = res.err; return; }
-  const key = wlSymKey(res.th.sym), it = wlItems.find(w=>wlSymKey(w.ticker)===key) || null;
+  const key = wlSymCmp(res.th.sym), it = wlItems.find(w=>wlSymCmp(w.ticker)===key) || null;
   if(!it && !wlValidTicker(wlNormTicker(res.th.sym))){ if(er) er.textContent = 'sym "' + String(res.th.sym).slice(0,30) + '" ใช้เป็นชื่อหุ้นไม่ได้'; return; }
   if(!it){ if(er) er.textContent = td4PipeMsg(res.th.sym, 'import'); return; }   /* TD4a — Import สร้างเอกสาร Watchlist ใหม่ไม่ได้ (ตัวที่อยู่แล้ว = อัปเดตได้ตามเดิม) */
   ltImp.parsed = res;
@@ -16630,7 +16632,7 @@ function ltImpCheck(){
 function ltImpSave(){
   const p = ltImp && ltImp.parsed; if(!p) return;
   const col = wlCol(); if(!col){ alert('เข้าสู่ระบบก่อน'); return; }
-  const th = p.th, key = wlSymKey(th.sym), it = wlItems.find(w=>wlSymKey(w.ticker)===key) || null;
+  const th = p.th, key = wlSymCmp(th.sym), it = wlItems.find(w=>wlSymCmp(w.ticker)===key) || null;
   let ticker, pr;
   if(!it){ alert(td4PipeMsg(th.sym, 'import')); return; }   /* TD4a */
   if(!it){

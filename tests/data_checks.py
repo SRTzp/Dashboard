@@ -6,7 +6,7 @@ import os, re, sys, json, random
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from playwright.sync_api import sync_playwright
 import run_tests_phase38 as P38, run_tests_phase39 as P39
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "reports", "bughunt-data.txt")
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "reports", "bughunt-fixes-data.txt")
 res = []
 def note(ok, msg): res.append(("PASS " if ok else "FAIL ") + msg)
 random.seed(7)
@@ -54,8 +54,19 @@ def main():
         }""")
         note(not dup["overlap"] and not dup["candDup"] and not dup["wlDup"], f"fixture Candidates∩Watchlist={dup['overlap']} candDup={dup['candDup']} wlDup={dup['wlDup']}")
         ks = {k["s"]: (k["k"], k["n"]) for k in dup["keys"]}
-        note(ks.get("BRK.B") == ks.get("BRK-B") == ks.get("brk.b"), f"key collapse BRK.B/BRK-B/brk.b → {ks.get('BRK.B')} {ks.get('BRK-B')} {ks.get('brk.b')}")
+        note(ks.get("BRK.B") != ks.get("BRK-B") and ks.get("BRK.B") == ks.get("brk.b"), f"(by design, stored key unchanged) wlSymKey: BRK.B/brk.b same, BRK-B distinct; compare via wlSymCmp → {ks.get('BRK.B')} {ks.get('BRK-B')} {ks.get('brk.b')}")
         note(ks.get("PTT.BK") == ks.get("ptt.bk"), f"key collapse PTT.BK/ptt.bk → {ks.get('PTT.BK')} {ks.get('ptt.bk')}")
+        cmp = page.evaluate("""()=>{
+          const f=window.wlSymCmp; if(!f) return null;
+          const rows=wlRowsAll(), all=[...rows.wl.map(r=>['WL',r.sym]),...rows.cand.map(r=>['CAND',r.sym])], g={};
+          all.forEach(([w,sym])=>{ (g[f(sym)]=g[f(sym)]||[]).push(w+':'+sym); });
+          return {cmp:['BRK.B','BRK-B','BRK/B','brk.b','BF.B','BF-B','PTT.BK','PTT','AAPL','A','AB','BRKB'].map(x=>[x,f(x)]), keyStill:[wlSymKey('BRK.B'),wlSymKey('BRK-B')], has:(()=>{wlItems.push({ticker:'BRK-B',market:'US',port:'core',archived:false}); const r=wlHas('BRK.B'); wlItems.pop(); return r;})(), dups:Object.entries(g).filter(([k,v])=>v.length>1)}; }""")
+        c = dict(cmp["cmp"]) if cmp else {}
+        note(bool(cmp) and c.get("BRK.B") == c.get("BRK-B") == c.get("BRK/B") == c.get("brk.b") and c.get("BF.B") == c.get("BF-B"), f"wlSymCmp collapses BRK.B/BRK-B/BRK/B/brk.b → {c.get('BRK.B')}")
+        note(bool(cmp) and c.get("PTT.BK") == c.get("PTT") and c.get("A") == "A" and c.get("AB") == "AB", f"wlSymCmp keeps PTT.BK=PTT, short tickers A/AB intact: {c}")
+        note(bool(cmp) and cmp["keyStill"] == ["BRK.B", "BRK-B"], f"stored keys NOT rewritten: wlSymKey stays {cmp and cmp['keyStill']}")
+        note(bool(cmp) and cmp["has"] is True, "wlHas('BRK.B') finds a stored 'BRK-B' (comparison only)")
+        note(True, f"INFO existing duplicates in fixture (listed, NOT merged): {cmp and cmp['dups']}")
         note(ks.get(" AAPL ") == ks.get("AAPL"), f"key collapse ' AAPL '/AAPL → {ks.get(' AAPL ')} {ks.get('AAPL')}")
         note(ks.get("PTT.BK") != ks.get("PTT") or True, f"INFO PTT vs PTT.BK keys: {ks.get('PTT')} vs {ks.get('PTT.BK')}")
         # Ready rule
@@ -64,8 +75,8 @@ def main():
           const base=(why,exit,arch)=>({ticker:'RDY'+out.length,market:'US',port:'core',note:'',industry:'',archived:arch||false,added_at:'2026-01-01T00:00:00.000Z',my_thesis:{why,exit}});
           const test=(why,exit,arch,exp,label)=>{ const it=base(why,exit,arch); wlItems.push(it); let got; try{ got=wlReady(it.ticker); }catch(e){ got='THROW '+e.message; } out.push({label,got,exp,shape:JSON.stringify(wlMyThesis(it))}); };
           test('x','y',false,true,'both'); test('x','',false,false,'no exit'); test('','y',false,false,'no why'); test('  ','  ',false,false,'whitespace'); test('x','y',true,false,'archived');
-          test('\\u200b','\\u200b',false,false,'zero-width only'); test('x'.repeat(5000),'y',false,true,'long');
-          wlItems.splice(wlItems.length-7,7); window.__READY_REAL=orig; return out; }""")
+          test('\\u200b','\\u200b',false,false,'zero-width only'); test('\\u200c\\u200d','\\ufeff',false,false,'ZWNJ/ZWJ/BOM only'); test(' \\u200b x \\u200b','\\u200b y',false,true,'zero-width around real text'); test('x'.repeat(5000),'y',false,true,'long');
+          wlItems.splice(wlItems.length-9,9); window.__READY_REAL=orig; return out; }""")
         for t in rd: note(t["got"] == t["exp"], f"Ready rule [{t['label']}] got={t['got']} expected={t['exp']}" + ("" if t['got']==t['exp'] else f" shape={t['shape'][:100]}"))
         b.close()
     open(OUT, "w").write("\n".join(res) + "\n"); print("\n".join(res))
