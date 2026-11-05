@@ -7879,7 +7879,7 @@ function tdHtmlLean(M){
     if(td3OtherOpen){ try{ other += `<div class="td3-ob" data-td3-ob>${td3OtherBody(M)}</div>`; }catch(e){ console.warn('td3 other:', e); } }
     other += `</details>`;
   } }catch(e){}
-  return `<div class="tdWrap td3" data-td-wrap data-ln3-today="1" data-td3="1">${td4RemBanner(M)}${(()=>{ try{ return tdRegimeVerdict(); }catch(e){ console.warn('td regime verdict:', e); return ''; } })()}${news}${goals}${sw}${banner}<div class="td3-pn" data-td3-panels>${P('ov', 'Overview', ov)}${P('core', 'Core Port', core)}${wk ? P('sat', 'Satellite', sat) : (sat ? P('plans', 'Plans', sat) : '')}</div>${other}</div>`;
+  return `<div class="tdWrap td3" data-td-wrap data-ln3-today="1" data-td3="1">${td4RemBanner(M)}${(()=>{ try{ return tdRegimeVerdict(); }catch(e){ console.warn('td regime verdict:', e); return ''; } })()}${news}${goals}${sw}${banner}<div class="td3-pn" data-td3-panels>${P('ov', 'Overview', ov)}${P('core', 'Selection', core)}${wk ? P('sat', 'Satellite', sat) : (sat ? P('plans', 'Plans', sat) : '')}</div>${other}</div>`;
 }
 /* ── TD4c — ชิปความเสี่ยงที่หัวแผง (ใช้ตัวเลข/สถานะเดิมของ tdBuild · ไม่คำนวณใหม่) ── */
 const TD4_STG = {reduce:'Reduce', pause:'Pause', recover:'Recover'};
@@ -24223,7 +24223,8 @@ function wiStratVisible(){ const el = document.getElementById('satV3Panel'); ret
 function wiStratFlush(){ if(!wiStratDirty) return; if(wiStratVisible()){ wiStratDirty = false; try{ satV3Render(); }catch(e){} } }
 function wiRefreshAll(){ if(wiStratVisible()){ wiStratDirty = false; try{ satV3Render(); }catch(e){} } else wiStratDirty = true; try{ todayRefresh(); }catch(e){} }
 /* สัปดาห์ Strategy ปัจจุบัน (อาทิตย์) → จันทร์ของ Weekly Impact */
-function wiCurMon(){ return Calc.wiMondayOfStrategy(wpWeekKey()); }
+/* PL2·1 — Weekly Impact เท่านั้น: วันเสาร์ถือว่าจันทร์ถัดไปคือสัปดาห์ปัจจุบัน (ผู้ใช้รันวันเสาร์เพื่อสัปดาห์หน้า) · วันอื่นเหมือนเดิม · ไม่แตะ wpWeekKey */
+function wiCurMon(){ const sun = wpWeekKey(); return (new Date().getDay()===6) ? Calc.wiAddDays(sun, 8) : Calc.wiMondayOfStrategy(sun); }
 function wiCurDoc(){ return wiDocs[wiCurMon()] || null; }
 function wiOtherDoc(){ const ks = Object.keys(wiDocs).sort(); return ks.length ? wiDocs[ks[ks.length-1]] : null; }
 function wiRangeText(mon){
