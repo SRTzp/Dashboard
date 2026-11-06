@@ -52,19 +52,19 @@ def sectors_tests(pw, w, h, label, shots=False):
         follow(page, "XLU", "XLK")
         # Flow (อ้างอิง)
         P105.go_flow(page)
-        flow = {s: (txt(page, f'#ffThemes [data-rr="{s}"] .l1') or "") for s in ("XLU", "XLK")}
+        flow = {s: (txt(page, f'#ffThemes [data-rr="{s}"] .rr-lean') or "") for s in ("XLU", "XLK")}
         go_today(page)
         hdr = js(page, "()=>[...document.querySelectorAll('[data-td3-panel=\"ov\"] *')].filter(e=>e.children.length===0 && /^sectors?$/i.test(e.innerText.trim())).length")
         th = txt(page, "[data-sd-th]") or ""
         check(f"{tag} §1 หัวเดียว 'Sectors · Daily' (ไม่มีป้าย SECTORS ซ้อนบน)", hdr == 0 and cnt(page, ".td3-sh") == 0 and th.startswith("Sectors · Daily") and cnt(page, "[data-sd-th]") == 1, [hdr, th])
-        t = txt(page, '[data-sd-trow="XLU"] .l1') or ""
-        met = txt(page, '[data-sd-trow="XLU"] [data-sd-met]') or ""
-        check(f"{tag} §1 แถวขวา = 'OUTPERFORMING · STRENGTHENING · 2 bars in state · 1.2% below 52W high' + '↗ strengthening' (เหมือน Flow)", "OUTPERFORMING" in t and "· 2 bars in state · 1.2% below 52W high" in met and "↗ strengthening" in t, [t, met])
-        same = all(("outperforming · strengthening · 2 bars in state · 1.2% below 52W high" in flow[s].replace("  ", " ").lower()) == ("outperforming · strengthening · 2 bars in state · 1.2% below 52W high" in (txt(page, f'[data-sd-trow="{s}"] .l1') or "").lower()) for s in flow)
-        up_flow = "↗ strengthening" in flow["XLU"]
+        t = txt(page, '[data-sd-trow="XLU"]') or ""
+        met = txt(page, '[data-sd-trow="XLU"] .rr-lean') or ""
+        check(f"{tag} §1 lean line = 'Beating SPY ↗' + '▲ Up' + '−1.2% from 52W high' (เหมือน Flow · RRG1b)", "Beating SPY ↗" in met and "−1.2% from 52W high" in met, [t, met])
+        same = all(("beating spy ↗" in flow[s].lower() and "−1.2% from 52W high".lower() in flow[s].lower()) == ("beating spy ↗" in (txt(page, f'[data-sd-trow="{s}"] .rr-lean') or "").lower() and "−1.2% from 52W high".lower() in (txt(page, f'[data-sd-trow="{s}"] .rr-lean') or "").lower()) for s in flow)
+        up_flow = "Beating SPY ↗" in flow["XLU"]
         check(f"{tag} §1 ค่าตรง Flow ทั้ง 2 แถว (เฟส/วัน/OFF52W/↗)", same and up_flow, flow)
-        side = js(page, "()=>{ const r = document.querySelector('[data-sd-trow=\"XLU\"]').getBoundingClientRect(), p = document.querySelector('[data-sd-trow=\"XLU\"] .sd-rt').getBoundingClientRect(); return {rowR:r.right, rtR:p.right, rtL:p.left, rowL:r.left, rowW:r.width, nmT:document.querySelector('[data-sd-trow=\"XLU\"] .sd-nm').getBoundingClientRect().top, rtT:p.top}; }")
-        check(f"{tag} §1 กลุ่มสถานะชิดขวาของแถว", abs(side["rowR"] - side["rtR"]) <= 14, side)
+        side = js(page, """()=>{ const r = document.querySelector('[data-sd-trow="XLU"]').getBoundingClientRect(), p = document.querySelector('[data-sd-trow="XLU"] .rr-lean').getBoundingClientRect(); return {rowR:r.right, rtR:p.right, rtL:p.left, rowL:r.left, nmB:document.querySelector('[data-sd-trow="XLU"] .sd-nm').getBoundingClientRect().bottom, rtT:p.top}; }""")
+        check(f"{tag} §1 lean line อยู่ใต้ชื่อ ชิดซ้ายของแถว ไม่เกินขอบขวา (RRG1b)", side["rtL"] - side["rowL"] <= 14 and side["rtR"] <= side["rowR"] + 0.5 and side["rtT"] >= side["nmB"] - 2, side)
         check(f"{tag} §1 ไม่ล้นแนวนอน", ovf(page) <= 0, ovf(page))
         if shots and label == "390px": C.shot(page, "td4c-sectors-390.png", sel='[data-sd-today]')
         # stale: แคชเมื่อวาน → ยังมีค่า + as of · ไม่มี Revisit
@@ -72,9 +72,9 @@ def sectors_tests(pw, w, h, label, shots=False):
         fresh_flag = cnt(page, '[data-sd-trow="XLU"] [data-sd-flag]')
         check(f"{tag} §1 ข้อมูลวันนี้ + เฟสต่างจากที่รีวิว → มี Revisit (กติกา TD3b ยังอยู่)", fresh_flag == 1, fresh_flag)
         P105.seed_rrg(page, d=sector_rows(), wk=P105.rows_w(), day="2026-09-29"); go_today(page)
-        t2 = txt(page, '[data-sd-trow="XLU"] .l1') or ""
+        t2 = txt(page, '[data-sd-trow="XLU"]') or ""
         asof = txt(page, "[data-sd-asof]") or ""
-        check(f"{tag} §1 แคชเก่า → ยังโชว์ค่า (OUTPERFORMING · 2 bars in state · 1.2% below 52W high) + 'as of 29 Sep' ที่หัว", "OUTPERFORMING" in t2 and "1.2% below 52W high" in t2 and asof == "as of 29 Sep", [t2, asof])
+        check(f"{tag} §1 แคชเก่า → ยังโชว์ค่า (OUTPERFORMING · 2 bars in state · 1.2% below 52W high) + 'as of 29 Sep' ที่หัว", "Beating SPY ↗" in t2 and "−1.2% from 52W high" in t2 and asof == "as of 29 Sep", [t2, asof])
         check(f"{tag} §1 แคชเก่า → ไม่มี Revisit (ธงเฉพาะข้อมูลวันนี้)", cnt(page, "[data-sd-flag]") == 0, cnt(page, "[data-sd-flag]"))
         # ไม่มีแคช
         js(page, "()=>{ const f = ffState(); f.rrg = {rowsD:[], rowsW:[], day:'', at:'', loading:false, err:''}; }"); go_today(page)

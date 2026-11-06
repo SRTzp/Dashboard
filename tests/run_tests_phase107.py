@@ -138,10 +138,10 @@ def sector_tests(pw):
         trows = js(page, "()=>[...document.querySelectorAll('[data-sd-trow]')].map(e=>e.dataset.sdTrow)")
         fl = js(page, "()=>[...document.querySelectorAll('#ffThemes [data-rr]')].map(e=>e.dataset.rr)")
         check(f"{tag} §2 Today เรียงเหมือน Flow (★ ทั้งคู่ → ตาม Δmom: XLK, XLU)", trows == ["XLK", "XLU"] and fl.index("XLK") < fl.index("XLU"), [trows, fl])
-        t = txt(page, '[data-sd-trow="XLU"] .l1') or ""
-        check(f"{tag} §2 แถว Sector ต่อท้ายชื่อด้วยสถานะ: 'OUTPERFORMING · STRENGTHENING · 2 bars in state · 1.2% below 52W high ↗ strengthening'", "XLU" in t and "OUTPERFORMING · STRENGTHENING · 2 bars in state · 1.2% below 52W high" in t and "↗ strengthening" in t and t.index("Utilities") < t.index("OUTPERFORMING"), t)
-        t2 = txt(page, '[data-sd-trow="XLK"] .l1') or ""
-        check(f"{tag} §2 แถวอื่นใช้รูปแบบเดียวกัน (XLK)", "OUTPERFORMING · STRENGTHENING · 2 bars in state · 1.2% below 52W high" in t2, t2)
+        t = txt(page, '[data-sd-trow="XLU"]') or ""   # RRG1b: lean line = [Relative chip][Price chip] −x% from 52W high
+        check(f"{tag} §2 แถว Sector = ชื่อ + lean line: 'Beating SPY ↗' · '▲ Up' · '−1.2% from 52W high' (ไม่มี bars in state)", "XLU" in t and "Beating SPY ↗" in t and "▲ Up" in t and "−1.2% from 52W high" in t and "bars in state" not in t and t.index("Utilities") < t.index("Beating SPY"), t)
+        t2 = txt(page, '[data-sd-trow="XLK"]') or ""
+        check(f"{tag} §2 แถวอื่นใช้รูปแบบเดียวกัน (XLK)", "Beating SPY ↗" in t2 and "−1.2% from 52W high" in t2, t2)
         # auto-collapse
         P105.go_flow(page)
         page.locator('#ffThemes [data-sd-hd="XLU"]').click(); settle(page, 300)
