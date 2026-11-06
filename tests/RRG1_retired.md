@@ -32,3 +32,14 @@ Today row (Sectors) keeps the state label — out of scope for the card.
 | Suite | Old | New |
 |---|---|---|
 | p112 §3.5 | SMH(imp,★) "SMH · Underperforming ↗ ★" hot; IGV(weak) cold; XLE(imp) "… ↗" hot; hot-first = {NVDA, XOMX} | "SMH · Recovering ★" rec (hot-first via ★); IGV hot; "XLE · Recovering" rec; hot-first = {NVDA, MSFT} |
+
+## RRG1b (claude/rrg1b) — lean card, waiting state, queue
+| Suite | Old | New | Why |
+|---|---|---|---|
+| rrg1_check H | card = 3 chips `Price: Down · Relative: Positive · Momentum: Strengthening` + `to 4 Nov` date chip | card = 2 chips `Beating SPY ↗` + `▼ Down −1.1%`; no momentum chip (arrow in the Relative chip), no date chip (date stays in Details) | brief item 4 replaces section H's 3-chip card |
+| rrg1_check H | price-chip tooltip lists EMA rule + timeframe + last price date | tooltip = "Own price vs 50-day EMA (falling) — not compared with SPY"; rule/timeframe/date are in Details | brief item 4 |
+| p86 / p105 / p107 / p109 (card/Today text) | "bars in state", 52W gap sentence, "↗ strengthening" sdChip, two 1y-norm gauges visible on the card; Today row "OUTPERFORMING · STRENGTHENING · n bars in state · x% below 52W high" | card/Today = `★ SYM Name` + `[Relative chip][Price chip] −5.9% from 52W high`; bars in state, 52W sentence, gauges + words, Δ legend → Details | item 4 (see full-suite section of the PR for which suites changed) |
+| Flow bar | "ดึงราคาไม่สำเร็จ: <raw API text>", "ดึงแล้ว 8/24 · รออีก n วิ" | "Updating prices · batch 2/3 · next in 45 s" / "Price limit reached — retrying in 60 s" / short failure line; raw text → Details › Last fetch error + console | item 1 |
+| Flow legend | always-visible hint (Thai + "Δ over the last 5 days … 52W gap … RS gauges …") | collapsed `How to read ›` (4 lines), state in localStorage `rrgLegendOpen` | item 3 |
+| `rrgRefresh` | returned undefined; `f.rrg` replaced only after all 3 batches; one cooldown only between batches of one run | returns the running promise (click joins it); each batch merged + persisted on arrival; `pending` list resumes; 61 s window measured from the last request across runs/reloads (`rrgLastBatchAt`); model stamp only when pending is empty | item 1 |
+New coverage: `tests/rrg1b_check.py` (31 checks), screenshots via `tests/rrg1b_shots.py`.

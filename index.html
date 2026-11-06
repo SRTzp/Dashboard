@@ -923,7 +923,8 @@ details.panel[open]>summary::before{transform:rotate(90deg)}
 .ffQ.lag{background:var(--red-dim)}
 .ffQ.imp{background:var(--blue-dim)}
 .ffQ.flat{background:var(--surface2,rgba(128,128,128,.10))}.ffQ.flat .ffQt{color:var(--muted)}.ffQ.flat .ffChip{color:var(--muted)}
-.rr-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}.rr-ch{border:1px solid;border-radius:99px;padding:1px 8px;font-size:.7rem;white-space:nowrap}.rr-ch b{font-weight:700}.rr-pd{font-size:.68rem}
+.rr-lean{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;height:22px;overflow:hidden;align-content:flex-start;font-family:inherit}.rr-ch{flex:none;border:1px solid;border-radius:99px;padding:1px 8px;font-size:.72rem;line-height:1.3;white-space:nowrap}.rr-gap{flex:none;font-size:.74rem;color:var(--muted);white-space:nowrap}.rr-gap.dn{color:var(--red)}.rr-wait{color:var(--muted);font-size:.76rem;height:auto}
+.rr-leg{margin:6px 0 2px}.rr-leg summary{cursor:pointer;font-size:.76rem;color:var(--muted);list-style:none}.rr-leg summary::-webkit-details-marker{display:none}.rr-leg[open] summary{margin-bottom:2px}.ffQ.wait{background:var(--surface2,rgba(128,128,128,.10));opacity:.85}.ffQ.wait .ffQt{color:var(--muted)}.ffQ.wait .ffChip{color:var(--muted)}
 .rr-dt{margin-top:6px;font-size:.74rem;color:var(--muted)}.rr-dt summary{cursor:pointer;font-weight:600;list-style:none}.rr-dt summary::-webkit-details-marker{display:none}.rr-dg{display:grid;gap:3px;margin-top:6px;overflow-wrap:anywhere}.rr-dg b{color:var(--text)}
 .ffQt{font-family:var(--mono);font-size:.64rem;font-weight:700;letter-spacing:.06em}
 .ffQ.lead .ffQt{color:var(--teal)}.ffQ.weak .ffQt{color:var(--amber)}
@@ -3641,7 +3642,10 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
       <div class="ffQ weak"><div class="ffQt">OUTPERFORMING · FADING</div><div class="ffQs">ยังชนะ SPY แต่แผ่ว · เตือนของที่ถือ</div><div class="ffQbox" id="ffQweak"></div></div>
     </div>
     <div class="ffQ flat" id="ffQflatBox" style="display:none;margin-top:8px;min-height:0"><div class="ffQt">NEUTRAL vs SPY</div><div class="ffQs">ใกล้เคียง SPY (อยู่ในช่วง ±ε) · ยังไม่มีทิศ</div><div class="ffQbox" id="ffQflat"></div></div>
-    <div class="hint" style="margin:6px 0 2px">Relative Trend vs SPY — โมเดลเฉพาะของแดชบอร์ด (ไม่ใช่ JdK RRG) · วัดเทียบ SPY ไม่ใช่ราคาขึ้น/ลง · วงจรปกติ: Recovering → Strengthening → Fading → Worsening</div>
+    <div class="ffQ wait" id="ffQwaitBox" style="display:none;margin-top:8px;min-height:0"><div class="ffQt">WAITING FOR REFRESH (OLD MODEL)</div><div class="ffQs">ผลโมเดลเก่า · ยังไม่จัดเข้ากล่อง</div><div class="ffQbox" id="ffQwait"></div></div>
+    <details class="rr-leg" id="rrLegend" data-rr-legend ontoggle="rrgLegTog(this)"><summary>How to read ›</summary>
+      <div class="hint">Relative = vs SPY, not price going up/down.<br>Price chip = the ETF's own trend (40W EMA weekly / 50D EMA daily).<br>Cycle: Recovering → Strengthening → Fading → Worsening.<br>Custom model, not JdK RRG.</div>
+    </details>
     <div id="ffThemes" style="margin-top:4px"></div>
     <div class="hint" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">⚠ SMH · IRBO · IGV · HACK เกาะกลุ่มเทคเดียวกันเกือบหมด — นับ breadth ได้ แต่อย่าถือว่าเป็นเสียงอิสระจากกัน</div>
     </div>
@@ -13605,7 +13609,7 @@ function sectorState(etf){
   let quad = null, followed = false;
   try{
     const r = ffState().rrg || {}, tf = rrgTf(), rows = Array.isArray(tf==='W' ? r.rowsW : r.rowsD) ? (tf==='W' ? r.rowsW : r.rowsD) : [];
-    const row = rows.find(x=>x && x.sym===etf && !x.err && x.quad); quad = row ? row.quad : null;
+    const row = rows.find(x=>x && x.sym===etf && !x.err && x.quad && !rrgWaiting(x)); quad = row ? row.quad : null;
   }catch(e){}
   try{ const n = sdNote(etf); followed = !!(n && n.follow); }catch(e){}
   return {quad, followed};
@@ -23108,6 +23112,8 @@ function rrgBarsFresh(r, today){
   return d >= -1 && d <= RRG_MAXAGE;
 }
 function rrgOutdated(r){ return !!(r && ((r.rowsD||[]).length || (r.rowsW||[]).length) && r.model !== RRG_MODEL); }
+/* RRG1b — แถวที่มีแต่ผลโมเดลเก่า: ห้ามใส่กล่อง/ป้ายสถานะใหม่ (Leading เก่า ≠ Outperforming) */
+function rrgWaiting(x){ return !!(x && !x.err && x.model !== RRG_MODEL); }
 function rrgCacheFresh(f){
   return !!(f && f.rrg && f.rrg.day === rrgToday() && (f.rrg.rowsD||[]).length && f.rrg.model === RRG_MODEL && rrgBarsFresh(f.rrg));
 }
@@ -23134,7 +23140,12 @@ async function rrgFetchBatch(syms, key){
             + '&interval=1day&outputsize=' + RRG_CFG.bars + '&apikey=' + encodeURIComponent(key);
   const res = await fetch(url, {cache:'no-store'});
   const json = await res.json();
-  if(json && json.status === 'error') throw new Error(json.message || 'API error');
+  if((json && json.status === 'error') || (res && res.status === 429)){
+    const msg = (json && json.message) || 'API error';
+    const e = new Error(msg);
+    e.rate = !!((json && json.code === 429) || (res && res.status === 429) || /credit|rate limit|too many requests/i.test(msg));   /* RRG1b — โควตา/นาทีเต็ม = ลองใหม่ได้ ไม่ใช่ข้อผิดพลาดถาวร */
+    throw e;
+  }
   return rrgUnpack(json, syms);
 }
 /* Twelve Data ส่งใหม่->เก่า · เราต้องเก่า->ใหม่ และต้องจับวันให้ตรงกับ SPY ก่อนหาร */
@@ -23147,9 +23158,10 @@ function rrgSeries(values){
   return m;
 }
 /* กันยิงซ้อน: rrgRefresh เรียก renderFundflow() เพื่อโชว์สถานะ "กำลังดึง"
-   ซึ่งไปกระตุ้น rrgAutoOnce() ต่อ — ถ้าไม่กันไว้จะยิง API เป็นสองเท่าโดยไม่รู้ตัว */
-let rrgBusy = false;
-/* ความคืบหน้าระหว่างทยอยดึง — {done, total, waitUntil} · วาดนับถอยหลังให้เห็นว่าไม่ได้ค้าง */
+   ซึ่งไปกระตุ้น rrgAutoOnce() ต่อ — ถ้าไม่กันไว้จะยิง API เป็นสองเท่าโดยไม่รู้ตัว
+   RRG1b — คิวเดียวเท่านั้น: rrgRunP คือ run ที่กำลังทำงาน · กดรีเฟรช/auto ระหว่างนั้น = เข้าร่วมคิวเดิม (ได้ promise เดียวกัน) ไม่เริ่ม run ที่สอง */
+let rrgBusy = false, rrgRunP = null, rrgBenchMap = null, rrgMemBatchAt = 0;
+/* ความคืบหน้าระหว่างทยอยดึง — {batch, nb, waitUntil, limit} · วาดนับถอยหลังให้เห็นว่าไม่ได้ค้าง */
 let rrgProg = null, rrgTimer = null;
 function rrgSetProg(p){
   rrgProg = p;
@@ -23163,94 +23175,141 @@ function rrgSetProg(p){
   ffRenderThemes();
 }
 function rrgSleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+/* RRG1b — เวลาที่ยิงชุดล่าสุด (นับทุกครั้งที่ยิง รวมที่ถูกปฏิเสธ) เก็บข้ามการรีเฟรชหน้า:
+   ก่อนหน้านี้ cooldown มีแค่ "ระหว่างชุดใน run เดียว" → run ใหม่ (auto/กดเอง/รีโหลด) ที่เริ่มทันทีหลัง run เก่า ยิงชุดแรกทับหน้าต่างเดิม = 8+8 เครดิตใน 1 นาที */
+function rrgLastBatchAt(){
+  let t = 0; try{ t = parseInt(localStorage.getItem('rrgLastBatchAt')||'0', 10) || 0; }catch(e){}
+  return Math.max(t, rrgMemBatchAt);
+}
+function rrgMarkBatch(){
+  rrgMemBatchAt = Date.now();
+  try{ localStorage.setItem('rrgLastBatchAt', String(rrgMemBatchAt)); }catch(e){}
+}
+/* รอจนพ้นหน้าต่าง 61 วิ นับจากชุดล่าสุด (ทุกเส้นทาง: migration / auto / กดเอง / retry) */
+async function rrgWaitSlot(prog){
+  const t = rrgLastBatchAt() + RRG_CFG.cooldownMs;
+  if(Date.now() >= t) return;
+  rrgSetProg(Object.assign({}, prog, {waitUntil:t}));
+  await rrgSleep(Math.max(0, t - Date.now()));
+}
+const RRG_MAX_TRIES = 3;
 /* กัน auto-fetch ยิงซ้ำข้ามการรีเฟรชหน้า — rrgAutoDone เป็นแค่ตัวแปรในหน่วยความจำ รีเฟรชแล้วหาย
    ใช้ localStorage เก็บ "เวลาที่พยายามดึงล่าสุด" (นับแม้ error) ซึ่งอยู่ข้ามการรีเฟรช — กันรีเฟรชถี่ๆ ยิง API ซ้อนจนชนโควตา/นาที
    ข้อมูล RRG ปกติไม่เปลี่ยนเร็ว ภายใน 1 ชม. ยังไม่จำเป็นต้องดึงใหม่ (ปุ่ม "รีเฟรช" กดเองยังใช้ได้เสมอ ไม่โดนกันด้วยตัวนี้) */
 const RRG_AUTO_COOLDOWN_MS = 60*60*1000;
 function rrgAutoRecently(){
-  const t = parseInt(localStorage.getItem('rrgAutoAttemptAt')||'0', 10);
+  let t = 0; try{ t = parseInt(localStorage.getItem('rrgAutoAttemptAt')||'0', 10); }catch(e){}
   return !!t && (Date.now() - t) < RRG_AUTO_COOLDOWN_MS;
 }
 function rrgMarkAutoAttempt(){
   try{ localStorage.setItem('rrgAutoAttemptAt', String(Date.now())); }catch(e){}
 }
-async function rrgRefresh(force){
+/* คำนวณแถว D + W ของ symbol เดียวจากซีรีส์ที่ดึงมา (แยกออกมาเพื่อให้บันทึกทีละชุดได้) */
+function rrgBuildRows(def, got, benchMap){
+  const map = rrgSeries(got[def.s]);
+  if(!map.size){
+    const e = {sym:def.s, name:def.n, err:'No data', model:RRG_MODEL};
+    return {d:e, w:Object.assign({}, e)};
+  }
+  /* RRG1 D — เก็บวันล่าสุดของแต่ละชุด "ก่อน" จับคู่วัน: ถ้าไม่ตรงกัน = ไม่จัดสถานะ (ไม่ใช่ปล่อยให้ intersection ซ่อน) */
+  const assetLast = [...map.keys()].sort().pop(), benchLast = [...benchMap.keys()].sort().pop();
+  if(assetLast !== benchLast){
+    const e = {sym:def.s, name:def.n, err:'Mismatched end dates — ' + def.s + ' ' + assetLast + ' vs ' + RRG_BENCH + ' ' + benchLast + ' · not classified', lastObs:assetLast, lastObsBench:benchLast, model:RRG_MODEL};
+    return {d:e, w:Object.assign({}, e)};
+  }
+  /* ใช้เฉพาะวันที่มีทั้งคู่ — วันหยุดไม่ตรงกันจะทำให้ ratio เพี้ยน */
+  const dates  = [...map.keys()].filter(d=>benchMap.has(d)).sort();
+  const closes = dates.map(d=>map.get(d).c);
+  const highs  = dates.map(d=>map.get(d).h);
+  const bench  = dates.map(d=>benchMap.get(d).c);
+  const lastD  = dates[dates.length-1];
+  const base   = {sym:def.s, name:def.n, date:lastD, lastObsBench:benchLast};
+  const d = Object.assign({}, base, rrgCompute(closes, highs, bench, 'D', {lastObs:lastD}));
+  /* สัปดาห์ที่ยังไม่จบ = partial: จัดสถานะจากสัปดาห์ที่ปิดครบล่าสุด · partial แสดงเป็น preview แยก */
+  const wk  = rrgToWeekly(dates, closes, highs, rrgToday());
+  const wkB = rrgToWeekly(dates, bench, bench, rrgToday());
+  const m = wk.partial ? wk.dates.length-1 : wk.dates.length;
+  const wRow = rrgCompute(wk.closes.slice(0,m), wk.highs.slice(0,m), wkB.closes.slice(0,m), 'W', {lastObs: wk.lastObs[m-1]});
+  const w = Object.assign({}, base, {date: wk.lastObs[m-1]}, wRow);
+  if(wk.partial && !wRow.err){
+    const pv = rrgCompute(wk.closes, wk.highs, wkB.closes, 'W', {lastObs: wk.lastObs[wk.lastObs.length-1]});
+    if(!pv.err) w.preview = {asOf:wk.lastObs[wk.lastObs.length-1], quad:pv.quad, rsTrend:pv.rsTrend, rawChg:pv.rawChg, close:pv.close};
+  }
+  return {d, w};
+}
+function rrgMergeRow(arr, row){
+  const i = arr.findIndex(x=>x && x.sym === row.sym);
+  if(i >= 0) arr[i] = row; else arr.push(row);
+}
+function rrgRefresh(force){
   const f = ffState();
   const key = rrgKey();
-  if(!key){ f.rrg = {err:'nokey', at:''}; renderFundflow(); return; }
-  if(rrgBusy) return;
-  if(!force && rrgCacheFresh(f)) return;
+  if(!key){ f.rrg = {err:'nokey', at:''}; renderFundflow(); return Promise.resolve(); }
+  if(rrgBusy) return rrgRunP;    /* RRG1b — เข้าร่วมคิวที่กำลังวิ่ง */
+  if(!force && rrgCacheFresh(f)) return Promise.resolve();
   rrgBusy = true;
+  rrgRunP = rrgRun(f, key).finally(()=>{ rrgBusy = false; rrgRunP = null; });
+  return rrgRunP;
+}
+async function rrgRun(f, key){
   rrgMarkAutoAttempt();
-  f.rrg = Object.assign({}, f.rrg, {loading:true, err:''});
+  f.rrg = Object.assign({}, f.rrg, {loading:true, err:'', errRaw:''});
   renderFundflow();
   try{
-    const all = [RRG_BENCH].concat(RRG_SYMS.map(x=>x.s));
+    /* คิวค้าง (pending) จาก run ก่อนที่ไม่จบ → ทำต่อเฉพาะที่เหลือ · ไม่มี = เริ่มใหม่ทั้งชุด */
+    const resume = Array.isArray(f.rrg.pending) && f.rrg.pending.length > 0;
+    if(!resume){ f.rrg.pending = RRG_SYMS.map(x=>x.s); rrgBenchMap = null; }
+    const need = f.rrg.pending.slice();
+    const all = (rrgBenchMap ? [] : [RRG_BENCH]).concat(need);
     const chunks = [];
     for(let i=0;i<all.length;i+=RRG_CFG.batch) chunks.push(all.slice(i, i+RRG_CFG.batch));
-    const got = {};
     for(let ci=0; ci<chunks.length; ci++){
-      const done = ci * RRG_CFG.batch;
-      if(ci > 0){
-        /* รอให้พ้นหน้าต่าง 1 นาที ก่อนใช้เครดิตชุดถัดไป ไม่งั้นโดนปฏิเสธทั้งชุด */
-        rrgSetProg({done, total:all.length, waitUntil: Date.now() + RRG_CFG.cooldownMs});
-        await rrgSleep(RRG_CFG.cooldownMs);
+      let got = null, tries = 0, limit = false;
+      while(!got){
+        await rrgWaitSlot({batch:ci+1, nb:chunks.length, limit});
+        rrgSetProg({batch:ci+1, nb:chunks.length, waitUntil:0, limit:false});
+        tries++;
+        rrgMarkBatch();     /* เครดิตถูกหักตอนยิง ไม่ใช่ตอนสำเร็จ */
+        try{ got = await rrgFetchBatch(chunks[ci], key); }
+        catch(e){
+          rrgMarkBatch();
+          f.rrg.errRaw = String((e && e.message) || e);
+          console.warn('rrg batch ' + (ci+1) + '/' + chunks.length + ' try ' + tries + ':', f.rrg.errRaw);
+          if(e && e.rate && tries < RRG_MAX_TRIES){ limit = true; continue; }   /* เก็บชุดที่ได้แล้ว · รอ 61 วิ · ลองชุดนี้ใหม่ */
+          if(e) e.rrgRate = !!e.rate;
+          throw e;
+        }
       }
-      rrgSetProg({done, total:all.length, waitUntil:0});
-      Object.assign(got, await rrgFetchBatch(chunks[ci], key));
+      if(chunks[ci].indexOf(RRG_BENCH) >= 0){
+        rrgBenchMap = rrgSeries(got[RRG_BENCH]);
+        if(!rrgBenchMap.size){ rrgBenchMap = null; throw new Error('ดึงราคา '+RRG_BENCH+' (ตัวหาร) ไม่ได้'); }
+      }
+      /* RRG1b — บันทึกทีละชุดทันที (ชุดที่ได้แล้วไม่หายถ้าชุดถัดไปล้ม) · ยังไม่ตรามโมเดล/วัน จนกว่าจะครบทุกตัว */
+      f.rrg.rowsD = (f.rrg.rowsD||[]).slice(); f.rrg.rowsW = (f.rrg.rowsW||[]).slice();
+      RRG_SYMS.filter(d=>chunks[ci].indexOf(d.s) >= 0).forEach(def=>{
+        const r = rrgBuildRows(def, got, rrgBenchMap);
+        rrgMergeRow(f.rrg.rowsD, r.d); rrgMergeRow(f.rrg.rowsW, r.w);
+      });
+      f.rrg.pending = f.rrg.pending.filter(s=>chunks[ci].indexOf(s) < 0);
+      renderFundflow(); schedulePersist();
     }
-    rrgSetProg(null);
-    const benchMap = rrgSeries(got[RRG_BENCH]);
-    if(!benchMap.size) throw new Error('ดึงราคา '+RRG_BENCH+' (ตัวหาร) ไม่ได้');
-    /* คำนวณทั้ง D และ W ตอนดึงรอบเดียว — ปุ่มสลับจึงไม่กินเครดิตเพิ่ม
-       (เก็บเฉพาะผลลัพธ์ ไม่เก็บราคาดิบ ไม่งั้น state ใน Firestore บวมเกินขีดจำกัดเอกสาร) */
-    const rowsD = [], rowsW = [];
-    RRG_SYMS.forEach(def=>{
-      const map = rrgSeries(got[def.s]);
-      if(!map.size){
-        const e = {sym:def.s, name:def.n, err:'No data'};
-        rowsD.push(e); rowsW.push(Object.assign({}, e));
-        return;
-      }
-      /* RRG1 D — เก็บวันล่าสุดของแต่ละชุด "ก่อน" จับคู่วัน: ถ้าไม่ตรงกัน = ไม่จัดสถานะ (ไม่ใช่ปล่อยให้ intersection ซ่อน) */
-      const assetLast = [...map.keys()].sort().pop(), benchLast = [...benchMap.keys()].sort().pop();
-      if(assetLast !== benchLast){
-        const e = {sym:def.s, name:def.n, err:'Mismatched end dates — ' + def.s + ' ' + assetLast + ' vs ' + RRG_BENCH + ' ' + benchLast + ' · not classified', lastObs:assetLast, lastObsBench:benchLast};
-        rowsD.push(e); rowsW.push(Object.assign({}, e));
-        return;
-      }
-      /* ใช้เฉพาะวันที่มีทั้งคู่ — วันหยุดไม่ตรงกันจะทำให้ ratio เพี้ยน */
-      const dates  = [...map.keys()].filter(d=>benchMap.has(d)).sort();
-      const closes = dates.map(d=>map.get(d).c);
-      const highs  = dates.map(d=>map.get(d).h);
-      const bench  = dates.map(d=>benchMap.get(d).c);
-      const lastD  = dates[dates.length-1];
-      const base   = {sym:def.s, name:def.n, date:lastD, lastObsBench:benchLast};
-      rowsD.push(Object.assign({}, base, rrgCompute(closes, highs, bench, 'D', {lastObs:lastD})));
-      /* สัปดาห์ที่ยังไม่จบ = partial: จัดสถานะจากสัปดาห์ที่ปิดครบล่าสุด · partial แสดงเป็น preview แยก */
-      const wk  = rrgToWeekly(dates, closes, highs, rrgToday());
-      const wkB = rrgToWeekly(dates, bench, bench, rrgToday());
-      const m = wk.partial ? wk.dates.length-1 : wk.dates.length;
-      const wRow = rrgCompute(wk.closes.slice(0,m), wk.highs.slice(0,m), wkB.closes.slice(0,m), 'W', {lastObs: wk.lastObs[m-1]});
-      const wr = Object.assign({}, base, {date: wk.lastObs[m-1]}, wRow);
-      if(wk.partial && !wRow.err){
-        const pv = rrgCompute(wk.closes, wk.highs, wkB.closes, 'W', {lastObs: wk.lastObs[wk.lastObs.length-1]});
-        if(!pv.err) wr.preview = {asOf:wk.lastObs[wk.lastObs.length-1], quad:pv.quad, rsTrend:pv.rsTrend, rawChg:pv.rawChg, close:pv.close};
-      }
-      rowsW.push(wr);
-    });
-    f.rrg = {rowsD, rowsW, build:RRG_BUILD, model:RRG_MODEL, lastBar:[...benchMap.keys()].sort().pop(), day:rrgToday(), at:new Date().toISOString(), loading:false, err:''};
-    try{ sdRebaseline(); }catch(e){ console.warn('sdRebaseline:', e); }
+    if(f.rrg.pending.length === 0){      /* ครบทุก symbol + SPY → ตราโมเดลใหม่ได้ */
+      f.rrg = Object.assign({}, f.rrg, {build:RRG_BUILD, model:RRG_MODEL, lastBar:[...rrgBenchMap.keys()].sort().pop(), day:rrgToday(), at:new Date().toISOString(), loading:false, err:'', errRaw:''});
+      delete f.rrg.pending;
+      try{ sdRebaseline(); }catch(e){ console.warn('sdRebaseline:', e); }
+    }
   }catch(e){
-    f.rrg = Object.assign({}, f.rrg, {loading:false, err:String((e && e.message) || e)});
+    const raw = String((e && e.message) || e);
+    f.rrg = Object.assign({}, f.rrg, {loading:false, errRaw:raw,
+      err: (e && e.rrgRate) ? 'Price limit reached — tap Refresh to resume' : 'Couldn’t update prices — tap Refresh to retry'});
   }finally{
-    rrgBusy = false;
     rrgSetProg(null);
   }
+  f.rrg.loading = false;
   renderFundflow();
   schedulePersist();
 }
-function rrgManualRefresh(){ rrgRefresh(true); }
+function rrgManualRefresh(){ return rrgRefresh(true); }
 /* ดึงอัตโนมัติครั้งเดียวต่อการเปิดหน้า และเฉพาะเมื่อแคชไม่ใช่ของวันนี้
    — renderFundflow() ถูกเรียกบ่อยมาก ถ้าไม่กันไว้จะยิง API รัวจนโควตาหมด */
 let rrgAutoDone = false;
@@ -23259,7 +23318,7 @@ function rrgAutoOnce(){
   const f = ffState();
   if(!rrgKey()) return;                                  /* ยังไม่ใส่ key — ไม่ต้องพยายาม */
   if(rrgCacheFresh(f)) return;
-  if(rrgAutoRecently()){ rrgAutoDone = true; return; }   /* เพิ่งพยายามไปเมื่อไม่ถึง 1 ชม. ที่แล้ว (ข้ามรีเฟรชหน้าด้วย) — ข้าม รอรอบหน้า */
+  if(rrgAutoRecently() && !(f.rrg && Array.isArray(f.rrg.pending) && f.rrg.pending.length)){ rrgAutoDone = true; return; }   /* RRG1b — มีคิวค้างจาก run ก่อน = ทำต่อได้ (rrgWaitSlot กันชนโควตาอยู่แล้ว) */   /* เพิ่งพยายามไปเมื่อไม่ถึง 1 ชม. ที่แล้ว (ข้ามรีเฟรชหน้าด้วย) — ข้าม รอรอบหน้า */
   rrgAutoDone = true;
   rrgRefresh(false);
 }
@@ -23605,18 +23664,35 @@ function rrgTip(x, tf){
   return (st ? st.l : '') + ' — relative to ' + RRG_BENCH + ', not absolute price · ' + T.label + ' bars · EMA' + RRG_CFG.fast + '/' + RRG_CFG.slow + ' of close/' + RRG_BENCH
     + ' · change over ' + T.momLag + ' bars · z-scores use a ' + T.zWin + '-bar (1y) window as context only';
 }
-/* RRG1 H — 3 ชิปบนการ์ด: Price trend / Relative trend / Relative momentum (tf เดียวกับมุมมอง) · ไม่รวมเป็นคะแนนเดียว */
-function rrgChipsHtml(x, tf){
+/* RRG1b — การ์ดแบบ lean 2 บรรทัด · บรรทัด 2 = [Relative chip] [Price chip] · ระยะจาก 52W
+   Relative chip = สถานะ vs SPY (ลูกศร = โมเมนตัม) · Price chip = เทรนด์ราคาของตัวเอง + % ห่างจาก EMA (50D รายวัน / 40W รายสัปดาห์)
+   ไม่ล้น/ไม่ตกบรรทัด: ชิปมาก่อนใน DOM · .rr-gap อยู่ท้าย · แถวสูงบรรทัดเดียว overflow:hidden → ถ้าที่ไม่พอ ข้อความ 52W ตกไปบรรทัดที่ซ่อนก่อน ชิปไม่โดนตัด */
+const RRG_REL_TXT = {lead:'Beating SPY ↗', weak:'Beating SPY ↘', imp:'Lagging SPY ↗', lag:'Lagging SPY ↘', flat:'≈ SPY'};
+function rrgSgn(v, d){ const t = Math.abs(v).toFixed(d == null ? 1 : d); return (v < 0 ? '−' : '+') + t; }
+function rrgGapTxt(x){ const v = Math.abs(x.off52); return v < 0.05 ? 'at 52W high' : '−' + v.toFixed(1) + '% from 52W high'; }
+function rrgLeanHtml(x, tf){
+  const E = ffEsc, W = tf === 'W';
+  if(rrgWaiting(x)) return '<div class="rr-lean rr-wait" data-rr-wait>Old model — refreshing…</div>';
   if(x.err || x.model !== RRG_MODEL) return '';
-  const E = ffEsc, T = RRG_TF[tf] || RRG_TF.D, W = tf === 'W', d = x.lastObs || x.date;
-  const pt = RRG_PT[x.pt], rel = x.rel === 'pos' ? ['Positive','var(--teal)'] : x.rel === 'neg' ? ['Negative','var(--red)'] : ['Neutral','var(--muted)'];
-  const mo = x.momUp ? ['Strengthening','var(--teal)'] : ['Weakening','var(--amber)'];
-  const chip = (k, lbl, v, tip)=> '<span class="rr-ch" data-rr-chip="' + k + '" style="color:' + v[1] + ';border-color:' + v[1] + '" title="' + E(tip) + '">' + lbl + ': <b>' + v[0] + '</b></span>';
-  const ptTip = 'Price trend (own price, not vs ' + RRG_BENCH + '): close vs ' + (W ? 'EMA40 (weeks)' : 'EMA50 (days)') + ' and the EMA slope over ' + (x.ptLag || (W ? 4 : 5)) + ' bars. Up = close above a rising EMA · Down = close below a falling EMA · otherwise Mixed. ' + T.label + ' bars · last price date ' + (d || '—');
-  const relTip = 'Relative trend vs ' + RRG_BENCH + ': sign of the EMA' + RRG_CFG.fast + '/' + RRG_CFG.slow + ' spread of close/' + RRG_BENCH + ' beyond a ±ε dead band. Positive = beating ' + RRG_BENCH + ', Negative = lagging it — says nothing about whether price is rising. ' + T.label + ' bars.';
-  const moTip = 'Relative momentum: is the relative trend improving (change over ' + (x.lag || T.momLag) + ' bars above +δ, with hysteresis) or fading. ' + T.label + ' bars.';
-  return '<div class="rr-chips">' + chip('price', 'Price', pt || ['—','var(--muted)'], ptTip) + chip('rel', 'Relative', rel, relTip) + chip('mom', 'Momentum', mo, moTip)
-    + '<span class="sub rr-pd" title="latest price date used (' + T.label + ')">to ' + E(sdDateTxt(d)) + '</span></div>';
+  const st = RRG_ST[x.quad] || RRG_ST.flat;
+  const relChip = '<span class="rr-ch" data-rr-chip="rel" style="color:' + st.c + ';border-color:' + st.c + '" title="' + E(st.l + ' — relative to ' + RRG_BENCH + ', not absolute price') + '">' + (RRG_REL_TXT[x.quad] || '≈ SPY') + '</span>';
+  const pt = RRG_PT[x.pt], pct = (typeof x.close === 'number' && x.ptEma > 0) ? (x.close / x.ptEma - 1) * 100 : null;
+  let pc;
+  if(!pt) pc = '<span class="rr-ch" data-rr-chip="price" style="color:var(--muted);border-color:var(--muted)" title="Own price trend unavailable">Price n/a</span>';
+  else {
+    const ic = x.pt === 'up' ? '▲' : x.pt === 'down' ? '▼' : '◆', emaN = W ? '40-week EMA' : '50-day EMA';
+    const slope = (x.ptEma > 0 && x.ptEmaPrev > 0) ? (x.ptEma > x.ptEmaPrev ? ' (rising)' : x.ptEma < x.ptEmaPrev ? ' (falling)' : ' (flat)') : '';
+    pc = '<span class="rr-ch" data-rr-chip="price" style="color:' + pt[1] + ';border-color:' + pt[1] + '" title="' + E('Own price vs ' + emaN + slope + ' — not compared with ' + RRG_BENCH) + '">' + ic + ' ' + pt[0] + (pct == null ? '' : ' ' + rrgSgn(pct)) + (pct == null ? '' : '%') + '</span>';
+  }
+  return '<div class="rr-lean" data-rr-lean>' + relChip + pc + '<span class="rr-gap' + (x.off52 > -5 ? '' : ' dn') + '" data-rr-gap>' + rrgGapTxt(x) + '</span></div>';
+}
+/* RRG1b — "How to read ›" พับไว้ตั้งต้น · จำเปิด/ปิดต่ออุปกรณ์ (localStorage, try/catch) */
+let rrgLegSynced = false;
+function rrgLegTog(el){ if(!rrgLegSynced) return; try{ localStorage.setItem('rrgLegendOpen', el.open ? '1' : '0'); }catch(e){} }
+function rrgLegSync(){
+  const el = document.getElementById('rrLegend'); if(!el) return;
+  let v = ''; try{ v = localStorage.getItem('rrgLegendOpen') || ''; }catch(e){}
+  rrgLegSynced = false; el.open = (v === '1'); rrgLegSynced = true;
 }
 let rrgDetOpen = {};
 function rrgDetTog(sym, el){ if(el.open) rrgDetOpen[sym] = true; else delete rrgDetOpen[sym]; }
@@ -23634,6 +23710,10 @@ function rrgDetailsHtml(x, tf){
   const pv = x.preview ? row('This week so far (to ' + E(sdDateTxt(x.preview.asOf)) + ')', E((RRG_ST[x.preview.quad]||{}).l || '—') + ' · raw ' + f2(x.preview.rsTrend, 3) + '% (preview — not used for the state)') : '';
   return '<details class="rr-dt" data-rr-details="' + E(x.sym) + '"' + (rrgDetOpen[x.sym] ? ' open' : '') + ' ontoggle="rrgDetTog(\'' + E(x.sym) + '\',this)"><summary>Details ›</summary><div class="rr-dg">'
     + row('Benchmark', RRG_BENCH) + row('Timeframe', T.label + (tf === 'W' ? ' (last completed week)' : ''))
+    + row('Bars in state', x.days + ' consecutive ' + (tf === 'W' ? 'weekly' : 'daily') + ' bars in ' + E(st.l))
+    + row('52W gap', E(rrgOffTxt(x)) + ' (close vs the highest high of the last 52 weeks)')
+    + '<div class="g" data-rr-gauges><span class="g"><i>RS level vs 1y norm</i>' + rrgGaugeHtml(x.ratio, x.dRatio, true) + '</span><span class="g"><i>RS momentum vs 1y norm</i>' + rrgGaugeHtml(x.mom, x.dMom, true) + '</span></div>'
+    + '<div class="sub">Gauges: Δ over the last ' + T.momLag + ' ' + (tf === 'W' ? 'weeks' : 'days') + ' — Flat = barely moving · Moving = clear direction · Fast / Very fast = changing quickly. They compare with the ETF\'s own 1y history (context, not the state).</div>'
     + row('Bars used', x.bars) + row('Last observation', E(x.lastObs || x.date || '—') + ' (' + E(x.sym) + ') / ' + E(x.lastObsBench || x.lastObs || '—') + ' (' + RRG_BENCH + ')')
     + row('Last close', f2(x.close, 2) + ' (' + E(x.sym) + ') / ' + f2(x.benchClose, 2) + ' (' + RRG_BENCH + ')')
     + row('Price trend', E((RRG_PT[x.pt] || ['—'])[0]) + ' · close ' + f2(x.close, 2) + ' vs EMA' + (x.ptN || '—') + ' ' + f2(x.ptEma, 2) + ' · EMA slope ' + (x.ptEma && x.ptEmaPrev ? ((x.ptEma / x.ptEmaPrev - 1) * 100).toFixed(2) + '% over ' + x.ptLag + ' bars' : '—') + ' · last price date ' + E(x.lastObs || x.date || '—'))
@@ -23643,6 +23723,7 @@ function rrgDetailsHtml(x, tf){
     + row('State', '<span style="color:' + st.c + '">' + st.l + '</span> · ε ' + f2(x.eps, 3) + ' · δ ' + f2(x.delta, 3) + ' · ' + RRG_K + '×SD, hysteresis: ' + RRG_HYST)
     + pv
     + row('Freshness', E(rrgFreshTxt()))
+    + (((ffState().rrg || {}).errRaw) ? row('Last fetch error', E(ffState().rrg.errRaw)) : '')
     + '<div class="sub">Custom model (EMA12/26 of close/' + RRG_BENCH + ', z-scored context) — not JdK RS-Ratio/RS-Momentum.</div></div></details>';
 }
 function sdRowHtml(x, tf, QLBL){
@@ -23652,10 +23733,7 @@ function sdRowHtml(x, tf, QLBL){
   let top;
   if(x.err) top = `<div class="l1"><span>${star}<b>${E(x.sym)}</b> <span class="sub">${E(x.name)}</span></span></div><div class="l2" style="color:var(--amber)">${E(x.err)}</div>`;
   else {
-    const q = QLBL[x.quad] || ['—','var(--muted)'], old = x.model !== RRG_MODEL;
-    top = `<div class="l1"><span>${star}<b>${E(x.sym)}</b> <span class="sub">${E(x.name)}</span></span><span>${old ? '<b style="color:' + q[1] + '" title="' + E(rrgTip(x, tf)) + '">' + q[0] + '</b> <span class="sub">(old model)</span> · ' : ''}<span title="consecutive ${tf === 'W' ? 'weekly' : 'daily'} bars in the same state (${E(q[0])})">${x.days} bars in state</span> · <span class="${x.off52>-5?'':'dn'}">${rrgOffTxt(x)}</span>${sdChip(x)}</span></div>`
-      + rrgChipsHtml(x, tf)
-      + `<div class="l2"><span class="g"><i>RS level vs 1y norm</i>${rrgGaugeHtml(x.ratio, x.dRatio, true)}</span><span class="g"><i>RS momentum vs 1y norm</i>${rrgGaugeHtml(x.mom, x.dMom, true)}</span></div>`;
+    top = `<div class="l1"><span>${star}<b>${E(x.sym)}</b> <span class="sub">${E(x.name)}</span></span></div>` + rrgLeanHtml(x, tf);
   }
   return `<div class="ln3-rr sd-row${x.err ? ' dim' : ''}${open ? ' open' : ''}" data-rr="${E(sym)}"><div class="sd-hd" role="button" tabindex="0" aria-expanded="${open}" data-sd-hd="${E(sym)}">${top}${sum}</div>${rrgDetailsHtml(x, tf)}${open ? sdBodyHtml(x) : ''}</div>`;
 }
@@ -23702,6 +23780,9 @@ function rrgSortRows(rows){   /* เรียงเดียวกับ Flow: �
     if(a.err && !b.err) return 1;
     if(!a.err && b.err) return -1;
     if(a.err && b.err) return a.sym.localeCompare(b.sym);
+    const wa = rrgWaiting(a), wb = rrgWaiting(b);   /* RRG1b — รอรีเฟรชอยู่ท้ายกลุ่มที่มีผลใหม่ */
+    if(wa !== wb) return wa ? 1 : -1;
+    if(wa && wb) return a.sym.localeCompare(b.sym);
     if(ORDER[a.quad] !== ORDER[b.quad]) return ORDER[a.quad]-ORDER[b.quad];
     const fa = sdIsFollow(a.sym), fb = sdIsFollow(b.sym);   /* TD4a — เฟสเดียวกัน: ★ ขึ้นก่อน แล้วตาม Δmom เดิม */
     if(fa !== fb) return fa ? -1 : 1;
@@ -23724,6 +23805,7 @@ function sdCurShow(sym, tf){
     const x = rows.find(y=>y && y.sym === sym);
     if(!x) return {ok:false, why:'missing'};
     if(x.err || !SD_QPH[x.quad]) return {ok:false, why:'err'};
+    if(rrgWaiting(x)) return {ok:false, why:'waiting'};   /* RRG1b */
     return {ok:true, phase:SD_QPH[x.quad], tf, row:x, stale:r.day !== rrgToday() || r.model !== RRG_MODEL || !rrgBarsFresh(r), day:r.day};
   }catch(e){ return {ok:false, why:'error'}; }
 }
@@ -23739,13 +23821,12 @@ function tdSectorsHtml(){
     else body = syms.map(sym=>{
       const n = sdNote(sym) || sdBlank(), c = sdCurShow(sym, tf), def = RRG_SYMS.find(d=>d.s === sym), name = def ? def.n : sym, E = ffEsc;
       const U = tf === 'W' ? 'w' : 'd';
-      let right;
-      if(c.ok){
-        const x = c.row;
-        right = `<span class="sd-rt"><b class="sd-ph" style="color:${SD_PHL[c.phase][1]}" data-sd-phase>${SD_PHL[c.phase][0].toUpperCase()}</b> <span class="sd-met" data-sd-met>· ${x.days} bars in state · <span class="${x.off52 > -5 ? '' : 'dn'}">${rrgOffTxt(x)}</span></span>${sdChip(x)}</span>`;
-      } else right = `<span class="sd-rt"><b class="sd-ph" data-sd-phase style="color:var(--muted)">—</b>${c.why === 'nocache' ? ' <button type="button" class="td3-lk sd-open" data-sd-openflow onclick="event.stopPropagation();sdGoFlowRrg()">Open Flow to refresh ›</button>' : ''}</span>`;
+      let right = '', lean = '';
+      if(c.ok){ lean = rrgLeanHtml(c.row, tf).replace('class="rr-lean"', 'class="rr-lean" data-sd-phase'); }   /* RRG1b — บรรทัด lean เดียวกับ Flow */
+      else if(c.why === 'waiting') lean = '<div class="rr-lean rr-wait" data-sd-phase data-rr-wait>Old model — refreshing…</div>';
+      else right = `<span class="sd-rt"><b class="sd-ph" data-sd-phase style="color:var(--muted)">—</b>${c.why === 'nocache' ? ' <button type="button" class="td3-lk sd-open" data-sd-openflow onclick="event.stopPropagation();sdGoFlowRrg()">Open Flow to refresh ›</button>' : ''}</span>`;
       const line = n.driver.trim() ? E(n.driver.trim().replace(/\s+/g, ' ')) : 'Drivers not yet recorded.', lop = sdTdExp.has(sym);   /* TD4a — เต็มข้อความ · พับ = 1 บรรทัด · แตะ = ขยาย */
-      return `<div class="sd-tr" role="button" tabindex="0" data-sd-trow="${E(sym)}" onclick="sdTdGo('${E(sym)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sdTdGo('${E(sym)}')}"><div class="l1"><span class="sd-nm"><b>${E(sym)}</b> <span class="sub">${E(name)}</span></span>${right}</div>`
+      return `<div class="sd-tr" role="button" tabindex="0" data-sd-trow="${E(sym)}" onclick="sdTdGo('${E(sym)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sdTdGo('${E(sym)}')}"><div class="l1"><span class="sd-nm"><b>${E(sym)}</b> <span class="sub">${E(name)}</span></span>${right}</div>${lean}`
         + (sdFlag(sym, n) ? `<div class="sd-fl">${SD_TAG}</div>` : '')
         + `<div class="sd-tl sd-tl1${lop ? ' open' : ''}" data-sd-tline aria-expanded="${lop}" onclick="sdTdLine('${E(sym)}',event)">${line}${n.driver.trim() || n.reviewed_at ? ' · ' + E(sdAgo(n.reviewed_at)) : ''}</div>`
         + (n.driver.trim() && !sdHasEv(n) ? '<div class="sd-tl" data-sd-tev>Supporting evidence not yet recorded.</div>' : '') + `</div>`;
@@ -23773,7 +23854,7 @@ function sdGoFlowRrg(){ sdTdGo(''); }
 function rrgCopyText(){
   const f = ffState(), r = f.rrg || {}, tf = rrgTf();
   const rows = Array.isArray(tf==='W' ? r.rowsW : r.rowsD) ? (tf==='W' ? r.rowsW : r.rowsD) : [];
-  const ok = rows.filter(x=>!x.err && x.quad), bad = rows.filter(x=>x.err || !x.quad);
+  const ok = rows.filter(x=>!x.err && x.quad && !rrgWaiting(x)), bad = rows.filter(x=>x.err || !x.quad), wt = rows.filter(rrgWaiting);
   const sorted = rrgSortRows(ok), fol = x=>{ try{ const n = sdNote(x.sym); return n && n.follow ? '★' : ''; }catch(e){ return ''; } };
   const item = x=>fol(x) + x.sym + (x.name ? ' (' + x.name + ')' : '');
   const day = ok.length ? (ok[0].date || r.day) : r.day;
@@ -23781,16 +23862,18 @@ function rrgCopyText(){
   [['lead',RRG_ST.lead.l],['imp',RRG_ST.imp.l],['weak',RRG_ST.weak.l],['lag',RRG_ST.lag.l],['flat',RRG_ST.flat.l]].forEach(q=>{
     const g = sorted.filter(x=>x.quad===q[0]); L.push(q[1] + ': ' + (g.length ? g.map(item).join(', ') : '—'));
   });
+  if(wt.length) L.push('Waiting for refresh (old model): ' + wt.map(x=>fol(x) + x.sym).join(', '));
   if(bad.length) L.push('No data: ' + bad.map(x=>fol(x) + x.sym).join(', '));
   return L.join('\n');
 }
 function rrgCopyPhase(){ sdCopyText(rrgCopyText(), 'Copied'); }
 function ffRenderThemes(){
+  if(!rrgLegSynced) rrgLegSync();
   const f = ffState();
   const r = f.rrg || {};
   const tf = rrgTf(), TF = RRG_TF[tf];
   const rows = Array.isArray(tf==='W' ? r.rowsW : r.rowsD) ? (tf==='W' ? r.rowsW : r.rowsD) : [];
-  const ok = rows.filter(x=>!x.err && x.quad);
+  const ok = rows.filter(x=>!x.err && x.quad && !rrgWaiting(x)), wait = rows.filter(x=>!x.err && x.quad && rrgWaiting(x));   /* RRG1b — ok = เฉพาะผลโมเดลใหม่ · wait = โมเดลเก่ารอรีเฟรช */
 
   /* แถบสถานะ + ปุ่มรีเฟรช */
   const bar = document.getElementById('ffRrgBar');
@@ -23801,21 +23884,21 @@ function ffRenderThemes(){
       const p = rrgProg;
       if(p && p.waitUntil){
         const sec = Math.max(0, Math.ceil((p.waitUntil - Date.now())/1000));
-        msg = `ดึงแล้ว ${p.done}/${p.total} · รออีก ${sec} วิ — แพลนฟรีจำกัด ${RRG_CFG.batch} เครดิต/นาที`;
+        msg = p.limit ? `Price limit reached — retrying in ${sec} s` : `Updating prices · batch ${p.batch}/${p.nb} · next in ${sec} s`;
       } else if(p){
-        msg = `กำลังดึง ${p.done}/${p.total}…`;
+        msg = `Updating prices · batch ${p.batch}/${p.nb}…`;
       } else {
-        msg = 'กำลังดึงราคา…';
+        msg = 'Updating prices…';
       }
     }
-    else if(r.err){ msg = 'ดึงราคาไม่สำเร็จ: ' + ffEsc(r.err) + (rrgOutdated(r) ? ' · <b>ผลด้านล่างเป็นโมเดลเก่า (outdated) — ยังไม่ได้อัปเดต</b>' : ''); cls = 'red'; }
+    else if(r.err){ msg = ffEsc(r.err) + (wait.length ? ' · <b>' + wait.length + ' waiting for refresh (old model)</b>' : ''); cls = 'red'; }   /* RRG1b — ข้อความสั้น · ข้อความดิบอยู่ใน Details/console */
     else if(!rows.length){ msg = 'ยังไม่มีข้อมูล — กดรีเฟรช'; cls = 'amber'; }
     else {
-      const bad = rows.length - ok.length;
+      const bad = rows.length - ok.length - wait.length;
       const d = ok.length ? (ok[0].date || r.day) : r.day;
       msg = TF.label + ' · Data as of ' + ffEsc(d) + ' · ' + ok.length + '/' + rows.length + ' ตัว'
           + (bad ? ' · <b style="color:var(--amber)">' + bad + ' ตัวคำนวณไม่ได้</b>' : '');
-      if(rrgOutdated(r)){ msg += ' · <b>Outdated model (v' + (r.build||'?') + ') — refresh to update</b>'; cls = 'amber'; }
+      if(rrgOutdated(r) || wait.length){ msg += ' · <b>' + (wait.length ? wait.length + ' waiting for refresh (old model)' : 'Outdated model — refresh to update') + '</b>'; cls = 'amber'; }
       else if(r.day !== rrgToday() || !rrgBarsFresh(r)){ msg += ' · <b>stale</b>'; cls = 'amber'; }
       if(tf === 'W' && ok.some(x=>x.preview)){ const pv = ok.find(x=>x.preview).preview; msg += ' · latest week still open (to ' + ffEsc(sdDateTxt(pv.asOf)) + ') — classified on last completed week'; }
     }
@@ -23840,6 +23923,11 @@ function ffRenderThemes(){
       '<span class="ffChip" title="'+ffEsc(x.name)+' · '+ffEsc((RRG_ST[x.quad]||{}).l||x.quad)+' · '+x.days+' bars in state · relative to SPY, not absolute price">'+ffEsc(x.sym)+'</span>');
   });
   try{ const fb = document.getElementById('ffQflatBox'); if(fb) fb.style.display = ok.some(x=>x.quad==='flat') ? '' : 'none'; }catch(e){}
+  try{   /* RRG1b — โมเดลเก่ารอรีเฟรช: แถบเทา แสดงแค่ ticker ไม่ใส่กล่อง/ป้ายสถานะใหม่ */
+    const wb = document.getElementById('ffQwaitBox'), wx = document.getElementById('ffQwait');
+    if(wx) wx.innerHTML = wait.map(x=>'<span class="ffChip" data-rr-waitchip="'+ffEsc(x.sym)+'" title="'+ffEsc(x.name)+' · old-model result — waiting for refresh">'+ffEsc(x.sym)+'</span>').join('');
+    if(wb) wb.style.display = wait.length ? '' : 'none';
+  }catch(e){}
 
   /* breadth = กี่ธีมที่ "ชนะ SPY อยู่จริง" ตอนนี้ — วัดจาก rsTrend (raw ก่อน z-score) > 0
      ห้ามกลับไปใช้ ratio >= 100: นั่นคือ z-score เทียบประวัติของตัวเอง แต่ละตัวจะอยู่เหนือ 100
@@ -23849,7 +23937,7 @@ function ffRenderThemes(){
   const up = scored.filter(x=>x.rel ? x.rel === 'pos' : x.rsTrend > 0).length;   /* RRG1 — breadth และสถานะใช้ rel ตัวเดียวกัน (outperforming) */
   const b = document.getElementById('ffBreadth');
   if(b){
-    b.textContent = scored.length ? (up+'/'+scored.length+' ชนะ SPY') : '—';
+    b.textContent = scored.length ? (up+'/'+scored.length+' ชนะ SPY' + (wait.length ? ' (' + wait.length + ' waiting)' : '')) : (wait.length ? '— (' + wait.length + ' waiting)' : '—');   /* RRG1b — นับเฉพาะผลโมเดลใหม่ */
     b.title = scored.length
       ? 'กี่ธีมที่อยู่สถานะ Outperforming (EMA12 ของ RS เหนือ EMA26 เกิน deadband ε) = ชนะ SPY อยู่ ณ ตอนนี้ (' + TF.label + ') · ตัวเดียวกับสถานะบนการ์ด'
         + '\nเกินครึ่ง = เงินไหลกระจายหลายธีม · เหลือ 0 = ไหลออกทั้งกระดาน ไม่ใช่แค่หมุนกลุ่ม'
@@ -23873,7 +23961,7 @@ function ffRenderThemes(){
          ▲ = กำลังมุ่งขึ้น/ขวา (เข้าหา Leading) · ▼ = กำลังถอย */
       if(ln1On()){   /* LN3 — ตารางกว้าง → แถว 2 บรรทัด · TD3b: ป้ายอังกฤษ + ☆/★ + Drivers & evidence (แถวคลิกได้ทั้งแถว) */
         const U = tf==='W' ? 'w' : 'd', UW = tf==='W' ? 'weeks' : 'days';
-        host.innerHTML = '<div class="hint" style="margin:2px 0 6px">Δ over the last '+TF.momLag+' '+UW+': <b>Flat</b> = barely moving · <b>Moving</b> = clear direction · <b>Fast / Very fast</b> = changing quickly · bars in state = consecutive '+UW.replace(/s$/,'')+' bars in the same state · 52W gap = close vs the highest high of the last 52 weeks · RS gauges compare with the ETF\'s own 1y history (context, not the state) · custom model, not JdK RRG</div><div class="ln3-rrg" data-ln3-rrg="1">'
+        host.innerHTML = '<div class="ln3-rrg" data-ln3-rrg="1">'
           + sorted.map(x=>sdRowHtml(x, tf, QLBL)).join('')
           + '</div><div class="sd-foot" data-sd-foot>'+SD_FOOT+'</div>';
         sdFit(host);
