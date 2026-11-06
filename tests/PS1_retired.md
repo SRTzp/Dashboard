@@ -15,4 +15,6 @@ PS1 changes how NEW plans and NEW Sat orders are sized (E-based risk, caps, veri
 | Settings: Max Heat / Open-Risk caps visible in Core rules / Sat rules / Accounts | Same fields (same ids, still saved) inside the collapsed "Legacy limits" of Portfolio & Risk |
 | Plan tab at ≥1000px: `#planTop` hidden in Lean | unchanged; new `#ps1Panel` is a sibling above it and is shown (grid row 2; core panel/side moved to row 3) |
 
+| phase23: Core rules had 22 labelled fields incl. the unit-less "Core — % of Core bucket" (Max Heat) field | that field moved to Legacy limits → 21 fields, 0 without a unit label (`run_tests_phase23.py` updated) |
+
 Nothing stored was changed or deleted: old plans, trades and settings keep their numbers; PS1 data lives in `settings.psRisk`, `plan.ps1` (cards) and `trade.ps1` (new Sat orders).
