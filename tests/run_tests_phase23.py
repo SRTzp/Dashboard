@@ -186,7 +186,7 @@ def settings_checks(pw, w, h, label):
         check(f"{tag} ตั้งค่า: ส่วนความเสี่ยง Core มีค่าเริ่มต้นครบ (CZ1: Risk A/B 1.25/1.25 · เพดานไม้แรก 15/10 · เพดานรวม 25/25 · 50 · 20 · 15 · 7 · 10 · 2.5 · 30 · 2) · main ตลาด = US",
               vals == {"mk": "US", "ra": "1", "rb": "1.25", "a": "25", "b": "25", "ca": "25", "cb": "25", "add": "50", "cap": "20", "warn": "15", "em": "7", "lb": "5", "lr": "4", "ls": "30", "gate": "2", "heatCore": "20", "heatSat": "6"}, json.dumps(vals))
         units = page.evaluate("() => [...document.querySelectorAll('#crSec .f')].map(f=>(f.querySelector('.crUnit')||{}).textContent||'')")
-        check(f"{tag} ตั้งค่า: ทุกช่องมีป้ายหน่วย (% ของถัง Momentum · % ของไม้ก่อนหน้า · ไม้ (1–6) · % ใต้ Stop · สัปดาห์) · ป้าย '% ของถัง Momentum' ≥ 8 ช่อง (TIER2: +6 ช่องเกณฑ์ Tier = 19 ช่อง)", len(units) == 22 and units.count("") == 1 and sum("% of Momentum bucket" in u for u in units) >= 3,   # RG2b — ช่อง Tier/เพดานชั้น 2/ladderShare/gateWeeks ถอด · หน่วยเปลี่ยนเป็น % ของถัง
+        check(f"{tag} ตั้งค่า: ทุกช่องมีป้ายหน่วย (% ของถัง Momentum · % ของไม้ก่อนหน้า · ไม้ (1–6) · % ใต้ Stop · สัปดาห์) · ป้าย '% ของถัง Momentum' ≥ 8 ช่อง (TIER2: +6 ช่องเกณฑ์ Tier = 19 ช่อง)", len(units) == 21 and units.count("") == 0 and sum("% of Momentum bucket" in u for u in units) >= 3,   # RG2b — ช่อง Tier/เพดานชั้น 2/ladderShare/gateWeeks ถอด · หน่วยเปลี่ยนเป็น % ของถัง
                json.dumps(units, ensure_ascii=False))
         mk = page.evaluate("() => ({main: coreRiskCfg('main').market, fam: coreRiskCfg('fam').market})")
         check(f"{tag} ตลาดเริ่มต้น: main = US · fam (ชื่อ Family) = TH · ชื่ออื่น = both", mk == {"main": "US", "fam": "TH"} and
