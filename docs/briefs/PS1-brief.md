@@ -29,7 +29,8 @@ Anything marked PARKED is not built in PS1.
 - One summary line under the form: `Shares · Risk x.xx% · Size x.x% of portfolio`. With 2+ rows it also shows `Avg entry · Avg SL · Left x.xx%`. Nothing else on the form.
 - Caps: total size ≤ max position size % of E (shares reduced to fit, one short note); bucket/total risk checked before Save. Over a cap → one-line reason, Save blocked.
 - Existing regime/DD size multipliers: keep exactly as today (PARKED D1). Shown in Details only.
-- Mobile 390px: single-trade form must fit without scrolling sideways; extra rows stack compactly.
+- **Layout: Entry · SL · Risk on ONE row, at every width incl. 390px. No overflow, no wrap.** Three equal-width compact inputs (grid 1fr 1fr 1fr, small gap), small labels ABOVE the inputs (not beside) to save width. The ＋ is a tiny icon in the Entry / SL label line, not a separate column. Summary line directly below: `2,000 sh · Risk 0.40% · Size 2.0% of portfolio`.
+- Extra rows (after ＋) appear under their own column header in the same 3-column grid; they never push the first row wider.
 
 ## 3. Add-ons (pyramid)
 - A NEW risk budget for an existing idea is allowed only when every existing tranche's stop is at or above its average entry (principal risk = 0). Otherwise the add-on uses what's left of the same idea budget.
@@ -39,6 +40,20 @@ Anything marked PARKED is not built in PS1.
 - Contracts/lots = (E × risk %) ÷ (|entry − stop| × contract multiplier), rounded DOWN to the broker's lot step. Single stop, full exit.
 - Uses E (whole portfolio), not the sub-account balance. Show the sub-account's free margin next to it as information ("margin is not risk").
 - Existing Sat rules (TP, min R:R, news window, EMA50/Structure verify) unchanged.
+
+## 4b. Sat plan defaults + verify rule (added 2026-11-07)
+- New Sat plans default to **Main** sleeve. Tactical stays available (unchanged rules), just not the default.
+- Default TF for new Main plans = **4H** (existing plans keep their TF).
+- Verify checkboxes (EMA50 Verify / Structure Verify) now drive Main entry + size:
+  | EMA50 | Structure | State | Main |
+  |---|---|---|---|
+  | ✓ | ✓ | Clear Trend | 100% size |
+  | ✗ | ✓ | Unclear Trend | **60% size** (risk budget × 0.6 → lots rounded down) |
+  | any | ✗ | — | **Blocked**: "Check Structure first" — can't save as ready / enter |
+- The 0.6 multiplies the Sat idea risk (after the existing f/DD multiplier, D1 parked). Summary shows "Size 60% (Unclear Trend)"; formula in Details only.
+- Tactical keeps its current rule (needs Clear Trend).
+- Legacy plans still on stored classify ("verification pending"): before a NEW entry they must tick at least Structure; already-entered trades untouched.
+- Tests: ✓✓ → 100%; ✗✓ → 60% lots (rounded down); Structure ✗ → blocked; new plan defaults Main + 4H; Tactical unchanged; legacy pending plan blocked until Structure ticked.
 
 ## 5. Portfolio Risk panel (Port tab top + compact line on Today)
 Show only:
