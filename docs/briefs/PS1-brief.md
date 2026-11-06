@@ -20,12 +20,16 @@ Anything marked PARKED is not built in PS1.
 - Replaces PL1's single "Base Risk 1% of pool" for NEW plans. Old plans/trades keep their stored numbers (same rule as PL1).
 
 ## 2. Add Trade / plan form (Momentum + Compounder)
-- Starts with 1 Entry + 1 SL. Small ＋ adds rows, max 4 entries and 4 SLs. ✕ removes a row.
-- **Entries split by risk** (SRTp's AAA example): each entry row has price + risk % (part of this idea's budget). Shares per row = that row's risk ÷ (entry − stop), rounded DOWN. One idea = one budget: the sum of the rows can't exceed the idea's risk %.
-- **Stops:** 1 SL = full exit. 2+ SL rows = price + % of shares exited at each; % must total 100. Risk uses the weighted exit (blended stop). Shown only as "Avg SL" in the summary.
-- Summary line (only this on the form): `Avg entry · Avg SL (−x%) · Shares · Risk used x.xx% · Left x.xx% · Size x.x% of portfolio`.
-- Caps: total size ≤ max position size % of E (shares reduced to fit, say so); bucket and total risk checked before Save. Over a cap → inline reason, Save blocked.
-- Existing regime/DD size multipliers: keep exactly as they work today (PARKED decision D1). Show the applied multiplier in Details only.
+**Main use = 1 entry + 1 SL. Multi-row is an optional extra. Keep the form lean.**
+- Default form = exactly what a single trade needs: Entry · SL · Risk % (prefilled with the bucket default). Nothing else visible. No per-row %, no weights.
+- A small, low-key "＋" next to Entry and next to SL (max 4 rows each, ✕ to remove). Only when a 2nd row exists:
+  - Entry rows show a small risk % field each (parts of this idea's budget; SRTp's AAA example). Shares per row = row risk ÷ (row entry − stop), rounded DOWN. Sum of rows ≤ the idea's risk %.
+  - SL rows show a small "% of shares" field each (must total 100). Risk uses the weighted exit (blended stop).
+  - Removing back to 1 row hides these fields again.
+- One summary line under the form: `Shares · Risk x.xx% · Size x.x% of portfolio`. With 2+ rows it also shows `Avg entry · Avg SL · Left x.xx%`. Nothing else on the form.
+- Caps: total size ≤ max position size % of E (shares reduced to fit, one short note); bucket/total risk checked before Save. Over a cap → one-line reason, Save blocked.
+- Existing regime/DD size multipliers: keep exactly as today (PARKED D1). Shown in Details only.
+- Mobile 390px: single-trade form must fit without scrolling sideways; extra rows stack compactly.
 
 ## 3. Add-ons (pyramid)
 - A NEW risk budget for an existing idea is allowed only when every existing tranche's stop is at or above its average entry (principal risk = 0). Otherwise the add-on uses what's left of the same idea budget.
@@ -62,5 +66,5 @@ Show only:
 - Sat contracts with multiplier + lot step, rounded down.
 - Panel: principal risk 0 at breakeven; missing stop = unknown; give-back amber/red bands.
 - Old plans/trades unchanged. No formulas/field names visible on main screens.
-- Screenshots 390/1440: plan form (1 row and 4 rows), Port risk panel, Today line.
+- Screenshots 390/1440: plan form (default single trade, and 2+2 rows), Port risk panel, Today line.
 - Log changed expectations in tests/PS1_retired.md. Draft PR → main. Don't merge.
