@@ -141,7 +141,7 @@ def tests(pw, w, h, label):
         lg = js(page, """()=>({add: [...document.querySelectorAll('.wlListHead button')].some(b=>/Add on candidate/.test(b.innerText)), ports: [...document.querySelectorAll('.wlHead .wlPills')].pop().innerText.replace(/\\s+/g,' '), ln3: document.querySelectorAll('[data-ln3-wl2],[data-ln3-dh],.ln3r').length})""")
         js(page, "()=>wlOpen('AVGO','sum')"); page.wait_for_timeout(300)
         acts = js(page, "()=>[...document.querySelectorAll('.wlActs button')].map(b=>b.innerText.trim())")
-        check(f"{tag} 7 โหมดแบบเดิม: '＋ Add on candidate' + Core.US/Core.TH + ปุ่ม ✎ ✕ 📥 เรียงแถวตามเดิม · ไม่มี LN3", lg["add"] and "Core.US" in lg["ports"] and lg["ln3"] == 0 and "✎ แก้ไข" in acts and "✕ ลบ" in acts, [lg, acts])
+        check(f"{tag} 7 โหมดแบบเดิม: '＋ Add on candidate' + ชิป Port All/US/TH (PL2c เปลี่ยนชื่อจาก Core.US/Core.TH) + ปุ่ม ✎ ✕ 📥 เรียงแถวตามเดิม · ไม่มี LN3", lg["add"] and lg["ports"].split()[-3:] == ["All", "US", "TH"] and "📥 Import" in acts and lg["ln3"] == 0 and "✎ แก้ไข" in acts and "✕ ลบ" in acts, [lg, acts])
     finally: b.close()
 
 
