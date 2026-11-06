@@ -8,6 +8,8 @@ import run_tests_phase4 as base
 import run_tests_phase107 as T
 import run_tests_phase111 as P111
 import run_tests_phase77 as P77
+import run_tests_phase79 as P79
+import run_tests_phase78 as P78
 
 ENGINE = base.BROWSER_ENGINE
 results = []
@@ -304,11 +306,34 @@ def sat_tests(pw, w, h):
         b.close()
 
 
+def pyr_tests(pw, w, h):
+    """Sat ไม้เติม (pyramid) ของ order ที่สร้างใต้ PS1: งบ = snapshot ของ order · เพดาน PS1 แทนเพดานเดิม · order เก่าใช้กติกาเดิม"""
+    tag = f"[{ENGINE}/satpyr/{w}]"
+    b, page, ce, pe = P79.launch(pw, w, h)
+    try:
+        ps_on(page, {"def": {"winner": 0.4, "ladder": 1.0, "satMain": 0.1, "satTac": 0.15}})
+        iid = P79.make(page, "main", 2000, 1990, "Long")
+        js(page, "([i])=>{ pfVerifySet(i,'structure_ok',true); pfVerifySet(i,'ema50_ok',true); }", [iid]); settle(page, 400)
+        P78.save(page, iid); P79.openall(page)
+        t = P78.trades(page)
+        check(f"{tag} Sat order ใหม่เก็บ snapshot t.ps1 (E · risk% · riskTHB · verifyFac)", len(t) == 1 and t[0].get("ps1") and t[0]["ps1"]["riskPct"] == 0.1 and t[0]["ps1"]["verifyFac"] == 1, t)
+        r = P79.pyr_calc(page, t[0]["id"], 2015, 2005)
+        check(f"{tag} ไม้เติม: งบ = riskTHB ใน snapshot ของ order · ไม่มีข้อความ cap เดิม (Satellite Open Risk จะเป็น …)", abs(r["budget"] - t[0]["ps1"]["riskTHB"]) < 1e-6 and not any("Open Risk" in x for x in r["errs"]), r)
+        # an old order (no ps1) keeps the old budget rules
+        js(page, "()=>{ const B=getBook('main'); B.trades.forEach(x=>{ delete x.ps1; }); saveBook('main'); render(); }"); settle(page, 300)
+        r2 = P79.pyr_calc(page, t[0]["id"], 2015, 2005)
+        check(f"{tag} order เก่า (ไม่มี ps1) ใช้งบ RPT เดิม ไม่เท่า snapshot", abs(r2["budget"] - t[0]["ps1"]["riskTHB"]) > 1, [r2["budget"], t[0]["ps1"]["riskTHB"]])
+        check(f"{tag} console ไม่มี error", not ce and not pe, [ce[:2], pe[:2]])
+    finally:
+        b.close()
+
+
 def main():
     with sync_playwright() as pw:
         for w, h in ((1440, 1000), (390, 844)):
             tests(pw, w, h)
             sat_tests(pw, w, h)
+            pyr_tests(pw, w, h)
     bad = [r for r in results if not r[1]]
     print(f"\nPS1 phase120: {len(results) - len(bad)}/{len(results)} PASS")
     raise SystemExit(1 if bad else 0)

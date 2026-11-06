@@ -22526,9 +22526,9 @@ function satV2SaveSlot(ideaId, accId, offplanAcct){
     setups: (Array.isArray(idea.setups) ? idea.setups.slice() : []).concat(Array.isArray(idea.setup_ck) ? PF_SETUP_CK.filter(x=>idea.setup_ck.includes(x[0])).map(x=>x[1]) : []),   /* PF1 — Setup 3 ข้อใหม่ เก็บเป็นป้ายให้สถิติ Journal นับได้ · แผนเก่า (ไม่มี setup_ck) ใช้ setups เดิม */
     sleeve: v.sleeve, tf: String(idea.tf || '').trim() || (v.tac ? v.cfg.tfTac : v.cfg.tfMain),
     setup_note: String(idea.setup_note || '').trim().slice(0, SAT_V2_NOTE_MAX),
-    size_limit: v.limit, deal_lot: v.lotDeal, tp1_pct: v.tac ? tps.pct : undefined, tac_type: v.tac ? (c.tacType || undefined) : undefined,
-    ps1: c.ps1 ? {E: c.ps1.E, riskPct: c.ps1.def, riskTHB: v.riskTHB, verifyFac: c.verify ? c.verify.fac : 1} : undefined   /* PS1 snapshot */
+    size_limit: v.limit, deal_lot: v.lotDeal, tp1_pct: v.tac ? tps.pct : undefined, tac_type: v.tac ? (c.tacType || undefined) : undefined
   });
+  if(c.ps1) t.ps1 = {E: c.ps1.E, riskPct: c.ps1.def, riskTHB: v.riskTHB, verifyFac: c.verify ? c.verify.fac : 1};   /* PS1 snapshot (makeTradeObject has a field whitelist) */
   B.trades.push(t);
   saveBook(accId);
   sat7dWrite('satIdeas', ideaId, {accts:{[accId]: {trade_id: t.id, broker: c.chosen ? c.chosen.broker : null, lot: c.lot}}});
