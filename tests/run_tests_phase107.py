@@ -139,9 +139,9 @@ def sector_tests(pw):
         fl = js(page, "()=>[...document.querySelectorAll('#ffThemes [data-rr]')].map(e=>e.dataset.rr)")
         check(f"{tag} §2 Today เรียงเหมือน Flow (★ ทั้งคู่ → ตาม Δmom: XLK, XLU)", trows == ["XLK", "XLU"] and fl.index("XLK") < fl.index("XLU"), [trows, fl])
         t = txt(page, '[data-sd-trow="XLU"] .l1') or ""
-        check(f"{tag} §2 แถว Sector ต่อท้ายชื่อด้วยสถานะ: 'LEADING · 2 d · -1.2%↗ strong + rising'", "XLU" in t and "LEADING · 2 d · -1.2%" in t and "↗ strong + rising" in t and t.index("Utilities") < t.index("LEADING"), t)
+        check(f"{tag} §2 แถว Sector ต่อท้ายชื่อด้วยสถานะ: 'OUTPERFORMING · STRENGTHENING · 2 bars in state · 1.2% below 52W high ↗ strengthening'", "XLU" in t and "OUTPERFORMING · STRENGTHENING · 2 bars in state · 1.2% below 52W high" in t and "↗ strengthening" in t and t.index("Utilities") < t.index("OUTPERFORMING"), t)
         t2 = txt(page, '[data-sd-trow="XLK"] .l1') or ""
-        check(f"{tag} §2 แถวอื่นใช้รูปแบบเดียวกัน (XLK)", "LEADING · 2 d · -1.2%" in t2, t2)
+        check(f"{tag} §2 แถวอื่นใช้รูปแบบเดียวกัน (XLK)", "OUTPERFORMING · STRENGTHENING · 2 bars in state · 1.2% below 52W high" in t2, t2)
         # auto-collapse
         P105.go_flow(page)
         page.locator('#ffThemes [data-sd-hd="XLU"]').click(); settle(page, 300)

@@ -107,7 +107,7 @@ def flow_tests(pw, w, h, tag):
     diffs = {s: [got["new"][s], got["old"][s]] for s in got["new"] if got["new"][s] != got["old"][s]}
     present = [s for s in FLOW_SELS if got["new"][s] is not None]
     check(f"{tag} แถบ Flow หลังใช้ token กลาง: computed style หลัก (bg · สีตัว · ขนาด/น้ำหนักฟอนต์ · padding · radius) เท่าก่อนย้ายทุกจุด ({len(present)} องค์ประกอบ)", not diffs and len(present) >= 18, json.dumps(diffs, ensure_ascii=False)[:1200])
-    check(f"{tag} แถบ Flow: ข้อความเท่าเดิมทุกตัวอักษร", got["txt"] == re.sub(r"(· \d+)w ", r"\1d ", got["txt_old"]),   # RG2a: อายุ flip หน่วยสัปดาห์ → วัน (EMA รายวัน)
+    check(f"{tag} แถบ Flow: ข้อความเท่าเดิมทุกตัวอักษร", got["txt"] == re.sub(r"(· \d+)w ", r"\1d ", got["txt_old"]).replace("→ Improving", "→ Underperforming · recovering"),   # RG2a: อายุ flip หน่วยสัปดาห์ → วัน (EMA รายวัน)
            got["txt"][:200] + " || " + got["txt_old"][:200])
     check(f"{tag} token กลางมีครบ (--sum-bg #16191E · --sum-cell #262A31 · --sum-fg · --sum-muted · pill up/dn/warn/nt)", got["var"][:2] == ["#16191E", "#262A31"] and all(got["var"]), json.dumps(got["var"]))
 
