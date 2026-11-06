@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PS1 — Portfolio & Risk (Settings card · lean plan form · add-on gate · Sat E-based lots + verify rule · Port panel · Today line) · เทส 120
 Chromium · 390 / 1440 · ข้อมูล SAMPLE ล้วน · รัน: python3 run_tests_phase120.py"""
-import json
+import json, re
 from playwright.sync_api import sync_playwright
 import ln3fix_common as C   # ต้องมาก่อน
 import run_tests_phase4 as base
@@ -328,12 +328,64 @@ def pyr_tests(pw, w, h):
         b.close()
 
 
+def fix_tests(pw, w, h):
+    """หลัง review: (1) multi-SL: stop สถานะ = SL แถว 1 · blended ใช้เฉพาะคำนวณความเสี่ยง (2) free-cash check ใช้กับแผน PS1 (3) ไม้เติมเติมแถว entry ถัดไปให้"""
+    tag = f"[{ENGINE}/fix/{w}]"
+    b, page, ce, pe = C.launch2(pw, w, h, [], {}, pin_winner=True)
+    try:
+        ps_on(page)
+        form(page, "MSL"); fill(page, 100, 90)
+        js(page, "()=>{ ps1RowAdd('s'); ps1RowAdd('e'); }"); settle(page, 200)
+        js(page, "()=>{ document.getElementById('cnSt1').value='80'; ps1In('s',1,'80'); document.getElementById('cnSp0').value='50'; ps1In('sp',0,'50'); document.getElementById('cnSp1').value='50'; ps1In('sp',1,'50');"
+                 " document.getElementById('cnEn1').value='95'; ps1In('e',1,'95'); document.getElementById('cnEr0').value='0.2'; ps1In('er',0,'0.2'); document.getElementById('cnEr1').value='0.2'; ps1In('er',1,'0.2'); }"); settle(page, 300)
+        e = errtxt(page)
+        js(page, "()=>coreNewSave()"); settle(page, 700)
+        c = js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='MSL'); return c && {stop:c.stop, pstop:c.plan.stop, avg:c.plan.ps1.avgStop, stops:c.plan.ps1.stops.map(x=>x.px), rows:c.plan.ps1.rows.length}; }")
+        check(f"{tag} 1 multi-SL: card/plan stop = SL แถว 1 (90) · blended (85) เก็บใน plan.ps1.avgStop · เก็บทุกแถว SL", c and c["stop"] == 90 and c["pstop"] == 90 and abs(c["avg"] - 85) < 1e-9 and c["stops"] == [90, 80], [c, e])
+        # open position at SL1 -> risk math uses blended
+        js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='MSL'); coreBuy1Open(c.id); }"); settle(page, 300)
+        stp = js(page, "()=>document.getElementById('cbStop').value")
+        check(f"{tag} 1 ซื้อไม้ 1: ช่อง Stop เติม SL แถว 1 (90)", str(stp) == "90", stp)
+        js(page, "()=>{ document.getElementById('cbPx').value='100'; coreBuy1In(); coreBuy1Save(); }"); settle(page, 500)
+        pos = js(page, "()=>ps1Positions('main').find(p=>p.ticker==='MSL')")
+        t = js(page, "()=>getBook('main').trades.find(t=>t.sym==='MSL').sl")
+        check(f"{tag} 1 position: trade.sl = 90 (สถานะ/alert) แต่ risk math ใช้ blended 85", t == 90 and pos and abs(pos["stop"] - 85) < 1e-9, [t, pos])
+        # 3 add-on prefill: next planned row (entry 2 = 95, risk 0.2 x mult)
+        js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='MSL'); lfAddOpen(c.id); }"); settle(page, 300)
+        pf = js(page, "()=>({px:document.getElementById('lfaPx')&&document.getElementById('lfaPx').value, risk:document.getElementById('lfaRisk')&&document.getElementById('lfaRisk').value, note:!!document.querySelector('[data-ps1-next]'), nTr:getBook('main').trades.filter(t=>t.sym==='MSL').length})")
+        check(f"{tag} 3 ไม้เติม: เติม entry แถว 2 ให้ (ราคา 95 + risk 0.2%) + ข้อความบอก · ไม่ซื้ออัตโนมัติ (trade เดิม 1 รายการ)", pf and pf["px"] == "95" and abs(float(pf["risk"]) - 0.2) < 1e-6 and pf["note"] and pf["nTr"] == 1, pf)
+        js(page, "()=>coreSheetClose()")
+        # single-row plan: no prefill
+        check(f"{tag} console ไม่มี error", not ce and not pe, [ce[:2], pe[:2]])
+    finally:
+        b.close()
+    # 2 free cash: pool cash tiny -> qty cut + cash tag
+    cash_tr = [P13.T("tC", "core", "open", sym="HOLD", entry=100, sl=90, qty=100, cur="USD", date="2026-10-20")]
+    b, page, ce, pe = C.launch2(pw, w, h, cash_tr, {"cH": open_card("HOLD", "tC", px=100)}, pin_winner=True)
+    try:
+        ps_on(page)
+        free = js(page, "()=>{ const cx=coreCtxTrack(coreCtx('main'),'winner'); return cx.cashTHB; }")
+        form(page, "CSH"); fill(page, 100, 90)
+        js(page, "()=>{ const n=coreNew; }")
+        base = sumtxt(page)
+        # shrink free cash by buying a big holding: set winner holdings so cash is small
+        js(page, "()=>{ window.__c0 = coreCtxTrack; coreCtxTrack = function(c,t){ const r = window.__c0(c,t); return Object.assign({}, r, {cashTHB: 3300}); }; coreNewIn(); }"); settle(page, 300)
+        s2 = sumtxt(page); note = js(page, "()=>{ const e=document.querySelector('[data-ps1-trim]'); return e ? e.innerText : ''; }")
+        m = re.search(r"([\d,]+)\s*sh", s2)
+        q2 = int(m.group(1).replace(',', '')) if m else -1
+        check(f"{tag} 2 free-cash: เงินสดว่าง $100 (฿3,300) → จำนวนหุ้นลดเหลือ ≤1 ตามเงินสด + ข้อความ 'เงินสดคุม'", 0 <= q2 <= 1 and "เงินสดคุม" in note, [base, s2, note, free])
+        check(f"{tag} console ไม่มี error (cash)", not ce and not pe, [ce[:2], pe[:2]])
+    finally:
+        b.close()
+
+
 def main():
     with sync_playwright() as pw:
         for w, h in ((1440, 1000), (390, 844)):
             tests(pw, w, h)
             sat_tests(pw, w, h)
             pyr_tests(pw, w, h)
+            fix_tests(pw, w, h)
     bad = [r for r in results if not r[1]]
     print(f"\nPS1 phase120: {len(results) - len(bad)}/{len(results)} PASS")
     raise SystemExit(1 if bad else 0)

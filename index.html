@@ -4880,9 +4880,13 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
     /* size cap -> trim all rows proportionally */
     var cost = 0, q = 0; rows.forEach(function (r) { cost += r.qty * r.px; q += r.qty; });
     res.trimmed = false;
-    if (num(o.maxSizePct) && o.maxSizePct > 0) {
-      var capCost = o.maxSizePct / 100 * E;
+    var capCost = Infinity, sizeCost = Infinity, hasCash = num(o.cash) && o.cash >= 0;
+    if (num(o.maxSizePct) && o.maxSizePct > 0) sizeCost = o.maxSizePct / 100 * E;
+    capCost = sizeCost; if (hasCash && o.cash < capCost) capCost = o.cash;   /* existing free-cash check applies on top of the size cap */
+    res.cashLimited = false;
+    if (capCost < Infinity) {
       if (cost > capCost + EPS) {
+        res.cashLimited = hasCash && o.cash <= sizeCost + EPS;
         var k = capCost / cost; res.trimmed = true; res.untrimmedQty = q;
         cost = 0; q = 0;
         rows.forEach(function (r) { r.qty = floorLot(r.qty * k, lot); cost += r.qty * r.px; q += r.qty; });
@@ -11433,17 +11437,27 @@ function ps1AddCalc(c, o, cx, v, out){
   return out;
 }
 let lfAddSt = null;   /* {id, acc, riskEdited, slEdited} */
+/* PS1 — next planned (not yet bought) entry row of a multi-row plan: {i, n, px, risk (effective % of E)} or null. Pre-fill only; never buys. */
+function ps1NextRow(c){
+  const P = c && c.plan && c.plan.ps1; if(!P || !P.rows || P.rows.length<2) return null;
+  const bought = (c.lots || []).filter(l=>l.layer!=='acc').length, i = bought, r = P.rows[i];
+  if(!r) return null;
+  const m = (P.mult ? P.mult.f * P.mult.dd : 1);
+  return {i, n:P.rows.length, px:r.px, risk:+(r.riskPct * m).toFixed(4)};
+}
 function lfAddOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
   const cx = coreCtxC(c), v = coreView(c, cx); if(v.kind!=='open') return;
   if(lfAddBlockReason(v, cx)) return;
-  lfAddSt = {id, acc:false, riskEdited:false, slEdited:false};
+  const nx = ps1NextRow(c);
+  lfAddSt = {id, acc:false, riskEdited:!!nx, slEdited:false};
   coreDlg = {kind:'lfadd', id};
   coreSheet('lfadd', `<div class="hd" style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">เติมไม้ · ${escHtml(c.ticker)}</h3><button type="button" class="ccLnk" data-lf-x aria-label="ปิด" onclick="coreSheetClose()">✕</button></div>
     <label class="lf-acc"><input type="checkbox" id="lfaAcc" data-lf-accck onchange="lfAddLayer(this.checked)"> <b>ไม้เร่ง</b> <span class="ccSub">(SL แยก · งบแยก)</span></label>
-    <div class="lfq c3"><div class="ccF"><label>Entry</label><input type="text" inputmode="decimal" id="lfaPx" oninput="lfAddIn()" value="${v.px!=null ? escHtml(String(v.px)) : ''}"></div>
+    <div class="lfq c3"><div class="ccF"><label>Entry</label><input type="text" inputmode="decimal" id="lfaPx" oninput="lfAddIn()" value="${nx ? nx.px : (v.px!=null ? escHtml(String(v.px)) : '')}"></div>
       <div class="ccF"><label id="lfaSlL">SL Base</label><input type="text" inputmode="decimal" id="lfaSl" oninput="lfAddSl()" value="${escHtml(String(v.stop))}"></div>
-      <div class="ccF"><label>Risk %</label><input type="text" inputmode="decimal" id="lfaRisk" oninput="lfAddRisk()"></div></div>
+      <div class="ccF"><label>Risk %</label><input type="text" inputmode="decimal" id="lfaRisk" oninput="lfAddRisk()"${nx ? ` value="${nx.risk}"` : ''}></div></div>
+    ${nx ? `<div class="ccSub" data-ps1-next>Planned entry ${nx.i+1} of ${nx.n} pre-filled (price + risk %) — edit if needed</div>` : ''}
     <div class="ccSub" id="lfaHint" data-lf-addhint></div>
     <div class="size lf-size"><span id="lfaAcct"></span><b id="lfaRes" data-lf-addres>—</b></div>
     <div class="ccSub" id="lfaWhy" data-lf-addwhy></div>
@@ -12101,7 +12115,9 @@ function ps1Positions(A){
       const bucket = (c && coreTrackOfCard(c)==='ladder') ? 'ladder' : 'winner';
       let px = null;
       if(c && cx){ try{ const v = coreView(c, cx); if(v.live && v.px>0) px = v.px; }catch(e){} }
-      out.push({id:t.id, ticker:t.sym, bucket, side:t.bias, qty:+t.qty, mult:t.mult||1, avg:+t.entry, stop:+t.sl, px, fx:k});
+      let stp = +t.sl; const P1 = c && c.plan && c.plan.ps1;
+      if(P1 && P1.stops && P1.stops.length>1 && t.id===c.trade_id && Math.abs(stp - P1.stops[0].px) < 1e-9) stp = P1.avgStop;   /* multi-SL plan: status stop = SL row 1; risk math uses the blended SL while the stop has not been moved */
+      out.push({id:t.id, ticker:t.sym, bucket, side:t.bias, qty:+t.qty, mult:t.mult||1, avg:+t.entry, stop:stp, px, fx:k});
     } else if(t.port==='satB'){
       out.push({id:t.id, ticker:t.sym, bucket:'sat', side:t.bias, qty:+t.qty, mult:t.mult||1, avg:+t.entry, stop:+t.sl, px:null, fx:k});
     }
@@ -12238,7 +12254,7 @@ function ps1FormRun(n, rd, cx, mk, errs){
   const minEn = Math.min.apply(null, entries.map(e=>e.px));
   if(stops.some(x=>!(x.px < minEn))){ mine.push('Entry must be above SL'); setSum(''); setDet(''); return done(); }
   if(mine.length){ setSum(''); return done(); }
-  const r = Ps1.planSize({E: E/div, market: mk, ideaRiskPct: typed * m, entries, stops, maxSizePct: b.sizeMax});
+  const r = Ps1.planSize({E: E/div, market: mk, ideaRiskPct: typed * m, entries, stops, maxSizePct: b.sizeMax, cash: cx.cashTHB/div});   /* free-cash check as on old plans */
   if(!r.ok){ mine.push(PS1_ERR[r.err] || ('Cannot size this plan (' + r.err + ')')); setSum(''); setDet(''); return done(); }
   if(r.errs.indexOf('ROWS_OVER_BUDGET')>=0) mine.push(`Entry risks add up to more than ${+typed.toFixed(4)}%`);
   if(r.zero) mine.push(`Too small for 1 ${mk==='TH' ? 'lot (100)' : 'share'}`);
@@ -12252,8 +12268,8 @@ function ps1FormRun(n, rd, cx, mk, errs){
   const snap = {v:1, bucket, E, Edate: ps1EDate(n.acct), div, typed, mult:{f:F.f, dd}, ideaEff: typed * m,
     rows: r.rows.map((x,i)=>({px:x.px, riskPct: n.ne>1 ? entries[i].riskPct / m : typed, qty:x.qty})),
     stops: stops.map(x=>({px:x.px, pct: n.ns>1 ? x.pct : 100})), qty:r.qty, avgEntry:r.avgEntry, avgStop:r.stop, riskPct:r.riskPct, riskMoney:newMoney,
-    sizePct:r.sizePct, leftPct:r.leftPct, trimmed:r.trimmed, lot:r.lot, maxSizePct:b.sizeMax, date:thaiToday()};
-  setSum(ps1SumHtml(snap) + (r.trimmed ? `<span class="ps1Note" data-ps1-trim>Shares reduced to fit max position ${b.sizeMax}%</span>` : ''));
+    sizePct:r.sizePct, leftPct:r.leftPct, trimmed:r.trimmed, cashLimited:!!r.cashLimited, lot:r.lot, maxSizePct:b.sizeMax, date:thaiToday()};
+  setSum(ps1SumHtml(snap) + (r.trimmed ? `<span class="ps1Note" data-ps1-trim>${r.cashLimited ? 'เงินสดคุม — shares reduced to fit free cash ฿' + fmt0(cx.cashTHB) : 'Shares reduced to fit max position ' + b.sizeMax + '%'}</span>` : ''));
   const sym = mk==='US' ? '$' : '฿', ed = snap.Edate ? ` (as of ${snap.Edate})` : '';
   setDet(`<div>Portfolio value E: ฿${fmt0(E)}${ed}</div><div>Idea risk ${+typed.toFixed(4)}% × Regime ${Math.round(F.f*100)}%${dd<1 ? ' × DD ' + dd : ''} = ${(typed*m).toFixed(3)}%</div>`
     + `<div>Risk in money: ${sym}${fmt0(r.risk)} · size ${sym}${fmt0(r.cost)} · max position ${b.sizeMax}%</div>`
@@ -12434,7 +12450,7 @@ function coreNewSave(){
     return;
   }
   const id = coreNewId();
-  const card = Object.assign({acct:n.acct, ticker:rd.ticker, market:rd.mk, strategy:'W', ...(n.track==='ladder' ? {track:'ladder'} : {}), plan:(n.ps1Last ? {entry:n.ps1Last.rows[0].px, stop:n.ps1Last.avgStop, risk:n.ps1Last.typed, ps1:n.ps1Last} : Object.assign({entry:rd.entry, stop:rd.stop}, (coreEl('cnRisk') && coreNum(coreEl('cnRisk').value)>0) ? {risk:+coreNum(coreEl('cnRisk').value)} : {})), stop:(n.ps1Last ? n.ps1Last.avgStop : rd.stop), stopHistory:[], px:null, pxDate:null, emaW:null, lots:[], trade_id:null, status:'plan', created_at:now}, tfields, csf);
+  const card = Object.assign({acct:n.acct, ticker:rd.ticker, market:rd.mk, strategy:'W', ...(n.track==='ladder' ? {track:'ladder'} : {}), plan:(n.ps1Last ? {entry:n.ps1Last.rows[0].px, stop:n.ps1Last.stops[0].px, risk:n.ps1Last.typed, ps1:n.ps1Last} : Object.assign({entry:rd.entry, stop:rd.stop}, (coreEl('cnRisk') && coreNum(coreEl('cnRisk').value)>0) ? {risk:+coreNum(coreEl('cnRisk').value)} : {})), stop:(n.ps1Last ? n.ps1Last.stops[0].px : rd.stop), stopHistory:[], px:null, pxDate:null, emaW:null, lots:[], trade_id:null, status:'plan', created_at:now}, tfields, csf);
   coreSheetClose();
   coreWrite(id, card);
   { const want = n.track==='ladder' ? 'ladder' : 'stock'; if(planScope!==want && (planScope==='stock' || planScope==='ladder')) setPlanScope(want); }   /* PL1·A8 — โชว์การ์ดใหม่ในหน้าของ track ตัวเอง */

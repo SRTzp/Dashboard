@@ -114,9 +114,13 @@
     /* size cap -> trim all rows proportionally */
     var cost = 0, q = 0; rows.forEach(function (r) { cost += r.qty * r.px; q += r.qty; });
     res.trimmed = false;
-    if (num(o.maxSizePct) && o.maxSizePct > 0) {
-      var capCost = o.maxSizePct / 100 * E;
+    var capCost = Infinity, sizeCost = Infinity, hasCash = num(o.cash) && o.cash >= 0;
+    if (num(o.maxSizePct) && o.maxSizePct > 0) sizeCost = o.maxSizePct / 100 * E;
+    capCost = sizeCost; if (hasCash && o.cash < capCost) capCost = o.cash;   /* existing free-cash check applies on top of the size cap */
+    res.cashLimited = false;
+    if (capCost < Infinity) {
       if (cost > capCost + EPS) {
+        res.cashLimited = hasCash && o.cash <= sizeCost + EPS;
         var k = capCost / cost; res.trimmed = true; res.untrimmedQty = q;
         cost = 0; q = 0;
         rows.forEach(function (r) { r.qty = floorLot(r.qty * k, lot); cost += r.qty * r.px; q += r.qty; });
