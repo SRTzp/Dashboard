@@ -34,3 +34,16 @@ Per scenario flips (none/opp/zero): F1 0/0/0 · F2 1/1/1 · F3 1/1/1 · F4 0/1/1
 - Daily bars: "last bar" is taken as given from Twelve Data; no intraday-partial-day handling.
 - `sectorHot` still treats `imp` (underperforming·recovering) as "hot" — unchanged trading rule, only badge text changed.
 - Old-model rows seen before refresh show the new labels with "(old model)" and a status-bar "Outdated model" notice.
+
+### Full suite vs main (`tests/runall2.sh`: run_tests.py + phases 1–113 = 114 suites, 2 workers, failures re-run singly)
+Run after the `sectorHot` commit, branch `claude/rrg1` vs a clean `origin/main` worktree.
+
+| | suites ok | suites failing | PASS lines |
+|---|---|---|---|
+| `claude/rrg1` | 100 / 114 | 14 | 11,770 |
+| `main` (worktree) | 83 / 114 | 31 | 10,282 |
+
+- **No suite fails on the branch that passes on main.** The 14 branch failures (p5, 13, 23, 41, 42, 43, 44, 45, 46, 47, 66, 75, 80, 81) all also fail on main, and where both ran to completion the FAIL counts match (p5 3, p23 1, p41 2, p42 2, p44 2, p45 1, p46 2, p75 2, p80 2, p81 4).
+- Their causes are unrelated to RRG: missing git-ignored backup files/dirs (`index.backup-pre-UI1.html`, `tests/_bk_*`), `sync_core_size.py`, and Plan/Tactical lot/risk checks (p80/p81) — pre-existing.
+- The extra 17 main-only failures are an artifact of the clean worktree: git-ignored files (`index.backup-pre-*.html`, `tests/_extracted.js`, `_to_delete/…`) don't exist there, so those suites crash on `ERR_FILE_NOT_FOUND`/`FileNotFoundError` (e.g. p14, 16, 22, 25, 40, 58, 108, 110). So `main` is a noisy baseline; the comparison that matters is the superset relation above.
+- Known false failures per runall2.sh (p13 always) show up as expected.
