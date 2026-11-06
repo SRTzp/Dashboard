@@ -2413,6 +2413,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .wlSortRow{margin:0 0 6px}
 .secBadge{display:inline-block;border-radius:var(--r-pill);padding:1px 7px;font-size:.66rem;font-weight:600;white-space:nowrap;background:var(--surface2);color:var(--muted)}
 .secBadge.hot{background:var(--green-dim);color:var(--green)}
+.secBadge.rec{background:var(--blue-dim);color:var(--blue)}
 .secBadge.cold,.secBadge.off{background:var(--surface2);color:var(--muted)}
 .jPva{font-size:.74rem;color:var(--muted);margin-top:3px;white-space:normal;line-height:1.35}
 .jBkt{width:100%;border-collapse:collapse;font-size:.74rem;margin:2px 0 10px;table-layout:fixed}
@@ -13609,14 +13610,14 @@ function sectorState(etf){
   try{ const n = sdNote(etf); followed = !!(n && n.follow); }catch(e){}
   return {quad, followed};
 }
-const SECTOR_QN = {lead:'Outperforming ↗', imp:'Underperforming ↗', weak:'Outperforming ↘', lag:'Underperforming ↘', flat:'Neutral'};   /* RRG1 — ชื่อสั้นสำหรับ badge */
-function sectorHot(item){ const st = sectorState(item && item.sector_etf); return !!(st && (st.quad==='lead' || st.quad==='imp' || st.followed)); }
+const SECTOR_QN = {lead:'Outperforming ↗', imp:'Recovering', weak:'Outperforming ↘', lag:'Underperforming ↘', flat:'Neutral'};   /* RRG1 — ชื่อสั้นสำหรับ badge */
+function sectorHot(item){ const st = sectorState(item && item.sector_etf); return !!(st && (st.quad==='lead' || st.quad==='weak' || st.followed)); }
 function sectorBadgeHtml(item){
   const etf = item && item.sector_etf; if(!etf) return '';
   const e = escHtml;
   if(etf==='TH') return `<span class="secBadge off" data-sec-badge="TH" title="Thai market sector">TH</span>`;
   const st = sectorState(etf), q = st && st.quad, star = st && st.followed ? ' ★' : '';
-  const cls = (q==='lead' || q==='imp') ? 'hot' : (q==='weak' || q==='lag') ? 'cold' : 'off';
+  const cls = (q==='lead' || q==='weak') ? 'hot' : q==='imp' ? 'rec' : q==='lag' ? 'cold' : 'off';   /* RRG1 — hot = Outperforming เท่านั้น · imp = 'Recovering' ของตัวเอง (ไม่ hot) */
   return `<span class="secBadge ${cls}" data-sec-badge="${e(etf)}" data-sec-q="${q||''}" title="Sector ETF ${e(etf)}${q ? ' · ' + SECTOR_QN[q] : ' · no relative-trend data'}">${e(etf)}${q ? ' · ' + SECTOR_QN[q] : ''}${star}</span>`;
 }
 let wlHotFirst = false;

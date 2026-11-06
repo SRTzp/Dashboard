@@ -26,3 +26,9 @@ New coverage: `tests/rrg1_check.py` (F1–F8, G migration; H9–H11 in the H com
 | p86 / p105 | card text contains the state label ("Outperforming · strengthening" / "Underperforming · recovering") | card text contains the three chips ("Price: Up · Relative: Positive · Momentum: Strengthening" etc.); the 5-state label lives in Details | brief H: card = 3 chips, C's 5 states = internal logic + Details |
 | fixtures | — | `rrg1_fixture.py` adds pt/ptEma/ptEmaPrev/ptN/ptLag (pt follows quad sign) | H fields |
 Today row (Sectors) keeps the state label — out of scope for the card.
+
+## sectorHot = Outperforming only
+`sectorHot`: lead or weak (or ★ followed). `imp` is no longer hot; its badge reads "Recovering" with its own class `rec` (blue).
+| Suite | Old | New |
+|---|---|---|
+| p112 §3.5 | SMH(imp,★) "SMH · Underperforming ↗ ★" hot; IGV(weak) cold; XLE(imp) "… ↗" hot; hot-first = {NVDA, XOMX} | "SMH · Recovering ★" rec (hot-first via ★); IGV hot; "XLE · Recovering" rec; hot-first = {NVDA, MSFT} |
