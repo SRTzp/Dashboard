@@ -6,4 +6,5 @@ MODELIZE_JS = """(rows)=>(rows||[]).map(x=>{ if(!x || x.err || x.model===2) retu
   o.rsTrend = x.quad==='flat' ? 0 : (pos ? Math.abs(x.rsTrend||0.5)+0.1 : -(Math.abs(x.rsTrend||0.5)+0.1));
   o.rawChg = x.rawChg!=null ? x.rawChg : (up ? 0.05 : -0.05);
   o.rel = x.quad==='flat' ? 'neu' : (pos ? 'pos' : 'neg'); o.momUp = up; o.lag = 5; o.bars = o.bars||300; o.close = o.close||100; o.benchClose = o.benchClose||100;
+  o.pt = x.pt || (pos ? 'up' : 'down'); o.ptEma = o.ptEma || 100; o.ptEmaPrev = o.ptEmaPrev || 99; o.ptN = o.ptN || 50; o.ptLag = o.ptLag || 5;
   o.lastObs = o.lastObs || x.date; return o; })"""

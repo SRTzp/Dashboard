@@ -130,6 +130,45 @@ def main():
             check("G failed refetch: old results retained, still outdated, NOT stamped migrated", g["o2"]["err"] and g["o2"]["outdated"] and g["o2"]["model"] is None and g["o2"]["rows"] == 1 and g["o2"]["noteModel"] is None, g["o2"])
             check("G no 'Revisit · phase changed' from the model change (flag off on old-model note)", g["o2"]["flag"] is False and g["o3"]["flag"] is False, g)
             check("G successful refetch: model=2, note re-baselined once (phase = current, model stamp, model_updated date)", g["o3"]["model"] == 2 and not g["o3"]["outdated"] and g["o3"]["noteModel"] == 2 and g["o3"]["updated"] == "2026-11-04" and g["o3"]["phase"] == g["o3"]["curPhase"], g["o3"])
+            # ---- H: own price trend is a separate dimension ----
+            h = js(page, r"""()=>{
+              const N = 400, mk = (f, bf)=>{ const c=[], b=[]; for(let i=0;i<N;i++){ const bb = bf ? bf(i) : 100; b.push(bb); c.push(bb*f(i)); } return {c, b}; };
+              const run = (s, tf)=> rrgCompute(s.c, s.c, s.b, tf||'D', {lastObs:'2026-11-04'});
+              const o = {};
+              // H9 asset -3% while SPY -8% over the last 60 bars
+              const f3 = (()=>{ const b=[], c=[]; for(let i=0;i<N;i++){ const t=Math.max(0,i-(N-60))/60; b.push(100*(1-0.08*t)); c.push(100*(1-0.03*t)); } return {c, b}; })();
+              const r9 = run(f3); o.h9 = {rel:r9.rel, pt:r9.pt, px:f3.c[N-1]/f3.c[N-60]-1};
+              // H10 price above a falling EMA: long decline then a sharp 3-bar bounce above EMA50 (EMA still falling)
+              const dec = mk(i=> i<N-3 ? (2 - i*0.0025) : (2 - (N-4)*0.0025)*1.08, null);
+              const r10 = run(dec); o.h10 = {pt:r10.pt, above: r10.close > r10.ptEma, falling: r10.ptEma < r10.ptEmaPrev};
+              // H11 rising and outperforming (accelerating up-trend vs flat SPY)
+              const up = mk(i=>Math.exp(0.0004*i + 0.0000030*i*i), null);
+              const r11 = run(up); o.h11 = {pt:r11.pt, rel:r11.rel, momUp:r11.momUp, quad:r11.quad};
+              // weekly rule: EMA40, lag 4
+              const wk = []; for(let i=0;i<120;i++) wk.push(100*Math.exp(0.004*i));
+              const rw = rrgCompute(wk, wk, wk.map(()=>100), 'W', {lastObs:'2026-10-30'}); o.w = {ptN:rw.ptN, ptLag:rw.ptLag, pt:rw.pt};
+              const rd = run(up,'D'); o.d = {ptN:rd.ptN, ptLag:rd.ptLag};
+              // pt does not influence the relative state: same RS series with a price-trend-flipping overlay on both legs leaves state unchanged
+              const a = mk(i=>Math.exp(-0.0004*i - 0.0000025*i*i), i=>100*Math.exp(0.003*i)), b2 = mk(i=>Math.exp(-0.0004*i - 0.0000025*i*i), i=>100*Math.exp(-0.003*i));
+              const ra = run(a), rb = run(b2); o.indep = {qa:ra.quad, qb:rb.quad, pa:ra.pt, pb:rb.pt};
+              // DOM: card shows three chips + date, state label only in Details
+              const f = ffState(); f.rrgTf = 'D';
+              const row = Object.assign({sym:'PAVE', name:'Infrastructure', date:'2026-11-04'}, r9);
+              f.rrg = {rowsD:[row], rowsW:[], build:RRG_BUILD, model:RRG_MODEL, lastBar:rrgToday(), day:rrgToday(), at:'', loading:false, err:''};
+              window.rrgToday = ()=>'2026-11-04'; f.rrg.day = '2026-11-04'; f.rrg.lastBar = '2026-11-04';
+              switchTab('flow'); f.themesCol=false; f.themesColUser=true; ffRenderThemes();
+              const card = document.querySelector('#ffThemes [data-rr="PAVE"]');
+              o.dom = {chips: [...card.querySelectorAll('.rr-ch')].map(e=>e.innerText.replace(/\s+/g,' ').trim()), date: (card.querySelector('.rr-pd')||{}).innerText, head: card.querySelector('.sd-hd .l1').innerText.replace(/\s+/g,' '), det: !!card.querySelector('details.rr-dt'), tipPrice: card.querySelector('[data-rr-chip=price]').title};
+              card.querySelector('details.rr-dt').open = true;
+              o.dom.detTxt = card.querySelector('details.rr-dt').innerText.replace(/\s+/g,' ');
+              return o; }""")
+            check("H9 ETF -3% while SPY -8% -> Relative Positive + Price Down (not 'rising')", h["h9"]["rel"] == "pos" and h["h9"]["pt"] == "down" and h["h9"]["px"] < 0, h["h9"])
+            check("H10 price above a falling EMA -> Mixed", h["h10"]["pt"] == "mixed" and h["h10"]["above"] and h["h10"]["falling"], h["h10"])
+            check("H11 rising and outperforming -> Up + Positive + Strengthening", h["h11"]["pt"] == "up" and h["h11"]["rel"] == "pos" and h["h11"]["momUp"] is True and h["h11"]["quad"] == "lead", h["h11"])
+            check("H rule: weekly = EMA40 / slope 4 bars · daily = EMA50 / slope 5 bars", h["w"]["ptN"] == 40 and h["w"]["ptLag"] == 4 and h["d"]["ptN"] == 50 and h["d"]["ptLag"] == 5 and h["w"]["pt"] == "up", {"w": h["w"], "d": h["d"]})
+            check("H price trend never changes the relative state (same RS, opposite SPY drift)", h["indep"]["qa"] == h["indep"]["qb"] and h["indep"]["pa"] != h["indep"]["pb"], h["indep"])
+            check("H card: three chips (Price/Relative/Momentum) + price date; 5-state label only in Details", h["dom"]["chips"] == ["Price: Down", "Relative: Positive", "Momentum: Strengthening"] or (len(h["dom"]["chips"]) == 3 and h["dom"]["chips"][0] == "Price: Down" and h["dom"]["chips"][1] == "Relative: Positive") and h["dom"]["date"] == "to 4 Nov" and h["dom"]["det"] and "Outperforming" not in h["dom"]["head"] and "Outperforming" in h["dom"]["detTxt"] and "EMA50" in h["dom"]["detTxt"], h["dom"])
+            check("H price chip tooltip lists the rule, timeframe and last price date", all(k in h["dom"]["tipPrice"] for k in ("EMA50", "Daily", "2026-11-04", "Mixed")), h["dom"]["tipPrice"])
             check("no console errors", not [e for e in ce if "favicon" not in e.lower()] and not pe, {"ce": ce[:3], "pe": pe[:3]})
         finally:
             b.close()

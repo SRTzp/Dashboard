@@ -923,6 +923,7 @@ details.panel[open]>summary::before{transform:rotate(90deg)}
 .ffQ.lag{background:var(--red-dim)}
 .ffQ.imp{background:var(--blue-dim)}
 .ffQ.flat{background:var(--surface2,rgba(128,128,128,.10))}.ffQ.flat .ffQt{color:var(--muted)}.ffQ.flat .ffChip{color:var(--muted)}
+.rr-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}.rr-ch{border:1px solid;border-radius:99px;padding:1px 8px;font-size:.7rem;white-space:nowrap}.rr-ch b{font-weight:700}.rr-pd{font-size:.68rem}
 .rr-dt{margin-top:6px;font-size:.74rem;color:var(--muted)}.rr-dt summary{cursor:pointer;font-weight:600;list-style:none}.rr-dt summary::-webkit-details-marker{display:none}.rr-dg{display:grid;gap:3px;margin-top:6px;overflow-wrap:anywhere}.rr-dg b{color:var(--text)}
 .ffQt{font-family:var(--mono);font-size:.64rem;font-weight:700;letter-spacing:.06em}
 .ffQ.lead .ffQt{color:var(--teal)}.ffQ.weak .ffQt{color:var(--amber)}
@@ -22984,6 +22985,7 @@ const RRG_ST = {
    'none' = ตามตารางตรง ๆ · 'opp' = ออกจากสถานะเมื่อข้ามขีดตรงข้าม (∓ε / ∓δ) · 'zero' = ออกเมื่อข้ามศูนย์
    ค่าที่เลือก + จำนวน flip บน scenario ดูใน PR / tests/rrg1_check.py */
 const RRG_MODEL = 2, RRG_K = 0.10, RRG_HYST = 'zero';
+const RRG_PT = {up:['Up','var(--teal)'], down:['Down','var(--red)'], mixed:['Mixed','var(--muted)']};
 const RRG_QLBL = {lead:[RRG_ST.lead.l,RRG_ST.lead.c], weak:[RRG_ST.weak.l,RRG_ST.weak.c], lag:[RRG_ST.lag.l,RRG_ST.lag.c], imp:[RRG_ST.imp.l,RRG_ST.imp.c], flat:[RRG_ST.flat.l,RRG_ST.flat.c]};
 /* คืน {key[], rel[], up[]} ตามแท่ง (null ก่อน start) */
 function rrgStateSeries(raw, chg, start, eps, delta, mode){
@@ -23081,11 +23083,17 @@ function rrgCompute(closes, highs, bench, tfKey, opt){
   const pi = last - (tfKey==='W' ? 1 : 5);
   const prevQuad = (pi>=0 && S.key[pi]) ? S.key[pi] : null;
   const hi52 = Math.max.apply(null, highs.slice(Math.max(0, n - (tfKey==='W' ? 52 : 252))));
+  /* RRG1 H — Price trend (แยกจาก relative เสมอ ไม่ปนกัน): W = close vs EMA40 สัปดาห์ · D = close vs EMA50 วัน · slope = EMA ตอนนี้ vs EMA ย้อน 4 / 5 แท่ง
+     Up = close เหนือ EMA ที่ขึ้น · Down = close ใต้ EMA ที่ลง · อื่น ๆ = Mixed */
+  const PN = tfKey==='W' ? 40 : 50, PL = tfKey==='W' ? 4 : 5;
+  const pEma = rrgEma(closes, PN), ptEma = pEma[last], ptEmaPrev = pEma[last-PL];
+  const pAbove = closes[last] > ptEma, pBelow = closes[last] < ptEma, pRise = ptEma > ptEmaPrev, pFall = ptEma < ptEmaPrev;
+  const pt = (pAbove && pRise) ? 'up' : (pBelow && pFall) ? 'down' : 'mixed';
   /* rsTrend = raw (EMA12−EMA26 ของ RS, %) · rawChg = raw − raw[lag] · rel/momUp = ทิศหลัง hysteresis */
   return {ratio, mom, quad, prevQuad, days, dRatio, dMom, rsTrend:raw[last], rawChg:momRaw[last],
           rel:S.rel[last], momUp:S.up[last], eps, delta, lag:TF.momLag, model:RRG_MODEL, flips:rrgFlips(S.key.slice(-TF.zWin)), flatBars:S.key.slice(-TF.zWin).filter(k=>k==='flat').length,
           off52: hi52>0 ? (closes[last]/hi52-1)*100 : 0, close:closes[last], benchClose:bench[last], bars:n,
-          lastObs:opt.lastObs || null};
+          pt, ptEma, ptEmaPrev, ptN:PN, ptLag:PL, lastObs:opt.lastObs || null};
 }
 
 /* ---------- ดึงราคาจาก Twelve Data ---------- */
@@ -23596,6 +23604,19 @@ function rrgTip(x, tf){
   return (st ? st.l : '') + ' — relative to ' + RRG_BENCH + ', not absolute price · ' + T.label + ' bars · EMA' + RRG_CFG.fast + '/' + RRG_CFG.slow + ' of close/' + RRG_BENCH
     + ' · change over ' + T.momLag + ' bars · z-scores use a ' + T.zWin + '-bar (1y) window as context only';
 }
+/* RRG1 H — 3 ชิปบนการ์ด: Price trend / Relative trend / Relative momentum (tf เดียวกับมุมมอง) · ไม่รวมเป็นคะแนนเดียว */
+function rrgChipsHtml(x, tf){
+  if(x.err || x.model !== RRG_MODEL) return '';
+  const E = ffEsc, T = RRG_TF[tf] || RRG_TF.D, W = tf === 'W', d = x.lastObs || x.date;
+  const pt = RRG_PT[x.pt], rel = x.rel === 'pos' ? ['Positive','var(--teal)'] : x.rel === 'neg' ? ['Negative','var(--red)'] : ['Neutral','var(--muted)'];
+  const mo = x.momUp ? ['Strengthening','var(--teal)'] : ['Weakening','var(--amber)'];
+  const chip = (k, lbl, v, tip)=> '<span class="rr-ch" data-rr-chip="' + k + '" style="color:' + v[1] + ';border-color:' + v[1] + '" title="' + E(tip) + '">' + lbl + ': <b>' + v[0] + '</b></span>';
+  const ptTip = 'Price trend (own price, not vs ' + RRG_BENCH + '): close vs ' + (W ? 'EMA40 (weeks)' : 'EMA50 (days)') + ' and the EMA slope over ' + (x.ptLag || (W ? 4 : 5)) + ' bars. Up = close above a rising EMA · Down = close below a falling EMA · otherwise Mixed. ' + T.label + ' bars · last price date ' + (d || '—');
+  const relTip = 'Relative trend vs ' + RRG_BENCH + ': sign of the EMA' + RRG_CFG.fast + '/' + RRG_CFG.slow + ' spread of close/' + RRG_BENCH + ' beyond a ±ε dead band. Positive = beating ' + RRG_BENCH + ', Negative = lagging it — says nothing about whether price is rising. ' + T.label + ' bars.';
+  const moTip = 'Relative momentum: is the relative trend improving (change over ' + (x.lag || T.momLag) + ' bars above +δ, with hysteresis) or fading. ' + T.label + ' bars.';
+  return '<div class="rr-chips">' + chip('price', 'Price', pt || ['—','var(--muted)'], ptTip) + chip('rel', 'Relative', rel, relTip) + chip('mom', 'Momentum', mo, moTip)
+    + '<span class="sub rr-pd" title="latest price date used (' + T.label + ')">to ' + E(sdDateTxt(d)) + '</span></div>';
+}
 let rrgDetOpen = {};
 function rrgDetTog(sym, el){ if(el.open) rrgDetOpen[sym] = true; else delete rrgDetOpen[sym]; }
 function rrgFreshTxt(r){
@@ -23614,6 +23635,7 @@ function rrgDetailsHtml(x, tf){
     + row('Benchmark', RRG_BENCH) + row('Timeframe', T.label + (tf === 'W' ? ' (last completed week)' : ''))
     + row('Bars used', x.bars) + row('Last observation', E(x.lastObs || x.date || '—') + ' (' + E(x.sym) + ') / ' + E(x.lastObsBench || x.lastObs || '—') + ' (' + RRG_BENCH + ')')
     + row('Last close', f2(x.close, 2) + ' (' + E(x.sym) + ') / ' + f2(x.benchClose, 2) + ' (' + RRG_BENCH + ')')
+    + row('Price trend', E((RRG_PT[x.pt] || ['—'])[0]) + ' · close ' + f2(x.close, 2) + ' vs EMA' + (x.ptN || '—') + ' ' + f2(x.ptEma, 2) + ' · EMA slope ' + (x.ptEma && x.ptEmaPrev ? ((x.ptEma / x.ptEmaPrev - 1) * 100).toFixed(2) + '% over ' + x.ptLag + ' bars' : '—') + ' · last price date ' + E(x.lastObs || x.date || '—'))
     + row('Raw RS trend', f2(x.rsTrend, 3) + '% (EMA' + RRG_CFG.fast + ' vs EMA' + RRG_CFG.slow + ' of close/' + RRG_BENCH + ')')
     + row('Raw change (' + x.lag + ' bars)', f2(x.rawChg, 3))
     + row('z vs own 1y history', 'trend ' + f2(x.ratio - 100, 2) + ' · momentum ' + f2(x.mom - 100, 2) + ' (context only)')
@@ -23630,7 +23652,8 @@ function sdRowHtml(x, tf, QLBL){
   if(x.err) top = `<div class="l1"><span>${star}<b>${E(x.sym)}</b> <span class="sub">${E(x.name)}</span></span></div><div class="l2" style="color:var(--amber)">${E(x.err)}</div>`;
   else {
     const q = QLBL[x.quad] || ['—','var(--muted)'], old = x.model !== RRG_MODEL;
-    top = `<div class="l1"><span>${star}<b>${E(x.sym)}</b> <span class="sub">${E(x.name)}</span></span><span><b style="color:${q[1]}" title="${E(rrgTip(x, tf))}">${q[0]}</b>${old ? ' <span class="sub">(old model)</span>' : ''} · <span title="consecutive ${tf === 'W' ? 'weekly' : 'daily'} bars in the same state">${x.days} bars in state</span> · <span class="${x.off52>-5?'':'dn'}">${rrgOffTxt(x)}</span>${sdChip(x)}</span></div>`
+    top = `<div class="l1"><span>${star}<b>${E(x.sym)}</b> <span class="sub">${E(x.name)}</span></span><span>${old ? '<b style="color:' + q[1] + '" title="' + E(rrgTip(x, tf)) + '">' + q[0] + '</b> <span class="sub">(old model)</span> · ' : ''}<span title="consecutive ${tf === 'W' ? 'weekly' : 'daily'} bars in the same state (${E(q[0])})">${x.days} bars in state</span> · <span class="${x.off52>-5?'':'dn'}">${rrgOffTxt(x)}</span>${sdChip(x)}</span></div>`
+      + rrgChipsHtml(x, tf)
       + `<div class="l2"><span class="g"><i>RS level vs 1y norm</i>${rrgGaugeHtml(x.ratio, x.dRatio, true)}</span><span class="g"><i>RS momentum vs 1y norm</i>${rrgGaugeHtml(x.mom, x.dMom, true)}</span></div>`;
   }
   return `<div class="ln3-rr sd-row${x.err ? ' dim' : ''}${open ? ' open' : ''}" data-rr="${E(sym)}"><div class="sd-hd" role="button" tabindex="0" aria-expanded="${open}" data-sd-hd="${E(sym)}">${top}${sum}</div>${rrgDetailsHtml(x, tf)}${open ? sdBodyHtml(x) : ''}</div>`;

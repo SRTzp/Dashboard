@@ -19,3 +19,10 @@ and seeds stamp `f.rrg.model = RRG_MODEL` + `lastBar`.
 
 Colour classes of the sector badge (`hot` = lead/imp, `cold` = weak/lag) are unchanged — only text.
 New coverage: `tests/rrg1_check.py` (F1–F8, G migration; H9–H11 in the H commit).
+
+## H commit (card = 3 chips)
+| Suite | Old (C commit) | New | Why |
+|---|---|---|---|
+| p86 / p105 | card text contains the state label ("Outperforming · strengthening" / "Underperforming · recovering") | card text contains the three chips ("Price: Up · Relative: Positive · Momentum: Strengthening" etc.); the 5-state label lives in Details | brief H: card = 3 chips, C's 5 states = internal logic + Details |
+| fixtures | — | `rrg1_fixture.py` adds pt/ptEma/ptEmaPrev/ptN/ptLag (pt follows quad sign) | H fields |
+Today row (Sectors) keeps the state label — out of scope for the card.

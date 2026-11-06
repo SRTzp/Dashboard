@@ -122,7 +122,7 @@ def flow_structure(pw, w, h, label):
         check(f"{tag} 1 ค่าเริ่มต้นพับ: ไม่มี .sd-body · aria-expanded=false ทุกแถว", cnt(page, "#ffThemes .sd-body") == 0 and cnt(page, '#ffThemes [data-sd-hd][aria-expanded="false"]') == 5)
         check(f"{tag} 1 สรุปบรรทัดพับ = 'Drivers not yet recorded' (ไม่มีโน้ต)", "Drivers not yet recorded" in (txt(page, f'{sdsel("SMH")} [data-sd-sum]') or ""), txt(page, f'{sdsel("SMH")} [data-sd-sum]'))
         smh = txt(page, sdsel("SMH")) or ""
-        check(f"{tag} 1 องค์ประกอบเดิมคงอยู่: IMPROVING · '4 d' · OFF52W -3.0% · Strength/Momentum · 2 เกจ", "Underperforming · recovering" in smh and "4 bars in state" in smh and "3.0% below 52W high" in smh and "RS level vs 1y norm" in smh and "RS momentum vs 1y norm" in smh and cnt(page, f'{sdsel("SMH")} .rrgGaugeWrap') == 2, smh)
+        check(f"{tag} 1 องค์ประกอบเดิมคงอยู่: IMPROVING · '4 d' · OFF52W -3.0% · Strength/Momentum · 2 เกจ", "Price: Down" in smh and "Relative: Negative" in smh and "Momentum: Strengthening" in smh and "4 bars in state" in smh and "3.0% below 52W high" in smh and "RS level vs 1y norm" in smh and "RS momentum vs 1y norm" in smh and cnt(page, f'{sdsel("SMH")} .rrgGaugeWrap') == 2, smh)
         ok_text = " ".join(js(page, "()=>[...document.querySelectorAll('#ffThemes .ln3-rr:not(.dim)')].map(e=>e.innerText)"))
         check(f"{tag} 1 ป้ายแถวที่คำนวณได้เป็นอังกฤษล้วน (ไม่มีอักษรไทย) · ไม่มีคำไทยของเกจ/Δ", not THAI.search(ok_text), THAI.findall(ok_text)[:5])
         lv = js(page, "()=>[...document.querySelectorAll('#ffThemes .rrgGaugeLbl')].map(e=>e.innerText.replace(/\\s+/g,' ').trim())")
