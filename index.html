@@ -922,6 +922,9 @@ details.panel[open]>summary::before{transform:rotate(90deg)}
 .ffQ.weak{background:var(--amber-dim)}
 .ffQ.lag{background:var(--red-dim)}
 .ffQ.imp{background:var(--blue-dim)}
+.ffQ.flat{background:var(--surface2,rgba(128,128,128,.10))}.ffQ.flat .ffQt{color:var(--muted)}.ffQ.flat .ffChip{color:var(--muted)}
+.rr-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}.rr-ch{border:1px solid;border-radius:99px;padding:1px 8px;font-size:.7rem;white-space:nowrap}.rr-ch b{font-weight:700}.rr-pd{font-size:.68rem}
+.rr-dt{margin-top:6px;font-size:.74rem;color:var(--muted)}.rr-dt summary{cursor:pointer;font-weight:600;list-style:none}.rr-dt summary::-webkit-details-marker{display:none}.rr-dg{display:grid;gap:3px;margin-top:6px;overflow-wrap:anywhere}.rr-dg b{color:var(--text)}
 .ffQt{font-family:var(--mono);font-size:.64rem;font-weight:700;letter-spacing:.06em}
 .ffQ.lead .ffQt{color:var(--teal)}.ffQ.weak .ffQt{color:var(--amber)}
 .ffQ.lag .ffQt{color:var(--red)}.ffQ.imp .ffQt{color:var(--blue)}
@@ -2410,6 +2413,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .wlSortRow{margin:0 0 6px}
 .secBadge{display:inline-block;border-radius:var(--r-pill);padding:1px 7px;font-size:.66rem;font-weight:600;white-space:nowrap;background:var(--surface2);color:var(--muted)}
 .secBadge.hot{background:var(--green-dim);color:var(--green)}
+.secBadge.rec{background:var(--blue-dim);color:var(--blue)}
 .secBadge.cold,.secBadge.off{background:var(--surface2);color:var(--muted)}
 .jPva{font-size:.74rem;color:var(--muted);margin-top:3px;white-space:normal;line-height:1.35}
 .jBkt{width:100%;border-collapse:collapse;font-size:.74rem;margin:2px 0 10px;table-layout:fixed}
@@ -3623,7 +3627,7 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
   <div class="panel" id="ffThemesPanel">
     <div class="ffHead" id="ffThemesHead" onclick="ffToggleThemes()" style="cursor:pointer" title="แตะเพื่อยุบ / ขยายแผนที่ธีม">
       <div>
-        <div class="ffLbl">แผนที่ธีม · RRG อัตโนมัติ · daily · กรองไม้ใหม่ · ไม่คิดคะแนน</div>
+        <div class="ffLbl">แผนที่ธีม · Relative Trend vs SPY อัตโนมัติ · daily · กรองไม้ใหม่ · ไม่คิดคะแนน</div>
         <h2 style="margin:2px 0 0;display:flex;align-items:center;gap:6px"><button type="button" class="wlCollapseBtn" id="ffThemesBtn" tabindex="-1" aria-expanded="true">▾</button><span id="ffThemesTitle">เงินไหลเข้าธีมไหน</span></h2>
       </div>
       <div class="ffScore" id="ffBreadth">—</div>
@@ -3631,12 +3635,13 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
     <div id="ffRrgBar" onclick="event.stopPropagation()"></div>
     <div id="ffThemesBody" style="display:none"><!-- ตั้งต้นซ่อนกันจอกระพริบ — ffApplyThemesCol() จะกางคืนถ้าสถานะที่บันทึกไว้คือเปิด -->
     <div class="ffQuad">
-      <div class="ffQ imp"><div class="ffQt">IMPROVING</div><div class="ffQs">อ่อนแต่กำลังฟื้น · เฝ้าดู</div><div class="ffQbox" id="ffQimp"></div></div>
-      <div class="ffQ lead"><div class="ffQt">LEADING</div><div class="ffQs">แข็งและยังเร่ง · เข้าได้</div><div class="ffQbox" id="ffQlead"></div></div>
-      <div class="ffQ lag"><div class="ffQt">LAGGING</div><div class="ffQs">อ่อนและยังแย่ · ข้าม</div><div class="ffQbox" id="ffQlag"></div></div>
-      <div class="ffQ weak"><div class="ffQt">WEAKENING</div><div class="ffQs">ยังแข็งแต่แผ่ว · เตือนของที่ถือ</div><div class="ffQbox" id="ffQweak"></div></div>
+      <div class="ffQ imp"><div class="ffQt">UNDERPERFORMING · RECOVERING</div><div class="ffQs">แพ้ SPY แต่กำลังฟื้น · เฝ้าดู</div><div class="ffQbox" id="ffQimp"></div></div>
+      <div class="ffQ lead"><div class="ffQt">OUTPERFORMING · STRENGTHENING</div><div class="ffQs">ชนะ SPY และยังเร่ง · เข้าได้</div><div class="ffQbox" id="ffQlead"></div></div>
+      <div class="ffQ lag"><div class="ffQt">UNDERPERFORMING · WORSENING</div><div class="ffQs">แพ้ SPY และยังแย่ลง · ข้าม</div><div class="ffQbox" id="ffQlag"></div></div>
+      <div class="ffQ weak"><div class="ffQt">OUTPERFORMING · FADING</div><div class="ffQs">ยังชนะ SPY แต่แผ่ว · เตือนของที่ถือ</div><div class="ffQbox" id="ffQweak"></div></div>
     </div>
-    <div class="hint" style="margin:6px 0 2px">การหมุนปกติวนตามเข็ม: Improving → Leading → Weakening → Lagging</div>
+    <div class="ffQ flat" id="ffQflatBox" style="display:none;margin-top:8px;min-height:0"><div class="ffQt">NEUTRAL vs SPY</div><div class="ffQs">ใกล้เคียง SPY (อยู่ในช่วง ±ε) · ยังไม่มีทิศ</div><div class="ffQbox" id="ffQflat"></div></div>
+    <div class="hint" style="margin:6px 0 2px">Relative Trend vs SPY — โมเดลเฉพาะของแดชบอร์ด (ไม่ใช่ JdK RRG) · วัดเทียบ SPY ไม่ใช่ราคาขึ้น/ลง · วงจรปกติ: Recovering → Strengthening → Fading → Worsening</div>
     <div id="ffThemes" style="margin-top:4px"></div>
     <div class="hint" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">⚠ SMH · IRBO · IGV · HACK เกาะกลุ่มเทคเดียวกันเกือบหมด — นับ breadth ได้ แต่อย่าถือว่าเป็นเสียงอิสระจากกัน</div>
     </div>
@@ -3928,7 +3933,7 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
     <div id="set1CardFresh"><div class="hint" style="margin:0 0 4px"><b>Data freshness</b> · regime · weekly · playbook · RRG</div><div id="frPanel" data-fr-panel></div></div>   <!-- RG2a — อยู่ในการ์ด App (Settings ยังเป็น 5 การ์ด) -->
     <div class="f"><label>Twelve Data API key <span class="crUnit">RRG prices</span></label>
       <input type="text" id="sTdKey" placeholder="paste your key from twelvedata.com" autocomplete="off" spellcheck="false"></div>
-    <div class="hint">Used to fetch daily closes for RRG · free plan ~19 credits/day · the key is stored in your own Firestore and syncs across devices.</div>
+    <div class="hint">Used to fetch daily closes for Relative Trend vs SPY · free plan ~19 credits/day · the key is stored in your own Firestore and syncs across devices.</div>
     <div class="set1row"><span>Reminders · news days · backup · sign-out</span><a href="#" class="setgo" data-set1-link="app" onclick="event.preventDefault();set1OpenSys('app')">Open ›</a></div>
     <div class="set1row"><span>Industry manager</span><a href="#" class="setgo" data-set1-link="industry" onclick="event.preventDefault();document.getElementById('setOverlay').classList.remove('show');openIndustryManager()">Open ›</a></div>
   </div></details>
@@ -7835,8 +7840,8 @@ function frRows(){
   try{
     const r = (ffState().rrg) || {}, has = (r.rowsD||[]).length || (r.rowsW||[]).length;
     const ag = has && r.day ? frDayDiff(r.day, rrgToday()) : null;
-    add('rrg', 'RRG sectors', ag, 0, ag==null ? null : {force: ag<=0 ? 'ok' : ag>3 ? 'old' : 'stale'});
-  }catch(e){ add('rrg', 'RRG sectors', null, 0); }
+    add('rrg', 'Relative-trend sectors', ag, 0, ag==null ? null : {force: ag<=0 ? 'ok' : ag>3 ? 'old' : 'stale'});
+  }catch(e){ add('rrg', 'Relative-trend sectors', null, 0); }
   return rows;
 }
 function frTag(key){
@@ -13243,7 +13248,7 @@ function ln3SetBuild(){
   sub(SC, secOf('sizeWl'), 'ขนาดตัวอักษร (3 ช่อง) ▸'); sub(SC, secOf('tabsOffset'), 'แถบ Tab บนสุด ▸');
   /* ── 6 ข้อมูล */
   const D = gb('data');
-  sub(D, secOf('sTdKey'), 'Twelve Data API key (RRG) ▸'); sub(D, sysBy['สำรองข้อมูลลงเครื่อง'], 'สำรองข้อมูลลงเครื่อง ▸');
+  sub(D, secOf('sTdKey'), 'Twelve Data API key (Relative Trend) ▸'); sub(D, sysBy['สำรองข้อมูลลงเครื่อง'], 'สำรองข้อมูลลงเครื่อง ▸');
   const jump = [...document.querySelectorAll('#setOverlay .setjump')].find(b=>/openIndustryManager/.test(b.getAttribute('onclick')||'')); if(jump){ jump.dataset.ln3Keep = '1'; ln3Mv(jump, D); }
   modal.classList.add('ln3set');
   if(lfMac()){   /* LN3fix — Mac: เปิดทีละหมวด (ไม่มีเปิดอยู่ = หมวดแรก) */
@@ -13605,15 +13610,15 @@ function sectorState(etf){
   try{ const n = sdNote(etf); followed = !!(n && n.follow); }catch(e){}
   return {quad, followed};
 }
-const SECTOR_QN = {lead:'Leading', imp:'Improving', weak:'Weakening', lag:'Lagging'};
-function sectorHot(item){ const st = sectorState(item && item.sector_etf); return !!(st && (st.quad==='lead' || st.quad==='imp' || st.followed)); }
+const SECTOR_QN = {lead:'Outperforming ↗', imp:'Recovering', weak:'Outperforming ↘', lag:'Underperforming ↘', flat:'Neutral'};   /* RRG1 — ชื่อสั้นสำหรับ badge */
+function sectorHot(item){ const st = sectorState(item && item.sector_etf); return !!(st && (st.quad==='lead' || st.quad==='weak' || st.followed)); }
 function sectorBadgeHtml(item){
   const etf = item && item.sector_etf; if(!etf) return '';
   const e = escHtml;
   if(etf==='TH') return `<span class="secBadge off" data-sec-badge="TH" title="Thai market sector">TH</span>`;
   const st = sectorState(etf), q = st && st.quad, star = st && st.followed ? ' ★' : '';
-  const cls = (q==='lead' || q==='imp') ? 'hot' : (q==='weak' || q==='lag') ? 'cold' : 'off';
-  return `<span class="secBadge ${cls}" data-sec-badge="${e(etf)}" data-sec-q="${q||''}" title="Sector ETF ${e(etf)}${q ? ' · ' + SECTOR_QN[q] : ' · no RRG data'}">${e(etf)}${q ? ' · ' + SECTOR_QN[q] : ''}${star}</span>`;
+  const cls = (q==='lead' || q==='weak') ? 'hot' : q==='imp' ? 'rec' : q==='lag' ? 'cold' : 'off';   /* RRG1 — hot = Outperforming เท่านั้น · imp = 'Recovering' ของตัวเอง (ไม่ hot) */
+  return `<span class="secBadge ${cls}" data-sec-badge="${e(etf)}" data-sec-q="${q||''}" title="Sector ETF ${e(etf)}${q ? ' · ' + SECTOR_QN[q] : ' · no relative-trend data'}">${e(etf)}${q ? ' · ' + SECTOR_QN[q] : ''}${star}</span>`;
 }
 let wlHotFirst = false;
 function wlSetHot(on){ wlHotFirst = !!on; renderWatchlist(); }
@@ -22935,7 +22940,7 @@ function ffSet(list,i,v){
      => breadth จึงนับจาก rsTrend (= raw ตัวดิบก่อน z-score) > 0
         ซึ่งแปลว่า EMA12(rs) > EMA26(rs) = ชนะ SPY อยู่จริง ๆ ณ ตอนนี้ (ดู ffRenderThemes)
 ============================================================================== */
-const RRG_BUILD = 6;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง
+const RRG_BUILD = 7;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง
                           + ใช้ทิ้งแคชอัตโนมัติเมื่อรูปร่างแถวเปลี่ยน (ดู ffState) */
 const RRG_BENCH = 'SPY';
 const RRG_SYMS = [
@@ -22965,18 +22970,64 @@ function rrgWeekKey(ds){
   d.setUTCDate(d.getUTCDate() - ((d.getUTCDay()+6)%7));   /* เลื่อนไปวันจันทร์ */
   return d.toISOString().slice(0,10);
 }
-function rrgToWeekly(dates, closes, highs){
-  const wd=[], wc=[], wh=[];
+function rrgQuadOf(rel, up){   /* RRG1 — คีย์สถานะจากทิศ RS (rel: 'pos'|'neg'|'neu') + โมเมนตัม (up: boolean) · ไม่ใช้ z-score ตัดสิน */
+  if(rel === 'neu') return 'flat';
+  return rel === 'pos' ? (up ? 'lead' : 'weak') : (up ? 'imp' : 'lag');
+}
+/* RRG1 — ข้อความ/สีของ 5 สถานะ (คีย์เดิมเก็บไว้ให้ประวัติเฟสที่บันทึกไว้) · l = เต็ม · s = สั้น (badge) */
+const RRG_ST = {
+  lead:{l:'Outperforming · strengthening', s:'Outperforming ↗', c:'var(--teal)'},
+  weak:{l:'Outperforming · fading',        s:'Outperforming ↘', c:'var(--amber)'},
+  imp: {l:'Underperforming · recovering',  s:'Underperforming ↗', c:'var(--blue)'},
+  lag: {l:'Underperforming · worsening',   s:'Underperforming ↘', c:'var(--red)'},
+  flat:{l:'Neutral vs benchmark',          s:'Neutral', c:'var(--muted)'}
+};
+/* RRG1 — ε, δ = RRG_K × SD ของ raw / ของ change ในหน้าต่างเดียวกับ z (D 252 · W 52) · hysteresis:
+   'none' = ตามตารางตรง ๆ · 'opp' = ออกจากสถานะเมื่อข้ามขีดตรงข้าม (∓ε / ∓δ) · 'zero' = ออกเมื่อข้ามศูนย์
+   ค่าที่เลือก + จำนวน flip บน scenario ดูใน PR / tests/rrg1_check.py */
+const RRG_MODEL = 2, RRG_K = 0.10, RRG_HYST = 'zero';
+const RRG_PT = {up:['Up','var(--teal)'], down:['Down','var(--red)'], mixed:['Mixed','var(--muted)']};
+const RRG_QLBL = {lead:[RRG_ST.lead.l,RRG_ST.lead.c], weak:[RRG_ST.weak.l,RRG_ST.weak.c], lag:[RRG_ST.lag.l,RRG_ST.lag.c], imp:[RRG_ST.imp.l,RRG_ST.imp.c], flat:[RRG_ST.flat.l,RRG_ST.flat.c]};
+/* คืน {key[], rel[], up[]} ตามแท่ง (null ก่อน start) */
+function rrgStateSeries(raw, chg, start, eps, delta, mode){
+  const n = raw.length, key = new Array(n).fill(null), relA = new Array(n).fill(null), upA = new Array(n).fill(null);
+  let rel = null, up = false;
+  const m = mode || RRG_HYST;
+  for(let i=start;i<n;i++){
+    const r = raw[i], c = chg[i];
+    const fresh = r > eps ? 'pos' : r < -eps ? 'neg' : 'neu';
+    if(rel === null || m === 'none'){ rel = fresh; up = c > delta; }
+    else {
+      const ex = m === 'opp' ? eps : 0, ed = m === 'opp' ? delta : 0;
+      if(rel === 'neu') rel = fresh;
+      else if(rel === 'pos'){ if(r < -ex) rel = fresh; }
+      else if(r > ex) rel = fresh;
+      if(up){ if(c < -ed) up = false; } else if(c > delta) up = true;
+    }
+    relA[i] = rel; upA[i] = up; key[i] = rrgQuadOf(rel, up);
+  }
+  return {key, rel:relA, up:upA};
+}
+function rrgFlips(keys){ let n = 0, p = null; keys.forEach(k=>{ if(k === null) return; if(p !== null && k !== p) n++; p = k; }); return n; }
+function rrgDayDiff(a, b){ return Math.round((Date.parse(b+'T00:00:00Z') - Date.parse(a+'T00:00:00Z')) / 86400000); }
+/* รวมแท่งรายวันเป็นรายสัปดาห์: ปิดวันสุดท้ายของสัปดาห์ · high = สูงสุดในสัปดาห์ · key = วันจันทร์
+   lastObs = วันซื้อขายจริงวันสุดท้ายของแท่ง · partial = แท่งสุดท้ายยังไม่จบสัปดาห์ (ไม่ใช่ศุกร์ และวันนี้ยังไม่พ้นศุกร์ของสัปดาห์นั้น) */
+function rrgToWeekly(dates, closes, highs, refDate){
+  const wd=[], wc=[], wh=[], lo=[];
   let key=null;
   for(let i=0;i<dates.length;i++){
     const k = rrgWeekKey(dates[i]);
-    if(k!==key){ key=k; wd.push(k); wc.push(closes[i]); wh.push(highs[i]); }
-    else { wc[wc.length-1]=closes[i]; wh[wh.length-1]=Math.max(wh[wh.length-1], highs[i]); }
+    if(k!==key){ key=k; wd.push(k); wc.push(closes[i]); wh.push(highs[i]); lo.push(dates[i]); }
+    else { wc[wc.length-1]=closes[i]; wh[wh.length-1]=Math.max(wh[wh.length-1], highs[i]); lo[lo.length-1]=dates[i]; }
   }
-  return {dates:wd, closes:wc, highs:wh};
-}
-function rrgQuadOf(ratio, mom){
-  return ratio>=100 ? (mom>=100 ? 'lead' : 'weak') : (mom>=100 ? 'imp' : 'lag');
+  let partial = false;
+  if(wd.length){
+    const lastObs = lo[lo.length-1], dow = new Date(lastObs+'T00:00:00Z').getUTCDay();   /* 5 = ศุกร์ */
+    const sat = new Date(wd[wd.length-1]+'T00:00:00Z'); sat.setUTCDate(sat.getUTCDate()+5);   /* เสาร์ของสัปดาห์นั้น */
+    const ref = refDate || lastObs;
+    partial = dow !== 5 && ref < sat.toISOString().slice(0,10);
+  }
+  return {dates:wd, closes:wc, highs:wh, lastObs:lo, partial};
 }
 function rrgEma(arr, n){
   const k = 2/(n+1), out = new Array(arr.length);
@@ -22995,9 +23046,19 @@ function rrgZ(arr, i, win){
   if(!(sd>0)) return null;
   return (arr[i]-mean)/sd;
 }
+/* z-score จากหน้าต่างท้ายสุด win แท่ง — คืน null ถ้าข้อมูลไม่พอหรือนิ่งสนิท (sd=0) */
+function rrgSd(arr, i, win){
+  const start = i-win+1;
+  if(start < 0) return null;
+  let sum=0; for(let k=start;k<=i;k++) sum += arr[k];
+  const mean = sum/win; let ss=0; for(let k=start;k<=i;k++){ const d=arr[k]-mean; ss += d*d; }
+  return Math.sqrt(ss/win);
+}
 /* closes/highs เรียงเก่า->ใหม่ · bench ต้องยาวเท่ากันและจับวันตรงกันมาแล้ว
-   tfKey = 'D' | 'W' — ต่างกันแค่หน้าต่าง normalize กับระยะโมเมนตัม สูตรเดียวกัน */
-function rrgCompute(closes, highs, bench, tfKey){
+   tfKey = 'D' | 'W' · opt = {lastObs, mode} (mode = ทับ RRG_HYST ใช้ในเทส)
+   สถานะ (lead/weak/imp/lag/flat) ตัดจาก raw (EMA spread %) และ raw change เท่านั้น — z-score เก็บเป็นบริบท */
+function rrgCompute(closes, highs, bench, tfKey, opt){
+  opt = opt || {};
   const TF = RRG_TF[tfKey] || RRG_TF.D;
   const n = closes.length;
   const need = RRG_CFG.slow + TF.zWin + TF.momLag;
@@ -23006,42 +23067,49 @@ function rrgCompute(closes, highs, bench, tfKey){
   const fast = rrgEma(rs, RRG_CFG.fast), slow = rrgEma(rs, RRG_CFG.slow);
   const raw = rs.map((_,i)=> slow[i]>0 ? 100*(fast[i]-slow[i])/slow[i] : 0);
   const momRaw = raw.map((v,i)=> i>=TF.momLag ? v-raw[i-TF.momLag] : 0);
-  const ratioS = [], momS = [];
-  for(let i=0;i<n;i++){
-    const zr = rrgZ(raw, i, TF.zWin), zm = rrgZ(momRaw, i, TF.zWin);
-    ratioS.push(zr===null?null:100+zr);
-    momS.push(zm===null?null:100+zm);
-  }
   const last = n-1;
-  if(ratioS[last]===null || momS[last]===null) return {err:'คำนวณไม่ได้ — ข้อมูลนิ่งเกินไป'};
-  const quad = rrgQuadOf(ratioS[last], momS[last]);
-  /* อยู่ควอดแรนต์นี้มากี่แท่งติดกัน — บอกว่าเพิ่งหมุนเข้ามาหรืออยู่มานาน */
+  const zr = rrgZ(raw, last, TF.zWin), zm = rrgZ(momRaw, last, TF.zWin);
+  if(zr===null || zm===null) return {err:'คำนวณไม่ได้ — ข้อมูลนิ่งเกินไป'};
+  const ratio = 100+zr, mom = 100+zm;
+  const eps = RRG_K * rrgSd(raw, last, TF.zWin), delta = RRG_K * rrgSd(momRaw, last, TF.zWin);
+  const S = rrgStateSeries(raw, momRaw, Math.max(RRG_CFG.slow, TF.momLag), eps, delta, opt.mode);
+  const quad = S.key[last];
   let days = 1;
-  for(let i=last-1;i>=0;i--){
-    if(ratioS[i]===null || momS[i]===null) break;
-    if(rrgQuadOf(ratioS[i], momS[i]) !== quad) break;
-    days++;
-  }
-  /* Δ = ทิศและความเร็วที่กำลังเคลื่อน — คือข้อมูลที่ "หาง" ของ RRG ให้ แต่อ่านเป็นตัวเลข
-     จุดเดียวบอกได้แค่ว่าอยู่ตรงไหน Δ บอกว่ากำลังมุ่งไปทางไหน */
+  for(let i=last-1;i>=0;i--){ if(S.key[i] === null || S.key[i] !== quad) break; days++; }
+  /* Δ ของ z — บริบท/ตัวเรียงเท่านั้น ไม่ใช่ตัวตัดสินสถานะ */
   const back = last - TF.momLag;
-  const dRatio = (back>=0 && ratioS[back]!==null) ? ratioS[last]-ratioS[back] : null;
-  const dMom   = (back>=0 && momS[back]!==null)   ? momS[last]-momS[back]     : null;
-  /* F2c — ควอดแรนต์ ณ แท่งของสัปดาห์ก่อน (TF W = แท่ง last-1 · TF D = แท่ง last-5) · หาไม่ได้ = null */
+  const zAt = (arr, i)=>{ const v = rrgZ(arr, i, TF.zWin); return v===null ? null : 100+v; };
+  const rB = back>=0 ? zAt(raw, back) : null, mB = back>=0 ? zAt(momRaw, back) : null;
+  const dRatio = rB!==null ? ratio-rB : null, dMom = mB!==null ? mom-mB : null;
   const pi = last - (tfKey==='W' ? 1 : 5);
-  const prevQuad = (pi>=0 && ratioS[pi]!==null && momS[pi]!==null) ? rrgQuadOf(ratioS[pi], momS[pi]) : null;
+  const prevQuad = (pi>=0 && S.key[pi]) ? S.key[pi] : null;
   const hi52 = Math.max.apply(null, highs.slice(Math.max(0, n - (tfKey==='W' ? 52 : 252))));
-  /* rsTrend = raw ก่อน z-score · > 0 คือ EMA12(rs) เหนือ EMA26(rs) = ชนะ SPY อยู่ ณ ตอนนี้
-     ต้องเก็บแยกเพราะ ratio ผ่าน z-score แล้ว เทียบกับศูนย์ไม่ได้อีก — ใช้เป็นฐานของ breadth */
-  return {ratio:ratioS[last], mom:momS[last], quad, prevQuad, days, dRatio, dMom, rsTrend:raw[last],
-          off52: hi52>0 ? (closes[last]/hi52-1)*100 : 0, close:closes[last], bars:n};
+  /* RRG1 H — Price trend (แยกจาก relative เสมอ ไม่ปนกัน): W = close vs EMA40 สัปดาห์ · D = close vs EMA50 วัน · slope = EMA ตอนนี้ vs EMA ย้อน 4 / 5 แท่ง
+     Up = close เหนือ EMA ที่ขึ้น · Down = close ใต้ EMA ที่ลง · อื่น ๆ = Mixed */
+  const PN = tfKey==='W' ? 40 : 50, PL = tfKey==='W' ? 4 : 5;
+  const pEma = rrgEma(closes, PN), ptEma = pEma[last], ptEmaPrev = pEma[last-PL];
+  const pAbove = closes[last] > ptEma, pBelow = closes[last] < ptEma, pRise = ptEma > ptEmaPrev, pFall = ptEma < ptEmaPrev;
+  const pt = (pAbove && pRise) ? 'up' : (pBelow && pFall) ? 'down' : 'mixed';
+  /* rsTrend = raw (EMA12−EMA26 ของ RS, %) · rawChg = raw − raw[lag] · rel/momUp = ทิศหลัง hysteresis */
+  return {ratio, mom, quad, prevQuad, days, dRatio, dMom, rsTrend:raw[last], rawChg:momRaw[last],
+          rel:S.rel[last], momUp:S.up[last], eps, delta, lag:TF.momLag, model:RRG_MODEL, flips:rrgFlips(S.key.slice(-TF.zWin)), flatBars:S.key.slice(-TF.zWin).filter(k=>k==='flat').length,
+          off52: hi52>0 ? (closes[last]/hi52-1)*100 : 0, close:closes[last], benchClose:bench[last], bars:n,
+          pt, ptEma, ptEmaPrev, ptN:PN, ptLag:PL, lastObs:opt.lastObs || null};
 }
 
 /* ---------- ดึงราคาจาก Twelve Data ---------- */
 function rrgKey(){ return ((state && state.settings && state.settings.tdKey) || '').trim(); }
 function rrgToday(){ return thaiToday(); }
+/* RRG1 D — สดต้อง: ดึงวันนี้ + โมเดลปัจจุบัน + แท่งล่าสุดของตลาดไม่เก่าเกิน RRG_MAXAGE วันปฏิทิน (หลวม ๆ ไม่ผูกปฏิทินวันหยุด) */
+const RRG_MAXAGE = 4;
+function rrgBarsFresh(r, today){
+  if(!r || !r.lastBar) return false;
+  const d = rrgDayDiff(r.lastBar, today || rrgToday());
+  return d >= -1 && d <= RRG_MAXAGE;
+}
+function rrgOutdated(r){ return !!(r && ((r.rowsD||[]).length || (r.rowsW||[]).length) && r.model !== RRG_MODEL); }
 function rrgCacheFresh(f){
-  return !!(f && f.rrg && f.rrg.day === rrgToday() && (f.rrg.rowsD||[]).length);
+  return !!(f && f.rrg && f.rrg.day === rrgToday() && (f.rrg.rowsD||[]).length && f.rrg.model === RRG_MODEL && rrgBarsFresh(f.rrg));
 }
 function rrgTf(){ return ffState().rrgTf === 'W' ? 'W' : 'D'; }
 function rrgSetTf(tf){
@@ -23144,19 +23212,35 @@ async function rrgRefresh(force){
         rowsD.push(e); rowsW.push(Object.assign({}, e));
         return;
       }
+      /* RRG1 D — เก็บวันล่าสุดของแต่ละชุด "ก่อน" จับคู่วัน: ถ้าไม่ตรงกัน = ไม่จัดสถานะ (ไม่ใช่ปล่อยให้ intersection ซ่อน) */
+      const assetLast = [...map.keys()].sort().pop(), benchLast = [...benchMap.keys()].sort().pop();
+      if(assetLast !== benchLast){
+        const e = {sym:def.s, name:def.n, err:'Mismatched end dates — ' + def.s + ' ' + assetLast + ' vs ' + RRG_BENCH + ' ' + benchLast + ' · not classified', lastObs:assetLast, lastObsBench:benchLast};
+        rowsD.push(e); rowsW.push(Object.assign({}, e));
+        return;
+      }
       /* ใช้เฉพาะวันที่มีทั้งคู่ — วันหยุดไม่ตรงกันจะทำให้ ratio เพี้ยน */
       const dates  = [...map.keys()].filter(d=>benchMap.has(d)).sort();
       const closes = dates.map(d=>map.get(d).c);
       const highs  = dates.map(d=>map.get(d).h);
       const bench  = dates.map(d=>benchMap.get(d).c);
-      const base   = {sym:def.s, name:def.n, date:dates[dates.length-1]};
-      rowsD.push(Object.assign({}, base, rrgCompute(closes, highs, bench, 'D')));
-      const wk  = rrgToWeekly(dates, closes, highs);
-      const wkB = rrgToWeekly(dates, bench, bench);
-      rowsW.push(Object.assign({}, base, {date:wk.dates[wk.dates.length-1]},
-                 rrgCompute(wk.closes, wk.highs, wkB.closes, 'W')));
+      const lastD  = dates[dates.length-1];
+      const base   = {sym:def.s, name:def.n, date:lastD, lastObsBench:benchLast};
+      rowsD.push(Object.assign({}, base, rrgCompute(closes, highs, bench, 'D', {lastObs:lastD})));
+      /* สัปดาห์ที่ยังไม่จบ = partial: จัดสถานะจากสัปดาห์ที่ปิดครบล่าสุด · partial แสดงเป็น preview แยก */
+      const wk  = rrgToWeekly(dates, closes, highs, rrgToday());
+      const wkB = rrgToWeekly(dates, bench, bench, rrgToday());
+      const m = wk.partial ? wk.dates.length-1 : wk.dates.length;
+      const wRow = rrgCompute(wk.closes.slice(0,m), wk.highs.slice(0,m), wkB.closes.slice(0,m), 'W', {lastObs: wk.lastObs[m-1]});
+      const wr = Object.assign({}, base, {date: wk.lastObs[m-1]}, wRow);
+      if(wk.partial && !wRow.err){
+        const pv = rrgCompute(wk.closes, wk.highs, wkB.closes, 'W', {lastObs: wk.lastObs[wk.lastObs.length-1]});
+        if(!pv.err) wr.preview = {asOf:wk.lastObs[wk.lastObs.length-1], quad:pv.quad, rsTrend:pv.rsTrend, rawChg:pv.rawChg, close:pv.close};
+      }
+      rowsW.push(wr);
     });
-    f.rrg = {rowsD, rowsW, build:RRG_BUILD, day:rrgToday(), at:new Date().toISOString(), loading:false, err:''};
+    f.rrg = {rowsD, rowsW, build:RRG_BUILD, model:RRG_MODEL, lastBar:[...benchMap.keys()].sort().pop(), day:rrgToday(), at:new Date().toISOString(), loading:false, err:''};
+    try{ sdRebaseline(); }catch(e){ console.warn('sdRebaseline:', e); }
   }catch(e){
     f.rrg = Object.assign({}, f.rrg, {loading:false, err:String((e && e.message) || e)});
   }finally{
@@ -23207,11 +23291,11 @@ function ffRenderCtx(){
    แทบไม่ต่างกันแม้ความหมายคนละขั้ว จึงแปลงเป็นแถบ + ป้ายความแรง 5 ระดับ ให้เห็นภาพทันทีแทน
    z = ค่าดิบ - 100 · เขียว = แข็งกว่าตลาด (SPY) · แดง = อ่อนกว่า · เหลือง = พอๆ กัน */
 function rrgLevel(z, en){   /* en = TD3b — ป้ายอังกฤษ (มุมมอง lean) · เกณฑ์/สีเดิมทุกอย่าง */
-  if(z >=  1)   return {lbl:en?'Very strong':'แข็งมาก',  col:'var(--teal)'};
-  if(z >=  0.3) return {lbl:en?'Strong':'แข็ง',     col:'rgba(14,156,134,.65)'};
-  if(z >  -0.3) return {lbl:en?'Neutral':'กลาง',     col:'var(--amber)'};
-  if(z >  -1)   return {lbl:en?'Weak':'อ่อน',     col:'rgba(214,69,69,.65)'};
-  return              {lbl:en?'Very weak':'อ่อนมาก', col:'var(--red)'};
+  if(z >=  1)   return {lbl:en?'Well above 1y norm':'สูงกว่าปกติมาก',  col:'var(--teal)'};
+  if(z >=  0.3) return {lbl:en?'Above 1y norm':'สูงกว่าปกติ',     col:'rgba(14,156,134,.65)'};
+  if(z >  -0.3) return {lbl:en?'Normal range':'ปกติ',     col:'var(--amber)'};
+  if(z >  -1)   return {lbl:en?'Below 1y norm':'ต่ำกว่าปกติ',     col:'rgba(214,69,69,.65)'};
+  return              {lbl:en?'Well below 1y norm':'ต่ำกว่าปกติมาก', col:'var(--red)'};
 }
 /* แถบเต็มสเกล = ±2SD (ครอบคลุมข้อมูลส่วนใหญ่จริง ๆ) · จุดกึ่งกลางแถบ = เท่ากับตลาดพอดี */
 function rrgPct(v){
@@ -23242,11 +23326,11 @@ function rrgGaugeHtml(v, d, en){
    Save ไม่แตะ reviewed_* · Follow แตะแค่ follow · ธง "Revisit · phase changed" = เฟสปัจจุบัน (tf เดียวกับตอนรีวิว, แคชสดวันนี้) ≠ reviewed_phase — เป็นตัวเตือนให้ทบทวน ไม่ใช่ข้อสรุป
    ══════════════════════════════════════════════════════════════════════════ */
 const SD_CAP = {driver:1200, summary:2000, revisit:600, title:120, url:500, src:3};   /* TD4a — ขยายจาก 400/800/300 */
-const SD_QPH = {lead:'LEADING', weak:'WEAKENING', lag:'LAGGING', imp:'IMPROVING'};
-const SD_PHL = {LEADING:['Leading','var(--teal)'], WEAKENING:['Weakening','var(--amber)'], LAGGING:['Lagging','var(--red)'], IMPROVING:['Improving','var(--blue)']};
+const SD_QPH = {lead:'LEADING', weak:'WEAKENING', lag:'LAGGING', imp:'IMPROVING', flat:'FLAT'};   /* RRG1 — คีย์เก็บเดิมคงไว้ (reviewed_phase เก่ายังอ่านได้) · แสดงผลเป็นสถานะใหม่ */
+const SD_PHL = {LEADING:[RRG_ST.lead.l,RRG_ST.lead.c], WEAKENING:[RRG_ST.weak.l,RRG_ST.weak.c], LAGGING:[RRG_ST.lag.l,RRG_ST.lag.c], IMPROVING:[RRG_ST.imp.l,RRG_ST.imp.c], FLAT:[RRG_ST.flat.l,RRG_ST.flat.c]};
 const SD_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const SD_Q = "What supports this sector's relative strength, what evidence supports or contradicts that explanation, and what would invalidate it?";
-const SD_FOOT = 'RRG shows relative price strength and momentum, not proof of fund inflows.';
+const SD_FOOT = 'Relative Trend vs SPY (custom model, not JdK RRG) shows relative price trend, not proof of fund inflows.';
 let sdOpen = {}, sdDraft = {}, sdImp = null, sdToastT = 0;
 const sdLen = s => Array.from(String(s==null ? '' : s)).length;
 const sdClip = (s, n) => { const a = Array.from(String(s==null ? '' : s)); return a.length > n ? a.slice(0, n).join('') + '…' : a.join(''); };
@@ -23268,7 +23352,7 @@ function sdAgo(iso){
   return 'Reviewed ' + (n <= 0 ? 'today' : n + 'd ago');
 }
 /* ── อ่าน/เขียนโน้ต ── */
-function sdBlank(){ return {follow:false, driver:'', evidence:{summary:'', sources:[]}, revisit_if:'', research_as_of:null, reviewed_at:null, reviewed_phase:null, reviewed_tf:null, updated_at:null}; }
+function sdBlank(){ return {follow:false, driver:'', evidence:{summary:'', sources:[]}, revisit_if:'', research_as_of:null, reviewed_at:null, reviewed_phase:null, reviewed_tf:null, reviewed_model:null, model_updated:null, updated_at:null}; }
 function sdNorm(r){
   const o = sdBlank(); if(!r || typeof r !== 'object') return o;
   o.follow = r.follow === true;
@@ -23281,6 +23365,8 @@ function sdNorm(r){
   o.reviewed_at = (typeof r.reviewed_at === 'string' && !isNaN(new Date(r.reviewed_at).getTime())) ? r.reviewed_at : null;
   o.reviewed_phase = SD_PHL[r.reviewed_phase] ? r.reviewed_phase : null;
   o.reviewed_tf = (r.reviewed_tf === 'D' || r.reviewed_tf === 'W') ? r.reviewed_tf : null;
+  o.reviewed_model = r.reviewed_model === RRG_MODEL ? RRG_MODEL : null;
+  o.model_updated = (typeof r.model_updated === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.model_updated)) ? r.model_updated : null;
   o.updated_at = typeof r.updated_at === 'string' ? r.updated_at : null;
   return o;
 }
@@ -23291,7 +23377,7 @@ function sdHasEv(n){ return !!(n && (n.evidence.summary.trim() || n.evidence.sou
 function sdCur(sym, tf){
   try{
     const r = ffState().rrg || {}, rows = tf === 'W' ? r.rowsW : r.rowsD;
-    if(!(r.day === rrgToday() && Array.isArray(rows) && rows.length && Array.isArray(r.rowsD) && r.rowsD.length)) return {ok:false, why:'stale'};
+    if(!(r.day === rrgToday() && r.model === RRG_MODEL && rrgBarsFresh(r) && Array.isArray(rows) && rows.length && Array.isArray(r.rowsD) && r.rowsD.length)) return {ok:false, why:'stale'};
     const x = rows.find(y=>y && y.sym === sym);
     if(!x) return {ok:false, why:'missing'};
     if(x.err || !SD_QPH[x.quad]) return {ok:false, why:'err'};
@@ -23300,14 +23386,26 @@ function sdCur(sym, tf){
 }
 function sdFlag(sym, n){   /* ธงเตือนทบทวน: ต้องเคยรีวิวพร้อมเฟสที่บันทึก · เทียบกับ tf เดียวกันเท่านั้น */
   if(!n || !n.reviewed_at || !n.reviewed_phase || !n.reviewed_tf) return false;
+  if(n.reviewed_model !== RRG_MODEL) return false;   /* RRG1 G — เฟสที่บันทึกไว้เป็นของโมเดลเก่า: ห้ามเทียบ (รอ re-baseline ครั้งเดียว) */
   const c = sdCur(sym, n.reviewed_tf);
   return c.ok && c.phase !== n.reviewed_phase;
 }
-function sdChip(x){   /* ↗ = คำใบ้จากค่าเดิม (Δmom ▲ ≥ 0.15) ไม่ใช่สัญญาณ */
-  if(!x || x.err || x.dMom == null || !(x.dMom >= 0.15)) return '';
-  if(x.quad === 'imp') return '<span class="sd-up" data-sd-up="imp">↗ momentum rising</span>';
-  if(x.quad === 'lead') return '<span class="sd-up" data-sd-up="lead">↗ strong + rising</span>';
+function sdChip(x){   /* RRG1 — ใช้ raw: "strengthening" = raw > +ε และ change > +δ · "recovering" = raw < −ε และ change > +δ · ไม่งั้นไม่แสดง */
+  if(!x || x.err || x.model !== RRG_MODEL || !(x.rawChg > x.delta)) return '';
+  if(x.quad === 'imp' && x.rsTrend < -x.eps) return '<span class="sd-up" data-sd-up="imp">↗ recovering (still below SPY)</span>';
+  if(x.quad === 'lead' && x.rsTrend > x.eps) return '<span class="sd-up" data-sd-up="lead">↗ strengthening</span>';
   return '';
+}
+/* RRG1 G — re-baseline ครั้งเดียวหลังได้ข้อมูลโมเดลใหม่: เขียนเฟสใหม่ทับเฟสเก่าที่บันทึกไว้ + ตราโมเดล · ไม่ทำให้เกิด "Revisit · phase changed" */
+function sdRebaseline(){
+  const notes = sdNotes();
+  Object.keys(notes).forEach(sym=>{
+    const n = sdNote(sym);
+    if(!n || !n.reviewed_at || !n.reviewed_phase || !n.reviewed_tf || n.reviewed_model === RRG_MODEL) return;
+    const c = sdCur(sym, n.reviewed_tf);
+    if(!c.ok) return;
+    sdWrite(sym, m=>{ m.reviewed_phase = c.phase; m.reviewed_model = RRG_MODEL; m.model_updated = thaiToday(); return m; });
+  });
 }
 function sdPhaseLbl(p, tf){ const l = SD_PHL[p]; return l ? l[0] + (tf ? ' · ' + (tf === 'W' ? 'Weekly' : 'Daily') : '') : ''; }
 const SD_TAG = '<span class="sd-tag" data-sd-flag="1" title="Phase differs from the one recorded at your last review — a reminder to re-read, not a conclusion that the explanation changed">Revisit · phase changed</span>';
@@ -23348,7 +23446,7 @@ function sdSave(sym, mark){
   const ok = sdWrite(sym, n=>{
     n.driver = d.driver; n.evidence = {summary:d.summary, sources:d.sources.slice(0, SD_CAP.src).map(x=>({title:x.title, url:x.url}))}; n.revisit_if = d.revisit;
     n.research_as_of = d.asof || null; n.updated_at = now;
-    if(mark){ n.reviewed_at = now; n.reviewed_phase = cur.ok ? cur.phase : null; n.reviewed_tf = cur.ok ? cur.tf : null; }
+    if(mark){ n.reviewed_at = now; n.reviewed_phase = cur.ok ? cur.phase : null; n.reviewed_tf = cur.ok ? cur.tf : null; n.reviewed_model = cur.ok ? RRG_MODEL : null; n.model_updated = null; }
     return n;
   });
   if(!ok){ d.msg = "Can't save yet — still syncing with the server. Try again in a moment."; sdRefreshRow(sym, false); return false; }
@@ -23373,11 +23471,11 @@ function sdCancelSrc(sym){ sdDraftOf(sym).addOpen = false; sdRefreshRow(sym, fal
 /* ── AI prompt ── */
 function sdPrompt(sym){
   const x = RRG_SYMS.find(y=>y.s === sym), name = x ? x.n : sym, tf = rrgTf(), c = sdCur(sym, tf);
-  const rrg = c.ok ? SD_PHL[c.phase][0].toUpperCase() + ' (' + (tf === 'W' ? 'Weekly' : 'Daily') + ' RRG, data as of ' + c.date + ')' : 'RRG data unavailable';
+  const rrg = c.ok ? SD_PHL[c.phase][0].toUpperCase() + ' (' + (tf === 'W' ? 'Weekly' : 'Daily') + ' relative trend vs SPY, data as of ' + c.date + ')' : 'Relative-trend data unavailable';
   const tpl = {schema:'sectorDrivers/v1', sector_id:sym, research_as_of:'YYYY-MM-DD', driver:'2–4 sentences; each starts with Fact: or Interpretation:.',
     evidence:{summary:'3–6 dated facts with numbers where available; then any material contradiction.', sources:[{title:'Source title (date)', url:'https://example.com/source'}]}, revisit_if:'2–3 concrete, checkable triggers that would weaken the explanation.'};
   return ['You are helping me review one sector ETF in my trading dashboard.', '',
-    'Sector ID: ' + sym, 'Name: ' + name, 'Reference ETF: ' + sym + ' (relative strength measured against ' + RRG_BENCH + ')', 'Current RRG phase: ' + rrg, "Today's date: " + thaiToday(), '',
+    'Sector ID: ' + sym, 'Name: ' + name, 'Reference ETF: ' + sym + ' (relative strength measured against ' + RRG_BENCH + ')', 'Current relative trend vs SPY: ' + rrg, "Today's date: " + thaiToday(), '',
     'Question: ' + SD_Q, '',
     'Rules:',
     '- Research current sources and note their dates.',
@@ -23476,11 +23574,11 @@ function sdImpApply(){
 function sdSummary(x, n){
   if(!n || (!n.driver.trim() && !sdHasEv(n) && !n.reviewed_at)) return '<span class="sub">Drivers not yet recorded</span>';
   const p = [];
-  if(n.reviewed_at) p.push(n.reviewed_phase ? 'Reviewed ' + sdDateTxt(n.reviewed_at) + ' (' + sdPhaseLbl(n.reviewed_phase, n.reviewed_tf) + ')' : 'Reviewed ' + sdDateTxt(n.reviewed_at) + ' · phase not recorded');
+  if(n.reviewed_at) p.push(n.reviewed_phase ? 'Reviewed ' + sdDateTxt(n.reviewed_at) + ' (' + sdPhaseLbl(n.reviewed_phase, n.reviewed_tf) + ')' + (n.model_updated ? ' · model updated ' + sdDateTxt(n.model_updated) : '') : 'Reviewed ' + sdDateTxt(n.reviewed_at) + ' · phase not recorded');
   else p.push('Not yet reviewed');
   let s = ffEsc(p.join(' · '));
   if(sdFlag(x.sym, n)) s += ' ' + SD_TAG;
-  else if(n.reviewed_phase && !sdCur(x.sym, n.reviewed_tf).ok) s += ' <span class="sub">· no current RRG data for this view</span>';
+  else if(n.reviewed_phase && !sdCur(x.sym, n.reviewed_tf).ok) s += ' <span class="sub">· no current relative-trend data for this view</span>';
   if(n.driver.trim() && !sdHasEv(n)) s += ' <span class="sub">· Supporting evidence not yet recorded.</span>';
   return s;
 }
@@ -23500,6 +23598,53 @@ function sdBodyHtml(x){
     <div class="sd-msg" data-sd-msg role="status">${E(d.msg)}</div>
     <div class="sd-bt"><button type="button" class="small" data-sd-copy onclick="sdCopyPrompt('${sym}',event)">Copy AI prompt</button><button type="button" class="small" data-sd-import onclick="sdImportOpen('${sym}',event)">Import answer</button><span style="flex:1"></span><button type="button" class="small" data-sd-save onclick="sdSave('${sym}',false)">Save</button><button type="button" class="primary small" data-sd-mark onclick="sdSave('${sym}',true)">Save &amp; mark reviewed</button></div></div>`;
 }
+/* RRG1 — ข้อความการ์ด: ป้ายสถานะ/ทูลทิป/ระยะจากจุดสูง 52W · Details (E) */
+function rrgOffTxt(x){ const v = Math.abs(x.off52); return v < 0.05 ? 'at 52W high' : v.toFixed(1) + '% below 52W high'; }
+function rrgTip(x, tf){
+  const T = RRG_TF[tf] || RRG_TF.D, st = RRG_ST[x.quad];
+  return (st ? st.l : '') + ' — relative to ' + RRG_BENCH + ', not absolute price · ' + T.label + ' bars · EMA' + RRG_CFG.fast + '/' + RRG_CFG.slow + ' of close/' + RRG_BENCH
+    + ' · change over ' + T.momLag + ' bars · z-scores use a ' + T.zWin + '-bar (1y) window as context only';
+}
+/* RRG1 H — 3 ชิปบนการ์ด: Price trend / Relative trend / Relative momentum (tf เดียวกับมุมมอง) · ไม่รวมเป็นคะแนนเดียว */
+function rrgChipsHtml(x, tf){
+  if(x.err || x.model !== RRG_MODEL) return '';
+  const E = ffEsc, T = RRG_TF[tf] || RRG_TF.D, W = tf === 'W', d = x.lastObs || x.date;
+  const pt = RRG_PT[x.pt], rel = x.rel === 'pos' ? ['Positive','var(--teal)'] : x.rel === 'neg' ? ['Negative','var(--red)'] : ['Neutral','var(--muted)'];
+  const mo = x.momUp ? ['Strengthening','var(--teal)'] : ['Weakening','var(--amber)'];
+  const chip = (k, lbl, v, tip)=> '<span class="rr-ch" data-rr-chip="' + k + '" style="color:' + v[1] + ';border-color:' + v[1] + '" title="' + E(tip) + '">' + lbl + ': <b>' + v[0] + '</b></span>';
+  const ptTip = 'Price trend (own price, not vs ' + RRG_BENCH + '): close vs ' + (W ? 'EMA40 (weeks)' : 'EMA50 (days)') + ' and the EMA slope over ' + (x.ptLag || (W ? 4 : 5)) + ' bars. Up = close above a rising EMA · Down = close below a falling EMA · otherwise Mixed. ' + T.label + ' bars · last price date ' + (d || '—');
+  const relTip = 'Relative trend vs ' + RRG_BENCH + ': sign of the EMA' + RRG_CFG.fast + '/' + RRG_CFG.slow + ' spread of close/' + RRG_BENCH + ' beyond a ±ε dead band. Positive = beating ' + RRG_BENCH + ', Negative = lagging it — says nothing about whether price is rising. ' + T.label + ' bars.';
+  const moTip = 'Relative momentum: is the relative trend improving (change over ' + (x.lag || T.momLag) + ' bars above +δ, with hysteresis) or fading. ' + T.label + ' bars.';
+  return '<div class="rr-chips">' + chip('price', 'Price', pt || ['—','var(--muted)'], ptTip) + chip('rel', 'Relative', rel, relTip) + chip('mom', 'Momentum', mo, moTip)
+    + '<span class="sub rr-pd" title="latest price date used (' + T.label + ')">to ' + E(sdDateTxt(d)) + '</span></div>';
+}
+let rrgDetOpen = {};
+function rrgDetTog(sym, el){ if(el.open) rrgDetOpen[sym] = true; else delete rrgDetOpen[sym]; }
+function rrgFreshTxt(r){
+  r = r || ffState().rrg || {};
+  if(rrgOutdated(r)) return 'Outdated model — refresh pending';
+  if(r.day !== rrgToday()) return 'Not fetched today · stale';
+  if(!rrgBarsFresh(r)) return 'Market data as of ' + (r.lastBar || '—') + ' · stale';
+  return 'Fresh · market data as of ' + r.lastBar;
+}
+function rrgDetailsHtml(x, tf){
+  if(x.err || x.model !== RRG_MODEL) return '';
+  const E = ffEsc, T = RRG_TF[tf] || RRG_TF.D, st = RRG_ST[x.quad], f2 = (v, d)=> typeof v === 'number' ? v.toFixed(d) : '—';
+  const row = (k, v)=> '<div><b>' + k + '</b> ' + v + '</div>';
+  const pv = x.preview ? row('This week so far (to ' + E(sdDateTxt(x.preview.asOf)) + ')', E((RRG_ST[x.preview.quad]||{}).l || '—') + ' · raw ' + f2(x.preview.rsTrend, 3) + '% (preview — not used for the state)') : '';
+  return '<details class="rr-dt" data-rr-details="' + E(x.sym) + '"' + (rrgDetOpen[x.sym] ? ' open' : '') + ' ontoggle="rrgDetTog(\'' + E(x.sym) + '\',this)"><summary>Details ›</summary><div class="rr-dg">'
+    + row('Benchmark', RRG_BENCH) + row('Timeframe', T.label + (tf === 'W' ? ' (last completed week)' : ''))
+    + row('Bars used', x.bars) + row('Last observation', E(x.lastObs || x.date || '—') + ' (' + E(x.sym) + ') / ' + E(x.lastObsBench || x.lastObs || '—') + ' (' + RRG_BENCH + ')')
+    + row('Last close', f2(x.close, 2) + ' (' + E(x.sym) + ') / ' + f2(x.benchClose, 2) + ' (' + RRG_BENCH + ')')
+    + row('Price trend', E((RRG_PT[x.pt] || ['—'])[0]) + ' · close ' + f2(x.close, 2) + ' vs EMA' + (x.ptN || '—') + ' ' + f2(x.ptEma, 2) + ' · EMA slope ' + (x.ptEma && x.ptEmaPrev ? ((x.ptEma / x.ptEmaPrev - 1) * 100).toFixed(2) + '% over ' + x.ptLag + ' bars' : '—') + ' · last price date ' + E(x.lastObs || x.date || '—'))
+    + row('Raw RS trend', f2(x.rsTrend, 3) + '% (EMA' + RRG_CFG.fast + ' vs EMA' + RRG_CFG.slow + ' of close/' + RRG_BENCH + ')')
+    + row('Raw change (' + x.lag + ' bars)', f2(x.rawChg, 3))
+    + row('z vs own 1y history', 'trend ' + f2(x.ratio - 100, 2) + ' · momentum ' + f2(x.mom - 100, 2) + ' (context only)')
+    + row('State', '<span style="color:' + st.c + '">' + st.l + '</span> · ε ' + f2(x.eps, 3) + ' · δ ' + f2(x.delta, 3) + ' · ' + RRG_K + '×SD, hysteresis: ' + RRG_HYST)
+    + pv
+    + row('Freshness', E(rrgFreshTxt()))
+    + '<div class="sub">Custom model (EMA12/26 of close/' + RRG_BENCH + ', z-scored context) — not JdK RS-Ratio/RS-Momentum.</div></div></details>';
+}
 function sdRowHtml(x, tf, QLBL){
   const sym = x.sym, n = sdNote(sym), open = !!sdOpen[sym], U = tf === 'W' ? 'w' : 'd', E = ffEsc;
   const star = `<button type="button" class="sd-star${n && n.follow ? ' on' : ''}" data-sd-star="${E(sym)}" aria-pressed="${!!(n && n.follow)}" aria-label="${n && n.follow ? 'Unfollow' : 'Follow'} ${E(sym)}" onclick="sdFollow('${sym}',event)">${n && n.follow ? '★' : '☆'}</button>`;
@@ -23507,13 +23652,14 @@ function sdRowHtml(x, tf, QLBL){
   let top;
   if(x.err) top = `<div class="l1"><span>${star}<b>${E(x.sym)}</b> <span class="sub">${E(x.name)}</span></span></div><div class="l2" style="color:var(--amber)">${E(x.err)}</div>`;
   else {
-    const q = QLBL[x.quad];
-    top = `<div class="l1"><span>${star}<b>${E(x.sym)}</b> <span class="sub">${E(x.name)}</span></span><span><b style="color:${q[1]}">${q[0]}</b> · ${x.days} ${U} · <span class="${x.off52>-5?'':'dn'}">${x.off52.toFixed(1)}%</span>${sdChip(x)}</span></div>`
-      + `<div class="l2"><span class="g"><i>Strength</i>${rrgGaugeHtml(x.ratio, x.dRatio, true)}</span><span class="g"><i>Momentum</i>${rrgGaugeHtml(x.mom, x.dMom, true)}</span></div>`;
+    const q = QLBL[x.quad] || ['—','var(--muted)'], old = x.model !== RRG_MODEL;
+    top = `<div class="l1"><span>${star}<b>${E(x.sym)}</b> <span class="sub">${E(x.name)}</span></span><span>${old ? '<b style="color:' + q[1] + '" title="' + E(rrgTip(x, tf)) + '">' + q[0] + '</b> <span class="sub">(old model)</span> · ' : ''}<span title="consecutive ${tf === 'W' ? 'weekly' : 'daily'} bars in the same state (${E(q[0])})">${x.days} bars in state</span> · <span class="${x.off52>-5?'':'dn'}">${rrgOffTxt(x)}</span>${sdChip(x)}</span></div>`
+      + rrgChipsHtml(x, tf)
+      + `<div class="l2"><span class="g"><i>RS level vs 1y norm</i>${rrgGaugeHtml(x.ratio, x.dRatio, true)}</span><span class="g"><i>RS momentum vs 1y norm</i>${rrgGaugeHtml(x.mom, x.dMom, true)}</span></div>`;
   }
-  return `<div class="ln3-rr sd-row${x.err ? ' dim' : ''}${open ? ' open' : ''}" data-rr="${E(sym)}"><div class="sd-hd" role="button" tabindex="0" aria-expanded="${open}" data-sd-hd="${E(sym)}">${top}${sum}</div>${open ? sdBodyHtml(x) : ''}</div>`;
+  return `<div class="ln3-rr sd-row${x.err ? ' dim' : ''}${open ? ' open' : ''}" data-rr="${E(sym)}"><div class="sd-hd" role="button" tabindex="0" aria-expanded="${open}" data-sd-hd="${E(sym)}">${top}${sum}</div>${rrgDetailsHtml(x, tf)}${open ? sdBodyHtml(x) : ''}</div>`;
 }
-const SD_QLBL = {lead:['LEADING','var(--teal)'], weak:['WEAKENING','var(--amber)'], lag:['LAGGING','var(--red)'], imp:['IMPROVING','var(--blue)']};
+const SD_QLBL = RRG_QLBL;
 /* TD4a — ช่องข้อความโตตามเนื้อหา (ไม่มีแถบเลื่อนซ้อนใน) */
 function sdGrow(el){ try{ el.style.height = 'auto'; el.style.height = (el.scrollHeight + 2) + 'px'; }catch(e){} }
 function sdFit(root){ try{ (root || document).querySelectorAll('.sd-ag').forEach(sdGrow); }catch(e){} }
@@ -23550,8 +23696,8 @@ function sdRowClick(ev){
 })();
 /* ── Today: บล็อก Sectors (ฟังก์ชันเดียว — TD3a ย้ายเข้า Overview ได้) ── */
 function sdIsFollow(sym){ try{ const n = sdNotes()[sym]; return !!(n && n.follow === true); }catch(e){ return false; } }
-function rrgSortRows(rows){   /* เรียงเดียวกับ Flow: ควอดแรนต์ → Δmom → ratio · แถว err ท้ายสุด */
-  const ORDER = {lead:0, imp:1, weak:2, lag:3};
+function rrgSortRows(rows){   /* เรียงเดียวกับ Flow: สถานะ → Δmom → ratio · แถว err ท้ายสุด */
+  const ORDER = {lead:0, imp:1, weak:2, lag:3, flat:4};
   return rows.slice().sort((a,b)=>{
     if(a.err && !b.err) return 1;
     if(!a.err && b.err) return -1;
@@ -23578,14 +23724,14 @@ function sdCurShow(sym, tf){
     const x = rows.find(y=>y && y.sym === sym);
     if(!x) return {ok:false, why:'missing'};
     if(x.err || !SD_QPH[x.quad]) return {ok:false, why:'err'};
-    return {ok:true, phase:SD_QPH[x.quad], tf, row:x, stale:r.day !== rrgToday(), day:r.day};
+    return {ok:true, phase:SD_QPH[x.quad], tf, row:x, stale:r.day !== rrgToday() || r.model !== RRG_MODEL || !rrgBarsFresh(r), day:r.day};
   }catch(e){ return {ok:false, why:'error'}; }
 }
 function tdSectorsHtml(){
   try{
     const syms = sdFollowed(), tf = rrgTf(), TFL = tf === 'W' ? 'Weekly' : 'Daily';
     const r0 = ffState().rrg || {}, rows0 = tf === 'W' ? r0.rowsW : r0.rowsD, hasCache = Array.isArray(rows0) && rows0.length;
-    const stale = hasCache && r0.day !== rrgToday();
+    const stale = hasCache && (r0.day !== rrgToday() || r0.model !== RRG_MODEL || !rrgBarsFresh(r0));
     const asOf = stale ? `<span class="sub" data-sd-asof>as of ${ffEsc(sdDateTxt(r0.day))}</span>` : '';
     const head = `<div class="sd-th" data-sd-th><b>Sectors · ${TFL}</b>${asOf}</div>`;   /* TD4c — หัวเดียว (ไม่มีป้าย SECTORS ซ้อนบน) */
     let body;
@@ -23596,7 +23742,7 @@ function tdSectorsHtml(){
       let right;
       if(c.ok){
         const x = c.row;
-        right = `<span class="sd-rt"><b class="sd-ph" style="color:${SD_PHL[c.phase][1]}" data-sd-phase>${SD_PHL[c.phase][0].toUpperCase()}</b> <span class="sd-met" data-sd-met>· ${x.days} ${U} · <span class="${x.off52 > -5 ? '' : 'dn'}">${x.off52.toFixed(1)}%</span></span>${sdChip(x)}</span>`;
+        right = `<span class="sd-rt"><b class="sd-ph" style="color:${SD_PHL[c.phase][1]}" data-sd-phase>${SD_PHL[c.phase][0].toUpperCase()}</b> <span class="sd-met" data-sd-met>· ${x.days} bars in state · <span class="${x.off52 > -5 ? '' : 'dn'}">${rrgOffTxt(x)}</span></span>${sdChip(x)}</span>`;
       } else right = `<span class="sd-rt"><b class="sd-ph" data-sd-phase style="color:var(--muted)">—</b>${c.why === 'nocache' ? ' <button type="button" class="td3-lk sd-open" data-sd-openflow onclick="event.stopPropagation();sdGoFlowRrg()">Open Flow to refresh ›</button>' : ''}</span>`;
       const line = n.driver.trim() ? E(n.driver.trim().replace(/\s+/g, ' ')) : 'Drivers not yet recorded.', lop = sdTdExp.has(sym);   /* TD4a — เต็มข้อความ · พับ = 1 บรรทัด · แตะ = ขยาย */
       return `<div class="sd-tr" role="button" tabindex="0" data-sd-trow="${E(sym)}" onclick="sdTdGo('${E(sym)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sdTdGo('${E(sym)}')}"><div class="l1"><span class="sd-nm"><b>${E(sym)}</b> <span class="sub">${E(name)}</span></span>${right}</div>`
@@ -23631,8 +23777,8 @@ function rrgCopyText(){
   const sorted = rrgSortRows(ok), fol = x=>{ try{ const n = sdNote(x.sym); return n && n.follow ? '★' : ''; }catch(e){ return ''; } };
   const item = x=>fol(x) + x.sym + (x.name ? ' (' + x.name + ')' : '');
   const day = ok.length ? (ok[0].date || r.day) : r.day;
-  const L = ['RRG ' + (tf==='W' ? 'Weekly' : 'Daily') + ' · as of ' + (day || '—') + ' · vs SPY'];
-  [['lead','Leading'],['imp','Improving'],['weak','Weakening'],['lag','Lagging']].forEach(q=>{
+  const L = ['Relative Trend vs SPY · ' + (tf==='W' ? 'Weekly' : 'Daily') + ' · as of ' + (day || '—') + ' · custom model, not JdK RRG'];
+  [['lead',RRG_ST.lead.l],['imp',RRG_ST.imp.l],['weak',RRG_ST.weak.l],['lag',RRG_ST.lag.l],['flat',RRG_ST.flat.l]].forEach(q=>{
     const g = sorted.filter(x=>x.quad===q[0]); L.push(q[1] + ': ' + (g.length ? g.map(item).join(', ') : '—'));
   });
   if(bad.length) L.push('No data: ' + bad.map(x=>fol(x) + x.sym).join(', '));
@@ -23662,14 +23808,16 @@ function ffRenderThemes(){
         msg = 'กำลังดึงราคา…';
       }
     }
-    else if(r.err){ msg = 'ดึงราคาไม่สำเร็จ: ' + ffEsc(r.err); cls = 'red'; }
+    else if(r.err){ msg = 'ดึงราคาไม่สำเร็จ: ' + ffEsc(r.err) + (rrgOutdated(r) ? ' · <b>ผลด้านล่างเป็นโมเดลเก่า (outdated) — ยังไม่ได้อัปเดต</b>' : ''); cls = 'red'; }
     else if(!rows.length){ msg = 'ยังไม่มีข้อมูล — กดรีเฟรช'; cls = 'amber'; }
     else {
       const bad = rows.length - ok.length;
       const d = ok.length ? (ok[0].date || r.day) : r.day;
-      msg = TF.label + ' · ข้อมูลถึง ' + ffEsc(d) + ' · ' + ok.length + '/' + rows.length + ' ตัว'
+      msg = TF.label + ' · Data as of ' + ffEsc(d) + ' · ' + ok.length + '/' + rows.length + ' ตัว'
           + (bad ? ' · <b style="color:var(--amber)">' + bad + ' ตัวคำนวณไม่ได้</b>' : '');
-      if(r.day !== rrgToday()) cls = 'amber';
+      if(rrgOutdated(r)){ msg += ' · <b>Outdated model (v' + (r.build||'?') + ') — refresh to update</b>'; cls = 'amber'; }
+      else if(r.day !== rrgToday() || !rrgBarsFresh(r)){ msg += ' · <b>stale</b>'; cls = 'amber'; }
+      if(tf === 'W' && ok.some(x=>x.preview)){ const pv = ok.find(x=>x.preview).preview; msg += ' · latest week still open (to ' + ffEsc(sdDateTxt(pv.asOf)) + ') — classified on last completed week'; }
     }
     const color = cls==='amber' ? 'var(--amber)' : cls==='red' ? 'var(--red)' : 'var(--muted)';
     bar.innerHTML = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 2px">'
@@ -23685,34 +23833,33 @@ function ffRenderThemes(){
       + (r.loading ? 'กำลังดึง…' : '🔄 รีเฟรชราคา') + '</button></div>';
   }
 
-  ['imp','lead','lag','weak'].forEach(q=>{ const el=document.getElementById('ffQ'+q); if(el) el.innerHTML=''; });
+  ['imp','lead','lag','weak','flat'].forEach(q=>{ const el=document.getElementById('ffQ'+q); if(el) el.innerHTML=''; });
   ok.slice().sort((a,b)=>b.ratio-a.ratio).forEach(x=>{
     const box = document.getElementById('ffQ'+x.quad);
     if(box) box.insertAdjacentHTML('beforeend',
-      '<span class="ffChip" title="'+ffEsc(x.name)+' · RS-Ratio '+x.ratio.toFixed(1)
-      +' · RS-Mom '+x.mom.toFixed(1)+' · อยู่ควอดแรนต์นี้ '+x.days+' '+TF.unit+'">'+ffEsc(x.sym)+'</span>');
+      '<span class="ffChip" title="'+ffEsc(x.name)+' · '+ffEsc((RRG_ST[x.quad]||{}).l||x.quad)+' · '+x.days+' bars in state · relative to SPY, not absolute price">'+ffEsc(x.sym)+'</span>');
   });
+  try{ const fb = document.getElementById('ffQflatBox'); if(fb) fb.style.display = ok.some(x=>x.quad==='flat') ? '' : 'none'; }catch(e){}
 
   /* breadth = กี่ธีมที่ "ชนะ SPY อยู่จริง" ตอนนี้ — วัดจาก rsTrend (raw ก่อน z-score) > 0
      ห้ามกลับไปใช้ ratio >= 100: นั่นคือ z-score เทียบประวัติของตัวเอง แต่ละตัวจะอยู่เหนือ 100
      ราว 50% ของเวลาโดยนิยาม ตัวเลขเลยเกาะครึ่ง ๆ ตลอด และไม่ลงแม้ตลาดไหลออกทั้งกระดาน
      rsTrend > 0 คือ EMA12(rs) เหนือ EMA26(rs) — เทียบกับศูนย์ได้จริง จึงสวิงได้เต็ม 0-100% */
   const scored = ok.filter(x=>typeof x.rsTrend === 'number');
-  const up = scored.filter(x=>x.rsTrend > 0).length;
+  const up = scored.filter(x=>x.rel ? x.rel === 'pos' : x.rsTrend > 0).length;   /* RRG1 — breadth และสถานะใช้ rel ตัวเดียวกัน (outperforming) */
   const b = document.getElementById('ffBreadth');
   if(b){
     b.textContent = scored.length ? (up+'/'+scored.length+' ชนะ SPY') : '—';
     b.title = scored.length
-      ? 'กี่ธีมที่ EMA12 ของ RS ยังเหนือ EMA26 = ชนะ SPY อยู่ ณ ตอนนี้ (' + TF.label + ')'
+      ? 'กี่ธีมที่อยู่สถานะ Outperforming (EMA12 ของ RS เหนือ EMA26 เกิน deadband ε) = ชนะ SPY อยู่ ณ ตอนนี้ (' + TF.label + ') · ตัวเดียวกับสถานะบนการ์ด'
         + '\nเกินครึ่ง = เงินไหลกระจายหลายธีม · เหลือ 0 = ไหลออกทั้งกระดาน ไม่ใช่แค่หมุนกลุ่ม'
       : 'ยังไม่มีข้อมูล — กดรีเฟรชราคา';
     b.style.color = !scored.length ? 'var(--muted)'
                   : up*2>scored.length ? 'var(--teal)' : up===0 ? 'var(--red)' : 'var(--muted)';
   }
 
-  const QLBL = {lead:['LEADING','var(--teal)'], weak:['WEAKENING','var(--amber)'],
-                lag:['LAGGING','var(--red)'],   imp:['IMPROVING','var(--blue)']};
-  const ORDER = {lead:0, imp:1, weak:2, lag:3};
+  const QLBL = RRG_QLBL;
+
   const host = document.getElementById('ffThemes');
   try{ const tt = document.getElementById('ffThemesTitle'); if(tt) tt.innerHTML = escHtml(ln1On() ? 'Leadership' : 'เงินไหลเข้าธีมไหน') + frTag('rrg'); }catch(e){}   /* TD3b — หัวมุมมอง lean เป็นอังกฤษ · legacy เดิม */
   if(host){
@@ -23726,7 +23873,7 @@ function ffRenderThemes(){
          ▲ = กำลังมุ่งขึ้น/ขวา (เข้าหา Leading) · ▼ = กำลังถอย */
       if(ln1On()){   /* LN3 — ตารางกว้าง → แถว 2 บรรทัด · TD3b: ป้ายอังกฤษ + ☆/★ + Drivers & evidence (แถวคลิกได้ทั้งแถว) */
         const U = tf==='W' ? 'w' : 'd', UW = tf==='W' ? 'weeks' : 'days';
-        host.innerHTML = '<div class="hint" style="margin:2px 0 6px">Δ over the last '+TF.momLag+' '+UW+': <b>Flat</b> = barely moving · <b>Moving</b> = clear direction · <b>Fast / Very fast</b> = changing quickly · '+U+' = '+UW+' in this quadrant · OFF52W = distance from the 1-year high</div><div class="ln3-rrg" data-ln3-rrg="1">'
+        host.innerHTML = '<div class="hint" style="margin:2px 0 6px">Δ over the last '+TF.momLag+' '+UW+': <b>Flat</b> = barely moving · <b>Moving</b> = clear direction · <b>Fast / Very fast</b> = changing quickly · bars in state = consecutive '+UW.replace(/s$/,'')+' bars in the same state · 52W gap = close vs the highest high of the last 52 weeks · RS gauges compare with the ETF\'s own 1y history (context, not the state) · custom model, not JdK RRG</div><div class="ln3-rrg" data-ln3-rrg="1">'
           + sorted.map(x=>sdRowHtml(x, tf, QLBL)).join('')
           + '</div><div class="sd-foot" data-sd-foot>'+SD_FOOT+'</div>';
         sdFit(host);
@@ -23749,12 +23896,13 @@ function ffRenderThemes(){
               + '<td>'+rrgGaugeHtml(x.ratio, x.dRatio)+'</td>'
               + '<td>'+rrgGaugeHtml(x.mom, x.dMom)+'</td>'
               + '<td>'+x.days+'</td>'
-              + '<td class="'+(x.off52>-5?'':'dn')+'">'+x.off52.toFixed(1)+'%</td></tr>';
+              + '<td class="'+(x.off52>-5?'':'dn')+'">'+rrgOffTxt(x)+'</td></tr>';
           }).join('')
         + '</tbody></table>';
     }
   }
   ffApplyThemesCol();
+  setTimeout(()=>{ try{ sdRebaseline(); }catch(e){} }, 0);   /* RRG1 G — re-baseline เมื่อมีข้อมูลโมเดลใหม่ครบ */
   try{ ffRenderActionBar(); }catch(e){}   /* ช่อง "ธีมนำ" ในแถบดำอ่านจากผล RRG */
 }
 /* ---------- ยุบ / ขยาย แผนที่ธีม (จำสถานะใน state.fundflow.themesCol) ---------- */
@@ -23966,7 +24114,7 @@ function ffLeadThemes(){
 function ffThemeRows(){
   try{ const r = ffState().rrg || {}, rows = rrgTf()==='W' ? r.rowsW : r.rowsD; return Array.isArray(rows) ? rows : []; }catch(e){ return []; }
 }
-const RRG_QUAD_LABEL = {lead:'Leading', weak:'Weakening', imp:'Improving', lag:'Lagging'};
+const RRG_QUAD_LABEL = {lead:RRG_ST.lead.l, weak:RRG_ST.weak.l, imp:RRG_ST.imp.l, lag:RRG_ST.lag.l, flat:RRG_ST.flat.l};
 /* F2d — ข้อมูลเทียบสัปดาห์ก่อน (pure · อ่านอย่างเดียว) — ไม่มี fundflow.json จริง = null */
 function ffChangesData(){
   if(!ffJson) return null;
@@ -24052,7 +24200,7 @@ function ffRenderActionBar(){
 
   if(ln1On()){   /* LN3 — การ์ดสรุปเดียว: Core ลงเงินได้ % · Regime · ธีมนำ · Macro (แทนกล่อง 4 ช่อง) */
     const rgTxt = k => { const r = R[k]; return (demo || !r) ? '—' : (r.up ? ln3Ar('▲ เขียว') : ln3Ar('▼ แดง')); };
-    const leadTxt = leads.length ? leads.map(sy=>escHtml(nameOf(sy) || sy)).join(' · ') + ' <span class="mu">(RRG Leading)</span>' : '—';
+    const leadTxt = leads.length ? leads.map(sy=>escHtml(nameOf(sy) || sy)).join(' · ') + ' <span class="mu">(Outperforming ↗)</span>' : '—';
     const macTxt = mv ? macKeys.map(a=>{ const st = ((mv.assets||{})[a]||{}).stance; return `${escHtml(PB_SHORT[a]||a)} ${ln3Ar(escHtml(Calc.pbStanceIcon(st)))}`; }).join(' · ') + ` <span class="mu">${escHtml((mv.quarter||'') + (vNo?' '+vNo:''))}</span>` : (pbLoaded ? 'ยังไม่มี Playbook ใช้จริง' : 'กำลังโหลด Playbook…');
     const cut = (!demo && !C.stale && C.cap < 100) ? `ลด ${100 - C.cap}% จาก Regime` : '';
     host.innerHTML = `<div class="ln3-fhero" data-ln3-fhero="1">
@@ -25059,7 +25207,7 @@ function ffRenderSettings(){
     +blk('l2','ชั้น 2 — บอร์ดจดเอง: เงินเข้าหุ้นเก็งกำไรไหม (daily)','ใช้บันทึกมุมมองเท่านั้น · ไม่ได้คุมเพดาน')
     +'<div class="divlbl">เพดานลงเงินจริง</div>'
     +'<div class="hint" style="margin:-4px 0 10px">คำนวณจาก <code>Regime</code> ที่โหลดจาก <code>fundflow.json</code> เท่านั้น · บอร์ดจดเองชั้น 1–2 ด้านบนไม่เปลี่ยนเพดาน</div>'
-    +'<div class="divlbl">แผนที่ธีม (RRG)</div>'
+    +'<div class="divlbl">แผนที่ธีม (Relative Trend vs SPY)</div>'
     +'<div class="hint" style="margin:-4px 0 4px">คำนวณอัตโนมัติจากราคาจริง ไม่ต้องตั้งเอง · ติดตาม '
       + RRG_SYMS.length + ' ตัวเทียบ ' + RRG_BENCH + ' — ' + RRG_SYMS.map(x=>x.s).join(' · ')
     +'</div>'

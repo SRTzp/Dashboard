@@ -7,6 +7,7 @@
 ทุกเคสรันที่ 1440px และ 430px · จำลอง fundflow.json ผ่าน window.__FF_JSON (ดู ff_stub.py)
 ภาพเก็บที่ tests/screenshots/f1-*.png · รัน: python3 run_tests_phase8.py
 """
+from rrg1_fixture import MODELIZE_JS
 import json, os, re
 from playwright.sync_api import sync_playwright
 import run_tests_phase4 as base
@@ -73,7 +74,7 @@ def all_readouts(page):
 
 
 def rrg_rows(page, rows, tf="D"):
-    page.evaluate("""([rows,tf])=>{ const f=ffState(); f.rrgTf=tf; f.rrg=f.rrg||{}; f.rrg[tf==='W'?'rowsW':'rowsD']=rows; f.rrg.day=rrgToday(); f.rrg.err='';
+    page.evaluate("""([rows,tf])=>{ const M = """ + MODELIZE_JS + """; rows = M(rows); const f=ffState(); f.rrgTf=tf; f.rrg=f.rrg||{}; f.rrg.model=2; f.rrg.lastBar=rrgToday(); f.rrg[tf==='W'?'rowsW':'rowsD']=rows; f.rrg.day=rrgToday(); f.rrg.err='';
         f.rrg.loading=false; ffRenderThemes(); }""", [rows, tf])
 
 
@@ -278,7 +279,7 @@ def run(pw, width, height, label):
     # ═════════ 8) เรียงธีมตามช่อง · 9) บอร์ดจดเอง ═════════
     rrg_rows(page, [mkrow("A", "lag", dmom=5), mkrow("B", "weak", dmom=1), mkrow("C", "imp", dmom=2), mkrow("D", "lead", dmom=0), mkrow("E", "lag", dmom=1), mkrow("F", "lead", dmom=4)])
     order = page.evaluate("() => [...document.querySelectorAll('#ffThemes .rrgTbl tbody tr')].map(r=>r.children[1].textContent.trim())")
-    check(f"{tag} ธีม RRG เรียงตามช่อง: นำ → ดีขึ้น → อ่อนลง → ตาม", order == ["LEADING", "LEADING", "IMPROVING", "WEAKENING", "LAGGING", "LAGGING"], json.dumps(order))
+    check(f"{tag} ธีม RRG เรียงตามช่อง: นำ → ดีขึ้น → อ่อนลง → ตาม", order == ["Outperforming · strengthening", "Outperforming · strengthening", "Underperforming · recovering", "Outperforming · fading", "Underperforming · worsening", "Underperforming · worsening"], json.dumps(order))
     lay = page.evaluate("""() => { const d=document.getElementById('ffManualBoards'), th=document.getElementById('ffThemesHead').closest('.panel'), foot=document.querySelector('#tabFlow .ffFoot'),
         kids=[...document.getElementById('tabFlow').children];
         return {open: d.open, idx: {themes: kids.indexOf(th), manual: kids.indexOf(d), foot: kids.indexOf(foot), last: kids.length-1}, stale: !!d.querySelector('#ffStale'),

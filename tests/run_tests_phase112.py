@@ -356,10 +356,10 @@ def sector_tests(pw):
             js(page, "()=>sdFollow('SMH')"); settle(page, 200)
             T.go_watch(page, "wl")
             bd = js(page, """()=>Object.fromEntries([...document.querySelectorAll('.wlR[data-sym]')].map(r=>{ const b = r.querySelector('[data-sec-badge]'); return [r.dataset.sym, b ? [b.innerText.replace(/\\s+/g,' ').trim(), b.className.replace('secBadge','').trim(), b.dataset.secQ] : null]; }))""")
-            check(f"{tag} §3.5 ป้าย 'SMH · Leading'? SMH ใน RRG D = Improving + ★ (followed) → 'SMH · Improving ★' เขียว", bd["NVDA"] and bd["NVDA"][0] == "SMH · Improving ★" and bd["NVDA"][1] == "hot", bd["NVDA"])
-            check(f"{tag} §3.5 Weakening → เทา 'IGV · Weakening'", bd["MSFT"] and bd["MSFT"][0] == "IGV · Weakening" and bd["MSFT"][1] == "cold", bd["MSFT"])
-            check(f"{tag} §3.5 Lagging → เทา 'XLK · Lagging'", bd["CCCC"] and bd["CCCC"][0] == "XLK · Lagging" and bd["CCCC"][1] == "cold", bd["CCCC"])
-            check(f"{tag} §3.5 Improving ไม่ ★ → เขียว 'XLE · Improving' (ไม่มี ★)", bd["XOMX"] and bd["XOMX"][0] == "XLE · Improving" and bd["XOMX"][1] == "hot", bd["XOMX"])
+            check(f"{tag} §3.5 ป้าย 'SMH · Leading'? SMH ใน RRG D = Improving + ★ (followed) → 'SMH · Improving ★' เขียว", bd["NVDA"] and bd["NVDA"][0] == "SMH · Recovering ★" and bd["NVDA"][1] == "rec", bd["NVDA"])
+            check(f"{tag} §3.5 Outperforming·fading (weak) → hot 'IGV · Outperforming ↘'", bd["MSFT"] and bd["MSFT"][0] == "IGV · Outperforming ↘" and bd["MSFT"][1] == "hot", bd["MSFT"])
+            check(f"{tag} §3.5 Lagging → เทา 'XLK · Lagging'", bd["CCCC"] and bd["CCCC"][0] == "XLK · Underperforming ↘" and bd["CCCC"][1] == "cold", bd["CCCC"])
+            check(f"{tag} §3.5 Recovering (imp) ไม่ ★ → 'XLE · Recovering' class rec (ไม่ hot)", bd["XOMX"] and bd["XOMX"][0] == "XLE · Recovering" and bd["XOMX"][1] == "rec", bd["XOMX"])
             check(f"{tag} §3.5 ฟิลด์ว่าง → ไม่มีป้าย · ค่าเพี้ยน → ไม่มีป้าย", bd["AAPL"] is None and bd["ZZZZ"] is None, [bd["AAPL"], bd["ZZZZ"]])
             check(f"{tag} §3.5 'TH' → ป้ายเทา 'TH' (ไม่มีข้อมูล RRG)", bd["PTT.BK"] and bd["PTT.BK"][0] == "TH" and bd["PTT.BK"][1] == "off", bd["PTT.BK"])
             # sort
@@ -369,7 +369,7 @@ def sector_tests(pw):
             page.locator("[data-wl-hot]").click(); settle(page, 400)
             hot = js(page, "()=>[...document.querySelectorAll('.wlR[data-sym]')].map(e=>e.dataset.sym)")
             top_hot = [s for s in hot[:2]]
-            check(f"{tag} §3.5 Hot sector first: Improving/Leading/★ ขึ้นก่อน (NVDA, XOMX) · ที่เหลือคงลำดับเดิม", set(top_hot) == {"NVDA", "XOMX"} and [s for s in hot[2:]] == [s for s in base_order if s not in top_hot], [base_order, hot])
+            check(f"{tag} §3.5 Hot sector first: Outperforming (lead/weak) หรือ ★ ขึ้นก่อน (NVDA ★, MSFT weak) · Recovering (XOMX) ไม่ hot · ที่เหลือคงลำดับเดิม", set(top_hot) == {"NVDA", "MSFT"} and [s for s in hot[2:]] == [s for s in base_order if s not in top_hot], [base_order, hot])
             js(page, "()=>wlSetHot(false)"); settle(page, 300)
             check(f"{tag} §3.5 ปิดตัวเลือก → กลับลำดับเดิม", js(page, "()=>[...document.querySelectorAll('.wlR[data-sym]')].map(e=>e.dataset.sym)") == base_order)
             ov = js(page, "()=>document.documentElement.scrollWidth - window.innerWidth")

@@ -2,6 +2,7 @@
 """F2d — Playbook view.watch + แถบดำ #ffAction 4 ช่องใหม่ (Regime · ธีมนำ · เพดาน Core · Macro) + ป้ายความสดบนบรรทัดสรุป
 ลบ #ffChanges / ffRenderChanges / ffChg* · เก็บ ffChangesData (pure) + prevQuad ใน rrgCompute
 ภาพเก็บที่ tests/screenshots/f2d-*.png · รัน: python3 run_tests_phase12.py (mock Firestore + fundflow stub)"""
+from rrg1_fixture import MODELIZE_JS
 import json, os, re
 import run_tests_phase4 as base
 import run_tests_phase11 as p11
@@ -34,7 +35,7 @@ def no_ff(page):
 
 
 def rrg_rows(page, rows):
-    page.evaluate("""(rows)=>{ const f = ffState(); f.rrg = {rowsD: rows, rowsW: rows, build: RRG_BUILD, day: rrgToday(), at: new Date().toISOString(), loading:false, err:''}; ffRenderActionBar(); }""", rows)
+    page.evaluate("""(rows)=>{ const M = """ + MODELIZE_JS + """; rows = M(rows); const f = ffState(); f.rrg = {rowsD: rows, rowsW: rows, build: RRG_BUILD, model: 2, lastBar: rrgToday(), day: rrgToday(), at: new Date().toISOString(), loading:false, err:''}; ffRenderActionBar(); }""", rows)
     page.wait_for_timeout(80)
 
 
@@ -127,7 +128,7 @@ def lead_tests(page, tag):
     check(f"{tag} ธีมเปลี่ยน: 0 → ไม่แสดงบรรทัด", page.locator('#ffAction [data-mv]').count() == 0)
     rrg_rows(page, [row("XLK", "Technology", "lead"), row("XLE", "Energy", "imp", "lag")])
     t = cellt(page, "lead")
-    check(f"{tag} ธีมเปลี่ยน: 1 → '↗ Energy → Improving' ไม่มี +n", "↗ Energy → Improving" in t and page.locator('#ffAction [data-mv=more]').count() == 0, t)
+    check(f"{tag} ธีมเปลี่ยน: 1 → '↗ Energy → Improving' ไม่มี +n", "↗ Energy → Underperforming · recovering" in t and page.locator('#ffAction [data-mv=more]').count() == 0, t)
     rrg_rows(page, [row("A", "Alpha", "lead", "imp"), row("B", "Beta", "lag", "weak"), row("C", "Gamma", "imp", "lag"), row("E", "Err", "lag", "lag"), {"sym": "X", "name": "X", "err": "x"}])
     t = cellt(page, "lead")
     n = page.locator('#ffAction [data-mv=theme]').count()
@@ -276,7 +277,7 @@ def style_tests(page, tag, w):
     check(f"{tag} Regime: ป้าย '<ชื่อ> เพิ่งพลิก' ต่อ ratio ที่พลิก (ACWI/BIL · HYG/IEI) ไม่ล้นช่อง",
           [x["t"] for x in fl] == ["ACWI/BIL เพิ่งพลิก", "HYG/IEI เพิ่งพลิก"] and not any(x["ov"] for x in fl), json.dumps(fl, ensure_ascii=False))
     mv = page.evaluate("() => [...document.querySelectorAll('#ffAction [data-mv=theme]')].map(e=>e.textContent)")
-    check(f"{tag} ธีมเปลี่ยน: ลูกศรถูกทาง (→Improving/Leading = ↗ · →Weakening/Lagging = ↘)", mv == ["↗ Energy → Improving", "↘ Health Care → Weakening"], json.dumps(mv, ensure_ascii=False))
+    check(f"{tag} ธีมเปลี่ยน: ลูกศรถูกทาง (→Improving/Leading = ↗ · →Weakening/Lagging = ↘)", mv == ["↗ Energy → Underperforming · recovering", "↘ Health Care → Outperforming · fading"], json.dumps(mv, ensure_ascii=False))
     big = page.evaluate("() => parseFloat(getComputedStyle(document.querySelector('#ffAction [data-ff=cap] .ffActV')).fontSize)")
     exp = page.evaluate('() => parseFloat(getComputedStyle(document.documentElement).fontSize)') * (1.6 if w <= 420 else 1.9)
     check(f"{tag} เพดาน: ตัวเลขหลักใหญ่ ({'~1.6rem' if w <= 420 else '~1.9rem'}) หนา", abs(big - exp) < 1, str(big))

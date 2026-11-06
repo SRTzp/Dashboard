@@ -8,6 +8,7 @@ import copy, json, re
 import ln3fix_common as C
 from playwright.sync_api import sync_playwright
 import run_tests_phase4 as base
+from rrg1_fixture import MODELIZE_JS
 
 ENGINE = base.BROWSER_ENGINE
 results = []
@@ -39,7 +40,7 @@ def rows_w():
             R("XBI", "Biotech", "weak", dm=0.1, date="2026-09-28"), R("XLF", "Financials", "lead", dm=0.4, date="2026-09-28")]
 
 
-SEED_RRG = """([d, w, day])=>{ const f = ffState(); f.rrg = {rowsD: d, rowsW: w, build: RRG_BUILD, day: day || rrgToday(), at: new Date().toISOString(), loading:false, err:''}; f.rrgTf = 'D'; }"""
+SEED_RRG = """([d, w, day])=>{ const M = """ + MODELIZE_JS + """; const f = ffState(); f.rrg = {rowsD: M(d), rowsW: M(w), build: RRG_BUILD, model: RRG_MODEL, lastBar: rrgToday(), day: day || rrgToday(), at: new Date().toISOString(), loading:false, err:''}; f.rrgTf = 'D'; }"""
 
 
 def launch(pw, w, h, mut=None, rrg=True):
@@ -121,20 +122,20 @@ def flow_structure(pw, w, h, label):
         check(f"{tag} 1 ค่าเริ่มต้นพับ: ไม่มี .sd-body · aria-expanded=false ทุกแถว", cnt(page, "#ffThemes .sd-body") == 0 and cnt(page, '#ffThemes [data-sd-hd][aria-expanded="false"]') == 5)
         check(f"{tag} 1 สรุปบรรทัดพับ = 'Drivers not yet recorded' (ไม่มีโน้ต)", "Drivers not yet recorded" in (txt(page, f'{sdsel("SMH")} [data-sd-sum]') or ""), txt(page, f'{sdsel("SMH")} [data-sd-sum]'))
         smh = txt(page, sdsel("SMH")) or ""
-        check(f"{tag} 1 องค์ประกอบเดิมคงอยู่: IMPROVING · '4 d' · OFF52W -3.0% · Strength/Momentum · 2 เกจ", "IMPROVING" in smh and "4 d" in smh and "-3.0%" in smh and "Strength" in smh and "Momentum" in smh and cnt(page, f'{sdsel("SMH")} .rrgGaugeWrap') == 2, smh)
+        check(f"{tag} 1 องค์ประกอบเดิมคงอยู่: IMPROVING · '4 d' · OFF52W -3.0% · Strength/Momentum · 2 เกจ", "Price: Down" in smh and "Relative: Negative" in smh and "Momentum: Strengthening" in smh and "4 bars in state" in smh and "3.0% below 52W high" in smh and "RS level vs 1y norm" in smh and "RS momentum vs 1y norm" in smh and cnt(page, f'{sdsel("SMH")} .rrgGaugeWrap') == 2, smh)
         ok_text = " ".join(js(page, "()=>[...document.querySelectorAll('#ffThemes .ln3-rr:not(.dim)')].map(e=>e.innerText)"))
         check(f"{tag} 1 ป้ายแถวที่คำนวณได้เป็นอังกฤษล้วน (ไม่มีอักษรไทย) · ไม่มีคำไทยของเกจ/Δ", not THAI.search(ok_text), THAI.findall(ok_text)[:5])
         lv = js(page, "()=>[...document.querySelectorAll('#ffThemes .rrgGaugeLbl')].map(e=>e.innerText.replace(/\\s+/g,' ').trim())")
-        allowed = {"Very strong", "Strong", "Neutral", "Weak", "Very weak"}
+        allowed = {"Well above 1y norm", "Above 1y norm", "Normal range", "Below 1y norm", "Well below 1y norm"}
         check(f"{tag} 1 ระดับ = Very strong/Strong/Neutral/Weak/Very weak · Δ = Flat/Moving/Fast/Very fast", all(any(s.startswith(a) for a in allowed) for s in lv) and all(re.search(r"(Flat|Moving|Fast|Very fast)", s) for s in lv), lv)
         check(f"{tag} 1 Δ ▲/▼ + สีเดิม (▲ teal / ▼ red)", js(page, "()=>{ const up=[...document.querySelectorAll('#ffThemes .rrgGaugeDelta')].filter(e=>e.innerText.startsWith('▲')); const dn=[...document.querySelectorAll('#ffThemes .rrgGaugeDelta')].filter(e=>e.innerText.startsWith('▼')); return up.length>0 && dn.length>0 && up.every(e=>e.style.color.includes('teal')) && dn.every(e=>e.style.color.includes('red')); }"))
         hint = txt(page, "#ffThemes .hint") or ""
-        check(f"{tag} 1 legend/hint เป็นอังกฤษ (Flat/Moving/Fast · d · OFF52W)", not THAI.search(hint) and "Flat" in hint and "Moving" in hint and "OFF52W" in hint, hint)
-        check(f"{tag} 1 footer บรรทัดเดียว: 'RRG shows relative price strength and momentum, not proof of fund inflows.'", txt(page, "[data-sd-foot]") == "RRG shows relative price strength and momentum, not proof of fund inflows." and cnt(page, "[data-sd-foot]") == 1, txt(page, "[data-sd-foot]"))
+        check(f"{tag} 1 legend/hint เป็นอังกฤษ (Flat/Moving/Fast · d · OFF52W)", not THAI.search(hint) and "Flat" in hint and "Moving" in hint and "52W gap" in hint and "not JdK RRG" in hint, hint)
+        check(f"{tag} 1 footer บรรทัดเดียว: 'RRG shows relative price strength and momentum, not proof of fund inflows.'", txt(page, "[data-sd-foot]") == "Relative Trend vs SPY (custom model, not JdK RRG) shows relative price trend, not proof of fund inflows." and cnt(page, "[data-sd-foot]") == 1, txt(page, "[data-sd-foot]"))
         chips = js(page, "()=>Object.fromEntries([...document.querySelectorAll('#ffThemes .ln3-rr')].map(e=>[e.dataset.rr, (e.querySelector('.sd-up')||{}).innerText||'']))")
-        check(f"{tag} 1 ↗ chip: IMPROVING+Δ▲≥0.15 → 'momentum rising' · LEADING+Δ▲ → 'strong + rising' · WEAKENING/LAGGING/err ไม่มี", chips == {"XLU": "↗ strong + rising", "SMH": "↗ momentum rising", "IGV": "", "XBI": "", "XLF": ""}, chips)
-        e = js(page, """()=>[sdChip({quad:'imp',dMom:0.15}), sdChip({quad:'imp',dMom:0.1499}), sdChip({quad:'lead',dMom:0.14}), sdChip({quad:'imp',dMom:-0.6}), sdChip({quad:'weak',dMom:0.9}), sdChip({quad:'lag',dMom:0.9}), sdChip({quad:'lead',dMom:null}), sdChip({err:'x',quad:'lead',dMom:1})].map(s=>s.replace(/<[^>]+>/g,''))""")
-        check(f"{tag} 1 ↗ chip ขอบเขต |Δ| ≥ 0.15 (0.15 มี · 0.1499 ไม่มี · Δ▼ ไม่มี · err ไม่มี)", e == ["↗ momentum rising", "", "", "", "", "", "", ""], e)
+        check(f"{tag} 1 ↗ chip: IMPROVING+Δ▲≥0.15 → 'momentum rising' · LEADING+Δ▲ → 'strong + rising' · WEAKENING/LAGGING/err ไม่มี", chips == {"XLU": "↗ strengthening", "SMH": "↗ recovering (still below SPY)", "IGV": "", "XBI": "", "XLF": ""}, chips)
+        e = js(page, """()=>{ const B={model:2, eps:0.02, delta:0.01}; return [sdChip({...B,quad:'imp',rsTrend:-0.5,rawChg:0.0101}), sdChip({...B,quad:'imp',rsTrend:-0.5,rawChg:0.01}), sdChip({...B,quad:'lead',rsTrend:0.5,rawChg:0.011}), sdChip({...B,quad:'lead',rsTrend:0.015,rawChg:0.5}), sdChip({...B,quad:'imp',rsTrend:-0.015,rawChg:0.5}), sdChip({...B,quad:'imp',rsTrend:-0.5,rawChg:-0.6}), sdChip({...B,quad:'weak',rsTrend:0.5,rawChg:0.9}), sdChip({...B,quad:'lag',rsTrend:-0.5,rawChg:0.9}), sdChip({...B,quad:'flat',rsTrend:0,rawChg:0.9}), sdChip({err:'x',quad:'lead'}), sdChip({quad:'lead',rsTrend:0.5,rawChg:0.9})].map(s=>s.replace(/<[^>]+>/g,'')); }""")
+        check(f"{tag} 1 ↗ chip (RRG1): strengthening = raw>+ε & change>+δ · recovering (still below SPY) = raw<−ε & change>+δ · otherwise none (ขอบ δ/ε · weak/lag/flat/err/โมเดลเก่า ไม่มี)", e == ["↗ recovering (still below SPY)", "", "↗ strengthening", "", "", "", "", "", "", "", ""], e)
         check(f"{tag} 1 แถว err: ยังโชว์ข้อความ error เดิม + ☆ + Drivers & evidence", "ไม่มีข้อมูล" in (txt(page, sdsel("XLF")) or "") and cnt(page, f'{sdsel("XLF")} [data-sd-star]') == 1 and cnt(page, f'{sdsel("XLF")} [data-sd-sum]') == 1)
         check(f"{tag} 1 ไม่ล้นแนวนอน ({overflow(page)})", overflow(page) <= 0)
         check(f"{tag} 1 ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
@@ -145,7 +146,7 @@ def flow_shots(pw, w, h, name):
     b, page, ce, pe = launch(pw, w, h)
     try:
         js(page, """()=>{ const ago = n => new Date(Date.now() - n*864e5).toISOString();
-          sdWrite('SMH', n=>{ n.follow=true; n.driver='Interpretation: AI capex lifted data-center orders; guidance raised by two large firms.'; n.evidence={summary:'Company A and B raised Q4 guidance; one supplier flagged slower China demand (contradiction).', sources:[{title:'Company A Q3 call', url:'https://example.com/a'},{title:'Company B 8-K', url:'https://example.com/b'}]}; n.revisit_if='Orders slow or companies cut guidance'; n.research_as_of='2026-09-29'; n.reviewed_at=ago(2); n.reviewed_phase='LEADING'; n.reviewed_tf='D'; return n; });
+          sdWrite('SMH', n=>{ n.follow=true; n.driver='Interpretation: AI capex lifted data-center orders; guidance raised by two large firms.'; n.evidence={summary:'Company A and B raised Q4 guidance; one supplier flagged slower China demand (contradiction).', sources:[{title:'Company A Q3 call', url:'https://example.com/a'},{title:'Company B 8-K', url:'https://example.com/b'}]}; n.revisit_if='Orders slow or companies cut guidance'; n.research_as_of='2026-09-29'; n.reviewed_at=ago(2); n.reviewed_phase='LEADING'; n.reviewed_tf='D'; n.reviewed_model=2; return n; });
           sdWrite('XLU', n=>{ n.follow=true; return n; }); sdOpen['SMH']=true; }""")
         go_flow(page); C.shot(page, name, full=True)
     finally: b.close()
@@ -180,7 +181,7 @@ def follow_tests(pw):
         check(f"{tag} 2 Re-follow: โน้ตเดิมกลับมา (ไม่ถูกล้าง) · updated_at ไม่เปลี่ยนเพราะกดดาว", n3["follow"] is True and n3["driver"] == "driver text" and n3["updated_at"] == n2["updated_at"], [n3, n2["updated_at"]])
         check(f"{tag} 2 ค่าตั้งอื่นใน settings ไม่เปลี่ยนหลัง follow/save/unfollow (deep-compare ยกเว้น sectorNotes)", other_settings(page) == base_other, "differs")
         # กดดาวไม่แตะ reviewed baseline
-        js(page, "()=>{ sdWrite('SMH', n=>{ n.reviewed_at = '2026-09-29T03:00:00.000Z'; n.reviewed_phase = 'LEADING'; n.reviewed_tf = 'D'; return n; }); }")
+        js(page, "()=>{ sdWrite('SMH', n=>{ n.reviewed_at = '2026-09-29T03:00:00.000Z'; n.reviewed_phase = 'LEADING'; n.reviewed_tf = 'D'; n.reviewed_model = 2; return n; }); }")
         before = note(page, "SMH")
         page.locator('[data-sd-star="SMH"]').click(); settle(page, 300); page.locator('[data-sd-star="SMH"]').click(); settle(page, 500)
         after = note(page, "SMH")
@@ -260,7 +261,7 @@ def flag_tests(pw):
     b, page, ce, pe = launch(pw, 1280, 900)
     try:
         def setn(phase, tf, at="2026-09-29T03:00:00.000Z"):
-            js(page, "([p,t,a])=>{ sdWrite('SMH', n=>{ n.follow = true; n.driver = 'drv'; n.reviewed_at = a; n.reviewed_phase = p; n.reviewed_tf = t; return n; }); ffRenderThemes(); todayRefresh(true); }", [phase, tf, at])
+            js(page, "([p,t,a])=>{ sdWrite('SMH', n=>{ n.follow = true; n.driver = 'drv'; n.reviewed_at = a; n.reviewed_phase = p; n.reviewed_tf = t; n.reviewed_model = p ? 2 : null; return n; }); ffRenderThemes(); todayRefresh(true); }", [phase, tf, at])
             settle(page, 300)
         def flag(): return js(page, "()=>({flow: document.querySelectorAll('#ffThemes [data-rr=\"SMH\"] [data-sd-flag]').length, today: document.querySelectorAll('[data-sd-trow=\"SMH\"] [data-sd-flag]').length})")
         go_flow(page)
@@ -288,7 +289,7 @@ def flag_tests(pw):
         check(f"{tag} 4 reviewed W แต่แคช W ว่าง → ไม่มีแท็ก", flag() == {"flow": 0, "today": 0}, flag())
         # แคชเก่า
         seed_rrg(page, day="2026-09-20"); setn("LEADING", "D"); js(page, "()=>{ ffRenderThemes(); todayRefresh(true); }"); settle(page, 300)
-        check(f"{tag} 4 แคช RRG เก่า (คนละวัน) → ไม่มีแท็ก · Today ยังโชว์เฟสล่าสุด + 'as of' (TD4c)", flag() == {"flow": 0, "today": 0} and "IMPROVING" in (txt(page, '[data-sd-trow="SMH"] [data-sd-phase]') or "") and "as of" in (txt(page, "[data-sd-asof]") or ""), flag())
+        check(f"{tag} 4 แคช RRG เก่า (คนละวัน) → ไม่มีแท็ก · Today ยังโชว์เฟสล่าสุด + 'as of' (TD4c)", flag() == {"flow": 0, "today": 0} and "UNDERPERFORMING" in (txt(page, '[data-sd-trow="SMH"] [data-sd-phase]') or "") and "as of" in (txt(page, "[data-sd-asof]") or ""), flag())
         # ไม่มีแคช/ไม่มี key
         js(page, "()=>{ ffState().rrg = {err:'nokey', at:''}; ffRenderThemes(); todayRefresh(true); }"); settle(page, 300)
         check(f"{tag} 4 ไม่มีแคช RRG เลย (nokey) → ไม่มีแท็ก ไม่ error", flag() == {"flow": 0, "today": 0})
@@ -319,7 +320,7 @@ def prompt_tests(pw):
         go_flow(page); open_row(page, "SMH")
         page.locator(f'{sdsel("SMH")} [data-sd-copy]').click(); settle(page, 300)
         p = js(page, "()=>window.__sdLastPrompt || ''")
-        for k, v in (("sector id", "Sector ID: SMH"), ("ชื่อ", "Semiconductors"), ("ETF/benchmark", "against SPY"), ("เฟส+tf+วันข้อมูล", "IMPROVING (Daily RRG, data as of 2026-09-30)"),
+        for k, v in (("sector id", "Sector ID: SMH"), ("ชื่อ", "Semiconductors"), ("ETF/benchmark", "against SPY"), ("เฟส+tf+วันข้อมูล", "UNDERPERFORMING · RECOVERING (Daily relative trend vs SPY, data as of 2026-09-30)"),
                      ("คำถามตรงตัว", "What supports this sector's relative strength, what evidence supports or contradicts that explanation, and what would invalidate it?"),
                      ("research current sources", "Research current sources"), ("facts vs interpretation", "Distinguish facts from interpretation"), ("price ≠ inflows", "Do not assume price strength proves fund inflows"),
                      ("Evidence insufficient", "Evidence insufficient"), ("JSON schema", '"schema": "sectorDrivers/v1"'), ("sector_id ใน template", '"sector_id": "SMH"'), ("Return only", "Return only the JSON")):
@@ -330,10 +331,10 @@ def prompt_tests(pw):
         check(f"{tag} 5 toast 'Prompt copied'", (txt(page, "#sdToast") or "") == "Prompt copied" and js(page, "()=>document.getElementById('sdToast').classList.contains('show')"), txt(page, "#sdToast"))
         js(page, "()=>{ ffState().rrgTf='W'; }"); page.locator(f'{sdsel("SMH")} [data-sd-copy]').click(); settle(page, 200)
         p2 = js(page, "()=>window.__sdLastPrompt")
-        check(f"{tag} 5 tf Weekly → 'LEADING (Weekly RRG, data as of 2026-09-28)'", "LEADING (Weekly RRG, data as of 2026-09-28)" in p2, p2[:300])
+        check(f"{tag} 5 tf Weekly → 'OUTPERFORMING · STRENGTHENING (Weekly relative trend vs SPY, data as of 2026-09-28)'", "OUTPERFORMING · STRENGTHENING (Weekly relative trend vs SPY, data as of 2026-09-28)" in p2, p2[:300])
         js(page, "()=>{ ffState().rrg = {err:'nokey', at:''}; }"); page.locator(f'{sdsel("SMH")} [data-sd-copy]').click() if cnt(page, f'{sdsel("SMH")} [data-sd-copy]') else js(page, "()=>sdCopyPrompt('SMH')"); settle(page, 200)
         p3 = js(page, "()=>window.__sdLastPrompt")
-        check(f"{tag} 5 ไม่มีข้อมูล RRG → 'RRG data unavailable' (ไม่แต่งเฟส)", "RRG data unavailable" in p3 and "LEADING" not in p3.split("Question:")[0] and "IMPROVING" not in p3.split("Question:")[0], p3[:300])
+        check(f"{tag} 5 ไม่มีข้อมูล RRG → 'Relative-trend data unavailable' (ไม่แต่งเฟส)", "Relative-trend data unavailable" in p3 and "LEADING" not in p3.split("Question:")[0] and "IMPROVING" not in p3.split("Question:")[0], p3[:300])
         check(f"{tag} 5 ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
     finally: b.close()
 
@@ -394,7 +395,7 @@ def today_tests(pw, w, h, label, shot=None):
     try:
         long_drv = "ก" * 100
         js(page, """(drv)=>{ const ago = n => new Date(Date.now() - n*864e5).toISOString();
-          sdWrite('SMH', n=>{ n.follow=true; n.driver='Guidance up on data-center orders and a very long explanation that continues beyond eighty characters for sure'; n.evidence={summary:'ev', sources:[]}; n.reviewed_at=ago(3); n.reviewed_phase='LEADING'; n.reviewed_tf='D'; return n; });
+          sdWrite('SMH', n=>{ n.follow=true; n.driver='Guidance up on data-center orders and a very long explanation that continues beyond eighty characters for sure'; n.evidence={summary:'ev', sources:[]}; n.reviewed_at=ago(3); n.reviewed_phase='LEADING'; n.reviewed_tf='D'; n.reviewed_model=2; return n; });
           sdWrite('XLU', n=>{ n.follow=true; n.driver='Utility driver'; return n; });
           sdWrite('IGV', n=>{ n.follow=true; return n; });
           sdWrite('ZZZ', n=>{ n.follow=true; n.driver='gone sector'; return n; });
@@ -404,7 +405,7 @@ def today_tests(pw, w, h, label, shot=None):
         check(f"{tag} 7 Today แสดงเฉพาะ sector ที่ follow (XLU, SMH, IGV) ตามลำดับ Flow · XBI (ไม่ follow) และ ZZZ (ไม่อยู่ในรายการ RRG) ไม่แสดง", rows == ["XLU", "SMH", "IGV"], rows)
         check(f"{tag} 7 ZZZ ถูกซ่อนแต่โน้ตยังอยู่ในเอกสาร (ไม่ลบ)", (note(page, "ZZZ") or {}).get("driver") == "gone sector")
         t = txt(page, '[data-sd-trow="SMH"]') or ""
-        check(f"{tag} 7 แถว SMH: ชื่อ · เฟส Improving · Δ (▲) · ↗ chip · แท็ก 'Revisit · phase changed' · driver ตัด ~80 ตัว (…) · 'Reviewed 3d ago'", "SMH" in t and "Semiconductors" in t and "IMPROVING · 4 d" in t and "↗ momentum rising" in t and "Revisit · phase changed" in t and "Reviewed 3d ago" in t, t)   # TD4a: เฟสตัวพิมพ์ใหญ่ + วัน + OFF52W ต่อท้ายชื่อ · driver เต็ม (พับ 1 บรรทัดด้วย CSS)
+        check(f"{tag} 7 แถว SMH: ชื่อ · เฟส Improving · Δ (▲) · ↗ chip · แท็ก 'Revisit · phase changed' · driver ตัด ~80 ตัว (…) · 'Reviewed 3d ago'", "SMH" in t and "Semiconductors" in t and "UNDERPERFORMING · RECOVERING · 4 bars in state" in t and "↗ recovering (still below SPY)" in t and "Revisit · phase changed" in t and "Reviewed 3d ago" in t, t)   # TD4a: เฟสตัวพิมพ์ใหญ่ + วัน + OFF52W ต่อท้ายชื่อ · driver เต็ม (พับ 1 บรรทัดด้วย CSS)
         dl = js(page, "()=>document.querySelector('[data-sd-trow=\"SMH\"] [data-sd-tline]').innerText")
         check(f"{tag} 7 driver บนแถว Today ≤ 80 ตัว + …", len(dl.split(" · ")[0]) > 80 and js(page, "()=>getComputedStyle(document.querySelector('[data-sd-trow=\"SMH\"] [data-sd-tline]')).whiteSpace") == "nowrap", dl)   # TD4a: แสดงข้อความเต็ม พับเป็น 1 บรรทัด (ellipsis) แตะ = ขยาย
         ph = js(page, "()=>getComputedStyle(document.querySelector('[data-sd-trow=\"SMH\"] [data-sd-phase]')).color")
@@ -440,7 +441,7 @@ def weekend_tests(pw):
     try:
         t = js(page, "()=>glWeekTasks().find(x=>x.id==='wsector')")
         check(f"{tag} 8 งาน Weekly 'Review drivers for selected sectors' อยู่ในรายการเริ่มต้น (กดเอง · auto=null)", t and t["name"] == "Review drivers for selected sectors" and t["auto"] is None and t["on"] is True, t)
-        js(page, "()=>{ sdWrite('SMH', n=>{ n.follow=true; n.driver='drv'; n.reviewed_at=new Date().toISOString(); n.reviewed_phase='IMPROVING'; n.reviewed_tf='D'; return n; }); glSetTab('w'); }"); go_today(page)
+        js(page, "()=>{ sdWrite('SMH', n=>{ n.follow=true; n.driver='drv'; n.reviewed_at=new Date().toISOString(); n.reviewed_phase='IMPROVING'; n.reviewed_tf='D'; n.reviewed_model=2; return n; }); glSetTab('w'); }"); go_today(page)
         row = js(page, "()=>{ const r=document.querySelector('[data-gl-wrow=\"wsector\"]'); return r ? {done: r.dataset.done, txt: r.innerText.replace(/\\s+/g,' ').trim(), tick: !!r.querySelector('[data-gl-wtick]'), auto: !!r.querySelector('[data-gl-wauto]')} : null; }")
         check(f"{tag} 8 แถวมีช่องติ๊กกดเอง · ไม่ auto · ยังไม่ติ๊กแม้มีโน้ต+รีวิวแล้ว (ไม่ auto-complete)", row and row["tick"] and not row["auto"] and row["done"] == "false", row)
         check(f"{tag} 8 ไม่มีตัวนับ (ไม่มี n/N ในแถว) — มีแค่ 'กดเอง' + ปุ่ม Flow ›", row and not re.search(r"\d+\s*/\s*\d+", row["txt"]) and "Flow ›" in row["txt"] and "กดเอง" in row["txt"], row)
@@ -509,7 +510,7 @@ def width_tests(pw, w, h, label):
     tag = f"[{ENGINE}/{label}]"
     b, page, ce, pe = launch(pw, w, h)
     try:
-        js(page, "()=>{ sdWrite('SMH', n=>{ n.follow=true; n.driver='ก'.repeat(300); n.evidence={summary:'ข'.repeat(700), sources:[{title:'Very long source title '.repeat(4), url:'https://example.com/'+'a'.repeat(300)}]}; n.revisit_if='ค'.repeat(250); n.reviewed_at=new Date(Date.now()-3*864e5).toISOString(); n.reviewed_phase='LEADING'; n.reviewed_tf='D'; return n; }); sdOpen['SMH']=true; sdOpen['XBI']=true; }")
+        js(page, "()=>{ sdWrite('SMH', n=>{ n.follow=true; n.driver='ก'.repeat(300); n.evidence={summary:'ข'.repeat(700), sources:[{title:'Very long source title '.repeat(4), url:'https://example.com/'+'a'.repeat(300)}]}; n.revisit_if='ค'.repeat(250); n.reviewed_at=new Date(Date.now()-3*864e5).toISOString(); n.reviewed_phase='LEADING'; n.reviewed_tf='D'; n.reviewed_model=2; return n; }); sdOpen['SMH']=true; sdOpen['XBI']=true; }")
         go_flow(page); ow1 = overflow(page)
         page.locator(f'{sdsel("SMH")} [data-sd-import]').click(); settle(page, 300); ow2 = overflow(page)
         js(page, "()=>sdImpClose()")

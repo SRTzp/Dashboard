@@ -3,6 +3,7 @@
 Chromium · 300 / 390 / 1280 / 1440 · Sat: fixture P77 (Lean) · Watch: fixture P106/P107 · ข้อมูล SAMPLE ล้วน
 ภาพ tests/screenshots/set1-{settings-390,sat-390,products-390,plan-btc-390,plan-xau-390,settings-1440}.png
 รัน: SECT='calc plan settings copy' python3 run_tests_phase110.py"""
+from rrg1_fixture import MODELIZE_JS
 import json, os, sys
 from playwright.sync_api import sync_playwright
 import ln3fix_common as C   # ต้องมาก่อน
@@ -271,7 +272,7 @@ ROWS = [
 
 
 def go_flow(page, rows):
-    js(page, "(rows)=>{ switchTab('flow'); const f = ffState(); f.rrg = {rowsD:rows, rowsW:[], day:'2026-10-29', at:'', loading:false, err:''}; f.themesCol = false; f.themesColUser = true; ffRenderThemes(); }", rows)
+    js(page, "(rows)=>{ const M = " + MODELIZE_JS + "; switchTab('flow'); const f = ffState(); f.rrg = {rowsD:M(rows), rowsW:[], model:2, lastBar:'2026-10-29', day:'2026-10-29', at:'', loading:false, err:''}; f.themesCol = false; f.themesColUser = true; ffRenderThemes(); }", rows)
     settle(page, 600)
 
 
@@ -289,7 +290,7 @@ def copy_tests(pw):
         pick = lambda q: [s for s in order if next((r for r in ROWS if r["sym"] == s), {}).get("quad") == q]
         fm = lambda s: ("★" if s == "XRT" else "") + s + " (" + nm[s] + ")"
         line = lambda lab, q: lab + ": " + (", ".join(fm(s) for s in pick(q)) or "—")
-        exp = "\n".join(["RRG Daily · as of 2026-10-29 · vs SPY", line("Leading", "lead"), line("Improving", "imp"), line("Weakening", "weak"), line("Lagging", "lag"), "No data: XLF"])
+        exp = "\n".join(["Relative Trend vs SPY · Daily · as of 2026-10-29 · custom model, not JdK RRG", line("Outperforming · strengthening", "lead"), line("Underperforming · recovering", "imp"), line("Outperforming · fading", "weak"), line("Underperforming · worsening", "lag"), line("Neutral vs benchmark", "flat"), "No data: XLF"])
         check(f"{tag} Copy by phase: ข้อความตรงเป๊ะ (★ ติดตาม · Lagging ว่าง = — · No data ท้ายสุด)", got == exp, got)
         check(f"{tag} Toast 'Copied'", (txt(page, "#sdToast") or "").strip() == "Copied", txt(page, "#sdToast"))
         # ความสูงแถวหัว: ไม่เพิ่มบรรทัดเทียบก่อนแก้ (วัดที่ 3 ความกว้างในส่วน layout)
