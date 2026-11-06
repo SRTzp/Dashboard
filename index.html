@@ -12416,7 +12416,7 @@ function coreNewSave(){
   const tfields = rd.ti ? {tier: rd.ti.tier, tierLens: rd.ti.lens || null, tierComputed: rd.ti.computed, tierInputs: rd.ti.inputs, tierReason: rd.ti.reason || null} : {};
   /* CS1 — snapshot ของการประเมิน/★/Base risk/ตัวปรับ ณ วันบันทึก · แก้การประเมินทีหลังไม่แตะแผน/ไม้ที่บันทึกแล้ว · ตรวจด่านซ้ำที่นี่อีกชั้น */
   let csn = null;
-  if(coreEl('cnStarBox') && n.mode==='new' && n.strat==='L'){
+  if(coreEl('cnStarBox') && n.mode==='new' && (n.strat==='L' || !n.ps1Last)){
     const cx0 = coreCtxTrack(coreCtx(n.acct), n.track), mk1 = rd.mk || coreMarketOf(rd.ticker), csx = csPlanState(rd.ticker, n.acct, cx0, mk1);
     if(n.strat!=='L' && !(csx.lotRisk>0)) return;   /* PL1·A4 — ไม่มีด่าน ★/RS/Gate 5 แล้ว (Ready rule มาใน A5) */
     let ra = null;
@@ -18422,7 +18422,7 @@ function crOnInput(src){
   else if(src==='v2dd' && g('sV2MaxDd')) g('sSatDdPause').value = g('sV2MaxDd').value;
   const sat = parseFloat(g('sPortSatB').value), note = g('satHeatNote');
   if(note) note.style.display = 'none';   /* SR1 — หน้า Sat อ่านช่องนี้จริงแล้ว ไม่ต้องมีหมายเหตุ "ค่าคงที่ 6%" */
-  const hh = g('satHeatHint'); if(hh) hh.textContent = `heat รวม Sat ตั้งที่ช่อง "Sat — % ของถัง Sat" ด้านล่างในกล่องนี้ (ตอนนี้ ${isFinite(sat) ? fmt2(sat) : '—'}%)`;
+  const hh = g('satHeatHint'); if(hh) hh.textContent = `heat รวม Sat ตั้งที่ช่อง "Sat — % ของถัง Sat" ใน Legacy limits (ตอนนี้ ${isFinite(sat) ? fmt2(sat) : '—'}%)`;
   const errs = {};
   { const pw = parseFloat(g('sPoolW').value), pl = parseFloat(g('sPoolL').value), ps = parseFloat(g('sPoolS').value);   /* RG2b — แบ่งถัง: แต่ละช่อง 0–100 · รวม 100 */
     const r = Calc.coreSize ? Calc.coreSize.poolSplit({total:1, pct:{winner:pw, ladder:pl, sat:ps}}) : {ok:true};
