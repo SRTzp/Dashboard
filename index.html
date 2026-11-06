@@ -14994,6 +14994,26 @@ function ideaRender(host){
 
 /* ── Import / Export / ลบ ── */
 const IDEA_ID_RE = /^[a-z0-9-]{1,60}$/;
+/* BUGHUNT — importer type check: ตรวจชนิดของค่าที่เก็บจริง (ไม่ใช่ค่าหลังแปลงเป็น string) · ผิดชนิด = error ชัด ๆ + ไม่บันทึกอะไรเลย · ไม่มีฟิลด์ (undefined) = ผ่าน
+   spec: {s:[ชื่อฟิลด์ string], n:[number], a:[array], o:[object], ao:[array ที่สมาชิกต้องเป็น object]} */
+function impTypeName(v){ return v===null ? 'null' : Array.isArray(v) ? 'array' : typeof v; }
+function impTypeErr(o, spec, ctx){
+  const bad = (k, want, v) => 'ฟิลด์ ' + (ctx ? ctx + '.' : '') + k + ' ต้องเป็น ' + want + ' (ไฟล์นี้เป็น ' + impTypeName(v) + ') — ไม่บันทึกอะไรเลย';
+  const isObj = v => v!==null && typeof v==='object' && !Array.isArray(v);
+  for(const k of (spec.s||[])) if(o[k]!==undefined && typeof o[k]!=='string') return bad(k, 'ข้อความ (string)', o[k]);
+  for(const k of (spec.n||[])) if(o[k]!==undefined && !(typeof o[k]==='number' && isFinite(o[k]))) return bad(k, 'ตัวเลข (number)', o[k]);
+  for(const k of (spec.a||[])) if(o[k]!==undefined && !Array.isArray(o[k])) return bad(k, 'รายการ (array)', o[k]);
+  for(const k of (spec.o||[])) if(o[k]!==undefined && !isObj(o[k])) return bad(k, 'object', o[k]);
+  for(const k of (spec.ao||[])){
+    if(o[k]===undefined) continue;
+    if(!Array.isArray(o[k])) return bad(k, 'รายการ (array)', o[k]);
+    const i = o[k].findIndex(x=>!isObj(x)); if(i>=0) return 'ฟิลด์ ' + (ctx ? ctx + '.' : '') + k + '[' + i + '] ต้องเป็น object (ไฟล์นี้เป็น ' + impTypeName(o[k][i]) + ') — ไม่บันทึกอะไรเลย';
+  }
+  return '';
+}
+const IMP_IDEA_SPEC = {s:['id','name','date','mode','status','audit'], a:['scope','origin','alt_explanations','assets','sources'], o:['user_notes','recheck','idea','mechanism','chain','call'], ao:['user_notes_check','evidence','kill','gaps','losers','candidates','log']};
+const IMP_LT_SUM_SPEC = {s:['status','biz','cycle','power','engine','price','risk','unknown','next','breaker','tier_note'], o:['call']};
+const IMP_LT_SPEC = {s:['sym','name','market','mode','date','asOf','basis','audit'], a:['sources'], o:['summary','sections','tier_inputs'], ao:['gaps','kpi','tripwires','catalysts','evidence','log']};
 function ideaParse(text){   /* → {err} | {idea, log, id} */
   if(!String(text==null?'':text).trim()) return {err:'ยังไม่ได้วาง JSON'};
   const raw = ltTrimJson(text);
@@ -15004,6 +15024,8 @@ function ideaParse(text){   /* → {err} | {idea, log, id} */
   if(o.schema==='trade@1' || o.schema==='trade-batch@1') return trdParse(o);   /* TR1 */
   if(o.schema==='idea-match@1') return {err:'ไฟล์นี้เป็นผลจับคู่ — Import ที่ Candidates › 📋 จับคู่ list'};
   if(o.schema!=='idea@1') return {err:'schema ต้องเป็น "idea@1" (ไฟล์นี้เป็น ' + (o.schema==null ? 'ไม่ระบุ' : JSON.stringify(String(o.schema)).slice(0,60)) + ')'};
+  { const te = impTypeErr(o, IMP_IDEA_SPEC); if(te) return {err:te};
+    for(const k of ['candidates','losers']){ const bad = (o[k]||[]).findIndex(c=>c.sym!==undefined && typeof c.sym!=='string'); if(bad>=0) return {err:'ฟิลด์ ' + k + '[' + bad + '].sym ต้องเป็นข้อความ (string) — ไม่บันทึกอะไรเลย'}; } }
   const id = String(o.id==null?'':o.id).trim();
   if(!id) return {err:'ไม่มี id ใน JSON'};
   if(!IDEA_ID_RE.test(id)) return {err:'id ต้องเป็น a-z 0-9 และ - ยาวไม่เกิน 60 ตัว (ไฟล์นี้: "' + id.slice(0,40) + '")'};
@@ -16524,6 +16546,7 @@ function ltParse(text, bound){   /* → {err} | {th, log} */
   let o; try{ o = JSON.parse(raw); }catch(e){ return {err:'อ่าน JSON ไม่ได้ — ตรวจว่าวางครบทั้งก้อน (ขึ้นต้น { ลงท้าย })'}; }
   if(!o || typeof o!=='object' || Array.isArray(o)) return {err:'JSON ต้องเป็น object ก้อนเดียว'};
   if(o.schema !== 'living-thesis@1') return {err:'schema ต้องเป็น "living-thesis@1" (ไฟล์นี้เป็น ' + (o.schema==null ? 'ไม่ระบุ' : JSON.stringify(String(o.schema)).slice(0,60)) + ')'};
+  { const te = impTypeErr(o, IMP_LT_SPEC) || (o.summary && typeof o.summary==='object' && !Array.isArray(o.summary) ? impTypeErr(o.summary, IMP_LT_SUM_SPEC, 'summary') : ''); if(te) return {err:te}; if(o.sections!==undefined && o.sections!==null && typeof o.summary==='object' && o.summary && o.summary.thesis!==undefined && !Array.isArray(o.summary.thesis)) return {err:'ฟิลด์ summary.thesis ต้องเป็นรายการ (array) (ไฟล์นี้เป็น ' + impTypeName(o.summary.thesis) + ') — ไม่บันทึกอะไรเลย'}; }
   const sym = String(o.sym==null?'':o.sym).trim();
   if(!sym) return {err:'ไม่มี sym (ชื่อหุ้น) ใน JSON'};
   if(!o.summary || typeof o.summary!=='object' || Array.isArray(o.summary)) return {err:'summary ต้องเป็น object'};
