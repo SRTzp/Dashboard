@@ -20,7 +20,7 @@ FF_STUB = r"""
 # LN1 — หน้าแผน Sat มีสวิตช์ Lean/แบบเดิม (ค่าเริ่ม Lean) · เทสเก่าทั้งหมดเขียนไว้กับหน้าแบบเดิม (PV2c) → seed โหมด "แบบเดิม" ที่นี่ที่เดียว
 # phase80 (เทส LN1) ใช้ FF_STUB_BASE เมื่อต้องการค่าเริ่ม Lean จริง: ff_stub.FF_STUB = ff_stub.FF_STUB_BASE ก่อน launch
 # SET1 — แฟลกนักพัฒนา (ผู้ใช้จริงไม่มี): dash.set1Open=1 กางการ์ด Settings ทั้งหมด · dash.ln1Legacy=1 ให้ตรวจโหมดเดิมของหน้าแผน Sat ได้ (ปกติบังคับ Lean) · phase110 ล้างทั้งสองตัว
-SET1_DEV_FLAGS = "try{ localStorage.setItem('dash.set1Open','1'); localStorage.setItem('dash.ln1Legacy','1'); }catch(e){}\n"
+SET1_DEV_FLAGS = "try{ localStorage.setItem('dash.set1Open','1'); localStorage.setItem('dash.ln1Legacy','1'); localStorage.setItem('dash.ps1Off','1'); }catch(e){}\n"   # PS1 - older suites run the pre-PS1 paths; PS1 suites call localStorage.removeItem('dash.ps1Off')
 FF_STUB_BASE = SET1_DEV_FLAGS + FF_STUB
 LN1_LEGACY_SEED = "try{ localStorage.setItem('ln1_plan_view','legacy'); }catch(e){}\n"
 FF_STUB = LN1_LEGACY_SEED + FF_STUB_BASE
