@@ -278,6 +278,8 @@ def sat_tests(pw, w, h):
         js(page, "([i])=>{ pfVerifySet(i,'structure_ok',true); pfVerifySet(i,'ema50_ok',false); }", [iid]); settle(page, 500)
         txt = js(page, "([i])=>{ const x=satIdeasList.find(y=>y.id===i); return satV2SizeLine({_idea:x,_skipSet:new Set()}, {id:'main'}); }", [iid])
         check(f"{tag} 4b สรุปขนาดแสดง 'Size 60% (Unclear Trend)' + 'margin is not risk'", "Size 60% (Unclear Trend)" in txt and "margin is not risk" in txt, txt[:300])
+        row_ = js(page, "()=>{ const el=document.querySelector('[data-ps1-unclear-row]'); return el ? el.innerText : ''; }")
+        check(f"{tag} 4b แถวขนาดไม้บนการ์ดแผน Sat แสดง 'Size 60% (Unclear Trend)'", row_ == "Size 60% (Unclear Trend)", row_)
         # default risk empty -> message
         js(page, "()=>{ const B=getBook('main'); B.settings.psRisk={def:{}}; saveBook('main'); render(); }"); settle(page, 400)
         ce_ = calc()
