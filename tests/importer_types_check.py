@@ -23,5 +23,20 @@ with sync_playwright() as p:
     for fn, base in (("ideaParse", idea), ("ltParse", lt)):
         r = pg.evaluate("([f,t])=>{const r=window[f](t,null); return {err:r.err||null}}", [fn, json.dumps(base)])
         ok = r["err"] is None; fails += 0 if ok else 1; print(("PASS" if ok else "FAIL"), fn, "valid fixture still accepted", r["err"])
+    # item 6 — null handling (pure parser/validator on fixtures; NO restore is ever run)
+    bk = {"_meta": {"app": "trading-dashboard", "schema": 3, "uid": "x", "activeAccount": "main", "accounts": [{"id": "main", "name": "m"}]}, "doc": {"books": {"main": {"trades": []}}}}
+    for k in ("uid", "activeAccount", "accounts"):
+        d = json.loads(json.dumps(bk)); d["_meta"][k] = None
+        r = pg.evaluate("t=>{const r=bkRestoreParse(t); return {ok:r.ok, thr:0, hasKey:r.ok && (r.obj._meta.uid!==null && r.obj._meta.activeAccount!==null && r.obj._meta.accounts!==null)}}", json.dumps(d))
+        ok = r["ok"] and r["hasKey"]; fails += 0 if ok else 1; print(("PASS" if ok else "FAIL"), "bkRestoreParse _meta.%s=null -> treated as absent" % k, r)
+    for k, v in (("uid", 5), ("accounts", "x"), ("accounts", [None])):
+        d = json.loads(json.dumps(bk)); d["_meta"][k] = v
+        r = pg.evaluate("t=>{const r=bkRestoreParse(t); return {ok:r.ok, err:r.err||null}}", json.dumps(d))
+        ok = (not r["ok"]) and r["err"]; fails += 0 if ok else 1; print(("PASS" if ok else "FAIL"), "bkRestoreParse _meta.%s=%s rejected" % (k, json.dumps(v)), r["err"])
+    r = pg.evaluate("()=>{ bkRs={obj:{_meta:{accounts:null}}}; return bkRsAcctName('zzz'); }")
+    ok = r == "zzz"; fails += 0 if ok else 1; print(("PASS" if ok else "FAIL"), "bkRsAcctName with accounts=null -> id", r)
+    pbq = pg.evaluate("()=>Calc.pbQuarterOf(new Date())")
+    pb = pg.evaluate("q=>{ const o={schema:'macroPlaybook/v2',quarter:q,status:'draft',doc_url:null,view:{},assets:[]}; const r=Calc.pbValidate(JSON.stringify(o)); return {threw:0, docUrlErr:(r.errors||[]).some(e=>/doc_url/.test(e)), warn:(r.warnings||[]).some(e=>/doc_url/.test(e))}; }", pbq)
+    ok = (not pb["docUrlErr"]) and pb["warn"]; fails += 0 if ok else 1; print(("PASS" if ok else "FAIL"), "pbValidate doc_url=null -> no type error, 'no link' warning", pb)
     b.close()
 print("FAILS", fails); sys.exit(1 if fails else 0)

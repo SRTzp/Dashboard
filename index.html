@@ -18515,6 +18515,7 @@ const Calc = {
     if(typeof obj.quarter!=='string' || !/^\d{4}Q[1-4]$/.test(obj.quarter)) errors.push('quarter: ต้องเป็นรูปแบบ YYYYQn เช่น 2026Q4');
     else if(obj.quarter < Calc.pbQuarterOf(now||new Date())) warnings.push('quarter '+obj.quarter+' เก่ากว่าไตรมาสปัจจุบัน ('+Calc.pbQuarterOf(now||new Date())+')');
     if(obj.status!=='draft' && obj.status!=='active') errors.push('status: ต้องเป็น "draft" หรือ "active"');
+    if(obj.doc_url===null) delete obj.doc_url;   /* BUGHUNT — null = ไม่มีลิงก์ (เหมือนไม่ใส่) */
     if(obj.doc_url!=null && typeof obj.doc_url!=='string') errors.push('doc_url: ต้องเป็นข้อความ');
     if(!isStr(obj.doc_url)) warnings.push('ยังไม่มีลิงก์รายงานเต็ม (doc_url)');
     const pillarIds = [];
@@ -25330,6 +25331,10 @@ function bkRestoreParse(text){
   const m = obj && obj._meta;
   if(!m || m.app !== 'trading-dashboard') return {ok:false, err:'ไม่ใช่ไฟล์ backup ของ Trading Dashboard (_meta.app ต้องเป็น trading-dashboard)'};
   if(m.schema !== 2 && m.schema !== 3) return {ok:false, err:'ไม่รองรับ schema '+m.schema+' (รับเฉพาะ 2 และ 3)'};
+  /* BUGHUNT — null = ไม่มีค่า (ข้าม) · ชนิดผิดอื่น ๆ = ปฏิเสธไฟล์ก่อนแตะข้อมูลใด ๆ */
+  for(const k of ['uid','activeAccount']){ if(m[k]===null) delete m[k]; else if(m[k]!==undefined && typeof m[k]!=='string') return {ok:false, err:'_meta.'+k+' ต้องเป็นข้อความ'}; }
+  if(m.accounts===null) delete m.accounts;
+  if(m.accounts!==undefined && (!Array.isArray(m.accounts) || m.accounts.some(a=>!a || typeof a!=='object' || typeof a.id!=='string'))) return {ok:false, err:'_meta.accounts ต้องเป็นรายการของ {id, name}'};
   let books = obj.doc && obj.doc.books && typeof obj.doc.books==='object' ? obj.doc.books : null;
   if(!books && obj.state && m.activeAccount) books = {[m.activeAccount]: obj.state};
   if(!books || !Object.keys(books).length) return {ok:false, err:'ไม่พบข้อมูลบัญชีในไฟล์'};
@@ -25346,7 +25351,7 @@ async function bkRestoreLoad(text, fname){
 function bkRsCountTxt(c){ return `open ${c.open} · plan ${c.plan} · closed ${c.closed}`; }
 function bkRsAcctName(id){
   const a = acctList.find(x=>x.id===id); if(a) return a.name;
-  const f = ((bkRs.obj._meta.accounts)||[]).find(x=>x.id===id); return f ? f.name : id;
+  const f = (Array.isArray(bkRs.obj._meta.accounts) ? bkRs.obj._meta.accounts : []).find(x=>x && x.id===id); return f ? f.name : id;
 }
 function bkRsRow(key, label, fileTxt, nowTxt, opts){
   opts = opts || {};
