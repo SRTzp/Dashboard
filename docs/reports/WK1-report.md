@@ -17,7 +17,7 @@ Branch `claude/wk1`, **stacked on `claude/tx1`** (uses TX1's `--read-fs/--read-l
 4. ①/③ missing data → inline `Copy prompt ›` (clipboard text starts `weekly-impact:` / `weekly-stocks-news:` + manifest JSON) and `Paste JSON ›` (opens the existing paste sheets); hidden once data exists.
 5. Per-item news read: `stockNewsRead[ed] = {readIds:[tickers]}`; old `true` = all read (no migration; expanded on first un-tick).
 6. News sheet: ✓ toggle per item, read items fade, `Unread | All` (default Unread), `Mark all read`, empty Unread → `All read ✓ · Show all`, body text on TX1 tokens.
-7. Daily line → one `<button>` `● Weekly News · x/y unread ›` (same spot/size); hidden when all read.
+7. Daily line → original look (small muted grey div, no dot, no border): `Weekly News · x/y unread · ` + the existing dashed `Read ›` pill as the ONLY tap target (text not clickable); hidden when all read.
 8. Tests: new `phase366` (86 checks) + retire/adjust old B4 (106), 102, 362.
 
 ## Decisions
@@ -29,10 +29,10 @@ Branch `claude/wk1`, **stacked on `claude/tx1`** (uses TX1's `--read-fs/--read-l
 - "Weekly News" Daily line keeps `Hidden when all read`; an edition with 0 items is not auto-read (needs Mark all read, which stores `true`).
 - Mark all read stores the current item tickers (so tickers added to an edition later show as unread).
 - Weekend panel max width 760px on wide screens (single column).
-- Not done / flagged: the news sheet header `Mark all read` wraps to its own line at 390px (cosmetic).
+- Fixed: the news sheet header `Mark all read` no longer wraps at 390px (title truncates, button/count `nowrap`).
 
 ## Tests
-- New `phase366`: **86/86** (390 + 1440) — order/tags/header/bar/badge, ⑤ Mon–Sun ICT boundaries, ⑥ fixture (stop<avg, =avg, >avg → N=1; multi-account; no-stop; Short), ⑦ manual, Copy prompt/Paste JSON only when missing (+ prompt text, paste sheet), news ✓/untick/filter/Mark all/Show all/reload/legacy flag, ③ and Daily-line counts, Daily line is one `<button>` (click + Enter + Space), hidden when all read, no overflow/console errors.
+- New `phase366`: **90/90** (390 + 1440) — order/tags/header/bar/badge, ⑤ Mon–Sun ICT boundaries, ⑥ fixture (stop<avg, =avg, >avg → N=1; multi-account; no-stop; Short), ⑦ manual, Copy prompt/Paste JSON only when missing (+ prompt text, paste sheet), news ✓/untick/filter/Mark all/Show all/reload/legacy flag, ③ and Daily-line counts, Daily line is a plain div with only the `Read ›` pill clickable (text tap does nothing; Enter on pill), Mark all read stays on the title row, hidden when all read, no overflow/console errors.
 - Related suites: 106 (155), 102 (54), 108 (130), 365 (68), 99 (122), 15 (85), 116 (67), 362 (69 after retire) all pass; **105: 186 PASS then a Playwright timeout (`[data-sd-hd="IGV"] .l2 .g` click) → exit 1, 0 FAIL lines** — identical (`fail 1 0 186`) in the previous full run `_to_delete/runall2/final.tsv`, so pre-existing, not caused by TX1/WK1. `check_syntax` OK · core_size 502/502 · sync OK. No full suite (as instructed).
 - Retired/changed: `tests/WK1_retired.md` (8 rows). Verify file `docs/reports/WK1-verify.txt` (via `tests/run_related.sh`).
 - Screenshots (git-ignored, `tests/screenshots/`): `wk1-weekend-{390,1440}`, `wk1-weekend-dark-*`, `wk1-news-*`, `wk1-news-dark-*` (app has no dark theme, so dark = `prefers-color-scheme` emulation, identical).
