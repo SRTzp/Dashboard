@@ -3455,7 +3455,7 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .ps1Pc{flex:0 0 62px;display:flex;align-items:center;gap:2px;margin:0}.ps1Pc input{width:100%;min-width:0;box-sizing:border-box}.ps1Pc i{font-style:normal;font-size:.74rem;color:var(--muted)}
 .ps1M{flex:0 1 auto;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;min-width:0}
 .ps1R>.ps1Rm{flex:none}
-.ps1Msg{color:var(--red);font-size:.74rem;margin-top:3px}.ps1Amb{color:var(--amber)}
+.ln1-e2{display:flex;align-items:center;gap:6px;margin-top:6px}.ln1-e2>input[data-v2-entry2]{flex:1 1 96px;width:0;min-width:84px}.ps1Msg{color:var(--red);font-size:.74rem;margin-top:3px}.ps1Amb{color:var(--amber)}
 @container (max-width:260px){.ps1Sz{display:none}}
 @container (max-width:190px){.ps1M[data-ps1-meta^="s"]{display:none}}
 .ps1RiskC{max-width:160px}
@@ -21554,8 +21554,26 @@ function satV3TpFar(cond, bias){
 /* ST1 — R:R ขั้นต่ำของ Sat = |TP แรก − Entry| ÷ |Entry − Stop| ≥ 1.5 · null = Entry/SL ยังไม่ครบ (ยังไม่ตัดสิน) */
 const SAT_RR_MIN = 1.5;
 function satRrFmt(rr){ return (Math.floor(rr*10 + 1e-9)/10).toFixed(1); }   /* ปัดลง — 1.45 ต้องไม่แสดงเป็น 1.5 */
+/* PS1b §7f — Sat Main optional 2nd entry (max 2 entries · 1 SL · 1 TP · Main only). Data (new keys on the idea): e2on, entry2, e2share (% of the idea's risk for entry 2, default 50)
+   Lots per account per entry = (account risk × share) ÷ (|entry − SL| × multiplier), rounded DOWN to the lot step. */
+function satE2On(idea){ return !ps1Off() && !!idea && idea.e2on === true && !!idea.v2 && satV2Sleeve(idea) !== 'tactical'; }
+function satE2Share(idea){ const v = +idea.e2share; return (v >= 5 && v <= 95) ? v / 100 : 0.5; }
+/* lot-weighted average entry from the un-rounded lots (same weights for every account → one R:R number) */
+function satE2Avg(idea){
+  if(!satE2On(idea)) return null;
+  const e1 = +idea.entry, e2 = +idea.entry2, sl = +idea.sl, sh = satE2Share(idea);
+  if(!(e1>0 && e2>0 && sl>0) || e1 === sl || e2 === sl) return null;
+  const w1 = (1 - sh) / Math.abs(e1 - sl), w2 = sh / Math.abs(e2 - sl);
+  return (w1 * e1 + w2 * e2) / (w1 + w2);
+}
+function satE2Toggle(ideaId, on){ sat7dWrite('satIdeas', ideaId, on ? {e2on:true, entry2:null, e2share:50} : {e2on:false, entry2:null}); satV3Render({force:true}); }
+function satE2Edit(ideaId, field, val){
+  const n = parseFloat(String(val).replace(/,/g, ''));
+  if(field === 'entry2') sat7dWrite('satIdeas', ideaId, {entry2: isFinite(n) && n > 0 ? n : null});
+  else if(field === 'e2share') sat7dWrite('satIdeas', ideaId, {e2share: isFinite(n) ? Math.min(95, Math.max(5, n)) : 50});
+}
 function satRrCheck(idea){
-  const e = +idea.entry, s = +idea.sl, tp = +idea.tp;
+  const e = (satE2Avg(idea) || +idea.entry), s = +idea.sl, tp = +idea.tp;
   if(!(e>0) || !(s>0) || e===s) return null;
   if(!(tp>0)) return {ok:false, rr:null, msg:`ต้องมี TP แรกก่อน — R:R ขั้นต่ำ ${SAT_RR_MIN}`};
   const short = satV3SideOf(idea)==='Short';
@@ -22909,6 +22927,22 @@ function satV2PlanCalc(idea, accId, f2c){
       else { lotDeal = deal; lot = leg; actualTHB = lot * dist * cc.contract * k; dealTHB = deal * dist * cc.contract * k; }
     }
   }
+  /* PS1b §7f — two entries: one budget split by share · each entry rounds DOWN · either rounds to 0 → "Too small to split" */
+  let e2o = null;
+  if(psx && satE2On(idea) && !slotEx){
+    const e2px = +idea.entry2, sh = satE2Share(idea);
+    e2o = {px:e2px, share:sh, err:'', ok:false};
+    if(chosen && riskCur > 0 && side === true && !(e2px > 0)) e2o.err = 'Enter entry 2';
+    else if(chosen && riskCur > 0 && side === true && e2px > 0 && (idea.bias==='Short' ? e2px >= s : e2px <= s)) e2o.err = 'Entry 2 must be on the same side of SL';
+    else if(chosen && riskCur > 0 && side === true){
+      const cc = chosen.cfg, k2 = cc.cur==='USD' ? base.fx : 1, d1 = dist, d2 = Math.abs(e2px - s);
+      const l1 = satV2Fl(riskCur * (1 - sh) / (d1 * cc.contract), cc.lotStep), l2 = satV2Fl(riskCur * sh / (d2 * cc.contract), cc.lotStep);
+      if(l1 < cc.minLot - 1e-12 || l2 < cc.minLot - 1e-12){ e2o.err = 'Too small to split — use 1 entry'; }
+      else { Object.assign(e2o, {ok:true, lot1:l1, lot2:l2, d1, d2, risk1:l1 * d1 * cc.contract * k2, risk2:l2 * d2 * cc.contract * k2, avg:(l1 * e + l2 * e2px) / (l1 + l2)}); }
+    }
+    if(e2o.err){ lot = null; lotDeal = null; actualTHB = 0; dealTHB = 0; lotMsg = e2o.err; }
+    else if(e2o.ok){ lot = e2o.lot1; lotDeal = e2o.lot1 + e2o.lot2; actualTHB = dealTHB = e2o.risk1 + e2o.risk2; lotMsg = ''; limit = 'risk'; }
+  }
   const tradeExists = !!(slot.trade_id && base.trades.some(t=>t.id===slot.trade_id));
   const heatTHB = base.openRisk + (tradeExists ? 0 : actualTHB);
   const heatPct = Calc.heat(heatTHB, base.cap);
@@ -22935,7 +22969,8 @@ function satV2PlanCalc(idea, accId, f2c){
   }
   if(tac && !tradeExists && !psx){ const br = satV2Brake(accId); if(br.stop) blocks.push(br.msg); }
   if(psx){   /* PS1b — min stop (% of entry price) + Loss limits */
-    const msm = (hasTr && e>0 && s>0) ? ps1MinStopMsg(accId, idea.asset, e, s) : (hasTr ? (ps1MinPct(accId, idea.asset) ? '' : 'Set min stop in Settings') : '');
+    let msm = (hasTr && e>0 && s>0) ? ps1MinStopMsg(accId, idea.asset, e, s) : (hasTr ? (ps1MinPct(accId, idea.asset) ? '' : 'Set min stop in Settings') : '');
+    if(!msm && e2o && +idea.entry2 > 0 && s > 0) msm = ps1MinStopMsg(accId, idea.asset, +idea.entry2, s);   /* §7f — min stop applies to EACH entry vs SL */
     if(msm) blocks.push(msm);
     const lm = lossBlockMsg(lev); if(lm) blocks.push(lm);
   }
@@ -22950,6 +22985,7 @@ function satV2PlanCalc(idea, accId, f2c){
   const rrC = (hasTr && !tradeExists) ? satRrCheck(idea) : null, rrB = (rrC && !rrC.ok) ? rrC.msg : '';   /* PF1 A4 — TP บังคับ + R:R ≥ ขั้นต่ำเดิม (satRrCheck) ทั้ง Main และ Tactical */
   const out = {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, tradeExists, factor: fac, split1, pyrSplit: spl, ruleFactor: ruleF, f2c: F,
     tacType, mainPos: mp, softWarn, noTrend: !hasTr, mr:false, mrOk:true, mrCheck:null, noteBlock: noteB, unpickBlock: unW, carryBlock: carryB, ddBlock: ddB, newsBlock: newsB, rrBlock: rrB, rr: rrC,
+    e2: e2o,
     ps1: psx ? {E: psE, def: psDef, loss: lev, minPct: ps1MinPct(accId, idea.asset), margin: (base.B.settings && base.B.settings.capital) ? +base.B.settings.capital.satB || 0 : 0} : null, verify: vfy,
     v2: {sleeve: sv, tac, cfg, rpt, capX, sleeveTHB, riskTHB, rawRisk, rawCap, rawHedge, capVal, limit, lotDeal, dealTHB, actualTHB, dist, tps, k: chosen ? (chosen.cfg.cur==='USD' ? base.fx : 1) : 1}};
   out.blocks = blocks;
@@ -22983,6 +23019,7 @@ function satV2SaveSlot(ideaId, accId, offplanAcct){
     setup_note: String(idea.setup_note || '').trim().slice(0, SAT_V2_NOTE_MAX),
     size_limit: v.limit, deal_lot: v.lotDeal, tp1_pct: v.tac ? tps.pct : undefined, tac_type: v.tac ? (c.tacType || undefined) : undefined
   });
+  if(c.e2 && c.e2.ok) t.entry2Plan = {px:c.e2.px, lot:c.e2.lot2, share:c.e2.share};   /* PS1b §7f — "Buy" fills entry 1 · entry 2 stays a pending add on the same idea (part of the same budget) */
   if(c.ps1) t.ps1 = {E: c.ps1.E, riskPct: c.ps1.def, riskTHB: v.riskTHB, verifyFac: c.verify ? c.verify.fac : 1};   /* PS1 snapshot (makeTradeObject has a field whitelist) */
   B.trades.push(t);
   saveBook(accId);
@@ -23350,6 +23387,11 @@ function pfRrParts(idea){
   if(c.rr==null) return {cls:'bad', txt:'TP อยู่ผิดฝั่ง', pill:'R:R —', ok:false};
   const r2 = x => String(Math.round(x*100)/100);
   if(!c.ok) return {cls:'bad', txt:`ต่ำกว่าขั้นต่ำ ${SAT_RR_MIN}`, pill:`R:R ${satRrFmt(c.rr)}`, ok:false};
+  if(satE2On(idea) && +idea.entry2 > 0){   /* PS1b §7f — 20/8 · 50/62 when it fits, else the average only; R:R from the average entry */
+    const av = satE2Avg(idea), e2 = +idea.entry2, d = [Math.abs(e-sl), Math.abs(e2-sl)], g = [Math.abs(tp-e), Math.abs(tp-e2)];
+    const both = `ความเสี่ยง ${r2(d[0])}/${r2(d[1])} · กำไร ${r2(g[0])}/${r2(g[1])}`;
+    return {cls:'ok', txt: both.length <= 34 ? both : `ความเสี่ยง avg ${r2(Math.abs(av-sl))} · กำไร avg ${r2(Math.abs(tp-av))}`, pill:`R:R ${satRrFmt(c.rr)} ✓`, ok:true};
+  }
   return {cls:'ok', txt:`ความเสี่ยง ${r2(Math.abs(e-sl))} · กำไร ${r2(Math.abs(tp-e))}`, pill:`R:R ${satRrFmt(c.rr)} ✓`, ok:true};
 }
 function pfRrHtml(idea){
@@ -23367,6 +23409,7 @@ function pfRrLive(inp){
   const f = inp.closest('.ln1-form'); if(!f) return;
   const g = sel => { const el = f.querySelector(sel); return el ? el.value.replace(/,/g, '') : ''; };
   const tr = g('[data-pf-trend-sel]'), idea = {entry: g('[data-v2-entry]'), sl: g('[data-v2-sl]'), tp: g('[data-v2-tp]'), bias: tr==='up' ? 'Long' : tr==='dn' ? 'Short' : ''};
+  if(f.querySelector('[data-v2-entry2]')){ idea.v2 = true; idea.e2on = true; idea.entry2 = g('[data-v2-entry2]'); idea.e2share = g('[data-v2-e2share]'); }   /* §7f */
   const r = pfRrParts(idea), box = f.querySelector('[data-pf-rr]'); if(!box) return;
   box.className = 'pf-rr ' + r.cls; box.dataset.pfRr = r.cls;
   box.querySelector('[data-pf-rrt]').textContent = r.txt; box.querySelector('[data-pf-rrp]').textContent = r.pill;
@@ -23549,9 +23592,11 @@ function ln1CardHtml(idea){
     + (tacLock ? '<div class="ui-hint" data-cs-tac-hint="1">Tactical needs EMA50 + Structure verify</div>' : '')
     + ln3MacroBoxHtml(idea, F)
     + (tac && tyInfo.type ? row('ประเภท', `<span class="ui-f2c-tag" data-v2-type="${tyInfo.type}">${SAT_V2_TYPE[tyInfo.type]} (อัตโนมัติ)</span>${tyInfo.softWarn ? ` <span class="ui-hint" data-v2-range-warn="1">${e(tyInfo.softWarn)}</span>` : ''}`) : '')
-    + `<div class="ln1-g3" data-ln1-prices="1"><div><label>Entry</label>${inp('entry', idea.entry, 'data-v2-entry placeholder="Entry" oninput="pfRrLive(this)"' + lkA)}</div><div><label>SL</label>${inp('sl', idea.sl, 'data-v2-sl placeholder="SL" oninput="pfRrLive(this)"' + lkA)}</div>`
+    + `<div class="ln1-g3" data-ln1-prices="1"><div><label>Entry${(!ps1Off() && !tac && !satIdeaHasTrade(idea) && idea.e2on !== true) ? ` <button type="button" class="ps1Pl" data-sat-e2add aria-label="Add 2nd entry" onclick="satE2Toggle('${id}',true)">＋</button>` : ''}</label>${inp('entry', idea.entry, 'data-v2-entry placeholder="Entry" oninput="pfRrLive(this)"' + lkA)}</div><div><label>SL</label>${inp('sl', idea.sl, 'data-v2-sl placeholder="SL" oninput="pfRrLive(this)"' + lkA)}</div>`
     + `<div><label>TP <b class="pf-req" aria-label="บังคับ">*</b></label>${inp('tp', idea.tp, `data-v2-tp="${tac ? 'tac' : 'main'}" data-pf-tp placeholder="ต้องใส่" oninput="pfRrLive(this)"${lkA}${(+idea.tp > 0) ? '' : ' class="pf-need"'}`)}</div>`
-    + `</div>` + pfRrHtml(idea) + `</div>`;
+    + `</div>`
+    + (satE2On(idea) ? `<div class="ln1-e2" data-sat-e2><input type="text" inputmode="decimal" data-v2-entry2 placeholder="Entry 2" value="${idea.entry2==null ? '' : e(String(idea.entry2))}" oninput="pfRrLive(this)" onchange="satE2Edit('${id}','entry2',this.value)"${lkA}><label class="ps1Pc"><input type="text" inputmode="decimal" data-v2-e2share aria-label="Risk share of entry 2 %" value="${Math.round(satE2Share(idea)*100)}" oninput="pfRrLive(this)" onchange="satE2Edit('${id}','e2share',this.value)"><i>%</i></label>${satIdeaHasTrade(idea) ? '' : `<button type="button" class="ps1Rm" data-sat-e2rm aria-label="Remove entry 2" onclick="satE2Toggle('${id}',false)">✕</button>`}</div>` : '')
+    + pfRrHtml(idea) + `</div>`;
   /* ขนาดไม้ทุกบัญชีเรียงต่อกัน */
   const msgs = [], details = [];
   const sizes = accs.map(a=>{
@@ -23565,7 +23610,7 @@ function ln1CardHtml(idea){
     const v = c.v2, cur = c.chosen.cfg.cur, unit = satSzUnit(idea, c), sp = satV2Split(a.id, sv);
     const legLine = '';
     details.push(`<div class="ln1-dt" data-ln1-detail="${e(a.id)}">${nm}${satV2SizeLine({_idea: idea, _skipSet: skipSet}, a)}</div>`);
-    return `<div class="ln1-sz" data-ln1-acct="${e(a.id)}">${nm}<span class="ln1-sv"><b data-ln1-lot="1">${satV2Lot(c.lot)}</b> ${unit} · <span class="ui-hint" data-ln1-detail-txt="1">${satSzDetail(idea, c)}</span> · <span data-ln1-risk="1">Risk ${satV2Money2(v.actualTHB / v.k, cur)}</span>${c.factor<1 ? ` <span class="ui-hint">ลด ${Math.round((1-c.factor)*100)}%</span>` : ''}${(c.verify && c.verify.ok && c.verify.fac<1) ? ' <span class="ui-hint" data-ps1-unclear-row>Size 60% (Unclear Trend)</span>' : ''}</span><span class="ln1-st">${st.ico}</span>${skipB}${offB}</div>${legLine}`;
+    return `<div class="ln1-sz" data-ln1-acct="${e(a.id)}">${nm}<span class="ln1-sv"><b data-ln1-lot="1">${(c.e2 && c.e2.ok) ? satV2Lot(c.e2.lot1) + ' + ' + satV2Lot(c.e2.lot2) : satV2Lot(c.lot)}</b> ${unit} · <span class="ui-hint" data-ln1-detail-txt="1">${satSzDetail(idea, c)}</span> · <span data-ln1-risk="1">Risk ${satV2Money2(v.actualTHB / v.k, cur)}</span>${c.factor<1 ? ` <span class="ui-hint">ลด ${Math.round((1-c.factor)*100)}%</span>` : ''}${(c.verify && c.verify.ok && c.verify.fac<1) ? ' <span class="ui-hint" data-ps1-unclear-row>Size 60% (Unclear Trend)</span>' : ''}</span><span class="ln1-st">${st.ico}</span>${skipB}${offB}</div>${legLine}`;
   }).join('');
   /* เหตุผลสวน/นอก Macro (เมื่อกฎเดิมบังคับ) + บรรทัด Macro · ขนาดไม้ */
   const m = F.mac;
