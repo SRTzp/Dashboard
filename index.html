@@ -3517,6 +3517,23 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .pbSecK,.pb-sheet .pbSecK{font-size:max(12px,calc(var(--read-fs) * .8))}
 .stkK,.stkSecH,.stkFold>summary,.stk-panel .wiSm,.stk-sheet .wiSm{font-size:max(12.5px,calc(var(--read-fs) * .85))}
 @media(min-width:601px){.pb-sheet .ui-sheet{max-width:720px;width:min(94vw,720px)}}
+
+/* WK1 — Weekend one list · news per item · Daily news line = one button */
+.td3-pn.wk{max-width:760px}@media (min-width:1000px){.td3-pn.wk{grid-template-columns:minmax(0,1fr)}}
+.td3-wkh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px}.td3-wkh h3,.td3-p.td3-wkp .td3-wkh h3{margin:0;font-size:1rem;letter-spacing:0;text-transform:none;color:var(--text)}.td3-wkh .m{color:var(--muted);font-size:.8rem}
+.td3-bar{height:6px;border-radius:9px;background:var(--hair);overflow:hidden;margin:4px 0 8px}.td3-bar i{display:block;height:100%;background:var(--teal)}
+.td3-wkp .td3-wk{align-items:flex-start;padding:9px 0;flex-wrap:wrap}.td3-wkp .td3-wk .nm{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 6px;font-size:.92rem}
+.td3-wkp .td3-wk .nm .td3-ck{align-self:flex-start;margin-right:4px;font-size:.7rem;border-radius:50%}
+.td3-wk[data-done="true"] .nm{color:var(--muted)}.td3-wk .nm small{flex:1 1 100%;margin:2px 0 0 32px;font-size:.74rem;color:var(--faint,var(--muted))}
+.td3-gt{font-size:9.5px;font-weight:600;letter-spacing:.06em;color:var(--faint,var(--muted));border:1px solid var(--border);border-radius:4px;padding:1px 4px}
+.td3-new{font-size:9.5px;font-weight:700;background:#2B5BD7;color:#fff;border-radius:4px;padding:1px 4px}
+.td3-wms{display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:32px}
+button.td3-wn{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:6px;width:100%;margin-top:8px;padding:8px 10px;min-height:40px;border-radius:10px;border:1px solid var(--teal);background:color-mix(in srgb,var(--teal) 10%,transparent);cursor:pointer;font-size:.86rem}
+button.td3-wn:focus-visible{outline:2px solid var(--teal);outline-offset:2px}button.td3-wn .dot{width:7px;height:7px;border-radius:50%;background:#2B5BD7;flex:none}button.td3-wn .g{margin-left:auto;color:var(--faint,var(--muted))}
+.stkRow{position:relative;transition:opacity .2s}.stkRow.rd{opacity:.5}.stkRow>.stkH{padding-left:40px}.stkRow>.stkB{padding-left:40px}
+.stkCk{position:absolute;left:0;top:6px;width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:none;color:transparent;font-weight:700;cursor:pointer;padding:0;z-index:1}.stkCk.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.stkFlt{display:flex;gap:6px;margin:6px 0}.stkFlt button{font:inherit;font-size:.8rem;font-weight:600;border:1px solid var(--border);background:none;color:var(--muted);border-radius:99px;padding:4px 12px;cursor:pointer;min-height:32px}.stkFlt button.on{background:var(--text);color:var(--surface);border-color:var(--text)}
+.stkDone{padding:14px 0;text-align:center;color:var(--muted)}.stkRc{margin-left:auto}.stkAllBtn{margin-left:8px}
 </style>
 </head>
 <body>
@@ -8048,7 +8065,9 @@ function td3WeekTick(id){
     const old = (S.weekLog && typeof S.weekLog==='object') ? S.weekLog : {}, log = {};
     Object.keys(old).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort().forEach(k=>{ log[k] = old[k]; });
     const cur = log[mon] && Array.isArray(log[mon].done) ? log[mon].done.slice() : [];
-    tdToggle(cur, id); log[mon] = Object.assign({}, log[mon], {done:cur});
+    if(id === 'wk_cands'){ const had = cur.includes('wk_cands') || cur.includes('wk_picks'); const k = cur.filter(x=>x !== 'wk_cands' && x !== 'wk_picks'); if(!had) k.push('wk_cands'); cur.length = 0; k.forEach(x=>cur.push(x)); }   /* WK1 — ④ รวม wk_cands + wk_picks (เก่า = ถือว่าติ๊กแล้ว) */
+    else tdToggle(cur, id);
+    log[mon] = Object.assign({}, log[mon], {done:cur});
     const keep = Object.keys(log).sort().slice(-GL_WEEKS_KEEP), out = {}; keep.forEach(k=>{ out[k] = log[k]; });
     S.weekLog = out;
   });
@@ -8060,39 +8079,67 @@ function td3MacroInfo(today){
   const days = ms == null ? null : Math.max(0, glDays(td3Day(new Date(ms).toISOString()) || today, today));
   return {label: q ? `Macro Playbook Q${q[2]}/${q[1].slice(2)}` : 'Macro Playbook', days, headline: String((v.view && v.view.headline) || '')};
 }
-function td3WeekModel(M){
-  const mon = tdMonday(M.today), done = glWeekDone(mon), mac = td3MacroInfo(M.today), d = stkLatest(), picks = satWeekPickList(), nt = td3NtList();
-  const A = wlRowsAll(), items = [];
-  const add = (panel, id, t, o)=>items.push(Object.assign({panel, id, t, auto:false, ok:false, count:true}, o));
-  add('ov', 'wk_macro', mac ? `Review ${mac.label}` : 'Review Macro Playbook', {ok:done.includes('wk_macro'), go:'flow'});
-  add('ov', 'wsector', 'Review drivers for selected sectors', {ok:done.includes('wsector'), go:'sectors', count:false});
-  add('core', 'wk_news', 'Read Weekly News', {auto:true, ok:!!(d && stkIsRead(d.id)), go:'news', sub:d ? '' : 'No edition yet'});
-  add('core', 'wk_cands', `Review Candidates ${A.cand.length} · Watchlist ${A.wl.length}`, {ok:done.includes('wk_cands'), go:'watch'});
-  add('core', 'wk_picks', 'Pick deep-dive stocks for the week', {ok:done.includes('wk_picks'), go:'watch'});
-  add('sat', 'wk_impact', 'Weekly Impact for this week', {auto:true, ok:!!wiCurDoc(), go:'plan'});
-  add('sat', 'wk_assets', 'Pick assets for the week', {auto:true, ok:picks.length >= 1 || nt.includes('*'), go:'plan', sub: nt.includes('*') ? 'Not trading this week' : ''});
-  const c = items.filter(i=>i.count), n = c.filter(i=>i.ok).length;
-  return {items, n, N:c.length, complete:n === c.length};
+/* ══ WK1 — Weekend = ONE list in routine order (SAT · CORE · OVERVIEW) · done ids เดิมที่ยังอยู่: wk_impact wk_assets wk_news wk_cands · ใหม่: wk_ideas wk_stops wk_chg · เลิกใช้: wk_macro wsector wk_picks(รวมใน wk_cands) ══ */
+function td3WeekIdeas(mon){   /* ideas ที่นำเข้า/สร้างสัปดาห์นี้ (จันทร์–อาทิตย์ · ICT) */
+  const end = posAddDaysISO(mon, 6); let n = 0;
+  try{ (ideaList || []).forEach(d=>{ const st = td4IdeaStamp(d), day = st.length <= 10 ? st : td3Day(st); if(day && day >= mon && day <= end) n++; }); }catch(e){}
+  return n;
 }
-function td3WeekRow(it){
-  const ck = it.auto ? `<span class="td3-ck auto${it.ok ? ' on' : ''}" data-td3-wauto="${it.id}">${it.ok ? '✓' : ''}</span>`
-    : `<button type="button" class="td3-ck${it.ok ? ' on' : ''}" data-td3-wtick="${it.id}" aria-pressed="${it.ok}" aria-label="Done: ${td3E(it.t)}" onclick="td3WeekTick('${it.id}')">${it.ok ? '✓' : ''}</button>`;
-  const lk = it.go ? `<button type="button" class="td3-lk" data-td3-wgo="${it.id}" onclick="td3WeekGo('${it.go}')">${it.go==='flow' ? 'Flow' : it.go==='sectors' ? 'Flow' : it.go==='news' ? 'Read' : it.go==='watch' ? 'Watch' : 'Plan'} ›</button>` : '';
-  return `<div class="td3-wk" data-td3-wk="${it.id}" data-done="${it.ok}">${ck}<span class="nm">${td3E(it.t)}${it.sub ? ` <span class="m">· ${td3E(it.sub)}</span>` : ''}</span>${lk}</div>`;
+function td3WeekStops(){   /* ตำแหน่งเปิด (Core + Sat ทุกบัญชี) ที่ stop ยังต่ำกว่าราคาเฉลี่ย (Short: สูงกว่า) · ไม่มี stop = ไม่นับ (แจ้งใน sub) */
+  let n = 0, noSl = 0;
+  try{ acctList.forEach(a=>{ const B = getBookSafe(a.id); ((B && B.trades) || []).forEach(t=>{ if(t.status !== 'open') return; if(!(+t.sl > 0)){ noSl++; return; } if(!posOpenRisk(t).locked) n++; }); }); }catch(e){}
+  return {n, noSl};
+}
+function td3WeekModel(M){
+  const mon = tdMonday(M.today), done = glWeekDone(mon), d = stkLatest(), picks = satWeekPickList(), nt = td3NtList(), A = wlRowsAll(), man = id=>done.includes(id);
+  const wi = !!wiCurDoc(), items = [];
+  const add = (id, tag, t, o)=>items.push(Object.assign({id, tag, t, auto:false, ok:false, count:true}, o));
+  add('wk_impact', 'SAT', 'Weekly Impact', {auto:true, ok:wi, go:'plan', sub:wi ? '' : 'weekly-impact skill → paste JSON', miss:wi ? null : 'wi'});
+  add('wk_assets', 'SAT', 'Pick assets for the week', {auto:true, ok:picks.length >= 1 || nt.includes('*'), go:'plan', sub: nt.includes('*') ? 'Not trading this week' : ''});
+  const sr = d ? stkReadCount(d) : [0, 0], stale = !d || stkStale(d);
+  add('wk_news', 'CORE', 'Read stock news', {auto:true, ok:!!(d && stkIsRead(d.id)), go:'news', sub: d ? `${sr[0]}/${sr[1]} read` : 'No edition yet', miss:stale ? 'stk' : null});
+  add('wk_cands', 'CORE', `Review Candidates ${A.cand.length} · Watchlist ${A.wl.length} → pick deep-dives`, {ok:man('wk_cands') || man('wk_picks'), go:'watch'});
+  const ni = td3WeekIdeas(mon);
+  add('wk_ideas', 'OVERVIEW', `New ideas ${ni}/2`, {auto:ni >= 1, ok:ni >= 1 || man('wk_ideas'), go:'flow', sub:'Flow › Fresh → Ask why › → idea-scout', nw:true});
+  const sp = td3WeekStops();
+  add('wk_stops', 'CORE', 'Raise stops', {auto:sp.n === 0, ok:sp.n === 0 || man('wk_stops'), go:'port', nw:true,
+    sub: (sp.n === 0 ? 'no positions with stop below avg entry' : `${sp.n} position${sp.n === 1 ? '' : 's'} with stop below avg entry`) + (sp.noSl ? ` · ${sp.noSl} without a stop not counted` : '')});
+  add('wk_chg', 'OVERVIEW', 'Check change_if triggers', {ok:man('wk_chg'), go:'flow', nw:true, sub:'tick when none is hit · full review at quarter end'});   /* สถานะ "โดน change_if" ไม่ได้เก็บไว้ที่ไหน → ติ๊กเอง */
+  const n = items.filter(i=>i.ok).length;
+  return {items, n, N:items.length, complete:n === items.length};
+}
+const TD3_GO_LBL = {flow:'Flow', news:'Read', watch:'Watch', port:'Port', plan:'Plan'};
+function td3WeekRow(it, i){
+  const num = it.ok ? '✓' : String(i + 1);
+  const ck = it.auto ? `<span class="td3-ck auto${it.ok ? ' on' : ''}" data-td3-wauto="${it.id}">${num}</span>`
+    : `<button type="button" class="td3-ck${it.ok ? ' on' : ''}" data-td3-wtick="${it.id}" aria-pressed="${it.ok}" aria-label="Done: ${td3E(it.t)}" onclick="td3WeekTick('${it.id}')">${num}</button>`;
+  const lk = it.go ? `<button type="button" class="td3-lk" data-td3-wgo="${it.id}" onclick="td3WeekGo('${it.go}')">${TD3_GO_LBL[it.go] || 'Plan'} ›</button>` : '';
+  const ms = it.miss ? `<span class="td3-wms"><button type="button" class="td3-lk" data-td3-wprompt="${it.miss}" onclick="td3WeekPrompt('${it.miss}')">Copy prompt ›</button><button type="button" class="td3-lk" data-td3-wpaste="${it.miss}" onclick="td3WeekPaste('${it.miss}')">Paste JSON ›</button></span>` : '';
+  return `<div class="td3-wk" data-td3-wk="${it.id}" data-done="${it.ok}"><span class="nm">${ck}<span class="td3-gt" data-td3-gt>${it.tag}</span>${td3E(it.t)}${it.nw ? ' <span class="td3-new">NEW</span>' : ''}${it.sub ? `<small class="m" data-td3-wsub>${td3E(it.sub)}</small>` : ''}</span>${ms}${lk}</div>`;
 }
 function td3WeekGo(g){
   if(g==='flow') switchTab('flow');
-  else if(g==='sectors') sdGoFlowRrg();
+  else if(g==='port') switchTab('mix');
   else if(g==='news'){ try{ stkOpenView(); }catch(e){ console.warn('td3 news:', e); } }
   else if(g==='watch'){ switchTab('watch'); }
   else tdGo({getAttribute:k=>k==='data-go' ? 'satbar' : '{}'});
 }
-function td3WeekPanel(which, W){
-  const rows = W.items.filter(i=>i.panel===which).map(td3WeekRow).join('');
-  if(which!=='sat') return rows;
-  const picks = satWeekPickList(), wkNt = td3NtHas('*');
-  return rows + `<div class="td3-ntbox" data-td3-ntbox><button type="button" class="td3-lk${wkNt ? ' on' : ''}" data-td3-nt="*" aria-pressed="${wkNt}" onclick="td3NtToggle('*')">${wkNt ? '✓ ' : ''}Not trading this week</button>`
+function td3WeekPrompt(kind){   /* Copy prompt: บรรทัดแรก = ชื่อ skill แล้วตามด้วยรายการ (manifest) ที่ skill ต้องใช้ */
+  const skill = kind === 'wi' ? 'weekly-impact' : 'weekly-stocks-news';
+  let man = {}; try{ man = kind === 'wi' ? wiManifest() : stkManifest(); }catch(e){}
+  const txt = skill + ':\n\n' + JSON.stringify(man, null, 1);
+  window.__td3LastPrompt = txt;
+  const ok = ()=>{ try{ sdToast('✓ Copied for ' + skill + ' — paste into Claude, then Paste JSON ›'); }catch(e){} };
+  try{ navigator.clipboard.writeText(txt).then(ok, ok); }catch(e){ ok(); }
+}
+function td3WeekPaste(kind){ try{ if(kind === 'wi') wiOpenPaste(); else stkOpenPaste(); }catch(e){ console.warn('td3 paste:', e); } }
+function td3WeekPanelHtml(W){
+  const pct = W.N ? Math.round(W.n / W.N * 100) : 0;
+  const wkNt = td3NtHas('*'), picks = satWeekPickList();
+  const ntbox = `<div class="td3-ntbox" data-td3-ntbox><button type="button" class="td3-lk${wkNt ? ' on' : ''}" data-td3-nt="*" aria-pressed="${wkNt}" onclick="td3NtToggle('*')">${wkNt ? '✓ ' : ''}Not trading this week</button>`
     + picks.map(k=>{ const on = td3NtHas(k); return `<button type="button" class="td3-lk${on ? ' on' : ''}" data-td3-nt="${td3E(k)}" aria-pressed="${on}" onclick="td3NtToggle('${td3E(k)}')">${td3E(tdLabel(k))}${on ? ' · not trading' : ''}</button>`; }).join('') + `</div>`;
+  const rows = W.items.map((it, i)=>td3WeekRow(it, i) + (it.id === 'wk_assets' ? ntbox : '')).join('');
+  return `<div class="ln3-tdc td3-p td3-wkp" data-td3-panel="week"><div class="td3-wkh"><h3>Weekend review</h3><span class="m" data-td3-wkcnt>· ${W.n}/${W.N} done · ~45 min</span></div><div class="td3-bar" data-td3-bar role="progressbar" aria-valuemin="0" aria-valuemax="${W.N}" aria-valuenow="${W.n}"><i style="width:${pct}%"></i></div>${rows}</div>`;
 }
 
 /* ── News (HIGH only · ICT · countdown < 4h) ── */
@@ -8297,7 +8344,7 @@ function td3CoreDaily(M){
   /* If time permits */
   const nx = qAll[0];
   if(hwDone && scrDone && addLog.length >= TD4_MIN_ADD && nx && !openRows) h += `<div class="td3-next" data-td3-next><div class="td3-th">If time permits</div><div><b>${s(nx.sym)}</b> · Candidate ${nx.ageD == null ? '—' : nx.ageD + 'd'}</div><div class="td3-acts"><button type="button" class="td3-lk" data-td3-nx-screen onclick="td3Screen('${s(nx.sym)}')">Screen ›</button><button type="button" class="td3-lk" data-td3-nx-plan onclick="td3PlanCore('${s(nx.sym)}','${s(nx.market)}')">Draft plan ›</button></div></div>`;
-  try{ const d = stkLatest(); if(d && !stkIsRead(d.id)){ const n = stkModel(d).news; h += `<div class="td3-wn m" data-td3-wnews>Weekly News · ${n} update${n===1 ? '' : 's'} unread · <button type="button" class="td3-lk" onclick="stkOpenView()">Read ›</button></div>`; } }catch(e){}
+  try{ const d = stkLatest(); if(d && !stkIsRead(d.id)){ const rc = stkReadCount(d); h += `<button type="button" class="td3-wn m" data-td3-wnews onclick="stkOpenView()"><span class="dot" aria-hidden="true"></span>Weekly News · ${rc[1] - rc[0]}/${rc[1]} unread <span class="g" aria-hidden="true">›</span></button>`; } }catch(e){}   /* WK1 — ทั้งบรรทัดคือปุ่ม */
   return h;
 }
 
@@ -8575,7 +8622,7 @@ function tdHtmlLean(M){
   const sw = `<div class="td3-sw" role="tablist" data-td3-sw><button type="button" role="tab" data-td3-tab="d" class="${!wk ? 'on' : ''}" aria-selected="${!wk}" onclick="td3SetMode('d')">Daily</button><button type="button" role="tab" data-td3-tab="w" class="${wk ? 'on' : ''}" aria-selected="${wk}" onclick="td3SetMode('w')">Weekend${W.complete ? '' : `<span class="td3-bd" data-td3-badge title="This week's review is incomplete" aria-label="This week's review is incomplete, ${W.n} of ${W.N} done">${W.n}/${W.N}</span>`}</button></div>`;
   let ov = '', core = '', sat = '';
   try{
-    if(wk){ ov = td3WeekPanel('ov', W); core = td3WeekPanel('core', W); sat = td3WeekPanel('sat', W); }
+    if(wk){ /* WK1 — Weekend = หนึ่งรายการ (td3WeekPanelHtml) */ }
     else { ov = td3OverviewDaily(M); core = td3CoreDaily(M); sat = td3PlansHtml(M); }   /* PL1·A7 — Plans แทนแผง Satellite ในโหมด Daily */
   }catch(e){ console.warn('td3 panels:', e); }
   const P = (k, t, b)=>{ const chip = k === 'sat' ? td4RiskChipHtml('sat', M) : k === 'core' ? td4RiskChipHtml('core', M) : ''; let pl = ''; if(k === 'core'){ try{ pl = td3PoolLinesHtml(); }catch(e){ console.warn('td3 pool lines:', e); } } return `<div class="ln3-tdc td3-p" data-td3-panel="${k}">${chip ? `<div class="td4-ph" data-td4-ph="${k}"><h3>${t}</h3>${chip}</div>` : `<h3>${t}</h3>`}${pl}${b}</div>`; };   /* RG2b §4.7 — หัวแผง Core: 2 บรรทัด Winner / Ladder */   /* TD4c — ชิปความเสี่ยงอยู่แถวเดียวกับหัวแผง */
@@ -8587,7 +8634,7 @@ function tdHtmlLean(M){
     if(td3OtherOpen){ try{ other += `<div class="td3-ob" data-td3-ob>${td3OtherBody(M)}</div>`; }catch(e){ console.warn('td3 other:', e); } }
     other += `</details>`;
   } }catch(e){}
-  return `<div class="tdWrap td3" data-td-wrap data-ln3-today="1" data-td3="1">${ftTodayPin()}${td4RemBanner(M)}${(()=>{ try{ return tdRegimeVerdict(); }catch(e){ console.warn('td regime verdict:', e); return ''; } })()}${news}${goals}${ps1TodayLine()}${sw}${banner}<div class="td3-pn" data-td3-panels>${P('ov', 'Overview', ov)}${P('core', 'Selection', core)}${wk ? P('sat', 'Satellite', sat) : (sat ? P('plans', 'Plans', sat) : '')}</div>${other}</div>`;
+  return `<div class="tdWrap td3" data-td-wrap data-ln3-today="1" data-td3="1">${ftTodayPin()}${td4RemBanner(M)}${(()=>{ try{ return tdRegimeVerdict(); }catch(e){ console.warn('td regime verdict:', e); return ''; } })()}${news}${goals}${ps1TodayLine()}${sw}${banner}<div class="td3-pn${wk ? ' wk' : ''}" data-td3-panels>${wk ? td3WeekPanelHtml(W) : P('ov', 'Overview', ov) + P('core', 'Selection', core) + (sat ? P('plans', 'Plans', sat) : '')}</div>${other}</div>`;
 }
 /* ── TD4c — ชิปความเสี่ยงที่หัวแผง (ใช้ตัวเลข/สถานะเดิมของ tdBuild · ไม่คำนวณใหม่) ── */
 const TD4_STG = {reduce:'Reduce', pause:'Pause', recover:'Recover'};
@@ -26527,15 +26574,26 @@ function stkStop(){
 function stkRefresh(){ try{ todayRefresh(); }catch(e){} try{ if(stkOpen) stkRenderView(); }catch(e){} }
 function stkLatest(){ const ks = Object.keys(stkDocs).sort(); return ks.length ? stkDocs[ks[ks.length-1]] : null; }
 function stkReadMap(){ const r = tdSettings().stockNewsRead; return (r && typeof r==='object' && !Array.isArray(r)) ? r : {}; }
-function stkIsRead(id){ return stkReadMap()[id]===true; }
-function stkMarkRead(id){
+/* WK1 — อ่านแล้วต่อรายการ: stockNewsRead[ฉบับ] = {readIds:[ticker…]} · ค่าเก่า true = อ่านทุกรายการ (ไม่ต้อง migrate · เขียนใหม่เมื่อมีการติ๊ก) · รายการ = หุ้นหนึ่งตัวในฉบับ (ไม่มี id ต่อข่าว → key = ฉบับ + ticker) */
+function stkReadEntry(id){ const v = stkReadMap()[id]; return v === true ? true : (v && typeof v === 'object' && Array.isArray(v.readIds) ? v.readIds.filter(x=>typeof x === 'string') : []); }
+function stkItemKeys(d){ try{ const M = stkModel(d); return M.cand.concat(M.wl).map(o=>o.t); }catch(e){ return []; } }
+function stkItemRead(id, t){ const e = stkReadEntry(id); return e === true || e.includes(t); }
+function stkReadCount(d){ const k = stkItemKeys(d), e = stkReadEntry(d.id); return [e === true ? k.length : k.filter(t=>e.includes(t)).length, k.length]; }
+function stkIsRead(id){ const e = stkReadEntry(id); if(e === true) return true; const d = stkDocs[id]; if(!d) return false; const k = stkItemKeys(d); return k.length > 0 && k.every(t=>e.includes(t)); }
+function stkSetRead(id, fn){
   satSettingsWrite(stg=>{
-    const m = Object.assign({}, (stg.stockNewsRead && typeof stg.stockNewsRead==='object') ? stg.stockNewsRead : {}); m[id] = true;
+    const m = Object.assign({}, (stg.stockNewsRead && typeof stg.stockNewsRead === 'object') ? stg.stockNewsRead : {});
+    const old = m[id] === true ? stkItemKeys(stkDocs[id] || {}) : (m[id] && Array.isArray(m[id].readIds) ? m[id].readIds.slice() : []);
+    const nx = fn(old); m[id] = nx === true ? true : {readIds:nx};
     Object.keys(m).sort().slice(0, Math.max(0, Object.keys(m).length - 12)).forEach(k=>{ delete m[k]; });
     stg.stockNewsRead = m;
   });
   stkRefresh(); try{ stkRenderView(); }catch(e){}
 }
+function stkToggleItem(id, t){ stkSetRead(id, cur=>cur.includes(t) ? cur.filter(x=>x !== t) : cur.concat(t)); }
+function stkMarkRead(id){ const k = stkItemKeys(stkDocs[id] || {}); stkSetRead(id, ()=>k.length ? k : true); }
+let stkFilter = 'unread';
+function stkSetFilter(f){ stkFilter = f === 'all' ? 'all' : 'unread'; try{ stkRenderView(); }catch(e){} }
 /* รายชื่อหุ้นปัจจุบัน (Watchlist · Candidates) — ใช้ตัวเดียวกับหน้า Watch */
 function stkLists(){
   let wl = [], cand = [];
@@ -26596,7 +26654,8 @@ function stkRowHtml(o, doc){
     ${x.monitor_th ? `<div class="stkK">ติดตามอะไร</div><div>${s(x.monitor_th)}</div>` : ''}
     ${srcs.length ? `<details class="stkSrc"><summary>แหล่งข่าว (${srcs.length})</summary>${srcs.map(r=>`<div>${s(r.name)}${r.published_at ? ' · ' + s(String(r.published_at).slice(0, 10)) : ''}${r.url && /^https?:\/\//i.test(r.url) ? ` · <a href="${s(r.url)}" target="_blank" rel="noopener">เปิด ↗</a>` : ''}</div>`).join('')}</details>` : ''}
     <button type="button" class="ln1-link" data-stk-watch="${s(o.t)}" onclick="stkGoWatch('${s(o.t)}')">ดูหุ้นใน Watch →</button></div>` : '';
-  return `<div class="stkRow${open ? ' open' : ''}" data-stk-row="${s(o.t)}"><button type="button" class="stkH" data-stk-toggle="${s(o.t)}" aria-expanded="${open}" onclick="stkToggle('${s(o.t)}')"><b>${s(o.t)}</b>${st ? `<span class="stkP stk-${st}" data-stk-pill="${st}">${s(STK_STATUS[st])}</span>` : ''}${o.tags.map(t=>`<span class="wiBdg">${s(t)}</span>`).join('')}<span class="stkHl">${s(x.headline_th || '')}</span></button>${body}</div>`;
+  const rdn = stkItemRead(doc.id, o.t);
+  return `<div class="stkRow${open ? ' open' : ''}${rdn ? ' rd' : ''}" data-stk-row="${s(o.t)}" data-stk-read-item="${rdn ? 1 : 0}"><button type="button" class="stkCk${rdn ? ' on' : ''}" data-stk-ck="${s(o.t)}" aria-pressed="${rdn}" aria-label="${rdn ? 'Mark unread' : 'Mark read'}: ${s(o.t)}" onclick="stkToggleItem('${s(doc.id)}','${s(o.t)}')">✓</button><button type="button" class="stkH" data-stk-toggle="${s(o.t)}" aria-expanded="${open}" onclick="stkToggle('${s(o.t)}')"><b>${s(o.t)}</b>${st ? `<span class="stkP stk-${st}" data-stk-pill="${st}">${s(STK_STATUS[st])}</span>` : ''}${o.tags.map(t=>`<span class="wiBdg">${s(t)}</span>`).join('')}<span class="stkHl">${s(x.headline_th || '')}</span></button>${body}</div>`;
 }
 function stkToggle(t){ if(stkExp.has(t)) stkExp.delete(t); else stkExp.add(t); stkRenderView(); }
 function stkGoWatch(t){ stkCloseView(); try{ switchTab('watch'); wlOpen(t); }catch(e){ console.warn('stkGoWatch:', e); } }
@@ -26605,12 +26664,14 @@ function stkRenderView(){
   const s = escHtml, d = stkLatest();
   if(!d){ host.innerHTML = `<div class="pbSh"><div class="pbShH"><b>Weekly Stock Summary</b></div><div>สรุปสัปดาห์นี้ยังไม่พร้อม</div><div class="pbBtns"><button type="button" class="ui-btn" data-stk-close="1" onclick="stkCloseView()">ปิด</button></div></div>`; return; }
   const M = stkModel(d), read = stkIsRead(d.id), stale = stkStale(d);
-  const sec = (t, list) => list.length ? `<div class="stkSec" data-stk-sec="${t}"><div class="stkSecH">${t==='cand' ? 'CANDIDATES' : 'WATCHLIST'} · ${list.length}</div>${list.map(o=>stkRowHtml(o, d)).join('')}</div>` : '';
+  const rc = stkReadCount(d), vis = list => stkFilter === 'all' ? list : list.filter(o=>!stkItemRead(d.id, o.t)), allRd = rc[1] > 0 && rc[0] === rc[1];
+  const sec = (t, list0) => { const list = vis(list0); return list.length ? `<div class="stkSec" data-stk-sec="${t}"><div class="stkSecH">${t==='cand' ? 'CANDIDATES' : 'WATCHLIST'} · ${list.length}</div>${list.map(o=>stkRowHtml(o, d)).join('')}</div>` : ''; };
   const fold = (k, label, list) => list.length ? `<details class="stkFold" data-stk-fold="${k}"><summary>${label} (${list.length})</summary><div>${list.map(o=>`<div class="stkNo"><b>${s(o.t)}</b> ${o.tags.map(t=>`<span class="wiBdg">${s(t)}</span>`).join('')}</div>`).join('')}</div></details>` : '';
-  host.innerHTML = `<div class="stkTop"><button type="button" class="stkX" data-stk-close="1" aria-label="ปิด" onclick="stkCloseView()"></button></div><div class="pbSh stkBody"><div class="pbShH"><b>Weekly Stock Summary</b>${read ? '' : ' <span class="stkNew">New</span>'}</div>
+  host.innerHTML = `<div class="stkTop"><button type="button" class="stkX" data-stk-close="1" aria-label="ปิด" onclick="stkCloseView()"></button></div><div class="pbSh stkBody"><div class="pbShH"><b>Weekly Stock Summary</b>${read ? '' : ' <span class="stkNew">New</span>'}<span class="wiSm stkRc" data-stk-rc>${rc[0]}/${rc[1]} read</span><button type="button" class="ui-btn stkAllBtn" data-stk-read="1" ${read ? 'disabled' : ''} onclick="stkMarkRead('${s(d.id)}')">Mark all read</button></div>
     <div class="wiSm" data-stk-meta="1">ครอบคลุมข่าว ${s(stkPeriod(d))}${stale ? ' (ฉบับเก่า — ยังไม่มีฉบับสัปดาห์นี้)' : ''} · อัปเดต ${s(wiAsofText(d.asof))}</div>
-    <div class="pbBtns"><button type="button" class="ui-btn" data-stk-read="1" ${read ? 'disabled' : ''} onclick="stkMarkRead('${s(d.id)}')">${read ? 'อ่านแล้ว ✓' : 'อ่านแล้ว'}</button><button type="button" class="ln1-link" data-stk-paste="1" onclick="stkOpenPaste()">วาง JSON</button><button type="button" class="ln1-link" data-stk-manifest="1" onclick="stkCopyManifest()">คัดลอกรายชื่อหุ้น</button></div>
-    ${sec('cand', M.cand)}${sec('wl', M.wl)}
+    <div class="stkFlt" data-stk-flt role="group" aria-label="Filter"><button type="button" class="${stkFilter === 'unread' ? 'on' : ''}" data-stk-f="unread" aria-pressed="${stkFilter === 'unread'}" onclick="stkSetFilter('unread')">Unread</button><button type="button" class="${stkFilter === 'all' ? 'on' : ''}" data-stk-f="all" aria-pressed="${stkFilter === 'all'}" onclick="stkSetFilter('all')">All</button></div>
+    <div class="pbBtns"><button type="button" class="ln1-link" data-stk-paste="1" onclick="stkOpenPaste()">วาง JSON</button><button type="button" class="ln1-link" data-stk-manifest="1" onclick="stkCopyManifest()">คัดลอกรายชื่อหุ้น</button></div>
+    ${(stkFilter === 'unread' && allRd) ? `<div class="stkDone" data-stk-allread>All read ✓ · <button type="button" class="ln1-link" data-stk-showall onclick="stkSetFilter('all')">Show all</button></div>` : ''}${sec('cand', M.cand)}${sec('wl', M.wl)}
     ${fold('none', 'ไม่มีข่าวสำคัญ', M.none)}${fold('incomplete', 'ข้อมูลไม่ครบ', M.incomplete)}${fold('gone', 'ไม่อยู่ในรายการแล้ว', M.gone)}
     ${(M.cand.length + M.wl.length + M.none.length + M.incomplete.length + M.gone.length) ? '' : '<div class="wiSm">ไม่มีหุ้นในสรุปนี้</div>'}</div>`;
 }
