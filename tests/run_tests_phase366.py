@@ -174,6 +174,47 @@ def tests(pw, w, h):
         js(page, "()=>stkCloseView()")
         js(page, "()=>{ stkMarkRead('%s'); }" % ED); settle(page, 500)
         check(f"{tag} 7 all read → the line is hidden · no Watchlist-card/Plan-form news added", cnt(page, "[data-td3-wnews]") == 0 and cnt(page, "[data-wl-news],[data-plan-news]") == 0)
+        # ── NS1 · Esc + click outside close the news panel/sheet ──
+        js(page, "()=>{ satSettingsWrite(stg=>{ stg.stockNewsRead = {}; }); todayRefresh(true); }"); settle(page, 300)
+        isopen = lambda: cnt(page, ".stk-panel, .stk-sheet") == 1
+        js(page, "()=>stkOpenView()"); settle(page, 300)
+        page.keyboard.press("Escape"); settle(page, 200)
+        check(f"{tag} NS1 open → Esc closes", cnt(page, ".stk-panel, .stk-sheet") == 0 and not js(page, "()=>stkOpen"))
+        js(page, "()=>stkOpenView()"); settle(page, 300)
+        if w >= 900:
+            page.mouse.click(60, 450)
+        else:
+            page.mouse.click(195, 30)   # backdrop above the sheet
+        settle(page, 300)
+        check(f"{tag} NS1 open → click outside closes", cnt(page, ".stk-panel, .stk-sheet") == 0)
+        js(page, "()=>stkOpenView()"); settle(page, 300)
+        page.locator('[data-stk-ck="AAA"]').click(); settle(page, 300)
+        check(f"{tag} NS1 click ✓ inside → stays open", isopen())
+        page.locator('[data-stk-f="all"]').click(); settle(page, 300)
+        page.locator('[data-stk-f="unread"]').click(); settle(page, 300)
+        check(f"{tag} NS1 click filter inside → stays open", isopen())
+        page.locator('[data-stk-read]').click(); settle(page, 300)
+        check(f"{tag} NS1 Mark all read inside → stays open", isopen())
+        # sheet on top: Esc closes only the paste sheet
+        js(page, "()=>stkOpenPaste()"); settle(page, 300)
+        page.keyboard.press("Escape"); settle(page, 200)
+        check(f"{tag} NS1 paste sheet on top → Esc closes only it, news stays", cnt(page, ".stk-psheet") == 0 and isopen())
+        page.keyboard.press("Escape"); settle(page, 200)
+        check(f"{tag} NS1 second Esc closes the news", cnt(page, ".stk-panel, .stk-sheet") == 0)
+        # text field focus: first Esc blurs, second closes
+        js(page, "()=>{ stkOpenView(); const h=document.getElementById('stkHost'); const i=document.createElement('input'); i.id='ns1in'; h.appendChild(i); i.focus(); }"); settle(page, 200)
+        page.keyboard.press("Escape"); settle(page, 200)
+        check(f"{tag} NS1 field focused → first Esc only blurs", isopen() and js(page, "()=>document.activeElement.id") != "ns1in")
+        page.keyboard.press("Escape"); settle(page, 200)
+        check(f"{tag} NS1 second Esc closes", cnt(page, ".stk-panel, .stk-sheet") == 0)
+        # reopen 3x then one Esc
+        for _ in range(3):
+            js(page, "()=>stkOpenView()"); settle(page, 150)
+        check(f"{tag} NS1 reopen 3× → exactly one panel/sheet", isopen())
+        page.keyboard.press("Escape"); settle(page, 200)
+        check(f"{tag} NS1 one Esc → closed, listener removed, no errors", cnt(page, ".stk-panel, .stk-sheet") == 0 and not js(page, "()=>stkOutsideOn") and not pe, pe[:2])
+        page.mouse.click(60, 450); settle(page, 200)
+        check(f"{tag} NS1 click after close does nothing (no errors)", not pe, pe[:2])
         # ── shots ──
         js(page, "()=>{ satSettingsWrite(stg=>{ stg.stockNewsRead = {'%s': {readIds:['AAA']}}; }); todayRefresh(true); }" % ED); settle(page, 400)
         weekend(page); js(page, "()=>document.querySelector('[data-td3-panel=week]').scrollIntoView({block:'start'})")

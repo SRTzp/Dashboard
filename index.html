@@ -19398,6 +19398,8 @@ function escCloseTop(){
     else if(c.contains('s7del-sheet')) satV3ClosedDelClose();
     else if(c.contains('pyr-sheet')) satPyrClose();
     else if(c.contains('pb-sheet')) pbCancel();
+    else if(c.contains('stk-psheet')) stkPasteClose();   /* NS1 */
+    else if(c.contains('stk-sheet')){ if(document.activeElement && sh.contains(document.activeElement) && kbEditableTarget(document.activeElement)){ document.activeElement.blur(); return true; } stkCloseView(); }
     else if(c.contains('bk-sheet')){ bkRsClose(); if(sh.isConnected && !(typeof bkRs !== 'undefined' && bkRs && bkRs.busy)) sh.remove(); }
     else sh.remove();
     return true;
@@ -19413,6 +19415,8 @@ function escCloseTop(){
     if(document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
     return true;
   }
+  { const sp = document.querySelector('.stk-panel');   /* NS1 — แผงข่าวรายสัปดาห์ (Mac) */
+    if(sp){ if(document.activeElement && sp.contains(document.activeElement) && kbEditableTarget(document.activeElement)){ document.activeElement.blur(); return true; } stkCloseView(); return true; } }
   if(wlFull){ wlFullSet(false); return true; }   /* LN3fix3b — ป๊อปอัป/เมนู/sheet ข้างบนปิดก่อน · Esc ถัดไปย่อกลับ */
   if(activeTab==='watch' && wlResearchExpanded){ if(wlNarrow()) wlBack(); else wlSetSub('sum'); return true; }
   if(activeTab==='watch' && wlMobOpen && wlNarrow() && !kbEditableTarget(document.activeElement)){ wlBack(); return true; }   /* เดิมอยู่ใน kbHandle */
@@ -26593,7 +26597,7 @@ function stkStart(){
 }
 function stkStop(){
   if(stkUnsub){ try{ stkUnsub(); }catch(e){} }
-  stkUnsub = null; stkUnsubUid = null; stkDocs = {}; stkLoaded = false; stkErr = null; stkPaste = null; stkOpen = false;
+  stkUnsub = null; stkUnsubUid = null; stkDocs = {}; stkLoaded = false; stkErr = null; stkPaste = null; stkOpen = false; stkOutsideOff();
   document.querySelectorAll('.stk-sheet, .stk-panel').forEach(el=>el.remove());
 }
 function stkRefresh(){ try{ todayRefresh(); }catch(e){} try{ if(stkOpen) stkRenderView(); }catch(e){} }
@@ -26668,8 +26672,18 @@ function stkOpenView(){
     const el = document.body.lastElementChild; el.addEventListener('click', e=>{ if(e.target===el) stkCloseView(); });
   }
   stkRenderView();
+  stkOutsideOff();
+  if(ln3Mac()){ document.addEventListener('click', stkOutside, true); stkOutsideOn = true; }   /* NS1 — capture: เห็น target ก่อนที่ปุ่มข้างในจะ re-render */
 }
-function stkCloseView(){ stkOpen = false; document.querySelectorAll('.stk-sheet, .stk-panel').forEach(el=>el.remove()); }
+let stkOutsideOn = false;
+function stkOutside(e){
+  const t = e.target;
+  if(!document.querySelector('.stk-panel')){ stkOutsideOff(); return; }
+  if(!t || !t.closest || t.closest('.stk-panel, .ui-sheet-backdrop, .overlay, .scorePop, .ccMenu, [data-stk-open]')) return;
+  stkCloseView();
+}
+function stkOutsideOff(){ if(stkOutsideOn){ document.removeEventListener('click', stkOutside, true); stkOutsideOn = false; } }
+function stkCloseView(){ stkOpen = false; stkOutsideOff(); document.querySelectorAll('.stk-sheet, .stk-panel').forEach(el=>el.remove()); }
 function stkRowHtml(o, doc){
   const s = escHtml, x = o.x, open = stkExp.has(o.t), st = x.status;
   const srcs = (x.source_refs||[]).map(i=>(doc.sources||{})[i]).filter(Boolean);
