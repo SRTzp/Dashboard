@@ -120,7 +120,7 @@ def tests(pw, w, h):
         check(f"{tag} 2 Form: font ของ input ≥ 16px (กัน iPhone zoom) · มีเส้นแบ่งบางเหนือสรุป · เริ่มต้นไม่มีช่องแถวเพิ่ม · มี ＋ 2 ปุ่ม", min(lay["fs"]) >= 16 and lay["bt"] == "1px" and lay["extra"] == 0 and lay["plus"] == 2, lay)
         s1 = sumtxt(page)
         check(f"{tag} 2 Form: ค่าเริ่มต้น Risk = default Momentum 0.4% · จำนวนหุ้น = floor(0.4%×E÷10) = {exp:,} (ปัดลง lot 1) · สรุปบรรทัดเดียว 'sh · Risk · Size … of portfolio'",
-              js(page, "()=>document.getElementById('cnRisk').value") == "0.4" and f"{exp:,} sh" in s1 and "Risk 0." in s1 and "of portfolio" in s1 and "Avg" not in s1, [s1, exp])
+              js(page, "()=>document.getElementById('cnRisk').value") == "0.4" and (f"#{exp:,}" in s1 or f"{exp:,} sh" in s1) and "Risk 0." in s1 and "of portfolio" in s1 and "Avg" not in s1, [s1, exp])
         check(f"{tag} 2 Form: ช่อง Risk นอกช่วง Momentum (0.7) → บล็อกบันทึก", (fill(page, r=0.7) or True) and save_dis(page) and "0.35" in errtxt(page), errtxt(page))
         fill(page, r=0.4)
         # size cap trims
@@ -188,7 +188,7 @@ def tests(pw, w, h):
         card_txt = js(page, "()=>{ const el=document.querySelector('[data-ps1-cardsum]'); return el ? el.innerText.replace(/\\s+/g,' ') : ''; }")
         js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='AAA'); coreToggle(c.id); }"); settle(page, 300)
         card_txt = js(page, "()=>{ const el=document.querySelector('[data-ps1-cardsum]'); return el ? el.innerText.replace(/\\s+/g,' ') : ''; }")
-        check(f"{tag} 3 การ์ดแผน PS1 แสดงสรุป 'sh · Risk · Size' (ไม่ใช่สูตรเดิม)", "sh" in card_txt and "Risk" in card_txt, card_txt)
+        check(f"{tag} 3 การ์ดแผน PS1 แสดงสรุป 'sh · Risk · Size' (ไม่ใช่สูตรเดิม)", ("#" in card_txt or "sh" in card_txt) and "Risk" in card_txt, card_txt)
         # buy 1 uses ps1 qty
         qty = sv["qty"]
         js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='AAA'); coreBuy1Open(c.id); }"); settle(page, 300)
@@ -352,6 +352,7 @@ def fix_tests(pw, w, h):
         t = js(page, "()=>getBook('main').trades.find(t=>t.sym==='MSL').sl")
         check(f"{tag} 1 position: trade.sl = 90 (สถานะ/alert) แต่ risk math ใช้ blended 85", t == 90 and pos and abs(pos["stop"] - 85) < 1e-9, [t, pos])
         # 3 add-on prefill: next planned row (entry 2 = 95, risk 0.2 x mult)
+        js(page, "()=>{ const it=wlItemOf('MSL'); if(it && !it.onboarding) it.onboarding={at:'2026-11-01'}; }")   # PS1b §8: add-ons wait for homework (screening saved)
         js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='MSL'); lfAddOpen(c.id); }"); settle(page, 300)
         pf = js(page, "()=>({px:document.getElementById('lfaPx')&&document.getElementById('lfaPx').value, risk:document.getElementById('lfaRisk')&&document.getElementById('lfaRisk').value, note:!!document.querySelector('[data-ps1-next]'), nTr:getBook('main').trades.filter(t=>t.sym==='MSL').length})")
         check(f"{tag} 3 ไม้เติม: เติม entry แถว 2 ให้ (ราคา 95 + risk 0.2%) + ข้อความบอก · ไม่ซื้ออัตโนมัติ (trade เดิม 1 รายการ)", pf and pf["px"] == "95" and abs(float(pf["risk"]) - 0.2) < 1e-6 and pf["note"] and pf["nTr"] == 1, pf)
@@ -372,7 +373,7 @@ def fix_tests(pw, w, h):
         # shrink free cash by buying a big holding: set winner holdings so cash is small
         js(page, "()=>{ window.__c0 = coreCtxTrack; coreCtxTrack = function(c,t){ const r = window.__c0(c,t); return Object.assign({}, r, {cashTHB: 3300}); }; coreNewIn(); }"); settle(page, 300)
         s2 = sumtxt(page); note = js(page, "()=>{ const e=document.querySelector('[data-ps1-trim]'); return e ? e.innerText : ''; }")
-        m = re.search(r"([\d,]+)\s*sh", s2)
+        m = re.search(r"#([\d,]+)", s2) or re.search(r"([\d,]+)\s*sh", s2)
         q2 = int(m.group(1).replace(',', '')) if m else -1
         check(f"{tag} 2 free-cash: เงินสดว่าง $100 (฿3,300) → จำนวนหุ้นลดเหลือ ≤1 ตามเงินสด + ข้อความ 'เงินสดคุม'", 0 <= q2 <= 1 and "เงินสดคุม" in note, [base, s2, note, free])
         check(f"{tag} console ไม่มี error (cash)", not ce and not pe, [ce[:2], pe[:2]])

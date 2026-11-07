@@ -19,3 +19,10 @@ New suite: `tests/run_tests_phase121.py` + `tests/ps1b_size_test.js`.
 | Test | Change | Why |
 |---|---|---|
 | phase106 B3 (sub rows, Sat 4.1k→12k) and phase113 §4.7 | `innerText` → `textContent` when reading `[data-td3-sub]` rows | PS1b §4 puts the sub-port rows inside a closed "Sub-port goals ›" row; `innerText` is empty when hidden. Expected texts are the same. |
+
+### §8 / §9 expectation changes
+| Test | Change | Why |
+|---|---|---|
+| phase120 §2/§3 summary | accepts `#68` as well as `68 sh` | §9: share counts show as `#68` (display only) |
+| phase120 free-cash | reads `#n` as well as `n sh` | same |
+| phase120 add-on prefill (MSL) | marks MSL's screening saved before opening the add-on | §8: add-ons on a fast-track idea are blocked until homework (thesis ①④ + screening) is done |
