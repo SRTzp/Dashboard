@@ -30,6 +30,8 @@ def toast_tests(pw, w, h):
             lines:t.querySelectorAll('.cgL').length, x:t.querySelectorAll('[data-cg-x]').length, w:r.width, fits:r.left>=0&&r.right<=innerWidth, ctr:Math.abs((r.left+r.right)/2-innerWidth/2)<2, n:document.querySelectorAll('#cgToast').length}; }""")
         check(f"{tag} role=status · aria-live=polite · 3 บรรทัด · ✕ เดียว · กึ่งกลาง · ไม่ล้นจอ", st["role"] == "status" and st["live"] == "polite" and st["shown"] and st["lines"] == 3 and st["x"] == 1 and st["fits"] and st["ctr"] and st["n"] == 1, st)
         if w <= 430: check(f"{tag} กว้าง = viewport − 32px", abs(st["w"] - (w - 32)) <= 1, st["w"])
+        fit = js(page, """()=>{ const o={}; for(const k of Object.keys(CG_GUIDE)){ showGuideToast(CG_GUIDE[k]); const t=document.getElementById('cgToast'); o[k]=[...t.querySelectorAll('.cgL')].map(e=>Math.round(e.getBoundingClientRect().height/parseFloat(getComputedStyle(e).lineHeight))).reduce((a,b)=>a+b,0); } return o; }""")
+        check(f"{tag} ทุก guide toast ไม่เกิน 3 บรรทัดที่มองเห็น", all(v <= 3 for v in fit.values()), fit)
         js(page, "()=>document.getElementById('cgToast').dispatchEvent(new Event('mouseenter'))"); settle(page, 150)
         paused = js(page, "()=>cgToastT === 0 && document.getElementById('cgToast').classList.contains('show')")
         js(page, "()=>document.getElementById('cgToast').dispatchEvent(new Event('mouseleave'))"); settle(page, 100)
