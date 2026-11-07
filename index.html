@@ -10455,6 +10455,9 @@ function ps1EDate(accId){
   ds.sort(); return ds.length ? ds[ds.length-1] : '';
 }
 function ps1Fmt(v, d){ return (typeof v==='number' && isFinite(v)) ? String(+v.toFixed(d==null?2:d)) : ''; }
+/* Saving Settings writes psRisk only if a Portfolio & Risk field was actually changed since the form was filled; an untouched save keeps the stored psRisk byte-for-byte (or leaves it absent). */
+let ps1FormSnap = null;
+function ps1FormDirty(){ if(ps1FormSnap == null) return true; try{ return JSON.stringify(ps1FormRead()) !== ps1FormSnap; }catch(e){ return true; } }
 function ps1FormFill(){
   const g = id => document.getElementById(id); if(!g('sPsTotal')) return;
   const raw = ps1Raw(), c = ps1Cfg(), d = raw.def || {};
@@ -10465,6 +10468,7 @@ function ps1FormFill(){
   { const lc = Ps1.lossCfg(raw.loss); g('sPsLossDd').value = lc.ddMax; g('sPsLossHalf').value = lc.ddHalf; g('sPsLossDay').value = lc.dayR; g('sPsLossWeek').value = lc.weekR; }
   { const ms = ps1StockMin(); g('sPsMinW').value = ms.winner == null ? '' : ms.winner; g('sPsMinL').value = ms.ladder == null ? '' : ms.ladder; }
   try{ ps1MinStopDraw(); }catch(e){ console.warn('minstop draw:', e); }
+  try{ ps1FormSnap = JSON.stringify(ps1FormRead()); }catch(e){ ps1FormSnap = null; }   /* what the form read right after filling — save compares against it */
   const w = c.buckets, h = g('ps1Wts');
   if(h) h.textContent = `Weights (set under Accounts & Capital › Pools): Compounder ${ps1Fmt(w.ladder.weight,1)} · Momentum ${ps1Fmt(w.winner.weight,1)} · Sat ${ps1Fmt(w.sat.weight,1)}. Positions are a target only — when the budget is used up the dashboard blocks new risk; it never forces filling.`;
 }
@@ -19128,7 +19132,7 @@ function saveSettings(){
       macroNeutral:(old.satRisk||{}).macroNeutral, macroAgainst:(old.satRisk||{}).macroAgainst,   /* RG2b — ถอดแล้ว: เก็บค่าเดิมไว้ ไม่อ่าน */
       ddReduce:parseFloat(document.getElementById('sSatDdReduce').value), ddPause:parseFloat(document.getElementById('sSatDdPause').value), ddPauseWeeks:parseFloat(document.getElementById('sSatDdWeeks').value), ddRecoverR:parseFloat(document.getElementById('sSatDdRecoverR').value)}) : (old.satRisk || null),   /* DD1 */   /* SR1 — % ตัวเลข ต่อบัญชี */
     satV2: portOn('satB') ? Object.assign(satV2FormRead(), {tfMig:'PF1', poolMig:'RG2b', rptNoticed:true}) : (old.satV2 || null),   /* RG2b — poolMig = cap/เบรกเป็นฐานถัง Sat แล้ว */   /* PV2a — ตั้งค่า Sat v2 ต่อบัญชี */
-    psRisk: (()=>{ if(!document.getElementById('sPsTotal')) return old.psRisk || null; const o = ps1FormRead(); const ms = Object.assign({}, (old.psRisk && old.psRisk.minStop) || {}); Object.keys(o.minStop).forEach(k=>{ if(o.minStop[k]>0) ms[k] = o.minStop[k]; else delete ms[k]; });
+    psRisk: (()=>{ if(!document.getElementById('sPsTotal') || !ps1FormDirty()) return old.psRisk || null; const o = ps1FormRead(); const ms = Object.assign({}, (old.psRisk && old.psRisk.minStop) || {}); Object.keys(o.minStop).forEach(k=>{ if(o.minStop[k]>0) ms[k] = o.minStop[k]; else delete ms[k]; });
       return {def:o.def, max:o.max, cap:o.cap, total:o.total, gb:o.gb, loss:o.loss, minStop:ms, minStopStock:{winner:isFinite(o.minStopStock.winner) ? o.minStopStock.winner : null, ladder:isFinite(o.minStopStock.ladder) ? o.minStopStock.ladder : null}}; })(),   /* PS1 · PS1b loss limits + Sat min stop */
     satPyrSplit: old.satPyrSplit || null,   /* PV2c — ค่าเดิมของ PY2 เก็บไว้ (เป็นค่าเริ่มของ แบ่งไม้ Main) · ตั้งค่าใหม่อยู่ที่ satV2.splitMain / splitTac */
     tdKey: (document.getElementById('sTdKey').value||'').trim()
