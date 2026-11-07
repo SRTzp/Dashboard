@@ -26,3 +26,11 @@ New suite: `tests/run_tests_phase121.py` + `tests/ps1b_size_test.js`.
 | phase120 §2/§3 summary | accepts `#68` as well as `68 sh` | §9: share counts show as `#68` (display only) |
 | phase120 free-cash | reads `#n` as well as `n sh` | same |
 | phase120 add-on prefill (MSL) | marks MSL's screening saved before opening the add-on | §8: add-ons on a fast-track idea are blocked until homework (thesis ①④ + screening) is done |
+
+### §7 plan-form expectation changes (phase120)
+| Test | Change | Why |
+|---|---|---|
+| phase120 §2 layout | "Entry · SL · Risk on one row, equal width" → stacked blocks in order Entry < SL < Risk, no overflow | §7b lean multi-row layout |
+| phase120 §2 summary | no longer needs "of portfolio" / "Avg entry" / "Left" in the summary; reads Avg SL + Left from Details | §7b/§7d: `#68 · 3.9% · Risk 0.39%`; Avg SL/Left moved to Details |
+| phase120 extra-row selectors | `[data-ps1-er]`,`[data-ps1-sp]`,`.ps1X` → `.ps1Pc`,`.ps1R` | per-entry Risk and SL Out % fields now sit inline in each row |
+| phase120 `ps_on` | adds `minStopStock:{winner:null,ladder:null}` | §7e: stock min stop (Momentum 4% / Compounder 7%) is on by default; old tests use narrow stops |
