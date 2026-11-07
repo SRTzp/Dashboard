@@ -924,7 +924,7 @@ details.panel[open]>summary::before{transform:rotate(90deg)}
 .ffQ.imp{background:var(--blue-dim)}
 .ffQ.flat{background:var(--surface2,rgba(128,128,128,.10))}.ffQ.flat .ffQt{color:var(--muted)}.ffQ.flat .ffChip{color:var(--muted)}
 .rr-lean{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;height:22px;overflow:hidden;align-content:flex-start;font-family:inherit}.rr-ch{flex:none;border:1px solid;border-radius:99px;padding:1px 8px;font-size:.72rem;line-height:1.3;white-space:nowrap}.rr-gap{flex:none;font-size:.74rem;color:var(--muted);white-space:nowrap}.rr-gap.dn{color:var(--red)}.rr-wait{color:var(--muted);font-size:.76rem;height:auto}
-.rr-lean{container-type:inline-size}.rr-sp{flex:none;font-size:.7rem;white-space:nowrap;font-weight:600}.rr-sp.up{color:var(--teal)}.rr-sp.dn{color:var(--amber)}.rr-sps{display:none}
+.rr-lean{container-type:inline-size}.rr-sp{flex:none;font-size:.7rem;white-space:nowrap;font-weight:600}.rr-sp.up{color:var(--teal)}.rr-sp.dn{color:var(--amber)}.rr-sps{display:none}.rr-nw{flex:none;font-size:.7rem;white-space:nowrap;font-weight:700;color:var(--blue)}
 @container (max-width:330px){.rr-spl{display:none}.rr-sps{display:inline}}
 .rr-leg{margin:6px 0 2px}.rr-leg summary{cursor:pointer;font-size:.76rem;color:var(--muted);list-style:none}.rr-leg summary::-webkit-details-marker{display:none}.rr-leg[open] summary{margin-bottom:2px}.ffQ.wait{background:var(--surface2,rgba(128,128,128,.10));opacity:.85}.ffQ.wait .ffQt{color:var(--muted)}.ffQ.wait .ffChip{color:var(--muted)}
 .rr-dt{margin-top:6px;font-size:.74rem;color:var(--muted)}.rr-dt summary{cursor:pointer;font-weight:600;list-style:none}.rr-dt summary::-webkit-details-marker{display:none}.rr-dg{display:grid;gap:3px;margin-top:6px;overflow-wrap:anywhere}.rr-dg b{color:var(--text)}
@@ -24042,6 +24042,10 @@ function rrgCompute(closes, highs, bench, tfKey, opt){
   const quad = S.key[last];
   let days = 1;
   for(let i=last-1;i>=0;i--){ if(S.key[i] === null || S.key[i] !== quad) break; days++; }
+  /* PS1b §10 — how long the state BEFORE the current run lasted (bars) · null if there is none in the data */
+  let prevDays = null;
+  { const pk = last-days >= 0 ? S.key[last-days] : null;
+    if(pk){ prevDays = 1; for(let i=last-days-1;i>=0;i--){ if(S.key[i] !== pk) break; prevDays++; } } }
   /* Δ ของ z — บริบท/ตัวเรียงเท่านั้น ไม่ใช่ตัวตัดสินสถานะ */
   const back = last - TF.momLag;
   const zAt = (arr, i)=>{ const v = rrgZ(arr, i, TF.zWin); return v===null ? null : 100+v; };
@@ -24057,7 +24061,7 @@ function rrgCompute(closes, highs, bench, tfKey, opt){
   const pAbove = closes[last] > ptEma, pBelow = closes[last] < ptEma, pRise = ptEma > ptEmaPrev, pFall = ptEma < ptEmaPrev;
   const pt = (pAbove && pRise) ? 'up' : (pBelow && pFall) ? 'down' : 'mixed';
   /* rsTrend = raw (EMA12−EMA26 ของ RS, %) · rawChg = raw − raw[lag] · rel/momUp = ทิศหลัง hysteresis */
-  return {ratio, mom, quad, prevQuad, days, dRatio, dMom, rsTrend:raw[last], rawChg:momRaw[last],
+  return {ratio, mom, quad, prevQuad, days, prevDays, dRatio, dMom, rsTrend:raw[last], rawChg:momRaw[last],
           rel:S.rel[last], momUp:S.up[last], eps, delta, lag:TF.momLag, model:RRG_MODEL, flips:rrgFlips(S.key.slice(-TF.zWin)), flatBars:S.key.slice(-TF.zWin).filter(k=>k==='flat').length,
           off52: hi52>0 ? (closes[last]/hi52-1)*100 : 0, close:closes[last], benchClose:bench[last], bars:n,
           pt, ptEma, ptEmaPrev, ptN:PN, ptLag:PL, lastObs:opt.lastObs || null};
@@ -24381,6 +24385,19 @@ function rrgPct(v){
 /* คำบอกความเร็ว ไม่ใช้ % — label (แข็งมาก/อ่อน ฯลฯ) คือสภาวะปัจจุบัน ส่วนนี้คือ "ขยับเร็วแค่ไหนช่วงหลัง"
    คนละสเกลกับ label โดยเจตนา (ดูคำอธิบาย legend เหนือตาราง) · title = ค่าดิบเผื่ออยาก hover ดูตัวเลขจริง */
 /* PS1b — one source for the speed words: Flat <0.15 · Moving <0.5 · Fast <1.0 · Very fast (used by the Details gauge and the card speed tag) */
+/* PS1b §10 — "Fresh" thresholds (one block, tune here) · days = bars in the current state (weekly = COMPLETED weeks only; the open week never counts)
+   NEW = entered the current state ≤ maxDays bars ago, AND the previous state lasted ≥ minPrev bars (filters flicker), AND the new state is one of `states`. */
+const RRG_FRESH = {D:{maxDays:3, minPrev:5}, W:{maxDays:1, minPrev:2}, states:['lead','imp','weak']};   /* Beating ↗ · Lagging ↗ · Beating ↘ — never Neutral or Lagging ↘ */
+function rrgNew(x, tf){
+  if(ps1Off() || !x || x.err || !x.quad || typeof x.days !== 'number' || typeof x.prevDays !== 'number') return null;
+  const T = RRG_FRESH[tf === 'W' ? 'W' : 'D'];
+  if(RRG_FRESH.states.indexOf(x.quad) < 0 || x.days > T.maxDays || x.prevDays < T.minPrev) return null;
+  return {n:x.days, u:(tf === 'W' ? 'w' : 'd')};
+}
+function rrgIsFresh(x, tf){ return !!rrgNew(x, tf) || !!(x && !x.err && !ps1Off() && rrgSpeed(x.dMom).fast); }
+function rrgFreshCount(rows, tf){ return (rows || []).filter(x=>rrgIsFresh(x, tf)).length; }
+function rrgFreshOnly(){ try{ return localStorage.getItem('rrgFreshOnly') === '1'; }catch(e){ return false; } }
+function rrgSetFresh(on){ try{ localStorage.setItem('rrgFreshOnly', on ? '1' : '0'); }catch(e){} ffRenderThemes(); }
 function rrgSpeed(d){ if(d==null || !isFinite(d)) return {lvl:0, fast:false, dir:0}; const a = Math.abs(d); return {lvl: a<0.15 ? 0 : a<0.5 ? 1 : a<1.0 ? 2 : 3, fast: a>=0.5, dir: d>=0 ? 1 : -1}; }
 function rrgDeltaHtml(d, en){
   if(d==null) return '<span class="rrgGaugeDelta muted">—</span>';
@@ -24705,7 +24722,9 @@ function rrgLeanHtml(x, tf){
   }
   const sp = rrgSpeed(x.dMom);   /* PS1b — speed tag only for Fast / Very fast RS momentum */
   const spTag = sp.fast ? '<span class="rr-sp ' + (sp.dir > 0 ? 'up' : 'dn') + '" data-rr-speed="' + (sp.dir > 0 ? 'up' : 'down') + '" title="RS momentum is changing fast (last 5 bars)"><span class="rr-spl">⚡ ' + (sp.dir > 0 ? 'speeding up' : 'slowing fast') + '</span><span class="rr-sps">⚡' + (sp.dir > 0 ? '▲' : '▼') + '</span></span>' : '';
-  return '<div class="rr-lean" data-rr-lean>' + relChip + spTag + pc + '<span class="rr-gap' + (x.off52 > -5 ? '' : ' dn') + '" data-rr-gap>' + rrgGapTxt(x) + '</span></div>';
+  const nw = rrgNew(x, tf);   /* PS1b §10 */
+  const newTag = nw ? '<span class="rr-nw" data-rr-new title="Entered this state ' + nw.n + (W ? ' week' : ' day') + (nw.n > 1 ? 's' : '') + ' ago after a ' + x.prevDays + '-' + (W ? 'week' : 'bar') + ' stretch in the previous state"><span class="rr-spl">NEW · ' + nw.n + nw.u + '</span><span class="rr-sps">NEW</span></span>' : '';
+  return '<div class="rr-lean" data-rr-lean>' + relChip + newTag + spTag + pc + '<span class="rr-gap' + (x.off52 > -5 ? '' : ' dn') + '" data-rr-gap>' + rrgGapTxt(x) + '</span></div>';
 }
 /* RRG1b — "How to read ›" พับไว้ตั้งต้น · จำเปิด/ปิดต่ออุปกรณ์ (localStorage, try/catch) */
 let rrgLegSynced = false;
@@ -24929,6 +24948,7 @@ function ffRenderThemes(){
     bar.innerHTML = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 2px">'
       + '<span class="ffNote" style="display:inline;color:'+color+'">' + msg + '</span>'
       + '<span style="margin-left:auto"></span>'
+      + (ps1Off() ? '' : '<span class="ffSeg" data-rr-fresh-f title="Fresh = NEW state or ⚡ speed tag"><button type="button" class="' + (!rrgFreshOnly() ? 'on-cur' : '') + '" data-rr-f="all" onclick="rrgSetFresh(false)">All</button><button type="button" class="' + (rrgFreshOnly() ? 'on-cur' : '') + '" data-rr-f="fresh" onclick="rrgSetFresh(true)">Fresh ' + rrgFreshCount(ok, tf) + '</button></span>')
       + '<span class="ffMini" title="เลขรุ่นของโค้ดที่กำลังรันจริง — ใช้ยืนยันว่าโหลดไฟล์ใหม่แล้ว">rrg v' + RRG_BUILD + '</span>'
       + '<span class="ffSeg" title="สลับได้ทันที ไม่กินเครดิต — คำนวณไว้ทั้งสองแบบตอนดึงรอบเดียว">'
         + '<button class="' + (tf==='D'?'on-cur':'') + '" onclick="rrgSetTf(\'D\')">Daily</button>'
@@ -24985,7 +25005,7 @@ function ffRenderThemes(){
       if(ln1On()){   /* LN3 — ตารางกว้าง → แถว 2 บรรทัด · TD3b: ป้ายอังกฤษ + ☆/★ + Drivers & evidence (แถวคลิกได้ทั้งแถว) */
         const U = tf==='W' ? 'w' : 'd', UW = tf==='W' ? 'weeks' : 'days';
         host.innerHTML = '<div class="ln3-rrg" data-ln3-rrg="1">'
-          + sorted.map(x=>sdRowHtml(x, tf, QLBL)).join('')
+          + ((!ps1Off() && rrgFreshOnly()) ? (sorted.filter(x=>rrgIsFresh(x, tf)).map(x=>sdRowHtml(x, tf, QLBL)).join('') || '<div class="hint" data-rr-fresh-none style="padding:10px 2px">Nothing fresh right now.</div>') : sorted.map(x=>sdRowHtml(x, tf, QLBL)).join(''))
           + '</div><div class="sd-foot" data-sd-foot>'+SD_FOOT+'</div>';
         sdFit(host);
       } else
