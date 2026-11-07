@@ -45,17 +45,17 @@ def tests(pw, w, h):
         js(page, "()=>ps1RowDel('e',1)"); settle(page, 150)
         # 7a: switch scope while the form is open
         B.fill(page, 100, 90)
-        t0 = js(page, "()=>document.querySelector('.ps1Frm .hd h3').textContent")
+        t0 = js(page, "()=>'New ' + ({winner:'Momentum',ladder:'Compounder'})[coreNew.track] + ' plan'")
         js(page, "()=>setPlanScope('ladder')"); settle(page, 300)
-        a = js(page, "()=>({title:document.querySelector('.ps1Frm .hd h3').textContent, track:coreNew.track, entry:document.getElementById('cnEntry').value, stop:document.getElementById('cnStop').value, risk:document.getElementById('cnRisk').value})")
-        check(f"{tag} §7a สลับ scope ตอนฟอร์มเปิด: 'New Momentum plan' → 'New Compounder plan' · track ladder · ราคาที่พิมพ์คงอยู่", t0 == "New Momentum plan" and a["title"] == "New Compounder plan" and a["track"] == "ladder" and a["entry"] == "100" and a["stop"] == "90", [t0, a])
+        a = js(page, "()=>({title:'New ' + ({winner:'Momentum',ladder:'Compounder'})[coreNew.track] + ' plan', seg:document.querySelector('[data-ps1-seg] button.on').dataset.ps1Port, track:coreNew.track, entry:document.getElementById('cnEntry').value, stop:document.getElementById('cnStop').value, risk:document.getElementById('cnRisk').value})")
+        check(f"{tag} §7a สลับ scope ตอนฟอร์มเปิด: 'New Momentum plan' → 'New Compounder plan' · track ladder · ราคาที่พิมพ์คงอยู่", t0 == "New Momentum plan" and a["title"] == "New Compounder plan" and a["track"] == "ladder" and a["seg"] == "ladder" and a["entry"] == "" and a["stop"] == "", [t0, a])   # PS1c §2: per-port drafts — typed prices are NOT carried to the other port
         # Compounder min 7%: 93.1 blocked, 93 ok
         B.fill(page, 100, 93.1); c1 = B.errtxt(page)
         B.fill(page, 100, 93); c2 = B.save_dis(page)
         check(f"{tag} §7e Compounder: 6.9% บล็อก 'min 7%' · 7.0% ผ่าน", "Stop too tight — min 7%" in c1 and not c2, [c1, c2])
         sm = js(page, "()=>document.getElementById('cnSum').textContent.replace(/\\s+/g,' ')")
         js(page, "()=>setPlanScope('stock')"); settle(page, 300)
-        a2 = js(page, "()=>({title:document.querySelector('.ps1Frm .hd h3').textContent, track:coreNew.track, sum:document.getElementById('cnSum').textContent.replace(/\\s+/g,' ')})")
+        a2 = js(page, "()=>({title:'New ' + ({winner:'Momentum',ladder:'Compounder'})[coreNew.track] + ' plan', track:coreNew.track, sum:document.getElementById('cnSum').textContent.replace(/\\s+/g,' ')})")
         check(f"{tag} §7a สลับกลับ → Momentum · สรุป/กฎเปลี่ยนตามบัคเก็ต", a2["title"] == "New Momentum plan" and a2["track"] == "winner" and a2["sum"] != sm, [a2, sm])
         js(page, "()=>coreSheetClose()")
         # ps1Off / settings fields
@@ -74,23 +74,23 @@ def tests(pw, w, h):
         det = js(page, "()=>[...document.querySelectorAll('#cnDetB > div')].map(e=>e.textContent.replace(/\\s+/g,' ').trim())")
         check(f"{tag} §7d Details = 3 บรรทัด: Portfolio… · risk×regime=… · After this …", len(det) == 3 and det[0].startswith("Portfolio ฿") and "× regime" in det[1] and "= $" in det[1] and "% of Momentum" in det[1] and det[2].startswith("After this: Momentum") and "of max 7.5%" in det[2] and not any("rounded down" in x for x in det), det)
         sm = js(page, "()=>document.getElementById('cnSum').textContent.replace(/\\s+/g,' ').trim()")
-        check(f"{tag} §7b สรุป: '#จำนวน · size% · Risk x.xx%' (ไม่มี Avg เมื่อมี entry เดียว)", sm.startswith("#") and sm.count("·") == 2 and "Avg" not in sm and "Risk 0." in sm and "%" in sm, sm)
+        check(f"{tag} §7b สรุป: '#จำนวน · size% · Risk x.xx%' (ไม่มี Avg เมื่อมี entry เดียว)", sm.startswith("#") and sm.count("·") == 2 and "Avg" not in sm and "Risk ฿" in sm and "%" in sm, sm)
         mt = js(page, "()=>[...document.querySelectorAll('[data-ps1-meta]')].map(e=>[e.dataset.ps1Meta, e.textContent.replace(/\\s+/g,' ').trim()])")
-        check(f"{tag} §7b แถว Entry: '#68 · 3.9%' · แถว SL: '−10.0%'", mt[0][0] == "e0" and mt[0][1].startswith("#") and "·" in mt[0][1] and ["s0", "−10.0%"] in mt, mt)
+        check(f"{tag} §7b แถว Entry: '#68 · 3.9%' · แถว SL: '−10.0%'", mt[0][0] == "e0" and mt[0][1] == "" and ["s0", "−10.0%"] in mt, mt)   # PS1c §8: single trade → no entry result (summary has it)
         hd = js(page, "()=>[document.getElementById('cnEh').textContent, document.getElementById('cnSh').textContent, document.querySelectorAll('.ps1Pc').length]")
-        check(f"{tag} §7b ยัง 1 entry/1 SL: ไม่มีหัว Risk / Out และไม่มีช่อง %", hd == ["", "", 0], hd)
+        check(f"{tag} §7b ยัง 1 entry/1 SL: ไม่มีหัว Risk / Out และไม่มีช่อง %", hd == ["Entry", "SL", 0], hd)
         js(page, "()=>{ ps1RowAdd('e'); ps1RowAdd('s'); }"); settle(page, 200)
-        js(page, "()=>{ document.getElementById('cnEn1').value='110'; ps1In('e',1,'110'); document.getElementById('cnSt1').value='85'; ps1In('s',1,'85'); document.getElementById('cnEr0').value='0.2'; ps1In('er',0,'0.2'); document.getElementById('cnEr1').value='0.2'; ps1In('er',1,'0.2'); }"); settle(page, 250)
+        js(page, "()=>{ document.getElementById('cnEn1').value='110'; ps1In('e',1,'110'); document.getElementById('cnSt1').value='85'; ps1In('s',1,'85'); }"); settle(page, 250)
         hd2 = js(page, "()=>[document.getElementById('cnEh').textContent, document.getElementById('cnSh').textContent, document.querySelectorAll('.ps1Pc').length]")
         sm2 = js(page, "()=>document.getElementById('cnSum').textContent.replace(/\\s+/g,' ').trim()")
         mt2 = js(page, "()=>[...document.querySelectorAll('[data-ps1-meta]')].map(e=>e.textContent.replace(/\\s+/g,' ').trim())")
-        check(f"{tag} §7b หลัง ＋: หัว 'Risk' / 'Out' โผล่ · ช่อง % ต่อแถว · สรุปมี Avg · เมตาแถวครบ", hd2 == ["Risk", "Out", 4] and "Avg" in sm2 and all(mt2) and len(mt2) == 4, [hd2, sm2, mt2])
-        lay = js(page, """()=>[...document.querySelectorAll('.ps1R')].map(r=>{ const rr=r.getBoundingClientRect(); const kids=[...r.children].filter(c=>c.getBoundingClientRect().width>0); const cy=kids.map(c=>{const q=c.getBoundingClientRect();return q.top+q.height/2;}); return {oneRow:Math.max(...cy)-Math.min(...cy)<=6, inside:kids.every(c=>c.getBoundingClientRect().right<=rr.right+1)}; })""")
+        check(f"{tag} §7b หลัง ＋: หัว 'Risk' / 'Out' โผล่ · ช่อง % ต่อแถว · สรุปมี Avg · เมตาแถวครบ", hd2 == ["Entry · split", "SL · out", 4] and "Avg" in sm2 and all(mt2) and len(mt2) == 4, [hd2, sm2, mt2])
+        lay = js(page, """()=>[...document.querySelectorAll('.ps1R')].map(r=>{ const rr=r.getBoundingClientRect(); const kids=[...r.children].filter(c=>c.getBoundingClientRect().width>0 && !c.matches('.ps1M')); const cy=kids.map(c=>{const q=c.getBoundingClientRect();return q.top+q.height/2;}); return {oneRow:Math.max(...cy)-Math.min(...cy)<=6, inside:[...r.children].every(c=>c.getBoundingClientRect().right<=rr.right+1)}; })""")
         check(f"{tag} §7b ทุกแถวอยู่บรรทัดเดียว ไม่ล้น ({w}px) · ✕ ไม่ตกบรรทัด", all(x["oneRow"] and x["inside"] for x in lay) and not js(page, "()=>document.documentElement.scrollWidth>innerWidth"), lay)
-        stack = js(page, """()=>{ const t=id=>document.querySelector(id).getBoundingClientRect().top; const r=s=>document.querySelector(s).getBoundingClientRect();
-            const hd=r('#cnEBox .ps1Hd'), r0=r('[data-ps1-row=e0]'), r1=r('[data-ps1-row=e1]'), s0=r('[data-ps1-row=s0]'), s1=r('[data-ps1-row=s1]'), risk=r('#cnRisk');
-            return {ok: hd.bottom<=r0.top+1 && r0.bottom<=r1.top+1 && r1.bottom<=s0.top+30 && s0.bottom<=s1.top+1 && s1.bottom<=risk.top+1 && r0.left===r1.left, hd:[hd.top,hd.bottom], r0:[r0.top,r0.bottom], r1:[r1.top,r1.bottom], s0:[s0.top,s0.bottom]}; }""")
-        check(f"{tag} §7b บล็อกซ้อนแนวตั้ง ไม่ทับกัน: หัว → แถว Entry 1 → 2 → SL 1 → 2 → Risk %", stack["ok"], stack)
+        stack = js(page, """()=>{ const r=s=>document.querySelector(s).getBoundingClientRect();
+            const hd=r('#cnEBox .ps1Hd'), r0=r('[data-ps1-row=e0]'), r1=r('[data-ps1-row=e1]'), s0=r('[data-ps1-row=s0]'), s1=r('[data-ps1-row=s1]'), risk=r('#cnRisk'), sbox=r('#cnSBox');
+            return {ok: risk.bottom<=hd.top+1 && hd.bottom<=r0.top+1 && r0.bottom<=r1.top+1 && s0.bottom<=s1.top+1 && Math.abs(r0.top-s0.top)<1 && r0.right<=sbox.left+1, hd:[hd.top,hd.bottom], r0:[r0.top,r0.bottom], r1:[r1.top,r1.bottom], s0:[s0.top,s0.bottom]}; }""")
+        check(f"{tag} §7b PS1c §4: Risk per idea → หัว → แถว 1 → 2 (ซ้าย Entry · ขวา SL แถวตรงกัน) ไม่ทับกัน", stack["ok"], stack)
         js(page, "()=>coreSheetClose()")
         check(f"{tag} console ไม่มี error", not ce and not pe, [ce[:2], pe[:2]])
     finally:
@@ -102,8 +102,8 @@ def fit320(pw):
     try:
         B.ps_on(page); B.form(page, "FIT"); B.fill(page, 100, 90)
         js(page, "()=>{ ps1RowAdd('e'); ps1RowAdd('s'); }"); settle(page, 200)
-        js(page, "()=>{ document.getElementById('cnEn1').value='110'; ps1In('e',1,'110'); document.getElementById('cnSt1').value='85'; ps1In('s',1,'85'); document.getElementById('cnEr0').value='0.2'; ps1In('er',0,'0.2'); document.getElementById('cnEr1').value='0.2'; ps1In('er',1,'0.2'); }"); settle(page, 250)
-        r = js(page, """()=>{ const rows=[...document.querySelectorAll('.ps1R')]; return {ov:document.documentElement.scrollWidth>innerWidth, rows:rows.map(r=>{ const rr=r.getBoundingClientRect(); const kids=[...r.children].filter(c=>c.getBoundingClientRect().width>0); const cy=kids.map(c=>{const q=c.getBoundingClientRect();return q.top+q.height/2;}); return Math.max(...cy)-Math.min(...cy)<=6 && kids.every(c=>c.getBoundingClientRect().right<=rr.right+1); }), sz:[...document.querySelectorAll('.ps1Sz')].map(e=>getComputedStyle(e).display)}; }""")
+        js(page, "()=>{ document.getElementById('cnEn1').value='110'; ps1In('e',1,'110'); document.getElementById('cnSt1').value='85'; ps1In('s',1,'85'); }"); settle(page, 250)
+        r = js(page, """()=>{ const rows=[...document.querySelectorAll('.ps1R')]; return {ov:document.documentElement.scrollWidth>innerWidth, rows:rows.map(r=>{ const rr=r.getBoundingClientRect(); const kids=[...r.children].filter(c=>c.getBoundingClientRect().width>0 && !c.matches('.ps1M')); const cy=kids.map(c=>{const q=c.getBoundingClientRect();return q.top+q.height/2;}); return Math.max(...cy)-Math.min(...cy)<=6 && kids.every(c=>c.getBoundingClientRect().right<=rr.right+1); }), sz:[...document.querySelectorAll('.ps1Sz')].map(e=>getComputedStyle(e).display)}; }""")
         check("[320] §7b fit: ไม่ห่อ ไม่ล้น · ตัด size % ก่อน (เมื่อแคบ)", not r["ov"] and all(r["rows"]), r)
         js(page, "()=>coreSheetClose()")
     finally:

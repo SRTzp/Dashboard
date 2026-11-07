@@ -116,29 +116,29 @@ def tests(pw, w, h):
             const fs=['cnEntry','cnStop','cnRisk','cnTicker'].map(i=>parseFloat(getComputedStyle(document.getElementById(i)).fontSize));
             const sum=document.getElementById('cnSum'); return {top:[a.top,b.top,c.top], w:[a.width,b.width,c.width], fs, bt:getComputedStyle(sum).borderTopWidth, ov:document.documentElement.scrollWidth>innerWidth,
               extra:document.querySelectorAll('.ps1Pc,#cnEx .ps1R,#cnSx .ps1R').length, plus:document.querySelectorAll('[data-ps1-add]').length}}""")
-        check(f"{tag} 2 Form: Entry · SL · Risk เรียงเป็นบล็อก (PS1b §7b)  ({w}px) ไม่ล้นแนวนอน", lay["top"][0] < lay["top"][1] < lay["top"][2] and not lay["ov"], lay)   # PS1b §7b: stacked blocks (Entry, SL, Risk) replace the old 3-column row
+        check(f"{tag} 2 Form: Entry · SL · Risk เรียงเป็นบล็อก (PS1b §7b)  ({w}px) ไม่ล้นแนวนอน", abs(lay["top"][0] - lay["top"][1]) < 1 and abs(lay["top"][1] - lay["top"][2]) < 1 and not lay["ov"], lay)   # PS1c §4: single trade = ONE row (Entry · SL · Risk on one baseline)
         check(f"{tag} 2 Form: font ของ input ≥ 16px (กัน iPhone zoom) · มีเส้นแบ่งบางเหนือสรุป · เริ่มต้นไม่มีช่องแถวเพิ่ม · มี ＋ 2 ปุ่ม", min(lay["fs"]) >= 16 and lay["bt"] == "1px" and lay["extra"] == 0 and lay["plus"] == 2, lay)
         s1 = sumtxt(page)
         check(f"{tag} 2 Form: ค่าเริ่มต้น Risk = default Momentum 0.4% · จำนวนหุ้น = floor(0.4%×E÷10) = {exp:,} (ปัดลง lot 1) · สรุปบรรทัดเดียว 'sh · Risk · Size … of portfolio'",
-              js(page, "()=>document.getElementById('cnRisk').value") == "0.4" and (f"#{exp:,}" in s1 or f"{exp:,} sh" in s1) and "Risk 0." in s1 and "Avg" not in s1, [s1, exp])
+              js(page, "()=>document.getElementById('cnRisk').value") == "0.4" and (f"#{exp:,}" in s1 or f"{exp:,} sh" in s1) and "Risk ฿" in s1 and "(0." in s1 and "Avg" not in s1, [s1, exp])
         check(f"{tag} 2 Form: ช่อง Risk นอกช่วง Momentum (0.7) → บล็อกบันทึก", (fill(page, r=0.7) or True) and save_dis(page) and "0.35" in errtxt(page), errtxt(page))
         fill(page, r=0.4)
         # size cap trims
         fill(page, 100, 99.9)
         s2 = sumtxt(page)
         sz = js(page, "()=>{ const s=document.querySelector('[data-ps1-size]'); return parseFloat(s.innerText); }")
-        check(f"{tag} 2 Form: SL แคบมาก → จำนวนหุ้นถูกลดให้ไม่เกิน max position 7.5% ของพอร์ต + มีโน้ตสั้น", sz <= 7.5 + 1e-6 and "reduced" in s2, [s2, sz])
+        check(f"{tag} 2 Form: SL แคบมาก → จำนวนหุ้นถูกลดให้ไม่เกิน max position 7.5% ของพอร์ต + มีโน้ตสั้น", sz <= 7.5 + 1e-6 and "trimmed" in s2, [s2, sz])
         fill(page, 100, 90)
         # two entry rows
         js(page, "()=>ps1RowAdd('e')"); settle(page, 150)
         js(page, "()=>{ document.getElementById('cnEn1').value='95'; ps1In('e',1,'95'); }"); settle(page, 150)
         two = js(page, "()=>({er:!!document.querySelector('#cnEr0'), n:document.querySelectorAll('input[id^=cnEr]').length, rows:document.querySelectorAll('#cnEx .ps1R').length, det:document.getElementById('cnDetB').textContent.replace(/\\s+/g,' '), sum:document.getElementById('cnSum').innerText.replace(/\\s+/g,' ')})")
         check(f"{tag} 2 Form: กด ＋ Entry → โผล่แถวที่ 2 + ช่อง risk % ต่อ entry · สรุปมี Avg entry · Avg SL · Left", two["er"] and two["n"] == 2 and two["rows"] == 1 and "Avg" in two["sum"], two)   # PS1b §7b: Left moves to Details
-        js(page, "()=>{ ps1In('er',0,'0.3'); document.getElementById('cnEr0').value='0.3'; ps1In('er',1,'0.2'); document.getElementById('cnEr1').value='0.2'; }"); settle(page, 150)
+        js(page, "()=>{ ps1In('er',0,'60'); document.getElementById('cnEr0').value='60'; ps1In('er',1,'50'); document.getElementById('cnEr1').value='50'; }"); settle(page, 150)
         sm = sumtxt(page)
-        check(f"{tag} 2 Form: 2 entry (100 risk 0.3% · 95 risk 0.2%) รวม ≤ 0.4%+ → คำนวณหุ้นต่อแถว · บล็อกเมื่อรวมเกินงบ idea (0.5 > 0.4)", save_dis(page) and "more than" in errtxt(page), [sm, errtxt(page)])
-        js(page, "()=>{ ps1In('er',0,'0.25'); document.getElementById('cnEr0').value='0.25'; ps1In('er',1,'0.15'); document.getElementById('cnEr1').value='0.15'; }"); settle(page, 150)
-        check(f"{tag} 2 Form: rows ลงตัว (0.25+0.15=0.40) → บันทึกได้", not save_dis(page), [errtxt(page), sumtxt(page)])
+        check(f"{tag} 2 Form: 2 entry (split 60 + 50) → บล็อกเมื่อ split รวม ≠ 100", save_dis(page) and "split must total 100" in errtxt(page), [sm, errtxt(page)])
+        js(page, "()=>{ ps1In('er',0,'60'); document.getElementById('cnEr0').value='60'; ps1In('er',1,'40'); document.getElementById('cnEr1').value='40'; }"); settle(page, 150)
+        check(f"{tag} 2 Form: split 60+40 = 100 → บันทึกได้", not save_dis(page), [errtxt(page), sumtxt(page)])
         # 2 SL rows
         js(page, "()=>ps1RowAdd('s')"); settle(page, 150)
         js(page, "()=>{ document.getElementById('cnSt1').value='85'; ps1In('s',1,'85'); }"); settle(page, 150)
@@ -338,7 +338,7 @@ def fix_tests(pw, w, h):
         form(page, "MSL"); fill(page, 100, 90)
         js(page, "()=>{ ps1RowAdd('s'); ps1RowAdd('e'); }"); settle(page, 200)
         js(page, "()=>{ document.getElementById('cnSt1').value='80'; ps1In('s',1,'80'); document.getElementById('cnSp0').value='50'; ps1In('sp',0,'50'); document.getElementById('cnSp1').value='50'; ps1In('sp',1,'50');"
-                 " document.getElementById('cnEn1').value='95'; ps1In('e',1,'95'); document.getElementById('cnEr0').value='0.2'; ps1In('er',0,'0.2'); document.getElementById('cnEr1').value='0.2'; ps1In('er',1,'0.2'); }"); settle(page, 300)
+                 " document.getElementById('cnEn1').value='95'; ps1In('e',1,'95'); document.getElementById('cnEr0').value='50'; ps1In('er',0,'50'); document.getElementById('cnEr1').value='50'; ps1In('er',1,'50'); }"); settle(page, 300)
         e = errtxt(page)
         js(page, "()=>coreNewSave()"); settle(page, 700)
         c = js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='MSL'); return c && {stop:c.stop, pstop:c.plan.stop, avg:c.plan.ps1.avgStop, stops:c.plan.ps1.stops.map(x=>x.px), rows:c.plan.ps1.rows.length}; }")
