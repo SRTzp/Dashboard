@@ -123,7 +123,7 @@ def card_tests(pw):
         saved = js(page, "()=>tdSettings().stockNewsRead")
         js(page, "()=>stkCloseView()"); go_today(page)
         c = js(page, "()=>({k: document.querySelector('[data-stk-card]').dataset.stkCard, new: !!document.querySelector('[data-stk-new]'), cls: document.querySelector('[data-stk-card]').className})")
-        check(f"{tag} 2 อ่านแล้ว → เก็บ stockNewsRead[{ED}] ใน settings · ป้าย New หาย · การ์ดจางลง · ยังเปิดอ่านได้", saved == {ED: True} and c["k"] == "read" and not c["new"] and "read" in c["cls"] and js(page, "()=>!!document.querySelector('[data-stk-open]')"), [saved, c])
+        check(f"{tag} 2 อ่านแล้ว → เก็บ stockNewsRead[{ED}] ใน settings · ป้าย New หาย · การ์ดจางลง · ยังเปิดอ่านได้", isinstance(saved.get(ED), dict) and sorted(saved[ED]["readIds"]) == ["AAA", "BBB", "CCC", "DDD"] and c["k"] == "read" and not c["new"] and "read" in c["cls"] and js(page, "()=>!!document.querySelector('[data-stk-open]')"), [saved, c])
         # โหลดซ้ำ (render ใหม่ทั้งหน้า) ยังไม่ flag ซ้ำ
         js(page, "()=>{ stkStop(); stkStart(); render(); }"); settle(page, 700); go_today(page)
         check(f"{tag} 2 เปิดแดชบอร์ดใหม่/โหลดซ้ำ → ฉบับเดิมไม่ถูก flag ว่าใหม่", js(page, "()=>document.querySelector('[data-stk-card]').dataset.stkCard") == "read")

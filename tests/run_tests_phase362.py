@@ -47,7 +47,7 @@ def item41(pw):
         lbl = js(page, "()=>[...document.querySelectorAll('[data-td3-panel] .ph, [data-td3-panel] h3, [data-td3-panel] .ttl, [data-td3-panel] b')].map(e=>e.innerText.trim()).join('|')")
         html = js(page, "()=>document.querySelector('[data-td3]') ? document.querySelector('[data-td3]').innerText : ''")
         check("PL2·4 Today panel shows 'Selection' (not 'Core Port')", "selection" in html.lower() and "core port" not in html.lower(), html[:300])
-        check("PL2·4 Satellite label kept (Today panel builder)", js(page, "()=>tdBuild.toString().length>0 && document.documentElement.innerHTML.includes(\"P('sat', 'Satellite'\")"))
+        check("PL2·4 Satellite label kept (Today panel builder; WK1: Weekend list tags its Sat steps 'SAT')", js(page, "()=>tdBuild.toString().length>0 && document.documentElement.innerHTML.includes(\"tag, 'SAT'\") || document.documentElement.innerHTML.includes(\"'SAT', 'Weekly Impact'\")"))
         check("PL2·4 other 'Core Port' (port definition name) not renamed", js(page, "()=>document.documentElement.innerHTML.includes(\"name:'Core Port'\")"))
     finally:
         b.close()

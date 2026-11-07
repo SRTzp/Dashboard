@@ -1,32 +1,18 @@
-# RUN-summary — overnight chained run (PF1 finish · PF2 · WM1 + WM1b · SN1)
+# Overnight run summary — TX1 → WK1 (2026-11-07/08)
 
-## ผลรวม (tests/runall2.sh · base + phase 1–102 = 103 suites · 2 worker · log ที่ `_to_delete/runall2_final/`)
-- รอบขนาน: ล้ม 5 suite (p5, p13, p15, p23, p90) · รันซ้ำทีละตัว: ยังล้ม 5 → แก้ p15 และ p90 (คาดหวังเปลี่ยนตามงานรอบนี้) แล้วรันซ้ำเดี่ยว **ผ่านทั้งคู่ (p15 · p90)**
-- ผลสุดท้าย: **100/103 suites ผ่าน** · รวม PASS 10,536 เคส (จาก `final.tsv` ก่อนแก้ p15/p90) · suite ที่ยังล้มหลังแก้ = p5, p13, p23 (ด้านล่าง)
+Both rounds finished and are pushed. Nothing merged. Briefs and `wk1-mockup.html` left untracked. Full suite NOT run (per instructions); related suites only.
 
-## Suite ที่ยังล้ม (หลังรันซ้ำ)
-| suite | FAIL | หมายเหตุ |
-|---|---|---|
-| p13 | (ล้มเสมอ — ไม่มี `index.backup-pre-UI1.html`) | known false failure |
-| p5 | `พิมพ์ในช่อง Break Price แล้วกด [บันทึกแผน] ค้าง 300ms → คลิกไม่หาย (planned=true) และตัวเลขที่เพิ่งพิมพ์ถูกเก็บ (brk_px 65000)` (1440px, 430px) | **ไม่เกี่ยวกับงานรอบนี้**: ล้มเหมือนกันบน `index.backup-pre-PF1.html` และ `pre-PF2` (ผล 3 FAIL เท่ากัน) → ขึ้นกับวันที่จริงของเครื่อง (รัน 25→26 ต.ค.) ไม่ได้แก้ตามคำสั่ง |
-| p23 | `จำนวนครั้งที่เขียน Firestore (users/testuid) จาก migration = 1` → ได้ 2 · `migration ไม่เขียนวนซ้ำ` → 2 (1440x900, 430x900) | เช่นเดียวกัน: ล้ม 5 ข้อบนบิลด์ก่อน PF1 → ไม่ใช่ผลของรอบนี้ |
-(p3 วันอาทิตย์ · p6 วันที่ 20 ไม่ล้นในรอบนี้)
+| Round | Result | Tests | Branch / commit | Compare URL |
+|---|---|---|---|---|
+| TX1 | ✅ done | new phase365 **68/68** · related 116 (67) 117 (64) 362 (69) 99 (122) 102 (54) 106 (155) 108 (130) 15 (85) all pass · syntax OK · core_size 502/502 · sync OK | `claude/tx1` @ 2477140 (from origin/main fc85d0c) | https://github.com/SRTzp/Dashboard/compare/main...claude/tx1?expand=1 |
+| WK1 | ✅ done | new phase366 **86/86** · related 106 (155) 102 (54) 108 (130) 365 (68) 99 (122) 15 (85) 116 (67) 362 (69) pass · phase105 = 186 PASS + a pre-existing Playwright timeout (same result in the earlier full run) | `claude/wk1` @ 5dbed3b (stacked on `claude/tx1`) | https://github.com/SRTzp/Dashboard/compare/claude/tx1...claude/wk1?expand=1 (vs main: `main...claude/wk1` includes TX1) |
 
-## ผลต่อรอบ
-- **PF1:** ข้าม — `docs/reports/PF1-report.md` มีอยู่แล้ว (phase98 170 เคสผ่านหลังรอบ WM1; ภาพ 7 ภาพเปิดดูในรอบเดิม).
-- **PF2:** phase99 122/122 · related suites ผ่าน · report `PF2-report.md`.
-- **WM1:** phase100 127/127 · report `WM1-report.md` · `docs/weekly-impact-schema.md`.
-- **WM1b:** phase101 75/75 · report `WM1b-report.md`.
-- **SN1:** phase102 64/64 · report `SN1-report.md` · `docs/stock-news-schema.md`.
+## Decisions (details in each report)
+**TX1** — `--read-fs/--read-lh` = measured Watchlist stock-data body (.ltMd) 15.64px / 1.65, applied to Brent/Playbook asset sheet, news panel/sheet, AI preview. Whole-card Edit ⇄ Read with one Save; no saved text → Edit; saved + draft → Edit with amber tag. Archive… removed from the card (kept in ⋯, Restore unchanged). Draft = `localStorage tx1.draft.<T>.<field>`, 1 s debounce, leave-page prompt only with drafts. News panel kept at 440px (widening broke an old test). App has no dark theme (dark shots = media emulation). Old tests adjusted: 116, 362 (press Edit first), 99 (phone sheet 17px→15.64px) → `tests/TX1_retired.md`.
+**WK1** — one 7-item list (SAT/CORE/OVERVIEW tags, `n/N done · ~45 min`, bar). Fallbacks used: per-item news key = edition + ticker; ⑦ change_if is a manual tick (no hit status stored); ⑥ counts only trades that have a stop and says how many were skipped. ④ merges wk_cands+wk_picks; removed ids wk_macro / wsector / wk_picks. Read state `stockNewsRead[ed] = {readIds}`; old `true` = all read. Daily line is one `<button>`. Old tests adjusted: 106 B4, 102 §2, 362 → `tests/WK1_retired.md`.
 
-## การตัดสินใจหลัก (ทั้งหมดอยู่ในรายงานรายรอบ)
-1. Gate WM1 = PF1 + PF2 ผ่านเทสในเครื่อง (ยกเว้น cloud ตามที่สั่ง).
-2. PF2: ลบ prompt สัปดาห์ใหม่ทุกอุปกรณ์ · Plan บน iPhone ไม่ใช้ select · การ์ด Sat เดียว state A/B/C (ชิป Focus เดิมคงไว้ใน B) · ฟิกซ์เจอร์เก่าที่เลือก Asset แต่ไม่มีแผนให้ seed แผนเฉพาะตอนรันตรง (`pf2_retire.seed_plans`).
-3. WM1: ถอดรูป/TradingView จากการ์ด Strategy ตาม §7 (ข้อมูล `w.chart` ยังอยู่) · Copy last week แทนลิงก์นำเข้า PF2 · ข่าววันนี้ขึ้นบนสุดของ Today.
-4. WM1b: `US` ยังเป็น key สงวน (ไม่ปลดล็อก) — ใช้ alias `US` ได้เมื่อตั้งตลาดอ้างอิงแล้ว · ปิดใช้งาน = ซ่อนจาก ＋ Asset/Weekly Impact เท่านั้น · ถามยืนยันเมื่อกำลังใช้ (เลือกอยู่/ไม้เปิด/แผนใช้งาน).
-5. SN1: ใช้ลำดับ Today ที่ผู้ใช้ยืนยัน → ก้นสองคอลัมน์บน Mac ต่างกัน ~43% (ผ่อนเกณฑ์ 15% → 50% ใน phase94/102) · ไม่มีดึงข่าวอัตโนมัติ (วาง JSON) .
-6. เทสเก่า: ปรับ/ถอดเฉพาะที่ brief เปลี่ยน (ดู `tests/PF2_retired.md`, `WM1_retired.md`, `SN1_retired.md`) · p15 ปรับจำนวนหมวด backup 6 → 8 · p90 ปรับลำดับ Today.
-7. เหตุการณ์: ครั้งหนึ่งสั่ง `rm -f` log ชั่วคราวโดยพลาด ระบบบล็อก ไม่มีไฟล์ถูกลบ · ไม่ push · ไม่ deploy.
-
-## Firestore rules ที่ผู้ใช้ต้องเพิ่มเอง (ไม่ได้ deploy)
-อยู่ใน `WM1-report.md` (weeklyImpact) และ `SN1-report.md` (stockNews) — ถ้ายังไม่เพิ่ม การบันทึกจะแสดง permission-denied.
+## Things to look at
+- phase105 times out at `[data-sd-hd="IGV"] .l2 .g` (pre-existing, unrelated).
+- `bkDue` (backup reminder) reads localStorage unguarded → throws if storage is blocked (pre-existing; not touched).
+- WK1's Mark all read button wraps to its own line at 390px (cosmetic).
+- Added helper `tests/run_related.sh` (runs listed suites only, writes logs + final.tsv for `make_verify.sh`) and tweaked `tests/make_verify.sh` to list only untracked files as `[new]`.
