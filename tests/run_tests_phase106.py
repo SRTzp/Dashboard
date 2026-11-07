@@ -210,7 +210,7 @@ def goals_tests(pw, w, h, label):
         f = [r for r in rows if r["id"] == "fam"][0]
         check(f"{tag} B3 ไม่มี startDate → 'Start date not set' (ไม่เดาจากวันที่แก้)", "Start date not set" in f["t"] and "m " not in f["t"].replace("Start date", ""), f)
         js(page, "()=>document.querySelector('[data-td3-acct=\"main\"] summary').click()"); settle(page, 300)
-        subs = js(page, "()=>[...document.querySelectorAll('[data-td3-acct=\"main\"] [data-td3-sub]')].map(e=>e.innerText.replace(/\\s+/g,' ').trim())")
+        subs = js(page, "()=>[...document.querySelectorAll('[data-td3-acct=\"main\"] [data-td3-sub]')].map(e=>e.textContent.replace(/\\s+/g,' ').trim())")
         check(f"{tag} B3 กาง: ทีละ sub-portfolio (RG2b: Momentum 19% $98k→$160k · อื่น No goal set)", len(subs) == 4 and "Momentum" in subs[0] and "$98k→$160k" in subs[0] and "19%" in subs[0] and all("No goal set" in s_ for s_ in subs[1:]), subs)
         check(f"{tag} ไม่ล้น · ไม่มี console error", ovf(page) <= 0 and not ce and not pe, [ovf(page), ce[:2], pe[:2]])
     finally: b.close()
@@ -236,7 +236,7 @@ def goals_settings_tests(pw):
         check(f"{tag} ข้อมูลผิด (target ≤ start) → ไม่บันทึก + แจ้งข้อความ", "target must be greater" in (txt(page, "#glSubMsg") or "") and "Option" not in (S(page, "subGoals")["main"]))
         go_today(page)
         js(page, "()=>document.querySelector('[data-td3-acct=\"main\"] summary').click()"); settle(page, 300)
-        check(f"{tag} Today แสดง Sat 4,100→12,000 หลังตั้งค่า", "$4.1k→$12k" in (txt(page, '[data-td3-acct="main"] [data-td3-sub="Sat"]') or ""), txt(page, '[data-td3-acct="main"] [data-td3-sub="Sat"]'))
+        check(f"{tag} Today แสดง Sat 4,100→12,000 หลังตั้งค่า", "$4.1k→$12k" in (js(page, "()=>(document.querySelector('[data-td3-acct=main] [data-td3-sub=Sat]')||{}).textContent||''")), txt(page, '[data-td3-acct="main"] [data-td3-sub="Sat"]'))
         check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
     finally: b.close()
 

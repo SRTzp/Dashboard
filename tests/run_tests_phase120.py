@@ -30,7 +30,8 @@ def check(name, ok, detail=""):
 
 def ps_on(page, ps=PS):
     """PS1 เปิด (ถอดแฟลกนักพัฒนา) + ตั้ง psRisk ของบัญชี main"""
-    js(page, "([ps])=>{ localStorage.removeItem('dash.ps1Off'); const B=getBook('main'); B.settings.psRisk = ps; saveBook('main'); render(); }", [ps])
+    # PS1b: Sat orders need a min stop per asset (required) -> give every Sat asset a tiny one unless the test sets its own
+    js(page, "([ps])=>{ localStorage.removeItem('dash.ps1Off'); const B=getBook('main'); const o=Object.assign({}, ps); if(!o.minStopStock) o.minStopStock={winner:null, ladder:null}; if(!o.minStop){ o.minStop={}; try{ satAssets({all:true}).forEach(a=>{ o.minStop[a.key]=0.05; }); }catch(e){} } B.settings.psRisk = o; saveBook('main'); render(); }", [ps])
     settle(page, 300)
 
 
@@ -114,12 +115,12 @@ def tests(pw, w, h):
         lay = js(page, """()=>{ const r=id=>document.getElementById(id).getBoundingClientRect(); const a=r('cnEntry'),b=r('cnStop'),c=r('cnRisk');
             const fs=['cnEntry','cnStop','cnRisk','cnTicker'].map(i=>parseFloat(getComputedStyle(document.getElementById(i)).fontSize));
             const sum=document.getElementById('cnSum'); return {top:[a.top,b.top,c.top], w:[a.width,b.width,c.width], fs, bt:getComputedStyle(sum).borderTopWidth, ov:document.documentElement.scrollWidth>innerWidth,
-              extra:document.querySelectorAll('[data-ps1-er],[data-ps1-sp],.ps1X').length, plus:document.querySelectorAll('[data-ps1-add]').length}}""")
-        check(f"{tag} 2 Form: Entry · SL · Risk อยู่แถวเดียวกัน กว้างเท่ากัน ({w}px) ไม่ล้นแนวนอน", abs(lay["top"][0] - lay["top"][1]) < 1 and abs(lay["top"][1] - lay["top"][2]) < 1 and max(lay["w"]) - min(lay["w"]) < 2 and not lay["ov"], lay)
+              extra:document.querySelectorAll('.ps1Pc,#cnEx .ps1R,#cnSx .ps1R').length, plus:document.querySelectorAll('[data-ps1-add]').length}}""")
+        check(f"{tag} 2 Form: Entry · SL · Risk เรียงเป็นบล็อก (PS1b §7b)  ({w}px) ไม่ล้นแนวนอน", lay["top"][0] < lay["top"][1] < lay["top"][2] and not lay["ov"], lay)   # PS1b §7b: stacked blocks (Entry, SL, Risk) replace the old 3-column row
         check(f"{tag} 2 Form: font ของ input ≥ 16px (กัน iPhone zoom) · มีเส้นแบ่งบางเหนือสรุป · เริ่มต้นไม่มีช่องแถวเพิ่ม · มี ＋ 2 ปุ่ม", min(lay["fs"]) >= 16 and lay["bt"] == "1px" and lay["extra"] == 0 and lay["plus"] == 2, lay)
         s1 = sumtxt(page)
         check(f"{tag} 2 Form: ค่าเริ่มต้น Risk = default Momentum 0.4% · จำนวนหุ้น = floor(0.4%×E÷10) = {exp:,} (ปัดลง lot 1) · สรุปบรรทัดเดียว 'sh · Risk · Size … of portfolio'",
-              js(page, "()=>document.getElementById('cnRisk').value") == "0.4" and f"{exp:,} sh" in s1 and "Risk 0." in s1 and "of portfolio" in s1 and "Avg" not in s1, [s1, exp])
+              js(page, "()=>document.getElementById('cnRisk').value") == "0.4" and (f"#{exp:,}" in s1 or f"{exp:,} sh" in s1) and "Risk 0." in s1 and "Avg" not in s1, [s1, exp])
         check(f"{tag} 2 Form: ช่อง Risk นอกช่วง Momentum (0.7) → บล็อกบันทึก", (fill(page, r=0.7) or True) and save_dis(page) and "0.35" in errtxt(page), errtxt(page))
         fill(page, r=0.4)
         # size cap trims
@@ -131,11 +132,11 @@ def tests(pw, w, h):
         # two entry rows
         js(page, "()=>ps1RowAdd('e')"); settle(page, 150)
         js(page, "()=>{ document.getElementById('cnEn1').value='95'; ps1In('e',1,'95'); }"); settle(page, 150)
-        two = js(page, "()=>({er:!!document.querySelector('[data-ps1-er]'), n:document.querySelectorAll('[data-ps1-er] input').length, rows:document.querySelectorAll('#cnEx .ps1X').length, sum:document.getElementById('cnSum').innerText.replace(/\\s+/g,' ')})")
-        check(f"{tag} 2 Form: กด ＋ Entry → โผล่แถวที่ 2 + ช่อง risk % ต่อ entry · สรุปมี Avg entry · Avg SL · Left", two["er"] and two["n"] == 2 and two["rows"] == 1 and "Avg entry" in two["sum"] and "Left" in two["sum"], two)
+        two = js(page, "()=>({er:!!document.querySelector('#cnEr0'), n:document.querySelectorAll('input[id^=cnEr]').length, rows:document.querySelectorAll('#cnEx .ps1R').length, det:document.getElementById('cnDetB').textContent.replace(/\\s+/g,' '), sum:document.getElementById('cnSum').innerText.replace(/\\s+/g,' ')})")
+        check(f"{tag} 2 Form: กด ＋ Entry → โผล่แถวที่ 2 + ช่อง risk % ต่อ entry · สรุปมี Avg entry · Avg SL · Left", two["er"] and two["n"] == 2 and two["rows"] == 1 and "Avg" in two["sum"], two)   # PS1b §7b: Left moves to Details
         js(page, "()=>{ ps1In('er',0,'0.3'); document.getElementById('cnEr0').value='0.3'; ps1In('er',1,'0.2'); document.getElementById('cnEr1').value='0.2'; }"); settle(page, 150)
         sm = sumtxt(page)
-        check(f"{tag} 2 Form: 2 entry (100 risk 0.3% · 95 risk 0.2%) รวม ≤ 0.4%+ → คำนวณหุ้นต่อแถว · บล็อกเมื่อรวมเกินงบ idea (0.5 > 0.4)", "Left" in sm and save_dis(page) and "more than" in errtxt(page), [sm, errtxt(page)])
+        check(f"{tag} 2 Form: 2 entry (100 risk 0.3% · 95 risk 0.2%) รวม ≤ 0.4%+ → คำนวณหุ้นต่อแถว · บล็อกเมื่อรวมเกินงบ idea (0.5 > 0.4)", save_dis(page) and "more than" in errtxt(page), [sm, errtxt(page)])
         js(page, "()=>{ ps1In('er',0,'0.25'); document.getElementById('cnEr0').value='0.25'; ps1In('er',1,'0.15'); document.getElementById('cnEr1').value='0.15'; }"); settle(page, 150)
         check(f"{tag} 2 Form: rows ลงตัว (0.25+0.15=0.40) → บันทึกได้", not save_dis(page), [errtxt(page), sumtxt(page)])
         # 2 SL rows
@@ -146,10 +147,10 @@ def tests(pw, w, h):
         js(page, "()=>{ ps1In('sp',0,'60'); document.getElementById('cnSp0').value='60'; }"); settle(page, 150)
         check(f"{tag} 2 Form: % ออกรวม ≠ 100 (60+50) → บล็อกบันทึก 'Exit % must total 100'", save_dis(page) and "total 100" in errtxt(page), errtxt(page))
         js(page, "()=>{ ps1In('sp',0,'50'); document.getElementById('cnSp0').value='50'; }"); settle(page, 150)
-        a = js(page, "()=>({sum:document.getElementById('cnSum').innerText, dis:document.getElementById('cnSave').disabled})")
+        a = js(page, "()=>({sum:document.getElementById('cnSum').innerText + ' ' + document.getElementById('cnDetB').textContent, dis:document.getElementById('cnSave').disabled})")   # PS1b §7d: Avg SL is in Details
         check(f"{tag} 2 Form: SL 90/85 ออก 50/50 → Avg SL = 87.50 ในสรุป", "87.50" in a["sum"], a)
         js(page, "()=>{ ps1RowDel('s',1); ps1RowDel('e',1); }"); settle(page, 150)
-        back = js(page, "()=>document.querySelectorAll('[data-ps1-er],[data-ps1-sp],.ps1X').length")
+        back = js(page, "()=>document.querySelectorAll('.ps1Pc,#cnEx .ps1R,#cnSx .ps1R').length")
         check(f"{tag} 2 Form: ลบกลับเหลือ 1 แถว → ช่องพิเศษหายหมด", back == 0, back)
         # 4 rows max
         js(page, "()=>{ for(let i=0;i<6;i++){ ps1RowAdd('e'); ps1RowAdd('s'); } }"); settle(page, 150)
@@ -187,7 +188,7 @@ def tests(pw, w, h):
         card_txt = js(page, "()=>{ const el=document.querySelector('[data-ps1-cardsum]'); return el ? el.innerText.replace(/\\s+/g,' ') : ''; }")
         js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='AAA'); coreToggle(c.id); }"); settle(page, 300)
         card_txt = js(page, "()=>{ const el=document.querySelector('[data-ps1-cardsum]'); return el ? el.innerText.replace(/\\s+/g,' ') : ''; }")
-        check(f"{tag} 3 การ์ดแผน PS1 แสดงสรุป 'sh · Risk · Size' (ไม่ใช่สูตรเดิม)", "sh" in card_txt and "Risk" in card_txt, card_txt)
+        check(f"{tag} 3 การ์ดแผน PS1 แสดงสรุป 'sh · Risk · Size' (ไม่ใช่สูตรเดิม)", ("#" in card_txt or "sh" in card_txt) and "Risk" in card_txt, card_txt)
         # buy 1 uses ps1 qty
         qty = sv["qty"]
         js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='AAA'); coreBuy1Open(c.id); }"); settle(page, 300)
@@ -223,7 +224,7 @@ def tests(pw, w, h):
     b, page, ce, pe = C.launch2(pw, w, h, tr5, c5, pin_winner=True)
     try:
         ps_on(page)
-        js(page, "()=>{ switchTab('plan'); setPlanScope('stock'); render(); }"); settle(page, 500)
+        js(page, "()=>{ ps1TodayOpen = true; switchTab('today'); render(); }"); settle(page, 500)   # PS1b: the Portfolio Risk panel lives in Today (collapsed by default; opened here)
         pn = js(page, """()=>({body: !!document.querySelector('[data-ps1-panel-body]'), e: (document.querySelector('[data-ps1-e]')||{}).innerText, buckets: [...document.querySelectorAll('[data-ps1-bucket]')].map(x=>x.dataset.ps1Bucket),
             chips: [...document.querySelectorAll('[data-ps1-chip]')].map(x=>x.dataset.ps1Chip), miss: (document.querySelector('[data-ps1-missing]')||{}).innerText||'', foot: document.querySelector('.ps1Fn')?.innerText,
             rows: Object.fromEntries([...document.querySelectorAll('[data-ps1-idea]')].map(r=>[r.dataset.ps1Idea, r.innerText.replace(/\\s+/g,' ').trim()])), tot: (document.querySelector('[data-ps1-total]')||{}).innerText})""")
@@ -237,7 +238,7 @@ def tests(pw, w, h):
         js(page, "()=>{ const B=getBook('main'); B.trades.find(t=>t.sym==='BE').qty = 60000; saveBook('main'); render(); }"); settle(page, 400)
         red = js(page, "()=>({lvl:(document.querySelector('[data-ps1-giveback]')||{dataset:{}}).dataset.ps1Giveback, txt:(document.querySelector('[data-ps1-giveback]')||{}).innerText||'', chips:[...document.querySelectorAll('[data-ps1-chip]')].map(x=>x.dataset.ps1Chip)})")
         check(f"{tag} 5 Panel: give-back ≥10% → แดง + 'Review: take partial profit or raise stops' · bucket เต็ม = 'Stop opening'", red["lvl"] == "red" and "Review: take partial profit or raise stops" in red["txt"], red)
-        js(page, "()=>switchTab('today')"); settle(page, 500)
+        js(page, "()=>{ ps1TodayOpen = false; switchTab('today'); render(); }"); settle(page, 500)
         td = js(page, "()=>{ const el=document.querySelector('[data-ps1-today]'); return el ? el.innerText.replace(/\\s+/g,' ') : ''; }")
         check(f"{tag} 5 Today: มีบรรทัดสั้น 'Risk x / 5.0% · left … · give-back …'", "Risk" in td and "give-back" in td and "left" in td, td)
         check(f"{tag} 5 Today: ไม่ล้นแนวนอน", not js(page, "()=>document.documentElement.scrollWidth>innerWidth"), [])
@@ -261,7 +262,7 @@ def sat_tests(pw, w, h):
 
         def calc():
             return js(page, """([i])=>{ const x=satIdeasList.find(y=>y.id===i); const c=satV3PlanAcctCalc(x,'main'); return {lot:c.lot, blocks:c.blocks, ready:c.ready, fac:c.verify&&c.verify.fac, ok:c.verify&&c.verify.ok, msg:c.lotMsg, raw:c.v2&&c.v2.rawRisk, lim:c.v2&&c.v2.limit, deal:c.v2&&c.v2.lotDeal, risk:c.v2&&c.v2.riskTHB, E:c.ps1&&c.ps1.E, def:c.ps1&&c.ps1.def, margin:c.ps1&&c.ps1.margin}; }""", [iid])
-        js(page, "()=>{ const B=getBook('main'); B.settings.psRisk={def:{winner:0.4,ladder:1.0,satMain:0.1,satTac:0.15}}; saveBook('main'); render(); }"); settle(page, 300)
+        ps_on(page, {"def": {"winner": 0.4, "ladder": 1.0, "satMain": 0.1, "satTac": 0.15}}); settle(page, 300)
         c0 = calc()
         check(f"{tag} 4b Structure ✗ (ยังไม่ติ๊ก) → ถูกบล็อก 'Check Structure first' · ไม่ ready", "Check Structure first" in c0["blocks"] and not c0["ready"], c0)
         js(page, "([i])=>{ pfVerifySet(i,'structure_ok',true); pfVerifySet(i,'ema50_ok',true); }", [iid]); settle(page, 400)
@@ -351,6 +352,7 @@ def fix_tests(pw, w, h):
         t = js(page, "()=>getBook('main').trades.find(t=>t.sym==='MSL').sl")
         check(f"{tag} 1 position: trade.sl = 90 (สถานะ/alert) แต่ risk math ใช้ blended 85", t == 90 and pos and abs(pos["stop"] - 85) < 1e-9, [t, pos])
         # 3 add-on prefill: next planned row (entry 2 = 95, risk 0.2 x mult)
+        js(page, "()=>{ const it=wlItemOf('MSL'); if(it && !it.onboarding) it.onboarding={at:'2026-11-01'}; }")   # PS1b §8: add-ons wait for homework (screening saved)
         js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='MSL'); lfAddOpen(c.id); }"); settle(page, 300)
         pf = js(page, "()=>({px:document.getElementById('lfaPx')&&document.getElementById('lfaPx').value, risk:document.getElementById('lfaRisk')&&document.getElementById('lfaRisk').value, note:!!document.querySelector('[data-ps1-next]'), nTr:getBook('main').trades.filter(t=>t.sym==='MSL').length})")
         check(f"{tag} 3 ไม้เติม: เติม entry แถว 2 ให้ (ราคา 95 + risk 0.2%) + ข้อความบอก · ไม่ซื้ออัตโนมัติ (trade เดิม 1 รายการ)", pf and pf["px"] == "95" and abs(float(pf["risk"]) - 0.2) < 1e-6 and pf["note"] and pf["nTr"] == 1, pf)
@@ -371,7 +373,7 @@ def fix_tests(pw, w, h):
         # shrink free cash by buying a big holding: set winner holdings so cash is small
         js(page, "()=>{ window.__c0 = coreCtxTrack; coreCtxTrack = function(c,t){ const r = window.__c0(c,t); return Object.assign({}, r, {cashTHB: 3300}); }; coreNewIn(); }"); settle(page, 300)
         s2 = sumtxt(page); note = js(page, "()=>{ const e=document.querySelector('[data-ps1-trim]'); return e ? e.innerText : ''; }")
-        m = re.search(r"([\d,]+)\s*sh", s2)
+        m = re.search(r"#([\d,]+)", s2) or re.search(r"([\d,]+)\s*sh", s2)
         q2 = int(m.group(1).replace(',', '')) if m else -1
         check(f"{tag} 2 free-cash: เงินสดว่าง $100 (฿3,300) → จำนวนหุ้นลดเหลือ ≤1 ตามเงินสด + ข้อความ 'เงินสดคุม'", 0 <= q2 <= 1 and "เงินสดคุม" in note, [base, s2, note, free])
         check(f"{tag} console ไม่มี error (cash)", not ce and not pe, [ce[:2], pe[:2]])

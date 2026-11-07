@@ -238,6 +238,97 @@
     return out;
   }
 
-  return { BUCKETS: BUCKETS, TOTAL_CAP: TOTAL_CAP, MAX_ROWS: MAX_ROWS, cfg: cfg, cfgErrors: cfgErrors, blendStop: blendStop, planSize: planSize,
+  /* ══ PS1b ══ */
+  /* ── Sat minimum stop distance (% of entry price) ──
+     minPct = per-asset setting (null/0 = not set -> blocked) · pointSize = price units per "point" (display only, default 1) */
+  function minStopCheck(o) {
+    o = o || {};
+    if (!(num(o.minPct) && o.minPct > 0)) return { ok: false, err: 'MIN_NOT_SET' };
+    if (!(num(o.entry) && o.entry > 0)) return { ok: true, err: null, minDist: null, minPts: null };   /* nothing to compare yet */
+    var ps = num(o.pointSize) && o.pointSize > 0 ? o.pointSize : 1, minDist = o.entry * o.minPct / 100, minPts = minDist / ps;
+    if (!(num(o.stop) && o.stop > 0)) return { ok: true, err: null, minDist: minDist, minPts: minPts, pts: null };
+    var d = Math.abs(o.entry - o.stop);
+    return { ok: d >= minDist - 1e-9 * o.entry, err: d >= minDist - 1e-9 * o.entry ? null : 'TOO_TIGHT', minDist: minDist, minPts: minPts, pts: d / ps };
+  }
+  /* risk as % of the port's own value (Details only) */
+  function portPct(riskMoney, portValue) { return num(riskMoney) && num(portValue) && portValue > 0 ? riskMoney / portValue * 100 : null; }
+
+  /* ── Loss limits (per port) ──  Thai time = UTC+7 · day resets 06:00 · week resets Monday 06:00 */
+  var HR = 3600000, DAY = 86400000, LOSS_DEF = { ddMax: 20, ddHalf: 10, dayR: 2, weekR: 5 };
+  function lossCfg(raw) {
+    raw = raw || {}; var o = {};
+    Object.keys(LOSS_DEF).forEach(function (k) { o[k] = num(raw[k]) && raw[k] > 0 ? raw[k] : LOSS_DEF[k]; });
+    if (o.ddHalf >= o.ddMax) o.ddHalf = o.ddMax;
+    return o;
+  }
+  function lossCfgErrors(raw) {
+    raw = raw || {}; var e = {};
+    ['ddMax', 'ddHalf', 'dayR', 'weekR'].forEach(function (k) { if (raw[k] !== undefined && raw[k] !== null && raw[k] !== '' && !(num(raw[k]) && raw[k] > 0)) e[k] = '> 0'; });
+    if (!e.ddMax && !e.ddHalf && num(raw.ddMax) && num(raw.ddHalf) && raw.ddHalf >= raw.ddMax) e.ddHalf = 'Must be below max drawdown';
+    if (!e.ddMax && num(raw.ddMax) && raw.ddMax > 100) e.ddMax = '≤ 100';
+    if (!e.dayR && !e.weekR && num(raw.dayR) && num(raw.weekR) && raw.weekR < raw.dayR) e.weekR = 'Week limit must be ≥ day limit';
+    return e;
+  }
+  function dayStart(now) { var i = Math.floor((now + HR) / DAY); return i * DAY - HR; }                    /* last 06:00 Thai */
+  function weekStart(now) { var i = Math.floor((now + HR) / DAY), dow = ((i + 3) % 7 + 7) % 7; return (i - dow) * DAY - HR; }   /* Monday 06:00 Thai */
+  /* drawdown state machine · st = {peak, half, low, stopped} · returns new state (pure) */
+  function lossStep(st, value, c) {
+    c = lossCfg(c); st = st || {};
+    var n = { peak: num(st.peak) ? st.peak : null, half: !!st.half, low: num(st.low) ? st.low : null, stopped: !!st.stopped };
+    if (!(num(value) && value > 0)) return n;
+    if (n.stopped) return n;                                  /* frozen until resume() */
+    if (n.peak === null || value > n.peak) { n.peak = value; }
+    if (n.half) {
+      n.low = n.low === null ? value : Math.min(n.low, value);
+      if (value >= n.peak - (n.peak - n.low) / 2 - 1e-9) { n.half = false; n.low = null; }   /* half of the deepest drop recovered */
+    }
+    var dd = (n.peak - value) / n.peak * 100;
+    if (dd >= c.ddMax - 1e-9) { n.stopped = true; n.half = false; n.low = null; }
+    else if (!n.half && dd >= c.ddHalf - 1e-9) { n.half = true; n.low = value; }
+    return n;
+  }
+  function lossResume(st, value, note) {
+    if (!(typeof note === 'string' && note.trim().length > 0)) return fail('NOTE_REQUIRED');
+    if (!(num(value) && value > 0)) return fail('NO_VALUE');
+    return { ok: true, state: { peak: value, half: false, low: null, stopped: false } };
+  }
+  /* closed ideas -> loss units.
+     items = [{gid, idea, t(ms), pnl (money, negative = loss), risk (planned money), rMoney}]
+     one idea group (gid = position group incl. partial exits) counts when net pnl < 0 and loss > ¼ planned risk (scratch/breakeven ignored)
+     the same idea across accounts (idea key) counts once (largest loss in R units). Only items with t >= startMs. */
+  function lossUnits(o) {
+    o = o || {}; var items = o.items || [], now = o.now, startMs = num(o.startMs) ? o.startMs : 0, g = {}, order = [];
+    items.forEach(function (it) {
+      if (!num(it.t) || it.t < startMs || !num(it.pnl) || !(num(it.rMoney) && it.rMoney > 0)) return;
+      var k = String(it.gid); if (!g[k]) { g[k] = { idea: it.idea || k, pnl: 0, risk: 0, t: 0, r: it.rMoney }; order.push(k); }
+      g[k].pnl += it.pnl; g[k].risk += num(it.risk) ? it.risk : 0; g[k].t = Math.max(g[k].t, it.t);
+    });
+    var byIdea = {};
+    order.forEach(function (k) {
+      var x = g[k]; if (!(x.pnl < 0) || !(-x.pnl > x.risk / 4 + 1e-9)) return;
+      var u = -x.pnl / x.r, cur = byIdea[x.idea];
+      if (!cur) byIdea[x.idea] = { units: u, t: x.t }; else { if (u > cur.units) cur.units = u; if (x.t > cur.t) cur.t = x.t; }
+    });
+    var ds = dayStart(now), ws = weekStart(now), day = 0, week = 0, nDay = 0, nWeek = 0;
+    Object.keys(byIdea).forEach(function (k) {
+      var b = byIdea[k]; if (b.t >= ws) { week += b.units; nWeek++; } if (b.t >= ds) { day += b.units; nDay++; }
+    });
+    return { day: day, week: week, nDay: nDay, nWeek: nWeek, dayEnd: ds + DAY, weekEnd: ws + 7 * DAY };
+  }
+  /* status of one port. port = 'ladder'|'winner'|'sat' · st = lossStep result · units = lossUnits result (null for ladder) */
+  function lossStatus(o) {
+    o = o || {}; var c = lossCfg(o.cfg), st = o.state || {}, u = o.units, port = o.port;
+    var dd = (num(st.peak) && st.peak > 0 && num(o.value)) ? Math.max(0, (st.peak - o.value) / st.peak * 100) : 0;
+    var r = { port: port, ddPct: dd, mult: 1, blocked: false, status: 'normal', label: 'Normal', until: null, reason: '', dayR: u ? u.day : 0, weekR: u ? u.week : 0, cfg: c };
+    var hasRW = port === 'winner' || port === 'sat';
+    if (st.stopped) { r.status = 'review'; r.label = 'Stop & review'; r.blocked = true; r.reason = 'Down ' + dd.toFixed(1) + '% from peak (limit ' + c.ddMax + '%) — press "Reviewed — resume"'; return r; }
+    if (hasRW && u && u.week >= c.weekR - 1e-9) { r.status = 'week'; r.label = 'Stop week'; r.blocked = true; r.until = u.weekEnd; r.reason = 'Week loss ' + u.week.toFixed(1) + 'R ≥ ' + c.weekR + 'R'; return r; }
+    if (hasRW && u && u.day >= c.dayR - 1e-9) { r.status = 'day'; r.label = 'Stop today'; r.blocked = true; r.until = u.dayEnd; r.reason = 'Day loss ' + u.day.toFixed(1) + 'R ≥ ' + c.dayR + 'R'; return r; }
+    if (st.half) { r.status = 'half'; r.label = 'Half size'; r.mult = 0.5; r.reason = 'Down ' + dd.toFixed(1) + '% from peak — risk × 0.5'; }
+    return r;
+  }
+
+  return { minStopCheck: minStopCheck, portPct: portPct, lossCfg: lossCfg, lossCfgErrors: lossCfgErrors, lossStep: lossStep, lossResume: lossResume, lossUnits: lossUnits, lossStatus: lossStatus, dayStart: dayStart, weekStart: weekStart, LOSS_DEF: LOSS_DEF,
+    BUCKETS: BUCKETS, TOTAL_CAP: TOTAL_CAP, MAX_ROWS: MAX_ROWS, cfg: cfg, cfgErrors: cfgErrors, blendStop: blendStop, planSize: planSize,
     capCheck: capCheck, addOnBudget: addOnBudget, addOnQty: addOnQty, satLots: satLots, positionRisk: positionRisk, gbLevel: gbLevel, panel: panel, floorLot: floorLot };
 });
