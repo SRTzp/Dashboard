@@ -52,8 +52,8 @@ def tests(pw, w, h, label):
     b, page, ce, pe = C.launch(pw, w, h, mut=mut_both)
     try:
         C.go_core(page)
-        sw = js(page, "()=>({a: document.getElementById('scopeStock').innerText.trim(), b: document.getElementById('scopeFuture').innerText.trim(), onA: document.getElementById('scopeStock').classList.contains('on')})")
-        check(f"{tag} 1 บนสุดปุ่ม 'Core | Sat' (ไม่มี 'Port หุ้น / Port Future') · Core ติดอยู่", sw["a"] == "Momentum" and sw["b"] == "Sat" and sw["onA"], sw)   # RG2b — ปุ่มสามตัว Momentum | Compounder | Sat
+        sw = js(page, "()=>({a: document.getElementById('scopeCore').innerText.trim(), b: document.getElementById('scopeFuture').innerText.trim(), onA: document.getElementById('scopeCore').classList.contains('on')})")
+        check(f"{tag} 1 บนสุดปุ่ม 'Core | Sat' (ไม่มี 'Port หุ้น / Port Future') · Core ติดอยู่", sw["a"] == "Core" and sw["b"] == "Sat" and sw["onA"], sw)   # RG2b — ปุ่มสามตัว Momentum | Compounder | Sat
         gone = js(page, """()=>({strip: !!document.querySelector('#strip') && document.querySelector('#strip').offsetParent!==null, ports: document.getElementById('ports').children.length,
           pos: !!document.getElementById('posPanel') && document.getElementById('posPanel').offsetParent!==null, foot: document.getElementById('foot').offsetParent!==null,
           sum: document.querySelectorAll('#tabPlan [data-sum]').length, bar4: document.querySelectorAll('#tabPlan .sumBar4').length,
@@ -273,15 +273,15 @@ def tests(pw, w, h, label):
     b, page, ce, pe = C.launch(pw, w, h, mut=mut_both)
     try:
         js(page, "()=>{ ln1SetMode('legacy'); switchTab('plan'); setPlanScope('stock'); render(); }"); page.wait_for_timeout(600)
-        lg = js(page, """()=>({a: document.getElementById('scopeStock').innerText.replace(/\\s+/g,' ').trim(), strip: document.getElementById('strip').offsetParent!==null, ports: !!document.querySelector('#portsSum'), pos: document.getElementById('posPanel').offsetParent!==null,
+        lg = js(page, """()=>({a: document.getElementById('scopeCore').innerText.replace(/\\s+/g,' ').trim(), strip: document.getElementById('strip').offsetParent!==null, ports: !!document.querySelector('#portsSum'), pos: document.getElementById('posPanel').offsetParent!==null,
           head: document.querySelectorAll('#corePanel [data-core-head]').length, lf: document.querySelectorAll('[data-lf-box]').length, hasW: /ระบบ Week|·W|W /.test(document.getElementById('corePanel').innerText)})""")
-        check(f"{tag} 3 โหมดเดิม (legacy) แผน Core เหมือนเดิม: ปุ่ม 'Momentum' (RG2b) · การ์ดบัญชี Hold/Plan · กล่อง 4 ช่อง · Positions · หัวบัญชี Core · ไม่มีกล่อง Lean", lg["a"].startswith("Momentum") and lg["strip"] and lg["ports"] and lg["pos"] and lg["head"] >= 1 and lg["lf"] == 0, lg)
+        check(f"{tag} 3 โหมดเดิม (legacy) แผน Core เหมือนเดิม: ปุ่ม 'Momentum' (RG2b) · การ์ดบัญชี Hold/Plan · กล่อง 4 ช่อง · Positions · หัวบัญชี Core · ไม่มีกล่อง Lean", lg["a"].startswith("Core") and lg["strip"] and lg["ports"] and lg["pos"] and lg["head"] >= 1 and lg["lf"] == 0, lg)
         js(page, "()=>coreNewOpen('main')"); page.wait_for_timeout(400)
         lf = js(page, "()=>({w: !!document.getElementById('cnStratW'), txt: 'ไม่มี', tierbtn: !!document.getElementById('cnTierB'), lean: !!document.querySelector('[data-lf-tier]'), opt: [...document.querySelectorAll('#cnAcct option')].map(o=>o.innerText.trim())})")
         check(f"{tag} 3 ฟอร์ม legacy เหมือนเดิม: (RG2b ไม่มีตัวเลือกกลยุทธ์) · ปุ่ม Tier 4 ตัวเลือก · บัญชี 'ทั้งคู่'", not lf["w"] and lf["tierbtn"] and not lf["lean"] and any("ทั้งคู่" in o for o in lf["opt"]), lf)
         js(page, "()=>{ coreSheetClose(); ln1SetMode('lean'); }"); page.wait_for_timeout(500)
-        back = js(page, "()=>({a: document.getElementById('scopeStock').innerText.trim(), lf: document.querySelectorAll('[data-lf-box]').length})")
-        check(f"{tag} 3 สลับกลับ Lean → ปุ่ม 'Momentum' + กล่อง Lean กลับมา", back["a"] == "Momentum" and back["lf"] == 1, back)
+        back = js(page, "()=>({a: document.getElementById('scopeCore').innerText.trim(), lf: document.querySelectorAll('[data-lf-box]').length})")
+        check(f"{tag} 3 สลับกลับ Lean → ปุ่ม 'Momentum' + กล่อง Lean กลับมา", back["a"] == "Core" and back["lf"] == 1, back)
     finally: b.close()
 
 

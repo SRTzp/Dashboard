@@ -242,20 +242,20 @@ def ladder_tests(pw):
         try:
             js(page, "()=>{ switchTab('plan'); }"); settle(page, 400)
             ids = js(page, "()=>[...document.querySelectorAll('.scopeBtn')].map(b=>b.id+':'+b.textContent.replace(/\\s+/g,' ').trim().replace(/ [SLF]$/,''))")
-            check(f"{tag} §4.3 สวิตช์ 3 ปุ่ม Momentum | Compounder | Sat", ids == ["scopeStock:Momentum", "scopeLadder:Compounder", "scopeFuture:Sat"], ids)
-            where = js(page, "()=>document.getElementById('scopeLadder').closest('#hdrSub') ? 'header' : (document.getElementById('scopeLadder').closest('.planScope') ? 'page' : '?')")
+            check(f"{tag} §4.3 สวิตช์ 3 ปุ่ม Momentum | Compounder | Sat", [i.split(" ")[0] for i in ids] == ["scopeCore:Core", "scopeFuture:Sat"], ids)   # PS1c §7: Core | Sat
+            where = js(page, "()=>document.getElementById('scopeCore').closest('#hdrSub') ? 'header' : (document.getElementById('scopeCore').closest('.planScope') ? 'page' : '?')")
             if w <= 390: check(f"{tag} §4.3 จอแคบ: 3 ปุ่มเต็มอยู่ในหน้า (ไม่ใช้ select · ไม่ทับปุ่ม header)", where == "page", where)
             # ห้ามทับ / ล้น
             box = js(page, "()=>[...document.querySelectorAll('.scopeBtn')].map(b=>{ const r=b.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.right), Math.round(r.width)]; })")
             cmp_ = js(page, "()=>!!document.querySelector('#hdrSub.cmp .hdrCmp select')")
             if cmp_:
                 lab = js(page, "()=>[...document.querySelector('#hdrSub .hdrCmp select').options].map(o=>o.textContent.replace(/\\s+/g,' ').trim().replace(/ [SLF]$/,''))")
-                check(f"{tag} §4.3 header แคบ: รูปย่อ (select) มี Momentum · Compounder · Sat", lab == ["Momentum", "Compounder", "Sat"], lab)
-            vis = cmp_ or (all(r[2] > 20 for r in box) and (box[2][1] <= w if where == "page" else True))
+                check(f"{tag} §4.3 header แคบ: รูปย่อ (select) มี Momentum · Compounder · Sat", lab == ["Core", "Sat"], lab)
+            vis = cmp_ or (all(r[2] > 20 for r in box) and (box[1][1] <= w if where == "page" else True))
             check(f"{tag} §4.3 ปุ่มทั้งสามมองเห็น/อยู่ในจอ", vis, box)
             if w == 300: shot(page, "rg2b-scope-page-300.png", "#tabPlan .planScope")
             # สลับ
-            page.evaluate("()=>document.getElementById('scopeLadder').click()"); settle(page, 600)
+            page.evaluate("()=>setPlanScope('ladder')"); settle(page, 600)
             # PL1 Step 6 — หน้า Compounder ใช้ส่วนประกอบเดียวกับ Momentum (หน้า Ladder เดิมเลิกแล้ว · ดู tests/PL1_retired.md)
             check(f"{tag} §4.3 (PL1) กด Compounder → planScope=ladder · แผงการ์ด (corePanel) แสดงหัว Compounder · ไม่มี #ladderPanel/[data-ldr-*]", js(page, "()=>planScope") == "ladder" and js(page, "()=>document.getElementById('corePanel').style.display") != "none" and "Compounder" in (js(page, "()=>document.getElementById('corePanel').innerText") or "") and cnt(page, "#ladderPanel, [data-ldr-card], [data-ldr-new]") == 0, js(page, "()=>document.getElementById('corePanel').innerText.slice(0,120)"))
             lg = js(page, "()=>{ const r = document.querySelector('[data-lf-legacy-row=ccLd]'); return r ? [r.innerText, r.querySelectorAll('button').length] : null; }")
@@ -271,10 +271,10 @@ def ladder_tests(pw):
     b, page, ce, pe = launch(pw, 480, 900, [], cards)
     try:
         js(page, "()=>{ switchTab('plan'); }"); settle(page, 500)
-        where = js(page, "()=>document.getElementById('scopeLadder').closest('#hdrSub') ? 'header' : 'page'")
+        where = js(page, "()=>document.getElementById('scopeCore').closest('#hdrSub') ? 'header' : 'page'")
         r = js(page, "()=>{ const b = [...document.querySelectorAll('#hdrSub .scopeBtn')].map(x=>{const q=x.getBoundingClientRect(); return [Math.round(q.left), Math.round(q.right)]}); const hb = document.querySelector('.topbar .hbtns').getBoundingClientRect(); return [b, Math.round(hb.left)]; }")
         check("[480px] §4.3 สวิตช์อยู่ใน header (ช่อง hdrSub) และไม่ทับปุ่มขวา", (where == "page" or (r[0] and r[0][-1][1] <= r[1])), [where, r])   # header ถ้าพอที่ มิฉะนั้นอยู่ในหน้า (ไม่ย่อเป็น dropdown)
-        page.evaluate("()=>document.getElementById('scopeLadder').click()"); settle(page, 500)
+        page.evaluate("()=>setPlanScope('ladder')"); settle(page, 500)
         check("[480px] §4.3 กดใน header → ไป Ladder", js(page, "()=>planScope") == "ladder")
     finally: b.close()
 
@@ -486,13 +486,13 @@ def ui_scope_tests(pw):
                 return {n:bs.length, where:bs.map(b=>b.closest('#hdrSub')?'header':(b.closest('.planScope')?'page':'?')), box:bs.map(b=>{const r=b.getBoundingClientRect();return [r.left,r.top,r.right,r.bottom]}),
                   vis:bs.map(b=>!!b.offsetParent), cmp:document.querySelectorAll('#hdrSub .hdrCmp, #hdrSub.cmp').length, sel:document.querySelectorAll('#hdrSub select').length, hbLeft:hb.left,
                   txt:bs.map(b=>b.textContent.replace(/\\s+/g,' ').trim().replace(/ [SDF]$/,'')), kb:bs.map(b=>(b.querySelector('.kbdhint')||{}).textContent||'')}; }""")
-            check(f"{tag} §UI1 Plan: ปุ่ม Momentum | Compounder | Sat แสดงครบ ไม่ย่อเป็น select/pill (cmp 0 · select 0)", info["n"] == 3 and all(info["vis"]) and info["cmp"] == 0 and info["sel"] == 0 and info["txt"] == ["Momentum", "Compounder", "Sat"], info)
+            check(f"{tag} §UI1 Plan: ปุ่ม Momentum | Compounder | Sat แสดงครบ ไม่ย่อเป็น select/pill (cmp 0 · select 0)", info["n"] == 2 and all(info["vis"]) and info["cmp"] == 0 and info["sel"] == 0 and [t.split(" ")[0] for t in info["txt"]] == ["Core", "Sat"]   # PS1c §7, info)
             check(f"{tag} §UI1 อยู่ใน header หรือในหน้า (ไม่ทับปุ่มขวาของ header)", len(set(info["where"])) == 1 and info["where"][0] in ("header", "page") and (info["where"][0] == "page" or max(x[2] for x in info["box"]) <= info["hbLeft"] - 4), [info["where"], info["hbLeft"], [round(x[2]) for x in info["box"]]])
             if w >= 1440: check(f"{tag} §UI1 จอกว้าง ≥ 1440: ปุ่มอยู่ใน header", info["where"][0] == "header", info["where"])
             if w <= 390: check(f"{tag} §UI1 มือถือแคบ: ปุ่มอยู่ในหน้า เต็มแถว ไม่ล้น", info["where"][0] == "page" and max(x[2] for x in info["box"]) <= w, info)
-            check(f"{tag} §UI1 ปุ่มไม่ทับกัน", not any(boxes_overlap(info["box"][i], info["box"][j]) for i in range(3) for j in range(i + 1, 3)), info["box"])
+            check(f"{tag} §UI1 ปุ่มไม่ทับกัน", not any(boxes_overlap(info["box"][i], info["box"][j]) for i in range(2) for j in range(i + 1, 2)), info["box"])
             src = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
-            check(f"{tag} §UI2 ป้ายคีย์ลัดในโค้ด: Momentum S · Compounder D · Sat F · ไม่มี L (kbdhint + แผนที่คีย์)", 'id="scopeLadder" onclick="setPlanScope(\'ladder\')">Compounder <span class="kbdhint">D</span>' in src and "KeyD:['Compounder'" in src and "KeyL:['Compounder'" not in src and 'Compounder <span class="kbdhint">L</span>' not in src, "")
+            check(f"{tag} §UI2 ป้ายคีย์ลัดในโค้ด: Momentum S · Compounder D · Sat F · ไม่มี L (kbdhint + แผนที่คีย์)", 'id="scopeCore"' in src and "KeyD:['Compounder'" in src and "KeyL:['Compounder'" not in src and 'Compounder <span class="kbdhint">L</span>' not in src, "")
             page.keyboard.press("d"); settle(page, 500)
             check(f"{tag} §UI2 กด D → Ladder", js(page, "()=>planScope") == "ladder")
             page.keyboard.press("f"); settle(page, 300)
@@ -504,7 +504,7 @@ def ui_scope_tests(pw):
             hlp = js(page, "()=>document.documentElement.innerHTML.includes(\"KeyL:['Ladder'\")")
             check(f"{tag} §UI2 ไม่มี KeyL → Ladder ในแผนที่คีย์", hlp is False)
             if w in (300, 1280, 1440):
-                js(page, "()=>{ document.getElementById('scopeLadder').click(); }"); settle(page, 500)
+                js(page, "()=>{ setPlanScope('ladder'); }"); settle(page, 500)
                 shot(page, f"rg2b-ui-header-{w}.png", ".topbar" if w >= 1100 else None)
             check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
         finally: b.close()

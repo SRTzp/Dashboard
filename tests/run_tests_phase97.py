@@ -35,8 +35,8 @@ PROBE = """()=>{
   const full = slot.querySelector('.scopeTabs,[data-ln3-accsw]');
   return {tab: activeTab, scope: planScope, nav: R(q('#tabsMain')), wrapC: (wr.left + wr.right) / 2, brand: R(q('.brand')), hb: R(q('.hbtns')), top: R(q('.topbar')), slot: R(slot),
     slotEmpty: slot.children.length === 0, slotCmp: slot.classList.contains('cmp'), fullInSlot: !!full, fullVis: vis(full), cmpVis: vis(slot.querySelector('.hdrCmp')),
-    nScopeStock: document.querySelectorAll('#scopeStock').length, nScopeFuture: document.querySelectorAll('#scopeFuture').length, nAccSw: document.querySelectorAll('[data-ln3-accsw]').length,
-    scopeInSlot: !!slot.querySelector('#scopeStock') && !!slot.querySelector('#scopeFuture'), accInSlot: !!slot.querySelector('[data-ln3-accsw]'),
+    nScopeCore: document.querySelectorAll('#scopeCore').length, nScopeFuture: document.querySelectorAll('#scopeFuture').length, nAccSw: document.querySelectorAll('[data-ln3-accsw]').length,
+    scopeInSlot: !!slot.querySelector('#scopeCore') && !!slot.querySelector('#scopeFuture'), accInSlot: !!slot.querySelector('[data-ln3-accsw]'),
     planScopeH: ps ? ps.getBoundingClientRect().height : 0, planScopeKids: ps ? ps.children.length : 0,
     gridCols: getComputedStyle(q('.topbar')).display, ow: document.documentElement.scrollWidth - innerWidth,
     brandNameVis: vis(q('.brandName')), syncTimeVis: vis(q('#brandSyncTime')), dotVis: vis(q('#acctDot')), dot: R(q('#acctDot')), mark: R(q('.brandMark')), sel: typeof ln3PortSel === 'function' ? ln3PortSel() : null};
@@ -78,26 +78,26 @@ def desk(pw, w, h):
         # Plan
         for k in ("plan-stock", "plan-future"):
             r = rows[k]
-            check(f"{tag} 1 {k}: ปุ่ม scope อยู่ใน #hdrSub (node เดียว: #scopeStock/#scopeFuture อย่างละ 1) · แถว .planScope ไม่เหลือความสูง",
-                  r["nScopeStock"] == 1 and r["nScopeFuture"] == 1 and ((r["scopeInSlot"] and r["planScopeH"] == 0) or (not r["scopeInSlot"] and r["planScopeKids"] == 1)), r)
+            check(f"{tag} 1 {k}: ปุ่ม scope อยู่ใน #hdrSub (node เดียว: #scopeCore/#scopeFuture อย่างละ 1) · แถว .planScope ไม่เหลือความสูง",
+                  r["nScopeCore"] == 1 and r["nScopeFuture"] == 1 and ((r["scopeInSlot"] and r["planScopeH"] == 0) or (not r["scopeInSlot"] and r["planScopeKids"] == 1)), r)
         r = rows["plan-stock"]
         placed = r["scopeInSlot"]
         if placed:
             gap = r["slot"]["l"] - r["nav"]["r"]
-            check(f"{tag} 2 Plan: ช่องห่างจาก nav 16px (± 1) · กึ่งกลางแนวตั้งตรงกับ nav (± 1) · เว้นห่าง toolbar ≥ 12px", near(gap, 16, 1) and near(r["slot"]["cy"], r["nav"]["cy"], 1) and r["hb"]["l"] - r["slot"]["r"] >= 12, [gap, r["slot"], r["nav"]["cy"], r["hb"]["l"]])
+            check(f"{tag} 2 Plan: ช่องห่างจาก nav 16px (± 1) · กึ่งกลางแนวตั้งตรงกับ nav (± 1) · เว้นห่าง toolbar ≥ 12px", near(r["slot"]["cy"], r["nav"]["cy"], 1) and r["hb"]["l"] - r["slot"]["r"] >= 12 and r["slot"]["l"] > r["nav"]["r"]   # PS1c §7: Core | Sat sits on the right, before the icons (no fixed 16px gap to the tabs), [gap, r["slot"], r["nav"]["cy"], r["hb"]["l"]])
             # คลิก Sat/Core เหมือนปุ่มเดิม
             go(page, "plan", "stock")
             if r["fullVis"]:
                 page.locator("#scopeFuture").first.click()   # RG2b: <430 ปุ่มอยู่ในหน้า; settle(page, 400)
                 s1 = js(page, "()=>({ps: planScope, cls: document.getElementById('tabPlan').className, on: document.getElementById('scopeFuture').classList.contains('on')})")
-                page.locator("#hdrSub #scopeStock").click(); settle(page, 400)
-                s2 = js(page, "()=>({ps: planScope, cls: document.getElementById('tabPlan').className, on: document.getElementById('scopeStock').classList.contains('on')})")
+                page.locator("#hdrSub #scopeCore").click(); settle(page, 400)
+                s2 = js(page, "()=>({ps: planScope, cls: document.getElementById('tabPlan').className, on: document.getElementById('scopeCore').classList.contains('on')})")
                 check(f"{tag} 1 คลิก Sat / Core ในช่อง = สลับ scope เหมือนปุ่มเดิม (planScope · lf-future/lf-stock · on)", s1["ps"] == "future" and "lf-future" in s1["cls"] and s1["on"] and s2["ps"] == "stock" and "lf-stock" in s2["cls"] and s2["on"], [s1, s2])
             else:
                 page.locator("#hdrSub .hdrCmp select").select_option(index=1); settle(page, 400)
                 s1 = js(page, "()=>({ps: planScope, on: document.getElementById('scopeFuture').classList.contains('on')})")
                 page.locator("#hdrSub .hdrCmp select").select_option(index=0); settle(page, 400)
-                s2 = js(page, "()=>({ps: planScope, on: document.getElementById('scopeStock').classList.contains('on')})")
+                s2 = js(page, "()=>({ps: planScope, on: document.getElementById('scopeCore').classList.contains('on')})")
                 check(f"{tag} 1 รูปย่อ: เลือก Sat / Core = สลับ scope เหมือนปุ่มเดิม", s1["ps"] == "future" and s1["on"] and s2["ps"] == "stock" and s2["on"], [s1, s2])
             js(page, "()=>{ document.activeElement && document.activeElement.blur(); }")
             page.keyboard.press("f"); settle(page, 350); k1 = js(page, "()=>planScope")
@@ -106,7 +106,7 @@ def desk(pw, w, h):
             check(f"{tag} 1 คีย์ลัด F / S ยังสลับ scope · ช่องตามสถานะ", k1 == "future" and k2 == "stock" and sel_ok in (-1, 0), [k1, k2, sel_ok])
         else:
             inpage = js(page, "()=>!!document.querySelector('#tabPlan .planScope .scopeTabs')")
-            check(f"{tag} 2 Plan: ที่ไม่พอแม้รูปย่อ → ตัวควบคุมอยู่ในหน้าเหมือนเดิม (ไม่ทับ/ไม่ดัน nav-toolbar) · node เดียว", inpage and r["nScopeStock"] == 1, r)
+            check(f"{tag} 2 Plan: ที่ไม่พอแม้รูปย่อ → ตัวควบคุมอยู่ในหน้าเหมือนเดิม (ไม่ทับ/ไม่ดัน nav-toolbar) · node เดียว", inpage and r["nScopeCore"] == 1, r)
         # Port
         r = rows["mix"]
         placed = r["accInSlot"]
@@ -114,7 +114,7 @@ def desk(pw, w, h):
         if placed:
             go(page, "mix")
             gap = r["slot"]["l"] - r["nav"]["r"]
-            check(f"{tag} 2 Port: ช่องห่าง nav 16px (± 1) · กึ่งกลางแนวตั้ง (± 1) · ห่าง toolbar ≥ 12px", near(gap, 16, 1) and near(r["slot"]["cy"], r["nav"]["cy"], 1) and r["hb"]["l"] - r["slot"]["r"] >= 12, [gap, r["slot"], r["nav"]["cy"], r["hb"]["l"]])
+            check(f"{tag} 2 Port: ช่องห่าง nav 16px (± 1) · กึ่งกลางแนวตั้ง (± 1) · ห่าง toolbar ≥ 12px", near(r["slot"]["cy"], r["nav"]["cy"], 1) and r["hb"]["l"] - r["slot"]["r"] >= 12 and r["slot"]["l"] > r["nav"]["r"]   # PS1c §7: Core | Sat sits on the right, before the icons (no fixed 16px gap to the tabs), [gap, r["slot"], r["nav"]["cy"], r["hb"]["l"]])
             for i, (lab, want) in enumerate([("OUN", "main"), ("FAM", "fam"), ("รวม", "all")]):
                 if r["fullVis"]:
                     page.locator("#hdrSub [data-ln3-accsw] button", has_text=lab).first.click()
@@ -136,7 +136,7 @@ def desk(pw, w, h):
         check(f"{tag} 4 Journal: การ์ดสรุปมี OUN|FAM · รวม|Core|Sat · ทุกปี/ทุกเดือน · แถบเตือน/ข้อความตัดสิน เหมือนเดิม · ช่อง header ว่าง",
               jr["acct"] == 2 and jr["scopes"] == 3 and jr["dec"] and "ทุกปี" in jr["txt"] and "ทุกเดือน" in jr["txt"] and jr["slotEmpty"], jr)
         pl = [rows[k]["nav"]["l"] for k in ks_all if k.startswith("plan")]
-        check(f"{tag} 2b PL2c·10 หน้า แผน: แท็บหลักเลื่อนซ้ายกว่าหน้าอื่น (≥1000px; ต่ำกว่านั้นสวิตช์อยู่ในหน้า) ", w < 1000 or bool(pl) and all(l < rows["today"]["nav"]["l"] - 20 for l in pl), {k: round(rows[k]["nav"]["l"], 1) for k in ks_all})
+        check(f"{tag} 2b PS1c §7 หน้า แผน: แท็บหลักอยู่ตำแหน่งเดียวกับหน้าอื่น ", bool(pl) and all(abs(l - rows["today"]["nav"]["l"]) < 0.5 for l in pl)   # PS1c §7: main tabs do NOT shift on Plan, {k: round(rows[k]["nav"]["l"], 1) for k in ks_all})
         if w in (1280, 1440, 1920):
             go(page, "plan", "stock")
             if w in (1280, 1440): C.shot(page, f"hd1-plan-{w}.png", full=False)
@@ -241,7 +241,7 @@ def phone(pw, w, h):
         check(f"{tag} 3 เลือก Sat / FAM จากช่องใน top bar ได้ · node เดียว", a == "future" and c[0] == c[1][1] and c[2] == 1, [a, c])
         if w == 390:
             go(page, "plan", "stock")
-            inpg = js(page, "()=>['scopeStock','scopeLadder','scopeFuture'].map(i=>{ const e = document.getElementById(i); const r = e && e.getBoundingClientRect(); return !!(e && e.offsetParent && r.width > 20 && r.right <= innerWidth); })")
+            inpg = js(page, "()=>['scopeCore','scopeFuture'].map(i=>{ const e = document.getElementById(i); const r = e && e.getBoundingClientRect(); return !!(e && e.offsetParent && r.width > 20 && r.right <= innerWidth); })")
             check(f"{tag} 3 Plan 390 (RG2b): ปุ่ม Winner | Ladder | Sat เต็ม 3 ปุ่มอยู่ในหน้า (ไม่ย่อเป็น pill)", inpg == [True, True, True] and not rows["plan-stock"]["slotCmp"], [inpg, rows["plan-stock"]["slotCmp"]])
         if w == 300:
             check(f"{tag} 3 Port 300: รูปย่อ pill", rows["mix"]["cmpVis"] and not rows["mix"]["fullVis"], rows["mix"])
@@ -262,7 +262,7 @@ def legacy(pw):
         go(page, "mix"); r2 = probe(page)
         check(f"{tag} Legacy: header ไม่เป็น grid · ช่องว่าง · scopeTabs อยู่ใน .planScope เหมือนเดิม", r1["gridCols"] != "grid" and r1["slotEmpty"] and r1["planScopeKids"] == 1 and r1["planScopeH"] > 0 and r2["slotEmpty"], [r1["gridCols"], r1["slotEmpty"], r1["planScopeKids"], r2["slotEmpty"]])
         js(page, "()=>ln1SetMode('lean')"); settle(page, 600); go(page, "plan", "stock"); r3 = probe(page)
-        check(f"{tag} กลับ Lean: scopeTabs เข้าช่องอีกครั้ง · node เดียว", r3["scopeInSlot"] and r3["nScopeStock"] == 1, r3)
+        check(f"{tag} กลับ Lean: scopeTabs เข้าช่องอีกครั้ง · node เดียว", r3["scopeInSlot"] and r3["nScopeCore"] == 1, r3)
         check(f"{tag} ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
     finally: b.close()
 

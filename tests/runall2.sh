@@ -9,7 +9,7 @@ mkdir -p "$OUT/logs" "$OUT/logs_rerun"
 : > "$OUT/results.tsv"; : > "$OUT/final.tsv"; [ -e "$OUT/DONE" ] && mv "$OUT/DONE" "$OUT/DONE.$(date +%s)"
 export OUT
 
-list_suites(){ echo run_tests.py; for n in $(seq 1 125); do [ -f "run_tests_phase$n.py" ] && echo "run_tests_phase$n.py"; done; }
+list_suites(){ echo run_tests.py; for n in $(seq 1 126); do [ -f "run_tests_phase$n.py" ] && echo "run_tests_phase$n.py"; done; }
 
 # หนึ่ง suite: คืน rc (timeout 1500 วินาที ด้วย perl alarm) · ล้ม = rc ≠ 0 หรือมีบรรทัด FAIL
 run_one(){

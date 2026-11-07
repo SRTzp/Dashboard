@@ -304,8 +304,8 @@ def header_plus_checks(pw, w, h, label):
             page.click("#hdrPlanBtn"); page.wait_for_timeout(700)
             page.evaluate("() => coreSheetClose()")   # 7E-2: scope หุ้น → ＋ เปิด sheet แผน Core ใหม่
             r = page.evaluate("""() => { const vis=id=>{ const r=document.getElementById(id).getBoundingClientRect(); return r.width>0 && r.top>=0 && r.bottom<=innerHeight; };
-                return {tab:activeTab, y:window.scrollY, scope:planScope, a:vis('scopeStock'), b:vis('scopeFuture')}; }""")
-            check(f"{tag} Journal (scrollY={before}) → กด ＋ (scope={scope}): แท็บแผน · scrollY ≤ 5 · เห็น #scopeStock/#scopeFuture · planScope คง '{scope}'",
+                return {tab:activeTab, y:window.scrollY, scope:planScope, a:vis('scopeCore'), b:vis('scopeFuture')}; }""")
+            check(f"{tag} Journal (scrollY={before}) → กด ＋ (scope={scope}): แท็บแผน · scrollY ≤ 5 · เห็น #scopeCore/#scopeFuture · planScope คง '{scope}'",
                   r["tab"] == "plan" and r["y"] <= 5 and r["a"] and r["b"] and r["scope"] == scope, json.dumps(r))
         if w == 430: shot(page, "cl2d-header-after-plus-430.png")
         # ปุ่มลัด T

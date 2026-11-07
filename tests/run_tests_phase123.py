@@ -46,17 +46,17 @@ def tests(pw, w, h):
         check(f"{tag} §8 ป้ายเดียว '⚠ Homework' (อำพัน) บนการ์ดแผน · ไม่มีแท็ก Fast-track บนการ์ด", len(bd) == 1 and bd[0][0] == "⚠ Homework" and bd[0][1] == "due" and "Fast-track" not in js(page, "()=>document.querySelector('[data-core-card]')?.parentElement.innerText||''"), bd)
         # Today pin
         js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 500)
-        pin = js(page, "()=>{ const p=document.querySelector('[data-ft-pin]'); const w=document.querySelector('[data-td-wrap]'); return p ? [p.innerText.replace(/\\s+/g,' ').trim(), w.firstElementChild===p, !!p.querySelector('[data-ft-go]'), !p.querySelector('.x,[data-td4-remx]')] : null; }")
-        check(f"{tag} §8 Today: ปักบนสุด 'Homework: ZZZ — thesis + screening · due in 3 days' + 'Do it ›' · ปิด/เลื่อนไม่ได้", pin and pin[1] and pin[2] and pin[3] and pin[0].startswith("Homework: ZZZ — thesis + screening · due in 3 days"), pin)
+        pin = js(page, "()=>{ const p=document.querySelector('[data-ft-pinrow]'); const w=document.querySelector('[data-td-wrap]'); return p ? [p.innerText.replace(/\\s+/g,' ').trim(), w.firstElementChild===p, !!p.querySelector('[data-ft-go]'), !p.querySelector('.x,[data-td4-remx]')] : null; }")
+        check(f"{tag} §8 Today: ปักบนสุด 'Homework: ZZZ — thesis + screening · due in 3 days' + 'Do it ›' · ปิด/เลื่อนไม่ได้", pin and pin[1] and pin[2] and pin[3] and pin[0].startswith("Homework ZZZ 3d thesis + screening")   # PS1c §6: one row, chips, pin)
         clock(page, "2026-11-12"); js(page, "()=>todayRefresh(true)"); settle(page, 400)
-        p2 = js(page, "()=>document.querySelector('[data-ft-pin]')?.innerText.replace(/\\s+/g,' ').trim()")
-        check(f"{tag} §8 นับถอยหลัง (นาฬิกาปลอม): วัน 2 → 'due in 1 day'", p2 and "due in 1 day" in p2, p2)
+        p2 = js(page, "()=>document.querySelector('[data-ft-pinrow]')?.innerText.replace(/\\s+/g,' ').trim()")
+        check(f"{tag} §8 นับถอยหลัง (นาฬิกาปลอม): วัน 2 → 'due in 1 day'", p2 and "ZZZ 1d" in p2, p2)
         # overdue
         clock(page, "2026-11-15"); js(page, "()=>todayRefresh(true)"); settle(page, 400)
-        od = js(page, "()=>{ const p=document.querySelector('[data-ft-pin]'); return p ? [p.innerText.replace(/\\s+/g,' ').trim(), p.classList.contains('od')] : null; }")
+        od = js(page, "()=>{ const p=document.querySelector('[data-ft-pinrow]'); return p ? [p.innerText.replace(/\\s+/g,' ').trim(), p.classList.contains('od')] : null; }")
         js(page, "()=>{ switchTab('plan'); setPlanScope('stock'); render(); }"); settle(page, 300)
         bo = js(page, "()=>[...document.querySelectorAll('[data-core-card] [data-ft-badge]')].map(e=>e.textContent.trim())")
-        check(f"{tag} §8 เกิน 3 วัน → 'OVERDUE 2 days' แดง · ป้าย '⚠ Overdue 2d'", od and "OVERDUE 2 days" in od[0] and od[1] and bo == ["⚠ Overdue 2d"], [od, bo])
+        check(f"{tag} §8 เกิน 3 วัน → 'OVERDUE 2 days' แดง · ป้าย '⚠ Overdue 2d'", od and "ZZZ overdue" in od[0] and od[1] and bo == ["⚠ Overdue 2d"], [od, bo])
         rem = js(page, "()=>{ const M=tdBuild(); return td4RemList(M).map(x=>x.t); }")
         check(f"{tag} §8 นับในแบนเนอร์ Unfinished today", any("Homework ZZZ overdue 2d" in t for t in rem), rem)
         # Watchlist row badge
