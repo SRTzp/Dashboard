@@ -161,3 +161,10 @@ Replaces PL1 A5 "Ready" BLOCK for Momentum/Compounder. Never blocks a plan any m
 - Same thresholds in one constant block so they can be tuned later. In the PR, report how many cards would be Fresh on the current data (target ~3–6 of 23).
 - Fit: NEW and ⚡ follow the RRG1b fit rule (52W text hides first; tags shorten to "NEW" / "⚡▲" / "⚡▼"); never wrap.
 - Tests: flicker (previous state 2 bars) → no NEW; real change → NEW for 3 bars then gone; weekly partial week ignored; Neutral/worsening never NEW; Fresh filter count.
+
+## 11. "Ask why ›" on Fresh RRG cards (SRTp 2026-11-08)
+- No new row. Inside the existing "▸ Drivers & evidence" line, append a small link "Ask why ›" ONLY on cards that are Fresh (§10: NEW or ⚡). Other cards unchanged. Text shortened to "Not recorded · Ask why ›" to fit; never wraps.
+- Tap → copy to clipboard (same copy + fallback pattern as other AI copy buttons, no download) and toast "Copied — paste into Claude (idea-scout)". Prompt:
+  `idea-scout scan: <TICKER> <Name> turned <state label> on <date> (<Daily|Weekly>, NEW·<n>, <speed tag if any>). Find the dated driver first (evidence from before/around the turn), then the value chain and tickers.`
+- When an imported idea is linked to this sector, the line shows `▸ Drivers & evidence · Idea: <idea title> ›` (opens the idea) and "Ask why" disappears. If linking doesn't exist today, use the sector's existing drivers/notes link if any; otherwise only the copy link (report in PR).
+- Tests: link only on Fresh cards; copy text matches card data; no download; hidden after an idea is linked; 390px no wrap.
