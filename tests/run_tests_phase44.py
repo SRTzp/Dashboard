@@ -275,7 +275,7 @@ def tests(pw, w, h, label):
         seg = [s for s in o["chain"]["segments"] if s["name"] == SEG][0]
         lr = [c for c in o["candidates"] if c["sym"] == "LRCX"][0]
         check(f"{tag} 7 Export → parse ได้ · มี log · pick:true ตามที่ติ๊ก · rank/state ตามที่แก้", len(o["log"]) == 1 and seg["pick"] is True and lr["rank"] == 1 and lr["state"] == "study" and o["status"] == "need_evidence", json.dumps({"log": len(o["log"]), "pick": seg["pick"], "lr": [lr["rank"], lr["state"]]}))
-        check(f"{tag} 7 Export = คัดลอกอย่างเดียว ไม่ดาวน์โหลดไฟล์ · ข้อความ 'คัดลอกแล้ว — แนบให้ idea-scout pick/update'", fn == "" and "คัดลอกแล้ว — แนบให้ idea-scout pick/update" in (txt_of(page, "[data-idea-msg]") or ""), fn + " | " + str(txt_of(page, "[data-idea-msg]")))
+        check(f"{tag} 7 Export = คัดลอกอย่างเดียว ไม่ดาวน์โหลดไฟล์ · ข้อความ 'คัดลอกแล้ว — แนบให้ idea-scout update' (มีบริษัทแล้ว)", fn == "" and "คัดลอกแล้ว — แนบให้ idea-scout update" in (txt_of(page, "[data-idea-msg]") or ""), fn + " | " + str(txt_of(page, "[data-idea-msg]")))
         check(f"{tag} 7 Export ไม่แก้ doc ใน Firestore (idea เดิมไม่มีธง pick)", all(not s.get("pick") for s in idb(page)["idea"]["chain"]["segments"]))
         check(f"{tag} 12 ไม่มี console error (Export)", not ce and not pe, json.dumps([ce, pe]))
     finally:
