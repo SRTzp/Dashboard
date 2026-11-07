@@ -87,6 +87,10 @@ def tests(pw, w, h):
         check(f"{tag} §7b หลัง ＋: หัว 'Risk' / 'Out' โผล่ · ช่อง % ต่อแถว · สรุปมี Avg · เมตาแถวครบ", hd2 == ["Risk", "Out", 4] and "Avg" in sm2 and all(mt2) and len(mt2) == 4, [hd2, sm2, mt2])
         lay = js(page, """()=>[...document.querySelectorAll('.ps1R')].map(r=>{ const rr=r.getBoundingClientRect(); const kids=[...r.children].filter(c=>c.getBoundingClientRect().width>0); const cy=kids.map(c=>{const q=c.getBoundingClientRect();return q.top+q.height/2;}); return {oneRow:Math.max(...cy)-Math.min(...cy)<=6, inside:kids.every(c=>c.getBoundingClientRect().right<=rr.right+1)}; })""")
         check(f"{tag} §7b ทุกแถวอยู่บรรทัดเดียว ไม่ล้น ({w}px) · ✕ ไม่ตกบรรทัด", all(x["oneRow"] and x["inside"] for x in lay) and not js(page, "()=>document.documentElement.scrollWidth>innerWidth"), lay)
+        stack = js(page, """()=>{ const t=id=>document.querySelector(id).getBoundingClientRect().top; const r=s=>document.querySelector(s).getBoundingClientRect();
+            const hd=r('#cnEBox .ps1Hd'), r0=r('[data-ps1-row=e0]'), r1=r('[data-ps1-row=e1]'), s0=r('[data-ps1-row=s0]'), s1=r('[data-ps1-row=s1]'), risk=r('#cnRisk');
+            return {ok: hd.bottom<=r0.top+1 && r0.bottom<=r1.top+1 && r1.bottom<=s0.top+30 && s0.bottom<=s1.top+1 && s1.bottom<=risk.top+1 && r0.left===r1.left, hd:[hd.top,hd.bottom], r0:[r0.top,r0.bottom], r1:[r1.top,r1.bottom], s0:[s0.top,s0.bottom]}; }""")
+        check(f"{tag} §7b บล็อกซ้อนแนวตั้ง ไม่ทับกัน: หัว → แถว Entry 1 → 2 → SL 1 → 2 → Risk %", stack["ok"], stack)
         js(page, "()=>coreSheetClose()")
         check(f"{tag} console ไม่มี error", not ce and not pe, [ce[:2], pe[:2]])
     finally:
