@@ -72,3 +72,92 @@ Goal: total portfolio max drawdown 20% by capping EACH port (Compounder, Momentu
 - Main screens: risk always as % of portfolio.
 - Details (plan form, Port panel rows, Today panel rows): add the port equivalent in brackets, e.g. `Risk 0.30% of portfolio (= 1.5% of Sat)`. Port % = risk ÷ that port's current value.
 - Drawdown chips/tiers stay as % of the port's own value (unchanged).
+
+## 7. Plan form fixes (from live screenshot 2026-11-08)
+### 7a. Bug: form ignores the Momentum/Compounder switch
+- Seen: header switch = Momentum, form title "New Compounder plan", but the numbers use Momentum rules (max position 7.5%, "Momentum risk after"). Title and rules disagree.
+- Fix: the open plan form follows the active scope. Switching scope while the form is open → title, risk range, size cap, bucket cap and summary all update to the new bucket (keep typed prices). One source of truth for the bucket; test both directions.
+
+### 7b. Lean multi-row layout (only after ＋; stocks only — Sat stays single entry + single SL)
+```
+Entry       Risk
+100.00     0.25%    #14 · 1.0%
+110.00     0.25%     #8 · 0.6%   ✕
+SL          Out
+90.00  −13.2%  50%
+85.00  −18.0%  50%                 ✕
+──────────────────────────────────────
+#22 · 1.6% · Avg 103.64 · Risk 0.25%
+```
+- Units as muted suffixes inside/after the field (%, sh); no extra header row, no "Shares" column for SL rows.
+- Each entry row: shares + size as % of portfolio (muted, 1 decimal). Summary shows total size % after the shares.
+- Each SL row (and the single-SL form): distance from the (average) entry as −x.x% in muted text next to the price.
+- Fit rule (390px): if a row would wrap, drop the row's size % first (it stays in Details), then the SL −x.x%. Never wrap, never overflow.
+- "Risk" column appears only with 2+ entries; "Out" column only with 2+ SLs.
+- Summary = `shares · size % · Avg (only if 2+ entries) · Risk`. "Avg SL" and "Left" move to Details (Left shown there only when ≥ 0.05%).
+- If a multiplier applies, append ONE tag to Risk: `Risk 0.25% (half size: regime)`.
+- 390px: each row fits on one line; ✕ never wraps.
+
+### 7c. Rounding
+- Seen: 18 sh × 10 + 9 sh × 20 = $360 = exactly 0.25% of E, but summary shows "Risk 0.24% · Left 0.01%". Percentages must be ROUNDED (not truncated) to 2 decimals and computed from the same THB numbers as the shares. Test this exact case (E ฿5,019,200, FX as used, regime 50%).
+
+### 7d. Details = 3 lines max
+1. `Portfolio ฿5.02M · prices as of 26 Oct` (amber if older than 3 days: "update account value")
+2. `0.50% × regime 50% = 0.25% = $360 (= x.x% of Momentum)`
+3. `After this: Momentum 0.25% of 1.5% · Total 0.25% of 5% · Size $2,790 (1.9%) of max 7.5%`
+Remove "Shares rounded down to 1" (lot size is implied).
+
+### 7e. Minimum stop for stocks (SRTp 2026-11-08)
+- Settings › Portfolio & Risk: "Min stop" per bucket — Momentum **4%**, Compounder **7%** (prefilled with these values, editable; empty = off).
+- Check: distance from EACH entry row to SL1 (the first real stop) must be ≥ min. Too tight → the SL row shows "Stop too tight — min 4%" and Save is blocked. Never auto-widen.
+- Same style as the Sat min stop (§2). Tests: 3.9% blocked, 4.0% OK (Momentum); 6.9% blocked, 7.0% OK (Compounder); multi-entry checks every row.
+
+### 7f. Sat Main: optional 2nd entry (SRTp 2026-11-08) — fits the CURRENT Sat form
+Current form: `Entry | SL | TP*` row → `ความเสี่ยง 20 · กำไร 50 · R:R 2.5 ✓` → one row per account `OUN 0.1 lot · 20 pts · Risk $200 ✅ ข้าม`.
+Change only this:
+```
+Entry ＋        SL            TP *
+[4050]         [4070]        [4000]
+[4062] 50% ✕                                   ← only after ＋
+ความเสี่ยง 20/8 · กำไร 50/62 · R:R 2.5 ✓      ← avg-based, see below
+OUN  0.05 + 0.04 lot · Risk $200   ✅ ข้าม
+```
+- Max 2 entries, 1 SL, 1 TP (single SL + full exit rule unchanged). Main only (Tactical stays single entry).
+- Small ＋ in the Entry label; the 2nd row shows price + one small % field (risk share of entry 2, default 50%; entry 1 = the rest) + ✕.
+- Lots per account per entry = (account risk × share) ÷ (|entry − SL| × multiplier), rounded DOWN to lot step. Account row shows `0.05 + 0.04 lot` and the total risk of both.
+- Risk/reward line: with 2 entries use the lot-weighted average entry for R:R (one R:R number, same ✓/✗ min R:R rule). Points shown as `20/8` only if it fits; otherwise show avg only.
+- If either entry rounds to 0 lots for an account → that account row shows "Too small to split — use 1 entry" (no wrong numbers).
+- Min stop (§2) applies to EACH entry vs SL. §4b verify multiplier and §5 loss limits apply to the whole idea (one budget).
+- Entering: "Buy" fills entry 1; entry 2 is a pending add on the same idea (not a pyramid — no breakeven rule, it's part of the original budget).
+- Tests: 50/50 split math per account, rounding-to-0 message, R:R on avg entry, min stop per entry, entry 2 uses the same budget, Tactical unchanged, 390px no wrap.
+
+## 8. Fast-track plans: enter first, homework right after (SRTp 2026-11-08)
+Replaces PL1 A5 "Ready" BLOCK for Momentum/Compounder. Never blocks a plan any more — it nags hard instead.
+- A plan can be saved even if: the stock is not on the Watchlist, not screened, or My Thesis ① Why buy / ④ Wrong if is empty.
+- Form: instead of the red "Not ready" box, one amber line: "Fast-track — homework due in 3 days (thesis ① ④ + screening)". Save button text: "Save plan (homework due)".
+- On save, if the stock isn't on the Watchlist: add it with its Track, fast-track flag in data (onboarding = "Unscreened"). Nothing else changes visually except the one badge.
+- Homework = My Thesis ① + ④ filled AND the screening modal saved (Trend 40 EMA + lenses). Due = 3 calendar days after the plan is saved.
+- Hard reminders until done:
+  1. ONE small badge everywhere (plan card, position card, Watchlist row): "⚠ Homework" amber → "⚠ Overdue 2d" red. No separate "Fast-track" tag on rows/cards (the tag lives in data + Journal only). Don't add any other new chips.
+  2. Today: pinned at the very TOP (above everything) — "Homework: AVGO — thesis + screening · due in 2 days" with "Do it ›" (opens My Thesis / screening). Cannot be dismissed or snoozed.
+  3. Overdue (> 3 days): turns red "OVERDUE 2 days" and is counted in the Unfinished-today banner.
+  4. Add-ons / pyramid / 2nd entry on that idea are blocked until homework is done ("Do homework first").
+- Journal: trades from fast-track plans keep a "Fast-track" tag (so results can be compared later).
+- Done = badge, Today item and add-on block disappear automatically.
+- Tests: save without thesis/Watchlist works; auto-add to Watchlist with tag; Today pinned item + countdown (fake clock); overdue red after 3 days; add-on blocked until homework done; badge clears when done; Sat unaffected.
+
+## 9. Share count notation (SRTp 2026-11-08)
+- Stock share counts display as `#45`, `#60` instead of "45 sh" / "45 หุ้น" — in all PS1/PS1b UI: plan form rows + summary, Details, Port/Today risk panel, cards, add-on ticket.
+- Sat stays in lots ("0.05 lot"). Stored data unchanged (display only).
+- Update the brief's examples accordingly (e.g. `#14 · 1.0%`, summary `#22 · 1.6% · Avg 103.64 · Risk 0.25%`).
+
+## 10. RRG "Fresh" highlight (SRTp 2026-11-08)
+- NEW tag on a card ("NEW · 2d" / "NEW · 1w") when ALL of:
+  - the card entered its current state ≤ 3 bars ago (Daily) or ≤ 1 COMPLETED week ago (Weekly; the partial week never counts);
+  - the previous state lasted ≥ 5 bars (Daily) / ≥ 2 weeks (Weekly) — filters back-and-forth flicker;
+  - the new state is one of: Beating SPY ↗ (strengthening), Lagging SPY ↗ (recovering), Beating SPY ↘ (fading). Not for Neutral or Lagging ↘.
+- The ⚡ speed tag (§3) stays as specified.
+- One filter at the top of Flow: `[ All ] [ Fresh N ]` — Fresh = cards with NEW or ⚡. Remember the choice per device (try/catch).
+- Same thresholds in one constant block so they can be tuned later. In the PR, report how many cards would be Fresh on the current data (target ~3–6 of 23).
+- Fit: NEW and ⚡ follow the RRG1b fit rule (52W text hides first; tags shorten to "NEW" / "⚡▲" / "⚡▼"); never wrap.
+- Tests: flicker (previous state 2 bars) → no NEW; real change → NEW for 3 bars then gone; weekly partial week ignored; Neutral/worsening never NEW; Fresh filter count.

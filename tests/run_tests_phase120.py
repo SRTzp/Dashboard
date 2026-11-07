@@ -30,7 +30,8 @@ def check(name, ok, detail=""):
 
 def ps_on(page, ps=PS):
     """PS1 เปิด (ถอดแฟลกนักพัฒนา) + ตั้ง psRisk ของบัญชี main"""
-    js(page, "([ps])=>{ localStorage.removeItem('dash.ps1Off'); const B=getBook('main'); B.settings.psRisk = ps; saveBook('main'); render(); }", [ps])
+    # PS1b: Sat orders need a min stop per asset (required) -> give every Sat asset a tiny one unless the test sets its own
+    js(page, "([ps])=>{ localStorage.removeItem('dash.ps1Off'); const B=getBook('main'); const o=Object.assign({}, ps); if(!o.minStop){ o.minStop={}; try{ satAssets({all:true}).forEach(a=>{ o.minStop[a.key]=0.05; }); }catch(e){} } B.settings.psRisk = o; saveBook('main'); render(); }", [ps])
     settle(page, 300)
 
 
@@ -223,7 +224,7 @@ def tests(pw, w, h):
     b, page, ce, pe = C.launch2(pw, w, h, tr5, c5, pin_winner=True)
     try:
         ps_on(page)
-        js(page, "()=>{ switchTab('plan'); setPlanScope('stock'); render(); }"); settle(page, 500)
+        js(page, "()=>{ ps1TodayOpen = true; switchTab('today'); render(); }"); settle(page, 500)   # PS1b: the Portfolio Risk panel lives in Today (collapsed by default; opened here)
         pn = js(page, """()=>({body: !!document.querySelector('[data-ps1-panel-body]'), e: (document.querySelector('[data-ps1-e]')||{}).innerText, buckets: [...document.querySelectorAll('[data-ps1-bucket]')].map(x=>x.dataset.ps1Bucket),
             chips: [...document.querySelectorAll('[data-ps1-chip]')].map(x=>x.dataset.ps1Chip), miss: (document.querySelector('[data-ps1-missing]')||{}).innerText||'', foot: document.querySelector('.ps1Fn')?.innerText,
             rows: Object.fromEntries([...document.querySelectorAll('[data-ps1-idea]')].map(r=>[r.dataset.ps1Idea, r.innerText.replace(/\\s+/g,' ').trim()])), tot: (document.querySelector('[data-ps1-total]')||{}).innerText})""")
@@ -237,7 +238,7 @@ def tests(pw, w, h):
         js(page, "()=>{ const B=getBook('main'); B.trades.find(t=>t.sym==='BE').qty = 60000; saveBook('main'); render(); }"); settle(page, 400)
         red = js(page, "()=>({lvl:(document.querySelector('[data-ps1-giveback]')||{dataset:{}}).dataset.ps1Giveback, txt:(document.querySelector('[data-ps1-giveback]')||{}).innerText||'', chips:[...document.querySelectorAll('[data-ps1-chip]')].map(x=>x.dataset.ps1Chip)})")
         check(f"{tag} 5 Panel: give-back ≥10% → แดง + 'Review: take partial profit or raise stops' · bucket เต็ม = 'Stop opening'", red["lvl"] == "red" and "Review: take partial profit or raise stops" in red["txt"], red)
-        js(page, "()=>switchTab('today')"); settle(page, 500)
+        js(page, "()=>{ ps1TodayOpen = false; switchTab('today'); render(); }"); settle(page, 500)
         td = js(page, "()=>{ const el=document.querySelector('[data-ps1-today]'); return el ? el.innerText.replace(/\\s+/g,' ') : ''; }")
         check(f"{tag} 5 Today: มีบรรทัดสั้น 'Risk x / 5.0% · left … · give-back …'", "Risk" in td and "give-back" in td and "left" in td, td)
         check(f"{tag} 5 Today: ไม่ล้นแนวนอน", not js(page, "()=>document.documentElement.scrollWidth>innerWidth"), [])
@@ -261,7 +262,7 @@ def sat_tests(pw, w, h):
 
         def calc():
             return js(page, """([i])=>{ const x=satIdeasList.find(y=>y.id===i); const c=satV3PlanAcctCalc(x,'main'); return {lot:c.lot, blocks:c.blocks, ready:c.ready, fac:c.verify&&c.verify.fac, ok:c.verify&&c.verify.ok, msg:c.lotMsg, raw:c.v2&&c.v2.rawRisk, lim:c.v2&&c.v2.limit, deal:c.v2&&c.v2.lotDeal, risk:c.v2&&c.v2.riskTHB, E:c.ps1&&c.ps1.E, def:c.ps1&&c.ps1.def, margin:c.ps1&&c.ps1.margin}; }""", [iid])
-        js(page, "()=>{ const B=getBook('main'); B.settings.psRisk={def:{winner:0.4,ladder:1.0,satMain:0.1,satTac:0.15}}; saveBook('main'); render(); }"); settle(page, 300)
+        ps_on(page, {"def": {"winner": 0.4, "ladder": 1.0, "satMain": 0.1, "satTac": 0.15}}); settle(page, 300)
         c0 = calc()
         check(f"{tag} 4b Structure ✗ (ยังไม่ติ๊ก) → ถูกบล็อก 'Check Structure first' · ไม่ ready", "Check Structure first" in c0["blocks"] and not c0["ready"], c0)
         js(page, "([i])=>{ pfVerifySet(i,'structure_ok',true); pfVerifySet(i,'ema50_ok',true); }", [iid]); settle(page, 400)

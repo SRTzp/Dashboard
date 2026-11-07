@@ -446,7 +446,7 @@ def goals_tests(pw):
             r = js(page, "()=>[td3SubOf('main','Winner') && td3SubOf('main','Winner').target, td3SubOf('main','Ladder'), td3SubOf('main','Sat') && td3SubOf('main','Sat').target]")
             check(f"{tag} §4.7 เป้า Core เดิมย้ายไป Winner · Ladder ว่าง · Sat คงเดิม", r == [2000000, None, 20000], r)
             js(page, "()=>{ switchTab('today'); todayRefresh(true); td3GoalOpen.add('main'); todayRefresh(true); }"); settle(page, 400)
-            rows = js(page, "()=>[...document.querySelectorAll('[data-td3-acct=main] [data-td3-sub]')].map(e=>e.dataset.td3Sub+':'+(e.innerText.includes('No goal')?'none':'goal'))")
+            rows = js(page, "()=>[...document.querySelectorAll('[data-td3-acct=main] [data-td3-sub]')].map(e=>e.dataset.td3Sub+':'+(e.textContent.includes('No goal')?'none':'goal'))")
             check(f"{tag} §4.7 Today แสดงแถวเป้า Winner (มี) · Ladder (ไม่มี) · Sat (มี)", rows[:3] == ["Winner:goal", "Ladder:none", "Sat:goal"], rows)
             js(page, "()=>{ openSystemSettings(); glSetPick('main'); }"); settle(page, 500)
             gr = js(page, "()=>[...document.querySelectorAll('#glSet [data-gl-subrow]')].map(e=>e.dataset.glSubrow)")
