@@ -167,6 +167,7 @@ def ready_tests(pw, w, h):
         check(f"{tag} A5: RS ★★★ ไม่ทำให้ Ready (ต้อง ①④ เท่านั้น)", f6["save"] is True and "Not ready" in f6["err"], f6)
         # editor บน Watchlist card
         js(page, "()=>{ coreSheetClose(); switchTab('watch'); wlSetView('wl'); renderWatchlist(); wlOpen('RDY1'); }"); settle(page, 600)
+        js(page, "()=>wlMtEditOpen('RDY1')"); settle(page, 300)   # TX1 — การ์ดที่มีข้อความเซฟแล้วเปิดเป็น Read · กด Edit ก่อนถึงมีช่อง
         st = js(page, "()=>document.querySelectorAll('.wlMtH [data-wl-status]').length+'|'+document.querySelectorAll('[data-wl-ready]').length+'|'+wlReady('RDY1')")
         check(f"{tag} A5: การ์ด Watchlist มีช่อง My Thesis ① Why buy / ④ Wrong if · มีแท็กสถานะเดียว (ไม่มีป้าย Ready ซ้ำ) · wlReady = false เมื่อยังไม่ครบ", st == "1|0|false" and cnt(page, "[data-wl-mt-why]") == 1 and cnt(page, "[data-wl-mt-exit]") == 1, st)
         page.fill("[data-wl-mt-exit]", "guidance cut"); page.locator("[data-wl-mt-save]").click(); settle(page, 600)

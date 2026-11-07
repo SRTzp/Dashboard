@@ -215,7 +215,7 @@ def macro_tests(pw, w, h, label, shots=False):
             full_ok = s and LONG_WHY in s["txt"].replace("\n", " ") .replace("  ", " ") or (s and LONG_WHY.replace(" ", "") in s["txt"].replace("\n", "").replace(" ", ""))
             chg_ok = s and LONG_CHG.replace(" ", "") in s["txt"].replace("\n", "").replace(" ", "")
             check(f"{tag} 3 อ่านต่อ → แผ่น Playbook เดิม (pbAssetSheet) แสดงข้อความ why และ change_if เต็มตรงต้นฉบับ", bool(s) and full_ok and chg_ok and pbx["why"] == LONG_WHY and pbx["change_if"] == LONG_CHG, [s and s["txt"][:300]])
-            check(f"{tag} 3 แผ่น: เต็มความกว้าง · สูง ≤ 92vh · ตัวอักษร 16–18px / 1.5 · เลื่อนแนวตั้งในแผ่น · ไม่ล้นแนวนอน", s and abs(s["w"] - s["vw"]) <= 1 and s["h"] <= s["vh"] * 0.92 + 1 and all(16 <= f <= 18 for f in s["fs"]) and all(1.45 <= x <= 1.6 for x in s["lh"]) and s["ow"] <= 0 and s["docOw"] <= 0, s)
+            check(f"{tag} 3 แผ่น: เต็มความกว้าง · สูง ≤ 92vh · ตัวอักษร = --read-fs 15.64px / --read-lh 1.65 (TX1) · เลื่อนแนวตั้งในแผ่น · ไม่ล้นแนวนอน", s and abs(s["w"] - s["vw"]) <= 1 and s["h"] <= s["vh"] * 0.92 + 1 and all(abs(f - 15.64) < .05 for f in s["fs"]) and all(abs(x - 1.65) < .01 for x in s["lh"]) and s["ow"] <= 0 and s["docOw"] <= 0, s)
             check(f"{tag} 3 แผ่น: มีปุ่ม '✕ ปิด' ติดบนสุด", s and s["x"] and s["x"]["vis"] and "ปิด" in s["x"]["txt"] and abs(s["x"]["top"]) <= 1, s and s["x"])
             if shots: shot(page, "pf2-macro-sheet-390.png", ".pb-sheet .ui-sheet")
             page.keyboard.press("Escape"); settle(page, 300)
