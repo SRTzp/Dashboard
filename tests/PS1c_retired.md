@@ -20,3 +20,17 @@ New suite: `tests/run_tests_phase126.py` (85 checks at 390 + 1440). Screenshots:
 
 ### Known failures that are NOT from PS1c (same result on `origin/main`)
 phase5, 23, 35, 41–46, 75, 80, 81 (date-dependent), phase13 (always), phase47/66 (removed backup files), phase105 (timeout), phase110 ("Settings = 5 cards" is stale since PS1 added the Portfolio & Risk card).
+
+### Follow-up fix: phase110 stale card count
+| Suite / check | Old expectation | Current behaviour |
+|---|---|---|
+| phase110 "Settings = 5 cards" | `acct · core · sat · prod · app` | 6 cards: `acct · ps1 (Portfolio & Risk) · core · sat · prod · app` (PS1 added Portfolio & Risk). Test updated; passes at 300/390/1280/1440. |
+
+### Follow-up fix 2: Settings save no longer writes `psRisk` unless a Portfolio & Risk field changed
+Product fix in `index.html` (not a test whitelist): `ps1FormFill()` snapshots what the form reads; `saveSettings()` keeps `old.psRisk` untouched (or absent) while `ps1FormDirty()` is false. Any edited field writes the full `psRisk` as before.
+
+| Suite / check | Old | Now |
+|---|---|---|
+| phase110 "save without editing → keys outside owner unchanged" | failed (`psRisk` was added with defaults) | passes **unchanged** (no `psRisk` added to OWN) |
+
+Verified directly: (A) no `psRisk` + untouched save → still absent; (B) custom stored `psRisk` (incl. minStop and an extra key) + untouched save → identical JSON; (C) edit one field → written, other stored values kept; (D) no `psRisk` + edit → created. Suites: phase110 141 pass / 0 fail; phase120 124 pass / 0 fail.
