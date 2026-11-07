@@ -8,7 +8,7 @@
 | phase106 B4 `wsector` | manual, not counted, ticks into `weekLog` | item removed (assert 0 rows) | "Review drivers for selected sectors" replaced by ⑤ New ideas |
 | phase106 B4 `wk_cands` + `wk_picks` | two manual ticks | one `wk_cands` tick (merged ④); also tick `wk_ideas` (manual, 0 ideas) to complete the week | brief §1 merge |
 | phase102 §2 "อ่านแล้ว" | `stockNewsRead == {ED: true}` | `{ED: {readIds:[all item tickers]}}` (button text "Mark all read", same `data-stk-read`) | brief §3 per-item read state; old `true` still read as "all read" |
-| Today Daily line (no old assertion) | `Weekly News · n updates unread · [Read ›]` | single `<button>` `Weekly News · x/y unread ›` | brief §4 |
+| Today Daily line (no old assertion) | `Weekly News · n updates unread · [Read ›]` | `Weekly News · x/y unread · [Read ›]` (same div + dashed pill; pill is the only tap target) | brief §4 |
 
 ## Removed done-state ids (weekLog[Mon].done)
 - `wk_macro` (replaced by `wk_chg`) · `wsector` (replaced by `wk_ideas`) · `wk_picks` (merged into `wk_cands`; an old `wk_picks` tick still counts ④ as done).
