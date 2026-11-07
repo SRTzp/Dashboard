@@ -910,6 +910,29 @@ details.panel[open]>summary::before{transform:rotate(90deg)}
 .ffSeg button:hover{background:var(--surface2)}
 .ffSeg button.on-up{background:var(--teal-dim);color:var(--teal)}
 .ffSeg button.on-dn{background:var(--red-dim);color:var(--red)}
+
+/* RR3 — Leadership header: title+score | controls on one row (Mac); status = one muted line under it */
+#ffThemesPanel{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:center}
+#ffThemesPanel>#ffThemesHead{grid-column:1;grid-row:1;flex-wrap:nowrap;align-items:center;min-width:0}
+#ffThemesPanel>#ffRrgBar{display:contents}
+#ffThemesPanel>#ffThemesHead>div:first-child{min-width:0;flex:1 1 auto}
+#ffThemesPanel>#ffThemesHead .ffLbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ffThemesPanel>#ffThemesHead .ffScore{white-space:nowrap;flex-shrink:0;font-size:.8rem}
+#ffThemesPanel>#ffThemesHead{gap:8px}
+#ffThemesPanel .rrgCtl .ffSeg button{padding:6px 9px}
+#ffThemesPanel .rrgCtl{grid-column:2;grid-row:1;display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:nowrap;min-width:0}
+#ffThemesPanel .rrgStatus{grid-column:1/-1;grid-row:2;margin:2px 0 4px;min-width:0}
+#ffThemesPanel>#ffThemesBody{grid-column:1/-1;grid-row:3}
+.rrgIc{box-sizing:border-box;width:32px;min-width:32px;height:28px;padding:0;font-size:12.75px;line-height:1;flex-shrink:0}
+.rrgIc.spin .rrgSpinI{display:inline-block;animation:rrgSpin 1s linear infinite}
+@keyframes rrgSpin{to{transform:rotate(360deg)}}
+.ln3-rrg.rrgDim{opacity:.6;transition:opacity .15s}
+@media (max-width:899px){
+  #ffThemesPanel .rrgCtl{grid-column:1/-1;grid-row:2;justify-content:space-between;gap:6px;margin-top:6px}
+  #ffThemesPanel .rrgCtl .ffSeg button{padding:6px 8px}
+  #ffThemesPanel .rrgStatus{grid-row:3}
+  #ffThemesPanel>#ffThemesBody{grid-row:4}
+}
 .ffSeg button.on-neu{background:var(--surface2);color:var(--text)}
 .ffW{display:inline-flex;gap:3px;align-items:center;flex-shrink:0;padding:4px 2px;cursor:not-allowed}
 .ffDot{width:5px;height:5px;border-radius:50%;background:var(--border)}
@@ -25395,12 +25418,16 @@ function rrgCopyText(){
   return L.join('\n');
 }
 function rrgCopyPhase(){ sdCopyText(rrgCopyText(), 'Copied'); }
+let rrgLastGood = {D:null, W:null};
 function ffRenderThemes(){
   if(!rrgLegSynced) rrgLegSync();
   const f = ffState();
   const r = f.rrg || {};
   const tf = rrgTf(), TF = RRG_TF[tf];
-  const rows = Array.isArray(tf==='W' ? r.rowsW : r.rowsD) ? (tf==='W' ? r.rowsW : r.rowsD) : [];
+  let rows = Array.isArray(tf==='W' ? r.rowsW : r.rowsD) ? (tf==='W' ? r.rowsW : r.rowsD) : [];
+  /* RR3 — while refreshing, never show an empty list: if the live rows are gone (state rebuilt/cleared mid-run) fall back to the last good rows of this timeframe */
+  if(rows.some(x=>x && !x.err && x.quad)) rrgLastGood[tf] = rows.slice();
+  else if(r.loading && rrgLastGood[tf] && rrgLastGood[tf].length) rows = rrgLastGood[tf];
   const ok = rows.filter(x=>!x.err && x.quad && !rrgWaiting(x)), wait = rows.filter(x=>!x.err && x.quad && rrgWaiting(x));   /* RRG1b — ok = เฉพาะผลโมเดลใหม่ · wait = โมเดลเก่ารอรีเฟรช */
 
   /* แถบสถานะ + ปุ่มรีเฟรช */
@@ -25433,18 +25460,17 @@ function ffRenderThemes(){
       if(tf === 'W' && ok.some(x=>x.preview)){ const pv = ok.find(x=>x.preview).preview; msg += ' · latest week still open (to ' + ffEsc(sdDateTxt(pv.asOf)) + ') — classified on last completed week'; }
     }
     const color = cls==='amber' ? 'var(--amber)' : cls==='red' ? 'var(--red)' : 'var(--muted)';
-    bar.innerHTML = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 2px">'
-      + '<span class="ffNote" style="display:inline;color:'+color+'">' + msg + '</span>'
-      + '<span style="margin-left:auto"></span>'
+    /* RR3 — status = one muted line (full width) · controls = right of the title row (grid on #ffThemesPanel; #ffRrgBar is display:contents) */
+    const dbg = 'rrg v' + RRG_BUILD + ' · build check';
+    bar.innerHTML = '<div class="rrgStatus" data-rrg-status><span class="ffNote" style="display:inline;color:'+color+'">' + msg + '</span></div>'
+      + '<div class="rrgCtl" data-rrg-ctl>'
       + (ps1Off() ? '' : '<span class="ffSeg" data-rr-fresh-f title="Fresh = NEW state or ⚡ speed tag"><button type="button" class="' + (!rrgFreshOnly() ? 'on-cur' : '') + '" data-rr-f="all" onclick="rrgSetFresh(false)">All</button><button type="button" class="' + (rrgFreshOnly() ? 'on-cur' : '') + '" data-rr-f="fresh" onclick="rrgSetFresh(true)">Fresh ' + rrgFreshCount(ok, tf) + '</button></span>')
-      + '<span class="ffMini" title="เลขรุ่นของโค้ดที่กำลังรันจริง — ใช้ยืนยันว่าโหลดไฟล์ใหม่แล้ว">rrg v' + RRG_BUILD + '</span>'
       + '<span class="ffSeg" title="สลับได้ทันที ไม่กินเครดิต — คำนวณไว้ทั้งสองแบบตอนดึงรอบเดียว">'
         + '<button class="' + (tf==='D'?'on-cur':'') + '" onclick="rrgSetTf(\'D\')">Daily</button>'
         + '<button class="' + (tf==='W'?'on-cur':'') + '" onclick="rrgSetTf(\'W\')">Weekly</button>'
       + '</span>'
-      + '<button class="small ic" type="button" data-rrg-copy title="Copy by phase" aria-label="Copy by phase" style="min-width:32px;height:28px;padding:0 8px;font-size:12.75px;line-height:1" onclick="rrgCopyPhase()">⧉</button>'
-      + '<button class="small" onclick="rrgManualRefresh()"' + (r.loading?' disabled':'') + '>'
-      + (r.loading ? 'กำลังดึง…' : '🔄 รีเฟรชราคา') + '</button></div>';
+      + '<button class="small ic rrgIc" type="button" data-rrg-copy title="Copy by phase · ' + dbg + '" aria-label="Copy by phase" onclick="rrgCopyPhase()">⧉</button>'
+      + '<button class="small ic rrgIc' + (r.loading?' spin':'') + '" type="button" data-rrg-refresh title="Refresh prices · ' + dbg + '" aria-label="Refresh prices" onclick="rrgManualRefresh()"' + (r.loading?' disabled':'') + '><span class="rrgSpinI">↻</span></button></div>';
   }
 
   ['imp','lead','lag','weak','flat'].forEach(q=>{ const el=document.getElementById('ffQ'+q); if(el) el.innerHTML=''; });
@@ -25492,8 +25518,8 @@ function ffRenderThemes(){
          ▲ = กำลังมุ่งขึ้น/ขวา (เข้าหา Leading) · ▼ = กำลังถอย */
       if(ln1On()){   /* LN3 — ตารางกว้าง → แถว 2 บรรทัด · TD3b: ป้ายอังกฤษ + ☆/★ + Drivers & evidence (แถวคลิกได้ทั้งแถว) */
         const U = tf==='W' ? 'w' : 'd', UW = tf==='W' ? 'weeks' : 'days';
-        host.innerHTML = '<div class="ln3-rrg" data-ln3-rrg="1">'
-          + ((!ps1Off() && rrgFreshOnly()) ? (sorted.filter(x=>rrgIsFresh(x, tf)).map(x=>sdRowHtml(x, tf, QLBL)).join('') || '<div class="hint" data-rr-fresh-none style="padding:10px 2px">Nothing fresh right now.</div>') : sorted.map(x=>sdRowHtml(x, tf, QLBL)).join(''))
+        host.innerHTML = '<div class="ln3-rrg' + (r.loading ? ' rrgDim' : '') + '" data-ln3-rrg="1">'
+          + ((!ps1Off() && rrgFreshOnly()) ? (sorted.filter(x=>rrgIsFresh(x, tf)).map(x=>sdRowHtml(x, tf, QLBL)).join('') || '<div class="hint" data-rr-fresh-none style="padding:10px 2px">Nothing fresh right now. <button type="button" class="small" data-rr-showall onclick="rrgSetFresh(false)">Show all</button></div>') : sorted.map(x=>sdRowHtml(x, tf, QLBL)).join(''))
           + '</div><div class="sd-foot" data-sd-foot>'+SD_FOOT+'</div>';
         sdFit(host);
       } else
