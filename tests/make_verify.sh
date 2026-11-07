@@ -45,8 +45,8 @@ BK="${BK_OVERRIDE:-index.backup-pre-${R}.html}"
     d=$(diff "$b" "$cur" | grep -c '^>'); r=$(diff "$b" "$cur" | grep -c '^<')
     [ "$d$r" != "00" ] && echo "files changed: tests/$name (+$d/-$r)"
   done
-  for f in tests/run_tests_phase*.py; do case "$f" in *.backup-pre-*) continue;; esac; [ -f "tests/_bk_${LC}/$(basename "$f")" ] || echo "files changed: $f (+$(wc -l < "$f" | tr -d ' ')/-0) [new]"; done
-  for f in docs/weekly-impact-schema.md tests/PF3_retired.md tests/PF3b_retired.md tests/PF1_retired.md tests/runall2.sh tests/make_verify.sh "docs/reports/${R}-report.md"; do [ -f "$f" ] && echo "files changed: $f"; done
+  for f in tests/run_tests_phase*.py; do case "$f" in *.backup-pre-*) continue;; esac; [ -f "tests/_bk_${LC}/$(basename "$f")" ] || { git ls-files --error-unmatch "$f" >/dev/null 2>&1 && continue; echo "files changed: $f (+$(wc -l < "$f" | tr -d ' ')/-0) [new]"; }; done
+  for f in docs/weekly-impact-schema.md tests/PF3_retired.md tests/PF3b_retired.md tests/PF1_retired.md tests/runall2.sh tests/run_related.sh tests/make_verify.sh "docs/reports/${R}-report.md"; do [ -f "$f" ] && echo "files changed: $f"; done
 } > "$REP"
 head -60 "$REP" > "$REP.tmp" && mv "$REP.tmp" "$REP"
 wc -l "$REP"

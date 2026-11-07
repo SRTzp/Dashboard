@@ -237,6 +237,7 @@ def item3(pw, w=1440, h=900):
         sm = js(page, "()=>({sum: !!document.querySelector('[data-wl-mt-sum]'), editor: document.querySelectorAll('[data-wl-mt-why]').length})")
         check(f"{tag} Watchlist header has no duplicate My Thesis summary or editor", not sm["sum"] and sm["editor"] == 0, sm)
         js(page, "()=>wlSetSub('view')"); settle(page, 500)
+        js(page, "()=>wlMtEditOpen('MTA')"); settle(page, 400)   # TX1 — Read → Edit
         st = js(page, """()=>({editor: document.querySelectorAll('[data-wl-mt-why]').length, legacyRows: document.querySelectorAll('[data-vw-row]').length, aiCard: (document.querySelector('[data-mt-ai]')||{}).dataset ? document.querySelector('[data-mt-ai]').dataset.mtAi : null,
           aiDate: (document.querySelector('[data-mt-ai-date]')||{}).innerText||'', aiSum: (document.querySelector('[data-mt-ai-sum]')||{}).innerText||'', gal: document.querySelectorAll('[data-mt-img]').length,
           notes: [...document.querySelectorAll('[data-mt-note]')].map(n=>n.dataset.mtNote+':'+n.innerText.replace(/\\s+/g,' ').trim()),
@@ -253,6 +254,7 @@ def item3(pw, w=1440, h=900):
         P44.reload_keep(page)
         js(page, "()=>{ switchTab('watch'); wlSetView('wl'); }"); settle(page, 500)
         js(page, "()=>{ wlOpen('MTA'); wlSetSub('view'); }"); settle(page, 700)
+        js(page, "()=>wlMtEditOpen('MTA')"); settle(page, 300)   # TX1
         after = js(page, "()=>({why: document.querySelector('[data-wl-mt-why]').value, gal: document.querySelectorAll('[data-mt-img]').length, stored: wlItemOf('MTA').my_thesis.why})")
         check(f"{tag} after reload: edited text and both images persist", after["why"] == "edited why" and after["stored"] == "edited why" and after["gal"] == 2, after)
         # import AI -> My Thesis untouched

@@ -24,6 +24,7 @@
    หลักคิด: ลดเส้น เพิ่มที่ว่าง ให้ตัวเลขเด่น ให้ป้ายกำกับเงียบ
    ============================================================ */
 :root{
+  --read-fs:.92rem; --read-lh:1.65;   /* TX1 — ขนาดตัวอ่าน = เนื้อหา Watchlist stock-data (.ltMd) */
   /* ---- พื้นผิว: ไล่จากพื้นหลัง → การ์ด → ช่องกรอก ---- */
   --bg:#EEF0F3;   /* 7D.3 §0.1 — ค่าจาก mockup (เดิม #EBECEF) */
   --surface:#FFFFFF;
@@ -1379,7 +1380,7 @@ button.acctJump:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
 .ltSum{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:9px 14px;font-size:.92rem;line-height:1.55;margin:0}
 .ltSum dt{color:var(--muted);font-size:.82rem;padding-top:2px}.ltSum dd{margin:0;overflow-wrap:anywhere}.ltSum ol{margin:0;padding-left:18px}
 @media (max-width:430px){.ltSum{grid-template-columns:1fr;gap:2px}.ltSum dt{margin-top:8px}}
-.ltMd{font-size:.92rem;line-height:1.65;overflow-wrap:anywhere}
+.ltMd{font-size:var(--read-fs);line-height:var(--read-lh);overflow-wrap:anywhere}
 .ltMd h3{font-size:.98rem;margin:18px 0 6px}.ltMd h3:first-child{margin-top:0}
 .ltMd ul,.ltMd ol{margin:4px 0 8px;padding-left:20px}.ltMd li{margin:3px 0}
 .ltMd blockquote{margin:8px 0;border-left:3px solid var(--border);padding:4px 12px;color:var(--text);background:var(--surface3);border-radius:0 8px 8px 0}
@@ -3519,6 +3520,26 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .set1flash{outline:2px solid var(--blue);outline-offset:2px}
 #setOverlay .modal{max-width:560px}
 [data-rrg-copy]{position:relative}[data-rrg-copy]::after{content:"";position:absolute;inset:-3px -2px}   /* SET1 — พื้นที่กด ≥ 32px โดยไม่เพิ่มความสูงแถว */
+
+/* TX1 — My Thesis Edit ⇄ Read · ตัวอ่าน (--read-fs / --read-lh) */
+.wlMt textarea{font-size:var(--read-fs);line-height:var(--read-lh);resize:none;min-height:calc(3 * var(--read-lh) * 1em + 18px);max-height:60vh;overflow-y:hidden}
+.wlMt textarea,.wlNcRow input{font-family:inherit}
+.wlNcRow input{font-size:var(--read-fs)}
+@media(max-width:600px){.wlMt textarea,.wlNcRow input{font-size:max(16px,var(--read-fs))}}
+.wlMtH{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.wlMtEd{margin-left:auto}
+.wlMtDraft{font-size:.74rem;padding:1px 8px;border-radius:999px;background:#fdf1d6;color:#7a5200;border:1px solid #e6c36a}.wlMtDraft[hidden]{display:none}
+.wlMtDraft .ln1-link{font-size:inherit;padding:0 2px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .wlMtDraft{background:#3a2e12;color:#f0d58a;border-color:#6b5520}}
+.wlMtBlk{border:1px solid var(--line,#ddd);border-radius:10px;padding:8px 10px;background:var(--surface3,#fafafb)}
+.wlMtBlk .wlMtLb,.wlMtNc .wlMtLb{font-size:.78rem;color:var(--mute,#7b818c);font-weight:600}
+.wlMtTx{font-size:var(--read-fs);line-height:var(--read-lh);white-space:pre-wrap;overflow-wrap:anywhere;margin-top:2px}
+.wlMtBlk.empty .mut{font-size:var(--read-fs);line-height:var(--read-lh)}
+.wlMtNc{font-size:var(--read-fs);line-height:var(--read-lh)}
+/* TX1 §4 — ตัวอ่านใน popup/แผงเนื้อหา = ขนาดเดียวกับ Watchlist stock-data */
+.pbSecV,.pb-sheet .pbSecV,.pb-sheet .pbThesis,.pb-sheet .pbScn,.pb-sheet .pbWhy,.pb-sheet .pbWatchV,.stkB,.stkHl,.stkNo,.mtAi .mtAiT{font-size:var(--read-fs);line-height:var(--read-lh)}
+.pbSecK,.pb-sheet .pbSecK{font-size:max(12px,calc(var(--read-fs) * .8))}
+.stkK,.stkSecH,.stkFold>summary,.stk-panel .wiSm,.stk-sheet .wiSm{font-size:max(12.5px,calc(var(--read-fs) * .85))}
+@media(min-width:601px){.pb-sheet .ui-sheet{max-width:720px;width:min(94vw,720px)}}
 </style>
 </head>
 <body>
@@ -7724,14 +7745,83 @@ function ftEnsureWl(sym, track, mk, ft){
     else if(!it.fasttrack){ col.doc(t).update({fasttrack:ft}); }
   }catch(e){ console.warn('ft wl:', e); }
 }
-function wlMtIn(sym, k, v){ const t = wlNormTicker(sym); wlMtDraft[t] = Object.assign({}, wlMtDraft[t] || {}, {[k]: String(v == null ? '' : v)}); }
+/* ══ TX1 — My Thesis: การ์ดเดียว Edit ⇄ Read · textarea โตตามเนื้อหา · ร่างอัตโนมัติ (localStorage ต่อหุ้น+ช่อง) ══
+   ร่างอยู่ที่ localStorage 'tx1.draft.<T>.<field>' (ความสะดวกต่อเครื่อง) · schema ที่เซฟ (my_thesis / next_check_*) ไม่เปลี่ยน · มีแต่ Save ที่ทำให้ homework เสร็จ */
+const WL_MT_FIELDS = ['why', 'exit', 'nc_date', 'nc_note'];
+let wlMtEdit = {}, wlMtTimer = {}, wlMtLoaded = {};
+function wlMtLsKey(t, k){ return 'tx1.draft.' + t + '.' + k; }
+function wlMtSaved(it){ const m = wlMyThesis(it); return {why:m.why, exit:m.exit, nc_date:String(it.next_check_date || ''), nc_note:String(it.next_check_note || '')}; }
+function wlMtDirty(t){
+  const it = wlItemOf(t), d = wlMtDraft[t]; if(!it || !d) return false;
+  const s = wlMtSaved(it); return WL_MT_FIELDS.some(k=>d[k] != null && String(d[k]).trim() !== String(s[k]).trim());
+}
+function wlMtClearLs(t){ try{ WL_MT_FIELDS.forEach(k=>localStorage.removeItem(wlMtLsKey(t, k))); }catch(e){} }
+function wlMtFlush(t){
+  clearTimeout(wlMtTimer[t]);
+  try{
+    const d = wlMtDraft[t] || {}, it = wlItemOf(t), s = it ? wlMtSaved(it) : {};
+    WL_MT_FIELDS.forEach(k=>{ const key = wlMtLsKey(t, k); if(d[k] != null && String(d[k]).trim() !== String(s[k] == null ? '' : s[k]).trim()) localStorage.setItem(key, String(d[k])); else localStorage.removeItem(key); });
+  }catch(e){}
+}
+function wlMtLoadDrafts(t){   /* ครั้งแรกที่วาดการ์ดของหุ้นนี้: มีร่างที่ต่างจากที่เซฟ → เปิดโหมดแก้ไขพร้อมร่าง */
+  if(wlMtLoaded[t]) return; wlMtLoaded[t] = 1;
+  try{
+    const o = {}; WL_MT_FIELDS.forEach(k=>{ const v = localStorage.getItem(wlMtLsKey(t, k)); if(v != null) o[k] = v; });
+    if(!Object.keys(o).length) return;
+    wlMtDraft[t] = Object.assign({}, o, wlMtDraft[t] || {});
+    if(wlMtDirty(t)) wlMtEdit[t] = true; else { delete wlMtDraft[t]; wlMtClearLs(t); }
+  }catch(e){}
+}
+function wlMtGrow(ta){
+  try{
+    if(!ta) return; ta.style.height = 'auto'; const sh = ta.scrollHeight; if(!sh) return;
+    const mx = Math.round(window.innerHeight * 0.6), h = sh + (ta.offsetHeight - ta.clientHeight);
+    ta.style.height = Math.min(h, mx) + 'px'; ta.style.overflowY = h > mx ? 'auto' : 'hidden';
+  }catch(e){}
+}
+function wlMtGrowAll(){ try{ document.querySelectorAll('textarea[data-wl-mt-ta]').forEach(wlMtGrow); }catch(e){} }
+function wlMtIn(sym, k, v, el){
+  const t = wlNormTicker(sym); wlMtDraft[t] = Object.assign({}, wlMtDraft[t] || {}, {[k]: String(v == null ? '' : v)});
+  if(el && el.tagName === 'TEXTAREA') wlMtGrow(el);
+  clearTimeout(wlMtTimer[t]); wlMtTimer[t] = setTimeout(()=>wlMtFlush(t), 1000);
+  try{ document.querySelectorAll('[data-wl-mt="' + t + '"] [data-wl-mt-draft]').forEach(x=>{ x.hidden = !wlMtDirty(t); }); }catch(e){}
+}
+function wlMtEditOpen(sym){
+  const t = wlNormTicker(sym); wlMtEdit[t] = true; wlMtMsg[t] = '';
+  try{ renderWatchlist(); }catch(e){}
+  try{ const ta = document.querySelector('[data-wl-mt="' + t + '"] textarea'); if(ta) ta.focus(); }catch(e){}
+}
+function wlMtDiscard(sym){
+  const t = wlNormTicker(sym); clearTimeout(wlMtTimer[t]); delete wlMtDraft[t]; wlMtClearLs(t); wlMtEdit[t] = false; wlMtMsg[t] = '';
+  try{ renderWatchlist(); }catch(e){}
+}
+function wlMtCancel(sym){   /* Cancel / Esc — ถามยืนยันเฉพาะเมื่อข้อความเปลี่ยน */
+  const t = wlNormTicker(sym);
+  if(wlMtDirty(t) && !confirm('Discard your unsaved changes?')) return;
+  wlMtDiscard(t);
+}
+function wlMtFmtDate(ds){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ds || '')); return m ? m[3] + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m[2] - 1] + ' ' + m[1] : ''; }
+document.addEventListener('keydown', ev=>{
+  try{
+    const box = ev.target && ev.target.closest ? ev.target.closest('[data-wl-mt][data-wl-mt-mode="edit"]') : null; if(!box) return;
+    const t = box.dataset.wlMt;
+    if((ev.metaKey || ev.ctrlKey) && ev.key === 'Enter'){ ev.preventDefault(); ev.stopPropagation(); wlMtSave(t); }
+    else if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); wlMtCancel(t); }
+  }catch(e){}
+}, true);
+window.addEventListener('beforeunload', ev=>{
+  let any = false; try{ Object.keys(wlMtDraft).forEach(t=>{ if(wlMtDirty(t)){ any = true; wlMtFlush(t); } }); }catch(e){}
+  if(any){ ev.preventDefault(); ev.returnValue = ''; return ''; }
+});
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') try{ Object.keys(wlMtDraft).forEach(t=>{ if(wlMtDirty(t)) wlMtFlush(t); }); }catch(e){} });
+window.addEventListener('resize', ()=>wlMtGrowAll());
 function wlMtSave(sym){
   const t = wlNormTicker(sym), it = wlItemOf(t), col = wlCol(); if(!it || !col) return;
   const d = wlMtDraft[t] || {}, cur = wlMyThesis(it);
   const why = String(d.why != null ? d.why : cur.why).trim().slice(0, 2000), exit = String(d.exit != null ? d.exit : cur.exit).trim().slice(0, 2000);
   wlMtMsg[t] = '';
   const ncDate = String(d.nc_date != null ? d.nc_date : (it.next_check_date || '')), ncNote = String(d.nc_note != null ? d.nc_note : (it.next_check_note || '')).trim().slice(0, 120);
-  Promise.resolve(col.doc(t).update({my_thesis:{why, exit, updated_at:new Date().toISOString()}, next_check_date:/^\d{4}-\d{2}-\d{2}$/.test(ncDate) ? ncDate : '', next_check_note:ncNote})).then(()=>{ delete wlMtDraft[t]; wlMtMsg[t] = 'Saved'; try{ renderWatchlist(); }catch(e){} })
+  Promise.resolve(col.doc(t).update({my_thesis:{why, exit, updated_at:new Date().toISOString()}, next_check_date:/^\d{4}-\d{2}-\d{2}$/.test(ncDate) ? ncDate : '', next_check_note:ncNote})).then(()=>{ clearTimeout(wlMtTimer[t]); delete wlMtDraft[t]; wlMtClearLs(t); wlMtEdit[t] = false; wlMtMsg[t] = 'Saved'; try{ renderWatchlist(); }catch(e){} })
     .catch(err=>{ wlMtMsg[t] = 'Could not save — your text is kept (' + ((err && (err.code || err.message)) || err) + ')'; try{ renderWatchlist(); }catch(e){} });
 }
 /* ══ PL2·3 — My Thesis (แท็บเดียว) : ข้อความของฉัน + รูปกราฟ + โน้ตเดิม · AI Thesis แยกต่างหาก (การ์ดตัวอย่างข้าง ๆ) ══
@@ -7782,17 +7872,35 @@ function wlOnbHtml(it){
 }
 function wlMtHtml(it){
   if(!it) return '';
-  const e = escHtml, t = it.ticker, m = wlMyThesis(it), d = wlMtDraft[t] || {}, why = d.why != null ? d.why : m.why, ex = d.exit != null ? d.exit : m.exit, ready = wlReady(t), msg = wlMtMsg[t] || '';
+  const e = escHtml, t = it.ticker; wlMtLoadDrafts(t);
+  const m = wlMyThesis(it), d = wlMtDraft[t] || {}, why = d.why != null ? d.why : m.why, ex = d.exit != null ? d.exit : m.exit, ready = wlReady(t), msg = wlMtMsg[t] || '';
   const ncd = d.nc_date != null ? d.nc_date : (it.next_check_date || ''), ncn = d.nc_note != null ? d.nc_note : (it.next_check_note || '');
   const myU = it.my_thesis && it.my_thesis.updated_at ? String(it.my_thesis.updated_at).slice(0, 10) : '', th = wlThesisOf(it);
   const aiU = !th ? '' : (it.thesis_imported_at ? 'imported ' + String(it.thesis_imported_at).slice(0, 10) : 'data as of ' + String(th.date || '—').slice(0, 10));
-  return `<div class="wlMt" data-wl-mt="${e(t)}"><div class="wlMtH"><b>My Thesis</b> ${wlStatusHtml(it) || `<span class="wlMtSt ${ready ? 'ok' : ''}" data-wl-ready>${ready ? 'Ready ✓' : 'Drafting thesis'}</span>`}</div>
-    <div class="mut wlDates" data-wl-dates>My Thesis: ${myU ? 'updated ' + e(myU) : '—'} · AI Thesis: ${aiU ? e(aiU) : '—'}</div>
-    <label>① Why buy<textarea rows="2" maxlength="2000" data-wl-mt-why placeholder="What is improving and not yet priced in?" oninput="wlMtIn('${e(t)}','why',this.value)">${e(why)}</textarea></label>
-    <label>④ Wrong if<textarea rows="2" maxlength="2000" data-wl-mt-exit placeholder="What breaks the thesis (data, event, or time limit)?" oninput="wlMtIn('${e(t)}','exit',this.value)">${e(ex)}</textarea></label>
+  const pill = wlStatusHtml(it) || `<span class="wlMtSt ${ready ? 'ok' : ''}" data-wl-ready>${ready ? 'Ready ✓' : 'Drafting thesis'}</span>`;
+  const dates = `<div class="mut wlDates" data-wl-dates>My Thesis: ${myU ? 'updated ' + e(myU) : '—'} · AI Thesis: ${aiU ? e(aiU) : '—'}</div>`;
+  const hasSaved = !wlBlank(m.why) || !wlBlank(m.exit), dirty = wlMtDirty(t), editing = !!wlMtEdit[t] || !hasSaved || dirty;
+  const tail = `${it.archived === true ? `<div class="wlMtF"><button type="button" class="small" data-wl-restore onclick="wlRestore('${e(t)}')">Restore</button></div><div class="mut" data-wl-arch-info>Archived ${e(String(it.archived_at || '').slice(0, 10))}: ${e(it.archived_reason || '')}</div>` : ''}${wlOnbHtml(it)}`;
+  setTimeout(wlMtGrowAll, 0);
+  if(!editing){
+    const blk = (k, lb, v, attr) => wlBlank(v)
+      ? `<div class="wlMtBlk empty" ${attr}><div class="wlMtLb">${lb}</div><div class="mut">Not written yet · <button type="button" class="ln1-link" data-wl-mt-write onclick="wlMtEditOpen('${e(t)}')">Write ›</button></div></div>`
+      : `<div class="wlMtBlk" ${attr} ondblclick="wlMtEditOpen('${e(t)}')"><div class="wlMtLb">${lb}</div><div class="wlMtTx">${e(v)}</div></div>`;
+    const ncLine = ncd || ncn ? [wlMtFmtDate(ncd), ncn].filter(Boolean).join(' · ') : '';
+    return `<div class="wlMt wlMtRead" data-wl-mt="${e(t)}" data-wl-mt-mode="read"><div class="wlMtH"><b>My Thesis</b> ${pill}<button type="button" class="small wlMtEd" data-wl-mt-edit onclick="wlMtEditOpen('${e(t)}')">Edit</button></div>
+    ${dates}
+    ${blk('why', '① Why buy', m.why, 'data-wl-mt-rwhy')}
+    ${blk('exit', '④ Wrong if', m.exit, 'data-wl-mt-rexit')}
+    <div class="wlMtNc" data-wl-mt-rnc><span class="wlMtLb">Next check</span> ${ncLine ? e(ncLine) : '<span class="mut">not set</span>'}</div>
+    ${msg ? `<div class="mut" data-wl-mt-msg>${e(msg)}</div>` : ''}${tail}</div>`;
+  }
+  return `<div class="wlMt" data-wl-mt="${e(t)}" data-wl-mt-mode="edit"><div class="wlMtH"><b>My Thesis</b> ${pill}<span class="wlMtDraft" data-wl-mt-draft ${dirty ? '' : 'hidden'}>Unsaved draft · <button type="button" class="ln1-link" data-wl-mt-dsave onclick="wlMtSave('${e(t)}')">Save</button> / <button type="button" class="ln1-link" data-wl-mt-ddisc onclick="wlMtDiscard('${e(t)}')">Discard</button></span></div>
+    ${dates}
+    <label>① Why buy<textarea rows="3" maxlength="2000" data-wl-mt-why data-wl-mt-ta placeholder="What is improving and not yet priced in?" oninput="wlMtIn('${e(t)}','why',this.value,this)">${e(why)}</textarea></label>
+    <label>④ Wrong if<textarea rows="3" maxlength="2000" data-wl-mt-exit data-wl-mt-ta placeholder="What breaks the thesis (data, event, or time limit)?" oninput="wlMtIn('${e(t)}','exit',this.value,this)">${e(ex)}</textarea></label>
     <div class="wlNcRow"><label>Next check<input type="date" data-wl-nc-date value="${e(ncd)}" oninput="wlMtIn('${e(t)}','nc_date',this.value)"></label><label class="grow">What to check<input type="text" maxlength="120" data-wl-nc-note value="${e(ncn)}" placeholder="e.g. Q3 earnings, 200d MA" oninput="wlMtIn('${e(t)}','nc_note',this.value)"></label></div>
-    <div class="wlMtF"><button type="button" class="small" data-wl-mt-save onclick="wlMtSave('${e(t)}')">Save</button>${it.archived === true ? `<button type="button" class="small" data-wl-restore onclick="wlRestore('${e(t)}')">Restore</button>` : `<button type="button" class="small" data-wl-archive onclick="wlArchiveOpen('${e(t)}')">Archive…</button>`}<span class="mut" data-wl-mt-msg>${e(msg)}</span></div>
-    ${it.archived === true ? `<div class="mut" data-wl-arch-info>Archived ${e(String(it.archived_at || '').slice(0, 10))}: ${e(it.archived_reason || '')}</div>` : ''}${wlOnbHtml(it)}</div>`;
+    <div class="wlMtF"><button type="button" class="small primary" data-wl-mt-save onclick="wlMtSave('${e(t)}')">Save</button><button type="button" class="small" data-wl-mt-cancel onclick="wlMtCancel('${e(t)}')">Cancel</button><span class="mut" data-wl-mt-msg>${e(msg)}</span></div>
+    ${tail}</div>`;
 }
 /* ══ PL1·A6 — Watchlist management: status tag · Next check · filters (Track/Reason/RS) · sort · Archive/Restore ══ */
 let wlReasonF = new Set(), wlRsF = new Set(), wlSortMode = 'rs', wlShowArch = false, wlArch = null;
