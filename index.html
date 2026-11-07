@@ -23479,6 +23479,10 @@ function ffState(){
     f.rrg.loading = false;
     if(f.rrg.err && f.rrg.err !== 'nokey') f.rrg.err = '';
   }
+  /* RRG1c — loading ต้องสะท้อน "มี run วิ่งอยู่จริง" เท่านั้น: state ถูก rebuild จาก Firestore ทุก snapshot และ loading:true ถูกเซฟไปกลางทาง
+     → ไม่มี run/ไม่มีนับถอยหลังแต่ยังโชว์ "กำลังดึง" ค้าง (บั๊ก RRG ค้างหลังชุดแรก) */
+  if(f.rrg.loading && !rrgBusy && !rrgProg) f.rrg.loading = false;
+  else if(rrgBusy && !f.rrg.loading) f.rrg.loading = true;
   if(!Array.isArray(f.dials)  || !f.dials.length)  f.dials  = d.dials;
   if(!Array.isArray(f.log))                        f.log    = [];
   if(typeof f.themesCol !== 'boolean')             f.themesCol = true;   /* ยังไม่เคยตั้ง → ยุบไว้ */
@@ -23879,6 +23883,16 @@ function rrgMergeRow(arr, row){
   const i = arr.findIndex(x=>x && x.sym === row.sym);
   if(i >= 0) arr[i] = row; else arr.push(row);
 }
+/* RRG1c — คิวต้องไม่ค้างเงียบ ๆ
+   rrgGen: run ที่ถูกยกเลิก (watchdog/reset) ตื่นมาทีหลังต้องเลิกเงียบ ๆ ไม่ไปทับ run ใหม่
+   rrgLastReqAt: เวลาที่ run "ขยับ" ล่าสุด (เริ่ม run / ยิง request) — เกิน RRG_STALL_MS ขณะ busy = ค้าง */
+let rrgGen = 0, rrgLastReqAt = 0;
+const RRG_STALL_MS = 120000;
+function rrgReset(){
+  rrgGen++; rrgBusy = false; rrgRunP = null;
+  try{ rrgSetProg(null); }catch(e){ rrgProg = null; }
+  try{ ffState().rrg.loading = false; }catch(e){}
+}
 function rrgRefresh(force){
   const f = ffState();
   const key = rrgKey();
@@ -23886,10 +23900,39 @@ function rrgRefresh(force){
   if(rrgBusy) return rrgRunP;    /* RRG1b — เข้าร่วมคิวที่กำลังวิ่ง */
   if(!force && rrgCacheFresh(f)) return Promise.resolve();
   rrgBusy = true;
-  rrgRunP = rrgRun(f, key).finally(()=>{ rrgBusy = false; rrgRunP = null; });
+  const gen = ++rrgGen;
+  rrgLastReqAt = Date.now();
+  rrgRunP = rrgRun(f, key, gen).finally(()=>{ if(gen === rrgGen){ rrgBusy = false; rrgRunP = null; } });
   return rrgRunP;
 }
-async function rrgRun(f, key){
+/* ทำต่อเฉพาะ symbol ที่เหลือ — เรียกตอนโหลดหน้า / แท็บกลับมามองเห็น / watchdog
+   เวลาที่ "ยิงได้อีกครั้ง" เก็บใน localStorage (rrgLastBatchAt + cooldown) → rrgWaitSlot รอเองตามเวลาจริง ไม่ยิงทับหน้าต่างเดิม */
+function rrgNextAllowedAt(){ return rrgLastBatchAt() + RRG_CFG.cooldownMs; }
+function rrgResume(why){
+  try{
+    if(!state || cl2aGateOn || !rrgKey()) return;
+    const f = ffState();
+    if(rrgBusy){
+      if(Date.now() - rrgLastReqAt > RRG_STALL_MS){
+        console.warn('rrg watchdog (' + why + '): no request for >' + (RRG_STALL_MS/1000) + ' s — reset, resuming missing symbols only');
+        rrgReset();
+      } else { ffRenderThemes(); return; }
+    }
+    const pend = f.rrg && Array.isArray(f.rrg.pending) && f.rrg.pending.length;
+    if(pend && !f.rrg.err) rrgRefresh(true);
+    else ffRenderThemes();
+  }catch(e){ console.warn('rrgResume:', e); }
+}
+function rrgWatchdog(){ if(rrgBusy && Date.now() - rrgLastReqAt > RRG_STALL_MS) rrgResume('watchdog'); }
+/* batch x/y จาก pending (ใช้ตอนไม่มี rrgProg เช่นเพิ่งโหลดหน้า) */
+function rrgBatchInfo(f){
+  const total = RRG_SYMS.length + 1, pend = f && f.rrg && Array.isArray(f.rrg.pending) ? f.rrg.pending.length : RRG_SYMS.length;
+  const nb = Math.ceil(total / RRG_CFG.batch), done = Math.max(0, RRG_SYMS.length - pend);
+  return {batch: Math.min(nb, Math.floor((done ? done + 1 : 0) / RRG_CFG.batch) + 1), nb};
+}
+async function rrgRun(f, key, gen){
+  const dead = ()=> gen !== rrgGen;
+  const cur = ()=>{ f = ffState(); return f; };   /* state ถูก rebuild จาก snapshot ได้ทุกเมื่อ — อย่าถือ object เก่าข้าม await */
   rrgMarkAutoAttempt();
   f.rrg = Object.assign({}, f.rrg, {loading:true, err:'', errRaw:''});
   renderFundflow();
@@ -23905,19 +23948,24 @@ async function rrgRun(f, key){
       let got = null, tries = 0, limit = false;
       while(!got){
         await rrgWaitSlot({batch:ci+1, nb:chunks.length, limit});
+        if(dead()) return;
         rrgSetProg({batch:ci+1, nb:chunks.length, waitUntil:0, limit:false});
         tries++;
         rrgMarkBatch();     /* เครดิตถูกหักตอนยิง ไม่ใช่ตอนสำเร็จ */
+        rrgLastReqAt = Date.now();
         try{ got = await rrgFetchBatch(chunks[ci], key); }
         catch(e){
+          if(dead()) return;
           rrgMarkBatch();
-          f.rrg.errRaw = String((e && e.message) || e);
+          cur().rrg.errRaw = String((e && e.message) || e);
           console.warn('rrg batch ' + (ci+1) + '/' + chunks.length + ' try ' + tries + ':', f.rrg.errRaw);
           if(e && e.rate && tries < RRG_MAX_TRIES){ limit = true; continue; }   /* เก็บชุดที่ได้แล้ว · รอ 61 วิ · ลองชุดนี้ใหม่ */
           if(e) e.rrgRate = !!e.rate;
           throw e;
         }
+        if(dead()) return;
       }
+      cur();
       if(chunks[ci].indexOf(RRG_BENCH) >= 0){
         rrgBenchMap = rrgSeries(got[RRG_BENCH]);
         if(!rrgBenchMap.size){ rrgBenchMap = null; throw new Error('ดึงราคา '+RRG_BENCH+' (ตัวหาร) ไม่ได้'); }
@@ -23928,22 +23976,29 @@ async function rrgRun(f, key){
         const r = rrgBuildRows(def, got, rrgBenchMap);
         rrgMergeRow(f.rrg.rowsD, r.d); rrgMergeRow(f.rrg.rowsW, r.w);
       });
-      f.rrg.pending = f.rrg.pending.filter(s=>chunks[ci].indexOf(s) < 0);
+      /* state ใหม่ (จาก snapshot) อาจไม่มี pending → คำนวณจากแถวที่มีโมเดลใหม่ ไม่ใช่เชื่อ pending เดิมอย่างเดียว */
+      f.rrg.pending = (Array.isArray(f.rrg.pending) ? f.rrg.pending : need).filter(s=>chunks[ci].indexOf(s) < 0);
+      f.rrg.loading = true;
       renderFundflow(); schedulePersist();
     }
+    cur();
     if(f.rrg.pending.length === 0){      /* ครบทุก symbol + SPY → ตราโมเดลใหม่ได้ */
       f.rrg = Object.assign({}, f.rrg, {build:RRG_BUILD, model:RRG_MODEL, lastBar:[...rrgBenchMap.keys()].sort().pop(), day:rrgToday(), at:new Date().toISOString(), loading:false, err:'', errRaw:''});
       delete f.rrg.pending;
       try{ sdRebaseline(); }catch(e){ console.warn('sdRebaseline:', e); }
     }
   }catch(e){
+    if(dead()) return;
+    cur();
     const raw = String((e && e.message) || e);
     f.rrg = Object.assign({}, f.rrg, {loading:false, errRaw:raw,
-      err: (e && e.rrgRate) ? 'Price limit reached — tap Refresh to resume' : 'Couldn’t update prices — tap Refresh to retry'});
+      err: (e && e.rrgRate) ? 'Price limit reached — tap Retry to resume' : 'Couldn’t update prices — tap Retry'});
   }finally{
-    rrgSetProg(null);
+    if(!dead()) rrgSetProg(null);
   }
-  f.rrg.loading = false;
+  if(dead()) return;
+  rrgBusy = false;      /* ก่อน render สุดท้าย — ffState() ผูก loading กับ rrgBusy */
+  cur().rrg.loading = false;
   renderFundflow();
   schedulePersist();
 }
@@ -23960,6 +24015,10 @@ function rrgAutoOnce(){
   rrgAutoDone = true;
   rrgRefresh(false);
 }
+/* RRG1c — แท็บกลับมามองเห็น / กลับจาก bfcache → ทำคิวต่อ · watchdog เช็คทุก 15 วิ */
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) rrgResume('visible'); });
+window.addEventListener('pageshow', e=>{ if(e && e.persisted) rrgResume('pageshow'); });
+setInterval(rrgWatchdog, 15000);
 
 /* ---------- บริบท RSP/SPY — อยู่ใต้ชั้น 2 · ไม่คิดคะแนน ----------
    equal-weight vs cap-weight: EMA10 เหนือ = ตลาดกว้าง (ขึ้นทั้งกระดาน)
@@ -24524,12 +24583,14 @@ function ffRenderThemes(){
         const sec = Math.max(0, Math.ceil((p.waitUntil - Date.now())/1000));
         msg = p.limit ? `Price limit reached — retrying in ${sec} s` : `Updating prices · batch ${p.batch}/${p.nb} · next in ${sec} s`;
       } else if(p){
-        msg = `Updating prices · batch ${p.batch}/${p.nb}…`;
+        msg = `Updating prices · batch ${p.batch}/${p.nb} · sending…`;
       } else {
-        msg = 'Updating prices…';
+        const bi = rrgBatchInfo(f);
+        msg = `Updating prices · batch ${bi.batch}/${bi.nb} · resuming…`;
       }
     }
-    else if(r.err){ msg = ffEsc(r.err) + (wait.length ? ' · <b>' + wait.length + ' waiting for refresh (old model)</b>' : ''); cls = 'red'; }   /* RRG1b — ข้อความสั้น · ข้อความดิบอยู่ใน Details/console */
+    else if(r.err){ msg = ffEsc(r.err) + (wait.length ? ' · <b>' + wait.length + ' waiting for refresh (old model)</b>' : '') + ' <button class="small" data-rrg-retry onclick="rrgManualRefresh()">Retry</button>'; cls = 'red'; }
+    else if(Array.isArray(r.pending) && r.pending.length){ const bi = rrgBatchInfo(f); msg = `Updating prices paused · batch ${bi.batch}/${bi.nb} · ${r.pending.length} waiting <button class="small" data-rrg-retry onclick="rrgManualRefresh()">Retry</button>`; cls = 'amber'; }   /* RRG1b — ข้อความสั้น · ข้อความดิบอยู่ใน Details/console */
     else if(!rows.length){ msg = 'ยังไม่มีข้อมูล — กดรีเฟรช'; cls = 'amber'; }
     else {
       const bad = rows.length - ok.length - wait.length;
