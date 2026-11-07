@@ -117,7 +117,7 @@ def ask_tests(pw, w, h):
         check(f"{tag} §11 การ์ด ⚡ อย่างเดียว: prompt มี '⚡ speeding up' ไม่มี NEW", cp2 and "(Daily, ⚡ speeding up)" in cp2, cp2)
         tt = js(page, """()=>{ const t=document.getElementById('cgToast'); if(!t) return null; const r=t.getBoundingClientRect();
             return {txt:[...t.querySelectorAll('.cgL')].map(e=>e.textContent).join('\\n'), shown:t.classList.contains('show'), lines:t.querySelectorAll('.cgL').length, fits:r.left>=0&&r.right<=innerWidth, btn:t.querySelectorAll('button,a').length, n:document.querySelectorAll('#cgToast').length}; }""")
-        check(f"{tag} CG1 toast ล่าง 3 บรรทัดตามสเปก มีแค่ปุ่ม ✕ ไม่เกิน 3 บรรทัด ไม่ล้นจอ", tt and tt["shown"] and tt["txt"] == "Goal: find the dated reason this sector turned.\nPaste → scan → if real driver, tick segments → \"pick\".\nNo dated driver = price-only move, ignore." and tt["lines"] <= 3 and tt["fits"] and tt["btn"] == 1 and tt["n"] == 1, tt)
+        check(f"{tag} CG1 toast ล่าง 3 บรรทัดตามสเปก มีแค่ปุ่ม ✕ ไม่เกิน 3 บรรทัด ไม่ล้นจอ", tt and tt["shown"] and tt["txt"] == "Goal: find the dated reason this sector turned.\nPaste → scan → real driver? tick segments → pick.\nNo dated driver = price move, ignore." and tt["lines"] <= 3 and tt["fits"] and tt["btn"] == 1 and tt["n"] == 1, tt)
         ms = js(page, "()=>[cgToastMs('x'), cgToastMs('x'.repeat(10)), cgToastMs('x'.repeat(60)), cgToastMs('x'.repeat(100)), cgToastMs('x'.repeat(40)), cgToastMs('x'.repeat(120)), cgToastMs('x'.repeat(200))]")
         check(f"{tag} §11 auto-hide = clamp(5s, 2.5s+60ms×ตัวอักษร, 10s)", ms == [5000, 5000, 6100, 8500, 5000, 9700, 10000], ms)
         js(page, "()=>{ const t=document.getElementById('cgToast'); t.dispatchEvent(new Event('mouseenter')); }"); settle(page, 150)
