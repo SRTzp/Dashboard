@@ -95,11 +95,38 @@ def ui_tests(pw, w, h):
         b.close()
 
 
+def ask_tests(pw, w, h):
+    tag = f"[{ENGINE}/{w}]"
+    b, page, ce, pe = T.launch(pw, w, h)
+    try:
+        js(page, "()=>localStorage.removeItem('dash.ps1Off')")
+        rows = [Rp("AAA", "lead", 2, 8, dm=0.1, off=-1.0), Rp("CCC", "lag", 1, 9, dm=0.1), Rp("DDD", "lead", 9, 9, dm=0.9)]
+        P105.seed_rrg(page, d=rows, wk=[]); P105.go_flow(page)
+        js(page, "()=>{ window.__cp=[]; Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{window.__cp.push(t);return Promise.resolve();}},configurable:true}); }")
+        has = js(page, "()=>Object.fromEntries([...document.querySelectorAll('#ffThemes [data-rr]')].map(e=>[e.dataset.rr, !!e.querySelector('[data-sd-ask]')]))")
+        check(f"{tag} §11 'Ask why ›' เฉพาะการ์ด Fresh (AAA=NEW, DDD=⚡) · CCC ไม่มี", has == {"AAA": True, "CCC": False, "DDD": True}, has)
+        txt = js(page, "()=>document.querySelector('#ffThemes [data-rr=AAA] [data-sd-sum]').innerText.replace(/\\s+/g,' ')")
+        check(f"{tag} §11 ข้อความบรรทัด: 'Not recorded · Ask why ›' (ยังไม่มี driver)", "Not recorded · Ask why ›" in txt, txt)
+        js(page, "()=>document.querySelector('#ffThemes [data-rr=AAA] [data-sd-ask]').click()"); settle(page, 300)
+        cp = js(page, "()=>window.__cp")
+        want = "idea-scout scan: AAA AAA name turned Beating SPY ↗ on "
+        check(f"{tag} §11 คลิก → คัดลอก prompt ตามข้อมูลการ์ด (state · Daily · NEW·2)", cp and cp[0].startswith(want) and "(Daily, NEW·2)" in cp[0] and cp[0].endswith("then the value chain and tickers."), cp)
+        open_ = js(page, "()=>document.querySelector('#ffThemes [data-rr=AAA]').classList.contains('open')")
+        check(f"{tag} §11 กดลิงก์ไม่เปิด/ปิดแถว (ไม่ toggle)", open_ is False, open_)
+        cp2 = js(page, "()=>{ document.querySelector('#ffThemes [data-rr=DDD] [data-sd-ask]').click(); return window.__cp[1]; }")
+        check(f"{tag} §11 การ์ด ⚡ อย่างเดียว: prompt มี '⚡ speeding up' ไม่มี NEW", cp2 and "(Daily, ⚡ speeding up)" in cp2, cp2)
+        one = js(page, "()=>[...document.querySelectorAll('#ffThemes [data-rr] [data-sd-sum]')].filter(e=>e.querySelector('[data-sd-ask]')).every(e=>e.getBoundingClientRect().height<=22 && e.scrollWidth<=e.clientWidth+1)")
+        check(f"{tag} §11 บรรทัดเดียว ไม่ห่อ ไม่ล้น ({w}px)", one, one)
+    finally:
+        b.close()
+
+
 def main():
     with sync_playwright() as pw:
         pure_tests(pw)
         for w, h in ((1440, 1000), (390, 844)):
             ui_tests(pw, w, h)
+            ask_tests(pw, w, h)
     bad = [r for r in results if not r[1]]
     print(f"\nPS1b phase122: {len(results) - len(bad)}/{len(results)} PASS")
     raise SystemExit(1 if bad else 0)

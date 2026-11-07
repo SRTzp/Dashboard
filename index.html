@@ -924,7 +924,7 @@ details.panel[open]>summary::before{transform:rotate(90deg)}
 .ffQ.imp{background:var(--blue-dim)}
 .ffQ.flat{background:var(--surface2,rgba(128,128,128,.10))}.ffQ.flat .ffQt{color:var(--muted)}.ffQ.flat .ffChip{color:var(--muted)}
 .rr-lean{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;height:22px;overflow:hidden;align-content:flex-start;font-family:inherit}.rr-ch{flex:none;border:1px solid;border-radius:99px;padding:1px 8px;font-size:.72rem;line-height:1.3;white-space:nowrap}.rr-gap{flex:none;font-size:.74rem;color:var(--muted);white-space:nowrap}.rr-gap.dn{color:var(--red)}.rr-wait{color:var(--muted);font-size:.76rem;height:auto}
-.rr-lean{container-type:inline-size}.rr-sp{flex:none;font-size:.7rem;white-space:nowrap;font-weight:600}.rr-sp.up{color:var(--teal)}.rr-sp.dn{color:var(--amber)}.rr-sps{display:none}.ftb{display:inline-block;flex:none;font-size:.68rem;font-weight:700;line-height:1.3;padding:0 6px;border-radius:999px;white-space:nowrap;color:var(--amber);border:1px solid var(--amber);margin-left:4px}.ftb.od{color:var(--red);border-color:var(--red)}.ftPin{display:flex;align-items:center;gap:8px;padding:8px 10px;margin:0 0 6px;border:1px solid var(--amber);border-radius:10px;background:var(--surface2);font-size:.82rem}.ftPin.od{border-color:var(--red)}.ftPin.od b{color:var(--red)}.ftPin .tx{flex:1;min-width:0}.ftLine{color:var(--amber);font-size:.8rem;margin:6px 0}.rr-nw{flex:none;font-size:.7rem;white-space:nowrap;font-weight:700;color:var(--blue)}
+.rr-lean{container-type:inline-size}.rr-sp{flex:none;font-size:.7rem;white-space:nowrap;font-weight:600}.rr-sp.up{color:var(--teal)}.rr-sp.dn{color:var(--amber)}.rr-sps{display:none}.ftb{display:inline-block;flex:none;font-size:.68rem;font-weight:700;line-height:1.3;padding:0 6px;border-radius:999px;white-space:nowrap;color:var(--amber);border:1px solid var(--amber);margin-left:4px}.ftb.od{color:var(--red);border-color:var(--red)}.ftPin{display:flex;align-items:center;gap:8px;padding:8px 10px;margin:0 0 6px;border:1px solid var(--amber);border-radius:10px;background:var(--surface2);font-size:.82rem}.ftPin.od{border-color:var(--red)}.ftPin.od b{color:var(--red)}.ftPin .tx{flex:1;min-width:0}.sd-ask{all:unset;cursor:pointer;color:var(--blue);font-size:inherit;white-space:nowrap}.sd-sum:has([data-sd-ask]){overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.ftLine{color:var(--amber);font-size:.8rem;margin:6px 0}.rr-nw{flex:none;font-size:.7rem;white-space:nowrap;font-weight:700;color:var(--blue)}
 @container (max-width:330px){.rr-spl{display:none}.rr-sps{display:inline}}
 .rr-leg{margin:6px 0 2px}.rr-leg summary{cursor:pointer;font-size:.76rem;color:var(--muted);list-style:none}.rr-leg summary::-webkit-details-marker{display:none}.rr-leg[open] summary{margin-bottom:2px}.ffQ.wait{background:var(--surface2,rgba(128,128,128,.10));opacity:.85}.ffQ.wait .ffQt{color:var(--muted)}.ffQ.wait .ffChip{color:var(--muted)}
 .rr-dt{margin-top:6px;font-size:.74rem;color:var(--muted)}.rr-dt summary{cursor:pointer;font-weight:600;list-style:none}.rr-dt summary::-webkit-details-marker{display:none}.rr-dg{display:grid;gap:3px;margin-top:6px;overflow-wrap:anywhere}.rr-dg b{color:var(--text)}
@@ -24735,8 +24735,26 @@ function sdImpApply(){
   sdOpen[sym] = true; sdImpClose(); sdRefreshRow(sym, false);
 }
 /* ── แถว Flow (มุมมอง lean) ── */
-function sdSummary(x, n){
-  if(!n || (!n.driver.trim() && !sdHasEv(n) && !n.reviewed_at)) return '<span class="sub">Drivers not yet recorded</span>';
+/* PS1b §11 — "Ask why ›" only on Fresh cards (NEW or ⚡): copies an idea-scout prompt (no download) · ideas↔sector linking does not exist today, so the line only offers the copy link */
+function sdAskPrompt(x, tf){
+  const nw = rrgNew(x, tf), sp = rrgSpeed(x.dMom), W = tf === 'W';
+  const bits = [W ? 'Weekly' : 'Daily'];
+  if(nw) bits.push('NEW·' + nw.n);
+  if(sp.fast) bits.push('⚡ ' + (sp.dir > 0 ? 'speeding up' : 'slowing fast'));
+  return 'idea-scout scan: ' + x.sym + ' ' + x.name + ' turned ' + (RRG_REL_TXT[x.quad] || x.quad) + ' on ' + (x.lastObs || x.date || '—') + ' (' + bits.join(', ') + '). Find the dated driver first (evidence from before/around the turn), then the value chain and tickers.';
+}
+function sdAskWhy(x, tf, n){
+  if(ps1Off() || !rrgIsFresh(x, tf)) return '';
+  const empty = !n || (!n.driver.trim() && !sdHasEv(n) && !n.reviewed_at);
+  return ' · <button type="button" class="sd-ask" data-sd-ask="' + ffEsc(x.sym) + '" onclick="event.stopPropagation();sdAskWhyGo(\'' + ffEsc(x.sym) + '\')">' + (empty ? 'Ask why ›' : 'Ask why ›') + '</button>';
+}
+function sdAskWhyGo(sym){
+  const tf = rrgTf(), x = rrgRowsNow().find(r=>r.sym === sym); if(!x) return;
+  sdCopyText(sdAskPrompt(x, tf), 'Copied — paste into Claude (idea-scout)');
+}
+function rrgRowsNow(){ try{ const r = ffState().rrg || {}, rows = rrgTf() === 'W' ? r.rowsW : r.rowsD; return Array.isArray(rows) ? rows : []; }catch(e){ return []; } }
+function sdSummary(x, n, tf){
+  if(!n || (!n.driver.trim() && !sdHasEv(n) && !n.reviewed_at)) return '<span class="sub">' + ((tf && rrgIsFresh(x, tf)) ? 'Not recorded' : 'Drivers not yet recorded') + '</span>';
   const p = [];
   if(n.reviewed_at) p.push(n.reviewed_phase ? 'Reviewed ' + sdDateTxt(n.reviewed_at) + ' (' + sdPhaseLbl(n.reviewed_phase, n.reviewed_tf) + ')' + (n.model_updated ? ' · model updated ' + sdDateTxt(n.model_updated) : '') : 'Reviewed ' + sdDateTxt(n.reviewed_at) + ' · phase not recorded');
   else p.push('Not yet reviewed');
@@ -24838,7 +24856,7 @@ function rrgDetailsHtml(x, tf){
 function sdRowHtml(x, tf, QLBL){
   const sym = x.sym, n = sdNote(sym), open = !!sdOpen[sym], U = tf === 'W' ? 'w' : 'd', E = ffEsc;
   const star = `<button type="button" class="sd-star${n && n.follow ? ' on' : ''}" data-sd-star="${E(sym)}" aria-pressed="${!!(n && n.follow)}" aria-label="${n && n.follow ? 'Unfollow' : 'Follow'} ${E(sym)}" onclick="sdFollow('${sym}',event)">${n && n.follow ? '★' : '☆'}</button>`;
-  const sum = `<div class="sd-sum" data-sd-sum><span class="sd-car">${open ? '▾' : '▸'}</span> Drivers &amp; evidence · ${sdSummary(x, n)}</div>`;
+  const sum = `<div class="sd-sum" data-sd-sum><span class="sd-car">${open ? '▾' : '▸'}</span> Drivers &amp; evidence · ${sdSummary(x, n, tf)}${sdAskWhy(x, tf, n)}</div>`;
   let top;
   if(x.err) top = `<div class="l1"><span>${star}<b>${E(x.sym)}</b> <span class="sub">${E(x.name)}</span></span></div><div class="l2" style="color:var(--amber)">${E(x.err)}</div>`;
   else {
