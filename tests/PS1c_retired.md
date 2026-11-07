@@ -20,3 +20,10 @@ New suite: `tests/run_tests_phase126.py` (85 checks at 390 + 1440). Screenshots:
 
 ### Known failures that are NOT from PS1c (same result on `origin/main`)
 phase5, 23, 35, 41–46, 75, 80, 81 (date-dependent), phase13 (always), phase47/66 (removed backup files), phase105 (timeout), phase110 ("Settings = 5 cards" is stale since PS1 added the Portfolio & Risk card).
+
+### Follow-up fix: phase110 stale card count
+| Suite / check | Old expectation | Current behaviour |
+|---|---|---|
+| phase110 "Settings = 5 cards" | `acct · core · sat · prod · app` | 6 cards: `acct · ps1 (Portfolio & Risk) · core · sat · prod · app` (PS1 added Portfolio & Risk). Test updated; passes at 300/390/1280/1440. |
+
+Not fixed here: phase110 "save without editing → keys outside owner unchanged" still fails (`psRisk` is added on save, a PS1 side effect). Same root cause family, separate assertion.

@@ -171,7 +171,7 @@ def settings_tests(pw, w, h, label, shots=False):
     try:
         js(page, "()=>openSettings()"); settle(page, 500)
         cards = js(page, "()=>[...document.querySelectorAll('#setOverlay [data-set1-card]')].map(e=>e.dataset.set1Card + ':' + e.querySelector('summary').childNodes[0].textContent.trim())")
-        check(f"{tag} Settings = 5 การ์ด: Accounts & Capital · Core rules · Sat rules · Products · App", cards == ["acct:Accounts & Capital", "core:Core rules", "sat:Sat rules", "prod:Products", "app:App"], cards)
+        check(f"{tag} Settings = 6 การ์ด: Accounts & Capital · Portfolio & Risk · Core rules · Sat rules · Products · App", cards == ["acct:Accounts & Capital", "ps1:Portfolio & Risk", "core:Core rules", "sat:Sat rules", "prod:Products", "app:App"], cards)
         ck = txt(page, "#set1Check") or ""
         check(f"{tag} Setup check: fixture ครบ → '✓ All set' บรรทัดเดียว", "All set" in ck, ck)
         # ไม่มี UI ของค่าที่ตายตัว
