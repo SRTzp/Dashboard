@@ -145,7 +145,7 @@ def tests(pw, w, h, label):
         # คำสั่ง scan
         page.click("[data-idea-copyscan]"); page.wait_for_timeout(250)
         got = js(page, "()=>window.__ideaLastScan")
-        exp = "idea-scout scan\nไอเดีย: ชิปขาดตลาด ราคาพุ่ง\nชื่อ: Semis ทดสอบ · id: semis-20261005 (ใช้ id เดิม — Import แล้วแทนที่ร่างนี้)\nตลาด: TH\nโน้ตของฉัน: หน่วยความจำขายดีมาก\nหุ้นที่นึกไว้: KLAC, AMAT, LRCX"
+        exp = "idea-scout scan:\nไอเดีย: ชิปขาดตลาด ราคาพุ่ง\nชื่อ: Semis ทดสอบ · id: semis-20261005 (ใช้ id เดิม — Import แล้วแทนที่ร่างนี้)\nตลาด: TH\nโน้ตของฉัน: หน่วยความจำขายดีมาก\nหุ้นที่นึกไว้: KLAC, AMAT, LRCX"
         check(f"{tag} 1 คำสั่ง scan ตรงรูปแบบ (ไม่มีบรรทัด ที่มา เพราะว่าง)", got == exp, json.dumps(got, ensure_ascii=False))
         check(f"{tag} 1 มีข้อความ 'คัดลอกคำสั่ง scan แล้ว' หลังกด", "คัดลอกคำสั่ง scan แล้ว" in (txt_of(page, "[data-idea-copymsg]") or "") or js(page, "()=>!!document.querySelector('[data-idea-copytext]')"))
         scan_exp = exp
@@ -163,7 +163,7 @@ def tests(pw, w, h, label):
         got2 = None
         js(page, "()=>ideaOpen('idea-20261005')"); page.wait_for_timeout(200); js(page, "()=>ideaCopyScan('idea-20261005')"); page.wait_for_timeout(200)
         got2 = js(page, "()=>window.__ideaLastScan")
-        check(f"{tag} 1 ช่องว่าง = ตัดบรรทัดทิ้ง (เหลือ ไอเดีย · ชื่อ · ตลาด)", got2 == "idea-scout scan\nไอเดีย: x\nชื่อ: ไอเดียไทยล้วน · id: idea-20261005 (ใช้ id เดิม — Import แล้วแทนที่ร่างนี้)\nตลาด: US", json.dumps(got2, ensure_ascii=False))
+        check(f"{tag} 1 ช่องว่าง = ตัดบรรทัดทิ้ง (เหลือ ไอเดีย · ชื่อ · ตลาด)", got2 == "idea-scout scan:\nไอเดีย: x\nชื่อ: ไอเดียไทยล้วน · id: idea-20261005 (ใช้ id เดิม — Import แล้วแทนที่ร่างนี้)\nตลาด: US", json.dumps(got2, ensure_ascii=False))
         # Import ผล scan ด้วย id เดียวกัน
         sm = semis(id="semis-20261005", name="Semis ทดสอบ", status="exploring")
         js(page, "()=>ideaOpen('semis-20261005')"); page.wait_for_timeout(200)
@@ -260,7 +260,7 @@ def tests(pw, w, h, label):
         check(f"{tag} 4 ＋ → ไอเดียร่าง: ชื่อ 'Semiconductors วิ่ง — เพราะอะไร?' · idea.status draft · โน้ต 'หุ้นกลุ่ม Semiconductors ขึ้นพร้อมกันใน screen 2026-10-05' · tickers = 4 ตัวกลุ่ม · origin · scope US", d is not None and I.get("name") == "Semiconductors วิ่ง — เพราะอะไร?" and I.get("status") == "draft" and un.get("idea") == "หุ้นกลุ่ม Semiconductors ขึ้นพร้อมกันใน screen 2026-10-05" and un.get("tickers") == ["LSCC", "QRVO", "SYNA", "PENG"] and I.get("origin") == [{"title": "TradingView screen 2026-10-05"}] and I.get("scope") == ["US"] and d.get("user") == {}, json.dumps(I, ensure_ascii=False)[:500])
         check(f"{tag} 4 ＋ → sheet ปิด · เปิดการ์ดร่างทันที (มี ที่มา ในการ์ด + คำสั่ง scan มี 'ที่มา:')", not js(page, "()=>document.getElementById('ltOverlay').classList.contains('show')") and "ร่าง — ยังไม่ได้รัน" in (txt_of(page, "[data-idea-draft-msg]") or "") and "TradingView screen 2026-10-05" in (txt_of(page, "[data-idea-draft]") or ""))
         page.click("[data-idea-copyscan]"); page.wait_for_timeout(250)
-        check(f"{tag} 4 คำสั่ง scan ของร่างจากกลุ่ม ตรงรูปแบบ (ไอเดีย · ชื่อ · ตลาด · หุ้น · ที่มา · ไม่มีโน้ต)", js(page, "()=>window.__ideaLastScan") == "idea-scout scan\nไอเดีย: หุ้นกลุ่ม Semiconductors ขึ้นพร้อมกันใน screen 2026-10-05\nชื่อ: Semiconductors วิ่ง — เพราะอะไร? · id: semiconductors-20261005 (ใช้ id เดิม — Import แล้วแทนที่ร่างนี้)\nตลาด: US\nหุ้นที่นึกไว้: LSCC, QRVO, SYNA, PENG\nที่มา: TradingView screen 2026-10-05", js(page, "()=>window.__ideaLastScan"))
+        check(f"{tag} 4 คำสั่ง scan ของร่างจากกลุ่ม ตรงรูปแบบ (ไอเดีย · ชื่อ · ตลาด · หุ้น · ที่มา · ไม่มีโน้ต)", js(page, "()=>window.__ideaLastScan") == "idea-scout scan:\nไอเดีย: หุ้นกลุ่ม Semiconductors ขึ้นพร้อมกันใน screen 2026-10-05\nชื่อ: Semiconductors วิ่ง — เพราะอะไร? · id: semiconductors-20261005 (ใช้ id เดิม — Import แล้วแทนที่ร่างนี้)\nตลาด: US\nหุ้นที่นึกไว้: LSCC, QRVO, SYNA, PENG\nที่มา: TradingView screen 2026-10-05", js(page, "()=>window.__ideaLastScan"))
         check(f"{tag} 4 ไม่มี console error (＋ กลุ่ม)", not ce and not pe, json.dumps([ce, pe]))
     finally:
         b.close()
@@ -307,7 +307,7 @@ def tests(pw, w, h, label):
         cmd = js(page, "()=>window.__ideaLastMatch"); L = cmd.split("\n")
         i0 = L.index("หุ้น (Symbol · Description · Industry · ตลาด):"); i1 = L.index("สรุปไอเดียสำหรับจับคู่:")
         stk = L[i0 + 1:i1]
-        check(f"{tag} 5 หัวคำสั่ง: 'idea-scout match' · 'วันที่: 2026-10-05 · ที่มา: {{ชื่อไฟล์}}'", L[0] == "idea-scout match" and L[1] == "วันที่: 2026-10-05 · ที่มา: tv_volume_spike_2026-10-05.csv", json.dumps(L[:2], ensure_ascii=False))
+        check(f"{tag} 5 หัวคำสั่ง: 'idea-scout match:' · 'วันที่: 2026-10-05 · ที่มา: {{ชื่อไฟล์}}'", L[0] == "idea-scout match:" and L[1] == "วันที่: 2026-10-05 · ที่มา: tv_volume_spike_2026-10-05.csv", json.dumps(L[:2], ensure_ascii=False))
         check(f"{tag} 5 ค่าเริ่ม = ส่งเฉพาะ 7 ตัวกลุ่ม Industry ตรง (ไม่มี NTAP · IBRX) · รูปแบบ 'SYM · Description · Industry · ตลาด'", len(stk) == 7 and "TER · Teradyne, Inc. · Electronic production equipment · US" in stk and not any(s.startswith(("NTAP", "IBRX")) for s in stk), json.dumps(stk, ensure_ascii=False))
         brief = "\n".join(L[i1 + 1:])
         check(f"{tag} 5 สรุปไอเดีย 1 ไอเดีย: '[id] ชื่อ — one_liner' + ได้/เสีย/ปนกัน พร้อม industries", brief.startswith("[" + SEMIS_ID + "] ") and brief.count("[" + SEMIS_ID + "]") == 1 and "\n ได้: " + SEG + " (Electronic Production Equipment, Semiconductors) ; " in brief and "\n เสีย: ผู้ผลิตอุปกรณ์ปลายทาง" in brief and "Electronic Components" in brief and "\n ปนกัน: hyperscaler · cloud (Internet Software/Services" in brief, brief[:700])

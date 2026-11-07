@@ -93,17 +93,17 @@ def tests(pw, w, h, label):
         try: obj = json.loads(tail)
         except Exception: pass
         lines = head.split("\n")
-        chk("2 คำสั่ง: บรรทัดแรก 'idea-scout update · ตอบข้อที่ขาด #1' (ไม่มี #2) · 'ไอเดีย: {name} ({id})' · '#1 {q}' + 'สิ่งที่ผู้ใช้หามา: …' · บอกแนบภาพ/PDF · ---", lines[0] == "idea-scout update · ตอบข้อที่ขาด #1" and lines[1] == f"ไอเดีย: {idea()['name']} ({IID})" and lines[2].startswith("#1 กำลังผลิต HBM/DRAM") and lines[3] == "สิ่งที่ผู้ใช้หามา: Micron แจ้ง capex FY27 $20B (IR deck สไลด์ 12)" and "#2" not in head and "(ภาพ / PDF แนบในแชทนี้ ถ้ามี)" in head and "\n---\n" in cmd, json.dumps(lines[:6], ensure_ascii=False))
+        chk("2 คำสั่ง: บรรทัดแรก 'idea-scout update · ตอบข้อที่ขาด #1' (ไม่มี #2) · 'ไอเดีย: {name} ({id})' · '#1 {q}' + 'สิ่งที่ผู้ใช้หามา: …' · บอกแนบภาพ/PDF · ---", lines[0] == "idea-scout update:" and lines[1] == "ตอบข้อที่ขาด #1" and lines[2] == f"ไอเดีย: {idea()['name']} ({IID})" and lines[3].startswith("#1 กำลังผลิต HBM/DRAM") and lines[4] == "สิ่งที่ผู้ใช้หามา: Micron แจ้ง capex FY27 $20B (IR deck สไลด์ 12)" and "#2" not in head and "(ภาพ / PDF แนบในแชทนี้ ถ้ามี)" in head and "\n---\n" in cmd, json.dumps(lines[:6], ensure_ascii=False))
         chk("2 JSON เดิมต่อท้าย parse ได้ · schema idea@1 · id ตรง", obj is not None and obj.get("schema") == "idea@1" and obj.get("id") == IID and len(obj.get("gaps", [])) == 4, (tail or "")[:120])
         chk("2 ข้อความยืนยัน 'คัดลอกแล้ว — วางให้ idea-scout แล้ว 📥 Import ผลกลับมา' · ร่างยังอยู่ (คัดลอกแล้วไม่ล้าง)", "คัดลอกแล้ว — วางให้ idea-scout แล้ว 📥 Import ผลกลับมา" in (txt_of(page, "[data-idea-gap-copy]") or "") and f"{IID}|1" in (drafts(page) or {}), txt_of(page, "[data-idea-gap-copy]"))
         page.fill('[data-idea-gap-ta="2"]', "x"); page.fill('[data-idea-gap-ta="1"]', ""); page.fill('[data-idea-gap-ta="2"]', "ข้อ 2 ด้วย"); page.wait_for_timeout(100)
         page.click("#ideaGapCopyBtn"); page.wait_for_timeout(300)
         cmd2 = js(page, "()=>window.__ideaLastGap") or ""
-        chk("2 ข้อ 1 ว่าง + ข้อ 2 มีข้อความ → คำสั่งมีเฉพาะ #2 (ตัดข้อว่างออก)", cmd2.split("\n")[0] == "idea-scout update · ตอบข้อที่ขาด #2" and "#1 " not in cmd2.split("---")[0], cmd2.split("\n")[0])
+        chk("2 ข้อ 1 ว่าง + ข้อ 2 มีข้อความ → คำสั่งมีเฉพาะ #2 (ตัดข้อว่างออก)", cmd2.split("\n")[:2] == ["idea-scout update:", "ตอบข้อที่ขาด #2"] and "#1 " not in cmd2.split("---")[0], cmd2.split("\n")[0])
         page.fill('[data-idea-gap-ta="1"]', "กลับมาพิมพ์ข้อ 1"); page.wait_for_timeout(100)
         page.click("#ideaGapCopyBtn"); page.wait_for_timeout(300)
         cmd3 = js(page, "()=>window.__ideaLastGap") or ""
-        chk("2 ทั้งสองข้อมีข้อความ → 'ตอบข้อที่ขาด #1, #2'", cmd3.split("\n")[0] == "idea-scout update · ตอบข้อที่ขาด #1, #2", cmd3.split("\n")[0])
+        chk("2 ทั้งสองข้อมีข้อความ → 'ตอบข้อที่ขาด #1, #2'", cmd3.split("\n")[:2] == ["idea-scout update:", "ตอบข้อที่ขาด #1, #2"], cmd3.split("\n")[:2])
         js(page, "()=>ideaGapSheetClose()"); page.wait_for_timeout(200)
         chk("2 ปิด sheet → overlay ปิด", not js(page, "()=>document.getElementById('ltOverlay').classList.contains('show')"))
         page.click("[data-idea-gap-ansel]"); page.wait_for_selector("[data-idea-gap-box]")
