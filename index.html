@@ -3445,6 +3445,20 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .ps1SpR{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px}
 .ps1SpR label{font-size:.7rem;color:var(--muted);display:block}
 .ps1SpR input{width:100%;box-sizing:border-box;margin-top:2px}
+.ps1L{grid-template-columns:minmax(0,1fr);gap:8px}
+.ps1B{min-width:0;container-type:inline-size}
+.ps1Hd{display:flex;align-items:center;justify-content:space-between;min-height:24px;font-size:.74rem;color:var(--muted);margin-bottom:3px}
+.ps1Hd label{display:flex;align-items:center;gap:6px;margin:0}.ps1Hc{margin-right:34px;min-width:60px;text-align:left}
+.ps1R{display:flex;align-items:center;gap:6px;margin-top:6px}.ps1R[data-ps1-row$="0"]{margin-top:0}
+.ps1In{flex:1 1 84px;min-width:0}.ps1In input{width:100%}
+.ps1Rx{display:contents}
+.ps1Pc{flex:0 0 62px;display:flex;align-items:center;gap:2px;margin:0}.ps1Pc input{width:100%;min-width:0;box-sizing:border-box}.ps1Pc i{font-style:normal;font-size:.74rem;color:var(--muted)}
+.ps1M{flex:0 1 auto;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;min-width:0}
+.ps1R>.ps1Rm{flex:none}
+.ps1Msg{color:var(--red);font-size:.74rem;margin-top:3px}.ps1Amb{color:var(--amber)}
+@container (max-width:260px){.ps1Sz{display:none}}
+@container (max-width:190px){.ps1M[data-ps1-meta^="s"]{display:none}}
+.ps1RiskC{max-width:160px}
 .ps1Sum{border-top:1px solid var(--border);margin-top:12px;padding-top:10px;font-size:.9rem;line-height:1.5;min-height:1.5em}
 .ps1Sum .ps1Note{display:block;font-size:.74rem;color:var(--muted);margin-top:2px}
 .ps1Det{margin-top:6px;font-size:.78rem;color:var(--muted)}.ps1Det summary{cursor:pointer;padding:4px 0}
@@ -12355,10 +12369,12 @@ function lfFormHtml(o){
       <div class="ccF"><label>Ticker</label><input type="text" id="cnTicker" list="cnTickerList" autocomplete="off" autocapitalize="characters" placeholder="เช่น AAPL หรือ XXX.BK" value="${tkv}" ${cur?'readonly':''} oninput="coreNewIn()">
       <datalist id="cnTickerList">${wl.map(t=>`<option value="${escHtml(t)}"></option>`).join('')}</datalist></div></div>
     <div class="csBan" id="cnStarBox" data-cs-banner style="display:none"></div>
-    <div id="cnWBox"><div class="ps1G" data-ps1-form>
-      <div class="ps1C"><label for="cnEntry"><span>Entry</span><button type="button" class="ps1Pl" id="cnEplus" data-ps1-add="e" aria-label="Add entry row" onclick="ps1RowAdd('e')">＋</button></label><input type="text" inputmode="decimal" id="cnEntry" oninput="coreNewIn()"><div id="cnEx" data-ps1-ex></div></div>
-      <div class="ps1C"><label for="cnStop"><span>SL</span><button type="button" class="ps1Pl" id="cnSplus" data-ps1-add="s" aria-label="Add SL row" onclick="ps1RowAdd('s')">＋</button></label><input type="text" inputmode="decimal" id="cnStop" oninput="coreNewIn()"><div id="cnSx" data-ps1-sx></div><div class="ps1Msg" id="cnSMsg" data-ps1-smsg style="display:none"></div></div>
-      <div class="ps1C"><label for="cnRisk"><span>Risk %</span></label><input type="text" inputmode="decimal" id="cnRisk" oninput="coreNewRisk()"><span id="cnFsrc" hidden></span></div></div>
+    <div id="cnWBox"><div class="ps1G ps1L" data-ps1-form>
+      <div class="ps1B" id="cnEBox" data-ps1-ebox><div class="ps1Hd"><label for="cnEntry"><span>Entry</span><button type="button" class="ps1Pl" id="cnEplus" data-ps1-add="e" aria-label="Add entry row" onclick="ps1RowAdd('e')">＋</button></label><span class="ps1Hc" id="cnEh"></span></div>
+        <div class="ps1R" data-ps1-row="e0"><div class="ps1In"><input type="text" inputmode="decimal" id="cnEntry" oninput="coreNewIn()"></div><span class="ps1Rx" id="cnE0x"></span></div><div id="cnEx" data-ps1-ex></div></div>
+      <div class="ps1B" id="cnSBox" data-ps1-sbox><div class="ps1Hd"><label for="cnStop"><span>SL</span><button type="button" class="ps1Pl" id="cnSplus" data-ps1-add="s" aria-label="Add SL row" onclick="ps1RowAdd('s')">＋</button></label><span class="ps1Hc" id="cnSh"></span></div>
+        <div class="ps1R" data-ps1-row="s0"><div class="ps1In"><input type="text" inputmode="decimal" id="cnStop" oninput="coreNewIn()"></div><span class="ps1Rx" id="cnS0x"></span></div><div id="cnSx" data-ps1-sx></div><div class="ps1Msg" id="cnSMsg" data-ps1-smsg style="display:none"></div></div>
+      <div class="ps1C ps1RiskC"><label for="cnRisk"><span>Risk %</span></label><input type="text" inputmode="decimal" id="cnRisk" oninput="coreNewRisk()"><span id="cnFsrc" hidden></span></div></div>
       <div id="cnSplit" data-ps1-split></div>
       <div class="ccSub" id="cnRiskHint" data-lf-riskhint style="margin:4px 0 0"></div>
       <div class="ccFfWarn ccStat warn" id="cnFwarn" data-cn-ffwarn style="display:none;margin:6px 0"></div>
@@ -12537,9 +12553,35 @@ function ps1PlanFl(c){ const p = c && c.plan && c.plan.ps1; return p ? {ok:true,
 /* PS1b §7c — percentages are ROUNDED (not truncated) to 2 decimals from the same numbers as the shares */
 function ps1R2(x){ return (Math.round((+x + 1e-9) * 100) / 100).toFixed(2); }
 function ps1SumHtml(p){
-  const f2 = ps1R2, multi = p.rows.length>1 || (p.stops && p.stops.length>1);
-  return `${ps1Off() ? '' : '#'}<b data-ps1-qty>${fmt0(p.qty)}</b>${ps1Off() ? ' sh' : ''} · Risk <b data-ps1-risk>${f2(p.riskPct)}%</b> · Size <b data-ps1-size>${(+p.sizePct).toFixed(1)}%</b> of portfolio`
-    + (multi ? ` · Avg entry <b>${p.avgEntry!=null ? f2(p.avgEntry) : '—'}</b> · Avg SL <b>${f2(p.avgStop)}</b> · Left <b>${f2(p.leftPct)}%</b>` : '');
+  /* PS1b §7b — `#22 · 1.6% · Avg 103.64 · Risk 0.25%` (Avg only with 2+ entries) · multiplier tag appended to Risk */
+  const f2 = ps1R2, ent2 = p.rows.length>1;
+  return `${ps1Off() ? '' : '#'}<b data-ps1-qty>${fmt0(p.qty)}</b>${ps1Off() ? ' sh' : ''} · ${ps1Off() ? 'Risk ' : ''}<b data-ps1-size>${(+p.sizePct).toFixed(1)}%</b>${ps1Off() ? ' of portfolio' : ''}`
+    + (ent2 ? ` · Avg <b>${p.avgEntry!=null ? f2(p.avgEntry) : '—'}</b>` : '')
+    + ` · Risk <b data-ps1-risk>${f2(p.riskPct)}%</b>${p.tag ? ` <span class="mut" data-ps1-tag>(${p.tag})</span>` : ''}`;
+}
+function ps1M(v){ v = +v; return v >= 1e6 ? (v/1e6).toFixed(2) + 'M' : v >= 1e3 ? (v/1e3).toFixed(1) + 'k' : String(Math.round(v)); }
+function ps1Tag(F, dd){
+  const m = F.f * dd, why = [];
+  if(m >= 1 - 1e-9) return '';
+  if(F.f < 1 - 1e-9) why.push('regime');
+  if(dd < 1 - 1e-9) why.push('loss limit');
+  return (Math.abs(m - 0.5) < 1e-9 ? 'half size' : Math.round(m*100) + '% size') + ': ' + why.join(' + ');
+}
+/* PS1b §7d — Details = 3 lines max */
+function ps1DetHtml(o){
+  const {snap, typed, m, F, dd, r, newMoney, cc, cfg, b, U, sym, n, E} = o, f2 = ps1R2, e = escHtml;
+  let l1 = 'Portfolio ฿' + ps1M(E);
+  if(snap.Edate){
+    const d = new Date(snap.Edate + 'T00:00:00Z'), txt = d.toLocaleDateString('en-GB', {day:'numeric', month:'short', timeZone:'UTC'});
+    l1 += ' · prices as of ' + e(txt);
+    try{ if(ftDayDiff(snap.Edate, thaiToday()) > 3) l1 += ' <span class="ps1Amb" data-ps1-stale>update account value</span>'; }catch(_){}
+  }
+  const pp = Ps1.portPct(newMoney, poolsOf(n.acct)[snap.bucket]);
+  let l2 = `${f2(typed)}% × regime ${Math.round(F.f*100)}%${dd<1 ? ' × half ' + dd : ''} = ${f2(typed*m)}% = ${sym}${fmt0(r.risk)}${pp==null ? '' : ' (= ' + (+pp).toFixed(1) + '% of ' + b.label + ')'}`;
+  if(snap.stops.length>1) l2 += ` · Avg SL ${f2(snap.avgStop)}`;
+  if(snap.leftPct >= 0.05 - 1e-9) l2 += ` · Left ${f2(snap.leftPct)}%`;
+  const l3 = `After this: ${b.label} ${f2(cc.bucketPct)}% of ${b.cap}% · Total ${f2(cc.totalPct)}% of ${cfg.total}% · Size ${sym}${fmt0(r.cost)} (${(+snap.sizePct).toFixed(1)}%) of max ${b.sizeMax}%${U.unknown ? ` · ${U.unknown} position(s) missing stop not counted` : ''}`;
+  return `<div data-ps1-d1>${l1}</div><div data-ps1-d2>${l2}</div><div data-ps1-d3>${l3}</div>`;
 }
 function ps1PlanCardHtml(c, v){
   const p = c.plan.ps1, e = escHtml;
@@ -12569,16 +12611,23 @@ function ps1In(k, i, v){
 }
 /* extra rows + per-row fields exist only once a 2nd row is added */
 function ps1Draw(){
-  const n = coreNew; if(!n) return; const ex = coreEl('cnEx'), sx = coreEl('cnSx'), sp = coreEl('cnSplit'); if(!ex || !sx || !sp) return;
-  const row = (kind, i, val)=>`<div class="ps1X"><input type="text" inputmode="decimal" id="cn${kind==='e' ? 'En' : 'St'}${i}" value="${escHtml(val)}" aria-label="${kind==='e' ? 'Entry' : 'SL'} ${i+1}" oninput="ps1In('${kind}',${i},this.value)"><button type="button" class="ps1Rm" data-ps1-rm="${kind}${i}" aria-label="Remove row" onclick="ps1RowDel('${kind}',${i})">✕</button></div>`;
-  ex.innerHTML = [1,2,3].slice(0, n.ne-1).map(i=>row('e', i, n.pxE[i-1])).join('');
-  sx.innerHTML = [1,2,3].slice(0, n.ns-1).map(i=>row('s', i, n.pxS[i-1])).join('');
-  let h = '';
-  if(n.ne>1) h += `<div class="ps1SpT">Risk per entry <span>% · part of this idea</span></div><div class="ps1SpR" data-ps1-er>${[0,1,2,3].slice(0, n.ne).map(i=>`<label>Entry ${i+1}<input type="text" inputmode="decimal" id="cnEr${i}" value="${escHtml(n.rkE[i])}" oninput="ps1In('er',${i},this.value)"></label>`).join('')}</div>`;
-  if(n.ns>1) h += `<div class="ps1SpT">Shares sold at each SL <span>% · total 100</span></div><div class="ps1SpR" data-ps1-sp>${[0,1,2,3].slice(0, n.ns).map(i=>`<label>SL ${i+1}<input type="text" inputmode="decimal" id="cnSp${i}" value="${escHtml(n.pcS[i])}" oninput="ps1In('sp',${i},this.value)"></label>`).join('')}</div>`;
-  sp.innerHTML = h;
+  const n = coreNew; if(!n) return; const ex = coreEl('cnEx'), sx = coreEl('cnSx'); if(!ex || !sx) return;
+  const E = escHtml, rm = (kind, i)=>`<button type="button" class="ps1Rm" data-ps1-rm="${kind}${i}" aria-label="Remove row" onclick="ps1RowDel('${kind}',${i})">✕</button>`;
+  const pcIn = (id, val, fn, i, lab)=>`<label class="ps1Pc"><input type="text" inputmode="decimal" id="${id}${i}" value="${E(val)}" aria-label="${lab} ${i+1} %" oninput="ps1In('${fn}',${i},this.value)"><i>%</i></label>`;
+  const eMeta = i=>`<span class="ps1M" data-ps1-meta="e${i}"></span>`, sMeta = i=>`<span class="ps1M" data-ps1-meta="s${i}"></span>`;
+  const eRow = i=>`<div class="ps1R" data-ps1-row="e${i}"><div class="ps1In"><input type="text" inputmode="decimal" id="cnEn${i}" value="${E(n.pxE[i-1])}" aria-label="Entry ${i+1}" oninput="ps1In('e',${i},this.value)"></div>${n.ne>1 ? pcIn('cnEr', n.rkE[i], 'er', i, 'Entry risk') : ''}${eMeta(i)}${rm('e', i)}</div>`;
+  const sRow = i=>`<div class="ps1R" data-ps1-row="s${i}"><div class="ps1In"><input type="text" inputmode="decimal" id="cnSt${i}" value="${E(n.pxS[i-1])}" aria-label="SL ${i+1}" oninput="ps1In('s',${i},this.value)"></div>${n.ns>1 ? pcIn('cnSp', n.pcS[i], 'sp', i, 'Out') : ''}${sMeta(i)}${rm('s', i)}</div>`;
+  ex.innerHTML = [1,2,3].slice(0, n.ne-1).map(eRow).join('');
+  sx.innerHTML = [1,2,3].slice(0, n.ns-1).map(sRow).join('');
+  const e0 = coreEl('cnE0x'), s0 = coreEl('cnS0x');
+  if(e0) e0.innerHTML = (n.ne>1 ? pcIn('cnEr', n.rkE[0], 'er', 0, 'Entry risk') : '') + eMeta(0);
+  if(s0) s0.innerHTML = (n.ns>1 ? pcIn('cnSp', n.pcS[0], 'sp', 0, 'Out') : '') + sMeta(0);
+  const eh = coreEl('cnEh'), sh = coreEl('cnSh'); if(eh) eh.textContent = n.ne>1 ? 'Risk' : ''; if(sh) sh.textContent = n.ns>1 ? 'Out' : '';
+  const sp = coreEl('cnSplit'); if(sp) sp.innerHTML = '';
   const pe = coreEl('cnEplus'), ps = coreEl('cnSplus'); if(pe) pe.style.visibility = n.ne>=Ps1.MAX_ROWS ? 'hidden' : ''; if(ps) ps.style.visibility = n.ns>=Ps1.MAX_ROWS ? 'hidden' : '';
 }
+function ps1MetaSet(kind, i, html){ const el = document.querySelector(`[data-ps1-meta="${kind}${i}"]`); if(el && el.dataset.h !== html){ el.innerHTML = html; el.dataset.h = html; } }
+function ps1MetaClear(){ document.querySelectorAll('[data-ps1-meta]').forEach(el=>{ if(el.innerHTML){ el.innerHTML = ''; el.dataset.h = ''; } }); }
 const PS1_ERR = {STOP_PCT_100:'Exit % must total 100', STOP_PCT:'Fill the % for each SL', ROW_RISK:'Fill the risk for each entry', NO_RISK:'Enter risk %', ENTRY_NOT_ABOVE_STOP:'Entry must be above SL', BAD_ENTRY:'Fill every entry', BAD_STOP:'Fill every SL', NO_E:'Set account capital in Settings'};
 /* live PS1 calc for the new-plan form (Momentum + Compounder) · writes summary / details · pushes blocking reasons into errs */
 function ps1StopMsg(t){ const el = coreEl('cnSMsg'); if(el){ el.textContent = t; el.style.display = t ? '' : 'none'; } }
@@ -12591,7 +12640,7 @@ function ps1FormRun(n, rd, cx, mk, errs){
   { const fw = coreFWarn(F), el = $('cnFwarn'); el.style.display = fw ? '' : 'none'; el.textContent = fw; }
   const re = $('cnRisk'), hint = $('cnRiskHint'), sumEl = $('cnSum'), det = $('cnDetB'), res0 = $('cnRes');
   if(res0 && res0.innerHTML){ res0.innerHTML = ''; res0.dataset.h = ''; }
-  const setSum = h=>{ if(sumEl.dataset.h !== h){ sumEl.innerHTML = h; sumEl.dataset.h = h; } };
+  const setSum = h=>{ if(!h) ps1MetaClear(); if(sumEl.dataset.h !== h){ sumEl.innerHTML = h; sumEl.dataset.h = h; } };
   const setDet = h=>{ if(det.dataset.h !== h){ det.innerHTML = h; det.dataset.h = h; } };
   const mine = [], done = ()=>{ mine.forEach(x=>errs.push(x)); };
   if(def==null){
@@ -12617,6 +12666,11 @@ function ps1FormRun(n, rd, cx, mk, errs){
   if(mine.length){ setSum(''); return done(); }
   const r = Ps1.planSize({E: E/div, market: mk, ideaRiskPct: typed * m, entries, stops, maxSizePct: b.sizeMax, cash: cx.cashTHB/div});   /* free-cash check as on old plans */
   if(!r.ok){ mine.push(PS1_ERR[r.err] || ('Cannot size this plan (' + r.err + ')')); setSum(''); setDet(''); return done(); }
+  { /* PS1b §7b — per-row meta: entries `#shares · size%` · SLs `−x.x%` from the (average) entry */
+    const Ediv = E / div, refE = r.avgEntry != null ? r.avgEntry : entries[0].px;
+    r.rows.forEach((x,i)=>{ ps1MetaSet('e', i, `#${fmt0(x.qty)}<span class="ps1Sz"> · ${(x.qty * x.px / Ediv * 100).toFixed(1)}%</span>`); });
+    stops.forEach((x,i)=>{ ps1MetaSet('s', i, `−${Math.abs((x.px - refE) / refE * 100).toFixed(1)}%`); });
+  }
   if(r.errs.indexOf('ROWS_OVER_BUDGET')>=0) mine.push(`Entry risks add up to more than ${+typed.toFixed(4)}%`);
   if(r.zero) mine.push(`Too small for 1 ${mk==='TH' ? 'lot (100)' : 'share'}`);
   const U = ps1Used(n.acct, null), newMoney = r.risk * div;
@@ -12629,13 +12683,10 @@ function ps1FormRun(n, rd, cx, mk, errs){
   const snap = {v:1, bucket, E, Edate: ps1EDate(n.acct), div, typed, mult:{f:F.f, dd}, ideaEff: typed * m,
     rows: r.rows.map((x,i)=>({px:x.px, riskPct: n.ne>1 ? entries[i].riskPct / m : typed, qty:x.qty})),
     stops: stops.map(x=>({px:x.px, pct: n.ns>1 ? x.pct : 100})), qty:r.qty, avgEntry:r.avgEntry, avgStop:r.stop, riskPct:r.riskPct, riskMoney:newMoney,
-    sizePct:r.sizePct, leftPct:r.leftPct, trimmed:r.trimmed, cashLimited:!!r.cashLimited, lot:r.lot, maxSizePct:b.sizeMax, date:thaiToday()};
+    tag:ps1Tag(F, dd), sizePct:r.sizePct, leftPct:r.leftPct, trimmed:r.trimmed, cashLimited:!!r.cashLimited, lot:r.lot, maxSizePct:b.sizeMax, date:thaiToday()};
   setSum(ps1SumHtml(snap) + (r.trimmed ? `<span class="ps1Note" data-ps1-trim>${r.cashLimited ? 'เงินสดคุม — shares reduced to fit free cash ฿' + fmt0(cx.cashTHB) : 'Shares reduced to fit max position ' + b.sizeMax + '%'}</span>` : ''));
   const sym = mk==='US' ? '$' : '฿', ed = snap.Edate ? ` (as of ${snap.Edate})` : '';
-  setDet(`<div>Portfolio value E: ฿${fmt0(E)}${ed}</div><div>Idea risk ${+typed.toFixed(4)}% × Regime ${Math.round(F.f*100)}%${dd<1 ? ' × Half size ' + dd : ''} = ${(typed*m).toFixed(3)}%</div>`
-    + `<div>Risk in money: ${sym}${fmt0(r.risk)} (${r.riskPct.toFixed(2)}% of portfolio${(()=>{ const pp = Ps1.portPct(newMoney, poolsOf(n.acct)[bucket]); return pp==null ? '' : ' = ' + (+pp.toFixed(2)) + '% of ' + b.label; })()}) · size ${sym}${fmt0(r.cost)} · max position ${b.sizeMax}%</div>`
-    + `<div>${b.label} risk after: ${cc.bucketPct.toFixed(2)}% / ${b.cap}% · Total after: ${cc.totalPct.toFixed(2)}% / ${cfg.total}%${U.unknown ? ` · ${U.unknown} position(s) missing stop not counted` : ''}</div>`
-    + `<div>Shares rounded down to ${mk==='TH' ? '100' : '1'}</div>`);
+  setDet(ps1DetHtml({n, E, snap, typed, m, F, dd, r, newMoney, cc, cfg, b, U, sym, div}));
   if(!mine.length) n.ps1Last = snap;
   done();
 }
