@@ -1,0 +1,55 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SK1 mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=IBM+Plex+Sans+Thai:wght@400;600&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EEF0F3;--surface:#fff;--border:#E3E6EA;--hair:#EEF0F3;--text:#141518;--muted:#7B818C;--faint:#9AA0A9;--teal:#0E8F6F;--amber:#A96E06;--amber-dim:rgba(169,110,6,.13);--red:#C93B37;--sans:'Manrope','IBM Plex Sans Thai',-apple-system,sans-serif;--mono:'IBM Plex Mono',monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);padding:24px 16px}
+.wrap{max-width:980px;margin:0 auto}h1{font-size:20px;margin:0 0 4px}.sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+.page{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.wf{background:var(--hair);border-radius:8px;padding:8px 12px;font-size:12.5px;color:var(--muted)}
+.hw{border:1px solid var(--amber);background:var(--amber-dim);color:var(--amber);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600}
+.sk{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);padding:2px 4px;outline:2px dashed var(--teal);outline-offset:4px;border-radius:4px}
+.sk b{font-weight:600;color:var(--muted)}.sk .it{white-space:nowrap}.pill{border:1px dashed var(--border);border-radius:999px;padding:2px 10px;color:var(--teal);font-weight:600;font-size:12px;cursor:pointer;background:transparent}
+.swr{display:flex;align-items:center;gap:10px}.sw{display:inline-flex;border:1px solid var(--border);border-radius:999px;padding:3px}.sw button{font:600 13px var(--sans);padding:5px 14px;border-radius:999px;color:var(--muted);border:0;background:transparent;cursor:pointer}.sw button.on{background:var(--text);color:#fff}
+.kb{font:600 11px var(--mono);color:var(--faint)}.kb kbd{border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;padding:0 5px;font:inherit}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.col{border:1px solid var(--border);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;min-height:120px}.ch{font-weight:700;font-size:12px}
+.wl{display:flex;flex-direction:column;gap:6px}
+.tag{font:600 11px var(--mono);letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin:22px 0 8px}
+.note{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:10px}
+.note b{color:var(--text)}
+@media(max-width:560px){.cols{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<h1>SK1 · Skills-due line + Weekend default + ← → switch</h1>
+<div class="sub">Interactive: press ← / → (or click the switch). It stops at each end and doesn't wrap around. Teal dashed outline = the new Skills due line.</div>
+
+<div class="page" id="pg">
+ <div class="wf">Regime · Goals line</div>
+ <div class="hw">⚠ Homework [AVGO 3d] [GLBE 3d] · Do it ›</div>
+ <div class="sk"><b>Skills due</b> · <span class="it">weekly-impact (this week missing)</span> · <span class="it">living-thesis: AVGO 35d</span> · <span class="it">playbook: quarter end in 5d</span> · <button class="pill">Copy ›</button></div>
+ <div class="swr"><div class="sw"><button data-m="d">Daily</button><button data-m="w">Weekend</button></div><span class="kb"><kbd>←</kbd> <kbd>→</kbd></span><span class="kb" id="why"></span></div>
+ <div id="body"></div>
+</div>
+
+<div class="note">
+<b>Where:</b> one muted line directly under Homework, above the Daily/Weekend switch. It shows in both modes, because these skills are due on any day (not only weekends). It's hidden when nothing is due.<br>
+<b>Copy ›:</b> copies the prompt for the first item and shows the CG1 guide toast. Tapping an item name copies that item's prompt.<br>
+<b>Weekend default:</b> Saturday and Sunday (ICT) open on Weekend. Other days open on Daily. If you switch by hand, the app keeps your choice until the next day.<br>
+<b>← / →:</b> only on the Today tab, and not while typing in a field. ← goes to Daily, → to Weekend. No wrap-around: pressing → on Weekend does nothing.
+</div>
+
+<div class="tag">Phone 390px</div>
+<div style="max-width:390px;border:1px solid var(--border);border-radius:16px;background:var(--surface);padding:12px;display:flex;flex-direction:column;gap:8px">
+ <div class="hw" style="font-size:12px">⚠ Homework [AVGO 3d] · Do it ›</div>
+ <div class="sk" style="outline-offset:2px"><b>Skills due</b> · weekly-impact · AVGO thesis · <button class="pill">Copy ›</button></div>
+ <div class="sw" style="align-self:flex-start"><button class="on">Daily</button><button>Weekend</button></div>
+</div>
+<div class="note">On a phone the items shorten to names only, so the line stays on one row. No arrow keys on a phone.</div>
+
+<script>
+let m=(new Date().getDay()%6===0)?'w':'d';const why=new Date().getDay()%6===0?'auto: weekend':'auto: weekday';
+function r(){document.querySelectorAll('.sw button[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+document.getElementById('why').textContent='· '+why;
+document.getElementById('body').innerHTML=m==='d'?'<div class="cols"><div class="col"><div class="ch">Overview</div><div class="wf">Risk · pools</div></div><div class="col"><div class="ch">Core · Selection</div><div class="wf">Deep dive · Cand → WL · New Cand</div><div style="font-size:12px;color:var(--muted)">Weekly News · 2/5 unread · <span class="pill">Read ›</span></div></div><div class="col"><div class="ch">Plans</div><div class="wf">Drafts · open</div></div></div>':'<div class="wl"><div class="wf">Weekend review · 3/7 done · ~45 min</div><div class="wf">① Weekly Impact … ⑦ change_if</div></div>'}
+document.querySelectorAll('.sw button[data-m]').forEach(b=>b.onclick=()=>{m=b.dataset.m;r()});
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft'&&m!=='d'){m='d';r()}if(e.key==='ArrowRight'&&m!=='w'){m='w';r()}});
+r();
+</script></div></body></html>
