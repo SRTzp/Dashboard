@@ -146,8 +146,8 @@ def cand_rows_tests(pw, w, h):
         rec = lambda sym, track, rs: {"manual": True, "sym": sym, "market": "US", "cand_at": "2026-10-20T03:00:00.000Z", "track": track, "reasons": rs}
         js(page, "(d)=>glWrite(S=>{ S.candMeta = Object.assign({}, S.candMeta||{}, d); })", {"CAA": rec("CAA", "winner", ["strong-rs", "volume-spike"]), "CBB": rec("CBB", "ladder", ["earnings-spike"]), "CCC": {"manual": True, "sym": "CCC", "market": "US", "cand_at": "2026-10-20T03:00:00.000Z"}}); settle(page, 400)
         goto(page, "cand")
-        chips = js(page, "()=>Object.fromEntries([...document.querySelectorAll('.wlR[data-sym]')].map(r=>[r.dataset.sym, [...r.querySelectorAll('.wlTg')].map(x=>x.innerText)]))")
-        check(f"{tag} A6: แถว Candidate แสดง Track + Reasons (CAA: Momentum · Strong RS · Volume Spike) · เอกสารเก่า (CCC) ไม่มี chip", chips.get("CAA") == ["Momentum", "Strong RS", "Volume Spike"] and chips.get("CBB") == ["Compounder", "Earnings Spike"] and chips.get("CCC") == [], chips)
+        chips = js(page, "()=>Object.fromEntries([...document.querySelectorAll('.wlR[data-sym]')].map(r=>[r.dataset.sym, [...r.querySelectorAll('.wlTg'), ...r.querySelectorAll('[data-tv1-src]')].map(x=>x.innerText)]))")   # TV1: reason moved from chips to the 'reason · age' tag
+        check(f"{tag} A6: แถว Candidate แสดง Track + Reasons (CAA: Momentum · Strong RS +1 · TV1 tag) · เอกสารเก่า (CCC) ไม่มี chip (tag = —)", chips.get("CAA") == ["Momentum", "Strong RS +1"] and chips.get("CBB") == ["Compounder", "Earnings Spike"] and chips.get("CCC") == ["—"], chips)
         js(page, "()=>wlSetTrack('ladder')"); settle(page, 300)
         check(f"{tag} A6: กรอง Track ใน Candidates → Compounder = CBB", rows(page) == ["CBB"], rows(page))
         js(page, "()=>{ wlTrackF = 'all'; wlToggleReason('strong-rs'); }"); settle(page, 300)

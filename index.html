@@ -3558,6 +3558,17 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .stkCk{position:absolute;left:0;top:6px;width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border);background:none;color:transparent;font-weight:700;cursor:pointer;padding:0;z-index:1}.stkCk.on{background:var(--teal);border-color:var(--teal);color:#fff}
 .stkFlt{display:flex;gap:6px;margin:6px 0}.stkFlt button{font:inherit;font-size:.8rem;font-weight:600;border:1px solid var(--border);background:none;color:var(--muted);border-radius:99px;padding:4px 12px;cursor:pointer;min-height:32px}.stkFlt button.on{background:var(--text);color:var(--surface);border-color:var(--text)}
 .stkDone{padding:14px 0;text-align:center;color:var(--muted)}.stkRc{margin-left:auto}.stkAllBtn{margin-left:8px;flex:none;white-space:nowrap}.stkBody .pbShH{flex-wrap:nowrap}.stkBody .pbShH b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.stkBody .pbShH .stkRc{white-space:nowrap}
+/* TV1 — TradingView link */
+.tv1-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 6px}.tv1-note{font-size:.74rem;color:var(--faint,var(--muted))}
+.tv1-wrap{position:relative;display:inline-block}.tv1-btn{font:inherit;font-size:.8rem;font-weight:600;border:1px solid var(--border);border-radius:999px;padding:5px 12px;background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap}.tv1-btn b{color:var(--blue,#2F5FBE)}
+.tv1-menu{position:absolute;top:calc(100% + 4px);right:0;z-index:30;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:6px;min-width:230px;max-width:calc(100vw - 32px)}
+.tv1-menu button{display:block;width:100%;text-align:left;border:0;background:none;font:inherit;font-size:.86rem;color:var(--text);padding:8px 10px;border-radius:8px;cursor:pointer}.tv1-menu button:hover{background:var(--surface2,#EEF0F3)}.tv1-menu small{display:block;color:var(--muted);font-size:.72rem;margin-top:1px}
+.tv1-gh{display:flex;align-items:center;gap:6px;font-size:.74rem;font-weight:700;color:var(--muted);margin:12px 4px 4px}.tv1-gh.hot{color:var(--amber)}.tv1-gh .c{color:var(--faint,var(--muted));font-weight:600}
+.tv1-src{font-size:.74rem;color:var(--muted);white-space:nowrap}.tv1-src.none{color:var(--amber);font-weight:700}.tv1-age{font-size:.72rem;font-family:var(--mono);color:var(--muted);margin-left:4px}.tv1-age.w{color:var(--amber);font-weight:700}
+.tv1-setup{font:inherit;font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 9px;border:1px dashed var(--border);background:none;color:var(--muted);cursor:pointer;white-space:nowrap}.tv1-setup.on{border:1px solid var(--teal);background:var(--teal-dim,rgba(14,143,111,.12));color:var(--teal)}
+.tv1-sug{background:var(--amber-dim,rgba(169,110,6,.13));color:var(--amber);font-size:.78rem;border-radius:8px;padding:6px 10px;margin:-2px 0 6px 4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tv1-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;z-index:1200;background:#1F2328;color:#fff;border-radius:12px;padding:10px 14px;font-size:.8rem;line-height:1.5;max-width:calc(100vw - 32px);display:none}
+.tv1-drop{border:2px dashed var(--border);border-radius:12px;padding:12px;text-align:center;color:var(--muted);font-size:.84rem;margin-bottom:8px}.tv1-ig .t{font-weight:700;font-size:.84rem;margin:8px 0 3px}.tv1-ig .t span{color:var(--muted);font-weight:600}.tv1-ig .l{font-size:.8rem;color:var(--muted);line-height:1.6}.tv1-meta{font-size:.82rem;margin:6px 0}.tv1-sum{font-size:.82rem;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -7534,14 +7545,14 @@ function candPopFinish(rest, n){   /* ปิด popup · ข้อความ�
   try{ if(activeTab==='watch') renderWatchlist(); }catch(e){}
 }
 /* ── Delete (Candidates) ── */
-function td4CandDelete(sym){
+function td4CandDelete(sym, noConfirm){
   const key = wlSymKey(sym), row = wlRowsAll().cand.find(r=>wlSymKey(r.sym)===key); if(!row || !tdCanWrite()) return;
   const idea = (row.cInfo || []).length > 0, t = String(row.sym).toUpperCase();
   if(!idea){
-    if(!confirm(`Remove ${t} from Candidates?`)) return;
+    if(!noConfirm && !confirm(`Remove ${t} from Candidates?`)) return;
     glWrite(S=>{ const cm = Object.assign({}, S.candMeta || {}); delete cm[key]; if(Object.keys(cm).length) S.candMeta = cm; else delete S.candMeta; });
   } else {
-    if(!confirm(`Delete ${t} from Candidates? It stays in the Idea, and you'll be asked again if the Idea changes.`)) return;
+    if(!noConfirm && !confirm(`Delete ${t} from Candidates? It stays in the Idea, and you'll be asked again if the Idea changes.`)) return;
     td3MetaWrite(t, {sym:t, market:row.market, dismissed:true, dismissed_at:new Date().toISOString()});
   }
   if(wlSel===row.sym) wlSel = '';
@@ -15044,12 +15055,12 @@ function wlRowsView(){
   const A = wlRowsAll();
   if(wlView==='cand'){   /* ID2 — เรียงแล้วจาก ideaCandRows · กรอง ▲/▼ ด้วย [ ] */
     const rows = A.cand.filter(r=>(candFilter==='all' || ideaRels(r.sym).some(x=>x.side===candFilter)) && (candMk==='all' || r.market===candMk) && (()=>{ const m = td3MetaOf(r.sym); return wlMatchF(m.track, m.reasons, null, false); })());   /* TD4a — All | US | TH · PL1·A6 Track/Reason */
-    return {rows: phApply(tqApply(rows)), A};
+    return {rows: tv1Order(phApply(tqApply(rows))), A};
   }
   let rows = A.wl.filter(r=>(wlPort==='all' || r.market===wlPort) && (()=>{ const ar = !!(r.item && r.item.archived === true); return wlShowArch ? ar : !ar; })() && wlMatchF(wlTrackOf(r.item), r.item && r.item.reasons, wlStarsOf(r), true));   /* RG2b — กรอง track · PL1·A6 Reason/RS + Archived */
   const sorted = rows.slice().sort(wlSortBy);
   if(wlHotFirst) sorted.sort((a,b)=>(sectorHot(b.item) ? 1 : 0) - (sectorHot(a.item) ? 1 : 0));   /* RG2a #7 — Hot sector first (เรียงเสถียร: ลำดับเดิมคงไว้ในกลุ่มเดียวกัน) */
-  return {rows: phApply(sorted), A};   /* TD4a — ★ มากสุดก่อน → มีข้อมูล → ลำดับเดิม */
+  return {rows: tv1Order(phApply(sorted)), A};   /* TD4a — ★ มากสุดก่อน → มีข้อมูล → ลำดับเดิม */
 }
 function wlFind(sym){
   const A = wlRowsAll();
@@ -15164,8 +15175,8 @@ function ln3WlRowHtml(r){
     else { const up = ltNextCats(it)[0]; if(up) mu = `<span class="mut ln3-cat" data-ln3-cat="1">📅 ${e(ltShort(up.text, 14))} ${e(wlThDate(up.date))}</span>`; }
   } else if(it) mu = `<span class="mut" data-ln3-nothesis="1">รอสร้าง Thesis</span>`;
   try{   /* PL1·A6 — Watchlist: status tag + Next check · Candidate: Track + Reasons */
-    if(r.port==='cand'){ const m = td3MetaOf(r.sym); mu += wlTagsHtml(m.track, m.reasons); }
-    else if(it) mu += wlStatusDotHtml(it) + wlNextHtml(it);
+    if(r.port==='cand'){ const m = td3MetaOf(r.sym); mu += wlTagsHtml(m.track, null) + tv1CandTagHtml(r); }   /* TV1 — reason now shown by the tv1 tag (reason · age) */
+    else if(it) mu += wlStatusDotHtml(it) + wlNextHtml(it) + tv1SetupHtml(r);
   }catch(err){}
   try{   /* TD3a — Candidate: โน้ตของเรา 1 บรรทัด · Watchlist: via Tier / via RS */
     if(r.port==='cand'){ const nt = (typeof td3MetaOf==='function') ? td3MetaOf(r.sym).note : ''; if(nt) mu += `<span class="mut td3-wnote" data-td3-wnote>${e(ltShort(nt, 40))}</span>`; }
@@ -15236,6 +15247,333 @@ try{   /* WL2 — ข้ามเส้น 430px: gaps/kpi สลับระห
   const ltMq = window.matchMedia('(max-width:430px)'), ltOnMq = ()=>{ if(typeof activeTab!=='undefined' && activeTab==='watch' && state) renderWatchlist(); };
   if(ltMq.addEventListener) ltMq.addEventListener('change', ltOnMq); else if(ltMq.addListener) ltMq.addListener(ltOnMq);
 }catch(e){}
+/* ═══ TV1 — Dashboard ⇄ TradingView ═══
+   Dashboard = notebook (decisions) · TradingView = chart screen. Files: Dash_Momentum.txt / Dash_Compounder.txt (Core only, no Sat).
+   Sections (a symbol only in its first): HOLD · READY - SETUP · READY · SCREEN - HOT - <Sector> · SCREEN
+   Data (settings of acctList[0], via glWrite): tvInfo{KEY:{x:'NASDAQ:NVDA', i:industry, s:sector}} · tvSetup{KEY:'YYYY-MM-DD'} (Setup ✓, expires after 5 trading days)
+   · tvSnap{winner:{KEY:section}, ladder:{…}} (snapshot of the last download → change count) · candMeta[KEY] adds industry · sector · tv · source · keep_until
+   HOT sector = existing sectorHot() rule on the stock's sector ETF (Outperforming ↗/↘ in RRG, or ★ followed); ETF = Watchlist sector_etf, else sectorSuggest(industry/sector). */
+const TV1_FILES = {winner:'Dash_Momentum.txt', ladder:'Dash_Compounder.txt'}, TV1_TRK = {winner:'Momentum', ladder:'Compounder'};
+const TV1_CAP = 15, TV1_SETUP_DAYS = 5, TV1_DROP_DAYS = 14, TV1_WARN_DAYS = 12;
+let tv1Menu = false, tv1Imp = null;
+function tv1Map(k){ const m = tdSettings()[k]; return (m && typeof m==='object' && !Array.isArray(m)) ? m : {}; }
+function tv1InfoOf(sym){ const m = tv1Map('tvInfo')[wlSymKey(sym)]; return (m && typeof m==='object') ? m : {}; }
+function tv1Today(){ return thaiToday(); }
+function tv1TDays(a, b){   /* trading days (Mon–Fri) in (a, b] */
+  if(!a || !b || b <= a) return 0;
+  let n = 0, t = Date.parse(a + 'T00:00:00Z'); const e = Date.parse(b + 'T00:00:00Z');
+  for(t += 86400000; t <= e; t += 86400000){ const w = new Date(t).getUTCDay(); if(w !== 0 && w !== 6) n++; }
+  return n;
+}
+function tv1AddDays(iso, n){ return new Date(Date.parse(iso + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10); }
+function tv1OpenTrades(){
+  const out = [];
+  (acctList || []).forEach(a=>{
+    const book = a.id===acctActive ? state : (acctBooks || {})[a.id], trades = book && Array.isArray(book.trades) ? book.trades : [];
+    trades.forEach(t=>{ if(t && t.status==='open' && t.port==='core' && t.sym) out.push(t); });
+  });
+  return out;
+}
+function tv1HeldKeys(){ return new Set(tv1OpenTrades().map(t=>wlSymKey(t.sym))); }
+/* ── Setup ✓ ── */
+function tv1SetupAt(sym){ const v = tv1Map('tvSetup')[wlSymKey(sym)]; return typeof v==='string' ? v : ''; }
+function tv1SetupLeft(sym, held){   /* days left (1–5) when active, else 0 */
+  const at = tv1SetupAt(sym); if(!at) return 0;
+  if((held || tv1HeldKeys()).has(wlSymKey(sym))) return 0;   /* entered → tag done */
+  const used = tv1TDays(at, tv1Today()); return used >= TV1_SETUP_DAYS ? 0 : TV1_SETUP_DAYS - used;
+}
+function tv1SetupToggle(sym){
+  const k = wlSymKey(sym), on = tv1SetupLeft(sym) > 0;
+  const ok = glWrite(S=>{ const m = Object.assign({}, S.tvSetup || {}); if(on) delete m[k]; else m[k] = tv1Today(); if(Object.keys(m).length) S.tvSetup = m; else delete S.tvSetup; });
+  if(!ok) return;
+  try{ renderWatchlist(); }catch(e){}
+}
+function tv1SetupHtml(r){
+  if(r.port==='cand') return '';
+  const left = tv1SetupLeft(r.sym), e = escHtml;
+  return `<button type="button" class="tv1-setup${left ? ' on' : ''}" data-tv1-setup="${e(r.sym)}" aria-pressed="${!!left}" title="Setup ✓ — ready to enter; auto-clears after ${TV1_SETUP_DAYS} trading days without an entry" onclick="event.stopPropagation();tv1SetupToggle(this.dataset.tv1Setup)">Setup ✓${left ? ` · ${left}d left` : ''}</button>`;
+}
+/* ── sector / HOT ── */
+function tv1EtfOf(sym, item){
+  if(item && item.sector_etf && item.sector_etf !== 'TH') return item.sector_etf;
+  const m = td3MetaOf(sym), inf = tv1InfoOf(sym);
+  for(const t of [item && item.industry, m.industry, inf.i, inf.s, m.sector]){ const s = sectorSuggest(t); if(s) return s; }
+  return '';
+}
+function tv1HotOf(etf){ if(!etf) return false; try{ const st = sectorState(etf); return !!(st && (st.quad==='lead' || st.quad==='weak' || st.followed)); }catch(e){ return false; } }
+function tv1SecName(etf){ const x = RRG_SYMS.find(r=>r.s===etf); return String(x ? x.n : etf).replace(/[^A-Za-z0-9 &-]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+function tv1CandInfo(r, today){
+  const m = td3MetaOf(r.sym), at = m.cand_at || td3IdeaTime(r), day = at ? (td3Day(at) || String(at).slice(0, 10)) : '';
+  return {m, at, day, ageD: day && newsDateOk(day) ? Math.max(0, glDays(day, today)) : null};
+}
+/* every Core stock of both tracks with its export section — Dashboard groups and the export use this one function */
+function tv1Stocks(){
+  const A = wlRowsAll(), today = tv1Today(), held = tv1HeldKeys(), by = new Map(), out = [];
+  const add = rec=>{ if(by.has(rec.key)) return; by.set(rec.key, rec); out.push(rec); };
+  const mk = (sym, market, item, extra)=>Object.assign({sym, key:wlSymKey(sym), market:market || wlGuessMarket(String(sym).toUpperCase()), item:item || null, etf:tv1EtfOf(sym, item)}, extra);
+  tv1OpenTrades().forEach(t=>{ const it = wlItemOf(t.sym); add(mk(String(t.sym).toUpperCase(), t.market || (it && it.market), it, {kind:'hold', track:wlTrackOf(String(t.sym)), sec:'HOLD'})); });
+  A.wl.forEach(r=>{ const it = r.item; if(!it || it.archived===true) return;
+    const su = tv1SetupLeft(r.sym, held) > 0;
+    add(mk(r.sym, r.market, it, {kind:'wl', track:wlTrackOf(it), sec:su ? 'READY - SETUP' : 'READY', setup:su})); });
+  coreCardsList.forEach(c=>{ if(!c || !c.ticker || coreEff(c).kind!=='plan') return;
+    const su = tv1SetupLeft(c.ticker, held) > 0, it = wlItemOf(c.ticker);
+    add(mk(String(c.ticker).toUpperCase(), it && it.market, it, {kind:'plan', track:coreTrackOfCard(c), sec:su ? 'READY - SETUP' : 'READY', setup:su})); });
+  A.cand.forEach(r=>{ const ci = tv1CandInfo(r, today), t = ci.m.track;
+    add(mk(r.sym, r.market, null, {kind:'cand', row:r, track:t==='ladder' ? 'ladder' : 'winner', sec:'SCREEN', at:ci.at, ageD:ci.ageD})); });
+  out.forEach(x=>{ x.hot = tv1HotOf(x.etf); if(x.kind==='cand' && x.hot) x.sec = 'SCREEN-HOT'; });
+  return out;
+}
+function tv1Sym(rec){   /* → {s, miss} */
+  const inf = tv1InfoOf(rec.sym);
+  if(inf.x) return {s:inf.x, miss:false};
+  const bare = String(rec.sym).toUpperCase().replace(/\.BK$/, '');
+  if(rec.market==='TH' || /\.BK$/i.test(rec.sym)) return {s:'SET:' + bare, miss:false};
+  return {s:bare, miss:true};
+}
+function tv1ByNewest(a, b){ return String(b.at || '').localeCompare(String(a.at || '')) || a.sym.localeCompare(b.sym); }
+function tv1Build(track, stocks){
+  stocks = stocks || tv1Stocks();
+  const mine = stocks.filter(x=>x.track===track), sections = [], secMap = {};
+  const hot1 = (a, b)=>(b.hot ? 1 : 0) - (a.hot ? 1 : 0);
+  const hold = mine.filter(x=>x.sec==='HOLD'), su = mine.filter(x=>x.sec==='READY - SETUP'), rd = mine.filter(x=>x.sec==='READY').slice().sort(hot1);
+  const cands = mine.filter(x=>x.kind==='cand').slice().sort((a, b)=>hot1(a, b) || tv1ByNewest(a, b)).slice(0, TV1_CAP);
+  sections.push(['HOLD', hold], ['READY - SETUP', su], ['READY', rd]);
+  const hotE = []; cands.filter(x=>x.hot).forEach(x=>{ if(!hotE.includes(x.etf)) hotE.push(x.etf); });
+  hotE.forEach(e=>sections.push(['SCREEN - HOT - ' + tv1SecName(e), cands.filter(x=>x.hot && x.etf===e)]));
+  sections.push(['SCREEN', cands.filter(x=>!x.hot)]);
+  let nMiss = 0, n = 0; const parts = [];
+  sections.forEach(([name, list])=>{
+    if(!list.length) return;
+    parts.push('###' + name);
+    list.forEach(x=>{ const s = tv1Sym(x); if(s.miss) nMiss++; n++; parts.push(s.s); secMap[x.key] = name; });
+  });
+  return {track, text:parts.join(','), n, nMiss, secMap};
+}
+function tv1Changes(stocks){
+  const snap = tv1Map('tvSnap'), res = {winner:0, ladder:0};
+  stocks = stocks || tv1Stocks();
+  ['winner', 'ladder'].forEach(t=>{
+    const b = tv1Build(t, stocks), old = (snap[t] && typeof snap[t]==='object') ? snap[t] : {}, keys = new Set(Object.keys(b.secMap).concat(Object.keys(old)));
+    let c = 0; keys.forEach(k=>{ if((b.secMap[k] || '') !== (old[k] || '')) c++; });
+    res[t] = c;
+  });
+  res.total = res.winner + res.ladder; return res;
+}
+function tv1Toast(lines){
+  let el = document.getElementById('tv1Toast');
+  if(!el){ el = document.createElement('div'); el.id = 'tv1Toast'; el.className = 'tv1-toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.innerHTML = lines.map(l=>`<div>${escHtml(l)}</div>`).join(''); el.style.display = 'block';
+  clearTimeout(tv1Toast.t); tv1Toast.t = setTimeout(()=>{ el.style.display = 'none'; }, 9000);
+}
+function tv1Save(text, name){
+  const url = URL.createObjectURL(new Blob([text], {type:'text/plain'})), a = document.createElement('a');
+  a.href = url; a.download = name; a.style.cssText = 'position:fixed;top:0;right:0;width:1px;height:1px;opacity:0;pointer-events:none';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ if(a.parentNode) a.parentNode.removeChild(a); }, 3000); setTimeout(()=>URL.revokeObjectURL(url), 30000);
+}
+function tv1Download(track){
+  tv1Menu = false;
+  const b = tv1Build(track), name = TV1_FILES[track];
+  tv1Save(b.text, name);
+  if(tdCanWrite()) glWrite(S=>{ const sn = Object.assign({}, S.tvSnap || {}); sn[track] = b.secMap; S.tvSnap = sn; });
+  const lines = ['Saved ' + name, 'TradingView: delete old ' + name.replace('.txt', '') + ' → ⋯ → Import list'];
+  if(b.nMiss > 0) lines.push(b.nMiss + ' symbol' + (b.nMiss > 1 ? 's' : '') + ' without exchange');
+  tv1Toast(lines);
+  try{ renderWatchlist(); }catch(e){}
+}
+function tv1MenuToggle(){ tv1Menu = !tv1Menu; try{ renderWatchlist(); }catch(e){} }
+document.addEventListener('click', ev=>{ if(tv1Menu && !(ev.target && ev.target.closest && ev.target.closest('[data-tv1-wrap]'))){ tv1Menu = false; try{ renderWatchlist(); }catch(e){} } });
+function tv1BarHtml(){
+  if(wlView!=='wl' && wlView!=='cand') return '';
+  let ch = {winner:0, ladder:0, total:0}; try{ ch = tv1Changes(); }catch(e){}
+  const note = wlView==='cand' ? '= SCREEN in TV' : '= READY in TV';
+  const item = t=>`<button type="button" role="menuitem" data-tv1-dl="${t}" onclick="tv1Download('${t}')">⬇ Download ${TV1_TRK[t]}<small>${TV1_FILES[t]} · ${ch[t] ? ch[t] + ' change' + (ch[t] > 1 ? 's' : '') + ' since last' : 'up to date'}</small></button>`;
+  const menu = tv1Menu ? `<div class="tv1-menu" role="menu" data-tv1-menu>${item('winner')}${item('ladder')}<button type="button" role="menuitem" data-tv1-import onclick="tv1ImportOpen()">⬆ Import…<small>screener .csv or watchlist .txt</small></button></div>` : '';
+  return `<div class="tv1-bar" data-tv1-bar><span class="tv1-note" data-tv1-note>${note}</span><span class="tv1-wrap" data-tv1-wrap><button type="button" class="tv1-btn" data-tv1-btn aria-haspopup="true" aria-expanded="${tv1Menu}" onclick="event.stopPropagation();tv1MenuToggle()">TradingView${ch.total ? ` · <b data-tv1-n="${ch.total}">${ch.total} change${ch.total > 1 ? 's' : ''}</b>` : ' ›'}</button>${menu}</span></div>`;
+}
+/* ── Dashboard groups + row tags ── */
+function tv1GroupOf(r){   /* label shown in the list (same rule as the export) */
+  if(r.port==='cand'){ const etf = tv1EtfOf(r.sym, null); return tv1HotOf(etf) ? 'HOT · ' + tv1SecName(etf) : 'Other'; }
+  return tv1SetupLeft(r.sym) > 0 ? 'Setup ✓' : 'Watchlist';
+}
+function tv1Order(rows){   /* Candidates: HOT groups (order of first appearance among newest) then Other · Watchlist: Setup ✓ first */
+  const keep = typeof phSort!=='undefined' && phSort;
+  if(wlView==='cand'){
+    const today = tv1Today(), info = new Map(rows.map(r=>[r.sym, tv1CandInfo(r, today)])), grp = new Map(rows.map(r=>[r.sym, tv1GroupOf(r)]));
+    const base = keep ? rows.slice() : rows.slice().sort((a, b)=>String(info.get(b.sym).at || '').localeCompare(String(info.get(a.sym).at || '')) || a.sym.localeCompare(b.sym));
+    const order = []; base.forEach(r=>{ const g = grp.get(r.sym); if(g!=='Other' && !order.includes(g)) order.push(g); }); order.push('Other');
+    return base.map((r, i)=>[r, i]).sort((a, b)=>order.indexOf(grp.get(a[0].sym)) - order.indexOf(grp.get(b[0].sym)) || a[1] - b[1]).map(x=>x[0]);
+  }
+  const held = tv1HeldKeys(), su = new Map(rows.map(r=>[r.sym, tv1SetupLeft(r.sym, held) > 0 ? 0 : 1]));
+  return rows.map((r, i)=>[r, i]).sort((a, b)=>su.get(a[0].sym) - su.get(b[0].sym) || a[1] - b[1]).map(x=>x[0]);
+}
+function tv1HeadHtml(rows, i){   /* group header before rows[i] when the group changes (only when there is something to separate) */
+  if(wlView!=='cand' && wlView!=='wl') return '';
+  const g = tv1GroupOf(rows[i]), prev = i ? tv1GroupOf(rows[i - 1]) : null;
+  if(g === prev) return '';
+  if(wlView==='cand' && !rows.some(r=>tv1GroupOf(r)!=='Other')) return '';
+  if(wlView==='wl' && !rows.some(r=>tv1GroupOf(r)==='Setup ✓')) return '';
+  const n = rows.filter(r=>tv1GroupOf(r)===g).length;
+  return `<div class="tv1-gh${g.indexOf('HOT')===0 ? ' hot' : ''}" data-tv1-group="${escHtml(g)}">${escHtml(g)} <span class="c">${n}</span></div>`;
+}
+function tv1ReasonText(r){
+  const m = td3MetaOf(r.sym);
+  if(Array.isArray(m.reasons) && m.reasons.length){ const l = m.reasons.map(crsLabel); return l[0] + (l.length > 1 ? ' +' + (l.length - 1) : ''); }
+  if(m.source) return String(m.source);
+  const hit = (r.cInfo || [])[0];
+  if(hit && hit.v){ const nm = ltShort(String(hit.v.name || ''), 22), nat = String((hit.v.I && hit.v.I.nature) || '').toLowerCase(); if(nm) return (nat==='event' ? 'Event: ' : 'Sector: ') + nm; }
+  return '';
+}
+function tv1CandTagHtml(r){
+  if(r.port!=='cand') return '';
+  const ci = tv1CandInfo(r, tv1Today()), why = tv1ReasonText(r), e = escHtml;
+  const age = ci.ageD==null ? '' : `<span class="tv1-age${ci.ageD >= TV1_WARN_DAYS ? ' w' : ''}" data-tv1-age="${ci.ageD}">${ci.ageD}d${ci.ageD >= TV1_WARN_DAYS ? ' ⚠' : ''}</span>`;
+  return `<span class="tv1-src${why ? '' : ' none'}" data-tv1-src>${why ? e(why) : '—'}</span>${age}`;
+}
+function tv1DropDue(r){
+  const ci = tv1CandInfo(r, tv1Today()), m = ci.m, scr = String(m.screened_at || ''), base = scr || ci.day;
+  if(!base || !newsDateOk(base)) return false;
+  if(glDays(base, tv1Today()) < TV1_DROP_DAYS) return false;
+  return !(m.keep_until && String(m.keep_until) > tv1Today());
+}
+function tv1DropSugHtml(r){
+  if(r.port!=='cand' || !tv1DropDue(r)) return '';
+  const e = escHtml;
+  return `<div class="tv1-sug" data-tv1-sug="${e(r.sym)}">${TV1_DROP_DAYS} days without screening · Drop? <button type="button" class="small" data-tv1-drop onclick="event.stopPropagation();td4CandDelete('${e(r.sym)}', true)">Drop</button><button type="button" class="small" data-tv1-keep onclick="event.stopPropagation();tv1KeepMore('${e(r.sym)}')">Keep 7 more days</button></div>`;
+}
+function tv1KeepMore(sym){ td3MetaWrite(sym, {keep_until: tv1AddDays(tv1Today(), 7)}); try{ renderWatchlist(); }catch(e){} }
+
+/* ── Import ── */
+const TV1_NONSTOCK_EX = /^(CRYPTO|BINANCE|COINBASE|BITSTAMP|BYBIT|KRAKEN|FX|FX_IDC|FOREXCOM|OANDA|TVC|INDEX|CME|CBOT|NYMEX|COMEX|ECONOMICS|SP|DJ|CAPITALCOM|PEPPERSTONE|ICEUS)$/;
+const TV1_US_EX = /^(NASDAQ|NYSE|AMEX|NYSEARCA|NYSE ARCA|ARCA|CBOE|BATS|OTC|NASDAQ_DLY)$/;
+const TV1_NONSTOCK_TYPE = /^(fund|etf|etn|crypto|cryptocurrency|index|forex|futures|bond|economic|cfd|spot)/;
+function tv1Norm(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+function tv1Parse(text){
+  const raw = String(text == null ? '' : text); if(!raw.trim()) return {err:'Nothing to read — drop a file or paste a list'};
+  const rows = [], seen = new Set();
+  const push = o=>{
+    let ex = String(o.ex || '').trim().toUpperCase(), sym = String(o.sym || '').trim().toUpperCase();
+    if(sym.includes(':')){ const p = sym.split(':'); sym = p.pop(); ex = ex || p.join(':'); }
+    if(!sym) return;
+    const key = wlSymKey(sym); if(seen.has(key)) return; seen.add(key);
+    const typ = String(o.type || '').trim().toLowerCase();
+    let non = !wlValidTicker(sym) || /[!\/]/.test(sym) || TV1_NONSTOCK_EX.test(ex) || (typ && TV1_NONSTOCK_TYPE.test(typ));
+    if(!non && ex && ex !== 'SET' && !TV1_US_EX.test(ex)) non = true;   /* other exchanges: not supported */
+    const th = ex === 'SET';
+    rows.push({sym:th ? sym + '.BK' : sym, key, ex, market:th ? 'TH' : (ex ? 'US' : wlGuessMarket(sym)), tv:ex ? ex + ':' + sym : '', desc:String(o.desc || '').trim(), industry:String(o.industry || '').trim(), sector:String(o.sector || '').trim(), section:String(o.section || ''), non});
+  };
+  const first = raw.split(/\r?\n/).find(l=>l.trim()) || '';
+  const csv = first.trim().startsWith('###') ? [] : matchCsv(raw), head = csv[0] || [], col = n=>head.findIndex(h=>String(h || '').trim().toLowerCase()===n);
+  if(col('symbol') >= 0){
+    const iS = col('symbol'), iE = col('exchange'), iD = col('description'), iI = col('industry'), iC = col('sector'), iT = Math.max(col('type'), col('instrument type'), col('asset type'));
+    csv.slice(1).filter(r=>r.some(x=>String(x || '').trim())).forEach(r=>push({sym:r[iS], ex:iE >= 0 ? r[iE] : '', desc:iD >= 0 ? r[iD] : '', industry:iI >= 0 ? r[iI] : '', sector:iC >= 0 ? r[iC] : '', type:iT >= 0 ? r[iT] : ''}));
+    if(!rows.length) return {err:'No rows to read — only a header'};
+    return {rows, mode:'csv'};
+  }
+  let sec = '';
+  raw.split(/[,\r\n]+/).map(s=>s.trim()).filter(Boolean).forEach(t=>{ if(t.startsWith('###')){ sec = t.slice(3).trim(); return; } push({sym:t, section:sec}); });
+  if(!rows.length) return {err:'Could not read any symbols'};
+  return {rows, mode:'txt'};
+}
+function tv1ReasonIds(text){   /* "volume" → Volume Spike · "earning" → Earnings Spike · any other reason label contained in the text */
+  const t = tv1Norm(text); if(!t) return [];
+  const list = crsList(), pick = f=>{ const r = list.find(f); return r ? [r.id] : null; };
+  if(t.includes('volume')){ const x = pick(r=>/volume/i.test(r.label)); if(x) return x; }
+  if(t.includes('earning')){ const x = pick(r=>/earning/i.test(r.label)); if(x) return x; }
+  return pick(r=>{ const n = tv1Norm(r.label); return n && t.includes(n); }) || [];
+}
+function tv1TrackFromName(n){ const t = String(n || '').toLowerCase(); return t.includes('momentum') ? 'winner' : t.includes('compounder') ? 'ladder' : ''; }
+function tv1Classify(rows){
+  const A = wlRowsAll(), cand = new Set(A.cand.map(r=>wlSymKey(r.sym))), held = tv1HeldKeys();
+  rows.forEach(r=>{
+    const it = wlItemOf(r.sym);
+    r.cls = r.non ? 'non' : it ? (it.archived===true ? 'arch' : 'wl') : held.has(r.key) ? 'wl' : cand.has(r.key) ? 'cand' : 'new';
+  });
+}
+function tv1ImportOpen(){
+  tv1Menu = false; try{ renderWatchlist(); }catch(e){}
+  tv1Imp = {text:'', name:'', rows:null, mode:'', err:'', track:''};
+  const ov = document.getElementById('ltOverlay'); if(!ov) return;
+  document.getElementById('ltModal').innerHTML = `<h3>⬆ Import from TradingView</h3>
+    <div class="hint" style="margin-top:-6px;margin-bottom:10px">Screener <b>.csv</b> (main use) or watchlist <b>.txt</b>. Goes to Candidates only — nothing is added to the Watchlist. Imports don't count toward the daily New Cand limit.</div>
+    <div class="tv1-drop" data-tv1-drop-zone ondragover="event.preventDefault()" ondrop="tv1Drop(event)">Drop a file here or <label class="small ltFileBtn">choose file<input type="file" data-tv1-file accept=".csv,.txt,text/csv,text/plain" onchange="tv1FileIn(this)"></label></div>
+    <textarea id="tv1Text" data-tv1-text rows="4" spellcheck="false" placeholder="…or paste the file contents here" oninput="tv1TextIn(this.value)"></textarea>
+    <div class="ltErr" data-tv1-err role="alert"></div>
+    <div id="tv1Prev" data-tv1-prev></div>
+    <div class="btns"><button type="button" data-tv1-cancel onclick="tv1ImportClose()">Cancel</button><button type="button" class="primary" data-tv1-add id="tv1AddBtn" onclick="tv1ImportApply()">Add</button></div>`;
+  ov.classList.add('show'); tv1PrevRender();
+}
+function tv1ImportClose(){ const ov = document.getElementById('ltOverlay'); if(ov) ov.classList.remove('show'); tv1Imp = null; }
+function tv1Drop(ev){ ev.preventDefault(); const f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0]; if(f) tv1ReadFile(f); }
+function tv1FileIn(inp){ const f = inp && inp.files && inp.files[0]; if(f) tv1ReadFile(f); }
+function tv1ReadFile(f){
+  if(!tv1Imp) return;
+  if(f.size > 1024 * 1024){ tv1Imp.err = 'File is over 1 MB — not read'; tv1Imp.rows = null; return tv1PrevRender(); }
+  const rd = new FileReader();
+  rd.onload = ()=>{ if(!tv1Imp) return; tv1Imp.name = f.name; tv1Imp.text = String(rd.result || ''); const ta = document.getElementById('tv1Text'); if(ta) ta.value = tv1Imp.text; tv1Read(); };
+  rd.readAsText(f);
+}
+function tv1TextIn(v){ if(!tv1Imp) return; tv1Imp.text = String(v || ''); tv1Read(); }
+function tv1Read(){
+  const I = tv1Imp; if(!I) return;
+  if(!I.text.trim()){ I.rows = null; I.err = ''; return tv1PrevRender(); }
+  const res = tv1Parse(I.text);
+  if(res.err){ I.rows = null; I.err = res.err; return tv1PrevRender(); }
+  I.err = ''; I.rows = res.rows; I.mode = res.mode; tv1Classify(I.rows); tv1PrevRender();
+}
+function tv1TrackSet(t){ if(tv1Imp){ tv1Imp.track = t; tv1Imp.err = ''; tv1PrevRender(); } }
+function tv1Restore(sym){ wlRestore(sym); if(tv1Imp && tv1Imp.rows){ const r = tv1Imp.rows.find(x=>x.sym===sym); if(r) r.cls = 'wl'; setTimeout(()=>{ if(tv1Imp) tv1PrevRender(); }, 150); } }
+function tv1PrevRender(){
+  const I = tv1Imp, host = document.getElementById('tv1Prev'); if(!I || !host) return;
+  const er = document.querySelector('[data-tv1-err]'); if(er) er.textContent = I.err || '';
+  const btn = document.getElementById('tv1AddBtn');
+  if(!I.rows){ host.innerHTML = ''; if(btn){ btn.disabled = true; btn.textContent = 'Add'; } return; }
+  const e = escHtml, nameTrack = tv1TrackFromName(I.name), by = k=>I.rows.filter(r=>r.cls===k), nNew = by('new').length;
+  const lbl = r=>{ const ids = tv1ReasonIds((I.name || '') + ' ' + r.section); return ids.length ? crsLabel(ids[0]) : 'TradingView'; };
+  const labels = []; by('new').forEach(r=>{ const l = lbl(r); if(!labels.includes(l)) labels.push(l); });
+  const reasonTxt = labels.length ? labels.join(' / ') : 'TradingView';
+  const src = I.name ? e(I.name) + ' · ' : '';
+  const trackRow = nameTrack ? `Track: <b data-tv1-track-auto>${TV1_TRK[nameTrack]}</b> (from file name)`
+    : `Track: <span class="td4-seg" role="group" aria-label="Track">${[['winner', 'Momentum'], ['ladder', 'Compounder']].map(([k, n])=>`<button type="button" class="${I.track===k ? 'on' : ''}" aria-pressed="${I.track===k}" data-tv1-track="${k}" onclick="tv1TrackSet('${k}')">${n}</button>`).join('')}</span> <span class="mut">(required)</span>`;
+  const grp = (k, title, note)=>{ const l = by(k); return l.length ? `<div class="tv1-ig" data-tv1-g="${k}"><div class="t">${title} · ${l.length} <span>${note}</span></div><div class="l">${l.map(r=>{
+      const hot = k==='new' && tv1HotOf(sectorSuggest(r.industry) || sectorSuggest(r.sector));
+      const ind = r.industry ? ` (${e(r.industry)}${hot ? ' · HOT' : ''})` : '';
+      return `<span data-tv1-r="${e(r.key)}">${e(r.sym)}${ind}${k==='arch' ? ` <button type="button" class="ccLnk" data-tv1-restore onclick="tv1Restore('${e(r.sym)}')">Restore ›</button>` : ''}</span>`; }).join(' · ')}</div></div>` : ''; };
+  host.innerHTML = `<div class="tv1-sum" data-tv1-sum>📄 ${src}${I.rows.length} rows · ${I.mode==='csv' ? 'screener .csv' : 'watchlist .txt'}</div>
+    <div class="tv1-meta" data-tv1-meta>Reason: <b data-tv1-reason>${e(reasonTxt)}</b> · ${trackRow}</div>
+    ${grp('new', 'New', '→ added as Candidates')}${grp('cand', 'Already Candidate', 'skip')}${grp('wl', 'Already Watchlist', 'skip')}${grp('arch', 'Archived', 'skip')}${grp('non', 'Non-stock', 'skip')}`;
+  if(btn){ btn.disabled = !nNew; btn.textContent = nNew ? 'Add ' + nNew + ' Candidate' + (nNew > 1 ? 's' : '') : 'Nothing to add'; }
+}
+function tv1ImportApply(){
+  const I = tv1Imp; if(!I || !I.rows) return;
+  const track = tv1TrackFromName(I.name) || I.track, nw = I.rows.filter(r=>r.cls==='new');
+  if(!track && nw.length){ I.err = 'Pick a track (Momentum or Compounder) first'; return tv1PrevRender(); }
+  if(!tdCanWrite()){ I.err = 'Not synced with the server yet — try again'; return tv1PrevRender(); }
+  const now = new Date().toISOString();
+  const ok = glWrite(S=>{
+    const cm = Object.assign({}, (S.candMeta && typeof S.candMeta==='object' && !Array.isArray(S.candMeta)) ? S.candMeta : {});
+    const info = Object.assign({}, (S.tvInfo && typeof S.tvInfo==='object' && !Array.isArray(S.tvInfo)) ? S.tvInfo : {});
+    I.rows.forEach(r=>{
+      if(r.non) return;
+      if(r.cls==='new'){
+        const rec = {manual:true, sym:r.sym, market:r.market, cand_at:now, track, source:'TradingView'};
+        const ids = tv1ReasonIds((I.name || '') + ' ' + r.section); if(ids.length) rec.reasons = ids;
+        if(r.industry) rec.industry = r.industry; if(r.sector) rec.sector = r.sector; if(r.tv) rec.tv = r.tv;
+        cm[r.key] = rec;   /* a dismissed one comes back (record replaced) · no candAddLog → daily New Cand untouched */
+      }
+      const o = Object.assign({}, info[r.key] || {});
+      if(r.tv) o.x = r.tv; if(r.industry) o.i = r.industry; if(r.sector) o.s = r.sector;
+      if(Object.keys(o).length) info[r.key] = o;
+    });
+    S.candMeta = cm; S.tvInfo = info;
+  });
+  if(!ok){ I.err = 'Could not save — nothing was added'; return tv1PrevRender(); }
+  const n = nw.length;
+  tv1ImportClose();
+  tv1Toast(['Added ' + n]);
+  try{ todayRefresh(true); }catch(e){}
+  try{ renderWatchlist(); }catch(e){}
+}
 function renderWatchlist(){
   if(!state) return;
   if(wlFull && wlNarrow()) wlFullOff();   /* LN3fix3b */
@@ -15270,8 +15608,8 @@ function renderWatchlist(){
     ? 'No Candidates yet — add one with ＋ Add Candidate, then Evaluate it and promote to the Watchlist.'
     : (wlStoreErr ? 'โหลด Watchlist ไม่สำเร็จ' : 'ยังไม่มีรายการ — กด ＋ เพิ่มหุ้น เพื่อเริ่ม Watchlist ใหม่ (ใช้ร่วมทุกบัญชี)');
   const legend = rows.some(r=>ideaRels(r.sym).length) ? '<div class="ideaLegend" data-idea-legend>▲ ได้ประโยชน์ · ▼ เสียประโยชน์ · ? รอตรวจ</div>' : '';
-  const list = `<div class="panel wlList"><div class="wlListHead">${head}${ln1On() ? '' : fltHtml()}${status}</div>
-    <div class="wlListBody" id="wlListBody"><div class="wlRows">${rows.map(r=>wlRowHtml(r) + (phMenu===r.sym ? phMenuHtml(r) : '') + (wlView==='cand' && candExp===r.sym ? candXHtml(r) : '')).join('') || `<div class="empty">${empty}</div>`}</div>${legend}</div></div>`;
+  const list = `<div class="panel wlList"><div class="wlListHead">${head}${tv1BarHtml()}${ln1On() ? '' : fltHtml()}${status}</div>
+    <div class="wlListBody" id="wlListBody"><div class="wlRows">${rows.map((r, i)=>tv1HeadHtml(rows, i) + wlRowHtml(r) + (wlView==='cand' ? tv1DropSugHtml(r) : '') + (phMenu===r.sym ? phMenuHtml(r) : '') + (wlView==='cand' && candExp===r.sym ? candXHtml(r) : '')).join('') || `<div class="empty">${empty}</div>`}</div>${legend}</div></div>`;
 
   const det = `<div class="wlDet">${wlSel ? wlDetailHtml(wlFind(wlSel)) : '<div class="panel"><div class="empty">เลือกหุ้นจากลิสต์</div></div>'}</div>`;
   /* 7Y — Research แสดงในแผงขวา ไม่เปิดเต็มหน้าแล้ว (ไม่มีโหมด rcExpanded) */
