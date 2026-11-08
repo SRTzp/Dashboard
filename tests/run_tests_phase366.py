@@ -235,6 +235,9 @@ def tests(pw, w, h):
             # WK1fix: every row's text uses the width (no one-char-per-line wrap)
             wd = js(page, "()=>[...document.querySelectorAll('[data-td3-wk]')].map(e=>{ const n=e.querySelector('.nm'); const r=n.getBoundingClientRect(); const lh=parseFloat(getComputedStyle(n).lineHeight)||16; return [e.dataset.td3Wk, Math.round(r.width), Math.round(r.height/lh), Math.round(e.getBoundingClientRect().width)]; })")
             check(f"{tag} WK1fix 390 all 7 rows: text block >= 55% of row width · no char-per-line wrap", len(wd) == 7 and all(x[1] >= 0.55 * x[3] and x[2] <= 8 for x in wd), wd)
+            # WK1fix2: tag and first word of the title share the same line top (tag never alone on its own line)
+            td = js(page, "()=>[...document.querySelectorAll('[data-td3-wk]')].map(e=>{ const g=e.querySelector('[data-td3-gt]'); const x=e.querySelector('.td3-wtx'); const rg=g.getBoundingClientRect(); const rg2=document.createRange(); const tn=[...x.childNodes].find(n=>n.nodeType===3&&n.textContent.trim()); rg2.setStart(tn, tn.textContent.search(/\\S/)); rg2.setEnd(tn, tn.textContent.search(/\\S/)+1); const rc=rg2.getBoundingClientRect(); return [e.dataset.td3Wk, Math.round(rg.top), Math.round(rc.top), Math.round(rg.bottom), Math.round(rc.bottom)]; })")
+            check(f"{tag} WK1fix2 390 all 7 rows: tag and first title word on the same line (overlapping vertical span)", len(td) == 7 and all(x[2] < x[3] and x[4] > x[1] and abs(x[1] - x[2]) <= 8 for x in td), td)
         check(f"{tag} no overflow on the Weekend list", T.ovf(page) <= 0, T.ovf(page))
     finally:
         b.close()
