@@ -231,6 +231,10 @@ def tests(pw, w, h):
         check(f"{tag} no horizontal overflow (sheet open) · no console/page errors", sx <= 0 and not [x for x in ce if "Failed to load" not in x] and not pe, [sx, ce[:2], pe[:2]])
         js(page, "()=>stkCloseView()")
         T.go_today(page); weekend(page)
+        if w == 390:
+            # WK1fix: every row's text uses the width (no one-char-per-line wrap)
+            wd = js(page, "()=>[...document.querySelectorAll('[data-td3-wk]')].map(e=>{ const n=e.querySelector('.nm'); const r=n.getBoundingClientRect(); const lh=parseFloat(getComputedStyle(n).lineHeight)||16; return [e.dataset.td3Wk, Math.round(r.width), Math.round(r.height/lh), Math.round(e.getBoundingClientRect().width)]; })")
+            check(f"{tag} WK1fix 390 all 7 rows: text block >= 55% of row width · no char-per-line wrap", len(wd) == 7 and all(x[1] >= 0.55 * x[3] and x[2] <= 8 for x in wd), wd)
         check(f"{tag} no overflow on the Weekend list", T.ovf(page) <= 0, T.ovf(page))
     finally:
         b.close()
