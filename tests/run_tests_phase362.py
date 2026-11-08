@@ -303,7 +303,7 @@ def item7(pw, w=1440, h=900):
         rep = js(page, "()=>tdSettings().candFromIdeasDone || null")
         cm = js(page, "()=>tdSettings().candMeta || {}")
         print("MIGRATION REPORT:", json.dumps(rep, ensure_ascii=False))
-        check(f"{tag} migration ran once: migrated MIGA + MIGB only (source 'From Ideas', manual)", rep and rep["migrated"] == 2 and all(cm.get(k, {}).get("source") == "From Ideas" and cm[k].get("manual") is True for k in ("MIGA", "MIGB")), [rep, list(cm)])
+        check(f"{tag} migration ran once: migrated MIGA + MIGB only (source Event/Sector + idea_id, manual)", rep and rep["migrated"] == 2 and all(cm.get(k, {}).get("source") in ("Event", "Sector") and cm.get(k, {}).get("idea_id") and cm[k].get("manual") is True for k in ("MIGA", "MIGB")), [rep, list(cm)])
         rs = (rep or {}).get("reasons", {})
         check(f"{tag} skipped with reasons: parked, invalid ticker, in Watchlist, already Candidate, deleted, thematic-only, not-counted idea", all(any(k.startswith(p) for k in rs) for p in ("company parked", "no valid ticker", "already in Watchlist", "already in Candidates", "previously deleted", "thematic only", "idea status not counted")), rs)
         check(f"{tag} no skipped ticker was written (PARKX BAD INWL NOTCNT absent)", not any(k in cm for k in ("PARKX", "BAD!!", "INWL", "NOTCNT")) and cm["EXIST"].get("source") is None, list(cm))

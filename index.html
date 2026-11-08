@@ -8892,6 +8892,7 @@ function renderToday(){ todayRefresh(true); }
 function todayRefresh(force){
   if(!state || cl2aGateOn) return;
   try{ plIdeasMigrate(); }catch(e){}   /* PL2·7 */
+  try{ tv1IdeaBackfill(); }catch(e){}   /* TV1b */
   try{ tdLast = tdBuild(); }catch(e){ console.warn('today build:', e); return; }
   const n = tdLast.counts.r, b = document.getElementById('tabBadgeToday');
   if(b){ b.style.display = n>0 ? '' : 'none'; b.textContent = n>0 ? String(n) : ''; }
@@ -15293,10 +15294,63 @@ function tv1SetupHtml(r){
   const left = tv1SetupLeft(r.sym), e = escHtml;
   return `<button type="button" class="tv1-setup${left ? ' on' : ''}" data-tv1-setup="${e(r.sym)}" aria-pressed="${!!left}" title="Setup ✓ — ready to enter; auto-clears after ${TV1_SETUP_DAYS} trading days without an entry" onclick="event.stopPropagation();tv1SetupToggle(this.dataset.tv1Setup)">Setup ✓${left ? ` · ${left}d left` : ''}</button>`;
 }
+/* ── TV1b — idea → Candidates: source (Event/Sector) · idea id · sector/industry ── */
+function tv1EtfFromText(t){ t = String(t == null ? '' : t).trim(); if(!t) return ''; const u = t.toUpperCase(); return RRG_SYMS.some(x=>x.s===u) ? u : sectorSuggest(t); }
+function tv1IdeaSector(v, c){   /* → {etf, industry}: idea's own sector/theme → Flow "Ask why" sector (symbol in name/origin) → company segment industries → company industry */
+  const I = (v && v.I) || {}, inn = (v && v.inner) || {};
+  let etf = '';
+  for(const t of [I.sector_etf, I.sector, I.theme, inn.sector, inn.theme]){ etf = tv1EtfFromText(t); if(etf) break; }
+  if(!etf){
+    const txt = [v && v.name, inn.one_liner].concat(ltArr(I.origin).map(o=>o && o.title)).filter(Boolean).join(' ');
+    const hit = RRG_SYMS.find(x=>new RegExp('(^|[^A-Za-z0-9])' + x.s + '([^A-Za-z0-9]|$)').test(txt));
+    if(hit) etf = hit.s;
+  }
+  const names = c && Array.isArray(c.segments) ? c.segments.map(String) : [], inds = [];
+  names.forEach(n=>{ const sg = ltArr(v && v.segs).find(x=>String(x.name)===n); if(sg && Array.isArray(sg.industries)) sg.industries.forEach(i=>{ if(i && !inds.includes(String(i))) inds.push(String(i)); }); });
+  if(c && c.industry && !inds.includes(String(c.industry))) inds.push(String(c.industry));
+  if(!etf) for(const t of inds.concat(names)){ etf = tv1EtfFromText(t); if(etf) break; }
+  return {etf, industry:inds[0] || ''};
+}
+function tv1IdeaMeta(v, c){   /* candMeta fields for a candidate that came from idea v */
+  const nat = String((v.inner && v.inner.nature) || (v.I && v.I.nature) || '').toLowerCase(), o = tv1IdeaSector(v, c), r = {source: nat==='event' ? 'Event' : 'Sector', idea_id: v.id};
+  if(o.etf){ r.sector_etf = o.etf; r.sector = tv1SecName(o.etf); }
+  if(o.industry) r.industry = o.industry;
+  return r;
+}
+function tv1IdeaFor(sym, m){   /* idea view (+ company) that a Candidate came from: stored idea_id first, else any counted idea listing the ticker */
+  const key = wlSymKey(sym), has = v=>v.cands.find(c=>wlSymKey(c.sym)===key);
+  if(m && m.idea_id){ const v = ideaFind(m.idea_id); if(v) return {v, c:has(v) || null}; }
+  if(m && m.source && m.source !== 'From Ideas') return null;
+  for(const v of ideaCounted()){ const c = has(v); if(c && c.state!=='park') return {v, c}; }
+  return null;
+}
+function tv1IdeaBackfill(){   /* existing idea-sourced Candidates: add source/idea id/sector where the idea is still found (only fills gaps · nothing overwritten) */
+  try{
+    if(!ideaLoaded || !ideaSrvOk || ideaErr || !wlStoreReady || !tdCanWrite()) return 0;
+    const cm = td3Meta(), patches = {};
+    Object.keys(cm).forEach(k=>{
+      const m = cm[k]; if(!m || m.dismissed===true || !(m.idea_id || m.source==='From Ideas')) return;
+      const hit = tv1IdeaFor(m.sym || k, m); if(!hit) return;
+      const add = tv1IdeaMeta(hit.v, hit.c), p = {};
+      if(m.source !== 'Event' && m.source !== 'Sector') p.source = add.source;
+      ['idea_id', 'sector_etf', 'sector', 'industry'].forEach(f=>{ if(add[f] && !m[f]) p[f] = add[f]; });
+      if(Object.keys(p).length) patches[k] = p;
+    });
+    const ks = Object.keys(patches); if(!ks.length) return 0;
+    const ok = glWrite(S=>{
+      const m = Object.assign({}, (S.candMeta && typeof S.candMeta==='object' && !Array.isArray(S.candMeta)) ? S.candMeta : {});
+      ks.forEach(k=>{ if(m[k]) m[k] = Object.assign({}, m[k], patches[k]); });
+      S.candMeta = m;
+    });
+    return ok ? ks.length : 0;
+  }catch(e){ console.warn('tv1 idea backfill:', e); return 0; }
+}
 /* ── sector / HOT ── */
 function tv1EtfOf(sym, item){
   if(item && item.sector_etf && item.sector_etf !== 'TH') return item.sector_etf;
   const m = td3MetaOf(sym), inf = tv1InfoOf(sym);
+  if(m.sector_etf && m.sector_etf !== 'TH' && sectorValid(m.sector_etf)) return m.sector_etf;
+  if(!item && !m.industry && !inf.i && !m.sector){ try{ const h = tv1IdeaFor(sym, m); if(h){ const o = tv1IdeaSector(h.v, h.c); if(o.etf) return o.etf; } }catch(e){} }   /* not yet backfilled / not migrated: read it from the idea */
   for(const t of [item && item.industry, m.industry, inf.i, inf.s, m.sector]){ const s = sectorSuggest(t); if(s) return s; }
   return '';
 }
@@ -15419,9 +15473,10 @@ function tv1HeadHtml(rows, i){   /* group header before rows[i] when the group c
 function tv1ReasonText(r){
   const m = td3MetaOf(r.sym);
   if(Array.isArray(m.reasons) && m.reasons.length){ const l = m.reasons.map(crsLabel); return l[0] + (l.length > 1 ? ' +' + (l.length - 1) : ''); }
+  if(m.source==='Event' || m.source==='Sector'){ const iv = m.idea_id ? ideaFind(m.idea_id) : null, nm = iv ? ltShort(String(iv.name || ''), 22) : ''; return m.source + (nm ? ': ' + nm : ''); }
   if(m.source) return String(m.source);
   const hit = (r.cInfo || [])[0];
-  if(hit && hit.v){ const nm = ltShort(String(hit.v.name || ''), 22), nat = String((hit.v.I && hit.v.I.nature) || '').toLowerCase(); if(nm) return (nat==='event' ? 'Event: ' : 'Sector: ') + nm; }
+  if(hit && hit.v){ const nm = ltShort(String(hit.v.name || ''), 22), nat = String((hit.v.inner && hit.v.inner.nature) || (hit.v.I && hit.v.I.nature) || '').toLowerCase(); if(nm) return (nat==='event' ? 'Event: ' : 'Sector: ') + nm; }
   return '';
 }
 function tv1CandTagHtml(r){
@@ -16309,7 +16364,7 @@ function ideaStop(){
   if(ideaUnsub){ try{ ideaUnsub(); }catch(e){} }
   ideaUnsub = null; ideaUnsubUid = null; ideaList = []; tradeList = []; ideaErr = null; ideaLoaded = false; ideaSrvOk = false;
 }
-function ideaRefresh(){ if(!state || cl2aGateOn) return; try{ plIdeasMigrate(); }catch(e){} try{ if(typeof activeTab!=='undefined' && activeTab==='watch') renderWatchlist(); }catch(e){} try{ todayRefresh(); }catch(e){} }   /* ID4 — Today ตามไอเดีย */
+function ideaRefresh(){ if(!state || cl2aGateOn) return; try{ plIdeasMigrate(); }catch(e){} try{ tv1IdeaBackfill(); }catch(e){} try{ if(typeof activeTab!=='undefined' && activeTab==='watch') renderWatchlist(); }catch(e){} try{ todayRefresh(); }catch(e){} }   /* ID4 — Today ตามไอเดีย */
 
 /* ── มุมมองที่แสดงจริง = idea ทับด้วย user ── */
 function ideaView(d){
@@ -17432,7 +17487,8 @@ function plIdeasMigrate(){
         if(seen.has(key)){ skip('duplicate inside Ideas'); return; }
         seen.add(key);
         const at = /^\d{4}-\d{2}-\d{2}$/.test(v.date) ? v.date + 'T00:00:00.000Z' : new Date().toISOString();
-        add[key] = {manual:true, sym: mk==='TH' ? t + '.BK' : t, market:mk, cand_at:at, source:'From Ideas', idea_id:v.id, note:('From idea: ' + v.name).slice(0, 200)};
+        add[key] = {manual:true, sym: mk==='TH' ? t + '.BK' : t, market:mk, cand_at:at, note:('From idea: ' + v.name).slice(0, 200)};
+        Object.assign(add[key], tv1IdeaMeta(v, c));   /* TV1b — source Event/Sector · idea_id · sector/industry */
       });
     });
     const n = Object.keys(add).length, rep = {at:new Date().toISOString(), migrated:n, skipped, reasons};

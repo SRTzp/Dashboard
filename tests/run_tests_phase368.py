@@ -7,6 +7,9 @@ import ln3fix_common as C   # ต้องมาก่อน
 import run_tests_phase4 as base
 import run_tests_phase107 as T
 import run_tests_phase13 as P13
+import run_tests_phase59 as P59
+import run_tests_phase44 as P44
+import copy
 
 ENGINE = base.BROWSER_ENGINE
 results = []
@@ -186,9 +189,64 @@ def tests(pw, w, h):
         b.close()
 
 
+def tv1b_ideas():
+    def mk(iid, name, nature, cands, segs=None):
+        d = P59.idea(cands, iid=iid); d["name"] = name; d["idea"] = dict(d.get("idea") or {}, nature=nature)
+        if segs is not None: d["chain"] = {"segments": segs}
+        return d
+    def c(sym, segs): x = P59.cand(sym, sym, 1, "study"); x["segments"] = segs; return x
+    seg_semis = {"name": "Chips", "role": "r", "effect": "win", "trap": "t", "industries": ["Semiconductors"], "suggest": True, "pick": False}
+    seg_none = {"name": "Misc", "role": "r", "effect": "win", "trap": "t", "industries": ["Zzz Unknown"], "suggest": True, "pick": False}
+    return [mk("iE", "Memory squeeze", "event", [c("EV1", ["Chips"]), c("EV2", ["Chips"]), c("EV3", ["Chips"])], [seg_semis]),
+            mk("iS", "IGV Software turned Improving - why?", "structural", [c("SW1", [])], []),
+            mk("iN", "Plain idea", "structural", [c("NOS", ["Misc"])], [seg_none])]
+
+
+def tests_tv1b(pw, w, h, backfill):
+    tag = f"[{ENGINE}/tv1b-{'backfill' if backfill else 'move'}/{w}]"
+    def mut(doc):
+        for bk in doc["books"].values():
+            st = bk.setdefault("settings", {})
+            if backfill:
+                st["candFromIdeasDone"] = {"at": "2026-09-01T00:00:00Z", "migrated": 4, "skipped": 0, "reasons": {}}
+                old = {"manual": True, "market": "US", "cand_at": "2026-09-30T00:00:00Z", "track": "winner", "reasons": ["volume-spike"]}
+                st["candMeta"] = {"EV1": dict(old, sym="EV1", source="From Ideas", idea_id="iE", note="From idea: Memory squeeze"),
+                                  "SW1": dict(old, sym="SW1", source="From Ideas", idea_id="iS"),
+                                  "GONE": dict(old, sym="GONE", source="From Ideas", idea_id="no-such-idea"),
+                                  "NOS": dict(old, sym="NOS", source="From Ideas", idea_id="iN"),
+                                  "KEEP": dict(old, sym="KEEP", source="TradingView", industry="Biotechnology")}
+    b, c, page, ce, pe, dl, env = P59.launch(pw, w, h, mut=mut, ideas=tv1b_ideas())
+    try:
+        settle(page, 1800)
+        js(page, "()=>{ window.sectorState = etf=>({quad: (etf==='SMH' || etf==='IGV') ? 'lead' : 'lag', followed:false}); }")
+        js(page, "()=>{ switchTab('watch'); wlSetView('cand'); }"); settle(page, 600)
+        m = js(page, "()=>JSON.parse(JSON.stringify(tdSettings().candMeta||{}))")
+        check(f"{tag} Event idea: EV1 source 'Event' · idea_id iE · industry Semiconductors · sector_etf SMH", m.get("EV1", {}).get("source") == "Event" and m["EV1"].get("idea_id") == "iE" and m["EV1"].get("industry") == "Semiconductors" and m["EV1"].get("sector_etf") == "SMH", m.get("EV1"))
+        check(f"{tag} Sector idea ('Ask why' idea named with IGV): SW1 source 'Sector' · idea_id iS · sector_etf IGV · sector 'Software'", m.get("SW1", {}).get("source") == "Sector" and m["SW1"].get("idea_id") == "iS" and m["SW1"].get("sector_etf") == "IGV" and "Software" in str(m["SW1"].get("sector")), m.get("SW1"))
+        check(f"{tag} no sector derivable (NOS): source + idea_id saved, no sector_etf, industry kept as text", m.get("NOS", {}).get("source") == "Sector" and m["NOS"].get("idea_id") == "iN" and not m["NOS"].get("sector_etf") and m["NOS"].get("industry") == "Zzz Unknown", m.get("NOS"))
+        if backfill:
+            check(f"{tag} backfill: existing 'From Ideas' rows upgraded (EV1 Event / SW1 Sector) and old fields (track, reasons, note, cand_at) kept", m["EV1"].get("track") == "winner" and m["EV1"].get("reasons") == ["volume-spike"] and m["EV1"].get("cand_at") == "2026-09-30T00:00:00Z" and m["EV1"].get("note") == "From idea: Memory squeeze", m["EV1"])
+            check(f"{tag} backfill: idea no longer found (GONE) left untouched · non-idea candidate (KEEP) untouched", m["GONE"].get("source") == "From Ideas" and "sector_etf" not in m["GONE"] and m["KEEP"] == {"manual": True, "market": "US", "cand_at": "2026-09-30T00:00:00Z", "track": "winner", "reasons": ["volume-spike"], "sym": "KEEP", "source": "TradingView", "industry": "Biotechnology"}, [m["GONE"], m["KEEP"]])
+            n0 = js(page, "()=>tv1IdeaBackfill()")
+            check(f"{tag} backfill is idempotent (second run writes nothing)", n0 == 0, n0)
+        hd = js(page, "()=>[...document.querySelectorAll('[data-tv1-group]')].map(e=>e.dataset.tv1Group)")
+        check(f"{tag} Candidates tab groups idea candidates under HOT · Semiconductors and HOT · Software (rest in Other)", "HOT · Semiconductors" in hd and "HOT · Software" in hd and "Other" in hd, hd)
+        grp = js(page, "()=>{ const o={}; let g=''; for(const e of document.querySelectorAll('[data-tv1-group], .wlR[data-sym]')){ if(e.dataset.tv1Group) g=e.dataset.tv1Group; else (o[g]=o[g]||[]).push(e.dataset.sym); } return o; }")
+        check(f"{tag} rows: EV1 EV2 EV3 under HOT · Semiconductors · SW1 under HOT · Software · NOS (+ GONE/KEEP) in Other", set(grp.get("HOT · Semiconductors", [])) == ({"EV1"} if backfill else {"EV1", "EV2", "EV3"}) and grp.get("HOT · Software") == ["SW1"] and "NOS" in grp.get("Other", []), grp)
+        if "EV3" in m and not backfill:
+            pass
+        tags = js(page, "()=>Object.fromEntries([...document.querySelectorAll('.wlR[data-sym]')].map(e=>[e.dataset.sym, (e.querySelector('[data-tv1-src]')||{}).textContent]))")
+        if not backfill: check(f"{tag} row tags show 'Event: …' / 'Sector: …' from the stored source", str(tags.get("EV1", "")).startswith("Event: Memory") and str(tags.get("SW1", "")).startswith("Sector: IGV"), tags)
+        _, txt_m = export(page, "winner")
+        check(f"{tag} export: SCREEN - HOT - Semiconductors holds EV1 EV2 EV3 · SCREEN - HOT - Software holds SW1", "###SCREEN - HOT - Semiconductors," in txt_m and "SW1" in txt_m.split("###SCREEN - HOT - Software,")[1].split(",###")[0] and all(k in txt_m.split("###SCREEN - HOT - Semiconductors,")[1].split(",###")[0] for k in (("EV1",) if backfill else ("EV1", "EV2", "EV3"))), txt_m)
+        check(f"{tag} no console/page errors", not [x for x in ce if "Failed to load" not in x] and not pe, [ce[:3], pe[:2]])
+    finally: b.close()
+
+
 if __name__ == "__main__":
     with sync_playwright() as pw:
-        for w, h in ((390, 844), (1440, 900)): tests(pw, w, h)
+        for w, h in ((390, 844), (1440, 900)):
+            tests(pw, w, h); tests_tv1b(pw, w, h, False); tests_tv1b(pw, w, h, True)
     bad = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(bad)}/{len(results)} PASS")
     sys.exit(1 if bad else 0)
