@@ -78,3 +78,6 @@ See `tests/LN4_retired.md` for changed expectations. New suites: `run_tests_phas
 Today `ln4-390-today.png` · Watch `ln4-390-watch.png` · Core form `ln4-390-core-form.png` · Sat form `ln4-390-sat-form.png` · Plan list `ln4-390-plan-list.png` · Journal `ln4-390-journal.png` · Port `ln4-390-port.png` · Settings `ln4-390-settings.png` (+ 1440/390 `ln4-today-*.png`, `ln4-watch-*.png`).
 iPhone audit covers LN4-owned elements (no horizontal scroll on every screen; text ≥ 12px; tap ≥ 36px; Core summary ≤ 2 lines; Sat TF→Trend→Verify order and Setup + `✓ all` on one row; Watch row on one line; Settings switch on the right). Port screen only checked for overflow (no LN4 elements added there). Legacy elements outside LN4 (e.g. Sat plan-card internals) were only touched where the audit flagged them.
 
+
+## Branch
+Compare: https://github.com/SRTzp/Dashboard/compare/main...claude/ln4 (not merged)
