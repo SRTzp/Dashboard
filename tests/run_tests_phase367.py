@@ -47,8 +47,12 @@ def setup(page, wl=None, ideas=0, stk=None, wi=False, pb=None):
     refresh(None if False else page)
 
 
-def line(page): return txt(page, "[data-sk1]")
-def names(page): return js(page, "()=>[...document.querySelectorAll('[data-sk1] [data-sk1-item]')].map(e=>e.dataset.sk1Item)")
+# LN4 — the Skills-due line is now part of Today › To do (chips). Rules unchanged (sk1Items) → read the To do model.
+def _sk(page): return js(page, "()=>ln4TodoItems(tdLast || {today:thaiToday(), weekday:true}).filter(x=>x.id.indexOf('sk:')===0).map(x=>({id:x.id.slice(3), t:x.t}))")
+def line(page): return " · ".join(x["t"] for x in _sk(page))
+def names(page): return [x["id"] for x in _sk(page) if x["id"] != "lt+"]
+def nsk(page): return len(_sk(page))
+def stxt(page): return [x["t"] for x in _sk(page) if x["id"] != "lt+"]
 
 
 def tests(pw, w, h):
@@ -60,56 +64,48 @@ def tests(pw, w, h):
         at(page, SAT); setup(page, wl=[("AVGO", 5)], ideas=0, stk=None, wi=False, pb="2026Q4")
         n = names(page)
         check(f"{tag} Sat: stock-news + idea-scout shown, WI not in line", "stk" in n and "idea" in n and "wi" not in n, n)
-        check(f"{tag} Sat text carries 'idea-scout (0/2 ideas)'", "idea-scout (0/2 ideas)" in (js(page, "()=>document.querySelector('[data-sk1] .sk1-f[class]') && [...document.querySelectorAll('[data-sk1] .sk1-f')].map(e=>e.textContent).join('|')") or ""))
+        check(f"{tag} Sat text carries 'idea-scout (0/2 ideas)'", "idea-scout (0/2 ideas)" in line(page))
         setup(page, ideas=1, stk="2026-10-02", pb="2026Q4", wl=[("AVGO", 5)])
-        check(f"{tag} Sat: 1 idea + edition this week → line absent", cnt(page, "[data-sk1]") == 0, line(page))
+        check(f"{tag} Sat: 1 idea + edition this week → line absent", nsk(page) == 0, line(page))
         at(page, SUN); setup(page, ideas=0, stk="2026-09-25", pb="2026Q4", wl=[])
         check(f"{tag} Sun: edition from last week → stock-news shown; 0 ideas shown", {"stk", "idea"} <= set(names(page)), names(page))
         at(page, FRI); setup(page, ideas=0, stk=None, wi=False, pb="2026Q4", wl=[])
-        check(f"{tag} Fri: stock-news + idea-scout hidden → line absent", cnt(page, "[data-sk1]") == 0, line(page))
+        check(f"{tag} Fri: stock-news + idea-scout hidden → line absent", nsk(page) == 0, line(page))
         at(page, MON); setup(page, wi=False, ideas=0, stk=None, pb="2026Q4", wl=[])
-        check(f"{tag} Mon + no WI → shown 'weekly-impact (last day today)'; stk/idea hidden", names(page) == ["wi"] and "last day today" in js(page, "()=>document.querySelector('[data-sk1] .sk1-f').textContent"), names(page))
+        check(f"{tag} Mon + no WI → shown 'weekly-impact (last day today)'; stk/idea hidden", names(page) == ["wi"] and "last day today" in line(page), names(page))
         setup(page, wi=True, pb="2026Q4", wl=[])
-        check(f"{tag} Mon + WI present → hidden", cnt(page, "[data-sk1]") == 0)
+        check(f"{tag} Mon + WI present → hidden", nsk(page) == 0)
         at(page, TUE); setup(page, wi=False, pb="2026Q4", wl=[])
-        check(f"{tag} Tue + no WI → hidden (no nagging)", cnt(page, "[data-sk1]") == 0, line(page))
+        check(f"{tag} Tue + no WI → hidden (no nagging)", nsk(page) == 0, line(page))
         # living-thesis
         at(page, THU); setup(page, wl=[("AVGO", 31), ("NVDA", 29), ("MSFT", None)], pb="2026Q4", wi=True)
-        txts = js(page, "()=>[...document.querySelectorAll('[data-sk1] .sk1-f')].map(e=>e.textContent)")
+        txts = stxt(page)
         check(f"{tag} thesis 31d shown · 29d hidden · missing shown (oldest/missing first)", txts == ["living-thesis: MSFT none", "living-thesis: AVGO 31d"], txts)
         setup(page, wl=[("A", 40), ("B", 50), ("C", 60)], pb="2026Q4", wi=True)
-        txts = js(page, "()=>[...document.querySelectorAll('[data-sk1] .sk1-f')].map(e=>e.textContent)")
-        check(f"{tag} 3 stale → 2 shown + '+1'", txts == ["living-thesis: C 60d", "living-thesis: B 50d"] and "+1" in line(page), [txts, line(page)])
+        txts = stxt(page)
+        check(f"{tag} 3 stale → 2 shown + '+1'", txts == ["living-thesis: C 60d", "living-thesis: B 50d"] and "+1 more" in line(page), [txts, line(page)])
         # playbook
         at(page, "2026-12-26T05:00:00Z"); setup(page, pb="2026Q4", wi=True, wl=[])
-        check(f"{tag} quarter end −5d, no next-quarter playbook → 'playbook: quarter end in 5d'", "playbook: quarter end in 5d" in js(page, "()=>[...document.querySelectorAll('[data-sk1] .sk1-f')].map(e=>e.textContent).join('|')"), line(page))
+        check(f"{tag} quarter end −5d, no next-quarter playbook → 'playbook: quarter end in 5d'", "playbook: quarter end in 5d" in line(page), line(page))
         at(page, "2026-12-28T05:00:00Z"); setup(page, pb="2027Q1", wi=True, wl=[])
-        check(f"{tag} next-quarter playbook exists → hidden", cnt(page, "[data-sk1]") == 0)
+        check(f"{tag} next-quarter playbook exists → hidden", nsk(page) == 0)
         at(page, "2026-12-21T05:00:00Z"); setup(page, pb="2026Q4", wi=True, wl=[])
-        check(f"{tag} quarter end −10d → hidden", cnt(page, "[data-sk1]") == 0, line(page))
+        check(f"{tag} quarter end −10d → hidden", nsk(page) == 0, line(page))
         at(page, "2027-01-05T05:00:00Z"); setup(page, pb="2026Q4", wi=True, wl=[])
         check(f"{tag} past quarter end, no playbook for new quarter → shown", "playbook" in (line(page) or ""), line(page))
         # nothing due
         at(page, THU); setup(page, pb="2026Q4", wi=True, wl=[("AVGO", 3)])
-        check(f"{tag} nothing due → line absent", cnt(page, "[data-sk1]") == 0)
+        check(f"{tag} nothing due → line absent", nsk(page) == 0)
         # position + copy
         at(page, SAT); setup(page, wl=[("AVGO", 35)], ideas=0, stk=None, pb="2026Q4")
-        pos = js(page, "()=>{ const l=document.querySelector('[data-sk1]'), sw=document.querySelector('[data-td3-sw]'); return {nx:l.nextElementSibling===sw || !!(l.compareDocumentPosition(sw)&4), above:l.getBoundingClientRect().bottom<=sw.getBoundingClientRect().top+1, pin: !!document.querySelector('[data-ft-pinrow]')}; }")
-        check(f"{tag} line sits above Daily/Weekend switch (both modes)", pos["above"], pos)
+        check(f"{tag} skills chips sit in the status card's To do row (above Act/Find)", js(page, "()=>{ const t=document.querySelector('[data-ln4-todorow]'), s=document.querySelector('[data-ln4-status]'); return !!(t && s && s.contains(t)); }"))
         js(page, "()=>{ window.__cp=[]; Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{window.__cp.push(t);return Promise.resolve()}},configurable:true}); }")
-        page.locator("[data-sk1-copy]").click(); settle(page, 400)
+        page.locator('[data-ln4-todo^="sk:lt:"]').first.click(); settle(page, 400)
         cp = js(page, "()=>window.__cp.slice()")
-        check(f"{tag} Copy › = first item prompt (starts with skill name) + CG1 toast", len(cp) == 1 and cp[0].startswith("living-thesis update: AVGO") and cnt(page, "#cgToast.show") == 1, cp)
-        page.locator('[data-sk1-item="idea"]').evaluate("e=>e.click()"); settle(page, 400)
+        check(f"{tag} tapping a skill chip copies its prompt (starts with skill name) + CG1 toast", len(cp) == 1 and cp[0].startswith("living-thesis update: AVGO") and cnt(page, "#cgToast.show") == 1, cp)
+        page.locator('[data-ln4-todo="sk:idea"]').evaluate("e=>e.click()"); settle(page, 400)
         cp = js(page, "()=>window.__cp.slice()")
         check(f"{tag} item tap copies that item's prompt", len(cp) == 2 and cp[1].startswith("idea-scout"), cp)
-        # phone
-        if w <= 430:
-            ov = js(page, "()=>{ const l=document.querySelector('[data-sk1]'); const r=l.getBoundingClientRect(); const kids=[...l.children].filter(e=>e.offsetParent); return {h:r.height, ovf:l.scrollWidth>l.clientWidth+1, rows:new Set(kids.map(e=>Math.round(e.getBoundingClientRect().top))).size, vis:kids.map(e=>e.innerText)}; }")
-            check(f"{tag} phone: one row, no overflow, names only", ov["rows"] == 1 and not ov["ovf"] and "35d" not in " ".join(ov["vis"]), ov)
-            setup(page, wl=[("AVGO", 35)], ideas=0, stk=None, pb="2026Q4", wi=False)
-            n3 = js(page, "()=>({ph:getComputedStyle(document.querySelector('[data-sk1-ph]')).display, hid:[...document.querySelectorAll('.sk1-x')].every(e=>getComputedStyle(e).display==='none')})")
-            check(f"{tag} phone: 3 items → third hidden, '+1' shown", n3["ph"] != "none" and n3["hid"], n3)
         os.makedirs(SHOTS, exist_ok=True)
         page.screenshot(path=os.path.join(SHOTS, f"sk1-today-{w}.png"))
         # --- default mode ---
