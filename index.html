@@ -3638,6 +3638,8 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 /* Starter ¼ (Plan form) */
 .ln4-starter{display:flex;align-items:center;gap:8px;margin:8px 0 2px;font-size:.84rem;cursor:pointer}.ln4-starter input{width:18px;height:18px}.ln4-starter small{color:var(--muted)}
 /* Lean Watch */
+.ln4-pb{font:700 10.5px var(--sans);border-radius:6px;padding:1px 6px;margin-left:4px;background:var(--bg,#EEF0F3);color:var(--muted);white-space:nowrap}.ln4-pb.a{background:var(--amber-dim);color:var(--amber)}.ln4-pb.g{background:var(--teal-dim);color:var(--teal)}
+.ln4-pc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 2px 6px;font-size:12.5px}.ln4-pc .m{flex:1;min-width:0;color:var(--muted)}
 .ln4w-row{display:flex;align-items:center;gap:8px;padding:10px 6px;border-top:1px solid var(--border);cursor:pointer;flex-wrap:wrap}.ln4w-row b{font-size:.98rem;min-width:56px}.ln4w-row .m{flex:1;color:var(--muted);font-size:.82rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ln4w-row .m.nr{color:var(--amber);font-weight:700}
 .ln4w-row .age{font:600 .74rem var(--mono);color:var(--muted);white-space:nowrap}.ln4w-row .age.w{color:var(--amber);font-weight:700}.ln4w-row .age button{border:0;background:none;color:var(--amber);cursor:pointer;font-size:.8rem;padding:0 0 0 2px}
 .ln4w-row.open{background:var(--bg,#EEF0F3);border-radius:10px}
@@ -8807,15 +8809,30 @@ function ln4PortPills(){
   try{ const ev = lossEval(A, 'sat'); if(ev && ev.status !== 'normal') out.push(`<span class="pill ${ev.blocked ? 'p-r' : 'p-a'}" data-ln4-portpill="sat">Sat ${td3E(ev.label.replace('Half size', 'Half'))}</span>`); }catch(e){}
   return out.join(' ');
 }
+/* room = week loss limit − realised week loss (home account) · ONE source for Today and Port */
+function ln4RoomR(){
+  try{ const A = tdHome(), w = lossEval(A, 'winner'), s = lossEval(A, 'sat'), lim = (w || s) ? (w || s).cfg.weekR : null;
+    if(lim != null){ const used = Math.max(w ? w.weekR : 0, s ? s.weekR : 0); return (Math.round((lim - used) * 10) / 10).toFixed(1); } }catch(e){}
+  return null;
+}
+/* Port badges: ¼ starter · add-on planned · stop below avg · 0 risk (same rule as Raise stop ›) */
+function ln4PortBadges(r, M){
+  const out = [];
+  try{
+    const pos = (M.pos || []).find(x=>x.id === r.id) || {};
+    const c = coreCardsList.find(x=>x.acct === M.A && (x.trade_id === r.id || x.acc_trade_id === r.id));
+    if(c && ln4Feature() && c.plan && c.plan.starter && c.plan.addon && (c.lots || []).length <= 1) out.push(`<span class="ln4-pb" data-ln4-pb="starter">${c.plan.addon.frac === 0.5 ? '½' : '¼'} starter · add-on planned</span>`);
+    if(pos.stop > 0 && pos.avg > 0 && pos.stop < pos.avg - 1e-9) out.push(`<span class="ln4-pb a" data-ln4-pb="below">stop below avg</span>`);
+    else if(r.principalPct === 0 || (pos.stop > 0 && pos.avg > 0 && pos.stop >= pos.avg - 1e-9)) out.push(`<span class="ln4-pb g" data-ln4-pb="zero">0 risk</span>`);
+  }catch(e){}
+  return out.join(' ');
+}
 function ln4RiskLine(){
   try{
     if(ps1Off()) return '';
     const M = ps1Model(); if(!M) return '';
     let room = '';
-    try{
-      const A = tdHome(), w = lossEval(A, 'winner'), s = lossEval(A, 'sat'), lim = (w || s) ? (w || s).cfg.weekR : null;
-      if(lim != null){ const used = Math.max(w ? w.weekR : 0, s ? s.weekR : 0); room = ` · room <b data-ln4-room>${(Math.round((lim - used) * 10) / 10).toFixed(1)}R</b> this week`; }
-    }catch(e){}
+    { const rr = ln4RoomR(); if(rr != null) room = ` · room <b data-ln4-room>${rr}R</b> this week`; }
     return `<span class="lb" data-ln4-risk>Risk <b>${ps1Pct(M.P.principalPct, 1)} / ${ps1Pct(M.cfg.total, 1)}</b>${room}</span>`;
   }catch(e){ return ''; }
 }
@@ -8862,6 +8879,15 @@ function ln4TodayLine(){
 }
 
 /* ── Exec / Missed / ladder ── */
+/* Journal "Taken": closed trades that came from a valid setup (plan reached Order working / crossed) and were filled — Missed never has a trade */
+function ln4TradeTaken(t){
+  try{
+    const ids = new Set(ln4ValidList().filter(x=>x.taken && !x.missed).map(x=>x.id));
+    if(!ids.size || !t) return false;
+    if((coreCardsList || []).some(c=>ids.has(c.id) && (c.trade_id === t.id || c.acc_trade_id === t.id))) return true;
+    return (satIdeasList || []).some(i=>ids.has(i.id) && (i.trade_id === t.id || (Array.isArray(i.trade_ids) && i.trade_ids.includes(t.id)) || (i.accts && typeof i.accts === 'object' && Object.values(i.accts).some(x=>x && x.trade_id === t.id))));
+  }catch(e){ return false; }
+}
 function ln4Taken(id){
   const c = (coreCardsList || []).find(x=>x.id === id);
   if(c) return c.status !== 'plan';
@@ -9010,6 +9036,21 @@ function ln4RowHtml(r){
   const b = r.btn ? `<button type="button" class="go${r.btn.p ? ' p' : ''}${r.btn.fx ? ' fx' : ''}" data-ln4-btn onclick="${r.btn.fn}">${s(r.btn.t)}</button>` : '';
   return `<div class="it ln4-row" data-ln4-row="${s(r.sym)}" data-ln4-kind="${r.kind}" data-ln4-state="${r.state}"${r.bad ? ` data-ln4-bad="${r.bad.k}"` : ''}><b>${s(r.sym)}</b>${tag}${sec}<span class="m" data-ln4-det>${r.det}</span>${stx}${b}</div>`;
 }
+/* LN4 §8 — Plan tab cards: same states as Today Act (Draft · Order working · Filled/Open · Add-on ›), same MMT/COMP tag (+½) · built from the same rows */
+function ln4CancelOrder(kind, id){
+  if(kind === 'core') coreWrite(id, {ln4:{placedAt:null}}); else sat7dWrite('satIdeas', id, {ln4:{placedAt:null}});
+  ln4Toast('Order cancelled');
+}
+function ln4PlanStripHtml(r){
+  if(!r) return '';
+  const s = td3E, tag = r.kind === 'sat' ? `<span class="sc sat">SAT</span>` : `<span class="sc${r.tag === 'COMP' ? ' c' : ''}" data-ln4-ptag="${r.tag}">${r.tag}${r.half ? ' ½' : ''}</span>`;
+  const stx = r.bad ? `<span class="st r" data-ln4-why>${s(r.bad.why)}</span>` : `<span class="st ${r.state === 'draft' ? 'd' : r.state === 'open' ? 'f' : ''}" data-ln4-status>${s(r.status)}</span>`;
+  const b = r.btn ? `<button type="button" class="go${r.btn.p ? ' p' : ''}${r.btn.fx ? ' fx' : ''}" data-ln4-btn onclick="event.stopPropagation();${r.btn.fn}">${s(r.btn.t)}</button>` : '';
+  const cx = r.state === 'working' ? `<button type="button" class="go" data-ln4-cancel onclick="event.stopPropagation();ln4CancelOrder('${r.kind}','${s(r.id)}')">Cancel order</button>` : '';
+  return `<div class="ln4 ln4-pc" data-ln4-pc="${s(r.sym)}" data-ln4-state="${r.state}">${tag}${stx}<span class="m">${s(r.det || '')}</span>${b}${cx}</div>`;
+}
+function ln4PlanStripCore(c){ try{ if(!c || c.strategy === 'L') return ''; return ln4PlanStripHtml(ln4CoreRows().find(x=>x.id === c.id)); }catch(e){ return ''; } }
+function ln4PlanStripSat(i){ try{ return ln4PlanStripHtml(ln4SatRows().find(x=>x.id === i.id)); }catch(e){ return ''; } }
 function ln4LadderBadge(){
   const L = ln4Ladder();
   return `<button type="button" class="lad" data-ln4-ladder onclick="ln4LadderTip()">Stage ${L.stage} · ${LN4_FRAC_TXT[L.stage]} size · <b>${L.n}/10</b> ›</button>${L.suggest ? `<button type="button" class="go p" data-ln4-moveup onclick="ln4SetStage(${L.stage + 1})">Move to Stage ${L.stage + 1}</button>` : ''}`;
@@ -12435,6 +12476,7 @@ function coreCardHtml(v, cx){
   let h = coreCardHtmlBase(v, cx);
   if(ln1On()){ try{ h = lfCardRow(h, v, cx); }catch(e){ console.warn('lf card row:', e); } }
   if(v.c.strategy!=='L' && v.c.track==='ladder') h = coreLadderTrackWords(h, coreCxFor(v.c, cx));
+  if(v.c.strategy!=='L' && (v.kind==='plan' || v.kind==='open')){ const st = ln4PlanStripCore(v.c); if(st) h = h.replace(/(<button type="button" class="ccRow[\s\S]*?<\/button>)/, (m)=>m + st); }   /* LN4 §8 */
   return h;
 }
 /* คำในโหมด Lean: W → Winners · L / บันได → Ladder · ระบบ Week → Winners (แก้เฉพาะข้อความที่เห็น ไม่แตะ attribute/ค่าเก็บ) */
@@ -13449,10 +13491,10 @@ function ps1PanelHtml(){
   const rows = P.ideas.slice().sort((a,b)=>((b.giveBackPct==null ? -1 : b.giveBackPct) - (a.giveBackPct==null ? -1 : a.giveBackPct)));
   const pv = {ladder: poolsOf(M.A).ladder, winner: poolsOf(M.A).winner, sat: satBal};
   const ofPort = (r)=>{ const pp = r.principalPct==null ? null : Ps1.portPct(r.principalPct / 100 * M.E, pv[r.bucket]); return pp==null ? '' : ` <span class="ps1Pp" data-ps1-portpct>(= ${ps1Pct(pp,1)} of ${e(c.buckets[r.bucket] ? c.buckets[r.bucket].label : r.bucket)})</span>`; };
-  const list = rows.length ? `<table class="ps1L" data-ps1-list><tr><th>Idea</th><th>Bucket</th><th class="r">Risk now</th><th class="r">Give-back</th></tr>${rows.map(r=>`<tr data-ps1-idea="${e(String(r.ticker))}"><td>${e(String(r.ticker))}</td><td>${e(c.buckets[r.bucket] ? c.buckets[r.bucket].label : r.bucket)}</td><td class="r">${r.principalPct==null ? '<i>unknown</i>' : ps1Pct(r.principalPct) + ofPort(r)}</td><td class="r">${r.giveBackPct==null ? '<i>unknown</i>' : ps1Pct(r.giveBackPct)}</td></tr>`).join('')}</table>` : '<div class="ps1Sub">No open positions.</div>';
+  const list = rows.length ? `<table class="ps1L" data-ps1-list><tr><th>Idea</th><th>Bucket</th><th class="r">Risk now</th><th class="r">Give-back</th></tr>${rows.map(r=>`<tr data-ps1-idea="${e(String(r.ticker))}"><td>${e(String(r.ticker))} ${ln4PortBadges(r, M)}</td><td>${e(c.buckets[r.bucket] ? c.buckets[r.bucket].label : r.bucket)}</td><td class="r">${r.principalPct==null ? '<i>unknown</i>' : ps1Pct(r.principalPct) + ofPort(r)}</td><td class="r">${r.giveBackPct==null ? '<i>unknown</i>' : ps1Pct(r.giveBackPct)}</td></tr>`).join('')}</table>` : '<div class="ps1Sub">No open positions.</div>';
   const miss = P.missing.length ? `<div class="ps1Miss" data-ps1-missing>Missing stop/price: ${P.missing.map(m=>`${e(String(m.ticker))} (${[m.missingStop ? 'stop' : '', m.missingPx ? 'price' : ''].filter(Boolean).join(' + ')})`).join(' · ')} — counted as unknown, not 0${P.partial ? '. Totals above exclude them.' : ''}</div>` : '';
   return `<div class="ps1P" data-ps1-panel-body><h3>Portfolio Risk</h3><div class="ps1Sub" data-ps1-e>Portfolio value ฿${fmt0(M.E)}${M.date ? ' · as of ' + e(M.date) : ''}</div><div class="ps1Lc" data-ps1-losschips>${order.map(k=>lossChipHtml(lossEval(M.A, k))).join(' ')}</div>${bk}
-    <div class="ps1T" data-ps1-total><span>Principal at risk <b>${ps1Pct(P.principalPct)}</b> / ${ps1Pct(c.total,1)}</span><span>Risk budget left <b>${ps1Pct(P.totalLeftPct)}</b></span></div>${gb}${list}${miss}
+    <div class="ps1T" data-ps1-total><span>Principal at risk <b>${ps1Pct(P.principalPct)}</b> / ${ps1Pct(c.total,1)}</span><span>Risk budget left <b>${ps1Pct(P.totalLeftPct)}</b></span>${(()=>{ const rr = M.A === tdHome() ? ln4RoomR() : null; return rr != null ? `<span data-ln4-port-room>room <b>${rr}R</b> this week</span>` : ''; })()}</div>${gb}${list}${miss}
     <div class="ps1Fn">Gaps/slippage can still cause a loss.</div></div>`;
 }
 function ps1RenderPanel(){
@@ -14744,7 +14786,7 @@ function renderJournalBody(A){
   if(portOn('satB')) jfdefs.push(['satB','Sat']); }   /* LN3 — Lean: Core/Sat อยู่ที่ปุ่มในกล่องสรุป */
   jfdefs.push(['win','Win'],['loss','Loss'],['offplan','นอกแผน'],['setupinc','Setup ไม่ครบ']);
   if(ln1On()) jfdefs.push(['acc','ไม้เร่ง']);   /* LN3fix2 */
-  jfdefs.push(['ctr','Counter trend']); if(ln4Feature()) jfdefs.push(['starter','Starter']); jfdefs.push(['missed','Missed']);   /* LN4 §4d/§8 */
+  jfdefs.push(['taken','Taken'],['ctr','Counter trend']); if(ln4Feature()) jfdefs.push(['starter','Starter']); jfdefs.push(['missed','Missed']);   /* LN4 §4d/§8 */
   if(!jfdefs.some(([k])=>k===jFilter)) jFilter = 'all';
   document.getElementById('jFilters').innerHTML = jfdefs.map(([k,l])=>
     `<span class="chip ${jFilter===k?'on':''}" data-jf="${k}" onclick="setJFilter('${k}')">${l}</span>`).join('') + (ln1On() ? `<span class="chip" data-ln3-backfill="1" role="button" tabindex="0" onclick="jBackfillOpen()">＋ ย้อนหลัง</span>` : '')
@@ -14767,6 +14809,7 @@ function renderJournalBody(A){
   else if(jFilter==='setupinc') rows = rows.filter(tradeSetupInc);
   else if(jFilter==='acc') rows = rows.filter(t=>!!t.acc);   /* LN3fix2 */
   else if(jFilter==='ctr') rows = rows.filter(t=>t.counterTrend === true);
+  else if(jFilter==='taken') rows = rows.filter(ln4TradeTaken);   /* LN4 §8 */
   else if(jFilter==='starter') rows = rows.filter(ln4TradeStarter);
   else if(jFilter==='missed') rows = [];
   else if(jFilter!=='all') rows = rows.filter(t=>t.port===jFilter);
@@ -25013,7 +25056,7 @@ function ln1CardHtml(idea){
     + `<div><label>TP <b class="pf-req" aria-label="บังคับ">*</b></label>${inp('tp', idea.tp, `data-v2-tp="${tac ? 'tac' : 'main'}" data-pf-tp placeholder="ต้องใส่" oninput="pfRrLive(this)"${lkA}${(+idea.tp > 0) ? '' : ' class="pf-need"'}`)}</div>`
     + (satE2On(idea) ? `<div class="ln1-e2c" data-sat-e2><input type="text" inputmode="decimal" data-v2-entry2 placeholder="Entry 2" value="${idea.entry2==null ? '' : e(String(idea.entry2))}" oninput="pfRrLive(this)" onchange="satE2Edit('${id}','entry2',this.value)"${lkA}></div><div class="ln1-e2c ln1-e2s"><label class="ps1Pc"><input type="text" inputmode="decimal" data-v2-e2share aria-label="Risk share of entry 2 %" value="${Math.round(satE2Share(idea)*100)}" oninput="pfRrLive(this)" onchange="satE2Edit('${id}','e2share',this.value)"><i>%</i></label>${satIdeaHasTrade(idea) ? '' : `<button type="button" class="ps1Rm" data-sat-e2rm aria-label="Remove entry 2" onclick="satE2Toggle('${id}',false)">✕</button>`}</div><div></div>` : '')
     + `</div>`
-    + pfRrHtml(idea) + ln4PillsHtml(idea, tac) + ln4SatStarterRow(idea) + `</div>`;
+    + pfRrHtml(idea) + ln4PillsHtml(idea, tac) + ln4SatStarterRow(idea) + ln4PlanStripSat(idea) + `</div>`;
   /* ขนาดไม้ทุกบัญชีเรียงต่อกัน */
   const msgs = [], details = [];
   const sizes = accs.map(a=>{
