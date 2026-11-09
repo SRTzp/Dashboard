@@ -223,8 +223,9 @@ def checks(pw, w, h, label):
         if not hint:
             page.evaluate("()=>{ try{ openSystemSettings(); }catch(e){} try{ if(typeof renderSatRisk==='function') renderSatRisk(); }catch(e){} }"); page.wait_for_timeout(200)
             hint = page.evaluate("()=>{ const e=document.getElementById('satHeatHint'); return e ? e.textContent : null; }")
-        src_ok = "ด้านล่างในกล่องนี้" in open(INDEX, encoding="utf-8").read()
-        check(f"{tag} 11 #satHeatHint มีคำ 'ด้านล่างในกล่องนี้' (SET1) (ในหน้าจริงถ้าวาดแล้ว + ในโค้ด)", src_ok and (not hint or "ด้านล่างในกล่องนี้" in hint) and "ด้านบน" not in (hint or ""), hint or "(ยังไม่วาด)")
+        # PS1 moved the Sat heat field into "Legacy limits" and reworded the hint (old SET1 text 'ด้านล่างในกล่องนี้' removed).
+        src_ok = 'ใน Legacy limits' in open(INDEX, encoding="utf-8").read()
+        check(f"{tag} 11 #satHeatHint ชี้ไปที่ช่อง Sat ใน 'Legacy limits' (PS1; เดิม SET1 'ด้านล่างในกล่องนี้') (ในหน้าจริงถ้าวาดแล้ว + ในโค้ด)", src_ok and (not hint or "Legacy limits" in hint) and "ด้านบน" not in (hint or ""), hint or "(ยังไม่วาด)")
         page.evaluate("()=>{ const o=document.getElementById('sysOverlay'); if(o) o.classList.remove('show'); }")
         # 12 ─ FQC ออกหมด
         src = open(INDEX, encoding="utf-8").read()

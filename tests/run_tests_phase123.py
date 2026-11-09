@@ -47,7 +47,7 @@ def tests(pw, w, h):
         # Today pin
         js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 500)
         pin = js(page, "()=>{ const p=document.querySelector('[data-ft-pinrow]'); const w=document.querySelector('[data-td-wrap]'); return p ? [p.innerText.replace(/\\s+/g,' ').trim(), w.firstElementChild===p, !!p.querySelector('[data-ft-go]'), !p.querySelector('.x,[data-td4-remx]')] : null; }")
-        check(f"{tag} §8 Today: ปักบนสุด 'Homework: ZZZ — thesis + screening · due in 3 days' + 'Do it ›' · ปิด/เลื่อนไม่ได้", pin and pin[1] and pin[2] and pin[3] and pin[0].startswith("Homework ZZZ 3d thesis + screening")   # PS1c §6: one row, chips, pin)
+        check(f"{tag} §8 Today: ปักบนสุด 'Homework: ZZZ — thesis + screening · due in 3 days' + 'Do it ›' · ปิด/เลื่อนไม่ได้", pin and pin[1] and pin[2] and pin[3] and pin[0].startswith("Homework ZZZ 3d thesis + screening"), pin)   # PS1c §6: one row, chips, pin
         clock(page, "2026-11-12"); js(page, "()=>todayRefresh(true)"); settle(page, 400)
         p2 = js(page, "()=>document.querySelector('[data-ft-pinrow]')?.innerText.replace(/\\s+/g,' ').trim()")
         check(f"{tag} §8 นับถอยหลัง (นาฬิกาปลอม): วัน 2 → 'due in 1 day'", p2 and "ZZZ 1d" in p2, p2)

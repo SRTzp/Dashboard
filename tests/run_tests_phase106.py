@@ -249,7 +249,10 @@ def weekend_tests(pw, w, h, label, shots=False):
         go_today(page)
         check(f"{tag} B4 Daily เปิดเป็นค่าเริ่มต้น (แม้วันอาทิตย์)", js(page, "()=>document.querySelector('[data-td3-tab=\"d\"]').classList.contains('on')") and cnt(page, "[data-td3-wk]") == 0)
         clock(page, "2026-10-04T05:00:00Z"); go_today(page)
-        check(f"{tag} B4 วันอาทิตย์ก็เปิด Daily เป็นค่าเริ่มต้น", js(page, "()=>document.querySelector('[data-td3-tab=\"d\"]').classList.contains('on')"))
+        # SK1: Sat/Sun open Weekend by default; Mon opens Daily
+        check(f"{tag} B4 วันอาทิตย์เปิด Weekend เป็นค่าเริ่มต้น (SK1)", js(page, "()=>document.querySelector('[data-td3-tab=\"w\"]').classList.contains('on')"))
+        clock(page, "2026-10-05T05:00:00Z"); go_today(page)
+        check(f"{tag} B4 วันจันทร์เปิด Daily เป็นค่าเริ่มต้น (SK1)", js(page, "()=>document.querySelector('[data-td3-tab=\"d\"]').classList.contains('on')"))
         clock(page, NOW); go_today(page)
         bd = js(page, "()=>{ const b = document.querySelector('[data-td3-badge]'); return b ? {t:b.innerText, title:b.title, aria:b.getAttribute('aria-label')} : null; }")
         check(f"{tag} B4 Weekend มี badge แดง n/m ตอนยังไม่ครบ + ข้อความ 'This week's review is incomplete'", bd and "/" in bd["t"] and "incomplete" in bd["title"] and "incomplete" in bd["aria"], bd)
