@@ -266,7 +266,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--tabs-sa
   .tabbtn.on{background:var(--lime-dim);color:var(--text);border-color:transparent}
   .tabbtn.on .kbdhint{background:var(--surface2);color:var(--faint)}
   .tabbtn .kbdhint{display:none}
-  body{padding-bottom:calc(var(--tabbar-h,68px) + 8px)}   /* เท่าความสูงแถบล่าง (วัดจริงด้วย JS ตอนโหลด/หมุนจอ) */
+  body{padding-bottom:calc(var(--tabbar-h,68px) + env(safe-area-inset-bottom,0px) + 24px)}   /* เท่าความสูงแถบล่าง (วัดจริงด้วย JS ตอนโหลด/หมุนจอ) */
 }
 
 /* ---------- TD1 — แท็บ วันนี้ ---------- */
@@ -3597,7 +3597,7 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .ln4 .st{font:700 11px var(--sans);color:var(--blue);white-space:nowrap}.ln4 .st.d{color:var(--faint,#9AA0A9)}.ln4 .st.f{color:var(--teal)}.ln4 .st.r{color:var(--red)}
 .ln4 .lad{font:600 12px var(--sans);border:1px solid var(--border);border-radius:999px;padding:3px 10px;background:var(--surface);color:var(--muted);cursor:pointer}.ln4 .lad b{color:var(--teal)}
 .ln4 .grp{font:700 10.5px var(--mono);color:var(--faint,#9AA0A9);letter-spacing:.05em;margin:10px 0 0}
-@media(max-width:560px){.ln4 .it{display:grid;grid-template-columns:auto auto 1fr auto;grid-template-areas:"a b c st" "m m m go";row-gap:4px;column-gap:6px;align-items:center}.ln4 .it>b{grid-area:a;min-width:0}.ln4 .it .m{grid-area:m}.ln4 .it .st{grid-area:st;justify-self:end}.ln4 .it .go{grid-area:go}.ln4 .it .sc,.ln4 .it .ln4-sc{max-width:110px}}
+@media(max-width:560px){.ln4 .it{display:grid;grid-template-columns:auto auto 1fr auto;grid-template-areas:"a b c st" "m m m go";row-gap:4px;column-gap:6px;align-items:center}.ln4 .it>b{grid-area:a;min-width:0}.ln4 .it .m{grid-area:m}.ln4 .it .st{grid-area:st;justify-self:end}.ln4 .it .go{grid-area:go}.ln4 .it .sc,.ln4 .it .ln4-sc{max-width:110px}.ln4 .it .ln4-sc{justify-self:start}}
 .ln4 .sel{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.ln4 .sb{border:1px solid var(--border);border-radius:14px;padding:10px;text-align:center;background:var(--surface);cursor:pointer;color:inherit;font:inherit}.ln4 .sb b{display:block;font:700 19px var(--mono)}.ln4 .sb span{font-size:12.5px;color:var(--muted)}.ln4 .sb.on{border-color:var(--text,#141518);box-shadow:0 0 0 1px var(--text,#141518)}.ln4 .sb.dn b{color:var(--teal)}
 .ln4 .fp{margin-top:10px;border:1px solid var(--border);border-radius:14px;padding:4px 12px;display:none}.ln4 .fp.open{display:block}
 .ln4 .fr{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--border);font-size:13.5px;flex-wrap:wrap}.ln4 .fr:first-child{border-top:0}.ln4 .fr b{min-width:56px}.ln4 .fr .m{flex:1;color:var(--muted);font-size:12.5px}
@@ -8891,7 +8891,8 @@ function ln4HotLine(){
 function ln4GoLeadership(){ try{ switchTab('flow'); }catch(e){} setTimeout(()=>{ const h = document.getElementById('ffThemesTitle') || document.getElementById('ffThemes'); if(h && h.scrollIntoView) h.scrollIntoView({block:'start'}); }, 80); }
 function ln4MacroLine(M){
   const mac = td3MacroInfo(M.today);
-  const txt = mac ? `<span data-ln4-macro-t>${td3E(mac.headline)}</span>` : `<span class="m">No active Playbook</span>`;
+  let one = ''; try{ const v = pbLatestActive(), q = /^\d{4}Q([1-4])$/.exec(String((v && v.quarter) || '')); if(v) one = (q ? 'Q' + q[1] + ' ' : '') + pbStanceLineText(v.assets || {}); }catch(e){}   /* final fix 2 — Playbook stance one-liner, never headline/URL */
+  const txt = mac ? `<span data-ln4-macro-t style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${td3E(one || 'Playbook active')}</span>` : `<span class="m">No active Playbook</span>`;
   return `<div class="line" data-ln4-macro><span class="k">MACRO</span>${txt}<button type="button" class="rd" data-ln4-playbook onclick="td4MacroGo()">Playbook ›</button></div>`;
 }
 function ln4GoalLine(M){
@@ -9020,17 +9021,17 @@ function ln4CoreRows(){
       if(r.open){
         const stop = +v.stop, avg = +v.avg, below = stop < avg - 1e-9;
         row.state = 'open'; row.status = 'Open';
-        row.det = below ? `Stop ${fmt2(stop)} below avg ${fmt2(avg)}` : `Stop ${fmt2(stop)} ≥ avg ${fmt2(avg)}`;
+        row.det = below ? `Stop ${stop.toFixed(2)} below avg ${avg.toFixed(2)}` : `Stop ${stop.toFixed(2)} ≥ avg ${avg.toFixed(2)}`;
         const addon = ln4Feature() && pl.addon && !below && (c.lots || []).length <= 1 && pl.addon.cond === 'stop>=be';
         if(addon){ row.btn = {t:'Add-on ›', fn:`ln4AddOn('${c.id}')`}; row.det += ' · add-on ready'; }
         else if(below) row.btn = {t:'Raise stop ›', fn:`ln4RaiseStop('${c.id}')`};
       } else if(c.ln4 && c.ln4.placedAt){
         row.state = 'working'; row.status = 'Order working';
-        row.det = `${+(c.px) > 0 && +pl.entry < +c.px ? 'Buy Limit' : 'Buy Stop'} ${fmt2(+pl.entry)}${star}`;
+        row.det = `${+(c.px) > 0 && +pl.entry < +c.px ? 'Buy Limit' : 'Buy Stop'} ${(+pl.entry).toFixed(2)}${star}`;
         row.btn = {t:'Record fill', fn:`ln4RecordFill('${c.id}')`};
       } else {
         row.state = 'draft'; row.status = 'Draft';
-        row.det = `${+(c.px) > 0 && +pl.entry < +c.px ? 'Buy Limit' : 'Buy Stop'} ${fmt2(+pl.entry)}${star}`;
+        row.det = `${+(c.px) > 0 && +pl.entry < +c.px ? 'Buy Limit' : 'Buy Stop'} ${(+pl.entry).toFixed(2)}${star}`;
         const bad = ln4CoreChecks(c);
         if(bad){ row.bad = bad; row.btn = {t:bad.btn, fn:`ln4Fix('${c.id}','${bad.k}')`, fx:true}; }
         else row.btn = {t:'Place order ›', fn:`ln4Place('core','${c.id}')`, p:true};

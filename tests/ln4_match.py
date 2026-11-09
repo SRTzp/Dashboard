@@ -34,10 +34,19 @@ def app(pw, w, h):
         # same sample data as today-v5.html: HOT sectors, TODAY events, To do chips, Exec
         js(page, """()=>{ const n = Date.now(); window.ln4HotSectors = ()=>[{etf:'XLK',name:'Semis',k:'lead'},{etf:'XLU',name:'Power & Grid',k:'lead'},{etf:'XLI',name:'Defense',k:'fresh'}];
           window.td3NewsModel = ()=>({hasDocs:true, now:n, list:[{id:'e1', ts:n-3600000, e:{title:'CN CPI'}, assets:['XAUUSD']},{id:'e2', ts:n+(3*3600+12*60)*1000, e:{title:'US CPI'}, assets:['XAUUSD','BTCUSD']},{id:'e3', ts:n+9*3600000, e:{title:'US PMI'}, assets:['XAUUSD']}]});
+          const SEC = {AMD:'XLK', NVDA:'XLK', AVGO:'XLK'}; window.tv1EtfOf = (sym)=>SEC[sym] || 'XLE'; window.tv1HotOf = (e)=>e === 'XLK'; window.tv1SecName = (e)=>e === 'XLK' ? 'Semis' : 'Energy';
+          ['AMD','AVGO'].forEach(t=>{ const c = coreCardsList.find(x=>x.ticker===t); if(c) coreWrite(c.id, {plan:Object.assign({}, c.plan||{}, {starter:true, addon:{riskPct:0.3, frac:0.25, cond:'stop>=be'}})}); });
+          window.pbLatestActive = ()=>({quarter:'2026Q4', savedAt:new Date(n-4*86400000).toISOString(), view:{headline:'Real Rates Are the Tax, Hormuz Is the Swing — https://example.com/'+'h'.repeat(120)}, assets:{XAUUSD:{stance:'up'}, BTC:{stance:'down_flat'}, BRENT:{stance:'up_flat'}, US:{stance:'up'}}});
           window.ftList = ()=>[{sym:'AVGO', over:2, left:0}]; window.sk1Items = ()=>[]; }""")
         js(page, "()=>glWrite(S=>{ S.ln4 = {valid:{a:{day:'2026-09-28',sym:'AMD',at:'2026-09-28T01:00:00Z',via:'working'},b:{day:'2026-09-29',sym:'NVDA',at:'2026-09-29T01:00:00Z',via:'working'},c:{day:'2026-09-30',sym:'ETN',at:'2026-09-30T01:00:00Z',via:'working',missed:1}}}; })"); settle(page, 400)
         js(page, "()=>todayRefresh(true)"); settle(page, 500)
         sh("today")
+        if w == 390:   # final fix 4 — viewport (not full page) at the very bottom of Today: last row must clear the fixed tab bar
+            js(page, "()=>window.scrollTo(0, document.documentElement.scrollHeight)"); settle(page, 400)
+            m = js(page, "()=>{ const tb = document.querySelector('.tabs'); const r = tb.getBoundingClientRect(); const els = [...document.querySelectorAll('#view-today *, body > *')].filter(e=>e.offsetParent && !tb.contains(e) && e !== tb && e.getBoundingClientRect().height > 0 && getComputedStyle(e).position !== 'fixed'); const last = Math.max(...els.map(e=>e.getBoundingClientRect().bottom)); return {tabTop:r.top, lastBottom:last, vh:innerHeight}; }")
+            print("today-bottom-390", m)
+            page.screenshot(path=f"{OUT}/ln4-today-bottom-390.png")
+            js(page, "()=>window.scrollTo(0,0)")
         js(page, """()=>{ switchTab('watch'); wlSetView('cand');
           const D = {MU:[3,'Volume spike'], LRCX:[5,'Earnings spike'], VRT:[2,'Event: AI power'], DDOG:[1,'TradingView'], FTNT:[9,''], GLBE:[14,'Volume spike']};
           const day = 86400000, now = new Date('2026-10-01T05:00:00Z').getTime();
@@ -49,10 +58,11 @@ def app(pw, w, h):
         page.screenshot(path=f"{RAW}/core-form-page-{w}.png")
         js(page, "()=>coreSheetClose()")
         iid = js(page, "()=>satV2NewPlan('XAUUSD','main')"); settle(page, 500)
+        page.add_style_tag(content='.ui-plan-cta.ui-sticky{position:static!important;margin-top:10px} .tabs{visibility:hidden!important}')
         js(page, "([i])=>satV2SetDir(i,'Long')", [iid])
         for f_, v in (("entry", 2000), ("sl", 1990), ("tp", 2020)):
             js(page, "([i,f,v])=>satV3PlanEdit(i,f,v)", [iid, f_, str(v)])
-        js(page, "()=>{ switchTab('plan'); setPlanScope('future'); }"); settle(page, 700); sh("sat-form", ".ln1-form")
+        js(page, "()=>{ switchTab('plan'); setPlanScope('future'); }"); settle(page, 700); sh("sat-form", ".ui-pcell")
         js(page, "()=>{ switchTab('journal'); }"); settle(page, 1500); sh("journal")
         js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='NVDA'); coreWrite(c.id,{plan:Object.assign({}, c.plan||{entry:171.4,stop:168}, {starter:true, addon:{riskPct:0.3, frac:0.25, cond:'stop>=be'}})}); }"); settle(page, 500)
         js(page, "()=>{ switchTab('mix'); }"); settle(page, 1500); sh("port")

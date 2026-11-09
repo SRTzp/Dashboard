@@ -117,3 +117,12 @@ iPhone audit covers LN4-owned elements (no horizontal scroll on every screen; te
 
 ## Branch
 Compare: https://github.com/SRTzp/Dashboard/compare/main...claude/ln4 (not merged)
+
+## Final fixes (review of ln4-match screenshots)
+
+| # | Fix | Status |
+|---|---|---|
+| 1 | Today Act rows: sector tag after MMT/COMP (HOT amber / cold grey), "· ¼ size" when Starter is on, 2-decimal prices (`Buy Stop 182.50`, `Stop 168.00 below avg 171.40`); tag no longer stretches at 390 | Done |
+| 2 | MACRO line = Playbook stance one-liner for the quarter (`Q4 XAU ▲ · BTC ▼▬ …`), never the headline/URL; one line with ellipsis | Done (the stance line is built from the Playbook's asset stances; there is no regime/driver field to quote, so "Risk-on · Fed hike risk" wording isn't reproduced) |
+| 3 | Sat form match shot now captures the whole form (header · Main/Tactical · account rows · Macro & ขนาดไม้ · บันทึก · N บัญชี); every part exists in the app, nothing needed restoring. Account rows show the test accounts (Main/Family), not OUN/FAM | Done |
+| 4 | iPhone body bottom padding = tab bar + safe-area + 24px; viewport shot `tests/screenshots/ln4-today-bottom-390.png` (last row ends 22px above the tab bar) | Done |
