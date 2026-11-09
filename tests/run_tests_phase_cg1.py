@@ -75,6 +75,32 @@ def toast_tests(pw, w, h):
 CG_UPDATE = ["Goal: refresh evidence/status.", "Paste → idea-scout update → import."]
 
 
+def sheet_tests(pw, w, h):
+    """toast-fix: opening a sheet hides the current toast; toasts shown while a sheet is open sit at the top and never overlap its buttons."""
+    tag = f"[{ENGINE}/{w}]"
+    b, page, ce, pe = T.launch(pw, w, h)
+    try:
+        js(page, "()=>{ switchTab('watch'); }"); settle(page, 300)
+        js(page, "()=>showGuideToast(CG_GUIDE.scanNew)"); settle(page, 250)
+        check(f"{tag} sheet: toast แสดงอยู่ก่อนเปิด sheet (ล่าง)", js(page, "()=>{ const t=document.getElementById('cgToast'); return t.classList.contains('show') && !t.classList.contains('cgTop') && t.getBoundingClientRect().top > innerHeight/2; }"))
+        js(page, "()=>ideaImportOpen()"); settle(page, 400)
+        check(f"{tag} sheet: เปิด sheet → toast เดิมถูกซ่อน", js(page, "()=>!document.getElementById('cgToast').classList.contains('show') && !!document.querySelector('.overlay.show')"))
+        for nm in ("scanNew", "update", "match"):
+            js(page, f"()=>showGuideToast(CG_GUIDE.{nm})"); settle(page, 300)
+            r = js(page, """()=>{ const t=document.getElementById('cgToast'), tr=t.getBoundingClientRect(); const bt=[...document.querySelectorAll('.overlay.show button, .overlay.show [role=button], .overlay.show a, .overlay.show input, .overlay.show textarea, .overlay.show select')].filter(e=>{ const r=e.getBoundingClientRect(); return r.width>0&&r.height>0; });
+              const hit=bt.filter(e=>{ const r=e.getBoundingClientRect(); return !(r.right<=tr.left||r.left>=tr.right||r.bottom<=tr.top||r.top>=tr.bottom); }).map(e=>e.outerHTML.slice(0,60));
+              return {top:t.classList.contains('cgTop'), y:tr.top, shown:t.classList.contains('show'), n:bt.length, hit}; }""")
+            check(f"{tag} sheet: toast '{nm}' ขึ้นด้านบน · ไม่ทับปุ่ม/ช่องของ sheet", r["top"] and r["shown"] and r["y"] < 40 and r["n"] > 0 and not r["hit"], r)
+        btn = js(page, "()=>{ const b=document.querySelector('[data-idea-check]'); const r=b.getBoundingClientRect(); const e=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2); return b.contains(e) || e===b; }")
+        check(f"{tag} sheet: ปุ่ม 'ตรวจ JSON' ไม่ถูก toast บัง (elementFromPoint)", btn)
+        js(page, "()=>ideaSheetClose()"); settle(page, 200)
+        js(page, "()=>showGuideToast(CG_GUIDE.update)"); settle(page, 250)
+        check(f"{tag} sheet: ปิด sheet แล้ว toast ใหม่กลับไปด้านล่าง", js(page, "()=>{ const t=document.getElementById('cgToast'); return !t.classList.contains('cgTop') && t.getBoundingClientRect().top > innerHeight/2; }"))
+        check(f"{tag} sheet: ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
+    finally:
+        b.close()
+
+
 def reduced_motion(pw):
     b = pw.chromium.launch(); ctx = b.new_context(reduced_motion="reduce", viewport={"width": 1440, "height": 900}); page = ctx.new_page()
     try:
@@ -101,7 +127,7 @@ def shots(pw):
 
 def main():
     with sync_playwright() as pw:
-        for w, h in ((1440, 900), (390, 800)): toast_tests(pw, w, h)
+        for w, h in ((1440, 900), (390, 800)): toast_tests(pw, w, h); sheet_tests(pw, w, h)
         reduced_motion(pw); shots(pw)
     bad = [r for r in results if not r[1]]
     print(f"\nCG1: {len(results) - len(bad)}/{len(results)} PASS")

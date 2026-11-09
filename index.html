@@ -2621,6 +2621,8 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .cgToast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,0);width:max-content;max-width:min(94vw,420px);box-sizing:border-box;background:var(--ink,#16191e);color:#fff;border-radius:14px;padding:9px 30px 9px 12px;font-size:.78rem;line-height:1.4;z-index:81;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;cursor:pointer}
 .cgToast.show{opacity:1;pointer-events:auto}
 .cgToast:not(.show){transform:translate(-50%,10px)}
+.cgToast.cgTop{bottom:auto;top:12px}
+.cgToast.cgTop:not(.show){transform:translate(-50%,-10px)}
 .cgToast .cgL{display:block}.cgToast .cgL+.cgL{margin-top:2px}
 .cgToast .cgX{position:absolute;top:3px;right:5px;border:0;background:transparent;color:inherit;opacity:.7;font-size:.8rem;line-height:1;padding:4px 5px;cursor:pointer;min-height:0}
 .cgToast.cgErr{background:var(--red,#b3261e)}
@@ -8012,6 +8014,10 @@ const CG_GUIDE = {
 const CG_COPY_FAIL = 'Copy failed — select and copy manually';
 let cgToastT = 0, cgToastLeft = 0, cgToastStart = 0;
 function cgToastMs(lines){ const n = (Array.isArray(lines) ? lines : [lines]).join('').length; return Math.min(10000, Math.max(5000, 2500 + 60 * n)); }
+function cgSheetOpen(){ return !!document.querySelector('.overlay.show'); }
+/* toast-fix — when any sheet/popup (.overlay) opens, hide a toast that was shown before it (bottom toast); toasts shown while open sit at the top (cgTop) and stay */
+try{ new MutationObserver(()=>{ if(!cgSheetOpen()) return; const t = document.getElementById('cgToast'); if(t && t.classList.contains('show') && !t.classList.contains('cgTop')) cgToastHide(); })
+  .observe(document.documentElement, {subtree:true, attributes:true, attributeFilter:['class']}); }catch(e){}
 function cgToastHide(){ clearTimeout(cgToastT); cgToastT = 0; const t = document.getElementById('cgToast'); if(t) t.classList.remove('show'); }
 function cgToastArm(ms){ clearTimeout(cgToastT); cgToastLeft = ms; cgToastStart = Date.now(); cgToastT = setTimeout(cgToastHide, ms); }
 function showGuideToast(lines, opt){
@@ -8028,6 +8034,7 @@ function showGuideToast(lines, opt){
     document.body.appendChild(t);
   }
   try{ const o = document.getElementById('sdToast'); if(o) o.classList.remove('show'); }catch(e){}
+  t.classList.toggle('cgTop', cgSheetOpen());   /* toast-fix — a sheet/popup is open → show at the TOP so it can't cover its bottom buttons */
   t.classList.toggle('cgErr', !!(opt && opt.error));
   t.innerHTML = L.map(x=>'<span class="cgL">' + escHtml(x) + '</span>').join('') + '<button type="button" class="cgX" aria-label="Close" data-cg-x>✕</button>';
   t.classList.add('show'); cgToastArm(cgToastMs(L));
