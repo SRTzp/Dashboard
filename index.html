@@ -8748,7 +8748,16 @@ function ln4StarterRowHtml(){
   if(!n || !(n.sfrac < 1)) return `<div class="ln4-starter" data-ln4-starter-off><small>Stage 3 — full size (no starter)</small></div>`;
   return `<label class="ln4-starter" data-ln4-starter><input type="checkbox" id="cnStarter" ${n.starter ? 'checked' : ''} onchange="ln4StarterIn(this.checked)"><span>Starter ${tx} — enter small now, add the rest when it works</span></label>`;
 }
-function ln4StarterIn(on){ if(!coreNew) return; coreNew.starter = !!on; coreNewIn(); }
+/* LN4 §4a — Starter = Entry split rows: ON → row 1 split 25% (normal price) + auto row 2 split 75% "Add-on · stop ≥ BE" (price optional) · OFF → single row 100% */
+function ln4StarterOn(n){ return !!(n && n.starter && n.ne >= 2 && n.sfrac > 0 && n.sfrac < 1 && ln4Feature()); }
+function ln4StarterSplit(n){ const f = Math.round(n.sfrac * 100); n.ne = Math.max(2, n.ne); n.spE = [String(f), String(100 - f), '', '']; }
+function ln4StarterIn(on){
+  const n = coreNew; if(!n) return; n.starter = !!on && ln4Feature();
+  if(n.starter){ if(n.ne < 2) ln4StarterSplit(n); }
+  else if(n.ne === 2){ n.ne = 1; n.pxE[0] = ''; ps1Reset('e'); }
+  try{ ps1Draw(); }catch(e){}
+  coreNewIn();
+}
 let ln4Sel = '', ln4MoreOpen = false, ln4TodoAll = false, ln4WlOpen = '', ln4WarnOpen = '';
 const LN4_FRAC = {1:0.25, 2:0.5, 3:1}, LN4_FRAC_TXT = {1:'¼', 2:'½', 3:'full'};
 function ln4Cfg(){ const r = tdSettings().ln4; return (r && typeof r==='object' && !Array.isArray(r)) ? r : {}; }
@@ -13313,6 +13322,7 @@ function coreNewOpen(acct, opt){
    starter: !ln4Feature() ? false : (mode==='editw' ? !!(cur.plan && cur.plan.starter) : (mode==='new' && ln4StarterDef() && ln4Frac() < 1)), sfrac: mode==='editw' ? ((cur.plan && cur.plan.addon && cur.plan.addon.frac) || ln4Frac()) : ln4Frac(),   /* LN4 §4 — Starter */
    /* RG2b — Winner กับ Ladder แยกหน้า: กลยุทธ์กำหนดจากหน้าที่เปิด (ไม่มีตัวเลือก W/L ในฟอร์ม · ไม่มีโหมดแปลง) */
    id: cur ? cur.id : null, f:null, showAll:false, nlv:2, lv:['','',''], sl:'', budEdited:false, ne:1, ns:1, pxE:['','',''], pxS:['','',''], spE:['','','',''], pcS:['','','',''], ps1Last:null, drafts:{}, wlTrack:null};
+  if(coreNew.starter){ ln4StarterSplit(coreNew); if(mode==='editw' && cur.plan && cur.plan.addon && +cur.plan.addon.px > 0) coreNew.pxE[0] = String(cur.plan.addon.px); }   /* LN4 §4a */
   /* PS1c §2 — the Watchlist track only sets the STARTING port of the form (a ticker given when it opens); after that only the form switch changes it */
   if(mode==='new' && opt.ticker){ const wi1 = coreWlItem(coreNorm(opt.ticker)); if(wi1 && !(opt.strat==='L')) coreNew.track = wlTrackOf(wi1); }
   coreTi = coreTiState(cur);
@@ -13520,7 +13530,8 @@ function ps1RowAdd(kind){
 function ps1RowDel(kind, i){
   const n = coreNew; if(!n) return; const k = kind==='e' ? 'ne' : 'ns'; if(n[k] <= 1 || i < 1) return;
   if(kind==='e'){ n.pxE.splice(i-1, 1); n.pxE.push(''); } else { n.pxS.splice(i-1, 1); n.pxS.push(''); }
-  n[k]--; ps1Reset(kind); ps1Draw(); coreNewIn();
+  n[k]--; ps1Reset(kind); if(kind==='e' && i===1 && n.starter){ n.starter = false; const ck = coreEl('cnStarter'); if(ck) ck.checked = false; }   /* LN4 §4a — removing the add-on row = Starter off */
+  ps1Draw(); coreNewIn();
 }
 /* PS1c §3 — even split: 2 → 50/50 · 3 → 34/33/33 · 4 → 25×4 (first row takes the remainder) */
 function ps1Even(c){ const b = Math.floor(100/c); return [0,1,2,3].map(i=>(c>1 && i<c) ? String(i===0 ? 100-b*(c-1) : b) : ''); }
@@ -13540,7 +13551,8 @@ function ps1Draw(){
   const pcIn = (id, val, fn, i, lab)=>`<label class="ps1Pc"><input type="text" inputmode="decimal" id="${id}${i}" value="${E(val)}" aria-label="${lab} ${i+1} %" oninput="ps1In('${fn}',${i},this.value)"><i>%</i></label>`;
   const eMeta = i=>`<span class="ps1M" data-ps1-meta="e${i}"></span>`, sMeta = i=>`<span class="ps1M" data-ps1-meta="s${i}"></span>`;
   const sp = '<span class="ps1Rsp" aria-hidden="true"></span>';   /* ✕ column is reserved on row 1 so every row has the same width */
-  const eRow = i=>`<div class="ps1R" data-ps1-row="e${i}"><div class="ps1In"><input type="text" inputmode="decimal" id="cnEn${i}" value="${E(n.pxE[i-1])}" aria-label="Entry ${i+1}" oninput="ps1In('e',${i},this.value)"></div>${pcIn('cnEr', n.spE[i], 'er', i, 'Entry split')}${rm('e', i)}${eMeta(i)}</div>`;
+  const addon = i=>ln4StarterOn(n) && i===1;
+  const eRow = i=>`<div class="ps1R" data-ps1-row="e${i}"><div class="ps1In"><input type="text" inputmode="decimal" id="cnEn${i}" value="${E(n.pxE[i-1])}" aria-label="Entry ${i+1}"${addon(i) ? ' placeholder="price (optional)" data-ln4-addon-px' : ''} oninput="ps1In('e',${i},this.value)"></div>${pcIn('cnEr', n.spE[i], 'er', i, 'Entry split')}${rm('e', i)}${eMeta(i)}</div>${addon(i) ? '<div class="ps1Note" data-ln4-addon-l style="margin:-2px 0 4px">Add-on · stop ≥ BE</div>' : ''}`;
   const sRow = i=>`<div class="ps1R" data-ps1-row="s${i}"><div class="ps1In"><input type="text" inputmode="decimal" id="cnSt${i}" value="${E(n.pxS[i-1])}" aria-label="SL ${i+1}" oninput="ps1In('s',${i},this.value)"></div>${pcIn('cnSp', n.pcS[i], 'sp', i, 'Out')}${rm('s', i)}${sMeta(i)}</div>`;
   ex.innerHTML = [1,2,3].slice(0, n.ne-1).map(eRow).join('');
   sx.innerHTML = [1,2,3].slice(0, n.ns-1).map(sRow).join('');
@@ -13564,6 +13576,7 @@ function ps1DraftLoad(){
   const d = n.drafts[n.track] || {entry:'', stop:'', risk:'', riskEdited:false, ne:1, ns:1, pxE:['','',''], pxS:['','',''], spE:['','','',''], pcS:['','','','']};
   coreEl('cnEntry').value = d.entry; coreEl('cnStop').value = d.stop; coreEl('cnRisk').value = d.risk; n.riskEdited = d.riskEdited;
   n.ne = d.ne; n.ns = d.ns; n.pxE = d.pxE.slice(); n.pxS = d.pxS.slice(); n.spE = d.spE.slice(); n.pcS = d.pcS.slice();
+  if(n.starter && n.ne < 2 && ln4Feature()) ln4StarterSplit(n);   /* LN4 §4a */
   ps1Draw();
 }
 /* PS1c §2 — THE switch: the form's own Momentum | Compounder (synced both ways with the top switch) */
@@ -13601,7 +13614,10 @@ function ps1FormRun(n, rd, cx, mk, errs){
   { const rp = $('cnRegPill'); if(rp) rp.style.display = 'none'; }
   const setDet = h=>{ if(det.dataset.h !== h){ det.innerHTML = h; det.dataset.h = h; } };
   const mine = [], done = ()=>{ mine.forEach(x=>errs.push(x)); };
-  const sf = (n.starter && n.sfrac > 0 && n.sfrac < 1) ? n.sfrac : 1;   /* LN4 §4 — Starter: risk used = risk × fraction */
+  /* LN4 §4a — Starter = split rows: row 2 (index 1) is the Add-on · the plan is sized "Now" from the other rows; the add-on is planned (price optional) */
+  const stOn = ln4StarterOn(n), spN = i=>coreNum(n.spE[i]) || 0, nowIdx = [];
+  for(let i=0;i<n.ne;i++) if(!(stOn && i===1)) nowIdx.push(i);
+  const sf = stOn ? nowIdx.reduce((a,i)=>a + spN(i), 0) / 100 : 1;
   if(def==null){
     re.value = ''; re.readOnly = true; hint.textContent = 'Set default risk in Settings'; mine.push('Set default risk in Settings'); setSum(''); setDet(''); return done();
   }
@@ -13610,14 +13626,15 @@ function ps1FormRun(n, rd, cx, mk, errs){
   const typed = coreNum(re.value);
   if(!(typed>0)) mine.push('Enter risk %');
   else if(typed < b.riskMin - 1e-9 || typed > b.riskMax + 1e-9) mine.push(`Risk must be ${b.riskMin}–${b.riskMax}%`);
-  const entries = [], stops = []; let incomplete = false;
-  for(let i=0;i<n.ne;i++){ const px = i===0 ? rd.entry : coreNum(n.pxE[i-1]); if(!(px>0)) incomplete = true; entries.push({px, riskPct: n.ne>1 ? typed * m * sf * (coreNum(n.spE[i]) || 0) / 100 : undefined}); }
+  const entries = [], stops = []; let incomplete = false, addPx = null;
+  for(let i=0;i<n.ne;i++){ const px = i===0 ? rd.entry : coreNum(n.pxE[i-1]); if(stOn && i===1){ addPx = px > 0 ? px : null; continue; } if(!(px>0)) incomplete = true; entries.push({px, riskPct: nowIdx.length>1 ? typed * m * spN(i) / 100 : undefined}); }
   for(let i=0;i<n.ns;i++){ const px = i===0 ? rd.stop : coreNum(n.pxS[i-1]); if(!(px>0)) incomplete = true; stops.push({px, pct: n.ns>1 ? coreNum(n.pcS[i]) : undefined}); }
   if(incomplete){ mine.push('กรอก Entry และ Stop'); setSum(''); setDet(''); return done(); }
   if(!(E>0)){ mine.push(PS1_ERR.NO_E); setSum(''); return done(); }
   const minEn = Math.min.apply(null, entries.map(e=>e.px));
   if(stops.some(x=>!(x.px < minEn))){ mine.push('Entry must be above SL'); setSum(''); setDet(''); return done(); }
-  if(n.ne>1){ const st = entries.reduce((a,e,i)=>a + (coreNum(n.spE[i]) || 0), 0); if(Math.abs(st - 100) > 0.005){ mine.push('Entry split must total 100%'); setSum(''); setDet(''); return done(); } }   /* PS1c §3 */
+  if(addPx != null && stops.some(x=>!(x.px < addPx))){ mine.push('Add-on price must be above SL'); setSum(''); setDet(''); return done(); }
+  if(n.ne>1){ let st = 0; for(let i=0;i<n.ne;i++) st += spN(i); if(Math.abs(st - 100) > 0.005){ mine.push('Entry split must total 100%'); setSum(''); setDet(''); return done(); } }   /* PS1c §3 */
   { /* PS1b §7e — min stop: EVERY entry row vs SL1 (the first real stop) · never auto-widen */
     const mp = ps1StockMin(n.acct)[bucket], sl1 = stops[0].px;
     ps1StopMsg('');
@@ -13628,7 +13645,7 @@ function ps1FormRun(n, rd, cx, mk, errs){
   if(!r.ok){ mine.push(PS1_ERR[r.err] || ('Cannot size this plan (' + r.err + ')')); setSum(''); setDet(''); return done(); }
   { /* PS1b §7b — per-row meta: entries `#shares · size%` · SLs `−x.x%` from the (average) entry */
     const Ediv = E / div, refE = r.avgEntry != null ? r.avgEntry : entries[0].px;
-    r.rows.forEach((x,i)=>{ ps1MetaSet('e', i, n.ne>1 ? `#${fmt0(x.qty)} · ${(x.qty * x.px / Ediv * 100).toFixed(1)}%` : ''); });   /* PS1c §10 — % of TOTAL portfolio */
+    r.rows.forEach((x,i)=>{ ps1MetaSet('e', nowIdx[i], (n.ne>1) ? `#${fmt0(x.qty)} · ${(x.qty * x.px / Ediv * 100).toFixed(1)}%` : ''); });   /* PS1c §10 — % of TOTAL portfolio */
     stops.forEach((x,i)=>{ ps1MetaSet('s', i, `−${Math.abs((x.px - refE) / refE * 100).toFixed(1)}%`); });
   }
   if(r.errs.indexOf('ROWS_OVER_BUDGET')>=0) mine.push(`Entry risks add up to more than ${+typed.toFixed(4)}%`);
@@ -13641,12 +13658,18 @@ function ps1FormRun(n, rd, cx, mk, errs){
   }
   { const lm = lossBlockMsg(lev); if(lm) mine.push(lm); }
   const snap = {v:1, bucket, E, Edate: ps1EDate(n.acct), div, typed, mult:{f:F.f, dd}, ideaEff: typed * m * sf,
-    rows: r.rows.map((x,i)=>({px:x.px, riskPct: n.ne>1 ? entries[i].riskPct / (m * sf) : typed, qty:x.qty})),
+    rows: r.rows.map((x,i)=>({px:x.px, riskPct: entries.length>1 ? entries[i].riskPct / m : typed, qty:x.qty})),
     stops: stops.map(x=>({px:x.px, pct: n.ns>1 ? x.pct : 100})), qty:r.qty, avgEntry:r.avgEntry, avgStop:r.stop, riskPct:r.riskPct, riskMoney:newMoney,
     tag:ps1Tag(F, dd), sizePct:r.sizePct, leftPct:r.leftPct, trimmed:r.trimmed, cashLimited:!!r.cashLimited, lot:r.lot, maxSizePct:b.sizeMax, date:thaiToday()};
-  if(sf < 1) snap.starter = {frac:sf, fullRiskPct:typed};
+  if(sf < 1) snap.starter = Object.assign({frac:sf, fullRiskPct:typed}, addPx != null ? {addPx} : {});
+  let planned = null;
+  if(stOn){   /* Planned total = every row (add-on price blank → estimated at Entry 1) */
+    const ents2 = []; for(let i=0;i<n.ne;i++){ let px = i===0 ? rd.entry : coreNum(n.pxE[i-1]); if(!(px>0)) px = rd.entry; ents2.push({px, riskPct: typed * m * spN(i) / 100}); }
+    try{ const r2 = Ps1.planSize({E: E/div, market: mk, ideaRiskPct: typed * m, entries: ents2, stops, maxSizePct: b.sizeMax, cash: cx.cashTHB/div});
+      if(r2 && r2.ok){ planned = {rows:r2.rows, qty:r2.qty, sizePct:r2.sizePct, avgEntry:r2.avgEntry, riskPct:r2.riskPct, riskMoney:r2.risk * div}; ps1MetaSet('e', 1, `#${fmt0(r2.rows[1].qty)}`); } }catch(e){ console.warn('ln4 planned:', e); }
+  }
   const multiF = n.ne>1 || n.ns>1;
-  setSum(ps1SumHtml(snap, {pill:!multiF}) + (sf < 1 ? ` <span class="ps1Note" data-ln4-startersum>= ${LN4_FRAC_TXT[sf===0.5 ? 2 : 1]} of ${+typed.toFixed(4)}%</span>` : '') + (r.trimmed ? `<span class="ps1Note" data-ps1-trim>${r.cashLimited ? 'เงินสดคุม — shares reduced to fit free cash ฿' + fmt0(cx.cashTHB) : 'Above max size ' + b.sizeMax + '% — shares will be trimmed'}</span>` : ''));
+  setSum((stOn ? `<span data-ln4-now><i>Now:</i> </span>` : '') + ps1SumHtml(snap, {pill:!multiF}) + (planned ? `<div class="ps1Plan" data-ln4-planned><i>Planned total:</i> ${ps1SumHtml(planned, {pill:false})}${addPx == null ? ' <span class="ps1Note">add-on price not set — est. at Entry 1</span>' : ''}</div>` : '') + (sf < 1 && !stOn ? ` <span class="ps1Note" data-ln4-startersum>= ${LN4_FRAC_TXT[sf===0.5 ? 2 : 1]} of ${+typed.toFixed(4)}%</span>` : '') + (r.trimmed ? `<span class="ps1Note" data-ps1-trim>${r.cashLimited ? 'เงินสดคุม — shares reduced to fit free cash ฿' + fmt0(cx.cashTHB) : 'Above max size ' + b.sizeMax + '% — shares will be trimmed'}</span>` : ''));
   { /* PS1c §8 — regime pill beside "Risk per idea" (2-column mode) */
     const rp = $('cnRegPill'); if(rp){ const mm = ps1MultPill(snap); rp.style.display = (multiF && mm) ? '' : 'none'; rp.textContent = (multiF && mm) ? `${mm.replace(/<[^>]+>/g,'').trim()} → ${(+(typed*m).toFixed(4))}%` : ''; }
     /* PS1c §10 — port % line: ALWAYS directly under the summary (smaller, lighter) */
@@ -13836,7 +13859,8 @@ function coreNewSave(){
     coreWrite(coreNewId(), Object.assign({acct:n.acct, ticker:rd.ticker, market:rd.mk, strategy:'L', plan:null, ladder, stop:d.sl, stopHistory:[], px:null, pxDate:null, emaW:null, lots:[], trade_id:null, status:'plan', created_at:now}, tfields, csf));
     return;
   }
-  const planX = (n.ps1Last && n.ps1Last.starter) ? {starter:true, addon:{riskPct:+(n.ps1Last.starter.fullRiskPct * (1 - n.ps1Last.starter.frac)).toFixed(4), frac:n.ps1Last.starter.frac, cond:'stop>=be'}} : {};   /* LN4 §4 — planned add-on */
+  const planX = (n.ps1Last && n.ps1Last.starter) ? {starter:true, addon:{riskPct:+(n.ps1Last.starter.fullRiskPct * (1 - n.ps1Last.starter.frac)).toFixed(4), frac:n.ps1Last.starter.frac, cond:'stop>=be'}} : {};
+  if(planX.addon && n.ps1Last.starter.addPx) planX.addon.px = n.ps1Last.starter.addPx;   /* LN4 §4 — planned add-on */
   if(n.mode==='editw' && cur){
     const pl0 = cur.plan || {}, np = Object.assign({}, pl0, n.ps1Last ? {entry:n.ps1Last.rows[0].px, stop:n.ps1Last.stops[0].px, risk:n.ps1Last.typed, ps1:n.ps1Last} : {entry:rd.entry, stop:rd.stop});
     delete np.starter; delete np.addon; Object.assign(np, planX);
