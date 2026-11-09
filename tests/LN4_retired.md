@@ -16,3 +16,9 @@ Replacement coverage: `run_tests_phase369.py` (Today/Act/Find/Starter/Exec/Watch
 | phase368 | no reason tag / 12d ⚠ / Drop? banner / Setup ✓ badge | `—` amber · `12d ⚠` · banner row on the 16d row · badge on every row | amber `set reason` · `12d⚠` · tap ⚠ → Drop / Keep 7 more days · Setup ✓ in the tapped row's actions | LN4 §7 |
 | phase117 (not in required list) | A6 row dots / Next check / Track chips / Candidate Track + reasons | rich Watchlist row | one tag + age, actions on tap (details live in the detail pane) | LN4 §7. 9 checks fail by design, not fixed |
 | phase120 (not in required list) | Form default shares (68 → 17 with Starter ON by default); Portfolio Risk panel + Today `ps1-today` line selectors; Sat 4b "Check Structure first" / sizes / Setup | old rules | Starter ¼ default ON; risk panel now inside Today › Details ▸ (collapsed); Sat verify matrix + Setup 3/3 required (LN4 §4d) | expected; not rewritten |
+
+
+## Follow-up round — 117 / 120 rewritten (now pass)
+- phase117: row status dots → one tag, no dots; Archived toggle read via textContent (sort fold is collapsed); Next check no longer on the row (still built by `wlNextHtml` for the detail); Candidate row = ONE reason tag / amber `set reason`.
+- phase120: Starter ON by default → Entry split rows (Now ¼ / Planned total; extra rows = 3); manual ＋Entry/＋SL checks run with Starter switched OFF (intent unchanged); Portfolio Risk panel read inside Today › Details ▸ (opened); Today line = status-card `Risk x / 5% · room yR`; Sat verify matrix (`Need EMA50 or Structure verify`, EMA ✓/Structure ✗ = Counter 60 %), Setup 3/3 ticked, Starter feature Off for full-size maths.
+- phase369: S1/S2 updated for split rows; added §8 Plan/Port/Journal checks.

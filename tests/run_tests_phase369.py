@@ -134,7 +134,7 @@ def tests(pw, w, h):
         # §8 Plan tab cards follow the same states
         js(page, "()=>{ switchTab('plan'); setPlanScope('stock'); }"); settle(page, 600)
         pc = js(page, "()=>{ const e = document.querySelector('[data-ln4-pc=\"AMD\"]'); return e ? {st:e.dataset.ln4State, t:e.innerText, tag:(e.querySelector('[data-ln4-ptag]')||{}).innerText} : null; }")
-        check(f"{tag} 8 Plan card AMD: Order working (blue) with Record fill + Cancel order, MMT tag", pc and pc["st"] == "working" and "Record fill" in pc["t"] and "Cancel order" in pc["t"] and pc["tag"] == "MMT", pc)
+        check(f"{tag} 8 Plan card AMD: Order working (blue) with Record fill + Cancel order, MMT tag", pc and pc["st"] == "working" and "Record fill" in pc["t"] and "Cancel order" in pc["t"] and pc["tag"].startswith("MMT"), pc)
         nv = js(page, "()=>{ const e = document.querySelector('[data-ln4-pc=\"NVDA\"]'); return e ? e.innerText : null; }")
         check(f"{tag} 8 Plan card NVDA (open, stop < avg) → status Open + 'Raise stop ›'", nv and "Open" in nv and "Raise stop" in nv, nv)
         page.locator('[data-ln4-pc="AMD"] [data-ln4-cancel]').click(); settle(page, 700)

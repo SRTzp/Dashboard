@@ -52,10 +52,17 @@ Core plan = `coreCards` doc (`status plan` → Draft, `open` → Open/Filled); S
 | §4b check-pill row under Entry/SL/TP; Starter in Sat form | **Done** (Structure · EMA50 · Setup n/3 · R:R · Stop ≥ min · Risk · Counter/Macro). Sat Starter multiplies the sat risk by the stage fraction |
 | iPhone readiness (390) | Done for LN4-owned screens (test 370, screenshots below). Pre-existing legacy elements outside LN4 scope are not re-styled |
 
-### Deviations / not built (honest list)
-* **§4a Core Starter as Entry split rows** (25 % row + auto 75 % "Add-on · stop ≥ BE" row, `Now / Planned total` summary): built the earlier variant instead — the Starter switch scales the first-lot risk by the stage fraction, the 75 % add-on is *stored* on the plan and surfaced as the `Add-on ›` button. Summary shows `= ¼ of x%`. Rows ＋Entry/＋SL are untouched.
-* **§8 other tabs:** Journal filters Counter trend · Starter · Missed + weekly row (`Week n · Exec x/y · Stage`) + `¼ starter`/`Counter` trade tags — done. **Not done:** Plan-card *Order working / Cancel order* states, Port badges (`¼ starter · add-on planned`, `stop below avg`, `room yR`), Journal "Taken" chip, Plan form `Fix` reason text parity beyond the focused field.
-* Sat: Missed detection for Sat plans; Sat `Add-on`.
+### Gaps closed (follow-up round, same branch) — all Done
+| Gap | Status |
+|---|---|
+| §4a Core Starter = Entry split rows | **Done.** ON → row 1 split 25 % (normal price) + auto row 2 split 75 % "Add-on · stop ≥ BE" (price optional, editable; blank = estimated at Entry 1). ＋Entry still works. Summary `Now: … ` + `Planned total: …` (2nd line only with Starter ON). OFF → single row 100 %. Feature Off → no switch, rows untouched. Stored shape unchanged (`plan.starter`, `plan.addon {riskPct, frac, cond, px?}`, snapshot = "Now" rows) so Today/Port/Journal keep working. Removing the add-on row turns Starter off. Tests S1–S4 |
+| §8 Plan cards | **Done.** Strip under every Core card (Plan tab) and in the Sat plan form: MMT/COMP tag (+ ½) · Draft (reason + Fix button / `Place order ›`) → **Order working** (`Record fill` / `Cancel order`) → Open (`Add-on ›` / `Raise stop ›`). Built from the same rows as Today Act (`ln4CoreRows` / `ln4SatRows`). `Cancel order` clears `placedAt` (setup stays counted as valid, not taken). Test 8 |
+| §8 Port | **Done.** Open-position list: `¼ starter · add-on planned`, `stop below avg`, `0 risk`; risk summary `room yR this week` — same function (`ln4RoomR`) as Today |
+| Journal "Taken" chip | **Done.** Closed trades whose plan was a valid setup and was filled (core card `trade_id` / Sat `accts.*.trade_id`) |
+| Suites 117 / 120 | **Done** — rewritten to the new expectations (see `tests/LN4_retired.md` list; now pass 64/64 and 128/128) |
+| Sat Missed detection | Skipped as agreed (no latest-price source on Sat plans) |
+| Sat `Add-on ›` | Not built (unchanged) |
+| Plan form `Fix` reason-text parity beyond the focused field | Not built (unchanged) |
 
 ## Tests
 See `tests/LN4_retired.md` for changed expectations. New suites: `run_tests_phase369.py` (status card, Act, Starter, Exec/Missed/ladder, To do, Find, Watch, Sat matrix/counter/setup/macro/✓ all/feature Off) and `run_tests_phase370.py` (iPhone 390 audit + screenshots).
@@ -63,7 +70,7 @@ See `tests/LN4_retired.md` for changed expectations. New suites: `run_tests_phas
 ## Results (final run, Chromium)
 | Suite | Result |
 |---|---|
-| 369 (new, LN4) | 177/177 |
+| 369 (new, LN4) | 201/201 |
 | 370 (new, iPhone 390 audit) | 26/26 |
 | 59 | 86/86 |
 | 106 | 48/48 (old-layout groups retired → `tests/LN4_retired.md`) |
@@ -72,7 +79,8 @@ See `tests/LN4_retired.md` for changed expectations. New suites: `run_tests_phas
 | 367 | 61/61 |
 | 368 | 120/120 |
 | cg1 | 46/46 |
-| 117 / 120 (not required) | 55/64 and several fails — intended changes, listed in `tests/LN4_retired.md`, **not rewritten** |
+| 117 | 64/64 (rewritten) |
+| 120 | 128/128 (rewritten) |
 
 ## 390 screenshots (iPhone-width, `tests/screenshots/`)
 Today `ln4-390-today.png` · Watch `ln4-390-watch.png` · Core form `ln4-390-core-form.png` · Sat form `ln4-390-sat-form.png` · Plan list `ln4-390-plan-list.png` · Journal `ln4-390-journal.png` · Port `ln4-390-port.png` · Settings `ln4-390-settings.png` (+ 1440/390 `ln4-today-*.png`, `ln4-watch-*.png`).
