@@ -20583,28 +20583,6 @@ const Calc = {
     const doc = errors.length ? null : {schema: v2 ? 'weeklyImpact/v2' : 'weeklyImpact/v1', week: obj.week, asof: obj.asof||null, sources, events, assets, legacy};
     return {errors, warnings, doc, matched, skipped, legacy};
   },
-  /* reimport ของสัปดาห์เดิม: ไม่ทับ actual ที่ยืนยันแล้วด้วย null · เก็บ provenance · event id ชนกันแต่ตัวตนต่าง (kind/metric/period) = รายงาน ไม่ merge */
-  wiMerge(oldDoc, nu){
-    const conflicts = [], kept = [], dropped = [];
-    const doc = JSON.parse(JSON.stringify(nu));
-    const oe = (oldDoc && oldDoc.events) || {};
-    Object.keys(doc.events||{}).forEach(id=>{
-      const n = doc.events[id], o = oe[id]; if(!o) return;
-      const diff = f => o[f]!=null && n[f]!=null && o[f]!==n[f];
-      if(diff('kind') || diff('metric') || diff('period') || diff('basis')){
-        conflicts.push({id, reason:'event id เดิมเป็นคนละรายการ ('+(o.title||'')+' ↔ '+(n.title||'')+')'});
-        doc.events[id] = JSON.parse(JSON.stringify(o)); return;
-      }
-      if(o.actual!=null){
-        if(n.actual==null){ n.actual = o.actual; n.actual_updated_at = o.actual_updated_at||null; n.actual_source = o.actual_source||null; n.src_actual = o.src_actual||null; if(n.status==='scheduled') n.status = o.status==='released' ? 'released' : n.status; kept.push(id); }
-        else if(n.actual!==o.actual){ n.actual_prev = {value:o.actual, at:o.actual_updated_at||null, source:o.actual_source||null}; }
-      }
-      if(o.previous_original!=null && n.previous_original==null) n.previous_original = o.previous_original;
-      if(o.previous!=null && n.previous!=null && o.previous!==n.previous){ n.previous_original = n.previous_original!=null ? n.previous_original : o.previous; n.previous_revised = true; }
-    });
-    Object.keys(oe).forEach(id=>{ if(!(doc.events||{})[id] && oe[id] && oe[id].actual!=null) dropped.push(id); });
-    return {doc, conflicts, kept, dropped};
-  },
   /* tier → อันดับ (HIGH 0 · MED 1 · LOW 2 · ไม่มีข้อมูล 3) */
   wiRank(t){ return t==='HIGH' ? 0 : t==='MED' ? 1 : t==='LOW' ? 2 : 3; },
   /* สถานะของ event ณ เวลา now(ms) — ไม่เดาว่าประกาศแล้วเพราะเวลาผ่าน */
@@ -26881,9 +26859,6 @@ function wiCopyManifest(){
 function wiCheck(){
   const P = wiPaste; if(!P) return;
   P.err = ''; P.res = Calc.wiValidate(P.text, wiAssetCtx());
-  const old = P.res.doc ? wiDocs[P.res.doc.week] : null;
-  P.conflicts = []; P.merge = null;
-  if(P.res.doc && old){ P.merge = Calc.wiMerge(old, P.res.doc); P.conflicts = P.merge.conflicts; }
   wiPasteRender();
 }
 function wiPasteRender(){
@@ -26896,9 +26871,7 @@ function wiPasteRender(){
     if(R.errors.length) h += `<div class="pbErrs" data-wi-errs="1"><b>แก้ก่อนบันทึก (ข้อมูลเดิมไม่ถูกแตะ)</b>${R.errors.slice(0, 12).map(e=>`<div>✕ ${s(e)}</div>`).join('')}${R.errors.length>12 ? `<div>… และอีก ${R.errors.length-12} ข้อ</div>` : ''}</div>`;
     if(R.matched.length || R.skipped.length) h += `<div class="wiPrev" data-wi-preview="1"><div class="wiK">ตัวอย่างก่อนบันทึก</div>${R.matched.map(m=>`<div class="wiOkL" data-wi-matched="${s(m.id)}">✓ ${s(m.key)}${m.via ? ' → ' + s(m.id) : ''}${wiAssetActive(m.id) ? '' : ' (ปิดใช้งาน — เก็บไว้ แสดงจาง)'}</div>`).join('')}${R.skipped.map(m=>`<div class="wiSkipL" data-wi-skipped="${s(m.key)}">⊘ ${s(m.key)} — ข้าม: ${s(m.reason)}${/ตั้งตลาดอ้างอิง/.test(m.reason) ? ' <span class="wiChipSet">ตั้งตลาดอ้างอิง</span>' : ''}</div>`).join('')}</div>`;
     if(R.warnings.length) h += `<div class="pbWarns">${R.warnings.slice(0, 8).map(e=>`<div>⚠ ${s(e)}</div>`).join('')}</div>`;
-    if(P.conflicts.length) h += `<div class="pbErrs" data-wi-conflict="1"><b>event id ชนกัน (ไม่ merge — ใช้ของเดิม)</b>${P.conflicts.map(c=>`<div>• ${s(c.id)}: ${s(c.reason)}</div>`).join('')}</div>`;
-    if(R.doc && P.merge && P.merge.kept.length) h += `<div class="wiSm">คงผลจริงที่บันทึกไว้แล้ว ${P.merge.kept.length} รายการ (ไม่ทับด้วย null)</div>`;
-    if(R.doc && wiDocs[R.doc.week]) h += `<div class="wiSm">สัปดาห์ ${s(R.doc.week)} มีข้อมูลอยู่แล้ว → บันทึกจะอัปเดตสแนปช็อตสัปดาห์นี้ (สัปดาห์อื่นไม่แตะ)</div>`;
+    if(R.doc && wiDocs[R.doc.week]) h += `<div class="wiSm">สัปดาห์ ${s(R.doc.week)} มีข้อมูลอยู่แล้ว → บันทึกจะแทนที่ทั้งหมด (สัปดาห์อื่นไม่แตะ)</div>`;
   }
   if(P.err) h += `<div class="pbErrs" data-wi-saveerr="1">${s(P.err)}</div>`;
   h += `<div class="pbBtns">${(R && R.doc && !R.errors.length) ? `<button type="button" class="ui-btn ui-btn-pri" id="wiSaveBtn" data-wi-save="1" ${wiSaving ? 'disabled' : ''} onclick="wiSave()">บันทึก</button>` : ''}<button type="button" class="ui-btn" onclick="wiPasteClose()">ปิด</button></div></div>`;
@@ -26911,8 +26884,7 @@ async function wiSave(){
   if(!col){ P.err = 'บันทึกไม่สำเร็จ: ยังไม่ได้เข้าสู่ระบบ'; wiPasteRender(); return; }
   wiSaving = true; wiPasteRender();
   try{
-    const old = wiDocs[P.res.doc.week] || null, mg = Calc.wiMerge(old, P.res.doc);
-    const body = Object.assign({}, mg.doc, {saved_at: firebase.firestore.FieldValue.serverTimestamp(), import_report: {skipped: P.res.skipped.map(x=>({key:x.key, reason:x.reason})), mapped: P.res.matched.filter(m=>m.via).map(m=>({from:m.key, to:m.id})), conflicts: mg.conflicts.map(c=>c.id)}});
+    const body = Object.assign({}, P.res.doc, {saved_at: firebase.firestore.FieldValue.serverTimestamp(), import_report: {skipped: P.res.skipped.map(x=>({key:x.key, reason:x.reason})), mapped: P.res.matched.filter(m=>m.via).map(m=>({from:m.key, to:m.id}))}});
     body.legacy = !!P.res.legacy;
     await col.doc(P.res.doc.week).set(body);
     wiSaving = false; wiPaste = null;
