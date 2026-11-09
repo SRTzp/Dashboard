@@ -275,7 +275,7 @@ def starter(pw, w, h):
         sum_on = P120.sumtxt(page)
         q_on = js(page, "()=>document.querySelector('[data-ps1-qty]').innerText")
         spl = js(page, "()=>[document.getElementById('cnEr0')&&document.getElementById('cnEr0').value, document.getElementById('cnEr1')&&document.getElementById('cnEr1').value, !!document.querySelector('[data-ln4-addon-l]'), document.getElementById('cnEn1')&&document.getElementById('cnEn1').placeholder]")
-        check(f"{tag} S1 Starter ¼ ON by default → Entry row 1 split 25% + auto row 2 75% 'Add-on · stop ≥ BE' (price optional)", on is True and spl[0] == "25" and spl[1] == "75" and spl[2] is True and "optional" in (spl[3] or ""), spl)
+        check(f"{tag} S1 Starter ¼ ON by default → Entry row 1 split 25% + auto row 2 75% 'Add-on · stop ≥ BE' (price optional)", on is True and spl[0] == "25" and spl[1] == "75" and spl[2] is True and "at BE" in (spl[3] or ""), spl)
         check(f"{tag} S1b summary: 'Now: …' + 'Planned total: …' (2nd line only with Starter ON)", "Now:" in sum_on and "Planned total:" in sum_on, sum_on)
         planned_qty = js(page, "()=>{ const e = document.querySelector('[data-ln4-planned] [data-ps1-qty]'); return e ? +e.innerText : 0; }")
         check(f"{tag} S1c Planned total qty > Now qty (add-on counted)", planned_qty > int(q_on) > 0, [planned_qty, q_on])

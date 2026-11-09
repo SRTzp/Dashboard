@@ -64,6 +64,34 @@ Core plan = `coreCards` doc (`status plan` → Draft, `open` → Open/Filled); S
 | Sat `Add-on ›` | Not built (unchanged) |
 | Plan form `Fix` reason-text parity beyond the focused field | Not built (unchanged) |
 
+## Visual match pass (mockup ↔ app)
+Side-by-side shots (mockup | app) at 1440 and 390: `tests/screenshots/ln4-match-<screen>-<1440|390>.png` · generator: `tests/ln4_match.py` (`LN4RAW=dir python3 ln4_match.py`). App tokens only (no mockup CSS copied); no function removed.
+
+| Screen | Difference found | Fixed? |
+|---|---|---|
+| Today | `Record fill` / `Add-on ›` were green; mockup has green only for `Place order` (Record fill = white outline) | Fixed |
+| Today | Find: counters sat flush under the header (no gap) | Fixed (10px gap) |
+| Today | Regime shown as long text (`Risk-ON · Momentum 100% …`) vs mockup's short `Bull` pill | Not changed — existing `tdRegimeVerdict` text kept (function reuse) |
+| Today | `Calendar ›` link after TODAY chips; chips ≥36px tall on 390 vs mockup ~26px | Kept (existing link; 36px tap rule from suite 370) |
+| Today | Block order, one-line Act rows, 2 lines at 390, HOT/TODAY/To do/Exec chips, status colours | Already matched |
+| Core form | Starter was a plain checkbox *below* Risk; mockup = teal toggle bar *above* Risk with "25% now · 75% add-on at break-even" | Fixed |
+| Core form | Risk per idea label above a bare input; mockup = one inline row (label · input · % · Momentum·Normal pill) | Fixed |
+| Core form | Inputs unstyled (square); mockup = rounded 10px inputs | Fixed |
+| Core form | ＋ buttons in the header; mockup = dashed `＋ Entry` / `＋ SL` pills under the rows | Fixed (same ids) |
+| Core form | Add-on row: "price (optional)" placeholder + long note; mockup = `at BE` + `Add-on · stop ≥ BE · #48` | Fixed |
+| Core form | Summary italic labels; mockup = bold `Now:` line + muted `Planned total:` with teal numbers | Fixed |
+| Core form | Save button black; mockup green | Fixed (plan forms only) |
+| Sat form | Starter row plain checkbox + long text | Fixed (same toggle bar, "25% now · rest at break-even") |
+| Sat form | `Setup on minor` label above chips; mockup = label + chips on one row | Fixed ≥561px; at 390 label wraps above (chips + `✓ all` stay on one row) |
+| Sat form | Verify labels `EMA50 Verify` / `Structure Verify`, per-account OUN/FAM rows only when sizeable | Kept (existing text; rows appear once the plan can be sized) |
+| Plan list | Mockup = dense Act-style rows; app = existing cards + new state strip | Strip restyled (tag · detail · status · buttons; MMT grey unless ½); card list kept |
+| Journal | Weekly row was plain text; mockup = tinted bar with `Week n · Exec x/y`, taken/missed squares, `Stage 1 · ¼` pill | Fixed |
+| Journal | Chip order/labels: mockup All · Taken · Missed · Starter ¼ · Full | Fixed (added `Full`; other chips follow) |
+| Port | Badges + room were only in the Plan-tab risk panel; Port tab had none | Fixed — new `Port · risk` card (Risk used · Room this week · Week loss) + Open positions with badges (starter badge blue) |
+| Settings | Checkboxes + teal bold labels; mockup = toggles, stage buttons `1·¼ 2·½ 3·full`, Week loss limit, Exec goal | Fixed |
+| Watch | Rows flat with borders, tag glued to ticker; mockup = tinted rounded rows with lime bar, aligned tag column, sans ages | Fixed |
+| Watch | Group headers (HOT · Sector n / Other n) not verifiable with stubbed rows | Not checked; extra `Filter` / `…` buttons are existing functions, kept |
+
 ## Tests
 See `tests/LN4_retired.md` for changed expectations. New suites: `run_tests_phase369.py` (status card, Act, Starter, Exec/Missed/ladder, To do, Find, Watch, Sat matrix/counter/setup/macro/✓ all/feature Off) and `run_tests_phase370.py` (iPhone 390 audit + screenshots).
 
