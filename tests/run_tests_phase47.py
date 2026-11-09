@@ -168,6 +168,7 @@ def tests(pw, w, h, label):
         sm = semis(id="semis-20261005", name="Semis ทดสอบ", status="exploring")
         js(page, "()=>ideaOpen('semis-20261005')"); page.wait_for_timeout(200)
         js(page, "()=>ideaImportOpen()"); page.wait_for_selector("#ideaJson", state="visible")
+        js(page, "()=>cgToastHide()"); page.wait_for_timeout(250)   # CG1 toast (copy-scan) legitimately overlays the sheet's bottom button; dismiss it first
         page.fill("#ideaJson", json.dumps(sm, ensure_ascii=False)); page.click("[data-idea-check]"); page.wait_for_timeout(150)
         page.click("[data-idea-save]"); page.wait_for_timeout(600)
         d2 = idb(page, "semis-20261005")

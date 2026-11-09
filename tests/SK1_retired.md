@@ -9,3 +9,5 @@ Notes for future tests:
 ## Test cleanup (claude/tests-clean)
 
 - **phase106 B4** — old expectation "Sunday opens Daily" retired. SK1 makes Sat/Sun open Weekend by default, Mon opens Daily. Test now checks Sun (2026-10-04) → Weekend tab on, Mon (2026-10-05) → Daily tab on.
+- **phase45 §5** — the `[data-c-add]` "＋ เพิ่มเข้า Watchlist" button on Candidate detail was removed by PL2 decision 5 (`ideaCandAddBtn` returns ''; entry to Watchlist = Evaluate only). Test now asserts the detail opens and no add button/why-text exists.
+- **phase47** — CG1 copy-scan toast legitimately sits over the Import sheet's bottom button (not an app bug); test dismisses it via `cgToastHide()` before clicking.

@@ -220,12 +220,13 @@ def tests(pw, w, h, label):
         check(f"{tag} 5 แตะ → การ์ดหุ้น KLAC ใน Watchlist", js(page, "()=>[wlView, wlSel]") == ["wl", "KLAC"], json.dumps(js(page, "()=>[wlView, wlSel]")))
         # Candidates detail: ปุ่ม + เพิ่ม
         js(page, "()=>{ wlSetView('cand'); wlOpen('NORS'); }"); page.wait_for_timeout(300)
-        a1 = js(page, "()=>{ const b=document.querySelector('[data-c-add]'); return {dis:b.disabled, why:(document.querySelector('[data-c-add-why]')||{innerText:''}).innerText}; }")
-        js(page, "()=>wlOpen('AMAT')"); page.wait_for_timeout(300)
-        a2 = js(page, "()=>{ const b=document.querySelector('[data-c-add]'); return {dis:b.disabled}; }")
-        js(page, "()=>wlOpen('SCRN')"); page.wait_for_timeout(300)
-        a3 = js(page, "()=>{ const b=document.querySelector('[data-c-add]'); return {dis:b.disabled, why:(document.querySelector('[data-c-add-why]')||{innerText:''}).innerText}; }")
-        check(f"{tag} 5 Candidates detail: NORS (ไม่มีแหล่ง) กดไม่ได้+เหตุผล · AMAT กดได้ · SCRN (screen) กดไม่ได้ 'รอตรวจ'", a1["dis"] and "ยังไม่มีแหล่งยืนยัน" in a1["why"] and a2["dis"] is False and a3["dis"] and "รอตรวจ" in a3["why"], json.dumps([a1, a2, a3], ensure_ascii=False))
+        # PL2 decision 5: the "＋ เพิ่มเข้า Watchlist" button ([data-c-add]) was removed from every Candidate card/detail
+        # (ideaCandAddBtn returns ''); the only way into Watchlist is Evaluate. Test now asserts that, per candidate.
+        def cand_detail(sym):
+            js(page, f"()=>wlOpen('{sym}')"); page.wait_for_timeout(300)
+            return js(page, "()=>({add: document.querySelectorAll('[data-c-add],[data-c-add-why]').length, open: !!document.querySelector('[data-cand-x],.wlActs')})")
+        a1, a2, a3 = cand_detail("NORS"), cand_detail("AMAT"), cand_detail("SCRN")
+        check(f"{tag} 5 Candidates detail (PL2): NORS / AMAT / SCRN เปิดได้ · ไม่มีปุ่ม '＋ เพิ่มเข้า Watchlist' อีกแล้ว (ทางเข้า = Evaluate)", all(a["open"] and a["add"] == 0 for a in (a1, a2, a3)), json.dumps([a1, a2, a3]))
         check(f"{tag} 10 ไม่มี console error (→ Watchlist)", not ce and not pe, json.dumps([ce, pe]))
     finally:
         b.close()
