@@ -355,9 +355,19 @@ def tests(pw, w, h, label):
         b.close()
 
 
+def skip_missing(name, *paths):
+    """Static check that needs local backup artifacts which are not committed: SKIP (not FAIL) when absent."""
+    missing = [os.path.basename(p.rstrip("/")) for p in paths if not os.path.exists(p)]
+    if missing:
+        print("SKIP: backup not present - " + name + "  :: " + ", ".join(missing))
+        return True
+    return False
+
+
 def static_tests():
     root = os.path.join(HERE, "..")
-    check("[static] สำรอง index.backup-pre-ID2.html + tests/_bk_id2/ อยู่", os.path.exists(os.path.join(root, "index.backup-pre-ID2.html")) and os.path.isdir(os.path.join(HERE, "_bk_id2")))
+    if not skip_missing("สำรอง ID2", os.path.join(root, "index.backup-pre-ID2.html"), os.path.join(HERE, "_bk_id2")):
+      check("[static] สำรอง index.backup-pre-ID2.html + tests/_bk_id2/ อยู่", os.path.exists(os.path.join(root, "index.backup-pre-ID2.html")) and os.path.isdir(os.path.join(HERE, "_bk_id2")))
     html = open(os.path.join(root, "index.html"), encoding="utf-8").read()
     seg = html.split("function wlRowsAll()")[1].split("function wlSortRows")[0]
     check("[static] wlRowsAll().cand ไม่อ่าน research (ไม่มี rsAll() ใน cand)", "ideaCandRows(" in seg and "rsAll()" not in seg.split("const cand")[1])

@@ -396,11 +396,21 @@ def tests(pw, w, h, label):
         b.close()
 
 
+def skip_missing(name, *paths):
+    """Static check that needs local backup artifacts which are not committed: SKIP (not FAIL) when absent."""
+    missing = [os.path.basename(p.rstrip("/")) for p in paths if not os.path.exists(p)]
+    if missing:
+        print("SKIP: backup not present - " + name + "  :: " + ", ".join(missing))
+        return True
+    return False
+
+
 def static_tests():
     root = os.path.join(HERE, "..")
     _h = open(os.path.join(root, "index.html"), encoding="utf-8").read()
     check("[static] 11 มีกฎ @media (hover:none) ซ่อน .ideaFil .kbdhint", any("hover:none" in ln and ".kbdhint" in ln and "display:none" in ln for ln in _h.splitlines()))
-    check("[static] สำรอง index.backup-pre-ID1.html + tests/_bk_id1/ + fixtures/idea_semis.json อยู่", os.path.exists(os.path.join(root, "index.backup-pre-ID1.html")) and os.path.isdir(os.path.join(HERE, "_bk_id1")) and os.path.exists(os.path.join(HERE, "fixtures", "idea_semis.json")))
+    if not skip_missing("สำรอง ID1", os.path.join(root, "index.backup-pre-ID1.html"), os.path.join(HERE, "_bk_id1")):
+      check("[static] สำรอง index.backup-pre-ID1.html + tests/_bk_id1/ + fixtures/idea_semis.json อยู่", os.path.exists(os.path.join(root, "index.backup-pre-ID1.html")) and os.path.isdir(os.path.join(HERE, "_bk_id1")) and os.path.exists(os.path.join(HERE, "fixtures", "idea_semis.json")))
     html = open(os.path.join(root, "index.html"), encoding="utf-8").read()
     check("[static] ไม่มีการอ่าน/เขียน field user ผ่าน innerHTML ดิบ · ข้อความผ่าน ltInl/escHtml (ไม่มี innerHTML = v.I.…)", "innerHTML = v.I" not in html and "ideaTxt = s => ltInl(" in html)
     check("[static] state หน้าจอ (ideaSel/ideaTab/ideaFilter) ไม่ถูกเขียนลง Firestore (ไม่อยู่ใน patch ของ ideaUserPatch)", "ideaUserPatch(id, {ideaSel" not in html and "ideaFilter:" not in html.split("function ideaUserPatch")[1].split("function ideaSetStatus")[0])

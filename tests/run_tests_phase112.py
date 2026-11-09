@@ -414,7 +414,27 @@ def width_tests(pw):
         finally: b.close()
 
 
+def run_split():
+    """Default (no SECT): one subprocess per section, run in parallel, so the suite reports a result
+    well inside a runner's wall-clock limit (serial run ~3 min; split ~40 s). Exit 1 if any section fails."""
+    secs = sections()
+    procs = [(s, subprocess.Popen([sys.executable, os.path.abspath(__file__)], env={**os.environ, "SECT": s},
+                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)) for s in secs]
+    ok = bad = 0; rc = 0
+    for s, pr in procs:
+        out, _ = pr.communicate()
+        print(f"\n──── section: {s} ────"); print(out.rstrip())
+        for ln in out.splitlines():
+            if ln.startswith("PASS - "): ok += 1
+            elif ln.startswith("FAIL - "): bad += 1
+        rc |= (pr.returncode != 0)
+    print(f"\nสรุป (all sections): {ok} ผ่าน · {bad} ไม่ผ่าน")
+    sys.exit(1 if (rc or bad) else 0)
+
+
 def main():
+    if not os.environ.get("SECT", "").strip():
+        return run_split()
     sec = sections()
     if "script" in sec: script_tests()
     with sync_playwright() as pw:
