@@ -116,11 +116,14 @@ def tests(pw, w, h):
             const fs=['cnEntry','cnStop','cnRisk','cnTicker'].map(i=>parseFloat(getComputedStyle(document.getElementById(i)).fontSize));
             const sum=document.getElementById('cnSum'); return {top:[a.top,b.top,c.top], w:[a.width,b.width,c.width], fs, bt:getComputedStyle(sum).borderTopWidth, ov:document.documentElement.scrollWidth>innerWidth,
               extra:document.querySelectorAll('.ps1Pc,#cnEx .ps1R,#cnSx .ps1R').length, plus:document.querySelectorAll('[data-ps1-add]').length}}""")
-        check(f"{tag} 2 Form: Entry · SL · Risk เรียงเป็นบล็อก (PS1b §7b)  ({w}px) ไม่ล้นแนวนอน", abs(lay["top"][0] - lay["top"][1]) < 1 and abs(lay["top"][1] - lay["top"][2]) < 1 and not lay["ov"], lay)   # PS1c §4: single trade = ONE row (Entry · SL · Risk on one baseline)
-        check(f"{tag} 2 Form: font ของ input ≥ 16px (กัน iPhone zoom) · มีเส้นแบ่งบางเหนือสรุป · เริ่มต้นไม่มีช่องแถวเพิ่ม · มี ＋ 2 ปุ่ม", min(lay["fs"]) >= 16 and lay["bt"] == "1px" and lay["extra"] == 0 and lay["plus"] == 2, lay)
+        check(f"{tag} 2 Form: Entry · SL · Risk เรียงเป็นบล็อก (PS1b §7b)  ({w}px) ไม่ล้นแนวนอน", abs(lay["top"][0] - lay["top"][1]) < 1 and not lay["ov"], lay)   # LN4 §4a: Starter ON = split layout (Entry · SL on one baseline; Risk below)   # PS1c §4: single trade = ONE row (Entry · SL · Risk on one baseline)
+        check(f"{tag} 2 Form: font ของ input ≥ 16px (กัน iPhone zoom) · มีเส้นแบ่งบางเหนือสรุป · เริ่มต้นไม่มีช่องแถวเพิ่ม · มี ＋ 2 ปุ่ม", min(lay["fs"]) >= 16 and lay["bt"] == "1px" and lay["extra"] == 3 and lay["plus"] == 2, lay)   # LN4 §4a: Starter ON by default → one auto add-on row
         s1 = sumtxt(page)
-        check(f"{tag} 2 Form: ค่าเริ่มต้น Risk = default Momentum 0.4% · จำนวนหุ้น = floor(0.4%×E÷10) = {exp:,} (ปัดลง lot 1) · สรุปบรรทัดเดียว 'sh · Risk · Size … of portfolio'",
-              js(page, "()=>document.getElementById('cnRisk').value") == "0.4" and (f"#{exp:,}" in s1 or f"{exp:,} sh" in s1) and "Risk ฿" in s1 and "(0." in s1 and "Avg" not in s1, [s1, exp])
+        check(f"{tag} 2 Form: (LN4 §4a) Starter ON ค่าเริ่มต้น: Risk 0.4% · Now = ¼ · Planned total = floor(0.4%×E÷10) · จำนวนหุ้น = floor(0.4%×E÷10) = {exp:,} (ปัดลง lot 1) · สรุปบรรทัดเดียว 'sh · Risk · Size … of portfolio'",
+              js(page, "()=>document.getElementById('cnRisk').value") == "0.4" and f"Now: #{exp // 4:,}" in s1 and f"Planned total: #{exp:,}" in s1 and "Risk ฿" in s1, [s1, exp])
+        js(page, "()=>ln4StarterIn(false)"); settle(page, 200)   # LN4 §4a: Starter OFF → single row 100% = the original PS1 form (the manual ＋ Entry / ＋ SL checks below keep their intent)
+        s1b = sumtxt(page)
+        check(f"{tag} 2 Form (LN4 §4a): Starter OFF → single row 100% · shares = floor(0.4%×E÷10) = {exp:,} · no 'Planned total'", (f"#{exp:,}" in s1b or f"{exp:,} sh" in s1b) and "Risk ฿" in s1b and "Avg" not in s1b and "Planned total" not in s1b and js(page, "()=>coreNew.ne") == 1, [s1b, exp])
         check(f"{tag} 2 Form: ช่อง Risk นอกช่วง Momentum (0.7) → บล็อกบันทึก", (fill(page, r=0.7) or True) and save_dis(page) and "0.35" in errtxt(page), errtxt(page))
         fill(page, r=0.4)
         # size cap trims
@@ -225,6 +228,7 @@ def tests(pw, w, h):
     try:
         ps_on(page)
         js(page, "()=>{ ps1TodayOpen = true; switchTab('today'); render(); }"); settle(page, 500)   # PS1b: the Portfolio Risk panel lives in Today (collapsed by default; opened here)
+        js(page, "()=>{ const d = document.querySelector('[data-ln4-moredet]'); if(d) d.open = true; const p = document.querySelector('[data-ps1-panel]'); if(p && p.closest('details')) p.closest('details').open = true; document.querySelectorAll('.ln4-more details, [data-ps1-today-det]').forEach(x=>x.open = true); }"); settle(page, 300)
         pn = js(page, """()=>({body: !!document.querySelector('[data-ps1-panel-body]'), e: (document.querySelector('[data-ps1-e]')||{}).innerText, buckets: [...document.querySelectorAll('[data-ps1-bucket]')].map(x=>x.dataset.ps1Bucket),
             chips: [...document.querySelectorAll('[data-ps1-chip]')].map(x=>x.dataset.ps1Chip), miss: (document.querySelector('[data-ps1-missing]')||{}).innerText||'', foot: document.querySelector('.ps1Fn')?.innerText,
             rows: Object.fromEntries([...document.querySelectorAll('[data-ps1-idea]')].map(r=>[r.dataset.ps1Idea, r.innerText.replace(/\\s+/g,' ').trim()])), tot: (document.querySelector('[data-ps1-total]')||{}).innerText})""")
@@ -236,11 +240,12 @@ def tests(pw, w, h):
         gb = js(page, "()=>{ const c=ps1Cfg('main'); return [Ps1.gbLevel(7.9,c), Ps1.gbLevel(8,c), Ps1.gbLevel(10,c)]; }")
         check(f"{tag} 5 Panel: give-back <8% ok · ≥8% amber · ≥10% red", gb == ["ok", "amber", "red"], gb)
         js(page, "()=>{ const B=getBook('main'); B.trades.find(t=>t.sym==='BE').qty = 60000; saveBook('main'); render(); }"); settle(page, 400)
+        js(page, "()=>{ const d = document.querySelector('[data-ln4-moredet]'); if(d) d.open = true; const p = document.querySelector('[data-ps1-panel]'); if(p && p.closest('details')) p.closest('details').open = true; document.querySelectorAll('.ln4-more details, [data-ps1-today-det]').forEach(x=>x.open = true); }"); settle(page, 300)
         red = js(page, "()=>({lvl:(document.querySelector('[data-ps1-giveback]')||{dataset:{}}).dataset.ps1Giveback, txt:(document.querySelector('[data-ps1-giveback]')||{}).innerText||'', chips:[...document.querySelectorAll('[data-ps1-chip]')].map(x=>x.dataset.ps1Chip)})")
         check(f"{tag} 5 Panel: give-back ≥10% → แดง + 'Review: take partial profit or raise stops' · bucket เต็ม = 'Stop opening'", red["lvl"] == "red" and "Review: take partial profit or raise stops" in red["txt"], red)
         js(page, "()=>{ ps1TodayOpen = false; switchTab('today'); render(); }"); settle(page, 500)
-        td = js(page, "()=>{ const el=document.querySelector('[data-ps1-today]'); return el ? el.innerText.replace(/\\s+/g,' ') : ''; }")
-        check(f"{tag} 5 Today: มีบรรทัดสั้น 'Risk x / 5.0% · left … · give-back …'", "Risk" in td and "give-back" in td and "left" in td, td)
+        td = js(page, "()=>{ const el=document.querySelector('[data-ln4-risk]'); return el ? el.innerText.replace(/\\s+/g,' ') : ''; }")
+        check(f"{tag} 5 Today (LN4 §1): status card line 'Risk x / 5% · room yR this week' (full panel is in Details ▸)", "Risk" in td and "/" in td and "room" in td, td)
         check(f"{tag} 5 Today: ไม่ล้นแนวนอน", not js(page, "()=>document.documentElement.scrollWidth>innerWidth"), [])
         check(f"{tag} 5 console ไม่มี error", not ce and not pe, [ce[:2], pe[:2]])
     finally:
@@ -252,6 +257,7 @@ def sat_tests(pw, w, h):
     b, page, ce, pe = P77.launch(pw, w, h)
     try:
         ps_on(page)
+        js(page, "()=>glWrite(S=>{ S.ln4 = {starterFeatureOff:true}; })"); settle(page, 300)   # LN4: Starter covered in 369 — these checks keep the full-size maths
         js(page, "()=>{ openSettings(); }"); settle(page, 200); js(page, "()=>document.getElementById('setOverlay').classList.remove('show')")
         iid = js(page, "()=>satV2NewPlan('XAUUSD','main')"); settle(page, 500)
         idea = js(page, "([i])=>{ const x=satIdeasList.find(y=>y.id===i); return {sleeve:x.sleeve, tf:x.tf}; }", [iid])
@@ -264,18 +270,22 @@ def sat_tests(pw, w, h):
             return js(page, """([i])=>{ const x=satIdeasList.find(y=>y.id===i); const c=satV3PlanAcctCalc(x,'main'); return {lot:c.lot, blocks:c.blocks, ready:c.ready, fac:c.verify&&c.verify.fac, ok:c.verify&&c.verify.ok, msg:c.lotMsg, raw:c.v2&&c.v2.rawRisk, lim:c.v2&&c.v2.limit, deal:c.v2&&c.v2.lotDeal, risk:c.v2&&c.v2.riskTHB, E:c.ps1&&c.ps1.E, def:c.ps1&&c.ps1.def, margin:c.ps1&&c.ps1.margin}; }""", [iid])
         ps_on(page, {"def": {"winner": 0.4, "ladder": 1.0, "satMain": 0.1, "satTac": 0.15}}); settle(page, 300)
         c0 = calc()
-        check(f"{tag} 4b Structure ✗ (ยังไม่ติ๊ก) → ถูกบล็อก 'Check Structure first' · ไม่ ready", "Check Structure first" in c0["blocks"] and not c0["ready"], c0)
+        check(f"{tag} 4b (LN4 §4d) EMA ✗ + Structure ✗ (ยังไม่ติ๊ก) → Blocked 'Need EMA50 or Structure verify' · ไม่ ready", "Need EMA50 or Structure verify" in c0["blocks"] and not c0["ready"], c0)
+        js(page, "([i])=>satV3IdeaWrite(i,{setup_ck: PF_SETUP_CK.map(x=>x[0])})", [iid]); settle(page, 300)   # LN4 §4d: Setup 3/3 required
         js(page, "([i])=>{ pfVerifySet(i,'structure_ok',true); pfVerifySet(i,'ema50_ok',true); }", [iid]); settle(page, 400)
         c1 = calc()
         js(page, "([i])=>{ pfVerifySet(i,'ema50_ok',false); }", [iid]); settle(page, 400)
         c2 = calc()
         js(page, "([i])=>{ pfVerifySet(i,'structure_ok',false); pfVerifySet(i,'ema50_ok',true); }", [iid]); settle(page, 400)
         c3 = calc()
-        check(f"{tag} 4b ✓✓ Clear Trend → ขนาด 100% (factor 1) · ไม่มี block Structure", c1["fac"] == 1 and "Check Structure first" not in c1["blocks"] and c1["lot"], c1)
+        check(f"{tag} 4b ✓✓ Clear Trend → ขนาด 100% (factor 1) · ไม่มี block Structure", c1["fac"] == 1 and "Need EMA50 or Structure verify" not in c1["blocks"] and c1["ready"] and c1["lot"], c1)
         import math
         exp_deal = math.floor(c1["raw"] * 0.6 / 0.01 + 1e-9) * 0.01
-        check(f"{tag} 4b EMA ✗ + Structure ✓ → Unclear Trend ขนาด 60% · lot = floor(0.6 × เต็ม) ปัดลงตาม lot step", c2["fac"] == 0.6 and c1["lim"] == "risk" and c2["lim"] == "risk" and abs(c2["deal"] - exp_deal) < 1e-9 and "Check Structure first" not in c2["blocks"], [c1, c2, exp_deal])
-        check(f"{tag} 4b Structure ✗ (EMA ✓) → ถูกบล็อก ไม่ว่า EMA", "Check Structure first" in c3["blocks"] and not c3["ready"], c3)
+        check(f"{tag} 4b EMA ✗ + Structure ✓ → Unclear Trend ขนาด 60% · lot = floor(0.6 × เต็ม) ปัดลงตาม lot step", c2["fac"] == 0.6 and c1["lim"] == "risk" and c2["lim"] == "risk" and abs(c2["deal"] - exp_deal) < 1e-9 and "Need EMA50 or Structure verify" not in c2["blocks"], [c1, c2, exp_deal])
+        check(f"{tag} 4b (LN4 §4d) EMA ✓ + Structure ✗ → Counter trend: อนุญาต ขนาด 60% (ไม่ซ้อน 36%)", c3["fac"] == 0.6 and c3["ok"] and "Need EMA50 or Structure verify" not in c3["blocks"] and c3["ready"], c3)   # LN4 §4d: Counter trend = allowed (after confirm at Save) · 60%
+        js(page, "([i])=>{ pfVerifySet(i,'structure_ok',false); pfVerifySet(i,'ema50_ok',false); }", [iid]); settle(page, 400)
+        c4 = calc()
+        check(f"{tag} 4b (LN4 §4d) EMA ✗ + Structure ✗ → Blocked", "Need EMA50 or Structure verify" in c4["blocks"] and not c4["ready"], c4)
         check(f"{tag} 4b ขนาด = E × default risk (0.10% ของพอร์ตทั้งหมด) · แสดง Sat balance เป็นข้อมูล 'margin is not risk'", c1["E"] and abs(c1["risk"] - c1["E"] * 0.1 / 100) < 1 and c1["def"] == 0.1 and c1["margin"] > 0, c1)
         # summary text for unclear
         js(page, "([i])=>{ pfVerifySet(i,'structure_ok',true); pfVerifySet(i,'ema50_ok',false); }", [iid]); settle(page, 500)
@@ -301,7 +311,7 @@ def sat_tests(pw, w, h):
         for f_, v in (("entry", 60000), ("sl", 58000), ("tp", 64000)):
             js(page, "([i,f,v])=>satV3PlanEdit(i,f,v)", [lid, f_, str(v)]); settle(page, 120)
         lg = js(page, """([i])=>{ const x=satIdeasList.find(y=>y.id===i); const c=satV3PlanAcctCalc(x,'main'); return {legacy:satClsLegacy(x), blocks:c.blocks, st:td3PlanStatus(x)}; }""", [lid])
-        check(f"{tag} 4b แผนเก่าที่ยังใช้ classify เดิม (verification pending) ต้องติ๊ก Structure ก่อนเข้าไม้ใหม่", lg["legacy"] and "Check Structure first" in lg["blocks"] and lg["st"] and lg["st"]["k"] == "pending", lg)
+        check(f"{tag} 4b แผนเก่าที่ยังใช้ classify เดิม (verification pending) ต้องติ๊ก Structure ก่อนเข้าไม้ใหม่", lg["legacy"] and "Need EMA50 or Structure verify" in lg["blocks"] and lg["st"] and lg["st"]["k"] == "pending", lg)
         check(f"{tag} 4b console ไม่มี error", not ce and not pe, [ce[:2], pe[:2]])
     finally:
         b.close()
@@ -313,8 +323,10 @@ def pyr_tests(pw, w, h):
     b, page, ce, pe = P79.launch(pw, w, h)
     try:
         ps_on(page, {"def": {"winner": 0.4, "ladder": 1.0, "satMain": 0.1, "satTac": 0.15}})
+        js(page, "()=>glWrite(S=>{ S.ln4 = {starterFeatureOff:true}; })"); settle(page, 300)   # LN4: Starter covered in 369 — these checks keep the full-size maths
         iid = P79.make(page, "main", 2000, 1990, "Long")
         js(page, "([i])=>{ pfVerifySet(i,'structure_ok',true); pfVerifySet(i,'ema50_ok',true); }", [iid]); settle(page, 400)
+        js(page, "([i])=>satV3IdeaWrite(i,{setup_ck: PF_SETUP_CK.map(x=>x[0])})", [iid]); settle(page, 300)   # LN4 §4d: Setup 3/3 required
         P78.save(page, iid); P79.openall(page)
         t = P78.trades(page)
         check(f"{tag} Sat order ใหม่เก็บ snapshot t.ps1 (E · risk% · riskTHB · verifyFac)", len(t) == 1 and t[0].get("ps1") and t[0]["ps1"]["riskPct"] == 0.1 and t[0]["ps1"]["verifyFac"] == 1, t)
@@ -335,7 +347,7 @@ def fix_tests(pw, w, h):
     b, page, ce, pe = C.launch2(pw, w, h, [], {}, pin_winner=True)
     try:
         ps_on(page)
-        form(page, "MSL"); fill(page, 100, 90)
+        form(page, "MSL"); js(page, "()=>ln4StarterIn(false)"); fill(page, 100, 90)   # LN4 §4a: manual split with Starter OFF (intent unchanged)
         js(page, "()=>{ ps1RowAdd('s'); ps1RowAdd('e'); }"); settle(page, 200)
         js(page, "()=>{ document.getElementById('cnSt1').value='80'; ps1In('s',1,'80'); document.getElementById('cnSp0').value='50'; ps1In('sp',0,'50'); document.getElementById('cnSp1').value='50'; ps1In('sp',1,'50');"
                  " document.getElementById('cnEn1').value='95'; ps1In('e',1,'95'); document.getElementById('cnEr0').value='50'; ps1In('er',0,'50'); document.getElementById('cnEr1').value='50'; ps1In('er',1,'50'); }"); settle(page, 300)

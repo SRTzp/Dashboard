@@ -508,26 +508,38 @@ def flow_tests(pw):
         finally: b.close()
 
 
+# LN4 — these groups tested the OLD Today layout (3 panels · News block · account-goals rows · Overview · Sat panel · Other ▸ body).
+# Replaced by run_tests_phase369/370 (see tests/LN4_retired.md). Weekend · Core queue · goals Settings · Flow groups still run.
+LN4_RETIRED = {"layout_tests", "other_tests", "news_tests", "goals_tests", "overview_tests", "sat_tests"}
+
+
+def step(fn, *a, **k):
+    if fn.__name__ in LN4_RETIRED: return
+    try: fn(*a, **k)
+    except Exception as e:
+        check(f"[crash] {fn.__name__}{a[1:3] if len(a) > 1 else ''}", False, str(e)[:200])
+
+
 def main():
     with sync_playwright() as pw:
         for w, h, label in ((1440, 900, "1440px"), (1280, 800, "1280px"), (390, 844, "390px"), (300, 700, "300px")):
-            layout_tests(pw, w, h, label, shots=True)
-        other_tests(pw)
-        news_tests(pw, 1440, 900, "1440px")
-        news_tests(pw, 390, 844, "390px", shots=True)
-        goals_tests(pw, 1440, 900, "1440px")
-        goals_tests(pw, 390, 844, "390px")
-        goals_settings_tests(pw)
-        weekend_tests(pw, 1440, 900, "1440px", shots=True)
-        weekend_tests(pw, 390, 844, "390px", shots=True)
-        overview_tests(pw)
-        core_tests(pw, 1440, 900, "1440px")
-        core_tests(pw, 390, 844, "390px", shots=True)
-        core_order_tests(pw)
-        sat_tests(pw, 1440, 900, "1440px")
-        sat_tests(pw, 390, 844, "390px", shots=True)
-        sat_tests(pw, 300, 700, "300px")
-        flow_tests(pw)
+            step(layout_tests, pw, w, h, label, shots=True)
+        step(other_tests, pw)
+        step(news_tests, pw, 1440, 900, "1440px")
+        step(news_tests, pw, 390, 844, "390px", shots=True)
+        step(goals_tests, pw, 1440, 900, "1440px")
+        step(goals_tests, pw, 390, 844, "390px")
+        step(goals_settings_tests, pw)
+        step(weekend_tests, pw, 1440, 900, "1440px", shots=True)
+        step(weekend_tests, pw, 390, 844, "390px", shots=True)
+        step(overview_tests, pw)
+        step(core_tests, pw, 1440, 900, "1440px")
+        step(core_tests, pw, 390, 844, "390px", shots=True)
+        step(core_order_tests, pw)
+        step(sat_tests, pw, 1440, 900, "1440px")
+        step(sat_tests, pw, 390, 844, "390px", shots=True)
+        step(sat_tests, pw, 300, 700, "300px")
+        step(flow_tests, pw)
     bad = [r for r in results if not r[1]]
     print(f"\nPASS {len(results) - len(bad)} · FAIL {len(bad)}")
     raise SystemExit(1 if bad else 0)
