@@ -165,19 +165,25 @@ def import_tests(pw):
         paste(page, sample(week="2026-10-05"), save=True)
         p1 = panel(page)
         check(f"{tag} 1 บันทึกสัปดาห์ถัดไป (5 ต.ค.) → เก็บไว้ · สัปดาห์นี้ยังเป็นของ 28 ก.ย. (ไม่สลับ) · สัปดาห์เก่ายังอยู่", n_docs(page) == 2 and p1["meta"][0].startswith("28 ก.ย.") and get_doc(page, WEEK) is not None)
-        # reimport สัปดาห์เดิม: omitted asset → ไม่มีข้อมูล · ไม่ทับ actual ด้วย null
-        js(page, """()=>{ const d = wiDocs['2026-09-28']; return sat7dCol('weeklyImpact').doc('2026-09-28').set({events:{e_pce:{actual:2.9, actual_updated_at:'2026-10-01T13:00:00.000Z', actual_source:'https://example.com/r', status:'released'}}}, {merge:true}); }"""); settle(page, 600)
-        d2 = sample(); del d2["assets"]["BRENT"]
-        paste(page, d2, save=True)
+        # WI2 — reimport สัปดาห์เดิม = แทนที่ทั้งหมด (ไม่ merge · ไม่มี conflict · ไม่พก actual เดิม)
+        js(page, """()=>{ return sat7dCol('weeklyImpact').doc('2026-09-28').set({events:{e_pce:{actual:2.9, actual_updated_at:'2026-10-01T13:00:00.000Z', actual_source:'https://example.com/r', status:'released'}}}, {merge:true}); }"""); settle(page, 600)
+        d2 = sample(); del d2["assets"]["BRENT"]; d2["events"]["e_pce"]["kind"] = "speech"; d2["events"]["e_pce"]["title"] = "SAMPLE NEW e_pce"
+        paste(page, d2)
+        note = js(page, "()=>document.getElementById('wiPasteHost').innerText")
+        cf = js(page, "()=>document.querySelector('[data-wi-conflict]') ? 1 : 0")
+        check(f"{tag} 1 WI2 สัปดาห์มีอยู่แล้ว → โน้ตแทนที่ทั้งหมด · ไม่มี conflict block", "บันทึกจะแทนที่ทั้งหมด" in note and cf == 0, [note[:300], cf])
+        page.locator("[data-wi-save]").click(); settle(page, 900)
         doc2 = get_doc(page, WEEK)
-        check(f"{tag} 1 reimport สัปดาห์เดิม: ไม่ทับ actual ที่ยืนยันแล้วด้วย null (เก็บ source/เวลา) · Asset ที่ไม่อยู่ในไฟล์ใหม่ (BRENT) = ไม่มีข้อมูล · สัปดาห์อื่นยังอยู่",
-              doc2["events"]["e_pce"]["actual"] == 2.9 and doc2["events"]["e_pce"]["actual_source"] == "https://example.com/r" and "BRENT" not in doc2["assets"] and get_doc(page, "2026-10-05") is not None, doc2["events"]["e_pce"])
-        # conflict: event id เดียวกันแต่ metric ต่าง
-        d3 = sample(); d3["events"]["e_pce"]["metric"] = "Headline PCE"
-        paste(page, d3)
-        cf = js(page, "()=>(document.querySelector('[data-wi-conflict]')||{}).innerText || null")
-        check(f"{tag} 1 event id ชนกันแต่ metric ต่าง → รายงาน conflict (ไม่ merge ด้วยชื่อ)", cf and "e_pce" in cf, cf)
-        js(page, "()=>wiPasteClose()")
+        e = doc2["events"]["e_pce"]
+        check(f"{tag} 1 WI2 event id เดิม kind ใหม่ → เก็บของใหม่ · actual เดิมไม่ถูกพกมา · Asset ที่ไม่อยู่ในไฟล์ใหม่ (BRENT) หาย · สัปดาห์อื่นยังอยู่",
+              e["kind"] == "speech" and e["title"] == "SAMPLE NEW e_pce" and e.get("actual") is None and e.get("actual_source") is None and "actual_prev" not in e and "BRENT" not in doc2["assets"] and get_doc(page, "2026-10-05") is not None, e)
+        d4 = sample(); del d4["events"]["e_pce"]
+        for a_ in d4["assets"].values():
+            a_["event_refs"] = [r for r in a_.get("event_refs", []) if r != "e_pce"]
+            if isinstance(a_.get("interp"), dict): a_["interp"] = {k: v for k, v in a_["interp"].items() if k != "e_pce"}
+        paste(page, d4, save=True)
+        doc4 = get_doc(page, WEEK)
+        check(f"{tag} 1 WI2 event เก่าที่ไม่อยู่ในไฟล์ใหม่ → หายหลังบันทึก", "e_pce" not in doc4["events"], list(doc4["events"].keys()))
         check(f"{tag} 1 ไม่มี console error", not ce and not pe, [ce[:2], pe[:2]])
     finally: b.close()
 
