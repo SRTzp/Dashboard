@@ -131,6 +131,17 @@ def tests(pw, w, h):
         page.locator('[data-ln4-row="AMD"] [data-ln4-btn]').click(); settle(page, 700)
         check(f"{tag} 2 Place order › (confirm) → 'Order working' + 'Record fill'", row(page, "AMD")["st"] == "working" and row(page, "AMD")["btn"] == "Record fill", row(page, "AMD"))
         check(f"{tag} 2 working time stored on the card", js(page, "()=>{ const c = coreCardsList.find(x=>x.ticker==='AMD'); return !!(c.ln4 && c.ln4.placedAt); }"))
+        # §8 Plan tab cards follow the same states
+        js(page, "()=>{ switchTab('plan'); setPlanScope('stock'); }"); settle(page, 600)
+        pc = js(page, "()=>{ const e = document.querySelector('[data-ln4-pc=\"AMD\"]'); return e ? {st:e.dataset.ln4State, t:e.innerText, tag:(e.querySelector('[data-ln4-ptag]')||{}).innerText} : null; }")
+        check(f"{tag} 8 Plan card AMD: Order working (blue) with Record fill + Cancel order, MMT tag", pc and pc["st"] == "working" and "Record fill" in pc["t"] and "Cancel order" in pc["t"] and pc["tag"] == "MMT", pc)
+        nv = js(page, "()=>{ const e = document.querySelector('[data-ln4-pc=\"NVDA\"]'); return e ? e.innerText : null; }")
+        check(f"{tag} 8 Plan card NVDA (open, stop < avg) → status Open + 'Raise stop ›'", nv and "Open" in nv and "Raise stop" in nv, nv)
+        page.locator('[data-ln4-pc="AMD"] [data-ln4-cancel]').click(); settle(page, 700)
+        pc2 = js(page, "()=>{ const e = document.querySelector('[data-ln4-pc=\"AMD\"]'); return e ? {st:e.dataset.ln4State, t:e.innerText} : null; }")
+        check(f"{tag} 8 Cancel order → back to Draft (Place order ›), placedAt cleared", pc2 and pc2["st"] == "draft" and "Place order" in pc2["t"] and js(page, "()=>!coreCardsList.find(x=>x.ticker==='AMD').ln4.placedAt"), pc2)
+        js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 500)
+        page.locator('[data-ln4-row="AMD"] [data-ln4-btn]').click(); settle(page, 700)
         # failing checks
         seed(page, {"ccBD": P24.card("ccBD", "main", "BAD1", plan={"entry": 100, "stop": 99.5}, px=90, pxDate="2026-10-01"),
                     "ccNS": P24.card("ccNS", "main", "NOSTOP", plan={"entry": 100, "stop": 0}, px=90, pxDate="2026-10-01")})
@@ -294,6 +305,18 @@ def starter(pw, w, h):
         settle(page, 500)
         r2 = row(page, "AAA")
         check(f"{tag} S6 stop ≥ break-even → 'Add-on ›'", r2 and r2["btn"] == "Add-on ›", r2)
+        # §8 Port badges + room · Journal Taken
+        js(page, "()=>{ switchTab('plan'); }"); settle(page, 400)
+        ph = js(page, "()=>ps1PanelHtml()")
+        check(f"{tag} 8 Port: AAA shows '¼ starter · add-on planned' + '0 risk' (stop ≥ avg)", "¼ starter · add-on planned" in ph and 'data-ln4-pb="zero"' in ph, ph[:200])
+        check(f"{tag} 8 Port: RED (stop 90 < avg 100) shows 'stop below avg'", 'data-ln4-pb="below"' in ph)
+        room_p = js(page, "()=>{ const m = ps1PanelHtml().match(/data-ln4-port-room>room <b>([^<]+)</); return m ? m[1] : null; }")
+        room_t = js(page, "()=>ln4RoomR() + 'R'")
+        check(f"{tag} 8 Port risk summary 'room yR this week' equals Today's number", room_p == room_t and room_p is not None, [room_p, room_t])
+        js(page, "()=>{ switchTab('journal'); }"); settle(page, 400)
+        check(f"{tag} 8 Journal has Taken chip and filter runs", cnt(page, '[data-jf="taken"]') == 1, cnt(page, '[data-jf="taken"]'))
+        page.locator('[data-jf="taken"]').click(); settle(page, 300)
+        check(f"{tag} 8 Journal Taken chip selected", js(page, "()=>jFilter") == "taken")
         check(f"{tag} S no errors", not ce and not pe, [ce[:2], pe[:2]])
     finally:
         b.close()
