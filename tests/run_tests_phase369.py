@@ -80,8 +80,9 @@ def tests(pw, w, h):
         check(f"{tag} 1 week room = 5R − realised this week (4.4R)", room == "4.4R", room)
         stub(page, "window.ln4HotSectors = ()=>['A','B','C','D','E','F','G'].map((x,i)=>({etf:'X'+x,name:'Sec '+x,k:i<5?'lead':'fresh'}));")
         refresh(page)
-        chips = js(page, "()=>[...document.querySelectorAll('[data-ln4-hotchip]')].map(e=>e.innerText)")
-        check(f"{tag} 1 HOT: max 5 chips then +N (Leading ↗ amber / Fresh blue)", len(chips) == 5 and txt(page, "[data-ln4-hotmore]") == "+2" and all("↗" in c for c in chips), chips)
+        chips = js(page, "()=>[...document.querySelectorAll('[data-ln4-hotchip]')].filter(e=>e.getBoundingClientRect().height>0).map(e=>e.innerText)")
+        mo = js(page, "()=>[...document.querySelectorAll('[data-ln4-hotmore]')].filter(e=>e.getBoundingClientRect().height>0).map(e=>e.innerText)")
+        check(f"{tag} 1 HOT (LN4b): Mac = top 3 + '+N' · phone = as many as fit one row + '+N' (Leading ↗ amber)", (len(chips) == 3 and mo == ["+4"] if w > 560 else (len(chips) >= 1 and mo == [f"+{7 - len(chips)}"])) and "↗" in chips[0], [chips, mo])
         stub(page, "window.ln4HotSectors = ()=>[{etf:'XA',name:'Semis',k:'lead'},{etf:'XB',name:'Defense',k:'fresh'}];")
         refresh(page)
         cls = js(page, "()=>[...document.querySelectorAll('[data-ln4-hotchip]')].map(e=>e.className)")
@@ -124,7 +125,7 @@ def tests(pw, w, h):
         stub(page, "window.ffPoolFactor = ()=>({cap:100, demo:false, age:0});")
         # one line per row at 1440 / two lines at 390
         hs = js(page, "()=>{ const out = {}; document.querySelectorAll('[data-ln4-row]').forEach(e=>{ out[e.dataset.ln4Row] = Math.round(e.getBoundingClientRect().height); }); return out; }")
-        lim = 62 if w >= 1000 else 96
+        lim = 62 if w >= 1000 else 112   # LN4b: phone Act row = 3 lines (ticker·tag·status / tags+reason / details·button)
         check(f"{tag} 2 row height fits {'one line' if w >= 1000 else 'two lines'} (≤{lim}px)", all(v <= lim for v in hs.values()), hs)
         # state flow Draft → Order working
         stub(page, "window.confirm = ()=>true;")
@@ -176,7 +177,7 @@ def tests(pw, w, h):
         # ETN px 310 ≥ entry 300, Draft → Missed chip
         mc = js(page, "()=>[...document.querySelectorAll('[data-ln4-miss]')].map(e=>e.innerText)")
         check(f"{tag} 4 Entry crossed while Draft → To do chip 'ETN trigger passed · Missed?'", any("ETN trigger passed" in x and "Missed?" in x for x in mc), mc)
-        check(f"{tag} 4 Exec badge present in the To do row", cnt(page, "[data-ln4-exec]") == 1 and "Exec" in txt(page, "[data-ln4-exec]"))
+        check(f"{tag} 4 Exec badge hidden while there is no valid setup (0/0) — LN4b", cnt(page, "[data-ln4-exec]") == 0)
         page.locator('[data-ln4-miss]').first.click(); settle(page, 600)
         ex = txt(page, "[data-ln4-exec]")
         v = js(page, "()=>ln4Cfg().valid")
