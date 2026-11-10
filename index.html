@@ -3587,6 +3587,7 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .ln4 .ln4-gb{width:90px;height:5px;background:var(--bg,#EEF0F3);border-radius:9px;overflow:hidden;align-self:center}.ln4 .ln4-gb i{display:block;height:100%;background:var(--teal)}
 .ln4 .ln4-det{margin:6px 0 0;padding:8px 10px;border:1px solid var(--border);border-radius:12px;font-size:12.5px}
 .ln4 .todo{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}.ln4 .todo>b{font-size:13px;margin-right:2px}
+.ln4 .ln4-lt{display:inline-flex;flex-wrap:nowrap;align-items:center;gap:4px;flex:1 1 0;min-width:0;overflow:hidden}.ln4 .ln4-lt.open{flex-wrap:wrap;overflow:visible}.ln4 .ln4-lt>*{flex:none}.ln4 .ln4-lt [hidden]{display:none}.ln4 .ln4-lt .k{font-size:12.5px;font-weight:600;color:var(--muted)}.ln4 .ln4-lt .sp1{color:var(--faint,#9AA0A9)}.ln4 .ln4-ltc{font-size:12px;padding:2px 8px;min-height:26px}
 .ln4 .ln4-chip{display:inline-flex;align-items:center;gap:2px}.ln4 .ln4-x{border:0;background:none;color:var(--faint,#9AA0A9);cursor:pointer;font-size:12px;padding:2px 4px}
 .ln4 .h{font:700 14px var(--sans);margin:2px 2px 8px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.ln4 .h small{color:var(--faint,#9AA0A9);font-weight:600;font-size:12px}
 .ln4 .it{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border)}.ln4 .grp+.it{border-top:0}
@@ -8855,15 +8856,15 @@ function ln4Half(bucket){
   return false;
 }
 function ln4HotSectors(){
-  const out = [];
+  /* HT1 — HOT = shared hotSectors() (top 5); ★ followed sectors that are not HOT are added on Today (marked ★, hot:false) */
+  const out = [], seen = new Set();
   try{
-    const tf = rrgTf(), rows = rrgRowsNow();
-    rows.forEach(x=>{
-      if(!x || x.err || !x.quad || rrgWaiting(x)) return;
-      /* LN4b — HOT = RRG Leading + Fresh only ("weak" = outperforming but fading is dropped); ★ followed sectors always listed (first) */
-      const lead = x.quad === 'lead', fresh = !lead && x.quad !== 'weak' && rrgIsFresh(x, tf);
+    const hs = hotSectors();
+    hs.forEach(h=>{ let star = false; try{ star = !!sectorState(h.etf).followed; }catch(e){} seen.add(h.etf); out.push({etf:h.etf, name:tv1SecName(h.etf), k:h.k, star, ratio:h.ratio, hot:true}); });
+    rrgRowsNow().forEach(x=>{
+      if(!x || x.err || !x.quad || rrgWaiting(x) || seen.has(x.sym)) return;
       let star = false; try{ star = !!sectorState(x.sym).followed; }catch(e){}
-      if(lead || fresh || star) out.push({etf:x.sym, name:tv1SecName(x.sym), k: lead ? 'lead' : fresh ? 'fresh' : 'star', star, ratio: +x.ratio || 0, hot: lead || fresh});
+      if(star) out.push({etf:x.sym, name:tv1SecName(x.sym), k:'star', star:true, ratio:+x.ratio || 0, hot:false});
     });
   }catch(e){}
   /* ★ first (strongest first) · then Fresh · then Leading by strength — Mac shows ★ + top 3, the rest is behind +N */
@@ -8954,6 +8955,18 @@ function ln4Fit(){
       const line = r.parentNode, over = ()=>r.scrollWidth > r.clientWidth + 1;
       let hid = 0;
       if(over()){ x.hidden = false; for(let i = cs.length - 1; i > 0 && over(); i--){ cs[i].classList.add('xf'); hid++; x.textContent = '+' + hid; } }
+    });
+    document.querySelectorAll('[data-ln4-ltin]').forEach(r=>{   /* HT1 — Mac To do: as many stock chips as fit the width · rest behind +N › · recomputed on every refresh/resize */
+      const cs = [...r.querySelectorAll('.ln4-ltc')], m = r.querySelector('[data-ln4-ltmore]'); if(!m) return;
+      cs.forEach(c=>{ c.hidden = false; if(c.previousElementSibling) c.previousElementSibling.hidden = false; });
+      if(r.classList.contains('open')) return;
+      m.hidden = true; m.textContent = '';
+      const over = ()=>r.scrollWidth > r.clientWidth + 1;
+      let hid = 0;
+      if(over()){
+        m.hidden = false;
+        for(let i = cs.length - 1; i > 0 && over(); i--){ cs[i].hidden = true; cs[i].previousElementSibling.hidden = true; hid++; m.textContent = '+' + hid + ' ›'; }
+      }
     });
     document.querySelectorAll('.ln4-hot').forEach(L=>{
       const r = L.querySelector('.r'), mp = L.querySelector('.ln4-hm.mp'); if(!r || !mp) return;
@@ -9253,10 +9266,10 @@ function ln4TodoItems(M){
     (coreCardsList || []).forEach(c=>{ if(c.status === 'plan' && ln4Crossed(c)) out.push({c:'a', id:'miss:' + c.id, miss:c.id, t:`${c.ticker} trigger passed · Missed?`}); });
   }catch(e){}
   try{
-    sk1Items().forEach(x=>{
+    sk1Items(true).forEach(x=>{
       if(x.more){ out.push({c:'g', g:'lt', gl:'living-thesis', gn:parseInt(String(x.full).replace(/\D/g, ''), 10) || 1, id:'sk:' + x.id, t:'living-thesis ' + x.full + ' more', fn:"switchTab('watch')"}); return; }
       const c = (x.id === 'wi' || x.id === 'pb' || (x.age != null && x.age !== Infinity && x.age > 45)) ? 'a' : 'g';
-      out.push({c, g: x.skill === 'living-thesis' ? 'lt' : '', gl:'living-thesis', id:'sk:' + x.id, t:x.full, fn:`sk1Copy('${td3E(x.id)}')`});
+      out.push({c, g: x.skill === 'living-thesis' ? 'lt' : '', gl:'living-thesis', id:'sk:' + x.id, sym:x.sym, skid:x.id, t:x.full, fn:`sk1Copy('${td3E(x.id)}')`});
     });
   }catch(e){}
   try{
@@ -9264,7 +9277,10 @@ function ln4TodoItems(M){
   }catch(e){}
   return out.map((x, i)=>[x, i]).sort((a, b)=>(rank[a[0].c] - rank[b[0].c]) || a[1] - b[1]).map(x=>x[0]);
 }
-let ln4TodoGrp = '';
+let ln4TodoGrp = '', ln4LtAll = false, ln4WidePrev = null;
+/* HT1 §2 — Mac >= 900px: living-thesis stocks inline on the To do row (no expand panel) · below: grouped chip "living-thesis · N stocks ›" */
+function ln4Wide(){ try{ return window.innerWidth >= 900; }catch(e){ return false; } }
+function ln4LtToggle(){ ln4LtAll = !ln4LtAll; todayRefresh(true); }
 function ln4TodoMore(){ ln4TodoAll = !ln4TodoAll; todayRefresh(true); }
 function ln4TodoGroup(g){ ln4TodoGrp = ln4TodoGrp === g ? '' : g; todayRefresh(true); }
 /* LN4b — same kind of skill/task = ONE chip ("living-thesis · 7 stocks ›" opens the list) */
@@ -9289,9 +9305,15 @@ function ln4TodoHtml(M){
     : x.grp
     ? `<button type="button" class="pill ${x.c === 'r' ? 'p-r' : x.c === 'a' ? 'p-a' : 'p-n'}" data-ln4-todo="${td3E(x.id)}" data-ln4-todogrp="${td3E(x.grp)}" data-ln4-c="${x.c}" aria-expanded="${ln4TodoGrp === x.grp}" onclick="ln4TodoGroup('${td3E(x.grp)}')">${td3E(x.t)} ›</button>`
     : `<button type="button" class="pill ${x.c === 'r' ? 'p-r' : x.c === 'a' ? 'p-a' : 'p-n'}" data-ln4-todo="${td3E(x.id)}" data-ln4-c="${x.c}" onclick="${x.fn}">${td3E(x.t)}</button>`;
-  const open = L.find(x=>x.grp && x.grp === ln4TodoGrp);
+  const wide = ln4Wide();
+  const ltInline = x=>{   /* one small chip per stock; each copies that stock's prompt (sk1Copy → CG1 toast) · ln4Fit hides what does not fit behind +N › */
+    const its = x.items.filter(y=>y.sym);
+    return `<span class="ln4-lt${ln4LtAll ? ' open' : ''}" data-ln4-ltin data-ln4-ltn="${its.length}" data-ln4-c="${x.c}"><span class="k">living-thesis</span>${its.map(y=>`<span class="sp1"> · </span><button type="button" class="pill ${y.c === 'a' ? 'p-a' : 'p-n'} ln4-ltc" data-ln4-ltchip="${td3E(y.sym)}" onclick="${y.fn}">${td3E(y.sym)}</button>`).join('')}<button type="button" class="pill p-n ln4-ltm" data-ln4-ltmore onclick="ln4LtToggle()"${ln4LtAll && its.length > 1 ? '' : ' hidden'}>${ln4LtAll ? 'less ‹' : ''}</button></span>`;
+  };
+  const chipW = x=>(wide && x.grp === 'lt' && x.items.every(y=>y.sym)) ? ltInline(x) : chip(x);
+  const open = wide ? null : L.find(x=>x.grp && x.grp === ln4TodoGrp);
   const panel = open ? `<div class="ln4-det r" data-ln4-todolist="${td3E(open.grp)}">${open.items.map(chip).join('')}</div>` : '';
-  return `<div class="todo r" data-ln4-todorow><b>To do</b>${vis.map(chip).join('')}${L.length > 3 ? `<button type="button" class="pill p-n" data-ln4-todomore onclick="ln4TodoMore()">${ln4TodoAll ? 'less' : '+' + (L.length - 3)}</button>` : ''}<span class="sp"></span>${e.y ? `<button type="button" class="pill p-g" data-ln4-exec onclick="ln4ExecTip()">Exec ${e.x}/${e.y}</button>` : ''}</div>${panel}`;
+  return `<div class="todo r" data-ln4-todorow><b>To do</b>${vis.map(chipW).join('')}${L.length > 3 ? `<button type="button" class="pill p-n" data-ln4-todomore onclick="ln4TodoMore()">${ln4TodoAll ? 'less' : '+' + (L.length - 3)}</button>` : ''}<span class="sp"></span>${e.y ? `<button type="button" class="pill p-g" data-ln4-exec onclick="ln4ExecTip()">Exec ${e.x}/${e.y}</button>` : ''}</div>${panel}`;
 }
 function ln4StatusHtml(M, W, wk){
   const rg = (()=>{ try{ return tdRegimeVerdict(); }catch(e){ console.warn('td regime verdict:', e); return ''; } })();
@@ -9521,7 +9543,7 @@ function sk1ModeSet(m){ td3Mode = m === 'w' ? 'w' : 'd'; sk1Day = thaiToday(); t
 function sk1QuarterEnd(iso){ const p = iso.split('-').map(Number), q = Math.floor((p[1] - 1) / 3); return new Date(Date.UTC(p[0], q * 3 + 3, 0)).toISOString().slice(0, 10); }
 function sk1QuarterOf(iso){ const p = iso.split('-').map(Number); return p[0] + 'Q' + (Math.floor((p[1] - 1) / 3) + 1); }
 function sk1NextQuarter(q){ const y = +q.slice(0, 4), n = +q.slice(5); return n === 4 ? (y + 1) + 'Q1' : y + 'Q' + (n + 1); }
-function sk1Items(){
+function sk1Items(all){
   const today = thaiToday(), dw = tdDow(today), wkend = dw === 0 || dw === 6, mon = tdMonday(today), out = [];
   try{ if(dw === 1 && wiLoaded && !wiCurDoc()) out.push({id:'wi', skill:'weekly-impact', full:'weekly-impact (last day today)', short:'weekly-impact'}); }catch(e){}
   try{
@@ -9533,8 +9555,8 @@ function sk1Items(){
       if(!th || age == null || age > 30) stale.push({t, age: age == null ? Infinity : age});
     });
     stale.sort((a, b)=>(b.age - a.age));
-    stale.slice(0, 2).forEach(x=>out.push({id:'lt:' + x.t, skill:'living-thesis', sym:x.t, age:x.age, full:'living-thesis: ' + x.t + (x.age === Infinity ? ' none' : ' ' + x.age + 'd'), short:x.t + ' thesis'}));
-    if(stale.length > 2) out.push({id:'lt+', more:true, full:'+' + (stale.length - 2), short:'+' + (stale.length - 2)});
+    stale.slice(0, all ? stale.length : 2).forEach(x=>out.push({id:'lt:' + x.t, skill:'living-thesis', sym:x.t, age:x.age, full:'living-thesis: ' + x.t + (x.age === Infinity ? ' none' : ' ' + x.age + 'd'), short:x.t + ' thesis'}));
+    if(!all && stale.length > 2) out.push({id:'lt+', more:true, full:'+' + (stale.length - 2), short:'+' + (stale.length - 2)});
   }catch(e){}
   try{
     const qe = sk1QuarterEnd(today), days = Math.round((Date.parse(qe + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000), cq = sk1QuarterOf(today);
@@ -9560,7 +9582,7 @@ const SK1_GUIDE = {
   idea:['Goal: find 1–2 new ideas this week.', 'Paste in Claude → idea-scout → import JSON in Watch › Ideas.']
 };
 function sk1Copy(id){
-  const it = sk1Items().find(x=>x.id === id && !x.more); if(!it) return;
+  const it = sk1Items(true).find(x=>x.id === id && !x.more); if(!it) return;
   const txt = sk1Prompt(it); window.__sk1LastPrompt = txt;
   const g = SK1_GUIDE[it.skill === 'living-thesis' ? 'living' : it.id];
   const ok = ()=>{ try{ showGuideToast(g); }catch(e){} };
@@ -9688,7 +9710,7 @@ function ln3Mac(){ try{ return ln1On() && window.innerWidth >= 1000; }catch(e){ 
 function ln3TdMac(){ return ln3Mac(); }
 let pbMacPrev = null;
 let tdMacPrev = null;
-window.addEventListener('resize', ()=>{ try{ tdBalanceSoon(); const m = ln3Mac(); if(m!==tdMacPrev && activeTab==='today') todayRefresh(true); if(m!==pbMacPrev && activeTab==='flow') pbRender(); }catch(e){} });
+window.addEventListener('resize', ()=>{ try{ tdBalanceSoon(); const m = ln3Mac(), w9 = ln4Wide(); if((m!==tdMacPrev || w9!==ln4WidePrev) && activeTab==='today'){ ln4WidePrev = w9; todayRefresh(true); } if(m!==pbMacPrev && activeTab==='flow') pbRender(); }catch(e){} });
 function renderToday(){ todayRefresh(true); }
 /* คำนวณใหม่ + อัปเดตเลขแดงบนปุ่มแท็บ (ทุกแท็บ) · วาดแท็บ วันนี้ เมื่ออยู่แท็บนี้ (หรือ force) · ห้ามโยน error ออกไปทำ render() หลักพัง */
 function todayRefresh(force){
@@ -15873,8 +15895,18 @@ function sectorState(etf){
   try{ const n = sdNote(etf); followed = !!(n && n.follow); }catch(e){}
   return {quad, followed};
 }
+/* HT1 — ONE HOT rule (Today chips · Watch HOT groups · TV "SCREEN - HOT - <Sector>"): candidates = RRG Leading, or Fresh AND in Leading/Improving
+   (Fresh in lag/flat/weak never counts) · ranked by the RRG strength order (rrgSortRows) · cap = top HOT_MAX. ★ never makes a sector HOT by itself. */
+const HOT_MAX = 5;
+function hotSectorsFrom(rows, tf){
+  const c = (rows || []).filter(x=>x && !x.err && x.quad && !rrgWaiting(x) && (x.quad === 'lead' || (x.quad === 'imp' && rrgIsFresh(x, tf))));
+  return rrgSortRows(c).slice(0, HOT_MAX).map(x=>({etf:x.sym, k:x.quad === 'lead' ? 'lead' : 'fresh', ratio:+x.ratio || 0, row:x}));
+}
+function hotSectors(){ try{ return hotSectorsFrom(rrgRowsNow(), rrgTf()); }catch(e){ return []; } }
+function hotSectorSet(){ return new Set(hotSectors().map(h=>h.etf)); }
+function isHotEtf(etf){ return !!etf && hotSectorSet().has(etf); }
 const SECTOR_QN = {lead:'Outperforming ↗', imp:'Recovering', weak:'Outperforming ↘', lag:'Underperforming ↘', flat:'Neutral'};   /* RRG1 — ชื่อสั้นสำหรับ badge */
-function sectorHot(item){ const st = sectorState(item && item.sector_etf); return !!(st && (st.quad==='lead' || st.quad==='weak' || st.followed)); }
+function sectorHot(item){ return isHotEtf(item && item.sector_etf); }
 function sectorBadgeHtml(item){
   const etf = item && item.sector_etf; if(!etf) return '';
   const e = escHtml;
@@ -16135,7 +16167,7 @@ try{   /* WL2 — ข้ามเส้น 430px: gaps/kpi สลับระห
    Sections (a symbol only in its first): HOLD · READY - SETUP · READY · SCREEN - HOT - <Sector> · SCREEN
    Data (settings of acctList[0], via glWrite): tvInfo{KEY:{x:'NASDAQ:NVDA', i:industry, s:sector}} · tvSetup{KEY:'YYYY-MM-DD'} (Setup ✓, expires after 5 trading days)
    · tvSnap{winner:{KEY:section}, ladder:{…}} (snapshot of the last download → change count) · candMeta[KEY] adds industry · sector · tv · source · keep_until
-   HOT sector = existing sectorHot() rule on the stock's sector ETF (Outperforming ↗/↘ in RRG, or ★ followed); ETF = Watchlist sector_etf, else sectorSuggest(industry/sector). */
+   HOT sector = shared hotSectors() (HT1: RRG Leading, or Fresh in Leading/Improving; top 5; ★ alone never makes HOT); ETF = Watchlist sector_etf, else sectorSuggest(industry/sector). */
 const TV1_FILES = {winner:'Dash_Momentum.txt', ladder:'Dash_Compounder.txt'}, TV1_TRK = {winner:'Momentum', ladder:'Compounder'};
 const TV1_CAP = 15, TV1_SETUP_DAYS = 5, TV1_DROP_DAYS = 14, TV1_WARN_DAYS = 12;
 let tv1Menu = false, tv1Imp = null;
@@ -16236,7 +16268,7 @@ function tv1EtfOf(sym, item){
   for(const t of [item && item.industry, m.industry, inf.i, inf.s, m.sector]){ const s = sectorSuggest(t); if(s) return s; }
   return '';
 }
-function tv1HotOf(etf){ if(!etf) return false; try{ const st = sectorState(etf); return !!(st && (st.quad==='lead' || st.quad==='weak' || st.followed)); }catch(e){ return false; } }
+function tv1HotOf(etf){ return isHotEtf(etf); }
 function tv1SecName(etf){ const x = RRG_SYMS.find(r=>r.s===etf); return String(x ? x.n : etf).replace(/[^A-Za-z0-9 &-]+/g, ' ').replace(/\s+/g, ' ').trim(); }
 function tv1CandInfo(r, today){
   const m = td3MetaOf(r.sym), at = m.cand_at || td3IdeaTime(r), day = at ? (td3Day(at) || String(at).slice(0, 10)) : '';
