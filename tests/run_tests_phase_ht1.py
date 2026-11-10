@@ -44,24 +44,41 @@ def tests(pw, w, h):
 
 
 SYMS = ["AMZN","MU","NVDA","AVGO","CRWD","META","DDOG"]
-def todo(pw, w, h):
-    tag = f"[to-do {w}]"
+SYMS15 = SYMS + ["AAPL","MSFT","GOOGL","TSLA","NFLX","ADBE","CRM","ORCL"]
+VIS = "()=>[...document.querySelectorAll('[data-ln4-ltchip]')].filter(e=>!e.hidden).map(e=>e.dataset.ln4Ltchip)"
+MORE = "()=>{ const m = document.querySelector('[data-ln4-ltmore]'); return m && !m.hidden ? m.textContent.trim() : ''; }"
+def todo(pw, w, h, syms=SYMS, label=""):
+    tag = f"[to-do {w}{label}]"
     b, page, ce, pe = T.launch(pw, w, h, iso=T.NOW, picks=(), weekly=False)
     try:
         import run_tests_phase24 as P24
         P24.set_ff(page, P24.ff_json(True, True))
-        js(page, "(S)=>{ window.sk1Items = (all)=>S.map(t=>({id:'lt:'+t, skill:'living-thesis', sym:t, age:40, full:'living-thesis: '+t+' 40d', short:t+' thesis'})); }", SYMS)
+        js(page, "(S)=>{ window.sk1Items = (all)=>S.map(t=>({id:'lt:'+t, skill:'living-thesis', sym:t, age:40, full:'living-thesis: '+t+' 40d', short:t+' thesis'})); }", syms)
         T.go_today(page)
         js(page, "()=>todayRefresh(true)"); T.settle(page, 400)
         q = lambda sel: js(page, "(s)=>document.querySelectorAll(s).length", sel)
         if w >= 900:
-            chips = js(page, "()=>[...document.querySelectorAll('[data-ln4-ltchip]')].map(e=>e.dataset.ln4Ltchip)")
-            check(f"{tag} inline chips on To do row: living-thesis · AMZN · MU · NVDA · AVGO · +N", chips[:3] == SYMS[:3] and len(chips) == 4 and q("[data-ln4-ltmore]") == 1, chips)
+            vis = js(page, VIS); more = js(page, MORE)
+            if len(syms) <= 7:
+                check(f"{tag} all {len(syms)} stock chips show, no +N", vis == syms and more == "", [vis, more])
+            else:
+                import re
+                n = int(re.sub(r"\D", "", more) or 0)
+                check(f"{tag} {len(syms)} items: +N › appears, shown + N = {len(syms)}", n > 0 and len(vis) + n == len(syms) and vis == syms[:len(vis)], [vis, more])
+            ok = js(page, "()=>{ const r = document.querySelector('[data-ln4-ltin]'); return r.scrollWidth <= r.clientWidth + 1; }")
+            check(f"{tag} chips fit the row (no clipped chip)", ok)
             check(f"{tag} no grouped chip, no expand panel", q("[data-ln4-todogrp=lt]") == 0 and q("[data-ln4-todolist]") == 0)
             js(page, "()=>{ window.__toastN = 0; const o = window.showGuideToast; window.showGuideToast = function(){ window.__toastN++; try{ return o.apply(this, arguments); }catch(e){} }; window.__sk1LastPrompt = ''; document.querySelector('[data-ln4-ltchip=MU]').click(); }"); T.settle(page, 400)
-            check(f"{tag} chip copies that stock's prompt + CG1 toast", js(page, "()=>window.__sk1LastPrompt") == "living-thesis update: MU" and js(page, "()=>window.__toastN") >= 1, js(page, "()=>window.__toastN"))
-            js(page, "()=>document.querySelector('[data-ln4-ltmore]').click()"); T.settle(page, 300)
-            check(f"{tag} +N › shows all 7 inline (still no panel)", q("[data-ln4-ltchip]") == 7 and q("[data-ln4-todolist]") == 0)
+            check(f"{tag} chip copies that stock's prompt + CG1 toast", js(page, "()=>window.__sk1LastPrompt") == "living-thesis update: MU" and js(page, "()=>window.__toastN") >= 1)
+            if len(syms) > 7:
+                js(page, "()=>document.querySelector('[data-ln4-ltmore]').click()"); T.settle(page, 300)
+                check(f"{tag} +N › shows all inline + 'less ‹'", len(js(page, VIS)) == len(syms) and js(page, MORE) == "less ‹" and q("[data-ln4-todolist]") == 0, js(page, MORE))
+                js(page, "()=>document.querySelector('[data-ln4-ltmore]').click()"); T.settle(page, 300)
+                v1 = len(js(page, VIS))
+                page.set_viewport_size({"width": 1000, "height": h}); T.settle(page, 500)
+                v2 = len(js(page, VIS))
+                page.set_viewport_size({"width": w, "height": h}); T.settle(page, 500)
+                check(f"{tag} recomputed on resize (1000px shows fewer, back restores)", v2 < v1 and len(js(page, VIS)) == v1, [v1, v2])
         else:
             t = js(page, "()=>{ const e = document.querySelector('[data-ln4-todogrp=lt]'); return e ? e.innerText.trim() : null; }")
             check(f"{tag} grouped chip 'living-thesis · 7 stocks ›'", t == "living-thesis · 7 stocks ›" and q("[data-ln4-ltchip]") == 0, t)
@@ -72,7 +89,9 @@ def todo(pw, w, h):
 if __name__ == "__main__":
     with sync_playwright() as pw:
         for w, h in ((1440, 900), (1280, 800), (390, 844)):
-            try: todo(pw, w, h)
+            try:
+                todo(pw, w, h)
+                if w >= 900: todo(pw, w, h, SYMS15, ' 15')
             except Exception as e:
                 import traceback; traceback.print_exc(); check(f'[todo {w}] crashed', False, str(e))
             try: tests(pw, w, h)

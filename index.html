@@ -3587,7 +3587,7 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .ln4 .ln4-gb{width:90px;height:5px;background:var(--bg,#EEF0F3);border-radius:9px;overflow:hidden;align-self:center}.ln4 .ln4-gb i{display:block;height:100%;background:var(--teal)}
 .ln4 .ln4-det{margin:6px 0 0;padding:8px 10px;border:1px solid var(--border);border-radius:12px;font-size:12.5px}
 .ln4 .todo{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}.ln4 .todo>b{font-size:13px;margin-right:2px}
-.ln4 .ln4-lt{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px}.ln4 .ln4-lt .k{font-size:12.5px;font-weight:600;color:var(--muted)}.ln4 .ln4-lt .sp1{color:var(--faint,#9AA0A9)}.ln4 .ln4-ltc{font-size:12px;padding:2px 8px;min-height:26px}
+.ln4 .ln4-lt{display:inline-flex;flex-wrap:nowrap;align-items:center;gap:4px;flex:1 1 0;min-width:0;overflow:hidden}.ln4 .ln4-lt.open{flex-wrap:wrap;overflow:visible}.ln4 .ln4-lt>*{flex:none}.ln4 .ln4-lt [hidden]{display:none}.ln4 .ln4-lt .k{font-size:12.5px;font-weight:600;color:var(--muted)}.ln4 .ln4-lt .sp1{color:var(--faint,#9AA0A9)}.ln4 .ln4-ltc{font-size:12px;padding:2px 8px;min-height:26px}
 .ln4 .ln4-chip{display:inline-flex;align-items:center;gap:2px}.ln4 .ln4-x{border:0;background:none;color:var(--faint,#9AA0A9);cursor:pointer;font-size:12px;padding:2px 4px}
 .ln4 .h{font:700 14px var(--sans);margin:2px 2px 8px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.ln4 .h small{color:var(--faint,#9AA0A9);font-weight:600;font-size:12px}
 .ln4 .it{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border)}.ln4 .grp+.it{border-top:0}
@@ -8956,6 +8956,18 @@ function ln4Fit(){
       let hid = 0;
       if(over()){ x.hidden = false; for(let i = cs.length - 1; i > 0 && over(); i--){ cs[i].classList.add('xf'); hid++; x.textContent = '+' + hid; } }
     });
+    document.querySelectorAll('[data-ln4-ltin]').forEach(r=>{   /* HT1 — Mac To do: as many stock chips as fit the width · rest behind +N › · recomputed on every refresh/resize */
+      const cs = [...r.querySelectorAll('.ln4-ltc')], m = r.querySelector('[data-ln4-ltmore]'); if(!m) return;
+      cs.forEach(c=>{ c.hidden = false; if(c.previousElementSibling) c.previousElementSibling.hidden = false; });
+      if(r.classList.contains('open')) return;
+      m.hidden = true; m.textContent = '';
+      const over = ()=>r.scrollWidth > r.clientWidth + 1;
+      let hid = 0;
+      if(over()){
+        m.hidden = false;
+        for(let i = cs.length - 1; i > 0 && over(); i--){ cs[i].hidden = true; cs[i].previousElementSibling.hidden = true; hid++; m.textContent = '+' + hid + ' ›'; }
+      }
+    });
     document.querySelectorAll('.ln4-hot').forEach(L=>{
       const r = L.querySelector('.r'), mp = L.querySelector('.ln4-hm.mp'); if(!r || !mp) return;
       const cs = [...r.querySelectorAll('.ln4-hc')]; cs.forEach(c=>c.classList.remove('xf')); mp.hidden = true;
@@ -9294,10 +9306,9 @@ function ln4TodoHtml(M){
     ? `<button type="button" class="pill ${x.c === 'r' ? 'p-r' : x.c === 'a' ? 'p-a' : 'p-n'}" data-ln4-todo="${td3E(x.id)}" data-ln4-todogrp="${td3E(x.grp)}" data-ln4-c="${x.c}" aria-expanded="${ln4TodoGrp === x.grp}" onclick="ln4TodoGroup('${td3E(x.grp)}')">${td3E(x.t)} ›</button>`
     : `<button type="button" class="pill ${x.c === 'r' ? 'p-r' : x.c === 'a' ? 'p-a' : 'p-n'}" data-ln4-todo="${td3E(x.id)}" data-ln4-c="${x.c}" onclick="${x.fn}">${td3E(x.t)}</button>`;
   const wide = ln4Wide();
-  const LT_SHOW = 4;
-  const ltInline = x=>{   /* one small chip per stock; each copies that stock's prompt (sk1Copy → CG1 toast) */
-    const its = x.items.filter(y=>y.sym), k = ln4LtAll ? its.length : Math.min(LT_SHOW, its.length);
-    return `<span class="ln4-lt" data-ln4-ltin data-ln4-c="${x.c}"><span class="k">living-thesis</span>${its.slice(0, k).map(y=>`<span class="sp1"> · </span><button type="button" class="pill ${y.c === 'a' ? 'p-a' : 'p-n'} ln4-ltc" data-ln4-ltchip="${td3E(y.sym)}" onclick="${y.fn}">${td3E(y.sym)}</button>`).join('')}${its.length > k ? `<button type="button" class="pill p-n" data-ln4-ltmore onclick="ln4LtToggle()">+${its.length - k} ›</button>` : (ln4LtAll && its.length > LT_SHOW ? `<button type="button" class="pill p-n" data-ln4-ltmore onclick="ln4LtToggle()">less ‹</button>` : '')}</span>`;
+  const ltInline = x=>{   /* one small chip per stock; each copies that stock's prompt (sk1Copy → CG1 toast) · ln4Fit hides what does not fit behind +N › */
+    const its = x.items.filter(y=>y.sym);
+    return `<span class="ln4-lt${ln4LtAll ? ' open' : ''}" data-ln4-ltin data-ln4-ltn="${its.length}" data-ln4-c="${x.c}"><span class="k">living-thesis</span>${its.map(y=>`<span class="sp1"> · </span><button type="button" class="pill ${y.c === 'a' ? 'p-a' : 'p-n'} ln4-ltc" data-ln4-ltchip="${td3E(y.sym)}" onclick="${y.fn}">${td3E(y.sym)}</button>`).join('')}<button type="button" class="pill p-n ln4-ltm" data-ln4-ltmore onclick="ln4LtToggle()"${ln4LtAll && its.length > 1 ? '' : ' hidden'}>${ln4LtAll ? 'less ‹' : ''}</button></span>`;
   };
   const chipW = x=>(wide && x.grp === 'lt' && x.items.every(y=>y.sym)) ? ltInline(x) : chip(x);
   const open = wide ? null : L.find(x=>x.grp && x.grp === ln4TodoGrp);
