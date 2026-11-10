@@ -147,9 +147,9 @@ def tests(pw, w, h):
         seed(page, {"ccBD": P24.card("ccBD", "main", "BAD1", plan={"entry": 100, "stop": 99.5}, px=90, pxDate="2026-10-01"),
                     "ccNS": P24.card("ccNS", "main", "NOSTOP", plan={"entry": 100, "stop": 0}, px=90, pxDate="2026-10-01")})
         setup_ok(page, ["AMD", "AVGO", "BAD1", "NOSTOP"])
-        check(f"{tag} 2 stop too tight → red reason + 'Set stop ›'", row(page, "BAD1")["btn"] == "Set stop ›" and "tight" in row(page, "BAD1")["why"], row(page, "BAD1"))
+        check(f"{tag} 2 MS1: stop tighter than min → NOT an error: no Fix button, grey '· 🛡️ sized on min stop'", row(page, "BAD1")["btn"] == "Place order ›" and not row(page, "BAD1")["why"] and "sized on min stop" in js(page, "()=>document.querySelector('[data-ln4-row=\"BAD1\"]').innerText"), row(page, "BAD1"))
         check(f"{tag} 2 no stop → 'No stop' + 'Set stop ›'", row(page, "NOSTOP")["why"] == "No stop" and row(page, "NOSTOP")["btn"] == "Set stop ›", row(page, "NOSTOP"))
-        page.locator('[data-ln4-row="BAD1"] [data-ln4-btn]').click(); settle(page, 1200)
+        page.locator('[data-ln4-row="NOSTOP"] [data-ln4-btn]').click(); settle(page, 1200)
         check(f"{tag} 2 'Set stop ›' opens the plan form focused on the Stop field", js(page, "()=>document.activeElement && document.activeElement.id") == "cnStop" and cnt(page, "#cnTicker[readonly]") == 1, js(page, "()=>document.activeElement && document.activeElement.id"))
         js(page, "()=>coreSheetClose()"); settle(page, 300)
         T.go_today(page)
