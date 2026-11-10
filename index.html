@@ -2375,7 +2375,8 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .pf-rr>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pf-rrp{font-weight:700;border-radius:99px;padding:1px 10px;font-size:13px;white-space:nowrap;flex:none}
 .pf-rr.ok .pf-rrp{background:#e3f6ec;color:#1F9D6B}.pf-rr.bad .pf-rrp{background:#fbe9e7;color:#c0392b}.pf-rr.none .pf-rrp{background:#eef0f3;color:#6b7280}
-.ln1-form .ln3-st{white-space:nowrap;overflow:hidden;overflow-wrap:normal}
+.ln1-form .ln3-st{white-space:normal;overflow:visible;overflow-wrap:normal;display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px}   /* UA1 — wraps instead of clipping the status row (Sat · Normal chip / hint were cut off) */
+.ln1-form .ln3-st>*,.ln1-form .ln3-st .ui-hint,.ln1-form .ln3-st .ln2-chip,.ln1-form .ln3-st .ps1Chip{white-space:nowrap}
 .ln3-st .ln2-fn{white-space:nowrap}.ln3-st .ln2-fn .dd{margin-right:1px}
 @media(max-width:480px){.ln1-form .ln3-st{font-size:12.5px}.ln3-st .ln2-fn .dn{display:none}.ln3-st .ln2-fn .dd{display:inline-block}.ln3-st .nmw{display:none}.ln3-st .ln2-chip{padding:1px 6px;font-size:12px}}
 @media(max-width:400px){.ln1-form .ln3-st{font-size:12px;word-spacing:-1px}}
@@ -3721,6 +3722,17 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .ln1-sz{flex-wrap:nowrap;gap:6px}.ln1-an{flex:none}.ln1-an b{white-space:nowrap}.ln1-sz>.ln1-sv{flex:1 1 auto;min-width:0;margin-left:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ln1-sz>.ui-hint{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ln1-sv .cs-w{display:flex;min-width:0;gap:4px}.ln1-sv .cs-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ln1-sv .cs-w .setgo{flex:none}
 .ln1-sz>.ui-btn,.ln1-sz>.ln1-st{flex:none;white-space:nowrap}
+}
+/* UA1 — font floors + tap targets found by tests/ui_audit.py (layout only) */
+@media(min-width:601px){
+label,.hint,.crUnit,th,.chip,.k,summary.divlbl,.ui-btn,.mu,.ps1Rg,.td3-ck,.ffQt,.ffQs,.ek,.sat-ctx,.ccTag,.ln3-tag,.lf-warnchip,.ps1Chip,.wiTx,.td3-gt,.ffSeg button,.set1sm,.set1t,.age{font-size:12.5px}
+.chip.lf-nf-btn,.ui-hint,button.chip{font-size:12.5px}
+}
+@media(max-width:600px){
+label,.hint,.crUnit,.mu,.k,.ps1Rg,.set1sm,.age,.ek,.sat-ctx,.set1t,.ln1-form .ln3-st,small,.pbIco,.sc.pt{font-size:13px}
+.chip,.td3-lk,.ui-btn,.go,.td3-ck,.rsDeepBtn,.ps1Chip,.ccTag{font-size:13px}
+button:not(.ln4-all):not(.privEye),summary,select,.ui-btn{min-height:36px}
+button.td3-ck{min-width:36px}
 }
 </style>
 </head>
@@ -9461,7 +9473,7 @@ function ln4PillsHtml(idea, tac){
       else { out.push(pill('g', 'Structure ✓', 'structure')); out.push(pill(V.fac < 1 ? 'a' : 'g', V.fac < 1 ? 'EMA50 ✗ · 60%' : 'EMA50 ✓', 'ema50')); }
     }
     const n = ln4SetupN(idea); out.push(pill(n === 3 ? 'g' : 'r', `Setup ${n}/3`, 'setup'));
-    const rr = pfRrParts(idea); if(!(rr.cls === 'bad' && rr.txt === '')) out.push(pill(rr.ok ? 'g' : 'n', rr.pill, 'rr'));   /* LN4c — wrong-side TP is already in the R:R bar pill */
+    /* UA1 — R:R already shows in the R:R bar pill above (value + TP wrong side) → not repeated as a chip */
     const A = (sat7dAccts()[0] || {}).id;
     if(A && +idea.entry > 0 && +idea.sl > 0 && !ps1Off()){
       const ms = ps1MinStopMsg(A, idea.asset, idea.entry, idea.sl);
