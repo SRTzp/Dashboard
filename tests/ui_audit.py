@@ -7,6 +7,9 @@ Rules: 1 word broken mid-word · 2 chip/pill/button wraps · 3 horizontal overfl
 5 duplicate message in one card · 6 font/tap below minimum · 7 overlap · 8 empty gap > 32px"""
 import os, sys, json, re, argparse, collections
 _ARGV = sys.argv[1:]; sys.argv = sys.argv[:1]   # the phase modules read argv[1] as the index.html path
+if '--index' in _ARGV:   # audit another index.html (e.g. a pre-fix backup for before/after)
+    _i = _ARGV.index('--index'); sys.argv.append(os.path.abspath(_ARGV[_i + 1])); del _ARGV[_i:_i + 2]
+import os as _o
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from playwright.sync_api import sync_playwright
