@@ -3587,6 +3587,7 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .ln4 .ln4-gb{width:90px;height:5px;background:var(--bg,#EEF0F3);border-radius:9px;overflow:hidden;align-self:center}.ln4 .ln4-gb i{display:block;height:100%;background:var(--teal)}
 .ln4 .ln4-det{margin:6px 0 0;padding:8px 10px;border:1px solid var(--border);border-radius:12px;font-size:12.5px}
 .ln4 .todo{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}.ln4 .todo>b{font-size:13px;margin-right:2px}
+.ln4 .ln4-lt{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px}.ln4 .ln4-lt .k{font-size:12.5px;font-weight:600;color:var(--muted)}.ln4 .ln4-lt .sp1{color:var(--faint,#9AA0A9)}.ln4 .ln4-ltc{font-size:12px;padding:2px 8px;min-height:26px}
 .ln4 .ln4-chip{display:inline-flex;align-items:center;gap:2px}.ln4 .ln4-x{border:0;background:none;color:var(--faint,#9AA0A9);cursor:pointer;font-size:12px;padding:2px 4px}
 .ln4 .h{font:700 14px var(--sans);margin:2px 2px 8px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.ln4 .h small{color:var(--faint,#9AA0A9);font-weight:600;font-size:12px}
 .ln4 .it{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border)}.ln4 .grp+.it{border-top:0}
@@ -9253,10 +9254,10 @@ function ln4TodoItems(M){
     (coreCardsList || []).forEach(c=>{ if(c.status === 'plan' && ln4Crossed(c)) out.push({c:'a', id:'miss:' + c.id, miss:c.id, t:`${c.ticker} trigger passed · Missed?`}); });
   }catch(e){}
   try{
-    sk1Items().forEach(x=>{
+    sk1Items(true).forEach(x=>{
       if(x.more){ out.push({c:'g', g:'lt', gl:'living-thesis', gn:parseInt(String(x.full).replace(/\D/g, ''), 10) || 1, id:'sk:' + x.id, t:'living-thesis ' + x.full + ' more', fn:"switchTab('watch')"}); return; }
       const c = (x.id === 'wi' || x.id === 'pb' || (x.age != null && x.age !== Infinity && x.age > 45)) ? 'a' : 'g';
-      out.push({c, g: x.skill === 'living-thesis' ? 'lt' : '', gl:'living-thesis', id:'sk:' + x.id, t:x.full, fn:`sk1Copy('${td3E(x.id)}')`});
+      out.push({c, g: x.skill === 'living-thesis' ? 'lt' : '', gl:'living-thesis', id:'sk:' + x.id, sym:x.sym, skid:x.id, t:x.full, fn:`sk1Copy('${td3E(x.id)}')`});
     });
   }catch(e){}
   try{
@@ -9264,7 +9265,10 @@ function ln4TodoItems(M){
   }catch(e){}
   return out.map((x, i)=>[x, i]).sort((a, b)=>(rank[a[0].c] - rank[b[0].c]) || a[1] - b[1]).map(x=>x[0]);
 }
-let ln4TodoGrp = '';
+let ln4TodoGrp = '', ln4LtAll = false, ln4WidePrev = null;
+/* HT1 §2 — Mac >= 900px: living-thesis stocks inline on the To do row (no expand panel) · below: grouped chip "living-thesis · N stocks ›" */
+function ln4Wide(){ try{ return window.innerWidth >= 900; }catch(e){ return false; } }
+function ln4LtToggle(){ ln4LtAll = !ln4LtAll; todayRefresh(true); }
 function ln4TodoMore(){ ln4TodoAll = !ln4TodoAll; todayRefresh(true); }
 function ln4TodoGroup(g){ ln4TodoGrp = ln4TodoGrp === g ? '' : g; todayRefresh(true); }
 /* LN4b — same kind of skill/task = ONE chip ("living-thesis · 7 stocks ›" opens the list) */
@@ -9289,9 +9293,16 @@ function ln4TodoHtml(M){
     : x.grp
     ? `<button type="button" class="pill ${x.c === 'r' ? 'p-r' : x.c === 'a' ? 'p-a' : 'p-n'}" data-ln4-todo="${td3E(x.id)}" data-ln4-todogrp="${td3E(x.grp)}" data-ln4-c="${x.c}" aria-expanded="${ln4TodoGrp === x.grp}" onclick="ln4TodoGroup('${td3E(x.grp)}')">${td3E(x.t)} ›</button>`
     : `<button type="button" class="pill ${x.c === 'r' ? 'p-r' : x.c === 'a' ? 'p-a' : 'p-n'}" data-ln4-todo="${td3E(x.id)}" data-ln4-c="${x.c}" onclick="${x.fn}">${td3E(x.t)}</button>`;
-  const open = L.find(x=>x.grp && x.grp === ln4TodoGrp);
+  const wide = ln4Wide();
+  const LT_SHOW = 4;
+  const ltInline = x=>{   /* one small chip per stock; each copies that stock's prompt (sk1Copy → CG1 toast) */
+    const its = x.items.filter(y=>y.sym), k = ln4LtAll ? its.length : Math.min(LT_SHOW, its.length);
+    return `<span class="ln4-lt" data-ln4-ltin data-ln4-c="${x.c}"><span class="k">living-thesis</span>${its.slice(0, k).map(y=>`<span class="sp1"> · </span><button type="button" class="pill ${y.c === 'a' ? 'p-a' : 'p-n'} ln4-ltc" data-ln4-ltchip="${td3E(y.sym)}" onclick="${y.fn}">${td3E(y.sym)}</button>`).join('')}${its.length > k ? `<button type="button" class="pill p-n" data-ln4-ltmore onclick="ln4LtToggle()">+${its.length - k} ›</button>` : (ln4LtAll && its.length > LT_SHOW ? `<button type="button" class="pill p-n" data-ln4-ltmore onclick="ln4LtToggle()">less ‹</button>` : '')}</span>`;
+  };
+  const chipW = x=>(wide && x.grp === 'lt' && x.items.every(y=>y.sym)) ? ltInline(x) : chip(x);
+  const open = wide ? null : L.find(x=>x.grp && x.grp === ln4TodoGrp);
   const panel = open ? `<div class="ln4-det r" data-ln4-todolist="${td3E(open.grp)}">${open.items.map(chip).join('')}</div>` : '';
-  return `<div class="todo r" data-ln4-todorow><b>To do</b>${vis.map(chip).join('')}${L.length > 3 ? `<button type="button" class="pill p-n" data-ln4-todomore onclick="ln4TodoMore()">${ln4TodoAll ? 'less' : '+' + (L.length - 3)}</button>` : ''}<span class="sp"></span>${e.y ? `<button type="button" class="pill p-g" data-ln4-exec onclick="ln4ExecTip()">Exec ${e.x}/${e.y}</button>` : ''}</div>${panel}`;
+  return `<div class="todo r" data-ln4-todorow><b>To do</b>${vis.map(chipW).join('')}${L.length > 3 ? `<button type="button" class="pill p-n" data-ln4-todomore onclick="ln4TodoMore()">${ln4TodoAll ? 'less' : '+' + (L.length - 3)}</button>` : ''}<span class="sp"></span>${e.y ? `<button type="button" class="pill p-g" data-ln4-exec onclick="ln4ExecTip()">Exec ${e.x}/${e.y}</button>` : ''}</div>${panel}`;
 }
 function ln4StatusHtml(M, W, wk){
   const rg = (()=>{ try{ return tdRegimeVerdict(); }catch(e){ console.warn('td regime verdict:', e); return ''; } })();
@@ -9521,7 +9532,7 @@ function sk1ModeSet(m){ td3Mode = m === 'w' ? 'w' : 'd'; sk1Day = thaiToday(); t
 function sk1QuarterEnd(iso){ const p = iso.split('-').map(Number), q = Math.floor((p[1] - 1) / 3); return new Date(Date.UTC(p[0], q * 3 + 3, 0)).toISOString().slice(0, 10); }
 function sk1QuarterOf(iso){ const p = iso.split('-').map(Number); return p[0] + 'Q' + (Math.floor((p[1] - 1) / 3) + 1); }
 function sk1NextQuarter(q){ const y = +q.slice(0, 4), n = +q.slice(5); return n === 4 ? (y + 1) + 'Q1' : y + 'Q' + (n + 1); }
-function sk1Items(){
+function sk1Items(all){
   const today = thaiToday(), dw = tdDow(today), wkend = dw === 0 || dw === 6, mon = tdMonday(today), out = [];
   try{ if(dw === 1 && wiLoaded && !wiCurDoc()) out.push({id:'wi', skill:'weekly-impact', full:'weekly-impact (last day today)', short:'weekly-impact'}); }catch(e){}
   try{
@@ -9533,8 +9544,8 @@ function sk1Items(){
       if(!th || age == null || age > 30) stale.push({t, age: age == null ? Infinity : age});
     });
     stale.sort((a, b)=>(b.age - a.age));
-    stale.slice(0, 2).forEach(x=>out.push({id:'lt:' + x.t, skill:'living-thesis', sym:x.t, age:x.age, full:'living-thesis: ' + x.t + (x.age === Infinity ? ' none' : ' ' + x.age + 'd'), short:x.t + ' thesis'}));
-    if(stale.length > 2) out.push({id:'lt+', more:true, full:'+' + (stale.length - 2), short:'+' + (stale.length - 2)});
+    stale.slice(0, all ? stale.length : 2).forEach(x=>out.push({id:'lt:' + x.t, skill:'living-thesis', sym:x.t, age:x.age, full:'living-thesis: ' + x.t + (x.age === Infinity ? ' none' : ' ' + x.age + 'd'), short:x.t + ' thesis'}));
+    if(!all && stale.length > 2) out.push({id:'lt+', more:true, full:'+' + (stale.length - 2), short:'+' + (stale.length - 2)});
   }catch(e){}
   try{
     const qe = sk1QuarterEnd(today), days = Math.round((Date.parse(qe + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000), cq = sk1QuarterOf(today);
@@ -9560,7 +9571,7 @@ const SK1_GUIDE = {
   idea:['Goal: find 1–2 new ideas this week.', 'Paste in Claude → idea-scout → import JSON in Watch › Ideas.']
 };
 function sk1Copy(id){
-  const it = sk1Items().find(x=>x.id === id && !x.more); if(!it) return;
+  const it = sk1Items(true).find(x=>x.id === id && !x.more); if(!it) return;
   const txt = sk1Prompt(it); window.__sk1LastPrompt = txt;
   const g = SK1_GUIDE[it.skill === 'living-thesis' ? 'living' : it.id];
   const ok = ()=>{ try{ showGuideToast(g); }catch(e){} };
@@ -9688,7 +9699,7 @@ function ln3Mac(){ try{ return ln1On() && window.innerWidth >= 1000; }catch(e){ 
 function ln3TdMac(){ return ln3Mac(); }
 let pbMacPrev = null;
 let tdMacPrev = null;
-window.addEventListener('resize', ()=>{ try{ tdBalanceSoon(); const m = ln3Mac(); if(m!==tdMacPrev && activeTab==='today') todayRefresh(true); if(m!==pbMacPrev && activeTab==='flow') pbRender(); }catch(e){} });
+window.addEventListener('resize', ()=>{ try{ tdBalanceSoon(); const m = ln3Mac(), w9 = ln4Wide(); if((m!==tdMacPrev || w9!==ln4WidePrev) && activeTab==='today'){ ln4WidePrev = w9; todayRefresh(true); } if(m!==pbMacPrev && activeTab==='flow') pbRender(); }catch(e){} });
 function renderToday(){ todayRefresh(true); }
 /* คำนวณใหม่ + อัปเดตเลขแดงบนปุ่มแท็บ (ทุกแท็บ) · วาดแท็บ วันนี้ เมื่ออยู่แท็บนี้ (หรือ force) · ห้ามโยน error ออกไปทำ render() หลักพัง */
 function todayRefresh(force){

@@ -42,9 +42,39 @@ def tests(pw, w, h):
     finally:
         b.close()
 
+
+SYMS = ["AMZN","MU","NVDA","AVGO","CRWD","META","DDOG"]
+def todo(pw, w, h):
+    tag = f"[to-do {w}]"
+    b, page, ce, pe = T.launch(pw, w, h, iso=T.NOW, picks=(), weekly=False)
+    try:
+        import run_tests_phase24 as P24
+        P24.set_ff(page, P24.ff_json(True, True))
+        js(page, "(S)=>{ window.sk1Items = (all)=>S.map(t=>({id:'lt:'+t, skill:'living-thesis', sym:t, age:40, full:'living-thesis: '+t+' 40d', short:t+' thesis'})); }", SYMS)
+        T.go_today(page)
+        js(page, "()=>todayRefresh(true)"); T.settle(page, 400)
+        q = lambda sel: js(page, "(s)=>document.querySelectorAll(s).length", sel)
+        if w >= 900:
+            chips = js(page, "()=>[...document.querySelectorAll('[data-ln4-ltchip]')].map(e=>e.dataset.ln4Ltchip)")
+            check(f"{tag} inline chips on To do row: living-thesis · AMZN · MU · NVDA · AVGO · +N", chips[:3] == SYMS[:3] and len(chips) == 4 and q("[data-ln4-ltmore]") == 1, chips)
+            check(f"{tag} no grouped chip, no expand panel", q("[data-ln4-todogrp=lt]") == 0 and q("[data-ln4-todolist]") == 0)
+            js(page, "()=>{ window.__toastN = 0; const o = window.showGuideToast; window.showGuideToast = function(){ window.__toastN++; try{ return o.apply(this, arguments); }catch(e){} }; window.__sk1LastPrompt = ''; document.querySelector('[data-ln4-ltchip=MU]').click(); }"); T.settle(page, 400)
+            check(f"{tag} chip copies that stock's prompt + CG1 toast", js(page, "()=>window.__sk1LastPrompt") == "living-thesis update: MU" and js(page, "()=>window.__toastN") >= 1, js(page, "()=>window.__toastN"))
+            js(page, "()=>document.querySelector('[data-ln4-ltmore]').click()"); T.settle(page, 300)
+            check(f"{tag} +N › shows all 7 inline (still no panel)", q("[data-ln4-ltchip]") == 7 and q("[data-ln4-todolist]") == 0)
+        else:
+            t = js(page, "()=>{ const e = document.querySelector('[data-ln4-todogrp=lt]'); return e ? e.innerText.trim() : null; }")
+            check(f"{tag} grouped chip 'living-thesis · 7 stocks ›'", t == "living-thesis · 7 stocks ›" and q("[data-ln4-ltchip]") == 0, t)
+        check(f"{tag} no page errors", not pe, pe)
+    finally:
+        b.close()
+
 if __name__ == "__main__":
     with sync_playwright() as pw:
-        for w, h in ((1440, 900), (390, 844)):
+        for w, h in ((1440, 900), (1280, 800), (390, 844)):
+            try: todo(pw, w, h)
+            except Exception as e:
+                import traceback; traceback.print_exc(); check(f'[todo {w}] crashed', False, str(e))
             try: tests(pw, w, h)
             except Exception as e:
                 import traceback; traceback.print_exc(); check(f"[{w}] crashed", False, str(e))
