@@ -15,29 +15,29 @@ Compare: https://github.com/SRTzp/Dashboard/compare/main...claude/ua1 · not mer
 | 7 overlap | 0 → 0 → 0 | 0 → 0 → 0 | 0 → 0 → 0 |
 | 8 empty gap | 0 → 0 → 0 | 0 → 0 → 0 | 0 → 0 → 0 |
 
-Target met: 0 everywhere. The only things not counted are the **14 accepted exceptions** (font only, iPhone: Today compact card text 12px + tab-bar labels 11.2px) listed below. Their tap targets are all >= 36px.
+Target met: 0 everywhere. Not counted: the **14 accepted exceptions** (font only, iPhone: Today compact card text 12px + tab-bar labels 11.2px), listed below. Their tap targets are all >= 36px.
 
 ## SRTp decisions applied
 
-1. **Today iPhone compact card**: look unchanged. HOT chips, , , event lines (),  now have a >= 36px hit area (transparent border + negative margin, so visual size and layout are the same). Font >= 12px accepted in  (exception reported, not hidden).
-2. **Tab bar**: same look; each tab is a full-width column, , bar padding moved into the buttons so the bar height is about the same. Labels 11.2px accepted.
-3. **Tiny buttons**  (Flow themes, Journal columns), , brand sync, DD chips, asset-chip name / pin / , , Not trading: invisible hit area (, 36px) — the audit counts it.
-4. **Lone control rows → moved into the header row, right side:**
-   - Sat tile  → tile header next to  (on Mac widths the tile is too narrow for name + both buttons, so it sits on a second right-aligned header row).
-   - Settings  → summary row of the "+ Add product" section (shown when the section is open).
-   - Core side card  → card header right (the instruction text no longer repeats the button name).
-   - Playbook history  → sheet header; Playbook paste  /  /  → sheet header (footer row removed).
-   - Playbook asset sheet single driver chip  → on the same row as the "Drivers" label, right.
-   - Core open card  warning chip: the body has no header row, so it now fills the full row (no half-empty row) instead of moving.
-5. **Duplicates**:  only in the Sat account row (status row shows nothing for it); wrong-side TP / low R:R only in the R:R bar pill + text (the extra hint is gone; the hint for an empty TP is unchanged because suite 98 pins it);  once (header chip).
-6. **Mac regime duplicate**: fixture added ("Today · Daily (Risk-OFF · MMT ½ / COMP ½)"). The old build reproduces it ( next to the chip ); now the label is just  when the chip is shown. The checker was also extended to catch this (labels < 60 chars).
-7. Other font floors raised (13px iPhone / 12.5 Mac) for badges, labels, hints that were below minimum; body notes 14px.
+1. **Today iPhone compact card**: look unchanged. HOT chips, `+5`, `homework · 2 stocks ›`, event lines (`.evl`) and `Calendar ›` have a >= 36px hit area (transparent border + negative margin, so visual size and layout are the same). Font >= 12px is an accepted exception in `ui_audit.py` (reported, not hidden).
+2. **Tab bar**: same look; each tab is a full column, `min-height:44px`, bar padding moved into the buttons so the bar height is about the same. Labels 11.2px accepted.
+3. **Tiny buttons** (`▾` Flow themes / Journal columns, `👁`, brand sync, DD chips, asset-chip name / pin / `⋯`, `อ่านต่อ`, Not trading): invisible 36px hit area (`::after`); the audit counts it.
+4. **Lone control rows moved into the header row, right side:**
+   - Sat tile `Not trading this week` → tile header next to `+ แผน` (on Mac widths the tile is too narrow for name + both buttons, so it sits on a second right-aligned header row).
+   - Settings `Add product` → summary row of the "+ Add product" section (visible when the section is open).
+   - Core side card `＋ แผน Core` → card header right (the instruction text no longer repeats the button name).
+   - Playbook history `ปิด` → sheet header; Playbook paste `ตรวจ` / `บันทึก` / `ปิด` → sheet header (footer row removed).
+   - Playbook asset sheet single driver chip `P1 · เสาหลัก 1` → same row as the "Drivers" label, right.
+   - Core open card warning chip `ไม่อยู่ใน Watchlist · ยังไม่ได้ทำการบ้าน`: the body has no header row, so it fills the full row (no half-empty row) instead of moving.
+5. **Duplicates**: `Set default risk in Settings` only in the Sat account row; wrong-side TP / low R:R only in the R:R bar (pill + text), extra hint removed (the hint for an empty TP is unchanged because suite 98 pins it); `＋ แผน Core` once (header chip).
+6. **Mac regime duplicate**: fixture added ("Today · Daily (Risk-OFF · MMT ½ / COMP ½)"). The old build reproduces it (`Risk-OFF · Momentum 50% · Compounder 50%` next to chip `MMT ½ · COMP ½ (regime)`); now the label is just `Risk-OFF` when the chip is shown. The checker was extended to catch it.
+7. Other font floors raised (13px iPhone / 12.5 Mac) for badges, labels, hints below minimum; body notes 14px.
 
 ## Tests
-369 201/201 · 370 30/30 · 372 16/16 · ht1 41/41 PASS. 104, 98, 371: same failures as origin/main (371 has one fewer). Changed expectation: 104 test 6 now accepts any size >= old+1px (floors).
+369 201/201 · 370 30/30 · 372 16/16 · ht1 41/41 PASS. 104, 98, 371 fail the same as origin/main (371 one fewer). Changed expectation: 104 test 6 now accepts any size >= old+1px (floors).
 
 ## Coverage / limits
-Not covered: Core COMP-track toggle variants, Sat forms with 3+ accounts, idea detail sheets, /. Rule 8 skips scrolled modals. Tap size is checked on iPhone only. The Risk-OFF fixture stays on for later screens in each run.
+Not covered: Core COMP-track toggle variants, Sat forms with 3+ accounts, idea detail sheets, `ltImportOpen`/`sdImportOpen`. Rule 8 skips scrolled modals. Tap size is checked on iPhone only. The Risk-OFF fixture stays on for later screens in each run.
 
 Generated by `python3 tests/ui_audit.py`. Viewports 390×844 · 1280×800 · 1440×900; fixtures + stress data.
 
