@@ -10579,6 +10579,68 @@ function swipeStartOk(e, t){
     switchTab(to);
   }, {passive:true});
 })();
+/* SW2 — iPhone portrait: ปัดซ้าย/ขวากลางจอ = Today Daily|Weekend · แผน Core|Sat (ไม่วน · ไม่เปลี่ยนแท็บหลัก — แท็บหลักยังปัดจาก #tabsMain เท่านั้น) */
+(function(){
+  const NEVER = SWIPE_NEVER_SEL + ', [data-td3-sw], [role=tablist], .scopeBtn, .topbar, #tabsMain, .overlay, [role=dialog], [contenteditable=""], [contenteditable="true"]';
+  const HINT = {today:'Swipe ← → to switch Daily / Weekend', plan:'Swipe ← → to switch Core / Sat'};
+  let sx=0, sy=0, st=0, tracking=false;
+  const eatClick = ev=>{ ev.stopPropagation(); ev.preventDefault(); };
+  function phone(){ try{ return window.innerWidth <= 560 && window.matchMedia('(orientation: portrait)').matches; }catch(e){ return false; } }
+  function hScroll(el){
+    for(let n=el; n && n !== document.body; n=n.parentElement){
+      if(n.scrollWidth > n.clientWidth + 1){ const ox = getComputedStyle(n).overflowX; if(ox === 'auto' || ox === 'scroll') return true; }
+    }
+    return false;
+  }
+  function startOk(e, t){
+    if(activeTab !== 'today' && activeTab !== 'plan') return false;
+    if(!phone() || e.touches.length > 1) return false;
+    if(t.clientX < 20 || t.clientX > window.innerWidth - 20) return false;
+    if(document.querySelector('.overlay.show')) return false;
+    const a = document.activeElement;
+    if(a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable)) return false;
+    const tg = e.target;
+    if(!tg || !tg.closest || !tg.closest('#mainWrap') || tg.closest(NEVER)) return false;
+    return !hScroll(tg);
+  }
+  function slide(dir){
+    try{
+      if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const el = document.getElementById(TAB_MAP[activeTab]);
+      if(el && el.animate) el.animate([{transform:'translateX(' + (dir > 0 ? 24 : -24) + 'px)', opacity:.4}, {transform:'none', opacity:1}], {duration:150, easing:'ease-out'});
+    }catch(e){}
+  }
+  function hint(k){
+    try{ const key = 'dash.sw2Hint.' + k; if(localStorage.getItem(key)) return; localStorage.setItem(key, '1'); td3ToastShow(HINT[k]); }catch(e){}
+  }
+  document.addEventListener('touchstart', e=>{
+    const t = e.touches[0];
+    if(!t || !startOk(e, t)){ tracking=false; return; }
+    sx = t.clientX; sy = t.clientY; st = Date.now(); tracking = true;
+  }, {passive:true});
+  document.addEventListener('touchmove', e=>{ if(tracking && e.touches.length > 1) tracking = false; }, {passive:true});
+  document.addEventListener('touchcancel', ()=>{ tracking = false; }, {passive:true});
+  document.addEventListener('touchend', e=>{
+    if(!tracking) return;
+    tracking = false;
+    const t = e.changedTouches[0]; if(!t) return;
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if(Math.abs(dx) < 60 || Math.abs(dx) < 2*Math.abs(dy) || Date.now() - st > 600) return;
+    if(document.querySelector('.overlay.show')) return;
+    const left = dx < 0;
+    if(activeTab === 'today'){
+      const to = left ? 'w' : 'd';
+      if(td3Mode === to){ return; }
+      td3SetMode(to); slide(left ? -1 : 1); hint('today');
+    }else{
+      const to = left ? 'future' : (planCoreLast || 'stock');
+      if(left === (planScope === 'future')) return;
+      setPlanScope(to); slide(left ? -1 : 1); hint('plan');
+    }
+    document.addEventListener('click', eatClick, true);
+    setTimeout(()=>document.removeEventListener('click', eatClick, true), 400);
+  }, {passive:true});
+})();
 document.addEventListener('keydown', (e)=>{
   if(e.key==='Escape' || e.key==='Esc') return;   /* ESC1 — Esc ทั้งหมด (รวม Watch กลับรายการ) อยู่ที่ escCloseTop() */
   if(kbEditableTarget(e.target)) return;
