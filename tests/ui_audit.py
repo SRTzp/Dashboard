@@ -74,12 +74,17 @@ for(const e of all){
     if(!phone){ min=12.5; kind='Mac min'; }
     else if(caps){ min=11; kind='caps label'; }
     else if(isChip(e)){ min=13; kind='chip'; }
-    else if(t.length>40 && !/(^|\s)(hint|mu|ui-hint|set1sm|ln3-st|ln4-sc|ld)(\s|$)/.test(cls(e)) && !['LABEL','SMALL','SUMMARY'].includes(e.tagName)){ min=14; kind='body'; }
+    else if(t.length>40 && !/(^|\s)(hint|mu|ui-hint|set1sm|ln3-st|ln4-sc|ld|crUnit|ps1Rg)(\s|$)/.test(cls(e)) && !['LABEL','SMALL','SUMMARY'].includes(e.tagName) && !e.closest('label,summary,.ln2-s')){ min=14; kind='body'; }
     else { min=13; kind='small'; }
-    if(fs < min-0.01) add(6, e, kind+' font '+fs+'px < '+min, {sub:'font'});
+    if(fs < min-0.01){
+      // SRTp UA1 decision #1/#2 — accepted exceptions (kept compact on purpose): Today iPhone compact card (text >= 12px) and the bottom tab bar labels (>= 11px)
+      const acc = phone && ((e.closest('.ln4-card,.ln4-more') && fs >= 12) || (e.closest('.tabs') && fs >= 11));
+      add(6, e, kind+' font '+fs+'px < '+min, acc ? {sub:'font', accepted:'Today compact card / tab bar (SRTp decision)'} : {sub:'font'});
+    }
   }
   if(phone && (e.tagName==='BUTTON'||e.tagName==='SELECT'||e.tagName==='SUMMARY'||(e.tagName==='INPUT'&&!['checkbox','radio','hidden','file'].includes(e.type))||e.getAttribute('role')==='tab')){
-    if(r.height < 35.5 && !/^✓\s*all$/i.test(txt(e))) add(6, e, 'tap target height '+Math.round(r.height)+'px < 36', {sub:'tap'});
+    let hit = r.height; try{ const pa = getComputedStyle(e,'::after'); if(pa && pa.content!=='none' && pa.position==='absolute'){ hit = Math.max(hit, parseFloat(pa.height)||0); } }catch(_){}   // invisible hit area counts
+    if(hit < 35.5 && !/^✓\s*all$/i.test(txt(e))) add(6, e, 'tap target height '+Math.round(hit)+'px < 36', {sub:'tap'});
   }
 }
 
@@ -117,11 +122,11 @@ for(const c of cards){
   if(rr.length>1 && !seenDup.has(rid) && c.querySelectorAll('.ui-pcell,.ui-plan').length<2){ seenDup.add(rid); add(5, rr[1], 'R:R shown '+rr.length+'× in one card: '+rr.map(x=>'"'+txt(x).slice(0,30)+'"').join(' / ')); }
 }
 for(const c of cards){
-  const els=[...c.querySelectorAll('*')].filter(e=>vis(e)&&leafText(e)&&e.children.length===0&&txt(e).length<40);
+  const els=[...c.querySelectorAll('*')].filter(e=>vis(e)&&leafText(e)&&e.children.length===0&&txt(e).length<60);
   const mm=els.filter(e=>/\b(MMT|COMP)\b/.test(txt(e)));
   const rg=els.filter(e=>/\b(Risk[- ]?(on|off)|Bull|Bear|Neutral|Cautious|Defensive|Expansion|Contraction)\b/i.test(txt(e)) && !mm.includes(e));
   if(mm.length && rg.length && !seenDup.has('rg'+path(c))){
-    const a=mm.map(x=>txt(x).toLowerCase()).join(' '); const hit=rg.find(x=>txt(x).toLowerCase().split(/[\s·|/]+/).some(w=>w.length>3&&a.includes(w)));
+    const a=mm.map(x=>txt(x).toLowerCase()).join(' '); const hit=rg.find(x=>txt(x).toLowerCase().split(/[\s·|/]+/).some(w=>w.length>3&&a.includes(w)) || (/Momentum|Compounder/i.test(txt(x)) && /(MMT|COMP)\s*[½¾]/.test(txt(mm[0]))));
     if(hit){ seenDup.add('rg'+path(c)); add(5, hit, 'regime label "'+txt(hit).slice(0,30)+'" and MMT/COMP chip "'+txt(mm[0]).slice(0,30)+'" say the same thing'); } }
 }
 
@@ -219,6 +224,7 @@ def screens():
     L = []
     def add(name, fn, scope=None, wait=600, post=None): L.append(dict(name=name, fn=fn, scope=scope, wait=wait, post=post))
     add("Today · Daily", "()=>{ switchTab('today'); td3SetMode('d'); todayRefresh(true); }")
+    add("Today · Daily (Risk-OFF · MMT ½ / COMP ½)", "async ()=>{ window.__FF_JSON={as_of:new Date().toISOString().slice(0,10), ratios:{ACWI_BIL:{up:false}, HYG_IEI:{up:false}}}; await ffLoadJson(true); switchTab('today'); td3SetMode('d'); todayRefresh(true); }")
     add("Today · Weekend", "()=>{ switchTab('today'); td3SetMode('w'); todayRefresh(true); }")
     add("Today · Daily (news row clicked)", "()=>{ switchTab('today'); td3SetMode('d'); todayRefresh(true); const r=document.querySelector('[data-td3-news] [onclick]'); if(r) r.click(); }")
     add("Flow", "()=>{ switchTab('flow'); }", wait=900)
@@ -354,7 +360,8 @@ def audit(vps, tag, shots=True, limit_crops=500):
 
 def counts(findings):
     c = collections.Counter()
-    for f in findings: c[(f["rule"], f["vp"])] += 1
+    for f in findings:
+        if not f.get("accepted"): c[(f["rule"], f["vp"])] += 1
     return c
 
 
@@ -367,8 +374,11 @@ def write_report(findings, visited, tag, out):
     L += ["", "## Counts per rule", "", "| rule | " + " | ".join(map(str, vps)) + " | total |", "|---|" + "---|" * (len(vps) + 1)]
     for r, nm in RULES.items():
         row = [c.get((r, v), 0) for v in vps]; L.append("| %d %s | %s | %d |" % (r, nm, " | ".join(map(str, row)), sum(row)))
+    acc = collections.Counter((f["vp"], f["sel"].split(" > ")[-1], f["text"][:24]) for f in findings if f.get("accepted"))
+    L += ["", "## Accepted exceptions (SRTp decision — not counted)", "", "Today iPhone compact card text (>= 12px) and bottom tab-bar labels (>= 11px). %d element hits." % sum(acc.values()), ""]
+    for (vp_, sel_, tx_), n_ in sorted(acc.items()): L.append("- %d · `%s` · %s%s" % (vp_, sel_, tx_.replace("|", "/"), " ×%d" % n_ if n_ > 1 else ""))
     L += ["", "## Findings", "", "| # | screen | vp | rule | element | text | note | crop |", "|---|---|---|---|---|---|---|---|"]
-    for i, f in enumerate(sorted(findings, key=lambda f: (f["rule"], f["screen"], f["vp"])), 1):
+    for i, f in enumerate(sorted([f for f in findings if not f.get("accepted")], key=lambda f: (f["rule"], f["screen"], f["vp"])), 1):
         L.append("| %d | %s | %d | %d | `%s` | %s | %s | %s |" % (i, f["screen"], f["vp"], f["rule"], f["sel"].replace("|", "/")[-70:], f["text"].replace("|", "/")[:40], (f["note"].replace("|", "/")[:130] + (" (+%d more screens)" % f["also"] if f.get("also") else "")), ("![](../../%s)" % f["shot"]) if f["shot"] else ""))
     open(out, "w").write("\n".join(L) + "\n")
 
