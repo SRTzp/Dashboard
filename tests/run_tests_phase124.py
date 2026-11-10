@@ -34,14 +34,15 @@ def tests(pw, w, h):
         # Momentum 3.9 blocked / 4.0 ok
         B.form(page, "MIN"); B.fill(page, 100, 96.1)
         e1 = B.errtxt(page); m1 = js(page, "()=>document.getElementById('cnSMsg').textContent")
-        check(f"{tag} §7e Momentum: SL ห่าง 3.9% → 'Stop too tight — min 4%' ที่แถว SL + บล็อกบันทึก", B.save_dis(page) and "Stop too tight — min 4%" in e1 and m1 == "Stop too tight — min 4%", [e1, m1])
+        ms1 = js(page, "()=>{ const e=document.querySelector('[data-ms1-pill]'); return e ? e.textContent : ''; }")
+        check(f"{tag} §7e MS1: Momentum SL ห่าง 3.9% → ไม่บล็อก · amber pill 'Sized on min stop 4% (your SL 3.9%)' · ไม่มี msg แดง", not B.save_dis(page) and "Sized on min stop 4% (your SL 3.9%)" in ms1 and "too tight" not in e1 and m1 == "", [e1, m1, ms1])
         B.fill(page, 100, 96)
         check(f"{tag} §7e Momentum: SL ห่าง 4.0% → ผ่าน (ไม่มี msg)", not B.save_dis(page) and js(page, "()=>document.getElementById('cnSMsg').style.display") == "none", [B.errtxt(page)])
         # multi-entry checks every row
         js(page, "()=>ps1RowAdd('e')"); settle(page, 150)
         js(page, "()=>{ document.getElementById('cnEn1').value='98'; ps1In('e',1,'98'); }"); settle(page, 150)
         e2 = B.errtxt(page)
-        check(f"{tag} §7e หลาย entry: ตรวจ 'ทุกแถว' vs SL1 (98→96 = 2.0% ต่ำกว่า 4%) → บล็อก", B.save_dis(page) and "Stop too tight" in e2, e2)
+        check(f"{tag} §7e MS1 หลาย entry: ทุกแถว vs SL (98→96 = 2.0% < 4%) → ไม่บล็อก (pill ต่อแถวตรวจใน MS1 test)", "Stop too tight" not in e2, e2)
         js(page, "()=>ps1RowDel('e',1)"); settle(page, 150)
         # 7a: switch scope while the form is open
         B.fill(page, 100, 90)
@@ -51,8 +52,9 @@ def tests(pw, w, h):
         check(f"{tag} §7a สลับ scope ตอนฟอร์มเปิด: 'New Momentum plan' → 'New Compounder plan' · track ladder · ราคาที่พิมพ์คงอยู่", t0 == "New Momentum plan" and a["title"] == "New Compounder plan" and a["track"] == "ladder" and a["seg"] == "ladder" and a["entry"] == "" and a["stop"] == "", [t0, a])   # PS1c §2: per-port drafts — typed prices are NOT carried to the other port
         # Compounder min 7%: 93.1 blocked, 93 ok
         B.fill(page, 100, 93.1); c1 = B.errtxt(page)
+        ms7 = js(page, "()=>{ const e=document.querySelector('[data-ms1-pill]'); return e ? e.textContent : ''; }")
         B.fill(page, 100, 93); c2 = B.save_dis(page)
-        check(f"{tag} §7e Compounder: 6.9% บล็อก 'min 7%' · 7.0% ผ่าน", "Stop too tight — min 7%" in c1 and not c2, [c1, c2])
+        check(f"{tag} §7e MS1 Compounder: 6.9% → ไม่บล็อก + pill 'min stop 7%' · 7.0% ผ่านไม่มี pill", "min stop 7%" in ms7 and not c2 and "too tight" not in c1, [c1, c2, ms7])
         sm = js(page, "()=>document.getElementById('cnSum').textContent.replace(/\\s+/g,' ')")
         js(page, "()=>setPlanScope('stock')"); settle(page, 300)
         a2 = js(page, "()=>({title:'New ' + ({winner:'Momentum',ladder:'Compounder'})[coreNew.track] + ' plan', track:coreNew.track, sum:document.getElementById('cnSum').textContent.replace(/\\s+/g,' ')})")

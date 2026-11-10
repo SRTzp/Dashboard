@@ -107,7 +107,8 @@
       var rr = multi ? en[i].riskPct : idea;
       if (!(num(rr) && rr > 0)) return fail('ROW_RISK');
       sumRow += rr;
-      rows.push({ px: px, riskPct: rr, qty: floorLot(rr / 100 * E / (px - stop), lot) });
+      var rd = px - stop, md = num(o.minStopPct) && o.minStopPct > 0 ? px * o.minStopPct / 100 : 0, tight = md > 0 && rd < md - 1e-9 * px;   /* MS1 — tighter than min stop: size on the min distance, keep the real stop */
+      rows.push({ px: px, riskPct: rr, qty: floorLot(rr / 100 * E / (tight ? md : rd), lot), minSized: tight, minDist: md, realDist: rd });
     }
     var res = { ok: true, E: E, lot: lot, stop: stop, multi: multi, stopMulti: bs.multi, rows: rows, idea: idea, errs: [] };
     if (multi && sumRow > idea + EPS) res.errs.push('ROWS_OVER_BUDGET');
@@ -138,6 +139,7 @@
     res.risk = risk; res.riskPct = risk / E * 100; res.leftPct = Math.max(0, idea - res.riskPct);
     res.sizePct = cost / E * 100;
     res.zero = q === 0;
+    res.minSized = rows.some(function (r) { return r.minSized; });
     return res;
   }
 

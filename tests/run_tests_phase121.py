@@ -61,7 +61,7 @@ def sat_tests(pw, w, h):
         check(f"{tag} §2 stop 0.75% >= min 0.5% → ผ่าน · lot มี · ไม่มี block 'Stop too tight'", c["lot"] and not any("too tight" in x for x in c["blocks"]), c)
         js(page, "([i])=>satV3PlanEdit(i,'sl','1991')", [iid]); settle(page, 300)
         c = calc(page, iid)
-        check(f"{tag} §2 stop 9 pts (0.45%) < 0.5% → 'Stop too tight — min 10 pts (0.5%)' + บันทึกไม่ได้ (ไม่ ready)", any("Stop too tight — min 10" in x and "(0.5%)" in x for x in c["blocks"]) and not c["ready"], c)
+        check(f"{tag} §2 MS1: stop 9 pts (0.45%) < 0.5% → ไม่บล็อก · ไซส์บน min 10 pts (raw 0.075) · Risk จริง < budget · amber info", not any("too tight" in x for x in c["blocks"]) and abs(c["raw"] - 0.075) < 1e-9 and c["dealTHB"] < c["riskTHB"] and c["lot"], c)
         js(page, "([i])=>satV3PlanEdit(i,'sl','1990')", [iid]); settle(page, 300)
         c = calc(page, iid)
         check(f"{tag} §2 stop = min (10 pts) พอดี → ผ่าน", not any("too tight" in x for x in c["blocks"]) and c["lot"], c)

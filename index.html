@@ -5204,7 +5204,8 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
       var rr = multi ? en[i].riskPct : idea;
       if (!(num(rr) && rr > 0)) return fail('ROW_RISK');
       sumRow += rr;
-      rows.push({ px: px, riskPct: rr, qty: floorLot(rr / 100 * E / (px - stop), lot) });
+      var rd = px - stop, md = num(o.minStopPct) && o.minStopPct > 0 ? px * o.minStopPct / 100 : 0, tight = md > 0 && rd < md - 1e-9 * px;   /* MS1 — tighter than min stop: size on the min distance, keep the real stop */
+      rows.push({ px: px, riskPct: rr, qty: floorLot(rr / 100 * E / (tight ? md : rd), lot), minSized: tight, minDist: md, realDist: rd });
     }
     var res = { ok: true, E: E, lot: lot, stop: stop, multi: multi, stopMulti: bs.multi, rows: rows, idea: idea, errs: [] };
     if (multi && sumRow > idea + EPS) res.errs.push('ROWS_OVER_BUDGET');
@@ -5235,6 +5236,7 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
     res.risk = risk; res.riskPct = risk / E * 100; res.leftPct = Math.max(0, idea - res.riskPct);
     res.sizePct = cost / E * 100;
     res.zero = q === 0;
+    res.minSized = rows.some(function (r) { return r.minSized; });
     return res;
   }
 
@@ -9174,7 +9176,6 @@ function ln4CoreChecks(c){
   if(!(stop > 0)) return {k:'stop', why:'No stop', btn:'Set stop ›'};
   try{
     const mp = ps1StockMin(c.acct)[bucket];
-    if(mp != null && entry > 0 && ((entry - stop) / entry * 100) < mp - 1e-9) return {k:'stop', why:`Stop too tight — min ${+mp.toFixed(2)}%`, btn:'Set stop ›'};
   }catch(e){}
   if(pl.ps1 && !ps1Off()){
     try{
@@ -9214,6 +9215,7 @@ function ln4CoreRows(){
         row.state = 'draft'; row.status = 'Draft';
         row.det = `${+(c.px) > 0 && +pl.entry < +c.px ? 'Buy Limit' : 'Buy Stop'} ${(+pl.entry).toFixed(2)}${star}`;
         const bad = ln4CoreChecks(c);
+        try{ const mp = ps1StockMin(c.acct)[trk], en = +pl.entry, st = +pl.stop; if(mp != null && en > 0 && st > 0 && ((en - st) / en * 100) < mp - 1e-9) row.det += ' · 🛡️ sized on min stop'; }catch(e){}   /* MS1 */
         if(bad){ row.bad = bad; row.btn = {t:bad.btn, fn:`ln4Fix('${c.id}','${bad.k}')`, fx:true}; }
         else row.btn = {t:'Place order ›', fn:`ln4Place('core','${c.id}')`, p:true};
       }
@@ -9248,6 +9250,7 @@ function ln4SatRows(){
         } else {
           let ms = ''; try{ const ac = (satV3ReadyAccts(i)[0] || {}); ms = ps1MinStopMsg(ac.id || tdHome(), i.asset, i.entry, i.sl); }catch(e){}
           if(ms && !/^Set min stop/.test(ms)) row.bad = {why:ms, btn:'Set stop ›', k:'stop'};
+          try{ if(ps1MinInfo((satV3ReadyAccts(i)[0] || {}).id || tdHome(), i.asset, i.entry, i.sl)) row.det += ' · 🛡️ sized on min stop'; }catch(e){}   /* MS1 */
         }
         if(row.bad) row.btn = {t:row.bad.btn, fn:`ln4Fix('${i.id}','${row.bad.k}','sat')`, fx:true};
         else row.btn = {t:'Place order ›', fn:`ln4Place('sat','${i.id}')`, p:true};
@@ -9505,7 +9508,9 @@ function ln4PillsHtml(idea, tac){
     const A = (sat7dAccts()[0] || {}).id;
     if(A && +idea.entry > 0 && +idea.sl > 0 && !ps1Off()){
       const ms = ps1MinStopMsg(A, idea.asset, idea.entry, idea.sl);
-      out.push(pill(ms ? 'r' : 'g', ms ? (/^Set min/.test(ms) ? ms : 'Stop < min') : 'Stop ≥ min', 'stop'));
+      let mi = null; try{ mi = satV2PlanCalc(idea, A, satV3F2c(idea)).minSized; }catch(e){}
+      if(mi && !ms) mi.rows.forEach(r=>out.push(pill('a', '🛡️ ' + ms1Txt(r) + (mi.rows.length>1 ? ` · entry ${r.n}` : ''), 'stop')));   /* MS1 */
+      else out.push(pill(ms ? 'r' : 'g', ms ? ms : 'Stop ≥ min', 'stop'));
       try{ const c = satV2PlanCalc(idea, A, satV3F2c(idea)); const rk = (c.blocks || []).find(b=>/cap|Risk|risk/.test(b)); out.push(pill(rk ? 'r' : 'g', rk ? 'Risk ✗' : 'Risk ✓', 'risk')); }catch(e){}
     }
     const mw = ln4MacroWarn(idea); if(mw) out.push(pill('a', mw, 'macro'));
@@ -11739,9 +11744,15 @@ function ps1LegacyCount(){
 function ps1MinStopMsg(accId, asset, entry, sl){
   const pct = ps1MinPct(accId, asset), r = Ps1.minStopCheck({minPct:pct, entry:+entry, stop:+sl, pointSize:ps1PointSize(asset)});
   if(r.err==='MIN_NOT_SET') return 'Set min stop in Settings';
-  if(r.err==='TOO_TIGHT') return `Stop too tight — min ${fmt2(r.minPts)} pts (${+pct.toFixed(3)}%)`;
-  return '';
+  return '';   /* MS1 — a stop tighter than the min no longer blocks: the order is sized on the min-stop distance (ps1MinInfo) */
 }
+/* MS1 — tighter-than-min info for one entry/SL: null when SL ≥ min (or min not set) */
+function ps1MinInfo(accId, asset, entry, sl){
+  const pct = ps1MinPct(accId, asset), r = Ps1.minStopCheck({minPct:pct, entry:+entry, stop:+sl, pointSize:ps1PointSize(asset)});
+  if(r.err!=='TOO_TIGHT') return null;
+  return {minPts:r.minPts, pts:r.pts, minDist:r.minDist, pct};
+}
+function ms1Txt(inf){ return `Sized on min stop ${fmt2(inf.minPts)} pts (your SL ${fmt2(inf.pts)})`; }
 /* ── Loss limits: state lives in settings.lossState = {startAt, ports:{winner|ladder|sat:{peak,half,low,stopped,log[]}}} (new key only) ── */
 const LOSS_PORTS = ['ladder','winner','sat'];
 const LOSS_LBL = {ladder:'Compounder', winner:'Momentum', sat:'Sat'};
@@ -13793,7 +13804,15 @@ function ps1SumHtml(p, o){
   const money = p.riskMoney > 0 ? `฿${ps1M(p.riskMoney)} (` : '';
   return `#<b data-ps1-qty>${fmt0(p.qty)}</b> · <b data-ps1-size>${(+p.sizePct).toFixed(1)}%</b>`
     + (ent2 ? ` · Avg <b>${p.avgEntry!=null ? f2(p.avgEntry) : '—'}</b>` : '')
-    + ` · Risk ${money}<b data-ps1-risk>${f2(p.riskPct)}%</b>${money ? ')' : ''}${(o && o.pill === false) ? '' : ps1MultPill(p)}`;
+    + ` · Risk ${money}<b data-ps1-risk>${f2(p.riskPct)}%</b>${money ? ')' : ''}${(o && o.pill === false) ? '' : ps1MultPill(p)}`
+    + ps1MsHtml(p);
+}
+/* MS1 — SL tighter than the min stop: amber pill + "Risk if SL hit … · budget …" (the user's SL is kept; size is on the min distance) */
+function ps1MsHtml(p){
+  const ms = p && p.ms; if(!ms || !ms.rows.length) return '';
+  const g = v=>String(+(+v).toFixed(2));
+  const pills = ms.rows.map(x=>`<span class="ln4-cp a" data-ms1-pill>🛡️ Sized on min stop ${g(x.minPct)}% (your SL ${g(x.yourPct)}%)${ms.multi ? ' · entry ' + x.n : ''}</span>`).join(' ');
+  return `<div class="ps1Ms" data-ms1>${pills} <span data-ms1-risk>Risk if SL hit ฿${ps1M(p.riskMoney)} · budget ฿${ps1M(ms.budget)}</span></div>`;
 }
 function ps1M(v){ v = +v; return v >= 1e6 ? (v/1e6).toFixed(2) + 'M' : v >= 1e3 ? (v/1e3).toFixed(1) + 'k' : String(Math.round(v)); }
 function ps1Tag(F, dd){
@@ -13940,11 +13959,11 @@ function ps1FormRun(n, rd, cx, mk, errs){
   if(n.ne>1){ let st = 0; for(let i=0;i<n.ne;i++) st += spN(i); if(Math.abs(st - 100) > 0.005){ mine.push('Entry split must total 100%'); setSum(''); setDet(''); return done(); } }   /* PS1c §3 */
   { /* PS1b §7e — min stop: EVERY entry row vs SL1 (the first real stop) · never auto-widen */
     const mp = ps1StockMin(n.acct)[bucket], sl1 = stops[0].px;
-    ps1StopMsg('');
-    if(mp != null && entries.some(en=>((en.px - sl1) / en.px * 100) < mp - 1e-9)){ const m1 = `Stop too tight — min ${+mp.toFixed(2)}%`; mine.push(m1); ps1StopMsg(m1); }
+    ps1StopMsg('');   /* MS1 — a stop tighter than the min no longer blocks: planSize sizes on the min distance (minStopPct) */
   }
   if(mine.length){ setSum(''); setDet(''); return done(); }
-  const r = Ps1.planSize({E: E/div, market: mk, ideaRiskPct: typed * m * sf, entries, stops, maxSizePct: b.sizeMax, cash: cx.cashTHB/div});   /* free-cash check as on old plans */
+  const msPct = ps1StockMin(n.acct)[bucket];
+  const r = Ps1.planSize({E: E/div, market: mk, ideaRiskPct: typed * m * sf, entries, stops, maxSizePct: b.sizeMax, cash: cx.cashTHB/div, minStopPct: msPct});   /* free-cash check as on old plans */
   if(!r.ok){ mine.push(PS1_ERR[r.err] || ('Cannot size this plan (' + r.err + ')')); setSum(''); setDet(''); return done(); }
   { /* PS1b §7b — per-row meta: entries `#shares · size%` · SLs `−x.x%` from the (average) entry */
     const Ediv = E / div, refE = r.avgEntry != null ? r.avgEntry : entries[0].px;
@@ -13964,11 +13983,12 @@ function ps1FormRun(n, rd, cx, mk, errs){
     rows: r.rows.map((x,i)=>({px:x.px, riskPct: entries.length>1 ? entries[i].riskPct / m : typed, qty:x.qty})),
     stops: stops.map(x=>({px:x.px, pct: n.ns>1 ? x.pct : 100})), qty:r.qty, avgEntry:r.avgEntry, avgStop:r.stop, riskPct:r.riskPct, riskMoney:newMoney,
     tag:ps1Tag(F, dd), sizePct:r.sizePct, leftPct:r.leftPct, trimmed:r.trimmed, cashLimited:!!r.cashLimited, lot:r.lot, maxSizePct:b.sizeMax, date:thaiToday()};
+  if(r.minSized) snap.ms = {rows: r.rows.map((x,i)=>x.minSized ? {n:i+1, minPct: msPct, yourPct: x.realDist / x.px * 100} : null).filter(Boolean), multi: r.rows.length>1, budget: typed * m * sf / 100 * E};   /* MS1 */
   if(sf < 1) snap.starter = Object.assign({frac:sf, fullRiskPct:typed}, addPx != null ? {addPx} : {});
   let planned = null;
   if(stOn){   /* Planned total = every row (add-on price blank → estimated at Entry 1) */
     const ents2 = []; for(let i=0;i<n.ne;i++){ let px = i===0 ? rd.entry : coreNum(n.pxE[i-1]); if(!(px>0)) px = rd.entry; ents2.push({px, riskPct: typed * m * spN(i) / 100}); }
-    try{ const r2 = Ps1.planSize({E: E/div, market: mk, ideaRiskPct: typed * m, entries: ents2, stops, maxSizePct: b.sizeMax, cash: cx.cashTHB/div});
+    try{ const r2 = Ps1.planSize({E: E/div, market: mk, ideaRiskPct: typed * m, entries: ents2, stops, maxSizePct: b.sizeMax, cash: cx.cashTHB/div, minStopPct: msPct});
       if(r2 && r2.ok){ planned = {rows:r2.rows, qty:r2.qty, sizePct:r2.sizePct, avgEntry:r2.avgEntry, riskPct:r2.riskPct, riskMoney:r2.risk * div}; ps1MetaSet('e', 1, `· #${fmt0(r2.rows[1].qty)}`); } }catch(e){ console.warn('ln4 planned:', e); }
   }
   const multiF = n.ne>1 || n.ns>1;
@@ -24620,6 +24640,8 @@ function satV2PlanCalc(idea, accId, f2c){
   const hasTr = pfHasTrend(idea);   /* PF1 — ทิศมาจาก Trend ของแผนเท่านั้น · ไม่มี Trend = ไม่คำนวณไม้/ไม่สร้าง order */
   const side = (hasTr && e>0 && s>0) ? (idea.bias==='Short' ? s>e : s<e) : null;
   const dist = (e>0 && s>0) ? Math.abs(e - s) : 0;
+  const mi1 = (!ps1Off() && e>0 && s>0) ? ps1MinInfo(accId, idea.asset, e, s) : null;   /* MS1 — SL tighter than min → size on the min distance, keep the user's SL */
+  const sd = mi1 ? mi1.minDist : dist;
   const cfgA = satRiskCfg(accId);
   const ruleF = 1;   /* LN4 §4d — Macro = warning only (was Calc.sizeRule neutral/against) */
   const fac = 1;
@@ -24646,7 +24668,7 @@ function satV2PlanCalc(idea, accId, f2c){
     riskCur = k>0 ? riskTHB / k : null;
     if(side===true && riskCur>0 && dist>0 && e>0){
       const cc = chosen.cfg, step = cc.lotStep;
-      rawRisk = riskCur / (dist * cc.contract);
+      rawRisk = riskCur / (sd * cc.contract);
       capVal = sleeveTHB / k * capX;
       rawCap = capVal / (e * cc.contract);
       let deal = psx ? rawRisk : Math.min(rawRisk, rawCap);   /* PS1b — min stop replaces the 1.4× value cap for new orders */
@@ -24656,11 +24678,11 @@ function satV2PlanCalc(idea, accId, f2c){
       const leg = satV2Fl(deal * split1, step);
       if(deal < cc.minLot - 1e-12) lotMsg = limit==='cap' ? 'เพดานมูลค่าต่ำกว่าขนาดขั้นต่ำ' : limit==='hedge' ? 'Main เล็กกว่าขนาดขั้นต่ำ — Hedge ไม่ได้' : 'SL กว้างเกินขนาดขั้นต่ำ';
       else if(leg < cc.minLot - 1e-12) lotMsg = 'SL กว้างเกินขนาดขั้นต่ำ';
-      else { lotDeal = deal; lot = leg; actualTHB = lot * dist * cc.contract * k; dealTHB = deal * dist * cc.contract * k; }
+      else { lotDeal = deal; lot = leg; actualTHB = lot * dist * cc.contract * k; dealTHB = deal * dist * cc.contract * k; }   /* MS1 — Risk = real distance (≤ budget when sized on min) */
     }
   }
   /* PS1b §7f — two entries: one budget split by share · each entry rounds DOWN · either rounds to 0 → "Too small to split" */
-  let e2o = null;
+  let e2o = null, mi2 = null;
   if(psx && satE2On(idea) && !slotEx){
     const e2px = +idea.entry2, sh = satE2Share(idea);
     e2o = {px:e2px, share:sh, err:'', ok:false};
@@ -24668,7 +24690,8 @@ function satV2PlanCalc(idea, accId, f2c){
     else if(chosen && riskCur > 0 && side === true && e2px > 0 && (idea.bias==='Short' ? e2px >= s : e2px <= s)) e2o.err = 'Entry 2 must be on the same side of SL';
     else if(chosen && riskCur > 0 && side === true){
       const cc = chosen.cfg, k2 = cc.cur==='USD' ? base.fx : 1, d1 = dist, d2 = Math.abs(e2px - s);
-      const l1 = satV2Fl(riskCur * (1 - sh) / (d1 * cc.contract), cc.lotStep), l2 = satV2Fl(riskCur * sh / (d2 * cc.contract), cc.lotStep);
+      mi2 = ps1MinInfo(accId, idea.asset, e2px, s);
+      const l1 = satV2Fl(riskCur * (1 - sh) / (sd * cc.contract), cc.lotStep), l2 = satV2Fl(riskCur * sh / ((mi2 ? mi2.minDist : d2) * cc.contract), cc.lotStep);
       if(l1 < cc.minLot - 1e-12 || l2 < cc.minLot - 1e-12){ e2o.err = 'Too small to split — use 1 entry'; }
       else { Object.assign(e2o, {ok:true, lot1:l1, lot2:l2, d1, d2, risk1:l1 * d1 * cc.contract * k2, risk2:l2 * d2 * cc.contract * k2, avg:(l1 * e + l2 * e2px) / (l1 + l2)}); }
     }
@@ -24703,7 +24726,7 @@ function satV2PlanCalc(idea, accId, f2c){
   if(tac && !tradeExists && !psx){ const br = satV2Brake(accId); if(br.stop) blocks.push(br.msg); }
   if(psx){   /* PS1b — min stop (% of entry price) + Loss limits */
     let msm = (hasTr && e>0 && s>0) ? ps1MinStopMsg(accId, idea.asset, e, s) : (hasTr ? (ps1MinPct(accId, idea.asset) ? '' : 'Set min stop in Settings') : '');
-    if(!msm && e2o && +idea.entry2 > 0 && s > 0) msm = ps1MinStopMsg(accId, idea.asset, +idea.entry2, s);   /* §7f — min stop applies to EACH entry vs SL */
+    if(!msm && e2o && +idea.entry2 > 0 && s > 0) msm = ps1MinStopMsg(accId, idea.asset, +idea.entry2, s);   /* §7f — MIN_NOT_SET only (MS1: tight SL never blocks) */
     if(msm) blocks.push(msm);
     const lm = lossBlockMsg(lev); if(lm) blocks.push(lm);
   }
@@ -24719,8 +24742,9 @@ function satV2PlanCalc(idea, accId, f2c){
   const out = {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, tradeExists, factor: fac, split1, pyrSplit: spl, ruleFactor: ruleF, f2c: F,
     tacType, mainPos: mp, softWarn, noTrend: !hasTr, mr:false, mrOk:true, mrCheck:null, noteBlock: noteB, unpickBlock: unW, carryBlock: carryB, ddBlock: ddB, newsBlock: newsB, rrBlock: rrB, rr: rrC,
     e2: e2o,
+    minSized: (mi1 || mi2) ? {rows:[mi1 && Object.assign({n:1}, mi1), mi2 && Object.assign({n:2}, mi2)].filter(Boolean), budget: riskTHB / (chosen && chosen.cfg.cur==='USD' ? base.fx : 1), cur: chosen ? chosen.cfg.cur : 'USD'} : null,
     ps1: psx ? {E: psE, def: psDef, loss: lev, minPct: ps1MinPct(accId, idea.asset), margin: (base.B.settings && base.B.settings.capital) ? +base.B.settings.capital.satB || 0 : 0} : null, verify: vfy,
-    v2: {sleeve: sv, tac, cfg, rpt, capX, sleeveTHB, riskTHB, rawRisk, rawCap, rawHedge, capVal, limit, lotDeal, dealTHB, actualTHB, dist, tps, k: chosen ? (chosen.cfg.cur==='USD' ? base.fx : 1) : 1}};
+    v2: {sleeve: sv, tac, cfg, rpt, capX, sleeveTHB, riskTHB, rawRisk, rawCap, rawHedge, capVal, limit, lotDeal, dealTHB, actualTHB, dist: sd, realDist: dist, tps, k: chosen ? (chosen.cfg.cur==='USD' ? base.fx : 1) : 1}};
   out.blocks = blocks;
   out.warns = (carryB ? [carryB] : []).concat(unW ? [unW] : [], noteB ? [noteB] : [], ddB ? [ddB] : [], newsB ? [newsB] : [], rrB ? [rrB] : [], out.blocks, rd.reasons);
   out.ready = hasTr && rd.ok && !ddB && !newsB && !rrB && !noteB && !unW && !carryB && out.blocks.length===0;
@@ -25346,7 +25370,7 @@ function ln1CardHtml(idea){
     const v = c.v2, cur = c.chosen.cfg.cur, unit = satSzUnit(idea, c), sp = satV2Split(a.id, sv);
     const legLine = '';
     details.push(`<div class="ln1-dt" data-ln1-detail="${e(a.id)}">${nm}${satV2SizeLine({_idea: idea, _skipSet: skipSet}, a)}</div>`);
-    return `<div class="ln1-sz" data-ln1-acct="${e(a.id)}">${nm}<span class="ln1-sv"><b data-ln1-lot="1">${(c.e2 && c.e2.ok) ? satV2Lot(c.e2.lot1) + ' + ' + satV2Lot(c.e2.lot2) : satV2Lot(c.lot)}</b> ${unit} · <span class="ui-hint" data-ln1-detail-txt="1">${satSzDetail(idea, c)}</span> · <span data-ln1-risk="1">Risk ${satV2Money2(v.actualTHB / v.k, cur)}</span>${c.factor<1 ? ` <span class="ui-hint">ลด ${Math.round((1-c.factor)*100)}%</span>` : ''}${(c.verify && c.verify.ok && c.verify.fac<1) ? ' <span class="ui-hint" data-ps1-unclear-row>Size 60% (Unclear Trend)</span>' : ''}</span><span class="ln1-st">${st.ico}</span>${skipB}${offB}</div>${legLine}`;
+    return `<div class="ln1-sz" data-ln1-acct="${e(a.id)}">${nm}<span class="ln1-sv"><b data-ln1-lot="1">${(c.e2 && c.e2.ok) ? satV2Lot(c.e2.lot1) + ' + ' + satV2Lot(c.e2.lot2) : satV2Lot(c.lot)}</b> ${unit} · <span class="ui-hint" data-ln1-detail-txt="1">${satSzDetail(idea, c)}</span> · <span data-ln1-risk="1">${c.minSized ? `Risk if SL hit ${satV2Money2(v.actualTHB / v.k, cur)} · budget ${satV2Money2(c.minSized.budget, cur)}` : `Risk ${satV2Money2(v.actualTHB / v.k, cur)}`}</span>${c.factor<1 ? ` <span class="ui-hint">ลด ${Math.round((1-c.factor)*100)}%</span>` : ''}${(c.verify && c.verify.ok && c.verify.fac<1) ? ' <span class="ui-hint" data-ps1-unclear-row>Size 60% (Unclear Trend)</span>' : ''}</span><span class="ln1-st">${st.ico}</span>${skipB}${offB}</div>${legLine}`;
   }).join('');
   /* เหตุผลสวน/นอก Macro (เมื่อกฎเดิมบังคับ) + บรรทัด Macro · ขนาดไม้ */
   const m = F.mac;

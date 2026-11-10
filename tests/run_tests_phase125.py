@@ -57,7 +57,7 @@ def tests(pw, w, h):
         # min stop per entry (0.1% of 2000 = 2 pts): entry2 1999 vs SL 1980 fine; make entry 2 too close to SL
         js(page, "([i])=>satE2Edit(i,'entry2','1981')", [iid]); settle(page, 300)
         ms = c2(page, iid)
-        check(f"{tag} §7f min stop ตรวจ 'ทุก entry' vs SL: entry 2 ห่าง 1 pt (<0.1%) → 'Stop too tight' + ไม่ ready", any("Stop too tight" in x for x in ms["blocks"]) and not ms["ready"], ms)
+        check(f"{tag} §7f MS1: entry 2 ห่าง 1 pt (<0.1%) → ไม่บล็อก 'too tight' · ไซส์ entry 2 บน min stop (2 pts) · Risk จริง < budget", not any("too tight" in x for x in ms["blocks"]) and ms["e2"]["ok"] and ms["e2"]["risk1"] + ms["e2"]["risk2"] <= ms["riskTHB"] + 1e-6, ms)
         # rounding to 0 → message
         js(page, "([i])=>{ satE2Edit(i,'entry2','1990'); satE2Edit(i,'e2share','95'); }", [iid]); settle(page, 300)
         sm = c2(page, iid)
