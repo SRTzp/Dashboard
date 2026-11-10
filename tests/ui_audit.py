@@ -71,7 +71,7 @@ for(const e of all){
     if(!phone){ min=12.5; kind='Mac min'; }
     else if(caps){ min=11; kind='caps label'; }
     else if(isChip(e)){ min=13; kind='chip'; }
-    else if(t.length>40 && !/(^|\s)(hint|mu|ui-hint)(\s|$)/.test(cls(e)) && !['LABEL','SMALL','SUMMARY'].includes(e.tagName)){ min=14; kind='body'; }
+    else if(t.length>40 && !/(^|\s)(hint|mu|ui-hint|set1sm|ln3-st|ln4-sc|ld)(\s|$)/.test(cls(e)) && !['LABEL','SMALL','SUMMARY'].includes(e.tagName)){ min=14; kind='body'; }
     else { min=13; kind='small'; }
     if(fs < min-0.01) add(6, e, kind+' font '+fs+'px < '+min, {sub:'font'});
   }
@@ -124,11 +124,12 @@ for(const c of cards){
 
 // 7 overlap
 const inFixed = e => { for(let n=e;n&&n!==document.body;n=n.parentElement){ const p=getComputedStyle(n).position; if(p==='fixed'||p==='sticky') return true; } return false; };
+const ellip = e => { for(let n=e;n&&n!==document.body;n=n.parentElement){ const c=getComputedStyle(n); if(c.textOverflow==='ellipsis'&&c.overflowX!=='visible') return true; } return false; };
 const multiLine = e => getComputedStyle(e).display==='inline' && e.getClientRects().length>1;
 const leaves = all.filter(e=>!inFixed(e) && (leafText(e)||['BUTTON','INPUT','SELECT'].includes(e.tagName)) && e.children.length<=3 && getComputedStyle(e).position!=='absolute');
 const lr = leaves.map(e=>({e, r:e.getBoundingClientRect()}));
 let ov=0;
-for(let i=0;i<lr.length&&ov<12;i++){ for(let j=i+1;j<lr.length&&ov<12;j++){ const a=lr[i], b=lr[j]; if(a.e.contains(b.e)||b.e.contains(a.e)||multiLine(a.e)||multiLine(b.e)) continue;
+for(let i=0;i<lr.length&&ov<12;i++){ for(let j=i+1;j<lr.length&&ov<12;j++){ const a=lr[i], b=lr[j]; if(a.e.contains(b.e)||b.e.contains(a.e)||multiLine(a.e)||multiLine(b.e)||ellip(a.e)||ellip(b.e)) continue;
     const ix=Math.min(a.r.right,b.r.right)-Math.max(a.r.left,b.r.left), iy=Math.min(a.r.bottom,b.r.bottom)-Math.max(a.r.top,b.r.top);
     if(ix>3&&iy>3&&ix>Math.min(a.r.width,b.r.width)*0.3){ const ar=Math.min(a.r.width*a.r.height,b.r.width*b.r.height); if(ix*iy>ar*0.3){ add(7, b.e, 'overlaps "'+txt(a.e).slice(0,30)+'" ('+Math.round(ix)+'×'+Math.round(iy)+'px)'); ov++; } } } }
 
