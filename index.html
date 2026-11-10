@@ -8855,15 +8855,15 @@ function ln4Half(bucket){
   return false;
 }
 function ln4HotSectors(){
-  const out = [];
+  /* HT1 — HOT = shared hotSectors() (top 5); ★ followed sectors that are not HOT are added on Today (marked ★, hot:false) */
+  const out = [], seen = new Set();
   try{
-    const tf = rrgTf(), rows = rrgRowsNow();
-    rows.forEach(x=>{
-      if(!x || x.err || !x.quad || rrgWaiting(x)) return;
-      /* LN4b — HOT = RRG Leading + Fresh only ("weak" = outperforming but fading is dropped); ★ followed sectors always listed (first) */
-      const lead = x.quad === 'lead', fresh = !lead && x.quad !== 'weak' && rrgIsFresh(x, tf);
+    const hs = hotSectors();
+    hs.forEach(h=>{ let star = false; try{ star = !!sectorState(h.etf).followed; }catch(e){} seen.add(h.etf); out.push({etf:h.etf, name:tv1SecName(h.etf), k:h.k, star, ratio:h.ratio, hot:true}); });
+    rrgRowsNow().forEach(x=>{
+      if(!x || x.err || !x.quad || rrgWaiting(x) || seen.has(x.sym)) return;
       let star = false; try{ star = !!sectorState(x.sym).followed; }catch(e){}
-      if(lead || fresh || star) out.push({etf:x.sym, name:tv1SecName(x.sym), k: lead ? 'lead' : fresh ? 'fresh' : 'star', star, ratio: +x.ratio || 0, hot: lead || fresh});
+      if(star) out.push({etf:x.sym, name:tv1SecName(x.sym), k:'star', star:true, ratio:+x.ratio || 0, hot:false});
     });
   }catch(e){}
   /* ★ first (strongest first) · then Fresh · then Leading by strength — Mac shows ★ + top 3, the rest is behind +N */
@@ -15873,8 +15873,18 @@ function sectorState(etf){
   try{ const n = sdNote(etf); followed = !!(n && n.follow); }catch(e){}
   return {quad, followed};
 }
+/* HT1 — ONE HOT rule (Today chips · Watch HOT groups · TV "SCREEN - HOT - <Sector>"): candidates = RRG Leading, or Fresh AND in Leading/Improving
+   (Fresh in lag/flat/weak never counts) · ranked by the RRG strength order (rrgSortRows) · cap = top HOT_MAX. ★ never makes a sector HOT by itself. */
+const HOT_MAX = 5;
+function hotSectorsFrom(rows, tf){
+  const c = (rows || []).filter(x=>x && !x.err && x.quad && !rrgWaiting(x) && (x.quad === 'lead' || (x.quad === 'imp' && rrgIsFresh(x, tf))));
+  return rrgSortRows(c).slice(0, HOT_MAX).map(x=>({etf:x.sym, k:x.quad === 'lead' ? 'lead' : 'fresh', ratio:+x.ratio || 0, row:x}));
+}
+function hotSectors(){ try{ return hotSectorsFrom(rrgRowsNow(), rrgTf()); }catch(e){ return []; } }
+function hotSectorSet(){ return new Set(hotSectors().map(h=>h.etf)); }
+function isHotEtf(etf){ return !!etf && hotSectorSet().has(etf); }
 const SECTOR_QN = {lead:'Outperforming ↗', imp:'Recovering', weak:'Outperforming ↘', lag:'Underperforming ↘', flat:'Neutral'};   /* RRG1 — ชื่อสั้นสำหรับ badge */
-function sectorHot(item){ const st = sectorState(item && item.sector_etf); return !!(st && (st.quad==='lead' || st.quad==='weak' || st.followed)); }
+function sectorHot(item){ return isHotEtf(item && item.sector_etf); }
 function sectorBadgeHtml(item){
   const etf = item && item.sector_etf; if(!etf) return '';
   const e = escHtml;
@@ -16135,7 +16145,7 @@ try{   /* WL2 — ข้ามเส้น 430px: gaps/kpi สลับระห
    Sections (a symbol only in its first): HOLD · READY - SETUP · READY · SCREEN - HOT - <Sector> · SCREEN
    Data (settings of acctList[0], via glWrite): tvInfo{KEY:{x:'NASDAQ:NVDA', i:industry, s:sector}} · tvSetup{KEY:'YYYY-MM-DD'} (Setup ✓, expires after 5 trading days)
    · tvSnap{winner:{KEY:section}, ladder:{…}} (snapshot of the last download → change count) · candMeta[KEY] adds industry · sector · tv · source · keep_until
-   HOT sector = existing sectorHot() rule on the stock's sector ETF (Outperforming ↗/↘ in RRG, or ★ followed); ETF = Watchlist sector_etf, else sectorSuggest(industry/sector). */
+   HOT sector = shared hotSectors() (HT1: RRG Leading, or Fresh in Leading/Improving; top 5; ★ alone never makes HOT); ETF = Watchlist sector_etf, else sectorSuggest(industry/sector). */
 const TV1_FILES = {winner:'Dash_Momentum.txt', ladder:'Dash_Compounder.txt'}, TV1_TRK = {winner:'Momentum', ladder:'Compounder'};
 const TV1_CAP = 15, TV1_SETUP_DAYS = 5, TV1_DROP_DAYS = 14, TV1_WARN_DAYS = 12;
 let tv1Menu = false, tv1Imp = null;
@@ -16236,7 +16246,7 @@ function tv1EtfOf(sym, item){
   for(const t of [item && item.industry, m.industry, inf.i, inf.s, m.sector]){ const s = sectorSuggest(t); if(s) return s; }
   return '';
 }
-function tv1HotOf(etf){ if(!etf) return false; try{ const st = sectorState(etf); return !!(st && (st.quad==='lead' || st.quad==='weak' || st.followed)); }catch(e){ return false; } }
+function tv1HotOf(etf){ return isHotEtf(etf); }
 function tv1SecName(etf){ const x = RRG_SYMS.find(r=>r.s===etf); return String(x ? x.n : etf).replace(/[^A-Za-z0-9 &-]+/g, ' ').replace(/\s+/g, ' ').trim(); }
 function tv1CandInfo(r, today){
   const m = td3MetaOf(r.sym), at = m.cand_at || td3IdeaTime(r), day = at ? (td3Day(at) || String(at).slice(0, 10)) : '';

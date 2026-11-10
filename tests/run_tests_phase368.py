@@ -39,7 +39,7 @@ def setup_data(page):
     """HOLD NVDA(core open) · Sat open SATX · wl: AVGO(setup) META CRWD(SMH) AMD(ladder) DELTA.BK(TH) · cands MU/LRCX(semis=HOT) FTNT DDOG(cold)"""
     js(page, "(t)=>{ const B=getBook('main'); B.trades=t; saveBook('main'); render(); }", [P13.T("t1", "core", "open", sym="NVDA", entry=100, sl=90, qty=10, cur="USD", date="2026-09-20"), P13.T("t2", "satB", "open", sym="SATX", entry=10, sl=9, qty=10, cur="USD", date="2026-09-20")])
     T.wl_seed(page, [W("NVDA"), W("AVGO"), W("META", industry="Software"), W("CRWD", sector_etf="SMH"), W("AMD", ladder_watch=True, ladder_watch_set=True), W("DELTA.BK", mk="TH", ladder_watch=True, ladder_watch_set=True)])
-    js(page, "()=>{ window.sectorState = etf=>({quad: etf==='SMH' ? 'lead' : 'lag', followed:false}); }")
+    js(page, "()=>{ window.sectorState = etf=>({quad: etf==='SMH' ? 'lead' : 'lag', followed:false}); window.hotSectors = ()=>[{etf:'SMH', k:'lead', ratio:1}]; }")
     cand(page, "MU", "Semiconductors", days=3); cand(page, "LRCX", "Semiconductors", days=5)
     cand(page, "FTNT", "Software", days=9, reasons=[]); cand(page, "DDOG", "", days=1, reasons=["earnings-spike"])
     js(page, "()=>glWrite(S=>{ S.tvInfo = {NVDA:{x:'NASDAQ:NVDA'}, MU:{x:'NASDAQ:MU'}, AMD:{x:'NASDAQ:AMD'}}; S.tvSetup = {AVGO:thaiToday()}; })")
@@ -221,7 +221,7 @@ def tests_tv1b(pw, w, h, backfill):
     b, c, page, ce, pe, dl, env = P59.launch(pw, w, h, mut=mut, ideas=tv1b_ideas())
     try:
         settle(page, 1800)
-        js(page, "()=>{ window.sectorState = etf=>({quad: (etf==='SMH' || etf==='IGV') ? 'lead' : 'lag', followed:false}); }")
+        js(page, "()=>{ window.sectorState = etf=>({quad: (etf==='SMH' || etf==='IGV') ? 'lead' : 'lag', followed:false}); window.hotSectors = ()=>[{etf:'SMH', k:'lead', ratio:1},{etf:'IGV', k:'lead', ratio:1}]; }")
         js(page, "()=>{ switchTab('watch'); wlSetView('cand'); }"); settle(page, 600)
         m = js(page, "()=>JSON.parse(JSON.stringify(tdSettings().candMeta||{}))")
         check(f"{tag} Event idea: EV1 source 'Event' · idea_id iE · industry Semiconductors · sector_etf SMH", m.get("EV1", {}).get("source") == "Event" and m["EV1"].get("idea_id") == "iE" and m["EV1"].get("industry") == "Semiconductors" and m["EV1"].get("sector_etf") == "SMH", m.get("EV1"))
