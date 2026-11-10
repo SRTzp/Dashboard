@@ -156,7 +156,7 @@ def phone(pw):
           const mo=[...document.querySelectorAll('[data-ln4-hotmore]')].filter(e=>e.getBoundingClientRect().height>0);
           const all=[...cs,...mo]; return {chips:cs.length, names:cs.map(e=>e.innerText.trim()), more:mo.map(e=>e.innerText), rows:new Set(all.map(e=>Math.round(e.getBoundingClientRect().top/8))).size, fs:cs.length?parseFloat(getComputedStyle(cs[0]).fontSize):0, right:Math.max(...all.map(e=>e.getBoundingClientRect().right)), hotRight:document.querySelector('[data-ln4-hot]').getBoundingClientRect().right}; }""")
         allnames = js(page, "()=>[...document.querySelectorAll('[data-ln4-hotchip]')].map(e=>e.innerText.trim())")
-        check(f"{tag} HOT: ONE row · as many chips as fit, same order (★ first) · +N = the rest · 11.5px", hot["chips"] >= 2 and hot["names"][0].startswith("★") and hot["names"] == allnames[:hot["chips"]] and hot["more"] == [f"+{len(H) - hot['chips']}"] and hot["rows"] == 1 and abs(hot["fs"] - 11.5) < 0.1 and hot["right"] <= hot["hotRight"] + 1, hot)
+        check(f"{tag} HOT: ONE row · as many chips as fit, same order (★ first) · +N = the rest · 13px (UA1 floor)", hot["chips"] >= 2 and hot["names"][0].startswith("★") and hot["names"] == allnames[:hot["chips"]] and hot["more"] == [f"+{len(H) - hot['chips']}"] and hot["rows"] == 1 and abs(hot["fs"] - 13) < 0.1 and hot["right"] <= hot["hotRight"] + 1, hot)
         page.locator("[data-ln4-hotmore]:visible").click(); settle(page, 300)
         full = js(page, "()=>[...document.querySelectorAll('[data-ln4-hotsheet] [data-ln4-hotchip]')].length")
         check(f"{tag} HOT: '+N' opens the full list (all {len(H)})", full == len(H), full)
@@ -164,7 +164,7 @@ def phone(pw):
         # ── TODAY events ──
         ev = js(page, """()=>({lines:[...document.querySelectorAll('[data-ln4-evl]')].map(e=>e.innerText.replace(/\\s+/g,' ')), more:(document.querySelector('[data-ln4-evmore]')||{}).innerText||'', chips:[...document.querySelectorAll('[data-ln4-ev]')].filter(e=>e.getBoundingClientRect().height>0).length,
           cal:(()=>{const c=document.querySelector('[data-td3-cal]').getBoundingClientRect(), k=document.querySelector('[data-ln4-today] .k').getBoundingClientRect(); return Math.abs((c.top+c.height/2)-(k.top+k.height/2));})(),
-          oneLine:[...document.querySelectorAll('[data-ln4-evl]')].every(e=>e.getBoundingClientRect().height<=34)})""")
+          oneLine:[...document.querySelectorAll('[data-ln4-evl]')].every(e=>{ const r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect().height < 24; })})""")
         check(f"{tag} TODAY: ≤ 3 lines, grouped same-time, 'US CPI + Core CPI'-style", len(ev["lines"]) == 3 and ev["lines"][0].endswith("XAUUSD · BTCUSD") is False and "Core CPI (Oct) + CPI (Oct)" in ev["lines"][0] and ev["more"].startswith("+"), ev)
         dots = js(page, "()=>[...document.querySelectorAll('[data-ln4-evl] [data-ln4-impact]')].map(e=>e.dataset.ln4Impact)")
         check(f"{tag} TODAY: impact dots on lines (HIGH red / MED amber), LOW hidden", dots and set(dots) <= {"HIGH", "MED"}, dots)

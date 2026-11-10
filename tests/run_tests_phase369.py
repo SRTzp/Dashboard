@@ -408,7 +408,7 @@ def sat(pw, w, h):
             r1 = js(page, "()=>{ const q=s=>document.querySelector(s); const a=q('[data-pf-row=\"1\"]'), z=q('[data-pf-row=\"2\"]'), su=q('[data-pf-row=\"3\"]'); const tf=a.querySelector('[data-pf-tf]').parentElement, tr=a.querySelector('[data-pf-trend-sel]').parentElement, v=a.querySelector('[data-pf-verify]'); const y=e=>Math.round(e.getBoundingClientRect().top); return {one: Math.abs(y(tf)-y(tr))<6 && Math.abs(y(tr)-y(v))<6 || window.innerWidth<600, zoneBelow: y(z)>y(a), setupOneRow: new Set([...su.querySelectorAll('.pf-chip')].map(y)).size===1 || window.innerWidth<600}; }")
             check(f"{tag} D8 Trade Overview: TF · Trend · Verify on ONE row, Zone below; Setup chips on one row", r1["one"] and r1["zoneBelow"] and r1["setupOneRow"], r1)
             pills = js(page, "()=>[...document.querySelectorAll('[data-ln4-cp]')].map(e=>e.dataset.ln4Cp)")
-            check(f"{tag} S pills row under Entry/SL/TP", "setup" in pills and "rr" in pills, pills)
+            check(f"{tag} S pills row under Entry/SL/TP", "setup" in pills and "rr" not in pills, pills)   # UA1: R:R lives in the R:R bar pill only
             check(f"{tag} S Sat Starter switch above the account rows (default ON)", cnt(page, "[data-ln4-sat-starter] input:checked") == 1)
         else:
             check(f"{tag} D7 form not rendered in test fixture", False, "no [data-ln4-all]")
