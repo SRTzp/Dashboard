@@ -37,3 +37,11 @@ Levels: `plan.ps1.rows[]` (planned levels) vs `lots[]` (filled). Incomplete = no
 New: `tests/run_tests_phase373.py` (390 / 1280 / 1440 + iPhone swipe, §11 items 1–14 + §2b/§2c) — **235 checks, all pass**. Screenshots: `tests/pb1_shots.py` → `tests/screenshots/pb1-*.png`.
 Rerun (all green except pre-existing failures that also fail on `origin/main`): 59 ✓ · 106 ✓ · 367 (2 pre-existing: "3 stale → 2 shown + '+1'") · 368 TV1 ✓ · 369 LN4 ✓ · 370 ✓ · 371 LN4b (2 pre-existing HOT-count/order failures) · 372 ✓ · MS1 ✓ · HT1 ✓ · SW2 ✓ · 100 (WI2) ✓ · `tests/ui_audit.py` (see below).
 Old tests updated for the new layout: `run_tests_phase369.py` (Act rows now board-driven; no Raise-stop; Plan strips → board cards; "Record fill" → "Filled ✓"), `run_tests_phase371.py` (fixtures near entry + setup ✓; Act squeeze test stubs `bdActRows`), `run_tests_phase_sw2.py` (Plan swipe = status segments), `run_tests_phase100.py` (Weekly Impact on Flow), `ui_audit.py` (board / drawer / popup screens).
+
+### Review-fix round
+- **One extra stored field besides `log[]`: `ln4.placedLv = {levelIndex: ISO}`** (core cards). Several levels can be Ordered at once; Filled ✓ / Cancel are per level. Legacy `ln4.placedAt` is still read and treated as the first unfilled level; it is cleared when that level is filled. Flags for filled levels are ignored.
+- Popup Momentum row fixed (the `.sel` class collided with LN4's Find selector → renamed `bd-sel`).
+- Core | Sat switch removed from the top bar; "Sat assets ›" kept.
+- Holding row 3 is one line: R · one state (add-on ready > `Entries k/n · next px [· ordered]` > 0 risk); "stop below avg" removed; size text only when no Entries text.
+- Port Risk tiles: 4 in a row on Mac, 2×2 on iPhone. "Risk in use" (ps1: open positions, principal at stop, home account) and the legacy "Open Risk รวม" (all accounts, cost-to-SL) measure different things, so both stay and are labelled `Risk in use (open · home acct)` / `Open Risk รวม (all accts · to SL)`. Neither includes planned orders.
+- Sat editor screenshots via F from Today: `tests/screenshots/pb1-sat-editor-{390,1440}.png`.
