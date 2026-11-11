@@ -33,6 +33,19 @@ Map from the current plan model (find the real field names; document them in the
 - When the last missing item is filled and saved → card moves to Ready automatically; log `Plan completed · Entry x · SL y`.
 - Tests: save draft without Entry → card in "Waiting for setup" with `needs Entry · SL`; risk unchanged; Complete › opens form at Entry; fill + save → moves to Ready + log; Setup 1/3 shown for a Sat plan with entry but partial setup.
 
+## 2c. Multiple entry levels (MMT starter + add-on, COMP ladder 2–3+ levels) — one card per plan
+- Use the existing multi-entry model (LN4 split rows 25/75, ladder, add-on rows — find the real fields; document in the PR). Do not change how levels are stored.
+- **Card column = overall state:** any level filled → ✅ Holding; else any level ordered → 📌 Ordered; else 📝 Planned.
+- **Card, Planned/Ordered:** Row 2 = first (highest) entry + `+N lower` grey (e.g. `Entry 341.20 +2 lower · SL 326.00`). `% to entry` = to the **nearest unfilled** level.
+- **Card, Holding:** Row 2 = `Avg` (filled-size-weighted average, same calc the app uses now) · SL · `Entries k/n`. Row 3 = R + next unfilled level and its state (`next 378.00 · ordered` / `add-on 176.00 · planned`).
+- **Pill (Holding with unfilled levels):** next level Planned and < 2% away → `Place order ›` (that level); next level Ordered → `Record fill` (that level); MMT add-on keeps the existing add-on rule (`Add-on ›`). Otherwise as §3.
+- **Drawer:** new section **ENTRIES** under LEVELS: one row per level `#k · price · size % · ✅ Filled / 📌 Ordered / 📝 Planned`; each unfilled row has its own small action (Place order / Record fill / Cancel order) calling the existing per-row handlers. LEVELS shows `Avg` instead of `Entry` once anything is filled.
+- **Log** per level: `#2 order placed 390.00`, `#2 filled 390.00`, `#3 order cancelled`.
+- **Cancel order** on one level returns only that level to Planned; the card column follows the overall rule above.
+- **Today Act:** a Holding plan whose next level is < 2% away (or ordered) appears with that level's action.
+- Risk: existing calculation (planned vs filled levels) unchanged.
+- Tests: COMP 3-level plan — all planned → Planned `+2 lower`; #1 ordered → Ordered; #1 filled → Holding `Entries 1/3` + avg; #2 order/fill via drawer rows → log `#2 …`; cancel #3 → stays Holding. MMT starter ¼ filled + add-on planned → Holding `add-on … · planned`, Add-on pill only when rule met.
+
 ## 3. Card (one per plan)
 Row 1: ticker (bold) · type tag · HOT tag if `hotSectors()` includes its sector · small `Family` tag when the plan's account is Family (no tag = Main).
 Row 2: Entry · SL · TP (TP only if set). Use existing price formatter.
