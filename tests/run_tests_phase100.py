@@ -83,7 +83,8 @@ def seed(page, d, week=None):
 
 
 def go_strategy(page, w_asset="XAUUSD"):
-    js(page, "(a)=>{ switchTab('plan'); setPlanScope('future'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); }", w_asset); settle(page, 700)
+    # PB1 §5: Weekly Impact moved from Plan › Sat to the top of Flow
+    js(page, "(a)=>{ switchTab('flow'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); bdFlowTopRender(); }", w_asset); settle(page, 700)
 
 
 def go_today(page):

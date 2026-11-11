@@ -55,10 +55,10 @@ def row(page, s): return next((r for r in rows(page) if r["s"] == s), None)
 def tests(pw, w, h):
     tag = f"[{ENGINE}/{w}]"
     cards = {
-        "ccAM": P24.card("ccAM", "main", "AMD", plan={"entry": 182.5, "stop": 170}, px=170, pxDate="2026-10-01"),
+        "ccAM": P24.card("ccAM", "main", "AMD", plan={"entry": 182.5, "stop": 170}, px=181, pxDate="2026-10-01"),   # PB1: Act lists only urgent rows → keep AMD < 2% from entry
         "ccNV": P24.open_card("ccNV", "tNV", ticker="NVDA", acct="main", qty=10, entry=171.4, sl=168, tier="A",
                               lots=[{"n": 1, "date": "2026-09-10", "px": 171.4, "qty": 10, "f": 1, "stop": 168}]),
-        "ccAV": P24.card("ccAV", "main", "AVGO", plan={"entry": 341.2, "stop": 320}, px=330, pxDate="2026-10-01", track="ladder"),
+        "ccAV": P24.card("ccAV", "main", "AVGO", plan={"entry": 341.2, "stop": 320}, px=340, pxDate="2026-10-01", track="ladder"),
         "ccET": P24.card("ccET", "main", "ETN", plan={"entry": 300, "stop": 280}, px=310, pxDate="2026-10-01"),
     }
     b, page, ce, pe = T.launch(pw, w, h, iso=NOW, picks=(), weekly=False)
@@ -114,11 +114,11 @@ def tests(pw, w, h):
         refresh(page)
         R = rows(page)
         order = [r["s"] for r in R if r["k"] == "core"]
-        check(f"{tag} 2 CORE group: MMT rows first, then COMP", order.index("AVGO") > order.index("AMD") and order.index("AVGO") > order.index("NVDA") and row(page, "AVGO")["pt"] == "COMP", order)
+        check(f"{tag} 2 PB1: Act rows come from the board, nearest-to-entry first (AVGO 0.4% before AMD 0.8%), COMP/MMT tags kept", order.index("AVGO") < order.index("AMD") and row(page, "AVGO")["pt"] == "COMP" and "NVDA" not in order, order)
         check(f"{tag} 2 Draft AMD: all checks pass → green 'Place order ›'", row(page, "AMD")["btn"] == "Place order ›" and row(page, "AMD")["st"] == "draft", row(page, "AMD"))
         check(f"{tag} 2 no separate check row (one element per plan)", cnt(page, "[data-ln4-row]") == len(R) and cnt(page, ".gc") == 0)
-        check(f"{tag} 2 ETN (no Setup ✓) → red 'No Setup ✓' + amber 'Setup ✓ ›'", row(page, "ETN")["why"] == "No Setup ✓" and row(page, "ETN")["btn"] == "Setup ✓ ›", row(page, "ETN"))
-        check(f"{tag} 2 open NVDA with stop < avg → 'Raise stop ›'", row(page, "NVDA")["btn"] == "Raise stop ›" and row(page, "NVDA")["st"] == "open", row(page, "NVDA"))
+        check(f"{tag} 2 PB1: ETN (no Setup ✓) = incomplete → not in Act; board card is 'needs Setup ✓' + 'Complete ›'", row(page, "ETN") is None and js(page, "()=>{ const x = bdItems().find(i=>i.sym==='ETN'); return !!(x && x.inc && x.inc.text === 'needs Setup ✓' && bdPill(x).t === 'Complete ›'); }"))
+        check(f"{tag} 2 PB1: open NVDA with stop < avg → no 'Raise stop ›' (removed) · not in Act · board pill 'Edit'", row(page, "NVDA") is None and js(page, "()=>{ const x = bdItems().find(i=>i.sym==='NVDA'); return !!(x && x.status === 'hold' && bdPill(x).t === 'Edit'); }"))
         stub(page, "window.ffPoolFactor = ()=>({cap:50, demo:false, age:0});")
         refresh(page)
         check(f"{tag} 2 regime half → MMT tag becomes 'MMT ½' (amber)", row(page, "AMD")["pt"] == "MMT ½", row(page, "AMD"))
@@ -130,26 +130,28 @@ def tests(pw, w, h):
         # state flow Draft → Order working
         stub(page, "window.confirm = ()=>true;")
         page.locator('[data-ln4-row="AMD"] [data-ln4-btn]').click(); settle(page, 700)
-        check(f"{tag} 2 Place order › (confirm) → 'Order working' + 'Record fill'", row(page, "AMD")["st"] == "working" and row(page, "AMD")["btn"] == "Record fill", row(page, "AMD"))
+        check(f"{tag} 2 Place order › (confirm) → 'Order working' + 'Filled ✓'", row(page, "AMD")["st"] == "working" and row(page, "AMD")["btn"] == "Filled ✓", row(page, "AMD"))
         check(f"{tag} 2 working time stored on the card", js(page, "()=>{ const c = coreCardsList.find(x=>x.ticker==='AMD'); return !!(c.ln4 && c.ln4.placedAt); }"))
-        # §8 Plan tab cards follow the same states
-        js(page, "()=>{ switchTab('plan'); setPlanScope('stock'); }"); settle(page, 600)
-        pc = js(page, "()=>{ const e = document.querySelector('[data-ln4-pc=\"AMD\"]'); return e ? {st:e.dataset.ln4State, t:e.innerText, tag:(e.querySelector('[data-ln4-ptag]')||{}).innerText} : null; }")
-        check(f"{tag} 8 Plan card AMD: Order working (blue) with Record fill + Cancel order, MMT tag", pc and pc["st"] == "working" and "Record fill" in pc["t"] and "Cancel order" in pc["t"] and pc["tag"].startswith("MMT"), pc)
-        nv = js(page, "()=>{ const e = document.querySelector('[data-ln4-pc=\"NVDA\"]'); return e ? e.innerText : null; }")
-        check(f"{tag} 8 Plan card NVDA (open, stop < avg) → status Open + 'Raise stop ›'", nv and "Open" in nv and "Raise stop" in nv, nv)
-        page.locator('[data-ln4-pc="AMD"] [data-ln4-cancel]').click(); settle(page, 700)
-        pc2 = js(page, "()=>{ const e = document.querySelector('[data-ln4-pc=\"AMD\"]'); return e ? {st:e.dataset.ln4State, t:e.innerText} : null; }")
-        check(f"{tag} 8 Cancel order → back to Draft (Place order ›), placedAt cleared", pc2 and pc2["st"] == "draft" and "Place order" in pc2["t"] and js(page, "()=>!coreCardsList.find(x=>x.ticker==='AMD').ln4.placedAt"), pc2)
+        # PB1 §3/§4: the Plan tab is the board — same states, same handlers (the old per-card strips are gone)
+        js(page, "()=>{ switchTab('plan'); }"); settle(page, 600)
+        pc = js(page, "()=>{ const e = document.querySelector('[data-bd-card=\"ccAM\"]'); return e ? {st:e.dataset.bdStatus, t:e.innerText, tag:(e.querySelector('[data-bd-tag]')||{}).innerText} : null; }")
+        check(f"{tag} 8 Plan board card AMD: 📌 Ordered with 'Filled ✓', MMT tag", pc and pc["st"] == "ord" and "Filled ✓" in pc["t"] and pc["tag"].startswith("MMT"), pc)
+        nv = js(page, "()=>{ const e = document.querySelector('[data-bd-card=\"ccNV\"]'); return e ? {st:e.dataset.bdStatus, t:e.innerText} : null; }")
+        check(f"{tag} 8 Plan board card NVDA (open, stop < avg) → ✅ Holding + 'Edit' (no 'Raise stop')", nv and nv["st"] == "hold" and "Edit" in nv["t"] and "Raise" not in nv["t"], nv)
+        js(page, "()=>bdOpen('ccAM')"); settle(page, 300)
+        page.locator('[data-bd-cancel]').click(); settle(page, 700)
+        pc2 = js(page, "()=>{ const e = document.querySelector('[data-bd-card=\"ccAM\"]'); return e ? {st:e.dataset.bdStatus, t:e.innerText} : null; }")
+        check(f"{tag} 8 Cancel order (drawer) → back to 📝 Planned (Place order ›), placedAt cleared", pc2 and pc2["st"] == "plan" and "Place order" in pc2["t"] and js(page, "()=>!coreCardsList.find(x=>x.ticker==='AMD').ln4.placedAt"), pc2)
+        js(page, "()=>bdClose()")
         js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 500)
         page.locator('[data-ln4-row="AMD"] [data-ln4-btn]').click(); settle(page, 700)
         # failing checks
-        seed(page, {"ccBD": P24.card("ccBD", "main", "BAD1", plan={"entry": 100, "stop": 99.5}, px=90, pxDate="2026-10-01"),
+        seed(page, {"ccBD": P24.card("ccBD", "main", "BAD1", plan={"entry": 100, "stop": 99.5}, px=99.5, pxDate="2026-10-01"),
                     "ccNS": P24.card("ccNS", "main", "NOSTOP", plan={"entry": 100, "stop": 0}, px=90, pxDate="2026-10-01")})
         setup_ok(page, ["AMD", "AVGO", "BAD1", "NOSTOP"])
         check(f"{tag} 2 MS1: stop tighter than min → NOT an error: no Fix button, grey '· 🛡️ sized on min stop'", row(page, "BAD1")["btn"] == "Place order ›" and not row(page, "BAD1")["why"] and "sized on min stop" in js(page, "()=>document.querySelector('[data-ln4-row=\"BAD1\"]').innerText"), row(page, "BAD1"))
-        check(f"{tag} 2 no stop → 'No stop' + 'Set stop ›'", row(page, "NOSTOP")["why"] == "No stop" and row(page, "NOSTOP")["btn"] == "Set stop ›", row(page, "NOSTOP"))
-        page.locator('[data-ln4-row="NOSTOP"] [data-ln4-btn]').click(); settle(page, 1200)
+        check(f"{tag} 2 PB1: no stop = incomplete → not in Act; board 'needs SL' + 'Complete ›'", row(page, "NOSTOP") is None and js(page, "()=>{ const x = bdItems().find(i=>i.sym==='NOSTOP'); return !!(x && x.inc && x.inc.text === 'needs SL' && bdPill(x).t === 'Complete ›'); }"))
+        js(page, "()=>bdComplete(bdItems().find(i=>i.sym==='NOSTOP').id)"); settle(page, 1200)
         check(f"{tag} 2 'Set stop ›' opens the plan form focused on the Stop field", js(page, "()=>document.activeElement && document.activeElement.id") == "cnStop" and cnt(page, "#cnTicker[readonly]") == 1, js(page, "()=>document.activeElement && document.activeElement.id"))
         js(page, "()=>coreSheetClose()"); settle(page, 300)
         T.go_today(page)
@@ -301,7 +303,7 @@ def starter(pw, w, h):
         settle(page, 600)
         js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 500)
         r1 = row(page, "AAA")
-        check(f"{tag} S5 stop below avg → 'Raise stop ›' (no Add-on yet)", r1 and r1["btn"] == "Raise stop ›", r1)
+        check(f"{tag} S5 PB1: stop below avg → no 'Raise stop ›' pill (removed) · no Add-on yet", r1 is None, r1)
         stub(page, "getBook('main').trades.find(t=>t.id==='tX').sl = 100; saveBook('main'); const c = coreCardsList.find(x=>x.ticker==='AAA'); coreWrite(c.id, {stop:100}); todayRefresh(true);")
         settle(page, 500)
         r2 = row(page, "AAA")

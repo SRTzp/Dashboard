@@ -3769,7 +3769,7 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
 .bd-editbar{display:flex;align-items:center;gap:10px;margin:0 0 12px}
 .bd-satnote{font-size:12.5px;color:var(--muted);margin:0 0 8px}
 #tabPlan.lf-stock[style*="display: block"]{grid-template-columns:minmax(0,1fr)!important}
-.bd{padding:2px 0 24px}
+.bd{padding:2px 0 24px;min-height:calc(100dvh - 170px)}
 .bd-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 2px 8px}
 .bd-head h2{margin:0;font-size:19px}
 .bd-sum{color:var(--muted);font-size:13px}.bd-sum b{color:var(--text,#141518)}
@@ -3856,6 +3856,7 @@ button.bd-read{cursor:pointer}
 .bd-det{margin-top:12px}
 .bd-lgrow{margin-top:6px}
 .bd-more{display:block;margin:6px 0 0}
+.bd-lvr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--border);font-size:13.5px}.bd-lvr:first-child{border-top:0}.bd-lvr[data-bd-lvst=filled] b{color:var(--teal)}
 .bd-jlog{margin-top:4px;font-size:12.5px;white-space:normal}.bd-jlog summary{cursor:pointer;color:var(--blue);font-weight:600;min-height:24px}.bd-jth{color:var(--muted);margin:4px 0}
 </style>
 </head>
@@ -9310,7 +9311,7 @@ function ln4CoreRows(){
       } else if(c.ln4 && c.ln4.placedAt){
         row.state = 'working'; row.status = 'Order working';
         row.det = `${+(c.px) > 0 && +pl.entry < +c.px ? 'Buy Limit' : 'Buy Stop'} ${(+pl.entry).toFixed(2)}${star}`;
-        row.btn = {t:'Record fill', fn:`ln4RecordFill('${c.id}')`};
+        row.btn = {t:'Filled ✓', fn:`ln4RecordFill('${c.id}')`};
       } else {
         row.state = 'draft'; row.status = 'Draft';
         row.det = `${+(c.px) > 0 && +pl.entry < +c.px ? 'Buy Limit' : 'Buy Stop'} ${(+pl.entry).toFixed(2)}${star}`;
@@ -9338,7 +9339,7 @@ function ln4SatRows(){
       row.det = det;
       try{ row.counter = satV2Sleeve(i) !== 'tactical' && (i.counter_trend === true || ln4VerifyOf(i).counter); row.macro = ln4MacroWarn(i); }catch(e){}
       if(rs === 'open'){ row.state = 'open'; row.status = 'Open'; }
-      else if(i.ln4 && i.ln4.placedAt){ row.state = 'working'; row.status = 'Order working'; row.btn = {t:'Record fill', fn:`ln4RecordFill('${i.id}')`}; }
+      else if(i.ln4 && i.ln4.placedAt){ row.state = 'working'; row.status = 'Order working'; row.btn = {t:'Filled ✓', fn:`ln4RecordFill('${i.id}')`}; }
       else {
         row.state = 'draft'; row.status = 'Draft';
         if(r.k === 'pending') row.bad = r.st.verify ? {why:'Need EMA50 or Structure verify', btn:'Verify ›', k:'verify'} : /^Needs /.test((r.st.list || [])[0] || '') ? {why:(r.st.list || [])[0], btn:'Verify ›', k:'verify'} : {why:`Setup ${ln4SetupN(i)}/3`, btn:'Setup ›', k:'setup'};
@@ -29020,6 +29021,9 @@ function bdItems(){
       const pl = c.plan || {}, v = coreView(c, coreCtx(c.acct)), hold = r.state === 'open';
       const entry = hold ? +v.avg : +pl.entry, sl = hold ? +v.stop : +pl.stop, tp = +(pl.tp || pl.target || 0), px = +c.px > 0 ? +c.px : null;
       const it = {id, kind:'core', tag:r.tag, sym:c.ticker, acct:c.acct, fam:bdFam(c.acct), row:r, ref:c, status:hold ? 'hold' : r.state === 'working' ? 'ord' : 'plan', entry, sl, tp, px, pct:null, R:null, inc:null, flags:{}, log:Array.isArray(c.log) ? c.log : []};
+      /* PB1 §2c — multiple entry levels come from the existing plan rows (plan.ps1.rows) · filled levels = lots[] (no storage change) */
+      { const rows = (pl.ps1 && Array.isArray(pl.ps1.rows) && pl.ps1.rows.length) ? pl.ps1.rows.map(x=>({px:+x.px, qty:+x.qty})) : [{px:+pl.entry, qty:null}];
+        it.levels = rows; it.lvOrdered = !!(c.ln4 && c.ln4.placedAt); it.nl = rows.length; it.k = hold ? Math.min(rows.length, Math.max(1, (c.lots || []).length)) : 0; }
       if(px && entry > 0) it.pct = (entry - px) / px * 100;
       if(hold){
         const init = (+pl.entry > +pl.stop && +pl.stop > 0) ? +pl.entry - +pl.stop : (+v.avg - +v.stop);
@@ -29068,7 +29072,8 @@ function bdPill(it){
     if(Math.abs(it.pct) < 2) return {t:'Place order ›', cls:'p', fn:`ln4Place('${it.kind}','${q(id)}')`, k:'place'};
     return {t:'Edit', cls:'', fn:`bdEditLv('${q(id)}')`, k:'edit'};
   }
-  if(it.status === 'ord') return {t:'Record fill', cls:'', fn:`bdFill('${q(id)}')`, k:'fill'};
+  if(it.status === 'ord') return {t:'Filled ✓', cls:'', fn:`bdFill('${q(id)}')`, k:'fill'};
+  if(it.lvOrdered && it.k < it.nl) return {t:'Filled ✓', cls:'', fn:`bdFill('${q(id)}')`, k:'fill'};
   if(it.flags.addon) return {t:'Add-on ›', cls:'p', fn:`bdAddon('${q(id)}')`, k:'addon'};
   return {t:'Edit', cls:'', fn:`bdEditLv('${q(id)}')`, k:'edit'};
 }
@@ -29098,12 +29103,14 @@ function bdCardHtml(it){
   const p = bdPill(it), e = bdE, id = e(it.id);
   const fam = it.fam ? `<span class="bd-fam" data-bd-fam>Family</span>` : '';
   const hot = it.kind === 'core' ? bdHotTag(it.sym) : '';
-  let r2 = it.inc && !(it.entry > 0) ? `<span class="bd-m">${it.known ? 'Zone ' + e(it.known) : 'No entry yet'}</span>` : `<span>Entry <b>${bdFmt(it.entry)}</b></span><span>SL <b>${bdFmt(it.sl)}</b></span>${it.tp > 0 ? `<span>TP <b>${bdFmt(it.tp)}</b></span>` : ''}`;
+  const multi = it.nl > 1, nxt = multi && it.k < it.nl ? it.levels[it.k] : null;
+  let r2 = it.inc && !(it.entry > 0) ? `<span class="bd-m">${it.known ? 'Zone ' + e(it.known) : 'No entry yet'}</span>` : `<span>${it.status === 'hold' && multi ? 'Avg' : 'Entry'} <b>${bdFmt(it.entry)}</b>${multi && it.status !== 'hold' ? ` <small class="bd-m" data-bd-lower>+${it.nl - 1} lower</small>` : ''}</span><span>SL <b>${bdFmt(it.sl)}</b></span>${it.tp > 0 ? `<span>TP <b>${bdFmt(it.tp)}</b></span>` : ''}`;
   let l3;
   if(it.status === 'hold'){
     const R = it.R == null ? `<span class="bd-m" data-bd-r="na">— R</span>` : `<b class="bd-r ${it.R >= 0 ? 'up' : 'dn'}" data-bd-r="${it.R >= 0 ? 'up' : 'dn'}">${it.R >= 0 ? '+' : '−'}${Math.abs(it.R).toFixed(1)}R</b>`;
     const st = it.flags.addon ? `<span class="bd-st g">add-on ready</span>` : it.flags.zero ? `<span class="bd-st">0 risk</span>` : it.flags.below ? `<span class="bd-st a">stop below avg</span>` : '';
-    l3 = `${R}${st}${it.size ? `<span class="bd-m" data-bd-size>${e(it.size)}</span>` : ''}`;
+    const nx = multi ? `<span class="bd-m" data-bd-entries>Entries ${it.k}/${it.nl}${nxt ? ' · next ' + bdFmt(nxt.px) + ' ' + (it.flags.addon ? 'add-on ready' : (it.lvOrdered ? 'ordered' : 'waiting')) : ' · all in'}</span>` : '';
+    l3 = `${R}${st}${it.size ? `<span class="bd-m" data-bd-size>${e(it.size)}</span>` : ''}${nx}`;
   }else if(it.inc) l3 = `<span class="bd-m" data-bd-need>${e(it.inc.text)}</span>`;
   else l3 = bdToEntry(it);
   return `<div class="bd-card" role="button" tabindex="0" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${it.inc ? ' data-bd-inc="1"' : ''} onclick="bdOpen('${id}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();bdOpen('${id}')}">
@@ -29192,29 +29199,32 @@ function bdLevelWatch(){
     if(+it.entry !== +s.entry && (+it.entry > 0 || +s.entry > 0)) ch.push(['entry', `Entry ${f(s.entry)} → ${f(it.entry)}`]);
     if(+it.sl !== +s.sl && (+it.sl > 0 || +s.sl > 0)) ch.push(['sl', `SL ${f(s.sl)} → ${f(it.sl)}`]);
     if(+it.tp !== +s.tp && (+it.tp > 0 || +s.tp > 0)) ch.push(['tp', `TP ${f(s.tp)} → ${f(it.tp)}`]);
+    const completed = s.inc && !it.inc && it.status === 'plan';
+    if(!ch.length && !completed) return;   /* nothing changed yet (form still open) — keep the snapshot until a change or 10 min */
     delete bdSnaps[id];
-    if(s.inc && !it.inc && it.status === 'plan'){ ch.length = 0; const r = bdLogAdd(id, 'note', `Plan completed · Entry ${f(it.entry)} · SL ${f(it.sl)}`); if(r) bdReason = {id, idx:r.idx}; return; }
+    if(completed){ ch.length = 0; const r = bdLogAdd(id, 'note', `Plan completed · Entry ${f(it.entry)} · SL ${f(it.sl)}`); if(r) bdReason = {id, idx:r.idx}; return; }
     if(!ch.length) return;
     const txt = ch.map(x=>x[1]).join(' · '), r = bdLogAdd(id, ch[0][0], txt);
     if(r) bdReason = {id, idx:r.idx};
   });
-  /* fills / add-ons started here */
+  /* fills / add-ons started here: every new lot = one log line  '#k filled @ px' */
   Object.keys(bdWatch).forEach(id=>{
     const w = bdWatch[id], it = bdById(id);
     if(Date.now() - w.at > 600000){ delete bdWatch[id]; return; }
-    if(!it){ return; }
-    const nl = it.kind === 'core' ? (it.ref.lots || []).length : null;
-    if(w.k === 'fill' && it.status === 'hold'){
-      delete bdWatch[id]; const px = it.entry > 0 ? td3Num(it.entry) : '—';
-      bdLogAdd(id, 'fill', `Filled @ ${px} · ${it.size || 'full'}`);
-    }else if(w.k === 'addon' && nl != null && nl > w.n0){
-      delete bdWatch[id]; bdLogAdd(id, 'addon', `Add-on filled · full`);
-    }
+    if(!it) return;
+    if(it.kind === 'core'){
+      const L = it.ref.lots || [];
+      if(L.length > w.n0){
+        delete bdWatch[id];
+        const n = L.length, lot = L[n - 1] || {}, px = +lot.px > 0 ? td3Num(+lot.px) : (it.entry > 0 ? td3Num(it.entry) : '—');
+        bdLogAdd(id, n > 1 ? 'addon' : 'fill', `#${n} filled @ ${px} · ${n > 1 ? (n >= it.nl ? 'full' : 'add-on') : (it.size || 'full')}`);
+      }
+    }else if(w.k === 'fill' && it.status === 'hold'){ delete bdWatch[id]; bdLogAdd(id, 'fill', `#1 filled @ ${it.entry > 0 ? td3Num(it.entry) : '—'} · full`); }
   });
 }
 
 /* ── pill actions (existing handlers · plus a log entry) ── */
-function bdFill(id){ const it = bdById(id); if(!it) return; bdWatch[id] = {k:'fill', at:Date.now(), n0:it.kind === 'core' ? (it.ref.lots || []).length : 0}; ln4RecordFill(id); }
+function bdFill(id){ const it = bdById(id); if(!it) return; bdWatch[id] = {k:'fill', at:Date.now(), n0:it.kind === 'core' ? (it.ref.lots || []).length : 0}; if(it.kind === 'core' && it.status === 'hold'){ ln4AddOn(id); return; } ln4RecordFill(id); }
 function bdAddon(id){ const it = bdById(id); if(!it) return; bdWatch[id] = {k:'addon', at:Date.now(), n0:it.kind === 'core' ? (it.ref.lots || []).length : 0}; ln4AddOn(id); }
 function bdEditLv(id){
   const it = bdById(id); if(!it) return; bdSnap(id);
@@ -29235,8 +29245,8 @@ function bdComplete(id){
   setTimeout(()=>{ const el = document.getElementById(+it.entry > 0 ? 'cnStop' : 'cnEntry'); if(el){ try{ el.focus(); }catch(e){} } }, 350);
 }
 function bdCancelOrder(id){
-  const it = bdById(id); if(!it || it.status !== 'ord') return;
-  const idx = bdWriteWithLog(it, {ln4:{placedAt:null}}, 'cancel', 'Order cancelled');
+  const it = bdById(id); if(!it || !(it.status === 'ord' || (it.status === 'hold' && it.lvOrdered))) return;
+  const idx = bdWriteWithLog(it, {ln4:{placedAt:null}}, 'cancel', 'Order cancelled' + (it.nl > 1 ? ' · #' + (it.k + 1) : ''));   /* §2c — the level that was working */
   bdReason = {id, idx}; try{ ln4Toast('Order cancelled'); }catch(e){}
 }
 function bdReasonSave(id){
@@ -29251,6 +29261,7 @@ function bdReasonSave(id){
 function bdReasonSkip(){ bdReason = null; bdRender(); }
 function bdClosePos(id){
   const it = bdById(id); if(!it) return;
+  bdClose();   /* the existing close dialog opens above — no drawer in the way */
   if(it.kind === 'core'){ const c = it.ref; if(c.trade_id){ bdCloseCtx = {id, kind:'core'}; openClosePos(c.trade_id, c.acct); } return; }
   try{ const eff = satV3EffectiveTrades(it.ref).filter(x=>x.trade.status === 'open')[0]; if(eff){ bdCloseCtx = {id, kind:'sat'}; openClosePos(eff.trade.id, eff.accId); } }catch(e){}
 }
@@ -29291,6 +29302,25 @@ function bdLevelsHtml(it){
   const right = hold ? (it.R == null ? '— R' : `${it.R >= 0 ? '+' : '−'}${Math.abs(it.R).toFixed(1)}R`) : (it.pct == null ? '— to entry' : `${it.pct < 0 ? '−' : '+'}${Math.abs(it.pct).toFixed(1)}% to entry`);
   return `<div class="bd-sec"><div class="bd-k">LEVELS</div><div class="bd-lv" data-bd-levels><span>Entry <b>${bdFmt(it.entry)}</b></span><span>SL <b>${bdFmt(it.sl)}</b></span>${it.tp > 0 ? `<span>TP <b>${bdFmt(it.tp)}</b></span>` : ''}<span class="bd-m" data-bd-lvr>${right}</span></div></div>`;
 }
+function bdEntriesHtml(it){
+  if(!(it.nl > 1)) return '';
+  const e = bdE, id = e(it.id), lots = it.kind === 'core' ? (it.ref.lots || []) : [];
+  const rows = it.levels.map((lv, i)=>{
+    let st, act = '';
+    if(i < it.k){ st = 'filled'; }
+    else if(it.status === 'ord' || (it.status === 'hold' && it.lvOrdered)) st = 'ordered';
+    else st = 'planned';
+    if(i === it.k){
+      if(it.status === 'plan') act = `<button type="button" class="go" data-bd-lvact="place" onclick="${bdPill(it).fn}">${e(bdPill(it).t)}</button>`;
+      else if(it.status === 'ord' || it.lvOrdered) act = `<button type="button" class="go" data-bd-lvact="fill" onclick="bdFill('${id}')">Filled ✓</button><button type="button" class="go" data-bd-lvact="cancel" onclick="bdCancelOrder('${id}')">Cancel</button>`;
+      else if(it.status === 'hold' && !it.flags.addon && it.kind === 'core') act = `<button type="button" class="go" data-bd-lvact="place" onclick="ln4Place('core','${id}')">Place order #${i + 1}</button>`;
+      else if(it.flags.addon) act = `<button type="button" class="go p" data-bd-lvact="addon" onclick="bdAddon('${id}')">Add-on #${i + 1} ›</button>`;
+    }
+    const fp = i < it.k && lots[i] && +lots[i].px > 0 ? ` @ ${td3Num(+lots[i].px)}` : '';
+    return `<div class="bd-lvr" data-bd-lv="${i + 1}" data-bd-lvst="${st}"><b>#${i + 1}</b> ${bdFmt(lv.px)}${lv.qty > 0 ? ` · ${td3Num(lv.qty)}` : ''} <span class="bd-m">${st}${fp}</span><span class="bd-sp"></span>${act}</div>`;
+  }).join('');
+  return `<div class="bd-sec"><div class="bd-k">ENTRIES</div><div class="bd-entries" data-bd-entries-list>${rows}</div></div>`;
+}
 function bdLogHtml(it){
   const rows = bdLogRows(it), e = bdE;
   const rs = (bdReason && bdReason.id === it.id) ? `<div class="bd-reason" data-bd-reason><input type="text" id="bdReasonIn" maxlength="200" placeholder="Reason? (optional)" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();bdReasonSave('${e(it.id)}')}"><button type="button" class="go" data-bd-reason-ok onclick="bdReasonSave('${e(it.id)}')">Add</button><button type="button" class="bd-link" data-bd-reason-skip onclick="bdReasonSkip()">Skip</button></div>` : '';
@@ -29302,11 +29332,11 @@ function bdDrawerHtml(it){
   const pill = {plan:'📝 Planned', ord:'📌 Ordered', hold:'✅ Holding'}[it.status];
   const prim = `<button type="button" class="go${p.cls ? ' ' + p.cls : ''}" data-bd-dprimary="${p.k}" onclick="${p.fn}">${e(p.t)}</button>`;
   let foot = `<button type="button" class="go" data-bd-update onclick="bdEditLv('${id}')">Update levels</button>`;
-  if(it.status === 'ord') foot += `<button type="button" class="go" data-bd-cancel onclick="bdCancelOrder('${id}')">Cancel order</button>`;
+  if(it.status === 'ord' || (it.status === 'hold' && it.lvOrdered)) foot += `<button type="button" class="go" data-bd-cancel onclick="bdCancelOrder('${id}')">Cancel order</button>`;
   if(it.status === 'hold' && p.k === 'edit') foot += `<button type="button" class="go" data-bd-close onclick="bdClosePos('${id}')">Close trade</button>`;
   else foot += prim;
   return `<div class="bd-dh"><span class="bd-grab" aria-hidden="true"></span><div class="bd-dh1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${it.fam ? '<span class="bd-fam">Family</span>' : ''}<span class="bd-stp" data-bd-spill>${pill}</span><span class="bd-sp"></span><button type="button" class="bd-x" data-bd-x aria-label="Close" onclick="bdClose()">✕</button></div></div>
-    <div class="bd-db">${bdLevelsHtml(it)}${it.kind === 'sat' ? bdChecksHtml(it) : bdThesisHtml(it)}${bdLogHtml(it)}</div>
+    <div class="bd-db">${bdLevelsHtml(it)}${bdEntriesHtml(it)}${it.kind === 'sat' ? bdChecksHtml(it) : bdThesisHtml(it)}${bdLogHtml(it)}</div>
     <div class="bd-df">${foot}</div>`;
 }
 function bdOpen(id){
@@ -29463,6 +29493,8 @@ function bdSavedToast(){ try{ td3ToastShow('Plan saved · View in Plan ›'); co
   td3SatOpen = function(id, focus){ try{ if(!bdSnaps[id]) bdSnap(id); }catch(e){} return tso.apply(this, arguments); };
   const coc = coreOpenCard;
   coreOpenCard = function(id){ const c = coreCardsList.find(x=>x.id === id); if(!c) return false; if(activeTab !== 'plan') switchTab('plan'); bdOpen(id); return true; };
+  const sv3 = satV3Render;
+  satV3Render = function(){ const r = sv3.apply(this, arguments); try{ bdFlowTopRender(); }catch(e){} return r; };   /* Weekly Impact lives on Flow now — picked ✓ marks follow every Sat re-render */
   const gpt = goPlanTop;
   goPlanTop = function(){ bdNewOpen(); };
 })();

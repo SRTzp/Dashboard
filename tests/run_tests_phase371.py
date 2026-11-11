@@ -61,13 +61,14 @@ def mac(pw, w, h):
         import run_tests_phase13 as P13
         P24.set_ff(page, P24.ff_json(True, True))
         cards = {
-            "ccAM": P24.card("ccAM", "main", "AMD", plan={"entry": 182.5, "stop": 170}, px=170, pxDate="2026-10-01"),
+            "ccAM": P24.card("ccAM", "main", "AMD", plan={"entry": 182.5, "stop": 170}, px=181, pxDate="2026-10-01"),
             "ccNV": P24.open_card("ccNV", "tNV", ticker="NVDA", acct="main", qty=10, entry=171.4, sl=168, tier="A", lots=[{"n": 1, "date": "2026-09-10", "px": 171.4, "qty": 10, "f": 1, "stop": 168}]),
         }
         js(page, "(t)=>{ const B=getBook('main'); B.trades=t; saveBook('main'); render(); }", [P13.T("tNV", "core", "open", sym="NVDA", entry=171.4, sl=168, qty=10, cur="USD", date="2026-09-10")])
         for cid, c in cards.items():
             page.evaluate("([id,c])=>window.firebase.__mockDb.__seedDoc(['users','testuid','coreCards',id], c)", [cid, c])
         js(page, "()=>{ coreStop(); coreStart(); }"); settle(page, 700)
+        js(page, "()=>glWrite(S=>{ const m = {}; m[wlSymKey('AMD')] = thaiToday(); S.tvSetup = m; })"); settle(page, 300)   # PB1: Act lists complete plans only
         P120.ps_on(page)
         stub(page, RRG)
         stub(page, EVS)
@@ -131,13 +132,14 @@ def phone(pw):
         import run_tests_phase13 as P13
         P24.set_ff(page, P24.ff_json(True, True))
         cards = {
-            "ccAM": P24.card("ccAM", "main", "AMD", plan={"entry": 182.5, "stop": 170}, px=170, pxDate="2026-10-01"),
+            "ccAM": P24.card("ccAM", "main", "AMD", plan={"entry": 182.5, "stop": 170}, px=181, pxDate="2026-10-01"),
             "ccNV": P24.open_card("ccNV", "tNV", ticker="NVDA", acct="main", qty=10, entry=171.4, sl=168, tier="A", lots=[{"n": 1, "date": "2026-09-10", "px": 171.4, "qty": 10, "f": 1, "stop": 168}]),
         }
         js(page, "(t)=>{ const B=getBook('main'); B.trades=t; saveBook('main'); render(); }", [P13.T("tNV", "core", "open", sym="NVDA", entry=171.4, sl=168, qty=10, cur="USD", date="2026-09-10")])
         for cid, c in cards.items():
             page.evaluate("([id,c])=>window.firebase.__mockDb.__seedDoc(['users','testuid','coreCards',id], c)", [cid, c])
         js(page, "()=>{ coreStop(); coreStart(); }"); settle(page, 700)
+        js(page, "()=>glWrite(S=>{ const m = {}; m[wlSymKey('AMD')] = thaiToday(); S.tvSetup = m; })"); settle(page, 300)   # PB1
         P120.ps_on(page)
         # ── HOT definition ──
         stub(page, RRG)
