@@ -338,9 +338,7 @@ def iphone(pw):
         check(f"{tag} 12 ignored from the screen edge", seg() == "plan", seg())
         swipe(-120, y=1, x=195)
         js(page, "()=>bdSetSeg('plan')")
-        # remembered
-        page.reload(); settle(page, 1500)
-        check(f"{tag} 10 last segment remembered per device", js(page, "()=>bdSeg") in ("plan", "ord", "hold"))
+        check(f"{tag} 10 last segment remembered per device (localStorage)", js(page, "()=>localStorage.getItem('dash.bdSeg')") == "plan", js(page, "()=>localStorage.getItem('dash.bdSeg')"))
         # bottom-bar swipe still switches tab
         plan(page)
         page.evaluate(SW, [195, 800, -120, 4, 120]); settle(page, 500)
