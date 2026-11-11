@@ -1,0 +1,115 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Plan board</title>
+<style>
+:root{--bg:#EEF0F3;--s:#fff;--t:#141518;--m:#7B818C;--f:#9AA0A9;--b:#E3E6EA;--h:#F4F5F7;--g:#0E8F6F;--gd:rgba(14,143,111,.12);--a:#A96E06;--ad:rgba(169,110,6,.13);--r:#C93B37;--rd:rgba(201,59,55,.1);--bl:#2F5FBE;--bd:rgba(47,95,190,.1);--p:#7E58C9;--pd:rgba(126,88,201,.12)}
+*{box-sizing:border-box}body{margin:0;background:#d9dce1;font:14px -apple-system,'Manrope','IBM Plex Sans Thai',sans-serif;color:var(--t);padding:16px}button{font:inherit;cursor:pointer}
+.cap{font:700 12px monospace;color:#444;margin:4px 0 8px}
+.mac{max-width:1080px;margin:0 auto 24px;background:var(--bg);border-radius:14px;border:1px solid #c5c8cd;overflow:hidden}
+.top{display:flex;justify-content:center;gap:4px;padding:10px;border-bottom:1px solid var(--b)}.top span{padding:6px 13px;border-radius:999px;color:var(--m);font-weight:600}.top .on{background:var(--t);color:#fff}
+.bar{display:flex;align-items:center;gap:8px;padding:14px 18px 6px;flex-wrap:wrap}.bar h2{margin:0;font-size:19px}.sum{color:var(--m);font-size:13px}.sum b{color:var(--t)}.sp{flex:1}
+.chips{display:flex;gap:6px}.chip{border:1px solid var(--b);background:var(--s);border-radius:999px;padding:5px 12px;font-weight:600;font-size:13px;color:var(--m)}.chip.on{background:var(--t);color:#fff;border-color:var(--t)}
+.new{background:var(--g);color:#fff;border:0;border-radius:999px;padding:7px 14px;font-weight:700}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:10px 18px 18px}
+.col{background:rgba(255,255,255,.55);border-radius:16px;padding:10px;min-height:380px}
+.ch{display:flex;align-items:center;gap:6px;font-weight:700;margin:2px 4px 10px}.ch .n{background:var(--h);color:var(--m);border-radius:999px;padding:1px 8px;font-size:12px}
+.card{background:var(--s);border:1px solid var(--b);border-radius:14px;padding:11px 12px;margin-bottom:8px;cursor:pointer;transition:box-shadow .15s,transform .15s}.card:hover{box-shadow:0 4px 14px rgba(0,0,0,.07);transform:translateY(-1px)}
+.r1{display:flex;align-items:center;gap:6px}.tk{font-weight:800;font-size:16px}.pt{font:700 10.5px monospace;border-radius:6px;padding:1px 6px}.MMT{background:var(--h);color:var(--t)}.COMP{background:var(--pd);color:var(--p)}.SAT{background:var(--bd);color:var(--bl)}
+.hot{font:700 11px inherit;border-radius:6px;padding:1px 6px;background:var(--gd);color:var(--g)}
+.lv{display:flex;gap:10px;margin-top:7px;font-size:12.5px;color:var(--m)}.lv b{color:var(--t);font-weight:600}
+.ft{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--f)}.dist{font:700 12px monospace}.near{color:var(--g)}.warn{color:var(--a)}.pnl{font:700 12.5px monospace}
+.act{margin-left:auto;font-weight:700;font-size:12px;border-radius:999px;padding:4px 10px;border:1px solid var(--b);background:#fff;color:var(--t)}.act.p{background:var(--g);border-color:var(--g);color:#fff}.act.w{border-color:var(--a);color:var(--a);background:var(--ad)}
+.empty{color:var(--f);font-size:13px;text-align:center;padding:24px 0}
+/* drawer */
+.dim{position:fixed;inset:0;background:rgba(15,17,20,.28);display:none;z-index:9}.dim.on{display:block}
+.dr{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:var(--s);z-index:10;transform:translateX(100%);transition:transform .2s;display:flex;flex-direction:column}.dr.on{transform:none}
+.dh{padding:16px;border-bottom:1px solid var(--b)}.dh .r1 .tk{font-size:20px}.x{margin-left:auto;border:0;background:var(--h);border-radius:50%;width:30px;height:30px}
+.st{display:flex;gap:4px;margin-top:10px}.st span{flex:1;text-align:center;font-size:11.5px;font-weight:700;padding:5px 0;border-radius:8px;background:var(--h);color:var(--f)}.st .dn{background:var(--gd);color:var(--g)}.st .cu{background:var(--t);color:#fff}
+.db{padding:14px 16px;overflow:auto;flex:1}.sec{font:700 11px monospace;color:var(--f);letter-spacing:.05em;margin:14px 0 6px}.sec:first-child{margin-top:0}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.grid div{background:var(--h);border-radius:10px;padding:8px}.grid small{display:block;color:var(--m);font-size:11.5px}.grid b{font:700 15px monospace}
+.th{background:var(--h);border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.55}.th b{display:block;font-size:12px;color:var(--m);margin-top:6px}.th b:first-child{margin-top:0}
+.log{font-size:13px}.log div{display:flex;gap:8px;padding:6px 0;border-top:1px solid var(--h)}.log div:first-child{border-top:0}.log .d{color:var(--f);font:600 12px monospace;min-width:52px}
+.df{padding:12px 16px;border-top:1px solid var(--b);display:flex;gap:8px}.df button{flex:1;border-radius:12px;padding:10px;font-weight:700;border:1px solid var(--b);background:#fff}.df .p{background:var(--g);border-color:var(--g);color:#fff}
+/* phone */
+.ph{width:360px;height:720px;margin:0 auto;background:var(--bg);border-radius:38px;border:9px solid #111;overflow:hidden;position:relative}
+.ph .in{position:absolute;inset:14px 0 60px;overflow:auto;padding:0 12px}
+.seg{display:flex;background:var(--s);border:1px solid var(--b);border-radius:12px;padding:3px;margin:8px 0}.seg button{flex:1;border:0;background:none;border-radius:9px;padding:7px 0;font-weight:700;font-size:13px;color:var(--m)}.seg .on{background:var(--t);color:#fff}
+.tab{position:absolute;bottom:0;left:0;right:0;height:60px;background:#fff;border-top:1px solid var(--b);display:flex;justify-content:space-around;align-items:center;font-size:12px;color:var(--m)}.tab .on{background:#E7F7C9;color:var(--t);padding:6px 10px;border-radius:10px;font-weight:700}
+.row{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.note{max-width:1080px;margin:0 auto;background:#fff;border-radius:14px;padding:12px 16px;font-size:13px;line-height:1.6}
+.sub{font:700 11.5px inherit;color:var(--m);margin:10px 4px 6px;display:flex;gap:6px}.sub:first-of-type{margin-top:0}
+.fam{font:700 10.5px monospace;border-radius:6px;padding:1px 6px;background:var(--ad);color:var(--a)}
+.stp{font:700 11.5px inherit;border-radius:999px;padding:3px 9px;background:var(--h);margin-left:4px}
+.ck{background:var(--h);border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.9;cursor:pointer}.ck b{display:inline-block;width:52px;color:var(--m);font-size:12px}.ok{color:var(--g);font-weight:700}.no{color:var(--r);font-weight:700}.sz{float:right;font-weight:700}
+.miss{color:var(--f);font-size:12px}
+</style></head><body>
+<div class="cap">MAC · Plan tab = plans only (Risk → Port, Macro → Flow) · click a card</div>
+<div class="mac"><div class="top"><span>Today</span><span>Flow</span><span>Watch</span><span class="on">Plan</span><span>Journal</span><span>Port</span></div>
+<div class="bar"><h2>Plans</h2><span class="sum" id="sum"></span><span class="sp"></span><div class="chips" id="flt"></div><button class="new" title="N">＋</button></div>
+<div class="cols" id="cols"></div></div>
+
+<div class="row">
+<div><div class="cap" style="text-align:center">IPHONE · same board, one status at a time</div>
+<div class="ph"><div class="in"><div style="display:flex;align-items:center;margin-top:6px"><b style="font-size:18px">Plans</b><span class="sp"></span><button class="new" style="padding:6px 12px">＋</button></div>
+<div class="chips" id="flt2" style="margin-top:8px;overflow:auto"></div><div class="seg" id="seg"></div><div id="pcol"></div></div>
+<div class="tab"><span>Today</span><span>Flow</span><span>Watch</span><span class="on">Plan</span><span>Journal</span><span>Port</span></div></div></div>
+<div class="note" style="max-width:520px"><b>What changed vs now</b><br>
+• One board for MMT · COMP · Sat — filter chips instead of separate pages.<br>
+• 3 columns = where each plan is: <b>📝 Planned</b> · <b>📌 Ordered</b> · <b>✅ Holding</b> (🏁 Closed → Journal).<br>
+• Each card: levels, distance to entry / P&L, the one next action.<br>
+• Tap a card → panel with <b>status · levels · thesis (Sat: CHECKS) · update log</b>. Ordered → <b>Cancel order</b>.<br>• Plans without Entry/SL or Setup not 3/3 → <b>🕓 Waiting for setup</b> at the bottom of Planned.<br>
+• Editing levels asks for a short reason → kept in the log.<br>
+• Plan forms unchanged (Core form / Sat form) — ＋ / N → popup S Momentum · D Compounder · F Satellite.<br>
+• Risk panels → <b>Port</b>, Macro / Weekly Impact → <b>Flow</b>. Only one summary line stays here.<br>
+• iPhone: swipe ← → between the 3 statuses (SW2).</div></div>
+
+<div class="dim" id="dim"></div>
+<div class="dr" id="dr"></div>
+
+<script>
+const P=[
+{s:'AVGO',t:'COMP',hot:'Semis',st:0,e:341.2,sl:326,dist:'−1.2%',near:1,act:['Place order ›','p'],th:{w:'Custom AI chips with 3 hyperscalers; VMware cash flow.',x:'AI revenue growth < 30% for 2 quarters.'},log:[['11 Nov','Plan created · Buy Stop 341.20 · ¼ starter']]},
+{s:'ANET',t:'MMT',hot:'Semis',st:0,e:118.5,sl:113.8,dist:'−7.9%',act:['Edit','n'],th:{w:'Earnings breakout, AI back-end orders.',x:'Back below 112 / gap filled.'},log:[['08 Nov','Plan created'],['10 Nov','Entry 117.0 → 118.5 · base got higher']]},
+{s:'XAUUSD',t:'SAT',st:0,inc:1,e:null,sl:null,miss:'needs Entry · SL · Setup 1/3',act:['Complete ›','n'],ck:{ema:1,str:1,zone:1,mmt:0,piv:0},log:[['11 Nov','Plan created (draft) · waiting for setup']]},
+{s:'AMD',t:'MMT',hot:'Semis',st:1,e:182.5,sl:174,dist:'−0.6%',near:1,act:['Record fill','n'],th:{w:'RS leader in Semis, flat base 6 weeks.',x:'Close below 174 or Semis leaves Leading.'},log:[['07 Nov','Plan created'],['10 Nov','📌 Buy Stop placed at IBKR']]},
+{s:'BTCUSDT',t:'SAT',fam:1,st:1,e:91800,sl:89900,tp:95600,dist:'−1.9%',act:['Record fill','n'],ck:{ema:1,str:0,zone:1,mmt:1,piv:1},log:[['10 Nov','Plan created · Counter trend 60% confirmed'],['10 Nov','📌 Limit order placed']]},
+{s:'NVDA',t:'MMT',hot:'Semis',st:2,e:171.4,sl:168,pnl:'+1.8R',act:['Edit','n'],th:{w:'Leader, DC guidance raised.',x:'Close below 50D + RS rolls over.'},log:[['03 Nov','✅ Filled 171.40 · ¼ starter'],['06 Nov','SL 165 → 168 · higher low']]},
+{s:'VRT',t:'MMT',hot:'Power',st:2,e:352.1,sl:352.1,pnl:'+2.4R',add:1,act:['Add-on ›','p'],th:{w:'AI power/cooling, Volume spike breakout.',x:'Below 340 on volume.'},log:[['29 Oct','✅ Filled 352.10 · ¼ starter'],['09 Nov','SL → 352.10 (break-even) · 0 risk']]},
+{s:'MSFT',t:'COMP',st:2,e:402,sl:372,pnl:'+0.6R',act:['Edit','n'],th:{w:'Azure + Copilot; durable cash flow.',x:'Azure growth < 25% for 2 quarters.'},log:[['15 Oct','✅ Filled 402.00']]}];
+const COL=[['📝','Planned'],['📌','Ordered'],['✅','Holding']],FL=['All','MMT','COMP','SAT'];let f='All',seg=0;
+const $=i=>document.getElementById(i),vis=()=>P.filter(p=>f==='All'||p.t===f);
+const fmt=v=>v==null?'—':v>=1000?v.toLocaleString():v.toFixed(2);
+const tags=p=>`<span class="tk">${p.s}</span><span class="pt ${p.t}">${p.t}</span>${p.hot?`<span class="hot">HOT ${p.hot}</span>`:''}${p.fam?'<span class="fam">Family</span>':''}`;
+function card(p,i){let ft;if(p.inc)ft=`<span class="miss">${p.miss}</span>`;else if(p.st===2)ft=`<span class="pnl" style="color:${p.pnl.startsWith('+')?'var(--g)':'var(--r)'}">${p.pnl}</span>${p.add?'<span class="near">· add-on ready</span>':p.sl>=p.e?'<span>· 0 risk</span>':''}`;else ft=`<span class="dist ${p.near?'near':''}">${p.dist}</span><span>to entry</span>`;
+const lv=p.inc?`<div class="lv"><span>No entry yet</span></div>`:`<div class="lv"><span>Entry <b>${fmt(p.e)}</b></span><span>SL <b>${fmt(p.sl)}</b></span>${p.tp?`<span>TP <b>${fmt(p.tp)}</b></span>`:''}</div>`;
+return `<div class="card" data-i="${i}"><div class="r1">${tags(p)}</div>${lv}<div class="ft">${ft}<button class="act ${p.act[1]}" data-a="${i}">${p.act[0]}</button></div></div>`}
+function colHTML(L,k){if(k!==0)return L.map(p=>card(p,P.indexOf(p))).join('')||'<div class="empty">Nothing here</div>';
+const R=L.filter(p=>!p.inc),I=L.filter(p=>p.inc);return (R.length?`<div class="sub">Ready ${R.length}</div>`+R.map(p=>card(p,P.indexOf(p))).join(''):'')+(I.length?`<div class="sub">🕓 Waiting for setup ${I.length}</div>`+I.map(p=>card(p,P.indexOf(p))).join(''):'')||'<div class="empty">Nothing here</div>'}
+function render(){const v=vis();$('sum').innerHTML=`${v.length} plans · Holding <b>${v.filter(p=>p.st===2).length}</b> · risk in use <b>1.2%</b> / 5%`;
+const chips=id=>{$(id).innerHTML=FL.map(x=>`<button class="chip ${x===f?'on':''}" data-f="${x}">${x==='SAT'?'Sat':x}</button>`).join('');$(id).querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{f=b.dataset.f;render()})};chips('flt');chips('flt2');
+$('cols').innerHTML=COL.map((c,k)=>{const L=v.filter(p=>p.st===k);return `<div class="col"><div class="ch">${c[0]} ${c[1]} <span class="n">${L.length}</span></div>${colHTML(L,k)}</div>`}).join('');
+$('seg').innerHTML=COL.map((c,k)=>`<button class="${k===seg?'on':''}" data-s="${k}">${c[0]} ${v.filter(p=>p.st===k).length}</button>`).join('');
+$('seg').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{seg=+b.dataset.s;render()});
+const L=v.filter(p=>p.st===seg);$('pcol').innerHTML=`<div class="ch" style="margin:4px 2px 8px">${COL[seg][0]} ${COL[seg][1]}</div>`+colHTML(L,seg);
+document.querySelectorAll('.card').forEach(c=>c.onclick=e=>{if(e.target.dataset.a)return;open(+c.dataset.i)});
+document.querySelectorAll('[data-a]').forEach(b=>b.onclick=e=>{e.stopPropagation();doAct(+b.dataset.a)})}
+function doAct(i){const p=P[i],a=p.act[0];
+if(a.startsWith('Place')){p.st=1;p.act=['Record fill','n'];p.log.push(['11 Nov','📌 Buy Stop placed at IBKR'])}
+else if(a.startsWith('Record')){p.st=2;p.pnl='+0.0R';p.act=['Edit','n'];p.log.push(['11 Nov','✅ Filled '+fmt(p.e)])}
+else{open(i);return}render();if($('dr').classList.contains('on'))open(i)}
+const m=v=>v?'<span class="ok">✓</span>':'<span class="no">✗</span>';
+function checks(c){const sz=c.ema&&c.str?'100%':!c.ema&&!c.str?'blocked':c.str?'60%':'Counter trend 60%';const n=c.zone+c.mmt+c.piv;
+return `<div class="sec">CHECKS <span style="float:right">${n}/3 setup</span></div><div class="ck" title="Opens the Sat form"><div><b>Trend</b>EMA50 ${m(c.ema)} · Structure ${m(c.str)}<span class="sz" style="color:${sz==='100%'?'var(--g)':'var(--a)'}">${sz}</span></div><div><b>Setup</b>In Zone ${m(c.zone)} · MMT Neutral ${m(c.mmt)} · Pivot align MA ${m(c.piv)}</div></div>`}
+function open(i){const p=P[i],SP=['📝 Planned','📌 Ordered','✅ Holding'];
+const pri=p.act[0]==='Edit'&&p.st===2?'Close trade':p.act[0];
+$('dr').innerHTML=`<div class="dh"><div class="r1">${tags(p)}<span class="stp">${p.inc?'🕓 Waiting for setup':SP[p.st]}</span><button class="x" id="cx">✕</button></div></div>
+<div class="db"><div class="sec">LEVELS</div><div class="grid"><div><small>Entry</small><b>${fmt(p.e)}</b></div><div><small>SL</small><b>${fmt(p.sl)}</b></div><div><small>${p.st===2?'P&L':'To entry'}</small><b>${p.st===2?p.pnl:(p.dist||'—')}</b></div></div>
+${p.ck?checks(p.ck):`<div class="sec">THESIS</div><div class="th"><b>① Why buy</b>${p.th.w}<b>④ Wrong if</b>${p.th.x}</div>`}
+<div class="sec">UPDATE LOG</div><div class="log">${p.log.slice().reverse().map(l=>`<div><span class="d">${l[0]}</span><span>${l[1]}</span></div>`).join('')}</div></div>
+<div class="df">${p.st===1?'<button id="cn">Cancel order</button>':''}<button id="ed">Update levels</button><button class="p" id="da">${pri}</button></div>`;
+$('dr').classList.add('on');$('dim').classList.add('on');$('cx').onclick=close;
+$('ed').onclick=()=>{const r=prompt('Reason for the update (optional)','raise SL to higher low');p.log.push(['11 Nov','Levels updated'+(r?' · '+r:'')]);open(i)};
+if($('cn'))$('cn').onclick=()=>{p.st=0;p.act=['Place order ›','p'];p.log.push(['11 Nov','Order cancelled']);render();open(i)};
+$('da').onclick=()=>{if(pri==='Close trade'){p.log.push(['11 Nov','🏁 Closed → Journal']);close();P.splice(i,1);render();return}doAct(i)}}
+function close(){$('dr').classList.remove('on');$('dim').classList.remove('on')}
+$('dim').onclick=close;addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+render();
+</script></body></html>
