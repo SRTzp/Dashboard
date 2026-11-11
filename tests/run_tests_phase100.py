@@ -82,8 +82,10 @@ def seed(page, d, week=None):
     settle(page, 600)
 
 
-def go_strategy(page, w_asset="XAUUSD"):
+def go_strategy(page, w_asset="XAUUSD", plan=False):
     # PB1 §5: Weekly Impact moved from Plan › Sat to the top of Flow
+    if plan:   # Sat asset tiles (Quarterly Macro + WI strip) stay on the Plan › Sat editor page
+        js(page, "(a)=>{ switchTab('plan'); setPlanScope('future'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); }", w_asset); settle(page, 700); return
     js(page, "(a)=>{ switchTab('flow'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); bdFlowTopRender(); }", w_asset); settle(page, 700)
 
 
@@ -299,7 +301,7 @@ def card_tests(pw, w, h, label, shots=False):
     try:
         seed(page, sample())
         js(page, """()=>{ sat7dWrite('satWeek','2026-09-20',{XAUUSD:{opinion_txt:'SAMPLE note สัปดาห์ก่อน'}}); }"""); settle(page, 500)
-        go_strategy(page)
+        go_strategy(page, plan=True)
         t = js(page, """()=>{ const e = document.querySelector('[data-ln1-tile="XAUUSD"]'); const labs = [...e.querySelectorAll('.ln1-lab, .pf2-k')].map(x=>x.innerText.trim());
           return {labs, pill: (e.querySelector('[data-wi-pill]')||{}).innerText, strip: (e.querySelector('.wiSL')||{}).innerText, more: !!e.querySelector('[data-wi-more]'), img: e.querySelectorAll('img, .vw-strip, [data-vw], a[href*="tradingview"], .ln1-chart').length,
                   order: [...e.children].map(c=>c.className.split(' ')[0]), txt: e.innerText.replace(/\\s+/g,' ')}; }""")

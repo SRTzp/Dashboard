@@ -185,15 +185,14 @@ def phone(pw):
         check(f"{tag} To do: tapping the group opens its list", cnt(page, '[data-ln4-todolist="lt"] [data-ln4-todo]') >= 2, cnt(page, "[data-ln4-todolist]"))
         page.locator('[data-ln4-todogrp="lt"]').click(); settle(page, 300)
         # ── Act row: ticker never squeezed ──
-        stub(page, """window.ln4SatRows = ()=>[{kind:'sat', sym:'Brent', key:'BRENT', id:'x1', state:'draft', status:'Draft', counter:true, macro:'Macro: Hawkish USD',
+        stub(page, """window.__oBd = window.bdActRows; window.bdActRows = ()=>[{kind:'sat', sym:'Brent', key:'BRENT', id:'x1', state:'draft', status:'Draft', counter:true, macro:'Macro: Hawkish USD',
             bad:{why:'Entry is beyond the trigger — the plan is no longer valid, fix it', btn:'Fix ›', k:'plan'}, det:'Entry 82.4 · SL 80.9 · 4h', btn:{t:'Fix ›', fn:'void 0', fx:true}}];""")
         refresh(page)
         r = js(page, """()=>{ const e=document.querySelector('[data-ln4-row="Brent"]'); const b=e.querySelector('b').getBoundingClientRect(); const rg=document.createRange(); rg.selectNodeContents(e.querySelector('b'));
           const lines=new Set([...rg.getClientRects()].map(x=>Math.round(x.top))).size; const tag=e.querySelector('.sc.sat').getBoundingClientRect(); const why=e.querySelector('[data-ln4-why]').getBoundingClientRect(); const det=e.querySelector('[data-ln4-det]').getBoundingClientRect();
           return {lines, bh:Math.round(b.height), tagSame:Math.abs((tag.top+tag.height/2)-(b.top+b.height/2))<10, whyBelow:why.top>=b.bottom-2, detBelow:det.top>=why.bottom-2, bw:Math.round(b.width), ov:b.right<=e.getBoundingClientRect().right}; }""")
         check(f"{tag} Act: 'Brent' on ONE line with a long red reason + 3 tags; tag on line 1, reason on line 2, details on line 3", r["lines"] == 1 and r["tagSame"] and r["whyBelow"] and r["detBelow"] and r["bh"] < 26, r)
-        stub(page, "window.ln4SatRows = ()=>[{kind:'sat', sym:'Brent', key:'BRENT', id:'x1', state:'draft', status:'Draft', det:'Entry 82.4', btn:{t:'Fix ›', fn:'void 0'}, bad:null}];")
-        stub(page, "delete window.ln4SatRows;")
+        stub(page, "window.bdActRows = window.__oBd;")   # PB1: Act rows now come from the board (bdActRows)
         refresh(page)
         # ── first viewport ──
         fv = js(page, "()=>{ const a=document.querySelector('[data-ln4-act] .h').getBoundingClientRect(); const s=document.querySelector('[data-ln4-status]').getBoundingClientRect(); const hot=document.querySelector('[data-ln4-hot]').getBoundingClientRect(); const sw=document.querySelector('[data-td3-sw]').getBoundingClientRect(); return {actBottom:Math.round(a.bottom), vh:innerHeight, statusTop:Math.round(s.top), hotTop:Math.round(hot.top), swTop:Math.round(sw.top), swBottom:Math.round(sw.bottom)}; }")
