@@ -33,5 +33,7 @@ with sync_playwright() as pw:
         js(page, "()=>{ switchTab('mix'); }"); settle(page, 1500); shot(page, "port-top-%d" % w)
         js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 1500); shot(page, "today-%d" % w)
         js(page, "()=>bdNewOpen()"); settle(page, 400); shot(page, "popup-%d" % w)
+        js(page, "()=>{ bdPopClose(); switchTab('today'); }"); settle(page, 500)
+        js(page, "()=>bdNewPick('F')"); settle(page, 1500); shot(page, "sat-editor-%d" % w)   # Sat editor page opened via F from Today (with the ‹ Plan board bar)
         b.close()
 print("shots done")

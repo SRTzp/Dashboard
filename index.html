@@ -3802,6 +3802,7 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
 .bd-r2{display:flex;gap:10px;flex-wrap:wrap;margin-top:7px;font-size:13px;color:var(--muted)}.bd-r2 b{color:var(--text,#141518);font-weight:600}
 .bd-r3{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;min-width:0}
 .bd-r3 .go{margin-left:auto;flex:none}
+.bd-r3{flex-wrap:nowrap}.bd-r3>.bd-st,.bd-r3>.bd-m{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bd-m{color:var(--faint,#9AA0A9);font-size:12.5px}
 .bd-m.near{color:var(--teal);font-weight:700}
 .bd-r{font:700 13px var(--mono)}.bd-r.up{color:var(--teal)}.bd-r.dn{color:var(--red)}
@@ -3836,7 +3837,7 @@ button.bd-read{cursor:pointer}
 .bd-popb{width:min(440px,92vw)}
 .bd-ph{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;font-size:16px}
 .bd-opt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:12px;margin:0 0 8px;cursor:pointer;font:inherit;color:inherit;min-height:52px}
-.bd-opt.sel,.bd-opt:focus-visible{border-color:var(--blue);box-shadow:0 0 0 2px rgba(47,95,190,.25);outline:0}
+.bd-opt.bd-sel,.bd-opt:focus-visible{border-color:var(--blue);box-shadow:0 0 0 2px rgba(47,95,190,.25);outline:0}
 .bd-opt kbd{font:700 12px var(--mono);border:1px solid var(--border);border-radius:6px;padding:2px 7px;background:var(--bg,#EEF0F3);color:var(--text,#141518)}
 .bd-ot{display:flex;flex-direction:column;min-width:0}
 /* Flow top + Port top */
@@ -3846,7 +3847,8 @@ button.bd-read{cursor:pointer}
 .bd-mr{display:flex;gap:8px 14px;flex-wrap:wrap;align-items:center}
 .bd-as{font-size:13.5px}
 .bd-portrisk{margin:0 0 12px}
-.bd-risk .ln4-tiles{margin-top:10px}
+.bd-risk .ln4-tiles{margin-top:10px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:560px){ .bd-risk .ln4-tiles{grid-template-columns:repeat(2,minmax(0,1fr))} }
 .bd-bar{display:block;height:8px;border-radius:4px;background:var(--bg,#EEF0F3);overflow:hidden}
 .bd-bar>i{display:block;height:100%;background:var(--teal)}
 .bd-bar-tot.a>i,.bd-bk.a .bd-bar>i{background:var(--amber)}.bd-bar-tot.r>i,.bd-bk.r .bd-bar>i{background:var(--red)}
@@ -6270,6 +6272,7 @@ function hdrSubSync(){
   const slot = document.getElementById('hdrSub'); if(!slot) return;
   const mode = hdrSubModeNow(), page = ({plan:'plan', mix:'port'})[activeTab] || '';
   let want = mode ? page : '';
+  if(want === 'plan') want = '';   /* PB1 — the Core | Sat switch is gone from the top bar (chips replace it) */
   if(mode === 'mob' && want === 'plan' && window.innerWidth < HDR_SCOPE3_MIN) want = '';   /* RG2b — Winner | Ladder | Sat 3 ปุ่มไม่พอที่ใน header จอแคบ → อยู่ในหน้า (ปุ่มเต็มความกว้าง · ไม่ใช้ select) */
   const changed = mode !== hdrSubMode; hdrSubMode = mode;
   const scope = document.querySelector('.scopeTabs'), box = document.querySelector('.planScope');
@@ -16004,7 +16007,7 @@ function ln3RenderPort(){
     <div class="ln3-pg">
       <div><div class="k">ทุนรวม ${nAcc} บัญชี</div><div class="v" data-priv-anchor>฿${fmt0(sum.cap)}</div></div>
       <div><div class="k">ถือครอง</div><div class="v">${fmt2(pct(sum.held,sum.cap))}%</div><div class="k">฿${fmt0(sum.held)} · เงินสด ฿${fmt0(sum.cash)}</div></div>
-      <div><div class="k">Open Risk รวม</div><div class="v" style="${rl>=6?'color:var(--red)':rl>=4?'color:var(--amber)':''}">${fmt2(rl)}%</div><div class="k">฿${fmt0(sum.risk)}</div></div>
+      <div><div class="k">Open Risk รวม (all accts · to SL)</div><div class="v" style="${rl>=6?'color:var(--red)':rl>=4?'color:var(--amber)':''}">${fmt2(rl)}%</div><div class="k">฿${fmt0(sum.risk)}</div></div>
       <div><div class="k">Realized สะสม</div><div class="v" style="${sum.realized<0?'color:var(--red)':sum.realized>0?'color:var(--teal)':''}">${Math.round(sum.realized)<0?'−':''}฿${fmtPnl0(Math.abs(sum.realized))}</div><div class="k">${fmt2(pct(sum.realized,sum.cap))}% ของทุน</div></div>
     </div></div>`;
   let html = '';
@@ -29033,7 +29036,13 @@ function bdItems(){
       const it = {id, kind:'core', tag:r.tag, sym:c.ticker, acct:c.acct, fam:bdFam(c.acct), row:r, ref:c, status:hold ? 'hold' : r.state === 'working' ? 'ord' : 'plan', entry, sl, tp, px, pct:null, R:null, inc:null, flags:{}, log:Array.isArray(c.log) ? c.log : []};
       /* PB1 §2c — multiple entry levels come from the existing plan rows (plan.ps1.rows) · filled levels = lots[] (no storage change) */
       { const rows = (pl.ps1 && Array.isArray(pl.ps1.rows) && pl.ps1.rows.length) ? pl.ps1.rows.map(x=>({px:+x.px, qty:+x.qty})) : [{px:+pl.entry, qty:null}];
-        it.levels = rows; it.lvOrdered = !!(c.ln4 && c.ln4.placedAt); it.nl = rows.length; it.k = hold ? Math.min(rows.length, Math.max(1, (c.lots || []).length)) : 0; }
+        it.levels = rows; it.nl = rows.length; it.k = hold ? Math.min(rows.length, Math.max(1, (c.lots || []).length)) : 0;
+        /* per-level order flags: ln4.placedLv = {levelIndex: ISO} · legacy ln4.placedAt = the first unfilled level (flags below the filled count are ignored) */
+        const plv = (c.ln4 && c.ln4.placedLv && typeof c.ln4.placedLv === 'object') ? c.ln4.placedLv : {}, placed = new Set();
+        Object.keys(plv).forEach(k=>{ if(plv[k] && +k >= it.k && +k < rows.length) placed.add(+k); });
+        if(c.ln4 && c.ln4.placedAt && it.k < rows.length) placed.add(it.k);
+        it.placed = placed; it.lvOrdered = placed.size > 0; it.firstPlaced = placed.size ? Math.min(...placed) : null;
+        if(!hold) it.status = placed.size ? 'ord' : 'plan'; }
       if(px && entry > 0) it.pct = (entry - px) / px * 100;
       if(hold){
         const init = (+pl.entry > +pl.stop && +pl.stop > 0) ? +pl.entry - +pl.stop : (+v.avg - +v.stop);
@@ -29082,8 +29091,7 @@ function bdPill(it){
     if(Math.abs(it.pct) < 2) return {t:'Place order ›', cls:'p', fn:`ln4Place('${it.kind}','${q(id)}')`, k:'place'};
     return {t:'Edit', cls:'', fn:`bdEditLv('${q(id)}')`, k:'edit'};
   }
-  if(it.status === 'ord') return {t:'Filled ✓', cls:'', fn:`bdFill('${q(id)}')`, k:'fill'};
-  if(it.lvOrdered && it.k < it.nl) return {t:'Filled ✓', cls:'', fn:`bdFill('${q(id)}')`, k:'fill'};
+  if(it.status === 'ord' || (it.lvOrdered && it.k < it.nl)) return {t:'Filled ✓', cls:'', fn:`bdFill('${q(id)}'${it.firstPlaced != null ? ',' + it.firstPlaced : ''})`, k:'fill'};
   if(it.flags.addon) return {t:'Add-on ›', cls:'p', fn:`bdAddon('${q(id)}')`, k:'addon'};
   return {t:'Edit', cls:'', fn:`bdEditLv('${q(id)}')`, k:'edit'};
 }
@@ -29118,9 +29126,12 @@ function bdCardHtml(it){
   let l3;
   if(it.status === 'hold'){
     const R = it.R == null ? `<span class="bd-m" data-bd-r="na">— R</span>` : `<b class="bd-r ${it.R >= 0 ? 'up' : 'dn'}" data-bd-r="${it.R >= 0 ? 'up' : 'dn'}">${it.R >= 0 ? '+' : '−'}${Math.abs(it.R).toFixed(1)}R</b>`;
-    const st = it.flags.addon ? `<span class="bd-st g">add-on ready</span>` : it.flags.zero ? `<span class="bd-st">0 risk</span>` : it.flags.below ? `<span class="bd-st a">stop below avg</span>` : '';
-    const nx = multi ? `<span class="bd-m" data-bd-entries>Entries ${it.k}/${it.nl}${nxt ? ' · next ' + bdFmt(nxt.px) + ' ' + (it.flags.addon ? 'add-on ready' : (it.lvOrdered ? 'ordered' : 'waiting')) : ' · all in'}</span>` : '';
-    l3 = `${R}${st}${it.size ? `<span class="bd-m" data-bd-size>${e(it.size)}</span>` : ''}${nx}`;
+    /* one line: R · ONE state (add-on ready > next level + state > 0 risk) · size only when no Entries text */
+    let st = '', ent = false;
+    if(it.flags.addon) st = `<span class="bd-st g">add-on ready</span>`;
+    else if(multi && it.k < it.nl){ ent = true; st = `<span class="bd-st" data-bd-entries>Entries ${it.k}/${it.nl} · next ${bdFmt(nxt.px)}${it.placed && it.placed.has(it.k) ? ' · ordered' : ''}</span>`; }
+    else if(it.flags.zero) st = `<span class="bd-st">0 risk</span>`;
+    l3 = `${R}${st}${it.size && !ent ? `<span class="bd-m" data-bd-size>${e(it.size)}</span>` : ''}`;
   }else if(it.inc) l3 = `<span class="bd-m" data-bd-need>${e(it.inc.text)}</span>`;
   else l3 = bdToEntry(it);
   return `<div class="bd-card" role="button" tabindex="0" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${it.inc ? ' data-bd-inc="1"' : ''} onclick="bdOpen('${id}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();bdOpen('${id}')}">
@@ -29226,6 +29237,7 @@ function bdLevelWatch(){
       const L = it.ref.lots || [];
       if(L.length > w.n0){
         delete bdWatch[id];
+        try{ if(it.ref.ln4 && it.ref.ln4.placedAt) coreWrite(id, {ln4:{placedAt:null}}); }catch(e){}   /* the legacy flag meant 'first unfilled level' — that level is filled now */
         const n = L.length, lot = L[n - 1] || {}, px = +lot.px > 0 ? td3Num(+lot.px) : (it.entry > 0 ? td3Num(it.entry) : '—');
         bdLogAdd(id, n > 1 ? 'addon' : 'fill', `#${n} filled @ ${px} · ${n > 1 ? (n >= it.nl ? 'full' : 'add-on') : (it.size || 'full')}`);
       }
@@ -29234,7 +29246,7 @@ function bdLevelWatch(){
 }
 
 /* ── pill actions (existing handlers · plus a log entry) ── */
-function bdFill(id){ const it = bdById(id); if(!it) return; bdWatch[id] = {k:'fill', at:Date.now(), n0:it.kind === 'core' ? (it.ref.lots || []).length : 0}; if(it.kind === 'core' && it.status === 'hold'){ ln4AddOn(id); return; } ln4RecordFill(id); }
+function bdFill(id, lv){ const it = bdById(id); if(!it) return; bdWatch[id] = {k:'fill', at:Date.now(), lv:lv, n0:it.kind === 'core' ? (it.ref.lots || []).length : 0}; if(it.kind === 'core' && it.status === 'hold'){ ln4AddOn(id); return; } ln4RecordFill(id); }
 function bdAddon(id){ const it = bdById(id); if(!it) return; bdWatch[id] = {k:'addon', at:Date.now(), n0:it.kind === 'core' ? (it.ref.lots || []).length : 0}; ln4AddOn(id); }
 function bdEditLv(id){
   const it = bdById(id); if(!it) return; bdSnap(id);
@@ -29254,10 +29266,18 @@ function bdComplete(id){
   try{ coreNewOpen(it.ref.acct, {mode:'editw', id}); }catch(e){}
   setTimeout(()=>{ const el = document.getElementById(+it.entry > 0 ? 'cnStop' : 'cnEntry'); if(el){ try{ el.focus(); }catch(e){} } }, 350);
 }
-function bdCancelOrder(id){
-  const it = bdById(id); if(!it || !(it.status === 'ord' || (it.status === 'hold' && it.lvOrdered))) return;
-  const idx = bdWriteWithLog(it, {ln4:{placedAt:null}}, 'cancel', 'Order cancelled' + (it.nl > 1 ? ' · #' + (it.k + 1) : ''));   /* §2c — the level that was working */
+function bdCancelOrder(id){ const it = bdById(id); if(it && it.firstPlaced != null) bdCancelLv(id, it.firstPlaced); }
+function bdCancelLv(id, i){
+  const it = bdById(id); if(!it || !it.placed || !it.placed.has(i)) return;
+  const ln = {placedLv:{[i]:null}}; if(it.ref.ln4 && it.ref.ln4.placedAt && i === it.k) ln.placedAt = null;
+  const idx = bdWriteWithLog(it, {ln4:ln}, 'cancel', (it.nl > 1 ? '#' + (i + 1) + ' order cancelled' : 'Order cancelled'));   /* §2c — only that level */
   bdReason = {id, idx}; try{ ln4Toast('Order cancelled'); }catch(e){}
+}
+function bdPlaceLv(id, i){
+  const it = bdById(id); if(!it) return;
+  const lv = it.levels && it.levels[i];
+  bdWriteWithLog(it, {ln4:{placedLv:{[i]:new Date().toISOString()}}}, 'order', '#' + (i + 1) + ' order placed ' + (lv && lv.px > 0 ? td3Num(lv.px) : '—'));
+  try{ ln4Valid(id, it.sym, 'working'); ln4Toast(`${it.sym}: Order working ✓`); }catch(e){}
 }
 function bdReasonSave(id){
   const inp = document.getElementById('bdReasonIn'); if(!inp || !bdReason || bdReason.id !== id) return;
@@ -29317,14 +29337,13 @@ function bdEntriesHtml(it){
   const e = bdE, id = e(it.id), lots = it.kind === 'core' ? (it.ref.lots || []) : [];
   const rows = it.levels.map((lv, i)=>{
     let st, act = '';
-    if(i < it.k){ st = 'filled'; }
-    else if(it.status === 'ord' || (it.status === 'hold' && it.lvOrdered)) st = 'ordered';
+    if(i < it.k) st = 'filled';
+    else if(it.placed && it.placed.has(i)) st = 'ordered';
     else st = 'planned';
-    if(i === it.k){
-      if(it.status === 'plan') act = `<button type="button" class="go" data-bd-lvact="place" onclick="${bdPill(it).fn}">${e(bdPill(it).t)}</button>`;
-      else if(it.status === 'ord' || it.lvOrdered) act = `<button type="button" class="go" data-bd-lvact="fill" onclick="bdFill('${id}')">Filled ✓</button><button type="button" class="go" data-bd-lvact="cancel" onclick="bdCancelOrder('${id}')">Cancel</button>`;
-      else if(it.status === 'hold' && !it.flags.addon && it.kind === 'core') act = `<button type="button" class="go" data-bd-lvact="place" onclick="ln4Place('core','${id}')">Place order #${i + 1}</button>`;
-      else if(it.flags.addon) act = `<button type="button" class="go p" data-bd-lvact="addon" onclick="bdAddon('${id}')">Add-on #${i + 1} ›</button>`;
+    if(st === 'ordered') act = `<button type="button" class="go" data-bd-lvact="fill" onclick="bdFill('${id}',${i})">Filled ✓</button><button type="button" class="go" data-bd-lvact="cancel" onclick="bdCancelLv('${id}',${i})">Cancel</button>`;
+    else if(st === 'planned' && it.kind === 'core'){
+      if(i === it.k && it.flags.addon) act += `<button type="button" class="go p" data-bd-lvact="addon" onclick="bdAddon('${id}')">Add-on ›</button>`;
+      act += `<button type="button" class="go" data-bd-lvact="place" onclick="bdPlaceLv('${id}',${i})">Place order #${i + 1}</button>`;
     }
     const fp = i < it.k && lots[i] && +lots[i].px > 0 ? ` @ ${td3Num(+lots[i].px)}` : '';
     return `<div class="bd-lvr" data-bd-lv="${i + 1}" data-bd-lvst="${st}"><b>#${i + 1}</b> ${bdFmt(lv.px)}${lv.qty > 0 ? ` · ${td3Num(lv.qty)}` : ''} <span class="bd-m">${st}${fp}</span><span class="bd-sp"></span>${act}</div>`;
@@ -29413,7 +29432,7 @@ function bdPortRiskHtml(){
     const tile = (k, v, d)=>`<div class="t" ${d}><div class="k">${k}</div><div class="v">${v}</div></div>`;
     const tot = c.total > 0 ? Math.max(0, Math.min(100, P.principalPct / c.total * 100)) : 0;
     const cls = (u, cap)=>cap > 0 ? (u > cap + 1e-9 ? 'r' : u >= cap * 0.8 ? 'a' : '') : '';
-    const tiles = `<div class="ln4-tiles" data-ln4-port-tiles>${tile('Risk in use', `${ps1Pct(P.principalPct, 1)} / ${ps1Pct(c.total, 0)}`, 'data-ln4-pt="risk"')}${used != null ? tile('Week loss', `${used}R`, 'data-ln4-pt="loss"') : ''}${room != null ? tile('Room', `<span data-ln4-port-room-v>${room}R</span>`, 'data-ln4-pt="room"') : ''}${tile('Open plans', String(open), 'data-bd-pt="open"')}</div>`;
+    const tiles = `<div class="ln4-tiles" data-ln4-port-tiles>${tile('Risk in use (open · home acct)', `${ps1Pct(P.principalPct, 1)} / ${ps1Pct(c.total, 0)}`, 'data-ln4-pt="risk"')}${used != null ? tile('Week loss', `${used}R`, 'data-ln4-pt="loss"') : ''}${room != null ? tile('Room', `<span data-ln4-port-room-v>${room}R</span>`, 'data-ln4-pt="room"') : ''}${tile('Open plans', String(open), 'data-bd-pt="open"')}</div>`;
     const bk = [['ladder', 'COMP'], ['winner', 'MMT'], ['sat', 'SAT']].map(([k, nm])=>{
       const b = P.buckets[k]; if(!b) return '';
       const w = b.cap > 0 ? Math.max(0, Math.min(100, b.principalPct / b.cap * 100)) : 0, cl = cls(b.principalPct, b.cap);
@@ -29457,11 +29476,11 @@ function bdNewOpen(){
   closeMoreMenu();
   bdPopSel = 0;
   if(activeTab === 'plan' && !bdEditMode && bdChip !== 'all'){ const i = BD_NEW.findIndex(x=>x[2] === bdChip); if(i >= 0) bdPopSel = i; }
-  document.body.insertAdjacentHTML('beforeend', `<div id="bdPop" class="ui-sheet-backdrop bd-pop ln4" role="dialog" aria-modal="true" aria-label="New plan" onclick="if(event.target===this)bdPopClose()"><div class="ui-sheet bd-popb"><div class="bd-ph"><b>New plan</b><button type="button" class="bd-x" data-bd-popx aria-label="Close" onclick="bdPopClose()">✕</button></div>${BD_NEW.map((o, i)=>`<button type="button" class="bd-opt${i === bdPopSel ? ' sel' : ''}" data-bd-opt="${o[0]}" onclick="bdNewPick('${o[0]}')"><kbd>${o[0]}</kbd><span class="sc${o[2] === 'SAT' ? ' sat' : (o[2] === 'COMP' ? ' c pt' : ' pt')}">${o[2]}</span><span class="bd-ot"><b>${o[1]}</b><span class="bd-m">${o[3]}</span></span></button>`).join('')}</div></div>`);
-  try{ const b = document.querySelector('#bdPop .bd-opt.sel'); if(b) b.focus(); }catch(e){}
+  document.body.insertAdjacentHTML('beforeend', `<div id="bdPop" class="ui-sheet-backdrop bd-pop ln4" role="dialog" aria-modal="true" aria-label="New plan" onclick="if(event.target===this)bdPopClose()"><div class="ui-sheet bd-popb"><div class="bd-ph"><b>New plan</b><button type="button" class="bd-x" data-bd-popx aria-label="Close" onclick="bdPopClose()">✕</button></div>${BD_NEW.map((o, i)=>`<button type="button" class="bd-opt${i === bdPopSel ? ' bd-sel' : ''}" data-bd-opt="${o[0]}" onclick="bdNewPick('${o[0]}')"><kbd>${o[0]}</kbd><span class="sc${o[2] === 'SAT' ? ' sat' : (o[2] === 'COMP' ? ' c pt' : ' pt')}">${o[2]}</span><span class="bd-ot"><b>${o[1]}</b><span class="bd-m">${o[3]}</span></span></button>`).join('')}</div></div>`);
+  try{ const b = document.querySelector('#bdPop .bd-opt.bd-sel'); if(b) b.focus(); }catch(e){}
 }
 function bdPopClose(){ const p = document.getElementById('bdPop'); if(p) p.remove(); }
-function bdPopSelSet(i){ bdPopSel = (i + BD_NEW.length) % BD_NEW.length; document.querySelectorAll('#bdPop .bd-opt').forEach((b, j)=>b.classList.toggle('sel', j === bdPopSel)); const b = document.querySelector('#bdPop .bd-opt.sel'); if(b) try{ b.focus(); }catch(e){} }
+function bdPopSelSet(i){ bdPopSel = (i + BD_NEW.length) % BD_NEW.length; document.querySelectorAll('#bdPop .bd-opt').forEach((b, j)=>b.classList.toggle('bd-sel', j === bdPopSel)); const b = document.querySelector('#bdPop .bd-opt.bd-sel'); if(b) try{ b.focus(); }catch(e){} }
 function bdNewPick(k){
   bdPopClose();
   if(k === 'S'){ planScope = 'stock'; try{ coreNewOpen(); }catch(e){ console.warn('bd new S:', e); } }
