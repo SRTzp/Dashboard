@@ -3856,6 +3856,7 @@ button.bd-read{cursor:pointer}
 .bd-det{margin-top:12px}
 .bd-lgrow{margin-top:6px}
 .bd-more{display:block;margin:6px 0 0}
+.bd-jlog{margin-top:4px;font-size:12.5px;white-space:normal}.bd-jlog summary{cursor:pointer;color:var(--blue);font-weight:600;min-height:24px}.bd-jth{color:var(--muted);margin:4px 0}
 </style>
 </head>
 <body>
@@ -13784,7 +13785,7 @@ function lfFormHtml(o){
       <div class="ccRes" id="cnLres"></div><div id="cnLgates"></div></div>
     <div class="ccErr" id="cnErr" style="display:none"></div>
     <!-- CS1 — ปุ่ม 'บันทึกเฉพาะ Tier' ออกจากฟอร์มแผน: ประเมินหุ้นที่ Edit Stock Evaluation (Candidate / Watchlist) -->
-    <div class="lf-btnrow"><button type="button" class="ccBtn" data-lf-cancel onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="cnSave" data-cn-save onclick="coreNewSave()" disabled>บันทึกแผน</button></div></div>`;
+    <div class="lf-btnrow"><button type="button" class="ccBtn" data-lf-cancel onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn" id="cnDraft" data-cn-draft onclick="bdDraftSave()">Save draft</button><button type="button" class="ccBtn pri" id="cnSave" data-cn-save onclick="coreNewSave()" disabled>บันทึกแผน</button></div></div>`;
 }
 
 /* แผน Core ใหม่ (＋ / T เมื่อ scope = หุ้น) · 7E-2b-1: Tier คำนวณ + สลับกลยุทธ์ W/L · opt {mode:'convert'|'edit', id} = แปลงแผน W → L / แก้แผนบันได */
@@ -15310,11 +15311,17 @@ function renderJournalBody(A){
     const mark = iv ? ` <span class="${iv.cls}" title="${iv.tip}">${iv.icon}</span>` : '';
     return `${one(d,'วินัย','disc')}<span style="color:var(--muted)"> / </span>${one(s,'Setup','setup')}${mark}`;
   }
+  function jBdLogHtml(t){   /* PB1 §7 — update log + thesis snapshot carried from the Plan board, collapsed under the trade */
+    if(!t || !Array.isArray(t.log) || !t.log.length) return '';
+    const th = t.thesis && (t.thesis.why || t.thesis.exit) ? `<div class="bd-jth" data-bd-jthesis>① ${escHtml(t.thesis.why || '—')}<br>④ ${escHtml(t.thesis.exit || '—')}</div>` : '';
+    return `<details class="bd-jlog" data-bd-jlog onclick="event.stopPropagation()"><summary>log ${t.log.length} entr${t.log.length === 1 ? 'y' : 'ies'} ›</summary>${th}${t.log.slice().reverse().map(x=>`<div class="bd-lr"><span class="bd-ld">${escHtml(bdLogDate(x.t))}</span> · ${escHtml(x.txt || x.k)}</div>`).join('')}</details>`;
+  }
   function jReasonCell(t){
-    if(!t.exitReason && !t.exitNote) return `<span style="color:var(--muted)">—</span>`;
+    const lg = jBdLogHtml(t);
+    if(!t.exitReason && !t.exitNote) return `<span style="color:var(--muted)">—</span>` + lg;
     const tag = reasonTagHtml('exit', t);
     const note = t.exitNote ? `<div style="color:var(--muted);white-space:normal;margin-top:3px">${escHtml(t.exitNote)}</div>` : '';
-    return tag + note;
+    return tag + note + lg;
   }
   function jLegRow(t, indent, gcolor, isLast){
     const pnl = realizedPnlOf(t), r = realizedROf(t), sym = tradeSym(t);
@@ -15368,7 +15375,7 @@ function renderJournalBody(A){
       return `<div class="tcard ln3-jc" data-ln3-jc="${escHtml(t.id)}">
         <div class="ln3-jl1"><span><b>${symDisp(t.sym)}</b> ${tags}</span><b class="${pnlCls(pnl)}">${sym}${fmtPnl0(pnl)}${r===null?'':` · ${fmt2(r)}R`}</b></div>
         <div class="ln3-jl2"><span>${escHtml(jDateShort(t.exitDate))} · ${fmt2(t.entry)} → ${fmt2(t.exitPrice)} · qty ${fmt2(t.qty)}</span><details class="ln3-mn" data-ln3-mn="1"><summary aria-label="เมนู">⋯</summary><div class="ln3-mnb"><button type="button" class="small" onclick="openTradeEdit('${t.id}','${aq}')">แก้ไข</button><button type="button" class="small danger" onclick="delTrade('${t.id}','${aq}')">ลบ</button></div></details></div>
-        ${jPvaHtml(t)}<div class="ln3-jl3"><span>${(t.exitReason||t.exitNote) ? jReasonCell(t) : ''}</span>${hasRv ? `<span class="ln3-rv">วินัย / Setup ${rv}</span>` : ''}</div></div>`;
+        ${jPvaHtml(t)}<div class="ln3-jl3"><span>${(t.exitReason||t.exitNote||(t.log&&t.log.length)) ? jReasonCell(t) : ''}</span>${hasRv ? `<span class="ln3-rv">วินัย / Setup ${rv}</span>` : ''}</div></div>`;
     }
     return `<div class="tcard">
       <div class="r1">
@@ -15385,7 +15392,7 @@ function renderJournalBody(A){
         <div><span class="k">วินัย / Setup</span>${jReviewCell(t)}</div>
       </div>
       ${jPvaHtml(t)}
-      ${(t.exitReason||t.exitNote)?`<div style="margin-top:6px;font-size:var(--closed-size)">${jReasonCell(t)}</div>`:''}
+      ${(t.exitReason||t.exitNote||(t.log&&t.log.length))?`<div style="margin-top:6px;font-size:var(--closed-size)">${jReasonCell(t)}</div>`:''}
       <div class="foot">
         <div></div>
         <div class="rowbtns">
@@ -16529,11 +16536,12 @@ function tv1Stocks(){
   const add = rec=>{ if(by.has(rec.key)) return; by.set(rec.key, rec); out.push(rec); };
   const mk = (sym, market, item, extra)=>Object.assign({sym, key:wlSymKey(sym), market:market || wlGuessMarket(String(sym).toUpperCase()), item:item || null, etf:tv1EtfOf(sym, item)}, extra);
   tv1OpenTrades().forEach(t=>{ const it = wlItemOf(t.sym); add(mk(String(t.sym).toUpperCase(), t.market || (it && it.market), it, {kind:'hold', track:wlTrackOf(String(t.sym)), sec:'HOLD'})); });
+  const incK = new Set((coreCardsList || []).filter(c=>c && c.ticker && coreEff(c).kind==='plan' && !(c.plan && +c.plan.entry > 0 && +c.plan.stop > 0)).map(c=>wlSymKey(c.ticker)));   /* PB1 §2b — an incomplete plan (no Entry/SL) is never READY - SETUP · complete plans unchanged */
   A.wl.forEach(r=>{ const it = r.item; if(!it || it.archived===true) return;
-    const su = tv1SetupLeft(r.sym, held) > 0;
+    const su = tv1SetupLeft(r.sym, held) > 0 && !incK.has(wlSymKey(r.sym));
     add(mk(r.sym, r.market, it, {kind:'wl', track:wlTrackOf(it), sec:su ? 'READY - SETUP' : 'READY', setup:su})); });
   coreCardsList.forEach(c=>{ if(!c || !c.ticker || coreEff(c).kind!=='plan') return;
-    const su = tv1SetupLeft(c.ticker, held) > 0, it = wlItemOf(c.ticker);
+    const su = tv1SetupLeft(c.ticker, held) > 0 && !incK.has(wlSymKey(c.ticker)), it = wlItemOf(c.ticker);
     add(mk(String(c.ticker).toUpperCase(), it && it.market, it, {kind:'plan', track:coreTrackOfCard(c), sec:su ? 'READY - SETUP' : 'READY', setup:su})); });
   A.cand.forEach(r=>{ const ci = tv1CandInfo(r, today), t = ci.m.track;
     add(mk(r.sym, r.market, null, {kind:'cand', row:r, track:t==='ladder' ? 'ladder' : 'winner', sec:'SCREEN', at:ci.at, ageD:ci.ageD})); });
@@ -29459,6 +29467,21 @@ function bdSavedToast(){ try{ td3ToastShow('Plan saved · View in Plan ›'); co
   goPlanTop = function(){ bdNewOpen(); };
 })();
 
+
+/* PB1 §2b — Save draft: a plan without Entry / SL (waiting for setup) · skips ONLY Entry/SL/size validation · normal Save unchanged */
+function bdDraftSave(){
+  const n = coreNew; if(!n || n.strat === 'L' || (n.mode !== 'new' && n.mode !== 'editw') || !coreEl('cnTicker')) return;
+  const rd = coreNewRead(); if(!rd || !rd.ticker){ const er = coreEl('cnErr'); if(er){ er.textContent = 'Enter a ticker first'; er.style.display = ''; } return; }
+  const now = new Date().toISOString(), cur = n.id ? coreCardsList.find(x=>x.id === n.id) : null;
+  const e = rd.entry > 0 ? rd.entry : null, s = rd.stop > 0 ? rd.stop : null;
+  if(cur){
+    const plan = Object.assign({}, cur.plan || {}, {entry:e, stop:s}); coreSheetClose(); coreWrite(cur.id, {plan, stop:s}); return;
+  }
+  const id = coreNewId();
+  coreSheetClose();
+  coreWrite(id, {acct:n.acct, ticker:rd.ticker, market:rd.mk, strategy:'W', ...(n.track === 'ladder' ? {track:'ladder'} : {}), plan:{entry:e, stop:s, draft:true}, stop:s, stopHistory:[], px:null, pxDate:null, emaW:null, lots:[], trade_id:null, status:'plan', created_at:now, log:[bdMk('create', 'Draft saved · ' + (e ? 'Entry ' + td3Num(e) : 'no Entry yet'))]});
+  try{ bdSavedToast(); }catch(x){}
+}
 /* ---- ห่อฟังก์ชันที่วาดตาราง ให้เรียก fixTableScroll() ต่อท้ายเองอัตโนมัติ ----
    ทำจุดเดียวตรงนี้ดีกว่าไปแทรกบรรทัดในแต่ละฟังก์ชัน เพราะไม่มีทางหลุดสักตัว
    และฟังก์ชันที่เพิ่มทีหลังก็แค่เติมชื่อลงในลิสต์ */
