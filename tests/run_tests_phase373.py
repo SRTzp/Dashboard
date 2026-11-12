@@ -9,6 +9,7 @@ import run_tests_phase4 as base
 import run_tests_phase13 as P13
 import run_tests_phase24 as P24
 import run_tests_phase106 as T
+import run_tests_phase120 as P120
 
 ENGINE = base.BROWSER_ENGINE
 results = []
@@ -353,10 +354,272 @@ def iphone(pw):
         b.close()
 
 
+# ───────────────────────── PB1b rev 3.1 — Sat popup · Trend rule · Place-order confirm · Flow focus ─────────────────────────
+SHOTS = "screenshots/"
+TABS = ["today", "flow", "watch", "plan", "journal", "mix"]
+
+
+def pop_step(page): return js(page, "()=>{ const e=document.querySelector('#bdPop [data-pb2-step]'); return e ? e.dataset.pb2Step : null; }")
+def st(page): return js(page, "()=>pb2 ? JSON.parse(JSON.stringify(pb2)) : null")
+def fld(page, k, v): page.fill(f'[data-pb2-in="{k}"]', str(v)); settle(page, 60)
+def tgl(page, k, v): page.click(f'[data-pb2-tg="{k}"][data-v="{1 if v else 0}"]'); settle(page, 60)
+def label(page): return txt(page, "[data-pb2-label]")
+def det(page): return txt(page, "[data-pb2-det]")
+def mssq(page): return cnt(page, "div[data-pb2-mss]")
+def mss_on(page): return js(page, "()=>[...document.querySelectorAll('[data-pb2-mss] .pb2-seg button.on')].map(e=>e.innerText)")
+def mss_click(page, yes): page.click(f'[data-pb2-mss] button[data-pb2-mss="{1 if yes else 0}"]'); settle(page, 60)
+def warn(page): return cnt(page, "[data-pb2-warn]")
+def pb_items(page): return js(page, "()=>bdItems().filter(x=>x.kind==='sat').map(x=>({id:x.id, sym:x.sym, st:x.status, inc:x.inc&&x.inc.text, blocked:!!x.blocked}))")
+def sat_card(page, iid): return js(page, "(i)=>{ const c=document.querySelector('[data-bd-card=\"'+i+'\"]'); if(!c) return null; const p=c.querySelector('[data-bd-pill]'); return {txt:c.innerText.replace(/\\s+/g,' '), pill:p?p.dataset.bdPill:null, dis:p?p.disabled:null, title:p?p.title:null, tag:(c.querySelector('[data-bd-trendtag]')||{}).innerText||'', blk:!!c.querySelector('[data-bd-blockedtag]'), nw:!!c.querySelector('[data-bd-nearwarn]'), need:(c.querySelector('[data-bd-need]')||{}).innerText||''}; }", iid)
+def last_idea(page): return js(page, "()=>{ const l=satIdeasList.filter(x=>x.pb2); return l.length ? l[l.length-1].id : null; }")
+
+
+def open_form(page, n=1, tab_=None):
+    if tab_: tab(page, tab_)
+    page.keyboard.press("n"); settle(page, 200)
+    page.keyboard.press("f"); settle(page, 200)
+    page.keyboard.press(str(n)); settle(page, 250)
+
+
+def new_plan(page, asset_n, buy=True, e=2642, sl=2628, tp=2684, ema=True, strc=True, mss=None, save=True):
+    open_form(page, asset_n)
+    if not buy: page.click('[data-pb2-dir="Sell"]')
+    fld(page, "entry", e); fld(page, "sl", sl); fld(page, "tp", tp)
+    if ema is not None: tgl(page, "ema", ema)
+    if strc is not None: tgl(page, "str", strc)
+    if mss is not None: mss_click(page, mss)
+    if save:
+        page.click("[data-pb2-save]"); settle(page, 300)
+        if cnt(page, "[data-ln4-cs-ok]"): page.click("[data-ln4-cs-ok]"); settle(page, 400)
+    settle(page, 500)
+    return last_idea(page)
+
+
+def shot(page, name, w): page.screenshot(path=f"{SHOTS}pb1b-{name}-{w}.png")
+
+
+def pb1b(pw, w, h):
+    tag = f"[{ENGINE}/{w}] PB1b"
+    b, page, ce, pe = launch(pw, w, h)
+    try:
+        seed(page, fixtures()); setup_ok(page, ["AMD"])
+        js(page, "()=>{ satWeekPickWrite(wpWeekKey(), ['XAUUSD','BTCUSD']); }"); settle(page, 500)
+        P120.ps_on(page, {"def": {"winner": 0.4, "ladder": 1.0, "satMain": 0.1, "satTac": 0.15}}); settle(page, 300)
+        stub(page, "window.confirm = ()=>true; window.prompt = (m, d)=>String(d);")
+        # ── §1 popup from every tab · no tab switch · step back · ★ first ──
+        okTabs = []
+        for t in TABS:
+            tab(page, t); page.keyboard.press("n"); settle(page, 200)
+            s0 = pop_step(page); page.keyboard.press("f"); settle(page, 200); s1 = pop_step(page)
+            page.keyboard.press("Escape"); settle(page, 150); s1b = pop_step(page)
+            page.keyboard.press("f"); settle(page, 150); page.keyboard.press("2"); settle(page, 250); s2 = pop_step(page)
+            at = js(page, "()=>activeTab"); a = js(page, "()=>pb2 && pb2.a")
+            page.keyboard.press("Escape"); settle(page, 150); s2b = pop_step(page)
+            page.keyboard.press("Escape"); settle(page, 150); page.keyboard.press("Escape"); settle(page, 150)
+            okTabs.append((t, s0, s1, s1b, s2, at == t or (t == "mix" and at in ("mix", "port")), a, s2b, cnt(page, "#bdPop")))
+        check(f"{tag} 1 N → F → 2 → form from all 6 tabs, no tab switch; Esc steps back (form→asset→type→closed)", all(x[1:5] == ("type", "asset", "type", "form") and x[5] and x[7] == "asset" and x[8] == 0 for x in okTabs), okTabs)
+        tab(page, "plan"); open_form(page, 1)
+        check(f"{tag} 1 asset 1 opens the form for the ★ asset (BTC/XAU focus) with header + SAT tag", pop_step(page) == "form" and "SAT" in txt(page, "#pb2Body .pb2-h"), st(page))
+        page.keyboard.press("Escape"); settle(page, 150)
+        stars = js(page, "()=>[...document.querySelectorAll('[data-pb2-asset]')].map(e=>+e.dataset.pb2Star)")
+        page.keyboard.press("Escape"); settle(page, 100); page.keyboard.press("n"); settle(page, 150); page.keyboard.press("f"); settle(page, 200)
+        stars = js(page, "()=>[...document.querySelectorAll('[data-pb2-asset]')].map(e=>+e.dataset.pb2Star)")
+        check(f"{tag} 1 ★ this week's focus assets come first in the asset step", stars[:2] == [1, 1] and 0 in stars and stars == sorted(stars, reverse=True) and len(stars) >= 4, stars)
+        keys = js(page, "()=>[...document.querySelectorAll('[data-pb2-asset]')].map(e=>e.dataset.pb2Asset)")
+        shot(page, "step2-assets", w)
+        page.keyboard.press("Escape"); settle(page, 100)
+        shot(page, "step1-type", w)
+        page.keyboard.press("Escape"); settle(page, 100)
+        # ── §2 form: starts unselected · no Setup checkboxes / Range / MSS price ──
+        tab(page, "plan"); open_form(page, 1)
+        ak = st(page)["a"]
+        check(f"{tag} 2 Trend starts UNSELECTED: EMA50/Structure ✓✗ both off, size says 'Choose trend', no MSS question", cnt(page, "[data-pb2-tg].yes, [data-pb2-tg].no") == 0 and label(page) == "Choose trend" and mssq(page) == 0, [cnt(page, "[data-pb2-tg].yes"), label(page)])
+        check(f"{tag} 2 no Setup checkboxes · no Range option · no MSS price field · exactly Entry/SL/TP inputs", cnt(page, "#pb2Body input[type=checkbox]") == 0 and cnt(page, "#pb2Body input") == 3 and "Range" not in txt(page, "#pb2Body") and "MSS price" not in txt(page, "#pb2Body"), txt(page, "#pb2Body"))
+        check(f"{tag} 2 grey Setup reminder line present (one line of text)", "Setup in TradingView: In Zone · EMA50/HVN converging · Pivot MMT · Trend Neutral" in txt(page, "[data-pb2-rem]"), txt(page, "[data-pb2-rem]"))
+        check(f"{tag} 2 order: Buy|Sell · Main|Family → Entry SL TP → TREND → size → reminder → macro → Save draft · Save plan", js(page, "()=>{ const q=s=>{const e=document.querySelector(s); return e?e.getBoundingClientRect().top:-1}; const a=[q('[data-pb2-seg]'),q('[data-pb2-prices]'),q('[data-pb2-trend]'),q('[data-pb2-size]'),q('[data-pb2-rem]'),q('[data-pb2-mac]'),q('[data-pb2-draft]')]; return a.every((x,i)=>x>0 && (i==0||x>a[i-1])); }"))
+        fld(page, "entry", 2642); fld(page, "sl", 2628); fld(page, "tp", 2684)
+        # hold · all ✓
+        pill = page.locator("[data-pb2-all]"); bb = pill.bounding_box()
+        page.mouse.move(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2); page.mouse.down(); page.wait_for_timeout(300); page.mouse.up(); settle(page, 100)
+        s_a = st(page); page.mouse.click(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2); settle(page, 150); s_b = st(page)
+        check(f"{tag} 2 pill: a tap and an early release (0.3 s) do nothing", s_a["ema"] is None and s_a["str"] is None and s_b["ema"] is None and s_b["str"] is None, [s_a, s_b])
+        page.mouse.move(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2); page.mouse.down(); page.wait_for_timeout(1000); page.mouse.up(); settle(page, 150)
+        s_c = st(page)
+        check(f"{tag} 2 pill: holding 0.8 s sets EMA50 ✓ + Structure ✓ (Size 100%)", s_c["ema"] is True and s_c["str"] is True and label(page) == "Size 100%", [s_c, label(page)])
+        page.click('[data-pb2-tg="ema"][data-v="1"]'); settle(page, 60); page.click('[data-pb2-tg="str"][data-v="1"]'); settle(page, 60)
+        check(f"{tag} 2 tap again unselects (both back to unselected)", st(page)["ema"] is None and st(page)["str"] is None and label(page) == "Choose trend", st(page))
+        page.focus("[data-pb2-all]"); page.keyboard.down(" "); page.wait_for_timeout(1000); page.keyboard.up(" "); settle(page, 150)
+        check(f"{tag} 2 pill works by keyboard hold (Space 0.8 s)", st(page)["ema"] is True and st(page)["str"] is True, st(page))
+        # ── §3 trend rule ──
+        page.evaluate("()=>{ pb2.ema=true; pb2.str=true; pb2.mss=null; pb2Refresh(); }"); settle(page, 80)
+        l100, d100 = label(page), det(page)
+        check(f"{tag} 3 ✓✓ → Size 100% · no warning · no MSS question", l100 == "Size 100%" and warn(page) == 0 and mssq(page) == 0, [l100, d100])
+        tgl(page, "ema", False)
+        l60, d60 = label(page), det(page)
+        check(f"{tag} 3 EMA ✗ / Structure ✓ → Size 60% + nearest-target warning", l60 == "Size 60%" and warn(page) == 1 and "nearest key target" in txt(page, "[data-pb2-warn]"), [l60, txt(page, "[data-pb2-warn]")])
+        import re
+        def lotof(d):
+            m = re.match(r"([0-9.]+)", d or ""); return float(m.group(1)) if m else None
+        a, c = lotof(d100), lotof(d60)
+        check(f"{tag} 3 the 60% size is 60% of the 100% size (one factor)", a is None or (c is not None and abs(c - round(a * 0.6, 4)) <= max(0.011, a * 0.05)), [d100, d60])
+        tgl(page, "ema", True); tgl(page, "str", False)
+        check(f"{tag} 3 EMA ✓ / Structure ✗ → MSS question shown, NO button preselected, label Blocked", mssq(page) == 1 and mss_on(page) == [] and label(page) == "Blocked" and warn(page) == 0, [mssq(page), mss_on(page), label(page)])
+        shot(page, "mss-blocked", w)
+        mss_click(page, True)
+        check(f"{tag} 3 …MSS Yes → 'Counter trend @ MSS · 60%' (no warning)", label(page) == "Counter trend @ MSS · 60%" and warn(page) == 0, label(page))
+        shot(page, "mss-yes", w)
+        mss_click(page, False)
+        check(f"{tag} 3 …MSS No → Blocked", label(page) == "Blocked", label(page))
+        tgl(page, "str", True)
+        check(f"{tag} 3 flip Structure to ✓ hides the MSS question and CLEARS the answer", mssq(page) == 0 and st(page)["mss"] is None, st(page))
+        tgl(page, "str", False)
+        check(f"{tag} 3 flip back to ✗ → question returns with nothing selected (old answer never re-unlocks)", mssq(page) == 1 and mss_on(page) == [] and label(page) == "Blocked", [mss_on(page), label(page)])
+        tgl(page, "ema", False)
+        check(f"{tag} 3 ✗✗ → MSS question, blank = Blocked", mssq(page) == 1 and label(page) == "Blocked" and mss_on(page) == [], [label(page)])
+        mss_click(page, True)
+        check(f"{tag} 3 ✗✗ MSS Yes → 'Reversal @ MSS · 60%' + nearest-target warning", label(page) == "Reversal @ MSS · 60%" and warn(page) == 1, [label(page), warn(page)])
+        mss_click(page, False)
+        check(f"{tag} 3 ✗✗ MSS No → Blocked", label(page) == "Blocked" and warn(page) == 0, label(page))
+        # side check + R:R
+        page.click('[data-pb2-dir="Sell"]'); settle(page, 80)
+        check(f"{tag} 2 side check: Sell with SL < Entry < TP → red 'Sell needs SL > Entry > TP'", "Sell needs SL > Entry > TP" in txt(page, "[data-pb2-side]"), txt(page, "[data-pb2-side]"))
+        page.click('[data-pb2-dir="Buy"]'); settle(page, 80)
+        check(f"{tag} 2 side check clears when levels are on the right side (Buy)", cnt(page, "[data-pb2-side]") == 0)
+        fld(page, "sl", 2650)
+        check(f"{tag} 2 Buy with SL above Entry → red 'Buy needs SL < Entry < TP'", "Buy needs SL < Entry < TP" in txt(page, "[data-pb2-side]"), txt(page, "[data-pb2-side]"))
+        fld(page, "sl", 2628)
+        # screenshot of the plain form
+        page.evaluate("()=>{ pb2.ema=true; pb2.str=true; pb2.mss=null; pb2Refresh(); }"); settle(page, 100)
+        shot(page, "step3-form", w)
+        check(f"{tag} 2 no horizontal overflow · popup content never wider than the sheet · Trend row on one line", ovf(page) <= 0 and js(page, "()=>{ const b=document.getElementById('pb2Body'); const tr=document.querySelector('.pb2-tr').getBoundingClientRect(); return b.scrollWidth<=b.clientWidth+1 && tr.height<50 && [...b.querySelectorAll('*')].every(e=>e.getBoundingClientRect().right<=b.getBoundingClientRect().right+1); }"))
+        page.keyboard.press("Escape"); settle(page, 150); page.keyboard.press("Escape"); settle(page, 150); page.keyboard.press("Escape"); settle(page, 150)
+        # ── Save plan → states ──
+        plan(page)
+        i1 = new_plan(page, 1, ema=True, strc=True)
+        d1 = idea_db(page, i1) or {}
+        check(f"{tag} 2 Save plan: stays on Plan, popup closed, toast 'Plan saved · View in Plan ›'", cnt(page, "#bdPop") == 0 and js(page, "()=>activeTab") == "plan" and "Plan saved" in txt(page, "#td3Toast"), txt(page, "#td3Toast"))
+        check(f"{tag} 2 saved idea: bias Long · entry/SL/TP · ema50_ok/structure_ok true · pb_acct", d1.get("bias") == "Long" and d1.get("entry") == 2642 and d1.get("sl") == 2628 and d1.get("tp") == 2684 and d1.get("ema50_ok") is True and d1.get("structure_ok") is True and bool(d1.get("pb_acct")), {k: d1.get(k) for k in ("bias", "entry", "sl", "tp", "ema50_ok", "structure_ok", "pb_acct")})
+        js(page, "()=>bdSetSeg('plan')"); settle(page, 200)
+        c1 = sat_card(page, i1)
+        check(f"{tag} 3b complete ✓✓ plan = 📝 Planned with an enabled 'Place order ›'", c1 and c1["pill"] == "place" and c1["dis"] is False and i1 in col(page, "plan"), c1)
+        # second asset, EMA ✗/Str ✓ warn card ; MSS blank incomplete ; MSS No blocked ; counter ; reversal
+        i2 = new_plan(page, 2, ema=False, strc=True)
+        c2 = sat_card(page, i2)
+        check(f"{tag} 3b EMA ✗ / Str ✓ plan: card shows the nearest-target ⚠️ icon and Place order is allowed", c2 and c2["nw"] and c2["pill"] == "place" and c2["dis"] is False, c2)
+        open_form(page, 3)    # USDJPY (3rd ★)
+        fld(page, "entry", 150); fld(page, "sl", 148); fld(page, "tp", 155); tgl(page, "ema", True); tgl(page, "str", False)
+        page.click("[data-pb2-save]"); settle(page, 500)
+        i3 = last_idea(page)
+        c3 = sat_card(page, i3)
+        check(f"{tag} 3b MSS unanswered: 🕓 Waiting — card says 'needs MSS answer', Complete › (no Place order)", c3 and "needs MSS answer" in c3["need"] and c3["pill"] == "complete", c3)
+        js(page, "(i)=>td3SatOpen(i,'')", i3); settle(page, 300)
+        check(f"{tag} 3b Complete › opens the same popup form (step 3), prices filled, no tab switch", pop_step(page) == "form" and js(page, "()=>document.querySelector('[data-pb2-in=entry]').value") == "150" and js(page, "()=>activeTab") == "plan")
+        mss_click(page, False); page.click("[data-pb2-save]"); settle(page, 500)
+        c3 = sat_card(page, i3)
+        check(f"{tag} 3b MSS No → Planned with red Blocked tag; Place order disabled with tooltip 'Blocked by trend rule'", c3 and c3["blk"] and c3["dis"] is True and c3["title"] == "Blocked by trend rule" and i3 in col(page, "plan") and "needs" not in c3["need"], c3)
+        shot(page, "plan-board", w)
+        js(page, "(i)=>td3SatOpen(i,'')", i3); settle(page, 300); mss_click(page, True)
+        page.click("[data-pb2-save]"); settle(page, 400)
+        check(f"{tag} 3 Counter-trend confirm still asked at Save (EMA ✓ / Structure ✗ Yes)", cnt(page, "[data-ln4-cs-ok]") == 1)
+        page.click("[data-ln4-cs-ok]"); settle(page, 500)
+        c3 = sat_card(page, i3)
+        check(f"{tag} 3 …saved → card tag 'Counter trend @ MSS', Place order enabled, no warning icon", c3 and c3["tag"] == "Counter trend @ MSS" and c3["pill"] == "place" and c3["dis"] is False and not c3["nw"], c3)
+        d3 = idea_db(page, i3) or {}
+        check(f"{tag} 3 stored: ema50_ok true · structure_ok false · mss true", d3.get("ema50_ok") is True and d3.get("structure_ok") is False and d3.get("mss") is True, {k: d3.get(k) for k in ("ema50_ok", "structure_ok", "mss")})
+        # reversal on S50 (4th asset)
+        i4 = new_plan(page, 4, ema=False, strc=False, mss=True, e=6000, sl=5900, tp=6300)
+        c4 = sat_card(page, i4)
+        check(f"{tag} 3 ✗✗ MSS Yes saved → 'Reversal @ MSS' tag + nearest-target ⚠️", c4 and c4["tag"] == "Reversal @ MSS" and c4["nw"], c4)
+        # ── Edit / Update levels open the same popup ──
+        js(page, "(i)=>bdOpen(i)", i1); settle(page, 400)
+        page.locator("[data-bd-update]").click(); settle(page, 400)
+        check(f"{tag} 1 drawer 'Update levels' opens the same popup form (no tab switch)", pop_step(page) == "form" and js(page, "()=>activeTab") == "plan" and cnt(page, "#bdDrawer") >= 0, pop_step(page))
+        page.keyboard.press("Escape"); settle(page, 150)
+        js(page, "(i)=>bdEditLv(i)", i1); settle(page, 300)
+        check(f"{tag} 1 board 'Edit' (bdEditLv) opens the same popup form", pop_step(page) == "form" and js(page, "()=>document.querySelector('[data-pb2-in=sl]').value") == "2628")
+        page.keyboard.press("Escape"); settle(page, 150)
+        js(page, "()=>bdClose()")
+        # ── §2b Place order confirm ──
+        js(page, "()=>bdSetSeg('plan')"); settle(page, 150)
+        page.locator(f'[data-bd-card="{i3}"] [data-bd-pill]').click(); settle(page, 400)
+        check(f"{tag} 2b Place order opens 'Setup ready on Execution TF?' with the setup line, MSS line (MSS trade) and summary", pop_step(page) == "place" and "Setup ready on Execution TF?" in txt(page, "#pb2Body") and PB2_LINE in txt(page, "[data-pb2-rem]") and "MSS confirmed per your rules (candle closed)" in txt(page, "[data-pb2-mssok]") and "Buy" in txt(page, "[data-pb2-summary]") and "Entry" in txt(page, "[data-pb2-summary]") and "Counter trend @ MSS" in txt(page, "[data-pb2-summary]"), txt(page, "#pb2Body"))
+        check(f"{tag} 2b buttons [Not yet] [Yes · mark ordered] + 'records only' note", "Not yet" in txt(page, "[data-pb2-no]") and "Yes · mark ordered" in txt(page, "[data-pb2-yes]") and "place it at your broker" in txt(page, "#pb2Body"))
+        shot(page, "place-confirm", w)
+        page.click("[data-pb2-no]"); settle(page, 300)
+        d3 = idea_db(page, i3) or {}
+        check(f"{tag} 2b [Not yet] changes nothing (no ordered flag, no snapshot)", cnt(page, "#bdPop") == 0 and not (d3.get("ln4") or {}).get("placedAt") and not (d3.get("ln4") or {}).get("snap") and i3 in col(page, "plan"), d3.get("ln4"))
+        page.locator(f'[data-bd-card="{i1}"] [data-bd-pill]').click(); settle(page, 400)
+        check(f"{tag} 2b non-MSS trade: no 'MSS confirmed' line", cnt(page, "[data-pb2-mssok]") == 0 and pop_step(page) == "place")
+        page.keyboard.press("Escape"); settle(page, 200)
+        check(f"{tag} 2b Esc = Not yet", cnt(page, "#bdPop") == 0 and i1 in col(page, "plan"))
+        page.locator(f'[data-bd-card="{i1}"] [data-bd-pill]').click(); settle(page, 300)
+        page.keyboard.press("Enter"); settle(page, 800)
+        d1 = idea_db(page, i1) or {}; sn = ((d1.get("ln4") or {}).get("snap") or {}).get("0") or {}
+        need = {"t", "entry", "sl", "tp", "dir", "acct", "ema", "structure", "mss", "label", "mult", "lot", "riskPct", "riskAmt", "macro", "setupOk"}
+        check(f"{tag} 2b Enter = Yes → Ordered + per-level snapshot with all fields", i1 in col(page, "ord") and need <= set(sn.keys()) and sn.get("setupOk") is True and sn.get("entry") == 2642 and sn.get("ema") is True and sn.get("dir") == "Buy", sorted(set(need) - set(sn.keys())))
+        check(f"{tag} 2b log line 'Order placed'", any(str(x.get("txt", "")).startswith("Order placed") for x in d1.get("log", [])), d1.get("log"))
+        js(page, "(i)=>bdEditLv(i)", i1); settle(page, 300)
+        fld(page, "entry", 2640); fld(page, "sl", 2620); page.click("[data-pb2-save]"); settle(page, 600)
+        d1 = idea_db(page, i1) or {}; sn2 = ((d1.get("ln4") or {}).get("snap") or {}).get("0") or {}
+        check(f"{tag} 2b editing the plan later leaves the snapshot unchanged (plan entry 2640 · snapshot still 2642/2628)", d1.get("entry") == 2640 and sn2 == sn and sn2.get("entry") == 2642 and sn2.get("sl") == 2628, [d1.get("entry"), sn2])
+        # Filled ✓ → trade open, snapshot copied
+        js(page, "()=>bdSetSeg('ord')"); settle(page, 150)
+        pf = page.locator(f'[data-bd-card="{i1}"] [data-bd-pill]'); fp = pf.inner_text()
+        pf.click(); settle(page, 900)
+        tr = js(page, "(i)=>{ const x=satIdeasList.find(y=>y.id===i); const out=[]; sat7dAccts().forEach(a=>{ const s=(x.accts||{})[a.id]; if(s&&s.trade_id){ const t=getBook(a.id).trades.find(q=>q.id===s.trade_id); if(t) out.push({st:t.status, snap:!!t.orderSnap, e:t.entry}); } }); return out; }", i1)
+        check(f"{tag} 2b Ordered → Filled ✓ records the trade open (snapshot carried to the trade)", "Filled" in fp and len(tr) >= 1 and tr[0]["st"] == "open" and tr[0]["snap"], [fp, tr])
+        # blocked card cannot place
+        js(page, "()=>bdSetSeg('plan')"); settle(page, 150)
+        d_blk = new_plan(page, 4, ema=True, strc=False, mss=False, e=6010, sl=5900, tp=6300) if False else None
+        # ── Plan has no Strategy page ──
+        plan(page)
+        check(f"{tag} 4 Plan: no 'Sat assets ›' link, no '‹ Plan board' bar, no Sat Strategy panel visible", cnt(page, "[data-bd-assets]") == 0 and cnt(page, "#bdEditBar") == 0 and js(page, "()=>{ const e=document.getElementById('satV3Panel'); return !e || e.offsetParent===null; }"))
+        js(page, "()=>setPlanScope('future')"); settle(page, 300)
+        check(f"{tag} 4 old deep link setPlanScope('future') still shows the board (no Strategy page)", cnt(page, "[data-bd-board] [data-bd-col]") >= 1 and js(page, "()=>{ const e=document.getElementById('satV3Panel'); return !e || e.offsetParent===null; }"))
+        js(page, "()=>setPlanScope('stock')"); plan(page)
+        # ── Flow top ──
+        tab(page, "flow")
+        shot(page, "flow-top", w)
+        order = js(page, "()=>{ const h=document.getElementById('bdFlowTop'); return [...h.children].map(e=>e.hasAttribute('data-bd-macro')?'macro':e.hasAttribute('data-bd-wi')?'wi':'other'); }")
+        check(f"{tag} 4 Flow top: first card '🌐 Macro · this week's Sat focus', then Weekly Impact", order[:2] == ["macro", "wi"] and "Sat focus" in txt(page, "[data-bd-macro] .bd-mh"), [order, txt(page, "[data-bd-macro] .bd-mh")])
+        chips = js(page, "()=>[...document.querySelectorAll('[data-bd-focus]')].map(e=>e.dataset.bdFocus+':'+e.getAttribute('aria-pressed'))")
+        check(f"{tag} 4 Flow card: week selector, regime, one chip per asset (★ focus), ＋ Asset", cnt(page, "[data-bd-wk]") == 1 and len(chips) >= 4 and "XAUUSD:true" in chips and any(c.endswith(":false") for c in chips) and cnt(page, "[data-bd-addasset]") == 1, chips)
+        on0 = [c for c in chips if c.endswith(":true")][0].split(":")[0]
+        page.click(f'[data-bd-focus="{on0}"]'); settle(page, 600)
+        pk = js(page, "()=>satWeekPickList()")
+        check(f"{tag} 4 tap a ★ chip = un-focus this week (removes the weekly pick; chip goes un-starred)", on0 not in pk and js(page, "(k)=>document.querySelector('[data-bd-focus=\"'+k+'\"]').getAttribute('aria-pressed')", on0) == "false", [on0, pk])
+        page.click(f'[data-bd-focus="{on0}"]'); settle(page, 600)
+        pk = js(page, "()=>satWeekPickList()")
+        check(f"{tag} 4 tap again = ★ focus again (writes the weekly pick) · when 3 are already focused the existing 3-max message shows", (on0 in pk and js(page, "(k)=>document.querySelector('[data-bd-focus=\"'+k+'\"]').getAttribute('aria-pressed')", on0) == "true") or (len(pk) == 3 and "3" in (txt(page, "#sdToast") or "")), [on0, pk])
+        page.click("[data-bd-addasset]"); settle(page, 300)
+        check(f"{tag} 4 '＋ Asset' = the existing add-asset sheet", cnt(page, "[data-wa-sheet]") == 1)
+        js(page, "()=>waSheetClose()")
+        check(f"{tag} 4 Flow: no horizontal overflow", ovf(page) <= 0)
+        # ── §5 / PB1 §2c ──
+        plan(page)
+        js(page, "()=>coreWrite('ccMH', {px:483, pxDate:'2026-10-01'})"); settle(page, 600); plan(page)
+        js(page, "()=>bdSetSeg('hold')"); settle(page, 200)
+        pm = js(page, "()=>{ const x=bdItems().find(y=>y.id==='ccMH'); const p=document.querySelector('[data-bd-card=\"ccMH\"] [data-bd-pill]'); return {pct:x.pct, lv:x.pctLv, pill:p&&p.dataset.bdPill, t:p&&p.innerText}; }")
+        check(f"{tag} 5 Holding, next unfilled level (480) Planned and < 2% away → pill 'Place order ›' for that level; % = nearest unfilled level", pm["pill"] == "place" and "Place order" in pm["t"] and pm["lv"] == 1 and abs(pm["pct"] - (480 - 483) / 483 * 100) < 0.01, pm)
+        page.locator('[data-bd-card="ccMH"] [data-bd-pill]').click(); settle(page, 700)
+        pm = js(page, "()=>{ const x=bdItems().find(y=>y.id==='ccMH'); const p=document.querySelector('[data-bd-card=\"ccMH\"] [data-bd-pill]'); return {placed:[...x.placed], pill:p&&p.dataset.bdPill}; }")
+        check(f"{tag} 5 …tapping it orders that level (then Filled ✓)", pm["placed"] == [1] and pm["pill"] == "fill", pm)
+        js(page, "()=>coreWrite('ccMH', {px:560})"); settle(page, 500)
+        pm = js(page, "()=>{ const x=bdItems().find(y=>y.id==='ccML'); return {pct:x.pct, lv:x.pctLv}; }")
+        check(f"{tag} 5 % to entry for a Planned multi-level plan = nearest level (not only #1)", pm["pct"] is not None and pm["lv"] in (0, 1, 2), pm)
+        check(f"{tag} no console / page errors", not ce and not pe, [str(x)[:200] for x in (ce + pe)][:4])
+        check(f"{tag} no horizontal overflow at the end", ovf(page) <= 0, ovf(page))
+    finally:
+        b.close()
+
+
+PB2_LINE = "In Zone · EMA50/HVN converging · Pivot MMT · Trend Neutral"
+
+
 if __name__ == "__main__":
     with sync_playwright() as pw:
         for w, h in ((1440, 900), (1280, 860), (390, 844)):
-            try: persist(pw, w, h); run(pw, w, h)
+            try: persist(pw, w, h); run(pw, w, h); pb1b(pw, w, h)
             except Exception as e:
                 import traceback; traceback.print_exc(); check(f"[{w}] crashed", False, str(e)[:300])
         try: iphone(pw)
