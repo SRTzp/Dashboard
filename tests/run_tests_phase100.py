@@ -63,6 +63,7 @@ def fixture(doc):
 def launch(pw, w, h, picks=None, pb=True):
     b, page, ce, pe = P99.launch(pw, w, h, pb=pb, picks=picks, mut=fixture)
     page.on("dialog", lambda d: DIALOGS.append(d.message))
+    page.route(re.compile(r"investing\.com"), lambda route: route.fulfill(status=200, content_type="text/html", body="<html><body></body></html>"))   # PB1d: calendar iframe = no real network
     return b, page, ce, pe
 
 
@@ -86,7 +87,7 @@ def go_strategy(page, w_asset="XAUUSD", plan=False):
     # PB1 §5: Weekly Impact moved from Plan › Sat to the top of Flow
     if plan:   # Sat asset tiles (Quarterly Macro + WI strip) stay on the Plan › Sat editor page
         js(page, "(a)=>{ switchTab('plan'); setPlanScope('future'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); }", w_asset); settle(page, 700); return
-    js(page, "(a)=>{ bdWiOpen = true; switchTab('flow'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); bdFlowTopRender(); }", w_asset); settle(page, 700)
+    js(page, "(a)=>{ switchTab('flow'); bdOpenRow('wi'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); bdFlowTopRender(); }", w_asset); settle(page, 700)
 
 
 def go_today(page):
@@ -96,6 +97,7 @@ def go_today(page):
 def paste(page, d_or_text, check_only=True, save=False):
     text = d_or_text if isinstance(d_or_text, str) else json.dumps(d_or_text, ensure_ascii=False)
     if not page.locator("#wiText").count():
+        js(page, "()=>{ const b=document.querySelector('[data-wi-paste]'); if(b) b.scrollIntoView({block:'center'}); }")   # PB1d: the row sits low on the page, behind the fixed bottom bar
         page.locator("[data-wi-paste]").first.click(); settle(page, 300)
     js(page, "(t)=>{ const e = document.getElementById('wiText'); e.value = t; wiPaste.text = t; }", text)
     page.locator("[data-wi-check]").click(); settle(page, 350)

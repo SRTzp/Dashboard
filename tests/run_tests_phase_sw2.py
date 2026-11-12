@@ -38,6 +38,7 @@ def tab(page): return js(page, "()=>activeTab")
 
 def run(pw):
     b, page, ce, pe = T.launch(pw, 390, 844, iso=T.NOW, picks=("XAUUSD",), weekly=False)
+    import re; page.route(re.compile(r"investing\.com"), lambda route: route.fulfill(status=200, content_type="text/html", body="<html><body></body></html>"))   # PB1d: calendar iframe = no real network
     try:
         js(page, "()=>{ try{localStorage.removeItem('dash.sw2Hint.today');localStorage.removeItem('dash.sw2Hint.plan');}catch(e){} }")
         T.go_today(page)
