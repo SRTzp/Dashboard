@@ -2,7 +2,7 @@
 """PB1 — One Plan board (Planned · Ordered · Holding) + drawer/log + Macro→Flow + Risk→Port + Today Act + New-plan popup + iPhone/SW2 · เทส 373
 Chromium · 390 + 1280 + 1440 · นาฬิกาปลอม พฤ. 1 ต.ค. 2026 12:00 ICT · SAMPLE data only
 รัน: python3 run_tests_phase373.py"""
-import json, sys
+import json, re, sys
 from playwright.sync_api import sync_playwright
 import ln3fix_common as C   # ต้องมาก่อน
 import run_tests_phase4 as base
@@ -71,6 +71,7 @@ def fixtures():
 
 def launch(pw, w, h):
     b, page, ce, pe = T.launch(pw, w, h, iso=NOW, picks=(), weekly=False)
+    page.route(re.compile(r"investing\.com"), lambda route: route.fulfill(status=200, content_type="text/html", body="<html><body></body></html>"))   # PB1d: calendar iframe = no real network
     P24.set_ff(page, P24.ff_json(True, True))
     js(page, "()=>{ try{ localStorage.removeItem('dash.ps1Off'); localStorage.removeItem('dash.bdChip'); localStorage.removeItem('dash.bdSeg'); }catch(e){} }")
     js(page, "(t)=>{ const B=getBook('main'); B.trades=t; saveBook('main'); render(); }", [
@@ -683,13 +684,17 @@ def pb1c(pw, w, h):
             page.click("[data-bd-macmore]"); settle(page, 300)
             check(f"{tag} '+N more' expands the rest", cnt(page, "[data-bd-mc]") == tot)
             js(page, "()=>bdMacMoreSet(false)")
-        # ── events = next 3 upcoming (past drop) ──
-        evs = js(page, "()=>bdUpcoming().map(o=>o.id)")
-        shown = js(page, "()=>[...document.querySelectorAll('[data-bd-ev]')].map(e=>e.dataset.bdEv)")
-        check(f"{tag} Events = next 3 upcoming only", len(shown) == min(3, len(evs)) and shown == evs[:3] and "e_cancel" not in evs, [shown, evs])
+        # ── ③ events = upcoming HIGH + MED only (past / cancelled drop) · Mac 3-col grid, max 5 + "Full week ›" tile · iPhone list of 3 ──
+        evs = js(page, "()=>bdUpcoming().filter(o=>o.tier==='HIGH'||o.tier==='MED').map(o=>o.id)")
+        shown = js(page, "()=>[...document.querySelectorAll('[data-bd-ev]')].filter(e=>e.getClientRects().length).map(e=>e.dataset.bdEv)")
+        check(f"{tag} Events = upcoming HIGH+MED only, {'3 on iPhone' if ph else 'max 5'}", shown == evs[:(3 if ph else 5)] and "e_cancel" not in evs and "e_post" not in evs, [shown, evs])
         if not ph:
             cols = js(page, "()=>getComputedStyle(document.querySelector('[data-bd-events]')).gridTemplateColumns.split(' ').length")
-            check(f"{tag} Events grid: {len(shown)} pills + Import in one row (no empty column)", cols == len(shown) + 1, cols)
+            check(f"{tag} Events grid = 3 columns + 'Full week ›' tile", cols == 3 and cnt(page, "[data-bd-fullweek]") == 1, cols)
+        fw = "[data-bd-fullweek-p]" if ph else "[data-bd-fullweek]"
+        page.click(fw); settle(page, 300)
+        check(f"{tag} 'Full week ›' opens the Weekly Impact row", js(page, "()=>document.querySelector('[data-bd-row=\"wi\"]').open"))
+        js(page, "()=>{ document.querySelector('[data-bd-row=\"wi\"]').open=false; window.scrollTo(0,0); }"); settle(page, 200)
         # ── RRG ──
         qs = js(page, "()=>[...document.querySelectorAll('[data-bd-quad]')].map(e=>e.dataset.bdQuad)")
         check(f"{tag} RRG = 4 quadrant tiles", qs == ["lead", "imp", "weak", "lag"], qs)
@@ -706,8 +711,22 @@ def pb1c(pw, w, h):
         if ph:
             fit = js(page, "()=>{ const l=document.querySelector('[data-bd-rrgleg]').getBoundingClientRect().bottom, tb=[...document.querySelectorAll('.tabbar,#tabBar,nav,.bottom-nav')].map(e=>e.getBoundingClientRect()).filter(r=>r.height>30&&r.top>innerHeight*0.7).map(r=>r.top); return [Math.round(l), tb, innerHeight, window.scrollY]; }")
             check(f"{tag} iPhone 390×844: blocks 1–4 fit without scrolling (end ≤ bottom bar)", fit[3] == 0 and fit[0] <= (min(fit[1]) if fit[1] else fit[2] - 64), fit)
-        else:
-            check(f"{tag} Flow RRG/other content full width (no side column)", js(page, "()=>{ const p=document.getElementById('ffThemesPanel').getBoundingClientRect(), t=document.getElementById('tabFlow').getBoundingClientRect(); return p.width >= t.width - 4; }"))
+        # ── ⑤ | ⑥ and More ──
+        qd = js(page, "()=>{ const a=document.querySelector('[data-pb-card]').getBoundingClientRect(), c=document.getElementById('ffCal').getBoundingClientRect(); return {side:Math.abs(a.top-c.top)<4, h:Math.round(a.height)===Math.round(c.height), n5:!!document.querySelector('[data-pb-card] .bd-nb'), n6:!!document.querySelector('#ffCal .bd-nb')}; }")
+        check(f"{tag} ⑤ Macro quarter card and ⑥ calendar: {'stacked' if ph else 'side by side, equal height'}", qd["n5"] and qd["n6"] and (ph or (qd["side"] and qd["h"])), qd)
+        rows = js(page, "()=>[...document.querySelectorAll('[data-bd-more] [data-bd-row]')].map(r=>{ const d=r.tagName==='DETAILS'?r:r.querySelector('details'); return [r.dataset.bdRow, d.open, Math.round(r.getBoundingClientRect().left), Math.round(r.getBoundingClientRect().top)]; })")
+        check(f"{tag} More: 4 rows (Regime · Weekly Impact | RRG · Manual boards) closed by default", [r[0] for r in rows] == ["regime", "wi", "rrg", "manual"] and not any(r[1] for r in rows), rows)
+        check(f"{tag} More: {'one column' if ph else '2 columns (left: Regime, Weekly Impact · right: RRG, Manual)'}", (len({r[2] for r in rows}) == 1) if ph else (rows[0][2] == rows[1][2] and rows[2][2] == rows[3][2] and rows[0][2] < rows[2][2]), rows)
+        t0 = js(page, "()=>Math.round(document.querySelector('[data-bd-row=\"rrg\"]').getBoundingClientRect().top + scrollY)")
+        js(page, "()=>{ document.querySelector('[data-bd-row=\"regime\"]').open=true; }"); settle(page, 200)
+        t1 = js(page, "()=>Math.round(document.querySelector('[data-bd-row=\"rrg\"]').getBoundingClientRect().top + scrollY)")
+        check(f"{tag} More: opening a left row does not move the right column" if not ph else f"{tag} More: Regime row expands the old regime content", (t0 == t1) if not ph else "Regime" in txt(page, "#ffRegime"), [t0, t1])
+        js(page, "()=>{ document.querySelector('[data-bd-row=\"regime\"]').open=false; }")
+        js(page, "()=>ln4GoLeadership()"); settle(page, 400)
+        check(f"{tag} deep link ln4GoLeadership opens 'RRG details'", js(page, "()=>document.querySelector('[data-bd-row=\"rrg\"]').open") and cnt(page, "#ffThemes .ln3-rr") >= 1)
+        js(page, "()=>{ document.querySelector('[data-bd-row=\"rrg\"]').open=false; }")
+        old = js(page, "()=>({leader: [...document.querySelectorAll('#ffThemesPanel')].filter(e=>!e.closest('[data-bd-more]')).length, regime: [...document.querySelectorAll('#ffRegime,#ffAction,#ffQeBar')].filter(e=>!e.closest('[data-bd-more]')).length, calOld: document.querySelectorAll('details#ffCal').length})")
+        check(f"{tag} no old Leadership / regime / calendar cards outside their slots", old == {"leader": 0, "regime": 0, "calOld": 0}, old)
         check(f"{tag} Flow no horizontal overflow", ovf(page) <= 0, ovf(page))
         page.screenshot(path=f"{SHOTS_C}flow-{w}.png")
         # ── Sat form: Trend one row + macro line ──
@@ -745,12 +764,60 @@ def pb1c(pw, w, h):
         page.screenshot(path=f"{SHOTS_C}confirm-{w}.png")
         js(page, "()=>bdPopClose()"); settle(page, 500)
         tab(page, "flow")
-        check(f"{tag} Flow: dark Regime card collapsed into 'Regime details ›' (closed, content intact)", "Regime details" in txt(page, "[data-bd-regd] summary") and js(page, "()=>!document.querySelector('[data-bd-regd]').open && document.getElementById('ffAction').textContent.length>20"))
-        js(page, "()=>{ document.querySelector('[data-bd-regd]').open=true; }"); settle(page, 200)
-        check(f"{tag} Regime details expands the same content (Regime row)", "Regime" in txt(page, "#ffAction"))
-        js(page, "()=>{ document.querySelector('[data-bd-regd]').open=false; }")
         page.screenshot(path=f"{SHOTS_C}flow-{w}.png")
         check(f"{tag} PB1c no console / page errors", not ce and not pe, [str(x)[:200] for x in (ce + pe)][:4])
+    finally:
+        b.close()
+
+
+# ───────────────────────── PB1d ─────────────────────────
+def pb1d(pw, w, h):
+    tag = f"[{ENGINE}/{w}] PB1d"
+    b, page, ce, pe = launch(pw, w, h)
+    try:
+        seed(page, fixtures()); setup_ok(page, ["AMD"])
+        js(page, "()=>{ satWeekPickWrite(wpWeekKey(), ['XAUUSD','BTCUSD']); }"); settle(page, 400)
+        P120.ps_on(page, {"def": {"winner": 0.4, "ladder": 1.0, "satMain": 0.1, "satTac": 0.15}}); settle(page, 300)
+        stub(page, "window.confirm = ()=>true; window.prompt = (m, d)=>String(d);")
+        # ── Flow screenshots ──
+        rows = RF.MODELIZE_JS
+        wi_seed(page, P100.sample())
+        page.evaluate("(r)=>{ const f=ffState(); f.rrg.rowsD=r; f.rrg.rowsW=r; f.rrg.build=RRG_BUILD; f.rrg.day=rrgToday(); }", page.evaluate("(" + rows + ")", rr_rows()))
+        tab(page, "flow"); js(page, "()=>{ ffRenderThemes(); bdFlowTopRender(); window.scrollTo(0,0); }"); settle(page, 600)
+        page.screenshot(path=f"{SHOTS_C.replace('pb1c-', 'pb1d-')}flow-{w}.png")
+        if w != 390: page.screenshot(path=f"{SHOTS_C.replace('pb1c-', 'pb1d-')}flow-{w}-full.png", full_page=True)
+        plan(page)
+        up = lambda: js(page, "()=>!!document.querySelector('#bdDrawer')")
+        form = lambda: js(page, "()=>bdFormUp()")
+        sat_id = new_plan(page, 1, ema=True, strc=True)
+        cases = [("MMT", "ccPL", "[data-bd-update]"), ("COMP", "ccOR", "[data-bd-update]"), ("SAT", sat_id, "[data-bd-update]")]
+        for name, cid, sel in cases:
+            plan(page)
+            js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); if(x) bdSetSeg(x.status); bdOpen(i); }", cid); settle(page, 350)
+            was = up()
+            page.click(sel); settle(page, 600)
+            check(f"{tag} {name}: drawer → Update levels closes the drawer while the form is open (no two sheets)", was and not up() and form(), [was, up(), form()])
+            if name == "SAT" and w == 390: page.screenshot(path=f"{SHOTS_C.replace('pb1c-', 'pb1d-')}drawer-form-{w}.png")
+            page.keyboard.press("Escape"); settle(page, 400)
+            check(f"{tag} {name}: Esc on the form → board, drawer does not reopen", not up() and not form(), [up(), form()])
+        # Place order confirm + Filled ✓ from the drawer
+        plan(page)
+        js(page, "(i)=>{ bdSetSeg('plan'); bdOpen(i); }", sat_id); settle(page, 300)
+        pr = js(page, "()=>{ const b=document.querySelector('#bdDr [data-bd-dprimary]'); return b ? [b.dataset.bdDprimary, b.disabled] : null; }")
+        if pr and pr[0] == "place" and not pr[1]:
+            page.click("#bdDr [data-bd-dprimary]"); settle(page, 500)
+            check(f"{tag} SAT: drawer → Place order › closes the drawer, confirm popup open", not up() and cnt(page, "[data-pb2-checks]") == 1, [up()])
+            js(page, "()=>bdPopClose()"); settle(page, 200)
+        else:
+            check(f"{tag} SAT: drawer primary action found (place)", False, pr)
+        plan(page)
+        js(page, "()=>{ bdSetSeg('ord'); bdOpen('ccOR'); }"); settle(page, 300)
+        pr = js(page, "()=>{ const b=document.querySelector('#bdDr [data-bd-dprimary]'); return b ? b.dataset.bdDprimary : null; }")
+        js(page, "()=>{ window.__sheetSeen = false; new MutationObserver(()=>{ if(bdFormUp()) window.__sheetSeen = true; }).observe(document.body, {childList:true, subtree:true, attributes:true}); }")
+        page.click("#bdDr [data-bd-dprimary]"); settle(page, 700)
+        seen = js(page, "()=>[window.__sheetSeen, !!document.querySelector('#bdDrawer')]")
+        check(f"{tag} COMP: drawer '{pr}' (Filled ✓): if it opens a sheet the drawer is closed first; no reopen", (not seen[0]) or (not seen[1]), [pr, seen])
+        check(f"{tag} PB1d drawer: no console / page errors, no overflow", not pe and ovf(page) <= 0, [str(x)[:160] for x in pe][:3])
     finally:
         b.close()
 
@@ -761,7 +828,7 @@ PB2_LINE = "In Zone · Trend Neutral · EMA50 = HVN · Pivot MMT"
 if __name__ == "__main__":
     with sync_playwright() as pw:
         for w, h in ((1440, 900), (1280, 860), (390, 844)):
-            try: persist(pw, w, h); run(pw, w, h); pb1b(pw, w, h); pb1c(pw, w, h)
+            try: persist(pw, w, h); run(pw, w, h); pb1b(pw, w, h); pb1c(pw, w, h); pb1d(pw, w, h)
             except Exception as e:
                 import traceback; traceback.print_exc(); check(f"[{w}] crashed", False, str(e)[:300])
         try: iphone(pw)
