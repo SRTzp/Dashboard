@@ -86,7 +86,7 @@ def go_strategy(page, w_asset="XAUUSD", plan=False):
     # PB1 §5: Weekly Impact moved from Plan › Sat to the top of Flow
     if plan:   # Sat asset tiles (Quarterly Macro + WI strip) stay on the Plan › Sat editor page
         js(page, "(a)=>{ switchTab('plan'); setPlanScope('future'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); }", w_asset); settle(page, 700); return
-    js(page, "(a)=>{ switchTab('flow'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); bdFlowTopRender(); }", w_asset); settle(page, 700)
+    js(page, "(a)=>{ bdWiOpen = true; switchTab('flow'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); bdFlowTopRender(); }", w_asset); settle(page, 700)
 
 
 def go_today(page):

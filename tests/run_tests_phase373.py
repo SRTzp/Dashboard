@@ -197,7 +197,7 @@ def run(pw, w, h):
         check(f"{tag} 7 Macro / Weekly Impact absent on Plan", cnt(page, "#tabPlan [data-wi-panel]") == 0 and cnt(page, "#tabPlan [data-bd-macro]") == 0)
         check(f"{tag} 7 Plan has no Core | Sat switch, no risk panel", js(page, "()=>getComputedStyle(document.querySelector('.planScope')).display") == "none" and cnt(page, "#tabPlan [data-ln2-hd]") == 0 and cnt(page, "#tabPlan .ln4-tiles") == 0)
         tab(page, "flow")
-        page.locator("[data-wi-paste]").click(); settle(page, 400)
+        page.locator("[data-bd-import]").first.click(); settle(page, 400)
         check(f"{tag} 7 Weekly Impact 'Paste' on Flow still opens the import sheet", cnt(page, "#wiText") == 1)
         js(page, "()=>wiPasteClose()")
         # ── 8 Port risk ──
@@ -435,7 +435,7 @@ def pb1b(pw, w, h):
         ak = st(page)["a"]
         check(f"{tag} 2 Trend starts UNSELECTED: EMA50/Structure ✓✗ both off, size says 'Choose trend', no MSS question", cnt(page, "[data-pb2-tg].yes, [data-pb2-tg].no") == 0 and label(page) == "Choose trend" and mssq(page) == 0, [cnt(page, "[data-pb2-tg].yes"), label(page)])
         check(f"{tag} 2 no Setup checkboxes · no Range option · no MSS price field · exactly Entry/SL/TP inputs", cnt(page, "#pb2Body input[type=checkbox]") == 0 and cnt(page, "#pb2Body input") == 3 and "Range" not in txt(page, "#pb2Body") and "MSS price" not in txt(page, "#pb2Body"), txt(page, "#pb2Body"))
-        check(f"{tag} 2 grey Setup reminder line present (one line of text)", "Setup in TradingView: In Zone · EMA50/HVN converging · Pivot MMT · Trend Neutral" in txt(page, "[data-pb2-rem]"), txt(page, "[data-pb2-rem]"))
+        check(f"{tag} 2 grey Setup reminder line present (one line of text)", "Setup in TradingView: In Zone · Trend Neutral · EMA50 = HVN · Pivot MMT" in txt(page, "[data-pb2-rem]"), txt(page, "[data-pb2-rem]"))
         check(f"{tag} 2 order: Buy|Sell · Main|Family → Entry SL TP → TREND → size → reminder → macro → Save draft · Save plan", js(page, "()=>{ const q=s=>{const e=document.querySelector(s); return e?e.getBoundingClientRect().top:-1}; const a=[q('[data-pb2-seg]'),q('[data-pb2-prices]'),q('[data-pb2-trend]'),q('[data-pb2-size]'),q('[data-pb2-rem]'),q('[data-pb2-mac]'),q('[data-pb2-draft]')]; return a.every((x,i)=>x>0 && (i==0||x>a[i-1])); }"))
         fld(page, "entry", 2642); fld(page, "sl", 2628); fld(page, "tp", 2684)
         # hold · all ✓
@@ -491,7 +491,7 @@ def pb1b(pw, w, h):
         # screenshot of the plain form
         page.evaluate("()=>{ pb2.ema=true; pb2.str=true; pb2.mss=null; pb2Refresh(); }"); settle(page, 100)
         shot(page, "step3-form", w)
-        check(f"{tag} 2 no horizontal overflow · popup content never wider than the sheet · Trend row on one line", ovf(page) <= 0 and js(page, "()=>{ const b=document.getElementById('pb2Body'); const tr=document.querySelector('.pb2-tr').getBoundingClientRect(); return b.scrollWidth<=b.clientWidth+1 && tr.height<50 && [...b.querySelectorAll('*')].every(e=>e.getBoundingClientRect().right<=b.getBoundingClientRect().right+1); }"))
+        check(f"{tag} 2 no horizontal overflow · popup content never wider than the sheet · Trend row on one line", ovf(page) <= 0 and js(page, "()=>{ const b=document.getElementById('pb2Body'); const tr=document.querySelector('.pb2-trow').getBoundingClientRect(); return b.scrollWidth<=b.clientWidth+1 && tr.height<50 && [...b.querySelectorAll('*')].every(e=>e.getBoundingClientRect().right<=b.getBoundingClientRect().right+1); }"))
         page.keyboard.press("Escape"); settle(page, 150); page.keyboard.press("Escape"); settle(page, 150); page.keyboard.press("Escape"); settle(page, 150)
         # ── Save plan → states ──
         plan(page)
@@ -542,8 +542,8 @@ def pb1b(pw, w, h):
         # ── §2b Place order confirm ──
         js(page, "()=>bdSetSeg('plan')"); settle(page, 150)
         page.locator(f'[data-bd-card="{i3}"] [data-bd-pill]').click(); settle(page, 400)
-        check(f"{tag} 2b Place order opens 'Setup ready on Execution TF?' with the setup line, MSS line (MSS trade) and summary", pop_step(page) == "place" and "Setup ready on Execution TF?" in txt(page, "#pb2Body") and PB2_LINE in txt(page, "[data-pb2-rem]") and "MSS confirmed per your rules (candle closed)" in txt(page, "[data-pb2-mssok]") and "Buy" in txt(page, "[data-pb2-summary]") and "Entry" in txt(page, "[data-pb2-summary]") and "Counter trend @ MSS" in txt(page, "[data-pb2-summary]"), txt(page, "#pb2Body"))
-        check(f"{tag} 2b buttons [Not yet] [Yes · mark ordered] + 'records only' note", "Not yet" in txt(page, "[data-pb2-no]") and "Yes · mark ordered" in txt(page, "[data-pb2-yes]") and "place it at your broker" in txt(page, "#pb2Body"))
+        check(f"{tag} 2b Place order opens 'Setup ready on Execution TF?' with the setup line, MSS line (MSS trade) and summary", pop_step(page) == "place" and "Setup ready on Execution TF?" in txt(page, "#pb2Body") and all(x in txt(page, "[data-pb2-checks]") for x in ("In Zone", "Trend Neutral", "EMA50 = HVN", "Pivot MMT")) and "MSS confirmed per your rules (candle closed)" in txt(page, "[data-pb2-mssok]") and "Buy" in txt(page, "[data-pb2-summary]") and "Entry" in txt(page, "[data-pb2-summary]") and "Counter trend @ MSS" in txt(page, "[data-pb2-summary]"), txt(page, "#pb2Body"))
+        check(f"{tag} 2b buttons [Not yet] [Yes · mark ordered] + 'records only' note", "Not yet" in txt(page, "[data-pb2-no]") and "Yes · mark ordered" in txt(page, "[data-pb2-yes]") and "place the order at your broker" in txt(page, "#pb2Body"))
         shot(page, "place-confirm", w)
         page.click("[data-pb2-no]"); settle(page, 300)
         d3 = idea_db(page, i3) or {}
@@ -580,8 +580,8 @@ def pb1b(pw, w, h):
         # ── Flow top ──
         tab(page, "flow")
         shot(page, "flow-top", w)
-        order = js(page, "()=>{ const h=document.getElementById('bdFlowTop'); return [...h.children].map(e=>e.hasAttribute('data-bd-macro')?'macro':e.hasAttribute('data-bd-wi')?'wi':'other'); }")
-        check(f"{tag} 4 Flow top: first card '🌐 Macro · this week's Sat focus', then Weekly Impact", order[:2] == ["macro", "wi"] and "Sat focus" in txt(page, "[data-bd-macro] .bd-mh"), [order, txt(page, "[data-bd-macro] .bd-mh")])
+        order = js(page, "()=>{ const h=document.getElementById('bdFlowTop'); return [...h.querySelectorAll('[data-bd-rs],[data-bd-macro],[data-bd-events],[data-bd-rrg]')].map(e=>e.hasAttribute('data-bd-rs')?'risk':e.hasAttribute('data-bd-macro')?'macro':e.hasAttribute('data-bd-events')?'events':'rrg'); }")
+        check(f"{tag} 4 Flow top order (PB1c): Risk strip → Macro cards → Events → RRG", order == ["risk", "macro", "events", "rrg"], order)
         chips = js(page, "()=>[...document.querySelectorAll('[data-bd-focus]')].map(e=>e.dataset.bdFocus+':'+e.getAttribute('aria-pressed'))")
         check(f"{tag} 4 Flow card: week selector, regime, one chip per asset (★ focus), ＋ Asset", cnt(page, "[data-bd-wk]") == 1 and len(chips) >= 4 and "XAUUSD:true" in chips and any(c.endswith(":false") for c in chips) and cnt(page, "[data-bd-addasset]") == 1, chips)
         on0 = [c for c in chips if c.endswith(":true")][0].split(":")[0]
@@ -613,13 +613,143 @@ def pb1b(pw, w, h):
         b.close()
 
 
-PB2_LINE = "In Zone · EMA50/HVN converging · Pivot MMT · Trend Neutral"
+# ───────────────────────── PB1c ─────────────────────────
+import copy
+import run_tests_phase100 as P100
+import rrg1_fixture as RF
+SHOTS_C = "/Users/peach/Dashboard-rg2b/tests/screenshots/pb1c-"
+RR = [("SMH", "lead", 4.2, 0.9), ("GRID", "lead", 3.1, 0.7), ("XLU", "lead", 2.4, -0.8), ("XLK", "lead", 1.0, 0.2), ("IGV", "imp", -1.0, 0.6), ("HACK", "imp", -0.7, 0.1),
+      ("XLF", "weak", 0.6, -0.7), ("XLE", "lag", -2.1, -0.9), ("XLP", "lag", -1.4, 0.9)]
+
+
+def rr_rows():
+    return [{"sym": s, "name": s + " fund", "quad": q, "ratio": 100 + r, "mom": 100 + d, "dRatio": 0.1, "dMom": d, "rsTrend": r / 10, "days": 5, "prevDays": 6, "date": "2026-09-30", "off52": -3} for s, q, r, d in RR]
+
+
+def wi_seed(page, doc):
+    body = copy.deepcopy(doc)
+    if "BTC" in body["assets"]: body["assets"]["BTCUSD"] = body["assets"].pop("BTC")
+    page.evaluate("([w,b])=>{ window.firebase.__mockDb.__seedDoc(['users','testuid','weeklyImpact',w], b); wiStop(); wiStart(); }", [body["week"], body]); settle(page, 700)
+
+
+def pb1c(pw, w, h):
+    tag = f"[{ENGINE}/{w}] PB1c"
+    b, page, ce, pe = launch(pw, w, h)
+    ph = w < 1000
+    try:
+        seed(page, fixtures())
+        js(page, "()=>{ satWeekPickWrite(wpWeekKey(), ['XAUUSD','BTCUSD']); }"); settle(page, 400)
+        rows = page.evaluate("(" + RF.MODELIZE_JS + ")", rr_rows())
+        page.evaluate("(r)=>{ const f=ffState(); f.rrg.rowsD=r; f.rrg.rowsW=r; f.rrg.build=RRG_BUILD; f.rrg.day=rrgToday(); }", rows)
+        # ── empty Weekly Impact ──
+        tab(page, "flow"); js(page, "()=>{ ffRenderThemes(); bdFlowTopRender(); }"); settle(page, 400)
+        check(f"{tag} Events empty state: 'No Weekly Impact yet · Import'", "No Weekly Impact yet" in txt(page, "[data-bd-events]") and cnt(page, "[data-bd-import]") >= 1, txt(page, "[data-bd-events]"))
+        wi_seed(page, P100.sample())
+        js(page, "()=>{ ffRenderThemes(); bdFlowTopRender(); }"); settle(page, 400)
+        # ── order + sort + ★ ──
+        order = js(page, "()=>[...document.querySelectorAll('#bdFlowTop [data-bd-rs],#bdFlowTop [data-bd-macro],#bdFlowTop [data-bd-events],#bdFlowTop [data-bd-rrg]')].map(e=>e.hasAttribute('data-bd-rs')?'risk':e.hasAttribute('data-bd-macro')?'macro':e.hasAttribute('data-bd-events')?'events':'rrg')")
+        check(f"{tag} Flow order Risk → Macro → Events → RRG", order == ["risk", "macro", "events", "rrg"], order)
+        check(f"{tag} Risk strip: Momentum % · Compounder % · regime", all(cnt(page, s) == 1 for s in ("[data-bd-rs-mom]", "[data-bd-rs-comp]", "[data-bd-regime]")) and "%" in txt(page, "[data-bd-rs-mom]"), txt(page, "[data-bd-rs]"))
+        tiers = js(page, "()=>[...document.querySelectorAll('[data-bd-mc]')].map(e=>e.dataset.bdTier)")
+        rk = {"HIGH": 0, "MED": 1, "LOW": 2, "NONE": 3}
+        check(f"{tag} Macro cards sorted by impact HIGH → MED → LOW → none", [rk[t] for t in tiers] == sorted(rk[t] for t in tiers) and tiers and tiers[0] == "HIGH", tiers)
+        check(f"{tag} Macro: max 4 cards", len(tiers) <= 4, tiers)
+        tops = js(page, "()=>[...document.querySelectorAll('[data-bd-mc]')].map(e=>{const r=e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.height)]})")
+        rowsT = {}
+        for t_, hh in tops: rowsT.setdefault(t_, set()).add(hh)
+        check(f"{tag} Macro card heights equal per row", all(len(v) == 1 for v in rowsT.values()), tops)
+        cols = js(page, "()=>{ const g=document.querySelector('[data-bd-macro]'); return getComputedStyle(g).gridTemplateColumns.split(' ').length; }")
+        n = len(tiers)
+        check(f"{tag} Macro grid columns = {'2 (iPhone)' if ph else 'min(cards,4) · no empty column'}", cols == (2 if ph else min(n, 4)) if not ph else cols == 2, [cols, n])
+        # ★ toggle
+        k0 = js(page, "()=>document.querySelector('[data-bd-focus][aria-pressed=\"false\"]').dataset.bdFocus")
+        page.click(f'[data-bd-focus="{k0}"]'); settle(page, 500)
+        check(f"{tag} ★ toggle writes the weekly pick", k0 in js(page, "()=>satWeekPickList()"))
+        page.click(f'[data-bd-focus="{k0}"]'); settle(page, 500)
+        # tap expands: change-if + note (editable, saved)
+        first = js(page, "()=>document.querySelector('[data-bd-mc]').dataset.bdMc")
+        page.click(f'[data-bd-mc="{first}"] .bd-an b'); settle(page, 300)
+        check(f"{tag} tap a card = expands Change-if + this week's note", cnt(page, f'[data-bd-ex="{first}"]') == 1 and cnt(page, f'[data-bd-note="{first}"]') == 1)
+        page.fill(f'[data-bd-note="{first}"]', "PB1c note SAMPLE"); page.locator(f'[data-bd-note="{first}"]').blur(); settle(page, 600)
+        saved = js(page, "(k)=>((satwWeek(wpWeekKey(), k)||{}).opinion_txt)||''", first)
+        check(f"{tag} note is editable and saved (same store as before)", saved == "PB1c note SAMPLE", saved)
+        page.click(f'[data-bd-mc="{first}"] .bd-an b'); settle(page, 200)
+        # ── +N when > 4 assets ──
+        js(page, "()=>satSettingsWrite(st=>{ st.satCustomAssets = [{key:'XAG',label:'Silver',unit:'lot'},{key:'USDJPY',label:'USDJPY',unit:'lot'}]; })"); settle(page, 500)
+        js(page, "()=>bdFlowTopRender()"); settle(page, 300)
+        tot = js(page, "()=>bdMacroItems(bdWkDoc()).length")
+        check(f"{tag} more than 4 assets → 4 cards + '+N more ›'", (tot <= 4) or (cnt(page, "[data-bd-mc]") == 4 and cnt(page, "[data-bd-macmore]") == 1), [tot, cnt(page, "[data-bd-mc]")])
+        if tot > 4:
+            page.click("[data-bd-macmore]"); settle(page, 300)
+            check(f"{tag} '+N more' expands the rest", cnt(page, "[data-bd-mc]") == tot)
+            js(page, "()=>bdMacMoreSet(false)")
+        # ── events = next 3 upcoming (past drop) ──
+        evs = js(page, "()=>bdUpcoming().map(o=>o.id)")
+        shown = js(page, "()=>[...document.querySelectorAll('[data-bd-ev]')].map(e=>e.dataset.bdEv)")
+        check(f"{tag} Events = next 3 upcoming only", len(shown) == min(3, len(evs)) and shown == evs[:3] and "e_cancel" not in evs, [shown, evs])
+        if not ph:
+            cols = js(page, "()=>getComputedStyle(document.querySelector('[data-bd-events]')).gridTemplateColumns.split(' ').length")
+            check(f"{tag} Events grid: {len(shown)} pills + Import in one row (no empty column)", cols == len(shown) + 1, cols)
+        # ── RRG ──
+        qs = js(page, "()=>[...document.querySelectorAll('[data-bd-quad]')].map(e=>e.dataset.bdQuad)")
+        check(f"{tag} RRG = 4 quadrant tiles", qs == ["lead", "imp", "weak", "lag"], qs)
+        cols = js(page, "()=>getComputedStyle(document.querySelector('[data-bd-rrg]')).gridTemplateColumns.split(' ').length")
+        check(f"{tag} RRG grid {'2×2' if ph else '4 columns'}", cols == (2 if ph else 4), cols)
+        hs = js(page, "()=>[...document.querySelectorAll('[data-bd-quad]')].map(e=>Math.round(e.getBoundingClientRect().height))")
+        check(f"{tag} RRG tile heights equal per row", (hs[0] == hs[1] and hs[2] == hs[3]) if ph else len(set(hs)) == 1, hs)
+        mv = js(page, "()=>Object.fromEntries([...document.querySelectorAll('[data-bd-quad=\"lead\"] .bd-sr')].map(e=>[e.dataset.bdSec, e.dataset.bdMv]))")
+        want = js(page, "()=>Object.fromEntries(bdRrgRows().filter(x=>x.quad==='lead').sort((a,b)=>b.ratio-a.ratio).slice(0,3).map(x=>[x.sym, (rrgSpeed(x.dMom).fast ? (rrgSpeed(x.dMom).dir>0 ? 'up':'fast') : 'slow')]))")
+        check(f"{tag} per-sector motion = existing calc (Leading XLU with falling momentum → ↘ slowing fast)", mv == want and mv.get("XLU") == "fast" and mv.get("SMH") == "up", [mv, want])
+        check(f"{tag} RRG tile max 3 sectors + '+N'", len(mv) == 3 and cnt(page, '[data-bd-qmore="lead"]') == 1 and "+1" in txt(page, '[data-bd-qmore="lead"]'), mv)
+        if ph: check(f"{tag} iPhone motion legend line", "slowing fast" in txt(page, "[data-bd-rrgleg]") and js(page, "()=>getComputedStyle(document.querySelector('[data-bd-rrgleg]')).display") != "none")
+        # ── fit ──
+        if ph:
+            fit = js(page, "()=>{ const l=document.querySelector('[data-bd-rrgleg]').getBoundingClientRect().bottom, tb=[...document.querySelectorAll('.tabbar,#tabBar,nav,.bottom-nav')].map(e=>e.getBoundingClientRect()).filter(r=>r.height>30&&r.top>innerHeight*0.7).map(r=>r.top); return [Math.round(l), tb, innerHeight, window.scrollY]; }")
+            check(f"{tag} iPhone 390×844: blocks 1–4 fit without scrolling (end ≤ bottom bar)", fit[3] == 0 and fit[0] <= (min(fit[1]) if fit[1] else fit[2] - 64), fit)
+        else:
+            check(f"{tag} Flow RRG/other content full width (no side column)", js(page, "()=>{ const p=document.getElementById('ffThemesPanel').getBoundingClientRect(), t=document.getElementById('tabFlow').getBoundingClientRect(); return p.width >= t.width - 4; }"))
+        check(f"{tag} Flow no horizontal overflow", ovf(page) <= 0, ovf(page))
+        page.screenshot(path=f"{SHOTS_C}flow-{w}.png")
+        # ── Sat form: Trend one row + macro line ──
+        open_form(page, 1)
+        row = js(page, "()=>{ const r=document.querySelector('.pb2-trow'); const k=[...r.children].map(e=>e.getBoundingClientRect()); return {h:r.getBoundingClientRect().height, tops:[...new Set(k.map(x=>Math.round(x.top)))].length, n:r.children.length, sw:r.scrollWidth<=r.clientWidth+1, txt:r.innerText.replace(/\\s+/g,' ')}; }")
+        check(f"{tag} Sat form: Trend on ONE row (HTF · EMA50 · Structure · all ✓), no wrap", row["n"] == 4 and row["h"] < 50 and row["sw"], row)
+        ml = txt(page, "[data-pb2-mac]")
+        check(f"{tag} Sat form macro line = asset bias (+ next event)", ml.startswith("Macro:") and any(x in ml for x in ("Bull", "Bear", "Neutral", "No Playbook")) and "▲ Macro" not in ml, ml)
+        page.screenshot(path=f"{SHOTS_C}sat-trend-{w}.png")
+        if w == 390:
+            for vw in (360,):
+                page.set_viewport_size({"width": vw, "height": 800}); settle(page, 200)
+                r2 = js(page, "()=>{ const r=document.querySelector('.pb2-trow'); return {h:r.getBoundingClientRect().height, sw:r.scrollWidth<=r.clientWidth+1, cw:r.clientWidth, sc:r.scrollWidth, k:[...r.children].map(e=>Math.round(e.getBoundingClientRect().width))}; }")
+                check(f"{tag} Trend row single line at 360", r2["h"] < 50 and r2["sw"], r2)
+                page.set_viewport_size({"width": 390, "height": 844}); settle(page, 200)
+        js(page, "()=>bdPopClose()")
+        # ── Place order confirm: numbered 4 ──
+        fixp = js(page, "()=>{ const i=sat7dIdea ? null : null; return 1; }")
+        new_plan(page, 1, ema=True, strc=True)
+        js(page, "()=>{ const it=bdItems().find(x=>x.kind==='sat'); if(it) pb2PlaceOpen(it.id); }"); settle(page, 300)
+        items = js(page, "()=>[...document.querySelectorAll('[data-pb2-chk]')].map(e=>e.innerText.replace(/\\s+/g,' ').trim())")
+        check(f"{tag} Place-order confirm: numbered list of 4 (In Zone · Trend Neutral · EMA50 = HVN · Pivot MMT) + one-tap note", len(items) == 4 and items[0].startswith("In Zone") and items[1].startswith("Trend Neutral") and items[2].startswith("EMA50 = HVN") and items[3].startswith("Pivot MMT") and "One tap confirms all 4" in txt(page, "#pb2Body"), items)
+        page.screenshot(path=f"{SHOTS_C}confirm-{w}.png")
+        js(page, "()=>bdPopClose()")
+        # ── toast never covers a sheet ──
+        js(page, "()=>{ const o=document.getElementById('td3Toast'); if(o) o.style.display='none'; pb2OpenType(); td3ToastShow('Plan saved · View in Plan ›'); }"); settle(page, 400)
+        shown_now = js(page, "()=>{ const t=document.getElementById('td3Toast'); return !!t && getComputedStyle(t).display!=='none'; }")
+        js(page, "()=>bdPopClose()"); settle(page, 700)
+        shown_after = js(page, "()=>{ const t=document.getElementById('td3Toast'); return !!t && getComputedStyle(t).display!=='none'; }")
+        check(f"{tag} toast is queued while a popup is open, then shown after it closes", (not shown_now) and shown_after, [shown_now, shown_after])
+        check(f"{tag} PB1c no console / page errors", not ce and not pe, [str(x)[:200] for x in (ce + pe)][:4])
+    finally:
+        b.close()
+
+
+PB2_LINE = "In Zone · Trend Neutral · EMA50 = HVN · Pivot MMT"
 
 
 if __name__ == "__main__":
     with sync_playwright() as pw:
         for w, h in ((1440, 900), (1280, 860), (390, 844)):
-            try: persist(pw, w, h); run(pw, w, h); pb1b(pw, w, h)
+            try: persist(pw, w, h); run(pw, w, h); pb1b(pw, w, h); pb1c(pw, w, h)
             except Exception as e:
                 import traceback; traceback.print_exc(); check(f"[{w}] crashed", False, str(e)[:300])
         try: iphone(pw)
