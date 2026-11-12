@@ -3921,6 +3921,7 @@ button.bd-read{cursor:pointer}
 .bd-leg{display:none;font-size:11.5px;color:var(--faint);text-align:center}
 .bd-seg{display:inline-flex;gap:2px;background:var(--surface2);border-radius:10px;padding:2px;flex:none}.bd-seg button{border:0;background:none;border-radius:8px;padding:3px 10px;min-height:26px;font:700 12px var(--sans);color:var(--muted);cursor:pointer}.bd-seg button.on-cur{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(16,20,28,.12)}
 [data-bd-macro-wrap]{display:contents}
+.bd-regd{margin:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px}.bd-regd>summary{cursor:pointer;font-size:13px;color:var(--muted)}.bd-regd[open]>summary{margin-bottom:10px}
 .bd-wid{margin:0}.bd-wid>summary{cursor:pointer;font-size:13px;color:var(--muted);padding:2px 0}
 .bd-wid[open]>summary{margin-bottom:8px}
 html body.lf-lean #tabFlow[style*="display: block"]{display:flex!important;flex-direction:column;gap:14px}
@@ -4191,7 +4192,9 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
 <div id="tabFlow" style="display:none">
   <div id="bdFlowTop" class="bd-flowtop"></div>
 
+  <details class="bd-regd" id="ffActionDet" data-bd-regd><summary>Regime details ›</summary>
   <div class="ffAction sumBlk" id="ffAction" aria-label="ผลที่ต้องทำ"></div>
+  </details>
 
   <div id="pbPanel"></div>
 
@@ -7796,6 +7799,13 @@ function td3ToastShow(msg, undo){
   el.style.display = 'flex'; clearTimeout(td3ToastT);
   td3ToastT = setTimeout(()=>{ el.style.display = 'none'; td3Undo = null; }, 5000);
 }
+
+/* PB1c — a toast that is already up when a popup/sheet opens is pulled back into the queue (never over the sheet) */
+setInterval(()=>{ try{
+  const t = document.getElementById('td3Toast'); if(!t || t.style.display === 'none' || !td3SheetUp()) return;
+  const m = t.querySelector('[data-td3-toasttxt]'); t.style.display = 'none'; clearTimeout(td3ToastT);
+  if(m) td3ToastShow(m.textContent, !!t.querySelector('[data-td3-undo]'));
+}catch(e){} }, 120);
 /* ═══ TD4a — Candidate pipeline: Today New Cand · Delete/dismiss · Back in Ideas · Candidate → Watchlist x/5 ═══
    ข้อมูล (ทั้งหมดอยู่ใน settings ของ acctList[0] เดิม): candMeta[KEY] เพิ่ม dismissed · dismissed_at · asked_stamp · restored_at · market
    candAddLog{YYYY-MM-DD:[KEY]} = โควตา "เพิ่มวันละ 5" (ลบ Candidate แล้วโควตาไม่คืน) · newsRead{day:[id]} */

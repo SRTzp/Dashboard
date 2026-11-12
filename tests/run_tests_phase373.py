@@ -738,6 +738,18 @@ def pb1c(pw, w, h):
         js(page, "()=>bdPopClose()"); settle(page, 700)
         shown_after = js(page, "()=>{ const t=document.getElementById('td3Toast'); return !!t && getComputedStyle(t).display!=='none'; }")
         check(f"{tag} toast is queued while a popup is open, then shown after it closes", (not shown_now) and shown_after, [shown_now, shown_after])
+        # toast already showing when the Place-order confirm opens → pulled back, never over the sheet
+        js(page, "()=>{ const it=bdItems().find(x=>x.kind==='sat'); td3ToastShow('Plan saved · View in Plan ›'); if(it) pb2PlaceOpen(it.id); }"); settle(page, 500)
+        over = js(page, "()=>{ const t=document.getElementById('td3Toast'); return !!t && getComputedStyle(t).display!=='none' && t.getClientRects().length>0; }")
+        check(f"{tag} no toast element visible while the Place-order confirm is open (after 'Plan saved')", not over and cnt(page, "[data-pb2-checks]") == 1, over)
+        page.screenshot(path=f"{SHOTS_C}confirm-{w}.png")
+        js(page, "()=>bdPopClose()"); settle(page, 500)
+        tab(page, "flow")
+        check(f"{tag} Flow: dark Regime card collapsed into 'Regime details ›' (closed, content intact)", "Regime details" in txt(page, "[data-bd-regd] summary") and js(page, "()=>!document.querySelector('[data-bd-regd]').open && document.getElementById('ffAction').textContent.length>20"))
+        js(page, "()=>{ document.querySelector('[data-bd-regd]').open=true; }"); settle(page, 200)
+        check(f"{tag} Regime details expands the same content (Regime row)", "Regime" in txt(page, "#ffAction"))
+        js(page, "()=>{ document.querySelector('[data-bd-regd]').open=false; }")
+        page.screenshot(path=f"{SHOTS_C}flow-{w}.png")
         check(f"{tag} PB1c no console / page errors", not ce and not pe, [str(x)[:200] for x in (ce + pe)][:4])
     finally:
         b.close()
