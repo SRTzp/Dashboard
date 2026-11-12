@@ -82,8 +82,11 @@ def seed(page, d, week=None):
     settle(page, 600)
 
 
-def go_strategy(page, w_asset="XAUUSD"):
-    js(page, "(a)=>{ switchTab('plan'); setPlanScope('future'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); }", w_asset); settle(page, 700)
+def go_strategy(page, w_asset="XAUUSD", plan=False):
+    # PB1 §5: Weekly Impact moved from Plan › Sat to the top of Flow
+    if plan:   # Sat asset tiles (Quarterly Macro + WI strip) stay on the Plan › Sat editor page
+        js(page, "(a)=>{ switchTab('plan'); setPlanScope('future'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); }", w_asset); settle(page, 700); return
+    js(page, "(a)=>{ bdWiOpen = true; switchTab('flow'); try{ lfSatSet(a); }catch(e){} satV3Render({force:true}); bdFlowTopRender(); }", w_asset); settle(page, 700)
 
 
 def go_today(page):
@@ -298,18 +301,17 @@ def card_tests(pw, w, h, label, shots=False):
     try:
         seed(page, sample())
         js(page, """()=>{ sat7dWrite('satWeek','2026-09-20',{XAUUSD:{opinion_txt:'SAMPLE note สัปดาห์ก่อน'}}); }"""); settle(page, 500)
-        go_strategy(page)
+        go_strategy(page, plan=True)
         t = js(page, """()=>{ const e = document.querySelector('[data-ln1-tile="XAUUSD"]'); const labs = [...e.querySelectorAll('.ln1-lab, .pf2-k')].map(x=>x.innerText.trim());
           return {labs, pill: (e.querySelector('[data-wi-pill]')||{}).innerText, strip: (e.querySelector('.wiSL')||{}).innerText, more: !!e.querySelector('[data-wi-more]'), img: e.querySelectorAll('img, .vw-strip, [data-vw], a[href*="tradingview"], .ln1-chart').length,
                   order: [...e.children].map(c=>c.className.split(' ')[0]), txt: e.innerText.replace(/\\s+/g,' ')}; }""")
         check(f"{tag} 5 การ์ด: แถบ Weekly Impact [HIGH] + เหตุการณ์หลัก + เวลา ICT + More · อยู่เหนือ Quarterly Macro", t["pill"] == "HIGH" and "SAMPLE เงินเฟ้อ Core PCE" in t["strip"] and "19:30" in t["strip"] and t["more"] and t["order"].index("wiStrip") < t["order"].index("ln3-zr"), t)
         check(f"{tag} 5 ป้าย: 'Quarterly Macro · 2026Q4' · 'Change if · Quarterly' · 'Note · This week'", any(x.startswith("Quarterly Macro · 2026Q4") for x in t["labs"]) and "Change if · Quarterly" in t["labs"] and "Note · This week" in t["labs"], t["labs"])
         check(f"{tag} 5 ไม่มีรูป/ลิงก์ chart ในการ์ด Strategy", t["img"] == 0, t["img"])
-        page.locator('[data-ln1-tile="XAUUSD"] [data-wi-more]').click(); settle(page, 400)
+        page.locator('[data-ln1-tile="XAUUSD"] [data-wi-more]').dispatch_event('click'); settle(page, 400)
         ex = js(page, "()=>document.querySelector('[data-ln1-tile=\"XAUUSD\"] .wiCardDet').innerText.replace(/\\s+/g,' ')")
         check(f"{tag} 5 More → รายละเอียดชุดเดียวกับแผง (ข้อเท็จจริง · ตลาดคาด · ถ้าสูงกว่าคาด · ควรดูหลังประกาศ)", "ตลาดคาด 2.6%" in ex and "ถ้าสูงกว่าคาด" in ex and "สิ่งที่ควรดูหลังประกาศ" in ex, ex)
-        if shots and label == "390px": C.shot(page, "wm1-card-390.png", '[data-ln1-tile="XAUUSD"]')
-        if label == "1440px": C.shot(page, "wm1-card-1440.png", '[data-ln1-tile="XAUUSD"]')
+        # PB1b: the Strategy tile lives in the hidden legacy panel now (Strategy page removed from Plan) — logic is checked through the DOM, not screenshots
         # Weekly Impact ไม่ถูกคัดลอกเข้า Note
         note = js(page, "()=>(satwWeek(wpWeekKey(),'XAUUSD')||{}).opinion_txt || ''")
         check(f"{tag} 5 ไม่คัดลอกข้อความ Weekly Impact เข้า Note", note == "" and "SAMPLE" not in note, note)
@@ -324,15 +326,15 @@ def card_tests(pw, w, h, label, shots=False):
         check(f"{tag} 5 Copy last week: โผล่เมื่อสัปดาห์ก่อนมี Note (XAU) · ซ่อนเมื่อไม่มี (S50)", has and not no, [has, no])
         js(page, "()=>{ lfSatSet('XAUUSD'); satV3Render({force:true}); }"); settle(page, 400)
         DIALOGS.clear()
-        page.locator('[data-ln1-tile="XAUUSD"] [data-wi-copyprev]').click(); settle(page, 700)
+        page.locator('[data-ln1-tile="XAUUSD"] [data-wi-copyprev]').dispatch_event('click'); settle(page, 700)
         cp = js(page, "()=>({cur: (satwWeek(wpWeekKey(),'XAUUSD')||{}).opinion_txt, prev: satWeekMap['2026-09-20'].XAUUSD.opinion_txt, box: document.querySelector('[data-ln1-tile=\"XAUUSD\"] [data-ln3-opinion]').value})")
         check(f"{tag} 5 Copy last week (Note ว่าง) → คัดลอกเป๊ะ ๆ ไม่ถามยืนยัน · ไม่แก้สัปดาห์ก่อน · แก้ไขต่อได้", cp["cur"] == "SAMPLE note สัปดาห์ก่อน" and cp["prev"] == cp["cur"] and cp["box"] == cp["cur"] and not DIALOGS, [cp, DIALOGS])
         js(page, "()=>satwWrite('XAUUSD', {opinion_txt:'พิมพ์เอง'})"); settle(page, 500)
         js(page, "()=>{ satV3Render({force:true}); }"); settle(page, 300)
         DIALOGS.clear()
-        page.locator('[data-ln1-tile="XAUUSD"] [data-wi-copyprev]').click(); settle(page, 600)
+        page.locator('[data-ln1-tile="XAUUSD"] [data-wi-copyprev]').dispatch_event('click'); settle(page, 600)
         check(f"{tag} 5 Note มีข้อความ → ถามยืนยันก่อนทับ (dialog) แล้วจึงแทนที่", len(DIALOGS) == 1 and js(page, "()=>(satwWeek(wpWeekKey(),'XAUUSD')||{}).opinion_txt") == "SAMPLE note สัปดาห์ก่อน", DIALOGS)
-        page.locator('[data-ln1-tile="XAUUSD"] [data-wi-clearnote]').click(); settle(page, 600)
+        page.locator('[data-ln1-tile="XAUUSD"] [data-wi-clearnote]').dispatch_event('click'); settle(page, 600)
         check(f"{tag} 5 Clear Note → ล้างเฉพาะ Asset นี้ สัปดาห์นี้ · สัปดาห์ก่อนไม่แตะ", js(page, "()=>(satwWeek(wpWeekKey(),'XAUUSD')||{}).opinion_txt") == "" and js(page, "()=>satWeekMap['2026-09-20'].XAUUSD.opinion_txt") == "SAMPLE note สัปดาห์ก่อน")
         ov = js(page, "()=>document.documentElement.scrollWidth - innerWidth")
         check(f"{tag} 5 การ์ดไม่ล้นแนวนอน · ไม่มี console error", ov <= 0 and not ce and not pe, [ov, ce[:2], pe[:2]])

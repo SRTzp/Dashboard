@@ -55,10 +55,10 @@ def row(page, s): return next((r for r in rows(page) if r["s"] == s), None)
 def tests(pw, w, h):
     tag = f"[{ENGINE}/{w}]"
     cards = {
-        "ccAM": P24.card("ccAM", "main", "AMD", plan={"entry": 182.5, "stop": 170}, px=170, pxDate="2026-10-01"),
+        "ccAM": P24.card("ccAM", "main", "AMD", plan={"entry": 182.5, "stop": 170}, px=181, pxDate="2026-10-01"),   # PB1: Act lists only urgent rows → keep AMD < 2% from entry
         "ccNV": P24.open_card("ccNV", "tNV", ticker="NVDA", acct="main", qty=10, entry=171.4, sl=168, tier="A",
                               lots=[{"n": 1, "date": "2026-09-10", "px": 171.4, "qty": 10, "f": 1, "stop": 168}]),
-        "ccAV": P24.card("ccAV", "main", "AVGO", plan={"entry": 341.2, "stop": 320}, px=330, pxDate="2026-10-01", track="ladder"),
+        "ccAV": P24.card("ccAV", "main", "AVGO", plan={"entry": 341.2, "stop": 320}, px=340, pxDate="2026-10-01", track="ladder"),
         "ccET": P24.card("ccET", "main", "ETN", plan={"entry": 300, "stop": 280}, px=310, pxDate="2026-10-01"),
     }
     b, page, ce, pe = T.launch(pw, w, h, iso=NOW, picks=(), weekly=False)
@@ -114,11 +114,11 @@ def tests(pw, w, h):
         refresh(page)
         R = rows(page)
         order = [r["s"] for r in R if r["k"] == "core"]
-        check(f"{tag} 2 CORE group: MMT rows first, then COMP", order.index("AVGO") > order.index("AMD") and order.index("AVGO") > order.index("NVDA") and row(page, "AVGO")["pt"] == "COMP", order)
+        check(f"{tag} 2 PB1: Act rows come from the board, nearest-to-entry first (AVGO 0.4% before AMD 0.8%), COMP/MMT tags kept", order.index("AVGO") < order.index("AMD") and row(page, "AVGO")["pt"] == "COMP" and "NVDA" not in order, order)
         check(f"{tag} 2 Draft AMD: all checks pass → green 'Place order ›'", row(page, "AMD")["btn"] == "Place order ›" and row(page, "AMD")["st"] == "draft", row(page, "AMD"))
         check(f"{tag} 2 no separate check row (one element per plan)", cnt(page, "[data-ln4-row]") == len(R) and cnt(page, ".gc") == 0)
-        check(f"{tag} 2 ETN (no Setup ✓) → red 'No Setup ✓' + amber 'Setup ✓ ›'", row(page, "ETN")["why"] == "No Setup ✓" and row(page, "ETN")["btn"] == "Setup ✓ ›", row(page, "ETN"))
-        check(f"{tag} 2 open NVDA with stop < avg → 'Raise stop ›'", row(page, "NVDA")["btn"] == "Raise stop ›" and row(page, "NVDA")["st"] == "open", row(page, "NVDA"))
+        check(f"{tag} 2 PB1: ETN (no Setup ✓) = incomplete → not in Act; board card is 'needs Setup ✓' + 'Complete ›'", row(page, "ETN") is None and js(page, "()=>{ const x = bdItems().find(i=>i.sym==='ETN'); return !!(x && x.inc && x.inc.text === 'needs Setup ✓' && bdPill(x).t === 'Complete ›'); }"))
+        check(f"{tag} 2 PB1: open NVDA with stop < avg → no 'Raise stop ›' (removed) · not in Act · board pill 'Edit'", row(page, "NVDA") is None and js(page, "()=>{ const x = bdItems().find(i=>i.sym==='NVDA'); return !!(x && x.status === 'hold' && bdPill(x).t === 'Edit'); }"))
         stub(page, "window.ffPoolFactor = ()=>({cap:50, demo:false, age:0});")
         refresh(page)
         check(f"{tag} 2 regime half → MMT tag becomes 'MMT ½' (amber)", row(page, "AMD")["pt"] == "MMT ½", row(page, "AMD"))
@@ -130,26 +130,28 @@ def tests(pw, w, h):
         # state flow Draft → Order working
         stub(page, "window.confirm = ()=>true;")
         page.locator('[data-ln4-row="AMD"] [data-ln4-btn]').click(); settle(page, 700)
-        check(f"{tag} 2 Place order › (confirm) → 'Order working' + 'Record fill'", row(page, "AMD")["st"] == "working" and row(page, "AMD")["btn"] == "Record fill", row(page, "AMD"))
+        check(f"{tag} 2 Place order › (confirm) → 'Order working' + 'Filled ✓'", row(page, "AMD")["st"] == "working" and row(page, "AMD")["btn"] == "Filled ✓", row(page, "AMD"))
         check(f"{tag} 2 working time stored on the card", js(page, "()=>{ const c = coreCardsList.find(x=>x.ticker==='AMD'); return !!(c.ln4 && c.ln4.placedAt); }"))
-        # §8 Plan tab cards follow the same states
-        js(page, "()=>{ switchTab('plan'); setPlanScope('stock'); }"); settle(page, 600)
-        pc = js(page, "()=>{ const e = document.querySelector('[data-ln4-pc=\"AMD\"]'); return e ? {st:e.dataset.ln4State, t:e.innerText, tag:(e.querySelector('[data-ln4-ptag]')||{}).innerText} : null; }")
-        check(f"{tag} 8 Plan card AMD: Order working (blue) with Record fill + Cancel order, MMT tag", pc and pc["st"] == "working" and "Record fill" in pc["t"] and "Cancel order" in pc["t"] and pc["tag"].startswith("MMT"), pc)
-        nv = js(page, "()=>{ const e = document.querySelector('[data-ln4-pc=\"NVDA\"]'); return e ? e.innerText : null; }")
-        check(f"{tag} 8 Plan card NVDA (open, stop < avg) → status Open + 'Raise stop ›'", nv and "Open" in nv and "Raise stop" in nv, nv)
-        page.locator('[data-ln4-pc="AMD"] [data-ln4-cancel]').click(); settle(page, 700)
-        pc2 = js(page, "()=>{ const e = document.querySelector('[data-ln4-pc=\"AMD\"]'); return e ? {st:e.dataset.ln4State, t:e.innerText} : null; }")
-        check(f"{tag} 8 Cancel order → back to Draft (Place order ›), placedAt cleared", pc2 and pc2["st"] == "draft" and "Place order" in pc2["t"] and js(page, "()=>!coreCardsList.find(x=>x.ticker==='AMD').ln4.placedAt"), pc2)
+        # PB1 §3/§4: the Plan tab is the board — same states, same handlers (the old per-card strips are gone)
+        js(page, "()=>{ switchTab('plan'); }"); settle(page, 600)
+        pc = js(page, "()=>{ const e = document.querySelector('[data-bd-card=\"ccAM\"]'); return e ? {st:e.dataset.bdStatus, t:e.innerText, tag:(e.querySelector('[data-bd-tag]')||{}).innerText} : null; }")
+        check(f"{tag} 8 Plan board card AMD: 📌 Ordered with 'Filled ✓', MMT tag", pc and pc["st"] == "ord" and "Filled ✓" in pc["t"] and pc["tag"].startswith("MMT"), pc)
+        nv = js(page, "()=>{ const e = document.querySelector('[data-bd-card=\"ccNV\"]'); return e ? {st:e.dataset.bdStatus, t:e.innerText} : null; }")
+        check(f"{tag} 8 Plan board card NVDA (open, stop < avg) → ✅ Holding + 'Edit' (no 'Raise stop')", nv and nv["st"] == "hold" and "Edit" in nv["t"] and "Raise" not in nv["t"], nv)
+        js(page, "()=>bdOpen('ccAM')"); settle(page, 300)
+        page.locator('[data-bd-cancel]').click(); settle(page, 700)
+        pc2 = js(page, "()=>{ const e = document.querySelector('[data-bd-card=\"ccAM\"]'); return e ? {st:e.dataset.bdStatus, t:e.innerText} : null; }")
+        check(f"{tag} 8 Cancel order (drawer) → back to 📝 Planned (Place order ›), placedAt cleared", pc2 and pc2["st"] == "plan" and "Place order" in pc2["t"] and js(page, "()=>!coreCardsList.find(x=>x.ticker==='AMD').ln4.placedAt"), pc2)
+        js(page, "()=>bdClose()")
         js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 500)
         page.locator('[data-ln4-row="AMD"] [data-ln4-btn]').click(); settle(page, 700)
         # failing checks
-        seed(page, {"ccBD": P24.card("ccBD", "main", "BAD1", plan={"entry": 100, "stop": 99.5}, px=90, pxDate="2026-10-01"),
+        seed(page, {"ccBD": P24.card("ccBD", "main", "BAD1", plan={"entry": 100, "stop": 99.5}, px=99.5, pxDate="2026-10-01"),
                     "ccNS": P24.card("ccNS", "main", "NOSTOP", plan={"entry": 100, "stop": 0}, px=90, pxDate="2026-10-01")})
         setup_ok(page, ["AMD", "AVGO", "BAD1", "NOSTOP"])
         check(f"{tag} 2 MS1: stop tighter than min → NOT an error: no Fix button, grey '· 🛡️ sized on min stop'", row(page, "BAD1")["btn"] == "Place order ›" and not row(page, "BAD1")["why"] and "sized on min stop" in js(page, "()=>document.querySelector('[data-ln4-row=\"BAD1\"]').innerText"), row(page, "BAD1"))
-        check(f"{tag} 2 no stop → 'No stop' + 'Set stop ›'", row(page, "NOSTOP")["why"] == "No stop" and row(page, "NOSTOP")["btn"] == "Set stop ›", row(page, "NOSTOP"))
-        page.locator('[data-ln4-row="NOSTOP"] [data-ln4-btn]').click(); settle(page, 1200)
+        check(f"{tag} 2 PB1: no stop = incomplete → not in Act; board 'needs SL' + 'Complete ›'", row(page, "NOSTOP") is None and js(page, "()=>{ const x = bdItems().find(i=>i.sym==='NOSTOP'); return !!(x && x.inc && x.inc.text === 'needs SL' && bdPill(x).t === 'Complete ›'); }"))
+        js(page, "()=>bdComplete(bdItems().find(i=>i.sym==='NOSTOP').id)"); settle(page, 1200)
         check(f"{tag} 2 'Set stop ›' opens the plan form focused on the Stop field", js(page, "()=>document.activeElement && document.activeElement.id") == "cnStop" and cnt(page, "#cnTicker[readonly]") == 1, js(page, "()=>document.activeElement && document.activeElement.id"))
         js(page, "()=>coreSheetClose()"); settle(page, 300)
         T.go_today(page)
@@ -301,7 +303,7 @@ def starter(pw, w, h):
         settle(page, 600)
         js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 500)
         r1 = row(page, "AAA")
-        check(f"{tag} S5 stop below avg → 'Raise stop ›' (no Add-on yet)", r1 and r1["btn"] == "Raise stop ›", r1)
+        check(f"{tag} S5 PB1: stop below avg → no 'Raise stop ›' pill (removed) · no Add-on yet", r1 is None, r1)
         stub(page, "getBook('main').trades.find(t=>t.id==='tX').sl = 100; saveBook('main'); const c = coreCardsList.find(x=>x.ticker==='AAA'); coreWrite(c.id, {stop:100}); todayRefresh(true);")
         settle(page, 500)
         r2 = row(page, "AAA")
@@ -336,7 +338,7 @@ def sat(pw, w, h):
         P120.ps_on(page, {"def": {"winner": 0.4, "ladder": 1.0, "satMain": 0.1, "satTac": 0.15}}); settle(page, 300)
         def calc():
             return js(page, """([i])=>{ const x=satIdeasList.find(y=>y.id===i); const c=satV3PlanAcctCalc(x,'main'); return {blocks:c.blocks, ready:c.ready, fac:c.verify&&c.verify.fac, ok:c.verify&&c.verify.ok, ctr:c.verify&&c.verify.counter, deal:c.v2&&c.v2.lotDeal, risk:c.v2&&c.v2.riskTHB, lot:c.lot}; }""", [iid])
-        def ver(e, s_): js(page, "([i,e,s])=>{ satV3IdeaWrite(i,{ema50_ok:e, structure_ok:s}); }", [iid, e, s_]); settle(page, 250)
+        def ver(e, s_, m=None): js(page, "([i,e,s,m])=>{ satV3IdeaWrite(i,{ema50_ok:e, structure_ok:s, mss:m}); }", [iid, e, s_, m]); settle(page, 250)   # PB1b rev 3.1: + MSS answer
         def setup(n): js(page, "([i,n])=>{ satV3IdeaWrite(i,{setup_ck: PF_SETUP_CK.map(x=>x[0]).slice(0,n)}); }", [iid, n]); settle(page, 250)
         # labels / order / keys
         lab = js(page, "()=>PF_SETUP_CK.map(x=>x.join(':'))")
@@ -346,22 +348,23 @@ def sat(pw, w, h):
             for k, sl in (("Long", "1990"), ("Short", "2010")):
                 pass
             js(page, "([i,sl,tp])=>{ satV3PlanEdit(i,'sl',sl); satV3PlanEdit(i,'tp',tp); }", [iid, "1990" if side == "Long" else "2010", "2020" if side == "Long" else "1980"]); settle(page, 250)
-            setup(3)
             ver(True, True); a = calc()
             ver(False, True); bb = calc()
-            ver(True, False); c = calc()
-            ver(False, False); d = calc()
+            ver(True, False); c0 = calc()
+            ver(True, False, True); c = calc()
+            ver(False, False); d0 = calc()
+            ver(False, False, True); d = calc()
+            ver(True, False, False); n_ = calc()
             ok100 = a["fac"] == 1 and a["ok"] and not a["ctr"] and a["ready"]
-            check(f"{tag} D2 {side} ✓✓ → 100% normal", ok100, a)
+            check(f"{tag} D2 {side} ✓✓ → 100% normal (no Setup ticks needed)", ok100, a)
             check(f"{tag} D2 {side} EMA50 ✗ + Structure ✓ → 60% allowed, not counter", bb["fac"] == 0.6 and bb["ok"] and not bb["ctr"] and bb["ready"], bb)
-            check(f"{tag} D2 {side} EMA50 ✓ + Structure ✗ → Counter trend 60% (not 36%)", c["fac"] == 0.6 and c["ok"] and c["ctr"] and c["ready"] and abs(c["risk"] / a["risk"] - 0.6) < 1e-9, [c, a])
-            check(f"{tag} D2 {side} ✗✗ → blocked 'Need EMA50 or Structure verify'", (not d["ok"]) and "Need EMA50 or Structure verify" in d["blocks"] and not d["ready"], d)
+            check(f"{tag} D2 {side} EMA50 ✓ + Structure ✗ + MSS Yes → Counter trend @ MSS 60% (not 36%)", c["fac"] == 0.6 and c["ok"] and c["ctr"] and c["ready"] and abs(c["risk"] / a["risk"] - 0.6) < 1e-9, [c, a])
+            check(f"{tag} D2 {side} EMA50 ✓ + Structure ✗ + MSS blank/No → Blocked", (not c0["ok"]) and "Blocked by trend rule" in c0["blocks"] and not c0["ready"] and (not n_["ok"]) and not n_["ready"], [c0, n_])
+            check(f"{tag} D2 {side} ✗✗ + MSS Yes → Reversal @ MSS 60%; blank → Blocked", d["fac"] == 0.6 and d["ok"] and not d["ctr"] and d["ready"] and abs(d["risk"] / a["risk"] - 0.6) < 1e-9 and (not d0["ok"]) and "Blocked by trend rule" in d0["blocks"] and not d0["ready"], [d, d0])
         js(page, "([i])=>satV2SetDir(i,'Long')", [iid]); js(page, "([i])=>{ satV3PlanEdit(i,'sl','1990'); satV3PlanEdit(i,'tp','2020'); }", [iid]); settle(page, 250)
-        # setup 2/3 blocks, 3/3 allows
-        ver(True, True); setup(2); s2 = calc()
-        check(f"{tag} D3 Setup 2/3 → blocked 'Setup 2/3' · not ready", "Setup 2/3" in s2["blocks"] and not s2["ready"], s2)
-        setup(3); s3 = calc()
-        check(f"{tag} D3 Setup 3/3 → allowed", s3["ready"] and not any(x.startswith("Setup") for x in s3["blocks"]), s3)
+        # Setup ✓ boxes are retired (PB1b): an empty setup_ck never blocks
+        ver(True, True); js(page, "([i])=>{ satV3IdeaWrite(i,{setup_ck: []}); }", [iid]); settle(page, 250); s2 = calc()
+        check(f"{tag} D3 Setup boxes retired → empty setup_ck is ready (no 'Setup n/3' block)", s2["ready"] and not any(x.startswith("Setup") for x in s2["blocks"]), s2)
         # macro: against → warning only
         js(page, "()=>{ window.__m = satV3F2c; }")
         base = calc()
@@ -379,7 +382,7 @@ def sat(pw, w, h):
         js(page, "([i])=>satV2SetDir(i,'Long')", [iid2])
         for f_, v in (("entry", 90000), ("sl", 88000), ("tp", 96000)):
             js(page, "([i,f,v])=>satV3PlanEdit(i,f,v)", [iid2, f_, str(v)]); settle(page, 120)
-        js(page, "([i])=>{ satV3IdeaWrite(i,{ema50_ok:true, structure_ok:false, setup_ck: PF_SETUP_CK.map(x=>x[0])}); }", [iid2]); settle(page, 300)
+        js(page, "([i])=>{ satV3IdeaWrite(i,{ema50_ok:true, structure_ok:false, mss:true}); }", [iid2]); settle(page, 300)
         js(page, "([i])=>{ window.__sv=0; const o=satV3SaveSlot; window.satV3SaveSlot=(...a)=>{ window.__sv++; return o(...a); }; satV3SaveReadyAccounts(i); }", [iid2]); settle(page, 400)
         check(f"{tag} D5 EMA50 ✓ + Structure ✗ → confirm sheet at Save, nothing saved yet", cnt(page, "[data-ln4-cs]") == 1 and js(page, "()=>window.__sv") == 0 and "Size = 60% of full" in txt(page, "[data-ln4-cs]"))
         page.locator("[data-ln4-cs-back]").click(); settle(page, 300)
@@ -390,28 +393,11 @@ def sat(pw, w, h):
         check(f"{tag} D5 'Save as counter trend' → plan stores counter_trend:true (+ trade tag)", chk["c"] is True and chk["saved"], chk)
         js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); settle(page, 600)
         check(f"{tag} D6 Counter tag shows on the Today Act row", cnt(page, "[data-ln4-row] [data-ln4-counter]") >= 0)
-        # Setup ✓ all : hold
+        # Setup ✓ boxes + 'Setup ✓ all' hold are retired from the plan (PB1b) — the popup form has the Trend 'hold · all ✓' pill (suite 373)
         iid3 = js(page, "()=>satV2NewPlan('USDJPY','main')"); settle(page, 500)
-        js(page, "()=>{ switchTab('plan'); setPlanScope('future'); }"); settle(page, 600)
-        has = cnt(page, "[data-ln4-all]")
-        if has:
-            before = js(page, "([i])=>(satIdeasList.find(y=>y.id===i).setup_ck||[]).length", [iid3])
-            page.locator("[data-ln4-all]").first.click(); settle(page, 300)
-            after_click = js(page, "([i])=>(satIdeasList.find(y=>y.id===i).setup_ck||[]).length", [iid3])
-            check(f"{tag} D7 ✓ all: a normal click does nothing", after_click == before, [before, after_click])
-            bx = page.locator("[data-ln4-all]").first.bounding_box()
-            page.mouse.move(bx["x"] + 5, bx["y"] + 5); page.mouse.down(); page.wait_for_timeout(300); page.mouse.up(); settle(page, 300)
-            check(f"{tag} D7 ✓ all: early release cancels", js(page, "([i])=>(satIdeasList.find(y=>y.id===i).setup_ck||[]).length", [iid3]) == before)
-            bx = page.locator("[data-ln4-all]").first.bounding_box()
-            page.mouse.move(bx["x"] + 5, bx["y"] + 5); page.mouse.down(); page.wait_for_timeout(1000); page.mouse.up(); settle(page, 500)
-            check(f"{tag} D7 ✓ all: hold 0.8 s ticks all 3 · button hidden at 3/3", js(page, "([i])=>(satIdeasList.find(y=>y.id===i).setup_ck||[]).length", [iid3]) == 3 and cnt(page, "[data-ln4-all]") == 0)
-            r1 = js(page, "()=>{ const q=s=>document.querySelector(s); const a=q('[data-pf-row=\"1\"]'), z=q('[data-pf-row=\"2\"]'), su=q('[data-pf-row=\"3\"]'); const tf=a.querySelector('[data-pf-tf]').parentElement, tr=a.querySelector('[data-pf-trend-sel]').parentElement, v=a.querySelector('[data-pf-verify]'); const y=e=>Math.round(e.getBoundingClientRect().top); return {one: Math.abs(y(tf)-y(tr))<6 && Math.abs(y(tr)-y(v))<6 || window.innerWidth<600, zoneBelow: y(z)>y(a), setupOneRow: new Set([...su.querySelectorAll('.pf-chip')].map(y)).size===1 || window.innerWidth<600}; }")
-            check(f"{tag} D8 Trade Overview: TF · Trend · Verify on ONE row, Zone below; Setup chips on one row", r1["one"] and r1["zoneBelow"] and r1["setupOneRow"], r1)
-            pills = js(page, "()=>[...document.querySelectorAll('[data-ln4-cp]')].map(e=>e.dataset.ln4Cp)")
-            check(f"{tag} S pills row under Entry/SL/TP", "setup" in pills and "rr" not in pills, pills)   # UA1: R:R lives in the R:R bar pill only
-            check(f"{tag} S Sat Starter switch above the account rows (default ON)", cnt(page, "[data-ln4-sat-starter] input:checked") == 1)
-        else:
-            check(f"{tag} D7 form not rendered in test fixture", False, "no [data-ln4-all]")
+        js(page, "([i])=>td3SatOpen(i,'')", [iid3]); settle(page, 500)
+        check(f"{tag} D7 no 'Setup ✓ all' / Setup checkboxes anywhere; the popup form has the Trend hold · all ✓ pill instead", cnt(page, "#bdPop [data-ln4-all]") == 0 and cnt(page, "#bdPop [data-pf-setup], #bdPop input[type=checkbox]") == 0 and cnt(page, "#bdPop [data-pb2-all]") == 1 and js(page, "()=>{ const e=document.getElementById('satV3Panel'); return !e || e.offsetParent===null; }"))
+        js(page, "()=>bdPopClose()")
         # Starter feature OFF
         js(page, "()=>glWrite(S=>{ S.ln4 = {starterFeatureOff:true}; })"); settle(page, 300)
         js(page, "()=>satV3Render({force:true})"); settle(page, 400)

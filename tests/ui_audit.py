@@ -235,9 +235,12 @@ def screens():
         Object.keys(D).forEach(k=>td3MetaWrite(k, Object.assign({cand_at:new Date(now - D[k][0]*86400000).toISOString()}, D[k][1] ? {source:D[k][1]} : {})));
         window.wlRowsAll = ()=>({wl:[], cand:Object.keys(D).map(s=>({sym:s, port:'cand', market:s.startsWith('SET')?'TH':'US', item:null, w:null, d:null, cInfo:[]}))}); renderWatchlist(); }""")
     add("Watch · Watchlist", "()=>{ switchTab('watch'); wlSetView('wl'); renderWatchlist(); }")
-    add("Plan · Core list", "()=>{ switchTab('plan'); setPlanScope('stock'); render(); }")
-    add("Plan · Core new form", "()=>{ switchTab('plan'); setPlanScope('stock'); coreNewOpen('main',{ticker:'SET:ADVANC'}); }", scope=".core-sheet", wait=700, post="fill")
-    add("Plan · Sat list", "()=>{ switchTab('plan'); setPlanScope('future'); render(); }")
+    add("Plan · board", "()=>{ switchTab('today'); switchTab('plan'); bdSetChip('all'); bdSetSeg('plan'); render(); }")   # PB1
+    add("Plan · board · Holding", "()=>{ switchTab('today'); switchTab('plan'); bdSetSeg('hold'); render(); }")
+    add("Plan · drawer", "()=>{ switchTab('today'); switchTab('plan'); const x = bdItems()[0]; if(x) bdOpen(x.id); }", scope="#bdDr", wait=500)
+    add("Plan · New plan popup", "()=>{ switchTab('plan'); bdClose(); bdNewOpen(); }", scope=".bd-popb", wait=400)
+    add("Plan · Core new form", "()=>{ bdClose(); bdPopClose(); switchTab('plan'); setPlanScope('stock'); coreNewOpen('main',{ticker:'SET:ADVANC'}); }", scope=".core-sheet", wait=700, post="fill")
+    add("Plan · Sat list", "()=>{ bdClose(); bdPopClose(); switchTab('plan'); setPlanScope('future'); render(); }")
     add("Journal", "()=>{ switchTab('journal'); }", wait=1500)
     add("Port", "()=>{ switchTab('mix'); }", wait=1500)
     add("Settings", "()=>{ openSettings(); }", wait=800)
@@ -348,7 +351,7 @@ def audit(vps, tag, shots=True, limit_crops=500):
                     visited.setdefault("Plan · Sat forms", {})[w] = "ERROR " + str(ex)[:80]
                 try:
                     js(page, "()=>{ switchTab('plan'); setPlanScope('stock'); const c=coreCardsList.find(x=>x.ticker==='SET:ADVANC'); if(c&&window.coreOpenCard) coreOpenCard(c.id); }"); settle(page, 700)
-                    visit("Plan · Core open card", None)
+                    visit("Plan · Core open card (drawer)", "#bdDr")
                 except Exception:
                     pass
                 for m in pe:
