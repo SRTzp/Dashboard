@@ -3938,12 +3938,14 @@ button.bd-read{cursor:pointer}
 /* PB1d — ⑤ ⑥ side by side · More rows in 2 independent columns */
 .bd-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
 .bd-pair>*{min-width:0;margin:0!important}
-.bd-q6{display:flex;flex-direction:column;gap:8px;padding:12px 14px}.bd-q6 .ffCalBody{flex:1;min-height:0}
+.bd-q6{display:flex;flex-direction:column;gap:8px;padding:12px 14px;overflow:hidden;min-height:0}.bd-q6 .ffCalBody{flex:1;min-height:0;display:flex;flex-direction:column;padding:0}.bd-q6 .ffCalFail,.bd-q6 .bd-calph{margin:auto;text-align:center}.bd-q6 .ffCalCredit{flex:none}
 .bd-calph{display:grid;place-items:center;height:100%;min-height:120px;color:var(--faint);font-size:12.5px;text-align:center;border:1px dashed var(--border);border-radius:10px;padding:10px}
-.bd-q6 .ffCalScroll{overflow:auto;max-height:467px}
+.bd-q6 .ffCalScroll{flex:1;min-height:0;overflow:auto}
+@media (min-width:1000px){.bd-q5,.bd-q6{height:380px;box-sizing:border-box}.bd-pair.q5open{align-items:start}.bd-pair.q5open .bd-q5{height:auto}.bd-qcard{overflow:hidden}.bd-pair.q5open .bd-qcard{overflow:visible}}
+@media (max-width:999px){.bd-q6{max-height:380px}}
 .bd-qcard{display:flex;flex-direction:column;gap:8px;padding:12px 14px;height:100%;box-sizing:border-box;margin:0}
-.bd-qh{font-weight:700;font-size:.95rem;line-height:1.4;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.bd-qp{overflow-wrap:anywhere}.bd-qp{font-size:13px;color:var(--muted);line-height:1.55;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
-.bd-qc{display:flex;flex-wrap:wrap;gap:6px}.bd-qf{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:auto}.bd-qf .sp{flex:1}
+.bd-qh,.bd-qp,.bd-qc,.bd-qf{flex:none}.bd-qh{font-weight:700;font-size:.95rem;line-height:1.4;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.bd-qp{overflow-wrap:anywhere;-webkit-line-clamp:3}.bd-qp{font-size:13px;color:var(--muted);line-height:1.55;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.bd-qc{display:flex;flex-wrap:wrap;gap:6px;max-height:58px;overflow:hidden}.bd-qf{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:auto}.bd-qf .sp{flex:1}
 .bd-moreh{margin-top:4px}
 .bd-dg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}.bd-dcol{display:flex;flex-direction:column;gap:10px;min-width:0}
 .bd-dd{padding:0;margin:0}.bd-dd>summary{list-style:none;display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;font-size:13.5px;min-height:44px}.bd-dd>summary::-webkit-details-marker{display:none}
@@ -8825,7 +8827,7 @@ function td4MacroAgoHtml(mac){
 function td4MacroGo(){
   switchTab('flow');
   if(!td4MacroDue()) return;
-  try{ pbOpen = true; try{ localStorage.setItem('dash.pbOpen', '1'); }catch(e){} pbRender(); const el = document.getElementById('pbPanel'); if(el) el.scrollIntoView({behavior:'auto', block:'start'}); }catch(e){ console.warn('macro go:', e); }
+  try{ pbOpen = true; bdQOpen = true; try{ localStorage.setItem('dash.pbOpen', '1'); }catch(e){} pbRender(); const el = document.getElementById('pbPanel'); if(el) el.scrollIntoView({behavior:'auto', block:'start'}); }catch(e){ console.warn('macro go:', e); }
 }
 function td3OverviewDaily(M){
   const mac = td3MacroInfo(M.today);
@@ -19064,7 +19066,7 @@ function ideaAssetsHtml(v){
 }
 function ideaGoAsset(a){
   try{ switchTab('flow'); }catch(e){}
-  if(satPbKeyOf(a)){ try{ pbOpen = true; pbRender(); const h = document.getElementById('pbPanel'); if(h && h.scrollIntoView) h.scrollIntoView({block:'start'}); }catch(e){} }
+  if(satPbKeyOf(a)){ try{ pbOpen = true; bdQOpen = true; pbRender(); const h = document.getElementById('pbPanel'); if(h && h.scrollIntoView) h.scrollIntoView({block:'start'}); }catch(e){} }
 }
 function ideaPbFoldHtml(){
   const ids = ideaCounted().filter(v=>ltArr(v.I.assets).some(a=>satPbKeyOf(a.asset))); if(!ids.length) return '';
@@ -27725,6 +27727,7 @@ const PB_REASON = {trigger:'เงื่อนไขเปลี่ยนแผ�
 const PB_CONF = {low:'ต่ำ', mid:'กลาง', high:'สูง'};
 const PB_META_KEYS = ['id','savedAt','versionNo','prevId','reason','stanceChanges'];
 let pbList = [], pbErr = null, pbLoaded = false, pbUnsub = null, pbUnsubUid = null;
+let bdQOpen = false;   /* PB1d-fix — ⑤ card expanded in place (Full playbook) */
 let pbOpen = false, pbPaste = null, pbSaving = false, pbOpenInit = false;
 let pbMsg = '', pbLinkOpen = null, pbPendingPlan = null;   /* MF1 */
 
@@ -27931,6 +27934,7 @@ function pbAssetSheet(id, a){
 }
 
 /* ── แผงในแท็บ Flow ── */
+function bdQToggle(){ bdQOpen = !bdQOpen; pbRender(); }
 function pbToggle(){ pbOpen = !pbOpen; try{ localStorage.setItem('dash.pbOpen', pbOpen ? '1' : '0'); }catch(e){} pbRender(); }
 function pbRender(){
   const host = document.getElementById('pbPanel'); if(!host) return;
@@ -27966,13 +27970,15 @@ function pbRender(){
     else {
       const view = mm.view || {}, as = mm.assets || {}, dn = pbDraftNewer(), q = Calc.pbQuarterOf(new Date()), stale = mm.status==='active' && mm.quarter && mm.quarter < q;
       const chips = Calc.pbSortKeys(as).map(a=>{ const st = (as[a]||{}).stance || 'none'; return `<span class="pbIco ${pbStanceCls(st)}" title="${e(a)} ${e(Calc.pbStanceText(st))}">${as[a] && as[a].focus===true ? '★' : ''}${e(PB_SHORT[a]||a)} ${Calc.pbStanceIcon(st)}</span>`; }).join(' ');
+      const foot = `<div class="bd-qf">${btnPaste}${btnHist}${mm.status==='draft' ? `<button type="button" class="ui-btn ui-btn-pri" onclick="pbOpenActivate('${e(mm.id)}')">เปลี่ยนเป็นใช้จริง</button>` : ''}<span class="sp"></span><button type="button" class="bd-lnk" data-bd-fullpb aria-expanded="${bdQOpen}" onclick="bdQToggle()">${bdQOpen ? 'Collapse ‹' : 'Full playbook ›'}</button></div>`;
       inner = (stale ? `<div class="pbWarn">⚠ Playbook เป็นของ ${e(mm.quarter)} — ยังไม่มีของไตรมาสนี้</div>` : '') + pbRecheckBarHtml()
-        + `<div class="bd-qh" data-bd-qhead>${e(view.headline || '—')}</div>${view.thesis ? `<div class="bd-qp">${e(view.thesis)}</div>` : ''}<div class="bd-qc">${chips}</div>`
+        + (bdQOpen ? pbCardHtml(mm, {open:true, live:true})
+                   : `<div class="bd-qh" data-bd-qhead>${e(view.headline || '—')}</div>${view.thesis ? `<div class="bd-qp">${e(view.thesis)}</div>` : ''}<div class="bd-qc">${chips}</div>`)
         + (dn && dn !== mm ? `<div class="pbDraftBar" onclick="pbViewVer('${e(dn.id)}')">มีร่าง v${+dn.versionNo||'?'} · ${e(dn.id)} ›</div>` : '')
-        + (pbMsg ? `<div class="pbMsg" data-pb-msg="1">${e(pbMsg)}</div>` : '')
-        + `<div class="bd-qf">${btnPaste}${btnHist}${mm.status==='draft' ? `<button type="button" class="ui-btn ui-btn-pri" onclick="pbOpenActivate('${e(mm.id)}')">เปลี่ยนเป็นใช้จริง</button>` : ''}<span class="sp"></span><button type="button" class="bd-lnk" data-bd-fullpb onclick="pbViewVer('${e(mm.id)}')">Full playbook ›</button></div>`;
+        + (pbMsg ? `<div class="pbMsg" data-pb-msg="1">${e(pbMsg)}</div>` : '') + foot;
     }
     host.innerHTML = `<div class="panel pbPanel bd-qcard" data-pb-card><div class="bd-sh"><span class="bd-nb" aria-hidden="true">5</span><b>Macro · quarter</b>${mm ? `<small class="bd-hint">${e((mm.quarter||'') + (+mm.versionNo>0 ? ' · v' + String(+mm.versionNo).padStart(3,'0') : '') + (mm.status==='active' ? ' · active' : ' · draft'))}</small>` : ''}${frTag('pb')}</div>${inner}</div>`;
+    try{ const pr = document.querySelector('[data-bd-pair]'); if(pr) pr.classList.toggle('q5open', !!bdQOpen); }catch(x){}
   }
   try{ ffRenderActionBar(); }catch(e){ console.warn('ffRenderActionBar:', e); }   /* F2c — ช่อง Macro ในแถบดำอ่านจาก Playbook */
   try{ bdFlowTopRender(); }catch(e){}   /* PB1c — Macro cards read the Playbook */
