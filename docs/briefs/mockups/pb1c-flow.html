@@ -1,0 +1,139 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Flow + Sat form</title>
+<style>
+:root{--bg:#EEF0F3;--s:#fff;--t:#141518;--m:#7B818C;--f:#9AA0A9;--b:#E3E6EA;--h:#F4F5F7;--g:#0E8F6F;--gd:rgba(14,143,111,.12);--a:#A96E06;--ad:rgba(169,110,6,.13);--r:#C93B37;--rd:rgba(201,59,55,.1);--bl:#2F5FBE;--bd:rgba(47,95,190,.1);--p:#7E58C9;--pd:rgba(126,88,201,.12)}
+*{box-sizing:border-box}body{margin:0;background:#d9dce1;font:14px -apple-system,'Manrope',sans-serif;color:var(--t);padding:16px}button{font:inherit;cursor:pointer}
+.cap{font:700 12px monospace;color:#444;margin:18px 0 8px;text-align:center}.row{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;align-items:flex-start}
+.pop{width:440px;background:#fff;border-radius:18px;padding:16px;box-shadow:0 12px 36px rgba(0,0,0,.14)}
+.ph{width:360px;background:var(--bg);border-radius:38px;border:9px solid #111;overflow:hidden;padding:14px 12px}
+.ph .pop{width:auto;border-radius:18px;padding:14px}
+.h{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;margin-bottom:10px}.sp{flex:1}.x{border:0;background:var(--h);border-radius:50%;width:28px;height:28px}
+.lbl{font-size:11.5px;color:var(--m);font-weight:700;letter-spacing:.02em}
+/* trend row */
+.trow{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;padding:8px 0;border-top:1px solid var(--h);border-bottom:1px solid var(--h);margin:10px 0}
+.trow .lbl{white-space:nowrap}.it{display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:13px;font-weight:600}
+.tg{display:inline-flex;border:1px solid var(--b);border-radius:8px;overflow:hidden}.tg span{width:26px;height:26px;display:grid;place-items:center;font-weight:800;font-size:12px;color:var(--f);cursor:pointer}.tg .yes{background:var(--gd);color:var(--g)}.tg .no{background:var(--rd);color:var(--r)}
+.all{margin-left:auto;border:1px solid var(--b);background:#fff;border-radius:999px;padding:3px 8px;font:700 11px inherit;color:var(--m);white-space:nowrap}
+.sz{display:flex;align-items:baseline;gap:8px;padding:10px 12px;border-radius:12px;background:var(--h)}.sz b{font:800 19px monospace;color:var(--g)}.sz small{color:var(--m);margin-left:auto}
+.ph .sz{flex-wrap:wrap}.ph .sz small{margin-left:0;flex-basis:100%}
+/* confirm */
+.chk{list-style:none;padding:0;margin:8px 0 0;counter-reset:c}.chk li{counter-increment:c;display:flex;gap:10px;align-items:center;padding:9px 2px;border-top:1px solid var(--h);font-size:14.5px;font-weight:600}.chk li:first-child{border-top:0}
+.chk li::before{content:counter(c);width:24px;height:24px;border-radius:50%;background:var(--gd);color:var(--g);display:grid;place-items:center;font:800 12px monospace;flex:none}
+.chk small{display:block;color:var(--m);font-weight:500;font-size:12px}
+.sum{border:1px solid var(--b);border-radius:12px;padding:10px 12px;margin-top:10px;font-size:13px;line-height:1.7}
+.ft{display:flex;gap:8px;margin-top:12px}.ft button{flex:1;border-radius:12px;padding:10px;font-weight:700;border:1px solid var(--b);background:#fff}.ft .p{background:var(--g);border-color:var(--g);color:#fff}
+.tiny{font-size:11.5px;color:var(--f);margin-top:8px}
+/* flow */
+.mac{max-width:1120px;margin:0 auto;background:var(--bg);border-radius:14px;border:1px solid #c5c8cd;overflow:hidden}
+.top{display:flex;justify-content:center;gap:4px;padding:10px;border-bottom:1px solid var(--b)}.top span{padding:6px 13px;border-radius:999px;color:var(--m);font-weight:600}.top .on{background:var(--t);color:#fff}
+.pg{padding:16px 18px;display:grid;gap:14px}
+.sec{display:flex;align-items:baseline;gap:8px;margin:2px 2px -4px}.sec b{font-size:15px}.sec small{color:var(--f);font-size:12px}.num{font:800 11px monospace;color:var(--f)}
+.c{background:#fff;border:1px solid var(--b);border-radius:16px;padding:14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.rk .t{font-size:12.5px;color:var(--m);font-weight:700}.rk .v{font:800 28px monospace;margin:4px 0}.rk .d{font-size:12.5px;color:var(--m)}
+.bar{height:6px;border-radius:9px;background:var(--h);overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:var(--g)}
+.as{position:relative;cursor:pointer}.as .n{font-weight:800;font-size:15px;display:flex;align-items:center;gap:6px}.star{color:var(--a)}
+.bias{font:700 11.5px inherit;border-radius:6px;padding:1px 7px}.bull{background:var(--gd);color:var(--g)}.bear{background:var(--rd);color:var(--r)}.neu{background:var(--h);color:var(--m)}
+.as p{margin:8px 0 0;font-size:12.5px;color:var(--m);line-height:1.5;min-height:38px}
+.imp{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--h);font-size:12px;color:var(--m)}
+.lv{font:800 10.5px monospace;border-radius:6px;padding:2px 6px}.HIGH{background:var(--rd);color:var(--r)}.MED{background:var(--ad);color:var(--a)}.LOW{background:var(--h);color:var(--m)}
+.ex{display:none;margin-top:8px;font-size:12.5px;background:var(--h);border-radius:10px;padding:8px 10px;line-height:1.55}.as.open .ex{display:block}
+.ev{display:grid;grid-template-columns:88px 52px 1fr auto;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--h);font-size:13px}.ev:first-child{border-top:0}.ev .tm{font:600 12px monospace;color:var(--m)}
+.rrg{display:grid;grid-template-columns:1fr 1fr;gap:14px}.quad{display:grid;grid-template-columns:1fr 1fr;gap:8px}.quad div{border-radius:12px;padding:10px;min-height:92px;font-size:12px}
+.q1{background:var(--bd);color:var(--bl)}.q2{background:var(--gd);color:var(--g)}.q3{background:var(--rd);color:var(--r)}.q4{background:var(--ad);color:var(--a)}.quad b{display:block;font-size:11px;letter-spacing:.03em;margin-bottom:4px}
+.sr{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--h);font-size:13px}.sr:first-child{border-top:0}.sr .r{font:700 12px monospace;color:var(--m);margin-left:auto}
+.btn{border:1px solid var(--b);background:#fff;border-radius:999px;padding:3px 10px;font-weight:700;font-size:12px}
+.flp{width:360px;background:var(--bg);border-radius:38px;border:9px solid #111;overflow:hidden;padding:12px}
+.flp .g2,.flp .rrg{grid-template-columns:1fr 1fr}.flp .g4{grid-template-columns:1fr 1fr}.flp .rrg{grid-template-columns:1fr}.flp .c{padding:12px}.flp .ev{grid-template-columns:70px 46px 1fr}.flp .ev .btn{display:none}.flp .rk .v{font-size:22px}
+.note{max-width:1120px;margin:16px auto 0;background:#fff;border-radius:14px;padding:12px 16px;font-size:13px;line-height:1.6}
+
+/* v2 compact */
+.pg{gap:10px}.sec{margin:4px 2px -2px}
+.rstrip{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:10px 14px}.rstrip>div{display:flex;align-items:baseline;gap:8px;padding:0 12px;border-left:1px solid var(--h)}.rstrip>div:first-child{border-left:0;padding-left:0}
+.rstrip b{font:800 20px monospace}.rstrip small{color:var(--m);font-size:12px}
+.as p{min-height:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.as{display:flex;flex-direction:column}.as .imp{margin-top:auto}.as p{margin-bottom:8px}
+.evr{display:grid;grid-template-columns:repeat(3,1fr) auto;gap:8px;align-items:center}.evr .e{display:flex;gap:6px;align-items:center;background:var(--h);border-radius:10px;padding:7px 10px;font-size:12.5px;white-space:nowrap;overflow:hidden}.evr .tm{font:600 11.5px monospace;color:var(--m)}
+.rq{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.rq .c{padding:12px}.rq b{font-size:11px;letter-spacing:.04em}.rq .s{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-top:1px solid var(--h)}.rq .s:first-of-type{border-top:0}.rq .s i{font:700 12px monospace;font-style:normal;color:var(--m)}
+.flp .rstrip{grid-template-columns:1fr 1fr}.flp .rstrip>div:last-child{grid-column:1/-1;border-left:0;padding:6px 0 0;border-top:1px solid var(--h);margin-top:6px}
+.flp .evr{grid-template-columns:1fr}.flp .rq{grid-template-columns:1fr 1fr}
+.flp .g4,.flp .rq,.flp .rstrip{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.flp .c{min-width:0}.flp .as .n{flex-wrap:wrap;font-size:14px;gap:4px}.flp .as .n .sp{display:none}.flp .as .star{margin-left:auto}.flp .rstrip b{font-size:17px}.flp .rstrip>div{padding:0 8px}.flp .sec small:not(:last-child){display:none}.flp .imp{flex-wrap:wrap}
+.qs{font-size:11.5px;color:var(--m);margin:2px 0 6px}
+.flp{width:390px;height:844px;padding:0;position:relative;display:flex;flex-direction:column;border-radius:44px}
+.pbar{display:flex;align-items:center;padding:16px 18px 8px;font-size:16px}.pbar .ic{width:32px;height:32px;border-radius:10px;background:#fff;display:grid;place-items:center;font-weight:800}
+.pin{flex:1;padding:4px 12px;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.ptab{height:64px;background:#fff;border-top:1px solid var(--b);display:flex;justify-content:space-around;align-items:center;font-size:12px;color:var(--m)}.ptab .on{background:#E7F7C9;color:var(--t);padding:6px 10px;border-radius:10px;font-weight:700}
+.rs1{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;font-size:12.5px;color:var(--m)}.rs1 b{font:800 15px monospace;color:var(--g)}.rs1 span:last-child{color:var(--t);font-weight:700}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--g);margin-right:5px}
+.pg2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.pa{padding:10px}.pa .n{display:flex;align-items:center;gap:5px;font-size:14px}.pa .imp{margin-top:8px;padding-top:6px;font-size:11.5px;flex-wrap:nowrap}.pa .el{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pq{padding:10px}.pq b{font-size:11px;letter-spacing:.04em}.pq .qs{font-size:11px;margin:2px 0 4px}.pq .ss{font-weight:700;font-size:13px}
+.tip{font-size:11.5px;color:var(--f);text-align:center;margin-top:auto;padding-bottom:6px}
+.pev{display:flex;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--h);font-size:12.5px}.pev:first-child{border-top:0}.pev .tm{font:600 11.5px monospace;color:var(--m)}
+</style></head><body>
+
+<div class="cap">A · SAT FORM — Trend on ONE row (Mac + iPhone)</div>
+<div class="row">
+<div class="pop"><div class="h">XAUUSD <span style="font:700 10.5px monospace;background:var(--bd);color:var(--bl);border-radius:6px;padding:1px 6px">SAT</span><span class="sp"></span><button class="x">✕</button></div>
+<div class="lbl">ENTRY · SL · TP …</div>
+<div class="trow"><span class="lbl">TREND HTF</span><span class="it">EMA50 <span class="tg"><span class="yes">✓</span><span>✗</span></span></span><span class="it">Structure <span class="tg"><span class="yes">✓</span><span>✗</span></span></span><button class="all">all ✓</button></div>
+<div class="sz"><b>Size 100%</b><small>0.12 lot · risk $168 · R:R 3.0</small></div></div>
+<div class="ph"><div class="pop"><div class="h">XAUUSD<span class="sp"></span><button class="x">✕</button></div>
+<div class="lbl">ENTRY · SL · TP …</div>
+<div class="trow" style="gap:6px"><span class="lbl">HTF</span><span class="it">EMA50 <span class="tg"><span class="yes">✓</span><span>✗</span></span></span><span class="it">Struct. <span class="tg"><span>✓</span><span class="no">✗</span></span></span><button class="all">all ✓</button></div>
+<div class="sz"><b style="color:var(--a);font-size:15px">Counter trend @ MSS · 60%</b><small>0.07 lot · risk $101 · R:R 3.0</small></div></div></div>
+</div>
+
+<div class="cap">B · PLACE ORDER — "Setup ready?" numbered, easy to scan</div>
+<div class="row">
+<div class="pop"><div class="h">Setup ready on Execution TF?<span class="sp"></span><button class="x">✕</button></div>
+<ul class="chk"><li><div>In Zone</div></li><li><div>Trend Neutral<small>ready to run, room to go</small></div></li><li><div>EMA50 = HVN<small>converging — accumulation, cost near price</small></div></li><li><div>Pivot MMT<small>break → momentum</small></div></li></ul>
+<div class="sum"><b>Buy XAUUSD</b> · Main · Entry <b>2,642</b> · SL <b>2,628</b> · TP <b>2,684</b><br>Size 100% · 0.12 lot · risk $168</div>
+<div class="ft"><button>Not yet</button><button class="p">Yes · mark ordered</button></div>
+<div class="tiny">One tap confirms all 4 · records only — place the order at your broker.</div></div>
+</div>
+
+<div class="cap">C · FLOW v2 (MAC) — compact: 1 risk strip · 4 asset cards · 1 event row · 4 RRG tiles</div>
+<div class="mac"><div class="top"><span>Today</span><span class="on">Flow</span><span>Watch</span><span>Plan</span><span>Journal</span><span>Port</span></div>
+<div class="pg" id="flowMac"></div></div>
+
+<div class="cap">D · FLOW (IPHONE 390×844) — fits one screen, no scrolling</div>
+<div class="row"><div class="flp" id="flowPh"></div></div>
+
+<div class="note"><b>Flow = 4 questions, in this order</b><br>
+<b>① Risk</b> — how much can Momentum / Compounder take now (2 equal tiles).<br>
+<b>② Macro Playbook</b> — one card per asset: medium-term bias + one-line view; tap → change-if + this week's note. ★ = focus this week (top-right of the card).<br>
+<b>③ Weekly Impact</b> — the same cards show this week's HIGH/MED/LOW badge, sorted by impact; the event list below gives times.<br>
+<b>④ RRG</b> — full width: quadrant summary left, sector list right (same height).</div>
+
+<script>
+const A=[['XAUUSD','bull','Bull',1,'Real yields falling, CB buying — dips bought above 2,550.','HIGH','CPI Tue · FOMC mins Wed','Change if: 10Y real yield > 2.3%. This week: buy pullbacks into 2,620–2,640.'],
+['BTCUSDT','neu','Neutral',1,'ETF flows flat; range 88k–96k until a break.','MED','CPI Tue','Change if: daily close > 96k. Note: range edges only.'],
+['S50','bear','Bear',1,'Earnings downgrades, foreign selling continues.','LOW','—','Change if: 3 days of foreign net buy.'],
+['BRENT','neu','Neutral',0,'OPEC+ cuts vs weak China demand.','MED','EIA Wed','Change if: inventories draw 3 weeks.']];
+const order=['HIGH','MED','LOW'];
+const MV={up:['↗','speeding up','var(--g)'],slow:['→','slowing','var(--m)'],fast:['↘','slowing fast','var(--a)']};
+const QS={LEADING:'Beating SPY · momentum up',IMPROVING:'Lagging SPY · momentum up',WEAKENING:'Beating SPY · momentum down',LAGGING:'Lagging SPY · momentum down'};
+function flow(ph){const S=[...A].sort((a,b)=>order.indexOf(a[5])-order.indexOf(b[5]));
+const Q=[['LEADING','var(--g)',[['SMH','+4.2','up'],['GRID','+3.1','up'],['XLU','+2.4','fast']]],['IMPROVING','var(--bl)',[['IGV','+1.0','up'],['HACK','+0.7','slow']]],['WEAKENING','var(--a)',[['XLF','−0.6','fast']]],['LAGGING','var(--r)',[['XLE','−2.1','fast'],['XLP','−1.4','up']]]];
+return `<div class="c rstrip"><div><small>Momentum</small><b style="color:var(--g)">100%</b></div><div><small>Compounder</small><b style="color:var(--g)">100%</b></div><div><span style="width:8px;height:8px;border-radius:50%;background:var(--g);display:inline-block"></span><small><span style="font-weight:800;color:var(--t)">Risk-ON</span> · breadth healthy</small></div></div>
+<div class="sec"><b>Macro · this week</b><small>sorted by impact · tap a card for notes</small><span class="sp"></span><small>10–16 Nov ▾</small></div>
+<div class="g4">${S.map(a=>`<div class="c as" onclick="this.classList.toggle('open')"><div class="n">${a[0]}<span class="bias ${a[1]}">${a[2]}</span><span class="sp"></span><span class="star">${a[3]?'★':'☆'}</span></div>
+<p style="margin-top:6px">${a[4]}</p><div class="ex">${a[7]}</div><div class="imp"><span class="lv ${a[5]}">${a[5]}</span>${a[6]}</div></div>`).join('')}</div>
+<div class="evr">${[['Tue 19:30','CPI','XAU · BTC','HIGH'],['Wed 21:30','EIA','Brent','MED'],['Thu 01:00','FOMC mins','XAU','MED']].map(e=>`<div class="e"><span class="tm">${e[0]}</span><span class="lv ${e[3]}">${e[3]}</span><b>${e[1]}</b><span style="color:var(--m)">${e[2]}</span></div>`).join('')}${ph?'':'<button class="btn">Import</button>'}</div>
+<div class="sec"><b>RRG · sectors vs SPY</b><span class="sp"></span><small>Daily | Weekly</small></div>
+<div class="rq">${Q.map(q=>`<div class="c"><b style="color:${q[1]}">${q[0]}</b><div class="qs">${QS[q[0]]}</div>${q[2].map(x=>`<div class="s"><span>${x[0]} <em style="font-style:normal;font-size:11.5px;color:${MV[x[2]][2]}">${MV[x[2]][0]} ${MV[x[2]][1]}</em></span><i>${x[1]}</i></div>`).join('')}</div>`).join('')}</div>`}
+
+function flowPhone(){const S=[...A].sort((a,b)=>order.indexOf(a[5])-order.indexOf(b[5]));
+const Q=[['LEADING','var(--g)',[['SMH','up'],['GRID','up'],['XLU','fast']]],['IMPROVING','var(--bl)',[['IGV','up'],['HACK','slow']]],['WEAKENING','var(--a)',[['XLF','fast']]],['LAGGING','var(--r)',[['XLE','fast'],['XLP','up']]]];
+return `<div class="pbar"><b>Trading</b><span class="sp"></span><span class="ic">＋</span></div><div class="pin">
+<div class="c rs1"><span>Mom <b>100%</b></span><span>Comp <b>100%</b></span><span><i class="dot"></i>Risk-ON</span></div>
+<div class="sec"><b>Macro · this week</b><span class="sp"></span><small>10–16 Nov</small></div>
+<div class="pg2">${S.map(a=>`<div class="c pa" onclick="this.classList.toggle('open')"><div class="n"><b>${a[0].replace('USDT','').replace('USD','')}</b><span class="bias ${a[1]}">${a[2]}</span><span class="sp"></span><span class="star">${a[3]?'★':'☆'}</span></div>
+<div class="imp"><span class="lv ${a[5]}">${a[5]}</span><span class="el">${a[6]}</span></div></div>`).join('')}</div>
+<div class="sec"><b>RRG · vs SPY</b><span class="sp"></span><small>Daily</small></div>
+<div class="pg2">${Q.map(q=>`<div class="c pq"><b style="color:${q[1]}">${q[0]}</b><div class="qs">${QS[q[0]]}</div><div class="ss">${q[2].map(x=>`<span style="margin-right:8px">${x[0]}<span style="color:${MV[x[1]][2]};margin-left:2px">${MV[x[1]][0]}</span></span>`).join('')}</div></div>`).join('')}</div>
+<div class="sec"><b>Events</b><span class="sp"></span><small>Import</small></div>
+<div class="c" style="padding:4px 12px">${[['Tue 19:30','HIGH','CPI','XAU · BTC'],['Wed 21:30','MED','EIA','Brent'],['Thu 01:00','MED','FOMC mins','XAU']].map(e=>`<div class="pev"><span class="tm">${e[0]}</span><span class="lv ${e[1]}">${e[1]}</span><b>${e[2]}</b><span style="color:var(--m);margin-left:auto">${e[3]}</span></div>`).join('')}</div>
+<div class="tip">↗ speeding up · → slowing · ↘ slowing fast (per sector)</div></div>
+<div class="ptab"><span>Today</span><span class="on">Flow</span><span>Watch</span><span>Plan</span><span>Journal</span><span>Port</span></div>`}
+document.getElementById('flowMac').innerHTML=flow(0);document.getElementById('flowPh').innerHTML=flowPhone();
+</script></body></html>
