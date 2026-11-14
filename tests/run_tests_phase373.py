@@ -85,6 +85,9 @@ def run(pw, w, h):
     tag = f"[{ENGINE}/{w}]"
     b, page, ce, pe = launch(pw, w, h)
     try:
+        for _t in ["AMD","TSLA","AVGO","ORCL","NOPX","NVDA","MSFT","ADBE","CRM","AMZN","META","NFLX"]:   # WL1 — homework done so the cap does not interfere with these flows
+            page.evaluate("([t])=>window.firebase.__mockDb.__seedDoc(['users','testuid','watchlist',t], {ticker:t, market:'US', port:'core', note:'', industry:'', added_at:'2026-09-01T00:00:00Z', exch:'NASDAQ', my_thesis:{why:'', exit:'e'}, hw:{trigger:'t', confirmedAt:'2026-09-03T00:00:00Z', doneAt:'2026-09-03T00:00:00Z'}})", [_t])
+        js(page, "()=>{ wlStop(); wlStart(); }"); settle(page, 500)
         seed(page, fixtures())
         setup_ok(page, ["AMD", "TSLA", "AVGO", "ORCL", "NOPX"])
         js(page, "()=>{ const v = {}; v.ccMS = {day:thaiToday(), sym:'AMZN', at:new Date().toISOString(), via:'crossed', missed:1}; return ln4Write(o=>{ o.valid = Object.assign(o.valid||{}, v); }); }"); settle(page, 400)
@@ -133,6 +136,7 @@ def run(pw, w, h):
         page.locator('[data-bd-card="ccPL"] .bd-tk').click(); settle(page, 400)
         check(f"{tag} 4 card tap (not pill) opens the drawer · status pill + levels + thesis + log", cnt(page, "#bdDrawer") == 1 and "Ordered" in txt(page, "[data-bd-spill]") and cnt(page, "[data-bd-levels]") == 1 and cnt(page, "[data-bd-thesis]") == 1 and cnt(page, "[data-bd-log]") == 1)
         check(f"{tag} 4 drawer: Ordered → 'Cancel order' + primary 'Filled ✓'", cnt(page, "[data-bd-cancel]") == 1 and cnt(page, '[data-bd-dprimary="fill"]') == 1)
+        js(page, "()=>{ const it = wlItemOf('AMD'); if(it){ it.my_thesis = {why:'', exit:''}; } bdRender(); }"); settle(page, 300)   # WL1 — homework seed carried ④; the drawer check wants an unwritten thesis
         check(f"{tag} 4 thesis missing → 'Add thesis ›' link", cnt(page, "[data-bd-addthesis]") >= 1)
         page.locator("[data-bd-cancel]").click(); settle(page, 800)
         check(f"{tag} 3 Cancel order (no confirm) → back to 📝 Planned + log 'Order cancelled'", "ccPL" in col(page, "plan") and "Order cancelled" in logs(page, "ccPL")[-1], logs(page, "ccPL"))
@@ -602,9 +606,10 @@ def pb1b(pw, w, h):
         js(page, "()=>bdSetSeg('hold')"); settle(page, 200)
         pm = js(page, "()=>{ const x=bdItems().find(y=>y.id==='ccMH'); const p=document.querySelector('[data-bd-card=\"ccMH\"] [data-bd-pill]'); return {pct:x.pct, lv:x.pctLv, pill:p&&p.dataset.bdPill, t:p&&p.innerText}; }")
         check(f"{tag} 5 Holding, next unfilled level (480) Planned and < 2% away → pill 'Place order ›' for that level; % = nearest unfilled level", pm["pill"] == "place" and "Place order" in pm["t"] and pm["lv"] == 1 and abs(pm["pct"] - (480 - 483) / 483 * 100) < 0.01, pm)
+        js(page, "()=>{ const it = wlItemOf('ADBE'); if(it){ it.my_thesis = {why:'', exit:'e'}; it.hw = {trigger:'t', confirmedAt:'2026-09-03T00:00:00Z', doneAt:'2026-09-03T00:00:00Z'}; } }")   # WL1 — homework done (an earlier case rewrites the Watch item)
         page.locator('[data-bd-card="ccMH"] [data-bd-pill]').click(); settle(page, 700)
         pm = js(page, "()=>{ const x=bdItems().find(y=>y.id==='ccMH'); const p=document.querySelector('[data-bd-card=\"ccMH\"] [data-bd-pill]'); return {placed:[...x.placed], pill:p&&p.dataset.bdPill}; }")
-        check(f"{tag} 5 …tapping it orders that level (then Filled ✓)", pm["placed"] == [1] and pm["pill"] == "fill", pm)
+        check(f"{tag} 5 …tapping it orders that level (then Filled ✓)", pm["placed"] == [1] and pm["pill"] == "fill", [pm, js(page, "()=>window.__wl1Msg")])
         js(page, "()=>coreWrite('ccMH', {px:560})"); settle(page, 500)
         pm = js(page, "()=>{ const x=bdItems().find(y=>y.id==='ccML'); return {pct:x.pct, lv:x.pctLv}; }")
         check(f"{tag} 5 % to entry for a Planned multi-level plan = nearest level (not only #1)", pm["pct"] is not None and pm["lv"] in (0, 1, 2), pm)

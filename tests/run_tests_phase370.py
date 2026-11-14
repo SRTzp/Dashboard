@@ -79,11 +79,15 @@ def run(pw):
         page.locator("[data-ln4-more]").click(); settle(page, 300)
         scan(page, tag, "today", "[data-ln4]")
         # Watch
-        js(page, "()=>{ switchTab('watch'); wlSetView('cand'); td3MetaWrite('AAA', {cand_at:'2026-09-29T03:00:00Z', source:'Volume spike'}); td3MetaWrite('BBB', {cand_at:'2026-09-15T03:00:00Z'}); window.wlRowsAll = ()=>({wl:[], cand:['AAA','BBB'].map(s=>({sym:s, port:'cand', market:'US', item:null, w:null, d:null, cInfo:[]}))}); renderWatchlist(); }"); settle(page, 500)
-        page.locator('[data-ln4w-row][data-sym="AAA"]').click(); settle(page, 300)
+        for t_ in ("AAA", "BBB"):   # WL1 — the Candidate list is gone: the Watch list is the lean list
+            page.evaluate("([t])=>window.firebase.__mockDb.__seedDoc(['users','testuid','watchlist',t], {ticker:t, market:'US', port:'core', note:'', industry:'', added_at:'2026-09-01T00:00:00Z', exch:'NASDAQ'})", [t_])
+        js(page, "()=>{ wlStop(); wlStart(); }"); settle(page, 700)
+        js(page, "()=>{ switchTab('watch'); wlSetView('wl'); }"); settle(page, 600)
+        page.locator('[data-wl1-row][data-sym="AAA"]').click(); settle(page, 300)
+        js(page, "()=>wlBack && wlBack()"); settle(page, 300)
         scan(page, tag, "watch", "#watchGroups")
-        rows = js(page, "()=>[...document.querySelectorAll('[data-ln4w-row]')].map(e=>{ const kids=[...e.children].filter(k=>!k.matches('[data-ln4w-acts],[data-tv1-sug]')); return new Set(kids.map(k=>{const r=k.getBoundingClientRect(); return Math.round((r.top+r.height/2)/20);})).size; })")
-        check(f"{tag} watch: ticker · tag · age on one line", all(x == 1 for x in rows), rows)
+        rows = js(page, "()=>[...document.querySelectorAll('[data-wl1-row] .l1')].map(e=>(()=>{ const c=[...e.children].map(k=>{const r=k.getBoundingClientRect(); return r.top+r.height/2;}); return Math.max(...c)-Math.min(...c) < 12 ? 1 : 2; })())")
+        check(f"{tag} watch: symbol · exchange · status chip on one line", rows and all(x == 1 for x in rows), rows)
         # Core form
         js(page, "()=>{ switchTab('plan'); setPlanScope('stock'); }"); settle(page, 500)
         scan(page, tag, "plan-list", "#tab-plan, body", True) if False else shot(page, "plan-list")

@@ -49,6 +49,7 @@ Row also shows: homework done / not done + current size cap (50% / 100%), what i
 - Valid item = `EXCHANGE:SYMBOL` (`[A-Z0-9_.!-]+:[A-Z0-9_.!&-]+`, uppercased). Anything else (formulas like `SPY/QQQ`, spreads, bare symbols) → listed as skipped with reason, never guessed.
 - No `###WATCHLIST` section → message "No WATCHLIST section found", nothing imported (never fall back to the whole file).
 - **Preview before save:** counts new / already in Watch / skipped + the list; button `Add N to <strategy>`.
+- One stock = one list: a symbol already in Watch under the OTHER strategy is shown as "already in Watch (<strategy>)" and is not added or moved.
 - Import only adds Watch items (status No plan unless plans exist). It never creates a plan/order/position, never unlocks size, never overwrites thesis/status/plan/order/fill/position, never removes stocks missing from a new file.
 
 ## 4. Entry workflow

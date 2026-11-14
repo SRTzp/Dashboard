@@ -66,11 +66,13 @@ def tests(pw, w, h):
         import run_tests_phase13 as P13
         P24.set_ff(page, P24.ff_json(True, True))
         js(page, "()=>{ try{ localStorage.removeItem('dash.ps1Off'); }catch(e){} }")
+        page.evaluate("()=>window.firebase.__mockDb.__seedDoc(['users','testuid','watchlist','AMD'], {ticker:'AMD', market:'US', port:'core', note:'', industry:'', added_at:'2026-09-01T00:00:00Z', exch:'NASDAQ', my_thesis:{why:'w', exit:'e'}, hw:{trigger:'t', confirmedAt:'2026-09-03T00:00:00Z', doneAt:'2026-09-03T00:00:00Z'}})")   # WL1 — homework done → the cap lets the full order through
+        js(page, "()=>{ wlStop(); wlStart(); }"); settle(page, 500)
         js(page, "(t)=>{ const B=getBook('main'); B.trades=t; saveBook('main'); render(); }", [P13.T("tNV", "core", "open", sym="NVDA", entry=171.4, sl=168, qty=10, cur="USD", date="2026-09-10")])
         stub(page, "window.ps1Model = ()=>({P:{principalPct:1.2}, cfg:{total:5}});")
         T.go_today(page)
         # ── 1 status card ──
-        check(f"{tag} 1 one status card + Act + Find (Daily)", cnt(page, "[data-ln4-status]") == 1 and cnt(page, "[data-ln4-act]") == 1 and cnt(page, "[data-ln4-find]") == 1)
+        check(f"{tag} 1 one status card + Act (Daily) · WL1: no Find card", cnt(page, "[data-ln4-status]") == 1 and cnt(page, "[data-ln4-act]") == 1 and cnt(page, "[data-ln4-find]") == 0)   # WL1 — the Find card (candidate triage) is gone
         check(f"{tag} 1 port pill hidden when Normal", cnt(page, "[data-ln4-portpill]") == 0)
         stub(page, "window.lossEval = (A,b)=> b==='winner' ? {status:'half', label:'Half size', mult:0.5, blocked:false, weekR:0.6, cfg:{weekR:5}} : {status:'normal', label:'Normal', mult:1, weekR:0, cfg:{weekR:5}};")
         refresh(page)
@@ -209,19 +211,12 @@ def tests(pw, w, h):
         check(f"{tag} 5 old Homework row + Skills due line are gone from Today", cnt(page, "[data-ft-pinrow]") == 0 or True)
         page.locator("[data-ln4-todomore]").click(); settle(page, 300)
         check(f"{tag} 5 '+N' opens the rest", cnt(page, "[data-ln4-todo]") >= 4, cnt(page, "[data-ln4-todo]"))
-        stub(page, "window.ftList = ()=>[]; window.sk1Items = ()=>[]; window.ln4Crossed = ()=>false;")
+        stub(page, "window.ftList = ()=>[]; window.wl1TodoItems = ()=>[]; window.sk1Items = ()=>[]; window.ln4Crossed = ()=>false;")
         js(page, "()=>glWrite(S=>{ delete S.ln4; })"); settle(page, 300)
         refresh(page)
         check(f"{tag} 5 To do row hidden when nothing to do", cnt(page, "[data-ln4-todorow]") == 0)
-        # ── 6 Find ──
-        check(f"{tag} 6 three counters: Deep dive x/2 · Cand → WL x/3 · New Cand x/3", js(page, "()=>[...document.querySelectorAll('[data-ln4-count]')].map(e=>e.querySelector('span').innerText)") == ["Deep dive", "Cand → WL", "New Cand"])
-        check(f"{tag} 6 no list open by default", js(page, "()=>document.querySelector('[data-ln4-fp]').classList.contains('open')") is False)
-        page.locator('[data-ln4-count="add"]').click(); settle(page, 300)
-        check(f"{tag} 6 New Cand opens ticker input + Add", cnt(page, "[data-ln4-fp] [data-td4-add]") == 1 and cnt(page, "[data-ln4-fp] [data-td4-add-go]") == 1)
-        page.locator('[data-ln4-count="scr"]').click(); settle(page, 300)
-        check(f"{tag} 6 one list open at a time (Cand → WL replaces New Cand)", cnt(page, "[data-ln4-fp] [data-td4-add]") == 0 and js(page, "()=>document.querySelectorAll('[data-ln4-count][aria-expanded=true]').length") == 1)
-        page.locator('[data-ln4-count="scr"]').click(); settle(page, 300)
-        check(f"{tag} 6 tap again closes it", js(page, "()=>document.querySelector('[data-ln4-fp]').classList.contains('open')") is False)
+        # ── 6 Find — WL1: removed with the Candidate list (counters / lists no longer exist) ──
+        check(f"{tag} 6 WL1: Find card (Deep dive · Cand → WL · New Cand) is gone from Today", cnt(page, "[data-ln4-find]") == 0 and cnt(page, "[data-ln4-count]") == 0)
         # ── 7 More fold: nothing deleted ──
         check(f"{tag} 7 'Details' fold keeps Overview/risk/pool lines (not deleted)", cnt(page, "[data-ln4-moredet]") == 1 and js(page, "()=>document.querySelector('[data-ln4-moredet]').innerHTML.length") > 200)
         # ── 8 Weekend ──
@@ -235,31 +230,14 @@ def tests(pw, w, h):
 
 
 def watch(pw, w, h):
+    # WL1 — the Candidate list (rows, tags, age ⚠, Pass/Drop/Thesis) was removed; the Watch list is covered by run_tests_phase374.py
     tag = f"[{ENGINE}/{w}]"
     b, page, ce, pe = T.launch(pw, w, h, iso=NOW, picks=(), weekly=False)
     try:
         js(page, "()=>{ switchTab('watch'); wlSetView('cand'); }"); settle(page, 500)
-        page.evaluate("""()=>{ const col = window.firebase.firestore().collection('users').doc('testuid').collection('watchlist'); }""")
-        js(page, "()=>{ td3MetaWrite('AAA', {cand_at:'2026-09-29T03:00:00Z', source:'Volume spike'}); td3MetaWrite('BBB', {cand_at:'2026-09-15T03:00:00Z'}); renderWatchlist(); }"); settle(page, 400)
-        js(page, "()=>{ window.wlRowsAll = ()=>({wl:[], cand:['AAA','BBB'].map(s=>({sym:s, port:'cand', market:'US', item:null, w:null, d:null, cInfo:[]}))}); }")
-        js(page, "()=>{ wlView='cand'; renderWatchlist(); }"); settle(page, 400)
-        hd = js(page, "()=>({tabs:document.querySelectorAll('[data-ln4w-hd] [data-wl-view]').length, add:document.querySelectorAll('[data-ln4w-hd] [data-wl-addc-btn]').length, tv:document.querySelectorAll('[data-ln4w-hd] [data-tv1-btn]').length, sel:[...(document.querySelector('[data-ln4w-mk]')||{options:[]}).options].map(o=>o.text)})")
-        check(f"{tag} W1 header: tabs + '＋' + 'TV' + one market dropdown (All/US/TH)", hd["tabs"] == 3 and hd["add"] == 1 and hd["tv"] == 1 and hd["sel"] == ["All", "US", "TH"], hd)
-        check(f"{tag} W2 no TradingView bar row any more", cnt(page, "[data-tv1-bar]") == 0)
-        rws = js(page, "()=>[...document.querySelectorAll('[data-ln4w-row]')].map(e=>({s:e.dataset.sym, tags:e.querySelectorAll('[data-ln4w-tag]').length, nr:!!e.querySelector('[data-ln4w-noreason]'), acts:!!e.querySelector('[data-ln4w-acts]')}))")
-        check(f"{tag} W3 one tag per row; amber 'set reason' when none; actions hidden", len(rws) == 2 and all(r["tags"] == 1 and not r["acts"] for r in rws) and any(r["nr"] for r in rws), rws)
-        page.locator('[data-ln4w-row][data-sym="AAA"]').click(); settle(page, 300)
-        acts = js(page, "()=>[...document.querySelectorAll('[data-ln4w-acts] button')].map(b=>b.innerText)")
-        check(f"{tag} W4 tap row → Pass · Drop · Thesis", acts == ["Pass", "Drop", "Thesis"], acts)
-        page.locator('[data-ln4w-row][data-sym="BBB"]').click(); settle(page, 300)
-        check(f"{tag} W4 one row open at a time", cnt(page, "[data-ln4w-acts]") == 1 and js(page, "()=>document.querySelector('[data-ln4w-acts]').parentElement.dataset.sym") == "BBB")
-        age = js(page, "()=>[...document.querySelectorAll('[data-ln4w-row]')].map(e=>({s:e.dataset.sym, w:!!e.querySelector('[data-ln4w-warn]')}))")
-        check(f"{tag} W5 ⚠ only on the 12d+ row (no banner row)", any(a["w"] for a in age) and cnt(page, ".tv1-sug") == 0, age)
-        page.locator('[data-ln4w-warn]').first.click(); settle(page, 300)
-        check(f"{tag} W5 tap ⚠ → Drop / Keep 7 more days", cnt(page, "[data-tv1-drop]") == 1 and cnt(page, "[data-tv1-keep]") == 1)
-        page.locator('[data-tv1-keep]').click(); settle(page, 500)
-        check(f"{tag} W5 Keep 7 more days → keep_until stored", js(page, "()=>!!td3MetaOf('BBB').keep_until"))
-        C.shot(page, f"ln4-watch-{w}.png", full=True)
+        js(page, "()=>{ td3MetaWrite('AAA', {cand_at:'2026-09-29T03:00:00Z', source:'Volume spike'}); renderWatchlist(); }"); settle(page, 400)
+        check(f"{tag} W1 WL1: no Candidates tab / rows / TV export menu (wlSetView('cand') lands on the Watch list)", js(page, "()=>wlView") == "wl" and cnt(page, "[data-wl-view='cand']") == 0 and cnt(page, "[data-ln4w-row]") == 0 and cnt(page, "[data-tv1-btn]") == 0, js(page, "()=>wlView"))
+        check(f"{tag} W2 candidate data kept (candMeta AAA still stored)", js(page, "()=>!!td3MetaOf('AAA').cand_at"))
         check(f"{tag} W no horizontal overflow · no errors", ovf(page) <= 0 and not ce and not pe, [ovf(page), ce[:2], pe[:2]])
     finally:
         b.close()
