@@ -16,4 +16,7 @@ Note: §1–§4 were built in one pass in the same code block, so they are commi
 ## §6 Costs switch (own commit)
 - Done: Settings · Training `Costs` toggle (default OFF, set OFF once), one flag read in the adapter (`src.costsOn`), OFF = costs 0 / net = gross / net-breakeven = entry / never Unknown; cost rows + per-trade override hidden; closes while OFF stamped `costsOff` (never re-costed when ON later); gross strict sign.
 - Tests: live-layer +10 (OFF/ON), suite re1c2 +24 (155/0). RE-C1 cost tests now run with the switch ON.
-- Left: reruns of §5 on the final code, ui_audit compare, screenshots, summary update.
+- Reruns on final code all green (re1c 203, 375 135, 374 254, 373 544, SW2 33, re1b 19, engine 313, adapter 63, live 73, re1c2 155); ui_audit 124 = main; summary updated.
+
+## Left
+- Nothing.

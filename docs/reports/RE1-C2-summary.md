@@ -1,10 +1,19 @@
-# RE-C2 — Today: Act in three groups + risk strip · branch `claude/re1c2` (not merged)
+# RE-C2 — Today: Act in three groups + risk strip + Costs switch OFF · branch `claude/re1c2` (not merged)
 Base: origin/main d828732 (RE-C1 verified on main: `risk-engine.js` + `re1-adapter.js` inlined and wired, `re1L()` live layer present).
 
 ## §0 answers
 - **Account:** Today follows the existing account selector (`acctActive`, shown when there is more than one account) — strip, Act groups, Risk room all use that account only. If there is no selector (one account), one block is built per account that has any plan / order / holding, prefixed `Main` / `Family`. Accounts are never summed. Note: before RE-C2, Act listed plans of every account together; it now shows only the selected account.
 - **Last price (near-entry):** only `c.px` of Core cards (cached price, already used by the board). Satellite has no price source → Satellite enters Enter by the ⚑ flag only (as the brief says). No price → the plan is not "Near". No fetch added.
 - **Events / Satellite news windows:** cached Weekly Impact docs (`wiDocs`, this / adjacent weeks, impact tier HIGH / MED) + the CPI / NFP / FOMC dates in Settings (`newsEvents`, existing −60 / +30 min no-entry rule). No data → event chip hidden / "no event data". No fetch added.
+
+## §6 Costs switch — OFF (own commit `6eba781`)
+- Settings · Training now has `Costs` next to `Starter ¼`. **Set OFF once in this release** (`costsOn=false`, `re1CostsReset`); default is OFF.
+- One flag, read in one place: `src.costsOn` in `re1-adapter.js` (`unitCosts`). OFF → costs known and all zero: net = gross, estimated net-breakeven price = entry, no `Unknown`, no `COST_UNKNOWN`, no `Add costs ›`. Strict sign runs on gross P&L. Saved cost values stay in the data, unread.
+- Hidden while OFF: Settings cost rows, the per-trade cost override in the close form.
+- Trades closed while OFF are stamped `costsOff` and read `costs not recorded`; when ON later they are never re-costed or re-labelled, and no position or order changes.
+- ON = RE-C1 behaviour: the RE-C1 cost tests run unchanged with the switch ON (live test source `costsOn:true`; `run_tests_re1c` launcher turns it on).
+- Tests: live layer 63 → 73 (OFF: no Unknown, breakeven = entry, stop at entry frees the Momentum idea, exit at entry is breakeven with no Momentum loss / Satellite step change, ON later never re-costs); suite re1c2 +24 (cost UI hidden at 390 / 1440, close stored as `costs not recorded`, toggling ON/OFF changes nothing). Screenshots `re1c2-costs-off-settings-390/1440.png`.
+- Note: the fill form has no per-trade cost field in this build, so only the close form override was hidden.
 
 ## What was built (all in `index.html`, block "RE1-C2")
 - **§1 strip:** `Act · ● state · MMT <ideas left> · <week room %> · SAT step n · <step %> · COMP <room %> · <next HIGH event>`; Normal / amber (Half size, Snapshot due, Sat reduced) / red (Locked MMT·SAT·COMP, snapshot stale / none); worst wins and the causing chip turns red and names itself. Event chip amber when a no-entry window starts within 24 h. Phone: state + abnormal chips + event chip only.
@@ -26,9 +35,9 @@ Old status text / chip in the top card (risk line `Risk · Mom …`, port pill, 
 |---|---|
 | engine `risk_engine_test.js` | 313 / 0 |
 | adapter `re1_adapter_test.js` | 63 / 0 |
-| live `re1c_live_test.js` | 63 / 0 |
-| **new `run_tests_re1c2.py`** (390/1280/1440) | **131 / 0** |
-| `run_tests_re1c.py` | 203 / 0 (one check re-pointed: Move stop now asserted in Act › Manage) |
+| live `re1c_live_test.js` | 73 / 0 (63 RE-C1 with Costs ON + 10 §6) |
+| **new `run_tests_re1c2.py`** (390/1280/1440) | **155 / 0** (131 + 24 for §6) |
+| `run_tests_re1c.py` | 203 / 0 (launcher sets Costs ON; one check re-pointed: Move stop now asserted in Act › Manage) |
 | 375 | 135 / 0 · retired (RE-C2) below |
 | 374 | 254 / 0 |
 | 373 | 544 / 0 · retired (RE-C2) below |
