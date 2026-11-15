@@ -296,7 +296,7 @@ def run_logic(pw):
     # ── H · Compounder Add-on = total-risk rule (answers-A #16) · six-loss lock + unlock flow
     d = doc_c()
     d["books"]["main"]["trades"] = [tr(id="n1", sym="NVDA", cur="USD", qty=100, entry=100, sl=95, posGroup="n1", sl0=95)]
-    cs = {"cN": {"acct": "main", "ticker": "NVDA", "market": "US", "strategy": "L", "track": "ladder", "status": "open", "trade_id": "n1", "lots": [{"n": 1, "px": 100, "qty": 100}], "stopHistory": [], "px": 101}}
+    cs = {"cN": {"acct": "main", "ticker": "NVDA", "market": "US", "strategy": "W", "track": "ladder", "status": "open", "trade_id": "n1", "lots": [{"n": 1, "px": 100, "qty": 100}], "stopHistory": [], "px": 101, "plan": {"entry": 100, "stop": 95}}}
     b, page, ce, pe = launch(pw, w, h, d, cs)
     try:
         r = js(page, """()=>{ const L=re1L('main'); const i=L.ideas[0]; const f={kind:'addon',ideaId:i.id,side:'long',entry:98,stop:92,mult:1,fx:33,lotStep:1,minLot:1};

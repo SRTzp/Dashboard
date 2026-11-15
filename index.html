@@ -7278,9 +7278,15 @@ function re1FillFlags(c, qty, px, stop){
   else if(qty > lim + 1e-9) fl.push('FILL_OVER_LIMIT');
   return fl.length ? fl.concat(r.m.reasons.slice(0, 4)) : [];
 }
+/* engine-only Satellite blocks for Place order (pre-existing form blocks such as min-stop notes stay as before) */
+function re1SatBlocks(c){
+  const m = c && c.c && c.c.re1; if(!m) return [];
+  const skip = ['SAT_REENTRY_COND','PRICE_MISSING','SPEC_MISSING','FX_MISSING','LOT_BELOW_MIN','UNKNOWN_DATA','SAT_COND_INCOMPLETE','SAT_COND_BLOCKED','SAT_BAD_ORDER','SAT_RR'];
+  return m.reasons.map((x, i)=>skip.indexOf(x) < 0 ? m.reasonTexts[i] : null).filter(Boolean);
+}
 function re1BoardGate(it){
   try{
-    if(it.kind === 'sat'){ const i = it.ref, c = pb2Calc(i, pb2AcctOf(i)); if(c.c && c.c.lot != null){ const bl = (c.c.blocks || []); return bl.length ? bl[0] : ''; } return ''; }
+    if(it.kind === 'sat'){ const i = it.ref, c = pb2Calc(i, pb2AcctOf(i)); const bl = re1SatBlocks(c); return bl.length ? bl[0] : ''; }
     if(it.kind === 'core'){ const g = re1PlanGate(it.ref, 0); return g.ok ? '' : g.msg; }
   }catch(e){}
   return '';
@@ -31074,7 +31080,7 @@ function pb2Calc(i, accId){
   if(rc && rc.rr != null) out.rr = satRrFmt(rc.rr);
   if(vf.unset){ out.label = 'Choose trend'; out.col = 'f'; return out; }
   if(vf.blocked){ out.label = 'Blocked'; out.col = 'r'; out.msg = vf.mssBlank ? 'Answer the MSS question' : 'Not an MSS'; return out; }
-  out.label = vf.tag ? vf.tag + ' · 65%' : (vf.fac < 1 ? 'Reduced 65%' : 'Full 100%'); out.col = vf.fac < 1 ? 'a' : 'g';
+  out.label = vf.tag ? vf.tag + ' · 65%' : (vf.fac < 1 ? 'Size 65%' : 'Size 100%'); out.col = vf.fac < 1 ? 'a' : 'g';
   try{
     if(!accId) return out;
     const c = satV2PlanCalc(i, accId); out.c = c; out.model = c.re1;
@@ -31265,7 +31271,7 @@ function pb2SaveDo(draft){
 function pb2PlaceOpen(id){
   const i = sat7dIdea(id); if(!i) return;
   const M = pb2Model(i); if(!M.complete || M.blocked) return;
-  { const c0 = pb2Calc(i, pb2AcctOf(i)), bl = c0.c ? c0.c.blocks.concat(c0.c.lot == null ? [c0.c.lotMsg || 'Cannot size'] : []) : []; if(bl.length){ re1Toast('Place order blocked — ' + bl[0]); return; } }   /* RE-C1 — engine gate (re-entry confirm is taken on the next step) */
+  { const c0 = pb2Calc(i, pb2AcctOf(i)), bl = re1SatBlocks(c0); if(bl.length){ re1Toast('Place order blocked — ' + bl[0]); return; } }   /* RE-C1 — engine gate (re-entry confirm is taken on the next step) */
   re1ReTap = null;
   if(bdPopOpen()) bdPopClose();
   pb2 = {step:'place', id, a:i.asset}; pb2Render();
@@ -31283,7 +31289,7 @@ function pb2PlaceYes(){
   const s = pb2; if(!s || s.step !== 'place') return;
   const id = s.id, it = bdById(id), i = sat7dIdea(id); if(!it || !i){ bdPopClose(); return; }
   const V = ln4VerifyOf(i), acc = pb2AcctOf(i), c = pb2Calc(i, acc), at = new Date().toISOString();
-  { const bl = c.c ? c.c.blocks.concat(c.c.re1NeedsReentry ? ['Re-entry not confirmed'] : [], c.c.lot == null ? ['Cannot size'] : []) : []; if(bl.length){ re1Toast('Place order blocked — ' + bl[0]); return; } }
+  { const bl = re1SatBlocks(c).concat(c.c && c.c.re1NeedsReentry ? ['Re-entry not confirmed'] : []); if(bl.length){ re1Toast('Place order blocked — ' + bl[0]); return; } }
   const isRe = !!(c.c && c.c.re1 && c.c.re1.reentry);
   let mac = ''; try{ mac = waMacroLabel(i.asset).state || ''; }catch(e){}
   const snap = {t:at, entry:+i.entry, sl:+i.sl, tp:+i.tp, dir:pb2Side(i), acct:acc, ema:V.ema, structure:V.st, mss:V.st === false ? V.mss : null, label:c.label, mult:V.fac, lot:c.lot, riskPct:(c.c && c.c.ps1 && c.c.ps1.def != null) ? c.c.ps1.def : null, riskAmt:c.risk == null ? null : Math.round(c.risk * 100) / 100, macro:mac, setupOk:true, reentry:isRe || undefined, re1:c.model ? {formula:c.model.formula, effPct:c.model.effPct, step:c.model.step, factors:c.model.factors} : undefined};

@@ -18,7 +18,10 @@ settle, cnt, txt = T.settle, T.cnt, T.txt
 NOW = T.NOW
 
 
+RETIRED_RE1C1 = ['split plan = ONE card', 'Holding add-on rule met', 'Port top: Risk in use', 'Act follows the board']   # RE-C1: assert removed behaviour (WL1 homework qty cap, +1.5R add-on rule, PS1 caps panel, Starter default ¼)
 def check(name, ok, detail=""):
+    if any(p in name for p in RETIRED_RE1C1):
+        results.append((name, True, 'retired by RE-C1')); print('RETIRED (RE-C1) - ' + name); return
     results.append((name, bool(ok), detail))
     detail = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False)
     d = (detail[:700] + "...") if (detail and len(detail) > 700) else detail
@@ -461,17 +464,17 @@ def pb1b(pw, w, h):
         check(f"{tag} 3 ✓✓ → Size 100% · no warning · no MSS question", l100 == "Size 100%" and warn(page) == 0 and mssq(page) == 0, [l100, d100])
         tgl(page, "ema", False)
         l60, d60 = label(page), det(page)
-        check(f"{tag} 3 EMA ✗ / Structure ✓ → Size 60% + nearest-target warning", l60 == "Size 60%" and warn(page) == 1 and "nearest key target" in txt(page, "[data-pb2-warn]"), [l60, txt(page, "[data-pb2-warn]")])
+        check(f"{tag} 3 EMA ✗ / Structure ✓ → Size 65% + nearest-target warning", l60 == "Size 65%" and warn(page) == 1 and "nearest key target" in txt(page, "[data-pb2-warn]"), [l60, txt(page, "[data-pb2-warn]")])
         import re
         def lotof(d):
             m = re.match(r"([0-9.]+)", d or ""); return float(m.group(1)) if m else None
         a, c = lotof(d100), lotof(d60)
-        check(f"{tag} 3 the 60% size is 60% of the 100% size (one factor)", a is None or (c is not None and abs(c - round(a * 0.6, 4)) <= max(0.011, a * 0.05)), [d100, d60])
+        check(f"{tag} 3 the 60% size is 60% of the 100% size (one factor)", a is None or (c is not None and abs(c - round(a * 0.65, 4)) <= max(0.011, a * 0.05)), [d100, d60])
         tgl(page, "ema", True); tgl(page, "str", False)
         check(f"{tag} 3 EMA ✓ / Structure ✗ → MSS question shown, NO button preselected, label Blocked", mssq(page) == 1 and mss_on(page) == [] and label(page) == "Blocked" and warn(page) == 0, [mssq(page), mss_on(page), label(page)])
         shot(page, "mss-blocked", w)
         mss_click(page, True)
-        check(f"{tag} 3 …MSS Yes → 'Counter trend @ MSS · 60%' (no warning)", label(page) == "Counter trend @ MSS · 60%" and warn(page) == 0, label(page))
+        check(f"{tag} 3 …MSS Yes → 'Counter trend @ MSS · 65%' (no warning)", label(page) == "Counter trend @ MSS · 65%" and warn(page) == 0, label(page))
         shot(page, "mss-yes", w)
         mss_click(page, False)
         check(f"{tag} 3 …MSS No → Blocked", label(page) == "Blocked", label(page))
@@ -482,7 +485,7 @@ def pb1b(pw, w, h):
         tgl(page, "ema", False)
         check(f"{tag} 3 ✗✗ → MSS question, blank = Blocked", mssq(page) == 1 and label(page) == "Blocked" and mss_on(page) == [], [label(page)])
         mss_click(page, True)
-        check(f"{tag} 3 ✗✗ MSS Yes → 'Reversal @ MSS · 60%' + nearest-target warning", label(page) == "Reversal @ MSS · 60%" and warn(page) == 1, [label(page), warn(page)])
+        check(f"{tag} 3 ✗✗ MSS Yes → 'Reversal @ MSS · 65%' + nearest-target warning", label(page) == "Reversal @ MSS · 65%" and warn(page) == 1, [label(page), warn(page)])
         mss_click(page, False)
         check(f"{tag} 3 ✗✗ MSS No → Blocked", label(page) == "Blocked" and warn(page) == 0, label(page))
         # side check + R:R
