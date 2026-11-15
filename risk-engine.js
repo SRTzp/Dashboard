@@ -22,7 +22,7 @@
   var POLICY = {
     mom: { rptPct: 0.45, weeklyPct: 1.80, monthlyPct: 7.20, ammo: 4, homeworkCap: 0.5, starter: 0.25, releaseR: 1.5 },
     sat: { stepRpt: [0.20, 0.30, 0.30, 0.40], weeklyPct: 1.20, monthlyPct: 4.80, condReduced: 0.65, minRR: 1.5, staleOrderMs: DAY },
-    comp: { pilotPct: 0.50, addonPct: 0.50, heatCapPct: 6.0, starter: 0.25, addonR: 1.5, lockLosses: 6, unlockDays: 7,
+    comp: { pilotPct: 0.50, addonPct: 0.50, heatCapPct: 6.0, starter: 0.25, lockLosses: 6, unlockDays: 7,
             regime: { green: 1.0, one: 0.75, both: 0.50 }, freshDays: 4, staleCap: 0.75, homeworkCap: 0.5 },
     active: { weeklyPct: 3.0, monthlyPct: 12.0 },
     emergency: { triggerPct: 10, recoverPct: 5, factor: 0.5 },
@@ -64,10 +64,9 @@
     SAT_RR:             { kind: 'block', text: 'R:R below 1.5 or TP missing' },
     COMP_LOCKED:        { kind: 'block', text: 'Compounder locked after six consecutive losing ticker-cycles' },
     COMP_HEAT:          { kind: 'block', text: 'Compounder heat cap 6% would be exceeded' },
-    COMP_THESIS:        { kind: 'block', text: 'Thesis not complete' },
-    COMP_PILOT_R:       { kind: 'block', text: 'Pilot has not reached +1.5R' },
-    COMP_PILOT_STOP:    { kind: 'block', text: 'Pilot stop not confirmed at estimated net breakeven' },
-    COMP_TOPUP_STOP:    { kind: 'block', text: 'First tranche stop not confirmed at estimated net breakeven' },
+    ADDON_THESIS:       { kind: 'block', text: 'Thesis not complete — Add-on / further buys need it' },
+    ADDON_TOTAL_RISK:   { kind: 'block', text: 'Ticker total risk (existing tranches at current stop + this order) would exceed the plan limit' },
+    ADDON_BELOW_ENTRY_WARN: { kind: 'flag', text: 'Adding below entry — re-check ④ Wrong if' },
     COMP_PHASE_CAP:     { kind: 'block', text: 'Above the allowed risk for the current phase' },
     COMP_REGIME_STALE:  { kind: 'flag',  text: 'Regime data stale — size capped at 75%' },
     COMP_UNLOCK_WAIT:   { kind: 'block', text: 'Unlock needs at least 7 days after the sixth loss closed' },
@@ -239,17 +238,20 @@
     var last = list[list.length - 1], ageDays = (now - last.at) / DAY;
     if (ageDays > P.snapshot.blockAfterDays + EPS) return { ok: false, state: 'stale', ageDays: ageDays, snapshot: last, reasons: ['SNAPSHOT_STALE'], flags: [] };
     var ws = weekStart(now), ms = monthStart(now);
-    function pick(from) { var c = null; list.forEach(function (s) { if (s.at >= from && !c) c = s; }); return c; }   /* first confirmed snapshot of the period */
+    /* RE-C1 (brief wins): week-start / month-start basis = the LATEST confirmed snapshot at or before the period start (a snapshot's `at` is its as-of date, 00:00 Bangkok).
+       None at or before the start (first run) → the earliest confirmed one, flagged BASIS_FIRST. A mid-week snapshot never replaces the week-start basis. */
+    function pick(from) { var c = null; list.forEach(function (s) { if (s.at <= from) c = s; }); return c || list[0]; }
     var wk = pick(ws), mo = pick(ms), flags = [];
-    if (!wk) flags.push('SNAPSHOT_OLD');
-    return { ok: true, state: flags.length ? 'carried' : 'current', ageDays: ageDays, snapshot: last,
-      weekEquity: (wk || last).equity, weekAt: (wk || last).at, monthEquity: (mo || last).equity, monthAt: (mo || last).at,
+    if (last.at < ws) flags.push('SNAPSHOT_OLD');
+    if (wk.at > ws || mo.at > ms) flags.push('BASIS_FIRST');
+    return { ok: true, state: last.at < ws ? 'carried' : 'current', ageDays: ageDays, snapshot: last,
+      weekEquity: wk.equity, weekAt: wk.at, monthEquity: mo.equity, monthAt: mo.at,
       currentEquity: last.equity, reasons: [], flags: flags };
   }
 
   /* ═══ 6. Emergency ═══
      state = {active, refEquity, refStartMs} · flows = [{at, amount}] (+deposit / −withdrawal) · snapshot = {at, equity, confirmed}
-     monthStartEquity = equity of the first confirmed snapshot of the snapshot's month (caller: snapshotBasis().monthEquity / monthAt).
+     monthStartEquity = month-start basis = the latest confirmed snapshot at or before day 1 00:00 Bangkok (caller: snapshotBasis().monthEquity / monthAt; brief RE-C1 §1).
      Trigger: cash-flow-adjusted decline >= 10 % from the reference. Keeps its reference across month change until adjusted decline is above −5 %. */
   function flowsSince(flows, fromMs, toMs) { var s = 0; (flows || []).forEach(function (f) { if (f && num(f.amount) && f.at > fromMs && f.at <= toMs) s += f.amount; }); return s; }
   function emergencyStep(state, snap, monthRef, flows, cfg) {
@@ -519,28 +521,24 @@
     if (o.confirm !== true) reasons.push('COMP_UNLOCK_CONFIRM');
     return res(reasons, [], { unlocked: reasons.length === 0, streakAfter: reasons.length ? st.streak : 0 });
   }
-  /* kind: 'pilot' | 'topup' | 'addon' · o = {kind, starterOn, thesisDone, pilot:{tranche, stopConfirmed, projectedNetOk, price}, requestedPct (of whole-plan risk %), usedPct (already held+working, % of equity)}
-     Whole plan 1 %: Pilot 0.50 + Add-on 0.50. Thesis incomplete → Pilot only. Starter ON → first entry 0.25; top-up to the full Pilot needs the first tranche's
-     stop confirmed at estimated net breakeven (no thesis needed). Add-on needs thesis + Pilot >= +1.5R + Pilot stop at net breakeven; top-up and Add-on may go together. */
+  /* kind: 'pilot' | 'topup' | 'addon' · o = {kind, starterOn, thesisDone, side, entryPx?, avgEntry?, factor? (= min(Regime, Emergency)), requestedPct (new order, % of week-start equity), usedPct (the ticker's existing tranches at their CURRENT stop + working orders, same basis)}
+     Pilot: first 0.50 % (Starter ON: 0.25 %). Add-on / further buys (answers-A #16 · owner amendment): TOTAL-RISK rule only —
+       thesis done AND used + new <= 1.00 % (0.50 % without thesis; a Starter top-up may use that 0.50 % without thesis) AND new order alone <= 0.50 % x factor.
+       Entry may be above OR below the average entry; below only raises the warning ADDON_BELOW_ENTRY_WARN (never a block). No +1.5R, no breakeven-stop condition. */
   function compEntryCheck(o) {
-    var P = pol(o.cfg).comp, reasons = [], used = num(o.usedPct) ? o.usedPct : 0, p = o.pilot || {}, r1 = null;
-    if (o.legacy === true && o.kind !== 'addon') o = merge(o, { kind: 'addon' });   /* legacy-shape card: any NEW buy must pass the Add-on rules; usedPct = ticker's total principal risk (RE1-answers-A #4) */
-    if (p.tranche && pos(p.price)) r1 = rMultiple(p.tranche, p.price, o.side);
-    var pilotBE = p.stopConfirmed === true && p.projectedNetOk === true;
-    var cap;
-    if (o.kind === 'pilot') cap = o.starterOn === true ? P.pilotPct * P.starter * 2 : P.pilotPct;      /* starter = 0.25 of the WHOLE plan (1 %) = half of Pilot */
-    else if (o.kind === 'topup') { if (!pilotBE) reasons.push('COMP_TOPUP_STOP'); cap = P.pilotPct; }
-    else if (o.kind === 'addon') {
-      if (o.thesisDone !== true) reasons.push('COMP_THESIS');
-      if (!(r1 !== null && r1 + EPS >= P.addonR)) reasons.push('COMP_PILOT_R');
-      if (!pilotBE) reasons.push('COMP_PILOT_STOP');
-      cap = P.pilotPct + P.addonPct;
+    var P = pol(o.cfg).comp, reasons = [], flags = [], used = num(o.usedPct) ? o.usedPct : 0, req = num(o.requestedPct) ? o.requestedPct : 0, cap;
+    if (o.legacy === true && o.kind !== 'addon') o = merge(o, { kind: 'addon' });   /* legacy-shape card: any NEW buy follows the Add-on rule; usedPct = ticker's total principal risk (RE1-answers-A #4) */
+    if (o.kind === 'pilot') {
+      cap = o.starterOn === true ? P.pilotPct * P.starter * 2 : P.pilotPct;      /* starter = 0.25 of the WHOLE plan (1 %) = half of Pilot */
+      if (used + req > cap + EPS) reasons.push('COMP_PHASE_CAP');
+    } else if (o.kind === 'topup' || o.kind === 'addon') {
+      if (o.kind === 'addon' && o.thesisDone !== true) reasons.push('ADDON_THESIS');
+      cap = o.thesisDone === true ? P.pilotPct + P.addonPct : P.pilotPct;
+      var alone = P.addonPct * (num(o.factor) ? o.factor : 1);
+      if (used + req > cap + EPS || req > alone + EPS) reasons.push('ADDON_TOTAL_RISK');
+      if (pos(o.entryPx) && pos(o.avgEntry) && (dirOf(o.side) === 1 ? o.entryPx < o.avgEntry - EPS : o.entryPx > o.avgEntry + EPS)) flags.push('ADDON_BELOW_ENTRY_WARN');
     } else return res(['UNKNOWN_DATA'], [], {});
-    if (o.kind === 'pilot' && o.thesisDone !== true) cap = Math.min(cap, P.pilotPct);
-    if (o.kind !== 'addon' && o.thesisDone !== true) cap = Math.min(cap, P.pilotPct);
-    var req = num(o.requestedPct) ? o.requestedPct : 0;
-    if (used + req > cap + EPS) reasons.push('COMP_PHASE_CAP');
-    return res(reasons, [], { capPct: cap, pilotR: r1 });
+    return res(reasons, flags, { capPct: cap, roomPct: Math.max(0, cap - used) });
   }
   /* legacy shape (answers-A #4): more than two tranches, or accelerator lots. Never resized / re-split; existing lots count to heat at actual remaining risk. */
   function compLegacyShape(o) {
@@ -553,8 +551,8 @@
     if (!b || !b.ok) return res(b ? b.reasons : ['NO_SNAPSHOT'], [], {});
     flags = flags.concat(b.flags || []);
     var ck = compStreak(i.cycles, i.unlocks, i.cfg); if (ck.locked) reasons.push('COMP_LOCKED');
-    var e = compEntryCheck(i.entry || {}); reasons = reasons.concat(e.reasons);
     var rg = regimeState(i.signals, i.now, i.cfg), f = compFactor(rg, i.emergencyFactor); flags = flags.concat(rg.flags);
+    var e = compEntryCheck(merge(i.entry || {}, { factor: f })); reasons = reasons.concat(e.reasons); flags = flags.concat(e.flags);
     var heat = compHeat(i.ideas, i.account, i.costsFor, b.weekEquity, b.currentEquity), cand = num(i.candidateRisk) ? i.candidateRisk : 0, P = pol(i.cfg).comp;
     if (heat.unknown.length) flags.push('COST_UNKNOWN');
     if (!leq(heat.money + cand, b.weekEquity * P.heatCapPct / 100)) reasons.push('COMP_HEAT');

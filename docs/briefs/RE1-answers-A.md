@@ -19,3 +19,14 @@ Addendum to `RE1-decisions.md` rev 2. Same authority: wins over the plan and old
 13. **Entry fee:** belongs to the idea; counted in exposure from the fill and attributed at close (engine default).
 14. **Compounder Starter:** first entry 0.25% of the plan; top-up goes to 0.50% (the full Pilot), never straight to 1% unless the Add-on conditions are met.
 15. **Event IDs:** deterministic `<acct>:<type>:<refId>:<seq>` (replay-safe).
+
+## Added 2026-11-15 (owner decision, replaces the Add-on conditions in RE1-decisions §4 and D6)
+16. **Compounder Add-on = total-risk rule.** The Add-on (second 0.50%) is allowed when ALL hold:
+    - thesis complete;
+    - the entry may be above OR below the Pilot's average entry — below it only shows the warning line "Adding below entry — re-check ④ Wrong if" (ADDON_BELOW_ENTRY_WARN, never a block) [amended by owner message 2026-11-15, supersedes "at or above the Pilot's average entry"];
+    - `risk of existing tranches at their current stop + new order risk ≤ 1.00% of week-start equity` for that ticker (current stop = the confirmed stop, else the initial stop);
+    - the new order alone ≤ 0.50% × min(Regime, Emergency).
+    No +1.5R requirement and no breakeven-stop requirement. Thesis incomplete → total for the ticker ≤ 0.50% (Pilot only), as before.
+    Starter (when ON): first entry 0.25%; a top-up follows the same total-risk rule within the cap in force (0.50% without thesis).
+    Consequences: one ticker can carry up to 1% principal risk; heat cap 6% ≈ six full positions. Heat still counts actual remaining risk. Engine, reason codes (ADDON_THESIS, ADDON_TOTAL_RISK; warning ADDON_BELOW_ENTRY_WARN) and tests must be updated; the old ADDON +1.5R / breakeven tests are replaced.
+    Planned multi-entry levels in one plan are sized so all levels together stay within the cap in force (0.50% without thesis, 1.00% with).

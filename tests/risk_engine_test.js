@@ -167,18 +167,22 @@ const costsOf = () => C;
 // ═══ G6 · Compounder ═══
 {
   const pilot = { id: 'p', entry: 100, qty: 100, stop: 95, initialStop: 95, mult: 1, fx: 1 };
-  // Starter top-up without thesis allowed; Add-on without thesis blocked
-  const tu = R.compEntryCheck({ kind: 'topup', starterOn: true, thesisDone: false, side: 'long', usedPct: 0.25, requestedPct: 0.25, pilot: { tranche: pilot, price: 101, stopConfirmed: true, projectedNetOk: true } });
-  ok(tu.allowed, 'G6 Starter top-up without thesis allowed'); near(tu.capPct, 0.5, 'G6 top-up capped at the full Pilot 0.50%');
-  has(R.compEntryCheck({ kind: 'topup', starterOn: true, thesisDone: false, side: 'long', usedPct: 0.25, requestedPct: 0.25, pilot: { tranche: pilot, price: 101, stopConfirmed: false, projectedNetOk: false } }), 'COMP_TOPUP_STOP', 'G6 top-up needs the first stop at net breakeven');
-  has(R.compEntryCheck({ kind: 'topup', starterOn: true, thesisDone: false, side: 'long', usedPct: 0.25, requestedPct: 0.3, pilot: { tranche: pilot, price: 101, stopConfirmed: true, projectedNetOk: true } }), 'COMP_PHASE_CAP', 'G6 top-up above full Pilot blocked without thesis');
-  const addonArgs = { kind: 'addon', side: 'long', usedPct: 0.5, requestedPct: 0.5, pilot: { tranche: pilot, price: 107.5, stopConfirmed: true, projectedNetOk: true } };
-  const noT = R.compEntryCheck(Object.assign({ thesisDone: false }, addonArgs)); has(noT, 'COMP_THESIS', 'G6 Add-on without thesis blocked'); ok(!noT.allowed, 'G6 ... not allowed');
-  ok(R.compEntryCheck(Object.assign({ thesisDone: true }, addonArgs)).allowed, 'G6 Add-on with thesis + 1.5R + BE stop allowed');
-  has(R.compEntryCheck(Object.assign({ thesisDone: true }, addonArgs, { pilot: { tranche: pilot, price: 107.4, stopConfirmed: true, projectedNetOk: true } })), 'COMP_PILOT_R', 'G6 Add-on at +1.49R blocked');
-  has(R.compEntryCheck(Object.assign({ thesisDone: true }, addonArgs, { pilot: { tranche: pilot, price: 110, stopConfirmed: false, projectedNetOk: false } })), 'COMP_PILOT_STOP', 'G6 Add-on needs the Pilot stop at net breakeven');
-  has(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.25, requestedPct: 0.8, pilot: addonArgs.pilot }), 'COMP_PHASE_CAP', 'G6 beyond whole plan 1% blocked');
-  ok(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.25, requestedPct: 0.75, pilot: addonArgs.pilot }).capPct === 1 && R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.25, requestedPct: 0.75, pilot: addonArgs.pilot }).allowed, 'G6 whole plan = 1%');
+  // Starter top-up (no thesis) allowed within 0.50 %; Add-on without thesis blocked. Add-on = TOTAL-RISK rule only (answers-A #16 amended).
+  const tu = R.compEntryCheck({ kind: 'topup', starterOn: true, thesisDone: false, side: 'long', usedPct: 0.25, requestedPct: 0.25 });
+  ok(tu.allowed, 'G6 Starter top-up without thesis allowed (no stop / breakeven condition)'); near(tu.capPct, 0.5, 'G6 top-up capped at 0.50% without thesis');
+  has(R.compEntryCheck({ kind: 'topup', starterOn: true, thesisDone: false, side: 'long', usedPct: 0.25, requestedPct: 0.3 }), 'ADDON_TOTAL_RISK', 'G6 top-up above 0.50% total blocked without thesis');
+  const addonArgs = { kind: 'addon', side: 'long', usedPct: 0.5, requestedPct: 0.5 };
+  const noT = R.compEntryCheck({ kind: 'addon', thesisDone: false, side: 'long', usedPct: 0.5, requestedPct: 0.5 }); has(noT, 'ADDON_THESIS', 'G6 Add-on without thesis blocked'); ok(!noT.allowed, 'G6 ... not allowed');
+  ok(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.5, requestedPct: 0.5 }).allowed, 'G6 Add-on with thesis: 0.50 + 0.50 = 1.00 allowed (no +1.5R / breakeven needed)');
+  has(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.5, requestedPct: 0.51 }), 'ADDON_TOTAL_RISK', 'G6 total above 1.00% blocked');
+  has(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.25, requestedPct: 0.8 }), 'ADDON_TOTAL_RISK', 'G6 beyond whole plan 1% blocked');
+  has(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0, requestedPct: 0.4, factor: 0.5 }), 'ADDON_TOTAL_RISK', 'G6 new order alone > 0.50% x min(Regime, Emergency) blocked');
+  ok(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.2, requestedPct: 0.25, factor: 0.5 }).allowed, 'G6 new order = 0.50% x 50% allowed');
+  const below = R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.5, requestedPct: 0.3, entryPx: 98, avgEntry: 100 });
+  ok(below.allowed && below.flags.indexOf('ADDON_BELOW_ENTRY_WARN') >= 0, 'G6 adding below the average entry: allowed + warning only');
+  ok(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.5, requestedPct: 0.3, entryPx: 103, avgEntry: 100 }).flags.indexOf('ADDON_BELOW_ENTRY_WARN') < 0, 'G6 above entry: no warning');
+  ok(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'short', usedPct: 0.5, requestedPct: 0.3, entryPx: 102, avgEntry: 100 }).flags.indexOf('ADDON_BELOW_ENTRY_WARN') >= 0, 'G6 short: adverse side warns');
+  ok(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.25, requestedPct: 0.75 }).capPct === 1, 'G6 whole plan = 1%');
   eq(R.compEntryCheck({ kind: 'pilot', starterOn: true, thesisDone: false, requestedPct: 0.25 }).allowed, true, 'G6 Starter first entry 0.25%');
   has(R.compEntryCheck({ kind: 'pilot', starterOn: true, thesisDone: false, requestedPct: 0.3 }), 'COMP_PHASE_CAP', 'G6 Starter first entry above 0.25 blocked');
   has(R.compEntryCheck({ kind: 'pilot', thesisDone: false, requestedPct: 0.6 }), 'COMP_PHASE_CAP', 'G6 thesis incomplete → Pilot only (0.50%)');
@@ -388,8 +392,8 @@ const costsOf = () => C;
   // legacy-shape compounder cards
   ok(R.compLegacyShape({ tranches: 3 }).legacy, 'A >2 tranches = legacy shape'); ok(R.compLegacyShape({ tranches: 2, accelLots: 1 }).legacy, 'A accelerator lot = legacy shape'); ok(!R.compLegacyShape({ tranches: 2 }).legacy, 'A two tranches = normal');
   const pl = { id: 'p', entry: 100, qty: 100, stop: 95, initialStop: 95, mult: 1, fx: 1 }, okPilot = { tranche: pl, price: 107.5, stopConfirmed: true, projectedNetOk: true };
-  has(R.compEntryCheck({ kind: 'pilot', legacy: true, thesisDone: false, side: 'long', usedPct: 0.5, requestedPct: 0.2, pilot: okPilot }), 'COMP_THESIS', 'A new buy on a legacy card must pass Add-on rules (thesis)');
-  has(R.compEntryCheck({ kind: 'pilot', legacy: true, thesisDone: true, side: 'long', usedPct: 0.9, requestedPct: 0.2, pilot: okPilot }), 'COMP_PHASE_CAP', 'A legacy card: ticker total principal risk stays within 1%');
+  has(R.compEntryCheck({ kind: 'pilot', legacy: true, thesisDone: false, side: 'long', usedPct: 0.5, requestedPct: 0.2, pilot: okPilot }), 'ADDON_THESIS', 'A new buy on a legacy card must pass Add-on rules (thesis)');
+  has(R.compEntryCheck({ kind: 'pilot', legacy: true, thesisDone: true, side: 'long', usedPct: 0.9, requestedPct: 0.2, pilot: okPilot }), 'ADDON_TOTAL_RISK', 'A legacy card: ticker total principal risk stays within 1%');
   ok(R.compEntryCheck({ kind: 'pilot', legacy: true, thesisDone: true, side: 'long', usedPct: 0.8, requestedPct: 0.2, pilot: okPilot }).allowed, 'A legacy card: exactly 1% allowed');
   // multi-entry inside one attempt shares ONE rpt
   const at = R.sizeAttempt({ equity: E, rptPct: 0.30, factor: 1, stop: 95, side: 'long', mult: 1, fx: 1, lotStep: 1, minLot: 1, levels: [{ price: 100, splitPct: 50 }, { price: 98, splitPct: 50 }] });
@@ -399,6 +403,18 @@ const costsOf = () => C;
   // history rule
   eq(R.bkk.noonOf('2026-11-13'), T('2026-11-13T12:00:00'), 'A date-only exit = 12:00 Bangkok'); eq(R.bkk.noonOf('x'), null, 'A bad date → null');
   eq(R.bkk.weekKey(R.bkk.noonOf('2026-11-15')), '2026-11-09', 'A Sunday noon belongs to the previous Bangkok week');
+}
+
+// ═══ RE-C1 · snapshot basis = latest confirmed snapshot AT OR BEFORE the period start (brief wins; a mid-week manual snapshot never replaces it) ═══
+{
+  const D0 = t => Date.parse(t + 'T00:00:00+07:00'), snaps = [{ at: D0('2026-11-09'), equity: 5000000, confirmed: true }, { at: D0('2026-11-18'), equity: 5300000, confirmed: true }];
+  const b = R.snapshotBasis(snaps, Date.parse('2026-11-19T10:00:00+07:00'));
+  eq(b.weekEquity, 5000000, 'RE-C1 mid-week manual snapshot (Wed) does NOT replace the week-start basis (Mon 16 Nov → latest at/before = 9 Nov)');
+  eq(b.currentEquity, 5300000, 'RE-C1 …but it is the current equity');
+  eq(b.monthEquity, 5000000, 'RE-C1 month basis = latest at/before 1 Nov → earliest available (first run), flagged');
+  ok(b.flags.indexOf('BASIS_FIRST') >= 0, 'RE-C1 no snapshot before the month start → BASIS_FIRST');
+  const b2 = R.snapshotBasis(snaps.concat([{ at: D0('2026-11-16'), equity: 5100000, confirmed: true }]), Date.parse('2026-11-19T10:00:00+07:00'));
+  eq(b2.weekEquity, 5100000, 'RE-C1 a snapshot dated Monday (as-of Monday 00:00) IS the week-start basis');
 }
 
 console.log((f ? 'FAIL ' : 'PASS ') + (n - f) + '/' + n + ' risk-engine assertions');

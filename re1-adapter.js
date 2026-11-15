@@ -54,6 +54,14 @@
     miss.add('CLOSE_TIME', t.id); return { ms: 0, dateOnly: false };
   }
 
+  /* exit reason for whipsaw / re-entry: explicit 'stop'|'target'|'manual' else derived from price vs the row's stop / target (the app's own exitReason is a free tag) */
+  function exitReasonOf(t, side) {
+    if (t.exitReason === 'stop' || t.exitReason === 'target' || t.exitReason === 'manual') return t.exitReason;
+    var x = n(t.exitPrice), sl = n(t.sl), tp = n(t.tp), long = side !== 'short';
+    if (pos(x) && pos(sl) && (long ? x <= sl + 1e-9 : x >= sl - 1e-9)) return 'stop';
+    if (pos(x) && pos(tp) && (long ? x >= tp - 1e-9 : x <= tp + 1e-9)) return 'target';
+    return pos(x) ? 'manual' : null;
+  }
   /* Build engine ideas for ONE account. Returns {ideas, info:{id→meta}, excluded:[...]} */
   function buildAccount(src, acc, miss) {
     var B = (src.books && src.books[acc.id]) || {}, S = B.settings || {}, trades = Array.isArray(B.trades) ? B.trades : [];
@@ -98,7 +106,7 @@
         else if (t.status === 'closed') {
           if (T.stop === null) T.stop = n(t.sl);
           var tm = tradeTime(t, miss); if (lastExit === null || tm.ms > lastExit) lastExit = tm.ms;
-          exits.push({ id: 'x:' + t.id, time: tm.ms, qty: n(t.qty) || 0, price: n(t.exitPrice), fees: 0, swap: 0, trancheId: T.id, reason: t.exitReason || null, dateOnly: tm.dateOnly });
+          exits.push({ id: 'x:' + t.id, time: tm.ms, qty: n(t.qty) || 0, price: n(t.exitPrice), fees: 0, swap: 0, trancheId: T.id, reason: exitReasonOf(t, side), dateOnly: tm.dateOnly });
           if (!t.exitReason) miss.add('EXIT_REASON', t.id);
         }
         if (init === null) sl0Missing = true;
@@ -123,7 +131,7 @@
         if (isoMs(placedAt) === null) miss.add('ORDER_TIME', t.id);
         wo.push({ id: 'w:' + t.id, qty: n(t.qty), entry: n(t.entry), stop: n(t.sl), mult: mult, fx: efx, at: isoMs(placedAt) });
       });
-      var idea = { id: key, account: acc.id, strategy: strategy, side: side, status: status, product: symKey(t0.sym), sym: t0.sym, tranches: tranches, exits: exits, entryFees: 0, workingOrders: wo };
+      var idea = { id: key, account: acc.id, strategy: strategy, side: side, status: status, product: symKey(t0.sym), sym: t0.sym, tranches: tranches, exits: exits, entryFees: 0, workingOrders: wo, rowIds: rows.map(function (t) { return t.id; }) };
       if (status === 'closed') idea.closedAt = lastExit;
       if (G.card) { idea.cardId = G.card.id; idea.market = marketOf(t0.sym, G.card); }
       else idea.market = marketOf(t0.sym, null);
@@ -198,17 +206,26 @@
     var lotStep = spec ? spec.lotStep : null, minLot = spec ? spec.minLot : null;
     if (i.strategy !== 'sat') { var mk = i.market; if (mk === 'TH') { lotStep = 100; minLot = 100; } else if (mk === 'US') { lotStep = 1; minLot = 1; } else { lotStep = null; } }
     var base = i.strategy === 'winner' ? R.POLICY.mom.rptPct : i.strategy === 'ladder' ? R.POLICY.comp.pilotPct : null;
-    var hw = ctx.homework[symKey(i.sym)], frac = 1, notes = out.notes;
-    if (i.strategy === 'winner' || i.strategy === 'ladder') {
-      if (hw === undefined) notes.push('homework state unknown — shown at 100%'); else if (hw === false) { frac = R.POLICY.mom.homeworkCap; notes.push('thesis not done → 50%'); }
+    var hw = ctx.homework[symKey(i.sym)], frac = 1, notes = out.notes, factor = 1, factors = out.factors = [];
+    if (i.strategy === 'winner') {
+      factors.push('BASE_' + R.POLICY.mom.rptPct);
+      if (hw === undefined) notes.push('homework state unknown — shown at 100%'); else if (hw === false) { frac = R.POLICY.mom.homeworkCap; notes.push('thesis not done → 50%'); factors.push('HOMEWORK_50'); }
+      if (ctx.emergencyFactor && ctx.emergencyFactor < 1) { factor *= ctx.emergencyFactor; factors.push('EMERGENCY_50'); }
+    } else if (i.strategy === 'ladder') {
+      /* Compounder: the Pilot (0.50% of the 1% plan) IS the 50% homework phase — the homework cap is a phase cap, never a second multiplier (RE-C1 §0).
+         Regime factor applies to NEW entries: min(Regime, Emergency). Starter ¼ (Training ON) = half of the Pilot. */
+      factors.push('PILOT_' + R.POLICY.comp.pilotPct);
+      if (hw === false) notes.push('thesis not done → Pilot only (no further cut)');
+      if (ctx.regime) { factor = R.compFactor(ctx.regime, ctx.emergencyFactor); var pc = Math.round(factor * 100); if (pc < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < ctx.regime.factor ? 'EMERGENCY_' : 'REGIME_') + pc); if (ctx.regime.stale) factors.push('REGIME_STALE'); }
+      if (ctx.starterOn === true) { frac = R.POLICY.comp.starter * 2; factors.push('STARTER_25'); }
     }
     var rpts = base !== null ? [base] : [R.POLICY.sat.stepRpt[ctx.satStepIndex], R.POLICY.sat.stepRpt[ctx.satStepIndex] * R.POLICY.sat.condReduced];
     if (i.strategy === 'sat') notes.push('Satellite: Condition unknown in history → shown at 100% and 65% of the current step (' + (ctx.satStepIndex + 1) + ')');
     var msPct = ctx.minStopPct(i);
     var minDist = pos(msPct) && pos(avg) ? avg * msPct / 100 : null;
     var variants = rpts.map(function (r) {
-      var z = R.sizeOrder({ equity: eq, rptPct: r, factor: 1, fraction: frac, entry: avg, stop: stop, side: i.side, minStopDist: minDist, mult: mult, fx: efx, lotStep: lotStep, minLot: minLot });
-      return { rptPct: r, qty: z.qty, risk: z.actualRisk, riskPct: z.actualRiskPct, reasons: z.reasons, minStopApplied: !!z.minStopApplied };
+      var z = R.sizeOrder({ equity: eq, rptPct: r, factor: factor, fraction: frac, entry: avg, stop: stop, side: i.side, minStopDist: minDist, mult: mult, fx: efx, lotStep: lotStep, minLot: minLot });
+      return { rptPct: r, effectiveRptPct: z.effectiveRptPct, qty: z.qty, risk: z.actualRisk, riskPct: z.actualRiskPct, reasons: z.reasons, minStopApplied: !!z.minStopApplied };
     });
     out.variants = variants; var v0 = variants[0]; out.rptPct = v0.rptPct; out.qty = v0.reasons.length ? null : v0.qty; out.risk = v0.reasons.length ? null : v0.risk; out.riskPct = v0.reasons.length ? null : v0.riskPct; out.reasons = v0.reasons.slice();
     out.minStopApplied = v0.minStopApplied; out.stopUsed = stop; out.entryUsed = avg;
@@ -245,10 +262,9 @@
       var coreV = ports.indexOf('core') >= 0 && n(cap.core) !== null ? n(cap.core) * (pc.core === 'USD' ? (A.fx || 0) : 1) : 0;
       var satV = ports.indexOf('satB') >= 0 && n(cap.satB) !== null ? n(cap.satB) * (pc.satB === 'USD' ? (A.fx || 0) : 1) : 0;
       var proxy = coreV + satV, realSnaps = Array.isArray(S.equitySnapshots) ? S.equitySnapshots : null;
-      var snaps, basisKind;
-      if (realSnaps && realSnaps.length) { snaps = realSnaps; basisKind = 'confirmed snapshots'; }
-      else { snaps = pos(proxy) ? [{ at: R.bkk.weekStart(now) + 1, equity: proxy, confirmed: true }] : []; basisKind = 'PROXY (entered capital, not a snapshot)'; M.add('EQUITY_SNAPSHOT', acc.id); }
-      var basis = R.snapshotBasis(snaps, now);
+      var basisKind = (realSnaps && realSnaps.length) ? 'confirmed snapshots' : 'PROXY (entered capital, not a snapshot)';
+      if (!(realSnaps && realSnaps.length)) M.add('EQUITY_SNAPSHOT', acc.id);
+      var basis = liveBasis(S, now, proxy);
       out.equity = { basisKind: basisKind, proxyEquity: pos(proxy) ? proxy : null, weekEquity: basis.ok ? basis.weekEquity : null, monthEquity: basis.ok ? basis.monthEquity : null, currentEquity: basis.ok ? basis.currentEquity : null,
         snapshotState: basis.state, snapshotAgeDays: basis.ageDays != null ? basis.ageDays : null, reasons: basis.reasons.slice(), fx: A.fx, snapshotsAvailable: realSnaps ? realSnaps.length : 0 };
       var costsFor = function () { return null; };   // no cost settings in the app yet
@@ -296,7 +312,7 @@
       out.emergency = realSnaps && realSnaps.length ? (function () { var last = realSnaps[realSnaps.length - 1]; var e = R.emergencyStep(null, last, basis.ok ? { equity: basis.monthEquity, at: basis.monthAt } : null, S.cashFlows || []); return { state: e.active ? 'ACTIVE' : 'off', declinePct: e.declinePct, factor: e.factor }; })() : { state: 'n/a', reason: 'no confirmed equity snapshots — Emergency cannot be evaluated; shown as off (factor 1)', factor: 1 };
 
       // Positions & working orders: old vs engine
-      var ctx = { weekEquity: basis.ok ? basis.weekEquity : null, fx: A.fx, homework: src.homework || {}, satStepIndex: step.stepIndex,
+      var ctx = { weekEquity: basis.ok ? basis.weekEquity : null, fx: A.fx, homework: src.homework || {}, satStepIndex: step.stepIndex, regime: regime, emergencyFactor: 1, starterOn: false,
         spec: function (i) { return (src.specs && src.specs[symKey(i.sym)]) || null; },
         minStopPct: function (i) { var ms = S.psRisk && S.psRisk.minStop; var v = ms && (ms[i.sym] != null ? ms[i.sym] : ms[symKey(i.sym)]); return pos(n(v)) ? n(v) : null; } };
       var rowsOut = [];
@@ -314,7 +330,7 @@
         var oldInitPct = pct(i.status === 'holding' ? oldRiskInit : woRisk, ctx.weekEquity);
         if (es.rptPct != null && oldInitPct != null) { if (oldInitPct > es.rptPct * 1.05) why.push('OLD_RISK_ABOVE_ENGINE_RPT'); else if (oldInitPct < es.rptPct * 0.7) why.push('OLD_RISK_BELOW_ENGINE_RPT'); }
         if (es.minStopApplied) why.push('MIN_STOP_SIZING');
-        (es.notes || []).forEach(function (t) { if (/50%/.test(t)) why.push('HOMEWORK_50'); });
+        (es.factors || []).forEach(function (f) { if (/^(HOMEWORK|REGIME|EMERGENCY|STARTER)_/.test(f)) why.push(f); });
         if (es.reasons.length) why = why.concat(es.reasons);
         if (i.tranches.some(function (t) { return t.initialStopUnknown; })) why.push('INITIAL_STOP_UNKNOWN');
         if (basisKind !== 'confirmed snapshots') why.push('EQUITY_PROXY');
@@ -322,7 +338,7 @@
         rowsOut.push({ id: i.id, sym: i.sym, strategy: i.strategy, status: i.status, side: i.side, legacyShape: comp.indexOf(i) >= 0 && legacy.some(function (l) { return l.id === i.id; }),
           old: { qtyAsEntered: oldQty, qtyHeldNow: heldQty, avgEntry: ideaAvg(i), currentStop: i.tranches[0] ? i.tranches[0].stop : (i.workingOrders[0] ? i.workingOrders[0].stop : null), initialStop: i.tranches[0] ? i.tranches[0].initialStop : null,
             principalRiskAtCurrentStop: oldRiskCur, riskAtInitialStop: oldRiskInit, workingOrderRisk: woRisk, riskPctOfEquityAtInitial: oldInitPct },
-          engine: { rptPct: es.rptPct, qty: es.qty, riskMoney: es.risk, riskPct: es.riskPct, variants: es.variants, reasons: es.reasons, notes: es.notes },
+          engine: { rptPct: es.rptPct, effectiveRptPct: es.variants && es.variants[0] ? es.variants[0].effectiveRptPct : null, factors: es.factors || [], qty: es.qty, riskMoney: es.risk, riskPct: es.riskPct, variants: es.variants, reasons: es.reasons, notes: es.notes },
           whyDifferent: Array.from(new Set(why)), exposure: res0.exposure, projectedNet: res0.projectedNet, costUnknown: res0.costUnknown, tranches: i.tranches.length, accelerator: meta2.hasAcc || false });
       });
       out.positions = rowsOut;
@@ -424,5 +440,242 @@
   }
   function toJson(rp) { return JSON.stringify(rp, function (k, v) { return (typeof v === 'number' && !isFinite(v)) ? null : v; }, 2); }
 
-  return { build: build, buildAccount: buildAccount, toMarkdown: toMarkdown, toJson: toJson, badges: badges, MISSING_NOTES: MISSING_NOTES };
+  /* ═════════════════════════════════════════════════════════════════════════════════════════════════
+     RE-C1 — LIVE layer: the same pure inputs, used by the forms (no longer a dry run). Still pure: no DOM / clock / storage.
+     Per-account book settings S:  equitySnapshots[{id,at,bkkDate,equity,fx,kind,confirmed}] · cashFlows[{id,at,bkkDate,amount}]
+       costSettings{winner|sat|ladder:{perSidePct,perUnit,min,flat,swapDay}} · re1:{cutoverAt (ms), unlocks:[{at,note}]}
+     trade rows: fees, swap, entryFee, costOverride, stopConfirmed, stopConfirmedAt, exitReason, reentry
+     ═════════════════════════════════════════════════════════════════════════════════════════════════ */
+  var RP = R.POLICY;
+  function asOfAt(x) { var d = x && x.bkkDate ? R.bkk.noonOf(x.bkkDate) : null; return d !== null ? d - 12 * 3600000 : (x && num(x.at) ? x.at : null); }   /* as-of date → Bangkok 00:00 of that date */
+  function flowAt(f) { var a = asOfAt(f); return a === null ? null : a + 12 * 3600000; }   /* a flow dated D happens at noon of D: after a snapshot dated D, before one dated D+1 */
+  /* Basis (brief §1): week/month-start equity = latest CONFIRMED snapshot at or before the period start (as-of date) · none before → the earliest confirmed one (flag).
+     Provisional (first run, no snapshot): entered capital, at most 14 days after cut-over (then the engine's 14-day block applies). Withdrawals reduce the basis at once; deposits count from the next snapshot. */
+  function liveBasis(S, now, proxy) {
+    var snaps = (Array.isArray(S.equitySnapshots) ? S.equitySnapshots : []).filter(function (x) { return x && x.confirmed === true && pos(n(x.equity)); })
+      .map(function (x) { return { id: x.id, at: asOfAt(x), equity: n(x.equity), confirmed: true, fx: n(x.fx), kind: x.kind, bkkDate: x.bkkDate }; }).filter(function (x) { return x.at !== null && x.at <= now; })
+      .sort(function (a, b) { return a.at - b.at; });
+    var prov = false, cut = S.re1 && num(S.re1.cutoverAt) ? S.re1.cutoverAt : now;
+    if (!snaps.length && pos(proxy)) { snaps = [{ id: 'provisional', at: cut, equity: proxy, confirmed: true, provisional: true }]; prov = true; }
+    var b = R.snapshotBasis(snaps, now);
+    if (!b.ok) return { ok: false, state: b.state, reasons: b.reasons, flags: [], snaps: snaps, provisional: prov, ageDays: b.ageDays == null ? null : b.ageDays, snapshot: b.snapshot || null };
+    var ws = R.bkk.weekStart(now), ms = R.bkk.monthStart(now);
+    function pickAt(t) { var c = null; snaps.forEach(function (x) { if (x.at <= t) c = x; }); return c || snaps[0]; }
+    var wk = pickAt(ws), mo = pickAt(ms), last = b.snapshot, flags = (b.flags || []).filter(function (f) { return f !== 'SNAPSHOT_OLD'; });
+    var flows = Array.isArray(S.cashFlows) ? S.cashFlows.filter(function (f) { return f && num(n(f.amount)); }) : [];
+    function wd(from) { var s = 0; flows.forEach(function (f) { var a = n(f.amount), at = flowAt(f); if (a < 0 && at !== null && at > from) s += -a; }); return s; }
+    var wkEq = wk.equity - wd(wk.at), moEq = mo.equity - wd(mo.at), curEq = last.equity - wd(last.at);
+    if (wk.at > ws) flags.push('BASIS_FIRST');
+    if (prov) flags.push('PROVISIONAL');
+    return { ok: true, state: prov ? 'provisional' : (last.at >= ws ? 'current' : 'carried'), ageDays: b.ageDays, snapshot: last, weekEquity: wkEq, weekAt: wk.at, monthEquity: moEq, monthAt: mo.at, currentEquity: curEq,
+      reasons: [], flags: flags, snaps: snaps, provisional: prov, provisionalUntil: prov ? cut + RP.snapshot.blockAfterDays * DAY : null, weekSnapDate: wk.bkkDate || null, lastDate: last.bkkDate || null, confirmedThisWeek: !prov && last.at >= ws };
+  }
+  /* Emergency: replay every confirmed snapshot in order (evaluated AT a snapshot). Reference = month-start basis of that snapshot. */
+  function liveEmergency(snaps, flows) {
+    var st = null, out = { active: false, factor: 1, declinePct: null, refEquity: null };
+    var fl = (flows || []).map(function (f) { return { at: flowAt(f), amount: n(f.amount) }; }).filter(function (f) { return f.at !== null && f.amount !== null; });
+    snaps.filter(function (x) { return !x.provisional; }).forEach(function (sn, i, arr) {
+      var upto = arr.slice(0, i + 1), ms = R.bkk.monthStart(sn.at), ref = null; upto.forEach(function (x) { if (x.at <= ms) ref = x; }); if (!ref) ref = upto[0];
+      var e = R.emergencyStep(st, sn, { equity: ref.equity, at: ref.at }, fl);
+      st = { active: e.active, refEquity: e.refEquity, refStartMs: e.refStartMs };
+      out = { active: e.active, factor: e.factor, declinePct: e.declinePct, refEquity: e.refEquity, refStartMs: e.refStartMs, evaluatedAt: sn.at };
+    });
+    return out;
+  }
+  function unitCosts(S, acct, strategy, override) {
+    var key = strategy === 'winner' ? 'winner' : strategy === 'ladder' ? 'ladder' : 'sat', cs = S.costSettings && typeof S.costSettings === 'object' ? S.costSettings : {};
+    var one = {}; one[acct] = cs;
+    var c = R.resolveCosts(one, acct, key, override || null);
+    if (c.known && !override && cs[key] && num(cs[key].swapDay)) c.swapDay = cs[key].swapDay;
+    if (c.known && override && num(override.swapDay)) c.swapDay = override.swapDay;
+    return c;
+  }
+  /* The whole live state of ONE account (accounts never mix: only this account's book, trades, cards and ideas are read). */
+  function live(src, acctId) {
+    var now = src.now, acc = ((src.accounts || []).filter(function (a) { return a.id === acctId; })[0]) || { id: acctId }, miss = new Missing();
+    var A = buildAccount(src, acc, miss), S = A.S || {}, ideas = A.ideas, fx = A.fx;
+    var cap = S.capital || {}, pc = src.portCur || { core: 'THB', satB: 'USD' }, ports = acc.ports || ['core', 'satB'];
+    var coreV = ports.indexOf('core') >= 0 && n(cap.core) !== null ? n(cap.core) * (pc.core === 'USD' ? (fx || 0) : 1) : 0, satV = ports.indexOf('satB') >= 0 && n(cap.satB) !== null ? n(cap.satB) * (pc.satB === 'USD' ? (fx || 0) : 1) : 0;
+    var basis = liveBasis(S, now, coreV + satV), flows = Array.isArray(S.cashFlows) ? S.cashFlows : [];
+    var emergency = liveEmergency(basis.snaps || [], flows), eF = emergency.factor;
+    var rowsById = {}; ((src.books && src.books[acctId] && src.books[acctId].trades) || []).forEach(function (t) { if (t) rowsById[t.id] = t; });
+    var rowsOf = function (idea) { return (idea.rowIds || []).map(function (id) { return rowsById[id]; }).filter(Boolean); };
+    var costOverrideOf = function (idea) { var o = null; rowsOf(idea).forEach(function (t) { if (t.costOverride && typeof t.costOverride === 'object') o = t.costOverride; }); return o; };
+    var costsFor = function (idea) { return unitCosts(S, acctId, idea.strategy, costOverrideOf(idea)); };
+    ideas.forEach(function (i) {
+      if (!i.tranches.length) return;
+      var c = costsFor(i), fees = 0, anyRec = false, swap = 0;
+      rowsOf(i).forEach(function (t) { if (t.status !== 'plan' && num(n(t.entryFee))) { fees += n(t.entryFee); anyRec = true; } });
+      if (!anyRec && c.known) i.tranches.forEach(function (t) { fees += R.exitCost(c, t.qty, t.entry, t.mult, t.fx) || 0; });
+      if (c.known && num(c.swapDay) && c.swapDay > 0 && i.strategy === 'sat') i.tranches.forEach(function (t) { var o = isoMs(t.openedAt) !== null ? isoMs(t.openedAt) : R.bkk.noonOf(t.openedAt); if (o !== null && now > o) { var d = Math.floor((now - o) / DAY); swap += d * c.swapDay * t.qty * (t.fx > 0 ? t.fx : 1); } });
+      i.entryFees = fees + swap;
+      (i.exits || []).forEach(function (e) {
+        var t = rowsById[String(e.id).replace(/^x:/, '')]; if (!t) return;
+        e.fees = num(n(t.fees)) ? n(t.fees) : (c.known ? (R.exitCost(c, e.qty, e.price, i.tranches[0].mult, i.tranches[0].fx) || 0) : 0); e.swap = num(n(t.swap)) ? n(t.swap) : 0;
+      });
+      i.reentry = rowsOf(i).some(function (t) { return t.reentry === true; });
+      i.tranches.forEach(function (t) { t.stopConfirmed = rowsOf(i).some(function (r) { return r.status === 'open' && r.stopConfirmed === true && n(r.entry) === t.entry && Math.abs(n(r.sl) - t.stop) < 1e-9; }); });
+    });
+    var ff = src.ff || {}, rat = ff.ratios || {}, g = function (key) { var r = rat[key]; if (!r) return null; return r.slow && typeof r.slow.up === 'boolean' ? r.slow.up : (typeof r.up === 'boolean' ? r.up : null); };
+    var signals = ff.demo ? { acwi: null, hyg: null, asOf: null } : { acwi: g('ACWI_BIL'), hyg: g('HYG_IEI'), asOf: ff.as_of || null };
+    var regime = R.regimeState(signals, now);
+    var momState = basis.ok ? R.momentumState({ now: now, account: acctId, ideas: ideas, costsFor: costsFor }) : null;
+    var satI = ideas.filter(function (i) { return i.strategy === 'sat'; });
+    var attempts = satI.filter(function (i) { return i.status === 'closed' && num(i.closedAt) && i.closedAt > 0; }).map(function (i) { return { id: i.id, closeAt: i.closedAt, net: R.ideaRealizedNet(i) }; });
+    var step = R.satStepState(attempts, now);
+    var dayAtt = satI.filter(function (i) { return i.tranches.length || i.status === 'ordered'; }).map(function (i) {
+      var t0 = i.tranches[0], start = t0 ? (isoMs(t0.openedAt) !== null ? isoMs(t0.openedAt) : R.bkk.noonOf(t0.openedAt)) : null; if (start == null && i.workingOrders[0]) start = i.workingOrders[0].at || null;
+      var ex = i.exits[i.exits.length - 1] || null;
+      return { id: i.id, product: i.product, startAt: start, status: i.status === 'closed' ? 'closed' : i.status === 'ordered' ? 'working' : 'open', net: i.status === 'closed' ? R.ideaRealizedNet(i) : null, exitReason: ex && ex.reason || null, reentry: !!i.reentry, closeAt: i.closedAt || null, side: i.side, entry: t0 ? t0.entry : null };
+    }).filter(function (a) { return num(a.startAt); });
+    var comp = ideas.filter(function (i) { return i.strategy === 'ladder'; });
+    var cycles = comp.filter(function (i) { return i.status === 'closed' && num(i.closedAt) && i.closedAt > 0; }).map(function (i) { return { id: i.id, flatAt: i.closedAt, net: R.ideaRealizedNet(i) }; });
+    var unlocks = (S.re1 && Array.isArray(S.re1.unlocks) ? S.re1.unlocks : []).filter(function (u) { return u && num(u.at); });
+    var streak = R.compStreak(cycles, unlocks);
+    var heat = basis.ok ? R.compHeat(ideas, acctId, costsFor, basis.weekEquity, basis.currentEquity) : null;
+    var satBud = basis.ok ? R.satBudgetCheck({ basis: basis, now: now, account: acctId, ideas: ideas, costsFor: costsFor, candidateRisk: 0 }) : null;
+    var momChk = basis.ok ? R.momentumCheck({ now: now, account: acctId, basis: basis, ideas: ideas, costsFor: costsFor, candidate: { ideaId: '__none__', isAddition: true, riskMoney: 0 } }) : null;
+    var active = basis.ok ? R.activeSummary({ basis: basis, mom: { usageWeek: momChk.usageWeek, usageMonth: momChk.usageMonth }, sat: { usageWeek: satBud.usageWeek, usageMonth: satBud.usageMonth }, candidateRisk: 0 }) : null;
+    return { acct: acctId, name: acc.name || acctId, now: now, fx: fx, S: S, ideas: ideas, info: A.info, basis: basis, emergency: emergency, eF: eF, costsFor: costsFor, regime: regime, signals: signals,
+      mom: { state: momState, chk: momChk }, sat: { step: step, attempts: attempts, dayAtt: dayAtt, budget: satBud, stale: R.satStaleOrders(ideas, now) }, comp: { streak: streak, cycles: cycles, unlocks: unlocks, heat: heat }, active: active, rowsById: rowsById };
+  }
+  /* ── reason text (engine text + the concrete numbers) ── */
+  function rtext(code, d) {
+    var T = R.REASONS[code] ? R.REASONS[code].text : code; d = d || {};
+    if ((code === 'MONEY_WEEK') && d.roomPct != null) return T + ' — room ' + f2(d.roomPct, 2) + '%';
+    if (code === 'COMP_HEAT' && d.heat && d.heat.pct != null) return 'Heat cap: ' + f2(d.heat.pct, 1) + '% of 6% — room ' + f2(Math.max(0, 6 - d.heat.pct), 1) + '%';
+    return T;
+  }
+  function f2(x, d) { d = d == null ? 2 : d; var v = Math.round(x * Math.pow(10, d)) / Math.pow(10, d); return String(v); }
+  function pctTxt(x) { return f2(x, 3) + '%'; }
+  function ideaOthers(L, ideaId) { return L.ideas.filter(function (i) { return i.id !== ideaId; }); }
+  /* largest qty (lot multiple) whose risk fits the room, never above the sized qty */
+  function allowedQty(room, perUnit, lotStep, minLot, maxQty) { if (!(room > 0) || !(perUnit > 0)) return 0; var q = R.floorLot(Math.min(maxQty, room / perUnit), lotStep); return q >= (minLot || 0) - 1e-12 && q > 0 ? q : 0; }
+  function baseModel(L, strat) { return { strategy: strat, acct: L.acct, ok: false, blocked: true, reasons: [], reasonTexts: [], flags: [], formula: '', effPct: null, qty: 0, money: null, roomLine: '', allowedQty: 0, chip: null, factors: [] }; }
+  function finish(m, d) {
+    var seen = {}; m.reasons = m.reasons.filter(function (c) { if (seen[c]) return false; seen[c] = 1; return true; });
+    m.reasonTexts = m.reasons.map(function (c) { return rtext(c, d); }); m.blocked = m.reasons.length > 0; m.ok = !m.blocked && m.qty > 0; return m;
+  }
+  function sizeCommon(L, f, rptPct, factor, fraction) {
+    var o = { equity: L.basis.weekEquity, rptPct: rptPct, factor: factor, fraction: fraction, stop: f.stop, side: f.side, minStopDist: f.minStopDist, mult: f.mult, fx: f.fx, lotStep: f.lotStep, minLot: f.minLot };
+    if (f.levels && f.levels.length > 1) {   /* several entry levels inside ONE attempt: one shared effective RPT, user split (answers-A #5) */
+      var z = R.sizeAttempt(Object.assign(o, { levels: f.levels })), q = 0, w = 0;
+      z.levels.forEach(function (l) { q += l.qty || 0; w += (l.qty || 0) * l.price; });
+      z.avgEntry = q > 0 ? w / q : f.entry; z.actualDistance = Math.abs(z.avgEntry - f.stop); z.sizingDistance = z.actualDistance;
+      var below = z.levels.some(function (l) { return l.reasons.indexOf('LOT_BELOW_MIN') >= 0; });
+      if (below && z.reasons.indexOf('LOT_BELOW_MIN') < 0) z.reasons = z.reasons.concat(['LOT_BELOW_MIN']);
+      return z;
+    }
+    return R.sizeOrder(Object.assign(o, { entry: f.entry }));
+  }
+  /* ── Momentum (new order · addition · edit) ──
+     f = {entry, stop, side, homeworkDone, starterOn, isFirstEntry, usedFraction, ideaId, isAddition, mult, fx, lotStep, minLot, minStopDist} */
+  function sizeMomentum(L, f) {
+    var m = baseModel(L, 'winner'); m.chip = L.emergency.active ? { t: 'Emergency 50%', c: 'r' } : null;   /* the 'Homework not done' state is shown once, by the WL1 cap box under the result */
+    if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
+    var fr = R.entryFraction({ homeworkDone: f.homeworkDone === true, starterOn: f.starterOn === true, isFirstEntry: f.isFirstEntry !== false, usedFraction: f.usedFraction || 0 });
+    var base = RP.mom.rptPct, ef = L.eF, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];
+    var parts = [f2(base, 2) + '%'], eff = base * ef * fr.fraction;
+    if (f.homeworkDone !== true) { parts.push('homework 50%'); m.factors.push('HOMEWORK_50'); }
+    if (f.starterOn === true && f.isFirstEntry !== false) { parts.push('starter 25%'); m.factors.push('STARTER_25'); }
+    if (ef < 1) { parts.push('emergency 50%'); m.factors.push('EMERGENCY_50'); }
+    m.effPct = eff; m.formula = parts.join(' × ') + ' = ';
+    if (z.reasons.length) { m.reasons = z.reasons.slice(); return finish(m); }
+    m.qty = z.qty; m.money = z.actualRisk; m.moneyPct = z.actualRiskPct; m.sizingDistance = z.sizingDistance; m.minStopApplied = z.minStopApplied; m.avgEntry = z.avgEntry || f.entry;
+    var chk = R.momentumCheck({ now: L.now, account: L.acct, basis: L.basis, ideas: ideaOthers(L, f.ideaId), costsFor: L.costsFor, candidate: { ideaId: f.ideaId || '__new__', isAddition: f.isAddition === true, riskMoney: z.actualRisk } });
+    m.reasons = chk.reasons.slice(); m.flags = chk.flags.slice();
+    var Mo = chk.money, uv = f.mult * f.fx, wRoom = Mo.weekCap - (Mo.weekUsed - z.actualRisk), mRoom = Mo.monthCap - (Mo.monthUsed - z.actualRisk), room = Math.min(wRoom, mRoom);
+    m.room = { weekPct: Math.max(0, wRoom) / L.basis.weekEquity * 100, monthPct: Math.max(0, mRoom) / L.basis.monthEquity * 100, ideasUsed: chk.ammo.total, ideasMax: chk.ammo.max, completedLosses: chk.ammo.completedLosses }; m.roomPct = m.room.weekPct;
+    var held = chk.ammo.completedLosses + chk.ammo.reserved, needPct = z.actualRisk / L.basis.weekEquity * 100;
+    if (m.reasons.indexOf('AMMO_EXHAUSTED') >= 0) m.roomLine = 'Ideas ' + Math.min(held, chk.ammo.max) + ' of ' + chk.ammo.max + ' used or reserved · week room ' + pctTxt(m.room.weekPct);   /* blocked: say what is used, never a count above the limit */
+    else if (m.reasons.indexOf('MONEY_WEEK') >= 0 || m.reasons.indexOf('MONEY_MONTH') >= 0) m.roomLine = 'Week room ' + pctTxt(m.room.weekPct) + ' · this order needs ' + pctTxt(needPct) + ' · ideas ' + Math.min(held, chk.ammo.max) + ' of ' + chk.ammo.max + ' used or reserved';
+    else m.roomLine = 'Week room ' + pctTxt(m.room.weekPct) + ' · idea ' + chk.ammo.total + ' of ' + chk.ammo.max + (f.homeworkDone === true ? '' : ' · full size after homework');
+    m.allowedQty = m.reasons.indexOf('AMMO_EXHAUSTED') >= 0 ? 0 : allowedQty(room, z.actualDistance * uv, f.lotStep, f.minLot, m.qty);
+    return finish(m, { roomPct: m.room.weekPct });
+  }
+  /* ── Satellite ──
+     f = {entry, stop, tp, side, cond:{ema50,structure,mss}, product, ideaId, reentry:{…}, mult, fx, lotStep, minLot, minStopDist, levels?:[{price,splitPct}]} */
+  function sizeSat(L, f) {
+    var m = baseModel(L, 'sat'), cond = R.satCondition(f.cond || {}), st = L.sat.step;
+    m.chip = cond.status === 'full' ? { t: 'Full', c: 'g' } : cond.status === 'reduced' ? { t: 'Reduced 65%', c: 'a' } : cond.status === 'blocked' ? { t: 'Blocked', c: 'r' } : { t: 'Choose Trend', c: 'f' };
+    m.condition = cond; m.step = st.step; m.reentry = false;
+    if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
+    var rs = cond.reasons.slice(), ord = R.satEntryOrder({ side: f.side, entry: f.entry, stop: f.stop, tp: f.tp });
+    rs = rs.concat(ord.reasons); m.rr = ord.rr == null ? null : ord.rr;
+    if (st.locked) rs.push('SAT_LOCKED');
+    rs = rs.concat(R.satQueueCheck(L.ideas, L.acct, f.ideaId).reasons);
+    var others = L.sat.dayAtt.filter(function (a) { return a.id !== f.ideaId; }), dc = R.satDailyCheck({ now: L.now, product: f.product, attempts: others, reentry: f.reentry || {} });
+    rs = rs.concat(dc.reasons); m.flags = m.flags.concat(dc.flags, cond.flags); m.reentry = dc.reentry === true; m.reentryNeedsConfirm = dc.reasons.indexOf('SAT_REENTRY_COND') >= 0;
+    var todayN = others.filter(function (a) { return a.product === f.product && R.bkk.dayKey(a.startAt) === R.bkk.dayKey(L.now) && a.status !== 'cancelled'; }).length;
+    var cf = cond.factor == null ? 0 : cond.factor, base = RP.sat.stepRpt[st.stepIndex], ef = L.eF;
+    m.factors = ['STEP_' + st.step]; var parts = ['Step ' + st.step + ' · ' + f2(base, 2) + '%'];
+    if (cond.status === 'reduced') { parts.push('65%'); m.factors.push('CONDITION_65'); }
+    if (ef < 1) { parts.push('emergency 50%'); m.factors.push('EMERGENCY_50'); }
+    m.effPct = cond.factor == null ? null : base * cf * ef; m.formula = parts.join(' × ') + ' = ';
+    var z = { reasons: [], qty: 0, actualRisk: 0, actualDistance: 0 };
+    if (cf > 0) {
+      z = sizeCommon(L, f, base, cf * ef, 1); if (z.levels) m.levels = z.levels;
+      if (z.reasons.length) rs = rs.concat(z.reasons);
+    }
+    m.sizing = z; m.qty = z.qty || 0; m.money = z.actualRisk || 0; m.moneyPct = z.actualRiskPct != null ? z.actualRiskPct : (m.money / L.basis.weekEquity * 100);
+    var bud = R.satBudgetCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: ideaOthers(L, f.ideaId), costsFor: L.costsFor, candidateRisk: m.money || 0 });
+    rs = rs.concat(bud.reasons); m.flags = m.flags.concat(bud.flags);
+    var act = R.activeSummary({ basis: L.basis, mom: { usageWeek: L.mom.chk.usageWeek, usageMonth: L.mom.chk.usageMonth }, sat: { usageWeek: bud.usageWeek, usageMonth: bud.usageMonth }, candidateRisk: m.money || 0 });
+    rs = rs.concat(act.reasons); m.reasons = rs;
+    var wRoom = bud.weekCap - (bud.weekUsed - m.money), room = Math.min(wRoom, bud.monthCap - (bud.monthUsed - m.money));
+    m.room = { weekPct: Math.max(0, wRoom) / L.basis.weekEquity * 100 }; m.roomPct = m.room.weekPct;
+    var uv = f.mult * f.fx; m.allowedQty = (z.actualDistance > 0 && uv > 0 && m.qty > 0) ? allowedQty(room, z.actualDistance * uv, f.lotStep, f.minLot, m.qty) : 0;
+    var q = R.satQueueCheck(L.ideas, L.acct, f.ideaId);
+    m.roomLine = (m.rr != null ? 'R:R ' + f2(m.rr, 1) + ' · ' : '') + (q.reasons.length ? 'queue busy' : 'queue free') + ' · ' + (m.reentry ? 're-entry' : todayN === 0 ? '1st setup today' : 'setup ' + (todayN + 1) + ' today') + ' · week room ' + pctTxt(m.room.weekPct);
+    return finish(m, { roomPct: m.room.weekPct });
+  }
+  /* ── Compounder ──
+     f = {kind:'pilot'|'topup'|'addon', ideaId (existing idea of this ticker), thesisDone, starterOn, entry, stop, side, mult, fx, lotStep, minLot, minStopDist, legacy, levels?}
+     Add-on / further buys = TOTAL-RISK rule (answers-A #16 amended): thesis + (existing tranches at current stop + working orders + new order) <= 1.00 % (0.50 % without thesis)
+     of week-start equity + new order alone <= 0.50 % x min(Regime, Emergency). Entry above OR below the average entry (below = warning only). */
+  function sizeComp(L, f) {
+    var m = baseModel(L, 'ladder'), kind = f.kind || 'pilot'; m.kind = kind;
+    m.chip = (L.regime.factor < 1 || L.regime.stale) ? { t: 'Regime ' + Math.round(L.regime.factor * 100) + '%', c: 'a' } : null;
+    if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
+    var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true;
+    var multi = !!(f.levels && f.levels.length > 1), planCap = thesis ? RP.comp.pilotPct + RP.comp.addonPct : RP.comp.pilotPct;
+    var base = multi ? planCap : (kind === 'pilot' ? RP.comp.pilotPct : RP.comp.addonPct);
+    var fraction = (kind === 'pilot' && f.starterOn === true && !multi) ? RP.comp.starter * 2 : 1;
+    var label = multi ? 'Plan ' : kind === 'pilot' ? 'Pilot ' : 'Add-on ';
+    m.factors = [(multi ? 'PLAN_' : kind === 'pilot' ? 'PILOT_' : 'ADDON_') + base]; var parts = [label + f2(base, 2) + '%'];
+    if (fac < 1) { var pc = Math.round(fac * 100), em = L.eF < rg.factor; parts.push((em ? 'emergency ' : 'regime ') + pc + '%'); m.factors.push((em ? 'EMERGENCY_' : 'REGIME_') + pc); }
+    if (fraction < 1) { parts.push('starter 25%'); m.factors.push('STARTER_25'); }
+    m.effPct = base * fac * fraction; m.formula = parts.join(' × ') + ' = ';
+    var z = sizeCommon(L, f, base, fac, fraction); m.sizing = z; if (z.levels) m.levels = z.levels;
+    if (z.reasons.length) { m.reasons = z.reasons.slice(); return finish(m); }
+    m.qty = z.qty; m.money = z.actualRisk; m.moneyPct = z.actualRiskPct; m.avgEntry = z.avgEntry || f.entry;
+    var eq = L.basis.weekEquity, existing = 0, working = 0, avg = null;
+    if (me) { var pr = R.ideaResult(me, L.costsFor(me)); existing = pr.exposure === null ? pr.principalRisk : pr.exposure; avg = ideaAvg(me); (me.workingOrders || []).forEach(function (w) { if (pos(w.qty) && pos(w.entry) && pos(w.stop)) working += w.qty * Math.abs(w.entry - w.stop) * (w.mult > 0 ? w.mult : 1) * (w.fx > 0 ? w.fx : 1); }); }
+    var usedPct = (existing + working) / eq * 100, firstPct = multi ? m.effPct * ((f.levels[0].splitPct || 0) / 100) : (m.money / eq * 100);
+    var chkKind = multi ? 'pilot' : kind, reqPct = multi ? firstPct : (m.money / eq * 100);
+    var entry = { kind: chkKind, starterOn: f.starterOn === true, thesisDone: thesis, legacy: f.legacy === true, side: f.side, entryPx: f.entry, avgEntry: avg, requestedPct: reqPct, usedPct: multi ? 0 : usedPct, factor: fac };
+    var cc = R.compCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: ideaOthers(L, f.ideaId), costsFor: L.costsFor, cycles: L.comp.cycles, unlocks: L.comp.unlocks, signals: L.signals, emergencyFactor: L.eF, entry: entry, candidateRisk: m.money });
+    m.reasons = cc.reasons.slice(); m.flags = cc.flags.slice(); m.lock = cc.lock; m.heat = cc.heat; m.entry = cc.entry; m.usedPct = usedPct;
+    var hRoom = Math.max(0, eq * RP.comp.heatCapPct / 100 - cc.heat.money), totRoom = Math.max(0, eq * planCap / 100 * (kind === 'pilot' ? 1 : 1) - (existing + working)), room = Math.min(hRoom, totRoom);
+    m.room = { heatPct: cc.heat.pct, heatCapPct: RP.comp.heatCapPct, roomPct: hRoom / eq * 100, tickerUsedPct: usedPct, tickerCapPct: planCap };
+    var uv = f.mult * f.fx, hard = m.reasons.some(function (c) { return /^(COMP_LOCKED|ADDON_THESIS)$/.test(c); });
+    m.allowedQty = hard ? 0 : allowedQty(multi ? hRoom : room, z.actualDistance * uv, f.lotStep, f.minLot, m.qty);
+    m.roomLine = 'Heat ' + f2(cc.heat.pct, 1) + '% of ' + RP.comp.heatCapPct + '% · room ' + f2(m.room.roomPct, 1) + '%' + (me ? ' · ticker ' + f2(usedPct, 2) + '% of ' + f2(planCap, 2) + '%' : '');
+    var miss = []; if (!thesis) miss.push('thesis done');
+    m.addon = { locked: miss.length > 0, missing: miss, totalRoomPct: Math.max(0, (RP.comp.pilotPct + RP.comp.addonPct) - usedPct) };
+    return finish(m, { heat: cc.heat });
+  }
+  /* idea-level helper for the stop form: estimated net-breakeven price, effect of confirming a new stop */
+  function stopInfo(L, ideaId, newStop) {
+    var i = L.ideas.filter(function (x) { return x.id === ideaId; })[0]; if (!i) return null;
+    var c = L.costsFor(i), nb = R.netBreakevenStop(i, c), avg = ideaAvg(i), trial = JSON.parse(JSON.stringify(i));
+    trial.tranches.forEach(function (t) { t.stop = newStop; t.stopConfirmed = true; });
+    var after = R.ideaResult(trial, c);
+    return { costsKnown: c.known, netBreakeven: nb, avgEntry: avg, costPerShare: nb !== null && avg !== null ? Math.abs(nb - avg) : null, projectedNetAfter: after.projectedNet, exposureAfter: after.exposure,
+      atBreakeven: c.known && after.projectedNet !== null && after.projectedNet >= -1e-7, frees: i.strategy === 'winner' && R.ammoReleased(trial, c), strategy: i.strategy,
+      rNow: null, firstTranche: i.tranches[0] || null };
+  }
+
+  return { live: live, liveBasis: liveBasis, liveEmergency: liveEmergency, sizeMomentum: sizeMomentum, sizeSat: sizeSat, sizeComp: sizeComp, stopInfo: stopInfo, unitCosts: unitCosts, asOfAt: asOfAt, rtext: rtext, f2: f2, pctTxt: pctTxt,
+    build: build, buildAccount: buildAccount, toMarkdown: toMarkdown, toJson: toJson, badges: badges, MISSING_NOTES: MISSING_NOTES };
 });
