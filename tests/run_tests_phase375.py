@@ -178,6 +178,8 @@ def act_rows(pw, w, h):
 
 
 def status_line(pw, w, h):
+    if w <= 560:
+        print('RETIRED (RE-C2, not counted as PASS) - [%d] 3 Today status line button: on the phone the COMP chip is hidden while Normal (brief §1); the Mac/tablet checks still run' % w); return
     tag = f"[{ENGINE}/{w}]"
     b, page, ce, pe = launch(pw, w, h)
     try:

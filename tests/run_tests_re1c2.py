@@ -126,6 +126,7 @@ def run_viewport(pw, w, h):
         check("[%s] core Ready toggle writes plan.ready + readyAt" % tag, js(page, "()=>{const c=coreCardsList.find(x=>x.id==='e1');return c.plan.ready===true && !!c.plan.readyAt}"))
         js(page, "()=>{ switchTab('plan'); }"); page.wait_for_timeout(400)
         check("[%s] ⚑ Ready button on the Planned card" % tag, js(page, "()=>document.querySelectorAll('[data-bd-card][data-bd-status=plan] [data-re2-ready]').length>=3"))
+        if w in (390, 1440): shot(page, "planned-ready-%d" % w)
         js(page, "()=>bdOpen('e1')"); page.wait_for_timeout(300)
         check("[%s] ⚑ Ready button in the drawer" % tag, js(page, "()=>!!document.querySelector('#bdDr [data-re2-ready]')"))
         js(page, "()=>{ bdClose(); }")

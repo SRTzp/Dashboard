@@ -7,8 +7,8 @@ Started from origin/main d828732 (RE-C1 merged: risk-engine.js + re1-adapter.js 
 - §2 Enter / Check orders / Manage (`re2Model`, `re2Row`) · To do no longer repeats Move stop / still valid?.
 - §3 ⚑ Ready flag (`re2ReadyToggle`, clears on Ordered/Filled/Cancelled via write wrappers).
 - §4 bottom pair (`re2RoomCard`, `re2EventsCard`).
-- §5 new suite `tests/run_tests_re1c2.py` in progress.
+- §5 suite `tests/run_tests_re1c2.py` 131/0; all reruns green; ui_audit = main (124).
 Note: §1–§4 were built in one pass in the same code block, so they are committed together.
 
 ## Left
-- Full test reruns, ui_audit compare, screenshots, summary.
+- Nothing (summary written: RE1-C2-summary.md).

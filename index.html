@@ -3676,13 +3676,13 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .re2-row .l1{display:flex;align-items:center;gap:6px;min-width:0}.re2-row .l1 b{font-size:.95rem}.re2-row .tag{font:700 .66rem ui-monospace,Menlo,monospace;background:var(--surface2);border-radius:5px;padding:1px 5px;color:var(--muted)}
 .re2-row .sp{flex:1}.re2-row .num{font-size:.82rem;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.re2-row .num i{font-style:normal;color:var(--muted)}.re2-row .num i.a{color:var(--amber);font-weight:600}
 .re2-act .chip{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--green-dim);color:var(--green);white-space:nowrap}.re2-act .chip.a,.re2-pc .chip.a{background:var(--amber-dim);color:var(--amber)}.re2-act .chip.r,.re2-pc .chip.r{background:var(--red-dim);color:var(--red)}.re2-act .chip.b{background:#e6ecfb;color:#2d5bd1}.re2-pc .chip{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--green-dim);color:var(--green);white-space:nowrap}.re2-pc .chip.n{background:var(--surface2);color:var(--muted)}
-.re2-row .btn{border:0;border-radius:999px;background:var(--green);color:#fff;font-weight:700;font-size:.82rem;padding:6px 11px;white-space:nowrap;cursor:pointer}.re2-row .btn.o{background:var(--surface);color:var(--text);border:1px solid var(--border)}.re2-row .btn:disabled{opacity:.45;cursor:not-allowed}
+.re2-row .btn{opacity:1;border:0;border-radius:999px;background:var(--green);color:#fff!important;font-weight:700;font-size:.82rem;padding:6px 11px;white-space:nowrap;cursor:pointer}.re2-row .btn.o{background:var(--surface);color:var(--text)!important;border:1px solid var(--border)}.re2-row .btn:disabled{opacity:.45;cursor:not-allowed}
 .re2-col .none,.re2-pc .none{font-size:.82rem;color:var(--muted);padding:6px 2px 0}
 .re2-pc summary{list-style:none;display:flex;align-items:baseline;gap:8px;cursor:pointer;min-width:0}.re2-pc summary::-webkit-details-marker{display:none}.re2-pc summary b{font-size:.95rem;white-space:nowrap}.re2-pc summary .s{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:.82rem}.re2-pc details[open] summary{margin-bottom:8px}.re2-pc details[open] .s{visibility:hidden}
 .re2-pc .rk3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.re2-pc .rk3>div{background:var(--surface2);border-radius:10px;padding:8px 10px;min-width:0}.re2-pc .rk3 small{display:block;color:var(--muted);font-size:.74rem}.re2-pc .rk3 b{display:block;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.re2-pc .rk3 span{display:block;font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .re2-pc .ev{display:flex;gap:8px;align-items:center;padding:5px 0;min-width:0}.re2-pc .ev time{font:.78rem ui-monospace,Menlo,monospace;color:var(--muted);width:74px;flex:none}.re2-pc .ev b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.re2-pc .ev .mut{margin-left:auto;font-size:.78rem;white-space:nowrap;color:var(--muted)}
 .re2-act .p,.re2-pc .p{display:none}
-.bd-ready{margin-left:auto;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:999px;font:700 .72rem var(--sans);padding:2px 9px;cursor:pointer;white-space:nowrap}.bd-ready.on{background:#e6ecfb;color:#2d5bd1;border-color:#b9c8f2}
+.bd-ready{margin-left:auto;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:999px;font:700 .82rem var(--sans);padding:4px 10px;cursor:pointer;white-space:nowrap}.bd-ready.on{background:#e6ecfb;color:#2d5bd1;border-color:#b9c8f2}
 @media(max-width:900px){.re2-act .cols,.re2-pair{grid-template-columns:1fr}.re2-pc .rk3{grid-template-columns:1fr}}
 @media(max-width:560px){
   .re2-act .m,.re2-pc .m{display:none}.re2-act .p,.re2-pc .p{display:inline}.re2-act .rk.m{display:none}.re2-act .rk.ab,.re2-act .rk.ev{display:inline-block}
@@ -31098,12 +31098,13 @@ function re2StopDue(L){   /* the same condition the To do item used: Momentum ho
 }
 function re2Row(it, o){
   const e = td3E, sr = (()=>{ try{ return tw1SizeRisk(it); }catch(x){ return {sz:'—', rk:'—'}; } })();
-  const q = o.q != null ? o.q : (sr.sz + (sr.rk && sr.rk !== '—' ? ' · ' + sr.rk : ''));
+  if(sr.sz === '—'){ try{ const lots = it.kind === 'core' ? (it.ref.lots || []).reduce((a, l)=>a + (+l.qty || 0), 0) : 0, rw = it.kind === 'core' && it.ref.plan && it.ref.plan.ps1 && Array.isArray(it.ref.plan.ps1.rows) ? it.ref.plan.ps1.rows.reduce((a, r)=>a + (+r.qty || 0), 0) : 0, n = it.status === 'hold' && lots > 0 ? lots : rw; if(n > 0) sr.sz = '#' + fmt0(n); }catch(x){} }
+  const q = o.q != null ? o.q : [sr.sz, sr.rk].filter(x=>x && x !== '—').join(' · ') || '—';
   const sh = {place:'Place ›', fill:'Filled ✓', stop:'Stop ›', hw:'Homework ›', addon:'Add-on ›', fix:'Fix ›', complete:'Complete ›', edit:'Edit', review:'Review ›'}[o.k] || o.btn;
   const btn = o.btn ? `<button type="button" class="btn${o.k === 'fill' || o.k === 'hw' ? ' o' : ''}" data-re2-btn="${o.k}"${o.dis ? ` disabled title="${e(o.title || '')}" data-re2-blocked="1"` : ''} onclick="event.stopPropagation();${o.fn || ''}"><span class="m">${e(o.btn)}</span><span class="p">${e(sh)}</span></button>` : '';
   return `<div class="row re2-row" data-re2-row="${e(it.sym)}" data-re2-grp="${o.g}" data-re2-id="${e(it.id)}" role="button" tabindex="0" onclick="bdOpen('${e(it.id).replace(/'/g, "\\'")}')">
     <div class="l1"><b>${e(it.sym)}</b><span class="tag">${e(it.tag)}</span>${o.chip ? `<span class="chip ${o.cc || ''} m" data-re2-chip-st>${e(o.chip)}</span>` : ''}<span class="q p">${e(q)}</span><span class="sp"></span>${btn}</div>
-    <div class="num"><span class="m">${e(q)} · ${e(o.lv || '')} · </span><i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p"> · ${e(o.lv || '')}</span></div></div>`;
+    <div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span><i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div></div>`;
 }
 function re2Model(acct){
   const now = Date.now(), L = re1L(acct), all = (()=>{ try{ return bdItems().filter(x=>(x.acct || tdHome()) === acct); }catch(e){ return []; } })();
@@ -31145,20 +31146,20 @@ function re2GroupHtml(key, title, rows, total, seg, none){
   return `<div class="col re2-col" data-re2-col="${key}"><div class="ch"><b>${title}</b><span class="mut" data-re2-n>${rows.length}</span><a href="#" data-re2-link onclick="event.preventDefault();bdSetSeg('${seg}');switchTab('plan')">${total} ${lab} ›</a></div>${rows.length ? rows.map(r=>re2Row(r.it, r.o)).join('') : `<div class="none">${none}</div>`}</div>`;
 }
 function re2RoomCard(acct){
-  const R = re2Room(acct), S = re2State(acct); if(!R) return `<div class="card re2-pc" data-re2-room><b>Risk room</b> <span class="mut">${td3E(S.t)} — confirm a snapshot in Settings</span></div>`;
+  const R = re2Room(acct), S = re2State(acct); if(!R) return `<div class="card ln4-card re2-pc" data-re2-room><b>Risk room</b> <span class="mut">${td3E(S.t)} — confirm a snapshot in Settings</span></div>`;
   const o = re2Open.room != null ? re2Open.room : ln4Wide();
   const sum = `MMT ${R.mom.left} ideas · SAT step ${R.sat.step} · COMP ${re1Pct(R.comp.room, 1)}`;
-  return `<div class="card re2-pc" data-re2-room><details${o ? ' open' : ''} ontoggle="re2Open.room=this.open"><summary><b>Risk room<span class="m"> · this week</span></b><span class="s">${sum}</span><span class="chip ${S.c}">${td3E(S.t)}</span></summary>
+  return `<div class="card ln4-card re2-pc" data-re2-room><details${o ? ' open' : ''} ontoggle="re2Open.room=this.open"><summary><b>Risk room<span class="m"> · this week</span></b><span class="s">${sum}</span><span class="chip ${S.c}">${td3E(S.t)}</span></summary>
     <div class="rk3"><div data-re2-rr="mom"><small>Momentum · week</small><b>${R.mom.left} of ${R.mom.max} ideas left</b><span>room ${re1Pct(R.mom.room)} of ${re1Pct(R.mom.cap)}</span></div>
     <div data-re2-rr="sat"><small>Satellite · week</small><b>Step ${R.sat.step} · ${re1Pct(R.sat.rpt)}${R.sat.locked ? ' · LOCKED' : ''}</b><span>${re1Pct(R.sat.used)} of ${re1Pct(R.sat.cap)} · queue ${R.sat.busy ? 'busy' : 'free'}</span></div>
     <div data-re2-rr="comp"><small>Compounder · open now</small><b>room ${re1Pct(R.comp.room, 1)}</b><span>heat ${re1Pct(R.comp.heat, 1)} of ${R.comp.cap}% · regime ${R.comp.regime}%</span></div></div></details></div>`;
 }
 function re2EventsCard(){
   const ev = re2EvData(Date.now()), e = td3E, o = re2Open.ev != null ? re2Open.ev : ln4Wide(), l3 = ev.list.slice(0, 3);
-  if(!ev.any) return `<div class="card re2-pc" data-re2-events><b>Next events</b> <span class="mut">no event data</span></div>`;
+  if(!ev.any) return `<div class="card ln4-card re2-pc" data-re2-events><b>Next events</b> <span class="mut">no event data</span></div>`;
   const sum = l3.length ? l3.slice(0, 2).map(x=>re2Day(x.ts) + ' ' + e(x.title)).join(' · ') : 'no HIGH / MED events';
   const wc = ev.win ? `<span class="chip ${ev.win.soon ? 'a' : 'n'}" data-re2-nowin><span class="m">No Sat entries ${e(ev.win.txt)}</span><span class="p">${e(ev.win.kind)} ${e(re2Day(ev.win.a).split(' ')[0])}</span></span>` : '';
-  return `<div class="card re2-pc" data-re2-events><details${o ? ' open' : ''} ontoggle="re2Open.ev=this.open"><summary><b><span class="m">Next events</span><span class="p">Events</span></b><span class="s">${sum}</span>${wc}</summary>
+  return `<div class="card ln4-card re2-pc" data-re2-events><details${o ? ' open' : ''} ontoggle="re2Open.ev=this.open"><summary><b><span class="m">Next events</span><span class="p">Events</span></b><span class="s">${sum}</span>${wc}</summary>
     ${l3.map(x=>`<div class="ev" data-re2-ev><time>${e(re2Day(x.ts))}</time><span class="chip ${x.imp === 'HIGH' ? 'r' : 'a'}">${x.imp}</span><b>${e(x.title)}</b><span class="mut">${e(x.assets.slice(0, 3).join(' · '))}</span></div>`).join('') || '<div class="none">No HIGH / MED events ahead</div>'}</details></div>`;
 }
 function re2BlockHtml(acct, label){
