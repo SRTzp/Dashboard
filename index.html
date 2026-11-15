@@ -7240,6 +7240,35 @@ function re1SetHtml(){
     <div class="ln4-sethd" style="margin-top:12px">Costs <small>· per account · strategy</small></div>${costRows}
     <small class="re1-note">Without costs a stop cannot be recognised as net breakeven.</small>`;
 }
+
+/* ── Place order gate / fill flags for Core plans (one source: the engine) ── */
+function re1CardModel(c, qty, px, stop){
+  const L = re1L(c.acct); if(!L) return null;
+  const mk = c.market || coreMarketOf(c.ticker), spec = re1StockSpec(L, mk), pl = c.plan || {}, bucket = coreTrackOfCard(c), thesis = !!ftHwDone(c.ticker);
+  const idea = L.ideas.find(i=>L.info[i.id] && L.info[i.id].card === c.id) || null, held = !!(idea && idea.tranches.length);
+  const e = px > 0 ? px : +pl.entry, sl = stop > 0 ? stop : +pl.stop, ms = ps1StockMin(c.acct)[bucket];
+  const f = Object.assign({entry:e, stop:sl, side:'long', minStopDist: ms > 0 ? e * ms / 100 : undefined, ideaId: idea ? idea.id : ('c:' + c.id)}, spec);
+  const m = bucket === 'ladder' ? Re1Adapter.sizeComp(L, Object.assign(f, {kind: held ? 'addon' : 'pilot', thesisDone: thesis, starterOn: !!(c.plan && c.plan.starter)})) : Re1Adapter.sizeMomentum(L, Object.assign(f, {homeworkDone: thesis, isFirstEntry: !held, isAddition: held, starterOn: !!(c.plan && c.plan.starter)}));
+  return {L, m, spec, e, sl};
+}
+function re1PlanGate(c, lv){
+  try{
+    const rows = (c.plan && c.plan.ps1 && Array.isArray(c.plan.ps1.rows)) ? c.plan.ps1.rows : null, i = lv != null ? lv : 0, q = rows && rows[i] ? +rows[i].qty : null, px = rows && rows[i] ? +rows[i].px : +((c.plan || {}).entry);
+    const r = re1CardModel(c, q, px, +((c.plan || {}).stop)); if(!r) return {ok:true, msg:''};
+    const lim = r.m.blocked ? r.m.allowedQty : r.m.qty, bad = r.m.reasons.filter(x=>['UNKNOWN_DATA','LOT_BELOW_MIN'].indexOf(x) < 0 || r.m.reasons.length === 1);
+    if(r.m.blocked && r.m.reasons.some(x=>['NO_SNAPSHOT','SNAPSHOT_STALE','EQUITY_MISSING','FX_MISSING','SPEC_MISSING','COMP_LOCKED','ADDON_THESIS','SAT_LOCKED'].indexOf(x) >= 0)) return {ok:false, msg:r.m.reasonTexts[0], model:r.m};
+    if(q > 0 && q > lim + 1e-9) return {ok:false, msg: (r.m.reasonTexts[0] ? r.m.reasonTexts[0] + ' — ' : 'Above today\'s size — ') + `allowed now ${fmt0(lim)} (plan has ${fmt0(q)})`, model:r.m};
+    return {ok:true, msg:'', model:r.m};
+  }catch(e){ console.warn('re1 gate:', e); return {ok:true, msg:''}; }
+}
+/* an actual fill is ALWAYS accepted; if it breaches a limit it carries flags (restricts new risk) */
+function re1FillFlags(c, qty, px, stop){
+  const r = re1CardModel(c, qty, px, stop); if(!r) return [];
+  const risk = qty * Math.abs(px - stop) * (r.spec.fx || 1), fl = [], lim = r.m.blocked ? r.m.allowedQty : r.m.qty;
+  if(r.m.blocked && r.m.reasons.some(x=>['MONEY_WEEK','MONEY_MONTH','AMMO_EXHAUSTED','COMP_HEAT','ADDON_TOTAL_RISK','NO_SNAPSHOT','SNAPSHOT_STALE'].indexOf(x) >= 0)) fl.push('FILL_OVER_LIMIT');
+  else if(qty > lim + 1e-9) fl.push('FILL_OVER_LIMIT');
+  return fl.length ? fl.concat(r.m.reasons.slice(0, 4)) : [];
+}
 function re1Toast(m){ try{ sdToast(m); }catch(e){ console.warn(m); } }
 /* ── Form result box (mockup A) ── m = adapter model · o = {cur, unit:'#'|'lot', fxd (display divisor for money)} ── */
 function re1BoxHtml(m, o){
@@ -11317,7 +11346,7 @@ function ln4SetupN(idea){ const ck = Array.isArray(idea && idea.setup_ck) ? idea
 /* PB1b rev 3.1 §3 — Trend rule (Buy and Sell alike). EMA50 / Structure start UNSELECTED (null).
    ✓✓ 100% · EMA ✗ / Str ✓ 60% + nearest-target warning · EMA ✓ / Str ✗ → MSS question: Yes = Counter trend @ MSS 60% · No/blank = Blocked ·
    ✗✗ → MSS question: Yes = Reversal @ MSS 60% + warning · No/blank = Blocked. Every reduced size = ONE factor (SAT_RED_FAC), never stacked. */
-const SAT_RED_FAC = 0.6;
+const SAT_RED_FAC = 0.65;   /* RE-C1 — Condition factor (engine POLICY.sat.condReduced) */
 function ln4VerifyOf(idea){
   const b = v=>(v === true || v === false) ? v : null;
   const ema = b(idea && idea.ema50_ok), st = b(idea && idea.structure_ok), mss = b(idea && idea.mss);
@@ -14885,53 +14914,34 @@ function lfAddCalc(c, o){
 /* PS1 §3 — add-on for cards made from a PS1 plan: new idea budget only when every tranche stop >= its average entry; else what is left.
    Size cap + bucket/total caps re-checked. Amounts in the market currency (v.div converts to THB). */
 function ps1AddCalc(c, o, cx, v, out){
-  const P = c.plan.ps1, div = v.div, acc = !!o.acc, bucket = P.bucket || 'winner';
-  const E = ps1E(c.acct), cfg = ps1Cfg(c.acct), b = cfg.buckets[bucket], En = E / div;
-  if(!(En>0)){ out.msg = 'Set account capital in Settings'; out.bad = true; return out; }
+  /* RE-C1 — additions (Momentum) and Add-on / further buys (Compounder) come from the engine. Momentum: completes the same idea, needs the thesis. Compounder: total-risk rule. */
+  const div = v.div, acc = !!o.acc, bucket = coreTrackOfCard(c), L = re1L(c.acct);
+  if(!L){ out.msg = 'Risk engine unavailable'; out.bad = true; return out; }
   if(!(o.px>0) || !(o.sl>0)){ out.msg = 'Fill Entry and SL'; return out; }
   if(!(o.px>o.sl)){ out.msg = 'Entry must be above SL'; out.bad = true; return out; }
-  const tr = [{qty:v.qty, avg:v.avg, stop: acc ? v.stop : o.sl}];
-  if(v.accT) tr.push({qty:v.accQty, avg:v.accAvg, stop: acc ? o.sl : v.accStop});
-  const lhalf = lossEval(c.acct, bucket), lm0 = lhalf ? lhalf.mult : 1;   /* PS1b — Half size stacks on the idea budget */
-  const ab = Ps1.addOnBudget({tranches:tr, ideaBudget: P.ideaEff / 100 * En * lm0});
-  if(!ab.ok){ out.msg = 'Cannot size this add-on'; out.bad = true; return out; }
-  out.newBudget = ab.newBudget;
-  const maxFrac = ab.left / En;
-  out.maxRiskPct = maxFrac * 100; out.defRiskPct = out.maxRiskPct;
-  out.why.push(ab.newBudget ? 'New risk budget: every stop is at or above its average entry' : 'Using what is left of this idea\'s budget');
-  const rk = o.riskEdited ? o.risk : out.defRiskPct;
-  out.riskPct = rk;
-  const stub = {qty:0, newRisk:0, maxRisk:maxFrac, tag:'normal', overRoom:false};
-  out.r = stub;
-  if(maxFrac <= 1e-12){ out.blocked.push('Idea budget used up - raise the stop first'); return out; }
-  if(!(rk>0)){ out.msg = 'Fill Risk %'; return out; }
-  if(rk > out.maxRiskPct + 1e-9){ stub.overRoom = true; out.blocked.push(`Risk above what is left (up to ${fmt2(+out.maxRiskPct.toFixed(4))}%)`); }
-  const budgetN = Math.min(rk / 100 * En, ab.left);
-  let q = Ps1.addOnQty({budget: budgetN, px:o.px, stop:o.sl, market:v.mk});
-  let qty = q.ok ? q.qty : 0;
-  const held = v.qty*v.avg + (v.accT ? v.accQty*v.accAvg : 0), capN = b.sizeMax / 100 * En, lot = v.mk==='TH' ? 100 : 1;
-  if(qty*o.px + held > capN + 1e-9){
-    const allowed = Ps1.floorLot(Math.max(0, capN - held) / o.px, lot);
-    if(allowed <= 0) out.blocked.push(`At max position size (${b.sizeMax}% of portfolio)`);
-    else { qty = Math.min(qty, allowed); out.why.push(`Shares reduced to fit max position ${b.sizeMax}%`); }
+  const spec = re1StockSpec(L, v.mk), idea = L.ideas.find(i=>L.info[i.id] && L.info[i.id].card === c.id) || null, thesis = !!ftHwDone(c.ticker), E = L.basis.ok ? L.basis.weekEquity : 0;
+  const msPct = ps1StockMin(c.acct)[bucket], f = Object.assign({entry:o.px, stop:o.sl, side:'long', minStopDist: msPct > 0 ? o.px * msPct / 100 : undefined, ideaId: idea ? idea.id : undefined}, spec);
+  let m;
+  if(bucket === 'ladder') m = Re1Adapter.sizeComp(L, Object.assign(f, {kind:'addon', thesisDone: thesis, legacy: !!(idea && L.info[idea.id] && L.info[idea.id].nTranches > 2)}));
+  else {
+    let used = 0; if(idea && E > 0){ const ini = idea.tranches.reduce((a,t)=>a + Math.max(0, (t.entry - (t.initialStop || t.stop)) * t.qty * (t.mult || 1) * (t.fx || 1)), 0); used = ini / (E * 0.0045 * L.eF); }
+    m = Re1Adapter.sizeMomentum(L, Object.assign(f, {homeworkDone: thesis, isFirstEntry:false, isAddition:true, usedFraction: Math.min(1, used)}));
+    if(!thesis){ m.reasons = m.reasons.concat(['ADDON_THESIS']); m.reasonTexts = m.reasons.map(x=>Re1Adapter.rtext(x)); m.blocked = true; m.ok = false; }
   }
-  stub.qty = qty; stub.newRisk = qty * (o.px - o.sl); out.riskPctTank = stub.newRisk / En;
-  const cur = v.qty*Math.max(0, v.avg - v.stop) + (v.accT ? v.accQty*Math.max(0, v.accAvg - v.accStop) : 0);
-  const delta = (ab.risk + stub.newRisk - cur) * div;
-  const U = ps1Used(c.acct, c.id);
-  const cc = Ps1.capCheck({E, cfg, bucket, newRisk: Math.max(0, delta), usedBucket: U.bucket[bucket], usedTotal: U.total});
-  if(cc.ok===false && cc.reasons){
-    if(cc.reasons.indexOf('BUCKET_CAP')>=0) out.blocked.push(`Over ${b.label} risk cap: ${cc.bucketPct.toFixed(2)}% > ${b.cap}% of portfolio`);
-    if(cc.reasons.indexOf('TOTAL_CAP')>=0) out.blocked.push(`Over total risk cap: ${cc.totalPct.toFixed(2)}% > ${cfg.total}% of portfolio`);
-  }
+  out.model = m; out.riskPct = m.effPct; out.defRiskPct = m.effPct; out.maxRiskPct = m.effPct;
+  (m.reasons || []).forEach((cde, i)=>{ if(['UNKNOWN_DATA'].indexOf(cde) < 0) out.blocked.push(m.reasonTexts[i]); });
+  if(m.allowedQty > 0 && m.allowedQty < m.qty) out.why.push(`Allowed now ${fmt0(m.allowedQty)} (needs ${fmt0(m.qty)})`);
+  (m.flags || []).forEach(fl=>{ if(fl === 'ADDON_BELOW_ENTRY_WARN') out.warns.push('Adding below entry — re-check ④ Wrong if'); });
+  const q = m.blocked && m.allowedQty > 0 ? m.allowedQty : m.qty;
+  out.r = {qty:q, newRisk: m.money / div * (m.qty > 0 ? q / m.qty : 0), maxRisk: m.effPct / 100, tag:'normal', overRoom:false};
+  out.riskPctTank = m.effPct / 100;
   if(!(v.qty>0)) out.blocked.push('ไม่มีหุ้นถืออยู่');
   if(!acc && o.sl < v.stop - 1e-9) out.blocked.push('SL Base ใหม่ต่ำกว่า SL เดิม');
-  if(acc && v.accT && o.sl < v.accStop - 1e-9) out.blocked.push('SL เร่งใหม่ต่ำกว่า SL เร่งเดิม');
+  if(acc && v.accT && o.sl < v.accStop - 1e-9) out.blocked.push('SL เร่งใหม่ต่ำกว่า SL เดิม');
   if(v.st && v.st.status==='yellow') out.blocked.push(v.trk==='ladder' ? 'ปิดใต้ 40W EMA — งดเพิ่มไม้' : 'ปิดใต้ EMA10 — งดเพิ่มไม้');
   if(v.st && v.st.status==='red') out.blocked.push('ปิดใต้ SL Base — ขายหมด');
-  { const dd = v.t ? coreBlkAdd(c, v.t) : ''; if(dd) out.blocked.push(dd); }   /* DD1 · PS1b */
   if(coreErr) out.blocked.push(coreErr);
-  if(qty<=0 && !out.blocked.length) out.blocked.push('Too small for 1 lot');
+  if(out.r.qty<=0 && !out.blocked.length) out.blocked.push('Too small for 1 lot');
   return out;
 }
 let lfAddSt = null;   /* {id, acc, riskEdited, slEdited} */
@@ -16144,8 +16154,6 @@ function coreBuy1In(){
   else if(d.rawQty!==d.qty) errs.push(`จะปัดลงเป็น ${fmt0(d.qty)} ตามตลาด`);
   if(!d.date) errs.push('กรอกวันที่');
   if(coreErr) errs.push(coreErr);
-  { const ddm = coreBlkNew(d.c); if(ddm) errs.push(ddm); }   /* DD1 · PS1b */
-  { const wm = d.qty > 0 ? wl1FillErr(d.c, d.qty) : ''; if(wm) errs.push(wm); }   /* WL1 — homework cap */
   const hard = errs.filter(e=>!/^จะปัดลง/.test(e));
   const er = coreEl('cbErr'); er.style.display = errs.length ? '' : 'none'; er.innerHTML = errs.map(escHtml).join('<br>');
   coreEl('cbSave').disabled = hard.length>0;
@@ -16160,6 +16168,7 @@ function coreBuy1Save(){
   const t = makeTradeObject({id:tid, date:d.date, sym:c.ticker, port:'core', bias:'Long', entry:d.px, sl:d.stop, qty:d.qty, mult:1,
     cur: d.mk==='TH' ? 'THB' : 'USD', status:'open', fromCard:true});
   if(!ps1Off() && c.plan && c.plan.ft) t.fastTrack = true;   /* PS1b §8 — Journal keeps a Fast-track tag */
+  try{ const fl = re1FillFlags(c, d.qty, d.px, d.stop); if(fl.length) t.re1Flags = fl; }catch(e){}   /* RE-C1 — fill accepted, breaches flagged */
   B.trades.push(t);
   saveBook(A);
   const plan = c.plan || {};
@@ -26489,123 +26498,68 @@ function satClsLegacy(idea){ return !!idea && !satVerifySaved(idea) && pfClsKey(
 function pfClassifyText(trend, key){ return !PF_CLS[key] ? '' : key==='unclear' || !trend ? PF_CLS[key] : PF_CLS[key] + (trend==='up' ? ' Up' : ' Down'); }
 function pfClassifyCls(trend, key){ return (trend && PF_CLS_COL[trend] && PF_CLS_COL[trend][key]) ? 'c-' + PF_CLS_COL[trend][key] : ''; }
 function pfClassifyHtml(idea){ const t = pfTrendKey(idea), k = satClsKey(idea); return PF_CLS[k] ? `<span class="pf-cl ${pfClassifyCls(t, k)}" data-pf-classify="${k}"${satClsLegacy(idea) ? ' data-pf-legacy="1" title="Legacy classification — verification pending"' : ''}>${pfClassifyText(t, k)}</span>` : ''; }
+let re1ReTap = null;   /* idea id whose Place-order re-entry confirm was tapped (screen state only) */
 function satV2PlanCalc(idea, accId, f2c){
-  const base = sat7dAcctBase(accId), cfg = satV2Cfg(accId), sv = satV2Sleeve(idea), tac = sv==='tactical';
+  /* RE-C1 — Satellite sizing, queue, daily slot / re-entry, budgets and condition table all come from risk-engine.js (Step × Condition × Emergency). Same result shape as before for the callers. */
+  const base = sat7dAcctBase(accId), cfg = satV2Cfg(accId), sv = 'main', tac = false;
   const F = f2c || satV3F2c(idea);
   const slot = (idea.accts && idea.accts[accId]) || {};
   const opts = sat7dBrokerOpts(base.B, idea.asset);
   const chosen = opts.find(o=>o.broker===slot.broker) || opts[0] || null;
   const e = +idea.entry, s = +idea.sl;
-  const hasTr = pfHasTrend(idea);   /* PF1 — ทิศมาจาก Trend ของแผนเท่านั้น · ไม่มี Trend = ไม่คำนวณไม้/ไม่สร้าง order */
+  const hasTr = pfHasTrend(idea);
   const side = (hasTr && e>0 && s>0) ? (idea.bias==='Short' ? s>e : s<e) : null;
   const dist = (e>0 && s>0) ? Math.abs(e - s) : 0;
-  const mi1 = (!ps1Off() && e>0 && s>0) ? ps1MinInfo(accId, idea.asset, e, s) : null;   /* MS1 — SL tighter than min → size on the min distance, keep the user's SL */
-  const sd = mi1 ? mi1.minDist : dist;
-  const cfgA = satRiskCfg(accId);
-  const ruleF = 1;   /* LN4 §4d — Macro = warning only (was Calc.sizeRule neutral/against) */
-  const fac = 1;
-  const M = satV2Money(accId);
-  const sleeveTHB = tac ? M.tacTHB : M.mainTHB, rpt = tac ? cfg.rptTac : cfg.rptMain, capX = tac ? cfg.capTac : cfg.capMain;
-  const slotEx = !!(slot.trade_id && base.trades.some(t=>t.id===slot.trade_id));   /* PS1 - saved orders keep their numbers */
-  const psx = (slotEx || ps1Off()) ? null : ps1Cfg(accId), psDef = psx ? (tac ? psx.def.satTac : psx.def.satMain) : null, psE = psx ? ps1E(accId) : 0;
-  /* PS1 4b - Main verify: Structure off = blocked / EMA50 off (Unclear Trend) = 60% size / stacks on top of f/DD */
-  const vfy = (!tac && !slotEx && !ps1Off()) ? ln4VerifyOf(idea) : {ok:true, fac:1, counter:false};   /* LN4 §4d — matrix ✓✓ 100 · EMA✗ 60 · Structure✗ = Counter 60 · ✗✗ blocked (never stacked) */
-  const lev = psx ? lossEval(accId, 'sat') : null;   /* PS1b — new Sat orders: Loss limits only (old DD factor, Tactical brake, weekly counter, value cap do not apply) */
-  const riskTHB = (psx ? (psDef ? psE * psDef / 100 : 0) : sleeveTHB * rpt / 100) * fac * (psx ? (lev ? lev.mult : 1) : base.ddFactor) * vfy.fac * (ln4SatStarter(idea) ? ln4Frac() : 1);   /* LN4 §4b — Starter fraction */
-  const spl = satV2Split(accId, sv), split1 = spl[0] / 100;   /* PV2c — ไม้ 1 = % แรกของดีล (ตั้งต่อส่วน · Tactical เริ่มที่ 100 = ไม้เดียว) */
+  const mi1 = (e>0 && s>0) ? ps1MinInfo(accId, idea.asset, e, s) : null;
+  const vfy = ln4VerifyOf(idea);
   const tps = satV2Tps(idea, accId);
-  /* PV2b — ประเภท Tactical ตาม Bias สัปดาห์ (แอปตั้งเอง): Long/Short ทิศเดียวกัน = เร่งกำไร · Neutral + Main สวนทิศ = Hedge · Neutral ไม่มี Main = Range */
-  const blocks = [], mp = satV2MainPos(accId, idea.asset);
-  /* PF1 — ประเภท Tactical ไม่อ่าน Bias Strategy แล้ว: มี Main ค้างและทิศแผนตรงข้าม = Hedge · นอกนั้น = เร่งกำไร (ตามทิศแผน) */
-  let tacType = null, softWarn = '';
-  if(tac && hasTr) tacType = (mp.n && mp.dir && idea.bias!==mp.dir) ? 'hedge' : 'accel';
-  let lot = null, lotDeal = null, rawRisk = null, rawCap = null, rawHedge = null, limit = null, lotMsg = '', actualTHB = 0, dealTHB = 0, riskCur = null, capVal = null;
+  const slotEx = !!(slot.trade_id && base.trades.some(t=>t.id===slot.trade_id));
+  const tradeExists = slotEx;
+  let m = null, lot = null, lotDeal = null, lotMsg = '', e2o = null, mi2 = null, L = null;
   if(!hasTr) lotMsg = 'เลือก Trend ก่อน';
-  else if(psx && !psDef) lotMsg = 'Set default risk in Settings';
-  if(chosen){
-    const k = chosen.cfg.cur==='USD' ? base.fx : 1;
-    riskCur = k>0 ? riskTHB / k : null;
-    if(side===true && riskCur>0 && dist>0 && e>0){
-      const cc = chosen.cfg, step = cc.lotStep;
-      rawRisk = riskCur / (sd * cc.contract);
-      capVal = sleeveTHB / k * capX;
-      rawCap = capVal / (e * cc.contract);
-      let deal = psx ? rawRisk : Math.min(rawRisk, rawCap);   /* PS1b — min stop replaces the 1.4× value cap for new orders */
-      limit = (!psx && rawCap < rawRisk - 1e-12) ? 'cap' : 'risk';
-      if(tacType==='hedge'){ rawHedge = mp.qty; if(rawHedge < deal - 1e-12){ deal = rawHedge; limit = 'hedge'; } }   /* PV2b — Hedge ≤ Main */
-      deal = satV2Fl(deal, step);
-      const leg = satV2Fl(deal * split1, step);
-      if(deal < cc.minLot - 1e-12) lotMsg = limit==='cap' ? 'เพดานมูลค่าต่ำกว่าขนาดขั้นต่ำ' : limit==='hedge' ? 'Main เล็กกว่าขนาดขั้นต่ำ — Hedge ไม่ได้' : 'SL กว้างเกินขนาดขั้นต่ำ';
-      else if(leg < cc.minLot - 1e-12) lotMsg = 'SL กว้างเกินขนาดขั้นต่ำ';
-      else { lotDeal = deal; lot = leg; actualTHB = lot * dist * cc.contract * k; dealTHB = deal * dist * cc.contract * k; }   /* MS1 — Risk = real distance (≤ budget when sized on min) */
+  if(chosen && hasTr){
+    L = re1L(accId);
+    if(L && e>0 && s>0 && side===true){
+      const cc = chosen.cfg, fx = cc.cur==='USD' ? L.fx : 1, rc = ((idea.ln4 && idea.ln4.reentry === true) || re1ReTap === idea.id) ? {confirmed:true, setupValid:true, sameDirectionZone:true, trendUnchanged:true, candleClosedSince:true} : {};
+      let levels = null;
+      if(satE2On(idea) && !slotEx){
+        const e2px = +idea.entry2, sh = satE2Share(idea); e2o = {px:e2px, share:sh, err:'', ok:false};
+        if(!(e2px > 0)) e2o.err = 'Enter entry 2'; else if(idea.bias==='Short' ? e2px >= s : e2px <= s) e2o.err = 'Entry 2 must be on the same side of SL';
+        else { levels = [{price:e, splitPct:(1 - sh) * 100}, {price:e2px, splitPct: sh * 100}]; mi2 = ps1MinInfo(accId, idea.asset, e2px, s); }
+      }
+      m = Re1Adapter.sizeSat(L, {entry:e, stop:s, tp:+idea.tp, side: idea.bias==='Short' ? 'short' : 'long', cond:{ema50: idea.ema50_ok, structure: idea.structure_ok, mss: idea.mss}, product: re1DryKey(idea.asset),
+        ideaId: (idea.id && idea.id !== '__pb2') ? ('s:' + idea.id) : undefined, reentry: rc, mult: cc.contract, fx, lotStep: cc.lotStep, minLot: cc.minLot, minStopDist: mi1 ? mi1.minDist : undefined, levels});
+      if(m.qty > 0){
+        if(levels && m.levels){ lot = m.levels[0].qty; lotDeal = m.qty; e2o.ok = m.levels.every(x=>x.qty > 0); if(e2o.ok) Object.assign(e2o, {lot1:m.levels[0].qty, lot2:m.levels[1].qty, d1:dist, d2:Math.abs(+idea.entry2 - s), avg:m.avgEntry}); else { e2o.err = 'Too small to split — use 1 entry'; lot = null; lotDeal = null; } }
+        else { lot = m.qty; lotDeal = m.qty; }
+      }
+      if(m.reasons.indexOf('LOT_BELOW_MIN') >= 0) lotMsg = e2o && e2o.err ? e2o.err : 'SL กว้างเกินขนาดขั้นต่ำ';
+      if(e2o && e2o.err){ lot = null; lotDeal = null; lotMsg = e2o.err; }
     }
   }
-  /* PS1b §7f — two entries: one budget split by share · each entry rounds DOWN · either rounds to 0 → "Too small to split" */
-  let e2o = null, mi2 = null;
-  if(psx && satE2On(idea) && !slotEx){
-    const e2px = +idea.entry2, sh = satE2Share(idea);
-    e2o = {px:e2px, share:sh, err:'', ok:false};
-    if(chosen && riskCur > 0 && side === true && !(e2px > 0)) e2o.err = 'Enter entry 2';
-    else if(chosen && riskCur > 0 && side === true && e2px > 0 && (idea.bias==='Short' ? e2px >= s : e2px <= s)) e2o.err = 'Entry 2 must be on the same side of SL';
-    else if(chosen && riskCur > 0 && side === true){
-      const cc = chosen.cfg, k2 = cc.cur==='USD' ? base.fx : 1, d1 = dist, d2 = Math.abs(e2px - s);
-      mi2 = ps1MinInfo(accId, idea.asset, e2px, s);
-      const l1 = satV2Fl(riskCur * (1 - sh) / (sd * cc.contract), cc.lotStep), l2 = satV2Fl(riskCur * sh / ((mi2 ? mi2.minDist : d2) * cc.contract), cc.lotStep);
-      if(l1 < cc.minLot - 1e-12 || l2 < cc.minLot - 1e-12){ e2o.err = 'Too small to split — use 1 entry'; }
-      else { Object.assign(e2o, {ok:true, lot1:l1, lot2:l2, d1, d2, risk1:l1 * d1 * cc.contract * k2, risk2:l2 * d2 * cc.contract * k2, avg:(l1 * e + l2 * e2px) / (l1 + l2)}); }
-    }
-    if(e2o.err){ lot = null; lotDeal = null; actualTHB = 0; dealTHB = 0; lotMsg = e2o.err; }
-    else if(e2o.ok){ lot = e2o.lot1; lotDeal = e2o.lot1 + e2o.lot2; actualTHB = dealTHB = e2o.risk1 + e2o.risk2; lotMsg = ''; limit = 'risk'; }
-  }
-  const tradeExists = !!(slot.trade_id && base.trades.some(t=>t.id===slot.trade_id));
-  const heatTHB = base.openRisk + (tradeExists ? 0 : actualTHB);
-  const heatPct = Calc.heat(heatTHB, base.cap);
-  const quotaFull = psx ? false : (tradeExists ? base.nNew > base.newMax : base.nNew >= base.newMax);   /* RG2b — Tactical นับโควตารวมกับ Main · PS1b: weekly counter not used by new orders */   /* Tactical ไม่นับโควตาไม้ใหม่/สัปดาห์ — คุมด้วยเบรก Tactical แทน */
-  const rd = Calc.readiness({heatPct, heatMax: psx ? 1e9 : base.heatMax, quotaFull, checksOk: true, hasInvalidation: true, side,   /* PS1 - new orders use PS1 caps only (old heat cap off) */
-    hasChosenBroker: !!chosen, hasAnyBroker: sat7dHasAnyBroker(base.B), lotMsg, hasCapital: base.cap>0});
-  const ddB = psx ? '' : ddSatBlock(base), newsB = newsSatBlockMsg();   /* PS1b — old Sat DD bar not applied to new orders */
-  /* PV2b — บล็อกที่แอปคิดให้ (ไม่มีทางลัด): Hedge ใหญ่เกิน Main · เพดาน Open Risk (Satellite · ต่อสินค้า · Core+Sat) · เบรก Tactical */
-  if(tacType==='hedge' && lotDeal!=null && lotDeal > mp.qty + 1e-9) blocks.push('Hedge ใหญ่กว่า Main — สถานะสุทธิพลิกฝั่ง');
-  if(psx && lot!=null){   /* PS1 - Satellite bucket + total caps (% of E) replace the old Open-Risk caps for new orders */
-    const U = ps1Used(accId, null), cc = Ps1.capCheck({E: psE, cfg: psx, bucket:'sat', newRisk: dealTHB || actualTHB, usedBucket: U.bucket.sat, usedTotal: U.total});
-    if(cc.ok===false && cc.reasons){
-      if(cc.reasons.indexOf('BUCKET_CAP')>=0) blocks.push(`Over Satellite risk cap: ${cc.bucketPct.toFixed(2)}% > ${psx.buckets.sat.cap}% of portfolio`);
-      if(cc.reasons.indexOf('TOTAL_CAP')>=0) blocks.push(`Over total risk cap: ${cc.totalPct.toFixed(2)}% > ${psx.total}% of portfolio`);
-    }
-  }
-  if(!vfy.ok) blocks.push(vfy.unset ? 'Choose Trend (EMA50 · Structure)' : 'Blocked by trend rule');   /* PB1b — Setup ✓ boxes retired (grey reminder only) */
-  if(!tradeExists && !psx && lot!=null){
-    const R = satV2Risk(accId), CP = satV2Caps(accId), add = actualTHB, fx = base.fx, usd = x => satV2Usd(x, fx);
-    if(R.sat + add > CP.sat + 1e-6) blocks.push(`Satellite Open Risk จะเป็น ${usd(R.sat + add)} > ${usd(CP.sat)} (${cfg.orSat}%)`);
-    const ra = (R.byAsset[idea.asset] || {tot:0}).tot;
-    if(ra + add > CP.asset + 1e-6) blocks.push(`Risk ${sat7dLabel(idea.asset)} จะเป็น ${usd(ra + add)} > ${usd(CP.asset)} (${cfg.orAsset}%)`);
-    if(R.core + R.sat + add > CP.total + 1e-6) blocks.push(`Core + Satellite จะเป็น ${usd(R.core + R.sat + add)} > ${usd(CP.total)} (${cfg.orTot}%)`);
-  }
-  if(tac && !tradeExists && !psx){ const br = satV2Brake(accId); if(br.stop) blocks.push(br.msg); }
-  if(psx){   /* PS1b — min stop (% of entry price) + Loss limits */
-    let msm = (hasTr && e>0 && s>0) ? ps1MinStopMsg(accId, idea.asset, e, s) : (hasTr ? (ps1MinPct(accId, idea.asset) ? '' : 'Set min stop in Settings') : '');
-    if(!msm && e2o && +idea.entry2 > 0 && s > 0) msm = ps1MinStopMsg(accId, idea.asset, +idea.entry2, s);   /* §7f — MIN_NOT_SET only (MS1: tight SL never blocks) */
-    if(msm) blocks.push(msm);
-    const lm = lossBlockMsg(lev); if(lm) blocks.push(lm);
-  }
-  /* CS1 — Tactical ต้อง Clear Trend (มี/ไม่มี Main ก็เหมือนกัน) · Main สร้างไม่ได้ขณะมี Tactical ที่เข้าแล้วและไม่มี Main · ไม้ที่บันทึกแล้ว/การเติมไม้ Main เดิมไม่โดน */
-  const clsB = (tac && !tradeExists && satClsKey(idea)!=='clear') ? 'Tactical needs EMA50 + Structure verify' : '';
-  const mainB = (!tac && !tradeExists && mp.n===0 && satTacHeldNoMain(accId, idea.asset)) ? satMainBlockMsg(idea.asset) : '';
-  if(clsB) blocks.push(clsB);
-  if(mainB) blocks.push(mainB);
+  const nonBlock = ['SAT_REENTRY_COND'], inputish = ['PRICE_MISSING','SPEC_MISSING','FX_MISSING','LOT_BELOW_MIN','UNKNOWN_DATA'];
+  const blocks = [];
+  if(m && !tradeExists) m.reasons.forEach((c, i)=>{ if(nonBlock.indexOf(c) < 0 && inputish.indexOf(c) < 0) blocks.push(m.reasonTexts[i]); });
+  else if(!m && chosen && hasTr && L && !L.basis.ok) L.basis.reasons.forEach(c=>blocks.push(Re1Adapter.rtext(c)));
+  const newsB = newsSatBlockMsg();
   const noteB = (F.needNote && !F.reason) ? 'เขียนเหตุผลที่เข้าสวน/นอก Macro' : '';
   const carryB = (!tradeExists && satV3IsCarried(idea)) ? satV3CarryBlockMsg() : '';
   const unW = (!tradeExists && !satIsPicked(idea.asset)) ? satUnpickMsg() : '';
-  const rrC = (hasTr && !tradeExists) ? satRrCheck(idea) : null, rrB = (rrC && !rrC.ok) ? rrC.msg : '';   /* PF1 A4 — TP บังคับ + R:R ≥ ขั้นต่ำเดิม (satRrCheck) ทั้ง Main และ Tactical */
-  const out = {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, tradeExists, factor: fac, split1, pyrSplit: spl, ruleFactor: ruleF, f2c: F,
-    tacType, mainPos: mp, softWarn, noTrend: !hasTr, mr:false, mrOk:true, mrCheck:null, noteBlock: noteB, unpickBlock: unW, carryBlock: carryB, ddBlock: ddB, newsBlock: newsB, rrBlock: rrB, rr: rrC,
-    e2: e2o,
-    minSized: (mi1 || mi2) ? {rows:[mi1 && Object.assign({n:1}, mi1), mi2 && Object.assign({n:2}, mi2)].filter(Boolean), budget: riskTHB / (chosen && chosen.cfg.cur==='USD' ? base.fx : 1), cur: chosen ? chosen.cfg.cur : 'USD'} : null,
-    ps1: psx ? {E: psE, def: psDef, loss: lev, minPct: ps1MinPct(accId, idea.asset), margin: (base.B.settings && base.B.settings.capital) ? +base.B.settings.capital.satB || 0 : 0} : null, verify: vfy,
-    v2: {sleeve: sv, tac, cfg, rpt, capX, sleeveTHB, riskTHB, rawRisk, rawCap, rawHedge, capVal, limit, lotDeal, dealTHB, actualTHB, dist: sd, realDist: dist, tps, k: chosen ? (chosen.cfg.cur==='USD' ? base.fx : 1) : 1}};
+  const rrC = (hasTr && !tradeExists) ? satRrCheck(idea) : null;
+  { let msm = (hasTr && e>0 && s>0) ? ps1MinStopMsg(accId, idea.asset, e, s) : (hasTr ? (ps1MinPct(accId, idea.asset) ? '' : 'Set min stop in Settings') : '');
+    if(!msm && e2o && +idea.entry2 > 0 && s > 0) msm = ps1MinStopMsg(accId, idea.asset, +idea.entry2, s);
+    if(msm) blocks.push(msm); }
+  const needsReentry = !!(m && m.reentryNeedsConfirm && !tradeExists);
+  const ready = hasTr && lot != null && !newsB && !noteB && !unW && !carryB && blocks.length === 0;
+  const k = chosen && chosen.cfg.cur==='USD' && L ? L.fx : 1;
+  const out = {base, slot, opts, chosen, lot, lotMsg, riskCur: m ? m.money / (k || 1) : null, heatPct:null, tradeExists, factor: m && m.condition && m.condition.factor ? m.condition.factor : 1, split1:1, pyrSplit:[100], ruleFactor:1, f2c:F,
+    tacType:null, mainPos:{n:0, qty:0}, softWarn:'', noTrend:!hasTr, mr:false, mrOk:true, mrCheck:null, noteBlock:noteB, unpickBlock:unW, carryBlock:carryB, ddBlock:'', newsBlock:newsB, rrBlock:'', rr:rrC, e2:e2o,
+    minSized: (mi1 || mi2) ? {rows:[mi1 && Object.assign({n:1}, mi1), mi2 && Object.assign({n:2}, mi2)].filter(Boolean), budget: m ? m.effPct / 100 * (L ? L.basis.weekEquity : 0) / (k || 1) : 0, cur: chosen ? chosen.cfg.cur : 'USD'} : null,
+    ps1: m && L ? {E:L.basis.weekEquity, def:m.effPct, loss:null, minPct: ps1MinPct(accId, idea.asset), margin:0} : null, verify: vfy, re1: m, re1NeedsReentry: needsReentry,
+    v2: {sleeve:sv, tac, cfg, rpt: m ? m.effPct : null, capX:null, sleeveTHB:0, riskTHB: m && L ? m.effPct / 100 * L.basis.weekEquity : 0, rawRisk:null, rawCap:null, rawHedge:null, capVal:null, limit:'risk', lotDeal, dealTHB: m ? m.money : 0, actualTHB: m ? m.money : 0, dist: mi1 ? mi1.minDist : dist, realDist: dist, tps, k}};
   out.blocks = blocks;
-  out.warns = (carryB ? [carryB] : []).concat(unW ? [unW] : [], noteB ? [noteB] : [], ddB ? [ddB] : [], newsB ? [newsB] : [], rrB ? [rrB] : [], out.blocks, rd.reasons);
-  out.ready = hasTr && rd.ok && !ddB && !newsB && !rrB && !noteB && !unW && !carryB && out.blocks.length===0;
+  out.warns = (carryB ? [carryB] : []).concat(unW ? [unW] : [], noteB ? [noteB] : [], newsB ? [newsB] : [], blocks, lotMsg ? [lotMsg] : []);
+  out.ready = ready;
   return out;
 }
 /* บันทึก order 1 บัญชี (แผน v2) — makeTradeObject เดิม + sleeve/setups/tf/size_limit */
@@ -26613,8 +26567,11 @@ function satV2SaveSlot(ideaId, accId, offplanAcct){
   const idea = sat7dIdea(ideaId); if(!idea) return;
   const F = satV3F2c(idea, Date.now());
   const c = satV2PlanCalc(idea, accId, F);
-  if(c.lot==null) return;
-  if(c.ddBlock || c.newsBlock || c.rrBlock || c.noteBlock || c.unpickBlock || c.carryBlock || c.blocks.length) return;
+  /* RE-C1 — an ACTUAL fill is always accepted: limit breaches are flagged on the trade, never refused. Quantity = what was ordered (Place order snapshot), else the engine size. */
+  const sn0 = idea.ln4 && idea.ln4.snap && idea.ln4.snap['0'], ordLot = sn0 && +sn0.lot > 0 ? +sn0.lot : null;
+  if(c.lot==null && ordLot == null) return;
+  const re1Fl = [].concat(c.blocks || [], c.newsBlock ? [c.newsBlock] : []);
+  if(ordLot != null) c.lot = ordLot;
   const B = getBook(accId), v = c.v2, tps = v.tps;
   const t = makeTradeObject({
     id: 't'+Date.now()+'_'+accId, date: thaiToday(),
@@ -26635,10 +26592,11 @@ function satV2SaveSlot(ideaId, accId, offplanAcct){
     size_limit: v.limit, deal_lot: v.lotDeal, tp1_pct: v.tac ? tps.pct : undefined, tac_type: v.tac ? (c.tacType || undefined) : undefined
   });
   if(c.e2 && c.e2.ok) t.entry2Plan = {px:c.e2.px, lot:c.e2.lot2, share:c.e2.share};   /* PS1b §7f — "Buy" fills entry 1 · entry 2 stays a pending add on the same idea (part of the same budget) */
+  if(re1Fl.length) t.re1Flags = re1Fl.slice(0, 6);   /* RE-C1 — breach flags (accepted fill) */
+  if(idea.ln4 && idea.ln4.reentry === true) t.reentry = true;
   if(c.ps1) t.ps1 = {E: c.ps1.E, riskPct: c.ps1.def, riskTHB: v.riskTHB, verifyFac: c.verify ? c.verify.fac : 1};
   if(c.verify && c.verify.counter) t.counterTrend = true;   /* LN4 §4d */
   if(c.verify && c.verify.ask && c.verify.ok){ t.counterTrend = true; t.trendTag = c.verify.tag; }   /* PB1b — Journal tags: Counter trend @ MSS · Reversal @ MSS */
-  if(ln4SatStarter(idea)) t.starter = ln4Frac();   /* LN4 §4b */   /* PS1 snapshot (makeTradeObject has a field whitelist) */
   B.trades.push(t);
   saveBook(accId);
   sat7dWrite('satIdeas', ideaId, {accts:{[accId]: {trade_id: t.id, broker: c.chosen ? c.chosen.broker : null, lot: c.lot}}});
@@ -31351,15 +31309,15 @@ function pb2Model(i){
 }
 /* size (lot · risk · label) through the existing sizing code, one account */
 function pb2Calc(i, accId){
-  const out = {lot:null, risk:null, cur:'USD', unit:'', msg:'', rr:null, label:'', col:'f', c:null};
+  const out = {lot:null, risk:null, cur:'USD', unit:'', msg:'', rr:null, label:'', col:'f', c:null, model:null};
   const vf = ln4VerifyOf(i), rc = (+i.entry > 0 && +i.sl > 0 && +i.tp > 0) ? satRrCheck(i) : null;
   if(rc && rc.rr != null) out.rr = satRrFmt(rc.rr);
   if(vf.unset){ out.label = 'Choose trend'; out.col = 'f'; return out; }
   if(vf.blocked){ out.label = 'Blocked'; out.col = 'r'; out.msg = vf.mssBlank ? 'Answer the MSS question' : 'Not an MSS'; return out; }
-  out.label = vf.tag ? vf.tag + ' · 60%' : (vf.fac < 1 ? 'Size 60%' : 'Size 100%'); out.col = vf.fac < 1 ? 'a' : 'g';
+  out.label = vf.tag ? vf.tag + ' · 65%' : (vf.fac < 1 ? 'Reduced 65%' : 'Full 100%'); out.col = vf.fac < 1 ? 'a' : 'g';
   try{
     if(!accId) return out;
-    const c = satV2PlanCalc(i, accId); out.c = c;
+    const c = satV2PlanCalc(i, accId); out.c = c; out.model = c.re1;
     if(c.lot != null){ out.lot = c.lot; out.unit = satSzUnit(i, c); out.cur = c.chosen ? c.chosen.cfg.cur : 'USD'; out.risk = c.v2.actualTHB / (c.v2.k || 1); }
     else out.msg = c.lotMsg || (c.blocks && c.blocks[0]) || '';
   }catch(e){ console.warn('pb2 calc:', e); }
@@ -31459,7 +31417,8 @@ function pb2Refresh(){
   h += `<div class="pb2-trow" data-pb2-trend><span class="pb2-k"><span class="pb2-lf">TREND HTF</span><span class="pb2-ls">HTF</span></span><span class="pb2-p"><span>EMA50</span>${tg('ema')}</span><span class="pb2-p"><span class="pb2-lf">Structure</span><span class="pb2-ls">Struct.</span>${tg('str')}</span><button type="button" class="pb2-all" data-pb2-all title="Hold ${PB2_HOLD_MS / 1000} s — EMA50 ✓ + Structure ✓" aria-label="Hold to set EMA50 ✓ and Structure ✓" onpointerdown="pb2HoldStart(event,this)" onpointerup="pb2HoldEnd(this)" onpointerleave="pb2HoldEnd(this)" onpointercancel="pb2HoldEnd(this)" onclick="event.preventDefault()" oncontextmenu="return false"><i></i><span>all ✓</span></button></div>`;
   if(V.ask) h += `<div class="pb2-q" data-pb2-mss><b>Is this entry an MSS on the higher TF?</b>${pb2Seg([['1', 'Yes'], ['0', 'No']], pb2.mss === true ? '1' : pb2.mss === false ? '0' : '', 'pb2Mss', 'pb2-mss')}</div>`;
   const det = calc.lot != null ? `${satV2Lot(calc.lot)} ${e(calc.unit)} · risk ${satV2Money2(calc.risk, calc.cur)} at SL${calc.rr ? ' · R:R ' + calc.rr : ''}` : (calc.rr ? `R:R ${calc.rr}` : '');
-  h += `<div class="pb2-sz" data-pb2-size data-pb2-rule="${V.key}"><b class="${calc.col}" data-pb2-label>${e(calc.label)}</b>${det ? `<small data-pb2-det>${det}</small>` : (calc.msg ? `<small class="m" data-pb2-det>${e(calc.msg)}</small>` : '')}</div>`;
+  h += `<div class="pb2-sz" data-pb2-size data-pb2-rule="${V.key}"><b class="${calc.col}" data-pb2-label>${e(calc.label)}</b>${calc.model ? '' : det ? `<small data-pb2-det>${det}</small>` : (calc.msg ? `<small class="m" data-pb2-det>${e(calc.msg)}</small>` : '')}</div>`;
+  if(calc.model && calc.c){ const k = calc.c.v2.k || 1; h += re1BoxHtml(Object.assign({}, calc.model, {reasons:calc.model.reasons.filter(x=>x !== 'SAT_REENTRY_COND'), reasonTexts:calc.model.reasonTexts.filter((x, j)=>calc.model.reasons[j] !== 'SAT_REENTRY_COND'), blocked: calc.model.reasons.filter(x=>x !== 'SAT_REENTRY_COND').length > 0}), {cur:calc.cur, unit:'lot', fxd:k}); if(calc.c.re1NeedsReentry) h += '<div class="re1-w" data-re1-reentry-note>Re-entry after a stop-out — one extra confirm at Place order</div>'; }
   if(V.warn) h += `<div class="pb2-wn" data-pb2-warn>${e(SAT_NEAR_WARN)}</div>`;
   if(pb2.err) h += `<div class="pb2-bad" data-pb2-err>${e(pb2.err)}</div>`;
   h += `<div class="pb2-rem" data-pb2-rem>ⓘ Setup in TradingView: ${PB2_SETUP_LINE}</div>`;
@@ -31546,6 +31505,8 @@ function pb2SaveDo(draft){
 function pb2PlaceOpen(id){
   const i = sat7dIdea(id); if(!i) return;
   const M = pb2Model(i); if(!M.complete || M.blocked) return;
+  { const c0 = pb2Calc(i, pb2AcctOf(i)), bl = c0.c ? c0.c.blocks.concat(c0.c.lot == null ? [c0.c.lotMsg || 'Cannot size'] : []) : []; if(bl.length){ re1Toast('Place order blocked — ' + bl[0]); return; } }   /* RE-C1 — engine gate (re-entry confirm is taken on the next step) */
+  re1ReTap = null;
   if(bdPopOpen()) bdPopClose();
   pb2 = {step:'place', id, a:i.asset}; pb2Render();
 }
@@ -31554,17 +31515,20 @@ function pb2PlaceHtml(){
   const V = ln4VerifyOf(i), acc = pb2AcctOf(i), c = pb2Calc(i, acc), e = bdE;
   const ex = (acctList.length > 1 && acc) ? ' · ' + e(pb2AcctName(acc)) : '';
   const list = `<ol class="pb2-chk" data-pb2-checks>${PB2_CHECKS.map(c=>`<li data-pb2-chk><span class="pb2-cn" aria-hidden="true"></span><span class="pb2-ct"><b>${bdE(c[0])}</b>${c[1] ? `<small>${bdE(c[1])}</small>` : ''}</span></li>`).join('')}</ol>`;
-  return `<div data-pb2-step="place">${pb2Hd('Setup ready on Execution TF?', false)}${list}${V.ask ? `<div class="pb2-q" data-pb2-mssok>MSS confirmed per your rules (candle closed)</div>` : ''}<div class="pb2-cf" data-pb2-summary><b>${pb2Side(i)} ${e(sat7dLabel(i.asset))}</b>${ex}<br>Entry <b>${bdFmt(i.entry)}</b> · SL <b>${bdFmt(i.sl)}</b> · TP <b>${bdFmt(i.tp)}</b><br>${e(c.label)}${c.lot != null ? ` · ${satV2Lot(c.lot)} ${e(c.unit)} · risk ${satV2Money2(c.risk, c.cur)}` : ''}</div><div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="pb2PlaceYes()">Yes · mark ordered</button></div><div class="bd-m pb2-note">One tap confirms all 4 · records only — place the order at your broker.</div></div>`;
+  return `<div data-pb2-step="place">${pb2Hd('Setup ready on Execution TF?', false)}${list}${V.ask ? `<div class="pb2-q" data-pb2-mssok>MSS confirmed per your rules (candle closed)</div>` : ''}<div class="pb2-cf" data-pb2-summary><b>${pb2Side(i)} ${e(sat7dLabel(i.asset))}</b>${ex}<br>Entry <b>${bdFmt(i.entry)}</b> · SL <b>${bdFmt(i.sl)}</b> · TP <b>${bdFmt(i.tp)}</b><br>${e(c.label)}${c.lot != null ? ` · ${satV2Lot(c.lot)} ${e(c.unit)} · risk ${satV2Money2(c.risk, c.cur)}` : ''}</div>${(c.c && c.c.re1NeedsReentry) ? `<label class="pb2-q" data-re1-reentry><input type="checkbox" ${re1ReTap === i.id ? 'checked' : ''} onchange="re1ReentryTap('${e(i.id)}', this.checked)"> <b>Re-entry</b> · same direction and zone · Trend inputs unchanged · one closed candle since the stop</label>` : ''}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes ${(c.c && c.c.re1NeedsReentry) ? 'disabled' : ''} onclick="pb2PlaceYes()">Yes · mark ordered</button></div><div class="bd-m pb2-note">One tap confirms all 4 · records only — place the order at your broker.</div></div>`;
 }
-function pb2PlaceNo(){ bdPopClose(); }
+function pb2PlaceNo(){ re1ReTap = null; bdPopClose(); }
+function re1ReentryTap(id, on){ re1ReTap = on ? id : null; const b = document.querySelector('[data-pb2-yes]'); if(b) b.disabled = !on; }
 function pb2PlaceYes(){
   const s = pb2; if(!s || s.step !== 'place') return;
   const id = s.id, it = bdById(id), i = sat7dIdea(id); if(!it || !i){ bdPopClose(); return; }
   const V = ln4VerifyOf(i), acc = pb2AcctOf(i), c = pb2Calc(i, acc), at = new Date().toISOString();
+  { const bl = c.c ? c.c.blocks.concat(c.c.re1NeedsReentry ? ['Re-entry not confirmed'] : [], c.c.lot == null ? ['Cannot size'] : []) : []; if(bl.length){ re1Toast('Place order blocked — ' + bl[0]); return; } }
+  const isRe = !!(c.c && c.c.re1 && c.c.re1.reentry);
   let mac = ''; try{ mac = waMacroLabel(i.asset).state || ''; }catch(e){}
-  const snap = {t:at, entry:+i.entry, sl:+i.sl, tp:+i.tp, dir:pb2Side(i), acct:acc, ema:V.ema, structure:V.st, mss:V.st === false ? V.mss : null, label:c.label, mult:V.fac, lot:c.lot, riskPct:(c.c && c.c.ps1 && c.c.ps1.def != null) ? c.c.ps1.def : null, riskAmt:c.risk == null ? null : Math.round(c.risk * 100) / 100, macro:mac, setupOk:true};
-  bdPopClose();
-  bdWriteWithLog(it, {ln4:{placedAt:at, snap:{'0':snap}}}, 'order', 'Order placed · Entry ' + (it.entry > 0 ? td3Num(it.entry) : '—'));   /* snapshot is written once, with the order — plan edits never touch ln4.snap */
+  const snap = {t:at, entry:+i.entry, sl:+i.sl, tp:+i.tp, dir:pb2Side(i), acct:acc, ema:V.ema, structure:V.st, mss:V.st === false ? V.mss : null, label:c.label, mult:V.fac, lot:c.lot, riskPct:(c.c && c.c.ps1 && c.c.ps1.def != null) ? c.c.ps1.def : null, riskAmt:c.risk == null ? null : Math.round(c.risk * 100) / 100, macro:mac, setupOk:true, reentry:isRe || undefined, re1:c.model ? {formula:c.model.formula, effPct:c.model.effPct, step:c.model.step, factors:c.model.factors} : undefined};
+  bdPopClose(); re1ReTap = null;
+  bdWriteWithLog(it, {ln4:Object.assign({placedAt:at, snap:{'0':snap}}, isRe ? {reentry:true} : {})}, 'order', 'Order placed · Entry ' + (it.entry > 0 ? td3Num(it.entry) : '—'));   /* snapshot is written once, with the order — plan edits never touch ln4.snap */
   try{ ln4Valid(id, it.sym || '', 'working'); ln4Toast(`${it.sym || ''}: Order working ✓`); }catch(e){}
 }
 /* Filled ✓ (Sat): plan trade is created now from the plan (existing sizing/blocks) and marked open (existing price prompt) */
@@ -32026,18 +31990,12 @@ function wl1Check(sym, trk, addQty, o){
   return Object.assign({ok, allowed, total, msg}, a);
 }
 function wl1Say(msg){ window.__wl1Msg = msg; try{ sdToast(msg); }catch(e){ console.warn(msg); } }
-function wl1PlaceGate(id, lv){
+function wl1PlaceGate(id, lv){   /* RE-C1 — Place order gate = the engine (homework cap is part of the Momentum size; Compounder Pilot is the cap) */
   const c = (coreCardsList || []).find(x=>x.id === id); if(!c) return true;
-  const rows = wl1PlanRows(c), k = coreEff(c).kind === 'open' ? (c.lots || []).length : 0, i = lv != null ? lv : Math.min(k, (rows ? rows.length : 1) - 1);
-  const r = wl1Check(c.ticker, coreTrackOfCard(c), wl1LevelQty(c, i), {});
-  if(!r.ok){ wl1Say(r.msg); return false; }
+  const g = re1PlanGate(c, lv); if(!g.ok){ wl1Say('Place order blocked — ' + g.msg); return false; }
   return true;
 }
-function wl1FillErr(c, qty){
-  if(!c) return '';
-  const r = wl1Check(c.ticker, coreTrackOfCard(c), +qty || 0, {fillId:c.id, extraFull:wl1FullQty(c)});
-  return r.ok ? '' : r.msg;
-}
+function wl1FillErr(c, qty){ return ''; }   /* RE-C1 — an actual fill is always accepted; breaches are flagged (re1FillFlags) */
 /* plan form cap box (mockup B) */
 function wl1CapBoxHtml(sym, trk, full, startNow){
   const a = wl1Agg(sym, trk, {extraFull:full}), e = escHtml, used = a.held + a.working, w = a.full > 0 ? Math.min(100, used / a.full * 100) : 0, m = a.full > 0 ? Math.min(100, a.cap / a.full * 100) : 50;
@@ -32050,6 +32008,7 @@ function wl1CapBoxHtml(sym, trk, full, startNow){
 }
 function wl1CapBoxDraw(n){
   const host = document.getElementById('cnWl1'); if(!host) return;
+  host.innerHTML = ''; return;   /* RE-C1 — superseded by the result box (homework 50% is a named factor there) */
   const snap = n && n.wl1Snap, sym = coreEl('cnTicker') ? wlNormTicker(coreEl('cnTicker').value) : '';
   if(!snap || !sym){ host.innerHTML = ''; return; }
   const fr = snap.starter && +snap.starter.frac > 0 ? +snap.starter.frac : 0, full = fr ? (snap.wl1Full > 0 ? snap.wl1Full : Math.round(snap.qty / fr)) : snap.qty;
