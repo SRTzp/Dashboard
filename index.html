@@ -3727,6 +3727,38 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .ln1-sv .cs-w{display:flex;min-width:0;gap:4px}.ln1-sv .cs-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ln1-sv .cs-w .setgo{flex:none}
 .ln1-sz>.ui-btn,.ln1-sz>.ln1-st{flex:none;white-space:nowrap}
 }
+/* TW1 — Today Act rows: Mac one aligned line · phone max 2 lines */
+.ln4 .it.tw1-row{display:grid;grid-template-columns:76px 50px 96px minmax(0,1.1fr) 84px minmax(0,.9fr) minmax(0,1.2fr) 104px;column-gap:10px;align-items:center}
+.ln4 .tw1-row>b{grid-column:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ln4 .tw1-row>.sc{grid-column:2;justify-self:start}
+.ln4 .tw1-row>.st{grid-column:3;justify-self:start;white-space:nowrap}
+.ln4 .tw1-row>.tw1-lv{grid-column:4;flex:none}
+.ln4 .tw1-m{display:contents}
+.ln4 .tw1-sz{grid-column:5;white-space:nowrap;font:600 13px var(--mono);text-align:right}
+.ln4 .tw1-rk{grid-column:6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:600 12.5px var(--mono);color:var(--muted)}
+.ln4 .tw1-why{grid-column:7;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;color:var(--muted)}.ln4 .tw1-why.bad{color:var(--red);font-weight:600}
+.ln4 .tw1-row>.go{grid-column:8;justify-self:end;min-width:96px;order:0}
+@media(max-width:1100px){.ln4 .it.tw1-row{grid-template-columns:70px 46px 88px minmax(0,1fr) 80px minmax(0,.9fr) minmax(0,1fr) 100px;column-gap:8px}}
+@media(max-width:560px){
+.ln4 .it.tw1-row{grid-template-columns:auto auto 1fr;grid-template-areas:"a b st" "m m go";row-gap:4px}
+.ln4 .tw1-row>b{grid-area:a;grid-column:auto;max-width:11ch}.ln4 .tw1-row>.sc{grid-area:b;grid-column:auto}.ln4 .tw1-row>.st{grid-area:st;grid-column:auto;justify-self:end}
+.ln4 .tw1-row>.tw1-lv{display:none}
+.ln4 .tw1-m{display:flex;grid-area:m;grid-column:auto;min-width:0;gap:6px;align-items:center;white-space:nowrap;overflow:hidden}
+.ln4 .tw1-sz,.ln4 .tw1-rk{grid-column:auto;flex:none;text-align:left;overflow:visible;font-size:12px}.ln4 .tw1-sz::after{content:" ·";color:var(--faint,#9AA0A9)}.ln4 .tw1-rk:not(:last-child)::after{content:" ·";color:var(--faint,#9AA0A9)}
+.ln4 .tw1-why{grid-column:auto;flex:1 1 0;min-width:0;font-size:12px}
+.ln4 .tw1-row>.go{grid-area:go;grid-column:auto;min-width:0;padding-left:10px;padding-right:10px}
+}
+/* TW1 — type filters left · status chips right, ONE row */
+.bd-frow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px}
+.bd-frow .bd-chips{margin:0;flex:1 1 auto;min-width:0}.bd-frow .bd-seg{margin:0;flex:none}
+.bd-frow .bd-seg button{font-size:13px;min-height:36px}
+@media(max-width:560px){
+.bd-frow{gap:4px}.bd-frow .bd-chips{gap:3px}
+.bd-frow .bd-chip{padding:0 7px;min-height:36px;font-size:13px}
+.bd-frow .bd-seg{gap:0;padding:2px}.bd-frow .bd-seg button{padding:0 5px;min-height:36px;font-size:13px;white-space:nowrap}
+}
+.bd-rq [data-tw1-name]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.tw1-tip{position:fixed;z-index:9999;background:var(--text,#141518);color:#fff;font:600 12.5px var(--sans);padding:5px 10px;border-radius:8px;max-width:min(240px,calc(100vw - 16px));pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.25);white-space:normal}
 /* UA1 — font floors + tap targets found by tests/ui_audit.py (layout only) */
 @media(min-width:601px){
 label,.hint,.crUnit,th,.chip,.k,summary.divlbl,.ui-btn,.mu,.ps1Rg,.td3-ck,.ffQt,.ffQs,.ek,.sat-ctx,.ccTag,.ln3-tag,.lf-warnchip,.ps1Chip,.td3-gt,.ffSeg button,.set1sm,.set1t,.lfNew,.pf-lab,small,.chip.lf-nf-btn,.ui-hint,button.chip,#brandSyncTime,.tv1-gh,.ps1M,.pbSecK,.td3-new,.pbCaret,.pbBadge,.ffLbl,.ffNote,#ffLogLine,.wlPTag,.phChip,.ccIc,#cnPortLn span,#cnPortLn a,.ln4-stg,.pietitle,.divlbl,.pbDate,.pbIco,.ui-chip,.ui-tag,.ccChip,#ln4SetStage button,.lb{font-size:12.5px!important}
@@ -9277,7 +9309,13 @@ function ln4PortPills(){   /* LN4c — ONE small chip: "MMT ½ · COMP ¾ (regim
   try{ const ev = lossEval(A, 'sat'); if(ev && ev.status !== 'normal'){ loss.push(`SAT ${ev.label.replace('Half size', 'Half')}`); if(ev.blocked) red = true; } }catch(e){}
   const parts = loss.slice(); if(reg.length) parts.push(reg.join(' · ') + ' (regime)');
   if(!parts.length) return '';
-  return `<span class="pill ${red ? 'p-r' : 'p-a'} ln4-pchip" data-ln4-portpill="all">${td3E(parts.join(' · '))}</span>`;
+  return `<button type="button" class="pill ${red ? 'p-r' : 'p-a'} ln4-pchip" data-ln4-portpill="all" data-tw1-status title="Regime details" aria-label="${td3E(parts.join(' · '))} — open Regime details in Flow" onclick="tw1RegimeGo()" style="cursor:pointer">${td3E(parts.join(' · '))}</button>`;
+}
+/* TW1 — Today status line → Flow, Regime details expanded and scrolled into view (reuses bdOpenRow) */
+function tw1RegimeGo(){
+  switchTab('flow');
+  let n = 0; const go = ()=>{ if(document.querySelector('[data-bd-more] [data-bd-row="regime"]')){ try{ bdFlowTopRender(); }catch(e){} bdOpenRow('regime'); } else if(++n < 15) setTimeout(go, 60); };
+  setTimeout(go, 30);
 }
 /* room = week loss limit − realised week loss (home account) · ONE source for Today and Port */
 function ln4RoomR(){
@@ -9609,6 +9647,10 @@ function ln4RowHtml(r){
   const stx = r.bad ? `<span class="st r why" data-ln4-why>${s(r.bad.why)}</span>` : `<span class="st ${r.state === 'draft' ? 'd' : r.state === 'open' ? 'f' : ''}" data-ln4-status>${s(r.status)}</span>`;
   const b = r.btn ? `<button type="button" class="go${r.btn.p ? ' p' : ''}${r.btn.fx ? ' fx' : ''}" data-ln4-btn onclick="${r.btn.fn}">${s(r.btn.t)}</button>` : '';
   /* LN4b — phone: line 1 ticker · type tag · status · line 2 sector/macro tags + red reason (may wrap) · line 3 grey details + button (wrapper is display:contents on Mac) */
+  if(r.tw1){
+    const why = r.why || '';
+    return `<div class="it ln4-row tw1-row" data-ln4-row="${s(r.sym)}" data-ln4-kind="${r.kind}" data-ln4-state="${r.state}"${r.bad ? ` data-ln4-bad="${r.bad.k}"` : ''} data-tw1-row><b>${s(r.sym)}</b>${tag}<span class="st ${r.state === 'draft' ? 'd' : r.state === 'open' ? 'f' : ''}" data-ln4-status>${s(r.status)}</span><span class="m tw1-lv" data-tw1-lv>${s(r.lv || '')}</span><span class="tw1-m"><span class="tw1-sz" data-tw1-size>${s(r.sz)}</span><span class="tw1-rk" data-tw1-risk>${s(r.rk)}</span><span class="tw1-why${r.bad ? ' bad' : ''}"${r.bad ? ' data-ln4-why' : ''} data-tw1-why title="${s(why)}">${s(why)}</span></span>${b}</div>`;
+  }
   return `<div class="it ln4-row" data-ln4-row="${s(r.sym)}" data-ln4-kind="${r.kind}" data-ln4-state="${r.state}"${r.bad ? ` data-ln4-bad="${r.bad.k}"` : ''}><b>${s(r.sym)}</b>${tag}<span class="ln4-l2">${sec}${r.bad ? stx : ''}</span><span class="m" data-ln4-det>${r.det}</span>${r.bad ? '' : stx}${b}</div>`;
 }
 /* LN4 §8 — Plan tab cards: same states as Today Act (Draft · Order working · Filled/Open · Add-on ›), same MMT/COMP tag (+½) · built from the same rows */
@@ -10043,10 +10085,7 @@ function td4RemList(M){
   if(!M || !M.weekday) return ftx;
   const out = ftx, today = M.today;
   ['US', 'TH'].forEach(mk=>{ const x = M.hwm && M.hwm[mk]; if(x && x.n < 1) out.push({id:'hw' + mk, t:`Deep dive ${mk}`, sec:'hw', mk}); });
-  const C = td3Cands(today), scrN = td3Promoted(today).length + C.filter(c=>c.screened === today).length;
-  if(scrN < TD4_MIN_SCR && C.some(c=>c.screened !== today)) out.push({id:'scr', t:`Cand→WL ${scrN}/${TD4_MIN_SCR}`, sec:'screen'});
-  const n = td4AddLog(today).length;
-  if(n < TD4_MIN_ADD) out.push({id:'add', t:`New Cand ${n}/${TD4_MIN_ADD}`, sec:'add'});
+  /* TW1 — Candidates were retired in WL1: no 'Cand→WL' / 'New Cand' reminders any more */
   try{ const k = td3NtHas('*') ? 0 : td3SatRows().filter(r=>r.k !== 'saved' && r.k !== 'nt').length; if(k) out.push({id:'sat', t:`Satellite ${k} to do`, sec:'sat'}); }catch(e){}
   return out;
 }
@@ -10074,20 +10113,6 @@ function td4RemGo(sec, mk){
       const miss = TD_HW_SHOW.filter(p=>!(x.parts || []).includes(p.id))[0];
       td3HwGo(x.t, x.src || 'W', miss ? (TD3_HW_SUB[miss.id] || '') : '');
       return true;
-    }
-    if(sec === 'screen'){
-      const C = td3Cands(today), pend = c=>c.screened !== today;
-      let q = td4Queue(td4ScrMk, today);
-      if(!q || !q.length) q = C.filter(pend);
-      const c = q && q[0];
-      if(!c || !c.sym) return fail('Candidate screening');
-      switchTab('watch'); try{ wlSetView('cand'); }catch(e){}
-      wlOpen(c.sym); scrOpen(c.sym);
-      return true;
-    }
-    if(sec === 'add'){
-      const el = document.querySelector('[data-td4-add]');
-      return focusEl(el, true) || fail('Add Candidate');
     }
     if(sec === 'sat'){
       const rows = td3SatRows().filter(r=>r.k !== 'saved' && r.k !== 'nt');
@@ -14091,10 +14116,26 @@ function coreNewOpen(acct, opt){
     <div class="ccErr" id="cnErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="cnSave" data-cn-save onclick="coreNewSave()" disabled>บันทึกแผน</button></div>`;
   coreSheet('new', ln1On() ? lfFormHtml({mode, cur, opt, cfg0, wl, wl0, title}) : legacyHtml);
-  if(mode==='editw' && cur && cur.plan){ const pl = cur.plan, set = (id, v)=>{ const el = coreEl(id); if(el && v!=null && v!=='') el.value = String(v); }; set('cnEntry', pl.entry); set('cnStop', pl.stop); set('cnRisk', pl.risk); coreNew.riskEdited = true; }   /* LN4 — Fix risk / Set stop */
+  if(mode==='editw' && cur && cur.plan){ const pl = cur.plan, set = (id, v)=>{ const el = coreEl(id); if(el && v!=null && v!=='') el.value = String(v); }; set('cnEntry', pl.entry); set('cnStop', pl.stop); set('cnRisk', pl.risk); coreNew.riskEdited = true; tw1LoadLevels(cur); }   /* LN4 — Fix risk / Set stop · TW1 — every saved entry + SL level */
   coreNewLvDraw();
   try{ ps1Draw(); }catch(e){}
   coreNewIn();
+}
+/* TW1 — Update levels / Edit plan must load ALL saved entry + SL rows (plan.ps1.rows / .stops). Before: only plan.entry / plan.stop (row 1) were restored, so a 2–3 entry plan reopened with one row and a save dropped the rest. */
+function tw1LoadLevels(cur){
+  const n = coreNew, p = cur && cur.plan && cur.plan.ps1; if(!n || !p) return;
+  const fx = v=>String(+(+v).toFixed(6)), pct = v=>String(+(+v).toFixed(4));
+  const rows = Array.isArray(p.rows) ? p.rows : [], stops = Array.isArray(p.stops) ? p.stops : [];
+  if(!n.starter && rows.length > 1){   /* Starter keeps its own add-on row (ln4StarterSplit) */
+    n.ne = Math.min(Ps1.MAX_ROWS, rows.length);
+    rows.slice(1, n.ne).forEach((r, i)=>{ n.pxE[i] = fx(r.px); });
+    const t = +p.typed; if(t > 0) n.spE = [0,1,2,3].map(i=>i < n.ne && rows[i] && +rows[i].riskPct > 0 ? pct(rows[i].riskPct / t * 100) : '');
+  }
+  if(stops.length > 1){
+    n.ns = Math.min(Ps1.MAX_ROWS, stops.length);
+    stops.slice(1, n.ns).forEach((r, i)=>{ n.pxS[i] = fx(r.px); });
+    n.pcS = [0,1,2,3].map(i=>i < n.ns && stops[i] && +stops[i].pct > 0 ? pct(stops[i].pct) : '');
+  }
 }
 function coreNewF(f){ if(!coreNew) return; coreNew.f = f; coreNewIn(); }
 function coreNewRisk(){ if(!coreNew) return; coreNew.riskEdited = true; coreNewIn(); }
@@ -29386,7 +29427,7 @@ function bdBoardHtml(){
   const chips = BD_CHIPS.map(k=>`<button type="button" class="bd-chip${bdChip === k ? ' on' : ''}" data-bd-chip="${k}" aria-pressed="${bdChip === k}" onclick="bdSetChip('${k}')">${k === 'all' ? 'All' : k === 'SAT' ? 'Sat' : k}</button>`).join('');
   const seg = `<div class="bd-seg" role="tablist" data-bd-seg>${BD_SEGS.map(s=>`<button type="button" role="tab" class="${bdSeg === s ? 'on' : ''}" aria-selected="${bdSeg === s}" data-bd-segbtn="${s}" onclick="bdSetSeg('${s}')">${BD_SEG_L[s].split(' ')[0]} ${by[s].length}</button>`).join('')}</div>`;
   return `<div class="bd-head"><h2>Plans</h2>${bdSummary(items)}</div>
-    <div class="bd-chips" data-bd-chips>${chips}</div>${seg}
+    <div class="bd-frow" data-bd-frow><div class="bd-chips" data-bd-chips>${chips}</div>${seg}</div>
     <div class="bd-cols" data-bd-cols>${BD_SEGS.map(s=>bdColHtml(s, by[s])).join('')}</div>`;
 }
 function bdBoardOn(){ return !bdEditMode; }
@@ -29717,9 +29758,37 @@ function bdActRows(){
     if(p.k === 'addon'){ r.state = 'open'; r.status = 'Open'; }
     if(p.k === 'fix' && !r.bad) r.bad = {why:'Fix risk', k:'risk'};
     if(p.k !== 'fix' && p.k !== 'complete') r.bad = null;
+    try{ Object.assign(r, tw1SizeRisk(it)); r.tw1 = true; r.why = tw1Why(it, p, r); r.lv = tw1Lv(it); }catch(e){ console.warn('tw1 row:', e); }
     rows.push(r);
   });
   return rows;
+}
+/* TW1 — Today Act rows: size + risk read from the SAME saved plan numbers the Plan board / form show (plan.ps1 · pb2Calc) — no new calculation */
+function tw1SizeRisk(it){
+  const o = {sz:'—', rk:'—'};
+  if(it.kind === 'core'){
+    const p = it.ref && it.ref.plan && it.ref.plan.ps1; if(!p) return o;
+    if(+p.qty > 0) o.sz = '#' + fmt0(p.qty);
+    if(+p.riskPct > 0) o.rk = (+p.riskMoney > 0 ? '฿' + ps1M(p.riskMoney) + ' · ' : '') + ps1R2(p.riskPct) + '%';
+    return o;
+  }
+  const i = it.ref, acc = pb2AcctOf(i), c = pb2Calc(i, acc);
+  if(c.lot != null){
+    o.sz = satV2Lot(c.lot) + ' ' + (c.unit || 'lot');
+    if(c.risk != null){ let pc = ''; try{ const E = ps1E(acc), th = c.c && c.c.v2 ? c.c.v2.actualTHB : 0; if(E > 0 && th > 0) pc = ' · ' + ps1R2(th / E * 100) + '%'; }catch(e){} o.rk = satV2Money2(c.risk, c.cur) + pc; }
+  }
+  return o;
+}
+function tw1Lv(it){
+  const f = v=>(+v > 0 ? td3Num(+v) : '—');
+  return `Entry ${f(it.entry)} / SL ${f(it.sl)}` + (it.kind === 'sat' ? ` / TP ${f(it.tp)}` : '');
+}
+function tw1Why(it, p, r){
+  if(r.bad) return r.bad.why;
+  if(p.k === 'addon') return 'Add-on ready';
+  if(p.k === 'fill') return 'Order working';
+  if(p.k === 'place' && it.pct != null) return `${it.pct < 0 ? '−' : '+'}${Math.abs(it.pct).toFixed(1)}% to entry`;
+  return '';
 }
 function ln4ActHtml(){
   const all = bdActRows(), vis = all.slice(0, 5), more = all.length - vis.length;
@@ -30201,13 +30270,46 @@ function bdRrgRows(){
   const live = rows.filter(x=>x && !x.err && x.quad && !rrgWaiting(x));
   return live.length ? live : ((typeof rrgLastGood !== 'undefined' && rrgLastGood[tf] ? rrgLastGood[tf] : []).filter(x=>x && !x.err && x.quad && !rrgWaiting(x)));
 }
+/* TW1 — RRG tile: full sector / theme name per ETF (existing RRG_SYMS names only · no name → ticker only, nothing invented) · Mac hover = tooltip + title · phone long-press ≈400 ms */
+function tw1Name(sym){ const r = RRG_SYMS.find(x=>x.s === sym); return r ? r.n : ''; }
+function tw1NameAttr(sym){ const n = tw1Name(sym); return n ? ` data-tw1-name="${bdE(n)}" title="${bdE(n)}"` : ''; }
+let tw1Tip = null, tw1TipT = 0, tw1LpT = 0, tw1LpXY = null, tw1LpDone = 0;
+function tw1TipShow(el){
+  const n = el && el.getAttribute('data-tw1-name'); if(!n) return;
+  tw1TipHide(); if(el.hasAttribute('title')){ el.setAttribute('data-tw1-title', el.getAttribute('title')); el.removeAttribute('title'); }   /* no double tooltip */
+  const t = document.createElement('div'); t.className = 'tw1-tip'; t.setAttribute('role', 'tooltip'); t.setAttribute('data-tw1-tip', ''); t.textContent = n; document.body.appendChild(t); tw1Tip = {t, el};
+  const r = el.getBoundingClientRect(), tr = t.getBoundingClientRect(), W = document.documentElement.clientWidth;
+  let x = r.left + r.width / 2 - tr.width / 2; x = Math.max(8, Math.min(W - tr.width - 8, x));
+  let y = r.top - tr.height - 6; if(y < 8) y = r.bottom + 6;
+  t.style.left = x + 'px'; t.style.top = y + 'px';
+}
+function tw1TipHide(){
+  clearTimeout(tw1TipT); tw1TipT = 0;
+  if(tw1Tip){ const el = tw1Tip.el; try{ tw1Tip.t.remove(); if(el.hasAttribute('data-tw1-title')){ el.setAttribute('title', el.getAttribute('data-tw1-title')); el.removeAttribute('data-tw1-title'); } }catch(e){} tw1Tip = null; }
+}
+(function(){
+  const sel = '[data-bd-rrg] [data-tw1-name]';
+  const hit = e=>{ try{ return e.target && e.target.closest ? e.target.closest(sel) : null; }catch(x){ return null; } };
+  document.addEventListener('mouseover', e=>{ const el = hit(e); if(el && !tw1Tip) tw1TipShow(el); else if(el && tw1Tip && tw1Tip.el !== el) tw1TipShow(el); }, true);
+  document.addEventListener('mouseout', e=>{ const el = hit(e); if(el && tw1Tip && tw1Tip.el === el && !(e.relatedTarget && el.contains(e.relatedTarget))) tw1TipHide(); }, true);
+  document.addEventListener('touchstart', e=>{
+    const el = hit(e); clearTimeout(tw1LpT); if(!el || !e.touches || e.touches.length !== 1) return;
+    tw1LpXY = [e.touches[0].clientX, e.touches[0].clientY];
+    tw1LpT = setTimeout(()=>{ tw1LpT = 0; tw1LpDone = Date.now(); tw1TipShow(el); tw1TipT = setTimeout(tw1TipHide, 2000); }, 400);
+  }, {capture:true, passive:true});
+  document.addEventListener('touchmove', e=>{ if(tw1LpT && tw1LpXY && e.touches[0] && Math.hypot(e.touches[0].clientX - tw1LpXY[0], e.touches[0].clientY - tw1LpXY[1]) > 10){ clearTimeout(tw1LpT); tw1LpT = 0; } }, {capture:true, passive:true});
+  const end = ()=>{ clearTimeout(tw1LpT); tw1LpT = 0; if(tw1Tip && tw1LpDone) tw1TipHide(); };
+  document.addEventListener('touchend', end, {capture:true, passive:true}); document.addEventListener('touchcancel', end, {capture:true, passive:true});
+  document.addEventListener('contextmenu', e=>{ if(hit(e) && (tw1LpDone && Date.now() - tw1LpDone < 3000 || e.pointerType === 'touch' || 'ontouchstart' in window)) e.preventDefault(); }, true);   /* no callout popup after a long-press */
+  window.addEventListener('scroll', tw1TipHide, {passive:true, capture:true});
+})();
 function bdRrgHtml(){
   const e = bdE, tf = rrgTf(), ok = bdRrgRows();
   const tiles = BD_RQ.map(q=>{
     const all = ok.filter(x=>x.quad === q[0]).sort((a, b)=>b.ratio - a.ratio), open = !!bdRrgMore[q[0]], vis = open ? all : all.slice(0, 3), hid = all.length - vis.length;
     const rsv = x=>{ const v = (+x.ratio || 100) - 100; return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1); };
-    const rows = vis.map(x=>{ const m = BD_MV[bdMotion(x)]; return `<div class="bd-sr" data-bd-sec="${e(x.sym)}" data-bd-mv="${bdMotion(x)}"><span class="sy">${e(x.sym)}</span><em class="mv ${bdMotion(x)}">${m[0]}<span class="mt"> ${m[1]}</span></em><i>${rsv(x)}</i></div>`; }).join('');
-    const inl = vis.map(x=>`<span class="il" data-bd-mv="${bdMotion(x)}">${e(x.sym)}<em class="mv ${bdMotion(x)}">${BD_MV[bdMotion(x)][0]}</em></span>`).join('');
+    const rows = vis.map(x=>{ const m = BD_MV[bdMotion(x)]; return `<div class="bd-sr" data-bd-sec="${e(x.sym)}" data-bd-mv="${bdMotion(x)}"${tw1NameAttr(x.sym)}><span class="sy">${e(x.sym)}</span><em class="mv ${bdMotion(x)}">${m[0]}<span class="mt"> ${m[1]}</span></em><i>${rsv(x)}</i></div>`; }).join('');
+    const inl = vis.map(x=>`<span class="il" data-bd-mv="${bdMotion(x)}"${tw1NameAttr(x.sym)}>${e(x.sym)}<em class="mv ${bdMotion(x)}">${BD_MV[bdMotion(x)][0]}</em></span>`).join('');
     const mo = hid > 0 ? `<button type="button" class="bd-qm" data-bd-qmore="${q[0]}" onclick="bdRrgMoreSet('${q[0]}',true)">+${hid}</button>` : (open && all.length > 3 ? `<button type="button" class="bd-qm" data-bd-qmore="${q[0]}" onclick="bdRrgMoreSet('${q[0]}',false)">less</button>` : '');
     return `<div class="panel bd-qt" data-bd-quad="${q[0]}"><b style="color:${q[3]}">${q[1]}</b><div class="qs">${q[2]}</div><div class="bd-qr">${rows || '<span class="m">—</span>'}</div><div class="bd-qi">${inl || '<span class="m">—</span>'}</div>${mo}</div>`;
   }).join('');
