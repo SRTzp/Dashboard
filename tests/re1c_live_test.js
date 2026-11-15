@@ -181,4 +181,16 @@ const spec = { mult: 1, fx: 35, lotStep: 1, minLot: 1 };
   const before = JSON.stringify(s); const L = A.live(s, 'main'); A.sizeMomentum(L, Object.assign({ homeworkDone: true, side: 'long', entry: 100, stop: 95 }, spec)); A.stopInfo(L, L.ideas[0].id, 101);
   ok('live layer is read-only (input unchanged)', JSON.stringify(s) === before);
 }
+
+/* RE-C1 — a blocked Momentum form never shows a count above the limit; the room line agrees with the reason */
+{
+  const s = src(); s.books.main.trades = [1, 2, 3, 4].map(k => tr({ id: 'h' + k, sym: 'S' + k, qty: 10, entry: 100, sl: 95, posGroup: 'h' + k, sl0: 95 }));
+  const L = A.live(s, 'main'); const m = A.sizeMomentum(L, Object.assign({ homeworkDone: true, side: 'long', entry: 100, stop: 95, ideaId: 'new' }, spec));
+  ok('blocked by ammunition: room line says "Ideas 4 of 4 used or reserved" (never "5 of 4")', /^Ideas 4 of 4 used or reserved/.test(m.roomLine) && !/5 of 4/.test(m.roomLine), m.roomLine);
+  const s2 = src(); s2.books.main.trades = [tr({ id: 'big', sym: 'BIG', qty: 5000, entry: 100, sl: 95, posGroup: 'big', sl0: 95 })];
+  const m2 = A.sizeMomentum(A.live(s2, 'main'), Object.assign({ homeworkDone: true, side: 'long', entry: 100, stop: 95, ideaId: 'new' }, spec));
+  ok('blocked by money: room line shows the room left and what this order needs, ideas never above 4', /this order needs/.test(m2.roomLine) && !/ideas [5-9] of 4/.test(m2.roomLine), m2.roomLine);
+  const s3 = src(); const m3 = A.sizeMomentum(A.live(s3, 'main'), Object.assign({ homeworkDone: true, side: 'long', entry: 100, stop: 95, ideaId: 'new' }, spec));
+  ok('allowed: "Week room … · idea 1 of 4"', /idea 1 of 4/.test(m3.roomLine), m3.roomLine);
+}
 console.log((fail ? 'FAIL ' : 'PASS ') + pass + '/' + (pass + fail) + ' live-layer assertions'); process.exit(fail ? 1 : 0);

@@ -119,7 +119,7 @@ Key decisions embedded (also covered by tests):
 - **Option C**: ammunition reservation is released only if **every live tranche's stop is confirmed** and `projectedNet ≥ 0` (strict, costs included). Recomputed on events only — the caller re-runs it after: stop confirm, qty change, partial exit, addition, cost edit. A returning reservation counts against *new* orders only (no position is touched).
 - **Momentum gross loss**: per idea, `max(0, −Σ realized exit events inside the period)`, summed over ideas (wins never offset across ideas). Partial exits count immediately; an idea becomes a *completed loss* (ammunition) only when closed with net < 0 (strict sign), by close-time week.
 - **Satellite budget** uses *net* (`max(0, −weekly net)`, wins offset within Satellite); the Active summary floors each strategy's usage at 0 separately.
-- **Snapshot**: only `confirmed` snapshots count; none ⇒ `NO_SNAPSHOT`; newest older than 14 days ⇒ `SNAPSHOT_STALE` (exactly 14.000 d still usable); no snapshot in the current week ⇒ carried with `SNAPSHOT_OLD` flag. Week basis = first confirmed snapshot on/after Monday 00:00, month basis = first on/after day 1.
+- **Snapshot**: only `confirmed` snapshots count; none ⇒ `NO_SNAPSHOT`; newest older than 14 days ⇒ `SNAPSHOT_STALE` (exactly 14.000 d still usable); newest snapshot older than this week's Monday ⇒ carried with `SNAPSHOT_OLD` flag. **Week basis = the latest confirmed snapshot at or before Monday 00:00 (Bangkok), month basis = the latest at or before day 1 00:00** (RE-C1 brief §1 — supersedes "first on/after"); none before the start (first run) ⇒ the earliest confirmed one, flagged `BASIS_FIRST`; a mid-week manual snapshot never replaces the week-start basis.
 - **Emergency**: trigger when cash-flow-adjusted decline ≥ 10 % (exact −10 % triggers); stays until decline < 5 % (exact −5 % stays); reference (equity + time) retained across month change; deposits/withdrawals after the reference are removed from the decline.
 - **Fills / reductions**: `actionPolicy('fill', check)` always `accepted:true` with `FILL_OVER_LIMIT` + the breached codes; `cancel / reduce / close / stop_update / snapshot / cost_edit` are always accepted; only `order / addon / topup / edit_increase` can be refused.
 - Unconfirmed / ambiguous data is never `0`: missing equity, FX, multiplier, lot step, price, cost ⇒ reason code.
@@ -175,7 +175,7 @@ equitySnapshots: [{
 }]
 cashFlows: [{ id, acct, at, amount (+deposit / −withdrawal, base currency), note }]
 ```
-Rules: week basis = first confirmed snapshot on/after Monday 00:00 (Bangkok); month basis = first confirmed on/after day 1 00:00; deposits take effect on the next snapshot, withdrawals reduce the basis immediately (engine: a withdrawal after a snapshot is subtracted from the displayed/used equity in the adapter; Emergency excludes both). Equity ≤ 0 or missing ⇒ `EQUITY_MISSING`.
+Rules: week basis = the **latest confirmed snapshot at or before Monday 00:00** (Bangkok, snapshot `at` = its as-of date); month basis = the latest confirmed at or before day 1 00:00 (RE-C1 brief §1 supersedes the earlier "first on/after" wording); deposits take effect on the next snapshot, withdrawals reduce the basis immediately (engine: a withdrawal after a snapshot is subtracted from the displayed/used equity in the adapter; Emergency excludes both). Equity ≤ 0 or missing ⇒ `EQUITY_MISSING`.
 
 ### 5.2 Cost settings
 ```

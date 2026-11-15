@@ -405,5 +405,17 @@ const costsOf = () => C;
   eq(R.bkk.weekKey(R.bkk.noonOf('2026-11-15')), '2026-11-09', 'A Sunday noon belongs to the previous Bangkok week');
 }
 
+// ═══ RE-C1 · snapshot basis = latest confirmed snapshot AT OR BEFORE the period start (brief wins; a mid-week manual snapshot never replaces it) ═══
+{
+  const D0 = t => Date.parse(t + 'T00:00:00+07:00'), snaps = [{ at: D0('2026-11-09'), equity: 5000000, confirmed: true }, { at: D0('2026-11-18'), equity: 5300000, confirmed: true }];
+  const b = R.snapshotBasis(snaps, Date.parse('2026-11-19T10:00:00+07:00'));
+  eq(b.weekEquity, 5000000, 'RE-C1 mid-week manual snapshot (Wed) does NOT replace the week-start basis (Mon 16 Nov → latest at/before = 9 Nov)');
+  eq(b.currentEquity, 5300000, 'RE-C1 …but it is the current equity');
+  eq(b.monthEquity, 5000000, 'RE-C1 month basis = latest at/before 1 Nov → earliest available (first run), flagged');
+  ok(b.flags.indexOf('BASIS_FIRST') >= 0, 'RE-C1 no snapshot before the month start → BASIS_FIRST');
+  const b2 = R.snapshotBasis(snaps.concat([{ at: D0('2026-11-16'), equity: 5100000, confirmed: true }]), Date.parse('2026-11-19T10:00:00+07:00'));
+  eq(b2.weekEquity, 5100000, 'RE-C1 a snapshot dated Monday (as-of Monday 00:00) IS the week-start basis');
+}
+
 console.log((f ? 'FAIL ' : 'PASS ') + (n - f) + '/' + n + ' risk-engine assertions');
 process.exit(f ? 1 : 0);

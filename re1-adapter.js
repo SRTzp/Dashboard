@@ -586,7 +586,10 @@
     m.reasons = chk.reasons.slice(); m.flags = chk.flags.slice();
     var Mo = chk.money, uv = f.mult * f.fx, wRoom = Mo.weekCap - (Mo.weekUsed - z.actualRisk), mRoom = Mo.monthCap - (Mo.monthUsed - z.actualRisk), room = Math.min(wRoom, mRoom);
     m.room = { weekPct: Math.max(0, wRoom) / L.basis.weekEquity * 100, monthPct: Math.max(0, mRoom) / L.basis.monthEquity * 100, ideasUsed: chk.ammo.total, ideasMax: chk.ammo.max, completedLosses: chk.ammo.completedLosses }; m.roomPct = m.room.weekPct;
-    m.roomLine = 'Week room ' + pctTxt(m.room.weekPct) + ' · idea ' + chk.ammo.total + ' of ' + chk.ammo.max + (f.homeworkDone === true ? '' : ' · full size after homework');
+    var held = chk.ammo.completedLosses + chk.ammo.reserved, needPct = z.actualRisk / L.basis.weekEquity * 100;
+    if (m.reasons.indexOf('AMMO_EXHAUSTED') >= 0) m.roomLine = 'Ideas ' + Math.min(held, chk.ammo.max) + ' of ' + chk.ammo.max + ' used or reserved · week room ' + pctTxt(m.room.weekPct);   /* blocked: say what is used, never a count above the limit */
+    else if (m.reasons.indexOf('MONEY_WEEK') >= 0 || m.reasons.indexOf('MONEY_MONTH') >= 0) m.roomLine = 'Week room ' + pctTxt(m.room.weekPct) + ' · this order needs ' + pctTxt(needPct) + ' · ideas ' + Math.min(held, chk.ammo.max) + ' of ' + chk.ammo.max + ' used or reserved';
+    else m.roomLine = 'Week room ' + pctTxt(m.room.weekPct) + ' · idea ' + chk.ammo.total + ' of ' + chk.ammo.max + (f.homeworkDone === true ? '' : ' · full size after homework');
     m.allowedQty = m.reasons.indexOf('AMMO_EXHAUSTED') >= 0 ? 0 : allowedQty(room, z.actualDistance * uv, f.lotStep, f.minLot, m.qty);
     return finish(m, { roomPct: m.room.weekPct });
   }

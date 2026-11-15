@@ -48,6 +48,20 @@ def L(page, acct="main"):
     return js(page, "(a)=>{ const L=re1L(a); return L? {ok:L.basis.ok, week:L.basis.weekEquity, reasons:L.basis.reasons, prov:L.basis.provisional, em:L.emergency.active, eF:L.eF, ammo:L.mom.state&&L.mom.state.ammoUsed, step:L.sat.step.step, locked:L.sat.step.locked, ideas:L.ideas.length, heat:L.comp.heat&&L.comp.heat.pct} : null }", acct)
 
 
+def layout_ok(page, host="#cnRe1"):
+    """result box FULL WIDTH below the inputs, nothing wider than its box, no mid-word break rule"""
+    return js(page, """(h)=>{ const b=document.querySelector(h+' [data-re1-box]'); if(!b) return {err:'nobox'};
+      const bw=b.getBoundingClientRect(), par=b.parentElement.getBoundingClientRect(); const en=document.getElementById('cnEntry')||document.querySelector('[data-pb2-in=entry]'), sl=document.getElementById('cnStop')||document.querySelector('[data-pb2-in=sl]');
+      const below=[en,sl].every(e=>!e||e.getBoundingClientRect().bottom <= bw.top+1);
+      const cs=getComputedStyle(b); const ovf=[...b.querySelectorAll('*')].some(e=>e.scrollWidth>e.clientWidth+1 && e.clientWidth>0);
+      return {full: bw.width >= par.width*0.95, below, wb: cs.wordBreak, ow: cs.overflowWrap, ovf, w:Math.round(bw.width), pw:Math.round(par.width)} }""", host)
+
+
+def layout_check(page, tag, what, host="#cnRe1"):
+    r = layout_ok(page, host)
+    check("[" + tag + "] " + what + ": result box full width BELOW the inputs, no mid-word break", r.get("full") and r.get("below") and r.get("wb") != "break-all" and r.get("ow") != "anywhere" and not r.get("ovf"), r)
+
+
 def run_viewport(pw, w, h):
     tag = str(w)
     # ── A · Momentum form: allowed (homework not done = 50%) and the formula names every factor
@@ -60,6 +74,7 @@ def run_viewport(pw, w, h):
         check(("[" + tag + "] result box: quantity + amount + room line + chip"), "#" in t and "฿" in t and "Week room" in t and "homework 50%" in t, t)
         check(("[" + tag + "] editable 'Risk per idea' is gone (hidden, read-only)"), js(page, "()=>{ const r=document.querySelector('.ps1RiskC'); return !r || getComputedStyle(r).display==='none' }") and js(page, "()=>document.getElementById('cnRisk').readOnly"))
         check(("[" + tag + "] form has no horizontal overflow"), no_overflow(page))
+        layout_check(page, tag, "Momentum allowed")
         if w == 390: shot(page, "form-momentum-390")
         if w == 1440: shot(page, "form-momentum-1440")
         # Compounder form: Pilot × regime; Add-on locked listing
@@ -67,6 +82,7 @@ def run_viewport(pw, w, h):
         t = box(page)
         check(("[" + tag + "] Compounder form: 'Pilot 0.5% × regime ..% = ..%' (homework NOT applied on top of the Pilot)"), "Pilot 0.5%" in t and "homework" not in t.lower().split("homework not done")[0] + "", t)
         check(("[" + tag + "] Pilot | Add-on switch with Add-on locked"), js(page, "()=>!!document.querySelector('[data-re1-switch]') && document.querySelector('[data-re1-kind=addon]').disabled"))
+        layout_check(page, tag, "Compounder allowed")
         if w == 390: shot(page, "form-compounder-390")
         check(("[" + tag + "] Settings shows Equity snapshot, costs, Training (Starter off)"), True)
         # Settings rows
@@ -76,11 +92,37 @@ def run_viewport(pw, w, h):
         check(("[" + tag + "] Settings: costs rows (Momentum / Compounder / Satellite) per account"), js(page, "()=>document.querySelectorAll('[data-re1-cost]').length") == 6)
         check(("[" + tag + "] Training · Starter ¼ is OFF after cut-over (set once)"), not js(page, "()=>re1TrainingOn()") and js(page, "()=>ln4Cfg().re1StarterReset===true"))
         check(("[" + tag + "] Settings has no horizontal overflow"), no_overflow(page))
-        if w == 390 or w == 1440: shot(page, "settings-%s" % tag)
+        txtS = js(page, "()=>document.getElementById('ln4SetBox').innerText")
+        check(("[" + tag + "] Settings shows Equity snapshot · + Cash flow · Costs · Training · Starter ¼"), all(x in txtS for x in ["Equity snapshot", "+ Cash flow", "Costs", "Training", "Starter"]), txtS[:200])
+        check(("[" + tag + "] old cap / loss / Core-rules / Sat Main-Tactical settings are hidden"), js(page, "()=>['#crSec','#satRiskSec','#ps1Sec [data-ps1-loss]','#ps1Sec .ps1Row:not([data-re1-keep])'].every(s=>{ const e=document.querySelector(s); return !e || e.offsetParent===null })") and js(page, "()=>{ const e=document.querySelector('#ps1Sec [data-ps1-minstock]'); return !!e }"))
+        if w == 390 or w == 1440:
+            page.set_viewport_size({"width": w, "height": 1900}); page.wait_for_timeout(300)
+            js(page, "()=>{ const b=document.getElementById('ln4SetBox'); b.scrollIntoView({block:'start'}); }"); page.wait_for_timeout(300)
+            shot(page, "settings-%s" % tag)
+            page.set_viewport_size({"width": w, "height": h}); page.wait_for_timeout(200)
         js(page, "()=>{ document.getElementById('setOverlay').classList.remove('show'); switchTab('mix'); }"); page.wait_for_timeout(500); page.add_style_tag(content=NOANIM)
         check("[" + tag + "] Port risk: one block per account, no overflow", js(page, "()=>document.querySelectorAll('[data-re1-port]').length") == 2 and js(page, "()=>document.querySelector('[data-re1-port]').offsetParent !== null") and no_overflow(page))
         if w in (390, 1440): shot(page, "port-risk-%s" % tag)
         check(("[" + tag + "] no console / page errors (A)"), not ce and not pe, ce + pe)
+    finally:
+        b.close()
+
+    # ── A2 · Satellite popup (allowed + blocked) at this width
+    d = doc_c()
+    for a in d["books"].values(): a["settings"]["capital"] = {"core": 5000000, "satB": 100000}
+    d["books"]["main"]["trades"] = []
+    b, page, ce, pe = launch(pw, w, h, d, {})
+    try:
+        SAT = """(a)=>{ const i={id:'gi',v3:true,v2:true,asset:'XAUUSD',bias:'Long',entry:2642,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[]}; sat7dWrite('satIdeas','gi',i); satIdeasList.push(i); switchTab('plan'); pb2={step:2,id:'gi',a:'XAUUSD',dir:'Buy',acct:'main',entry:'2642',sl:'2628',tp:a[0],ema:true,str:true,mss:null}; pb2Render(); const el=document.getElementById('pb2C'); return el? el.innerText : 'NOPOP' }"""
+        t = js(page, SAT, ["2684"]); page.wait_for_timeout(400); page.add_style_tag(content=NOANIM)
+        check(("[" + tag + "] Satellite form allowed: result box present"), "Step" in t and "queue" in t, t[:200])
+        layout_check(page, tag, "Satellite allowed", "#pb2C")
+        if w == 390: shot(page, "form-satellite-390")
+        t = js(page, SAT, ["2650"]); page.wait_for_timeout(300)
+        check(("[" + tag + "] Satellite form blocked (R:R below 1.5): red box with the reason"), "Blocked" in t or "R:R" in t, t[:200])
+        layout_check(page, tag, "Satellite blocked", "#pb2C")
+        if w == 390: shot(page, "form-satellite-blocked-390")
+        check(("[" + tag + "] no overflow in the Satellite popup"), no_overflow(page))
     finally:
         b.close()
 
@@ -94,6 +136,8 @@ def run_viewport(pw, w, h):
         check(("[" + tag + "] blocked form: red box with the reason (ammunition)"), "Blocked" in t and "ammunition" in t.lower(), t)
         check(("[" + tag + "] blocked form: marked blocked + allowed quantity line"), js(page, "()=>!!document.querySelector('#cnRe1 [data-re1-blocked]')"))
         check(("[" + tag + "] Save draft stays enabled while blocked"), js(page, "()=>!document.getElementById('cnDraft').disabled"))
+        layout_check(page, tag, "Momentum blocked")
+        check(("[" + tag + "] blocked room line agrees with the reason (never 'idea 5 of 4')"), "of 4 used or reserved" in t and "5 of 4" not in t, t)
         if w in (390, 1440): shot(page, "form-blocked-%s" % tag)
         check(("[" + tag + "] blocked form no overflow"), no_overflow(page))
     finally:
@@ -104,7 +148,20 @@ def run_viewport(pw, w, h):
     try:
         plan_form(page, "AMD", 182.5, 170)
         t = box(page)
-        check(("[" + tag + "] over the weekly money limit: reason text + room"), "Weekly loss budget" in t and "room" in t, t)
+        check(("[" + tag + "] over the weekly money limit: reason text + room"), "Weekly loss budget" in t and "room" in t and "ideas" not in t.split("Week room")[0], t)
+        check(("[" + tag + "] money-blocked room line shows what this order needs, never an idea count above 4"), "this order needs" in t and not any(("ideas %d of 4" % k) in t for k in range(5, 10)), t)
+    finally:
+        b.close()
+    d = doc_c()
+    d["books"]["main"]["trades"] = [tr(id="c%d" % k, sym="C%d" % k, cur="USD", qty=1000, entry=100, sl=96, posGroup="c%d" % k, sl0=96) for k in range(6)]
+    cs = {"cc%d" % k: {"acct": "main", "ticker": "C%d" % k, "market": "US", "strategy": "L", "track": "ladder", "status": "open", "trade_id": "c%d" % k, "lots": [{"n": 1, "px": 100, "qty": 1000}]} for k in range(6)}
+    b, page, ce, pe = launch(pw, w, h, d, cs)
+    try:
+        plan_form(page, "NVDX", 100, 90, track="ladder"); t = box(page)
+        check(("[" + tag + "] Compounder blocked (heat cap): red box, reason + heat line, allowed qty"), "Blocked" in t and "Heat" in t, t)
+        layout_check(page, tag, "Compounder blocked")
+        if w == 390: shot(page, "form-compounder-blocked-390")
+        check(("[" + tag + "] Compounder blocked form no overflow"), no_overflow(page))
     finally:
         b.close()
 
@@ -407,7 +464,7 @@ def run_guarantees(pw):
 
 
 with sync_playwright() as pw:
-    for w, h in ((390, 844), (1280, 800), (1440, 900)):
+    for w, h in ((360, 780), (390, 844), (1280, 800), (1440, 900)):
         run_viewport(pw, w, h)
     run_logic(pw)
     run_adapter_dry(pw)

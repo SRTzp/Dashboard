@@ -238,17 +238,20 @@
     var last = list[list.length - 1], ageDays = (now - last.at) / DAY;
     if (ageDays > P.snapshot.blockAfterDays + EPS) return { ok: false, state: 'stale', ageDays: ageDays, snapshot: last, reasons: ['SNAPSHOT_STALE'], flags: [] };
     var ws = weekStart(now), ms = monthStart(now);
-    function pick(from) { var c = null; list.forEach(function (s) { if (s.at >= from && !c) c = s; }); return c; }   /* first confirmed snapshot of the period */
+    /* RE-C1 (brief wins): week-start / month-start basis = the LATEST confirmed snapshot at or before the period start (a snapshot's `at` is its as-of date, 00:00 Bangkok).
+       None at or before the start (first run) → the earliest confirmed one, flagged BASIS_FIRST. A mid-week snapshot never replaces the week-start basis. */
+    function pick(from) { var c = null; list.forEach(function (s) { if (s.at <= from) c = s; }); return c || list[0]; }
     var wk = pick(ws), mo = pick(ms), flags = [];
-    if (!wk) flags.push('SNAPSHOT_OLD');
-    return { ok: true, state: flags.length ? 'carried' : 'current', ageDays: ageDays, snapshot: last,
-      weekEquity: (wk || last).equity, weekAt: (wk || last).at, monthEquity: (mo || last).equity, monthAt: (mo || last).at,
+    if (last.at < ws) flags.push('SNAPSHOT_OLD');
+    if (wk.at > ws || mo.at > ms) flags.push('BASIS_FIRST');
+    return { ok: true, state: last.at < ws ? 'carried' : 'current', ageDays: ageDays, snapshot: last,
+      weekEquity: wk.equity, weekAt: wk.at, monthEquity: mo.equity, monthAt: mo.at,
       currentEquity: last.equity, reasons: [], flags: flags };
   }
 
   /* ═══ 6. Emergency ═══
      state = {active, refEquity, refStartMs} · flows = [{at, amount}] (+deposit / −withdrawal) · snapshot = {at, equity, confirmed}
-     monthStartEquity = equity of the first confirmed snapshot of the snapshot's month (caller: snapshotBasis().monthEquity / monthAt).
+     monthStartEquity = month-start basis = the latest confirmed snapshot at or before day 1 00:00 Bangkok (caller: snapshotBasis().monthEquity / monthAt; brief RE-C1 §1).
      Trigger: cash-flow-adjusted decline >= 10 % from the reference. Keeps its reference across month change until adjusted decline is above −5 %. */
   function flowsSince(flows, fromMs, toMs) { var s = 0; (flows || []).forEach(function (f) { if (f && num(f.amount) && f.at > fromMs && f.at <= toMs) s += f.amount; }); return s; }
   function emergencyStep(state, snap, monthRef, flows, cfg) {

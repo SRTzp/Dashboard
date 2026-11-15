@@ -36,16 +36,16 @@ Thesis done + (existing tranches at current stop + working orders + new order) �
 ## (c) Counts (final run)
 | Suite | Result |
 |---|---|
-| `tests/risk_engine_test.js` (engine) | 308 pass / 0 fail |
+| `tests/risk_engine_test.js` (engine) | 313 pass / 0 fail |
 | `tests/re1_adapter_test.js` (adapter) | 63 / 0 |
-| `tests/re1c_live_test.js` (live layer) | 60 / 0 |
-| `run_tests_re1c.py` (390 / 1280 / 1440) | 124 pass / 0 fail |
+| `tests/re1c_live_test.js` (live layer) | 63 / 0 |
+| `run_tests_re1c.py` (360 / 390 / 1280 / 1440) | 203 pass / 0 fail |
 | 375 (`run_tests_phase375.py`) | 158 / 0 |
 | 374 (`run_tests_phase374.py`) | 254 pass / 0 fail · 3 retired (1 check × 3 viewports) |
 | 373 (`run_tests_phase373.py`) | 547 pass / 0 fail · 9 retired (3 checks × 3 viewports) |
 | SW2 (`run_tests_phase_sw2.py`) | 33 / 33 |
 | re1b (`run_tests_re1b.py`) | 19 / 0 |
-| `ui_audit.py` | exit 0 · `screens not ok: []` · rule 1/3/5/7 = 0 · rule 2 = 2, rule 4 = 2 (390 only), rule 6 = 161, rule 8 = 2 (not compared with main) |
+| `ui_audit.py` | exit 0 · `screens not ok: []` · identical to origin/main (table below) |
 
 Retired checks are printed as `RETIRED (RE-C1, not counted as PASS)` and are **not** in any pass count above.
 
@@ -80,3 +80,23 @@ Retired checks are printed as `RETIRED (RE-C1, not counted as PASS)` and are **n
 
 ## Screenshots (`tests/screenshots/re1c-*.png`, animations off)
 form-momentum-390/1440 · form-satellite-1440 · form-compounder-390 · form-blocked-390/1440 · compounder-locked-1440 · compounder-addon-below-entry-1440 · port-risk-390/1440 · settings-390/1440 (snapshot + costs + Training) · move-stop-1440 · confirm-stop-1440 · sat-reentry-confirm-1440 · fill-flagged-over-cap-1440.
+
+## Fix round (after review)
+1. **iPhone plan form:** the result box lived inside the Entry / SL grid cell; it now sits full width below the inputs (`#cnRe1` after the grid) and `word-break` is normal (no `anywhere`). Layout is asserted at 360 / 390 / 1280 / 1440 for Momentum, Compounder and Satellite, allowed and blocked ("result box full width BELOW the inputs, no mid-word break").
+2. **Blocked room line:** it now agrees with the reason — ammunition: `Ideas 4 of 4 used or reserved · week room …`; money: `Week room … · this order needs … · ideas n of 4 used or reserved`; never a count above 4 (tests: live "blocked by ammunition…", "blocked by money…", UI "blocked room line agrees with the reason").
+3. **Old Settings cards hidden (data kept, unread):** Portfolio & Risk caps / loss limits / legacy limits, Core rules (DD brake, tier, ladder, add-ons), Sat RPT / DD / pyramid split / value caps / Tactical brake / old per-trade risk. Min stop (stocks and Satellite) and the TP1 / TP2 exit split stay. Test: "old cap / loss / Core-rules / Sat Main-Tactical settings are hidden".
+4. **Snapshot basis — the brief wins:** the engine's `snapshotBasis` and the adapter both use the latest confirmed snapshot at or before the period start; spec §5.1, §2 and the engine comment are aligned. New tests: engine "mid-week manual snapshot (Wed) does NOT replace the week-start basis", "a snapshot dated Monday IS the week-start basis", "BASIS_FIRST"; the live-layer test already covered the same in the adapter.
+5. **ui_audit, origin/main vs this branch** (same `ui_audit.py`, `--index` on a worktree of origin/main). First branch run had new findings; fixed at 390 (lone chip row on Today, small fonts / tap targets in the new Port blocks, Settings rows and the result box). Final:
+
+| rule | main 390 / 1280 / 1440 | branch 390 / 1280 / 1440 |
+|---|---|---|
+| 1 word broken | 0 / 0 / 0 | 0 / 0 / 0 |
+| 2 chip wraps | 2 / 0 / 0 | 2 / 0 / 0 |
+| 3 overflow | 0 / 0 / 0 | 0 / 0 / 0 |
+| 4 lone control row | 0 / 0 / 0 | 0 / 0 / 0 |
+| 5 duplicate message | 0 / 0 / 0 | 0 / 0 / 0 |
+| 6 font / tap target | 41 / 35 / 35 | 41 / 35 / 35 |
+| 7 overlap | 0 / 0 / 0 | 0 / 0 / 0 |
+| 8 empty gap | 0 / 1 / 1 | 0 / 1 / 1 |
+
+6. **Screenshots retaken** (`re1c-form-*-390.png` incl. Satellite and blocked variants; `re1c-settings-390/1440.png` taller viewport scrolled to Equity snapshot · + Cash flow · Costs · Training · Starter ¼).
