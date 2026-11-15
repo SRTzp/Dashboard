@@ -54,6 +54,14 @@
     miss.add('CLOSE_TIME', t.id); return { ms: 0, dateOnly: false };
   }
 
+  /* exit reason for whipsaw / re-entry: explicit 'stop'|'target'|'manual' else derived from price vs the row's stop / target (the app's own exitReason is a free tag) */
+  function exitReasonOf(t, side) {
+    if (t.exitReason === 'stop' || t.exitReason === 'target' || t.exitReason === 'manual') return t.exitReason;
+    var x = n(t.exitPrice), sl = n(t.sl), tp = n(t.tp), long = side !== 'short';
+    if (pos(x) && pos(sl) && (long ? x <= sl + 1e-9 : x >= sl - 1e-9)) return 'stop';
+    if (pos(x) && pos(tp) && (long ? x >= tp - 1e-9 : x <= tp + 1e-9)) return 'target';
+    return pos(x) ? 'manual' : null;
+  }
   /* Build engine ideas for ONE account. Returns {ideas, info:{id→meta}, excluded:[...]} */
   function buildAccount(src, acc, miss) {
     var B = (src.books && src.books[acc.id]) || {}, S = B.settings || {}, trades = Array.isArray(B.trades) ? B.trades : [];
@@ -98,7 +106,7 @@
         else if (t.status === 'closed') {
           if (T.stop === null) T.stop = n(t.sl);
           var tm = tradeTime(t, miss); if (lastExit === null || tm.ms > lastExit) lastExit = tm.ms;
-          exits.push({ id: 'x:' + t.id, time: tm.ms, qty: n(t.qty) || 0, price: n(t.exitPrice), fees: 0, swap: 0, trancheId: T.id, reason: t.exitReason || null, dateOnly: tm.dateOnly });
+          exits.push({ id: 'x:' + t.id, time: tm.ms, qty: n(t.qty) || 0, price: n(t.exitPrice), fees: 0, swap: 0, trancheId: T.id, reason: exitReasonOf(t, side), dateOnly: tm.dateOnly });
           if (!t.exitReason) miss.add('EXIT_REASON', t.id);
         }
         if (init === null) sl0Missing = true;
