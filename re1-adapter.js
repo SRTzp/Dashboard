@@ -549,7 +549,16 @@
     m.reasonTexts = m.reasons.map(function (c) { return rtext(c, d); }); m.blocked = m.reasons.length > 0; m.ok = !m.blocked && m.qty > 0; return m;
   }
   function sizeCommon(L, f, rptPct, factor, fraction) {
-    return R.sizeOrder({ equity: L.basis.weekEquity, rptPct: rptPct, factor: factor, fraction: fraction, entry: f.entry, stop: f.stop, side: f.side, minStopDist: f.minStopDist, mult: f.mult, fx: f.fx, lotStep: f.lotStep, minLot: f.minLot });
+    var o = { equity: L.basis.weekEquity, rptPct: rptPct, factor: factor, fraction: fraction, stop: f.stop, side: f.side, minStopDist: f.minStopDist, mult: f.mult, fx: f.fx, lotStep: f.lotStep, minLot: f.minLot };
+    if (f.levels && f.levels.length > 1) {   /* several entry levels inside ONE attempt: one shared effective RPT, user split (answers-A #5) */
+      var z = R.sizeAttempt(Object.assign(o, { levels: f.levels })), q = 0, w = 0;
+      z.levels.forEach(function (l) { q += l.qty || 0; w += (l.qty || 0) * l.price; });
+      z.avgEntry = q > 0 ? w / q : f.entry; z.actualDistance = Math.abs(z.avgEntry - f.stop); z.sizingDistance = z.actualDistance;
+      var below = z.levels.some(function (l) { return l.reasons.indexOf('LOT_BELOW_MIN') >= 0; });
+      if (below && z.reasons.indexOf('LOT_BELOW_MIN') < 0) z.reasons = z.reasons.concat(['LOT_BELOW_MIN']);
+      return z;
+    }
+    return R.sizeOrder(Object.assign(o, { entry: f.entry }));
   }
   /* ── Momentum (new order · addition · edit) ──
      f = {entry, stop, side, homeworkDone, starterOn, isFirstEntry, usedFraction, ideaId, isAddition, mult, fx, lotStep, minLot, minStopDist} */
@@ -557,14 +566,14 @@
     var m = baseModel(L, 'winner'); m.chip = L.emergency.active ? { t: 'Emergency 50%', c: 'r' } : (f.homeworkDone === true ? null : { t: 'Homework not done', c: 'a' });
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
     var fr = R.entryFraction({ homeworkDone: f.homeworkDone === true, starterOn: f.starterOn === true, isFirstEntry: f.isFirstEntry !== false, usedFraction: f.usedFraction || 0 });
-    var base = RP.mom.rptPct, ef = L.eF, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; m.factors = ['BASE_' + base];
+    var base = RP.mom.rptPct, ef = L.eF, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];
     var parts = [f2(base, 2) + '%'], eff = base * ef * fr.fraction;
     if (f.homeworkDone !== true) { parts.push('homework 50%'); m.factors.push('HOMEWORK_50'); }
     if (f.starterOn === true && f.isFirstEntry !== false) { parts.push('starter 25%'); m.factors.push('STARTER_25'); }
     if (ef < 1) { parts.push('emergency 50%'); m.factors.push('EMERGENCY_50'); }
     m.effPct = eff; m.formula = parts.join(' × ') + ' = ';
     if (z.reasons.length) { m.reasons = z.reasons.slice(); return finish(m); }
-    m.qty = z.qty; m.money = z.actualRisk; m.moneyPct = z.actualRiskPct; m.sizingDistance = z.sizingDistance; m.minStopApplied = z.minStopApplied;
+    m.qty = z.qty; m.money = z.actualRisk; m.moneyPct = z.actualRiskPct; m.sizingDistance = z.sizingDistance; m.minStopApplied = z.minStopApplied; m.avgEntry = z.avgEntry || f.entry;
     var chk = R.momentumCheck({ now: L.now, account: L.acct, basis: L.basis, ideas: ideaOthers(L, f.ideaId), costsFor: L.costsFor, candidate: { ideaId: f.ideaId || '__new__', isAddition: f.isAddition === true, riskMoney: z.actualRisk } });
     m.reasons = chk.reasons.slice(); m.flags = chk.flags.slice();
     var Mo = chk.money, uv = f.mult * f.fx, wRoom = Mo.weekCap - (Mo.weekUsed - z.actualRisk), mRoom = Mo.monthCap - (Mo.monthUsed - z.actualRisk), room = Math.min(wRoom, mRoom);
@@ -594,8 +603,7 @@
     m.effPct = cond.factor == null ? null : base * cf * ef; m.formula = parts.join(' × ') + ' = ';
     var z = { reasons: [], qty: 0, actualRisk: 0, actualDistance: 0 };
     if (cf > 0) {
-      if (f.levels && f.levels.length > 1) { z = R.sizeAttempt({ equity: L.basis.weekEquity, rptPct: base, factor: cf * ef, stop: f.stop, side: f.side, minStopDist: f.minStopDist, mult: f.mult, fx: f.fx, lotStep: f.lotStep, minLot: f.minLot, levels: f.levels }); m.levels = z.levels; z.actualDistance = Math.abs(f.entry - f.stop); }
-      else z = sizeCommon(L, f, base, cf * ef, 1);
+      z = sizeCommon(L, f, base, cf * ef, 1); if (z.levels) m.levels = z.levels;
       if (z.reasons.length) rs = rs.concat(z.reasons);
     }
     m.sizing = z; m.qty = z.qty || 0; m.money = z.actualRisk || 0; m.moneyPct = z.actualRiskPct != null ? z.actualRiskPct : (m.money / L.basis.weekEquity * 100);
@@ -611,33 +619,39 @@
     return finish(m, { roomPct: m.room.weekPct });
   }
   /* ── Compounder ──
-     f = {kind:'pilot'|'topup'|'addon', ideaId, thesisDone, starterOn, entry, stop, side, mult, fx, lotStep, minLot, minStopDist, legacy, usedPct, lastPrice} */
+     f = {kind:'pilot'|'topup'|'addon', ideaId (existing idea of this ticker), thesisDone, starterOn, entry, stop, side, mult, fx, lotStep, minLot, minStopDist, legacy, levels?}
+     Add-on / further buys = TOTAL-RISK rule (answers-A #16 amended): thesis + (existing tranches at current stop + working orders + new order) <= 1.00 % (0.50 % without thesis)
+     of week-start equity + new order alone <= 0.50 % x min(Regime, Emergency). Entry above OR below the average entry (below = warning only). */
   function sizeComp(L, f) {
     var m = baseModel(L, 'ladder'), kind = f.kind || 'pilot'; m.kind = kind;
     m.chip = (L.regime.factor < 1 || L.regime.stale) ? { t: 'Regime ' + Math.round(L.regime.factor * 100) + '%', c: 'a' } : null;
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
-    var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), base = kind === 'addon' ? RP.comp.addonPct : RP.comp.pilotPct;
-    var fraction = (kind === 'pilot' && f.starterOn === true) ? RP.comp.starter * 2 : 1;
-    m.factors = [(kind === 'addon' ? 'ADDON_' : 'PILOT_') + base]; var parts = [(kind === 'addon' ? 'Add-on ' : 'Pilot ') + f2(base, 2) + '%'];
+    var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true;
+    var multi = !!(f.levels && f.levels.length > 1), planCap = thesis ? RP.comp.pilotPct + RP.comp.addonPct : RP.comp.pilotPct;
+    var base = multi ? planCap : (kind === 'pilot' ? RP.comp.pilotPct : RP.comp.addonPct);
+    var fraction = (kind === 'pilot' && f.starterOn === true && !multi) ? RP.comp.starter * 2 : 1;
+    var label = multi ? 'Plan ' : kind === 'pilot' ? 'Pilot ' : 'Add-on ';
+    m.factors = [(multi ? 'PLAN_' : kind === 'pilot' ? 'PILOT_' : 'ADDON_') + base]; var parts = [label + f2(base, 2) + '%'];
     if (fac < 1) { var pc = Math.round(fac * 100), em = L.eF < rg.factor; parts.push((em ? 'emergency ' : 'regime ') + pc + '%'); m.factors.push((em ? 'EMERGENCY_' : 'REGIME_') + pc); }
     if (fraction < 1) { parts.push('starter 25%'); m.factors.push('STARTER_25'); }
     m.effPct = base * fac * fraction; m.formula = parts.join(' × ') + ' = ';
-    var z = sizeCommon(L, f, base, fac, fraction); m.sizing = z;
+    var z = sizeCommon(L, f, base, fac, fraction); m.sizing = z; if (z.levels) m.levels = z.levels;
     if (z.reasons.length) { m.reasons = z.reasons.slice(); return finish(m); }
-    m.qty = z.qty; m.money = z.actualRisk; m.moneyPct = z.actualRiskPct;
-    var pil = null;
-    if (me && me.tranches.length) { var pr = R.ideaResult(me, L.costsFor(me)); pil = { tranche: me.tranches[0], stopConfirmed: me.tranches.every(function (t) { return t.stopConfirmed === true; }), projectedNetOk: pr.projectedNet !== null && pr.projectedNet >= -1e-7, price: f.lastPrice }; }
-    var entry = { kind: kind, starterOn: f.starterOn === true, thesisDone: f.thesisDone === true, legacy: f.legacy === true, side: f.side, pilot: pil || {}, requestedPct: m.effPct, usedPct: f.usedPct || 0 };
+    m.qty = z.qty; m.money = z.actualRisk; m.moneyPct = z.actualRiskPct; m.avgEntry = z.avgEntry || f.entry;
+    var eq = L.basis.weekEquity, existing = 0, working = 0, avg = null;
+    if (me) { var pr = R.ideaResult(me, L.costsFor(me)); existing = pr.exposure === null ? pr.principalRisk : pr.exposure; avg = ideaAvg(me); (me.workingOrders || []).forEach(function (w) { if (pos(w.qty) && pos(w.entry) && pos(w.stop)) working += w.qty * Math.abs(w.entry - w.stop) * (w.mult > 0 ? w.mult : 1) * (w.fx > 0 ? w.fx : 1); }); }
+    var usedPct = (existing + working) / eq * 100, firstPct = multi ? m.effPct * ((f.levels[0].splitPct || 0) / 100) : (m.money / eq * 100);
+    var chkKind = multi ? 'pilot' : kind, reqPct = multi ? firstPct : (m.money / eq * 100);
+    var entry = { kind: chkKind, starterOn: f.starterOn === true, thesisDone: thesis, legacy: f.legacy === true, side: f.side, entryPx: f.entry, avgEntry: avg, requestedPct: reqPct, usedPct: multi ? 0 : usedPct, factor: fac };
     var cc = R.compCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: ideaOthers(L, f.ideaId), costsFor: L.costsFor, cycles: L.comp.cycles, unlocks: L.comp.unlocks, signals: L.signals, emergencyFactor: L.eF, entry: entry, candidateRisk: m.money });
-    m.reasons = cc.reasons.slice(); m.flags = cc.flags.slice(); m.lock = cc.lock; m.heat = cc.heat; m.entry = cc.entry;
-    var hRoom = Math.max(0, L.basis.weekEquity * RP.comp.heatCapPct / 100 - cc.heat.money);
-    m.room = { heatPct: cc.heat.pct, heatCapPct: RP.comp.heatCapPct, roomPct: hRoom / L.basis.weekEquity * 100 };
-    var uv = f.mult * f.fx, hard = m.reasons.some(function (c) { return /^COMP_(LOCKED|THESIS|PILOT|TOPUP)/.test(c); });
-    m.allowedQty = hard ? 0 : allowedQty(hRoom, z.actualDistance * uv, f.lotStep, f.minLot, m.qty);
-    m.roomLine = 'Heat ' + f2(cc.heat.pct, 1) + '% of ' + RP.comp.heatCapPct + '% · room ' + f2(m.room.roomPct, 1) + '%';
-    var ad = R.compEntryCheck({ kind: 'addon', thesisDone: f.thesisDone === true, legacy: f.legacy === true, side: f.side, pilot: pil || {}, requestedPct: 0, usedPct: 0 });
-    var miss = ad.reasons.filter(function (c) { return /^COMP_(THESIS|PILOT_R|PILOT_STOP)$/.test(c); });
-    m.addon = { locked: miss.length > 0, missing: miss.map(function (c) { return c === 'COMP_THESIS' ? 'thesis done' : c === 'COMP_PILOT_R' ? 'Pilot at +1.5R' : 'stop at net breakeven'; }) };
+    m.reasons = cc.reasons.slice(); m.flags = cc.flags.slice(); m.lock = cc.lock; m.heat = cc.heat; m.entry = cc.entry; m.usedPct = usedPct;
+    var hRoom = Math.max(0, eq * RP.comp.heatCapPct / 100 - cc.heat.money), totRoom = Math.max(0, eq * planCap / 100 * (kind === 'pilot' ? 1 : 1) - (existing + working)), room = Math.min(hRoom, totRoom);
+    m.room = { heatPct: cc.heat.pct, heatCapPct: RP.comp.heatCapPct, roomPct: hRoom / eq * 100, tickerUsedPct: usedPct, tickerCapPct: planCap };
+    var uv = f.mult * f.fx, hard = m.reasons.some(function (c) { return /^(COMP_LOCKED|ADDON_THESIS)$/.test(c); });
+    m.allowedQty = hard ? 0 : allowedQty(multi ? hRoom : room, z.actualDistance * uv, f.lotStep, f.minLot, m.qty);
+    m.roomLine = 'Heat ' + f2(cc.heat.pct, 1) + '% of ' + RP.comp.heatCapPct + '% · room ' + f2(m.room.roomPct, 1) + '%' + (me ? ' · ticker ' + f2(usedPct, 2) + '% of ' + f2(planCap, 2) + '%' : '');
+    var miss = []; if (!thesis) miss.push('thesis done');
+    m.addon = { locked: miss.length > 0, missing: miss, totalRoomPct: Math.max(0, (RP.comp.pilotPct + RP.comp.addonPct) - usedPct) };
     return finish(m, { heat: cc.heat });
   }
   /* idea-level helper for the stop form: estimated net-breakeven price, effect of confirming a new stop */

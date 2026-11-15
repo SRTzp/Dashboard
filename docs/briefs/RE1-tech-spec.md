@@ -229,7 +229,8 @@ riskEvents: [{
 | SAT_STALE_ORDER | F | satStaleOrders | working order > 1 day — "still valid?" reminder |
 | COMP_LOCKED | B | compCheck | six consecutive losing ticker-cycles |
 | COMP_HEAT | B | compCheck | open principal risk + candidate > 6 % |
-| COMP_THESIS / COMP_PILOT_R / COMP_PILOT_STOP / COMP_TOPUP_STOP / COMP_PHASE_CAP | B | compEntryCheck | Add-on / top-up / phase-cap gates |
+| ADDON_THESIS / ADDON_TOTAL_RISK / COMP_PHASE_CAP | B | compEntryCheck | Add-on needs thesis · ticker total risk (existing at current stop + this order) ≤ 1.00% (0.50% without thesis) and new order ≤ 0.50% × min(Regime, Emergency) · Pilot phase cap (RE-C1 amendment, answers-A #16) |
+| ADDON_BELOW_ENTRY_WARN | F | compEntryCheck | adding below the average entry — warning only, never a block |
 | COMP_REGIME_STALE | F | regimeState | signals stale/missing ⇒ factor ≤ 75 % |
 | COMP_UNLOCK_WAIT / _SIGNALS / _STALE / _NOTE / _CONFIRM | B | compUnlockCheck | the five unlock conditions |
 | EMERGENCY_ON | F | (adapter label) | Emergency active (factor 0.5) |
