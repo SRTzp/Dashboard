@@ -78,6 +78,7 @@ def run_core(pw, w, h):
         check("[%s] Journal: one collapsed row 'Not taken · 2 this week ›'" % tag, j and not j["open"] and j["sum"] == "Not taken · 2 this week ›" and j["rows"] == 2, j)
         check("[%s] Journal: count per reason for week / month" % tag, j and "Missed 1 wk · 1 mo" in j["counts"] and "Invalidated 1 wk · 1 mo" in j["counts"], j)
         js(page, "()=>document.querySelector('[data-re4-nottaken] summary').click()"); page.wait_for_timeout(200)
+        js(page, "()=>document.querySelector('[data-re4-nottaken]').scrollIntoView({block:'center'})"); page.wait_for_timeout(200)
         if w in (390, 1440): shot(page, "journal-not-taken-%d" % w)
         check("[%s] Journal: no overflow when the list is open" % tag, no_overflow(page))
         # restore
@@ -227,9 +228,46 @@ def run_sat(pw, w, h):
         b.close()
 
 
+def run_shots(pw, w, h):
+    """standard re1d-*.png set (no animation): Today · Plan board · one form per strategy · Port risk · Settings (risk section) · Satellite form"""
+    tag = str(w)
+    cs = cards(); cs["pA"] = plan_card("AAA", 100, 92, px=102.0); cs["pB"] = plan_card("BBB", 60, 55)
+    d = doc_c()
+    for a in d["books"].values(): a["settings"]["capital"] = {"core": 5000000, "satB": 100000}
+    b, page, ce, pe = launch(pw, w, h, d, cs)
+    try:
+        shot(page, "today-%s" % tag)
+        check("[%s] Today: no overflow" % tag, no_overflow(page))
+        board(page); shot(page, "plan-board-%s" % tag)
+        check("[%s] Plan board: no overflow" % tag, no_overflow(page))
+        js(page, "()=>{ switchTab('plan'); coreNewOpen('main', {mode:'new'}); }"); page.wait_for_timeout(500)
+        js(page, "(a)=>{ const s=(id,v)=>{const e=document.getElementById(id); e.value=v;}; s('cnTicker',a[0]); s('cnEntry',a[1]); s('cnStop',a[2]); coreNewIn(); }", ["AMD", "182.5", "170"]); page.wait_for_timeout(400)
+        shot(page, "form-momentum-%s" % tag)
+        check("[%s] Momentum form: no overflow" % tag, no_overflow(page))
+        js(page, "()=>coreFormPort('ladder')"); page.wait_for_timeout(300)
+        js(page, "(a)=>{ const s=(id,v)=>{const e=document.getElementById(id); e.value=v;}; s('cnTicker',a[0]); s('cnEntry',a[1]); s('cnStop',a[2]); coreNewIn(); }", ["NVDA2", "180", "170"]); page.wait_for_timeout(400)
+        shot(page, "form-compounder-%s" % tag)
+        check("[%s] Compounder form: no overflow" % tag, no_overflow(page))
+        js(page, "()=>{ coreSheetClose(); }"); page.wait_for_timeout(200)
+        SAT = """()=>{ const i={id:'gi',v3:true,v2:true,asset:'XAUUSD',bias:'Long',entry:2642,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[]}; sat7dWrite('satIdeas','gi',i); satIdeasList.push(i); switchTab('plan'); pb2={step:2,id:'gi',a:'XAUUSD',dir:'Buy',acct:'main',entry:'2642',sl:'2628',tp:'2684',ema:true,str:true,mss:null}; pb2Render(); }"""
+        js(page, SAT); page.wait_for_timeout(500); shot(page, "form-satellite-%s" % tag)
+        check("[%s] Satellite form: no overflow" % tag, no_overflow(page))
+        js(page, "()=>{ bdPopClose(); switchTab('mix'); }"); page.wait_for_timeout(500)
+        shot(page, "port-risk-%s" % tag)
+        check("[%s] Port risk: no overflow" % tag, no_overflow(page))
+        js(page, "()=>{ openSettings(); }"); page.wait_for_timeout(400)
+        js(page, "()=>{ const e=document.querySelector('[data-re1-snap]'); if(e) e.scrollIntoView({block:'start'}); }"); page.wait_for_timeout(250)
+        shot(page, "settings-risk-%s" % tag)
+        check("[%s] Settings (risk section): no overflow" % tag, no_overflow(page))
+        check("[%s] no console / page errors" % tag, not ce and not pe, ce + pe)
+    finally:
+        b.close()
+
+
 with sync_playwright() as pw:
     for w, h in ((360, 780), (390, 844), (1280, 800), (1440, 900)):
         run_core(pw, w, h); run_passed(pw, w, h); run_review(pw, w, h); run_sat(pw, w, h)
+        if w in (390, 1440): run_shots(pw, w, h)
 bad = [r for r in results if not r[1]]
 print("SUMMARY: %d pass / %d fail" % (len(results) - len(bad), len(bad)))
 sys.exit(1 if bad else 0)

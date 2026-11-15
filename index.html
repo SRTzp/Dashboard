@@ -11208,25 +11208,6 @@ function ln4LadderTip(){
   const L = ln4Ladder();
   ln4Toast(`Stage ${L.stage} = ${LN4_FRAC_TXT[L.stage]} size · valid setups taken ${L.n}/10 · reach 8/10 → next stage (manual)`);
 }
-function ln4MissKey(c){ return c.id + ':' + (c.plan ? c.plan.entry : ''); }
-function ln4Crossed(c){
-  /* Entry crossed (latest price ≥ plan Entry, long) while still Draft — only stocks with a plan are checked */
-  const e = +(c.plan && c.plan.entry), px = +c.px;
-  if(!(e > 0) || !(px > 0) || px < e) return false;
-  if(c.ln4 && c.ln4.placedAt) return false;
-  const cfg = ln4Cfg(); if(cfg.valid && cfg.valid[c.id]) return false;
-  return !(cfg.dismissed && cfg.dismissed[ln4MissKey(c)]);
-}
-function ln4Missed(id){   /* RE-D §6 — the To do 'trigger passed · Missed?' pill opens the same Cancel plan sheet (Missed pre-selected) */
-  const c = coreCardsList.find(x=>x.id === id); if(!c) return;
-  re4Open(id, 'plan', null, 'missed');
-}
-function ln4NotValid(id){
-  const c = coreCardsList.find(x=>x.id === id); if(!c) return;
-  const k = ln4MissKey(c); ln4Write(o=>{ o.dismissed = o.dismissed || {}; o.dismissed[k] = 1; });
-  ln4Toast(`${c.ticker}: not valid anymore`);
-}
-
 /* ── Act rows ── */
 function ln4CoreChecks(c){
   const pl = c.plan || {}, bucket = coreTrackOfCard(c) === 'ladder' ? 'ladder' : 'winner';
@@ -11381,9 +11362,6 @@ function ln4TodoItems(M){
   try{ wl1TodoItems().forEach(x=>out.push(x)); }catch(e){ console.warn('wl1 todo:', e); }   /* WL1 */
   try{ re1TodoItems().forEach(x=>out.push(x)); }catch(e){ console.warn('re1 todo:', e); }   /* RE-C1 */
   try{
-    (coreCardsList || []).forEach(c=>{ if(c.status === 'plan' && ln4Crossed(c)) out.push({c:'a', id:'miss:' + c.id, miss:c.id, t:`${c.ticker} trigger passed · Missed?`}); });
-  }catch(e){}
-  try{
     sk1Items(true).forEach(x=>{
       if(x.more){ out.push({c:'g', g:'lt', gl:'living-thesis', gn:parseInt(String(x.full).replace(/\D/g, ''), 10) || 1, id:'sk:' + x.id, t:'living-thesis ' + x.full + ' more', fn:"switchTab('watch')"}); return; }
       const c = (x.id === 'wi' || x.id === 'pb' || (x.age != null && x.age !== Infinity && x.age > 45)) ? 'a' : 'g';
@@ -11405,7 +11383,7 @@ function ln4TodoGroup(g){ ln4TodoGrp = ln4TodoGrp === g ? '' : g; todayRefresh(t
 function ln4TodoGrouped(L){
   const out = [], seen = {}, rank = {r:0, a:1, g:2};
   L.forEach(x=>{
-    if(!x.g || x.miss){ out.push(x); return; }
+    if(!x.g){ out.push(x); return; }
     const m = L.filter(y=>y.g === x.g);
     if(m.length < 2 && !(x.g === 'lt' && x.gn)){ out.push(x); return; }
     if(seen[x.g]) return; seen[x.g] = 1;
@@ -11418,9 +11396,7 @@ function ln4TodoGrouped(L){
 function ln4TodoHtml(M){
   const L0 = ln4TodoItems(M), e = ln4Exec(); if(!L0.length && !e.y) return '';   /* nothing to do and no valid setup yet = hidden */
   const L = ln4TodoGrouped(L0), vis = ln4TodoAll ? L : L.slice(0, 3);
-  const chip = x=>x.miss
-    ? `<span class="ln4-chip"><button type="button" class="pill p-a" data-ln4-todo="${td3E(x.id)}" data-ln4-miss="${td3E(x.miss)}" onclick="ln4Missed('${td3E(x.miss)}')">${td3E(x.t)}</button><button type="button" class="ln4-x" data-ln4-notvalid="${td3E(x.miss)}" title="Not valid anymore" aria-label="Not valid anymore" onclick="ln4NotValid('${td3E(x.miss)}')">✕</button></span>`
-    : x.grp
+  const chip = x=>x.grp
     ? `<button type="button" class="pill ${x.c === 'r' ? 'p-r' : x.c === 'a' ? 'p-a' : 'p-n'}" data-ln4-todo="${td3E(x.id)}" data-ln4-todogrp="${td3E(x.grp)}" data-ln4-c="${x.c}" aria-expanded="${ln4TodoGrp === x.grp}" onclick="ln4TodoGroup('${td3E(x.grp)}')">${td3E(x.t)} ›</button>`
     : `<button type="button" class="pill ${x.c === 'r' ? 'p-r' : x.c === 'a' ? 'p-a' : 'p-n'}" data-ln4-todo="${td3E(x.id)}" data-ln4-c="${x.c}" onclick="${x.fn}">${td3E(x.t)}</button>`;
   const wide = ln4Wide();
