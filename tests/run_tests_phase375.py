@@ -19,7 +19,10 @@ js, settle, cnt, txt = W.js, T.settle, T.cnt, T.txt
 SHOTS = "/Users/peach/Dashboard-rg2b/tests/screenshots/tw1-"
 
 
+RETIRED_RE1C2 = ['2 Act has plan/position rows', '2 stock row: size = shares', '2 multi-entry plan: size = total shares', '2 Sat row: size in lots', '2 every row has size + risk']   # RE-C2: Act rows are now the three groups (Enter / Check orders / Manage) — covered by run_tests_re1c2
 def check(name, ok, detail=""):
+    if any(q in name for q in RETIRED_RE1C2):
+        print('RETIRED (RE-C2, not counted as PASS) - ' + name); return
     results.append((name, bool(ok), detail))
     detail = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False)
     d = (detail[:700] + "...") if (detail and len(detail) > 700) else detail
@@ -175,6 +178,8 @@ def act_rows(pw, w, h):
 
 
 def status_line(pw, w, h):
+    if w <= 560:
+        print('RETIRED (RE-C2, not counted as PASS) - [%d] 3 Today status line button: on the phone the COMP chip is hidden while Normal (brief §1); the Mac/tablet checks still run' % w); return
     tag = f"[{ENGINE}/{w}]"
     b, page, ce, pe = launch(pw, w, h)
     try:

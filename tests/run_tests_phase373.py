@@ -18,8 +18,11 @@ settle, cnt, txt = T.settle, T.cnt, T.txt
 NOW = T.NOW
 
 
+RETIRED_RE1C2 = ['9 Act follows the board (Fix risk']   # RE-C2: Act is now three groups of actionable items (no single list / max 5 / Fix risk row)
 RETIRED_RE1C1 = ['Port top: Risk in use', '8 Plan summary line uses the same risk number', '8 bar colours: ≥80% of cap amber']   # RE-C1: only checks whose asserted behaviour the brief removes
 def check(name, ok, detail=""):
+    if any(p in name for p in RETIRED_RE1C2):
+        print('RETIRED (RE-C2, not counted as PASS) - ' + name); return
     if any(p in name for p in RETIRED_RE1C1):
         print('RETIRED (RE-C1, not counted as PASS) - ' + name); return
     results.append((name, bool(ok), detail))

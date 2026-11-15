@@ -482,7 +482,10 @@
     });
     return out;
   }
-  function unitCosts(S, acct, strategy, override) {
+  /* RE-C2 §6 — Costs switch: OFF (default) = the whole cost feature is dormant: costs count as 0 (known, all zero) → net = gross, net-breakeven = entry, never Unknown. ONE flag, read here (src.costsOn === true = ON = RE-C1 behaviour). */
+  var NO_COSTS = { known: true, perSidePct: 0, perUnit: 0, min: 0, flat: 0, swapDay: 0, source: 'off' };
+  function unitCosts(S, acct, strategy, override, on) {
+    if (on !== true) return { known: true, perSidePct: 0, perUnit: 0, min: 0, flat: 0, swapDay: 0, source: 'off' };
     var key = strategy === 'winner' ? 'winner' : strategy === 'ladder' ? 'ladder' : 'sat', cs = S.costSettings && typeof S.costSettings === 'object' ? S.costSettings : {};
     var one = {}; one[acct] = cs;
     var c = R.resolveCosts(one, acct, key, override || null);
@@ -501,16 +504,19 @@
     var rowsById = {}; ((src.books && src.books[acctId] && src.books[acctId].trades) || []).forEach(function (t) { if (t) rowsById[t.id] = t; });
     var rowsOf = function (idea) { return (idea.rowIds || []).map(function (id) { return rowsById[id]; }).filter(Boolean); };
     var costOverrideOf = function (idea) { var o = null; rowsOf(idea).forEach(function (t) { if (t.costOverride && typeof t.costOverride === 'object') o = t.costOverride; }); return o; };
-    var costsFor = function (idea) { return unitCosts(S, acctId, idea.strategy, costOverrideOf(idea)); };
+    var costsOn = src.costsOn === true, costsFor = function (idea) { return unitCosts(S, acctId, idea.strategy, costOverrideOf(idea), costsOn); };
+    var offRow = function (idea) { return !costsOn || rowsOf(idea).some(function (t) { return t.costsOff === true; }); };   /* a trade closed while OFF is never re-costed when ON later */
     ideas.forEach(function (i) {
       if (!i.tranches.length) return;
-      var c = costsFor(i), fees = 0, anyRec = false, swap = 0;
-      rowsOf(i).forEach(function (t) { if (t.status !== 'plan' && num(n(t.entryFee))) { fees += n(t.entryFee); anyRec = true; } });
+      var c = costsFor(i), fees = 0, anyRec = false, swap = 0, zero = offRow(i);
+      rowsOf(i).forEach(function (t) { if (!zero && t.status !== 'plan' && num(n(t.entryFee))) { fees += n(t.entryFee); anyRec = true; } });
+      if (zero) anyRec = true;
       if (!anyRec && c.known) i.tranches.forEach(function (t) { fees += R.exitCost(c, t.qty, t.entry, t.mult, t.fx) || 0; });
-      if (c.known && num(c.swapDay) && c.swapDay > 0 && i.strategy === 'sat') i.tranches.forEach(function (t) { var o = isoMs(t.openedAt) !== null ? isoMs(t.openedAt) : R.bkk.noonOf(t.openedAt); if (o !== null && now > o) { var d = Math.floor((now - o) / DAY); swap += d * c.swapDay * t.qty * (t.fx > 0 ? t.fx : 1); } });
+      if (!zero && c.known && num(c.swapDay) && c.swapDay > 0 && i.strategy === 'sat') i.tranches.forEach(function (t) { var o = isoMs(t.openedAt) !== null ? isoMs(t.openedAt) : R.bkk.noonOf(t.openedAt); if (o !== null && now > o) { var d = Math.floor((now - o) / DAY); swap += d * c.swapDay * t.qty * (t.fx > 0 ? t.fx : 1); } });
       i.entryFees = fees + swap;
       (i.exits || []).forEach(function (e) {
         var t = rowsById[String(e.id).replace(/^x:/, '')]; if (!t) return;
+        if (zero || t.costsOff === true) { e.fees = 0; e.swap = 0; return; }
         e.fees = num(n(t.fees)) ? n(t.fees) : (c.known ? (R.exitCost(c, e.qty, e.price, i.tranches[0].mult, i.tranches[0].fx) || 0) : 0); e.swap = num(n(t.swap)) ? n(t.swap) : 0;
       });
       i.reentry = rowsOf(i).some(function (t) { return t.reentry === true; });
@@ -536,7 +542,7 @@
     var satBud = basis.ok ? R.satBudgetCheck({ basis: basis, now: now, account: acctId, ideas: ideas, costsFor: costsFor, candidateRisk: 0 }) : null;
     var momChk = basis.ok ? R.momentumCheck({ now: now, account: acctId, basis: basis, ideas: ideas, costsFor: costsFor, candidate: { ideaId: '__none__', isAddition: true, riskMoney: 0 } }) : null;
     var active = basis.ok ? R.activeSummary({ basis: basis, mom: { usageWeek: momChk.usageWeek, usageMonth: momChk.usageMonth }, sat: { usageWeek: satBud.usageWeek, usageMonth: satBud.usageMonth }, candidateRisk: 0 }) : null;
-    return { acct: acctId, name: acc.name || acctId, now: now, fx: fx, S: S, ideas: ideas, info: A.info, basis: basis, emergency: emergency, eF: eF, costsFor: costsFor, regime: regime, signals: signals,
+    return { acct: acctId, costsOn: costsOn, name: acc.name || acctId, now: now, fx: fx, S: S, ideas: ideas, info: A.info, basis: basis, emergency: emergency, eF: eF, costsFor: costsFor, regime: regime, signals: signals,
       mom: { state: momState, chk: momChk }, sat: { step: step, attempts: attempts, dayAtt: dayAtt, budget: satBud, stale: R.satStaleOrders(ideas, now) }, comp: { streak: streak, cycles: cycles, unlocks: unlocks, heat: heat }, active: active, rowsById: rowsById };
   }
   /* ── reason text (engine text + the concrete numbers) ── */

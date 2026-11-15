@@ -10,7 +10,7 @@ function tr(o) { return Object.assign({ port: 'core', bias: 'Long', mult: 1, cur
 function src(over) {
   const snap = { id: 's1', bkkDate: '2026-11-16', equity: 5000000, confirmed: true, kind: 'weekly' };
   const S = (e) => Object.assign({ fx: 35, equitySnapshots: [snap], costSettings: { winner: { perUnit: 0.005, min: 1 }, ladder: { perUnit: 0.005, min: 1 }, sat: { perUnit: 7, swapDay: 3 } }, capital: { core: 5000000, satB: 0 } }, e || {});
-  const o = { now: NOW, accounts: [{ id: 'main', name: 'Main', ports: ['core', 'satB'] }, { id: 'fam', name: 'Family', ports: ['core', 'satB'] }],
+  const o = { costsOn: true, now: NOW, accounts: [{ id: 'main', name: 'Main', ports: ['core', 'satB'] }, { id: 'fam', name: 'Family', ports: ['core', 'satB'] }],
     books: { main: { settings: S(), trades: [] }, fam: { settings: S({ equitySnapshots: [{ id: 'f1', bkkDate: '2026-11-09', equity: 10000000, confirmed: true }] }), trades: [] } },
     cards: [], ideas: [], ff: FF, specs: {}, portCur: { core: 'THB', satB: 'USD' }, homework: {}, starterOn: false };
   return Object.assign(o, over || {});
@@ -192,5 +192,31 @@ const spec = { mult: 1, fx: 35, lotStep: 1, minLot: 1 };
   ok('blocked by money: room line shows the room left and what this order needs, ideas never above 4', /this order needs/.test(m2.roomLine) && !/ideas [5-9] of 4/.test(m2.roomLine), m2.roomLine);
   const s3 = src(); const m3 = A.sizeMomentum(A.live(s3, 'main'), Object.assign({ homeworkDone: true, side: 'long', entry: 100, stop: 95, ideaId: 'new' }, spec));
   ok('allowed: "Week room … · idea 1 of 4"', /idea 1 of 4/.test(m3.roomLine), m3.roomLine);
+}
+
+/* RE-C2 §6 — Costs switch OFF: costs 0 · net = gross · net-breakeven = entry · never Unknown · trades closed while OFF are never re-costed when ON later */
+{
+  const off = () => { const s = src(); s.costsOn = false; s.books.main.trades = [tr({ id: 'a1', sym: 'AAPL', qty: 100, entry: 100, sl: 95, posGroup: 'a1', sl0: 95 })]; return s; };
+  let s = off(); s.books.main.settings.costSettings = {}; let L = A.live(s, 'main');
+  const si = A.stopInfo(L, L.ideas[0].id, 100);
+  ok('OFF: costs known (all zero) even with no cost settings → never Unknown', L.costsFor(L.ideas[0]).known === true && si.costsKnown === true && L.costsOn === false, si);
+  ok('OFF: estimated net-breakeven price = entry price', si.netBreakeven === 100 && si.costPerShare === 0, si);
+  ok('OFF: no COST_UNKNOWN flag on a Momentum result', A.sizeMomentum(L, Object.assign({ homeworkDone: true, side: 'long', entry: 50, stop: 48 }, spec)).flags.indexOf('COST_UNKNOWN') < 0);
+  s = off(); s.books.main.trades[0].sl = 100; s.books.main.trades[0].stopConfirmed = true; L = A.live(s, 'main');
+  ok('OFF: stop confirmed at entry frees the Momentum idea (Option C) and risk is 0', L.mom.state.ammoUsed === 0 && L.mom.state.reservedIdeas.length === 0, L.mom.state);
+  s = off(); s.books.main.settings.costSettings = { winner: { perUnit: 50, min: 1 } }; L = A.live(s, 'main');
+  ok('OFF: saved cost values stay in the data, unread (costs still 0)', L.costsFor(L.ideas[0]).perUnit === 0 && s.books.main.settings.costSettings.winner.perUnit === 50);
+  const closed = (extra) => { const s = off(); s.books.main.trades = [tr(Object.assign({ id: 'c1', sym: 'AAPL', qty: 100, entry: 100, sl: 95, status: 'closed', exitPrice: 100, exitDate: '2026-10-01', closedAt: '2026-10-01T04:00:00.000Z', posGroup: 'c1', sl0: 95 }, extra || {}))]; return s; };
+  L = A.live(closed(), 'main'); let ir = L.ideas[0];
+  ok('OFF: exit at entry = breakeven (no Momentum loss counted)', L.mom.state.completedLosses === 0 && L.mom.state.ammoUsed === 0 && ir.status === 'closed', L.mom.state);
+  ok('OFF: Satellite exit at entry does not change the step', (() => { const s2 = closed({ port: 'satB', sym: 'XAUUSD', cur: 'USD' }); const L2 = A.live(s2, 'main'); return L2.sat.step.step === 1 && !L2.sat.step.locked; })());
+  // ON later: a trade closed while OFF (costsOff) is never re-costed; a normal one with the same data is
+  const on1 = closed({ costsOff: true }); on1.costsOn = true; on1.books.main.settings.costSettings = { winner: { perUnit: 0.5, min: 1 } };
+  const on2 = closed(); on2.costsOn = true; on2.books.main.settings.costSettings = { winner: { perUnit: 0.5, min: 1 } };
+  const L1 = A.live(on1, 'main'), L2 = A.live(on2, 'main');
+  const net = (L) => { const i = L.ideas[0]; return R.ideaRealizedNet(i); };
+  ok('ON later: a trade closed while OFF keeps net = gross (never re-costed)', Math.abs(net(L1)) < 1e-9, net(L1));
+  ok('ON: a trade closed with the switch ON is costed as in RE-C1', net(L2) < -1e-9, net(L2));
+  ok('ON later never changes a position / order quantity', L1.ideas[0].tranches[0].qty === 100 && L2.ideas[0].tranches[0].qty === 100);
 }
 console.log((fail ? 'FAIL ' : 'PASS ') + pass + '/' + (pass + fail) + ' live-layer assertions'); process.exit(fail ? 1 : 0);
