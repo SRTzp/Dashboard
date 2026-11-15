@@ -11240,7 +11240,7 @@ function ln4RowHtml(r){
   const tag = r.kind === 'sat' ? `<span class="sc sat">SAT</span>` : `<span class="sc${r.tag === 'COMP' ? ' c' : ''}${r.half ? '' : ' pt'}" data-ln4-ptag="${r.tag}"${r.half ? ' data-half="1"' : ''}>${r.tag}${r.half ? ' ½' : ''}</span>`;
   const sec = r.kind === 'sat' ? (r.counter ? '<span class="sc ctr" data-ln4-counter>Counter</span>' : '') + (r.macro ? `<span class="sc" data-ln4-macro-warn>${s(r.macro)}</span>` : '') : ln4SecTag(r.sym);
   const stx = r.bad ? `<span class="st r why" data-ln4-why>${s(r.bad.why)}</span>` : `<span class="st ${r.state === 'draft' ? 'd' : r.state === 'open' ? 'f' : ''}" data-ln4-status>${s(r.status)}</span>`;
-  const b = r.btn ? `<button type="button" class="go${r.btn.p ? ' p' : ''}${r.btn.fx ? ' fx' : ''}" data-ln4-btn onclick="${r.btn.fn}">${s(r.btn.t)}</button>` : '';
+  const b = r.btn ? `<button type="button" class="go${r.btn.p ? ' p' : ''}${r.btn.fx ? ' fx' : ''}" data-ln4-btn${r.btn.dis ? ' disabled' : ''} onclick="${r.btn.fn}">${s(r.btn.t)}</button>` : '';
   /* LN4b — phone: line 1 ticker · type tag · status · line 2 sector/macro tags + red reason (may wrap) · line 3 grey details + button (wrapper is display:contents on Mac) */
   if(r.tw1){
     const why = r.why || '';
@@ -11258,7 +11258,7 @@ function ln4PlanStripHtml(r){
   if(!r) return '';
   const s = td3E, tag = r.kind === 'sat' ? `<span class="sc sat">SAT</span>` : `<span class="sc${r.tag === 'COMP' ? ' c' : ''}${r.half ? '' : ' pt'}" data-ln4-ptag="${r.tag}">${r.tag}${r.half ? ' ½' : ''}</span>`;
   const stx = r.bad ? `<span class="st r" data-ln4-why>${s(r.bad.why)}</span>` : `<span class="st ${r.state === 'draft' ? 'd' : r.state === 'open' ? 'f' : ''}" data-ln4-status>${s(r.status)}</span>`;
-  const b = r.btn ? `<button type="button" class="go${r.btn.p ? ' p' : ''}${r.btn.fx ? ' fx' : ''}" data-ln4-btn onclick="event.stopPropagation();${r.btn.fn}">${s(r.btn.t)}</button>` : '';
+  const b = r.btn ? `<button type="button" class="go${r.btn.p ? ' p' : ''}${r.btn.fx ? ' fx' : ''}" data-ln4-btn${r.btn.dis ? ' disabled' : ''} onclick="event.stopPropagation();${r.btn.fn}">${s(r.btn.t)}</button>` : '';
   const cx = r.state === 'working' ? `<button type="button" class="go" data-ln4-cancel onclick="event.stopPropagation();ln4CancelOrder('${r.kind}','${s(r.id)}')">Cancel order</button>` : '';
   return `<div class="ln4 ln4-pc" data-ln4-pc="${s(r.sym)}" data-ln4-state="${r.state}">${tag}<span class="m">${s(r.det || '')}</span>${stx}${cx}${b}</div>`;
 }
@@ -30516,6 +30516,7 @@ function bdPill(it){
 }
 function bdUrgency(it){   /* §8 Today Act order: Fix risk → Add-on → Planned < 2% → Ordered */
   const p = bdPill(it);
+  if(p.dis && p.re1) return 2.6;   /* RE-C1 — an engine-blocked plan stays visible in Act (reason shown, button disabled) */
   if(p.dis) return 9;
   if(p.k === 'fix') return 0; if(p.k === 'addon') return 1;
   if(p.k === 'place') return it.pct != null && Math.abs(it.pct) < 2 ? 2 : 2.5;
@@ -30907,7 +30908,7 @@ function bdActRows(){
   const dist = x=>x.pct == null ? 1e9 : Math.abs(x.pct);
   items.filter(x=>!x.inc).map(x=>({x, u:bdUrgency(x)})).filter(o=>o.u < 9).sort((a, b)=>(a.u - b.u) || (dist(a.x) - dist(b.x))).forEach(o=>{
     const it = o.x, p = bdPill(it), r = Object.assign({}, it.row);
-    r.btn = {t:p.t, fn:p.fn, p:p.cls === 'p', fx:p.cls === 'fx'};
+    r.btn = {t:p.t, fn:p.fn, p:p.cls === 'p', fx:p.cls === 'fx', dis:!!p.dis};
     if(p.k === 'addon'){ r.state = 'open'; r.status = 'Open'; }
     if(p.k === 'fix' && !r.bad) r.bad = {why:'Fix risk', k:'risk'};
     if(p.k !== 'fix' && p.k !== 'complete') r.bad = null;
@@ -30937,6 +30938,7 @@ function tw1Lv(it){
   return `Entry ${f(it.entry)} / SL ${f(it.sl)}` + (it.kind === 'sat' ? ` / TP ${f(it.tp)}` : '');
 }
 function tw1Why(it, p, r){
+  if(p.re1 && p.dis) return p.title;   /* RE-C1 */
   if(r.bad) return r.bad.why;
   if(p.k === 'addon') return 'Add-on ready';
   if(p.k === 'fill') return 'Order working';

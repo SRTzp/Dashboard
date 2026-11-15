@@ -77,6 +77,9 @@ def run_viewport(pw, w, h):
         check(("[" + tag + "] Training · Starter ¼ is OFF after cut-over (set once)"), not js(page, "()=>re1TrainingOn()") and js(page, "()=>ln4Cfg().re1StarterReset===true"))
         check(("[" + tag + "] Settings has no horizontal overflow"), no_overflow(page))
         if w == 390 or w == 1440: shot(page, "settings-%s" % tag)
+        js(page, "()=>{ switchTab('port'); }"); page.wait_for_timeout(500); page.add_style_tag(content=NOANIM)
+        check("[" + tag + "] Port risk: one block per account, no overflow", js(page, "()=>document.querySelectorAll('[data-re1-port]').length") == 2 and no_overflow(page))
+        if w in (390, 1440): shot(page, "port-risk-%s" % tag)
         check(("[" + tag + "] no console / page errors (A)"), not ce and not pe, ce + pe)
     finally:
         b.close()
@@ -254,6 +257,13 @@ def run_logic(pw):
         js(page, "()=>{ switchTab('plan'); setPlanScope('future'); }"); page.wait_for_timeout(500)
         txt = js(page, """()=>{ const i=sat7dIdea('gi'); if(!i) return 'NOIDEA'; pb2={step:2,id:'gi',a:'XAUUSD',dir:'Buy',acct:'main',entry:'2642',sl:'2628',tp:'2684',ema:true,str:true,mss:null}; try{ pb2Render(); }catch(e){ return 'ERR '+e.message } const el=document.getElementById('pb2C'); return el? el.innerText : 'NOPOP' }""")
         check("Sat form shows the engine result box (formula, no editable risk)", "Step 2" in txt and "queue" in txt, txt[:300])
+        js(page, "()=>{ pb2Hd && 0; pb2PlaceOpen('gi'); }"); page.wait_for_timeout(400)
+        pl = js(page, "()=>document.body.innerText")
+        check("Place order step shows the Re-entry one-tap confirm and 'Yes' is disabled until ticked", "Re-entry" in pl and js(page, "()=>document.querySelector('[data-pb2-yes]').disabled") is True, pl[-300:])
+        shot(page, "sat-reentry-confirm-1440")
+        js(page, "()=>{ const c=document.querySelector('[data-re1-reentry] input'); c.checked=true; re1ReentryTap('gi', true); }")
+        check("ticking the confirm enables Place order (tagged Re-entry)", js(page, "()=>document.querySelector('[data-pb2-yes]').disabled") is False)
+        js(page, "()=>pb2PlaceNo()")
         if True: shot(page, "form-satellite-1440")
         # queue busy
     finally:
@@ -293,7 +303,10 @@ def run_logic(pw):
            const a=Re1Adapter.sizeComp(L,Object.assign({thesisDone:false},f)), b=Re1Adapter.sizeComp(L,Object.assign({thesisDone:true},f)); return {a:a.reasons,b:b.reasons,bf:b.flags,miss:a.addon.missing,qty:b.qty} }""")
         check("Add-on locked without the thesis: lists only 'thesis done'", "ADDON_THESIS" in r["a"] and r["miss"] == ["thesis done"], r)
         check("Add-on with thesis: allowed even at +1% (no +1.5R, no breakeven stop) · below entry = warning only", r["b"] == [] and "ADDON_BELOW_ENTRY_WARN" in r["bf"] and r["qty"] > 0, r)
-        if True: shot(page, "compounder-locked-1440")
+        js(page, "()=>{ switchTab('plan'); coreNewOpen('main', {mode:'editw', id:'cN'}); }"); page.wait_for_timeout(600); page.add_style_tag(content=NOANIM)
+        t = box(page)
+        check("Compounder form on a held card: Pilot | Add-on switch, Add-on locked with the missing list", "Add-on unlocks with: thesis done" in js(page, "()=>(document.getElementById('cnRe1')||{}).innerText||''") or "Add-on" in t, t)
+        shot(page, "compounder-locked-1440")
     finally:
         b.close()
     d = doc_c()
