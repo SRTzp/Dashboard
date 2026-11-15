@@ -7157,7 +7157,8 @@ function re1DryMount(h){
    and trade-row fields stopConfirmed / stopConfirmedAt / costOverride / fees / swap / entryFee / exitReason / reentry. Nothing is deleted; no position or order is ever resized.
    ═══════════════════════════════════════════════════════════════════════════════════════════════ */
 function re1Src(){ const s = re1DrySrc(); s.now = Date.now(); return s; }
-function re1L(acct){ try{ return Re1Adapter.live(re1Src(), acct); }catch(e){ console.warn('re1 live:', e); return null; } }
+let re1Cache = {};
+function re1L(acct){ const t = Date.now(), c = re1Cache[acct]; if(c && t - c.t < 300) return c.L; try{ const L = Re1Adapter.live(re1Src(), acct); re1Cache[acct] = {t, L}; return L; }catch(e){ console.warn('re1 live:', e); return null; } }
 function re1Accts(){ return (acctList || []).map(a=>a.id); }
 function re1Name(id){ const a = (acctList || []).find(x=>x.id === id); try{ return a ? td3AcctName(a) : id; }catch(e){ return a ? a.name : id; } }
 function re1Sym(m){ return m && m.cur === 'USD' ? '$' : '฿'; }
@@ -7171,7 +7172,7 @@ function re1StockSpec(L, mk){ return {mult:1, fx: mk === 'US' ? (L && L.fx > 0 ?
 function re1Write(acct, mut){
   if(!tdCanWrite()) return false;
   const B = getBook(acct); if(!B.settings || typeof B.settings !== 'object') B.settings = {};
-  mut(B.settings, B); saveBook(acct);
+  mut(B.settings, B); saveBook(acct); re1Cache = {};
   try{ todayRefresh(true); }catch(e){} try{ re1Refresh(); }catch(e){}
   return true;
 }
@@ -7268,6 +7269,93 @@ function re1FillFlags(c, qty, px, stop){
   if(r.m.blocked && r.m.reasons.some(x=>['MONEY_WEEK','MONEY_MONTH','AMMO_EXHAUSTED','COMP_HEAT','ADDON_TOTAL_RISK','NO_SNAPSHOT','SNAPSHOT_STALE'].indexOf(x) >= 0)) fl.push('FILL_OVER_LIMIT');
   else if(qty > lim + 1e-9) fl.push('FILL_OVER_LIMIT');
   return fl.length ? fl.concat(r.m.reasons.slice(0, 4)) : [];
+}
+function re1BoardGate(it){
+  try{
+    if(it.kind === 'sat'){ const i = it.ref, c = pb2Calc(i, pb2AcctOf(i)); if(c.c && c.c.lot != null){ const bl = (c.c.blocks || []); return bl.length ? bl[0] : ''; } return ''; }
+    if(it.kind === 'core'){ const g = re1PlanGate(it.ref, 0); return g.ok ? '' : g.msg; }
+  }catch(e){}
+  return '';
+}
+
+/* ── Stop confirmation (mockup D) ── */
+function re1StopRefresh(ns){
+  const host = document.getElementById('csRe1'); if(!host || !coreDlg) return;
+  const c = coreCardsList.find(x=>x.id === coreDlg.id); if(!c) return;
+  const L = re1L(c.acct), idea = L && L.ideas.find(i=>L.info[i.id] && L.info[i.id].card === c.id), e = escHtml; if(!idea){ host.innerHTML = ''; return; }
+  const st = (ns > 0) ? Re1Adapter.stopInfo(L, idea.id, ns) : null, mk = c.market || coreMarketOf(c.ticker), cur = mk === 'TH' ? '฿' : '$', sg = x=>x == null ? '—' : fmt2(x);
+  const t0 = idea.tranches[0], r = (t0 && +c.px > 0 && t0.initialStop && t0.entry > t0.initialStop) ? (+c.px - t0.entry) / (t0.entry - t0.initialStop) : null;
+  let h = `<div class="re1-box" data-re1-stopbox>`;
+  if(r != null) h += `<span class="re1-chip ${r >= 1.5 ? '' : 'n'}">${(r >= 0 ? '+' : '') + r.toFixed(1)}R</span>`;
+  if(st && !st.costsKnown) h += `<div class="re1-f" data-re1-nocost>Costs missing — the stop cannot be recognised as net breakeven. <a href="#" onclick="event.preventDefault();coreSheetClose();openSettings()">Add costs ›</a></div>`;
+  else if(st){
+    h += `<div class="re1-f" data-re1-nb>Net breakeven = entry ${sg(st.avgEntry)} + costs ${sg(st.costPerShare)} = <b>${sg(st.netBreakeven)}</b></div>`;
+    h += `<div class="re1-big" data-re1-effect>${ns > 0 ? (st.atBreakeven ? 'Risk ' + cur + '0' + (st.frees ? ' · frees 1 idea' : '') : (st.exposureAfter != null ? 'Risk ' + cur + Math.round(st.exposureAfter / (mk === 'US' ? (L.fx || 1) : 1)).toLocaleString('en-US') + ' · below net breakeven' : '')) : ''}</div>`;
+  }
+  h += `<label class="re1-f" style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="csConf" data-re1-stopconf> The stop is placed at the broker</label></div>`;
+  if(host.dataset.h !== h){ host.innerHTML = h; host.dataset.h = h; }
+}
+function re1StopMark(t, ns, confirmed, acct, cardId){
+  if(!t) return; t.stopConfirmed = !!confirmed; t.stopConfirmedAt = confirmed ? new Date().toISOString() : null;
+  try{ const S = getBook(acct).settings; if(S && typeof S === 'object') re1Ev(S, acct, confirmed ? 'stop_confirm' : 'stop_move', cardId || t.id, {stop: ns, confirmed: !!confirmed}); }catch(e){}
+  re1Cache = {};
+}
+
+/* ── Port risk blocks (mockup B): one block per account, never combined ── */
+function re1PortBlock(id){
+  const L = re1L(id), e = escHtml; if(!L) return '';
+  const b = L.basis, P = Re1Adapter && RiskEngine.POLICY, eq = b.ok ? b.weekEquity : null, pc = v=>eq > 0 ? v / eq * 100 : null, bar = (u, cap)=>`<div class="re1-bar"><i style="width:${Math.max(0, Math.min(100, cap > 0 && u != null ? u / cap * 100 : 0)).toFixed(0)}%"></i></div>`;
+  const state = !b.ok ? (b.reasons[0] === 'NO_SNAPSHOT' ? ['No snapshot', 'r'] : ['Snapshot stale', 'r']) : L.emergency.active ? ['Emergency ×0.5', 'r'] : b.provisional ? ['Provisional', 'a'] : !b.confirmedThisWeek ? ['Snapshot due', 'a'] : ['Normal', ''];
+  const head = `<div class="t" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${e(re1Name(id))}</b><small class="re1-note" style="margin:0" data-re1-basis>${b.ok ? `week-start ${re1Money(eq)} · ${b.provisional ? 'provisional (entered capital)' : 'snapshot ' + e(re1DayTxt(b.weekSnapDate))}` : 'no usable equity basis'}</small><span class="re1-chip ${state[1]}" data-re1-state>${e(state[0])}</span></div>`;
+  if(!b.ok) return `<div class="re1-pc" data-re1-port="${e(id)}">${head}<div class="re1-f">${e(b.reasons.map(c=>RiskEngine.REASONS[c] ? RiskEngine.REASONS[c].text : c).join(' · '))} — new risk-increasing orders are blocked. Confirm a snapshot in Settings.</div></div>`;
+  const m = L.mom.chk, sb = L.sat.budget, ms = L.mom.state, st = L.sat.step, hh = L.comp.heat, rg = L.regime, ac = L.active;
+  const mU = pc(m.usageWeek), sU = pc(sb.usageWeek), mCap = P.mom.weeklyPct, sCap = P.sat.weeklyPct, cap6 = P.comp.heatCapPct;
+  const q = L.ideas.filter(i=>i.strategy === 'sat' && (i.status === 'ordered' || i.status === 'holding')).length;
+  const row = (nm, line, u, cap, room, cls)=>`<div class="re1-pr" data-re1-row="${e(nm)}"><b>${e(nm)}</b><div><small>${line}</small>${bar(u, cap)}</div><span class="re1-chip ${cls || ''}">${room}</span></div>`;
+  const rm = (cap, u)=>'room ' + re1Pct(Math.max(0, cap - (u || 0)), cap >= 6 ? 1 : 2);
+  const dec = L.emergency.declinePct, mDec = b.monthEquity > 0 && b.currentEquity ? (b.monthEquity - b.currentEquity) / b.monthEquity * 100 : null, shown = dec != null ? dec : mDec;
+  return `<div class="re1-pc" data-re1-port="${e(id)}">${head}
+    ${row('Momentum', `week ${re1Pct(mU)} of ${re1Pct(mCap)} · ideas ${ms.ammoUsed} of ${P.mom.ammo} used`, mU, mCap, rm(mCap, mU))}
+    ${row('Satellite', `week ${re1Pct(sU)} of ${re1Pct(sCap)} · step ${st.step}${st.locked ? ' · LOCKED' : ''} · ${q ? 'queue busy' : 'queue free'}`, sU, sCap, st.locked ? 'locked' : rm(sCap, sU), st.locked ? 'r' : '')}
+    ${row('Compounder', `heat ${re1Pct(hh.pct, 1)} of ${cap6}% · regime ${Math.round(rg.factor * 100)}%${rg.stale ? ' (stale)' : ''} · streak ${L.comp.streak.streak} of ${P.comp.lockLosses}${L.comp.streak.locked ? ' · LOCKED' : ''}`, hh.pct, cap6, L.comp.streak.locked ? 'locked' : rm(cap6, hh.pct), L.comp.streak.locked ? 'r' : '')}
+    <div class="re1-pr" data-re1-row="Active total"><b>Active total</b><div><small>week ${re1Pct(pc(ac.weekUsed))} of ${P.active.weeklyPct}% · month ${re1Pct(b.monthEquity > 0 ? (ac.monthUsed / b.monthEquity * 100) : null, 1)} of ${P.active.monthlyPct}%</small></div><span class="re1-chip n">summary</span></div>
+    <div class="re1-pr" data-re1-row="Emergency"><b>Emergency</b><div><small>${shown != null ? (shown > 0 ? '−' : '+') + Math.abs(shown).toFixed(1) + '% from month start' : 'no snapshot comparison yet'} · half size at −${P.emergency.triggerPct}%</small></div><span class="re1-chip ${L.emergency.active ? 'r' : ''}">${L.emergency.active ? 'ON' : 'off'}</span></div>
+    ${L.comp.streak.locked ? `<div class="re1-row" data-re1-unlock><span class="re1-nm"><b>Compounder unlock</b><small>7 days after the sixth loss · both signals green · fresh data · review note · confirm</small></span><span class="re1-ctl"><input type="text" id="re1UnN_${e(id)}" placeholder="Review note" style="width:170px"><label style="font-size:12px"><input type="checkbox" id="re1UnC_${e(id)}"> confirm</label><button type="button" class="re1-btn" onclick="re1Unlock('${e(id)}')">Unlock</button></span><div class="re1-err" id="re1UnE_${e(id)}" style="display:none"></div></div>` : ''}</div>`;
+}
+function re1Unlock(id){
+  const L = re1L(id), n = document.getElementById('re1UnN_' + id), c = document.getElementById('re1UnC_' + id), er = document.getElementById('re1UnE_' + id); if(!L) return;
+  const r = RiskEngine.compUnlockCheck({now: Date.now(), streakState: L.comp.streak, regime: L.regime, note: n ? n.value : '', confirm: !!(c && c.checked)});
+  if(!r.unlocked){ if(er){ er.style.display = ''; er.textContent = r.reasons.map(x=>RiskEngine.REASONS[x].text).join(' · '); } return; }
+  re1Write(id, S=>{ const o = S.re1 && typeof S.re1 === 'object' ? S.re1 : (S.re1 = {}); o.unlocks = (o.unlocks || []).concat([{at: Date.now(), note: String(n.value).trim()}]); re1Ev(S, id, 'unlock', 'compounder', {note: String(n.value).trim()}); });
+}
+function re1PortRiskHtml(ids){
+  try{
+    const list = (ids && ids.length ? ids : re1Accts()), blocks = list.map(re1PortBlock).join('');
+    let gb = ''; try{ const M = ps1Model(list[0]); if(M && M.P) gb = `<div class="re1-f" style="margin-top:8px" data-ps1-giveback-ro>Give-back to stops (read-only, no cap): <b>${re1Pct(M.P.giveBackPct)}</b> of portfolio</div>`; }catch(e){}
+    return `<div class="panel ln3-pcard" data-re1-portrisk><div class="ln3-ph"><b>Risk</b><small class="re1-note" style="margin:0">projected controls · gaps and slippage can still cause a loss</small></div><div class="re1-pk">${blocks}</div>${gb}</div>`;
+  }catch(e){ console.warn('re1 port:', e); return ''; }
+}
+
+/* ── To do items from the engine: Snapshot due · Move stop (+1.5R) · Satellite order still valid? ── */
+function re1TodoItems(){
+  const out = [], now = Date.now();
+  try{
+    re1Accts().forEach(id=>{
+      const L = re1L(id); if(!L) return; const nm = re1Name(id);
+      if(!L.basis.ok || !L.basis.confirmedThisWeek) out.push({c: L.basis.ok ? 'a' : 'r', id:'re1snap:' + id, t:'Snapshot due · ' + nm, fn:"openSettings()"});
+      L.ideas.forEach(i=>{
+        if(i.strategy === 'winner' && i.status === 'holding' && i.tranches.length){
+          const card = (coreCardsList || []).find(c=>c.id === (L.info[i.id] || {}).card), t0 = i.tranches[0];
+          if(card && +card.px > 0 && t0.initialStop && t0.entry > t0.initialStop){
+            const r = (+card.px - t0.entry) / (t0.entry - t0.initialStop);
+            if(r >= RiskEngine.POLICY.mom.releaseR && L.mom.state.reservedIdeas.indexOf(i.id) >= 0) out.push({c:'a', id:'re1stop:' + card.id, t:'Move stop · ' + card.ticker, fn:"coreStopOpen('" + td3E(card.id) + "')"});
+          }
+        }
+      });
+      (L.sat.stale || []).forEach(x=>{ const it = L.ideas.find(i=>i.id === x.ideaId); out.push({c:'a', id:'re1stale:' + x.orderId, t:(it ? it.sym : 'Order') + ' · still valid?', fn:"switchTab('plan')"}); });
+    });
+  }catch(e){}
+  return out;
 }
 function re1Toast(m){ try{ sdToast(m); }catch(e){ console.warn(m); } }
 /* ── Form result box (mockup A) ── m = adapter model · o = {cur, unit:'#'|'lot', fxd (display divisor for money)} ── */
@@ -10699,7 +10787,8 @@ function tdRegimeVerdict(opt){
   const nodata = st==='grey';
   const old = !nodata && W.age!=null && W.age > 2;
   let chipHasReg = false; if(opt && opt.dedupe){ try{ chipHasReg = ln4PortPills().indexOf('(regime)') >= 0; }catch(e){} }   /* UA1 — chip MMT ½ · COMP ½ (regime) บอกขนาดแล้ว → ป้าย Regime เหลือแค่ Risk-ON/OFF */
-  const full = (nodata || chipHasReg) ? label : `${label} · Momentum ${W.cap}% · Compounder ${L.cap}%`;
+  const rgf = (()=>{ try{ return Math.round(RiskEngine.regimeState({acwi:a, hyg:h, asOf:(J && J.as_of) || null}, Date.now()).factor * 100); }catch(e){ return L.cap; } })();
+  const full = (nodata || chipHasReg) ? label : `${label} · Compounder ${rgf}%`;
   const short = label;   /* LN4c — phone: label only · W/L sizes live in Details */
   const stF = old ? `<span class="st"> · data ${W.age}d old</span>` : '';
   const stS = old ? `<span class="st"> · ${W.age}d old</span>` : '';
@@ -10712,16 +10801,7 @@ function tdRegimeGo(){
   setTimeout(()=>{ const h = document.getElementById('ffRegime'); if(h && h.scrollIntoView) h.scrollIntoView({block:'start'}); }, 60);
 }
 /* RG2b §4.7 — Today › Core: หัวแผงมี 2 บรรทัด `Winner 75% · used x%` / `Ladder 100% · used x%` (ตัวคูณ Regime ของถังนั้น · ใช้จริง ÷ ถัง) · จอแคบ = `W 75% · x%` · รวมทุกบัญชีที่เปิด Core */
-function td3PoolLinesHtml(){
-  const ids = acctList.filter(a=>(a.ports || ACCT_PORT_KEYS).includes('core')).map(a=>a.id);
-  const st = ids.map(id=>{ try{ return poolStats(id); }catch(e){ return null; } }).filter(x=>x && x.P.total > 0);
-  if(!st.length) return '';
-  const sum = f=>st.reduce((a, x)=>a + f(x), 0);
-  const row = (k, full, short, used, pool)=>{
-    const F = ffPoolFactor(k), pc = pool > 0 ? Math.round(used / pool * 100) : 0, stale = F.stale ? `<span class="td3-pst" data-td3-pool-stale> · data ${F.age==null ? '—' : F.age}d old</span>` : '';
-    return `<div class="td3-pool" data-td3-pool="${k}" data-pool-factor="${F.cap}" data-pool-used="${pc}"><span class="full">${full} ${F.cap}% · used ${pc}%</span><span class="short">${short} ${F.cap}% · ${pc}%</span>${stale}</div>`; };
-  return `<div class="td3-pools" data-td3-pools>${row('winner', 'Momentum', 'W', sum(x=>x.wC), sum(x=>x.P.winner))}${row('ladder', 'Compounder', 'L', sum(x=>x.lU), sum(x=>x.P.ladder))}</div>`;
-}
+function td3PoolLinesHtml(){ return ''; }   /* RE-C1 — Momentum regime throttle removed; Compounder regime shown in the status chip */
 /* ═══════════════════════════════════════════════════════════════════════════
    LN4 — Lean Today (status card · Act · Find) + Starter ¼ + Exec/Missed + Stage ladder
    Principle: show only what needs action; normal = hidden; details one tap away. Nothing deleted — moved/collapsed.
@@ -10791,15 +10871,19 @@ let ln4HotAll = false;
 function ln4HotSheet(){ ln4HotAll = !ln4HotAll; todayRefresh(true); }
 
 /* ── status card ── */
-function ln4PortPills(){   /* LN4c — ONE small chip: "MMT ½ · COMP ¾ (regime)" · loss-brake states "MMT Half · SAT Blocked" · only when abnormal */
-  const A = tdHome(), loss = [], reg = []; let red = false;
-  [['winner', 'MMT'], ['ladder', 'COMP']].forEach(([b, nm])=>{
-    let done = false;
-    try{ const ev = lossEval(A, b); if(ev && ev.status !== 'normal'){ loss.push(`${nm} ${ev.label.replace('Half size', 'Half')}`); if(ev.blocked) red = true; done = true; } }catch(e){}
-    if(!done){ try{ const F = ffPoolFactor(b); if(!F.demo && F.cap < 100) reg.push(`${nm} ${F.cap <= 50 ? '½' : '¾'}`); }catch(e){} }
-  });
-  try{ const ev = lossEval(A, 'sat'); if(ev && ev.status !== 'normal'){ loss.push(`SAT ${ev.label.replace('Half size', 'Half')}`); if(ev.blocked) red = true; } }catch(e){}
-  const parts = loss.slice(); if(reg.length) parts.push(reg.join(' · ') + ' (regime)');
+function ln4PortPills(){   /* RE-C1 — ONE chip, only when abnormal: Emergency · snapshot · locks · regime (engine) */
+  const parts = []; let red = false, regOnly = true;
+  try{
+    re1Accts().forEach(id=>{
+      const L = re1L(id); if(!L) return; const nm = re1Accts().length > 1 ? re1Name(id) + ' ' : '';
+      if(!L.basis.ok){ parts.push(nm + (L.basis.reasons[0] === 'NO_SNAPSHOT' ? 'no snapshot' : 'snapshot stale')); red = true; regOnly = false; return; }
+      if(!L.basis.confirmedThisWeek && !L.basis.provisional){ parts.push(nm + 'snapshot due'); regOnly = false; }
+      if(L.emergency.active){ parts.push(nm + 'Emergency ½'); red = true; regOnly = false; }
+      if(L.sat.step.locked){ parts.push(nm + 'SAT locked'); red = true; regOnly = false; }
+      if(L.comp.streak.locked){ parts.push(nm + 'COMP locked'); red = true; regOnly = false; }
+    });
+    const F = RiskEngine.regimeState((re1L(tdHome()) || {}).signals || {}, Date.now()); if((F.factor < 1 || F.stale) && (re1L(tdHome()) || {}).signals && re1L(tdHome()).signals.asOf) parts.push('COMP ' + (F.factor <= 0.5 ? '½' : '¾') + ' (regime)');
+  }catch(e){}
   if(!parts.length) return '';
   return `<button type="button" class="pill ${red ? 'p-r' : 'p-a'} ln4-pchip" data-ln4-portpill="all" data-tw1-status title="Regime details" aria-label="${td3E(parts.join(' · '))} — open Regime details in Flow" onclick="tw1RegimeGo()" style="cursor:pointer">${td3E(parts.join(' · '))}</button>`;
 }
@@ -10810,11 +10894,7 @@ function tw1RegimeGo(){
   setTimeout(go, 30);
 }
 /* room = week loss limit − realised week loss (home account) · ONE source for Today and Port */
-function ln4RoomR(){
-  try{ const A = tdHome(), w = lossEval(A, 'winner'), s = lossEval(A, 'sat'), lim = (w || s) ? (w || s).cfg.weekR : null;
-    if(lim != null){ const used = Math.max(w ? w.weekR : 0, s ? s.weekR : 0); return (Math.round((lim - used) * 10) / 10).toFixed(1); } }catch(e){}
-  return null;
-}
+function ln4RoomR(){ return null; }   /* RE-C1 — R-based room retired (loss limits removed); room comes from the engine */
 /* Port badges: ¼ starter · add-on planned · stop below avg · 0 risk (same rule as Raise stop ›) */
 function ln4PortBadges(r, M){
   const out = [];
@@ -10851,12 +10931,12 @@ function ln4PortCardHtml(ids){
   }catch(e){ console.warn('ln4 port:', e); return ''; }
 }
 function ln4RiskLine(roomHere){
+  /* RE-C1 — status text from the engine (home account): Momentum / Satellite week usage */
   try{
-    if(ps1Off()) return '';
-    const M = ps1Model(); if(!M) return '';
-    let room = '';
-    if(roomHere !== false){ const rr = ln4RoomR(); if(rr != null) room = ` · room <b data-ln4-room>${rr}R</b><span class="ln4-tw"> this week</span>`; }
-    return `<span class="lb" data-ln4-risk>Risk <b>${ps1Pct(M.P.principalPct, 1)}${ln4Wide() ? ' / ' + ps1Pct(M.cfg.total, 1) : '/' + ps1Pct(M.cfg.total, 0)}</b>${room}</span>`;
+    const A = tdHome(), L = re1L(A); if(!L) return '';
+    if(!L.basis.ok) return `<span class="lb" data-ln4-risk><b style="color:var(--red)">${L.basis.reasons[0] === 'NO_SNAPSHOT' ? 'No snapshot' : 'Snapshot stale'}</b> · new orders blocked</span>`;
+    const eq = L.basis.weekEquity, pc = v=>re1Pct(v / eq * 100, 2), P = RiskEngine.POLICY;
+    return `<span class="lb" data-ln4-risk>Risk · Mom <b>${pc(L.mom.chk.usageWeek)}</b>/${P.mom.weeklyPct}${ln4Wide() ? ' · Sat <b>' + pc(L.sat.budget.usageWeek) + '</b>/' + P.sat.weeklyPct : ''}${ln4Wide() ? ' · ideas <b>' + L.mom.state.ammoUsed + '</b>/' + P.mom.ammo : ''}</span>`;
   }catch(e){ return ''; }
 }
 function ln4HotLine(){
@@ -11205,6 +11285,7 @@ function ln4TodoItems(M){
   const out = [], rank = {r:0, a:1, g:2};
   try{ ftList().forEach(x=>{ const c = x.over > 0 ? 'r' : x.left <= 1 ? 'a' : 'g'; out.push({c, g:'ft', gl:'homework', id:'ft:' + x.sym, t:`${x.sym} homework ${x.over > 0 ? 'overdue' : (x.left === 0 ? 'due today' : 'due in ' + x.left + 'd')}`, fn:`ftGo('${td3E(x.sym)}')`}); }); }catch(e){}
   try{ wl1TodoItems().forEach(x=>out.push(x)); }catch(e){ console.warn('wl1 todo:', e); }   /* WL1 */
+  try{ re1TodoItems().forEach(x=>out.push(x)); }catch(e){ console.warn('re1 todo:', e); }   /* RE-C1 */
   try{
     (coreCardsList || []).forEach(c=>{ if(c.status === 'plan' && ln4Crossed(c)) out.push({c:'a', id:'miss:' + c.id, miss:c.id, t:`${c.ticker} trigger passed · Missed?`}); });
   }catch(e){}
@@ -11261,7 +11342,7 @@ function ln4TodoHtml(M){
 function ln4StatusHtml(M, W, wk){
   const rg = (()=>{ try{ return tdRegimeVerdict({dedupe:true}); }catch(e){ console.warn('td regime verdict:', e); return ''; } })();
   const sw = `<span class="sw" role="tablist" data-td3-sw><button type="button" role="tab" data-td3-tab="d" class="${!wk ? 'on' : ''}" aria-selected="${!wk}" onclick="td3SetMode('d')">Daily</button><button type="button" role="tab" data-td3-tab="w" class="${wk ? 'on' : ''}" aria-selected="${wk}" onclick="td3SetMode('w')">Weekend${W.complete ? '' : `<span class="td3-bd" data-td3-badge title="This week's review is incomplete" aria-label="This week's review is incomplete, ${W.n} of ${W.N} done">${W.n}/${W.N}</span>`}</button></span>`;
-  let wlLine = ''; try{ const Wf = ffPoolFactor('winner'), Lf = ffPoolFactor('ladder'); if(!Wf.demo) wlLine = `<div class="line ln4-wl" data-ln4-wl><span class="k">SIZE</span><span class="m">Regime size · Momentum ${Wf.cap}% · Compounder ${Lf.cap}%</span></div>`; }catch(e){}
+  let wlLine = ''; try{ const Lh = re1L(tdHome()); if(Lh && Lh.signals && Lh.signals.asOf) wlLine = `<div class="line ln4-wl" data-ln4-wl><span class="k">SIZE</span><span class="m">Regime size · Compounder ${Math.round(Lh.regime.factor * 100)}%${Lh.emergency.active ? ' · Emergency ½ on new risk' : ''}</span></div>`; }catch(e){}
   const mg = wlLine + ln4MacroLine(M) + ln4GoalLine(M);
   const chip = ln4PortPills(), phone = !ln4Wide();
   const rr = phone ? ln4RoomR() : null, roomTxt = rr != null ? `<span class="ln4-room2">room <b data-ln4-room>${rr}R</b></span>` : '';
@@ -11467,14 +11548,7 @@ function td4RiskItems(M, scope){
   });
   return out.sort((a, b)=>b.sev - a.sev);   /* เสมอกัน = ลำดับเดิม (sort เสถียร) */
 }
-function td4RiskChipHtml(scope, M){
-  try{
-    const L = td4RiskItems(M, scope);
-    if(!L.length) return scope === 'core' ? '' : `<button type="button" class="td4-risk ok" data-td4-risk="${scope}" data-risk-state="ok" aria-haspopup="dialog" onclick="td4RiskOpen('${scope}')"><span class="t">Risk ✓</span></button>`;
-    const w = L[0], more = L.length > 1 ? ` <span class="n" data-td4-risk-more>+${L.length - 1}</span>` : '';
-    return `<button type="button" class="td4-risk ${w.sev === 2 ? 'r' : 'a'}" data-td4-risk="${scope}" data-risk-state="${w.sev === 2 ? 'red' : 'amber'}" aria-haspopup="dialog" aria-label="Risk: ${td3E(w.t)}" onclick="td4RiskOpen('${scope}')"><span class="t">⚠ ${td3E(w.t)}</span>${more}<span class="g">›</span></button>`;
-  }catch(e){ console.warn('risk chip:', e); return ''; }
-}
+function td4RiskChipHtml(scope, M){ return ''; }   /* RE-C1 — DD / open-risk chips superseded by the engine status text */
 function td4RiskClose(){ const el = document.getElementById('td4RiskSheet'); if(el) el.remove(); document.removeEventListener('keydown', td4RiskKey, true); }
 function td4RiskKey(e){ if(e.key === 'Escape'){ e.preventDefault(); td4RiskClose(); } }
 function td4RiskOpen(scope){
@@ -15063,6 +15137,7 @@ function lfStopOpen(id){
     <div class="ccSub" data-lf-stopcur>SL Base ${fmt2(v.stop)}${v.accT ? ` · SL เร่ง ${fmt2(v.accStop)}` : ''} · เลื่อนขึ้นได้อย่างเดียว</div>
     ${v.accT ? `<div class="ccF"><div class="ccSeg" data-lf-stoplayer><button type="button" class="on" data-cs-layer="base" onclick="lfStopLayer('base')">Base</button><button type="button" data-cs-layer="acc" onclick="lfStopLayer('acc')">เร่ง</button><button type="button" data-cs-layer="both" onclick="lfStopLayer('both')">ทั้งคู่</button></div></div>` : ''}
     <div class="ccF"><label>Stop ใหม่</label><input type="text" inputmode="decimal" id="csStop" oninput="coreStopIn()"></div>
+    <div id="csRe1" data-re1-stop></div>
     <div class="ccErr" id="csErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="csSave" data-cs-save onclick="coreStopSave()" disabled>บันทึก</button></div>`);
 }
@@ -15084,6 +15159,7 @@ function lfStopIn(){
   else if(coreErr) msg = coreErr;
   er.style.display = msg && (ns>0) ? '' : 'none'; er.textContent = msg;
   coreEl('csSave').disabled = !!msg;
+  try{ re1StopRefresh(ns); }catch(e){}
   return !msg;
 }
 function lfStopSave(){
@@ -15093,7 +15169,7 @@ function lfStopSave(){
   const ta = c.acc_trade_id ? B.trades.find(x=>x.id===c.acc_trade_id && x.status==='open') : null;
   const date = posThaiToday(), hist = (c.stopHistory || []).slice(), patch = {};
   if((d.layer==='base' || d.layer==='both') && ns > +t.sl + 1e-9){
-    const old = +t.sl; if(!(t.sl0>0) && old>0) t.sl0 = old; t.sl = ns; hist.push({date, from:old, to:ns, layer:'base'}); patch.stop = ns;
+    const old = +t.sl; if(!(t.sl0>0) && old>0) t.sl0 = old; t.sl = ns; re1StopMark(t, ns, !!(coreEl('csConf') && coreEl('csConf').checked), A, c.id); hist.push({date, from:old, to:ns, layer:'base'}); patch.stop = ns;
   }
   if((d.layer==='acc' || d.layer==='both') && ta && ns > +ta.sl + 1e-9){
     const old = +ta.sl; ta.sl = ns; hist.push({date, from:old, to:ns, layer:'acc'}); patch.stopAcc = ns;
@@ -15141,6 +15217,7 @@ function coreGoto(id){
 /* ── sheets ── */
 function lfMac(){ try{ return window.matchMedia('(min-width:1000px)').matches; }catch(e){ return false; } }
 function coreSheet(kind, html){
+  if(kind === 'stop') setTimeout(()=>{ try{ re1StopRefresh(0); }catch(e){} }, 0);   /* RE-C1 — stop-confirm panel */
   document.querySelectorAll('.core-sheet').forEach(el=>el.remove());
   if(kind==='new' && ln1On() && lfMac() && document.getElementById('lfCoreSide') && bdEditMode){   /* LN3fix — Mac: ฟอร์มแผน Core อยู่คอลัมน์ขวา ไม่เด้งทับ */
     const host = document.getElementById('lfCoreSide');
@@ -15713,16 +15790,7 @@ function ps1RenderPanel(){
 let ps1TodayOpen = null;
 function ps1TodayIsOpen(){ if(ps1TodayOpen===null){ try{ ps1TodayOpen = localStorage.getItem('ps1TodayOpen')==='1'; }catch(e){ ps1TodayOpen = false; } } return ps1TodayOpen; }
 function ps1TodayTog(el){ ps1TodayOpen = !!el.open; try{ localStorage.setItem('ps1TodayOpen', el.open ? '1' : '0'); }catch(e){} }
-function ps1TodayLine(){
-  try{
-    if(ps1Off()) return '';
-    const M = ps1Model(); if(!M) return '';
-    const P = M.P, stops = Object.keys(P.buckets).filter(k=>P.buckets[k].stopOpening).map(k=>M.cfg.buckets[k].label);
-    const cls = P.giveBackLevel==='ok' ? '' : ' ' + P.giveBackLevel;
-    const chips = ['ladder','winner','sat'].map(k=>lossChipHtml(lossEval(M.A, k))).filter(Boolean).join(' ');
-    return `<details class="ps1Td${cls}" data-ps1-today${ps1TodayIsOpen() ? ' open' : ''} ontoggle="ps1TodayTog(this)"><summary role="button">Risk <b>${ps1Pct(P.principalPct,1)}</b> / ${ps1Pct(M.cfg.total,1)} · left <b>${ps1Pct(P.totalLeftPct,1)}</b> · give-back <b>${ps1Pct(P.giveBackPct,1)}</b>${P.partial ? ' · <i>some unknown</i>' : ''}${stops.length ? ` · <b>Stop opening:</b> ${escHtml(stops.join(', '))}` : ''} <span class="ps1TdC" data-ps1-today-chips>${chips}</span> <span class="ps1Chev" aria-hidden="true">›</span></summary><div class="ps1TdBody" data-ps1-today-body>${ps1PanelHtml()}</div></details>`;
-  }catch(e){ console.warn('ps1 today:', e); return ''; }
-}
+function ps1TodayLine(){ return ''; }   /* RE-C1 — superseded by the engine status line */
 /* PS1b §9 — stock share counts show as #45 (display only · Sat stays in lots) */
 function shN(q){ return '#' + fmt0(q); }
 function ps1PlanFl(c){ const p = c && c.plan && c.plan.ps1; return p ? {ok:true, qty:p.rows[0].qty, zeroLot:!(p.rows[0].qty>0), cashLimited:false, capped:false} : null; }
@@ -16337,6 +16405,7 @@ function coreStopOpen(id){
   coreSheet('stop', `<h3>เลื่อน Stop · ${escHtml(c.ticker)}</h3><div class="ccSub">Stop ปัจจุบัน ${fmt2(v.stop)} · เลื่อนขึ้นได้อย่างเดียว</div>
     <div class="ccF"><label>Stop ใหม่</label><input type="text" inputmode="decimal" id="csStop" oninput="coreStopIn()"></div>
     ${c.strategy==='L' ? '<div class="ccSub" id="csPrev" data-cs-preview></div>' : ''}
+    <div id="csRe1" data-re1-stop></div>
     <div class="ccErr" id="csErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="csSave" data-cs-save onclick="coreStopSave()" disabled>บันทึก</button></div>`);
 }
@@ -16351,6 +16420,7 @@ function coreStopIn(){
   else if(coreErr) msg = coreErr;
   er.style.display = msg && (ns>0) ? '' : 'none'; er.textContent = msg;
   coreEl('csSave').disabled = !!msg;
+  try{ re1StopRefresh(ns); }catch(e){}
   const pv = coreEl('csPrev');
   if(pv){
     const c = coreCardsList.find(x=>x.id===coreDlg.id);
@@ -16373,7 +16443,7 @@ function coreStopSave(){
   if(!coreStopIn()) return;
   const c = coreCardsList.find(x=>x.id===coreDlg.id), ns = coreNum(coreEl('csStop').value); if(!c) return;
   const A = c.acct, B = getBook(A), t = B.trades.find(x=>x.id===c.trade_id); if(!t || t.status!=='open'){ coreSheetClose(); return; }
-  const old = +t.sl; if(!(t.sl0>0) && old>0) t.sl0 = old; t.sl = ns; saveBook(A);   /* DD1 — sl0 ไม่ถูกแตะ (ไม้เก่าไม่มี = เก็บ Stop ก่อนย้ายครั้งแรก) */
+  const old = +t.sl; if(!(t.sl0>0) && old>0) t.sl0 = old; t.sl = ns; re1StopMark(t, ns, !!(coreEl('csConf') && coreEl('csConf').checked), A, c.id); saveBook(A);   /* DD1 — sl0 ไม่ถูกแตะ (ไม้เก่าไม่มี = เก็บ Stop ก่อนย้ายครั้งแรก) */
   const hist = (c.stopHistory || []).concat([{date:posThaiToday(), from:old, to:ns}]);
   const patch = {stop:ns, stopHistory:hist};
   if(c.strategy==='L' && c.ladder){
@@ -17406,7 +17476,7 @@ function poolsPortHtml(ids){
     return `<div class="poolBar" data-pool-bar="${k}"><div class="poolBarT"><span>${nm}</span><span>฿${fmt0(used)} / ฿${fmt0(pool)}</span></div><div class="poolBarB"><i style="width:${w}%" class="${used > pool + 1 ? 'over' : ''}"></i></div></div>`; };
   const per = st.map(x=>{ const a = acctList.find(z=>z.id===x.P.A) || {};
     return `<div class="poolAcct" data-pool-acct="${escHtml(x.P.A)}">${st.length > 1 ? `<div class="poolAcctN"><span class="acctDotC" style="--ac:${acctColor(a)}"></span>${escHtml(a.name || x.P.A)} · ฿${fmt0(x.P.total)}</div>` : ''}${bar('winner', 'Momentum', x.wC, x.P.winner)}${bar('ladder', 'Compounder', x.lU, x.P.ladder)}${bar('sat', 'Sat', x.sH, x.P.sat)}${(()=>{ let o = 0; try{ o = satV2Money(x.P.A).optionTHB; }catch(e){} return o > 0 ? `<div data-pv2-row="legacy" style="margin-top:6px;font-size:12px;color:var(--muted)">อื่น ๆ (เดิม) · ถัง Option ฿${fmt0(o)} — อ่านอย่างเดียว ไม่นับในการแบ่งเงิน</div>` : ''; })()}</div>`; }).join('');
-  return `<details class="poolLine" data-pool-line data-amber="${amber ? 1 : 0}"><summary><i class="poolDot${amber ? ' amb' : ''}" data-pool-dot></i><span data-pool-txt>${line}</span></summary>${per}<div class="hint" style="margin:6px 0 0">Used vs pool · Momentum at cost · Compounder held + reserved · Sat open contract value</div></details>`;
+  return `<details class="poolLine" data-pool-line data-amber="${amber ? 1 : 0}"><summary><i class="poolDot${amber ? ' amb' : ''}" data-pool-dot></i><span data-pool-txt>${line}</span></summary>${per}<div class="hint" style="margin:6px 0 0">Allocation — not the risk basis · Used vs pool · Momentum at cost · Compounder held + reserved · Sat open contract value</div></details>`;
 }
 function pv2PortHtml(accId, named){ return poolsPortHtml([accId]); }   /* RG2b — เดิม = แถบ Core / Main / Tactical (ถอดแล้ว) */
 /* ══════════════════════════════════════════════════════════════════════════
@@ -17758,6 +17828,7 @@ function ln3RenderPort(){
     const i = entries.findIndex(e=>e.acct.id===sel), s = stats[i];
     html += `<div class="ln3-pline" data-ln3-accline="1">ทุน ฿${fmt0(s.cap)} · ถือครอง ${fmt2(pct(s.held,s.cap))}% · Open Risk ${fmt2(pct(s.risk,s.cap))}%</div>`;
   }
+  html += re1PortRiskHtml(ids);   /* RE-C1 — risk blocks per account (engine) */
   html += ln4PortCardHtml(ids);   /* LN4 §8 */
   const v2 = poolsPortHtml(ids);   /* RG2b — บรรทัดถังเดียว (รวมยอดทุกบัญชีที่เลือก) + แถบพับ */
   if(v2) html += `<div class="ln3-pcard" data-ln3-struct="1">${v2}</div>`;
@@ -30745,6 +30816,7 @@ function bdPill(it){
   if(it.status === 'plan'){
     if(it.inc) return {t:'Complete ›', cls:'', fn:`bdComplete('${q(id)}')`, k:'complete'};
     if(it.blocked) return {t:'Place order ›', cls:'', fn:'', k:'place', dis:true, title:'Blocked by trend rule'};   /* PB1b §3b — complete but the Trend rule says Blocked */
+    { const g = re1BoardGate(it); if(g) return {t:'Place order ›', cls:'', fn:'', k:'place', dis:true, title:g, re1:true}; }   /* RE-C1 — engine limit */
     if(bad && (bad.k === 'risk' || bad.k === 'stop')) return {t:'Fix risk ›', cls:'fx', fn:`bdFix('${q(id)}','${bad.k}')`, k:'fix'};
     if(bad) return {t:'Edit', cls:'', fn:`bdEditLv('${q(id)}')`, k:'edit'};
     if(it.pct == null) return {t:'Place order ›', cls:'', fn:`ln4Place('${it.kind}','${q(id)}')`, k:'place'};
