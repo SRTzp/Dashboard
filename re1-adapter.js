@@ -262,10 +262,9 @@
       var coreV = ports.indexOf('core') >= 0 && n(cap.core) !== null ? n(cap.core) * (pc.core === 'USD' ? (A.fx || 0) : 1) : 0;
       var satV = ports.indexOf('satB') >= 0 && n(cap.satB) !== null ? n(cap.satB) * (pc.satB === 'USD' ? (A.fx || 0) : 1) : 0;
       var proxy = coreV + satV, realSnaps = Array.isArray(S.equitySnapshots) ? S.equitySnapshots : null;
-      var snaps, basisKind;
-      if (realSnaps && realSnaps.length) { snaps = realSnaps; basisKind = 'confirmed snapshots'; }
-      else { snaps = pos(proxy) ? [{ at: R.bkk.weekStart(now) + 1, equity: proxy, confirmed: true }] : []; basisKind = 'PROXY (entered capital, not a snapshot)'; M.add('EQUITY_SNAPSHOT', acc.id); }
-      var basis = R.snapshotBasis(snaps, now);
+      var basisKind = (realSnaps && realSnaps.length) ? 'confirmed snapshots' : 'PROXY (entered capital, not a snapshot)';
+      if (!(realSnaps && realSnaps.length)) M.add('EQUITY_SNAPSHOT', acc.id);
+      var basis = liveBasis(S, now, proxy);
       out.equity = { basisKind: basisKind, proxyEquity: pos(proxy) ? proxy : null, weekEquity: basis.ok ? basis.weekEquity : null, monthEquity: basis.ok ? basis.monthEquity : null, currentEquity: basis.ok ? basis.currentEquity : null,
         snapshotState: basis.state, snapshotAgeDays: basis.ageDays != null ? basis.ageDays : null, reasons: basis.reasons.slice(), fx: A.fx, snapshotsAvailable: realSnaps ? realSnaps.length : 0 };
       var costsFor = function () { return null; };   // no cost settings in the app yet
@@ -449,6 +448,7 @@
      ═════════════════════════════════════════════════════════════════════════════════════════════════ */
   var RP = R.POLICY;
   function asOfAt(x) { var d = x && x.bkkDate ? R.bkk.noonOf(x.bkkDate) : null; return d !== null ? d - 12 * 3600000 : (x && num(x.at) ? x.at : null); }   /* as-of date → Bangkok 00:00 of that date */
+  function flowAt(f) { var a = asOfAt(f); return a === null ? null : a + 12 * 3600000; }   /* a flow dated D happens at noon of D: after a snapshot dated D, before one dated D+1 */
   /* Basis (brief §1): week/month-start equity = latest CONFIRMED snapshot at or before the period start (as-of date) · none before → the earliest confirmed one (flag).
      Provisional (first run, no snapshot): entered capital, at most 14 days after cut-over (then the engine's 14-day block applies). Withdrawals reduce the basis at once; deposits count from the next snapshot. */
   function liveBasis(S, now, proxy) {
@@ -463,7 +463,7 @@
     function pickAt(t) { var c = null; snaps.forEach(function (x) { if (x.at <= t) c = x; }); return c || snaps[0]; }
     var wk = pickAt(ws), mo = pickAt(ms), last = b.snapshot, flags = (b.flags || []).filter(function (f) { return f !== 'SNAPSHOT_OLD'; });
     var flows = Array.isArray(S.cashFlows) ? S.cashFlows.filter(function (f) { return f && num(n(f.amount)); }) : [];
-    function wd(from) { var s = 0; flows.forEach(function (f) { var a = n(f.amount), at = asOfAt(f); if (a < 0 && at !== null && at > from) s += -a; }); return s; }
+    function wd(from) { var s = 0; flows.forEach(function (f) { var a = n(f.amount), at = flowAt(f); if (a < 0 && at !== null && at > from) s += -a; }); return s; }
     var wkEq = wk.equity - wd(wk.at), moEq = mo.equity - wd(mo.at), curEq = last.equity - wd(last.at);
     if (wk.at > ws) flags.push('BASIS_FIRST');
     if (prov) flags.push('PROVISIONAL');
@@ -473,7 +473,7 @@
   /* Emergency: replay every confirmed snapshot in order (evaluated AT a snapshot). Reference = month-start basis of that snapshot. */
   function liveEmergency(snaps, flows) {
     var st = null, out = { active: false, factor: 1, declinePct: null, refEquity: null };
-    var fl = (flows || []).map(function (f) { return { at: asOfAt(f), amount: n(f.amount) }; }).filter(function (f) { return f.at !== null && f.amount !== null; });
+    var fl = (flows || []).map(function (f) { return { at: flowAt(f), amount: n(f.amount) }; }).filter(function (f) { return f.at !== null && f.amount !== null; });
     snaps.filter(function (x) { return !x.provisional; }).forEach(function (sn, i, arr) {
       var upto = arr.slice(0, i + 1), ms = R.bkk.monthStart(sn.at), ref = null; upto.forEach(function (x) { if (x.at <= ms) ref = x; }); if (!ref) ref = upto[0];
       var e = R.emergencyStep(st, sn, { equity: ref.equity, at: ref.at }, fl);
