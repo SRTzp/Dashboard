@@ -246,7 +246,7 @@ Groups map 1:1 to RE1-decisions §7: **G1** Satellite step path (−0.130 −0.3
 
 ---
 
-## 8. Open questions for the owner
+## 8. Open questions for the owner — **all 15 CLOSED by `RE1-answers-A.md` (see §9)**
 
 1. **Momentum realized-loss definition across partial exits.** Engine counts per idea `max(0, −Σ period exit events)`, so a partial *win* then a later *loss* in the same week nets inside the idea. Alternative: floor every exit event separately (stricter). Which?
 2. **Regime freshness.** "Fetched ≤ 4 days ago" needs the `fundflow.json` fetch timestamp (today only business-day `ageDays` is exposed). Calendar days or business days? Where does the fetch time come from — `fundflow.json` field or the workflow commit time?
@@ -263,3 +263,43 @@ Groups map 1:1 to RE1-decisions §7: **G1** Satellite step path (−0.130 −0.3
 13. **Entry fees timing.** Engine attributes the entry fee to the first exit event (close-time rule) while counting it in exposure from the fill. OK, or charge it to the week of the fill?
 14. **Starter for Compounder = 0.25 % of the whole plan** (engine: half of the Pilot). Confirm that "top-up to the full Pilot" means up to 0.50 % (not to 1 %).
 15. **Event IDs** — deterministic string scheme in §5.3; OK to use `<acct>:<type>:<refId>:<seq>` or prefer random UUIDs generated once at write time?
+
+
+---
+
+## 9. Answers to §8 (RE1-answers-A.md, same authority as RE1-decisions) and what changed — RE-B
+
+| Q | Answer | Spec / engine effect |
+|---|---|---|
+| 1 | Keep per-idea, per-period `max(0, −Σ exit events in period)`; different ideas never net | no change (tests B/G3) |
+| 2 | Freshness = the data's own **as-of date** (last US session in `fundflow.json`) within **4 calendar days** of today (Asia/Bangkok); missing date = not fresh | **engine changed**: `regimeState` takes `signals.asOf` (`YYYY-MM-DD` or ms) instead of `fetchedAt`; future / unparsable / missing = not fresh; age in Bangkok calendar days (`ageDays`). Tests group **A** |
+| 3 | Heat denominator = **week-start equity**; also show vs current | `compHeat(…, equity, currentEquity)` returns `pct` + `pctCurrent` + `count`; `compCheck` uses week-start basis (test: a later, lower snapshot does not change the heat %) |
+| 4 | Legacy ladder cards never resized/re-split; every filled lot counts to heat at actual remaining risk; >2 tranches or accelerator lots = **legacy shape**; a NEW buy on such a card must pass Add-on rules and keep the ticker's total principal risk ≤ 1% | `compLegacyShape`; `compEntryCheck({legacy:true})` forces Add-on gates + whole-plan 1% cap; RE-B report lists every such card |
+| 5 | Remove: weekly new-idea quota 4, pyramid budgets 50/30/20 + 80/100% caps, old heat / orSat caps, Macro cut. **Keep TP1/TP2 exit split** (exit management, not sizing). **Keep multi-entry levels inside ONE attempt** — shared effective RPT, user-entered split, one result for step logic | `sizeAttempt({levels:[{price,splitPct}]})` (one RPT shared, splits must total 100, each level floored to the lot); step logic already counts one result per attempt id. TP1/TP2 has no engine input |
+| 6 | Capital pools stay as an allocation display in Port, labelled "allocation — not the risk basis" | adapter uses pools only to build the **proxy** equity for the dry run; not an engine input |
+| 7 | Remove Starter ¼ from the Satellite form; keep for Momentum / Compounder | RE-C (no engine change) |
+| 8 | Stored Sunday week keys stay data keys; `bkk` weeks for risk only | no re-keying |
+| 9 | One outcome rule everywhere (strict sign), incl. Journal badges on old trades; old trades have no costs → gross P&L, marked "costs not recorded"; date-only exit = 12:00 Bangkok | `bkk.noonOf`; adapter attributes date-only exits to 12:00 and counts them (`CLOSE_TIME_DATE_ONLY`); report counts badge changes |
+| 10 | "Give-back to stops" kept read-only without caps; placement in the RE-C mockup | RE-C |
+| 11 | No swap estimate: projected = realized + incurred fees/swap + estimated remaining exit fee; re-evaluated on cost edit | matches the engine |
+| 12 | Daily slot / re-entry per product **per account**; accounts never share state | matches the engine (account-filtered inputs) |
+| 13 | Entry fee belongs to the idea: counted in exposure from the fill, attributed at close | matches the engine |
+| 14 | Compounder Starter first entry 0.25 % of the plan; top-up to 0.50 %; never straight to 1 % unless Add-on conditions are met | matches `compEntryCheck` |
+| 15 | Event ids `<acct>:<type>:<refId>:<seq>` | §5.3 unchanged |
+
+## 10. RE-B — read-only adapter + hidden dry run (no behaviour change)
+
+**Files:** `re1-adapter.js` (pure; inlined in `index.html` by `tools/sync_re1.py`, like `ps1-size.js`; the engine is inlined the same way), glue `re1Dry*()` in `index.html`, `tests/re1_adapter_test.js`, `tests/run_tests_re1b.py`.
+**Entry:** only with `?re1dry=1` in the URL; then **Settings → "Settings · execution" box** shows a "RE1 dry run · Run" row. Without the flag there is no element and `re1DryRun()` is inert (tested). The run reads data already in memory (`acctList`, books, `coreCardsList`, `satIdeasList`, `ffJsonData()`, `productCfg`), shows the report in a full-screen overlay and downloads `re1-dryrun-<YYYY-MM-DD>.md` and `.json`. It calls no setter and never touches Firestore or localStorage (spy test).
+
+**Adapter mapping (read side):**
+- Ideas are rebuilt from trade rows per account: rows grouped by `posGroup`; owner = Core card (via `trade_id` / `acc_trade_id`) · Sat idea slot (`accts[acct].trade_id`) · loose. Strategy: card `strategy 'L'` / `track 'ladder'` → Compounder, other card → Momentum; Sat port or Sat idea → Satellite; Core trade without card → Momentum **assumed** (listed); other ports excluded (listed).
+- Tranche = base row or accelerator row by entry price; qty = open row + closed legs; each closed row = one exit event (price, qty, `closedAt`, else 12:00 Bangkok of `exitDate`, else excluded and listed). Initial stop = `sl0`, else card `stopHistory[0].from`, else current stop (listed as `INITIAL_STOP`). "Stop confirmed" does not exist in the app → every stop is *not confirmed* (listed); a stop move recorded in the card history that ends at the current stop is reported as *inferred*.
+- Working orders: Core card `plan.ps1.rows` levels marked placed (`ln4.placedLv` / `placedAt`) beyond the filled lots; Sat idea with `ln4.placedAt` and its `status:'plan'` trade. Planned = reserves nothing. USD without account FX is excluded and listed (never ×1).
+- Equity: **no confirmed snapshots exist yet** → entered capital (`capital.core` + `capital.satB × fx`) is used as a clearly labelled **PROXY** so the old-vs-engine comparison is readable; real `settings.equitySnapshots` would win automatically. Emergency is "n/a" without snapshots.
+- Costs: none exist → `resolveCosts` unknown for every idea → projected nets Unknown, no Option-C release, `COST_UNKNOWN`.
+- Regime: slow series of ACWI/BIL and HYG/IEI from `fundflow.json`; engine freshness by as-of date.
+
+**Report sections per account (Main / Family, never mixed):** equity basis · exposure + budget usage (week/month) per strategy · Satellite step/queue/stale orders from history · Momentum losing-idea count + reservations · Compounder heat/streak/regime/freshness/legacy cards · Emergency · every open position and working order with old vs engine size/risk and difference reasons (`OLD_RISK_ABOVE/BELOW_ENGINE_RPT`, `MIN_STOP_SIZING`, `HOMEWORK_50`, `INITIAL_STOP_UNKNOWN`, `EQUITY_PROXY`, engine reason codes) · orders that would be blocked today (reason codes) · missing fields (costs, initial stop, confirmed stop, close time / date-only, exchange, lot spec, FX, strategy, order qty/time, exit reason) · Journal badges that change under the strict sign rule.
+
+Known limits of the dry run (by design): Satellite Condition is not stored in history → engine size shown at 100 % **and** 65 % of the current step; Compounder engine size is the Pilot (0.50 %) only; old size comparison uses the position as entered (open qty + exited qty).

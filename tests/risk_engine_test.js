@@ -183,11 +183,11 @@ const costsOf = () => C;
   has(R.compEntryCheck({ kind: 'pilot', starterOn: true, thesisDone: false, requestedPct: 0.3 }), 'COMP_PHASE_CAP', 'G6 Starter first entry above 0.25 blocked');
   has(R.compEntryCheck({ kind: 'pilot', thesisDone: false, requestedPct: 0.6 }), 'COMP_PHASE_CAP', 'G6 thesis incomplete → Pilot only (0.50%)');
   // min(Regime 75 %, Emergency 50 %) = 50 %
-  const now = NOW, fresh = { acwi: true, hyg: false, fetchedAt: now - 1 * D }, rg = R.regimeState(fresh, now);
+  const now = NOW, fresh = { acwi: true, hyg: false, asOf: now - 1 * D }, rg = R.regimeState(fresh, now);
   near(rg.factor, 0.75, 'G6 one red = 75%'); near(R.compFactor(rg, 0.5), 0.5, 'G6 min(75%, 50%) = 50% (not 37.5%)');
-  near(R.regimeState({ acwi: true, hyg: true, fetchedAt: now }, now).factor, 1, 'G6 both green 100%'); near(R.regimeState({ acwi: false, hyg: false, fetchedAt: now }, now).factor, 0.5, 'G6 both red 50%');
-  const stale = R.regimeState({ acwi: true, hyg: true, fetchedAt: now - 5 * D }, now); near(stale.factor, 0.75, 'G6 stale caps at 75%'); has(stale, 'COMP_REGIME_STALE', 'G6 stale flagged');
-  near(R.regimeState({ acwi: true, hyg: true, fetchedAt: now - 4 * D }, now).factor, 1, 'G6 exactly 4 days is still fresh');
+  near(R.regimeState({ acwi: true, hyg: true, asOf: now }, now).factor, 1, 'G6 both green 100%'); near(R.regimeState({ acwi: false, hyg: false, asOf: now }, now).factor, 0.5, 'G6 both red 50%');
+  const stale = R.regimeState({ acwi: true, hyg: true, asOf: now - 5 * D }, now); near(stale.factor, 0.75, 'G6 stale caps at 75%'); has(stale, 'COMP_REGIME_STALE', 'G6 stale flagged');
+  near(R.regimeState({ acwi: true, hyg: true, asOf: now - 4 * D }, now).factor, 1, 'G6 exactly 4 days is still fresh');
   // six-loss lock
   const cyc = (nets, t0 = T('2026-11-01T10:00:00')) => nets.map((v, i) => ({ id: 'cy' + i, flatAt: t0 + i * D, net: v }));
   eq(R.compStreak(cyc([-1, -1, -1, -1, -1]), []).locked, false, 'G6 five losses: not locked');
@@ -196,15 +196,15 @@ const costsOf = () => C;
   eq(R.compStreak(cyc([-1, -1, -1, 0, -1, -1, -1]), []).locked, true, 'G6 exact breakeven neither counts nor resets');
   eq(R.compStreak(cyc([-0.2, -0.2, -0.2, -0.2, -0.2, -0.2]), []).locked, true, 'G6 six small losses still lock (not 6% total)');
   // unlock gate
-  const sixth = k.sixthLossAt, green = R.regimeState({ acwi: true, hyg: true, fetchedAt: sixth + 7 * D - 1 }, sixth + 7 * D), U = (o) => R.compUnlockCheck(Object.assign({ streakState: k, now: sixth + 7 * D, regime: green, note: 'reviewed the six exits', confirm: true }, o));
+  const sixth = k.sixthLossAt, green = R.regimeState({ acwi: true, hyg: true, asOf: sixth + 7 * D - 1 }, sixth + 7 * D), U = (o) => R.compUnlockCheck(Object.assign({ streakState: k, now: sixth + 7 * D, regime: green, note: 'reviewed the six exits', confirm: true }, o));
   ok(U({}).allowed && U({}).unlocked, 'G6 unlock OK on day 7 with everything in place'); eq(U({}).streakAfter, 0, 'G6 streak returns to 0');
   has(U({ now: sixth + 7 * D - 1 }), 'COMP_UNLOCK_WAIT', 'G6 refused before day 7');
-  has(U({ regime: R.regimeState({ acwi: true, hyg: true, fetchedAt: sixth - 3 * D }, sixth + 7 * D) }), 'COMP_UNLOCK_STALE', 'G6 refused with stale data');
-  has(U({ regime: R.regimeState({ acwi: true, hyg: false, fetchedAt: sixth + 7 * D }, sixth + 7 * D) }), 'COMP_UNLOCK_SIGNALS', 'G6 refused when a signal is red');
+  has(U({ regime: R.regimeState({ acwi: true, hyg: true, asOf: sixth - 3 * D }, sixth + 7 * D) }), 'COMP_UNLOCK_STALE', 'G6 refused with stale data');
+  has(U({ regime: R.regimeState({ acwi: true, hyg: false, asOf: sixth + 7 * D }, sixth + 7 * D) }), 'COMP_UNLOCK_SIGNALS', 'G6 refused when a signal is red');
   has(U({ note: '   ' }), 'COMP_UNLOCK_NOTE', 'G6 refused without a note'); has(U({ note: '' }), 'COMP_UNLOCK_NOTE', 'G6 refused with empty note'); has(U({ confirm: false }), 'COMP_UNLOCK_CONFIRM', 'G6 refused without confirm');
   eq(R.compStreak(cyc([-1, -1, -1, -1, -1, -1]), [{ at: sixth + 8 * D }]).streak, 0, 'G6 recorded unlock → streak 0'); eq(R.compStreak(cyc([-1, -1, -1, -1, -1, -1, -1], T('2026-11-01T10:00:00')), [{ at: sixth + 8 * D }]).locked, false, 'G6 losses before the unlock do not re-lock');
   // locked blocks pilot AND add-on; heat cap
-  const b = basis(), sig = { acwi: true, hyg: true, fetchedAt: NOW };
+  const b = basis(), sig = { acwi: true, hyg: true, asOf: NOW };
   const lockedCk = R.compCheck({ now: NOW, account: 'main', basis: b, ideas: [], cycles: cyc([-1, -1, -1, -1, -1, -1]), unlocks: [], signals: sig, entry: { kind: 'pilot', requestedPct: 0.5, thesisDone: true }, emergencyFactor: 1 });
   has(lockedCk, 'COMP_LOCKED', 'G6 lock blocks Pilot');
   has(R.compCheck({ now: NOW, account: 'main', basis: b, ideas: [], cycles: cyc([-1, -1, -1, -1, -1, -1]), unlocks: [], signals: sig, entry: Object.assign({ thesisDone: true }, addonArgs), emergencyFactor: 1 }), 'COMP_LOCKED', 'G6 lock blocks Add-on');
@@ -367,7 +367,38 @@ const costsOf = () => C;
   // R multiples use the initial stop frozen at fill
   near(R.rMultiple({ entry: 100, stop: 100, initialStop: 95 }, 107.5, 'long'), 1.5, 'X 1.5R from the initial stop even after the stop moved');
   // regime unknown → treated stale
-  eq(R.regimeState({ acwi: null, hyg: true, fetchedAt: NOW }, NOW).fresh, false, 'X missing signal = not fresh');
+  eq(R.regimeState({ acwi: null, hyg: true, asOf: NOW }, NOW).fresh, false, 'X missing signal = not fresh');
+}
+
+
+// ═══ A · RE1-answers-A behaviour changes ═══
+{
+  const today = T('2026-11-18T10:00:00');
+  const rs = d => R.regimeState({ acwi: true, hyg: true, asOf: d }, today);
+  eq(rs('2026-11-18').fresh, true, 'A freshness: as-of today is fresh'); eq(rs('2026-11-14').fresh, true, 'A as-of 4 calendar days ago is fresh (Fri → Wed)'); eq(rs('2026-11-13').fresh, false, 'A 5 calendar days is stale');
+  eq(rs('2026-11-14').ageDays, 4, 'A age in calendar days'); eq(rs(undefined).fresh, false, 'A missing as-of = not fresh'); eq(rs('garbage').fresh, false, 'A unparsable as-of = not fresh'); eq(rs('2026-11-19').fresh, false, 'A future as-of = not fresh');
+  near(rs('2026-11-10').factor, 0.75, 'A stale caps at 75%'); near(R.regimeState({ acwi: false, hyg: false, asOf: '2026-11-10' }, today).factor, 0.5, 'A stale both red stays 50% (cap only lowers)');
+  // Bangkok calendar: 00:30 Bangkok on the 19th is 17:30 UTC on the 18th — still counts as the 19th
+  eq(R.regimeState({ acwi: true, hyg: true, asOf: '2026-11-15' }, T('2026-11-19T00:30:00')).fresh, true, 'A Bangkok date used, not UTC');
+  // heat: week-start equity for the cap, current equity shown too
+  const hi = [idea({ id: 'ha1', strategy: 'ladder', entry: 100, stop: 95, qty: 2000, status: 'holding' })], h = R.compHeat(hi, 'main', null, 1000000, 800000);
+  near(h.pct, 1, 'A heat vs week-start equity'); near(h.pctCurrent, 1.25, 'A heat also shown vs current equity'); eq(h.count, 1, 'A heat count');
+  const b = R.snapshotBasis([{ at: T('2026-11-16T08:00:00'), equity: 1000000, confirmed: true }, { at: T('2026-11-18T08:00:00'), equity: 900000, confirmed: true }], today);
+  near(R.compCheck({ now: today, account: 'main', basis: b, ideas: hi, cycles: [], unlocks: [], signals: { acwi: true, hyg: true, asOf: '2026-11-18' }, entry: { kind: 'pilot', requestedPct: 0.5, thesisDone: true }, candidateRisk: 0, emergencyFactor: 1 }).heat.pct, 1, 'A compCheck heat on week-start equity (not the later 900k snapshot)');
+  // legacy-shape compounder cards
+  ok(R.compLegacyShape({ tranches: 3 }).legacy, 'A >2 tranches = legacy shape'); ok(R.compLegacyShape({ tranches: 2, accelLots: 1 }).legacy, 'A accelerator lot = legacy shape'); ok(!R.compLegacyShape({ tranches: 2 }).legacy, 'A two tranches = normal');
+  const pl = { id: 'p', entry: 100, qty: 100, stop: 95, initialStop: 95, mult: 1, fx: 1 }, okPilot = { tranche: pl, price: 107.5, stopConfirmed: true, projectedNetOk: true };
+  has(R.compEntryCheck({ kind: 'pilot', legacy: true, thesisDone: false, side: 'long', usedPct: 0.5, requestedPct: 0.2, pilot: okPilot }), 'COMP_THESIS', 'A new buy on a legacy card must pass Add-on rules (thesis)');
+  has(R.compEntryCheck({ kind: 'pilot', legacy: true, thesisDone: true, side: 'long', usedPct: 0.9, requestedPct: 0.2, pilot: okPilot }), 'COMP_PHASE_CAP', 'A legacy card: ticker total principal risk stays within 1%');
+  ok(R.compEntryCheck({ kind: 'pilot', legacy: true, thesisDone: true, side: 'long', usedPct: 0.8, requestedPct: 0.2, pilot: okPilot }).allowed, 'A legacy card: exactly 1% allowed');
+  // multi-entry inside one attempt shares ONE rpt
+  const at = R.sizeAttempt({ equity: E, rptPct: 0.30, factor: 1, stop: 95, side: 'long', mult: 1, fx: 1, lotStep: 1, minLot: 1, levels: [{ price: 100, splitPct: 50 }, { price: 98, splitPct: 50 }] });
+  ok(at.allowed, 'A multi-entry allowed'); ok(at.actualRisk <= 3000 + 1e-6 && at.actualRisk > 2900, 'A both levels together ≈ one 0.30% budget: ' + at.actualRisk); eq(at.levels.length, 2, 'A two levels'); near(at.effectiveRptPct, 0.30, 'A one effective RPT');
+  eq(R.sizeAttempt({ equity: E, rptPct: 0.30, stop: 95, side: 'long', mult: 1, fx: 1, lotStep: 1, minLot: 1, levels: [{ price: 100, splitPct: 60 }, { price: 98, splitPct: 50 }] }).allowed, false, 'A split must total 100');
+  eq(R.satStepState([{ id: 'att', closeAt: NOW - 1, net: -1 }, { id: 'att', closeAt: NOW - 1, net: -2 }], NOW).step, 2, 'A a multi-entry attempt is one result for step logic');
+  // history rule
+  eq(R.bkk.noonOf('2026-11-13'), T('2026-11-13T12:00:00'), 'A date-only exit = 12:00 Bangkok'); eq(R.bkk.noonOf('x'), null, 'A bad date → null');
+  eq(R.bkk.weekKey(R.bkk.noonOf('2026-11-15')), '2026-11-09', 'A Sunday noon belongs to the previous Bangkok week');
 }
 
 console.log((f ? 'FAIL ' : 'PASS ') + (n - f) + '/' + n + ' risk-engine assertions');

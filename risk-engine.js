@@ -106,7 +106,9 @@
   function dayKey(ms) { var d = new Date(ms + BKK); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); }
   function weekKey(ms) { return dayKey(weekStart(ms)); }
   function monthKey(ms) { return dayKey(monthStart(ms)).slice(0, 7); }
-  var bkk = { dayStart: dayStart, weekStart: weekStart, monthStart: monthStart, dayKey: dayKey, weekKey: weekKey, monthKey: monthKey,
+  /* date-only exit (history) = 12:00 Asia/Bangkok of that date (RE1-answers-A #9) */
+  function noonOf(dateStr) { return /^\d{4}-\d{2}-\d{2}/.test(String(dateStr)) ? Date.parse(String(dateStr).slice(0, 10) + 'T12:00:00+07:00') : null; }
+  var bkk = { noonOf: noonOf, dayStart: dayStart, weekStart: weekStart, monthStart: monthStart, dayKey: dayKey, weekKey: weekKey, monthKey: monthKey,
     nextWeekStart: function (ms) { return weekStart(ms) + 7 * DAY; } };
 
   /* ═══ 2. Strict sign rule ═══ net after fees and swap: <0 loss · >0 win · =0 breakeven. No tolerance band. ═══ */
@@ -284,6 +286,20 @@
     return res(below ? ['LOT_BELOW_MIN'] : [], flags, { qty: below ? 0 : q, qtyFull: q0, effectiveRptPct: eff, budget: budget, sizingDistance: sd, actualDistance: actual,
       actualRisk: below ? 0 : q * actual * uv, actualRiskPct: below ? 0 : q * actual * uv / o.equity * 100, minStopApplied: sd > actual + EPS, notional: below ? 0 : q * o.entry * uv });
   }
+  /* One attempt with several entry levels (PB1 multi-entry): ONE effective RPT for the whole attempt, shared by the levels by the user's split.
+     o = sizeOrder inputs without entry + {levels:[{price, splitPct}]} (splitPct sum must be 100). Each level is floored to the lot separately; total risk <= one budget. */
+  function sizeAttempt(o) {
+    o = o || {}; var L = o.levels || [], sum = 0, out = [], flags = [], reasons = [];
+    L.forEach(function (l) { sum += num(l.splitPct) ? l.splitPct : 0; });
+    if (!L.length || Math.abs(sum - 100) > 1e-6) return { allowed: false, reasons: ['UNKNOWN_DATA'], flags: [], levels: [] };
+    var tot = 0, qtyTot = 0;
+    L.forEach(function (l) {
+      var r = sizeOrder(merge(o, { entry: l.price, rptPct: o.rptPct * l.splitPct / 100 }));
+      out.push({ price: l.price, splitPct: l.splitPct, qty: r.qty, actualRisk: r.actualRisk, reasons: r.reasons });
+      reasons = reasons.concat(r.reasons); tot += r.actualRisk || 0; qtyTot += r.qty || 0; flags = flags.concat(r.flags);
+    });
+    return res(reasons, flags, { levels: out, actualRisk: tot, actualRiskPct: pos(o.equity) ? tot / o.equity * 100 : null, qty: qtyTot, effectiveRptPct: o.rptPct * (num(o.factor) ? o.factor : 1) });
+  }
   /* Momentum / Compounder entry fraction of full size: homework cap (thesis done?) × starter (first entry only, when ON). usedFraction = already held + working. */
   function entryFraction(o) {
     o = o || {}; var cap = o.homeworkDone === true ? 1 : POLICY.mom.homeworkCap;
@@ -457,21 +473,25 @@
   }
 
   /* ═══ 11. Compounder ═══ */
-  /* signals: {acwi:true|false|null, hyg:true|false|null, fetchedAt (ms), lastSession (ms)}  — freshness: last completed US session fetched <= 4 days ago */
+  /* signals: {acwi:true|false|null, hyg:true|false|null, asOf:'YYYY-MM-DD' | ms}  (asOf = the data's own last-US-session date from fundflow.json).
+     Fresh = asOf within 4 CALENDAR days of today (Asia/Bangkok). Missing / unparsable / future asOf = not fresh. (RE1-answers-A #2) */
+  function asOfMs(v) { if (num(v)) return v; if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return Date.parse(v + 'T00:00:00+07:00'); return null; }
+  function calDaysBetween(aMs, bMs) { return Math.round((dayStart(bMs) - dayStart(aMs)) / DAY); }
   function regimeState(sig, now, cfg) {
     var P = pol(cfg).comp, s = sig || {}, reds = 0, missing = 0;
     ['acwi', 'hyg'].forEach(function (k) { if (s[k] === false) reds++; else if (s[k] !== true) missing++; });
-    var fresh = num(s.fetchedAt) && now - s.fetchedAt <= P.freshDays * DAY + EPS && !missing;
+    var a = asOfMs(s.asOf), age = a === null ? null : calDaysBetween(a, now);
+    var fresh = age !== null && age >= 0 && age <= P.freshDays && !missing;
     var base = reds === 0 ? P.regime.green : reds === 1 ? P.regime.one : P.regime.both;
     var factor = fresh ? base : Math.min(base, P.staleCap);
-    return { reasons: [], factor: factor, base: base, reds: reds, missing: missing, fresh: !!fresh, bothGreen: reds === 0 && !missing, stale: !fresh, flags: fresh ? [] : ['COMP_REGIME_STALE'] };
+    return { reasons: [], factor: factor, base: base, reds: reds, missing: missing, fresh: !!fresh, ageDays: age, bothGreen: reds === 0 && !missing, stale: !fresh, flags: fresh ? [] : ['COMP_REGIME_STALE'] };
   }
   function compFactor(regime, emergencyF) { return Math.min(regime.factor, num(emergencyF) ? emergencyF : 1); }   /* min(Regime, Emergency), never multiplied */
   /* heat = current open principal risk of live Compounder ideas (same idea-level calculation), cap 6 % */
-  function compHeat(ideas, account, costsFor, equity) {
+  function compHeat(ideas, account, costsFor, equity, currentEquity) {
     var live = ideasOf(ideas, account, 'ladder').filter(function (i) { return i.status === 'holding'; }), money = 0, unknown = [];
     live.forEach(function (i) { var r = ideaResult(i, costsFor ? costsFor(i) : null); if (r.exposure === null) unknown.push(i.id); else money += r.exposure; });
-    return { money: money, pct: pos(equity) ? money / equity * 100 : null, unknown: unknown };
+    return { money: money, pct: pos(equity) ? money / equity * 100 : null, pctCurrent: pos(currentEquity) ? money / currentEquity * 100 : null, unknown: unknown, count: live.length };
   }
   /* Lock: six consecutive losing ticker-cycles (first fill → flat). A win resets; exact breakeven neither counts nor resets.
      cycles = [{id, flatAt, net}] · unlocks = [{at}] (a recorded unlock resets the streak to 0 from that time) */
@@ -504,6 +524,7 @@
      stop confirmed at estimated net breakeven (no thesis needed). Add-on needs thesis + Pilot >= +1.5R + Pilot stop at net breakeven; top-up and Add-on may go together. */
   function compEntryCheck(o) {
     var P = pol(o.cfg).comp, reasons = [], used = num(o.usedPct) ? o.usedPct : 0, p = o.pilot || {}, r1 = null;
+    if (o.legacy === true && o.kind !== 'addon') o = merge(o, { kind: 'addon' });   /* legacy-shape card: any NEW buy must pass the Add-on rules; usedPct = ticker's total principal risk (RE1-answers-A #4) */
     if (p.tranche && pos(p.price)) r1 = rMultiple(p.tranche, p.price, o.side);
     var pilotBE = p.stopConfirmed === true && p.projectedNetOk === true;
     var cap;
@@ -521,6 +542,12 @@
     if (used + req > cap + EPS) reasons.push('COMP_PHASE_CAP');
     return res(reasons, [], { capPct: cap, pilotR: r1 });
   }
+  /* legacy shape (answers-A #4): more than two tranches, or accelerator lots. Never resized / re-split; existing lots count to heat at actual remaining risk. */
+  function compLegacyShape(o) {
+    o = o || {}; var n = num(o.tranches) ? o.tranches : 0, acc = num(o.accelLots) ? o.accelLots : 0, why = [];
+    if (n > 2) why.push('TRANCHES_GT_2'); if (acc > 0) why.push('ACCELERATOR_LOTS');
+    return { legacy: why.length > 0, why: why };
+  }
   function compCheck(i) {
     var reasons = [], flags = [], b = i.basis;
     if (!b || !b.ok) return res(b ? b.reasons : ['NO_SNAPSHOT'], [], {});
@@ -528,7 +555,7 @@
     var ck = compStreak(i.cycles, i.unlocks, i.cfg); if (ck.locked) reasons.push('COMP_LOCKED');
     var e = compEntryCheck(i.entry || {}); reasons = reasons.concat(e.reasons);
     var rg = regimeState(i.signals, i.now, i.cfg), f = compFactor(rg, i.emergencyFactor); flags = flags.concat(rg.flags);
-    var heat = compHeat(i.ideas, i.account, i.costsFor, b.weekEquity), cand = num(i.candidateRisk) ? i.candidateRisk : 0, P = pol(i.cfg).comp;
+    var heat = compHeat(i.ideas, i.account, i.costsFor, b.weekEquity, b.currentEquity), cand = num(i.candidateRisk) ? i.candidateRisk : 0, P = pol(i.cfg).comp;
     if (heat.unknown.length) flags.push('COST_UNKNOWN');
     if (!leq(heat.money + cand, b.weekEquity * P.heatCapPct / 100)) reasons.push('COMP_HEAT');
     return res(reasons, flags, { lock: ck, regime: rg, factor: f, heat: heat, entry: e, riskPctOfEquity: heat.pct });
@@ -604,7 +631,7 @@
     momentumState: momentumState, momentumCheck: momentumCheck,
     satCondition: satCondition, satEntryOrder: satEntryOrder, satStepState: satStepState, satEffectiveRpt: satEffectiveRpt, satQueueCheck: satQueueCheck,
     satStaleOrders: satStaleOrders, satDailyCheck: satDailyCheck, satBudgetCheck: satBudgetCheck, satCheck: satCheck,
-    regimeState: regimeState, compFactor: compFactor, compHeat: compHeat, compStreak: compStreak, compUnlockCheck: compUnlockCheck, compEntryCheck: compEntryCheck, compCheck: compCheck,
+    regimeState: regimeState, asOfMs: asOfMs, compLegacyShape: compLegacyShape, sizeAttempt: sizeAttempt, compFactor: compFactor, compHeat: compHeat, compStreak: compStreak, compUnlockCheck: compUnlockCheck, compEntryCheck: compEntryCheck, compCheck: compCheck,
     activeSummary: activeSummary, actionPolicy: actionPolicy, asFill: asFill, foldEvents: foldEvents
   };
 });
