@@ -6954,7 +6954,10 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     });
     return out;
   }
-  function unitCosts(S, acct, strategy, override) {
+  /* RE-C2 §6 — Costs switch: OFF (default) = the whole cost feature is dormant: costs count as 0 (known, all zero) → net = gross, net-breakeven = entry, never Unknown. ONE flag, read here (src.costsOn === true = ON = RE-C1 behaviour). */
+  var NO_COSTS = { known: true, perSidePct: 0, perUnit: 0, min: 0, flat: 0, swapDay: 0, source: 'off' };
+  function unitCosts(S, acct, strategy, override, on) {
+    if (on !== true) return { known: true, perSidePct: 0, perUnit: 0, min: 0, flat: 0, swapDay: 0, source: 'off' };
     var key = strategy === 'winner' ? 'winner' : strategy === 'ladder' ? 'ladder' : 'sat', cs = S.costSettings && typeof S.costSettings === 'object' ? S.costSettings : {};
     var one = {}; one[acct] = cs;
     var c = R.resolveCosts(one, acct, key, override || null);
@@ -6973,16 +6976,19 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     var rowsById = {}; ((src.books && src.books[acctId] && src.books[acctId].trades) || []).forEach(function (t) { if (t) rowsById[t.id] = t; });
     var rowsOf = function (idea) { return (idea.rowIds || []).map(function (id) { return rowsById[id]; }).filter(Boolean); };
     var costOverrideOf = function (idea) { var o = null; rowsOf(idea).forEach(function (t) { if (t.costOverride && typeof t.costOverride === 'object') o = t.costOverride; }); return o; };
-    var costsFor = function (idea) { return unitCosts(S, acctId, idea.strategy, costOverrideOf(idea)); };
+    var costsOn = src.costsOn === true, costsFor = function (idea) { return unitCosts(S, acctId, idea.strategy, costOverrideOf(idea), costsOn); };
+    var offRow = function (idea) { return !costsOn || rowsOf(idea).some(function (t) { return t.costsOff === true; }); };   /* a trade closed while OFF is never re-costed when ON later */
     ideas.forEach(function (i) {
       if (!i.tranches.length) return;
-      var c = costsFor(i), fees = 0, anyRec = false, swap = 0;
-      rowsOf(i).forEach(function (t) { if (t.status !== 'plan' && num(n(t.entryFee))) { fees += n(t.entryFee); anyRec = true; } });
+      var c = costsFor(i), fees = 0, anyRec = false, swap = 0, zero = offRow(i);
+      rowsOf(i).forEach(function (t) { if (!zero && t.status !== 'plan' && num(n(t.entryFee))) { fees += n(t.entryFee); anyRec = true; } });
+      if (zero) anyRec = true;
       if (!anyRec && c.known) i.tranches.forEach(function (t) { fees += R.exitCost(c, t.qty, t.entry, t.mult, t.fx) || 0; });
-      if (c.known && num(c.swapDay) && c.swapDay > 0 && i.strategy === 'sat') i.tranches.forEach(function (t) { var o = isoMs(t.openedAt) !== null ? isoMs(t.openedAt) : R.bkk.noonOf(t.openedAt); if (o !== null && now > o) { var d = Math.floor((now - o) / DAY); swap += d * c.swapDay * t.qty * (t.fx > 0 ? t.fx : 1); } });
+      if (!zero && c.known && num(c.swapDay) && c.swapDay > 0 && i.strategy === 'sat') i.tranches.forEach(function (t) { var o = isoMs(t.openedAt) !== null ? isoMs(t.openedAt) : R.bkk.noonOf(t.openedAt); if (o !== null && now > o) { var d = Math.floor((now - o) / DAY); swap += d * c.swapDay * t.qty * (t.fx > 0 ? t.fx : 1); } });
       i.entryFees = fees + swap;
       (i.exits || []).forEach(function (e) {
         var t = rowsById[String(e.id).replace(/^x:/, '')]; if (!t) return;
+        if (zero || t.costsOff === true) { e.fees = 0; e.swap = 0; return; }
         e.fees = num(n(t.fees)) ? n(t.fees) : (c.known ? (R.exitCost(c, e.qty, e.price, i.tranches[0].mult, i.tranches[0].fx) || 0) : 0); e.swap = num(n(t.swap)) ? n(t.swap) : 0;
       });
       i.reentry = rowsOf(i).some(function (t) { return t.reentry === true; });
@@ -7008,7 +7014,7 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     var satBud = basis.ok ? R.satBudgetCheck({ basis: basis, now: now, account: acctId, ideas: ideas, costsFor: costsFor, candidateRisk: 0 }) : null;
     var momChk = basis.ok ? R.momentumCheck({ now: now, account: acctId, basis: basis, ideas: ideas, costsFor: costsFor, candidate: { ideaId: '__none__', isAddition: true, riskMoney: 0 } }) : null;
     var active = basis.ok ? R.activeSummary({ basis: basis, mom: { usageWeek: momChk.usageWeek, usageMonth: momChk.usageMonth }, sat: { usageWeek: satBud.usageWeek, usageMonth: satBud.usageMonth }, candidateRisk: 0 }) : null;
-    return { acct: acctId, name: acc.name || acctId, now: now, fx: fx, S: S, ideas: ideas, info: A.info, basis: basis, emergency: emergency, eF: eF, costsFor: costsFor, regime: regime, signals: signals,
+    return { acct: acctId, costsOn: costsOn, name: acc.name || acctId, now: now, fx: fx, S: S, ideas: ideas, info: A.info, basis: basis, emergency: emergency, eF: eF, costsFor: costsFor, regime: regime, signals: signals,
       mom: { state: momState, chk: momChk }, sat: { step: step, attempts: attempts, dayAtt: dayAtt, budget: satBud, stale: R.satStaleOrders(ideas, now) }, comp: { streak: streak, cycles: cycles, unlocks: unlocks, heat: heat }, active: active, rowsById: rowsById };
   }
   /* ── reason text (engine text + the concrete numbers) ── */
@@ -7165,7 +7171,8 @@ function re1DrySrc(){
   cards.forEach(c=>{ try{ if(c && c.ticker) homework[re1DryKey(c.ticker)] = !!ftHwDone(c.ticker); }catch(e){} });
   let ff = {demo:true, as_of:null, ratios:{}}; try{ const J = ffJsonData(); ff = {demo:!ffJson, as_of:J && J.as_of || null, ratios:(J && J.ratios) || {}}; }catch(e){}
   let starterOn = false; try{ starterOn = ln4Cfg().starterOff !== true; }catch(e){}
-  return {now:Date.now(), accounts, books, cards, ideas, specs, ff, portCur:{core:PORTS.core.cur, satB:PORTS.satB.cur}, homework, starterOn};
+  let costsOn = false; try{ costsOn = ln4Cfg().costsOn === true; }catch(e){}   /* RE-C2 §6 */
+  return {now:Date.now(), accounts, books, cards, ideas, specs, ff, portCur:{core:PORTS.core.cur, satB:PORTS.satB.cur}, homework, starterOn, costsOn};
 }
 let re1DryLast = null;
 function re1DryRun(){
@@ -7232,10 +7239,13 @@ function re1Ensure(){
   try{
     re1Accts().forEach(id=>{ const S = getBook(id).settings || {}; if(!(S.re1 && S.re1.cutoverAt)) re1Write(id, s=>{ s.re1 = Object.assign({}, s.re1 || {}, {cutoverAt: Date.now()}); re1Ev(s, id, 'cutover', 'init', {note:'RE-C1 cut-over'}); }); });
     if(!ln4Cfg().re1StarterReset) ln4Write(o=>{ o.starterFeatureOff = true; o.re1StarterReset = true; });
+    if(!ln4Cfg().re1CostsReset) ln4Write(o=>{ o.costsOn = false; o.re1CostsReset = true; });   /* RE-C2 §6 — Costs OFF once at this release */
   }catch(e){ console.warn('re1 ensure:', e); }
 }
 /* Training · Starter ¼ (one switch: feature AND default) */
 function re1TrainingOn(){ try{ return ln4Feature() && ln4StarterDef(); }catch(e){ return false; } }
+function re1CostsOn(){ try{ return ln4Cfg().costsOn === true; }catch(e){ return false; } }   /* RE-C2 §6 — default OFF */
+function re1SetCosts(on){ ln4Write(o=>{ o.costsOn = !!on; }); re1Cache = {}; try{ ln4SetRender(); }catch(e){} try{ todayRefresh(true); }catch(e){} try{ re1Refresh(); }catch(e){} }
 function re1SetTraining(on){ ln4Write(o=>{ if(on){ delete o.starterFeatureOff; delete o.starterOff; } else o.starterFeatureOff = true; }); try{ ln4SetRender(); }catch(e){} }
 /* ── snapshots · cash flows · costs ── */
 function re1SnapConfirm(acct){
@@ -7282,8 +7292,8 @@ function re1SetHtml(){
     <div class="re1-row"><span class="re1-nm"><b>Deposit / withdrawal</b></span><button type="button" class="re1-btn" data-re1-flow onclick="re1FlowToggle()">+ Cash flow</button></div>
     <div class="re1-flbox" id="re1FlBox" style="display:none"><select id="re1FlA">${re1Accts().map(id=>`<option value="${e(id)}">${e(re1Name(id))}</option>`).join('')}</select><input type="date" id="re1FlD" value="${today}" max="${today}"><input type="text" inputmode="decimal" id="re1FlM" placeholder="Amount"><select id="re1FlT"><option value="in">Deposit</option><option value="out">Withdrawal</option></select><button type="button" class="re1-btn p" onclick="re1FlowSave()">Save</button><div class="re1-err" id="re1FlE" style="display:none"></div></div>
     <small class="re1-note">Older than 14 days blocks new orders. Deposits count from the next snapshot; withdrawals at once.</small>
-    <div class="ln4-sethd" style="margin-top:12px">Costs <small>· per account · strategy</small></div>${costRows}
-    <small class="re1-note">Without costs a stop cannot be recognised as net breakeven.</small>`;
+    ${re1CostsOn() ? `<div class="ln4-sethd" style="margin-top:12px">Costs <small>· per account · strategy</small></div>${costRows}
+    <small class="re1-note">Without costs a stop cannot be recognised as net breakeven.</small>` : ''}`;   /* RE-C2 §6 — cost rows hidden while the Costs switch is OFF */
 }
 
 /* ── Place order gate / fill flags for Core plans (one source: the engine) ── */
@@ -7419,6 +7429,7 @@ function re1TimelineHtml(t){
 function re1CloseCostsMount(t, A){
   try{
     const pv = document.getElementById('cpPreview'); if(!pv) return; let h = document.getElementById('cpRe1');
+    if(!re1CostsOn()){ if(h) h.remove(); return; }   /* RE-C2 §6 — no per-trade cost override while OFF */
     if(!h){ h = document.createElement('div'); h.id = 'cpRe1'; h.setAttribute('data-re1-closecosts', ''); pv.parentNode.insertBefore(h, pv.nextSibling); }
     const L = re1L(A), idea = L && L.ideas.find(i=>(i.rowIds || []).indexOf(t.id) >= 0), known = !!(idea && L.costsFor(idea).known);
     h.innerHTML = `<div class="re1-box" style="margin-top:8px">${known ? '<div class="re1-f">Costs from Settings are applied. Optional override for this trade:</div>' : '<div class="re1-w" data-re1-addcosts>Costs missing — the result is Unknown. <a href="#" onclick="event.preventDefault();closeClosePos&&closeClosePos();openSettings()">Add costs ›</a> or enter them here.</div>'}
@@ -10840,6 +10851,7 @@ function ln4SetRender(){ const h = document.getElementById('ln4SetBox'); if(!h) 
   const on = re1TrainingOn();
   h.innerHTML = `<div class="ln4-sethd">Settings · risk</div>` + re1SetHtml()
    + `<div class="ln4-sethd" style="margin-top:12px">Training</div><label class="ln4-setrow" data-re1-training><span><b>Starter ¼</b><br><small>Off by default · first Momentum / Compounder entry at ¼ of the planned size when on</small></span><input type="checkbox" id="re1TrainChk" ${on ? 'checked' : ''} onchange="re1SetTraining(this.checked)"></label>`
+   + `<label class="ln4-setrow" data-re1-costs><span><b>Costs</b><br><small>Off for now · when on, fees / swap count and a missing cost makes a result Unknown</small></span><input type="checkbox" id="re1CostsChk" ${re1CostsOn() ? 'checked' : ''} onchange="re1SetCosts(this.checked)"></label>`
    + `<div class="ln4-setrow" data-ln4-setexec><span><b>Exec goal</b><br><small>Valid setups taken per week</small></span><span class="ln4-val">≥ ${LN4_WEEK_GOAL}%</span></div>`; try{ re1DryMount(h); }catch(e){} }
 /* RG2a #2 — verdict 1 บรรทัดบนสุดของ Today: label จากคู่ Winner (EMA20/50) + factor ที่มีอยู่แล้ว (ไม่มีกฎใหม่) · แตะ → Flow › Regime */
 function tdRegimeVerdict(opt){
@@ -13013,6 +13025,7 @@ function summarize(){
 function realizedPnlOf(t){
   if(t.status!=='closed' || !(t.exitPrice>0)) return null;
   const dir = t.bias==='Short' ? -1 : 1;
+  if(!re1CostsOn() || t.costsOff === true) return (t.exitPrice - t.entry) * t.qty * (t.mult||1) * dir;   /* RE-C2 §6 — Costs OFF (or closed while OFF): gross, strict sign on gross */
   return (t.exitPrice - t.entry) * t.qty * (t.mult||1) * dir - (Number(t.fees)||0) - (Number(t.swap)||0) - (Number(t.entryFee)||0);   /* RE-C1 — net of recorded costs; old trades have none → gross */
 }
 function re1CostsRecorded(t){ return t && (t.fees != null || t.swap != null || t.entryFee != null); }
@@ -22064,6 +22077,7 @@ function confirmClosePos(){
     t.status = 'closed';
     t.exitPrice = ex;
     if(rc.fees != null) t.fees = rc.fees; if(rc.swap != null) t.swap = rc.swap;
+    if(!re1CostsOn()) t.costsOff = true;   /* RE-C2 §6 — closed while Costs OFF: stored as 'costs not recorded', never re-costed later */
     try{ bdTradeSnap(t, closePosAcct); }catch(e){}   /* PB1 §7 — thesis snapshot + update log travel with the trade */
     t.exitDate = exitDate;
     t.closedAt = new Date().toISOString();   /* PS1b */
@@ -22083,6 +22097,7 @@ function confirmClosePos(){
     leg.closedAt = new Date().toISOString();   /* PS1b */
     leg.posGroup = t.posGroup;
     if(rc.fees != null) leg.fees = rc.fees; if(rc.swap != null) leg.swap = rc.swap;
+    if(!re1CostsOn()) leg.costsOff = true;
     t.qty = t.qty - q;
     getBook(closePosAcct).trades.push(leg);
   }

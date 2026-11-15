@@ -233,10 +233,45 @@ def run_accounts(pw, w, h):
         b.close()
 
 
+def run_costs(pw, w, h):
+    """RE-C2 §6 — Costs switch OFF by default: cost UI hidden, closes stored as 'costs not recorded', ON shows the RE-C1 cost UI, nothing resized."""
+    tag = str(w)
+    d = doc_c(); d["books"]["main"]["trades"].append(tr(id="h1", sym="NVDA", cur="USD", qty=40, entry=100, sl=90, posGroup="h1", sl0=90))
+    b, page, ce, pe = launch(pw, w, h, d)
+    try:
+        check("[%s] Costs switch is OFF by default (set once at this release)" % tag, js(page, "()=>re1CostsOn()===false && ln4Cfg().re1CostsReset===true && ln4Cfg().costsOn===false"))
+        js(page, "()=>openSettings()"); page.wait_for_timeout(500)
+        check("[%s] Settings · Training has a Costs toggle next to Starter ¼, unchecked" % tag, js(page, "()=>{const l=document.querySelector('[data-re1-costs]'),t=document.querySelector('[data-re1-training]');return !!l&&!!t&&!document.getElementById('re1CostsChk').checked&&l.previousElementSibling===t}"))
+        check("[%s] OFF: Settings cost rows hidden" % tag, js(page, "()=>document.querySelectorAll('[data-re1-cost]').length")==0 and "Add costs" not in js(page, "()=>document.getElementById('ln4SetBox').innerText"))
+        js(page, "()=>{ openClosePos('h1','main'); }"); page.wait_for_timeout(400)
+        check("[%s] OFF: no per-trade cost override in the close form" % tag, js(page, "()=>!document.getElementById('cpFees') && !document.querySelector('[data-re1-closecosts]')"))
+        js(page, "()=>{ document.getElementById('cpExitPrice').value='100'; cpRefresh(); confirmClosePos(); }"); page.wait_for_timeout(500)
+        t = js(page, "()=>{const t=getBook('main').trades.find(x=>x.id==='h1');return {st:t.status,c:t.costsOff===true,f:t.fees==null,q:t.qty}}")
+        check("[%s] closed while OFF → stored as 'costs not recorded' (costsOff, no fees)" % tag, t["st"]=="closed" and t["c"] and t["f"], t)
+        check("[%s] exit at entry is breakeven on gross (strict sign)" % tag, js(page, "()=>outcomeOfPnl(realizedPnlOf(getBook('main').trades.find(x=>x.id==='h1')))")=="be")
+        check("[%s] no Unknown / Add costs anywhere on Today and Port when OFF" % tag, js(page, "()=>{switchTab('today');todayRefresh(true);const a=document.body.innerText;switchTab('port');const b=document.body.innerText;return !/Add costs|Costs missing|result is Unknown/.test(a+b)}"))
+        if w == 390: shot(page, "costs-off-settings-390")
+        js(page, "()=>{ switchTab('today'); openSettings(); }"); page.wait_for_timeout(300)
+        if w == 1440: shot(page, "costs-off-settings-1440")
+        q0 = js(page, "()=>JSON.stringify(getBook('main').trades.map(t=>[t.id,t.qty,t.sl,t.status,t.exitPrice,t.costsOff]))")
+        js(page, "()=>{ re1SetCosts(true); }"); page.wait_for_timeout(400)
+        check("[%s] ON: cost rows + per-account Costs back (RE-C1 behaviour)" % tag, js(page, "()=>re1CostsOn()")==True and js(page, "()=>document.querySelectorAll('[data-re1-cost]').length")==6)
+        q1 = js(page, "()=>JSON.stringify(getBook('main').trades.map(t=>[t.id,t.qty,t.sl,t.status,t.exitPrice,t.costsOff]))")
+        check("[%s] turning ON never changes or re-labels a trade or position" % tag, q0 == q1)
+        check("[%s] ON: the trade closed while OFF still reads 'costs not recorded' and gross" % tag, js(page, "()=>{const t=getBook('main').trades.find(x=>x.id==='h1');return !re1CostsRecorded(t) && outcomeOfPnl(realizedPnlOf(t))==='be'}"))
+        js(page, "()=>{ re1SetCosts(false); }"); page.wait_for_timeout(300)
+        check("[%s] OFF again hides the rows" % tag, js(page, "()=>document.querySelectorAll('[data-re1-cost]').length")==0)
+        check("[%s] no console / page errors" % tag, not ce and not pe, ce + pe)
+    finally:
+        b.close()
+
+
 with sync_playwright() as pw:
     for w, h in ((390, 844), (1280, 800), (1440, 900)):
         run_viewport(pw, w, h); run_pair(pw, w, h)
     run_accounts(pw, 1280, 800)
+    for w, h in ((390, 844), (1440, 900)):
+        run_costs(pw, w, h)
 bad = [r for r in results if not r[1]]
 print("SUMMARY: %d pass / %d fail" % (len(results) - len(bad), len(bad)))
 sys.exit(1 if bad else 0)

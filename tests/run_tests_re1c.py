@@ -23,6 +23,7 @@ def check(name, ok, detail=""):
 def launch(pw, w, h, d=None, c=None):
     b, ctx, page, ce, pe, dl = P39.launch(pw, w, h, doc=d or doc_c(), cards=c if c is not None else cards(), clean=True)
     page.add_style_tag(content=NOANIM); page.wait_for_timeout(500)
+    js(page, "()=>{ ln4Write(o=>{ o.costsOn = true; o.re1CostsReset = true; }); re1Cache = {}; }")   # RE-C2 §6: these are the RE-C1 cost tests → Costs switch ON (RE-C1 behaviour exactly)
     return b, page, ce, pe
 
 
