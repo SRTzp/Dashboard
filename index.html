@@ -3684,6 +3684,9 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .re2-pc .ev{display:flex;gap:8px;align-items:center;padding:5px 0;min-width:0}.re2-pc .ev time{font:.78rem ui-monospace,Menlo,monospace;color:var(--muted);width:74px;flex:none}.re2-pc .ev b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.re2-pc .ev .mut{margin-left:auto;font-size:.78rem;white-space:nowrap;color:var(--muted)}
 .re2-act .p,.re2-pc .p{display:none}
 .bd-ready{margin-left:auto;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:999px;font:700 .82rem var(--sans);padding:4px 10px;cursor:pointer;white-space:nowrap}.bd-ready.on{background:#e6ecfb;color:#2d5bd1;border-color:#b9c8f2}
+.bd-cx{background:none;border:0;color:var(--muted);font:600 .8rem var(--sans);padding:4px 2px;cursor:pointer;white-space:nowrap}.bd-cx:hover{color:var(--text)}.bd-df .bd-cx{margin-right:auto}
+.re4-nt>summary{cursor:pointer;color:var(--muted);font-size:.84rem;white-space:nowrap}.re4-nt .re1-f{margin-top:4px}
+#hdrPlanBtn[disabled]{opacity:.45;cursor:not-allowed}
 @media(max-width:900px){.re2-act .cols,.re2-pair{grid-template-columns:1fr}.re2-pc .rk3{grid-template-columns:1fr}}
 @media(max-width:560px){
   .re2-act .m,.re2-pc .m{display:none}.re2-act .p,.re2-pc .p{display:inline}.re2-act .rk.m{display:none}.re2-act .rk.ab,.re2-act .rk.ev{display:inline-block}
@@ -7466,6 +7469,7 @@ function re1TodoItems(){
       const L = re1L(id); if(!L) return; const nm = re1Name(id);
       if(!L.basis.ok || !L.basis.confirmedThisWeek) out.push({c: L.basis.ok ? 'a' : 'r', id:'re1snap:' + id, t:'Snapshot due · ' + nm, fn:"openSettings()"});
       /* RE1-C2 — 'Move stop · SYM' and '… still valid?' live in Today › Act now (Manage / Check orders) */
+      try{ if(re4Due(id)) out.push({c:'r', id:'re4rev:' + id, t:'Execution review · ' + nm, fn:`re4ReviewOpen('${id}')`}); }catch(e){}   /* RE-D §6 */
     });
   }catch(e){}
   return out;
@@ -11184,7 +11188,7 @@ function ln4Taken(id){
 }
 function ln4ValidList(){
   const v = ln4Cfg().valid, out = [];
-  if(v && typeof v === 'object') Object.keys(v).forEach(id=>{ const x = v[id]; if(x && typeof x === 'object') out.push(Object.assign({id}, x, {taken: !x.missed && ln4Taken(id)})); });
+  if(v && typeof v === 'object') Object.keys(v).forEach(id=>{ const x = v[id]; if(x && typeof x === 'object' && !x.excluded) out.push(Object.assign({id}, x, {taken: !x.missed && ln4Taken(id)})); });
   return out;
 }
 function ln4Exec(){
@@ -11213,10 +11217,9 @@ function ln4Crossed(c){
   const cfg = ln4Cfg(); if(cfg.valid && cfg.valid[c.id]) return false;
   return !(cfg.dismissed && cfg.dismissed[ln4MissKey(c)]);
 }
-function ln4Missed(id){
+function ln4Missed(id){   /* RE-D §6 — the To do 'trigger passed · Missed?' pill opens the same Cancel plan sheet (Missed pre-selected) */
   const c = coreCardsList.find(x=>x.id === id); if(!c) return;
-  ln4Valid(c.id, c.ticker, 'crossed', {missed:1, entry:+c.plan.entry, px:+c.px});
-  ln4Toast(`${c.ticker} recorded as Missed`);
+  re4Open(id, 'plan', null, 'missed');
 }
 function ln4NotValid(id){
   const c = coreCardsList.find(x=>x.id === id); if(!c) return;
@@ -13378,7 +13381,7 @@ function renderPlanSections(){
      ladder:{levels:[{px, status:'wait'|'bought'|'cancelled', qty?, fillPx?, boughtAt?, cancelledAt?, cancelBy?:'stop'|'manual'}], sl, budgetPct (เศษส่วน), split:[0.4,0.3,0.3]|[0.5,0.5], lockedAt}
      บันทึกแผน L = ล็อกแผน = จองเงินทันที (ไม่มีสถานะร่าง) · Tier คำนวณ (ทั้ง W และ L): tierInputs{roic,ndEbitda,fcfConv,gate5{substitute,customerMigrating,singleProduct}} tierComputed tierReason (เฉพาะ override A)
    ═══════════════════════════════════════════════════════════════════════════ */
-let coreCardsList = [], coreErr = null, coreUnsub = null, coreUnsubUid = null, coreCardsLoaded = false;   /* RG2b §4.7 — DD ต่อถังแยกไม้ Ladder ด้วยการ์ด L → ไม่เขียน state ก่อนโหลดการ์ดเสร็จ */
+let coreCardsList = [], coreCancelledList = [], coreErr = null, coreUnsub = null, coreUnsubUid = null, coreCardsLoaded = false;   /* RG2b §4.7 — DD ต่อถังแยกไม้ Ladder ด้วยการ์ด L → ไม่เขียน state ก่อนโหลดการ์ดเสร็จ */
 /* PX1 — ราคาปิดสัปดาห์อัตโนมัติ (หุ้น Core) · GitHub Actions + yfinance เขียน users/{uid}/prices/{ySym} + _meta · แอปอ่านอย่างเดียว
    coreCardsRaw = การ์ดจาก Firestore ตามจริง · coreCardsList = การ์ดที่ใส่ราคา effective แล้ว (px/pxDate/emaW ทุกจุดที่อ่านเห็นค่าเดียวกัน · ค่ากรอกเองเก็บใน _pxMan) · ไม่เขียนค่า auto ลง coreCards */
 let coreCardsRaw = [], pxAuto = {}, pxMeta = null, pxErr = null, pxUnsub = null, pxUnsubUid = null;
@@ -13418,7 +13421,8 @@ function pxYSym(c){
 }
 /* ใส่ราคา effective ลงการ์ด: auto ใช้เมื่อ ไม่ suspect + ใหม่กว่าที่กรอกเอง (หรือการ์ดยังไม่มี pxDate) · วันเท่ากัน/กรอกเองใหม่กว่า = กรอกเอง · L ไม่ใช้ EMA */
 function coreApplyPx(){
-  coreCardsList = coreCardsRaw.map(c=>{
+  coreCancelledList = coreCardsRaw.filter(c=>c.status === 'cancelled');   /* RE-D §6 — cancelled plans leave every live list (kept in the data, shown in Journal › Not taken) */
+  coreCardsList = coreCardsRaw.filter(c=>c.status !== 'cancelled').map(c=>{
     const a = pxAuto[pxYSym(c)];
     const ok = a && !a.suspect && +a.close>0 && a.closeDate && (!c.pxDate || String(a.closeDate) > String(c.pxDate));
     if(!ok){
@@ -13473,7 +13477,7 @@ function pxStatusHtml(){
 }
 function coreStop(){
   if(coreUnsub){ try{ coreUnsub(); }catch(e){} }
-  coreUnsub = null; coreUnsubUid = null; coreCardsList = []; coreCardsRaw = []; coreErr = null; coreCardsLoaded = false;
+  coreUnsub = null; coreUnsubUid = null; coreCardsList = []; coreCancelledList = []; coreCardsRaw = []; coreErr = null; coreCardsLoaded = false;
   pxStop();
 }
 /* วาดใหม่ทั้งหน้า (ตัวเลขชั้น 2 อยู่ทั้งแผง Core และบล็อกสรุป) · กำลังพิมพ์ในแผงนี้ = รอวาดตอนออกจากช่อง */
@@ -16795,7 +16799,7 @@ function renderJournalBody(A){
   if(!jfdefs.some(([k])=>k===jFilter)) jFilter = 'all';
   document.getElementById('jFilters').innerHTML = jfdefs.map(([k,l])=>
     `<span class="chip ${jFilter===k?'on':''}" data-jf="${k}" onclick="setJFilter('${k}')">${l}</span>`).join('') + (ln1On() ? `<span class="chip" data-ln3-backfill="1" role="button" tabindex="0" onclick="jBackfillOpen()">＋ ย้อนหลัง</span>` : '')
-    + `<div class="hint" data-ln4-jrow style="flex-basis:100%">${ln4WeekRowHtml()}</div>` + (jFilter==='missed' ? `<div class="hint" data-ln4-missed style="flex-basis:100%">${ln4MissedList().map(x=>`<div>${escHtml(x.day)} · <b>${escHtml(x.sym || '')}</b> · Missed${x.entry ? ' · entry ' + x.entry : ''}</div>`).join('') || 'No missed setups'}</div>` : '');
+    + `<div class="hint" data-ln4-jrow style="flex-basis:100%">${ln4WeekRowHtml()}</div>` + re4JournalHtml() + (jFilter==='missed' ? `<div class="hint" data-ln4-missed style="flex-basis:100%">${ln4MissedList().map(x=>`<div>${escHtml(x.day)} · <b>${escHtml(x.sym || '')}</b> · Missed${x.entry ? ' · entry ' + x.entry : ''}</div>`).join('') || 'No missed setups'}</div>` : '');
 
   /* RG2a #13 — ชิป bucket + ตาราง 4 แถว (ไม้ · win rate · avg R · P/L ฿ · max DD ฿ ของเส้นทุนไม้ปิดใน bucket) */
   {
@@ -25740,7 +25744,7 @@ function satV3SkipToggle(ideaId, accId, on){
     const merged = Object.assign({}, idea, {accts: Object.assign({}, idea.accts, {
       [accId]: Object.assign({}, (idea.accts||{})[accId], {skip: !!on})
     })});
-    if(merged.status!=='closed' && satV3ShouldAutoClose(merged)) sat7dWrite('satIdeas', ideaId, {status:'closed'});
+    if(merged.status!=='closed' && merged.status!=='cancelled' && satV3ShouldAutoClose(merged)) sat7dWrite('satIdeas', ideaId, {status:'closed'});
   }
 }
 /* บันทึก order 1 บัญชี — makeTradeObject() เดิมทั้งดุ้น (บวก cancel_level/setups แบบ optional ที่เพิ่มเข้าไปแล้ว)
@@ -25841,7 +25845,7 @@ function satV3ShouldAutoClose(idea){
   });
 }
 function satV3MaybeAutoClose(ideaId){
-  const idea = sat7dIdea(ideaId); if(!idea || idea.status==='closed') return;
+  const idea = sat7dIdea(ideaId); if(!idea || idea.status==='closed' || idea.status==='cancelled') return;
   if(satV3ShouldAutoClose(idea)) sat7dWrite('satIdeas', ideaId, {status:'closed'});
 }
 /* ตัวกรอง "ปิดแล้ว" (Phase 4 จะผูกปุ่มนี้) — ลบเฉพาะเอกสารไอเดีย ไม่แตะไม้ในสมุดเลย */
@@ -30540,7 +30544,7 @@ function bdCardHtml(it){
   else l3 = bdToEntry(it);
   if(it.kind === 'sat' && it.pb && !it.inc){ const V = it.pb.vf, tg = it.blocked ? `<span class="bd-st r" data-bd-blockedtag>Blocked</span>` : V.tag ? `<span class="bd-st a" data-bd-trendtag>${bdE(V.tag)}</span>` : ''; const wn = V.warn ? `<span class="bd-st a" data-bd-nearwarn role="img" aria-label="nearest target" title="${bdE(SAT_NEAR_WARN)}">⚠️</span>` : ''; if(tg || wn) l3 = tg + wn + (it.pct == null ? '' : l3); }   /* PB1b — Card: trend tag + nearest-target warning icon */
   return `<div class="bd-card" role="button" tabindex="0" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${it.inc ? ' data-bd-inc="1"' : ''} onclick="bdOpen('${id}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();bdOpen('${id}')}">
-    <div class="bd-r1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${fam}${it.status === 'plan' ? re2ReadyBtn(it) : ''}</div>
+    <div class="bd-r1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${fam}${it.status === 'plan' ? re2ReadyBtn(it) + re4CancelBtn(it, true) : ''}</div>
     <div class="bd-r2">${r2}</div>
     <div class="bd-r3">${l3}<button type="button" class="go${p.cls ? ' ' + p.cls : ''}" data-bd-pill="${p.k}"${p.dis ? ` disabled title="${bdE(p.title)}" data-bd-blocked="1"` : ''} onclick="event.stopPropagation();${p.fn}">${bdE(p.t)}</button></div></div>`;
 }
@@ -30671,14 +30675,8 @@ function bdComplete(id){
   try{ coreNewOpen(it.ref.acct, {mode:'editw', id}); }catch(e){}
   setTimeout(()=>{ const el = document.getElementById(+it.entry > 0 ? 'cnStop' : 'cnEntry'); if(el){ try{ el.focus(); }catch(e){} } }, 350);
 }
-function bdCancelOrder(id){ const it = bdById(id); if(it && it.firstPlaced != null) bdCancelLv(id, it.firstPlaced); }
-function bdCancelLv(id, i){
-  const it = bdById(id); if(!it || !it.placed || !it.placed.has(i)) return;
-  const ln = {placedLv:{[i]:null}}; if(it.ref.ln4 && it.ref.ln4.placedAt && i === it.k) ln.placedAt = null;
-  if(it.kind === 'sat'){ ln.placedAt = null; ln.snap = null; }   /* PB1b — the order is gone → its snapshot goes with it (a new Place order takes a new one) */
-  const idx = bdWriteWithLog(it, {ln4:ln}, 'cancel', (it.nl > 1 ? '#' + (i + 1) + ' order cancelled' : 'Order cancelled'));   /* §2c — only that level */
-  bdReason = {id, idx}; try{ ln4Toast('Order cancelled'); }catch(e){}
-}
+function bdCancelOrder(id){ const it = bdById(id); if(it && it.firstPlaced != null) re4Open(id, 'order', it.firstPlaced); }   /* RE-D §6 — reason first (same sheet as Cancel plan) */
+function bdCancelLv(id, i){ const it = bdById(id); if(it && it.placed && it.placed.has(i)) re4Open(id, 'order', i); }
 function bdPlaceLv(id, i){
   const it = bdById(id); if(!it) return;
   if(it.kind === 'core' && !wl1PlaceGate(id, i)) return;   /* WL1 — homework cap */
@@ -30766,7 +30764,7 @@ function bdDrawerHtml(it){
   const hot = it.kind === 'core' ? bdHotTag(it.sym) : '';
   const pill = {plan:'📝 Planned', ord:'📌 Ordered', hold:'✅ Holding'}[it.status];
   const prim = `<button type="button" class="go${p.cls ? ' ' + p.cls : ''}" data-bd-dprimary="${p.k}"${p.dis ? ` disabled title="${e(p.title)}" data-bd-blocked="1"` : ''} onclick="${p.fn}">${e(p.t)}</button>`;
-  let foot = (it.status === 'plan' ? re2ReadyBtn(it) : '') + `<button type="button" class="go" data-bd-update onclick="bdEditLv('${id}')">Update levels</button>`;
+  let foot = (it.status === 'plan' ? re2ReadyBtn(it) + re4CancelBtn(it, false) : '') + `<button type="button" class="go" data-bd-update onclick="bdEditLv('${id}')">Update levels</button>`;
   if(it.status === 'ord' || (it.status === 'hold' && it.lvOrdered)) foot += `<button type="button" class="go" data-bd-cancel onclick="bdCancelOrder('${id}')">Cancel order</button>`;
   if(it.status === 'hold' && it.kind === 'sat') foot += `<button type="button" class="go" data-bd-satstop onclick="re1SatStopOpen('${id}')">Move stop</button>`;   /* RE-D §2 */
   if(it.status === 'hold' && p.k === 'edit') foot += `<button type="button" class="go" data-bd-close onclick="bdClosePos('${id}')">Close trade</button>`;
@@ -31005,6 +31003,7 @@ function re2State(acct){   /* worst wins · the strategy that causes it names it
     }
   }
   if(st.cause === 'emerg'){ ['mmt', 'sat', 'comp'].forEach(k=>{ ab[k] = ab[k] || 'a'; }); }
+  try{ if(re4Due(acct)){ set('Review due', 'r', 'exec'); ab.exec = 'r'; } }catch(e){}   /* RE-D §6 — Execution review */
   st.ab = ab; return st;
 }
 function re2StripHtml(acct, label){
@@ -31017,6 +31016,7 @@ function re2StripHtml(acct, label){
     h += chip('sat', `SAT step <b>${R.sat.step}</b> · ${re1Pct(R.sat.rpt)}`);
     h += `<button type="button" class="rk${ab.comp ? ' ' + ab.comp + ' ab' : ' m'} re2-comp" data-re2-chip="comp" data-tw1-status title="Regime details" aria-label="COMP — open Regime details in Flow" onclick="tw1RegimeGo()">${ab.comp === 'r' ? 'COMP locked' : `COMP <b>${re1Pct(R.comp.room, 1)}</b>`}</button>`;
   }
+  try{ if(re4Due(acct)) h += `<button type="button" class="rk r ab" data-re2-chip="exec" data-re4-chip title="Execution review due" onclick="re4ReviewOpen('${e(acct)}')">${re4Counted(acct).length} not taken</button>`; }catch(x){}
   if(ev.any){
     const amber = !!(ev.win && ev.win.soon), n = ev.high;
     h += `<span class="rk ev${amber ? ' a' : ''}" data-re2-evchip="${amber ? 'amber' : 'neutral'}">${n ? e(n.title.slice(0, 24)) + ' ' + e(re2Day(n.ts)) : (ev.win ? e(ev.win.kind) + ' ' + e(ev.win.txt) : 'No HIGH events')}</span>`;
@@ -31048,8 +31048,9 @@ function re2Row(it, o){
   const e = td3E, sr = (()=>{ try{ return tw1SizeRisk(it); }catch(x){ return {sz:'—', rk:'—'}; } })();
   if(sr.sz === '—'){ try{ const lots = it.kind === 'core' ? (it.ref.lots || []).reduce((a, l)=>a + (+l.qty || 0), 0) : 0, rw = it.kind === 'core' && it.ref.plan && it.ref.plan.ps1 && Array.isArray(it.ref.plan.ps1.rows) ? it.ref.plan.ps1.rows.reduce((a, r)=>a + (+r.qty || 0), 0) : 0, n = it.status === 'hold' && lots > 0 ? lots : rw; if(n > 0) sr.sz = '#' + fmt0(n); }catch(x){} }
   const q = o.q != null ? o.q : [sr.sz, sr.rk].filter(x=>x && x !== '—').join(' · ') || '—';
-  const sh = {place:'Place ›', fill:'Filled ✓', stop:'Stop ›', hw:'Homework ›', addon:'Add-on ›', fix:'Fix ›', complete:'Complete ›', edit:'Edit', review:'Review ›'}[o.k] || o.btn;
-  const btn = o.btn ? `<button type="button" class="btn${o.k === 'fill' || o.k === 'hw' ? ' o' : ''}" data-re2-btn="${o.k}"${o.dis ? ` disabled title="${e(o.title || '')}" data-re2-blocked="1"` : ''} onclick="event.stopPropagation();${o.fn || ''}"><span class="m">${e(o.btn)}</span><span class="p">${e(sh)}</span></button>` : '';
+  const sh = {place:'Place ›', cancel:'Cancel ›', fill:'Filled ✓', stop:'Stop ›', hw:'Homework ›', addon:'Add-on ›', fix:'Fix ›', complete:'Complete ›', edit:'Edit', review:'Review ›'}[o.k] || o.btn;
+  const btn2 = o.btn2 ? `<button type="button" class="btn o" data-re2-btn="keep" onclick="event.stopPropagation();${o.fn2 || ''}">${e(o.btn2)}</button>` : '';
+  const btn = btn2 + (o.btn ? `<button type="button" class="btn${o.k === 'fill' || o.k === 'hw' ? ' o' : ''}" data-re2-btn="${o.k}"${o.dis ? ` disabled title="${e(o.title || '')}" data-re2-blocked="1"` : ''} onclick="event.stopPropagation();${o.fn || ''}"><span class="m">${e(o.btn)}</span><span class="p">${e(sh)}</span></button>` : '');
   return `<div class="row re2-row" data-re2-row="${e(it.sym)}" data-re2-grp="${o.g}" data-re2-id="${e(it.id)}" role="button" tabindex="0" onclick="bdOpen('${e(it.id).replace(/'/g, "\\'")}')">
     <div class="l1"><b>${e(it.sym)}</b><span class="tag">${e(it.tag)}</span>${o.chip ? `<span class="chip ${o.cc || ''} m" data-re2-chip-st>${e(o.chip)}</span>` : ''}<span class="q p">${e(q)}</span><span class="sp"></span>${btn}</div>
     <div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span><i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div></div>`;
@@ -31062,6 +31063,7 @@ function re2Model(acct){
     const ready = re2ReadyOf(it); let d = null;
     if(it.kind === 'core' && it.px > 0 && it.entry > 0 && !it.inc) d = (it.px - it.entry) / it.entry * 100;
     const near = nearEntry(d);
+    if(re4Passed(it) && !re4Kept(it.id)){ enter.push({it, o:{g:'enter', chip:'passed entry · missed?', cc:'a', k:'cancel', btn:'Cancel plan ›', fn:`re4Open('${td3E(it.id).replace(/'/g, "\\'")}','plan',null,'missed')`, btn2:'Keep', fn2:`re4Keep('${td3E(it.id).replace(/'/g, "\\'")}')`, why:'passed entry · missed?', warn:true, lv:tw1Lv(it), d}}); return; }   /* RE-D §6 */
     if(!ready && !near) return;
     const p = bdPill(it, true), blocked = !!p.dis;
     const why = blocked ? (p.title || 'Blocked') : ready ? '⚑ ready' + (it.kind === 'sat' && L ? ' · step ' + L.sat.step.step : '') : (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '%';
@@ -31128,6 +31130,7 @@ function re2ReadyToggle(id){
   try{ const c = it.ref; if(it.kind === 'core'){ c.plan = Object.assign({}, c.plan || {}, {ready:on ? true : null, readyAt:at}); } else { c.ready = on ? true : null; c.readyAt = at; } }catch(e){}
   try{ bdRender(); todayRefresh(true); }catch(e){}
 }
+function re4CancelBtn(it, card){ return `<button type="button" class="bd-cx" data-re4-cancel${card ? ' data-re4-card' : ''} onclick="event.stopPropagation();re4Open('${td3E(it.id).replace(/'/g, "\\'")}','plan')">Cancel plan ›</button>`; }
 function re2ReadyBtn(it){ const on = re2ReadyOf(it); return `<button type="button" class="bd-ready${on ? ' on' : ''}" data-re2-ready="${on ? '1' : '0'}" aria-pressed="${on}" title="Flag as ready to enter — shows in Today › Enter" onclick="event.stopPropagation();re2ReadyToggle('${td3E(it.id).replace(/'/g, "\\'")}')">⚑ Ready</button>`; }
 (function(){   /* the flag clears itself when the plan becomes Ordered, Filled or Cancelled */
   const clr = p=>!!(p && ((p.ln4 && p.ln4.placedAt) || (p.status && p.status !== 'plan') || p.archived === true || p.trade_id || (Array.isArray(p.lots) && p.lots.length)));
@@ -31135,6 +31138,147 @@ function re2ReadyBtn(it){ const on = re2ReadyOf(it); return `<button type="butto
   const sw = sat7dWrite; sat7dWrite = function(col, docId, patch){ try{ if(col === 'satIdeas' && clr(patch) && !patch.ready) patch = Object.assign({}, patch, {ready:null, readyAt:null}); }catch(e){} return sw.call(this, col, docId, patch); };
 })();
 
+/* ═══ RE-D §6 — Cancel a Planned trade (with a reason) · Not taken · Execution review ═══
+   Additive data only. Stored on the plan: cancelReason (code) · cancelReasonText · cancelNote · cancelledAt · cancelPx (last cached price, if any); status → 'cancelled' (never deleted).
+   Order cancels (plan stays Planned) store the same four fields on the plan and one record in ln4.ocx. Review notes: ln4.exrev · prompt 'Keep': ln4.keep.
+   Nothing here touches a position, an order size, the engine or a limit — the review only locks the New plan button for that account. */
+const RE4_REASONS = [['missed', 'Missed — price ran before I could enter'], ['hesitated', 'Hesitated — did not place the order'], ['invalidated', 'Invalidated — setup broke / invalidation level hit'], ['thesis', 'Thesis or news changed'], ['room', 'Better use of the risk room'], ['blocked', 'Blocked by a risk limit'], ['error', 'Plan error — wrong levels / duplicate'], ['other', 'Other']];
+const RE4_COUNTED = ['missed', 'hesitated'], RE4_LIMIT = 3;
+function re4Text(code){ const r = RE4_REASONS.find(x=>x[0] === code); return r ? r[1] : ''; }
+function re4Short(code){ return re4Text(code).split(' — ')[0]; }
+function re4WeekStart(now){ try{ return RiskEngine.bkk.weekStart(now == null ? Date.now() : now); }catch(e){ return 0; } }
+function re4SatAcct(i){ try{ return pb2AcctOf(i) || Object.keys(i.accts || {})[0] || tdHome(); }catch(e){ return tdHome(); } }
+function re4Strat(c){ return coreTrackOfCard(c) === 'ladder' ? 'COMP' : 'MMT'; }
+/* every "not taken" record in one shape: {id, sym, strat, acct, reason, note, at, scope:'plan'|'order', px, kind, restorable} */
+function re4Entries(){
+  const out = [];
+  try{ (coreCancelledList || []).forEach(c=>{ if(c.cancelReason) out.push({id:c.id, sym:c.ticker, strat:re4Strat(c), acct:c.acct, reason:c.cancelReason, note:c.cancelNote || '', at:c.cancelledAt, scope:'plan', px:c.cancelPx, kind:'core', restorable:true}); }); }catch(e){}
+  try{ (satIdeasList || []).forEach(i=>{ if(i && i.status === 'cancelled' && i.cancelReason) out.push({id:i.id, sym:i.asset, strat:'SAT', acct:re4SatAcct(i), reason:i.cancelReason, note:i.cancelNote || '', at:i.cancelledAt, scope:'plan', px:i.cancelPx, kind:'sat', restorable:true}); }); }catch(e){}
+  try{ (ln4Cfg().ocx || []).forEach(o=>{ if(o && o.reason) out.push(Object.assign({scope:'order', restorable:false}, o)); }); }catch(e){}
+  return out.filter(x=>x.at && RE4_REASONS.some(r=>r[0] === x.reason)).sort((a, b)=>String(b.at).localeCompare(String(a.at)));
+}
+function re4Counted(acct, now){ const ws = re4WeekStart(now); return re4Entries().filter(x=>x.acct === acct && RE4_COUNTED.indexOf(x.reason) >= 0 && Date.parse(x.at) >= ws); }
+function re4Done(acct, now){ const ws = re4WeekStart(now); let n = 0; try{ (ln4Cfg().exrev || []).forEach(r=>{ if(r && r.acct === acct && Date.parse(r.at) >= ws && +r.n > n) n = +r.n; }); }catch(e){} return n; }
+function re4Due(acct, now){ const n = re4Counted(acct, now).length; return n >= RE4_LIMIT && n > re4Done(acct, now); }
+function re4NewLocked(){ try{ return !!acctActive && re4Due(acctActive); }catch(e){ return false; } }
+function re4AcctName(a){ try{ return td3AcctName(acctList.find(x=>x.id === a)) || a; }catch(e){ return a; } }
+/* ── the cancel sheet (one screen · reason required · note optional / required for Other) ── */
+function re4Open(id, scope, lv, pre){
+  const it = bdById(id); if(!it) return; scope = scope === 'order' ? 'order' : 'plan';
+  if(scope === 'plan' && it.status !== 'plan') return;
+  const e = bdE, opts = RE4_REASONS.map(([k, t])=>`<option value="${k}"${pre === k ? ' selected' : ''}>${e(t)}</option>`).join('');
+  coreDlg = {kind:'cxplan', id, scope, lv: lv == null ? null : lv};
+  coreSheet('cxplan', `<h3>${scope === 'order' ? 'Cancel order' : 'Cancel plan'} · ${e(it.sym)}</h3>
+    <div class="ccF"><label for="cxReason">Reason</label><select id="cxReason" data-re4-reason onchange="re4In()"><option value="">Choose a reason</option>${opts}</select></div>
+    <div class="ccF"><label for="cxNote">Note <span id="cxReq" class="mut">(optional)</span></label><input type="text" id="cxNote" data-re4-note maxlength="160" autocomplete="off" oninput="re4In()"></div>
+    <div class="ccErr" id="cxErr" style="display:none"></div>
+    <div class="ccFoot"><button type="button" class="ccBtn" data-re4-keep onclick="coreSheetClose()">Keep</button><button type="button" class="ccBtn pri" id="cxGo" data-re4-go onclick="re4Go()" disabled>${scope === 'order' ? 'Cancel order' : 'Cancel plan'}</button></div>`);
+  setTimeout(re4In, 0);
+}
+function re4In(){
+  const r = coreEl('cxReason'), n = coreEl('cxNote'), go = coreEl('cxGo'); if(!r || !n || !go) return false;
+  const other = r.value === 'other', req = coreEl('cxReq'); if(req) req.textContent = other ? '(required)' : '(optional)';
+  const ok = !!r.value && (!other || n.value.trim().length > 0); go.disabled = !ok; return ok;
+}
+function re4Fields(it, code, note){ const px = it.kind === 'core' && +it.px > 0 ? +it.px : null; return {cancelReason:code, cancelReasonText:re4Text(code), cancelNote:note || null, cancelledAt:new Date().toISOString(), cancelPx:px}; }
+function re4ValidMark(id, sym, code){   /* Exec goal: Missed / Hesitated = a valid setup NOT taken · reasons 3–8 are left out of the ratio */
+  if(RE4_COUNTED.indexOf(code) >= 0) ln4Valid(id, sym, 'cancel', {missed:1, reason:code});
+  else ln4Write(o=>{ if(o.valid && o.valid[id]) o.valid[id].excluded = 1; });
+}
+function re4Go(){
+  const d = coreDlg; if(!d || d.kind !== 'cxplan' || !re4In()) return;
+  const it = bdById(d.id); if(!it){ coreSheetClose(); return; }
+  const code = coreEl('cxReason').value, note = coreEl('cxNote').value.trim().slice(0, 160), f = re4Fields(it, code, note);
+  coreSheetClose();
+  if(d.scope === 'order'){
+    const i = d.lv != null ? d.lv : it.firstPlaced; if(i == null) return;
+    bdCancelLvDo(d.id, i, f);
+    const acct = it.acct || (it.kind === 'sat' ? re4SatAcct(it.ref) : it.ref.acct) || tdHome();
+    ln4Write(o=>{ o.ocx = Array.isArray(o.ocx) ? o.ocx : []; o.ocx.push({id:it.id, sym:it.sym, strat:it.tag, acct, reason:code, note:note, at:f.cancelledAt, px:f.cancelPx, kind:it.kind}); });
+    if(RE4_COUNTED.indexOf(code) >= 0) ln4Valid(it.id, it.sym, 'cancel', {missed:1, reason:code});
+  } else {
+    const log = bdLogOf(it).slice(); log.push(bdMk('cancel', 'Plan cancelled · ' + re4Short(code) + (note ? ' · ' + note : ''))); bdLogMem[it.id] = log;
+    if(it.kind === 'core') coreWrite(it.id, Object.assign({status:'cancelled', log}, f));
+    else re4SatCancel(it.ref, f, log);
+    re4ValidMark(it.id, it.sym, code);
+  }
+  try{ bdClose(); }catch(e){}
+  try{ ln4Toast((d.scope === 'order' ? 'Order' : 'Plan') + ' cancelled · ' + re4Short(code)); }catch(e){}
+  try{ bdRender(); todayRefresh(true); }catch(e){}
+}
+function re4SatCancel(i, f, log){
+  const t0 = f.cancelledAt;
+  Object.keys(i.accts || {}).forEach(a=>{
+    const s = i.accts[a]; if(!s || !s.trade_id) return;
+    const B = getBook(a), t = B.trades.find(x=>x.id === s.trade_id); if(!t || t.status !== 'plan') return;
+    t.status = 'cancelled'; if(!t.cancelDate) t.cancelDate = thaiToday(); t.cancelReason = f.cancelReason; t.cancelNote = f.cancelNote || f.cancelReasonText; saveBook(a);
+  });
+  sat7dWrite('satIdeas', i.id, Object.assign({status:'cancelled', log, ln4:{placedAt:null, snap:null}}, f));
+}
+/* order cancel: reason first, then the existing cancel (only that level) · same stored fields on the plan */
+function bdCancelLvDo(id, i, f){
+  const it = bdById(id); if(!it || !it.placed || !it.placed.has(i)) return;
+  const ln = {placedLv:{[i]:null}}; if(it.ref.ln4 && it.ref.ln4.placedAt && i === it.k) ln.placedAt = null;
+  if(it.kind === 'sat'){ ln.placedAt = null; ln.snap = null; }   /* PB1b — the order is gone → its snapshot goes with it (a new Place order takes a new one) */
+  bdWriteWithLog(it, Object.assign({ln4:ln}, f || {}), 'cancel', (it.nl > 1 ? '#' + (i + 1) + ' order cancelled' : 'Order cancelled') + (f ? ' · ' + re4Short(f.cancelReason) : ''));   /* §2c — only that level */
+}
+/* ── restore (Journal › Not taken): plan-level records only — back to Planned, reason cleared ── */
+function re4Restore(id){
+  const e = re4Entries().find(x=>x.id === id && x.scope === 'plan'); if(!e) return;
+  const clr = {cancelReason:null, cancelReasonText:null, cancelNote:null, cancelledAt:null, cancelPx:null};
+  if(e.kind === 'core') coreWrite(id, Object.assign({status:'plan'}, clr));
+  else {
+    const i = sat7dIdea(id); if(!i) return;
+    Object.keys(i.accts || {}).forEach(a=>{ const s = i.accts[a]; if(!s || !s.trade_id) return; const B = getBook(a), t = B.trades.find(x=>x.id === s.trade_id); if(t && t.status === 'cancelled' && t.cancelReason){ t.status = 'plan'; t.cancelDate = null; t.cancelReason = null; t.cancelNote = null; saveBook(a); } });
+    sat7dWrite('satIdeas', id, Object.assign({status:'active'}, clr));
+  }
+  ln4Write(o=>{ if(o.valid && o.valid[id]){ if(o.valid[id].via === 'cancel') delete o.valid[id]; else delete o.valid[id].excluded; } });
+  try{ ln4Toast('Plan restored to Planned'); bdRender(); todayRefresh(true); if(activeTab === 'journal') render(); }catch(err){}
+}
+/* ── Today: passed-entry prompt (stocks with a cached price) ── */
+function re4Passed(it){ return it.kind === 'core' && it.status === 'plan' && +it.px > 0 && +it.entry > 0 && !it.inc && (it.px - it.entry) / it.entry * 100 > NEAR_ENTRY_PCT + 1e-9; }
+function re4Kept(id){ try{ return (ln4Cfg().keep || {})[id] === thaiToday(); }catch(e){ return false; } }
+function re4Keep(id){ ln4Write(o=>{ o.keep = o.keep || {}; o.keep[id] = thaiToday(); }); try{ todayRefresh(true); }catch(e){} }
+/* ── Execution review ── */
+let re4Rev = null;
+function re4ReviewOpen(acct){
+  acct = acct || acctActive; const list = re4Counted(acct); if(!list.length) return;
+  const e = bdE, rows = list.slice(0, 5).map(x=>`<div class="re1-f" data-re4-rrow>${e(String(x.at).slice(0, 10))} · <b>${e(x.sym)}</b> · ${e(x.strat)} · ${e(re4Short(x.reason))}</div>`).join('') + (list.length > 5 ? `<div class="re1-f mut">+${list.length - 5} more</div>` : '');
+  re4Rev = {acct, n:list.length};
+  coreDlg = {kind:'exrev'};
+  coreSheet('exrev', `<h3>Execution review · ${e(re4AcctName(acct))}</h3><div class="ccSub">${list.length} not taken this week</div>${rows}
+    <div class="ccF"><label for="rvStop">What stopped me</label><input type="text" id="rvStop" maxlength="160" autocomplete="off" oninput="re4RevIn()"></div>
+    <div class="ccF"><label for="rvChange">What I change</label><input type="text" id="rvChange" maxlength="160" autocomplete="off" oninput="re4RevIn()"></div>
+    ${re4Suggest(list)}
+    <div class="ccFoot"><button type="button" class="ccBtn pri" id="rvDone" data-re4-done onclick="re4RevDone()" disabled>Done</button></div>`);
+}
+function re4Suggest(list){
+  const h = list.filter(x=>x.reason === 'hesitated').length, m = list.filter(x=>x.reason === 'missed').length;
+  if(h > m) return `<div class="re1-f" data-re4-suggest><a href="#" onclick="event.preventDefault();coreSheetClose();openSettings()">Turn on Starter ¼ for the next entries ›</a></div>`;
+  if(m > h) return `<div class="re1-f mut" data-re4-suggest>Use resting orders or keep fewer Planned names</div>`;
+  return '';
+}
+function re4RevIn(){ const a = coreEl('rvStop'), b = coreEl('rvChange'), d = coreEl('rvDone'); if(d) d.disabled = !(a && b && a.value.trim() && b.value.trim()); }
+function re4RevDone(){
+  const a = coreEl('rvStop'), b = coreEl('rvChange'); if(!re4Rev || !a || !b || !a.value.trim() || !b.value.trim()) return;
+  const r = {acct:re4Rev.acct, at:new Date().toISOString(), n:re4Rev.n, stopped:a.value.trim().slice(0, 160), change:b.value.trim().slice(0, 160), day:thaiToday()};
+  coreSheetClose(); ln4Write(o=>{ o.exrev = Array.isArray(o.exrev) ? o.exrev : []; o.exrev.push(r); });
+  re4Rev = null; try{ todayRefresh(true); re4Chrome(); }catch(e){}
+}
+function re4Chrome(){ try{ const b = document.getElementById('hdrPlanBtn'); if(!b) return; const lk = re4NewLocked(); b.disabled = lk; if(lk){ b.title = 'Execution review due'; b.setAttribute('aria-label', 'New plan — Execution review due'); b.dataset.re4Lock = '1'; } else { b.title = 'ไปหน้าแผน (T)'; b.setAttribute('aria-label', 'ไปหน้าแผน (T)'); delete b.dataset.re4Lock; } }catch(e){} }
+/* ── Journal › Not taken (one collapsed row) ── */
+function re4JournalHtml(){
+  const L = re4Entries(); if(!L.length) return '';
+  const ws = re4WeekStart(), ms = (()=>{ try{ return RiskEngine.bkk.monthStart(Date.now()); }catch(e){ return 0; } })(), e = bdE;
+  const wk = L.filter(x=>Date.parse(x.at) >= ws), mo = L.filter(x=>Date.parse(x.at) >= ms);
+  const per = RE4_REASONS.map(([k])=>[k, wk.filter(x=>x.reason === k).length, mo.filter(x=>x.reason === k).length]).filter(x=>x[1] || x[2]);
+  const day = x=>{ try{ return RiskEngine.bkk.dayKey(Date.parse(x.at)); }catch(err){ return String(x.at).slice(0, 10); } };
+  return `<details class="re4-nt" data-re4-nottaken style="flex-basis:100%"><summary>Not taken · ${wk.length} this week ›</summary>
+    <div class="re1-f" data-re4-counts>${per.map(([k, w, m])=>`${e(re4Short(k))} ${w} wk · ${m} mo`).join(' · ') || '—'}</div>
+    ${L.map(x=>`<div class="re1-f" data-re4-nt-row="${e(x.id)}">${e(day(x))} · <b>${e(x.sym)}</b> · ${e(x.strat)} · ${e(re4Short(x.reason))}${x.note ? ' · ' + e(x.note) : ''}${x.scope === 'order' ? ' · order' : ''}${x.restorable ? ` · <a href="#" data-re4-restore onclick="event.preventDefault();re4Restore('${e(x.id)}')">Restore ›</a>` : ''}</div>`).join('')}</details>`;
+}
+
+(function(){ const tr = todayRefresh; todayRefresh = function(){ const r = tr.apply(this, arguments); try{ re4Chrome(); }catch(e){} return r; }; const br = bdRender; bdRender = function(){ const r = br.apply(this, arguments); try{ re4Chrome(); }catch(e){} return r; }; })();
 /* ── PB1 §9 — New plan popup (existing ＋ button / key N · from ANY tab) ── */
 const BD_NEW = [['S', 'Momentum (Stock)', 'MMT', '0.35–0.50% · stop ≥ 4%'], ['D', 'Compounder', 'COMP', '0.80–1.25% · stop ≥ 7%'], ['F', 'Satellite (Future)', 'SAT', 'XAU · BTC · S50 · Brent · 0.10–0.25%']];
 let bdPopSel = 0;
@@ -31304,7 +31448,7 @@ function pb2Back(){
   pb2.step = s - 1; pb2Render();
 }
 bdPopClose = function(){ pb2 = null; clearTimeout(pb2HoldT); pb2HoldT = 0; const p = document.getElementById('bdPop'); if(p) p.remove(); };
-bdNewOpen = function(){ pb2OpenType(); };
+bdNewOpen = function(){ if(re4NewLocked()){ try{ ln4Toast('Execution review due — finish it to plan a new trade'); re4Chrome(); }catch(e){} return; } pb2OpenType(); };   /* RE-D §6 — New plan locked while the review is open */
 bdNewPick = function(k){
   if(k === 'F'){ pb2 = {step:1, sel:0}; pb2Render(); return; }
   bdPopClose();
