@@ -6940,7 +6940,9 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     var wkEq = wk.equity - wd(wk.at), moEq = mo.equity - wd(mo.at), curEq = last.equity - wd(last.at);
     if (wk.at > ws) flags.push('BASIS_FIRST');
     if (prov) flags.push('PROVISIONAL');
+    /* RE-D §2 — each snapshot freezes its FX: the week / month usage is converted at the rate of the snapshot that gives that basis (null = older snapshot without a rate → the current rate, labelled) */
     return { ok: true, state: prov ? 'provisional' : (last.at >= ws ? 'current' : 'carried'), ageDays: b.ageDays, snapshot: last, weekEquity: wkEq, weekAt: wk.at, monthEquity: moEq, monthAt: mo.at, currentEquity: curEq,
+      weekFx: pos(wk.fx) ? wk.fx : null, monthFx: pos(mo.fx) ? mo.fx : null,
       reasons: [], flags: flags, snaps: snaps, provisional: prov, provisionalUntil: prov ? cut + RP.snapshot.blockAfterDays * DAY : null, weekSnapDate: wk.bkkDate || null, lastDate: last.bkkDate || null, confirmedThisWeek: !prov && last.at >= ws };
   }
   /* Emergency: replay every confirmed snapshot in order (evaluated AT a snapshot). Reference = month-start basis of that snapshot. */
@@ -7012,11 +7014,12 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     var unlocks = (S.re1 && Array.isArray(S.re1.unlocks) ? S.re1.unlocks : []).filter(function (u) { return u && num(u.at); });
     var streak = R.compStreak(cycles, unlocks);
     var heat = basis.ok ? R.compHeat(ideas, acctId, costsFor, basis.weekEquity, basis.currentEquity) : null;
-    var satBud = basis.ok ? R.satBudgetCheck({ basis: basis, now: now, account: acctId, ideas: ideas, costsFor: costsFor, candidateRisk: 0 }) : null;
-    var momChk = basis.ok ? R.momentumCheck({ now: now, account: acctId, basis: basis, ideas: ideas, costsFor: costsFor, candidate: { ideaId: '__none__', isAddition: true, riskMoney: 0 } }) : null;
+    var ideasW = basis.ok ? fxIdeas(ideas, fx, basis.weekFx) : ideas, ideasM = basis.ok ? fxIdeas(ideas, fx, basis.monthFx) : ideas, Lx = { now: now, acct: acctId, basis: basis, costsFor: costsFor, ideasW: ideasW, ideasM: ideasM };
+    var satBud = basis.ok ? satBudL(Lx, 0) : null;
+    var momChk = basis.ok ? momCheckL(Lx, { ideaId: '__none__', isAddition: true, riskMoney: 0 }) : null;
     var active = basis.ok ? R.activeSummary({ basis: basis, mom: { usageWeek: momChk.usageWeek, usageMonth: momChk.usageMonth }, sat: { usageWeek: satBud.usageWeek, usageMonth: satBud.usageMonth }, candidateRisk: 0 }) : null;
     return { acct: acctId, costsOn: costsOn, name: acc.name || acctId, now: now, fx: fx, S: S, ideas: ideas, info: A.info, basis: basis, emergency: emergency, eF: eF, costsFor: costsFor, regime: regime, signals: signals,
-      mom: { state: momState, chk: momChk }, sat: { step: step, attempts: attempts, dayAtt: dayAtt, budget: satBud, stale: R.satStaleOrders(ideas, now) }, comp: { streak: streak, cycles: cycles, unlocks: unlocks, heat: heat }, active: active, rowsById: rowsById };
+      mom: { state: momState, chk: momChk }, sat: { step: step, attempts: attempts, dayAtt: dayAtt, budget: satBud, stale: R.satStaleOrders(ideas, now) }, comp: { streak: streak, cycles: cycles, unlocks: unlocks, heat: heat }, active: active, rowsById: rowsById, ideasW: ideasW, ideasM: ideasM };
   }
   /* ── reason text (engine text + the concrete numbers) ── */
   function rtext(code, d) {
@@ -7030,6 +7033,30 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
   function ideaOthers(L, ideaId) { return L.ideas.filter(function (i) { return i.id !== ideaId; }); }
   /* largest qty (lot multiple) whose risk fits the room, never above the sized qty */
   function allowedQty(room, perUnit, lotStep, minLot, maxQty) { if (!(room > 0) || !(perUnit > 0)) return 0; var q = R.floorLot(Math.min(maxQty, room / perUnit), lotStep); return q >= (minLot || 0) - 1e-12 && q > 0 ? q : 0; }
+  /* RE-D §2 — ideas re-priced at a snapshot's FX (USD tranches / working orders only). Used for the week / month USAGE; the candidate order stays at the current rate. */
+  function fxIdeas(ideas, cur, to) {
+    if (!pos(to) || !pos(cur) || Math.abs(to - cur) < 1e-12) return ideas;
+    return ideas.map(function (i) { var c = Object.assign({}, i); c.tranches = (i.tranches || []).map(function (t) { return t.fx === cur ? Object.assign({}, t, { fx: to }) : t; }); c.workingOrders = (i.workingOrders || []).map(function (w) { return w.fx === cur ? Object.assign({}, w, { fx: to }) : w; }); return c; });
+  }
+  function otherIds(ideas, id) { return ideas.filter(function (i) { return i.id !== id; }); }
+  function mergeDual(w, m, kind) {   /* week fields from the week-basis run, month fields from the month-basis run */
+    if (w === m) return w;
+    var o = Object.assign({}, w), r = w.reasons.filter(function (c) { return c !== 'MONEY_MONTH'; });
+    if (m.reasons.indexOf('MONEY_MONTH') >= 0) { var at = Math.max(r.indexOf('MONEY_WEEK'), r.indexOf('UNKNOWN_DATA')); r.splice(at + 1, 0, 'MONEY_MONTH'); }
+    o.reasons = r; o.allowed = r.length === 0;
+    if (kind === 'mom') { o.money = Object.assign({}, w.money, { monthUsed: m.money.monthUsed, monthCap: m.money.monthCap }); o.usageMonth = m.usageMonth; }
+    else { o.monthUsed = m.monthUsed; o.monthCap = m.monthCap; o.monthlyNet = m.monthlyNet; o.usageMonth = m.usageMonth; }
+    return o;
+  }
+  /* Momentum / Satellite budget check with week usage at the week-snapshot FX and month usage at the month-snapshot FX (identical to a single run when both equal the current rate) */
+  function momCheckL(L, cand, exceptId) {
+    var f = function (ideas) { return R.momentumCheck({ now: L.now, account: L.acct, basis: L.basis, ideas: exceptId === undefined ? ideas : otherIds(ideas, exceptId), costsFor: L.costsFor, candidate: cand }); };
+    return mergeDual(f(L.ideasW), f(L.ideasM), 'mom');
+  }
+  function satBudL(L, candRisk, exceptId) {
+    var f = function (ideas) { return R.satBudgetCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: exceptId === undefined ? ideas : otherIds(ideas, exceptId), costsFor: L.costsFor, candidateRisk: candRisk }); };
+    return mergeDual(f(L.ideasW), f(L.ideasM), 'sat');
+  }
   function baseModel(L, strat) { return { strategy: strat, acct: L.acct, ok: false, blocked: true, reasons: [], reasonTexts: [], flags: [], formula: '', effPct: null, qty: 0, money: null, roomLine: '', allowedQty: 0, chip: null, factors: [] }; }
   function finish(m, d) {
     var seen = {}; m.reasons = m.reasons.filter(function (c) { if (seen[c]) return false; seen[c] = 1; return true; });
@@ -7061,7 +7088,7 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     m.effPct = eff; m.formula = parts.join(' × ') + ' = ';
     if (z.reasons.length) { m.reasons = z.reasons.slice(); return finish(m); }
     m.qty = z.qty; m.money = z.actualRisk; m.moneyPct = z.actualRiskPct; m.sizingDistance = z.sizingDistance; m.minStopApplied = z.minStopApplied; m.avgEntry = z.avgEntry || f.entry;
-    var chk = R.momentumCheck({ now: L.now, account: L.acct, basis: L.basis, ideas: ideaOthers(L, f.ideaId), costsFor: L.costsFor, candidate: { ideaId: f.ideaId || '__new__', isAddition: f.isAddition === true, riskMoney: z.actualRisk } });
+    var chk = momCheckL(L, { ideaId: f.ideaId || '__new__', isAddition: f.isAddition === true, riskMoney: z.actualRisk }, f.ideaId);
     m.reasons = chk.reasons.slice(); m.flags = chk.flags.slice();
     var Mo = chk.money, uv = f.mult * f.fx, wRoom = Mo.weekCap - (Mo.weekUsed - z.actualRisk), mRoom = Mo.monthCap - (Mo.monthUsed - z.actualRisk), room = Math.min(wRoom, mRoom);
     m.room = { weekPct: Math.max(0, wRoom) / L.basis.weekEquity * 100, monthPct: Math.max(0, mRoom) / L.basis.monthEquity * 100, ideasUsed: chk.ammo.total, ideasMax: chk.ammo.max, completedLosses: chk.ammo.completedLosses }; m.roomPct = m.room.weekPct;
@@ -7097,7 +7124,7 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
       if (z.reasons.length) rs = rs.concat(z.reasons);
     }
     m.sizing = z; m.qty = z.qty || 0; m.money = z.actualRisk || 0; m.moneyPct = z.actualRiskPct != null ? z.actualRiskPct : (m.money / L.basis.weekEquity * 100);
-    var bud = R.satBudgetCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: ideaOthers(L, f.ideaId), costsFor: L.costsFor, candidateRisk: m.money || 0 });
+    var bud = satBudL(L, m.money || 0, f.ideaId);
     rs = rs.concat(bud.reasons); m.flags = m.flags.concat(bud.flags);
     var act = R.activeSummary({ basis: L.basis, mom: { usageWeek: L.mom.chk.usageWeek, usageMonth: L.mom.chk.usageMonth }, sat: { usageWeek: bud.usageWeek, usageMonth: bud.usageMonth }, candidateRisk: m.money || 0 });
     rs = rs.concat(act.reasons); m.reasons = rs;
@@ -7342,8 +7369,9 @@ function re1BoardGate(it){
 /* ── Stop confirmation (mockup D) ── */
 function re1StopRefresh(ns){
   const host = document.getElementById('csRe1'); if(!host || !coreDlg) return;
-  const c = coreCardsList.find(x=>x.id === coreDlg.id); if(!c) return;
-  const L = re1L(c.acct), idea = L && L.ideas.find(i=>L.info[i.id] && L.info[i.id].card === c.id), e = escHtml; if(!idea){ host.innerHTML = ''; return; }
+  const sat = coreDlg.sat === true;   /* RE-D §2 — the Satellite stop form uses this same confirm box */
+  const c = sat ? {acct:coreDlg.acct, id:coreDlg.id, px:0, market:'US', ticker:''} : coreCardsList.find(x=>x.id === coreDlg.id); if(!c) return;
+  const L = re1L(c.acct), idea = L && L.ideas.find(i=>L.info[i.id] && (sat ? L.info[i.id].satIdea === c.id : L.info[i.id].card === c.id)), e = escHtml; if(!idea){ host.innerHTML = ''; return; }
   const st = (ns > 0) ? Re1Adapter.stopInfo(L, idea.id, ns) : null, mk = c.market || coreMarketOf(c.ticker), cur = mk === 'TH' ? '฿' : '$', sg = x=>x == null ? '—' : fmt2(x);
   const t0 = idea.tranches[0], r = (t0 && +c.px > 0 && t0.initialStop && t0.entry > t0.initialStop) ? (+c.px - t0.entry) / (t0.entry - t0.initialStop) : null;
   let h = `<div class="re1-box" data-re1-stopbox>`;
@@ -7362,12 +7390,45 @@ function re1StopMark(t, ns, confirmed, acct, cardId){
   re1Cache = {};
 }
 
+/* ── RE-D §2 — Satellite stop update: same confirm step as stocks (estimated net-breakeven, effect of confirming, tick 'placed at the broker'; stores stopConfirmed + time) ── */
+function re1SatStopRows(i){ const a = satV3EffectiveTrades(i).concat(satV3PyrOpenTrades(i)), seen = {}; return a.filter(x=>x.trade && x.trade.status === 'open' && !seen[x.trade.id] && (seen[x.trade.id] = 1)); }
+function re1SatStopOpen(id){
+  const i = sat7dIdea(id); if(!i) return; const rows = re1SatStopRows(i);
+  if(!rows.length){ try{ ln4Toast('No open position to move a stop on'); }catch(e){} return; }
+  const t0 = rows[0].trade, cur = +t0.sl, long = String(t0.bias || 'Long') !== 'Short';
+  coreDlg = {kind:'stop', sat:true, id, acct:rows[0].accId, cur, long};
+  coreSheet('stop', `<h3>Move stop · ${escHtml(i.asset)}</h3><div class="ccSub">Current stop ${fmt2(cur)} · ${long ? 'raise' : 'lower'} only</div>
+    <div class="ccF"><label>New stop</label><input type="text" inputmode="decimal" id="csStop" oninput="re1SatStopIn()"></div>
+    <div id="csRe1" data-re1-stop></div>
+    <div class="ccErr" id="csErr" style="display:none"></div>
+    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">Cancel</button><button type="button" class="ccBtn pri" id="csSave" data-cs-save onclick="re1SatStopSave()" disabled>Save</button></div>`);
+}
+function re1SatStopIn(){
+  if(!coreDlg || !coreDlg.sat) return false;
+  const ns = coreNum(coreEl('csStop').value), er = coreEl('csErr'), d = coreDlg;
+  let msg = '';
+  if(!(ns > 0)) msg = 'Enter the new stop';
+  else if(d.long ? ns < d.cur - 1e-9 : ns > d.cur + 1e-9) msg = d.long ? 'The new stop is below the current stop — it can only be raised' : 'The new stop is above the current stop — it can only be lowered';
+  else if(Math.abs(ns - d.cur) < 1e-9) msg = 'Same as the current stop';
+  er.style.display = msg && (ns > 0) ? '' : 'none'; er.textContent = msg; coreEl('csSave').disabled = !!msg;
+  try{ re1StopRefresh(ns); }catch(e){}
+  return !msg;
+}
+function re1SatStopSave(){
+  if(!re1SatStopIn()) return;
+  const d = coreDlg, i = sat7dIdea(d.id), ns = coreNum(coreEl('csStop').value); if(!i) return;
+  const conf = !!(coreEl('csConf') && coreEl('csConf').checked), rows = re1SatStopRows(i).filter(x=>x.accId === d.acct);
+  rows.forEach(x=>{ const t = x.trade, old = +t.sl; if(!(t.sl0 > 0) && old > 0) t.sl0 = old; t.sl = ns; re1StopMark(t, ns, conf, d.acct, i.id); });
+  coreSheetClose(); saveBook(d.acct); render();
+}
+
 /* ── Port risk blocks (mockup B): one block per account, never combined ── */
+function re1Fx(x){ return String(Math.round(x * 10000) / 10000); }
 function re1PortBlock(id){
   const L = re1L(id), e = escHtml; if(!L) return '';
   const b = L.basis, P = Re1Adapter && RiskEngine.POLICY, eq = b.ok ? b.weekEquity : null, pc = v=>eq > 0 ? v / eq * 100 : null, bar = (u, cap)=>`<div class="re1-bar"><i style="width:${Math.max(0, Math.min(100, cap > 0 && u != null ? u / cap * 100 : 0)).toFixed(0)}%"></i></div>`;
   const state = !b.ok ? (b.reasons[0] === 'NO_SNAPSHOT' ? ['No snapshot', 'r'] : ['Snapshot stale', 'r']) : L.emergency.active ? ['Emergency ×0.5', 'r'] : b.provisional ? ['Provisional', 'a'] : !b.confirmedThisWeek ? ['Snapshot due', 'a'] : ['Normal', ''];
-  const head = `<div class="t" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${e(re1Name(id))}</b><small class="re1-note" style="margin:0" data-re1-basis>${b.ok ? `week-start ${re1Money(eq)} · ${b.provisional ? 'provisional (entered capital)' : 'snapshot ' + e(re1DayTxt(b.weekSnapDate))}` : 'no usable equity basis'}</small><span class="re1-chip ${state[1]}" data-re1-state>${e(state[0])}</span></div>`;
+  const head = `<div class="t" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${e(re1Name(id))}</b><small class="re1-note" style="margin:0" data-re1-basis>${b.ok ? `week-start ${re1Money(eq)} · ${b.provisional ? 'provisional (entered capital)' : 'snapshot ' + e(re1DayTxt(b.weekSnapDate)) + (L.fx > 0 ? ' · FX ' + (b.weekFx > 0 ? re1Fx(b.weekFx) + ' (snapshot)' : re1Fx(L.fx) + ' (current rate — snapshot has no FX)') : '')}` : 'no usable equity basis'}</small><span class="re1-chip ${state[1]}" data-re1-state>${e(state[0])}</span></div>`;
   if(!b.ok) return `<div class="re1-pc" data-re1-port="${e(id)}">${head}<div class="re1-f">${e(b.reasons.map(c=>RiskEngine.REASONS[c] ? RiskEngine.REASONS[c].text : c).join(' · '))} — new risk-increasing orders are blocked. Confirm a snapshot in Settings.</div></div>`;
   const m = L.mom.chk, sb = L.sat.budget, ms = L.mom.state, st = L.sat.step, hh = L.comp.heat, rg = L.regime, ac = L.active;
   const mU = pc(m.usageWeek), sU = pc(sb.usageWeek), mCap = P.mom.weeklyPct, sCap = P.sat.weeklyPct, cap6 = P.comp.heatCapPct;
@@ -30840,6 +30901,7 @@ function bdDrawerHtml(it){
   const prim = `<button type="button" class="go${p.cls ? ' ' + p.cls : ''}" data-bd-dprimary="${p.k}"${p.dis ? ` disabled title="${e(p.title)}" data-bd-blocked="1"` : ''} onclick="${p.fn}">${e(p.t)}</button>`;
   let foot = (it.status === 'plan' ? re2ReadyBtn(it) : '') + `<button type="button" class="go" data-bd-update onclick="bdEditLv('${id}')">Update levels</button>`;
   if(it.status === 'ord' || (it.status === 'hold' && it.lvOrdered)) foot += `<button type="button" class="go" data-bd-cancel onclick="bdCancelOrder('${id}')">Cancel order</button>`;
+  if(it.status === 'hold' && it.kind === 'sat') foot += `<button type="button" class="go" data-bd-satstop onclick="re1SatStopOpen('${id}')">Move stop</button>`;   /* RE-D §2 */
   if(it.status === 'hold' && p.k === 'edit') foot += `<button type="button" class="go" data-bd-close onclick="bdClosePos('${id}')">Close trade</button>`;
   else foot += prim;
   return `<div class="bd-dh"><span class="bd-grab" aria-hidden="true"></span><div class="bd-dh1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${it.fam ? '<span class="bd-fam">Family</span>' : ''}<span class="bd-stp" data-bd-spill>${pill}</span><span class="bd-sp"></span><button type="button" class="bd-x" data-bd-x aria-label="Close" onclick="bdClose()">✕</button></div></div>
