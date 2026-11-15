@@ -2,7 +2,7 @@
 """PB1 — One Plan board (Planned · Ordered · Holding) + drawer/log + Macro→Flow + Risk→Port + Today Act + New-plan popup + iPhone/SW2 · เทส 373
 Chromium · 390 + 1280 + 1440 · นาฬิกาปลอม พฤ. 1 ต.ค. 2026 12:00 ICT · SAMPLE data only
 รัน: python3 run_tests_phase373.py"""
-import json, re, sys
+import os, json, re, sys
 from playwright.sync_api import sync_playwright
 import ln3fix_common as C   # ต้องมาก่อน
 import run_tests_phase4 as base
@@ -630,7 +630,7 @@ def pb1b(pw, w, h):
 import copy
 import run_tests_phase100 as P100
 import rrg1_fixture as RF
-SHOTS_C = "/Users/peach/Dashboard-rg2b/tests/screenshots/pb1c-"
+SHOTS_C = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots") + "/pb1c-"
 RR = [("SMH", "lead", 4.2, 0.9), ("GRID", "lead", 3.1, 0.7), ("XLU", "lead", 2.4, -0.8), ("XLK", "lead", 1.0, 0.2), ("IGV", "imp", -1.0, 0.6), ("HACK", "imp", -0.7, 0.1),
       ("XLF", "weak", 0.6, -0.7), ("XLE", "lag", -2.1, -0.9), ("XLP", "lag", -1.4, 0.9)]
 

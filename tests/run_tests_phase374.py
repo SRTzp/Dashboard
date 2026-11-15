@@ -4,7 +4,7 @@ homework size cap (50% → 100%), Candidate list removed + export notice, TV1 ex
 Chromium · 390 (+360) + 1280 + 1440 · นาฬิกาปลอม พฤ. 1 ต.ค. 2026 12:00 ICT · SAMPLE data only
 (เทส 368 = TV1 export/download — เลิกใช้: ฟีเจอร์ถูกถอดใน WL1 · Import ยังอยู่ และถูกแทนด้วยเคส Import ในไฟล์นี้)
 รัน: python3 run_tests_phase374.py → tests/screenshots/wl1-*.png"""
-import json, re, sys
+import os, json, re, sys
 from playwright.sync_api import sync_playwright
 import ln3fix_common as C   # ต้องมาก่อน
 import run_tests_phase4 as base
@@ -18,7 +18,7 @@ ENGINE = base.BROWSER_ENGINE
 results = []
 js = C.js
 settle, cnt, txt = T.settle, T.cnt, T.txt
-SHOTS = "/Users/peach/Dashboard-rg2b/tests/screenshots/wl1-"
+SHOTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots") + "/wl1-"
 
 
 RETIRED_RE1C1 = ['Filled ✓ above the cap']   # RE-C1: only checks whose asserted behaviour the brief removes

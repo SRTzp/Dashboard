@@ -3677,9 +3677,10 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .re2-row .sp{flex:1}.re2-row .num{font-size:.82rem;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.re2-row .num i{font-style:normal;color:var(--muted)}.re2-row .num i.a{color:var(--amber);font-weight:600}
 .re2-act .chip{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--green-dim);color:var(--green);white-space:nowrap}.re2-act .chip.a,.re2-pc .chip.a{background:var(--amber-dim);color:var(--amber)}.re2-act .chip.r,.re2-pc .chip.r{background:var(--red-dim);color:var(--red)}.re2-act .chip.b{background:#e6ecfb;color:#2d5bd1}.re2-pc .chip{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--green-dim);color:var(--green);white-space:nowrap}.re2-pc .chip.n{background:var(--surface2);color:var(--muted)}
 .re2-row .btn{opacity:1;border:0;border-radius:999px;background:var(--green);color:#fff!important;font-weight:700;font-size:.82rem;padding:6px 11px;white-space:nowrap;cursor:pointer}.re2-row .btn.o{background:var(--surface);color:var(--text)!important;border:1px solid var(--border)}.re2-row .btn:disabled{opacity:.45;cursor:not-allowed}
+.re2-row .btn .m,.re2-row .btn .p{color:inherit}   /* RE-D §1.1 — the long label no longer picks up the muted .m colour (faded Move stop › at 1280 / 1440) */
 .re2-col .none,.re2-pc .none{font-size:.82rem;color:var(--muted);padding:6px 2px 0}
 .re2-pc summary{list-style:none;display:flex;align-items:baseline;gap:8px;cursor:pointer;min-width:0}.re2-pc summary::-webkit-details-marker{display:none}.re2-pc summary b{font-size:.95rem;white-space:nowrap}.re2-pc summary .s{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:.82rem}.re2-pc details[open] summary{margin-bottom:8px}.re2-pc details[open] .s{visibility:hidden}
-.re2-pc .rk3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.re2-pc .rk3>div{background:var(--surface2);border-radius:10px;padding:8px 10px;min-width:0}.re2-pc .rk3 small{display:block;color:var(--muted);font-size:.74rem}.re2-pc .rk3 b{display:block;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.re2-pc .rk3 span{display:block;font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.re2-pc .rk3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.re2-pc .rk3>div{background:var(--surface2);border-radius:10px;padding:8px 10px;min-width:0}.re2-pc .rk3 small{display:block;color:var(--muted);font-size:.74rem}.re2-pc .rk3 b{display:block;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.re2-pc .rk3 span{display:block;font-size:.78rem;color:var(--muted);white-space:normal}   /* RE-D §1.2 — wraps to a second line instead of cutting 'regime 7…' */
 .re2-pc .ev{display:flex;gap:8px;align-items:center;padding:5px 0;min-width:0}.re2-pc .ev time{font:.78rem ui-monospace,Menlo,monospace;color:var(--muted);width:74px;flex:none}.re2-pc .ev b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.re2-pc .ev .mut{margin-left:auto;font-size:.78rem;white-space:nowrap;color:var(--muted)}
 .re2-act .p,.re2-pc .p{display:none}
 .bd-ready{margin-left:auto;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:999px;font:700 .82rem var(--sans);padding:4px 10px;cursor:pointer;white-space:nowrap}.bd-ready.on{background:#e6ecfb;color:#2d5bd1;border-color:#b9c8f2}
@@ -7446,7 +7447,9 @@ function re1BoxHtml(m, o){
   const formula = m.formula && m.effPct != null ? `<div class="re1-f" data-re1-formula>${e(m.formula)}<b>${re1Pct(m.effPct, 3)}</b></div>` : '';
   const why = (m.reasonTexts || []).map(t=>e(t)).join(' · ');
   if(m.blocked){
-    const al = m.allowedQty > 0 ? `allowed now ${q(m.allowedQty)}${m.qty > 0 ? ` (needs ${q(m.qty)})` : ''}` : (m.qty > 0 ? `nothing allowed now (needs ${q(m.qty)})` : '');
+    const RE1_SIZE_BLOCK = ['MONEY_WEEK', 'MONEY_MONTH', 'ACTIVE_WEEK', 'ACTIVE_MONTH', 'COMP_HEAT', 'COMP_PHASE_CAP', 'ADDON_TOTAL_RISK', 'LOT_BELOW_MIN'];   /* RE-D §1.3 — 'allowed now' only when size / room is a blocking reason (not R:R, TP, queue, trend …) */
+    const sizeBlocks = (m.reasons || []).some(c=>RE1_SIZE_BLOCK.indexOf(c) >= 0);
+    const al = !sizeBlocks ? '' : m.allowedQty > 0 ? `allowed now ${q(m.allowedQty)}${m.qty > 0 ? ` (needs ${q(m.qty)})` : ''}` : (m.qty > 0 ? `nothing allowed now (needs ${q(m.qty)})` : '');
     return `<div class="re1-box bad" data-re1-box data-re1-blocked="1" data-re1-strat="${e(m.strategy)}">${chip}${formula}<div class="re1-big" data-re1-block>Blocked · ${why}</div>${al ? `<div class="re1-f" data-re1-allowed>${e(al)}</div>` : ''}${m.roomLine ? `<div class="re1-f">${e(m.roomLine)}</div>` : ''}</div>`;
   }
   const flags = (m.flags || []).filter(f=>f !== 'SAT_REENTRY_TAG' && f !== 'SNAPSHOT_OLD' && f !== 'BASIS_FIRST').map(f=>Re1Adapter.rtext(f)).join(' · ');
@@ -30545,6 +30548,9 @@ function bdItems(){
   return out;
 }
 /* the next step for a card = ONE pill. Handlers are the existing ones (ln4Place / ln4RecordFill / ln4AddOn / forms) */
+/* RE-D §1.4 — ONE 'near entry' threshold (3 %), used by Today › Enter and the Plan board (board was 2 %): Place order button, urgency order and the teal 'near' tint */
+const NEAR_ENTRY_PCT = 3;
+function nearEntry(pct){ return pct != null && isFinite(pct) && Math.abs(pct) <= NEAR_ENTRY_PCT + 1e-9; }
 function bdPill(it, force){
   const id = it.id, q = s=>String(s).replace(/'/g, "\\'"), r = it.row || {}, bad = r.bad;
   if(it.status === 'plan'){
@@ -30554,20 +30560,20 @@ function bdPill(it, force){
     if(bad && (bad.k === 'risk' || bad.k === 'stop')) return {t:'Fix risk ›', cls:'fx', fn:`bdFix('${q(id)}','${bad.k}')`, k:'fix'};
     if(bad) return {t:'Edit', cls:'', fn:`bdEditLv('${q(id)}')`, k:'edit'};
     if(it.pct == null || force) return {t:'Place order ›', cls:'p', fn:`ln4Place('${it.kind}','${q(id)}')`, k:'place'};   /* RE1-C2 — force: Today Enter lists items up to 3% away or flagged ⚑ Ready */
-    if(Math.abs(it.pct) < 2) return {t:'Place order ›', cls:'p', fn:`ln4Place('${it.kind}','${q(id)}')`, k:'place'};
+    if(nearEntry(it.pct)) return {t:'Place order ›', cls:'p', fn:`ln4Place('${it.kind}','${q(id)}')`, k:'place'};
     return {t:'Edit', cls:'', fn:`bdEditLv('${q(id)}')`, k:'edit'};
   }
   if(it.status === 'ord' || (it.lvOrdered && it.k < it.nl)) return {t:'Filled ✓', cls:'', fn:`bdFill('${q(id)}'${it.firstPlaced != null ? ',' + it.firstPlaced : ''})`, k:'fill'};
   if(it.flags.addon) return {t:'Add-on ›', cls:'p', fn:`bdAddon('${q(id)}')`, k:'addon'};
-  if(it.status === 'hold' && it.nl > 1 && it.k < it.nl && it.pctLv === it.k && it.pct != null && Math.abs(it.pct) < 2 && !(it.placed && it.placed.has(it.k))) return {t:'Place order ›', cls:'p', fn:`bdPlaceLv('${q(id)}',${it.k})`, k:'place'};   /* PB1 §2c — next unfilled level Planned and < 2% away */
+  if(it.status === 'hold' && it.nl > 1 && it.k < it.nl && it.pctLv === it.k && it.pct != null && nearEntry(it.pct) && !(it.placed && it.placed.has(it.k))) return {t:'Place order ›', cls:'p', fn:`bdPlaceLv('${q(id)}',${it.k})`, k:'place'};   /* PB1 §2c — next unfilled level Planned and < 2% away */
   return {t:'Edit', cls:'', fn:`bdEditLv('${q(id)}')`, k:'edit'};
 }
-function bdUrgency(it){   /* §8 Today Act order: Fix risk → Add-on → Planned < 2% → Ordered */
+function bdUrgency(it){   /* §8 Today Act order: Fix risk → Add-on → Planned within NEAR_ENTRY_PCT → Ordered */
   const p = bdPill(it);
   if(p.dis && p.re1) return 2.6;   /* RE-C1 — an engine-blocked plan stays visible in Act (reason shown, button disabled) */
   if(p.dis) return 9;
   if(p.k === 'fix') return 0; if(p.k === 'addon') return 1;
-  if(p.k === 'place') return it.pct != null && Math.abs(it.pct) < 2 ? 2 : 2.5;
+  if(p.k === 'place') return it.pct != null && nearEntry(it.pct) ? 2 : 2.5;
   if(p.k === 'fill') return 3; return 9;
 }
 function bdSorted(items){
@@ -30584,7 +30590,8 @@ function bdTagHtml(it){ return `<span class="sc${it.tag === 'SAT' ? ' sat' : (it
 function bdToEntry(it){
   if(it.pct == null) return `<span class="bd-m" data-bd-pct="na">— to entry</span>`;
   const p = it.pct, a = Math.abs(p), t = (p < 0 ? '−' : '+') + a.toFixed(1) + '% to entry';
-  return `<span class="bd-m${a < 2 ? ' near' : ''}" data-bd-pct="${a < 2 ? 'near' : 'far'}">${t}</span>`;
+  const nr = nearEntry(p);
+  return `<span class="bd-m${nr ? ' near' : ''}" data-bd-pct="${nr ? 'near' : 'far'}">${t}</span>`;
 }
 function bdCardHtml(it){
   const p = bdPill(it), e = bdE, id = e(it.id);
@@ -30950,7 +30957,7 @@ function bdPortRiskHtml(){
 }
 function bdPortRiskRender(){ const host = document.getElementById('bdPortRisk'); if(host){ const h = bdPortRiskHtml(); if(host.dataset.h !== h){ host.innerHTML = h; host.dataset.h = h; } } }
 
-/* ── PB1 §8 — Today Act follows the board: ⚠️ Fix risk → 🛡️ Add-on → 📝 < 2% → 📌 check fill · max 5 · +N more › ── */
+/* ── PB1 §8 — Today Act follows the board: ⚠️ Fix risk → 🛡️ Add-on → 📝 ≤ NEAR_ENTRY_PCT → 📌 check fill · max 5 · +N more › ── */
 function bdActRows(){
   const rows = [];
   let items = []; try{ items = bdItems(); }catch(e){ console.warn('bd act:', e); }
@@ -30999,7 +31006,7 @@ function tw1Why(it, p, r){
    every number / state / block reason comes from risk-engine.js through re1L() (same helpers as the Port block) · no second calculation · no fetch · no write to any position or order.
    Only additive write: the ⚑ Ready flag on a plan (plan.ready / plan.readyAt · Sat idea ready / readyAt) — nothing reads it except the Enter group.
    ═══════════════════════════════════════════════════════════════════════════════════════════════ */
-const RE2_NEAR_PCT = 3, RE2_DAY = 86400000;
+const RE2_NEAR_PCT = NEAR_ENTRY_PCT, RE2_DAY = 86400000;
 let re2Open = {};
 function re2Accts(){   /* §0 — follow the account selector (shown when >1 account); no selector → one block per account that has any plan / order / holding */
   try{
@@ -31128,7 +31135,7 @@ function re2Model(acct){
   by.plan.forEach(it=>{
     const ready = re2ReadyOf(it); let d = null;
     if(it.kind === 'core' && it.px > 0 && it.entry > 0 && !it.inc) d = (it.px - it.entry) / it.entry * 100;
-    const near = d != null && Math.abs(d) <= RE2_NEAR_PCT + 1e-9;
+    const near = nearEntry(d);
     if(!ready && !near) return;
     const p = bdPill(it, true), blocked = !!p.dis;
     const why = blocked ? (p.title || 'Blocked') : ready ? '⚑ ready' + (it.kind === 'sat' && L ? ' · step ' + L.sat.step.step : '') : (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '%';
