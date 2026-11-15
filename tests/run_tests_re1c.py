@@ -57,7 +57,7 @@ def run_viewport(pw, w, h):
         plan_form(page, "AMD", 182.5, 170)
         t = box(page)
         check(("[" + tag + "] Momentum result box: formula '0.45% × homework 50% = 0.225%'"), "0.45% × homework 50% =" in t and "0.225%" in t, t)
-        check(("[" + tag + "] result box: quantity + amount + room line + chip"), "#" in t and "฿" in t and "Week room" in t and "Homework not done" in t, t)
+        check(("[" + tag + "] result box: quantity + amount + room line + chip"), "#" in t and "฿" in t and "Week room" in t and "homework 50%" in t, t)
         check(("[" + tag + "] editable 'Risk per idea' is gone (hidden, read-only)"), js(page, "()=>{ const r=document.querySelector('.ps1RiskC'); return !r || getComputedStyle(r).display==='none' }") and js(page, "()=>document.getElementById('cnRisk').readOnly"))
         check(("[" + tag + "] form has no horizontal overflow"), no_overflow(page))
         if w == 390: shot(page, "form-momentum-390")
@@ -77,8 +77,8 @@ def run_viewport(pw, w, h):
         check(("[" + tag + "] Training · Starter ¼ is OFF after cut-over (set once)"), not js(page, "()=>re1TrainingOn()") and js(page, "()=>ln4Cfg().re1StarterReset===true"))
         check(("[" + tag + "] Settings has no horizontal overflow"), no_overflow(page))
         if w == 390 or w == 1440: shot(page, "settings-%s" % tag)
-        js(page, "()=>{ switchTab('port'); }"); page.wait_for_timeout(500); page.add_style_tag(content=NOANIM)
-        check("[" + tag + "] Port risk: one block per account, no overflow", js(page, "()=>document.querySelectorAll('[data-re1-port]').length") == 2 and no_overflow(page))
+        js(page, "()=>{ document.getElementById('setOverlay').classList.remove('show'); switchTab('mix'); }"); page.wait_for_timeout(500); page.add_style_tag(content=NOANIM)
+        check("[" + tag + "] Port risk: one block per account, no overflow", js(page, "()=>document.querySelectorAll('[data-re1-port]').length") == 2 and js(page, "()=>document.querySelector('[data-re1-port]').offsetParent !== null") and no_overflow(page))
         if w in (390, 1440): shot(page, "port-risk-%s" % tag)
         check(("[" + tag + "] no console / page errors (A)"), not ce and not pe, ce + pe)
     finally:
@@ -190,12 +190,13 @@ def run_logic(pw):
         js(page, "()=>coreSheetClose()")
         js(page, "()=>{ openSettings(); }"); page.wait_for_timeout(300)
         js(page, "()=>{ document.getElementById('re1Co_main_winner_u').value='0.005'; document.getElementById('re1Co_main_winner_m').value='1'; re1CostSave('main','winner'); }"); page.wait_for_timeout(300)
-        js(page, "()=>coreStopOpen('cA')"); page.wait_for_timeout(400)
+        js(page, "()=>{ document.getElementById('setOverlay').classList.remove('show'); coreStopOpen('cA'); }"); page.wait_for_timeout(400)
         js(page, "()=>{ const e=document.getElementById('csStop'); e.value='101'; coreStopIn(); }"); page.wait_for_timeout(200)
         t = js(page, "()=>document.querySelector('#csRe1').innerText")
         check("costs present: 'Net breakeven = entry … + costs … = …' and 'Risk ฿0 · frees 1 idea'", "Net breakeven" in t and "frees 1 idea" in t, t)
         if True: shot(page, "move-stop-1440")
-        js(page, "()=>{ document.getElementById('csConf').checked=true; coreStopSave(); }"); page.wait_for_timeout(500)
+        js(page, "()=>{ document.getElementById('csConf').checked=true; }"); shot(page, "confirm-stop-1440")
+        js(page, "()=>{ coreStopSave(); }"); page.wait_for_timeout(500)
         tt = js(page, "()=>{ const t=getBook('main').trades.find(x=>x.id==='a1'); return {sl:t.sl, c:t.stopConfirmed, q:t.qty} }")
         check("stop confirmed at the broker is stored (stopConfirmed + time) and quantity untouched", tt["c"] is True and tt["sl"] == 101 and tt["q"] == 100, tt)
         check("confirmed net-breakeven stop frees the idea (ammunition 1 → 0)", L(page)["ammo"] == 0, L(page))
@@ -224,7 +225,7 @@ def run_logic(pw):
         check("Emergency on at a confirmed snapshot (−12% from month start) — Main only", st["em"] and not fm["em"] and st["eF"] == 0.5, [st, fm])
         plan_form(page, "AMD", 182.5, 170)
         check("form shows 'emergency 50%' in the formula", "emergency 50%" in box(page), box(page))
-        js(page, "()=>{ coreSheetClose(); switchTab('port'); }"); page.wait_for_timeout(600)
+        js(page, "()=>{ document.getElementById('setOverlay').classList.remove('show'); coreSheetClose(); switchTab('mix'); }"); page.wait_for_timeout(600)
         page.add_style_tag(content=NOANIM)
         blocks = js(page, "()=>document.querySelectorAll('[data-re1-port]').length")
         check("Port shows one risk block per account (2, never combined)", blocks == 2, blocks)
@@ -316,7 +317,7 @@ def run_logic(pw):
     try:
         st = js(page, "()=>re1L('main').comp.streak")
         check("six consecutive losing ticker-cycles → Compounder locked", st["locked"] is True, st)
-        js(page, "()=>{ coreSheetClose && coreSheetClose(); switchTab('port'); }"); page.wait_for_timeout(500)
+        js(page, "()=>{ coreSheetClose && coreSheetClose(); switchTab('mix'); }"); page.wait_for_timeout(500)
         check("Port shows the unlock flow (note + confirm)", js(page, "()=>!!document.querySelector('[data-re1-unlock]')"))
         js(page, "()=>{ document.getElementById('re1UnN_main').value='reviewed'; document.getElementById('re1UnC_main').checked=true; re1Unlock('main'); }"); page.wait_for_timeout(300)
         er = js(page, "()=>document.getElementById('re1UnE_main').innerText")
@@ -336,11 +337,81 @@ def run_adapter_dry(pw):
         b.close()
 
 
+def run_guarantees(pw):
+    """Item 4 proofs: nothing resizes an existing position / working order · only Place order is blocked · fills / closes always succeed and flag · WL1 homework rules hold through the engine"""
+    w, h = 1440, 900
+    d = doc_c()
+    d["books"]["main"]["settings"]["equitySnapshots"] = [{"id": "a", "bkkDate": "2026-09-01", "equity": 5000000, "confirmed": True}, {"id": "b", "bkkDate": "2026-09-28", "equity": 4400000, "confirmed": True}]   # Emergency ON
+    d["books"]["main"]["trades"] = [tr(id="h%d" % k, sym="S%d" % k, cur="USD", qty=10 * k, entry=100, sl=95, posGroup="h%d" % k, sl0=95) for k in range(1, 5)] + [tr(id="wo", sym="WORK", cur="USD", status="plan", qty=25, entry=60, sl=55)]
+    cs = {"cQ": {"acct": "main", "ticker": "NEWQ", "market": "US", "strategy": "W", "status": "plan", "plan": {"entry": 50, "stop": 45, "ps1": {"re1": True, "qtyFull": 80, "rows": [{"px": 50, "qty": 40}], "stops": [{"px": 45}], "qty": 40, "riskMoney": 6600}}},
+          "cW": {"acct": "main", "ticker": "WORK", "market": "US", "strategy": "W", "status": "plan", "ln4": {"placedAt": "2026-10-01T02:00:00.000Z"}, "plan": {"entry": 60, "stop": 55, "ps1": {"re1": True, "qtyFull": 50, "rows": [{"px": 60, "qty": 25}], "stops": [{"px": 55}], "qty": 25, "riskMoney": 4125}}}}
+    b, page, ce, pe = launch(pw, w, h, d, cs)
+    try:
+        SNAP = "()=>JSON.stringify({t:getBook('main').trades.map(t=>[t.id,t.qty,t.status]), c:coreCardsList.map(c=>[c.id, c.plan&&c.plan.ps1&&c.plan.ps1.rows.map(r=>r.qty), (c.lots||[]).map(l=>l.qty), c.ln4&&c.ln4.placedAt])})"
+        before = js(page, SNAP)
+        js(page, "()=>{ openSettings(); }"); page.wait_for_timeout(300)
+        page.fill("#re1SnA_main", "4300000"); page.locator("[data-re1-confirm=main]").click(); page.wait_for_timeout(300)
+        js(page, "()=>{ document.getElementById('re1Co_main_winner_u').value='9'; re1CostSave('main','winner'); re1SetTraining(true); re1SetTraining(false); }"); page.wait_for_timeout(300)
+        js(page, "()=>{ document.getElementById('re1FlM').value='1000'; document.getElementById('re1FlT').value='out'; re1FlowSave(); }"); page.wait_for_timeout(300)
+        js(page, "()=>{ document.getElementById('setOverlay').classList.remove('show'); }"); plan_form(page, "AMD", 182.5, 170); js(page, "()=>coreSheetClose()")
+        js(page, "()=>{ switchTab('today'); todayRefresh(true); switchTab('mix'); }"); page.wait_for_timeout(300)
+        check("NO existing position / working order / plan quantity changed by snapshot, costs, Emergency, flows, Training, forms, Port, Today", js(page, SNAP) == before, [before[:160], js(page, SNAP)[:160]])
+        check("Emergency is active while that held (no resize of the 4 holdings / the working order)", L(page)["em"] is True)
+        # Place order is the only thing blocked
+        plan_form(page, "AMD", 182.5, 170)
+        blocked = "Blocked" in box(page)
+        check("a blocked form still lets you Save plan and Save draft (only Place order is blocked)", (not blocked) or (js(page, "()=>!document.getElementById('cnSave').disabled") and js(page, "()=>!document.getElementById('cnDraft').disabled")), box(page))
+        js(page, "()=>coreSheetClose()")
+        g = js(page, "()=>re1PlanGate(coreCardsList.find(c=>c.id==='cQ'),0)")
+        check("Place order IS blocked by the engine when a limit is hit (4 ideas reserved)", g["ok"] is False and "ammunition" in g["msg"].lower(), g)
+        js(page, "()=>{ document.getElementById('setOverlay').classList.remove('show'); switchTab('plan'); }"); page.wait_for_timeout(300)
+        js(page, "()=>{ coreBuy1Open('cQ'); document.getElementById('cbPx').value='50'; document.getElementById('cbQty').value='40'; coreBuy1In(); }"); page.wait_for_timeout(200)
+        check("Filled ✓ over a cap: Save stays enabled and the form says it is accepted + flagged", js(page, "()=>!document.getElementById('cbSave').disabled") and "flagged" in js(page, "()=>document.getElementById('cbErr').innerText"), js(page, "()=>document.getElementById('cbErr').innerText"))
+        shot(page, "fill-flagged-over-cap-1440")
+        js(page, "()=>coreBuy1Save()"); page.wait_for_timeout(400)
+        fl = js(page, "()=>getBook('main').trades.find(t=>t.sym==='NEWQ')")
+        check("Filled ✓ succeeded with the real quantity and carries FILL_OVER_LIMIT", fl and fl["qty"] == 40 and "FILL_OVER_LIMIT" in (fl.get("re1Flags") or []), fl)
+        js(page, "()=>{ openClosePos('h2','main'); document.getElementById('cpExitPrice').value='90'; cpRefresh(); confirmClosePos(); }"); page.wait_for_timeout(300)
+        check("Close trade always succeeds (here with Emergency on and the account over its limits)", js(page, "()=>getBook('main').trades.find(t=>t.id==='h2').status") == "closed")
+        # WL1 homework through the engine
+        plan_form(page, "AMD", 182.5, 170)
+        t = box(page); check("WL1 (Momentum): 50% until the thesis is done, named in the formula", "homework 50%" in t, t)
+        plan_form(page, "NVDX", 180, 170, track="ladder"); t = box(page)
+        okc = js(page, "()=>{ const m=coreNew.re1Model; const L=re1L('main'); return {eff:m.effPct, factor:L.regime.factor*L.eF, q:m.qty, riskPct:m.moneyPct} }")
+        check("WL1 (Compounder): 0.50% Pilot without thesis (× regime/emergency), no extra homework cut", "Pilot 0.5%" in t and abs(okc["eff"] - 0.5 * min(L(page)["eF"], 0.75)) < 1e-9 and okc["riskPct"] <= okc["eff"] + 1e-6, [t, okc])
+        js(page, "()=>coreSheetClose()")
+        r = js(page, "()=>{ const c=coreCardsList.find(x=>x.id==='cQ'); return {} }")
+        # aggregate per stock across plans: plan A working 25 of full 50 (cap 25) + plan B same stock
+        js(page, """()=>{ window.__cb = {id:'cB', acct:'main', ticker:'WORK', market:'US', strategy:'W', status:'plan', plan:{entry:60, stop:55, ps1:{re1:true, qtyFull:50, rows:[{px:60, qty:10}], stops:[{px:55}], qty:10, riskMoney:1650}}}; coreCardsList.push(window.__cb); }""")
+        r = js(page, "()=>{ const c=coreCardsList.find(x=>x.id==='cB'); return wl1Check('WORK','winner',10,{}) }")
+        check("WL1 aggregate per stock across plans: plan A working 25 + plan B 10 > 50% of full (25) → blocked with allowed qty", r["ok"] is False and "homework not done" in r["msg"] and "allowed" in r["msg"], r)
+        check("…and Place order of plan B is refused for that reason", js(page, "()=>{ window.__wl1Msg=''; const ok=wl1PlaceGate('cB'); return [ok, window.__wl1Msg] }")[0] is False)
+        js(page, "()=>{ wl1HwDone = ()=>true; const o=wlItemOf; wlItemOf = s=>o(s) || {hw:{}}; }")
+        r2 = js(page, "()=>wl1Check('WORK','winner',10,{})")
+        check("WL1: once the thesis is done the cap lifts to full size (50)", r2["ok"] is True, r2)
+        check("no console / page errors (guarantees)", not ce and not pe, ce + pe)
+    finally:
+        b.close()
+    # Compounder Add-on locked / below-entry warning (screenshots)
+    d = doc_c(); d["books"]["main"]["trades"] = [tr(id="n1", sym="NVDA", cur="USD", qty=100, entry=100, sl=95, posGroup="n1", sl0=95)]
+    cs = {"cN": {"acct": "main", "ticker": "NVDA", "market": "US", "strategy": "W", "track": "ladder", "status": "open", "trade_id": "n1", "lots": [{"n": 1, "px": 100, "qty": 100}], "stopHistory": [], "px": 101, "plan": {"entry": 100, "stop": 95}}}
+    b, page, ce, pe = launch(pw, w, h, d, cs)
+    try:
+        js(page, "()=>{ switchTab('plan'); coreNewOpen('main', {mode:'editw', id:'cN'}); }"); page.wait_for_timeout(600); page.add_style_tag(content=NOANIM)
+        js(page, "()=>{ ftHwDone = ()=>true; const s=(id,v)=>{const e=document.getElementById(id); e.value=v;}; s('cnEntry','98'); s('cnStop','92'); re1Kind('addon'); coreNewIn(); }"); page.wait_for_timeout(400)
+        t = box(page)
+        check("Add-on below the average entry: allowed + one warning line 'Adding below entry — re-check ④ Wrong if'", "Adding below entry — re-check ④ Wrong if" in t and "Blocked" not in t, t)
+        shot(page, "compounder-addon-below-entry-1440")
+    finally:
+        b.close()
+
+
 with sync_playwright() as pw:
     for w, h in ((390, 844), (1280, 800), (1440, 900)):
         run_viewport(pw, w, h)
     run_logic(pw)
     run_adapter_dry(pw)
+    run_guarantees(pw)
 bad = [r for r in results if not r[1]]
 print("SUMMARY: %d pass / %d fail" % (len(results) - len(bad), len(bad)))
 sys.exit(1 if bad else 0)

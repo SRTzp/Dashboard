@@ -7010,7 +7010,7 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
   /* ── Momentum (new order · addition · edit) ──
      f = {entry, stop, side, homeworkDone, starterOn, isFirstEntry, usedFraction, ideaId, isAddition, mult, fx, lotStep, minLot, minStopDist} */
   function sizeMomentum(L, f) {
-    var m = baseModel(L, 'winner'); m.chip = L.emergency.active ? { t: 'Emergency 50%', c: 'r' } : (f.homeworkDone === true ? null : { t: 'Homework not done', c: 'a' });
+    var m = baseModel(L, 'winner'); m.chip = L.emergency.active ? { t: 'Emergency 50%', c: 'r' } : null;   /* the 'Homework not done' state is shown once, by the WL1 cap box under the result */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
     var fr = R.entryFraction({ homeworkDone: f.homeworkDone === true, starterOn: f.starterOn === true, isFirstEntry: f.isFirstEntry !== false, usedFraction: f.usedFraction || 0 });
     var base = RP.mom.rptPct, ef = L.eF, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];
@@ -15715,13 +15715,13 @@ function ps1FormRun0(n, rd, cx, mk, errs){
     stops.forEach((x,i)=>{ ps1MetaSet('s', i, `−${Math.abs((x.px - avgPx) / avgPx * 100).toFixed(1)}%`); }); }
   const snap = {v:2, re1:true, bucket, E, Edate: L.basis.weekSnapDate || null, div, typed: m.effPct, mult:{f:1, dd:1}, ideaEff: m.effPct, rows: rowsQ, stops: stops.map(x=>({px:x.px, pct:x.pct})), qty:m.qty, avgEntry:avgPx, avgStop:stop,
     riskPct:m.moneyPct, riskMoney:m.money, tag:'', sizePct: m.qty * avgPx * div / E * 100, leftPct:null, trimmed:false, cashLimited:false, lot: mk==='TH' ? 100 : 1, maxSizePct:null, date:thaiToday(),
-    qtyFull: m.sizing && m.sizing.qtyFull, engine:{formula:m.formula, factors:m.factors, reasons:m.reasons, effPct:m.effPct, basis:L.basis.weekSnapDate || 'provisional'}};
+    qtyFull: (m.sizing && m.sizing.qtyFull > 0) ? (bucket === 'ladder' ? m.sizing.qtyFull * 2 : m.sizing.qtyFull) : null, engine:{formula:m.formula, factors:m.factors, reasons:m.reasons, effPct:m.effPct, basis:L.basis.weekSnapDate || 'provisional'}};
   if(m.minStopApplied) snap.ms = {rows:[{n:1, minPct:msPct, yourPct:Math.abs(avgPx - stop) / avgPx * 100}], multi:false, budget:m.effPct / 100 * E};
   if(stOn && addPx != null) snap.starter = {frac:0.25, fullRiskPct:m.effPct / 0.25, addPx};
   else if(stOn) snap.starter = {frac:0.25, fullRiskPct:m.effPct / 0.25};
   re.value = String(+m.effPct.toFixed(4)); re.readOnly = true;
   setSum(''); setDet(`<div class="re1-f" data-re1-det>Basis ${E ? re1Money(E) : '—'} (${L.basis.provisional ? 'provisional · entered capital' : 'week-start snapshot ' + escHtml(re1DayTxt(L.basis.weekSnapDate))}) · account ${escHtml(re1Name(n.acct))}${m.minStopApplied ? ' · sized on minimum stop ' + (+m.sizingDistance.toFixed(4)) : ''}</div>`);
-  n.wl1Snap = null; if(!mine.length) n.ps1Last = snap;
+  n.wl1Snap = Object.assign({}, snap, {wl1Full: snap.qtyFull > 0 ? snap.qtyFull : null}); if(!mine.length) n.ps1Last = snap;
   done();
 }
 function re1Kind(k){ if(!coreNew) return; coreNew.re1Kind = k; try{ coreNewIn(); }catch(e){} }
@@ -15959,7 +15959,8 @@ function coreBuy1In(){
   else if(d.rawQty!==d.qty) errs.push(`จะปัดลงเป็น ${fmt0(d.qty)} ตามตลาด`);
   if(!d.date) errs.push('กรอกวันที่');
   if(coreErr) errs.push(coreErr);
-  const hard = errs.filter(e=>!/^จะปัดลง/.test(e));
+  try{ if(d.qty > 0 && d.px > 0 && d.stop > 0){ const fl = re1FillFlags(d.c, d.qty, d.px, d.stop); if(fl.length) errs.push('Over limit — the fill is accepted and flagged (' + fl[0] + ')'); } }catch(e){}   /* RE-C1 */
+  const hard = errs.filter(e=>!/^(จะปัดลง|Over limit)/.test(e));
   const er = coreEl('cbErr'); er.style.display = errs.length ? '' : 'none'; er.innerHTML = errs.map(escHtml).join('<br>');
   coreEl('cbSave').disabled = hard.length>0;
   return hard;
@@ -30577,7 +30578,7 @@ function bdColHtml(seg, list){
   }else body = list.map(bdCardHtml).join('');
   return `<section class="bd-col${bdSeg === seg ? ' bd-on' : ''}" data-bd-col="${seg}"><div class="bd-ch"><b>${BD_SEG_L[seg]}</b><span class="bd-n" data-bd-n="${seg}">${list.length}</span></div>${body}</section>`;
 }
-function bdRiskNow(){ try{ const M = ps1Model(tdHome()); if(M) return {used:M.P.principalPct, cap:M.cfg.total}; }catch(e){} return null; }
+function bdRiskNow(){ try{ const L = re1L(tdHome()); if(L && L.basis.ok && L.active) return {used: L.active.weekUsed / L.basis.weekEquity * 100, cap: RiskEngine.POLICY.active.weeklyPct}; }catch(e){} return null; }   /* RE-C1 — Active (Momentum + Satellite) week usage vs 3% summary check; was PS1 principal / 5% total cap */
 function bdSummary(items){
   const H = items.filter(x=>x.status === 'hold').length, rk = bdRiskNow();
   return `<span class="bd-sum" data-bd-sum><b>${items.length}</b> plan${items.length === 1 ? '' : 's'} · Holding <b>${H}</b>${rk ? ` · risk in use <b>${ps1Pct(rk.used, 1)}</b> / ${ps1Pct(rk.cap, 0)}` : ''}</span>`;
@@ -30887,6 +30888,7 @@ function bdOpenRow(k){
 
 /* ── PB1 §6 — Port top: Risk panel (moved from Plan · same numbers: ps1Model / ln4RoomR / lossEval) ── */
 function bdPortRiskHtml(){
+  return '';   /* RE-C1 — the PS1 caps panel (risk in use / 5% · COMP 3 · MMT 1.5 · SAT 0.5) is replaced by the per-account engine blocks (re1PortRiskHtml) */
   try{
     if(ps1Off()) return '';
     const home = tdHome(), Mh = ps1Model(home); if(!Mh) return '';
@@ -31699,6 +31701,7 @@ function wl1TodoItems(){
 function wl1Lot(mk){ return mk === 'TH' ? 100 : 1; }
 function wl1FullQty(c){
   const pl = c.plan || {}, rows = wl1PlanRows(c);
+  if(pl.ps1 && pl.ps1.re1 && +pl.ps1.qtyFull > 0) return +pl.ps1.qtyFull;   /* RE-C1 — engine plans store the FULL-size quantity (Momentum: before the 50% homework fraction · Compounder: whole plan = 2 × Pilot) */
   let q = 0;
   if(rows){
     q = rows.reduce((a, x)=>a + (+x.qty || 0), 0);
@@ -31759,6 +31762,10 @@ function wl1Say(msg){ window.__wl1Msg = msg; try{ sdToast(msg); }catch(e){ conso
 function wl1PlaceGate(id, lv){   /* RE-C1 — Place order gate = the engine (homework cap is part of the Momentum size; Compounder Pilot is the cap) */
   const c = (coreCardsList || []).find(x=>x.id === id); if(!c) return true;
   const g = re1PlanGate(c, lv); if(!g.ok){ wl1Say('Place order blocked — ' + g.msg); return false; }
+  /* WL1 aggregate per stock across plans (Momentum 50% of full until the thesis is done · Compounder Pilot only) — still enforced at Place order */
+  const rows = wl1PlanRows(c), k = coreEff(c).kind === 'open' ? (c.lots || []).length : 0, i = lv != null ? lv : Math.min(k, (rows ? rows.length : 1) - 1);
+  const r = wl1Check(c.ticker, coreTrackOfCard(c), wl1LevelQty(c, i), {});
+  if(!r.ok){ wl1Say('Place order blocked — ' + r.msg); return false; }
   return true;
 }
 function wl1FillErr(c, qty){ return ''; }   /* RE-C1 — an actual fill is always accepted; breaches are flagged (re1FillFlags) */
@@ -31774,10 +31781,9 @@ function wl1CapBoxHtml(sym, trk, full, startNow){
 }
 function wl1CapBoxDraw(n){
   const host = document.getElementById('cnWl1'); if(!host) return;
-  host.innerHTML = ''; return;   /* RE-C1 — superseded by the result box (homework 50% is a named factor there) */
   const snap = n && n.wl1Snap, sym = coreEl('cnTicker') ? wlNormTicker(coreEl('cnTicker').value) : '';
   if(!snap || !sym){ host.innerHTML = ''; return; }
-  const fr = snap.starter && +snap.starter.frac > 0 ? +snap.starter.frac : 0, full = fr ? (snap.wl1Full > 0 ? snap.wl1Full : Math.round(snap.qty / fr)) : snap.qty;
+  const fr = snap.starter && +snap.starter.frac > 0 ? +snap.starter.frac : 0, full = snap.wl1Full > 0 ? snap.wl1Full : (fr ? Math.round(snap.qty / fr) : snap.qty);
   const h = wl1CapBoxHtml(sym, n.track === 'ladder' ? 'ladder' : 'winner', full, fr ? snap.qty : 0);
   if(host.dataset.h !== h){ host.innerHTML = h; host.dataset.h = h; }
 }

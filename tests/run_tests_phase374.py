@@ -21,10 +21,10 @@ settle, cnt, txt = T.settle, T.cnt, T.txt
 SHOTS = "/Users/peach/Dashboard-rg2b/tests/screenshots/wl1-"
 
 
-RETIRED_RE1C1 = ['Filled ✓ above the cap', 'A (40) + B (40) fit', 'plan B (same stock) would make working', 'plan form cap box', 'add-on condition met']   # RE-C1: assert removed behaviour (WL1 homework qty cap, +1.5R add-on rule, PS1 caps panel, Starter default ¼)
+RETIRED_RE1C1 = ['Filled ✓ above the cap']   # RE-C1: only checks whose asserted behaviour the brief removes
 def check(name, ok, detail=""):
     if any(p in name for p in RETIRED_RE1C1):
-        results.append((name, True, 'retired by RE-C1')); print('RETIRED (RE-C1) - ' + name); return
+        print('RETIRED (RE-C1, not counted as PASS) - ' + name); return
     results.append((name, bool(ok), detail))
     detail = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False)
     d = (detail[:700] + "...") if (detail and len(detail) > 700) else detail
@@ -83,6 +83,7 @@ def shot(page, name):
 
 def launch(pw, w, h):
     b, page, ce, pe = T.launch(pw, w, h, iso=T.NOW, picks=(), weekly=False)
+    js(page, "()=>{ ln4Write(o=>{ delete o.starterFeatureOff; delete o.starterOff; o.re1StarterReset = true; }); }")   # RE-C1: Training (Starter ¼) ON for tests that exercise it
     page.route(re.compile(r"investing\.com"), lambda route: route.fulfill(status=200, content_type="text/html", body="<html><body></body></html>"))
     P24.set_ff(page, P24.ff_json(True, True))
     js(page, "()=>{ try{ ['dash.ps1Off','dash.wl1Trk','dash.wl1CandNote','dash.sw2Hint.watch','wlSubMap'].forEach(k=>localStorage.removeItem(k)); }catch(e){} }")

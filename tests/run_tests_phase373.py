@@ -18,10 +18,10 @@ settle, cnt, txt = T.settle, T.cnt, T.txt
 NOW = T.NOW
 
 
-RETIRED_RE1C1 = ['split plan = ONE card', 'Holding add-on rule met', 'Port top: Risk in use', 'Act follows the board']   # RE-C1: assert removed behaviour (WL1 homework qty cap, +1.5R add-on rule, PS1 caps panel, Starter default ¼)
+RETIRED_RE1C1 = ['Port top: Risk in use', '8 Plan summary line uses the same risk number', '8 bar colours: ≥80% of cap amber']   # RE-C1: only checks whose asserted behaviour the brief removes
 def check(name, ok, detail=""):
     if any(p in name for p in RETIRED_RE1C1):
-        results.append((name, True, 'retired by RE-C1')); print('RETIRED (RE-C1) - ' + name); return
+        print('RETIRED (RE-C1, not counted as PASS) - ' + name); return
     results.append((name, bool(ok), detail))
     detail = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False)
     d = (detail[:700] + "...") if (detail and len(detail) > 700) else detail
@@ -74,6 +74,7 @@ def fixtures():
 
 def launch(pw, w, h):
     b, page, ce, pe = T.launch(pw, w, h, iso=NOW, picks=(), weekly=False)
+    js(page, "()=>{ ln4Write(o=>{ delete o.starterFeatureOff; delete o.starterOff; o.re1StarterReset = true; }); }")   # RE-C1: Training (Starter ¼) ON for tests that exercise it
     page.route(re.compile(r"investing\.com"), lambda route: route.fulfill(status=200, content_type="text/html", body="<html><body></body></html>"))   # PB1d: calendar iframe = no real network
     P24.set_ff(page, P24.ff_json(True, True))
     js(page, "()=>{ try{ localStorage.removeItem('dash.ps1Off'); localStorage.removeItem('dash.bdChip'); localStorage.removeItem('dash.bdSeg'); }catch(e){} }")
@@ -212,7 +213,7 @@ def run(pw, w, h):
         tab(page, "mix")
         stub(page, "window.ps1Model = (A)=>({A:A||tdHome(), E:1000000, cfg:{total:5, buckets:{winner:{cap:1.5,label:'MMT'},ladder:{cap:3,label:'COMP'},sat:{cap:0.5,label:'SAT'}}}, P:{principalPct:1.2, buckets:{winner:{principalPct:1.3,cap:1.5},ladder:{principalPct:0.9,cap:3},sat:{principalPct:0.6,cap:0.5}}, ideas:[]}, pos:[]});")
         js(page, "()=>render()"); settle(page, 500); tab(page, "mix")
-        rk = txt(page, "[data-bd-risk]")
+        rk = txt(page, "[data-bd-risk]") or ""
         check(f"{tag} 8 Port top: Risk in use 1.2% / 5% · Week loss · Room · Open plans · COMP/MMT/SAT used / cap", "1.2% / 5%" in rk and "Room" in rk and "Open plans" in rk and all(k in rk for k in ("COMP", "MMT", "SAT")), rk)
         cls = js(page, "()=>[...document.querySelectorAll('[data-bd-bucket]')].map(e=>e.dataset.bdBucket+':'+(e.classList.contains('r')?'r':e.classList.contains('a')?'a':''))")
         check(f"{tag} 8 bar colours: ≥80% of cap amber (MMT 1.3/1.5) · over cap red (SAT 0.6/0.5)", "MMT:a" in cls and "SAT:r" in cls and "COMP:" in cls, cls)

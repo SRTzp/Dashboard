@@ -571,7 +571,7 @@
   /* ── Momentum (new order · addition · edit) ──
      f = {entry, stop, side, homeworkDone, starterOn, isFirstEntry, usedFraction, ideaId, isAddition, mult, fx, lotStep, minLot, minStopDist} */
   function sizeMomentum(L, f) {
-    var m = baseModel(L, 'winner'); m.chip = L.emergency.active ? { t: 'Emergency 50%', c: 'r' } : (f.homeworkDone === true ? null : { t: 'Homework not done', c: 'a' });
+    var m = baseModel(L, 'winner'); m.chip = L.emergency.active ? { t: 'Emergency 50%', c: 'r' } : null;   /* the 'Homework not done' state is shown once, by the WL1 cap box under the result */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
     var fr = R.entryFraction({ homeworkDone: f.homeworkDone === true, starterOn: f.starterOn === true, isFirstEntry: f.isFirstEntry !== false, usedFraction: f.usedFraction || 0 });
     var base = RP.mom.rptPct, ef = L.eF, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];
