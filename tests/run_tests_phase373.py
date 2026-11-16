@@ -118,7 +118,9 @@ def run(pw, w, h):
         page.locator('[data-bd-lvact="place"]').first.click(); settle(page, 800)
         lv = js(page, "()=>[...document.querySelectorAll('[data-bd-lv]')].map(e=>e.dataset.bdLv+':'+e.dataset.bdLvst)")
         check(f"{tag} 2c placing level #2 → #2 ordered; card stays Holding; log line", lv[1] == "2:ordered" and "ccMH" in col(page, "hold") and any(x.startswith("#2 order placed") for x in logs(page, "ccMH")), [lv, logs(page, "ccMH")])
-        page.locator("[data-bd-cancel]").click(); settle(page, 800)
+        page.locator("[data-bd-cancel]").click(); settle(page, 500)
+        js(page, "()=>{document.getElementById('cxReason').value='hesitated'; document.getElementById('cxNote').value=''; re4In(); re4Go();}"); settle(page, 1200)   # RE-D §6: reason sheet first
+        js(page, "()=>bdOpen('ccMH')"); settle(page, 400)   # the sheet closes the drawer → reopen it
         check(f"{tag} 2c cancel affects that level only → #2 planned again, #1 still filled, log '#2 order cancelled'", js(page, "()=>[...document.querySelectorAll('[data-bd-lv]')].map(e=>e.dataset.bdLvst)") == ["filled", "planned", "planned"] and "#2 order cancelled" in logs(page, "ccMH")[-1], logs(page, "ccMH"))
         js(page, "()=>bdClose()")
         # ── 2 chips ──
@@ -145,11 +147,12 @@ def run(pw, w, h):
         check(f"{tag} 4 drawer: Ordered → 'Cancel order' + primary 'Filled ✓'", cnt(page, "[data-bd-cancel]") == 1 and cnt(page, '[data-bd-dprimary="fill"]') == 1)
         js(page, "()=>{ const it = wlItemOf('AMD'); if(it){ it.my_thesis = {why:'', exit:''}; } bdRender(); }"); settle(page, 300)   # WL1 — homework seed carried ④; the drawer check wants an unwritten thesis
         check(f"{tag} 4 thesis missing → 'Add thesis ›' link", cnt(page, "[data-bd-addthesis]") >= 1)
-        page.locator("[data-bd-cancel]").click(); settle(page, 800)
+        page.locator("[data-bd-cancel]").click(); settle(page, 500)
+        js(page, "()=>{document.getElementById('cxReason').value='hesitated'; document.getElementById('cxNote').value='chasing'; re4In(); re4Go();}"); settle(page, 1200)   # RE-D §6: reason sheet first
+        js(page, "()=>bdOpen('ccPL')"); settle(page, 400)
         check(f"{tag} 3 Cancel order (no confirm) → back to 📝 Planned + log 'Order cancelled'", "ccPL" in col(page, "plan") and "Order cancelled" in logs(page, "ccPL")[-1], logs(page, "ccPL"))
-        check(f"{tag} 5 inline Reason? input (not window.prompt) appears after cancel", cnt(page, "#bdReasonIn") == 1)
-        page.fill("#bdReasonIn", "chasing"); page.locator("[data-bd-reason-ok]").click(); settle(page, 700)
-        check(f"{tag} 5 cancel reason appended to the log text", "chasing" in logs(page, "ccPL")[-1], logs(page, "ccPL"))
+        # RE-D §6 — RETIRED: inline 'Reason?' input after cancel (replaced by the reason sheet before the cancel; covered in run_tests_re1d.py)
+        check(f"{tag} 5 cancel note is stored on the plan (reason sheet)", js(page, "()=>coreCardsList.find(c=>c.id==='ccPL').cancelNote") == "chasing")
         lg = js(page, "()=>[...document.querySelectorAll('[data-bd-lr]')].map(e=>e.innerText)")
         check(f"{tag} 4 log newest first", len(lg) >= 3 and "Order cancelled" in lg[0], lg)
         page.keyboard.press("Escape"); settle(page, 300)

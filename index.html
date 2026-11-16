@@ -11188,7 +11188,7 @@ function ln4Taken(id){
 }
 function ln4ValidList(){
   const v = ln4Cfg().valid, out = [];
-  if(v && typeof v === 'object') Object.keys(v).forEach(id=>{ const x = v[id]; if(x && typeof x === 'object' && !x.excluded) out.push(Object.assign({id}, x, {taken: !x.missed && ln4Taken(id)})); });
+  if(v && typeof v === 'object') Object.keys(v).forEach(id=>{ const x = v[id]; if(x && typeof x === 'object' && !x.excluded) out.push(Object.assign({id}, x, {taken: !x.missed && !x.notTaken && ln4Taken(id)})); });
   return out;
 }
 function ln4Exec(){
@@ -11571,7 +11571,7 @@ function ln4TradeTags(t){
 function ln4MissedList(){ const v = ln4Cfg().valid, out = []; if(v) Object.keys(v).forEach(id=>{ if(v[id] && v[id].missed) out.push(Object.assign({id}, v[id])); }); return out.sort((a, b)=>String(b.day).localeCompare(String(a.day))); }
 function ln4WeekRowHtml(){
   const e = ln4Exec(), w = ln4Week(), d = new Date(Date.parse(w.from + 'T00:00:00Z')), j = new Date(Date.UTC(d.getUTCFullYear(), 0, 1)), wk = Math.ceil(((d - j) / 86400000 + j.getUTCDay() + 1) / 7);
-  const dots = ln4ValidList().filter(x=>x.day >= w.from && x.day <= w.to).map(x=>`<i class="${x.missed ? 'm' : x.taken ? 't' : 'w'}"></i>`).join('');
+  const dots = ln4ValidList().filter(x=>x.day >= w.from && x.day <= w.to).map(x=>`<i class="${x.missed || x.notTaken ? 'm' : x.taken ? 't' : 'w'}"></i>`).join('');
   return `<span class="ln4-wk" data-ln4-wk><b>Week ${wk}</b> · Exec <b>${e.x}/${e.y}</b>${dots ? ` <span class="ln4-dots">${dots}</span>` : ''}${ln4Feature() ? ` · <span class="ln4-stg">Stage ${ln4Stage()} · ${LN4_FRAC_TXT[ln4Stage()]}</span>` : ''}<span class="ln4-tw">this week</span></span>`;
 }
 
@@ -25697,7 +25697,7 @@ function satV3PlanAcctCalc(idea, accId, f2c){
   const noteB = (F.needNote && !F.reason) ? 'เขียนเหตุผลที่เข้าสวน/นอก Macro' : '';   /* WA1 */
   const carryB = (!tradeExists && satV3IsCarried(idea)) ? satV3CarryBlockMsg() : '';   /* CO1 */
   const unW = (!tradeExists && !satIsPicked(idea.asset)) ? satUnpickMsg() : '';   /* WA1 — ไม่ได้เลือกสัปดาห์นี้ = ห้ามเปิดไม้ใหม่ */
-  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: (carryB ? [carryB] : []).concat(unW ? [unW] : [], noteB ? [noteB] : [], newsB ? [newsB] : [], rrB ? [rrB] : [], rd.reasons, mrC ? mrC.reasons : []), ready: rd.ok && (!mrC || mrC.ok) && !ddB && !newsB && !rrB && !noteB && !unW && !carryB, tradeExists, factor: facA, split1, pyrSplit: cfgA.pyrSplit, ruleFactor: ruleF, noteBlock: noteB, unpickBlock: unW, carryBlock: carryB, f2c: F, mr: !!mrAct, mrOk: mrC ? mrC.ok : true, mrCheck: mrC, offBias: false, ddBlock: ddB, newsBlock: newsB, rrBlock: rrB, rr: rrC};
+  return {base, slot, opts, chosen, lot, lotMsg, riskCur, heatPct, warns: (carryB ? [carryB] : []).concat(unW ? [unW] : [], noteB ? [noteB] : [], newsB ? [newsB] : [], rrB ? [rrB] : [], rd.reasons, mrC ? mrC.reasons : []), ready: rd.ok && (!mrC || mrC.ok) && !newsB && !rrB && !noteB && !unW && !carryB, tradeExists, factor: facA, split1, pyrSplit: cfgA.pyrSplit, ruleFactor: ruleF, noteBlock: noteB, unpickBlock: unW, carryBlock: carryB, f2c: F, mr: !!mrAct, mrOk: mrC ? mrC.ok : true, mrCheck: mrC, offBias: false, newsBlock: newsB, rrBlock: rrB, rr: rrC};
 }
 /* TD1 — ย้ายตัวเลือกบัญชีที่ ready ออกมาเป็นฟังก์ชันกลาง (พฤติกรรมเดิม) ให้แท็บ วันนี้ใช้ร่วมกับปุ่มบันทึก order */
 function satV3ReadyAccts(idea){
@@ -31171,14 +31171,14 @@ function re4Go(){
     bdCancelLvDo(d.id, i, f);
     const acct = it.acct || (it.kind === 'sat' ? re4SatAcct(it.ref) : it.ref.acct) || tdHome();
     ln4Write(o=>{ o.ocx = Array.isArray(o.ocx) ? o.ocx : []; o.ocx.push({id:it.id, sym:it.sym, strat:it.tag, acct, reason:code, note:note, at:f.cancelledAt, px:f.cancelPx, kind:it.kind}); });
-    if(RE4_COUNTED.indexOf(code) >= 0) ln4Valid(it.id, it.sym, 'cancel', {missed:1, reason:code});
+    if(RE4_COUNTED.indexOf(code) >= 0) ln4Valid(it.id, it.sym, 'cancel', {notTaken:1, reason:code});   /* the plan stays on the board → not 'missed' (that flag hides it) */
   } else {
     const log = bdLogOf(it).slice(); log.push(bdMk('cancel', 'Plan cancelled · ' + re4Short(code) + (note ? ' · ' + note : ''))); bdLogMem[it.id] = log;
     if(it.kind === 'core') coreWrite(it.id, Object.assign({status:'cancelled', log}, f));
     else re4SatCancel(it.ref, f, log);
     re4ValidMark(it.id, it.sym, code);
   }
-  try{ bdClose(); }catch(e){}
+  if(d.scope === 'plan'){ try{ bdClose(); }catch(e){} } else { setTimeout(()=>{ try{ if(bdById(d.id)) bdOpen(d.id); }catch(e){} }, 120); }   /* the sheet closes the drawer — an order cancel returns to it */
   try{ ln4Toast((d.scope === 'order' ? 'Order' : 'Plan') + ' cancelled · ' + re4Short(code)); }catch(e){}
   try{ bdRender(); todayRefresh(true); }catch(e){}
 }
@@ -31196,7 +31196,7 @@ function bdCancelLvDo(id, i, f){
   const it = bdById(id); if(!it || !it.placed || !it.placed.has(i)) return;
   const ln = {placedLv:{[i]:null}}; if(it.ref.ln4 && it.ref.ln4.placedAt && i === it.k) ln.placedAt = null;
   if(it.kind === 'sat'){ ln.placedAt = null; ln.snap = null; }   /* PB1b — the order is gone → its snapshot goes with it (a new Place order takes a new one) */
-  bdWriteWithLog(it, Object.assign({ln4:ln}, f || {}), 'cancel', (it.nl > 1 ? '#' + (i + 1) + ' order cancelled' : 'Order cancelled') + (f ? ' · ' + re4Short(f.cancelReason) : ''));   /* §2c — only that level */
+  bdWriteWithLog(it, Object.assign({ln4:ln}, f || {}), 'cancel', (it.nl > 1 ? '#' + (i + 1) + ' order cancelled' : 'Order cancelled'));   /* §2c — only that level */
 }
 /* ── restore (Journal › Not taken): plan-level records only — back to Planned, reason cleared ── */
 function re4Restore(id){
