@@ -9,7 +9,7 @@
 6. **Risk room chip / Act state** no longer set "Review due"; red "N not taken" chip, To do item and form block remain (tested).
 
 ## Differences from the brief
-- **`[ ]` conflict:** `[` `]` already cycled per-tab filters (Plan chips, Watch, Journal, Port…). Account switching now owns plain `[ ]` when ≥2 accounts; the old cycle moved to `Shift+[` / `Shift+]` (single-account behaviour unchanged). Help overlay updated.
+- **(superseded by Small fix) `[ ]` conflict:** `[` `]` already cycled per-tab filters (Plan chips, Watch, Journal, Port…). Account switching now owns plain `[ ]` when ≥2 accounts; the old cycle moved to `Shift+[` / `Shift+]` (single-account behaviour unchanged). Help overlay updated.
 - `tests/aw1_test.js` is a thin node wrapper around `tests/run_tests_aw1.py` (Playwright) because the checks need a browser.
 - Snapshot sheet has no date field (uses today, as the Settings card's default).
 - `tests/run_tests_re1d.py`: one assertion ("strip state is red") replaced by "no 'Review due'" per §6.
@@ -24,3 +24,10 @@
 - Plain `[ ]` per-tab filter cycling when ≥2 accounts (now Shift+`[ ]`).
 - Word "Trading" and sync text hidden on iPhone ≤600 px (dot stays).
 - "Cancel plan ›" words on the Planned card (now ✕; drawer keeps words).
+
+## Small fix — account shortcut keys
+- Account switch is now `.` = previous, `/` = next (`e.code` Period / Slash, so Thai layout works; no Shift/Ctrl/Alt/Meta, so Shift+/ still opens the help overlay). Same ignore rules (typing, sheet/modal open, fewer than 2 accounts).
+- Plain `[` `]` are back on the per-tab filter cycle exactly as before AW1; the "Shift+[ ]" wording is gone.
+- Pill title now "Name · . previous · / next"; help overlay rows updated (`. /` account, `[ ]` tab filter). `docs/GUIDE-daily-use.md` did not mention the keys.
+- Tests: `run_tests_aw1.py` now 113/113 (`.` `/` switch, `[ ]` cycle filters with 2 accounts, Shift+/ opens help, keys ignored while typing/modifier/sheet). `risk_engine` 313, `re1_adapter` 63, `re1c_live` 82, `run_tests_re1d` 336 — all pass.
+- The "removed features" entry about plain `[ ]` cycling no longer applies.
