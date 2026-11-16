@@ -3,9 +3,10 @@
 Add popup · Screening modal · Watchlist row + card · Compounder page · Today Plans block · พร้อมตรวจ overflow แนวนอน"""
 import json, os
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C   # ต้องมาก่อน
-import run_tests_phase107 as T
-import run_tests_phase111 as P111
+import lib_phase107 as T
+import lib_phase111 as P111
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "briefs", "PL1-screens")
 os.makedirs(OUT, exist_ok=True)

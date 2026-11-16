@@ -6,9 +6,10 @@ Run: python3 tests/crawl_all.py"""
 import os, re, sys, json, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from playwright.sync_api import sync_playwright
-import run_tests_phase38 as P38
-import run_tests_phase39 as P39
-import run_tests_phase4 as base
+import net_stub  # TS1: no real network in tests
+import lib_phase38 as P38
+import lib_phase39 as P39
+import lib_phase4 as base
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "reports", "bughunt-crawl.txt")
 TABS = ["today", "flow", "watch", "plan", "journal", "mix"]

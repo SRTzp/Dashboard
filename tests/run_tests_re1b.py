@@ -4,10 +4,11 @@ no visible entry point without the flag, both accounts reported, downloads re1-d
 Run: python3 run_tests_re1b.py"""
 import json, os, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C
-import run_tests_phase4 as base
-import run_tests_phase38 as P38
-import run_tests_phase39 as P39
+import lib_phase4 as base
+import lib_phase38 as P38
+import lib_phase39 as P39
 
 js = C.js
 results = []

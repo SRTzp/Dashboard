@@ -6,7 +6,8 @@ mock Firestore (ไม่ต่อเน็ต) · 1440px + 430px · ภาพ�
         ซึ่งตรงกับสถานการณ์จริง (rules อนุญาต read แต่ยังไม่อนุญาต delete)"""
 import copy, json, os, re, sys
 from playwright.sync_api import sync_playwright
-import run_tests_phase4 as base
+import net_stub  # TS1: no real network in tests
+import lib_phase4 as base
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..", "tools")))

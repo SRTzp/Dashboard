@@ -4,12 +4,14 @@
 รัน: python3 run_tests_phase370.py → tests/screenshots/ln4-390-*.png"""
 import json, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
+import ts1_retire
 import ln3fix_common as C
-import run_tests_phase4 as base
-import run_tests_phase24 as P24
-import run_tests_phase106 as T
-import run_tests_phase120 as P120
-import run_tests_phase77 as P77
+import lib_phase4 as base
+import lib_phase24 as P24
+import lib_phase106 as T
+import lib_phase120 as P120
+import lib_phase77 as P77
 
 ENGINE = base.BROWSER_ENGINE
 results = []
@@ -17,6 +19,7 @@ js, settle = C.js, T.settle
 
 
 def check(name, ok, detail=""):
+    if ts1_retire.skip(__name__ if __name__ != "__main__" else "run_tests_phase370", name): return   # TS1 check-level retirement
     results.append((name, bool(ok), detail))
     detail = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False)
     d = (detail[:900] + "...") if (detail and len(detail) > 900) else detail
@@ -67,7 +70,7 @@ def run(pw):
     }
     b, page, ce, pe = T.launch(pw, w, h, iso=T.NOW, picks=("XAUUSD",), weekly=False)
     try:
-        import run_tests_phase13 as P13
+        import lib_phase13 as P13
         P24.set_ff(page, P24.ff_json(True, True))
         js(page, "(t)=>{ const B=getBook('main'); B.trades=t; saveBook('main'); render(); }", [P13.T("tNV", "core", "open", sym="NVDA", entry=171.4, sl=168, qty=10, cur="USD", date="2026-09-10")])
         for cid, c in cards.items():

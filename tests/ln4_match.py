@@ -3,10 +3,11 @@
 run: LN4RAW=dir python3 ln4_match.py"""
 import sys, os
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C
-import run_tests_phase24 as P24
-import run_tests_phase106 as T
-import run_tests_phase120 as P120
+import lib_phase24 as P24
+import lib_phase106 as T
+import lib_phase120 as P120
 js, settle = C.js, T.settle
 RAW = os.environ.get('LN4RAW', '/tmp/ln4raw')
 os.makedirs(RAW, exist_ok=True)
@@ -21,7 +22,7 @@ def app(pw, w, h):
     b, page, ce, pe = T.launch(pw, w, h, iso=T.NOW, picks=("XAUUSD",), weekly=False)
     sh = lambda n, sel=None: (page.locator(sel).first.screenshot(path=f"{RAW}/{n}-{w}.png") if sel else page.screenshot(path=f"{RAW}/{n}-{w}.png", full_page=True))
     try:
-        import run_tests_phase13 as P13
+        import lib_phase13 as P13
         P24.set_ff(page, P24.ff_json(True, True))
         js(page, "(t)=>{ const B=getBook('main'); B.trades=t; saveBook('main'); render(); }", [P13.T("tNV", "core", "open", sym="NVDA", entry=171.4, sl=168, qty=10, cur="USD", date="2026-09-10")])
         for cid, c in cards.items():

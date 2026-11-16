@@ -5,7 +5,8 @@ mock Firestore (ไม่ต่อเน็ต) · 1440px + 430px · seed.json �
 เทียบขนาด/ไอคอนปุ่ม ＋ กับ index.backup-pre-CL2b.html (อยู่โฟลเดอร์แม่ของ index.html) — ถ้าไม่มีไฟล์นั้นจะข้ามเฉพาะเคสเทียบ (พิมพ์ SKIP)"""
 import copy, json, os, re, sys
 from playwright.sync_api import sync_playwright
-import run_tests_phase4 as base
+import net_stub  # TS1: no real network in tests
+import lib_phase4 as base
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHOTS = os.path.join(HERE, "screenshots"); os.makedirs(SHOTS, exist_ok=True)

@@ -4,6 +4,7 @@ Fake timers are in-page: Date.now is virtual and rrgSleep advances it (no real w
 import json, sys
 import ln3fix_common as C
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 
 js = C.js
 results = []

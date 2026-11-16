@@ -5,7 +5,8 @@ Chromium · functions evaluated in-page on synthetic series · prints hysteresis
 import json, sys
 import ln3fix_common as C
 from playwright.sync_api import sync_playwright
-import run_tests_phase4 as base
+import net_stub  # TS1: no real network in tests
+import lib_phase4 as base
 
 js = C.js
 results = []

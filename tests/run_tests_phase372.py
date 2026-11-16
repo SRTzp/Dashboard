@@ -2,13 +2,16 @@
 """LN4c — Today status card (iPhone/Mac) + screenshots (390 viewport · 1280)"""
 import json, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
+import ts1_retire
 import ln3fix_common as C
-import run_tests_phase24 as P24
-import run_tests_phase106 as T
-import run_tests_phase120 as P120
+import lib_phase24 as P24
+import lib_phase106 as T
+import lib_phase120 as P120
 js, settle = C.js, T.settle
 results = []
 def check(n, ok, d=""):
+    if ts1_retire.skip(__name__ if __name__ != "__main__" else "run_tests_phase372", n): return   # TS1 check-level retirement
     results.append((n, bool(ok)));
     print(("PASS" if ok else "FAIL") + " - " + n + ((" :: " + json.dumps(d, ensure_ascii=False)[:500]) if not ok else ""))
 

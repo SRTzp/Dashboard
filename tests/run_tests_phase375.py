@@ -5,12 +5,13 @@ Chromium · 390 (+360) + 1280 + 1440 · นาฬิกาปลอม พฤ. 1
 รัน: python3 run_tests_phase375.py → tests/screenshots/tw1-*.png"""
 import os, json, re, sys, copy
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C   # ต้องมาก่อน
 import run_tests_phase374 as W
-import run_tests_phase24 as P24
-import run_tests_phase13 as P13
-import run_tests_phase106 as T
-import run_tests_phase120 as P120
+import lib_phase24 as P24
+import lib_phase13 as P13
+import lib_phase106 as T
+import lib_phase120 as P120
 import rrg1_fixture as RF
 
 ENGINE = W.base.BROWSER_ENGINE
@@ -285,7 +286,7 @@ def sweep(pw, w, h):
         P24.set_ff(page, P24.ff_json(True, True))
         js(page, "()=>{ try{ localStorage.removeItem('dash.td4RemDismiss'); }catch(e){} }")
         P24 and None
-        from run_tests_phase37 import set_clock
+        from lib_phase37 import set_clock
         set_clock(page, "2026-10-01T21:30:00+07:00"); settle(page, 300)
         W.refresh_today(page); W.refresh_today(page)
         js(page, "()=>{ ln4MoreOpen = true; todayRefresh(true); document.querySelectorAll('#tabToday details').forEach(d=>d.open = true); }")

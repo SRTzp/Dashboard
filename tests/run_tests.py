@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json, os, sys, math, re
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Default: index.html one directory up from tests/ (i.e. ~/Documents/Dashboard/index.html when this

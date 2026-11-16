@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """UA1 — whole-app UI audit (reusable). Playwright, 390x844 / 1280x800 / 1440x900, fixtures + stress data (mock Firebase).
-Visits every tab / sub-tab / sheet / form, runs 8 layout rules on the visible DOM, writes docs/reports/UA1-audit.md
+Visits every tab / sub-tab / sheet / form, runs 8 layout rules on the visible DOM, writes docs/reports/ui-audit-latest.md (never overwrites UA1-audit.md)
 + crops (red outline) to tests/screenshots/ua1/<tag>/.
-Run: python3 tests/ui_audit.py [--out docs/reports/UA1-audit.md] [--tag before|after] [--vp 390,1280,1440] [--json out.json]
+Run: python3 tests/ui_audit.py [--out docs/reports/ui-audit-latest.md] [--tag before|after] [--vp 390,1280,1440] [--json out.json]
 Rules: 1 word broken mid-word · 2 chip/pill/button wraps · 3 horizontal overflow/clipping · 4 lone control row ·
 5 duplicate message in one card · 6 font/tap below minimum · 7 overlap · 8 empty gap > 32px"""
 import os, sys, json, re, argparse, collections
@@ -13,11 +13,12 @@ import os as _o
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C
-import run_tests_phase24 as P24
-import run_tests_phase106 as T
-import run_tests_phase120 as P120
-import run_tests_phase13 as P13
+import lib_phase24 as P24
+import lib_phase106 as T
+import lib_phase120 as P120
+import lib_phase13 as P13
 
 js, settle = C.js, T.settle
 ROOT = os.path.abspath(os.path.join(HERE, ".."))
@@ -388,7 +389,7 @@ def write_report(findings, visited, tag, out):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=os.path.join(ROOT, "docs", "reports", "UA1-audit.md"))
+    ap.add_argument("--out", default=os.path.join(ROOT, "docs", "reports", "ui-audit-latest.md"))
     ap.add_argument("--tag", default="before")
     ap.add_argument("--vp", default="390,1280,1440")
     ap.add_argument("--json", default="")

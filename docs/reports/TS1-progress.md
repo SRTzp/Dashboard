@@ -1,6 +1,6 @@
 # TS1 progress
 
-Branch  (from origin/main 2739856). Order note: §4 (node-only) and §2 were done before §1 finished because §1 needs a full browser re-run; each has its own commit.
+Branch claude/ts1 (from origin/main 2739856). Order note: §4 (node-only) and §2 were done before §1 finished because §1 needs a full browser re-run; each has its own commit.
 
 ## §1 — "before": every browser suite on the base commit (origin/main 2739856, 4 parallel)
 
@@ -157,3 +157,11 @@ Totals: 149 suites · 19 pass · 130 fail
 | run_tests_re1c2 | ok | 155 | 0 | 91 |  |
 | run_tests_re1c | ok | 203 | 0 | 172 |  |
 | run_tests_re1d | ok | 336 | 0 | 190 |  |
+
+## Done so far
+- **§4** (commit 1aaf1af): Compounder heat uses the week-snapshot FX (existing usage); `tests/re1c_live_test.js` 88/88 (7 new heat/FX checks that fail on the old adapter), `risk_engine_test` 313/313, `re1_adapter_test` 63/63, sync tool OK.
+- **§2** (commit 6fd8737): old hidden Settings cards removed (markup + read sites). New `tests/run_tests_ts1.py` 26/0 (both accounts, 1440 + 390): no-edit Save leaves the stored settings deep-equal; Settings screenshots byte-identical before/after (closed and fully expanded).
+- **§1** (done, commit below): shared causes first — `tests/net_stub.py` (no real network; fixed `run_tests` 403 console check), obsolete `backup-pre` / `_bk_` static checks removed, two broken suite files repaired (`# comment` swallowed the closing `)`), `ui_audit` writes `ui-audit-latest.md`. Re-run of the 130 failing suites after those fixes: 126 still failing, 4 fixed (`run_tests`, 19, 20, 363).
+  - Dispositions: 26 suites stay and pass · 7 stay and FAIL (kept visible: real findings, see summary) · 2 empty suites (62, 88: every check already retired inside) moved · 119 retired to `tests/_retired/` with reason (README) · 40 of those are still imported as helpers by current suites → `tests/lib_phase*.py` · 1 check-level retirement set in `tests/ts1_retire.py` (phase35 `#satHeatHint`, TS1 §2).
+  - `tests/run_regression.sh` (+ `--quick`): first full run 963 s (16 min).
+  - Real app finding (not fixed, outside TS1 scope): at 390 px on the Port tab the header `＋` button (`#hdrPlanBtn`) is covered by the account-compare label (`.hdrCmp`, x 196–230 vs button 208–248) — introduced by AW1 (pre-AW1 c4bc75b: button at x=196, clickable). Fails `run_tests_phase373` (419 pass / 1 fail).

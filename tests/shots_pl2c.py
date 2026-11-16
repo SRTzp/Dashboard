@@ -2,10 +2,11 @@
 """PL2c screenshots @390/1024/1440 -> docs/briefs/PL2c-screens/ (sample data)"""
 import os, json
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C
-import run_tests_phase107 as T
-import run_tests_phase111 as P111
-import run_tests_phase44 as P44
+import lib_phase107 as T
+import lib_phase111 as P111
+import lib_phase44 as P44
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "briefs", "PL2c-screens"); os.makedirs(OUT, exist_ok=True)
 js, settle = C.js, T.settle
 LOG = []

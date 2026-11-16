@@ -3,6 +3,7 @@
 Run: python3 run_tests_re1d.py   (screenshots → tests/screenshots/re1d-*.png, written inside the running worktree)"""
 import json, os, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import re1d_common as K
 from re1d_common import js, doc_c, cards, tr, plan_card, launch, refresh, shot, no_overflow, check, results, txt, rows
 

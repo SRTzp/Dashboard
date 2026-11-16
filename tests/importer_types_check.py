@@ -3,8 +3,9 @@
 import os, sys, json
 import re
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 H = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, H)
-import run_tests_phase38 as P38, run_tests_phase39 as P39
+import lib_phase38 as P38, lib_phase39 as P39
 fx = lambda n: json.load(open(os.path.join(H, "fixtures", n)))
 idea, lt = fx("idea_semis.json"), fx("avgo_thesis.json")
 CASES = [("ideaParse", idea, k, v, True) for k, v in [("id", 12345), ("name", {"a": 1}), ("name", [1, 2]), ("date", 5), ("mode", None), ("gaps", "x"), ("candidates", {}), ("candidates", [None]), ("kill", [5]), ("user_notes", []), ("chain", None)]]

@@ -3,9 +3,10 @@
 รัน: python3 run_tests_phase367.py"""
 import json, os, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C   # ต้องมาก่อน
-import run_tests_phase4 as base
-import run_tests_phase106 as T
+import lib_phase4 as base
+import lib_phase106 as T
 
 ENGINE = base.BROWSER_ENGINE
 results = []

@@ -6,13 +6,14 @@ Chromium · 390 (+360) + 1280 + 1440 · นาฬิกาปลอม พฤ. 1
 รัน: python3 run_tests_phase374.py → tests/screenshots/wl1-*.png"""
 import os, json, re, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C   # ต้องมาก่อน
-import run_tests_phase4 as base
-import run_tests_phase13 as P13
-import run_tests_phase24 as P24
-import run_tests_phase38 as P38
-import run_tests_phase120 as P120
-import run_tests_phase106 as T
+import lib_phase4 as base
+import lib_phase13 as P13
+import lib_phase24 as P24
+import lib_phase38 as P38
+import lib_phase120 as P120
+import lib_phase106 as T
 
 ENGINE = base.BROWSER_ENGINE
 results = []

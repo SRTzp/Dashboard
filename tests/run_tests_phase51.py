@@ -5,13 +5,14 @@ mock Firestore · Chromium 1440 + 390 · นาฬิกาปลอมเลื
 รัน: python3 run_tests_phase51.py"""
 import json, os, re, sys
 from playwright.sync_api import sync_playwright
-import run_tests_phase4 as base
-import run_tests_phase5 as p5
-import run_tests_phase24 as p24
-import run_tests_phase36 as p36
-import run_tests_phase37 as P37
-import run_tests_phase38 as P38
-import run_tests_phase39 as P39
+import net_stub  # TS1: no real network in tests
+import lib_phase4 as base
+import lib_phase5 as p5
+import lib_phase24 as p24
+import lib_phase36 as p36
+import lib_phase37 as P37
+import lib_phase38 as P38
+import lib_phase39 as P39
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHOTS = os.path.join(HERE, "screenshots"); os.makedirs(SHOTS, exist_ok=True)

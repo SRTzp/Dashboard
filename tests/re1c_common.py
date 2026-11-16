@@ -2,8 +2,8 @@
 import json, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import ln3fix_common as C
-import run_tests_phase38 as P38
-import run_tests_phase39 as P39
+import lib_phase38 as P38
+import lib_phase39 as P39
 js = C.js
 def tr(**o):
     t = {"port": "core", "bias": "Long", "mult": 1, "cur": "THB", "status": "open", "date": "2026-09-29", "qty": 100, "entry": 100, "sl": 95, "tp": None}

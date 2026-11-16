@@ -2,9 +2,10 @@
 """SW2 — iPhone 390 content-area swipe: Today Daily|Weekend · Plan Core|Sat. synthetic touch events."""
 import json, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C
-import run_tests_phase4 as base
-import run_tests_phase106 as T
+import lib_phase4 as base
+import lib_phase106 as T
 
 results = []
 js, settle = C.js, T.settle
