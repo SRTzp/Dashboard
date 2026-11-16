@@ -6798,7 +6798,7 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
       var comp = ideas.filter(function (i) { return i.strategy === 'ladder'; });
       var cycles = comp.filter(function (i) { return i.status === 'closed' && num(i.closedAt) && i.closedAt > 0; }).map(function (i) { return { id: i.id, flatAt: i.closedAt, net: R.ideaRealizedNet(i) }; });
       var streak = R.compStreak(cycles, []);
-      var heat = R.compHeat(ideas, acc.id, costsFor, basis.ok ? basis.weekEquity : null, basis.ok ? basis.currentEquity : null);
+      var heat = R.compHeat(basis.ok ? fxIdeas(ideas, A.fx, basis.weekFx) : ideas, acc.id, costsFor, basis.ok ? basis.weekEquity : null, basis.ok ? basis.currentEquity : null);   /* TS1 — heat uses the week-snapshot FX like the other limits */
       var legacy = [];
       comp.forEach(function (i) {
         var m = A.info[i.id] || {}, ls = R.compLegacyShape({ tranches: i.tranches.length, accelLots: i.tranches.filter(function (t) { return t.acc; }).length });
@@ -6860,7 +6860,7 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
           var sb = R.satBudgetCheck({ basis: basis, now: now, account: acc.id, ideas: others, costsFor: costsFor, candidateRisk: risk }); r = r.concat(sb.reasons); f = f.concat(sb.flags);
         } else {
           if (streak.locked) r.push('COMP_LOCKED');
-          var h2 = R.compHeat(others, acc.id, costsFor, basis.weekEquity, basis.currentEquity); if (risk !== null && h2.money + risk > basis.weekEquity * R.POLICY.comp.heatCapPct / 100 + 1e-7) r.push('COMP_HEAT');
+          var h2 = R.compHeat(fxIdeas(others, A.fx, basis.weekFx), acc.id, costsFor, basis.weekEquity, basis.currentEquity); if (risk !== null && h2.money + risk > basis.weekEquity * R.POLICY.comp.heatCapPct / 100 + 1e-7) r.push('COMP_HEAT');
           f = f.concat(regime.flags);
         }
         if (r.length) blocked.push({ id: i.id, sym: i.sym, strategy: i.strategy, status: i.status, reasons: Array.from(new Set(r)), flags: Array.from(new Set(f)), candidateRisk: risk });
@@ -7041,8 +7041,9 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     var cycles = comp.filter(function (i) { return i.status === 'closed' && num(i.closedAt) && i.closedAt > 0; }).map(function (i) { return { id: i.id, flatAt: i.closedAt, net: R.ideaRealizedNet(i) }; });
     var unlocks = (S.re1 && Array.isArray(S.re1.unlocks) ? S.re1.unlocks : []).filter(function (u) { return u && num(u.at); });
     var streak = R.compStreak(cycles, unlocks);
-    var heat = basis.ok ? R.compHeat(ideas, acctId, costsFor, basis.weekEquity, basis.currentEquity) : null;
-    var ideasW = basis.ok ? fxIdeas(ideas, fx, basis.weekFx) : ideas, ideasM = basis.ok ? fxIdeas(ideas, fx, basis.monthFx) : ideas, Lx = { now: now, acct: acctId, basis: basis, costsFor: costsFor, ideasW: ideasW, ideasM: ideasM };
+    var ideasW = basis.ok ? fxIdeas(ideas, fx, basis.weekFx) : ideas;
+    var heat = basis.ok ? R.compHeat(ideasW, acctId, costsFor, basis.weekEquity, basis.currentEquity) : null;   /* TS1 — week-snapshot FX */
+    var ideasM = basis.ok ? fxIdeas(ideas, fx, basis.monthFx) : ideas, Lx = { now: now, acct: acctId, basis: basis, costsFor: costsFor, ideasW: ideasW, ideasM: ideasM };
     var satBud = basis.ok ? satBudL(Lx, 0) : null;
     var momChk = basis.ok ? momCheckL(Lx, { ideaId: '__none__', isAddition: true, riskMoney: 0 }) : null;
     var active = basis.ok ? R.activeSummary({ basis: basis, mom: { usageWeek: momChk.usageWeek, usageMonth: momChk.usageMonth }, sat: { usageWeek: satBud.usageWeek, usageMonth: satBud.usageMonth }, candidateRisk: 0 }) : null;
@@ -7188,7 +7189,7 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     var usedPct = (existing + working) / eq * 100, firstPct = multi ? m.effPct * ((f.levels[0].splitPct || 0) / 100) : (m.money / eq * 100);
     var chkKind = multi ? 'pilot' : kind, reqPct = multi ? firstPct : (m.money / eq * 100);
     var entry = { kind: chkKind, starterOn: f.starterOn === true, thesisDone: thesis, legacy: f.legacy === true, side: f.side, entryPx: f.entry, avgEntry: avg, requestedPct: reqPct, usedPct: multi ? 0 : usedPct, factor: fac };
-    var cc = R.compCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: ideaOthers(L, f.ideaId), costsFor: L.costsFor, cycles: L.comp.cycles, unlocks: L.comp.unlocks, signals: L.signals, emergencyFactor: L.eF, entry: entry, candidateRisk: m.money });
+    var cc = R.compCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: ideaOthers({ ideas: L.ideasW || L.ideas }, f.ideaId), costsFor: L.costsFor, cycles: L.comp.cycles, unlocks: L.comp.unlocks, signals: L.signals, emergencyFactor: L.eF, entry: entry, candidateRisk: m.money });
     m.reasons = cc.reasons.slice(); m.flags = cc.flags.slice(); m.lock = cc.lock; m.heat = cc.heat; m.entry = cc.entry; m.usedPct = usedPct;
     var hRoom = Math.max(0, eq * RP.comp.heatCapPct / 100 - cc.heat.money), totRoom = Math.max(0, eq * planCap / 100 * (kind === 'pilot' ? 1 : 1) - (existing + working)), room = Math.min(hRoom, totRoom);
     m.room = { heatPct: cc.heat.pct, heatCapPct: RP.comp.heatCapPct, roomPct: hRoom / eq * 100, tickerUsedPct: usedPct, tickerCapPct: planCap };
