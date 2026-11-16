@@ -3,7 +3,7 @@
  1. no removed id is in the DOM · the visible Settings fields are still there
  2. open Settings + Save with NO edits → the stored settings object is deep-equal before / after (both accounts)
  3. edits to the visible fields (Sat TP1/TP2, min stop, capital, pools) are saved and nothing else changes
- 4. Settings screenshots at 1440 and 390 → tests/screenshots/ts1-settings-{1440,390}.png (env TS1_SHOTS = other folder, used for the 'before' set)
+ 4. Settings + Today screenshots at 1440 and 390 → tests/screenshots/ts1-settings-{1440,390}.png · ts1-today-{1440,390}.png (env TS1_SHOTS = other folder, used for the 'before' set)
 Run: python3 tests/run_tests_ts1.py"""
 import json, os, sys
 from playwright.sync_api import sync_playwright
@@ -68,6 +68,9 @@ def run(pw, w, h):
         js(page, "()=>saveSettings()"); page.wait_for_timeout(300)
         d2 = diff(after, stored(page))
         check("[%s] %s: a second Save changes nothing either" % (tag, acct), not d2, d2)
+    # Today screenshot (evidence that the dead-code removal changed nothing visible)
+    js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(700)
+    page.screenshot(path=os.path.join(SHOTS, "ts1-today-%s.png" % tag))
     # edits to visible fields are saved, the rest is untouched
     js(page, "(a)=>{ if(acctActive!==a) acctSwitch(a); }", "main"); page.wait_for_timeout(400)
     js(page, "()=>openSettings()"); page.wait_for_timeout(300)
