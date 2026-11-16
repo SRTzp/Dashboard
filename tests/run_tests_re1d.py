@@ -103,14 +103,23 @@ def run_passed(pw, w, h):
     cs["pA"] = plan_card("AAA", 100, 92, px=110)
     cs["pB"] = plan_card("BBB", 100, 92, px=102.9)
     cs["pC"] = plan_card("CCC", 100, 92, px=103.1)
+    cs["pR"] = plan_card("RRR", 100, 92, px=108.0, ready=True)
     b, page, ce, pe = launch(pw, w, h, doc_c(), cs)
     try:
         en = {r["sym"]: r for r in rows(page, "enter")}
-        check("[%s] Enter: >3%% past entry → amber 'passed entry · missed?' with Cancel plan › / Keep" % tag, "AAA" in en and "passed entry" in en["AAA"]["t"] and js(page, "()=>[...document.querySelectorAll('[data-re2-row=AAA] button')].map(b=>b.dataset.re2Btn).join()") == "keep,cancel", en.get("AAA"))
+        check("[%s] Enter: >3%% past entry → amber 'passed entry · missed?' with Cancel plan › / Keep" % tag, "AAA" in en and "passed entry" in en["AAA"]["t"] and js(page, "()=>[...document.querySelectorAll('[data-re2-row=AAA] button')].map(b=>b.dataset.re2Btn).join()") == "update,keep,cancel", en.get("AAA"))
+        check("[%s] prompt has a third action 'Update levels ›'" % tag, js(page, "()=>[...document.querySelectorAll('[data-re2-row=AAA] button')].some(b=>b.dataset.re2Btn==='update' && b.innerText.replace(/\\s+/g,' ').indexOf('Update levels')>=0)"))
         check("[%s] Enter: 2.9%% and 3.1%% are not 'passed' prompts at the boundary rule (≤3%% is Near, >3%% past entry is passed)" % tag, "BBB" in en and "passed entry" not in en["BBB"]["t"] and "CCC" in en and "passed entry" in en["CCC"]["t"], [en.get("BBB"), en.get("CCC")])
         check("[%s] prompt row is amber" % tag, js(page, "()=>!!document.querySelector('[data-re2-row=AAA] [data-re2-why].a')"))
         check("[%s] Enter prompt: no overflow" % tag, no_overflow(page))
         if w in (390, 1440): shot(page, "passed-entry-%d" % w)
+        js(page, "()=>document.querySelector('[data-re2-row=AAA] [data-re2-btn=update]').click()"); page.wait_for_timeout(500)
+        check("[%s] Update levels › opens the existing edit form for that plan" % tag, js(page, "()=>!!document.getElementById('cnEntry') && coreNew && coreNew.id==='pA'"))
+        js(page, "()=>{ coreSheetClose(); switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(300)
+        js(page, "()=>document.querySelector('[data-re2-row=RRR] [data-re2-btn=keep]').click()"); page.wait_for_timeout(400)
+        rr = {r["sym"]: r for r in rows(page, "enter")}.get("RRR")
+        check("[%s] after Keep a ⚑ Ready plan stays as a normal Enter row: Place order + amber '+8.0%% past entry'" % tag, rr and rr["btn"] == "place" and "+8.0% past entry" in rr["t"] and js(page, "()=>!!document.querySelector('[data-re2-row=RRR] [data-re2-why].a')") and "passed entry" not in rr["t"], rr)
+        if w in (390, 1440): shot(page, "ready-past-entry-%d" % w)
         js(page, "()=>document.querySelector('[data-re2-row=AAA] [data-re2-btn=keep]').click()"); page.wait_for_timeout(400)
         check("[%s] Keep hides the prompt for that plan until the next day (plan untouched, no auto-cancel)" % tag, "AAA" not in {r["sym"] for r in rows(page, "enter")} and js(page, "()=>coreCardsList.find(c=>c.id==='pA').status")=="plan")
         js(page, "()=>{ ln4Write(o=>{ o.keep.pA = '2000-01-01'; }); }"); page.wait_for_timeout(300); refresh(page)
@@ -144,9 +153,6 @@ def run_review(pw, w, h):
         check("[%s] strip state is red (worst wins)" % tag, js(page, "()=>document.querySelector('[data-re2-state]').classList.contains('r')"), txt(page, "[data-re2-state]"))
         todo = js(page, "()=>[...document.querySelectorAll('[data-ln4-status] *')].map(e=>e.innerText||'').join(' | ')")
         check("[%s] To do shows 'Execution review · <account>'" % tag, "Execution review · " in todo, todo[:300])
-        check("[%s] New plan is locked: button disabled with the reason" % tag, js(page, "()=>{const b=document.getElementById('hdrPlanBtn');return b.disabled && b.title==='Execution review due'}"))
-        js(page, "()=>{ bdNewOpen(); }"); page.wait_for_timeout(250)
-        check("[%s] New plan popup does not open while locked" % tag, js(page, "()=>!document.getElementById('bdPop')"))
         # other actions stay open
         board(page)
         pl = js(page, "()=>{const b=document.querySelector('[data-bd-card=pE] [data-bd-pill]');return b?{t:b.innerText,dis:b.disabled}:null}")
@@ -164,7 +170,7 @@ def run_review(pw, w, h):
         js(page, "()=>{document.getElementById('rvStop').value='froze'; re4RevIn();}")
         check("[%s] Done stays disabled with one note only" % tag, js(page, "()=>document.getElementById('rvDone').disabled"))
         js(page, "()=>{document.getElementById('rvChange').value='resting orders'; re4RevIn(); re4RevDone();}"); page.wait_for_timeout(500)
-        check("[%s] Done: stored with date in Journal data, flag closed, New plan unlocked" % tag, js(page, "()=>{const r=ln4Cfg().exrev;return r&&r.length===1&&r[0].acct==='main'&&r[0].day&&r[0].stopped==='froze'&&r[0].change==='resting orders'}") and not js(page, "()=>re4Due('main')") and js(page, "()=>!document.getElementById('hdrPlanBtn').disabled"))
+        check("[%s] Done: stored with date in Journal data, flag closed, New plan unlocked" % tag, js(page, "()=>{const r=ln4Cfg().exrev;return r&&r.length===1&&r[0].acct==='main'&&r[0].day&&r[0].stopped==='froze'&&r[0].change==='resting orders'}") and not js(page, "()=>re4Due('main')") and js(page, "()=>!re4Due('main')"))
         check("[%s] chip and To do are gone after the review" % tag, js(page, "()=>!document.querySelector('[data-re4-chip]')") and ("Execution review · " + js(page, "()=>re4AcctName('main')")) not in js(page, "()=>document.body.innerText"))
         js(page, "()=>{ coreWrite('x6', {acct:'main', ticker:'X6', market:'US', strategy:'W', status:'cancelled', cancelReason:'hesitated', cancelledAt:new Date().toISOString(), plan:{entry:10, stop:9}}); }"); page.wait_for_timeout(600); refresh(page)
         check("[%s] a 4th Missed / Hesitated the same week reopens it" % tag, js(page, "()=>re4Due('main')") and js(page, "()=>document.querySelector('[data-re4-chip]').innerText.trim()")=="4 not taken")
@@ -228,6 +234,51 @@ def run_sat(pw, w, h):
         b.close()
 
 
+
+def run_lock(pw, w, h):
+    """§6 — the lock lives in the New plan forms (selected account); the ＋ button always opens"""
+    tag = str(w)
+    cs = cards()
+    for i, (acct, r) in enumerate([("main", "missed"), ("main", "hesitated"), ("main", "missed"), ("fam", "missed"), ("fam", "hesitated"), ("fam", "missed")]):
+        cs["l%d" % i] = cancelled_card("l%d" % i, "L%d" % i, r, acct=acct, at="2026-10-01T05:00:00.000Z")
+    b, page, ce, pe = launch(pw, w, h, doc_c(), cs)
+    try:
+        check("[%s] precondition: Main and Family both have a review due" % tag, js(page, "()=>re4Due('main') && re4Due('fam')"))
+        check("[%s] the ＋ button is never disabled and always opens" % tag, js(page, "()=>!document.getElementById('hdrPlanBtn').disabled"))
+        js(page, "()=>{ bdNewOpen(); }"); page.wait_for_timeout(300)
+        check("[%s] ＋ opens the New plan popup while the review is due" % tag, js(page, "()=>!!document.getElementById('bdPop')"))
+        js(page, "()=>{ bdPopClose(); }")
+        # lock is checked against the account selected INSIDE the form
+        js(page, "()=>{ switchTab('plan'); coreNewOpen('main', {mode:'new'}); }"); page.wait_for_timeout(500)
+        js(page, "(a)=>{ const s=(id,v)=>{const e=document.getElementById(id); e.value=v;}; s('cnTicker',a[0]); s('cnEntry',a[1]); s('cnStop',a[2]); coreNewIn(); }", ["NEWX", "50", "46"]); page.wait_for_timeout(300)
+        lk = js(page, "()=>{const l=document.querySelector('[data-re4-formlock]');return {t:l?l.innerText.replace(/\\s+/g,' '):'',save:document.getElementById('cnSave').disabled,draft:document.getElementById('cnDraft').disabled,link:!!(l&&l.querySelector('[data-re4-dorev]'))}}")
+        check("[%s] Stock form (due account): red line 'Execution review due · <account>' + 'Do review ›'" % tag, lk["t"].startswith("Execution review due · ") and "Do review" in lk["t"] and lk["link"], lk)
+        check("[%s] Stock form: Save plan and Save draft both disabled" % tag, lk["save"] and lk["draft"], lk)
+        if w in (390, 1440): shot(page, "form-review-lock-%d" % w)
+        check("[%s] Stock form lock: no overflow" % tag, no_overflow(page))
+        js(page, "()=>{ coreNewSave(); bdDraftSave(); }"); page.wait_for_timeout(300)
+        check("[%s] saving is refused while locked (no plan written)" % tag, js(page, "()=>!coreCardsList.some(c=>c.ticker==='NEWX')"))
+        js(page, "()=>{ coreSheetClose(); coreNewOpen('main', {mode:'new'}); }"); page.wait_for_timeout(500)
+        js(page, "()=>{ const sel=document.getElementById('cnAcct'); if(sel) sel.value='fam'; coreNewPick('fam'); }"); page.wait_for_timeout(300)
+        lk2 = js(page, "()=>({line:!!document.querySelector('[data-re4-formlock]'),fam:re4Due('fam')})")
+        check("[%s] Stock form: picking the Family account (also due) keeps the lock; the line names it" % tag, lk2["fam"] and lk2["line"] and js(page, "()=>re4AcctName('fam')") in js(page, "()=>document.querySelector('[data-re4-formlock]').innerText"), [lk2, js(page, "()=>document.querySelector('[data-re4-formlock]').innerText"), js(page, "()=>coreNew.acct")])
+        js(page, "()=>{ coreSheetClose(); }")
+        js(page, "()=>{ ln4Write(o=>{ o.exrev=[{acct:'main',at:new Date().toISOString(),n:4,stopped:'a',change:'b',day:thaiToday()}]; }); }"); page.wait_for_timeout(500)
+        js(page, "()=>{ coreNewOpen('main', {mode:'new'}); }"); page.wait_for_timeout(500)
+        js(page, "(a)=>{ const s=(id,v)=>{const e=document.getElementById(id); e.value=v;}; s('cnTicker',a[0]); s('cnEntry',a[1]); s('cnStop',a[2]); coreNewIn(); }", ["NEWY", "50", "46"]); page.wait_for_timeout(300)
+        check("[%s] an account with no review due is not blocked (no line, no disabled Save)" % tag, js(page, "()=>!document.querySelector('[data-re4-formlock]') && !document.getElementById('cnDraft').disabled"))
+        js(page, "()=>{ coreSheetClose(); }")
+        # Satellite form: same lock against its account
+        js(page, "()=>{ ln4Write(o=>{ o.exrev=[]; }); acctActive='main'; }"); page.wait_for_timeout(300)
+        js(page, "()=>{ pb2OpenAsset('XAUUSD'); }"); page.wait_for_timeout(500)
+        sl = js(page, "()=>({line:!!document.querySelector('[data-re4-formlock]'),save:(document.querySelector('[data-pb2-save]')||{}).disabled,draft:(document.querySelector('[data-pb2-draft]')||{}).disabled})")
+        check("[%s] Satellite form (due account): line + Save plan / Save draft disabled" % tag, sl["line"] and sl["save"] and sl["draft"], sl)
+        js(page, "()=>{ bdPopClose(); }")
+        check("[%s] no console / page errors" % tag, not ce and not pe, ce + pe)
+    finally:
+        b.close()
+
+
 def run_shots(pw, w, h):
     """standard re1d-*.png set (no animation): Today · Plan board · one form per strategy · Port risk · Settings (risk section) · Satellite form"""
     tag = str(w)
@@ -252,9 +303,11 @@ def run_shots(pw, w, h):
         SAT = """()=>{ const i={id:'gi',v3:true,v2:true,asset:'XAUUSD',bias:'Long',entry:2642,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[]}; sat7dWrite('satIdeas','gi',i); satIdeasList.push(i); switchTab('plan'); pb2={step:2,id:'gi',a:'XAUUSD',dir:'Buy',acct:'main',entry:'2642',sl:'2628',tp:'2684',ema:true,str:true,mss:null}; pb2Render(); }"""
         js(page, SAT); page.wait_for_timeout(500); shot(page, "form-satellite-%s" % tag)
         check("[%s] Satellite form: no overflow" % tag, no_overflow(page))
+        check("[%s] Satellite: no LN2 header, no zeroed legacy Open-Risk / Legacy numbers (Plan, Satellite form)" % tag, js(page, "()=>typeof ln2HeaderHtml==='undefined' && !document.querySelector('[data-ln2-hd],[data-ln2-box],[data-ln2-row]') && !/Open Risk|Legacy|Risk Sat \\(/.test(document.body.innerText)"))
         js(page, "()=>{ bdPopClose(); switchTab('mix'); }"); page.wait_for_timeout(500)
         shot(page, "port-risk-%s" % tag)
         check("[%s] Port risk: no overflow" % tag, no_overflow(page))
+        check("[%s] Port: no LN2 / legacy Open-Risk numbers" % tag, js(page, "()=>!document.querySelector('[data-ln2-hd],[data-ln2-box]') && !/Legacy/.test(document.body.innerText)"))
         js(page, "()=>{ openSettings(); }"); page.wait_for_timeout(400)
         js(page, "()=>{ const e=document.querySelector('[data-re1-snap]'); if(e) e.scrollIntoView({block:'start'}); }"); page.wait_for_timeout(250)
         shot(page, "settings-risk-%s" % tag)
@@ -266,7 +319,7 @@ def run_shots(pw, w, h):
 
 with sync_playwright() as pw:
     for w, h in ((360, 780), (390, 844), (1280, 800), (1440, 900)):
-        run_core(pw, w, h); run_passed(pw, w, h); run_review(pw, w, h); run_sat(pw, w, h)
+        run_core(pw, w, h); run_passed(pw, w, h); run_review(pw, w, h); run_sat(pw, w, h); run_lock(pw, w, h)
         if w in (390, 1440): run_shots(pw, w, h)
 bad = [r for r in results if not r[1]]
 print("SUMMARY: %d pass / %d fail" % (len(results) - len(bad), len(bad)))
