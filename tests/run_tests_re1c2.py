@@ -3,9 +3,10 @@
 Run: python3 run_tests_re1c2.py"""
 import json, os, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import re1c_common as K
 from re1c_common import js, doc_c, cards, tr
-import run_tests_phase39 as P39
+import lib_phase39 as P39
 
 HERE = os.path.dirname(os.path.abspath(__file__)); SHOTS = os.path.join(HERE, "screenshots")
 results = []

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """PS1b screenshots 390 / 1440 -> tests/screenshots/ps1b-*.png"""
 from playwright.sync_api import sync_playwright
-import ln3fix_common as C, run_tests_phase77 as P77, run_tests_phase105 as P105, run_tests_phase107 as T, run_tests_phase111 as P111, run_tests_phase120 as B
+import net_stub  # TS1: no real network in tests
+import ln3fix_common as C, lib_phase77 as P77, lib_phase105 as P105, lib_phase107 as T, lib_phase111 as P111, lib_phase120 as B
 import run_tests_phase121 as X
 js = C.js; settle = T.settle
 
@@ -38,7 +39,7 @@ with sync_playwright() as pw:
         C.shot(page, f"ps1b-rrg-{w}.png", sel="#ffThemes")
         b.close()
 print("shots done")
-import run_tests_phase122 as R122, run_tests_phase105 as P105b
+import run_tests_phase122 as R122, lib_phase105 as P105b
 with sync_playwright() as pw:
     for w, h in ((390, 844), (1440, 1000)):
         # §7 plan form: single, then 2 entries / 2 SLs; min-stop error

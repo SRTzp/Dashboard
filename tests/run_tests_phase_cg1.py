@@ -3,8 +3,9 @@
 + mode prefix 'idea-scout <mode>:' line 1 + Export JSON pick/update · เทส CG1"""
 import json, os
 from playwright.sync_api import sync_playwright
-import run_tests_phase4 as base
-import run_tests_phase107 as T
+import net_stub  # TS1: no real network in tests
+import lib_phase4 as base
+import lib_phase107 as T
 import ln3fix_common as C
 
 ENGINE = base.BROWSER_ENGINE

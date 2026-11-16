@@ -2,6 +2,7 @@
 """RRG1b — screenshots 390 / 1440: lean cards (fixture, new model) + one waiting symbol + legend closed/open + Today Sectors. ภาพ → tests/screenshots/rrg1b-*.png"""
 import ln3fix_common as C
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 js = C.js
 
 SEED = r"""()=>{

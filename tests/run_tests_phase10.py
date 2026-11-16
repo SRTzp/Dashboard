@@ -7,7 +7,8 @@
 """
 import json, os
 from playwright.sync_api import sync_playwright
-import run_tests_phase4 as base
+import net_stub  # TS1: no real network in tests
+import lib_phase4 as base
 
 ENGINE = base.BROWSER_ENGINE
 results = []

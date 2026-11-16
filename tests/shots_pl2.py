@@ -3,11 +3,12 @@
 Today banner + Selection · My Thesis tab (images + AI preview) · Sat plan row · trade summary · Candidate flow."""
 import json, os
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C   # must come first
-import run_tests_phase107 as T
-import run_tests_phase111 as P111
-import run_tests_phase59 as P59
-import run_tests_phase44 as P44
+import lib_phase107 as T
+import lib_phase111 as P111
+import lib_phase59 as P59
+import lib_phase44 as P44
 import run_tests_phase362 as X
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "briefs", "PL2-screens"); os.makedirs(OUT, exist_ok=True)

@@ -246,4 +246,25 @@ const spec = { mult: 1, fx: 35, lotStep: 1, minLot: 1 };
   ok('week usage at the week-start snapshot rate, month usage at the month-start snapshot rate', L5.basis.weekFx === 30 && L5.basis.monthFx === 32 && near(L5.mom.chk.money.weekUsed, 30000, 1e-6) && near(L5.mom.chk.money.monthUsed, 32000, 1e-6), [L5.basis.weekFx, L5.basis.monthFx, L5.mom.chk.money]);
   ok('positions and orders are untouched (qty / stop)', L1.ideas[0].tranches[0].qty === 100 && L1.ideas[0].tranches[0].stop === 90);
 }
+/* TS1 §4 — Compounder heat uses the same frozen-FX basis: existing usage at the WEEK snapshot rate, the new order at the current rate; no stored rate → current rate */
+{
+  const mk = (snapFx, curFx) => {
+    const s = src(); const S = s.books.main.settings; S.fx = curFx; S.equitySnapshots = [{ id: 's1', bkkDate: '2026-11-16', equity: 5000000, confirmed: true, kind: 'weekly', fx: snapFx }].map(x => { if (snapFx == null) delete x.fx; return x; });
+    S.costSettings = null; s.costsOn = false; S.re1 = { cutoverAt: NOW - 86400000 };
+    s.cards = [{ id: 'cc1', acct: 'main', ticker: 'AAPL', market: 'US', strategy: 'L', status: 'open', trade_id: 'h1', stopHistory: [], lots: [{ n: 1, px: 100, qty: 100 }] }];
+    s.books.main.trades = [tr({ id: 'h1', sym: 'AAPL', port: 'core', qty: 100, entry: 100, sl: 90, posGroup: 'h1', sl0: 90, cardId: 'cc1', strategy: 'ladder' })];   // open USD Compounder: risk $1,000
+    return s;
+  };
+  const heat = (L) => L.comp.heat;
+  const La = A.live(mk(30, 35), 'main'), Lb = A.live(mk(30, 40), 'main'), Lc = A.live(mk(30, 28), 'main');
+  ok('TS1 heat: the open Compounder idea is counted', heat(La) && heat(La).count === 1, heat(La));
+  ok('TS1 heat money = $1,000 × snapshot FX 30 = 30,000', near(heat(La).money, 30000, 1e-6), heat(La));
+  ok('TS1 heat does not move when only the FX rate moves after the snapshot (35 → 40 → 28)', near(heat(Lb).money, heat(La).money) && near(heat(Lc).money, heat(La).money), [heat(La).money, heat(Lb).money, heat(Lc).money]);
+  ok('TS1 heat % identical for any current rate', near(heat(La).pct, heat(Lb).pct) && near(heat(La).pct, 30000 / 5000000 * 100, 1e-9), [heat(La).pct, heat(Lb).pct]);
+  const Ln = A.live(mk(null, 35), 'main'), Ln2 = A.live(mk(null, 40), 'main');
+  ok('TS1 heat with no stored snapshot rate → current rate (35 / 40)', near(heat(Ln).money, 35000, 1e-6) && near(heat(Ln2).money, 40000, 1e-6), [heat(Ln).money, heat(Ln2).money]);
+  const cs = (L) => A.sizeComp(L, Object.assign({ kind: 'pilot', thesisDone: false, side: 'long', entry: 180, stop: 170 }, spec, { fx: 35 }));
+  const ma = cs(La), mb = A.sizeComp(Lb, Object.assign({ kind: 'pilot', thesisDone: false, side: 'long', entry: 180, stop: 170 }, spec, { fx: 40 }));
+  ok('TS1 new-order check: existing heat in the room line stays at the week rate, the new order uses the current rate', ma.heat && mb.heat && near(ma.heat.money, mb.heat.money, 1e-6), [ma.heat && ma.heat.money, mb.heat && mb.heat.money]);
+}
 console.log((fail ? 'FAIL ' : 'PASS ') + pass + '/' + (pass + fail) + ' live-layer assertions'); process.exit(fail ? 1 : 0);

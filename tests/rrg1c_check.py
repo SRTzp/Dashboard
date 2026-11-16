@@ -5,6 +5,7 @@ import json, sys
 import ln3fix_common as C
 from rrg1b_check import HELPERS
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 
 js = C.js
 results = []

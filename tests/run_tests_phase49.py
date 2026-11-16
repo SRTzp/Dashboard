@@ -5,8 +5,9 @@ mock Firestore · Chromium 1440 + 390 · นาฬิกาปลอม 2026-10-
 รัน: python3 run_tests_phase49.py"""
 import copy, json, os
 from playwright.sync_api import sync_playwright
-import run_tests_phase44 as P44
-import run_tests_phase47 as P47
+import net_stub  # TS1: no real network in tests
+import lib_phase44 as P44
+import lib_phase47 as P47
 
 P40 = P47.P40
 js, check, txt_of = P40.js, P40.check, P40.txt_of

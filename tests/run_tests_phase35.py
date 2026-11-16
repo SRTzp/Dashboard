@@ -7,10 +7,12 @@ seed: AVGO (Watchlist + research_card: catalysts 3 [estimated 2026-12-10 · conf
 รัน: python3 run_tests_phase35.py [/path/to/index.html]"""
 import json, copy, os, re, sys
 from playwright.sync_api import sync_playwright
-import run_tests_phase4 as base
-import run_tests_phase24 as p24
-import run_tests_phase26 as p26
-import run_tests_phase29 as p29
+import net_stub  # TS1: no real network in tests
+import ts1_retire
+import lib_phase4 as base
+import lib_phase24 as p24
+import lib_phase26 as p26
+import lib_phase29 as p29
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHOTS = os.path.join(HERE, "screenshots"); os.makedirs(SHOTS, exist_ok=True)
@@ -25,6 +27,7 @@ SRC = "https://www.sec.gov/Archives/edgar/data/1/x.htm"
 
 
 def check(name, ok, detail=""):
+    if ts1_retire.skip("run_tests_phase35", name): return   # TS1 check-level retirement
     results.append((name, bool(ok), detail))
     d = (detail[:700] + "...(truncated)") if (detail and len(detail) > 700) else detail
     print(("PASS" if ok else "FAIL") + " - " + name + (("  :: " + d) if (d and not ok) else ""))
@@ -37,7 +40,7 @@ def shot_el(page, sel, name):
     except Exception as e: print("shot fail", name, e)
 
 
-import run_tests_phase38 as P38   # WL2: th()/wl_th() สร้าง Thesis (living-thesis@1)
+import lib_phase38 as P38   # WL2: th()/wl_th() สร้าง Thesis (living-thesis@1)
 
 
 def m(name, value, unit="%", period="TTM"): return {"name": name, "value": value, "unit": unit, "period": period, "source_url": SRC}

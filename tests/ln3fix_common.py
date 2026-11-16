@@ -3,13 +3,13 @@
 import json, os
 import ff_stub
 ff_stub.FF_STUB = ff_stub.FF_STUB_BASE   # SET1 — แฟลกนักพัฒนา: โหมดเดิมตรวจได้ · เปิดการ์ด Settings ทั้งหมด
-import run_tests_phase4 as base
-import run_tests_phase13 as P13
-import run_tests_phase24 as P24
-import run_tests_phase37 as P37
+import lib_phase4 as base
+import lib_phase13 as P13
+import lib_phase24 as P24
+import lib_phase37 as P37
 import run_tests_phase51 as P51
-import run_tests_phase54 as P54
-import run_tests_phase77 as P77
+import lib_phase54 as P54
+import lib_phase77 as P77
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHOTS = os.path.join(HERE, "screenshots"); os.makedirs(SHOTS, exist_ok=True)

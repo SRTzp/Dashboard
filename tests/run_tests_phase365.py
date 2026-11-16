@@ -3,10 +3,11 @@
 Chromium · 390 + 1440 · light + dark shots · ข้อมูล SAMPLE ล้วน · รัน: python3 run_tests_phase365.py"""
 import json, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C   # ต้องมาก่อน
-import run_tests_phase4 as base
-import run_tests_phase44 as P44
-import run_tests_phase111 as P111
+import lib_phase4 as base
+import lib_phase44 as P44
+import lib_phase111 as P111
 
 ENGINE = base.BROWSER_ENGINE
 results = []

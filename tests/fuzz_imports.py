@@ -5,8 +5,9 @@ and accepted-but-malformed payloads. Output: docs/reports/bughunt-fuzz.txt   Run
 import os, re, sys, json, copy
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from playwright.sync_api import sync_playwright
-import run_tests_phase38 as P38, run_tests_phase39 as P39
-import run_tests_phase102 as P102, run_tests_phase100 as P100, run_tests_phase68 as P68, run_tests_phase103 as P103
+import net_stub  # TS1: no real network in tests
+import lib_phase38 as P38, lib_phase39 as P39
+import run_tests_phase102 as P102, lib_phase100 as P100, lib_phase68 as P68, run_tests_phase103 as P103
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "docs", "reports", "bughunt-fuzz.txt")

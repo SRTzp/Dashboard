@@ -10,6 +10,7 @@ satV3* ยังไม่ถูก mount เข้าหน้าไหนจร
 """
 import json, os, sys, re
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_INDEX = os.path.abspath(os.path.join(HERE, "..", "index.html"))

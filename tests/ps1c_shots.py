@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """PS1c screenshots 390 / 1440 -> tests/screenshots/ps1c-*.png"""
 from playwright.sync_api import sync_playwright
-import ln3fix_common as C, run_tests_phase107 as T, run_tests_phase120 as P, run_tests_phase121 as X
+import net_stub  # TS1: no real network in tests
+import ln3fix_common as C, lib_phase107 as T, lib_phase120 as P, run_tests_phase121 as X
 js = C.js; settle = T.settle
 
 with sync_playwright() as pw:

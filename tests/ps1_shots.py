@@ -2,8 +2,9 @@
 """PS1 — screenshots 390 / 1440: plan form (single · 2×2 rows) · Sat plan verify states · Port risk panel · Today line. ภาพ → tests/screenshots/ps1-*.png"""
 import ln3fix_common as C
 from playwright.sync_api import sync_playwright
-import run_tests_phase120 as T
-import run_tests_phase77 as P77
+import net_stub  # TS1: no real network in tests
+import lib_phase120 as T
+import lib_phase77 as P77
 js = C.js
 settle = T.settle
 P13 = T.P13

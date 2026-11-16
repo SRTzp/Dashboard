@@ -1,3 +1,14 @@
+# Tests — Trading Dashboard
+
+## How to run tests (TS1)
+1. One-off setup: `pip install playwright && python3 -m playwright install chromium` (Node.js is needed for the `node` tests).
+2. Everything: `bash tests/run_regression.sh` — node + sync checks first, then every browser suite 4 at a time. One line per suite, exit code 0 only if all pass (`JOBS=2` for fewer browsers).
+3. Quick check while working: `bash tests/run_regression.sh --quick` — node tests + the core browser suites (Today, Plan board, plan forms for Momentum / Compounder / Sat, Cancel, Journal, Port risk, Settings, snapshot).
+4. One suite: `python3 tests/run_tests_re1d.py` (browser) or `node tests/risk_engine_test.js`. Tests never touch the network (`tests/net_stub.py`).
+5. Retired suites live in `tests/_retired/` with the reason and the job that removed the feature — they are not run and never count as passes. `tests/lib_phase*.py` are helper modules (launchers / fixtures) that current suites import. `python3 tests/ui_audit.py` writes `docs/reports/ui-audit-latest.md`.
+
+---
+
 # Tests — Trading Dashboard (7D.3 §0.6)
 
 ชุดทดสอบนี้รันกับ `index.html` ตัวจริง (ไม่มีสำเนา) ผ่าน mock Firestore + Playwright

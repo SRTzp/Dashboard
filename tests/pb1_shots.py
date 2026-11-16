@@ -2,8 +2,9 @@
 """PB1 — screenshots 390 / 1440: Plan board · drawer · Flow top · Port top · Today (tests/screenshots/pb1-*.png)"""
 import os
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import run_tests_phase373 as X
-import run_tests_phase120 as P120
+import lib_phase120 as P120
 
 js, settle = X.js, X.settle
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots")

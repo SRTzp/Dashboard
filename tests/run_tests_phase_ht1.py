@@ -3,9 +3,10 @@
 lead 5 · lead+fresh 10 · imp+fresh 1 · lag 1 · lag+fresh 5 · flat+fresh 1."""
 import json, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C
-import run_tests_phase4 as base
-import run_tests_phase106 as T
+import lib_phase4 as base
+import lib_phase106 as T
 js = C.js
 results = []
 def check(n, ok, d=""):
@@ -51,7 +52,7 @@ def todo(pw, w, h, syms=SYMS, label=""):
     tag = f"[to-do {w}{label}]"
     b, page, ce, pe = T.launch(pw, w, h, iso=T.NOW, picks=(), weekly=False)
     try:
-        import run_tests_phase24 as P24
+        import lib_phase24 as P24
         P24.set_ff(page, P24.ff_json(True, True))
         js(page, "(S)=>{ window.sk1Items = (all)=>S.map(t=>({id:'lt:'+t, skill:'living-thesis', sym:t, age:40, full:'living-thesis: '+t+' 40d', short:t+' thesis'})); }", syms)
         T.go_today(page)

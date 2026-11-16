@@ -3,6 +3,7 @@
 Run: node tests/aw1_test.js   (wrapper)  or  python3 tests/run_tests_aw1.py   Screenshots → tests/screenshots/aw1-*.png"""
 import json, os, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import re1d_common as K
 from re1d_common import js, doc_c, cards, plan_card, launch, refresh, no_overflow, check, results, txt
 

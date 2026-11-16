@@ -5,7 +5,8 @@
 import os, re, sys, json, random
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from playwright.sync_api import sync_playwright
-import run_tests_phase38 as P38, run_tests_phase39 as P39
+import net_stub  # TS1: no real network in tests
+import lib_phase38 as P38, lib_phase39 as P39
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "reports", "bughunt-fixes-data.txt")
 res = []
 def note(ok, msg): res.append(("PASS " if ok else "FAIL ") + msg)

@@ -2,6 +2,7 @@
 """RRG1 — screenshots: Flow theme card + Details at 390 / 1440 (synthetic series through the real rrgCompute). ภาพ → tests/screenshots/rrg1-*.png"""
 import ln3fix_common as C
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 js = C.js
 
 SEED = r"""()=>{

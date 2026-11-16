@@ -8,6 +8,7 @@
 """
 import json, os, sys, re
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_INDEX = os.path.abspath(os.path.join(HERE, "..", "index.html"))
@@ -141,7 +142,7 @@ def run_viewport(pw, width, height, label):
     # 7D/7D.2 regression using the merged assets: the Sat weekly-plan select (SAT7D_ASSETS-driven, used by the old
     # #s7NewAsset <select> when SAT_V3_ON=false) still derives all 4 assets with correct labels after the merge.
     # ★ 7D.3 Phase 4: SAT_V3_ON is now true in the live file, so #s7NewAsset itself no longer mounts (the new
-    # satV3 page replaces it — see run_tests_phase4.py's v3off suite, which re-checks #s7NewAsset's DOM directly
+    # satV3 page replaces it — see lib_phase4.py's v3off suite, which re-checks #s7NewAsset's DOM directly
     # under SAT_V3_ON=false). Here we check the same underlying data (SAT7D_ASSETS + sat7dLabel) the old <select>
     # was built from, which is what this case actually verifies and is unaffected by which panel is mounted.
     page.evaluate("() => switchTab('plan')")

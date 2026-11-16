@@ -4,12 +4,13 @@ Chromium · 390 + 1280 + 1440 · นาฬิกาปลอม พฤ. 1 ต.�
 รัน: python3 run_tests_phase373.py"""
 import os, json, re, sys
 from playwright.sync_api import sync_playwright
+import net_stub  # TS1: no real network in tests
 import ln3fix_common as C   # ต้องมาก่อน
-import run_tests_phase4 as base
-import run_tests_phase13 as P13
-import run_tests_phase24 as P24
-import run_tests_phase106 as T
-import run_tests_phase120 as P120
+import lib_phase4 as base
+import lib_phase13 as P13
+import lib_phase24 as P24
+import lib_phase106 as T
+import lib_phase120 as P120
 
 ENGINE = base.BROWSER_ENGINE
 results = []
@@ -631,7 +632,7 @@ def pb1b(pw, w, h):
 
 # ───────────────────────── PB1c ─────────────────────────
 import copy
-import run_tests_phase100 as P100
+import lib_phase100 as P100
 import rrg1_fixture as RF
 SHOTS_C = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots") + "/pb1c-"
 RR = [("SMH", "lead", 4.2, 0.9), ("GRID", "lead", 3.1, 0.7), ("XLU", "lead", 2.4, -0.8), ("XLK", "lead", 1.0, 0.2), ("IGV", "imp", -1.0, 0.6), ("HACK", "imp", -0.7, 0.1),
