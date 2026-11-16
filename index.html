@@ -3413,6 +3413,30 @@ button.ccChip{cursor:pointer;min-height:24px}
   .hdrCmp{height:36px}.hdrCmp select{height:36px}
   .hdrCmp{padding:0 24px 0 10px}.hdrCmp:after{right:9px}
 }
+/* ===== AW1 — account switch in the top bar ===== */
+.topbar .topMid{display:flex;align-items:center;gap:10px;margin:0 auto;min-width:0}
+.acSw{display:flex;align-items:center;gap:2px;background:var(--surface);border-radius:var(--r-pill);padding:5px;box-shadow:var(--sh-1);flex:none}
+.acSwB{position:relative;display:inline-flex;align-items:center;gap:6px;border:none;box-shadow:none;background:transparent;color:var(--muted);font-weight:600;font-size:.85rem;padding:7px 12px;min-height:34px;border-radius:var(--r-pill);white-space:nowrap;cursor:pointer}
+.acSwB:hover{background:var(--surface2);color:var(--text)}
+.acSwB.on{background:var(--surface2);color:var(--ink)}
+.acSwD{width:8px;height:8px;border-radius:50%;background:var(--ac);opacity:.35;flex:none}.acSwB.on .acSwD{opacity:1}
+.acSwL.p{display:none}
+.acSwN{font:700 .66rem/1 var(--sans,-apple-system,sans-serif);font-style:normal;background:var(--amber-dim);color:var(--amber);border-radius:999px;padding:3px 6px}
+@media (min-width:900px){ body.lf-lean .topbar .topMid{grid-column:2;grid-row:1;justify-self:center} }
+@media (min-width:900px) and (max-width:1099px){ .acSwB{padding:7px 8px;gap:4px;font-size:.8rem} }
+@media (max-width:600px){
+  .topbar .topMid{display:contents}
+  .topbar .brandName,.topbar #brandSyncTime{display:none}
+  .topbar .brand{flex:none;overflow:visible;position:relative}
+  .topbar .brandSync{position:absolute;left:20px;bottom:-3px;margin:0;padding:3px;background:var(--bg);border-radius:50%;line-height:0}
+  .topbar .brandSync:after{content:"";position:absolute;inset:-12px}
+  .topbar .acctDot{width:9px;height:9px}
+  .acSw{margin-right:auto;margin-left:14px;padding:3px}
+  .acSwB{min-height:44px;min-width:44px;justify-content:center;padding:6px 11px;font-size:.84rem}
+  .acSwL.m{display:none}.acSwL.p{display:inline}
+  .acSwB .acSwN{position:absolute;top:2px;right:0;padding:2px 5px}
+  .hbtns{gap:2px}
+}
 @media (max-width:340px){
   body.lf-lean .topbar .hbtns{gap:2px}
   body.lf-lean .topbar .hbtns>button{width:36px}
@@ -4190,9 +4214,10 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
 <header class="topbar">
   <div class="brand" title="Trading Dashboard — ความเสี่ยงรวม + Trading Journal · ฐานคำนวณ THB">
     <span class="brandMark">▮</span><span class="brandName">Trading</span>
-    <button type="button" class="brandSync" id="brandSync" onclick="retrySync()" title="ซิงก์"><span class="acctDot" id="acctDot"></span><span id="brandSyncTime">—</span></button>
+    <button type="button" class="brandSync" id="brandSync" onclick="brandSyncTap(event)" title="ซิงก์"><span class="acctDot" id="acctDot"></span><span id="brandSyncTime">—</span></button>
   </div>
 
+  <div class="topMid" id="topMid">
   <div class="tabs" id="tabsMain">
     <button type="button" class="tabbtn on" id="tabBtnToday" data-t="Today" onclick="switchTab('today')">Today<span class="tdBadge" id="tabBadgeToday" style="display:none"></span> <span class="kbdhint">1</span></button>
     <button type="button" class="tabbtn" id="tabBtnFlow" data-t="Flow" onclick="switchTab('flow')">Flow <span class="kbdhint">2</span></button>
@@ -4200,6 +4225,8 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     <button type="button" class="tabbtn" id="tabBtnPlan" data-t="แผน" onclick="switchTab('plan')">แผน <span class="kbdhint">4</span></button>
     <button type="button" class="tabbtn" id="tabBtnJournal" data-t="Journal" onclick="switchTab('journal')">Journal <span class="kbdhint">5</span></button>
     <button type="button" class="tabbtn" id="tabBtnMix" data-t="Port" onclick="switchTab('mix')">Port <span class="kbdhint">6</span></button>
+  </div>
+  <div class="acSw" id="acSw" role="group" aria-label="Account" style="display:none"></div><!-- AW1 — account switch -->
   </div>
 
   <div class="hdrSub" id="hdrSub"></div><!-- HD1 — ช่องเดียวใน header: Plan = Core|Sat · Port = รวม|บัญชี (ย้าย node เดิมเข้ามา ไม่ clone) -->
@@ -4216,11 +4243,6 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
 </header>
 
 <div class="moreMenu" id="moreMenu" role="menu" aria-label="เมนูเพิ่มเติม">
-  <div class="mmSec" id="mmAcct">
-    <div class="acctMenuHead">บัญชี</div>
-    <div class="acctBar"><select id="acctSel" onchange="closeMoreMenu();acctSwitch(this.value)" title="สลับบัญชี"></select>
-      <span id="acctPortsHint" class="hint" style="margin:0"></span></div>
-  </div>
   <div class="mmSec mmSync">
     <div class="syncbadge" id="syncBadge" onclick="retrySync()"><span class="sdot"></span><span id="syncText">—</span> · <span id="authedAs" style="opacity:.7"></span></div>
   </div>
@@ -8230,7 +8252,7 @@ function hdrSubFit(){
   }
   let avail;
   if(hdrSubMode === 'desk'){
-    const hb = document.querySelector('.topbar .hbtns'), tb = document.getElementById('tabsMain');
+    const hb = document.querySelector('.topbar .hbtns'), tb = document.getElementById('topMid');
     avail = hb.getBoundingClientRect().left - HDR_CLEAR - (tb.getBoundingClientRect().right + 16);
   }else avail = slot.getBoundingClientRect().width;
   if(full.getBoundingClientRect().width <= avail) return 'full';
@@ -8284,16 +8306,40 @@ if(document.fonts && document.fonts.ready) document.fonts.ready.then(hdrSubLater
 
 /* ---- แถบสลับบัญชีใต้ชื่อแอป ---- */
 function renderAcctBar(){
-  const sel = document.getElementById('acctSel'); if(!sel) return;
-  sel.innerHTML = acctList.map(a=>`<option value="${escHtml(a.id)}"${a.id===acctActive?' selected':''}>${escHtml(a.name)}</option>`).join('');
-  sel.style.display = acctList.length>1 ? '' : 'none';
-  const mmA = document.getElementById('mmAcct'); if(mmA) mmA.style.display = acctList.length>1 ? '' : 'none';
-  const hint = document.getElementById('acctPortsHint');
-  if(hint){
-    const on = acctPorts();
-    hint.textContent = (acctList.length>1 && on.length<ACCT_PORT_KEYS.length)
-      ? on.map(k=>PORTS[k].name.split(' — ')[0]).join(' · ') : '';
-  }
+  const hint = document.getElementById('acctPortsHint');   /* AW1 — the ⋯ menu account picker is gone; hint kept null-safe */
+  if(hint){ const on = acctPorts(); hint.textContent = (acctList.length>1 && on.length<ACCT_PORT_KEYS.length) ? on.map(k=>PORTS[k].name.split(' — ')[0]).join(' · ') : ''; }
+  try{ aw1Render(); }catch(e){ console.warn('aw1 switch:', e); }
+}
+/* AW1 §1 — account switch in the top bar (all tabs) · §3 badge for the inactive account */
+function aw1Short(a){   /* iPhone label: first letter · two letters when two names share it */
+  const n = String(a.name || a.id || '?').trim(), one = n.charAt(0).toUpperCase();
+  return acctList.filter(x=>String(x.name || x.id || '').trim().charAt(0).toUpperCase() === one).length > 1 ? n.slice(0, 2) : one;
+}
+function aw1SnapDue(acct){ try{ const L = re1L(acct); return !!(L && (!L.basis.ok || !L.basis.confirmedThisWeek)); }catch(e){ return false; } }
+function aw1Count(acct){   /* same functions Today uses, called with the other account id — no state switch */
+  let n = 0;
+  try{ const M = re2Model(acct); n += M.enter.length + M.check.length + M.manage.length; }catch(e){}
+  if(aw1SnapDue(acct)) n++;
+  try{ if(re4Due(acct)) n++; }catch(e){}
+  return n;
+}
+function aw1Render(){
+  const h = document.getElementById('acSw'); if(!h) return;
+  if(acctList.length < 2){ h.style.display = 'none'; h.innerHTML = ''; return; }
+  h.style.display = '';
+  h.innerHTML = acctList.map(a=>{
+    const on = a.id === acctActive, n = on ? 0 : aw1Count(a.id), full = escHtml(a.name || a.id);
+    return `<button type="button" class="acSwB${on ? ' on' : ''}" data-acsw="${escHtml(a.id)}" aria-pressed="${on}" title="${full} · [ previous · ] next" aria-label="${full}${n ? ', ' + n + ' waiting' : ''}" onclick="acctSwitch('${escHtml(a.id).replace(/'/g, "\\'")}')"><i class="acSwD" style="--ac:${acctColor(a)}"></i><span class="acSwL m">${full}</span><span class="acSwL p">${escHtml(aw1Short(a))}</span>${n ? `<em class="acSwN" data-acsw-n>${n > 9 ? '9+' : n}</em>` : ''}</button>`;
+  }).join('');
+}
+function aw1Step(d){
+  if(acctList.length < 2) return false;
+  const i = Math.max(0, acctList.findIndex(a=>a.id === acctActive)), nx = acctList[(i + d + acctList.length) % acctList.length];
+  acctSwitch(nx.id); return true;
+}
+function brandSyncTap(e){   /* iPhone: the sync text is hidden — the dot opens the ⋯ menu where the full sync line is */
+  if(window.matchMedia && window.matchMedia('(max-width:600px)').matches){ toggleMoreMenu(e); return; }
+  retrySync();
 }
 /* สลับบัญชี — เก็บก้อนของบัญชีเดิมไว้ในมือก่อน แล้วสร้าง state ใหม่จากก้อนของบัญชีปลายทาง
    ห้ามสลับตอนยังไม่ยืนยันกับ server เพราะก้อนของบัญชีอื่นใน acctBooks อาจยังเป็นของเก่าจาก cache
@@ -12665,6 +12711,7 @@ document.addEventListener('keydown', (e)=>{
   if(e.defaultPrevented) return;
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   if(document.querySelector('.overlay.show')) return; // อย่าสลับแท็บขณะเปิด modal อยู่
+  if((e.key==='[' || e.key===']' || e.code==='BracketLeft' || e.code==='BracketRight') && !e.shiftKey && acctList.length>1 && !td3SheetUp()){ if(aw1Step((e.key===']' || e.code==='BracketRight') ? 1 : -1)){ e.preventDefault(); return; } }   /* AW1 §2 — [ prev · ] next account (Shift+[ ] keeps the per-tab filter cycle) */
   const n = parseInt(e.key,10);
   if(n>=1 && n<=TAB_ORDER.length){ switchTab(TAB_ORDER[n-1]); return; }   /* TD1 — คีย์ตามตำแหน่ง: 1 Today · 2 Flow · 3 Watch · 4 แผน · 5 Journal · 6 Port */
   kbHandle(e);
@@ -12690,7 +12737,7 @@ const KB_SUB = {
     extra:[['Tab','สลับ Momentum ⇄ Compounder (Watch)'],['↑ ↓','เลื่อนหุ้น/ไอเดียในรายการ'],['F','ขยาย/ย่อ รายละเอียด (Watch)'],['← →','เปลี่ยนแท็บการ์ด (Thesis: สรุป … ออกเมื่อ · Ideas: สรุป … บริษัท)'],['[ ] ใน Ideas','วนตัวกรอง ทั้งหมด → รอหลักฐาน → พร้อมส่งต่อ → พัก'],['Esc','มือถือ: กลับจากหน้ารายตัว']]
   }
 };
-const KB_GLOBAL = [['1–6','สลับแท็บ Today · Flow · Watch · แผน · Journal · Port'],['T','ไปหน้าแผน'],['C','Watchlist'],['?','ดูปุ่มลัด'],['Esc','ปิดหน้าต่าง']];
+const KB_GLOBAL = [['1–6','สลับแท็บ Today · Flow · Watch · แผน · Journal · Port'],['[ ]','สลับบัญชีก่อนหน้า/ถัดไป (มี 2 บัญชีขึ้นไป · Shift+[ ] = วนตัวกรองในแท็บ)'],['T','ไปหน้าแผน'],['C','Watchlist'],['?','ดูปุ่มลัด'],['Esc','ปิดหน้าต่าง']];
 function kbAppReady(){ const w=document.getElementById('mainWrap'); return w && w.style.display!=='none'; }
 function kbEditableTarget(target){
   if(!target) return false;
