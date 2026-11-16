@@ -112,10 +112,10 @@ def run_viewport(pw, w, h):
     b, page, ce, pe = launch(pw, w, h, None, cs)
     try:
         en = [r["sym"] for r in rows(page, "enter")]
-        check("[%s] Enter: 2.9%% in · −3.0%% in · 3.1%% out · no price out · ⚑ Ready in" % tag, "AAA" in en and "DDD" in en and "EEE" in en and "BBB" not in en and "CCC" not in en, en)
+        check("[%s] Enter: 2.9%% in · −3.0%% in · 3.1%% out · no price out · ⚑ Ready in" % tag, "AAA" in en and "DDD" in en and "EEE" in en and "CCC" not in en and "BBB" in en, en)   # RE-D §6: >3% past entry shows as the amber 'passed entry · missed?' prompt (not a Near row)
         t = {r["sym"]: r["t"] for r in rows(page, "enter")}
         check("[%s] chips: Near with signed distance (+2.9%%) · ⚑ ready" % tag, "Near" in t.get("AAA", "") or w <= 560 and "+2.9%" in t.get("AAA", ""), t)
-        check("[%s] marker is the signed distance of price from entry" % tag, "+2.9%" in t.get("AAA", "") and "−3.0%" in t.get("DDD", "") and "⚑ ready" in t.get("EEE", ""), t)
+        check("[%s] marker is the signed distance of price from entry" % tag, "+2.9%" in t.get("AAA", "") and "−3.0%" in t.get("DDD", "") and "passed entry" in t.get("BBB", "") and "passed entry" in t.get("EEE", ""), t)   # RE-D §6: 3.1% and the far Ready plan are passed-entry prompts
         js(page, """()=>{ const i={id:'gs',v3:true,v2:true,asset:'XAUUSD',bias:'Long',entry:2642,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[]}; sat7dWrite('satIdeas','gs',i); satIdeasList.push(i); }"""); refresh(page)
         check("[%s] Satellite never auto-enters (no flag → not in Enter)" % tag, not any("XAU" in r["sym"] for r in rows(page, "enter")), rows(page, "enter"))
         js(page, "()=>re2ReadyToggle('gs')"); refresh(page)
@@ -138,7 +138,7 @@ def run_viewport(pw, w, h):
         # blocked row keeps a disabled button + reason
         override(page, "C.basis = Object.assign({}, L.basis, {ok:false, reasons:['SNAPSHOT_STALE']})")
         en = rows(page, "enter")
-        check("[%s] blocked by the engine: row stays, button disabled, reason on line 2" % tag, en and all(r["dis"] for r in en) and "older than 14 days" in " ".join(r["t"] for r in en), en)
+        check("[%s] blocked by the engine: row stays, button disabled, reason on line 2" % tag, en and all(r["dis"] for r in en if r["btn"] == "place") and "older than 14 days" in " ".join(r["t"] for r in en), en)
         js(page, "()=>{ re1L = window.__re1L; re1Cache = {}; }")
         check("[%s] no console / page errors" % tag, not ce and not pe, ce + pe)
     finally:
@@ -250,9 +250,9 @@ def run_costs(pw, w, h):
         check("[%s] closed while OFF → stored as 'costs not recorded' (costsOff, no fees)" % tag, t["st"]=="closed" and t["c"] and t["f"], t)
         check("[%s] exit at entry is breakeven on gross (strict sign)" % tag, js(page, "()=>outcomeOfPnl(realizedPnlOf(getBook('main').trades.find(x=>x.id==='h1')))")=="be")
         check("[%s] no Unknown / Add costs anywhere on Today and Port when OFF" % tag, js(page, "()=>{switchTab('today');todayRefresh(true);const a=document.body.innerText;switchTab('port');const b=document.body.innerText;return !/Add costs|Costs missing|result is Unknown/.test(a+b)}"))
-        if w == 390: shot(page, "costs-off-settings-390")
         js(page, "()=>{ switchTab('today'); openSettings(); }"); page.wait_for_timeout(300)
-        if w == 1440: shot(page, "costs-off-settings-1440")
+        js(page, "()=>{ const e=document.querySelector('[data-re1-training]'); if(e) e.scrollIntoView({block:'center'}); }"); page.wait_for_timeout(250)   # RE-D §1.6 — scrolled to Training (Starter ¼ + Costs, cost rows hidden)
+        if w in (390, 1440): shot(page, "costs-off-settings-%d" % w)
         q0 = js(page, "()=>JSON.stringify(getBook('main').trades.map(t=>[t.id,t.qty,t.sl,t.status,t.exitPrice,t.costsOff]))")
         js(page, "()=>{ re1SetCosts(true); }"); page.wait_for_timeout(400)
         check("[%s] ON: cost rows + per-account Costs back (RE-C1 behaviour)" % tag, js(page, "()=>re1CostsOn()")==True and js(page, "()=>document.querySelectorAll('[data-re1-cost]').length")==6)

@@ -3,7 +3,7 @@
 Plan filters on one row · RRG tile name tooltip (hover / long-press) · Candidate leftovers gone from Today · เทส 375
 Chromium · 390 (+360) + 1280 + 1440 · นาฬิกาปลอม พฤ. 1 ต.ค. 2026 12:00 ICT · SAMPLE data only
 รัน: python3 run_tests_phase375.py → tests/screenshots/tw1-*.png"""
-import json, re, sys, copy
+import os, json, re, sys, copy
 from playwright.sync_api import sync_playwright
 import ln3fix_common as C   # ต้องมาก่อน
 import run_tests_phase374 as W
@@ -16,7 +16,7 @@ import rrg1_fixture as RF
 ENGINE = W.base.BROWSER_ENGINE
 results = []
 js, settle, cnt, txt = W.js, T.settle, T.cnt, T.txt
-SHOTS = "/Users/peach/Dashboard-rg2b/tests/screenshots/tw1-"
+SHOTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots") + "/tw1-"
 
 
 RETIRED_RE1C2 = ['2 Act has plan/position rows', '2 stock row: size = shares', '2 multi-entry plan: size = total shares', '2 Sat row: size in lots', '2 every row has size + risk']   # RE-C2: Act rows are now the three groups (Enter / Check orders / Manage) — covered by run_tests_re1c2

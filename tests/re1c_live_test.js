@@ -219,4 +219,31 @@ const spec = { mult: 1, fx: 35, lotStep: 1, minLot: 1 };
   ok('ON: a trade closed with the switch ON is costed as in RE-C1', net(L2) < -1e-9, net(L2));
   ok('ON later never changes a position / order quantity', L1.ideas[0].tranches[0].qty === 100 && L2.ideas[0].tranches[0].qty === 100);
 }
+/* RE-D §2 — FX per snapshot: week / month USAGE converts at the rate of the snapshot that gives the basis; a NEW order still converts at the current Settings rate */
+{
+  const mk = (snapFx, curFx) => {
+    const s = src(); const S = s.books.main.settings; S.fx = curFx; S.equitySnapshots = [{ id: 's1', bkkDate: '2026-11-16', equity: 5000000, confirmed: true, kind: 'weekly', fx: snapFx }].map(x => { if (snapFx == null) delete x.fx; return x; });
+    S.costSettings = null; s.costsOn = false;
+    S.re1 = { cutoverAt: NOW - 86400000 };
+    s.books.main.trades = [tr({ id: 'u1', sym: 'AAPL', qty: 100, entry: 100, sl: 90, posGroup: 'u1', sl0: 90 })];   // open Momentum USD: risk $1,000
+    return s;
+  };
+  const open = (L) => L.mom.chk.money.open;
+  const L1 = A.live(mk(30, 35), 'main'), L2 = A.live(mk(35, 35), 'main'), L3 = A.live(mk(null, 35), 'main');
+  ok('basis carries the snapshot FX (week and month)', L1.basis.weekFx === 30 && L1.basis.monthFx === 30, [L1.basis.weekFx, L1.basis.monthFx]);
+  ok('open risk in the week usage = $1,000 × snapshot FX 30 = 30,000', near(open(L1), 30000, 1e-6), open(L1));
+  ok('same trade with snapshot FX = current FX 35 → 35,000 (unchanged behaviour)', near(open(L2), 35000, 1e-6), open(L2));
+  ok('older snapshot without a stored FX → current rate (35) and no frozen rate', near(open(L3), 35000, 1e-6) && L3.basis.weekFx === null, [open(L3), L3.basis.weekFx]);
+  ok('engine output identical when snapshot FX = current FX (single run)', JSON.stringify(L2.mom.chk) === JSON.stringify(A.live(mk(null, 35), 'main').mom.chk));
+  const m1 = A.sizeMomentum(L1, Object.assign({ homeworkDone: true, side: 'long', entry: 100, stop: 95 }, spec, { fx: 35 }));
+  ok('a new order still sizes and converts at the current rate 35 (risk of one share = $5 × 35)', m1.qty > 0 && near(m1.money, m1.qty * 5 * 35, 1e-6), [m1.qty, m1.money]);
+  const m1b = A.sizeMomentum(L2, Object.assign({ homeworkDone: true, side: 'long', entry: 100, stop: 95 }, spec, { fx: 35 }));
+  ok('same qty either way; only the room line (usage) differs', m1.qty === m1b.qty && near(L1.mom.chk.money.weekUsed, 30000, 1e-6) && near(L2.mom.chk.money.weekUsed, 35000, 1e-6), [m1.qty, m1b.qty]);
+  // month basis from an older snapshot with a different rate: week at the week snapshot's rate, month at the month snapshot's rate
+  const s5 = mk(30, 35); s5.books.main.settings.equitySnapshots = [{ id: 'm0', bkkDate: '2026-10-30', equity: 5000000, confirmed: true, kind: 'weekly', fx: 32 }, { id: 'w0', bkkDate: '2026-11-16', equity: 5000000, confirmed: true, kind: 'weekly', fx: 30 }];
+  s5.now = bk('2026-11-17') + 36000000;
+  const L5 = A.live(s5, 'main');
+  ok('week usage at the week-start snapshot rate, month usage at the month-start snapshot rate', L5.basis.weekFx === 30 && L5.basis.monthFx === 32 && near(L5.mom.chk.money.weekUsed, 30000, 1e-6) && near(L5.mom.chk.money.monthUsed, 32000, 1e-6), [L5.basis.weekFx, L5.basis.monthFx, L5.mom.chk.money]);
+  ok('positions and orders are untouched (qty / stop)', L1.ideas[0].tranches[0].qty === 100 && L1.ideas[0].tranches[0].stop === 90);
+}
 console.log((fail ? 'FAIL ' : 'PASS ') + pass + '/' + (pass + fail) + ' live-layer assertions'); process.exit(fail ? 1 : 0);

@@ -467,7 +467,9 @@
     var wkEq = wk.equity - wd(wk.at), moEq = mo.equity - wd(mo.at), curEq = last.equity - wd(last.at);
     if (wk.at > ws) flags.push('BASIS_FIRST');
     if (prov) flags.push('PROVISIONAL');
+    /* RE-D §2 — each snapshot freezes its FX: the week / month usage is converted at the rate of the snapshot that gives that basis (null = older snapshot without a rate → the current rate, labelled) */
     return { ok: true, state: prov ? 'provisional' : (last.at >= ws ? 'current' : 'carried'), ageDays: b.ageDays, snapshot: last, weekEquity: wkEq, weekAt: wk.at, monthEquity: moEq, monthAt: mo.at, currentEquity: curEq,
+      weekFx: pos(wk.fx) ? wk.fx : null, monthFx: pos(mo.fx) ? mo.fx : null,
       reasons: [], flags: flags, snaps: snaps, provisional: prov, provisionalUntil: prov ? cut + RP.snapshot.blockAfterDays * DAY : null, weekSnapDate: wk.bkkDate || null, lastDate: last.bkkDate || null, confirmedThisWeek: !prov && last.at >= ws };
   }
   /* Emergency: replay every confirmed snapshot in order (evaluated AT a snapshot). Reference = month-start basis of that snapshot. */
@@ -539,11 +541,12 @@
     var unlocks = (S.re1 && Array.isArray(S.re1.unlocks) ? S.re1.unlocks : []).filter(function (u) { return u && num(u.at); });
     var streak = R.compStreak(cycles, unlocks);
     var heat = basis.ok ? R.compHeat(ideas, acctId, costsFor, basis.weekEquity, basis.currentEquity) : null;
-    var satBud = basis.ok ? R.satBudgetCheck({ basis: basis, now: now, account: acctId, ideas: ideas, costsFor: costsFor, candidateRisk: 0 }) : null;
-    var momChk = basis.ok ? R.momentumCheck({ now: now, account: acctId, basis: basis, ideas: ideas, costsFor: costsFor, candidate: { ideaId: '__none__', isAddition: true, riskMoney: 0 } }) : null;
+    var ideasW = basis.ok ? fxIdeas(ideas, fx, basis.weekFx) : ideas, ideasM = basis.ok ? fxIdeas(ideas, fx, basis.monthFx) : ideas, Lx = { now: now, acct: acctId, basis: basis, costsFor: costsFor, ideasW: ideasW, ideasM: ideasM };
+    var satBud = basis.ok ? satBudL(Lx, 0) : null;
+    var momChk = basis.ok ? momCheckL(Lx, { ideaId: '__none__', isAddition: true, riskMoney: 0 }) : null;
     var active = basis.ok ? R.activeSummary({ basis: basis, mom: { usageWeek: momChk.usageWeek, usageMonth: momChk.usageMonth }, sat: { usageWeek: satBud.usageWeek, usageMonth: satBud.usageMonth }, candidateRisk: 0 }) : null;
     return { acct: acctId, costsOn: costsOn, name: acc.name || acctId, now: now, fx: fx, S: S, ideas: ideas, info: A.info, basis: basis, emergency: emergency, eF: eF, costsFor: costsFor, regime: regime, signals: signals,
-      mom: { state: momState, chk: momChk }, sat: { step: step, attempts: attempts, dayAtt: dayAtt, budget: satBud, stale: R.satStaleOrders(ideas, now) }, comp: { streak: streak, cycles: cycles, unlocks: unlocks, heat: heat }, active: active, rowsById: rowsById };
+      mom: { state: momState, chk: momChk }, sat: { step: step, attempts: attempts, dayAtt: dayAtt, budget: satBud, stale: R.satStaleOrders(ideas, now) }, comp: { streak: streak, cycles: cycles, unlocks: unlocks, heat: heat }, active: active, rowsById: rowsById, ideasW: ideasW, ideasM: ideasM };
   }
   /* ── reason text (engine text + the concrete numbers) ── */
   function rtext(code, d) {
@@ -557,6 +560,30 @@
   function ideaOthers(L, ideaId) { return L.ideas.filter(function (i) { return i.id !== ideaId; }); }
   /* largest qty (lot multiple) whose risk fits the room, never above the sized qty */
   function allowedQty(room, perUnit, lotStep, minLot, maxQty) { if (!(room > 0) || !(perUnit > 0)) return 0; var q = R.floorLot(Math.min(maxQty, room / perUnit), lotStep); return q >= (minLot || 0) - 1e-12 && q > 0 ? q : 0; }
+  /* RE-D §2 — ideas re-priced at a snapshot's FX (USD tranches / working orders only). Used for the week / month USAGE; the candidate order stays at the current rate. */
+  function fxIdeas(ideas, cur, to) {
+    if (!pos(to) || !pos(cur) || Math.abs(to - cur) < 1e-12) return ideas;
+    return ideas.map(function (i) { var c = Object.assign({}, i); c.tranches = (i.tranches || []).map(function (t) { return t.fx === cur ? Object.assign({}, t, { fx: to }) : t; }); c.workingOrders = (i.workingOrders || []).map(function (w) { return w.fx === cur ? Object.assign({}, w, { fx: to }) : w; }); return c; });
+  }
+  function otherIds(ideas, id) { return ideas.filter(function (i) { return i.id !== id; }); }
+  function mergeDual(w, m, kind) {   /* week fields from the week-basis run, month fields from the month-basis run */
+    if (w === m) return w;
+    var o = Object.assign({}, w), r = w.reasons.filter(function (c) { return c !== 'MONEY_MONTH'; });
+    if (m.reasons.indexOf('MONEY_MONTH') >= 0) { var at = Math.max(r.indexOf('MONEY_WEEK'), r.indexOf('UNKNOWN_DATA')); r.splice(at + 1, 0, 'MONEY_MONTH'); }
+    o.reasons = r; o.allowed = r.length === 0;
+    if (kind === 'mom') { o.money = Object.assign({}, w.money, { monthUsed: m.money.monthUsed, monthCap: m.money.monthCap }); o.usageMonth = m.usageMonth; }
+    else { o.monthUsed = m.monthUsed; o.monthCap = m.monthCap; o.monthlyNet = m.monthlyNet; o.usageMonth = m.usageMonth; }
+    return o;
+  }
+  /* Momentum / Satellite budget check with week usage at the week-snapshot FX and month usage at the month-snapshot FX (identical to a single run when both equal the current rate) */
+  function momCheckL(L, cand, exceptId) {
+    var f = function (ideas) { return R.momentumCheck({ now: L.now, account: L.acct, basis: L.basis, ideas: exceptId === undefined ? ideas : otherIds(ideas, exceptId), costsFor: L.costsFor, candidate: cand }); };
+    return mergeDual(f(L.ideasW), f(L.ideasM), 'mom');
+  }
+  function satBudL(L, candRisk, exceptId) {
+    var f = function (ideas) { return R.satBudgetCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: exceptId === undefined ? ideas : otherIds(ideas, exceptId), costsFor: L.costsFor, candidateRisk: candRisk }); };
+    return mergeDual(f(L.ideasW), f(L.ideasM), 'sat');
+  }
   function baseModel(L, strat) { return { strategy: strat, acct: L.acct, ok: false, blocked: true, reasons: [], reasonTexts: [], flags: [], formula: '', effPct: null, qty: 0, money: null, roomLine: '', allowedQty: 0, chip: null, factors: [] }; }
   function finish(m, d) {
     var seen = {}; m.reasons = m.reasons.filter(function (c) { if (seen[c]) return false; seen[c] = 1; return true; });
@@ -588,7 +615,7 @@
     m.effPct = eff; m.formula = parts.join(' × ') + ' = ';
     if (z.reasons.length) { m.reasons = z.reasons.slice(); return finish(m); }
     m.qty = z.qty; m.money = z.actualRisk; m.moneyPct = z.actualRiskPct; m.sizingDistance = z.sizingDistance; m.minStopApplied = z.minStopApplied; m.avgEntry = z.avgEntry || f.entry;
-    var chk = R.momentumCheck({ now: L.now, account: L.acct, basis: L.basis, ideas: ideaOthers(L, f.ideaId), costsFor: L.costsFor, candidate: { ideaId: f.ideaId || '__new__', isAddition: f.isAddition === true, riskMoney: z.actualRisk } });
+    var chk = momCheckL(L, { ideaId: f.ideaId || '__new__', isAddition: f.isAddition === true, riskMoney: z.actualRisk }, f.ideaId);
     m.reasons = chk.reasons.slice(); m.flags = chk.flags.slice();
     var Mo = chk.money, uv = f.mult * f.fx, wRoom = Mo.weekCap - (Mo.weekUsed - z.actualRisk), mRoom = Mo.monthCap - (Mo.monthUsed - z.actualRisk), room = Math.min(wRoom, mRoom);
     m.room = { weekPct: Math.max(0, wRoom) / L.basis.weekEquity * 100, monthPct: Math.max(0, mRoom) / L.basis.monthEquity * 100, ideasUsed: chk.ammo.total, ideasMax: chk.ammo.max, completedLosses: chk.ammo.completedLosses }; m.roomPct = m.room.weekPct;
@@ -624,7 +651,7 @@
       if (z.reasons.length) rs = rs.concat(z.reasons);
     }
     m.sizing = z; m.qty = z.qty || 0; m.money = z.actualRisk || 0; m.moneyPct = z.actualRiskPct != null ? z.actualRiskPct : (m.money / L.basis.weekEquity * 100);
-    var bud = R.satBudgetCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: ideaOthers(L, f.ideaId), costsFor: L.costsFor, candidateRisk: m.money || 0 });
+    var bud = satBudL(L, m.money || 0, f.ideaId);
     rs = rs.concat(bud.reasons); m.flags = m.flags.concat(bud.flags);
     var act = R.activeSummary({ basis: L.basis, mom: { usageWeek: L.mom.chk.usageWeek, usageMonth: L.mom.chk.usageMonth }, sat: { usageWeek: bud.usageWeek, usageMonth: bud.usageMonth }, candidateRisk: m.money || 0 });
     rs = rs.concat(act.reasons); m.reasons = rs;
