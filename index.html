@@ -3437,6 +3437,7 @@ button.ccChip{cursor:pointer;min-height:24px}
   .acSwB .acSwN{position:absolute;top:2px;right:0;padding:2px 5px}
   .hbtns{gap:2px}
 }
+@media (max-width:380px){ .topbar .hbtns>button{width:36px;min-width:36px} .acSw{margin-left:12px} .acSwB{padding:6px 9px} }
 @media (max-width:340px){
   body.lf-lean .topbar .hbtns{gap:2px}
   body.lf-lean .topbar .hbtns>button{width:36px}
@@ -3709,6 +3710,8 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .re2-act .p,.re2-pc .p{display:none}
 .bd-ready{margin-left:auto;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:999px;font:700 .82rem var(--sans);padding:4px 10px;cursor:pointer;white-space:nowrap}.bd-ready.on{background:#e6ecfb;color:#2d5bd1;border-color:#b9c8f2}
 .bd-cx{background:none;border:0;color:var(--muted);font:600 .8rem var(--sans);padding:4px 2px;cursor:pointer;white-space:nowrap}.bd-cx:hover{color:var(--text)}.bd-df .bd-cx{margin-right:auto}
+.bd-cx.bd-cxx{position:relative;flex:none;width:28px;height:28px;min-width:0;min-height:0;box-sizing:border-box;padding:0;margin-left:auto;border:1px solid var(--border);border-radius:50%;display:inline-grid;place-items:center;font-size:.8rem;line-height:1;color:var(--muted)}.bd-cx.bd-cxx:hover{color:var(--ink);border-color:var(--ink)}
+@media (max-width:600px){.bd-cx.bd-cxx:after{content:"";position:absolute;inset:-8px}}
 .re4-nt>summary{cursor:pointer;color:var(--muted);font-size:.84rem;white-space:nowrap}.re4-nt .re1-f{margin-top:4px}
 
 @media(max-width:900px){.re2-act .cols,.re2-pair{grid-template-columns:1fr}.re2-pc .rk3{grid-template-columns:1fr}}
@@ -31004,7 +31007,7 @@ function re2State(acct){   /* worst wins · the strategy that causes it names it
     }
   }
   if(st.cause === 'emerg'){ ['mmt', 'sat', 'comp'].forEach(k=>{ ab[k] = ab[k] || 'a'; }); }
-  try{ if(re4Due(acct)){ set('Review due', 'r', 'exec'); ab.exec = 'r'; } }catch(e){}   /* RE-D §6 — Execution review */
+  try{ if(re4Due(acct)) ab.exec = 'r'; }catch(e){}   /* RE-D §6 — Execution review · AW1 §6: no 'Review due' in the state chip (red 'N not taken' · To do · form block carry it) */
   st.ab = ab; return st;
 }
 function re2StripHtml(acct, label){
@@ -31134,7 +31137,11 @@ function re2ReadyToggle(id){
   try{ const c = it.ref; if(it.kind === 'core'){ c.plan = Object.assign({}, c.plan || {}, {ready:on ? true : null, readyAt:at}); } else { c.ready = on ? true : null; c.readyAt = at; } }catch(e){}
   try{ bdRender(); todayRefresh(true); }catch(e){}
 }
-function re4CancelBtn(it, card){ return `<button type="button" class="bd-cx" data-re4-cancel${card ? ' data-re4-card' : ''} onclick="event.stopPropagation();re4Open('${td3E(it.id).replace(/'/g, "\\'")}','plan')">Cancel plan ›</button>`; }
+function re4CancelBtn(it, card){   /* AW1 §5 — Planned card header = round ✕ · drawer foot keeps the words */
+  const id = td3E(it.id).replace(/'/g, "\\'");
+  return card ? `<button type="button" class="bd-cx bd-cxx" data-re4-cancel data-re4-card title="Cancel plan" aria-label="Cancel plan" onclick="event.stopPropagation();re4Open('${id}','plan')">✕</button>`
+    : `<button type="button" class="bd-cx" data-re4-cancel onclick="event.stopPropagation();re4Open('${id}','plan')">Cancel plan ›</button>`;
+}
 function re2ReadyBtn(it){ const on = re2ReadyOf(it); return `<button type="button" class="bd-ready${on ? ' on' : ''}" data-re2-ready="${on ? '1' : '0'}" aria-pressed="${on}" title="Flag as ready to enter — shows in Today › Enter" onclick="event.stopPropagation();re2ReadyToggle('${td3E(it.id).replace(/'/g, "\\'")}')">⚑ Ready</button>`; }
 (function(){   /* the flag clears itself when the plan becomes Ordered, Filled or Cancelled */
   const clr = p=>!!(p && ((p.ln4 && p.ln4.placedAt) || (p.status && p.status !== 'plan') || p.archived === true || p.trade_id || (Array.isArray(p.lots) && p.lots.length)));
