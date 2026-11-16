@@ -24,6 +24,7 @@ Brief file note: `RE1-D-brief.md` has 60 lines (you expected 59); sections 1–6
 - **NOT done:** the hidden old Settings cards (`#crSec`, `#satRiskSec`, extra `#ps1Sec` rows, Sat RPT/DD block). Their ids are read by Settings load / validate / save and the Lean layout (~40 sites); removing the markup needs those rewritten. Still hidden by CSS, stored values unread. Needs its own change with Settings tests.
 
 ## 4. Regression
+- Final reruns after the last fixes: re1d 284/0 · re1c2 155/0 · re1c 203/0 · phase51 123/0 · phase373 0 fail.
 - Node: risk_engine 313/313 · adapter 63/63 · live 82/82. `check_syntax` OK. Sync tools OK.
 - `run_tests_re1c` 203/0 (Costs ON) · `run_tests_re1c2` 155/0 (OFF default, ON inside) · new `run_tests_re1d` (360/390/1280/1440).
 - `ui_audit`: identical to origin/main — rule 2: 2 (390), rule 8: 2 (1280/1440), rule 6: 111 — **no new findings**, `screens not ok: []`. The rule 2 / rule 8 findings are not on screens RE1 touched; left.
