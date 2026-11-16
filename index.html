@@ -3724,7 +3724,7 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .re1-chip{display:inline-block;font:700 .8rem var(--sans);padding:2px 8px;border-radius:999px;background:var(--green-dim);color:var(--green);white-space:nowrap;margin-bottom:4px}.re1-chip.a{background:var(--amber-dim);color:var(--amber)}.re1-chip.r{background:var(--red-dim);color:var(--red)}.re1-chip.n,.re1-chip.f{background:var(--surface2);color:var(--muted)}
 .re1-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:7px 0;border-top:1px solid var(--hair)}.re1-nm{display:flex;flex-direction:column;min-width:0;flex:1 1 130px}.re1-nm small,.re1-note,.re1-sub{color:var(--muted);font-size:14px}.re1-sub{font-weight:700;margin-top:6px}.re1-note{display:block;margin:4px 0}
 .re1-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:100%}.re1-ctl input,.re1-flbox input,.re1-flbox select{border:1px solid var(--border);border-radius:10px;padding:6px 8px;font:14px var(--mono);width:100px;min-width:0;min-height:38px;background:var(--surface)}
-.re1-btn{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:8px 14px;min-height:38px;font:700 .86rem var(--sans);cursor:pointer}.re1-btn.p{background:var(--ink);color:#fff;border-color:var(--ink)}
+.aw1-cur{color:var(--muted);font:14px var(--mono)}.re1-btn{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:8px 14px;min-height:38px;font:700 .86rem var(--sans);cursor:pointer}.re1-btn.p{background:var(--ink);color:#fff;border-color:var(--ink)}
 .re1-flbox{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0}.re1-err{color:var(--red);font-size:12px;flex-basis:100%}
 .re1-pk{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}@media(min-width:900px){.re1-pk{grid-template-columns:repeat(2,minmax(0,1fr))}}.re1-pc{background:var(--surface);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh-1);min-width:0}
 .re1-pr{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--hair);font-size:.88rem}.re1-pr small{color:var(--muted);display:block;overflow-wrap:break-word;word-break:normal}.re1-bar{height:5px;border-radius:3px;background:var(--hair);margin-top:3px;overflow:hidden}.re1-bar i{display:block;height:100%;background:var(--teal)}
@@ -7301,14 +7301,52 @@ function re1CostsOn(){ try{ return ln4Cfg().costsOn === true; }catch(e){ return 
 function re1SetCosts(on){ ln4Write(o=>{ o.costsOn = !!on; }); re1Cache = {}; try{ ln4SetRender(); }catch(e){} try{ todayRefresh(true); }catch(e){} try{ re1Refresh(); }catch(e){} }
 function re1SetTraining(on){ ln4Write(o=>{ if(on){ delete o.starterFeatureOff; delete o.starterOff; } else o.starterFeatureOff = true; }); try{ ln4SetRender(); }catch(e){} }
 /* ── snapshots · cash flows · costs ── */
-function re1SnapConfirm(acct){
-  const a = document.getElementById('re1SnA_' + acct), d = document.getElementById('re1SnD_' + acct), eq = Number(String(a && a.value || '').replace(/,/g, '')), date = (d && d.value) || thaiToday();
-  const er = document.getElementById('re1SnE_' + acct); const say = t=>{ if(er){ er.textContent = t; er.style.display = t ? '' : 'none'; } };
+function re1SnapConfirm(acct, pfx){   /* AW1 §4 — pfx lets the Equity snapshot sheet reuse this (same validation · same write) with its own input ids */
+  pfx = pfx || 're1Sn';
+  const a = document.getElementById(pfx + 'A_' + acct), d = document.getElementById(pfx + 'D_' + acct), eq = Number(String(a && a.value || '').replace(/,/g, '')), date = (d && d.value) || thaiToday();
+  const er = document.getElementById(pfx + 'E_' + acct); const say = t=>{ if(er){ er.textContent = t; er.style.display = t ? '' : 'none'; } };
   if(!(eq > 0)){ say('Enter the account equity (incl. unrealized P&L)'); return false; }
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > thaiToday()){ say('Date cannot be in the future'); return false; }
   say('');
   return re1Write(acct, (S, B)=>{ const L = Array.isArray(S.equitySnapshots) ? S.equitySnapshots : (S.equitySnapshots = []); let n = 1; L.forEach(x=>{ if(x && x.bkkDate === date) n++; });
     const id = `snap:${acct}:${date}:${n}`; L.push({id, acct, at: Date.now(), bkkDate: date, kind: 'manual', equity: eq, currency: 'THB', fx: +S.fx > 0 ? +S.fx : null, confirmed: true, confirmedAt: Date.now(), source: 'user'}); re1Ev(S, acct, 'snapshot', date, {equity: eq}); });
+}
+/* AW1 §4 — Equity snapshot sheet (all accounts) · reuses re1SnapConfirm · the Settings card stays as is */
+function aw1SnapAttr(S, inSummary){ return S && S.cause === 'snap' ? ` role="button" tabindex="0" data-aw1-snap style="cursor:pointer" title="Confirm equity snapshot" onkeydown="if(event.key==='Enter'){event.preventDefault();event.stopPropagation();aw1SnapOpen()}" onclick="${inSummary ? 'event.preventDefault();' : ''}event.stopPropagation();aw1SnapOpen()"` : ''; }
+function aw1SnapRows(){
+  const e = escHtml;
+  return re1Accts().map(id=>{
+    const l = re1L(id), b = l && l.basis, last = b && b.snapshot ? b.snapshot : null, due = aw1SnapDue(id);
+    const when = last && last.bkkDate ? re1DayTxt(last.bkkDate) : '—';
+    return `<div class="re1-row aw1-snrow" data-aw1-snap-row="${e(id)}" data-due="${due ? 1 : 0}"><span class="re1-nm"><b>${e(re1Name(id))}</b><small>last ${e(when)}</small></span>
+      <span class="re1-ctl"><span class="aw1-cur">฿</span><input type="text" inputmode="decimal" id="aw1SnA_${e(id)}" aria-label="Equity ${e(re1Name(id))}" placeholder="Equity" value="${last ? Number(Math.round(last.equity)).toLocaleString('en-US') : ''}"${due ? '' : ' readonly'}>${due ? `<button type="button" class="re1-btn" data-aw1-confirm="${e(id)}" onclick="aw1SnapOne('${e(id)}')">Confirm</button>` : '<span class="re1-chip" data-aw1-done>✓ Confirmed</span>'}</span>
+      <div class="re1-err" id="aw1SnE_${e(id)}" style="display:none"></div></div>`; }).join('');
+}
+function aw1SnapOpen(){
+  const due = re1Accts().filter(aw1SnapDue);
+  coreSheet('snap', `<h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">Equity snapshot<span class="re1-chip a" data-aw1-due style="margin-left:auto">${due.length ? due.length + ' due' : 'all confirmed'}</span></h3>
+    <div data-aw1-snap-rows>${aw1SnapRows()}</div>
+    <div class="ccFoot"><button type="button" class="ccBtn" data-aw1-later onclick="coreSheetClose()">Later</button><button type="button" class="ccBtn pri" id="aw1SnAll" data-aw1-all onclick="aw1SnapAll()">${due.length > 1 ? 'Confirm both' : 'Confirm'}</button></div>`);
+  aw1SnapFoot();
+}
+function aw1SnapFoot(){
+  const left = [...document.querySelectorAll('[data-aw1-snap-row][data-due="1"]')], b = document.getElementById('aw1SnAll'), c = document.querySelector('[data-aw1-due]');
+  if(b){ b.textContent = left.length > 1 ? 'Confirm both' : 'Confirm'; b.disabled = !left.length; }
+  if(c) c.textContent = left.length ? left.length + ' due' : 'all confirmed';
+}
+function aw1SnapOne(id){
+  if(re1SnapConfirm(id, 'aw1Sn') === false) return false;
+  const row = document.querySelector(`[data-aw1-snap-row="${CSS.escape(id)}"]`);
+  if(row){
+    row.dataset.due = '0'; const inp = row.querySelector('input'); if(inp) inp.readOnly = true;
+    const btn = row.querySelector('[data-aw1-confirm]'); if(btn) btn.outerHTML = '<span class="re1-chip" data-aw1-done>✓ Confirmed</span>';
+    const sm = row.querySelector('small'); if(sm) sm.textContent = 'last ' + re1DayTxt(thaiToday());
+  }
+  aw1SnapFoot(); try{ renderAcctBar(); }catch(x){}
+  return true;
+}
+function aw1SnapAll(){
+  [...document.querySelectorAll('[data-aw1-snap-row][data-due="1"]')].forEach(r=>aw1SnapOne(r.dataset.aw1SnapRow));
 }
 function re1FlowSave(){
   const g = id=>document.getElementById(id), acct = g('re1FlA').value, date = g('re1FlD').value || thaiToday(), amt = Number(String(g('re1FlM').value).replace(/,/g, '')), dir = g('re1FlT').value;
@@ -7489,7 +7527,7 @@ function re1TodoItems(){
   try{
     re1Accts().forEach(id=>{
       const L = re1L(id); if(!L) return; const nm = re1Name(id);
-      if(!L.basis.ok || !L.basis.confirmedThisWeek) out.push({c: L.basis.ok ? 'a' : 'r', id:'re1snap:' + id, t:'Snapshot due · ' + nm, fn:"openSettings()"});
+      if(!L.basis.ok || !L.basis.confirmedThisWeek) out.push({c: L.basis.ok ? 'a' : 'r', id:'re1snap:' + id, t:'Snapshot due · ' + nm, fn:"aw1SnapOpen()"});
       /* RE1-C2 — 'Move stop · SYM' and '… still valid?' live in Today › Act now (Manage / Check orders) */
       try{ if(re4Due(id)) out.push({c:'r', id:'re4rev:' + id, t:'Execution review · ' + nm, fn:`re4ReviewOpen('${id}')`}); }catch(e){}   /* RE-D §6 */
     });
@@ -30973,7 +31011,7 @@ function re2StripHtml(acct, label){
   const e = td3E, S = re2State(acct), R = re2Room(acct), ev = re2EvData(Date.now());
   const ab = S.ab || {}, nm = {mmt:'MMT', sat:'SAT', comp:'COMP'};
   const chip = (k, txt)=>{ const c = ab[k]; return `<span class="rk${c ? ' ' + c + ' ab' : ' m'}" data-re2-chip="${k}">${c === 'r' ? e(nm[k]) + ' locked' : txt}</span>`; };
-  let h = `<div class="h re2-strip" data-re2-strip="${e(acct)}"><b>${label ? e(label) + ' · ' : ''}Act</b><span class="dot ${S.c}"></span><b class="nm re2-st ${S.c}" data-re2-state>${e(S.t)}</b>`;
+  let h = `<div class="h re2-strip" data-re2-strip="${e(acct)}"><b>${label ? e(label) + ' · ' : ''}Act</b><span class="dot ${S.c}"></span><b class="nm re2-st ${S.c}" data-re2-state${aw1SnapAttr(S)}>${e(S.t)}</b>`;
   if(R){
     h += chip('mmt', `MMT <b>${R.mom.left}</b> idea${R.mom.left === 1 ? '' : 's'} · ${re1Pct(R.mom.room)}`);
     h += chip('sat', `SAT step <b>${R.sat.step}</b> · ${re1Pct(R.sat.rpt)}`);
@@ -31065,7 +31103,7 @@ function re2RoomCard(acct){
   const R = re2Room(acct), S = re2State(acct); if(!R) return `<div class="card ln4-card re2-pc" data-re2-room><b>Risk room</b> <span class="mut">${td3E(S.t)} — confirm a snapshot in Settings</span></div>`;
   const o = re2Open.room != null ? re2Open.room : ln4Wide();
   const sum = `MMT ${R.mom.left} ideas · SAT step ${R.sat.step} · COMP ${re1Pct(R.comp.room, 1)}`;
-  return `<div class="card ln4-card re2-pc" data-re2-room><details${o ? ' open' : ''} ontoggle="re2Open.room=this.open"><summary><b>Risk room<span class="m"> · this week</span></b><span class="s">${sum}</span><span class="chip ${S.c}">${td3E(S.t)}</span></summary>
+  return `<div class="card ln4-card re2-pc" data-re2-room><details${o ? ' open' : ''} ontoggle="re2Open.room=this.open"><summary><b>Risk room<span class="m"> · this week</span></b><span class="s">${sum}</span><span class="chip ${S.c}"${aw1SnapAttr(S, true)}>${td3E(S.t)}</span></summary>
     <div class="rk3"><div data-re2-rr="mom"><small>Momentum · week</small><b>${R.mom.left} of ${R.mom.max} ideas left</b><span>room ${re1Pct(R.mom.room)} of ${re1Pct(R.mom.cap)}</span></div>
     <div data-re2-rr="sat"><small>Satellite · week</small><b>Step ${R.sat.step} · ${re1Pct(R.sat.rpt)}${R.sat.locked ? ' · LOCKED' : ''}</b><span>${re1Pct(R.sat.used)} of ${re1Pct(R.sat.cap)} · queue ${R.sat.busy ? 'busy' : 'free'}</span></div>
     <div data-re2-rr="comp"><small>Compounder · open now</small><b>room ${re1Pct(R.comp.room, 1)}</b><span>heat ${re1Pct(R.comp.heat, 1)} of ${R.comp.cap}% · regime ${R.comp.regime}%</span></div></div></details></div>`;
