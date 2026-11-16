@@ -150,7 +150,7 @@ def run_review(pw, w, h):
         js(page, "()=>{ coreWrite('x5', {acct:'main', ticker:'X5', market:'US', strategy:'W', status:'cancelled', cancelReason:'missed', cancelledAt:new Date().toISOString(), plan:{entry:10, stop:9}}); }"); page.wait_for_timeout(600); refresh(page)
         st = txt(page, "[data-re2-strip]")
         check("[%s] 3 → red chip '3 not taken' on the Today strip" % tag, js(page, "()=>{const c=document.querySelector('[data-re4-chip]');return !!c && c.innerText.trim()==='3 not taken' && c.classList.contains('r')}"), st)
-        check("[%s] strip state is red (worst wins)" % tag, js(page, "()=>document.querySelector('[data-re2-state]').classList.contains('r')"), txt(page, "[data-re2-state]"))
+        check("[%s] AW1 §6: strip state no longer says 'Review due' (the red '3 not taken' chip carries it)" % tag, "Review due" not in txt(page, "[data-re2-state]"), txt(page, "[data-re2-state]"))
         todo = js(page, "()=>[...document.querySelectorAll('[data-ln4-status] *')].map(e=>e.innerText||'').join(' | ')")
         check("[%s] To do shows 'Execution review · <account>'" % tag, "Execution review · " in todo, todo[:300])
         # other actions stay open
