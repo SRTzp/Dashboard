@@ -1,6 +1,6 @@
 # RM1 — shared new-entry budget modifier (SMA 20/50 on ACWI/BIL + HYG/IEI)
 
-Approved by SRTp 17 Nov 2026 (rev 3 · final spec 11:14 · Compounder total 1.25% + lean UI rules 13:08). **Intentional strategy-rule change** (replaces the old regime signals). No mockup: layouts unchanged, labels and values only.
+Approved by SRTp 17 Nov 2026 (rev 4 · final spec 11:14 · Compounder total 1.25% + lean UI rules 13:08 · modifier 100/80/60, fallback 80%, SMA periods as settings 14:31). **Intentional strategy-rule change** (replaces the old regime signals). No mockup: layouts unchanged, labels and values only.
 Base: latest `origin/main` **after PV1b is merged** (PV1 / PV1b touch the same Today / Plan rows). Branch: `claude/rm1`. Commits: A data → B engine + sizing → C UI → D tests/report, push each.
 
 ## Rules
@@ -23,11 +23,11 @@ Base: latest `origin/main` **after PV1b is merged** (PV1 / PV1b touch the same T
 | Equity (ACWI/BIL) | Credit (HYG/IEI) | Modifier |
 |---|---|---:|
 | green | green | 100% |
-| green | red | 75% |
-| red | green | 75% |
-| red | red | 50% |
+| green | red | 80% |
+| red | green | 80% |
+| red | red | 60% |
 
-- Either signal neutral / unavailable, or data stale → **fallback 75%**. Missing data never yields 100%.
+- Either signal neutral / unavailable, or data stale → **fallback 80%** (decided 17 Nov 14:31 with the 100/80/60 table). Missing data never yields 100%. All four values (100 / 80 / 60 / fallback 80) and the SMA periods (`smaFast` 20, `smaSlow` 50) are policy settings, not hard-coded.
 - Freshness: keep the engine's rule — **age = today (Asia/Bangkok, existing convention) − the OLDEST of the four `inputs_asof` dates**; ≤ 4 calendar days fresh, > 4 stale. One shared function used by engine and all views (removes the panel's 5-business-day rule).
 - **effectiveMultiplier = min(regimeModifier, emergencyMultiplier)** — applied once to the original base risk budget; never multiplied together. Emergency 0% blocks new risk. Emergency triggers and exit behaviour unchanged; no automatic selling.
 - Always compute from the base budget (never reduce an already-reduced number).
@@ -37,11 +37,11 @@ Base: latest `origin/main` **after PV1b is merged** (PV1 / PV1b touch the same T
 - `re1-adapter.js` reads the new fields (`state`, `inputs_asof`), not `slow.up`.
 
 ## C · UI (labels / values only, existing places)
-- Flow summary line shows the effective multiplier and its reason, e.g. **"New-entry budget: 75% of normal · equity red, credit green."** / **"New-entry budget: 50% of normal · emergency brake."** Fallback: **"Modifier unavailable · fallback cap 75%"**, plus the stricter effective limit when one applies (e.g. "· effective 50% (emergency brake)").
+- Flow summary line shows the effective multiplier and its reason, e.g. **"New-entry budget: 80% of normal · equity red, credit green."** / **"New-entry budget: 50% of normal · emergency brake."** Fallback: **"Modifier unavailable · fallback cap 80%"**, plus the stricter effective limit when one applies (e.g. "· effective 50% (emergency brake)").
 - Both indicators labelled **"SMA 20/50"** with the data date (oldest input date). If days are shown: **"green 16 days"** style — never a bare number that could read as an SMA period.
 - Replace the fixed "Risk-on 100% / Core ceiling 100% / Momentum 100%" with the shared result; fix Today's regime line (it used the fast pair). All views show the same state, %, date and fresh/stale.
 - Sizing results go into the existing fields. No new panel, confirmation step or Holding control.
-- Where a size is reduced, the existing size line names the one limiting rule: e.g. `Risk ฿2,000 · limited by regime 50%` / `· limited by 12.5% value cap` / `· limited by total risk 1.25%`. Detail in More only.
+- Where a size is reduced, the existing size line names the one limiting rule: e.g. `Risk ฿2,000 · limited by regime 60%` / `· limited by 12.5% value cap` / `· limited by total risk 1.25%`. Detail in More only.
 - Rule text from the engine: the new-plan menu (`BD_NEW`) and any help text read pilot / total / Momentum ranges from policy config, not hard-coded strings (today the menu says "0.80–1.25%" while the engine caps at 1.00%).
 
 ## UI rules (lean · applies to every change in this job)
@@ -53,10 +53,13 @@ Base: latest `origin/main` **after PV1b is merged** (PV1 / PV1b touch the same T
 6. Plain short words; no new symbols to learn.
 
 ## Tests / proof
-- Node: four combinations → 100 / 75 / 75 / 50; neutral, unavailable, stale (4 days valid, 5 stale, oldest-input rule) → 75; min() with emergency (emergency 50% + red/red → 50%, not 25%; emergency 0% → no new risk, nothing sold); repeated recalculation of the same plan gives identical qty (no compounding); saved plan + holding unchanged after a signal change; Compounder qty limited by each of risk / total-risk room (1.25% × modifier) / value-cap room in turn, with the matching "limited by" text; Momentum with multiplier ≠ 1 and FX; round-down.
+- Node: four combinations → 100 / 80 / 80 / 60; neutral, unavailable, stale (4 days valid, 5 stale, oldest-input rule) → 80; min() with emergency (emergency 50% + red/red → 50%, not 30%; emergency 0% → no new risk, nothing sold); repeated recalculation of the same plan gives identical qty (no compounding); saved plan + holding unchanged after a signal change; Compounder qty limited by each of risk / total-risk room (1.25% × modifier) / value-cap room in turn, with the matching "limited by" text; Momentum with multiplier ≠ 1 and FX; round-down.
 - Browser suite `tests/run_tests_rm1.py`: same state, %, date in Flow, Today, Port, Risk room, Plan / drawer for one fixture; "SMA 20/50" labels; fallback text; no overflow 1440 / 1280 / 390.
 - Existing engine suites updated only where the old EMA / slow-pair rule is asserted (list each changed assertion). `tests/run_regression.sh` must not get worse than base.
 - Screenshots (`git add -f`): `rm1-flow-1440/390`, `rm1-today-390`, `rm1-plan-1440`, `rm1-fallback-1440`.
 
 ## Report — `docs/reports/RM1-summary.md`
 Data source + adjustment method · formulas · freshness rule · every place that read the old signal and now reads the shared one · the explicit-recalculation path · today's live result (both states, SMA values, dates, modifier) · tests changed and why · open questions (isolate; keep independent parts).
+
+## Research add-on (display only)
+`scripts/compare_regime.py` run via GitHub Actions `workflow_dispatch` (Yahoo is rate-limited on the Mac), writes `docs/reports/RM1-compare.md`: last 5 years, ACWI/BIL + HYG/IEI adjusted; SMA 10/20 vs 20/50 → flips per year per ratio, % of days at 100 / 80 / 60, days from the 2020 and 2022 lows back to 100%. No effect on the app.

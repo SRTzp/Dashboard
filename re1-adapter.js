@@ -210,7 +210,8 @@
     if (i.strategy === 'winner') {
       factors.push('BASE_' + R.POLICY.mom.rptPct);
       if (hw === undefined) notes.push('homework state unknown — shown at 100%'); else if (hw === false) { frac = R.POLICY.mom.homeworkCap; notes.push('thesis not done → 50%'); factors.push('HOMEWORK_50'); }
-      if (ctx.emergencyFactor && ctx.emergencyFactor < 1) { factor *= ctx.emergencyFactor; factors.push('EMERGENCY_50'); }
+      if (ctx.regime) { factor = R.compFactor(ctx.regime, ctx.emergencyFactor); var mp = Math.round(factor * 100); if (mp < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < ctx.regime.factor ? 'EMERGENCY_' : 'REGIME_') + mp); }   /* RM1: Momentum also takes min(Regime, Emergency) */
+      else if (ctx.emergencyFactor && ctx.emergencyFactor < 1) { factor *= ctx.emergencyFactor; factors.push('EMERGENCY_50'); }
     } else if (i.strategy === 'ladder') {
       /* Compounder: the Pilot (0.50% of the 1% plan) IS the 50% homework phase — the homework cap is a phase cap, never a second multiplier (RE-C1 §0).
          Regime factor applies to NEW entries: min(Regime, Emergency). Starter ¼ (Training ON) = half of the Pilot. */
@@ -247,11 +248,9 @@
   /* ── report ── */
   function build(src) {
     var now = src.now, miss = new Missing(), report = { generatedAt: now, generatedAtBkk: R.bkk.dayKey(now), policy: 'RE1-decisions rev 2 + answers-A', baseCurrency: 'THB', readOnly: true, accounts: [], notes: [] };
-    var ff = src.ff || {}, rat = ff.ratios || {}, g = function (k) { var r = rat[k]; if (!r) return null; var up = r.slow && typeof r.slow.up === 'boolean' ? r.slow.up : (typeof r.up === 'boolean' ? r.up : null); return up; };
-    var slowMissing = ['ACWI_BIL', 'HYG_IEI'].filter(function (k) { return rat[k] && !(rat[k].slow && typeof rat[k].slow.up === 'boolean'); });
-    var signals = { acwi: g('ACWI_BIL'), hyg: g('HYG_IEI'), asOf: ff.as_of || null };
-    var regime = R.regimeState(signals, now);
-    report.regime = { signals: signals, factor: regime.factor, base: regime.base, fresh: regime.fresh, ageDays: regime.ageDays, demo: !!ff.demo, slowSeriesMissing: slowMissing, flags: regime.flags };
+    var ff = src.ff || {};
+    var regime = R.regimeFromFundflow(ff.demo ? null : ff, now), signals = regime.signals;   /* RM1: the one shared reader */
+    report.regime = { signals: signals, factor: regime.factor, base: regime.base, fresh: regime.fresh, ageDays: regime.ageDays, asOf: regime.asOf, equity: regime.equity, credit: regime.credit, fallback: regime.fallback, demo: !!ff.demo, flags: regime.flags };
     if (ff.demo) report.notes.push('fundflow.json not loaded (demo data) — regime result is not usable');
 
     (src.accounts || []).forEach(function (acc) {
@@ -306,7 +305,7 @@
         if (ls2.legacy && i.status !== 'closed') legacy.push({ id: i.id, sym: i.sym, status: i.status, tranches: Math.max(i.tranches.length, lots.length), accelerator: Math.max(accLots, 0) || undefined, why: ls2.why, strategyKey: card ? card.strategy : null });
       });
       out.compounder = { streak: streak.streak, locked: streak.locked, cyclesClosed: cycles.length, heatMoney: heat.money, heatPctWeekStart: heat.pct, heatPctCurrent: heat.pctCurrent, heatCapPct: R.POLICY.comp.heatCapPct, heatCount: heat.count,
-        regimeFactor: regime.factor, regimeFresh: regime.fresh, regimeAgeDays: regime.ageDays, legacyShapeCards: legacy };
+        regimeFactor: regime.factor, regimeFresh: regime.fresh, regimeAgeDays: regime.ageDays, regimeFallback: regime.fallback, legacyShapeCards: legacy };
 
       // Emergency: needs confirmed snapshots
       out.emergency = realSnaps && realSnaps.length ? (function () { var last = realSnaps[realSnaps.length - 1]; var e = R.emergencyStep(null, last, basis.ok ? { equity: basis.monthEquity, at: basis.monthAt } : null, S.cashFlows || []); return { state: e.active ? 'ACTIVE' : 'off', declinePct: e.declinePct, factor: e.factor }; })() : { state: 'n/a', reason: 'no confirmed equity snapshots — Emergency cannot be evaluated; shown as off (factor 1)', factor: 1 };
@@ -387,9 +386,9 @@
     P('# RE1 dry run — ' + rp.generatedAtBkk + ' (Asia/Bangkok)'); P('');
     P('**Read-only.** Nothing was written to Firestore or localStorage. Missing data is shown as `Unknown`, never 0. Accounts are never mixed. Policy: ' + rp.policy + '. Base currency ' + rp.baseCurrency + '.'); P('');
     rp.notes.forEach(function (t) { P('> ' + t); });
-    P('## Regime (Compounder)'); P('');
-    P('- ACWI/BIL (slow): ' + (rp.regime.signals.acwi === null ? 'Unknown' : rp.regime.signals.acwi ? 'green' : 'red') + ' · HYG/IEI (slow): ' + (rp.regime.signals.hyg === null ? 'Unknown' : rp.regime.signals.hyg ? 'green' : 'red') + ' · as-of ' + (rp.regime.signals.asOf || 'Unknown'));
-    P('- Factor **' + Math.round(rp.regime.factor * 100) + '%** · fresh: ' + (rp.regime.fresh ? 'yes' : 'NO') + (rp.regime.ageDays != null ? ' (' + rp.regime.ageDays + ' calendar days old)' : '') + (rp.regime.slowSeriesMissing.length ? ' · slow series missing for ' + rp.regime.slowSeriesMissing.join(', ') : '')); P('');
+    P('## Regime (new-entry budget modifier · Momentum + Compounder)'); P('');
+    P('- ACWI/BIL (SMA 20/50): ' + rp.regime.signals.acwi + ' · HYG/IEI (SMA 20/50): ' + rp.regime.signals.hyg + ' · oldest input date ' + (rp.regime.signals.asOf || 'Unknown'));
+    P('- Modifier **' + Math.round(rp.regime.factor * 100) + '%**' + (rp.regime.fallback ? ' (fallback)' : '') + ' · fresh: ' + (rp.regime.fresh ? 'yes' : 'NO') + (rp.regime.ageDays != null ? ' (' + rp.regime.ageDays + ' calendar days old)' : '')); P('');
     rp.accounts.forEach(function (a) {
       P('---'); P('## Account: ' + esc(a.name || a.id) + ' (`' + a.id + '`)'); P('');
       P('Rows: ' + a.counts.tradeRows + ' trade rows → ' + a.counts.ideas + ' ideas (holding ' + a.counts.holding + ' · ordered ' + a.counts.ordered + ' · planned ' + a.counts.planned + ' · closed ' + a.counts.closed + ')'); P('');
@@ -524,9 +523,8 @@
       i.reentry = rowsOf(i).some(function (t) { return t.reentry === true; });
       i.tranches.forEach(function (t) { t.stopConfirmed = rowsOf(i).some(function (r) { return r.status === 'open' && r.stopConfirmed === true && n(r.entry) === t.entry && Math.abs(n(r.sl) - t.stop) < 1e-9; }); });
     });
-    var ff = src.ff || {}, rat = ff.ratios || {}, g = function (key) { var r = rat[key]; if (!r) return null; return r.slow && typeof r.slow.up === 'boolean' ? r.slow.up : (typeof r.up === 'boolean' ? r.up : null); };
-    var signals = ff.demo ? { acwi: null, hyg: null, asOf: null } : { acwi: g('ACWI_BIL'), hyg: g('HYG_IEI'), asOf: ff.as_of || null };
-    var regime = R.regimeState(signals, now);
+    var ff = src.ff || {};
+    var regime = R.regimeFromFundflow(ff.demo ? null : ff, now), signals = regime.signals;   /* RM1: same shared reader as build() and every view */
     var momState = basis.ok ? R.momentumState({ now: now, account: acctId, ideas: ideas, costsFor: costsFor }) : null;
     var satI = ideas.filter(function (i) { return i.strategy === 'sat'; });
     var attempts = satI.filter(function (i) { return i.status === 'closed' && num(i.closedAt) && i.closedAt > 0; }).map(function (i) { return { id: i.id, closeAt: i.closedAt, net: R.ideaRealizedNet(i) }; });
@@ -608,11 +606,12 @@
     var m = baseModel(L, 'winner'); m.chip = L.emergency.active ? { t: 'Emergency 50%', c: 'r' } : null;   /* the 'Homework not done' state is shown once, by the WL1 cap box under the result */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
     var fr = R.entryFraction({ homeworkDone: f.homeworkDone === true, starterOn: f.starterOn === true, isFirstEntry: f.isFirstEntry !== false, usedFraction: f.usedFraction || 0 });
-    var base = RP.mom.rptPct, ef = L.eF, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];
+    var base = RP.mom.rptPct, rg = L.regime, ef = R.compFactor(rg, L.eF), emOnly = L.eF < rg.factor, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];   /* RM1: effective modifier = min(regime, emergency), applied once to the base budget */
     var parts = [f2(base, 2) + '%'], eff = base * ef * fr.fraction;
     if (f.homeworkDone !== true) { parts.push('homework 50%'); m.factors.push('HOMEWORK_50'); }
     if (f.starterOn === true && f.isFirstEntry !== false) { parts.push('starter 25%'); m.factors.push('STARTER_25'); }
-    if (ef < 1) { parts.push('emergency 50%'); m.factors.push('EMERGENCY_50'); }
+    if (ef < 1) { var mpc = Math.round(ef * 100); parts.push((emOnly ? 'emergency ' : 'regime ') + mpc + '%'); m.factors.push((emOnly ? 'EMERGENCY_' : 'REGIME_') + mpc); m.limit = { code: emOnly ? 'emergency' : 'regime', text: 'limited by ' + (emOnly ? 'emergency brake ' : 'regime ') + mpc + '%' }; }
+    m.regime = { factor: ef, base: rg.factor, emergency: L.eF, fallback: rg.fallback, equity: rg.equity, credit: rg.credit };
     m.effPct = eff; m.formula = parts.join(' × ') + ' = ';
     if (z.reasons.length) { m.reasons = z.reasons.slice(); return finish(m); }
     m.qty = z.qty; m.money = z.actualRisk; m.moneyPct = z.actualRiskPct; m.sizingDistance = z.sizingDistance; m.minStopApplied = z.minStopApplied; m.avgEntry = z.avgEntry || f.entry;
@@ -669,34 +668,62 @@
      of week-start equity + new order alone <= 0.50 % x min(Regime, Emergency). Entry above OR below the average entry (below = warning only). */
   function sizeComp(L, f) {
     var m = baseModel(L, 'ladder'), kind = f.kind || 'pilot'; m.kind = kind;
-    m.chip = (L.regime.factor < 1 || L.regime.stale) ? { t: 'Regime ' + Math.round(L.regime.factor * 100) + '%', c: 'a' } : null;
+    m.chip = null;   /* RM1: the modifier is shown once, in the size line ("limited by regime 50%") and the Flow line — no second chip */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
-    var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true;
-    var multi = !!(f.levels && f.levels.length > 1), planCap = thesis ? RP.comp.pilotPct + RP.comp.addonPct : RP.comp.pilotPct;
+    var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true, emOnly = L.eF < rg.factor;
+    var multi = !!(f.levels && f.levels.length > 1), planCap = thesis ? RP.comp.totalCapPct : RP.comp.pilotPct;   /* RM1: whole-plan budget 1.25 % with thesis (was 1.00 %) */
     var base = multi ? planCap : (kind === 'pilot' ? RP.comp.pilotPct : RP.comp.addonPct);
     var fraction = (kind === 'pilot' && f.starterOn === true && !multi) ? RP.comp.starter * 2 : 1;
     var label = multi ? 'Plan ' : kind === 'pilot' ? 'Pilot ' : 'Add-on ';
     m.factors = [(multi ? 'PLAN_' : kind === 'pilot' ? 'PILOT_' : 'ADDON_') + base]; var parts = [label + f2(base, 2) + '%'];
-    if (fac < 1) { var pc = Math.round(fac * 100), em = L.eF < rg.factor; parts.push((em ? 'emergency ' : 'regime ') + pc + '%'); m.factors.push((em ? 'EMERGENCY_' : 'REGIME_') + pc); }
+    var regLimit = null;
+    if (fac < 1) { var pc = Math.round(fac * 100); parts.push((emOnly ? 'emergency ' : 'regime ') + pc + '%'); m.factors.push((emOnly ? 'EMERGENCY_' : 'REGIME_') + pc); regLimit = { code: emOnly ? 'emergency' : 'regime', text: 'limited by ' + (emOnly ? 'emergency brake ' : 'regime ') + pc + '%' }; }
     if (fraction < 1) { parts.push('starter 25%'); m.factors.push('STARTER_25'); }
+    m.regime = { factor: fac, base: rg.factor, emergency: L.eF, fallback: rg.fallback, equity: rg.equity, credit: rg.credit };
     m.effPct = base * fac * fraction; m.formula = parts.join(' × ') + ' = ';
     var z = sizeCommon(L, f, base, fac, fraction); m.sizing = z; if (z.levels) m.levels = z.levels;
     if (z.reasons.length) { m.reasons = z.reasons.slice(); return finish(m); }
+    var eq = L.basis.weekEquity, existing = 0, working = 0, avg = null, heldValue = 0, uvv = (f.mult > 0 ? f.mult : 1) * (f.fx > 0 ? f.fx : 1);
+    if (me) {
+      var pr = R.ideaResult(me, L.costsFor(me)); existing = pr.exposure === null ? pr.principalRisk : pr.exposure; avg = ideaAvg(me);
+      (me.tranches || []).forEach(function (t) { if (pos(t.qty) && pos(t.entry)) heldValue += t.qty * t.entry * (t.mult > 0 ? t.mult : 1) * (t.fx > 0 ? t.fx : 1); });
+      (me.workingOrders || []).forEach(function (w) { if (pos(w.qty) && pos(w.entry) && pos(w.stop)) { working += w.qty * Math.abs(w.entry - w.stop) * (w.mult > 0 ? w.mult : 1) * (w.fx > 0 ? w.fx : 1); heldValue += w.qty * w.entry * (w.mult > 0 ? w.mult : 1) * (w.fx > 0 ? w.fx : 1); } });
+    }
+    /* RM1 — final qty = the smallest of: risk qty (budget x modifier) · total-risk room qty · value-cap room qty. Always from the base budget (never a reduced number again). */
+    var riskQty = z.qty, avgPx = z.avgEntry || f.entry, dist = z.actualDistance, lotStep = f.lotStep, usedMoney = existing + working;
+    var capTotalPct = (kind === 'pilot' && !multi) ? (f.starterOn === true ? RP.comp.pilotPct * RP.comp.starter * 2 : RP.comp.pilotPct) : (thesis ? RP.comp.totalCapPct * fac : RP.comp.pilotPct);
+    if (multi) capTotalPct = thesis ? RP.comp.totalCapPct * fac : RP.comp.pilotPct * fac;
+    var totalRoomMoney = eq * capTotalPct / 100 - usedMoney, valueCapPct = pos(f.valueCapPct) ? f.valueCapPct : RP.comp.valueCapPct, valueRoomMoney = eq * valueCapPct / 100 - heldValue;
+    var totalQty = (dist > 0 && uvv > 0) ? R.floorLot(Math.max(0, totalRoomMoney) / (dist * uvv), lotStep) : 0, valueQty = (avgPx > 0 && uvv > 0) ? R.floorLot(Math.max(0, valueRoomMoney) / (avgPx * uvv), lotStep) : 0;
+    var finalQty = Math.min(riskQty, totalQty, valueQty), minLot = f.minLot || 0, limit = regLimit, valueBlocked = false;
+    if (finalQty < riskQty) {
+      var byValue = valueQty < totalQty;
+      limit = byValue ? { code: 'value_cap', text: 'limited by ' + f2(valueCapPct, 1) + '% value cap' } : { code: 'total_risk', text: 'limited by total risk ' + f2(capTotalPct, 2) + '%' };
+      if (finalQty >= minLot - 1e-12 && finalQty > 0) {
+        var k = finalQty / riskQty;
+        if (z.levels && z.levels.length > 1) {
+          var lv = z.levels.map(function (l) { var q = R.floorLot((l.qty || 0) * k, lotStep); return Object.assign({}, l, { qty: q, actualRisk: q * Math.abs(l.price - f.stop) * uvv }); });
+          var risk = 0, qt = 0; lv.forEach(function (l) { risk += l.actualRisk; qt += l.qty; });
+          z = Object.assign({}, z, { levels: lv, qty: qt, actualRisk: risk, actualRiskPct: risk / eq * 100 }); m.levels = lv;
+        } else { var rk = finalQty * z.actualDistance * uvv; z = Object.assign({}, z, { qty: finalQty, actualRisk: rk, actualRiskPct: rk / eq * 100 }); }
+        m.sizing = z;
+      } else if (byValue) valueBlocked = true;   /* nothing fits: keep the risk size so the block shows what was needed */
+    }
+    m.limit = limit; m.limits = { riskQty: riskQty, totalRoomQty: totalQty, valueRoomQty: valueQty, finalQty: finalQty, valueCapPct: valueCapPct, totalCapPct: capTotalPct };
     m.qty = z.qty; m.money = z.actualRisk; m.moneyPct = z.actualRiskPct; m.avgEntry = z.avgEntry || f.entry;
-    var eq = L.basis.weekEquity, existing = 0, working = 0, avg = null;
-    if (me) { var pr = R.ideaResult(me, L.costsFor(me)); existing = pr.exposure === null ? pr.principalRisk : pr.exposure; avg = ideaAvg(me); (me.workingOrders || []).forEach(function (w) { if (pos(w.qty) && pos(w.entry) && pos(w.stop)) working += w.qty * Math.abs(w.entry - w.stop) * (w.mult > 0 ? w.mult : 1) * (w.fx > 0 ? w.fx : 1); }); }
     var usedPct = (existing + working) / eq * 100, firstPct = multi ? m.effPct * ((f.levels[0].splitPct || 0) / 100) : (m.money / eq * 100);
     var chkKind = multi ? 'pilot' : kind, reqPct = multi ? firstPct : (m.money / eq * 100);
     var entry = { kind: chkKind, starterOn: f.starterOn === true, thesisDone: thesis, legacy: f.legacy === true, side: f.side, entryPx: f.entry, avgEntry: avg, requestedPct: reqPct, usedPct: multi ? 0 : usedPct, factor: fac };
-    var cc = R.compCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: ideaOthers({ ideas: L.ideasW || L.ideas }, f.ideaId), costsFor: L.costsFor, cycles: L.comp.cycles, unlocks: L.comp.unlocks, signals: L.signals, emergencyFactor: L.eF, entry: entry, candidateRisk: m.money });
+    var cc = R.compCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: ideaOthers({ ideas: L.ideasW || L.ideas }, f.ideaId), costsFor: L.costsFor, cycles: L.comp.cycles, unlocks: L.comp.unlocks, regime: L.regime, signals: L.signals, emergencyFactor: L.eF, entry: entry, candidateRisk: m.money });
     m.reasons = cc.reasons.slice(); m.flags = cc.flags.slice(); m.lock = cc.lock; m.heat = cc.heat; m.entry = cc.entry; m.usedPct = usedPct;
-    var hRoom = Math.max(0, eq * RP.comp.heatCapPct / 100 - cc.heat.money), totRoom = Math.max(0, eq * planCap / 100 * (kind === 'pilot' ? 1 : 1) - (existing + working)), room = Math.min(hRoom, totRoom);
-    m.room = { heatPct: cc.heat.pct, heatCapPct: RP.comp.heatCapPct, roomPct: hRoom / eq * 100, tickerUsedPct: usedPct, tickerCapPct: planCap };
-    var uv = f.mult * f.fx, hard = m.reasons.some(function (c) { return /^(COMP_LOCKED|ADDON_THESIS)$/.test(c); });
+    if (valueBlocked) m.reasons.push('COMP_VALUE_CAP');
+    var hRoom = Math.max(0, eq * RP.comp.heatCapPct / 100 - cc.heat.money), totRoom = Math.max(0, totalRoomMoney), room = Math.min(hRoom, totRoom);
+    m.room = { heatPct: cc.heat.pct, heatCapPct: RP.comp.heatCapPct, roomPct: hRoom / eq * 100, tickerUsedPct: usedPct, tickerCapPct: capTotalPct };
+    var uv = f.mult * f.fx, hard = m.reasons.some(function (c) { return /^(COMP_LOCKED|ADDON_THESIS|COMP_VALUE_CAP)$/.test(c); });
     m.allowedQty = hard ? 0 : allowedQty(multi ? hRoom : room, z.actualDistance * uv, f.lotStep, f.minLot, m.qty);
-    m.roomLine = 'Heat ' + f2(cc.heat.pct, 1) + '% of ' + RP.comp.heatCapPct + '% · room ' + f2(m.room.roomPct, 1) + '%' + (me ? ' · ticker ' + f2(usedPct, 2) + '% of ' + f2(planCap, 2) + '%' : '');
+    m.roomLine = 'Heat ' + f2(cc.heat.pct, 1) + '% of ' + RP.comp.heatCapPct + '% · room ' + f2(m.room.roomPct, 1) + '%' + (me ? ' · ticker ' + f2(usedPct, 2) + '% of ' + f2(capTotalPct, 2) + '%' : '');
     var miss = []; if (!thesis) miss.push('thesis done');
-    m.addon = { locked: miss.length > 0, missing: miss, totalRoomPct: Math.max(0, (RP.comp.pilotPct + RP.comp.addonPct) - usedPct) };
+    m.addon = { locked: miss.length > 0, missing: miss, totalRoomPct: Math.max(0, capTotalPct - usedPct) };
     return finish(m, { heat: cc.heat });
   }
   /* idea-level helper for the stop form: estimated net-breakeven price, effect of confirming a new stop */

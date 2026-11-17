@@ -4,6 +4,8 @@ const ok = (c, m) => { n++; if (!c) { f++; console.log('FAIL', m); } };
 const eq = (a, b, m) => ok(a === b, m + ' got ' + JSON.stringify(a) + ' want ' + JSON.stringify(b));
 const near = (a, b, m, e = 1e-6) => ok(typeof a === 'number' && Math.abs(a - b) < e, m + ' got ' + a + ' want ' + b);
 const T = s => Date.parse(s + '+07:00'), NOW = T('2026-11-18T10:00:00');
+// RM1 fixture: fundflow ratios in the SMA 20/50 shape (state + inputs_asof, adjusted)
+const FFR = (eq, cr, asof) => { const it = (st, a, b) => ({ tf: 'D', sma: [20, 50], adj: true, state: st, up: st === 'green' ? true : st === 'red' ? false : null, days_in_state: 5, bar: asof, inputs_asof: { [a]: asof, [b]: asof }, sma20: 1, sma50: 1, ratio: 1 }); return { ACWI_BIL: it(eq, 'ACWI', 'BIL'), HYG_IEI: it(cr, 'HYG', 'IEI') }; };
 const iso = s => new Date(T(s)).toISOString();
 
 const tr = (o) => Object.assign({ port: 'core', bias: 'Long', mult: 1, cur: 'THB', status: 'open', date: '2026-11-02', qty: 100, entry: 100, sl: 95, tp: null }, o);
@@ -37,7 +39,7 @@ const cards = [
 const ideas = [{ id: 'iX', asset: 'XAUUSD', bias: 'Long', entry: 2000, sl: 1990, tp: 2020, status: 'active', accts: { main: { trade_id: 's1', lot: 0.1 } }, ln4: { placedAt: iso('2026-11-16T09:00:00') } }];
 const specs = { XAUUSD: { contract: 100, lotStep: 0.01, minLot: 0.01, cur: 'USD', sys: 'lot' } };
 const src = { now: NOW, accounts: [{ id: 'main', name: 'Main', ports: ['core', 'satB'] }, { id: 'fam', name: 'Family', ports: ['core'] }], books: { main, fam }, cards, ideas, specs,
-  ff: { as_of: '2026-11-17', ratios: { ACWI_BIL: { up: true, slow: { up: true } }, HYG_IEI: { up: false, slow: { up: false } } } }, portCur: { core: 'THB', satB: 'USD' }, homework: { AAPL: true, MSFT: true, NVDA: false } };
+  ff: { as_of: '2026-11-17', ratios: FFR('green', 'red', '2026-11-16') }, portCur: { core: 'THB', satB: 'USD' }, homework: { AAPL: true, MSFT: true, NVDA: false } };
 const before = JSON.stringify(src);
 const rp = A.build(src);
 eq(JSON.stringify(src), before, 'adapter never mutates its input');
@@ -75,8 +77,8 @@ ok(M.momentum.reservedIdeas >= 2, 'Momentum reservations counted: ' + M.momentum
 eq(M.compounder.legacyShapeCards.length, 1, 'one legacy-shape Compounder card'); ok(M.compounder.legacyShapeCards[0].why.includes('ACCELERATOR_LOTS') && M.compounder.legacyShapeCards[0].why.includes('TRANCHES_GT_2'), 'legacy reasons: accelerator + >2 tranches');
 ok(M.compounder.heatMoney > 0, 'legacy card lots count to heat at actual remaining risk'); near(M.compounder.heatPctWeekStart, M.compounder.heatMoney / 1000000 * 100, 'heat pct on week-start equity'); ok(M.compounder.heatPctCurrent != null, 'heat also shown vs current equity');
 ok(M.positions.find(p => p.sym === 'MSFT').legacyShape, 'position row flagged ⚑ legacy');
-near(M.compounder.regimeFactor, 0.75, 'regime one red = 75% from slow series, fresh'); eq(M.compounder.regimeFresh, true, 'regime fresh (as-of 1 day old)'); eq(rp.regime.signals.hyg, false, 'slow series used');
-eq(A.build(Object.assign({}, src, { ff: { as_of: '2026-11-10', ratios: src.ff.ratios } })).regime.fresh, false, 'as-of 8 days old = stale'); eq(A.build(Object.assign({}, src, { ff: {} })).regime.fresh, false, 'no fundflow = not fresh');
+near(M.compounder.regimeFactor, 0.8, 'regime one red = 80% (RM1 table 100/80/80/60)'); eq(M.compounder.regimeFresh, true, 'regime fresh (oldest input 1 day old)'); eq(rp.regime.signals.hyg, 'red', 'SMA 20/50 state used');
+eq(A.build(Object.assign({}, src, { ff: { as_of: '2026-11-17', ratios: FFR('green', 'red', '2026-11-10') } })).regime.fresh, false, 'as-of 8 days old = stale'); eq(A.build(Object.assign({}, src, { ff: {} })).regime.fresh, false, 'no fundflow = not fresh');
 
 // Satellite from history: ordered XAU in queue, BTC loser this week → Step 2; costs unknown
 eq(M.satellite.step, 2, 'Satellite Step 2 after one loss this week'); eq(M.satellite.queue.length, 1, 'queue has the ordered XAUUSD setup'); eq(M.satellite.queue[0].status, 'ordered', 'status ordered');
