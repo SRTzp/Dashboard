@@ -111,7 +111,7 @@ def run(pw, w, h):
         check(f"{tag} 1 Holding: needs-action first (add-on / stop below avg) before plain", col(page, "hold")[0] in ("ccST", "ccFU"))
         # ── 2c multiple entry levels ──
         check(f"{tag} 2c one card per plan; Planned multi-level card shows 'Entry x +2 lower'", cnt(page, '[data-bd-card="ccML"]') == 1 and "+2 lower" in txt(page, '[data-bd-card="ccML"] [data-bd-lower]') and "ccML" in col(page, "plan"), txt(page, '[data-bd-card="ccML"] .bd-r2'))
-        check(f"{tag} 2c any level filled → ✅ Holding: 'Avg x' + 'Entries 1/3 · next 480 waiting'", "ccMH" in col(page, "hold") and "Entries 1/3" in txt(page, '[data-bd-card="ccMH"] [data-bd-entries]') and "next 480" in txt(page, '[data-bd-card="ccMH"] [data-bd-entries]') and "Avg" in txt(page, '[data-bd-card="ccMH"] .bd-r2'), txt(page, '[data-bd-card="ccMH"] .bd-r3'))
+        check(f"{tag} 2c any level filled → ✅ Holding: 'Avg x' + 'Entries 1/3 · next 480 waiting'", "ccMH" in col(page, "hold") and "Entries 1/3" in txt(page, '[data-bd-card="ccMH"] [data-bd-entries]') and "next 480" in txt(page, '[data-bd-card="ccMH"] [data-bd-entries]') and "avg entry" in txt(page, '[data-bd-card="ccMH"] [data-pv-kv]'), txt(page, '[data-bd-card="ccMH"] .bd-r3'))
         js(page, "()=>bdOpen('ccMH')"); settle(page, 300)
         lv = js(page, "()=>[...document.querySelectorAll('[data-bd-lv]')].map(e=>e.dataset.bdLv+':'+e.dataset.bdLvst)")
         check(f"{tag} 2c drawer ENTRIES lists each level with its state (#1 filled, #2/#3 planned)", lv == ["1:filled", "2:planned", "3:planned"], lv)
@@ -133,7 +133,7 @@ def run(pw, w, h):
         # ── 14 family tag · no price ──
         plan(page)
         check(f"{tag} 14 Family tag only on Family-account plan", cnt(page, '[data-bd-card="ccFM"] [data-bd-fam]') == 1 and cnt(page, '[data-bd-card="ccPL"] [data-bd-fam]') == 0)
-        check(f"{tag} 14 symbol without a price → '—' to entry, no errors", "—" in txt(page, '[data-bd-card="ccNP"] [data-bd-pct]'), txt(page, '[data-bd-card="ccNP"] .bd-r3'))
+        check(f"{tag} 14 symbol without a price → 'no live price' (PV1: never a bare dash), no errors", "no live price" in txt(page, '[data-bd-card="ccNP"] [data-bd-pct]'), txt(page, '[data-bd-card="ccNP"] .bd-r3'))
         # ── 3 pills ──
         pill = lambda i: js(page, "(i)=>{ const e=document.querySelector('[data-bd-card=\"'+i+'\"] [data-bd-pill]'); return e ? e.dataset.bdPill + '|' + e.className + '|' + e.innerText : null; }", i)
         check(f"{tag} 3 Planned < 2% → green 'Place order ›'; far → plain 'Edit'", pill("ccPL").startswith("place|go p") and pill("ccFA").startswith("edit|go|"), [pill("ccPL"), pill("ccFA")])
@@ -191,9 +191,9 @@ def run(pw, w, h):
         js(page, "()=>{ for(let i=0;i<60;i++) bdLogAdd('ccFM','note','n'+i); }"); settle(page, 600)
         check(f"{tag} 6 log capped at 50 entries (oldest dropped)", len((card_db(page, "ccFM") or {}).get("log", [])) == 50 and logs(page, "ccFM")[-1] == "n59", len((card_db(page, "ccFM") or {}).get("log", [])))
         # Fix risk for an over-cap plan
-        stub(page, "window.__badRisk = true; const o = ln4CoreChecks; window.ln4CoreChecks = function(c){ return c.ticker==='TSLA' ? {k:'risk', why:'Risk 0.6% > 0.5%', btn:'Fix risk ›'} : o(c); };")
+        stub(page, "window.__badRisk = true; const o = ln4CoreChecks; window.ln4CoreChecks = function(c){ return c.ticker==='TSLA' ? {k:'risk', why:'Risk 0.6% > 0.5%', btn:'Fix size ›'} : o(c); };")
         js(page, "()=>render()"); settle(page, 400)
-        check(f"{tag} 3 plan that breaks a cap → amber 'Fix risk ›'", pill("ccFA").startswith("fix|go fx") or pill("ccFA").startswith("fix"), pill("ccFA"))
+        check(f"{tag} 3 plan that breaks a cap → amber 'Fix size ›' (PV1: names the fix)", pill("ccFA").startswith("fix|go fx") or pill("ccFA").startswith("fix"), pill("ccFA"))
         # ── 13 close trade → Journal with thesis + log ──
         js(page, "()=>{ const it = wlItemOf('MSFT'); }")
         js(page, "()=>glWrite(S=>{}) ")
@@ -230,7 +230,7 @@ def run(pw, w, h):
         # ── 9 Today Act ──
         tab(page, "today")
         R = js(page, "()=>[...document.querySelectorAll('[data-ln4-act] [data-ln4-row]')].map(e=>e.dataset.ln4Row+'|'+((e.querySelector('[data-ln4-btn]')||{}).innerText||''))")
-        check(f"{tag} 9 Act follows the board (Fix risk → Add-on → < 2% → check fill), max 5", len(R) <= 5 and R and R[0].endswith("Fix risk ›") and any("Add-on" in r for r in R), R)
+        check(f"{tag} 9 Act follows the board (Fix risk → Add-on → < 2% → check fill), max 5", len(R) <= 5 and R and R[0].endswith("Fix size ›") and any("Add-on" in r for r in R), R)
         check(f"{tag} 9 no 'Raise stop' pill anywhere on Today Act", all("Raise" not in r for r in R))
         mo = cnt(page, "[data-bd-actmore]")
         if mo:
@@ -450,7 +450,7 @@ def pb1b(pw, w, h):
         tab(page, "plan"); open_form(page, 1)
         ak = st(page)["a"]
         check(f"{tag} 2 Trend starts UNSELECTED: EMA50/Structure ✓✗ both off, size says 'Choose trend', no MSS question", cnt(page, "[data-pb2-tg].yes, [data-pb2-tg].no") == 0 and label(page) == "Choose trend" and mssq(page) == 0, [cnt(page, "[data-pb2-tg].yes"), label(page)])
-        check(f"{tag} 2 no Setup checkboxes · no Range option · no MSS price field · exactly Entry/SL/TP inputs", cnt(page, "#pb2Body input[type=checkbox]") == 0 and cnt(page, "#pb2Body input") == 3 and "Range" not in txt(page, "#pb2Body") and "MSS price" not in txt(page, "#pb2Body"), txt(page, "#pb2Body"))
+        check(f"{tag} 2 no Setup checkboxes · no Range option · no MSS price field · exactly Entry/SL/TP inputs", cnt(page, "#pb2Body input[type=checkbox]") == 0 and cnt(page, "#pb2Body input:not([data-pb2-in=last])") == 3 and "Range" not in txt(page, "#pb2Body") and "MSS price" not in txt(page, "#pb2Body"), txt(page, "#pb2Body"))
         check(f"{tag} 2 grey Setup reminder line present (one line of text)", "Setup in TradingView: In Zone · Trend Neutral · EMA50 = HVN · Pivot MMT" in txt(page, "[data-pb2-rem]"), txt(page, "[data-pb2-rem]"))
         check(f"{tag} 2 order: Buy|Sell · Main|Family → Entry SL TP → TREND → size → reminder → macro → Save draft · Save plan", js(page, "()=>{ const q=s=>{const e=document.querySelector(s); return e?e.getBoundingClientRect().top:-1}; const a=[q('[data-pb2-seg]'),q('[data-pb2-prices]'),q('[data-pb2-trend]'),q('[data-pb2-size]'),q('[data-pb2-rem]'),q('[data-pb2-mac]'),q('[data-pb2-draft]')]; return a.every((x,i)=>x>0 && (i==0||x>a[i-1])); }"))
         fld(page, "entry", 2642); fld(page, "sl", 2628); fld(page, "tp", 2684)
@@ -674,7 +674,7 @@ def pb1c(pw, w, h):
         tops = js(page, "()=>[...document.querySelectorAll('[data-bd-mc]')].map(e=>{const r=e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.height)]})")
         rowsT = {}
         for t_, hh in tops: rowsT.setdefault(t_, set()).add(hh)
-        check(f"{tag} Macro card heights equal per row", all(len(v) == 1 for v in rowsT.values()), tops)
+        check(f"{tag} Macro cards size independently (PV1: no stretch to the tallest card)", js(page, "()=>/start|flex-start/.test(getComputedStyle(document.querySelector('[data-bd-macro]')).alignItems)"), tops)   # PV1: was 'heights equal per row'; neighbours must keep their own height
         cols = js(page, "()=>{ const g=document.querySelector('[data-bd-macro]'); return getComputedStyle(g).gridTemplateColumns.split(' ').length; }")
         n = len(tiers)
         check(f"{tag} Macro grid columns = {'2 (iPhone)' if ph else 'min(cards,4) · no empty column'}", cols == (2 if ph else min(n, 4)) if not ph else cols == 2, [cols, n])
