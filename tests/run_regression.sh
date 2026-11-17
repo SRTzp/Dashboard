@@ -19,6 +19,7 @@ FAST=(
   "sync_ps1|python3 tools/sync_ps1.py --check"
   "sync_core_size|python3 tools/sync_core_size.py --check"
   "sync_pv1|python3 tools/sync_pv1.py --check"
+  "rrg_verify (app rrgCompute == pandas)|python3 tests/rrg_verify_test.py"
   "node risk_engine|node tests/risk_engine_test.js"
   "node re1_adapter|node tests/re1_adapter_test.js"
   "node re1c_live|node tests/re1c_live_test.js"
