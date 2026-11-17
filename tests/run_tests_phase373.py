@@ -140,7 +140,7 @@ def run(pw, w, h):
         # ── 3 pills ──
         pill = lambda i: js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); const p=bdPill(x); return p.k + '|go' + (p.cls ? ' ' + p.cls : '') + '|' + p.t; }", i)   # PV1b: the card shows Place / Add-on / Filled only; Edit lives in More
         check(f"{tag} 3 Planned < 2% → green 'Place order ›'; far → plain 'Edit'", pill("ccPL").startswith("place|go p") and pill("ccFA").startswith("edit|go|"), [pill("ccPL"), pill("ccFA")])
-        check(f"{tag} 3 Ordered → 'Filled ✓'; Holding add-on rule met → green 'Add-on ›'; below avg → 'Edit' (never 'Raise stop')", pill("ccOR").startswith("fill") and pill("ccST").startswith("addon|go p") and pill("ccFU").startswith("edit") and "Raise" not in txt(page, "[data-bd-cols]"), [pill("ccOR"), pill("ccST"), pill("ccFU")])
+        check(f"{tag} 3 Ordered → 'Filled ✓'; Holding (Starter add-on removed, TS1b) → 'Edit'; below avg → 'Edit' (never 'Raise stop')", pill("ccOR").startswith("fill") and pill("ccST").startswith("edit") and pill("ccFU").startswith("edit") and "Raise" not in txt(page, "[data-bd-cols]"), [pill("ccOR"), pill("ccST"), pill("ccFU")])
         js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); if(x) bdSetSeg(x.status); }", "ccPL"); settle(page, 150)
         page.locator('[data-bd-card="ccPL"] [data-bd-pill]').click(); settle(page, 300); page.locator('[data-pb2-yes]').click(); settle(page, 800)   # EF1: Place › opens the confirm sheet; one Confirm
         check(f"{tag} 3 Place order → card moves to 📌 Ordered + log entry", "ccPL" in col(page, "ord") and "ccPL" not in col(page, "plan") and any(t.startswith("Order placed") for t in logs(page, "ccPL")), [col(page, "ord"), logs(page, "ccPL")])
