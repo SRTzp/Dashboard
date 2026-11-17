@@ -4,6 +4,9 @@ Screenshots → tests/screenshots/pv1-*.png (env PV1_SHOTS = other folder)."""
 import os, sys, json
 from playwright.sync_api import sync_playwright
 from pv1_common import *
+import copy
+import lib_phase11 as P11
+import lib_phase100 as P100
 
 SHOTS = os.environ.get("PV1_SHOTS") or K.SHOTS
 os.makedirs(SHOTS, exist_ok=True)
@@ -63,11 +66,88 @@ def partA(pw, w, h):
         b.close()
 
 
+LONG_NOTE = ("PV1 SAMPLE full reason. " + "Fed is still in hiking mode so real yields and the dollar act directly on gold this week. " * 4).strip()
+
+
+def wi_seed(page, doc):
+    body = copy.deepcopy(doc)
+    if "BTC" in body["assets"]: body["assets"]["BTCUSD"] = body["assets"].pop("BTC")
+    page.evaluate("([w,b])=>{ window.firebase.__mockDb.__seedDoc(['users','testuid','weeklyImpact',w], b); wiStop(); wiStart(); }", [body["week"], body]); page.wait_for_timeout(700)
+
+
+def partB(pw, w, h):
+    tag = str(w); ph = w < 600
+    # ── with Weekly Impact + Playbook
+    b, page, ce, pe = launch(pw, w, h, doc_pv(), cards_pv())
+    try:
+        doc = P100.sample(); doc["assets"]["XAUUSD"]["note"] = LONG_NOTE; doc["assets"]["XAUUSD"]["carryover_th"] = "PV1 SAMPLE carry-over text"
+        wi_seed(page, doc)
+        P11.seed_pb(page, [P11.pbver(1, "2026-09-20T00:00:00.000Z", x="up", b="down", r="flat", xa={"confidence": "mid", "why": "PV1 SAMPLE quarter why", "change_if": "PV1 SAMPLE change if"})])
+        js(page, "()=>{ switchTab('flow'); satWeekPickWrite(wpWeekKey(), ['XAUUSD','BTCUSD']); ffRenderThemes(); bdFlowTopRender(); }"); page.wait_for_timeout(600)
+        cards = js(page, "()=>[...document.querySelectorAll('[data-bd-mc]')].map(e=>{const r=e.getBoundingClientRect(); const p=e.querySelector('.bd-av'); const cs=getComputedStyle(p); return {k:e.dataset.bdMc, h:Math.round(r.height), clamp:cs.webkitLineClamp, color:cs.color, det:e.querySelector('[data-bd-det]')?e.querySelector('[data-bd-det]').getBoundingClientRect().height:0, detTxt:e.querySelector('[data-bd-det]')?e.querySelector('[data-bd-det]').innerText:''}})")
+        check("[%s] B: cards have a real Details ▾ button, 44 px tap height, text clamped to 3 lines" % tag, cards and all(c["clamp"] == "3" and c["det"] >= 43.5 and "Details" in c["detTxt"] for c in cards), cards)
+        mut = js(page, "()=>getComputedStyle(document.querySelector('[data-bd-mc] .bd-av:not(.m)')).color === getComputedStyle(document.body).color || getComputedStyle(document.querySelector('[data-bd-mc] .bd-av:not(.m)')).color !== getComputedStyle(document.querySelector('.bd-hint')).color")
+        check("[%s] B: short text is normal text colour (not muted)" % tag, mut)
+        before = {c["k"]: c["h"] for c in cards}
+        first = cards[0]["k"] if cards else ""
+        for c in cards:
+            if c["k"] == "XAUUSD": first = "XAUUSD"
+        js(page, "(k)=>document.querySelector('[data-bd-det=\"'+k+'\"]').click()", first); page.wait_for_timeout(400)
+        n = js(page, "()=>document.querySelectorAll('[data-pv-panel]').length")
+        pt = txt(page, "[data-pv-panel]")
+        check("[%s] B: exactly one detail panel opens" % tag, n == 1, n)
+        check("[%s] B: panel has the FULL Weekly Impact note + carry-over" % tag, LONG_NOTE in pt and "PV1 SAMPLE carry-over text" in pt, pt[:400])
+        check("[%s] B: catalysts — time, title, forecast / previous, mechanism, scenarios" % tag, "SAMPLE Core PCE" in pt and "forecast 2.6%" in pt and "previous 2.7%" in pt and "เงินเฟ้อมีผลต่อ" in pt and js(page, "()=>document.querySelectorAll('[data-pv-panel] [data-pv-sc]').length") >= 3 and "Thu 19:30" in pt or "Thu" in pt, pt[:600])
+        check("[%s] B: Quarter view — bias, why, change-if, confidence" % tag, "PV1 SAMPLE quarter why" in pt and "PV1 SAMPLE change if" in pt and "confidence mid" in pt, pt[-500:])
+        check("[%s] B: sources + 'Weekly Impact as of' shown" % tag, "Sources:" in pt and "SAMPLE calendar" in pt and "Weekly Impact as of" in pt, pt[-300:])
+        check("[%s] B: 'Your note · this week' is a separate block" % tag, js(page, "()=>!!document.querySelector('[data-pv-panel] .pv-mine textarea[data-bd-note]')") and "your note · this week" in pt.lower())
+        after = js(page, "()=>Object.fromEntries([...document.querySelectorAll('[data-bd-mc]')].map(e=>[e.dataset.bdMc, Math.round(e.getBoundingClientRect().height)]))")
+        keep = {k: v for k, v in after.items() if k != first and not ph}
+        check("[%s] B: neighbour cards keep their height when one opens (no stretch)" % tag, all(abs(keep[k] - before[k]) <= 1 for k in keep), [before, after])
+        wd = js(page, "()=>{const p=document.querySelector('[data-pv-panel]').getBoundingClientRect(), g=document.querySelector('[data-bd-macro]').getBoundingClientRect(); return [Math.round(p.width), Math.round(g.width)]}")
+        check("[%s] B: panel is full width of the card row" % tag, abs(wd[0] - wd[1]) <= 2, wd)
+        # opening another closes the first
+        other = next((c["k"] for c in cards if c["k"] != first), None)
+        if other:
+            js(page, "(k)=>document.querySelector('[data-bd-det=\"'+k+'\"]').click()", other); page.wait_for_timeout(300)
+            check("[%s] B: opening another asset closes the first (one panel)" % tag, js(page, "()=>document.querySelectorAll('[data-pv-panel]').length") == 1 and js(page, "(k)=>!!document.querySelector('[data-pv-panel][data-bd-panel=\"'+k+'\"]')", other))
+            js(page, "(k)=>document.querySelector('[data-bd-det=\"'+k+'\"]').click()", first); page.wait_for_timeout(300)
+        # note still saves
+        page.fill('[data-bd-note="%s"]' % first, "PV1 note SAMPLE"); page.locator('[data-bd-note="%s"]' % first).blur(); page.wait_for_timeout(600)
+        saved = js(page, "(k)=>((satwWeek(wpWeekKey(), k)||{}).opinion_txt)||''", first)
+        check("[%s] B: note still saves to the same store" % tag, saved == "PV1 note SAMPLE", saved)
+        check("[%s] B: ★ focus button still works" % tag, js(page, "()=>!!document.querySelector('[data-bd-focus]')"))
+        check("[%s] B: no horizontal overflow (panel open)" % tag, no_overflow(page))
+        if w in (1440, 390):
+            js(page, "(k)=>document.querySelector('[data-pv-panel]').scrollIntoView({block:'center'})", first); page.wait_for_timeout(200); shot(page, "flow-open-%d" % w)
+        js(page, "(k)=>document.querySelector('[data-pv-close]').click()", first); page.wait_for_timeout(300)
+        check("[%s] B: Close ▴ closes the panel" % tag, js(page, "()=>document.querySelectorAll('[data-pv-panel]').length") == 0)
+        check("[%s] B: no console / page errors" % tag, not ce and not pe, ce + pe)
+    finally:
+        b.close()
+    # ── no Playbook + no Weekly Impact
+    b, page, ce, pe = launch(pw, w, h, doc_pv(), cards_pv())
+    try:
+        wi_seed(page, P100.sample())
+        js(page, "()=>{ switchTab('flow'); satWeekPickWrite(wpWeekKey(), ['XAUUSD']); ffRenderThemes(); bdFlowTopRender(); bdCardTog('XAUUSD'); }"); page.wait_for_timeout(500)
+        pt = txt(page, "[data-pv-panel]")
+        check("[%s] B: no Playbook → compact box 'No Playbook for XAU · Add ›'" % tag, js(page, "()=>!!document.querySelector('[data-pv-nopb] [data-pv-pbadd]')") and "No Playbook for" in pt, pt[-300:])
+        check("[%s] B: no-Playbook panel still shows Weekly Impact text and your note" % tag, "SAMPLE" in pt and "your note" in pt.lower())
+        check("[%s] B: no overflow (no Playbook)" % tag, no_overflow(page))
+        js(page, "()=>{ wiStop(); wiDocs = {}; bdFlowTopRender(); bdCardTog('XAUUSD'); }"); page.wait_for_timeout(300)
+        t2 = txt(page, "[data-bd-macro]")
+        check("[%s] B: no Weekly Impact → existing empty text on the card" % tag, "No Weekly Impact yet" in t2, t2[:200])
+        check("[%s] B: no console / page errors (empty states)" % tag, not ce and not pe, ce + pe)
+    finally:
+        b.close()
+
+
 if __name__ == "__main__":
     only = os.environ.get("PV1_PARTS", "ABC").split(",") if False else list(os.environ.get("PV1_PARTS", "ABC"))
     with sync_playwright() as pw:
         for w, h in SIZES:
             if "A" in only: partA(pw, w, h)
+            if "B" in only: partB(pw, w, h)
     bad = [r for r in results if not r[1]]
     print("%d checks pass · %d fail" % (len(results) - len(bad), len(bad)))
     sys.exit(1 if bad else 0)

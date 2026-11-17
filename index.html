@@ -3993,7 +3993,11 @@ button.bd-read{cursor:pointer}
 .bd-an{display:flex;align-items:center;gap:6px;min-width:0}.bd-an>b{font-size:15px;white-space:nowrap}.bd-an .sp{flex:1}
 .bd-bias{font:700 11.5px var(--sans);border-radius:6px;padding:1px 7px;white-space:nowrap}.bd-bias.bull{background:var(--teal-dim);color:var(--teal)}.bd-bias.bear{background:var(--red-dim);color:var(--red)}.bd-bias.neu,.bd-bias.none{background:var(--surface2);color:var(--muted)}
 .bd-star{border:0;background:none;color:var(--faint);font-size:18px;line-height:1;cursor:pointer;min-width:32px;min-height:32px;padding:0;margin:-6px -6px -6px 0}.bd-star.on{color:var(--amber)}.bd-star[disabled]{cursor:default;opacity:.6}
-.bd-av{margin:8px 0;font-size:12.5px;line-height:1.5;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:calc(2 * 1.5em)}
+.bd-av{margin:8px 0;font-size:13px;line-height:1.5;color:var(--text);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.bd-av.m{color:var(--muted)}.bd-g4[data-bd-macro]{align-items:start}.bd-ac.open{border-color:var(--text)}.bd-det{margin-left:auto;border:0;background:none;color:var(--blue);font:700 12.5px var(--sans);cursor:pointer;min-height:44px;min-width:44px;padding:0 4px;white-space:nowrap}.bd-det:focus-visible{outline:2px solid var(--blue);border-radius:6px}
+.pv-panel{grid-column:1/-1;background:var(--surface);border:1px solid var(--text);border-radius:var(--r);padding:14px 16px;min-width:0}.pv-ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pv-ph>b{font-size:15px}.pv-ph .sp{flex:1}.pv-close{border:1px solid var(--border);background:var(--surface);border-radius:999px;font:700 13px var(--sans);color:var(--text);padding:0 14px;min-height:44px;cursor:pointer}
+.pv-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;margin-top:10px}.pv-grid>div{min-width:0}.pv-panel h4{font:700 11px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}.pv-panel p{margin:0 0 10px;font-size:13.5px;line-height:1.5}.pv-panel .m{color:var(--muted)}.pv-panel .a{color:var(--amber);font-weight:700}
+.pv-ev{display:flex;gap:8px;font-size:13px;padding:6px 0;border-top:1px solid var(--hair)}.pv-ev:first-of-type{border-top:0}.pv-ev time{font:12px var(--mono);color:var(--muted);width:78px;flex:none}.pv-ev>div{min-width:0;overflow-wrap:anywhere}.pv-sc{margin-top:3px}.pv-box{background:var(--surface2);border-radius:10px;padding:9px 11px;margin-bottom:12px;font-size:13px;line-height:1.5;overflow-wrap:anywhere}.pv-box>div+div{margin-top:4px}.pv-src{font-size:12px;color:var(--muted);margin-top:10px;overflow-wrap:anywhere}.pv-mine{border-top:1px dashed var(--border);padding-top:10px}.pv-mine textarea{width:100%;box-sizing:border-box;font:inherit;font-size:13px;border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:var(--surface);color:var(--text);resize:vertical;min-height:80px}
+@media(max-width:900px){.pv-grid{grid-template-columns:1fr}}
 .bd-ai{display:flex;align-items:center;gap:6px;margin-top:auto;padding-top:8px;border-top:1px solid var(--hair);font-size:12px;color:var(--muted);min-width:0}
 
 .bd-lv{flex:none;font:800 10.5px var(--mono);border-radius:6px;padding:2px 6px;background:var(--surface2);color:var(--muted)}.bd-lv.HIGH{background:var(--red-dim);color:var(--red)}.bd-lv.MED{background:var(--amber-dim);color:var(--amber)}
@@ -4027,8 +4031,8 @@ button.bd-read{cursor:pointer}
 @media (max-width:999px){
   .bd-lf{display:none}.bd-ls{display:inline}
   .bd-rs>.bd-nb{display:inline-grid;align-self:center}.bd-rs{grid-template-columns:auto auto auto minmax(0,1fr)}
-  .bd-ai{display:none}
-  .bd-av{display:-webkit-box;margin:5px 0 0;font-size:11.5px;line-height:1.4;min-height:0;-webkit-line-clamp:2}
+  .bd-ai>.m{display:none}
+  .bd-av{display:-webkit-box;margin:5px 0 0;font-size:12.5px;line-height:1.4;min-height:0;-webkit-line-clamp:3}
   .bd-qt .qs{display:none}
 }
 /* PB1d — ⑤ ⑥ side by side · More rows in 2 independent columns */
@@ -30531,14 +30535,62 @@ function bdMacroItems(doc){
     return {doc, key:a.key, n, star:picks.includes(a.key), tier:t, bias:bdBias(a.key), mac:(function(){ try{ return satMacroOf(a.key, satwAtTime(wk)); }catch(x){ return {}; } })(), evs: doc ? wiMainEvents(a.key, doc) : []};
   });
 }
-function bdMcHtml(it, cur){
-  const e = bdE, k = e(it.key), open = bdMacOpen.has(it.key), mac = it.mac || {};
-  const star = `<button type="button" class="bd-star${it.star ? ' on' : ''}" data-bd-focus="${k}" aria-pressed="${it.star}" aria-label="${it.star ? 'Unfocus' : 'Focus'} ${k} this week"${cur ? '' : ' disabled'} onclick="event.stopPropagation();bdFocusToggle('${k}')">${it.star ? '★' : '☆'}</button>`;
+/* PV1 Part B — Flow asset card (short text, own height) + ONE full-width detail panel with everything already stored for the asset. Nothing is generated. */
+function pvEvTime(e){
+  try{
+    if(e.status === 'ongoing') return 'ongoing';
+    const ts = Calc.wiTs(e.scheduled_at);
+    if(e.time_status === 'confirmed' && ts != null) return bdEvWhen(e);
+    if(e.date_local){ const p = e.date_local.split('-'); return (+p[2]) + ' ' + BD_MON[+p[1] - 1]; }
+  }catch(x){}
+  return 'no time set';
+}
+function pvPbCell(key, mac){
+  try{ const pk = satPbKeyOf(key), ver = (typeof pbList !== 'undefined' ? pbList : []).find(v=>v && v.id === mac.versionId); return pk && ver && ver.assets ? (ver.assets[pk] || null) : null; }catch(x){ return null; }
+}
+function pvOpenPlaybook(){ try{ switchTab('flow'); pbOpen = true; bdQOpen = true; try{ localStorage.setItem('dash.pbOpen', '1'); }catch(e){} pbRender(); const h = document.getElementById('pbPanel'); if(h && h.scrollIntoView) h.scrollIntoView({block:'start'}); }catch(e){ console.warn('pv playbook:', e); } }
+function pvFlowPanelHtml(it, cur){
+  const e = bdE, k = e(it.key), doc = it.doc, en = doc ? wiEntry(it.key, doc) : null, mac = it.mac || {}, lab = bdAsShort(it.key);
   let note = ''; try{ note = ((satwWeek(bdMacroWkKey(), it.key) || {}).opinion_txt) || ''; }catch(x){}
+  const para = t=>String(t || '').split(/\n{2,}/).map(x=>`<p>${e(x)}</p>`).join('');
+  /* why it matters */
+  let why;
+  if(!doc) why = `<p class="m">No Weekly Impact yet</p>`;
+  else if(!en) why = `<p class="m">Not in this week's Weekly Impact</p>`;
+  else why = (en.note ? para(en.note) : '<p class="m">No note for this asset in this week\'s Weekly Impact</p>') + (en.carryover_th ? `<p data-pv-carry><b>Carry-over:</b> ${e(en.carryover_th)}</p>` : '');
+  /* catalysts */
+  let cat = '', srcIds = [];
+  if(en){
+    const evs = wiMainEvents(it.key, doc);
+    cat = evs.length ? evs.map(o=>{
+      const ev = o.e, ip = en.interp && en.interp[o.id] ? en.interp[o.id] : null, un = ev.unit;
+      const fp = [ev.forecast != null ? 'forecast ' + wiNum(ev.forecast, un) : '', ev.previous != null ? 'previous ' + wiNum(ev.previous, un) : '', ev.actual != null ? 'actual ' + wiNum(ev.actual, un) : ''].filter(Boolean).join(' · ');
+      [ev.src_schedule, ev.src_forecast, ev.src_previous, ev.src_actual].concat(Array.isArray(ev.source_refs) ? ev.source_refs : []).forEach(x=>{ if(x && srcIds.indexOf(x) < 0) srcIds.push(x); });
+      const sc = ip && Array.isArray(ip.scenarios_th) ? ip.scenarios_th.map(x=>`<div class="pv-sc" data-pv-sc="${e(x.key)}"><b>${e(wiScLabel(x))}</b> ${e(x.text_th)}</div>`).join('') : '';
+      return `<div class="pv-ev" data-pv-ev="${e(o.id)}"><time>${e(pvEvTime(ev))}</time><div><b>${e(ev.label_th || ev.title)}</b>${ev.label_th && ev.label_th !== ev.title ? ` <span class="m">${e(ev.title)}</span>` : ''}${fp ? `<div class="m">${e(fp)}</div>` : ''}${ip && ip.mechanism_th ? `<div>${e(ip.mechanism_th)}</div>` : ''}${sc}${ip && ip.watch_th ? `<div class="pv-sc"><b>Watch</b> ${e(ip.watch_th)}</div>` : ''}</div></div>`;
+    }).join('') : '<p class="m">No events linked to this asset this week</p>';
+  }else cat = '<p class="m">No events</p>';
+  /* quarter view (Playbook) */
+  let qv;
+  if(it.bias.k === 'none') qv = `<div class="pv-box" data-pv-nopb>No Playbook for ${e(lab)} · <button type="button" class="bd-lnk" data-pv-pbadd onclick="event.stopPropagation();pvOpenPlaybook()">Add ›</button></div>`;
+  else{
+    const cell = pvPbCell(it.key, mac), conf = cell && cell.confidence ? String(cell.confidence) : '', drv = (mac.drivers || []).map(d=>d.title || d.id).filter(Boolean);
+    qv = `<div class="pv-box" data-pv-pb><div><b>${e(it.bias.t)}</b>${mac.posture ? ' · ' + e(mac.posture) : ''}${mac.quarter ? ' · ' + e(mac.quarter) : ''}${conf ? ' · confidence ' + e(conf) : ''}${mac.stale ? ' · <span class="a">stale</span>' : ''}</div>${mac.why ? `<div>${e(mac.why)}</div>` : ''}${mac.change_if ? `<div><span class="m">Change if:</span> ${e(mac.change_if)}</div>` : ''}${drv.length ? `<div><span class="m">Drivers:</span> ${e(drv.join(' · '))}</div>` : ''}${(()=>{ try{ return mac.changedAt ? `<div class="m">since ${e(new Date(mac.changedAt).toISOString().slice(0, 10))}</div>` : ''; }catch(x){ return ''; } })()}</div>`;
+  }
+  /* sources + asof */
+  const srcs = doc ? srcIds.map(i=>(doc.sources || {})[i]).filter(Boolean) : [];
+  const srcH = srcs.length ? srcs.map(o=>o.url && /^https?:\/\//i.test(o.url) ? `<a href="${e(o.url)}" target="_blank" rel="noopener">${e(o.name)} ↗</a>` : e(o.name)).join(' · ') : (doc ? 'no sources listed' : '');
+  const asof = (()=>{ try{ const ts = doc && doc.asof ? Calc.wiTs(doc.asof) : null; if(ts == null) return ''; const d = Calc.wiIctDate(ts), p = d.split('-'); return 'Weekly Impact as of ' + BD_DOW[new Date(d + 'T00:00:00Z').getUTCDay()] + ' ' + (+p[2]) + ' ' + BD_MON[+p[1] - 1] + ' ' + Calc.wiIctHM(ts) + ' ICT'; }catch(x){ return ''; } })();
+  return `<div class="pv-panel" data-bd-panel="${k}" data-pv-panel>
+    <div class="pv-ph"><b>${e(lab)} · this week</b><span class="bd-lv ${it.tier || 'NA'}">${it.tier || '—'}</span><span class="bd-bias ${it.bias.k}">${e(it.bias.t)}</span><span class="sp"></span><button type="button" class="pv-close" data-pv-close onclick="bdCardTog('${k}')">Close ▴</button></div>
+    <div class="pv-grid"><div><h4>Why it matters this week</h4>${why}<h4>Catalysts</h4>${cat}<div class="pv-src" data-pv-src>${srcH ? 'Sources: ' + srcH : ''}${srcH && asof ? ' · ' : ''}${asof}</div></div>
+    <div><h4>Quarter view (Playbook)</h4>${qv}<div class="pv-mine" data-bd-ex="${k}"><h4>Your note · this week</h4><textarea id="bdn-${k}" data-bd-note="${k}" rows="4" maxlength="600" placeholder="This week's view, one paragraph"${cur ? '' : ' disabled'} onchange="bdNoteSave('${k}',this.value)">${e(note)}</textarea></div></div></div></div>`;
+}
+function bdMcHtml(it, cur){
+  const e = bdE, k = e(it.key), open = bdMacOpen.has(it.key);
+  const star = `<button type="button" class="bd-star${it.star ? ' on' : ''}" data-bd-focus="${k}" aria-pressed="${it.star}" aria-label="${it.star ? 'Unfocus' : 'Focus'} ${k} this week"${cur ? '' : ' disabled'} onclick="event.stopPropagation();bdFocusToggle('${k}')">${it.star ? '★' : '☆'}</button>`;
   let reason = ''; try{ const en = it.doc ? wiEntry(it.key, it.doc) : null; reason = String((en && en.note) || '').trim(); }catch(x){}   /* PB1d §2 — THIS WEEK's reason from Weekly Impact */
-  const qv = (it.bias.k !== 'none' ? it.bias.t : 'no Playbook') + (mac.why ? ' — ' + mac.why : '');
-  const ex = open ? `<div class="bd-ex" data-bd-ex="${k}" onclick="event.stopPropagation()"><div class="bd-chg"><b>Quarter view</b> ${e(qv)}</div>${mac.change_if ? `<div class="bd-chg"><b>Change if</b> ${e(mac.change_if)}</div>` : ''}<label class="bd-nl" for="bdn-${k}">Note · this week</label><textarea id="bdn-${k}" data-bd-note="${k}" rows="3" maxlength="600" placeholder="This week's view, one paragraph"${cur ? '' : ' disabled'} onchange="bdNoteSave('${k}',this.value)">${e(note)}</textarea></div>` : '';
-  return `<div class="bd-ac${open ? ' open' : ''}" data-bd-mc="${k}" data-bd-tier="${it.tier || 'NONE'}" role="button" tabindex="0" aria-expanded="${open}" onclick="bdCardTog('${k}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();bdCardTog('${k}')}"><div class="bd-an"><b>${e(bdAsShort(it.key))}</b><span class="bd-lv ${it.tier || 'NA'}">${it.tier || '—'}</span><span class="sp"></span>${star}</div><p class="bd-av${reason ? '' : ' m'}" data-bd-reason>${e(reason || (it.doc ? 'Not in this week\'s Weekly Impact' : 'No Weekly Impact yet'))}</p><div class="bd-ai"><span class="bd-bias ${it.bias.k}">${e(it.bias.t)}</span><span class="m">quarter bias</span></div>${ex}</div>`;
+  return `<div class="bd-ac${open ? ' open' : ''}" data-bd-mc="${k}" data-bd-tier="${it.tier || 'NONE'}" onclick="bdCardTog('${k}')"><div class="bd-an"><b>${e(bdAsShort(it.key))}</b><span class="bd-lv ${it.tier || 'NA'}">${it.tier || '—'}</span><span class="sp"></span>${star}</div><p class="bd-av${reason ? '' : ' m'}" data-bd-reason>${e(reason || (it.doc ? 'Not in this week\'s Weekly Impact' : 'No Weekly Impact yet'))}</p><div class="bd-ai"><span class="bd-bias ${it.bias.k}">${e(it.bias.t)}</span><span class="m">quarter bias</span><button type="button" class="bd-det" data-bd-det="${k}" aria-expanded="${open}" aria-controls="pvp-${k}" onclick="event.stopPropagation();bdCardTog('${k}')">${open ? 'Close ▴' : 'Details ▾'}</button></div></div>`;
 }
 function bdMacroSecHtml(){
   const e = bdE, cur = bdMacroWk === 0, doc = bdWkDoc(), items = bdMacroItems(doc);
@@ -30551,10 +30603,12 @@ function bdMacroSecHtml(){
   }
   const cols = Math.max(1, Math.min(BD_MAC_MAX, vis.length));
   const more = hid > 0 ? `<button type="button" class="bd-more2" data-bd-macmore onclick="bdMacMoreSet(true)">+${hid} more ›</button>` : (bdMacMore && sorted.length > BD_MAC_MAX ? `<button type="button" class="bd-more2" data-bd-macmore onclick="bdMacMoreSet(false)">Show less ‹</button>` : '');
-  const body = vis.length ? `<div class="bd-g bd-g4" data-bd-macro data-bd-cols="${cols}" style="--bdc:${cols}">${vis.map(i=>bdMcHtml(i, cur)).join('')}${more}</div>` : `<div class="panel bd-empty" data-bd-macro>No assets yet${cur ? ' · <button type="button" class="bd-lnk" data-bd-addasset onclick="waSheetOpen()">＋ Asset</button>' : ''}</div>`;
+  const cards = vis.map(i=>bdMcHtml(i, cur)); let selIdx = vis.findIndex(i=>bdMacOpen.has(i.key));   /* PV1 — one panel · desktop: under the row of the selected card · phone: directly under it */
+  if(selIdx >= 0){ const phone = (()=>{ try{ return window.matchMedia('(max-width:560px)').matches; }catch(x){ return false; } })(), per = phone ? 1 : Math.max(1, cols), at = phone ? selIdx : Math.min(vis.length - 1, (Math.floor(selIdx / per) + 1) * per - 1); cards.splice(at + 1, 0, pvFlowPanelHtml(vis[selIdx], cur)); }
+  const body = vis.length ? `<div class="bd-g bd-g4" data-bd-macro data-bd-cols="${cols}" style="--bdc:${cols}">${cards.join('')}${more}</div>` : `<div class="panel bd-empty" data-bd-macro>No assets yet${cur ? ' · <button type="button" class="bd-lnk" data-bd-addasset onclick="waSheetOpen()">＋ Asset</button>' : ''}</div>`;
   return `<div class="bd-sh">${bdNb(2)}<b><span class="bd-lf">Which asset moves this week · why</span><span class="bd-ls">Moves this week</span></b><small class="bd-hint">sorted by impact · tap for quarter view</small><span class="sp"></span>${cur && vis.length ? `<button type="button" class="bd-lnk" data-bd-addasset onclick="waSheetOpen()">＋ Asset</button>` : ''}<select class="bd-wk" data-bd-wk aria-label="Week" onchange="bdMacroWkSet(this.value)">${wks}</select></div>${body}`;
 }
-function bdCardTog(k){ if(bdMacOpen.has(k)) bdMacOpen.delete(k); else bdMacOpen.add(k); bdFlowTopRender(); try{ const c = document.querySelector('[data-bd-mc="' + k + '"]'); if(c) c.focus(); }catch(x){} }
+function bdCardTog(k){ const was = bdMacOpen.has(k); bdMacOpen.clear(); if(!was) bdMacOpen.add(k); bdFlowTopRender(); try{ const c = document.querySelector('[data-bd-det="' + k + '"]'); if(c) c.focus(); }catch(x){} }   /* PV1 — one open panel at a time */
 function bdMacMoreSet(v){ bdMacMore = !!v; bdFlowTopRender(); }
 function bdNoteSave(k, v){ try{ satwSetOpinion(k, v); }catch(x){ console.warn('bd note:', x); } setTimeout(()=>{ try{ bdFlowTopRender(); }catch(x){} }, 0); }
 function bdEventsHtml(){

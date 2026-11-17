@@ -674,7 +674,7 @@ def pb1c(pw, w, h):
         tops = js(page, "()=>[...document.querySelectorAll('[data-bd-mc]')].map(e=>{const r=e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.height)]})")
         rowsT = {}
         for t_, hh in tops: rowsT.setdefault(t_, set()).add(hh)
-        check(f"{tag} Macro card heights equal per row", all(len(v) == 1 for v in rowsT.values()), tops)
+        check(f"{tag} Macro cards size independently (PV1: no stretch to the tallest card)", js(page, "()=>/start|flex-start/.test(getComputedStyle(document.querySelector('[data-bd-macro]')).alignItems)"), tops)   # PV1: was 'heights equal per row'; neighbours must keep their own height
         cols = js(page, "()=>{ const g=document.querySelector('[data-bd-macro]'); return getComputedStyle(g).gridTemplateColumns.split(' ').length; }")
         n = len(tiers)
         check(f"{tag} Macro grid columns = {'2 (iPhone)' if ph else 'min(cards,4) · no empty column'}", cols == (2 if ph else min(n, 4)) if not ph else cols == 2, [cols, n])

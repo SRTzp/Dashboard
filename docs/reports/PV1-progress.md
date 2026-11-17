@@ -34,3 +34,9 @@ Honest numbers for this holding (what posView must return): heldQty 11 · planne
 - Drawer: new POSITION block (same posView). Satellite optional "Last price" (form + drawer), stored `lastPx {v, at}`, display only (test proves pb2Calc unchanged), amber "old price" after 24 h.
 - Tests: `node tests/pv1_posview_test.js` (38 pass) · `tests/run_tests_pv1.py` part A (48 pass at 1440/1280/390).
 - Baseline (base commit, full run): 34/41 ok, failing = run_tests_phase122, 365, 366, 367, 373, cg1, ht1 (saved list). Note: the baseline run overlapped my first edits (marker block only).
+
+## Part B — done (commit 2)
+- Flow "Which asset moves this week · why": cards size independently (`align-items:start`), short text in normal text colour, 3 lines max (also on phone), real `Details ▾` / `Close ▴` button (44 px). One full-width panel (`data-pv-panel`) under the card's row (phone: directly under the opened card); one open at a time.
+- Panel (stored data only): full Weekly Impact note + `carryover_th`; every `event_refs` event with time (ICT / date / ongoing), title, forecast / previous / actual, mechanism, scenarios, watch; Quarter view (bias, posture, quarter, confidence, why, change-if, drivers, since); sources + "Weekly Impact as of … ICT"; separate "Your note · this week" (same textarea/save). No Playbook → "No Playbook for X · Add ›" (opens the Playbook panel). No Weekly Impact → existing empty text.
+- `tests/run_tests_phase373.py`: the check "Macro card heights equal per row" contradicted the brief (no stretch) → replaced by "cards size independently".
+- Tests: run_tests_pv1 parts A+B = 111 pass at 1440/1280/390. Screenshots pv1-flow-open-1440/390.
