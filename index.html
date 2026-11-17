@@ -4739,7 +4739,7 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
   </div></details>
   <details class="setsec" id="newsSetSec"><summary class="divlbl">Key news days (Sat)</summary>
   <div class="secbody">
-    <div class="hint" style="margin:0 0 10px">CPI / NFP / FOMC — enter by hand once a quarter (dates on the Thai calendar) · CPI / NFP: no new Sat trades from 1 h before the release until the 30-minute bar after it closes · all types: pre-news checklist on the Today tab · times follow US daylight saving, editable · add/edit/delete save immediately</div>
+    <div class="hint" style="margin:0 0 10px">CPI / NFP / FOMC — enter by hand once a quarter (dates on the Thai calendar) · CPI / NFP: from 1 h before the release until the 30-minute bar after it closes a Sat plan stays placeable at a reduced size (below) · all types: pre-news checklist on the Today tab · times follow US daylight saving, editable · add/edit/delete save immediately</div>
     <div id="newsSet"></div>
   </div></details>
   <details class="setsec" id="ideaSetSec"><summary class="divlbl">Ideas — groups moving without an idea</summary>
@@ -9244,7 +9244,16 @@ function newsSetRender(){
       <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" data-news-new-time value="${escHtml(d.time)}" oninput="newsIn('time',this.value)" aria-label="เวลา">
       <button type="button" class="small" data-news-add onclick="newsAdd()">＋ เพิ่ม</button></div>`
     + (soon ? '' : '<div class="hint" data-news-warn style="color:var(--amber,#b7791f);margin-top:6px">ยังไม่ได้กรอกวันข่าวช่วง 2 สัปดาห์ข้างหน้า</div>')
+    + `<div class="newsRow" data-news-size><span class="nk">News-window size</span><input type="text" inputmode="numeric" maxlength="3" data-news-size-in value="${newsSizePct()}" onchange="newsSizeSet(this.value)" aria-label="News-window size percent"><span class="hint" style="margin:0">% of normal (Satellite only · min() with Unclear Trend / MSS 65%)</span></div>`
     + `<div class="hint" data-news-msg style="margin-top:6px">${escHtml(d.msg||'')}</div>`;
+}
+function newsSizeSet(v){   /* EF1 §6 — policy setting newsSizePct (default 65) */
+  const n = Math.round(+v);
+  if(!(n >= 10 && n <= 100)){ newsDraft.msg = 'Enter 10–100'; return newsSetRender(); }
+  if(!tdCanWrite()){ newsDraft.msg = 'ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง'; return newsSetRender(); }
+  const B = getBook(tdHome()); B.settings.newsSizePct = n; saveBook(tdHome());
+  newsDraft.msg = 'Saved'; try{ todayRefresh(); }catch(e){} try{ if(activeTab === 'plan') bdRender(); }catch(e){}
+  newsSetRender();
 }
 
 /* ── รวบรวมการ์ด Core ที่ถืออยู่ทุกบัญชี (ใช้ coreView เดียวกับการ์ด) ── */
@@ -10756,7 +10765,7 @@ function td3PlanStatus(idea){
   if(rs==='closed') return null;
   if(rs==='plan' || rs==='open') return {k:'saved'};
   if(satV2Sleeve(idea)==='tactical' && satClsKey(idea)!=='clear') return {k:'pending', list:['Needs EMA50 + Structure verify']};   /* CS1 */
-  if(satV2Sleeve(idea)!=='tactical'){ const vf = ln4VerifyOf(idea); if(vf.unset) return {k:'pending', list:['needs Trend'], verify:true}; if(vf.ask && vf.mss === null && !vf.ok) return {k:'pending', list:['needs MSS answer'], verify:true}; }   /* PB1b — Setup ✓ boxes retired · Blocked (MSS = No) is complete → handled as the Blocked tag */
+  if(satV2Sleeve(idea)!=='tactical'){ const vf = ln4VerifyOf(idea); if(vf.unset) return {k:'incomplete', list:['EMA50 + Structure'], hint:'Needs EMA50 + Structure'}; if(vf.ask && vf.mss === null && !vf.ok) return {k:'incomplete', list:['MSS (Structure = No)'], hint:'Needs MSS (Structure = No)'}; }   /* EF1 — answered in the plan form, not a separate pending step */
   const miss = []; if(!pfHasTrend(idea)) miss.push('Trend'); if(!(+idea.entry > 0)) miss.push('Entry'); if(!(+idea.sl > 0)) miss.push('SL'); if(!(+idea.tp > 0)) miss.push('TP');
   if(miss.length) return {k:'incomplete', list:miss};
   let ready = 0; try{ ready = satV3ReadyCount(idea); }catch(e){}
@@ -11342,7 +11351,7 @@ function ln4SatRows(){
       else if(i.ln4 && i.ln4.placedAt){ row.state = 'working'; row.status = 'Order working'; row.btn = {t:'Filled ✓', fn:`ln4RecordFill('${i.id}')`}; }
       else {
         row.state = 'draft'; row.status = 'Draft';
-        if(r.k === 'pending') row.bad = r.st.verify ? {why:(r.st.list || [])[0] || 'needs Trend', btn:'Complete ›', k:'verify'} : /^Needs /.test((r.st.list || [])[0] || '') ? {why:(r.st.list || [])[0], btn:'Verify ›', k:'verify'} : {why:`Setup ${ln4SetupN(i)}/3`, btn:'Setup ›', k:'setup'};
+        if(r.k === 'pending') row.bad = r.st.verify ? {why:(r.st.list || [])[0] || 'Needs EMA50 + Structure', btn:'Complete ›', k:'verify'} : /^Needs /.test((r.st.list || [])[0] || '') ? {why:(r.st.list || [])[0], btn:'Verify ›', k:'verify'} : {why:`Setup ${ln4SetupN(i)}/3`, btn:'Setup ›', k:'setup'};
         else if(r.k === 'incomplete'){
           const L = r.st.list || [];
           if(L.includes('SL')) row.bad = {why:'No stop', btn:'Set stop ›', k:'stop'};
@@ -29762,7 +29771,7 @@ function bdTradeSnap(t, A){
 /* ── drawer ── */
 function bdChecksHtml(it){
   const i = it.ref, e = bdE, V = ln4VerifyOf(i), mk = v=>v === true ? '✓' : v === false ? '✗' : '—';
-  const res = V.unset ? 'needs Trend' : V.key === 'clear' ? '100%' : V.blocked ? (V.mssBlank ? 'needs MSS answer' : 'Blocked') : (V.tag ? V.tag + ' · 60%' : '60%');
+  const res = V.unset ? 'Needs EMA50 + Structure' : V.key === 'clear' ? '100%' : V.blocked ? (V.mssBlank ? 'Needs MSS (Structure = No)' : 'Blocked') : (V.tag ? V.tag + ' · 60%' : '60%');
   return `<div class="bd-sec"><div class="bd-k">CHECKS</div><button type="button" class="bd-read bd-chk" data-bd-checks onclick="bdEditLv('${e(it.id)}')"><div>Trend: EMA50 ${mk(V.ema)} · Structure ${mk(V.st)}${V.ask ? ' · MSS ' + (V.mss === true ? 'Yes' : V.mss === false ? 'No' : '—') : ''} → <b>${e(res)}</b></div>${V.warn ? `<div class="bd-m" data-bd-nearwarn>${e(SAT_NEAR_WARN)}</div>` : ''}</button></div>`;
 }
 function bdThesisHtml(it){
@@ -30553,9 +30562,9 @@ function pb2Model(i){
   if(wrong){ issues.push('wrong side'); first = first || (e > 0 && s > 0 && (sell ? s <= e : s >= e) ? 'SL' : 'TP'); }
   else if(e > 0 && s > 0 && t > 0){ const c = satRrCheck(i); if(c && c.rr != null && !c.ok){ issues.push(`R:R ${satRrFmt(c.rr)} < ${SAT_RR_MIN}`); first = first || 'TP'; } }
   const vf = ln4VerifyOf(i);
-  if(vf.unset){ miss.push('Trend'); first = first || 'Trend'; }
-  else if(vf.ask && vf.mss === null){ miss.push('MSS answer'); first = first || 'MSS'; }
-  const text = (miss.length ? 'needs ' + miss.join(' · ') : '') + (miss.length && issues.length ? ' · ' : '') + issues.join(' · ');
+  if(vf.unset){ miss.push('EMA50 + Structure'); first = first || 'Trend'; }
+  else if(vf.ask && vf.mss === null){ miss.push('MSS (Structure = No)'); first = first || 'MSS'; }
+  const text = (miss.length ? 'Needs ' + miss.join(' · ') : '') + (miss.length && issues.length ? ' · ' : '') + issues.join(' · ');
   return {need:miss, issues, text, complete:!text, blocked:!text && vf.blocked === true, vf, first, wrong};
 }
 /* size (lot · risk · label) through the existing sizing code, one account */
