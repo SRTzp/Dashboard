@@ -21,3 +21,9 @@ NOT in the backup: the NVDA **core card** (Firestore `users/<uid>/coreCards`: `l
 So the "18 planned @140", the `#29`, the ฿36.1k plan loss, and the 162.80 price/date are **unverified**. With FX 33.76 the brief's plan loss would be 1,068 × 33.76 = ฿36,056 (still ฿36.1k).
 Result: filled side confirmed; planned side and price cannot be reconciled from the backup. Part A code NOT started.
 Side finding: the backup/export does not include core cards (plans, lots, prices) — worth a separate look.
+
+## A0 — FINAL reconciliation (stored NVDA card pasted by user · card `ccmwdlk56w91` · trade `t1794539144994595`)
+Stored: lots = [11 @158 · 2026-11-13 · stop 110] · plan.ps1.rows = [11 @158, 18 @140] · qty 29 · div (FX) 33.76 · E 5,019,200 · stops [110] · riskMoney 36,055.68 · riskPct 0.71836 · px 162.85 (2026-11-13, auto) · mult f 0.75 (regime) · ln4.placedLv {0} (row 1 placed + filled; row 2 planned only).
+Reproduce the displayed Today row (`tw1SizeRisk` → plan.ps1): `#29` = ps1.qty (11+18 all planned rows) · ฿36.1k = riskMoney = (11×(158−110) + 18×(140−110)) × 33.76 = 1,068 × 33.76 = 36,055.68 ✓ · 0.72% = 36,055.68 / 5,019,200 = 0.7184% ✓.
+**Brief's reading confirmed**: the row shows the WHOLE PLAN (planned shares + loss at stop if both rows fill), not holdings. Only differences: FX is 33.76 (not 33.8), price is 162.85 (not 162.80).
+Honest numbers for this holding (what posView must return): heldQty 11 · plannedQty 29 · avgEntry 158 · cost 11×158×33.76 = ฿58,675 · value 11×162.85×33.76 = ฿60,477 (1.205% of 5,019,200) · uPnl +฿1,802 (+3.07%) · openRisk 11×48×33.76 = ฿17,825 (0.355%) · toStop 11×52.85×33.76 = ฿19,627 · plannedRisk ฿36,056 / 0.718% · R = 48.
