@@ -103,11 +103,9 @@ def sheet_tests(pw, w, h):
 
 
 def reduced_motion(pw):
-    b = pw.chromium.launch(); ctx = b.new_context(reduced_motion="reduce", viewport={"width": 1440, "height": 900}); page = ctx.new_page()
+    b, page, ce, pe = T.launch(pw, 1440, 900)   # TS1b: the standard launcher (firebase stub etc.); a bare goto() died on "firebase is not defined"
     try:
-        import pathlib
-        page.goto(pathlib.Path(base.INDEX_HTML).resolve().as_uri() if hasattr(base, "INDEX_HTML") else "file://" + os.path.abspath("../index.html"))
-        page.wait_for_timeout(500)
+        page.emulate_media(reduced_motion="reduce")
         css = page.evaluate("""()=>{ showGuideToast(['x']); const t=document.getElementById('cgToast'); const a=getComputedStyle(t).transform; t.classList.remove('show'); const b=getComputedStyle(t).transform; return [a,b,getComputedStyle(t).transitionProperty]; }""")
         check("reduced-motion: ไม่มี transform animation (fade เท่านั้น)", css[0] == css[1] and "translate" not in css[2], css)
     finally:

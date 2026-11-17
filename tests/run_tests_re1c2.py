@@ -244,7 +244,7 @@ def run_costs(pw, w, h):
     try:
         check("[%s] Costs switch is OFF by default (set once at this release)" % tag, js(page, "()=>re1CostsOn()===false && ln4Cfg().re1CostsReset===true && ln4Cfg().costsOn===false"))
         js(page, "()=>openSettings()"); page.wait_for_timeout(500)
-        check("[%s] Settings · Training has a Costs toggle next to Starter ¼, unchecked" % tag, js(page, "()=>{const l=document.querySelector('[data-re1-costs]'),t=document.querySelector('[data-re1-training]');return !!l&&!!t&&!document.getElementById('re1CostsChk').checked&&l.previousElementSibling===t}"))
+        check("[%s] Settings · Costs toggle present, unchecked (TS1b: the Training / Starter ¼ row is gone)" % tag, js(page, "()=>{const l=document.querySelector('[data-re1-costs]');return !!l&&!document.getElementById('re1CostsChk').checked&&!document.querySelector('[data-re1-training]')}"))
         check("[%s] OFF: Settings cost rows hidden" % tag, js(page, "()=>document.querySelectorAll('[data-re1-cost]').length")==0 and "Add costs" not in js(page, "()=>document.getElementById('ln4SetBox').innerText"))
         js(page, "()=>{ openClosePos('h1','main'); }"); page.wait_for_timeout(400)
         check("[%s] OFF: no per-trade cost override in the close form" % tag, js(page, "()=>!document.getElementById('cpFees') && !document.querySelector('[data-re1-closecosts]')"))

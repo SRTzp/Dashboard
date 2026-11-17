@@ -60,7 +60,7 @@ def todo(pw, w, h, syms=SYMS, label=""):
         q = lambda sel: js(page, "(s)=>document.querySelectorAll(s).length", sel)
         if w >= 900:
             vis = js(page, VIS); more = js(page, MORE)
-            if len(syms) <= 7:
+            if len(syms) <= 4:   # approved cap: 4 chips + "+N ›"
                 check(f"{tag} all {len(syms)} stock chips show, no +N", vis == syms and more == "", [vis, more])
             else:
                 import re

@@ -108,7 +108,7 @@ def ask_tests(pw, w, h):
         js(page, "()=>{ window.__cp=[]; Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{window.__cp.push(t);return Promise.resolve();}},configurable:true}); }")
         has = js(page, "()=>Object.fromEntries([...document.querySelectorAll('#ffThemes [data-rr]')].map(e=>[e.dataset.rr, !!e.querySelector('[data-sd-ask]')]))")
         check(f"{tag} §11 'Ask why ›' เฉพาะการ์ด Fresh (AAA=NEW, DDD=⚡) · CCC ไม่มี", has == {"AAA": True, "CCC": False, "DDD": True}, has)
-        txt = js(page, "()=>document.querySelector('#ffThemes [data-rr=AAA] [data-sd-sum]').innerText.replace(/\\s+/g,' ')")
+        txt = js(page, "()=>document.querySelector('#ffThemes [data-rr=AAA] [data-sd-sum]').textContent.replace(/\\s+/g,' ')")
         check(f"{tag} §11 ข้อความบรรทัด: 'Not recorded · Ask why ›' (ยังไม่มี driver)", "Not recorded · Ask why ›" in txt, txt)
         js(page, "()=>document.querySelector('#ffThemes [data-rr=AAA] [data-sd-ask]').click()"); settle(page, 300)
         cp = js(page, "()=>window.__cp")

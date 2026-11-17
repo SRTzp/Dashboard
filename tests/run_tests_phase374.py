@@ -446,7 +446,7 @@ def today_addon(pw, w, h):
         put_trades(page, [P13.T("tST", "core", "open", sym="NVDA", entry=171.4, sl=171.4, qty=10, cur="USD", date="2026-09-10")])
         refresh_today(page); refresh_today(page)
         t = todo(page, "wl1ao:")
-        check(f"{tag} 6 add-on condition met → ONE Today reminder '🛡️ NVDA add-on condition met · Review add-on ›' (no auto order)", len(t) == 1 and "add-on condition met" in t[0] and js(page, "()=>(coreCardsList.find(x=>x.id==='ccST').ln4||{}).placedAt") is None, t)
+        check(f"{tag} 6 Starter removed (TS1b): no 'add-on condition met' Today reminder", len(t) == 0, t)   # TS1b: the Starter add-on reminder is gone with the Starter feature (it was only reachable with Starter on)
         check(f"{tag} 6 holding with homework done → no homework task", not todo(page, "wl1hw:"), todo(page, "wl1hw:"))
         if w == 390:
             shot(page, "iphone-today-390")
