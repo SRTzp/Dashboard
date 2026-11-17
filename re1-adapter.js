@@ -641,8 +641,13 @@
     rs = rs.concat(dc.reasons); m.flags = m.flags.concat(dc.flags, cond.flags); m.reentry = dc.reentry === true; m.reentryNeedsConfirm = dc.reasons.indexOf('SAT_REENTRY_COND') >= 0;
     var todayN = others.filter(function (a) { return a.product === f.product && R.bkk.dayKey(a.startAt) === R.bkk.dayKey(L.now) && a.status !== 'cancelled'; }).length;
     var cf = cond.factor == null ? 0 : cond.factor, base = RP.sat.stepRpt[st.stepIndex], ef = L.eF;
+    /* EF1 — news window: size cut = min(condition factor, news factor), never multiplied */
+    var nf = (f.newsPct > 0 && f.newsPct < 100) ? f.newsPct / 100 : null, newsCut = false;
+    if (nf != null && cf > 0 && nf < cf) { cf = nf; newsCut = true; } else if (nf != null && cf > 0 && nf === cf) { newsCut = true; }
+    m.newsCut = newsCut; if (newsCut) m.chip = { t: 'News ' + Math.round(cf * 100) + '%', c: 'a' };
     m.factors = ['STEP_' + st.step]; var parts = ['Step ' + st.step + ' · ' + f2(base, 2) + '%'];
-    if (cond.status === 'reduced') { parts.push('65%'); m.factors.push('CONDITION_65'); }
+    if (newsCut) { parts.push('news ' + Math.round(cf * 100) + '%'); m.factors.push('NEWS_' + Math.round(cf * 100)); }
+    else if (cond.status === 'reduced') { parts.push('65%'); m.factors.push('CONDITION_65'); }
     if (ef < 1) { parts.push('emergency 50%'); m.factors.push('EMERGENCY_50'); }
     m.effPct = cond.factor == null ? null : base * cf * ef; m.formula = parts.join(' × ') + ' = ';
     var z = { reasons: [], qty: 0, actualRisk: 0, actualDistance: 0 };
