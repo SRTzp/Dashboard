@@ -132,7 +132,7 @@ def run(pw, w, h):
         js(page, "()=>document.querySelector('[data-re4-keep]').click()"); page.wait_for_timeout(300)
         check("[%s] Keep closes the sheet and changes nothing" % tag, js(page, "()=>!document.querySelector('[data-core-sheet=cxplan]')") and js(page, "()=>JSON.stringify(coreCardsList.map(c=>[c.id,c.status]))") == before)
         js(page, "()=>{ const id=document.querySelector('[data-bd-status=plan]').dataset.bdId||''; }")
-        js(page, "()=>document.querySelector('[data-bd-status=plan]').click()"); page.wait_for_timeout(400)
+        js(page, "()=>bdOpen(document.querySelector('[data-bd-status=plan]').dataset.bdCard)"); page.wait_for_timeout(400)   # PV1b: tapping the card toggles More; the drawer opens from Edit
         dr = js(page, "()=>{const b=document.querySelector('#bdDrawer [data-re4-cancel]');return b?b.innerText.replace(/\\s+/g,' ').trim():null}")
         check("[%s] drawer foot keeps the words 'Cancel plan ›'" % tag, dr == "Cancel plan ›", dr)
         js(page, "()=>{ try{ bdClose(); }catch(e){} }"); page.wait_for_timeout(200)

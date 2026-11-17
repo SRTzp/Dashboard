@@ -38,7 +38,7 @@ def run_core(pw, w, h):
         n_plan = js(page, "()=>document.querySelectorAll('[data-bd-status=plan] [data-re4-cancel]').length")
         n_all = js(page, "()=>document.querySelectorAll('[data-bd-status=plan]').length")
         check("[%s] every Planned card has the quiet 'Cancel plan ›' action" % tag, n_plan == n_all and n_all >= 3, [n_plan, n_all])
-        check("[%s] the Planned card gains no extra row from the Cancel action (PV1: header · numbers · [reason] · footer · More)" % tag, js(page, "()=>[...document.querySelectorAll('[data-bd-status=plan]')].every(c=>c.querySelectorAll(':scope > div').length<=5 && c.querySelectorAll(':scope > .bd-r1 [data-re4-cancel]').length===1)"))
+        check("[%s] the Planned card gains no extra row from the Cancel action (PV1: header · numbers · [reason] · footer · More)" % tag, js(page, "()=>[...document.querySelectorAll('[data-bd-status=plan]')].every(c=>c.querySelectorAll(':scope > div').length<=5 && c.querySelectorAll(':scope > .pv-r1 [data-re4-cancel], :scope > .bd-r1 [data-re4-cancel]').length===1)"))
         check("[%s] no 'Cancel plan' on Ordered cards (they have Cancel order)" % tag, js(page, "()=>!document.querySelector('[data-bd-status=ord] [data-re4-cancel]')"))
         check("[%s] no overflow on the board" % tag, no_overflow(page))
         base = L_snapshot(page)

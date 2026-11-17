@@ -29450,7 +29450,7 @@ function pvCardHtml(it){
   if(hold){ try{ if(it.kind === 'core' && it.tag === 'COMP' && !ftHwDone(it.sym)) state = `<span class="bd-st a" data-pv-hw>50% · homework</span>`; }catch(x){} if(it.flags.addon) state += `<span class="bd-st g">add-on ready</span>`; }
   else if(it.status === 'plan') state = blk ? `<span class="pv-blk" data-pv-blocked data-bd-blockedtag>Blocked</span>` : re2ReadyBtn(it);
   const wn = sat && it.pb && !it.inc && !hold && it.pb.vf.warn ? `<span class="bd-st a" data-bd-nearwarn role="img" aria-label="nearest target" title="${bdE(SAT_NEAR_WARN)}">⚠️</span>` : '';
-  const tg = sat && it.pb && !it.inc && !hold && !blk && it.pb.vf.tag ? `<span class="bd-st a" data-bd-trendtag>${bdE(it.pb.vf.tag)}</span>` : '';
+  const tg = sat && it.pb && !it.inc && !hold && !(blk && blk.k === 'trend') && it.pb.vf.tag ? `<span class="bd-st a" data-bd-trendtag>${bdE(it.pb.vf.tag)}</span>` : '';
   const showPill = !blk && !p.dis && (p.k === 'place' || p.k === 'addon' || p.k === 'fill');
   const pill = showPill ? `<button type="button" class="go pv-go${p.cls ? ' ' + p.cls : ''}" data-bd-pill="${p.k}" onclick="event.stopPropagation();${p.fn}">${bdE(p.t)}</button>` : '';
   const x = it.status === 'plan' ? re4CancelBtn(it, true) : '';
@@ -29923,7 +29923,7 @@ function posView(it){
   }
   /* PV1b — turn the leg facts into chips + feed the display-only reward / banked inputs (no sizing / risk input changes) */
   const hold = it.status === 'hold', baseQ = hold ? (inp.fills || []).reduce((a, f)=>a + (+f.qty || 0), 0) : (inp.planned || []).reduce((a, f)=>a + (+f.qty || 0), 0);
-  const nEx = hold ? lg.exits.length : 0, rem = lg.T.slice(nEx), two = rem.length === 2 && lg.q1 > 0 && baseQ > 0;
+  const nEx = hold ? lg.exits.length : 0, rem = lg.T.slice(Math.min(nEx, Math.max(0, lg.T.length - 1))), two = rem.length === 2 && lg.q1 > 0 && baseQ > 0;
   const tq = two ? [Math.min(lg.q1, baseQ), baseQ - Math.min(lg.q1, baseQ)] : rem.map(()=>baseQ), tgs = rem.map((px, j)=>({px, qty:tq[j]})).filter(t=>t.qty > 0 || !(baseQ > 0));
   inp.targets = hold ? null : tgs.filter(t=>t.qty > 0); inp.exits = hold ? lg.exits : null;
   const pv = PosView.calc(inp); pv.cur = cur; pv.unit = unit; Object.assign(pv, extra);
