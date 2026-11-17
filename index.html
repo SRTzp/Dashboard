@@ -3697,7 +3697,7 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
 .re2-pc .rk3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.re2-pc .rk3>div{background:var(--surface2);border-radius:10px;padding:8px 10px;min-width:0}.re2-pc .rk3 small{display:block;color:var(--muted);font-size:.74rem}.re2-pc .rk3 b{display:block;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.re2-pc .rk3 span{display:block;font-size:.78rem;color:var(--muted);white-space:normal}   /* RE-D §1.2 — wraps to a second line instead of cutting 'regime 7…' */
 .re2-pc .ev{display:flex;gap:8px;align-items:center;padding:5px 0;min-width:0}.re2-pc .ev time{font:.78rem ui-monospace,Menlo,monospace;color:var(--muted);width:74px;flex:none}.re2-pc .ev b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.re2-pc .ev .mut{margin-left:auto;font-size:.78rem;white-space:nowrap;color:var(--muted)}
 .re2-act .p,.re2-pc .p{display:none}
-.ef-amber{color:var(--amber)}.ef-news{color:var(--amber);font-size:.82rem;font-weight:600;margin-top:4px}.pb2-more{margin-top:6px;font-size:.82rem}.pb2-more summary{cursor:pointer;color:var(--muted)}.bd-ready{margin-left:auto;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:999px;font:700 .82rem var(--sans);padding:4px 10px;cursor:pointer;white-space:nowrap}.bd-ready.on{background:#e6ecfb;color:#2d5bd1;border-color:#b9c8f2}
+.ef-amber{color:var(--amber)}.ef-news{color:var(--amber);font-size:.82rem;font-weight:600;margin-top:4px}.pb2-more{margin-top:6px;font-size:.82rem}.pb2-more summary{cursor:pointer;color:var(--muted)}.bd-ready{margin-left:auto;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:999px;font:700 .82rem var(--sans);padding:4px 10px;cursor:pointer;white-space:nowrap}.bd-ready.on{background:none;border:0;border-radius:0;padding:4px 0;color:var(--green);cursor:default}.re2-act .chip[data-re2-chip-st].rdy{background:none;border:0;padding:2px 0;color:var(--green)}.re2-more{font-size:.82rem;color:var(--muted);padding:6px 0;cursor:pointer;background:none;border:0;font:600 .82rem var(--sans);text-align:left}
 .bd-cx{background:none;border:0;color:var(--muted);font:600 .8rem var(--sans);padding:4px 2px;cursor:pointer;white-space:nowrap}.bd-cx:hover{color:var(--text)}.bd-df .bd-cx{margin-right:auto}
 .bd-cx.bd-cxx{position:relative;flex:none;width:28px;height:28px;min-width:0;min-height:0;box-sizing:border-box;padding:0;margin-left:auto;border:1px solid var(--border);border-radius:50%;display:inline-grid;place-items:center;font-size:.8rem;line-height:1;color:var(--muted)}.bd-cx.bd-cxx:hover{color:var(--ink);border-color:var(--ink)}
 @media (max-width:600px){.bd-cx.bd-cxx:after{content:"";position:absolute;inset:-8px}}
@@ -24759,7 +24759,6 @@ function satV3SaveSlot(ideaId, accId, offplanAcct){
 /* ปุ่มเดียว "บันทึก order ทุกบัญชีที่พร้อม (n)" — เฉพาะบัญชี ✅ (ready) เท่านั้น */
 function satV3SaveReadyAccounts(ideaId, confirmed){
   const idea = sat7dIdea(ideaId); if(!idea) return;
-  if(!confirmed && idea.v2 && ln4VerifyOf(idea).counter){ ln4CounterAsk(ideaId); return; }   /* LN4 §4d — counter trend: confirm at Save */
   if(idea.v2) satV3IdeaWrite(ideaId, {counter_trend: ln4VerifyOf(idea).counter === true});
   sat7dAccts().forEach(a=>{
     const s = (idea.accts||{})[a.id] || {}; if(s.trade_id || s.skip) return;
@@ -29728,9 +29727,10 @@ function bdComplete(id){
 }
 function bdCancelOrder(id){ const it = bdById(id); if(it && it.firstPlaced != null) re4Open(id, 'order', it.firstPlaced); }   /* RE-D §6 — reason first (same sheet as Cancel plan) */
 function bdCancelLv(id, i){ const it = bdById(id); if(it && it.placed && it.placed.has(i)) re4Open(id, 'order', i); }
-function bdPlaceLv(id, i){
+function bdPlaceLv(id, i, ok){
   const it = bdById(id); if(!it) return;
-  if(it.kind === 'core' && !wl1PlaceGate(id, i)) return;   /* WL1 — homework cap */
+  if(it.kind === 'core' && !ok && !wl1PlaceGate(id, i)) return;   /* WL1 — homework cap (re-checked at Confirm) */
+  if(it.kind === 'core' && !ok){ efCorePlaceOpen(id, i); return; }   /* EF1b — a later entry level opens the same confirm sheet */
   const lv = it.levels && it.levels[i];
   bdWriteWithLog(it, {ln4:{placedLv:{[i]:new Date().toISOString()}}}, 'order', '#' + (i + 1) + ' order placed ' + (lv && lv.px > 0 ? td3Num(lv.px) : '—'));
   try{ ln4Valid(id, it.sym, 'working'); ln4Toast(`${it.sym}: Order working ✓`); }catch(e){}
@@ -30230,7 +30230,7 @@ function re2Model(acct){
     if(!ready && !near) return;
     const p = bdPill(it, true), blocked = !!p.dis;
     const why = blocked ? (p.title || 'Blocked') : pastKept ? '+' + d.toFixed(1) + '% past entry' : ready ? (d != null ? (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '% · ' : '') + 'ready' + (it.kind === 'sat' && L ? ' · step ' + L.sat.step.step : '') : (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '%';
-    enter.push({it, o:{g:'enter', chip: ready ? 'Ready' : 'Near', cc: ready ? 'b' : '', k:p.k, btn:p.t, fn:p.fn, dis:blocked, title:p.title, why, warn:blocked || pastKept, lv:tw1Lv(it), d}});
+    enter.push({it, o:{g:'enter', chip: ready ? 'Ready' : 'Near', cc: ready ? 'b rdy' : '', k:p.k, btn:p.t, fn:p.fn, dis:blocked, title:p.title, why, warn:blocked || pastKept, lv:tw1Lv(it), d}});
   });
   by.ord.forEach(it=>{
     const age = re2Age(it, now), old = age != null && age > RE2_DAY, n = old ? Math.max(1, Math.floor(age / RE2_DAY)) : 0;
@@ -30254,9 +30254,22 @@ function re2Model(acct){
   });
   return {acct, L, enter, check, manage, nothing, tot:{plan:by.plan.length, ord:by.ord.length, hold:by.hold.length}};
 }
+let re2EnterAll = false;
+function re2EnterToggle(){ re2EnterAll = !re2EnterAll; try{ todayRefresh(true); }catch(e){} }
+/* EF1b — Enter shows the 3 Ready plans closest to entry; the rest sit behind "+N ›" (expands in place) */
+function re2EnterCap(rows){
+  const isR = r=>r.o && r.o.chip === 'Ready', rd = rows.filter(isR);
+  if(rd.length <= 3) return rows;
+  const key = r=>r.o.d == null ? 1e9 : Math.abs(r.o.d);
+  const keep = new Set(rd.slice().sort((a, b)=>key(a) - key(b)).slice(0, 3));
+  const n = rd.length - 3;
+  const out = re2EnterAll ? rows.slice() : rows.filter(r=>!isR(r) || keep.has(r));
+  out.push({more:true, n});
+  return out;
+}
 function re2GroupHtml(key, title, rows, total, seg, none){
   const e = td3E, lab = {plan:'planned', ord:'ordered', hold:'holding'}[seg];
-  return `<div class="col re2-col" data-re2-col="${key}"><div class="ch"><b>${title}</b><span class="mut" data-re2-n>${rows.length}</span><a href="#" data-re2-link onclick="event.preventDefault();bdSetSeg('${seg}');switchTab('plan')">${total} ${lab} ›</a></div>${rows.length ? rows.map(r=>re2Row(r.it, r.o)).join('') : `<div class="none">${none}</div>`}</div>`;
+  return `<div class="col re2-col" data-re2-col="${key}"><div class="ch"><b>${title}</b><span class="mut" data-re2-n>${rows.filter(r=>!r.more).length}</span><a href="#" data-re2-link onclick="event.preventDefault();bdSetSeg('${seg}');switchTab('plan')">${total} ${lab} ›</a></div>${rows.length ? rows.map(r=>r.more ? `<button type="button" class="re2-more" data-re2-more onclick="re2EnterToggle()">${re2EnterAll ? 'Show less ‹' : '+' + r.n + ' ›'}</button>` : re2Row(r.it, r.o)).join('') : `<div class="none">${none}</div>`}</div>`;
 }
 function re2RoomCard(acct){
   const R = re2Room(acct), S = re2State(acct); if(!R) return `<div class="card ln4-card re2-pc" data-re2-room><b>Risk room</b> <span class="mut">${td3E(S.t)} — confirm a snapshot in Settings</span></div>`;
@@ -30277,7 +30290,7 @@ function re2EventsCard(){
 }
 function re2BlockHtml(acct, label){
   const M = re2Model(acct), foot = M.nothing > 0 ? `<div class="none" data-re2-nothing>${M.nothing} holding${M.nothing === 1 ? ' needs' : 's need'} nothing</div>` : '';
-  const g1 = re2GroupHtml('enter', 'Enter', M.enter, M.tot.plan, 'plan', 'Nothing to enter'), g2 = re2GroupHtml('check', 'Check orders', M.check, M.tot.ord, 'ord', 'Nothing to check'),
+  const g1 = re2GroupHtml('enter', 'Enter', re2EnterCap(M.enter), M.tot.plan, 'plan', 'Nothing to enter'), g2 = re2GroupHtml('check', 'Check orders', M.check, M.tot.ord, 'ord', 'Nothing to check'),
     g3 = re2GroupHtml('manage', 'Manage', M.manage, M.tot.hold, 'hold', 'Nothing to manage').replace(/<\/div>$/, foot + '</div>');
   return `<div class="card ln4-card re2-act" data-ln4-act data-re2-act="${td3E(acct)}">${re2StripHtml(acct, label)}<div class="cols re2-cols">${g1}${g2}${g3}</div></div><div class="pair re2-pair">${re2RoomCard(acct)}${re2EventsCard()}</div>`;
 }
@@ -30734,7 +30747,6 @@ function pb2Save(draft){
   if(!pb2.id && re4Due(pb2.acct)) return;   /* RE-D §6 — Execution review due for the selected account */
   const i = pb2TmpIdea();
   if(!(i.entry > 0 || i.sl > 0 || i.tp > 0)){ pb2.err = 'Enter Entry · SL · TP first'; pb2Refresh(); return; }
-  if(!draft && ln4VerifyOf(i).counter && !pb2.cfm){ pb2CounterAsk(); return; }
   pb2SaveDo(draft);
 }
 function pb2CounterAsk(){
@@ -30802,10 +30814,10 @@ function efCarryAdopt(id){   /* a plan carried from last week is valid this week
   }catch(e){}
 }
 /* ── EF1 C · Momentum / Compounder Place › → the same confirm sheet (one Confirm) ── */
-function efCorePlaceOpen(id){
+function efCorePlaceOpen(id, lv){
   const it = bdById(id); if(!it || it.kind !== 'core') return;
   if(bdPopOpen()) bdPopClose();
-  pb2 = {step:'cplace', id, a:it.sym}; pb2Render();
+  pb2 = {step:'cplace', id, a:it.sym, lv:lv == null ? null : lv}; pb2Render();
 }
 function efCorePlaceHtml(){
   const it = bdById(pb2.id); if(!it){ return '<div class="bd-m">Plan not found</div>'; }
@@ -30814,13 +30826,14 @@ function efCorePlaceHtml(){
   const money = pv ? pvMoneyLine(it, pv) : '';
   const lim = g && g.model && g.model.limit && g.model.limit.text ? `<div class="bd-m" data-ef-limit>${e(g.model.limit.text)}</div>` : '';
   const f = g && g.model && g.model.formula ? g.model.formula : '';
-  return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order · ' + it.sym, false)}<div class="pb2-cf" data-pb2-summary><b>${e(it.sym)}</b> <span class="bd-m">${e(it.tag)} · Limit</span><div class="pv-legs" data-pv-legs>${legs}</div><div class="pv-r2" data-pv-money>${money}</div></div>${lim}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}</div></details><div class="bd-m pb2-note">Records only — place the order at your broker.</div></div>`;
+  return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order' + (pb2.lv != null ? ' #' + (pb2.lv + 1) : '') + ' · ' + it.sym, false)}<div class="pb2-cf" data-pb2-summary><b>${e(it.sym)}</b> <span class="bd-m">${e(it.tag)} · Limit${pb2.lv != null && it.levels && it.levels[pb2.lv] && it.levels[pb2.lv].px > 0 ? ' · #' + (pb2.lv + 1) + ' ' + e(td3Num(it.levels[pb2.lv].px)) : ''}</span><div class="pv-legs" data-pv-legs>${legs}</div><div class="pv-r2" data-pv-money>${money}</div></div>${lim}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}</div></details><div class="bd-m pb2-note">Records only — place the order at your broker.</div></div>`;
 }
 function efCorePlaceYes(){
   const s = pb2; if(!s || s.step !== 'cplace') return;
   const id = s.id, it = bdById(id); if(!it){ bdPopClose(); return; }
-  if(!wl1PlaceGate(id)) return;   /* the engine is checked again at Confirm */
+  if(!wl1PlaceGate(id, s.lv != null ? s.lv : undefined)) return;   /* the engine is checked again at Confirm */
   bdPopClose();
+  if(s.lv != null){ bdPlaceLv(id, s.lv, true); return; }
   const at = new Date().toISOString(), nm = it.sym;
   bdWriteWithLog(it, {ln4:{placedAt:at}}, 'order', 'Order placed · Entry ' + (it.entry > 0 ? td3Num(it.entry) : '—'));
   try{ ln4Valid(id, nm || '', 'working'); ln4Toast(`${nm || ''}: Order working ✓`); }catch(e){}
