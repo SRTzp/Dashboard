@@ -173,6 +173,21 @@ def run2(pw, w, h):
         check("[%s] T no overflow" % tag, no_overflow(page) and not ce and not pe, ce + pe)
     finally:
         b.close()
+    # Check orders row = card format + the still-valid prompt
+    c = core_planned(); c["ln4"] = {"placedAt": "2000-01-03T03:00:00.000Z", "placedLv": {"0": "2000-01-03T03:00:00.000Z"}}
+    b, page, ce, pe = launch(pw, w, h, doc_pv(), {"cP": c})
+    try:
+        js(page, "()=>{ window.ps1MinStopMsg=()=>''; window.ftHwDone=()=>true; window.wl1HwDone=()=>true; re1Cache={}; }"); page.wait_for_timeout(300)
+        seed_n(page, 0); page.wait_for_timeout(300)
+        import re as _re
+        row = js(page, "()=>{const r=document.querySelector('[data-re2-col=check] [data-re2-row]'); return r? r.innerText.replace(/\\s+/g,' ') : ''}")
+        line = txt(page, "[data-re2-col=check] [data-re2-cardline]")
+        check("[%s] T2 Check orders row text = card format 'Buy #q @ px · SL · Risk −$'" % tag, _re.search(r"Buy #[\d.]+ @ [\d,.]+ · SL [\d,.]+.* · Risk −[฿$]", line or "") is not None, line)
+        check("[%s] T2 Check orders row keeps the still-valid prompt" % tag, "still valid?" in (row or ""), row)
+        if w == 390: shot(page, "check-row-390")
+        check("[%s] T2 Check orders: no overflow / errors" % tag, no_overflow(page) and not ce and not pe, ce + pe)
+    finally:
+        b.close()
     # level sheet risk line
     c = copy.deepcopy(NVDA_CARD)
     b, page, ce, pe = launch(pw, w, h, doc_pv(), cards_pv())
