@@ -60,13 +60,18 @@
       }
     } else { ['cost', 'value', 'uPnl', 'uPnlPct', 'weightAcct', 'weightPool', 'toStop', 'openRisk', 'openRiskPct'].forEach(function (k) { why[k] = 'nothing filled yet'; }); }
 
-    /* whole-plan risk (stored figure wins; else computed from every planned row at the stop) */
-    o.plannedRisk = null; o.plannedRiskPct = null;
-    if (pos(+inp.plannedRiskMoney)) { o.plannedRisk = +inp.plannedRiskMoney; o.plannedRiskPct = num(+inp.plannedRiskPct) && inp.plannedRiskPct != null ? +inp.plannedRiskPct : (equity !== null ? o.plannedRisk / equity * 100 : null); }
-    else if (planned && planned.length && stop !== null && uv !== null) {
-      o.plannedRisk = sum(planned, function (r) { return r.qty * Math.max(0, dir * (r.px - stop)); }) * uv; o.plannedRiskPct = equity !== null ? o.plannedRisk / equity * 100 : null;
-      if (!(o.plannedRisk > 1e-9)) { o.plannedRisk = null; o.plannedRiskPct = null; why.plannedRisk = 'none · stop at or beyond entry'; }
-    } else why.plannedRisk = !planned || !planned.length ? 'not sized' : stop === null ? 'no stop' : 'no FX';
+    /* whole-plan risk — ONE source with Reward / R: the planned legs (rows × (entry − stop) × mult × FX). The stored figure is only the fallback when there are no rows (or no FX / stop to compute from); it is flagged when it differs from the legs. */
+    o.plannedRisk = null; o.plannedRiskPct = null; o.plannedRiskStored = null; o.plannedRiskDiff = false;
+    var storedRisk = pos(+inp.plannedRiskMoney) ? +inp.plannedRiskMoney : null;
+    if (planned && planned.length && stop !== null && uv !== null) {
+      var legRisk = sum(planned, function (r) { return r.qty * Math.max(0, dir * (r.px - stop)); }) * uv;
+      if (legRisk > 1e-9) {
+        o.plannedRisk = legRisk; o.plannedRiskPct = equity !== null ? legRisk / equity * 100 : null;
+        if (storedRisk !== null) { o.plannedRiskStored = storedRisk; o.plannedRiskDiff = Math.abs(storedRisk - legRisk) > Math.max(1, legRisk * 0.005); }
+      } else if (storedRisk === null) why.plannedRisk = 'none · stop at or beyond entry';
+    }
+    if (o.plannedRisk === null && storedRisk !== null) { o.plannedRisk = storedRisk; o.plannedRiskPct = num(+inp.plannedRiskPct) && inp.plannedRiskPct != null ? +inp.plannedRiskPct : (equity !== null ? storedRisk / equity * 100 : null); }
+    else if (o.plannedRisk === null && !why.plannedRisk) why.plannedRisk = !planned || !planned.length ? 'not sized' : stop === null ? 'no stop' : 'no FX';
 
     o.plannedValue = null;
     if (pos(+inp.plannedValueMoney)) o.plannedValue = +inp.plannedValueMoney;
@@ -77,6 +82,7 @@
     var e0 = fills.length ? fills[0].px : (planned && planned.length ? planned[0].px : null), s0 = pos(+inp.initialStop) ? +inp.initialStop : stop;
     o.rUnit = (e0 !== null && s0 !== null && dir * (e0 - s0) > 0) ? dir * (e0 - s0) : null; if (o.rUnit === null) why.rUnit = 'no initial stop';
     o.R = (o.rUnit !== null && price !== null && o.avgEntry !== null) ? dir * (price - o.avgEntry) / o.rUnit : null; if (o.R === null) why.R = o.rUnit === null ? why.rUnit : price === null ? 'no live price' : 'nothing filled yet';
+
     /* PV1b — display-only extras: initial stop · reward at the planned targets · banked on exits already taken (never feed sizing / risk / gates) */
     o.initialStop = pos(+inp.initialStop) ? +inp.initialStop : null;
     o.reward = null; o.rewardR = null; o.banked = null;

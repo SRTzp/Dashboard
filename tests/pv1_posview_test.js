@@ -13,7 +13,10 @@ t('nvda upnl', near(r.uPnl, 1801.1, 0.5) || near(r.uPnl, 11 * 4.85 * 33.76), r.u
 t('nvda openRisk', near(r.openRisk, 17825.28)); t('nvda openRisk%', near(r.openRiskPct, 0.3551, 0.001));
 t('nvda toStop', near(r.toStop, 19626.38)); t('nvda planned risk (computed) 36,055.68', near(r.plannedRisk, 36055.68), r.plannedRisk); t('nvda planned risk %', near(r.plannedRiskPct, 0.7184, 0.001));
 t('nvda R unit 48', r.rUnit === 48); t('nvda R 0.10', near(r.R, 4.85 / 48, 0.001));
-r = P.calc(Object.assign({}, nv, { plannedRiskMoney: 36055.68, plannedRiskPct: 0.7183551163532036 })); t('stored plan risk wins', r.plannedRisk === 36055.68 && r.plannedRiskPct === 0.7183551163532036);
+/* EF1b — ONE source: the legs win; the stored riskMoney is only the fallback when there are no rows, and it is flagged when it differs from the legs */
+r = P.calc(Object.assign({}, nv, { plannedRiskMoney: 1000, plannedRiskPct: 0.02 })); t('legs win over a different stored plan risk', near(r.plannedRisk, 36055.68) && near(r.plannedRiskPct, 0.7184, 0.001) && r.plannedRiskStored === 1000 && r.plannedRiskDiff === true, [r.plannedRisk, r.plannedRiskStored, r.plannedRiskDiff]);
+r = P.calc(Object.assign({}, nv, { plannedRiskMoney: 36055.68 })); t('stored equal to the legs: legs shown, not flagged', near(r.plannedRisk, 36055.68) && r.plannedRiskDiff === false);
+r = P.calc(Object.assign({}, nv, { planned: [], plannedRiskMoney: 36055.68, plannedRiskPct: 0.7183551163532036 })); t('no rows: stored riskMoney is the fallback (not flagged)', r.plannedRisk === 36055.68 && r.plannedRiskPct === 0.7183551163532036 && r.plannedRiskDiff === false, [r.plannedRisk, r.plannedRiskDiff]);
 t('nvda planned value 11×158+18×140 = 4,258 × 33.76', near(P.calc(nv).plannedValue, 4258 * 33.76), P.calc(nv).plannedValue);
 r = P.calc({ dir: 'long', fx: 1, planned: [{ qty: 2, px: 10 }] }); t('plan value no FX needed when fx=1', r.plannedValue === 20);
 r = P.calc({ dir: 'long', fx: null, planned: [{ qty: 2, px: 10 }] }); t('plan value: no FX → null + reason', r.plannedValue === null && r.why.plannedValue === 'no FX');
