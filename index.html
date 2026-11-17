@@ -29491,7 +29491,8 @@ function pvMoreRows(it, pv){
 }
 function pvLegChip(l, pv){
   const q = l.qty > 0 ? pvQtyTxt(l.qty, pv) : null;
-  return `<span class="pv-lg${l.done ? ' ok' : ''}" data-pv-leg="${l.out ? 'out' : 'in'}"${l.done ? ' data-pv-done="1"' : ''}>${l.side} ${td3Num(l.px)} ${q != null ? '<i>×</i>' + q : '· <em>not sized</em>'}</span>`;
+  /* PV1b follow-up — reads like an order ticket: "Buy #36 @ 180" / "Sell #0.05 @ 4,200" (qty bold, no unit word); unsized "Buy #— @ 30 · not sized" */
+  return `<span class="pv-lg${l.done ? ' ok' : ''}" data-pv-leg="${l.out ? 'out' : 'in'}"${l.done ? ' data-pv-done="1"' : ''}>${l.side} #<b>${q != null ? q : '—'}</b> @ ${td3Num(l.px)}${q != null ? '' : ' · <em>not sized</em>'}</span>`;
 }
 function pvMoneyLine(it, pv){
   const e = bdE, m = v=>pvMoney(pv, v), hold = it.status === 'hold', comp = it.kind === 'core' && it.tag === 'COMP';
@@ -29507,8 +29508,9 @@ function pvMoneyLine(it, pv){
   if(!hold){
     const risk = pv.plannedRisk != null ? sp('Risk', '−' + m(pv.plannedRisk), 'dn', 'data-pv-risk') : sp('Risk', na(pv.why.plannedRisk || 'not sized'), '', 'data-pv-risk');
     const rw = pv.reward != null ? sp('Reward', '+' + m(pv.reward), 'up', 'data-pv-reward') : sp('Reward', na(pv.why.reward || 'no target'), '', 'data-pv-reward');
-    const R = pv.rewardR != null ? `<span data-pv-r><b>${pv.rewardR.toFixed(1)}R</b></span>` : '';
-    return stop + risk + rw + R;
+    const qty = `<span data-pv-qty>#<b>${pv.plannedQty != null ? pvQtyTxt(pv.plannedQty, pv) : '—'}</b></span>`;
+    const rw2 = pv.reward != null ? `<span data-pv-reward>Reward <b class="up">+${m(pv.reward)}</b>${pv.rewardR != null ? ` <b data-pv-r>${pv.rewardR.toFixed(1)}R</b>` : ''}</span>` : rw;   /* R joined to Reward */
+    return qty + stop + risk + rw2;
   }
   if(comp){
     return stop + ifs() + sp('Value', pv.value != null ? m(pv.value) + (pv.weightAcct != null ? ' · ' + pvPct(pv.weightAcct) : '') : na(pv.why.value || 'no live price'), '', 'data-pv-value')
@@ -30756,7 +30758,7 @@ function pb2PlaceHtml(){
   const V = ln4VerifyOf(i), acc = pb2AcctOf(i), c = pb2Calc(i, acc), e = bdE;
   const ex = (acctList.length > 1 && acc) ? ' · ' + e(pb2AcctName(acc)) : '';
   const list = `<ol class="pb2-chk" data-pb2-checks>${PB2_CHECKS.map(c=>`<li data-pb2-chk><span class="pb2-cn" aria-hidden="true"></span><span class="pb2-ct"><b>${bdE(c[0])}</b>${c[1] ? `<small>${bdE(c[1])}</small>` : ''}</span></li>`).join('')}</ol>`;
-  return `<div data-pb2-step="place">${pb2Hd('Setup ready on Execution TF?', false)}${list}${V.ask ? `<div class="pb2-q" data-pb2-mssok>MSS confirmed per your rules (candle closed)</div>` : ''}<div class="pb2-cf" data-pb2-summary><b>${pb2Side(i)} ${e(sat7dLabel(i.asset))}</b>${ex}<br>Entry <b>${bdFmt(i.entry)}</b> · SL <b>${bdFmt(i.sl)}</b> · TP <b>${bdFmt(i.tp)}</b><br>${e(c.label)}${c.lot != null ? ` · ${satV2Lot(c.lot)} ${e(c.unit)} · risk ${satV2Money2(c.risk, c.cur)}` : ''}</div>${(c.c && c.c.re1NeedsReentry) ? `<label class="pb2-q" data-re1-reentry><input type="checkbox" ${re1ReTap === i.id ? 'checked' : ''} onchange="re1ReentryTap('${e(i.id)}', this.checked)"> <b>Re-entry</b> · same direction and zone · Trend inputs unchanged · one closed candle since the stop</label>` : ''}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes ${(c.c && c.c.re1NeedsReentry) ? 'disabled' : ''} onclick="pb2PlaceYes()">Yes · mark ordered</button></div><div class="bd-m pb2-note">One tap confirms all 4 · records only — place the order at your broker.</div></div>`;
+  return `<div data-pb2-step="place">${pb2Hd('Setup ready on Execution TF?', false)}${list}${V.ask ? `<div class="pb2-q" data-pb2-mssok>MSS confirmed per your rules (candle closed)</div>` : ''}<div class="pb2-cf" data-pb2-summary><b>${pb2Side(i)} ${e(sat7dLabel(i.asset))}</b>${ex}<br><span data-pb2-order>Entry ${pb2Side(i)} #<b>${c.lot != null ? satV2Lot(c.lot) : '—'}</b> @ <b>${bdFmt(i.entry)}</b></span> · SL <b>${bdFmt(i.sl)}</b> · TP <b>${bdFmt(i.tp)}</b><br>${e(c.label)}${c.lot != null ? ` · risk ${satV2Money2(c.risk, c.cur)}` : ' · not sized'}</div>${(c.c && c.c.re1NeedsReentry) ? `<label class="pb2-q" data-re1-reentry><input type="checkbox" ${re1ReTap === i.id ? 'checked' : ''} onchange="re1ReentryTap('${e(i.id)}', this.checked)"> <b>Re-entry</b> · same direction and zone · Trend inputs unchanged · one closed candle since the stop</label>` : ''}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes ${(c.c && c.c.re1NeedsReentry) ? 'disabled' : ''} onclick="pb2PlaceYes()">Yes · mark ordered</button></div><div class="bd-m pb2-note">One tap confirms all 4 · records only — place the order at your broker.</div></div>`;
 }
 function pb2PlaceNo(){ re1ReTap = null; bdPopClose(); }
 function re1ReentryTap(id, on){ re1ReTap = on ? id : null; const b = document.querySelector('[data-pb2-yes]'); if(b) b.disabled = !on; }
