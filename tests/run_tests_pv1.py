@@ -24,7 +24,7 @@ def partA(pw, w, h):
         js(page, SAT_JS); page.wait_for_timeout(700); refresh(page)
         r = {x["sym"]: x["t"] for x in rows(page, "manage")}
         t = r.get("NVDA", "")
-        check("[%s] A2 holding row = #11/#29 · ฿60.5k · 1.2%% · open risk ฿17.8k" % tag, "#11/#29 · ฿60.5k · 1.2% · open risk ฿17.8k" in t, t)
+        check("[%s] A2 holding row = card format: next leg · SL · open Risk ฿17.8k" % tag, "Buy #18 @ 140 · SL 110 · Risk −฿17.8k" in t, t)
         check("[%s] A2 old plan-total numbers are gone from the holding row (no ฿36.1k / 0.72%% / cap 50%%)" % tag, "36.1k" not in t and "0.72%" not in t and "cap 50%" not in t, t)
         check("[%s] A2 homework note stays text, not a number" % tag, "size limited to 50% · homework not done" in t, t)
         pv = js(page, "()=>{const it=bdItems().find(x=>x.sym==='NVDA'); return posView(it)}")
@@ -156,7 +156,7 @@ def partC(pw, w, h):
         # ── Planned OK (short): six numbers, valid with stop above entry
         c = card_txt(page, "ps")
         check("[%s] C: Planned Short card — Long/Short word (PV1b: now Blocked here: min stop not set in this fixture)" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=ps]'); return c.querySelector('[data-pv-dir]').dataset.pvDir==='Short'}"), c)
-        check("[%s] C: Planned card money line — Stop · Risk · Reward · R (PV1b)" % tag, all(x in c for x in ("Stop 75,000", "Risk −$297", "Reward +$3.7k", "12.3R")), c)
+        check("[%s] C: Planned card money line — Stop · Risk · Reward · R (PV1b)" % tag, all(x in c for x in ("Stop 75,000", "Risk −$297", "Reward +$3,667", "12.3R")), c)
         # ── Blocked: chip replaces Ready, reason, fix button names the fix, not sized
         cb = card_txt(page, "pb")
         check("[%s] C: blocked plan → red Blocked chip, no ⚑ Ready" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=pb]'); return !!c.querySelector('[data-pv-blocked]') && !c.querySelector('[data-re2-ready]')}"), cb)

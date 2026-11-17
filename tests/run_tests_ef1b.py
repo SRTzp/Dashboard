@@ -190,9 +190,42 @@ def run2(pw, w, h):
         b.close()
 
 
+def run3(pw, w, h):
+    tag = str(w)
+    b, page, ce, pe = launch(pw, w, h, doc_pv(), {"cP": core_planned()})
+    try:
+        js(page, "()=>{ tv1SetupLeft = (sym, held)=>{ const at = tv1SetupAt(sym); if(!at) return 0; return 1; }; window.ps1MinStopMsg=()=>''; window.ftHwDone=()=>true; window.wl1HwDone=()=>true; re1Cache={}; switchTab('plan'); bdRender(); }"); page.wait_for_timeout(500)
+        card_t = js(page, "()=>document.querySelector('[data-bd-card=cP]').innerText.replace(/\\s+/g,' ')")
+        check("[%s] M card: Risk −฿540 · Reward +฿2,836 · 5.3R (legs × FX 33.76; stored ps1.riskMoney ignored)" % tag, "Risk −฿540" in card_t and "Reward +฿2,836" in card_t and "5.3R" in card_t, card_t)
+        check("[%s] M card has no '$' on a ฿ value" % tag, "$" not in card_t, card_t)
+        pv = js(page, "()=>{const p=posView(bdItems().find(i=>i.id==='cP')); return {r:p.plannedRisk, w:p.reward, R:p.rewardR, st:p.plannedRiskStored, d:p.plannedRiskDiff}}")
+        check("[%s] M posView: risk 540.16 · reward 2835.84 · R 5.25 · stored kept aside + flagged" % tag, abs(pv["r"] - 540.16) < 0.01 and abs(pv["w"] - 2835.84) < 0.01 and abs(pv["R"] - 5.2500) < 0.01 and pv["st"] and pv["d"], pv)
+        r1 = js(page, "()=>{const r=document.querySelector('[data-bd-card=cP] .pv-r1'); const t=[...r.children].map(e=>Math.round(e.getBoundingClientRect().top)); const x=r.querySelector('.bd-cxx').getBoundingClientRect(), p=r.querySelector('[data-bd-pill]').getBoundingClientRect(); return {one: Math.abs(x.top - p.top) < 14, xr:x.right, cr:r.getBoundingClientRect().right}}")
+        check("[%s] H card header: ✕ on the same line as Ready + Place order ›, inside the card" % tag, r1["one"] and r1["xr"] <= r1["cr"] + 1, r1)
+        if w == 390: shot(page, "card-header-390")
+        page.click("[data-bd-card=cP] [data-bd-pill=place]"); page.wait_for_timeout(400)
+        sh = txt(page, "[data-ef-core-place]")
+        check("[%s] M sheet shows the same Risk −฿540 · Reward +฿2,836 · 5.3R" % tag, "Risk −฿540" in sh and "Reward +฿2,836" in sh and "5.3R" in sh and "$" not in sh, sh)
+        more = js(page, "()=>{const d=document.querySelector('[data-ef-more]'); return d? d.innerText : ''}")
+        diff = js(page, "()=>{const e=document.querySelector('[data-ef-risk-diff]'); return e ? e.textContent : ''}")
+        check("[%s] M More flags that the stored plan risk differs from the legs" % tag, "differs from the legs" in (diff or "") and "36.1k" in diff, diff)
+        if w == 390: shot(page, "sheet-money-390")
+    finally:
+        b.close()
+    # no rows → stored riskMoney is the fallback
+    c = core_planned(); c["plan"]["ps1"]["rows"] = []
+    b, page, ce, pe = launch(pw, w, h, doc_pv(), {"cP": c})
+    try:
+        js(page, "()=>{ re1Cache={}; switchTab('plan'); bdRender(); }"); page.wait_for_timeout(400)
+        pv = js(page, "()=>{const p=posView(bdItems().find(i=>i.id==='cP')); return {r:p.plannedRisk, d:p.plannedRiskDiff}}")
+        check("[%s] M no legs → stored ps1.riskMoney is the fallback (no diff flag)" % tag, pv["r"] and abs(pv["r"] - 36055.68) < 1 and not pv["d"], pv)
+    finally:
+        b.close()
+
+
 with sync_playwright() as pw:
     for w, h in SIZES:
-        run(pw, w, h); run2(pw, w, h)
+        run(pw, w, h); run2(pw, w, h); run3(pw, w, h)
 fails = [r for r in results if not r[1]]
 print("\n%d checks pass · %d fail" % (len(results) - len(fails), len(fails)))
 sys.exit(1 if fails else 0)

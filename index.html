@@ -3905,6 +3905,7 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
 .pv-legs{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.pv-lg{font-size:12.5px;padding:3px 7px;border-radius:7px;border:1px dashed #c9cdd5;white-space:nowrap}.pv-lg i{font-style:normal;color:var(--muted)}.pv-lg em{font-style:normal;color:var(--muted)}.pv-lg.ok{border:1px solid transparent;background:#f1f3f6;color:var(--muted)}.pv-lg.ok::before{content:"✓ ";color:var(--green)}
 .pv-bl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--red)}.pv-fixbtn{margin-left:auto;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid #e3c79a;color:#a8650a;background:var(--card,#fff);cursor:pointer;white-space:nowrap}
 .pv-more2{margin-top:8px;border-top:1px solid var(--border);padding-top:6px;cursor:default}.pv-edit{display:flex;justify-content:flex-end;margin-top:6px}.pv-card .pv-go{padding:3px 9px;font-size:12px}.pv-card{cursor:pointer;min-width:0;max-width:100%}.pv-card *{min-width:0}
+@media (max-width:600px){.pv-card .pv-r1{flex-wrap:nowrap;gap:4px}.pv-card .pv-r1 .bd-tk{flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}.pv-card .pv-r1 .bd-ready{margin-left:0;font-size:.76rem;padding:4px 0;flex:none}.pv-card .pv-r1 .pv-go{white-space:nowrap;flex:none;padding:3px 7px}.pv-card .pv-r1 .bd-cx.bd-cxx{flex:none}}   /* EF1b — phone: Ready + Place order + ✕ stay on the first line */
 .pvTg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.pvTg3 label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}@media(max-width:560px){.pvTg3{grid-template-columns:1fr}}
 .pv-tb2{font-family:inherit;width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px;margin-top:2px}.pv-tb2 td{font-family:var(--sans,inherit);font-size:12.5px;white-space:normal;padding:4px 0;border-top:1px solid var(--hair,#e6e8ee);vertical-align:top}.pv-tb2 tr:first-child td{border-top:0}.pv-tb2 td:first-child{padding-right:10px;width:52%;overflow-wrap:anywhere}.pv-tb2 td:last-child{text-align:right;font-weight:600;overflow-wrap:anywhere}.pv-tb2 .m{color:var(--muted);font-weight:400;display:block}
 @media(max-width:560px){.pv-kv{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -5814,13 +5815,18 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
       }
     } else { ['cost', 'value', 'uPnl', 'uPnlPct', 'weightAcct', 'weightPool', 'toStop', 'openRisk', 'openRiskPct'].forEach(function (k) { why[k] = 'nothing filled yet'; }); }
 
-    /* whole-plan risk (stored figure wins; else computed from every planned row at the stop) */
-    o.plannedRisk = null; o.plannedRiskPct = null;
-    if (pos(+inp.plannedRiskMoney)) { o.plannedRisk = +inp.plannedRiskMoney; o.plannedRiskPct = num(+inp.plannedRiskPct) && inp.plannedRiskPct != null ? +inp.plannedRiskPct : (equity !== null ? o.plannedRisk / equity * 100 : null); }
-    else if (planned && planned.length && stop !== null && uv !== null) {
-      o.plannedRisk = sum(planned, function (r) { return r.qty * Math.max(0, dir * (r.px - stop)); }) * uv; o.plannedRiskPct = equity !== null ? o.plannedRisk / equity * 100 : null;
-      if (!(o.plannedRisk > 1e-9)) { o.plannedRisk = null; o.plannedRiskPct = null; why.plannedRisk = 'none · stop at or beyond entry'; }
-    } else why.plannedRisk = !planned || !planned.length ? 'not sized' : stop === null ? 'no stop' : 'no FX';
+    /* whole-plan risk — ONE source with Reward / R: the planned legs (rows × (entry − stop) × mult × FX). The stored figure is only the fallback when there are no rows (or no FX / stop to compute from); it is flagged when it differs from the legs. */
+    o.plannedRisk = null; o.plannedRiskPct = null; o.plannedRiskStored = null; o.plannedRiskDiff = false;
+    var storedRisk = pos(+inp.plannedRiskMoney) ? +inp.plannedRiskMoney : null;
+    if (planned && planned.length && stop !== null && uv !== null) {
+      var legRisk = sum(planned, function (r) { return r.qty * Math.max(0, dir * (r.px - stop)); }) * uv;
+      if (legRisk > 1e-9) {
+        o.plannedRisk = legRisk; o.plannedRiskPct = equity !== null ? legRisk / equity * 100 : null;
+        if (storedRisk !== null) { o.plannedRiskStored = storedRisk; o.plannedRiskDiff = Math.abs(storedRisk - legRisk) > Math.max(1, legRisk * 0.005); }
+      } else if (storedRisk === null) why.plannedRisk = 'none · stop at or beyond entry';
+    }
+    if (o.plannedRisk === null && storedRisk !== null) { o.plannedRisk = storedRisk; o.plannedRiskPct = num(+inp.plannedRiskPct) && inp.plannedRiskPct != null ? +inp.plannedRiskPct : (equity !== null ? storedRisk / equity * 100 : null); }
+    else if (o.plannedRisk === null && !why.plannedRisk) why.plannedRisk = !planned || !planned.length ? 'not sized' : stop === null ? 'no stop' : 'no FX';
 
     o.plannedValue = null;
     if (pos(+inp.plannedValueMoney)) o.plannedValue = +inp.plannedValueMoney;
@@ -5831,6 +5837,7 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     var e0 = fills.length ? fills[0].px : (planned && planned.length ? planned[0].px : null), s0 = pos(+inp.initialStop) ? +inp.initialStop : stop;
     o.rUnit = (e0 !== null && s0 !== null && dir * (e0 - s0) > 0) ? dir * (e0 - s0) : null; if (o.rUnit === null) why.rUnit = 'no initial stop';
     o.R = (o.rUnit !== null && price !== null && o.avgEntry !== null) ? dir * (price - o.avgEntry) / o.rUnit : null; if (o.R === null) why.R = o.rUnit === null ? why.rUnit : price === null ? 'no live price' : 'nothing filled yet';
+
     /* PV1b — display-only extras: initial stop · reward at the planned targets · banked on exits already taken (never feed sizing / risk / gates) */
     o.initialStop = pos(+inp.initialStop) ? +inp.initialStop : null;
     o.reward = null; o.rewardR = null; o.banked = null;
@@ -30040,7 +30047,8 @@ function posView(it){
   return pv;
 }
 /* money in the surface's own currency: Core ฿ · Satellite $ (÷ the FX used) */
-function pvMoney(pv, v){ if(v == null || !isFinite(v)) return null; return pv.cur === '$' && pv.fx > 0 ? '$' + ps1M(v / pv.fx) : '฿' + ps1M(v); }
+function pvMoneyN(v){ v = Math.abs(+v); return v < 1e4 ? Math.round(v).toLocaleString('en-US') : ps1M(v); }   /* EF1b — under 10k: the exact figure (฿2,836); above: 36.1k */
+function pvMoney(pv, v){ if(v == null || !isFinite(v)) return null; return pv.cur === '$' && pv.fx > 0 ? '$' + pvMoneyN(v / pv.fx) : '฿' + pvMoneyN(v); }
 function pvPct(v, d){ return v == null || !isFinite(v) ? null : (+v).toFixed(d == null ? (Math.abs(v) < 0.1 && v !== 0 ? 2 : 1) : d) + '%'; }
 function pvQtyTxt(v, pv){ return pv.unit === 'lot' ? satV2Lot(v) : fmt0(v); }
 /* A2 — the row text. Holding: #held/#planned · value · % of account · open risk. Planned / Ordered: plan #size · risk · %. Returns null when there is nothing stored to show (old cards) → caller keeps the old text */
@@ -30853,7 +30861,7 @@ function efCorePlaceHtml(){
   if(pb2.lv != null){ lim = efLevelRiskHtml(it, pv, pb2.lv) + lim; }   /* EF1b — this order's own risk */
   const setupOn = pb2.lv == null ? `<label class="pb2-q" data-ef-setup><input type="checkbox" id="efSetupCk"${tv1SetupLeft(it.sym) > 0 ? ' checked' : ''}> Setup ready today ✓</label>` : '';
   lim += setupOn;
-  return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order' + (pb2.lv != null ? ' #' + (pb2.lv + 1) : '') + ' · ' + it.sym, false)}<div class="pb2-cf" data-pb2-summary><b>${e(it.sym)}</b> <span class="bd-m">${e(it.tag)} · Limit${pb2.lv != null && it.levels && it.levels[pb2.lv] && it.levels[pb2.lv].px > 0 ? ' · #' + (pb2.lv + 1) + ' ' + e(td3Num(it.levels[pb2.lv].px)) : ''}</span><div class="pv-legs" data-pv-legs>${legs}</div><div class="pv-r2" data-pv-money>${money}</div></div>${lim}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}</div></details><div class="bd-m pb2-note">Records only — place the order at your broker.</div></div>`;
+  return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order' + (pb2.lv != null ? ' #' + (pb2.lv + 1) : '') + ' · ' + it.sym, false)}<div class="pb2-cf" data-pb2-summary><b>${e(it.sym)}</b> <span class="bd-m">${e(it.tag)} · Limit${pb2.lv != null && it.levels && it.levels[pb2.lv] && it.levels[pb2.lv].px > 0 ? ' · #' + (pb2.lv + 1) + ' ' + e(td3Num(it.levels[pb2.lv].px)) : ''}</span><div class="pv-legs" data-pv-legs>${legs}</div><div class="pv-r2" data-pv-money>${money}</div></div>${lim}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}${pv && pv.plannedRiskDiff ? `<br><span data-ef-risk-diff class="ef-amber">Stored plan risk ${e(pvMoney(pv, pv.plannedRiskStored))} differs from the legs (${e(pvMoney(pv, pv.plannedRisk))}) — the legs are shown</span>` : ''}</div></details><div class="bd-m pb2-note">Records only — place the order at your broker.</div></div>`;
 }
 function efCorePlaceYes(){
   const s = pb2; if(!s || s.step !== 'cplace') return;
