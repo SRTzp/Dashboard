@@ -28,7 +28,9 @@ def views(page):
       const out = {}; const q = s => document.querySelector(s);
       switchTab('flow'); try{ bdRender && bdRender(); }catch(e){} ffRenderRegime();
       const st = q('[data-bd-regime]'); out.flowStrip = st ? {pc: st.dataset.rm1Pc, txt: st.innerText.replace(/\\s+/g,' ')} : null;
-      out.flowMom = (q('[data-bd-rs-mom] b')||{}).innerText; out.flowComp = (q('[data-bd-rs-comp] b')||{}).innerText;
+      out.budget = (q('[data-bd-rs-budget]')||{}).innerText; out.nBudget = document.querySelectorAll('[data-bd-rs-budget]').length; out.nSplit = document.querySelectorAll('[data-bd-rs-mom],[data-bd-rs-comp]').length;
+      const rs = q('[data-bd-reason]'); if(rs){ const b = rs.getBoundingClientRect(), cell = (q('[data-bd-rs-budget]')||q('[data-bd-rs-mom]')).getBoundingClientRect(), strip = q('[data-bd-rs]').getBoundingClientRect(), cs = getComputedStyle(rs);
+        out.reason = {txt: rs.innerText.replace(/\\s+/g,' '), full: rs.scrollWidth <= rs.clientWidth + 1 && rs.scrollHeight <= rs.clientHeight + 1, ellipsis: cs.textOverflow==='ellipsis' || cs.overflow==='hidden', below: b.top >= cell.bottom - 1, inside: b.left >= strip.left - 1 && b.right <= strip.right + 1, lines: Math.round(b.height / parseFloat(cs.lineHeight || 16)) || 1}; }
       const rg = q('#ffRegime'); out.flowCard = rg ? rg.textContent.replace(/\\s+/g,' ') : '';
       const ln = q('[data-rm1-line]'); out.flowLine = ln ? ln.textContent : '';
       const chips = [...document.querySelectorAll('[data-rm1-chip]')].map(e=>e.textContent.replace(/\\s+/g,' ')); out.chips = chips;
@@ -46,8 +48,10 @@ def run(pw, w, h):
         # ---- fixture 1: equity red · credit green → 80 % (fresh) ----
         setff(page, ff("red", "green"))
         v = views(page)
-        check("[%s] Flow strip shows the modifier 80%% with the reason" % tag, v["flowStrip"] and v["flowStrip"]["pc"] == "80" and "New-entry budget: 80% of normal · equity red, credit green." in v["flowStrip"]["txt"], v["flowStrip"])
-        check("[%s] Flow: Momentum and Compounder cells show the same effective 80%%" % tag, v["flowMom"] == "80%" and v["flowComp"] == "80%", [v["flowMom"], v["flowComp"]])
+        check("[%s] Flow strip shows ONE value 'New-entry budget 80%%' (no separate Momentum / Compounder cells)" % tag, v["nBudget"] == 1 and v["nSplit"] == 0 and re.sub(r"\s+", " ", v["budget"]) == "New-entry budget 80%", [v["budget"], v["nBudget"], v["nSplit"]])
+        check("[%s] reason line: 'equity red · credit green · SMA 20/50 · data 1 Oct'" % tag, v["reason"] and v["reason"]["txt"] == "equity red · credit green · SMA 20/50 · data 1 Oct", v["reason"])
+        check("[%s] reason line is not truncated (no ellipsis / clipping, inside the strip, on its own line below the value)" % tag, v["reason"] and v["reason"]["full"] and not v["reason"]["ellipsis"] and v["reason"]["below"] and v["reason"]["inside"], v["reason"])
+        check("[%s] strip button carries the shared line + %% for the other views" % tag, v["flowStrip"] and v["flowStrip"]["pc"] == "80", v["flowStrip"])
         check("[%s] Flow card: both indicators labelled SMA 20/50 + state + days (no bare number)" % tag, len(v["chips"]) == 2 and all("SMA 20/50" in c for c in v["chips"]) and "red 32 days" in v["chips"][0] and "green 24 days" in v["chips"][1], v["chips"])
         check("[%s] Flow card: data date = oldest input date (1 Oct)" % tag, "SMA 20/50 · data 1 Oct" in v["flowCard"], v["flowCard"][:200])
         check("[%s] Today regime line: same %% (80) and state" % tag, v["today"] and v["today"]["pc"] == "80" and "Mixed" in v["today"]["label"], v["today"])
@@ -78,15 +82,15 @@ def run(pw, w, h):
         # ---- fixture 3: fallback (credit neutral) ----
         setff(page, ff("green", "neutral"))
         v = views(page)
-        check("[%s] fallback text in Flow: 'Modifier unavailable · fallback cap 80%%'" % tag, v["flowStrip"] and "Modifier unavailable · fallback cap 80%" in v["flowStrip"]["txt"], v["flowStrip"])
+        check("[%s] fallback text in Flow: 'Modifier unavailable · fallback cap 80%%' (wrapped, not cut)" % tag, v["reason"] and v["reason"]["txt"].startswith("Modifier unavailable · fallback cap 80%") and v["reason"]["full"] and not v["reason"]["ellipsis"], v["reason"])
         check("[%s] fallback: Today + Port show the same 80%%" % tag, v["today"]["pc"] == "80" and v["port"] == "80 80 80" , [v["today"], v["port"]])
         # stale: oldest input 5 days old (2026-09-27) → fallback; 4 days (09-28) fresh
         setff(page, ff("green", "green", asof="2026-09-28"))
         v = views(page); check("[%s] 4 days old = fresh → 100%%" % tag, v["flowStrip"]["pc"] == "100", v["flowStrip"])
         setff(page, ff("green", "green", asof="2026-09-27"))
-        v = views(page); check("[%s] 5 days old = stale → fallback 80%% in every view" % tag, v["flowStrip"]["pc"] == "80" and "fallback" in v["flowStrip"]["txt"] and v["today"]["pc"] == "80", [v["flowStrip"], v["today"]])
+        v = views(page); check("[%s] 5 days old = stale → fallback 80%% in every view" % tag, v["flowStrip"]["pc"] == "80" and "fallback" in v["reason"]["txt"] and v["today"]["pc"] == "80", [v["reason"], v["today"]])
         setff(page, ff("green", "green", asof="2026-10-01", asof2="2026-09-27"))
-        v = views(page); check("[%s] oldest of the four inputs decides (one leg 5 days old → stale)" % tag, v["flowStrip"]["pc"] == "80" and "fallback" in v["flowStrip"]["txt"], v["flowStrip"])
+        v = views(page); check("[%s] oldest of the four inputs decides (one leg 5 days old → stale)" % tag, v["flowStrip"]["pc"] == "80" and "fallback" in v["reason"]["txt"], v["reason"])
         setff(page, ff("green", "neutral"))
         js(page, "()=>{ switchTab('flow'); }"); page.wait_for_timeout(300)
         if w == 1440: shot(page, "fallback-1440")

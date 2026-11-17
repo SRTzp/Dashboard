@@ -3989,13 +3989,13 @@ button.bd-read{cursor:pointer}
 .td3-toast [data-td3-toasttxt]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .bd-flowtop{display:flex;flex-direction:column;gap:10px;margin:0 0 14px}
 .bd-flowtop .m{color:var(--muted)}
-.bd-rs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;padding:10px 14px;margin:0}
+.bd-rs{display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;padding:10px 14px;margin:0}
 .bd-rc{display:flex;align-items:baseline;gap:8px;padding:0 12px;border:0;border-left:1px solid var(--hair);background:none;font:inherit;color:var(--text);min-width:0;text-align:left}
 .bd-rc:first-child{border-left:0;padding-left:0}
 .bd-rc small{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}.bd-rc>b{font:800 20px var(--mono)}
 .bd-rc b.g{color:var(--teal)}.bd-rc b.a{color:var(--amber)}.bd-rc b.r{color:var(--red)}.bd-rc b.f{color:var(--faint)}
-.bd-rg2{cursor:pointer;align-items:center;min-height:36px}.bd-rg2 i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--faint)}.bd-rg2 i.g{background:var(--teal)}.bd-rg2 i.a{background:var(--amber)}.bd-rg2 i.r{background:var(--red)}
-.bd-rg2 span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.bd-rg2 span b{font-weight:800}.bd-rg2 em{font-style:normal;color:var(--muted)}
+.bd-rg2{cursor:pointer;align-items:center;min-height:0;flex:1 0 100%;border-left:0;padding:0}.bd-rs>.bd-rc:not(.bd-rg2){flex:0 0 auto}.bd-rs>.bd-nb+.bd-rc{border-left:0;padding-left:0}.bd-rg2 i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--faint)}.bd-rg2 i.g{background:var(--teal)}.bd-rg2 i.a{background:var(--amber)}.bd-rg2 i.r{background:var(--red)}
+.bd-rg2 span{min-width:0;white-space:normal;overflow-wrap:anywhere;font-size:13px}.bd-rg2 span b{font-weight:800}.bd-rg2 em{font-style:normal;color:var(--muted)}
 .bd-sh{display:flex;align-items:center;gap:8px;margin:4px 2px -2px;min-width:0}.bd-sh>b{font-size:15px;white-space:nowrap}.bd-sh .sp{flex:1}
 .bd-hint{color:var(--faint);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .bd-sh .bd-wk{font:600 12.5px var(--sans);color:var(--muted);background:none;border:0;padding:4px 0}
@@ -4080,7 +4080,7 @@ html body.lf-lean #tabFlow[style*="display: block"]{display:flex!important;flex-
 @media (min-width:1000px){html body.lf-lean #tabFlow>*{width:100%;box-sizing:border-box}}
 @media (max-width:999px){
   .bd-flowtop{gap:8px}
-  .bd-rs{grid-template-columns:auto auto auto minmax(0,1fr);padding:8px 10px;column-gap:0}.bd-rs>.bd-nb{margin-right:8px}.bd-rc{padding:0 10px;gap:6px}.bd-rc>b{font-size:16px}.bd-lf{display:none}.bd-rg2{min-height:0}.bd-rg2 em{display:none}
+  .bd-rs{grid-template-columns:auto auto auto minmax(0,1fr);padding:8px 10px;column-gap:0}.bd-rs>.bd-nb{margin-right:8px}.bd-rc{padding:0 10px;gap:6px}.bd-rc>b{font-size:16px}.bd-lf{display:none}.bd-rg2{min-height:0}
   .bd-g{gap:8px}.bd-g4,.bd-rq{grid-template-columns:repeat(2,minmax(0,1fr))}
   .bd-hint{display:none}
   .bd-ac{padding:9px 10px}.bd-ac.open{grid-column:1/-1}.bd-an{flex-wrap:nowrap;font-size:14px}.bd-an>b{font-size:14px;overflow:hidden;text-overflow:ellipsis}.bd-ai{margin-top:6px;padding-top:5px;font-size:11.5px}.bd-star{min-width:28px;min-height:28px;font-size:17px;margin:-4px -4px -4px 0}
@@ -30845,13 +30845,24 @@ function bdMacroLine(key){   /* Sat form: Macro: Bull · ⚠️ CPI Tue 19:30 */
   return {bias:b.t, ev: ev ? `${ev.t}${ev.w ? ' ' + ev.w : ''}` : ''};
 }
 function bdRiskHtml(){
-  /* RM1 — Risk strip reads the shared result: one effective budget (min of regime modifier and emergency) for Momentum and Compounder, one line with the reason */
+  /* RM1 — ONE value "New-entry budget N%" (shared result = min of regime modifier and emergency). Momentum / Compounder are shown separately only when they differ.
+     The reason sits on its own line and wraps: "equity red · credit red · SMA 20/50 · data 16 Nov" */
   const E = rm1Eff(), r = E.r, nodata = E.demo;
-  const cc = v=>nodata ? 'f' : (v >= 100 ? 'g' : v > 0 ? 'a' : 'r'), pcs = nodata ? '—' : E.pc;
+  const vals = {mom: E.pc, comp: E.pc};   /* both strategies take min(modifier, emergency) today; a strategy-specific brake would differ here */
+  const cc = v=>nodata ? 'f' : (v >= 100 ? 'g' : v > 0 ? 'a' : 'r'), pc = v=>nodata ? '—' : v + '%';
   let cls = 'f';
   if(!nodata) cls = (r.fallback || E.em) ? 'a' : (r.equity==='green' && r.credit==='green') ? 'g' : (r.equity==='red' && r.credit==='red') ? 'r' : 'a';
-  const dt = r.asOf ? ' · ' + E.sma + ' · ' + rm1Date(r.asOf) : '';
-  return `<div class="bd-sh bd-rsh">${bdNb(1)}<b>Risk · how much to deploy</b></div><div class="panel bd-rs" data-bd-rs>${bdNb(1)}<div class="bd-rc" data-bd-rs-mom><small><span class="bd-lf">Momentum</span><span class="bd-ls">Mom</span></small><b class="${cc(E.pc)}">${pcs}${nodata ? '' : '%'}</b></div><div class="bd-rc" data-bd-rs-comp><small><span class="bd-lf">Compounder</span><span class="bd-ls">Comp</span></small><b class="${cc(E.pc)}">${pcs}${nodata ? '' : '%'}</b></div><button type="button" class="bd-rc bd-rg2" data-bd-regime data-rg-label="${escHtml(E.line)}" data-rm1-pc="${E.pc}" onclick="tdRegimeGo()"><i class="${cls}"></i><span><b>${escHtml(nodata ? 'No Fund-flow data' : E.line)}</b><em>${escHtml(dt)}${r.stale && r.known ? ' · stale' : ''}</em></span></button></div>`;
+  const parts = [];
+  if(nodata) parts.push('No Fund-flow data');
+  else {
+    if(r.fallback) parts.push('Modifier unavailable · fallback cap ' + Math.round(r.factor*100) + '%' + (E.em ? ' · effective ' + E.pc + '% (emergency brake)' : ''));
+    else { if(E.em) parts.push('emergency brake'); parts.push('equity ' + r.equity, 'credit ' + r.credit); }
+    parts.push(E.sma); if(r.asOf) parts.push('data ' + rm1Date(r.asOf)); if(r.stale && r.known) parts.push('stale');
+  }
+  const cells = vals.mom === vals.comp
+    ? `<div class="bd-rc" data-bd-rs-budget><small>New-entry budget</small><b class="${cc(vals.mom)}">${pc(vals.mom)}</b></div>`
+    : `<div class="bd-rc" data-bd-rs-mom><small><span class="bd-lf">Momentum</span><span class="bd-ls">Mom</span></small><b class="${cc(vals.mom)}">${pc(vals.mom)}</b></div><div class="bd-rc" data-bd-rs-comp><small><span class="bd-lf">Compounder</span><span class="bd-ls">Comp</span></small><b class="${cc(vals.comp)}">${pc(vals.comp)}</b></div>`;
+  return `<div class="bd-sh bd-rsh">${bdNb(1)}<b>Risk · how much to deploy</b></div><div class="panel bd-rs" data-bd-rs>${bdNb(1)}${cells}<button type="button" class="bd-rc bd-rg2" data-bd-regime data-rg-label="${escHtml(E.line)}" data-rm1-pc="${E.pc}" onclick="tdRegimeGo()"><i class="${cls}"></i><span data-bd-reason>${escHtml(parts.join(' · '))}</span></button></div>`;
 }
 function bdWkDoc(){ const wk = bdMacroWkKey(); return wiDocs[bdMacroWk === 0 ? wiCurMon() : Calc.wiMondayOfStrategy(wk)] || null; }
 function bdMacroItems(doc){
