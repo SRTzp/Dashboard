@@ -58,6 +58,7 @@
   --green-dim:rgba(47,154,99,.12);
   --purple:#7E58C9;
   --purple-dim:rgba(126,88,201,.13);
+  --port-sat:#6741b8;--port-sat-bg:#efe9fa;--port-mmt:#2f5bd3;--port-mmt-bg:#e8eefc;--port-comp:#0f766e;--port-comp-bg:#e3f3f1;   /* TS1b C2 — one colour per port (chip + Today › Act left bar only); chip text >= 4.5:1 */
 
   --mono:'IBM Plex Mono',ui-monospace,monospace;
   --sans:'Manrope','IBM Plex Sans Thai',-apple-system,'Segoe UI',sans-serif;
@@ -4149,6 +4150,18 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
 .wl1-seg button span{font-weight:600;opacity:.8}.wl1-seg button.on{background:var(--ink,#141518);color:#fff}
 .wl1-sumrow{display:flex;align-items:center;gap:8px;min-width:0}.wl1-sum{flex:1;min-width:0;font-size:.82rem;color:var(--muted,#7B818C);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wl1-sum b{color:var(--amber,#A96E06)}
 .wl1-ic{display:inline-flex;gap:6px;flex:none}.wl1-ic .ic{min-width:36px;width:36px;padding:0;min-height:36px;border:1px solid var(--border,#E3E6EA);background:var(--surface,#fff);border-radius:999px;font:700 .86rem var(--sans,inherit);cursor:pointer}
+/* TS1b C2 — port colours: SAT purple · MMT blue · COMP teal. Only the port tag chip and a 3 px left bar on Today › Act rows; numbers/buttons/status words keep their own colours. */
+.pb2-cf .sc[data-port]{font:700 10.5px var(--sans,inherit);border-radius:6px;padding:1px 6px;white-space:nowrap}
+html body .re2-row .tag[data-port="SAT"]{background:var(--port-sat-bg);color:var(--port-sat)}html body .re2-row .tag[data-port="MMT"]{background:var(--port-mmt-bg);color:var(--port-mmt)}html body .re2-row .tag[data-port="COMP"]{background:var(--port-comp-bg);color:var(--port-comp)}
+.re2-row[data-port="SAT"]{box-shadow:inset 3px 0 0 var(--port-sat)}.re2-row[data-port="MMT"]{box-shadow:inset 3px 0 0 var(--port-mmt)}.re2-row[data-port="COMP"]{box-shadow:inset 3px 0 0 var(--port-comp)}
+html body .sc.sc.sc[data-port="SAT"]{background:var(--port-sat-bg);color:var(--port-sat)}
+html body .sc.sc.sc[data-port="MMT"]{background:var(--port-mmt-bg);color:var(--port-mmt)}
+html body .sc.sc.sc[data-port="COMP"]{background:var(--port-comp-bg);color:var(--port-comp)}
+.ln4 .ln4-row[data-port="SAT"]{box-shadow:inset 3px 0 0 var(--port-sat)}.ln4 .ln4-row[data-port="MMT"]{box-shadow:inset 3px 0 0 var(--port-mmt)}.ln4 .ln4-row[data-port="COMP"]{box-shadow:inset 3px 0 0 var(--port-comp)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--port-sat:#c4acf5;--port-sat-bg:rgba(126,88,201,.28);--port-mmt:#9db4ff;--port-mmt-bg:rgba(47,91,211,.28);--port-comp:#6fd8cc;--port-comp-bg:rgba(15,118,110,.32)}}
+:root[data-theme="dark"]{--port-sat:#c4acf5;--port-sat-bg:rgba(126,88,201,.28);--port-mmt:#9db4ff;--port-mmt-bg:rgba(47,91,211,.28);--port-comp:#6fd8cc;--port-comp-bg:rgba(15,118,110,.32)}
+.wl1-arch{margin:6px 0 2px}.wl1-arch-b{border:0;background:none;color:var(--muted);font:600 .8rem var(--sans,inherit);padding:8px 4px;min-height:36px;cursor:pointer}
+.wl1-arch-r{display:flex;align-items:center;gap:8px;min-width:0;padding:6px 4px;border-top:1px solid var(--border,#e3e5ea);font-size:.8rem}.wl1-arch-r b{flex:none}.wl1-arch-r .d{flex:none;color:var(--muted)}.wl1-arch-r .rs{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}.wl1-arch-r button{flex:none;min-height:32px}
 .wl1-row{display:block;padding:9px 10px;margin:4px 0;border-radius:10px;border-top:0;background:var(--bg,#EEF0F3);cursor:pointer;min-height:44px}
 .wl1-row.on{background:var(--surface,#fff);box-shadow:inset 3px 0 0 var(--lime,#b5e61d)}
 .wl1-row .l1,.wl1-row .l2{display:flex;align-items:center;gap:6px;min-width:0}.wl1-row .l2{margin-top:3px}
@@ -10313,7 +10326,7 @@ function wlMtHtml(it){
     ${tail}</div>`;
 }
 /* ══ PL1·A6 — Watchlist management: status tag · Next check · filters (Track/Reason/RS) · sort · Archive/Restore ══ */
-let wlArch = null;
+let wlArch = null, wlArchOpen = false;   /* TS1b C — Archived list under each Watch list (memory only) */
 function wlPlanExists(sym){ const t = coreNorm(sym); return !!t && coreCardsList.some(c=>coreNorm(c.ticker)===t && coreEff(c).kind!=='closed'); }
 const WL_ST = {drafting:'Drafting Thesis', awaiting:'Awaiting Setup', plan:'Plan Ready', archived:'Archived'};
 function wlStatusKey(it){ if(!it) return ''; if(it.archived === true) return 'archived'; if(wlPlanExists(it.ticker)) return 'plan'; return wlReady(it.ticker) ? 'awaiting' : 'drafting'; }
@@ -11076,7 +11089,7 @@ function ln4PortCardHtml(ids){
       const M = a === home ? Mh : ps1Model(a); if(!M) return;
       M.pos.forEach(pos=>{
         const r = M.P.ideas.find(x=>x.id === pos.id) || {id:pos.id, ticker:pos.ticker, bucket:pos.bucket};
-        const tag = pos.bucket === 'sat' ? '<span class="sc sat">SAT</span>' : `<span class="sc pt${pos.bucket === 'ladder' ? ' c' : ''}">${pos.bucket === 'ladder' ? 'COMP' : 'MMT'}</span>`;
+        const tag = pos.bucket === 'sat' ? '<span class="sc sat" data-port="SAT">SAT</span>' : `<span class="sc pt${pos.bucket === 'ladder' ? ' c' : ''}" data-port="${pos.bucket === 'ladder' ? 'COMP' : 'MMT'}">${pos.bucket === 'ladder' ? 'COMP' : 'MMT'}</span>`;
         const f = v=>(+v).toFixed(2).replace(/\.?0+$/, '');
         rows += `<div class="it" data-ln4-port-row="${s(String(pos.ticker))}"><b>${s(String(pos.ticker))}</b>${tag}<span class="m">avg ${f(pos.avg)} · stop ${pos.stop > 0 ? f(pos.stop) : '—'}</span>${ln4PortBadges(r, M)}</div>`;
       });
@@ -11313,16 +11326,16 @@ function ln4SatRows(){
 }
 function ln4RowHtml(r){
   const s = td3E;
-  const tag = r.kind === 'sat' ? `<span class="sc sat">SAT</span>` : `<span class="sc${r.tag === 'COMP' ? ' c' : ''}${r.half ? '' : ' pt'}" data-ln4-ptag="${r.tag}"${r.half ? ' data-half="1"' : ''}>${r.tag}${r.half ? ' ½' : ''}</span>`;
+  const tag = r.kind === 'sat' ? `<span class="sc sat" data-port="SAT">SAT</span>` : `<span class="sc${r.tag === 'COMP' ? ' c' : ''}${r.half ? '' : ' pt'}" data-port="${r.tag === 'COMP' ? 'COMP' : 'MMT'}" data-ln4-ptag="${r.tag}"${r.half ? ' data-half="1"' : ''}>${r.tag}${r.half ? ' ½' : ''}</span>`;
   const sec = r.kind === 'sat' ? (r.counter ? '<span class="sc ctr" data-ln4-counter>Counter</span>' : '') + (r.macro ? `<span class="sc" data-ln4-macro-warn>${s(r.macro)}</span>` : '') : ln4SecTag(r.sym);
   const stx = r.bad ? `<span class="st r why" data-ln4-why>${s(r.bad.why)}</span>` : `<span class="st ${r.state === 'draft' ? 'd' : r.state === 'open' ? 'f' : ''}" data-ln4-status>${s(r.status)}</span>`;
   const b = r.btn ? `<button type="button" class="go${r.btn.p ? ' p' : ''}${r.btn.fx ? ' fx' : ''}" data-ln4-btn${r.btn.dis ? ' disabled' : ''} onclick="${r.btn.fn}">${s(r.btn.t)}</button>` : '';
   /* LN4b — phone: line 1 ticker · type tag · status · line 2 sector/macro tags + red reason (may wrap) · line 3 grey details + button (wrapper is display:contents on Mac) */
   if(r.tw1){
     const why = r.why || '';
-    return `<div class="it ln4-row tw1-row" data-ln4-row="${s(r.sym)}" data-ln4-kind="${r.kind}" data-ln4-state="${r.state}"${r.bad ? ` data-ln4-bad="${r.bad.k}"` : ''} data-tw1-row><b>${s(r.sym)}</b>${tag}<span class="st ${r.state === 'draft' ? 'd' : r.state === 'open' ? 'f' : ''}" data-ln4-status>${s(r.status)}</span><span class="m tw1-lv" data-tw1-lv>${s(r.lv || '')}</span><span class="tw1-m"><span class="tw1-sz" data-tw1-size>${s(r.sz)}</span><span class="tw1-rk" data-tw1-risk>${s(r.rk)}</span><span class="tw1-why${r.bad ? ' bad' : ''}"${r.bad ? ' data-ln4-why' : ''} data-tw1-why title="${s(why)}">${s(why)}</span></span>${b}</div>`;
+    return `<div class="it ln4-row tw1-row" data-port="${r.kind === 'sat' ? 'SAT' : (r.tag === 'COMP' ? 'COMP' : 'MMT')}" data-ln4-row="${s(r.sym)}" data-ln4-kind="${r.kind}" data-ln4-state="${r.state}"${r.bad ? ` data-ln4-bad="${r.bad.k}"` : ''} data-tw1-row><b>${s(r.sym)}</b>${tag}<span class="st ${r.state === 'draft' ? 'd' : r.state === 'open' ? 'f' : ''}" data-ln4-status>${s(r.status)}</span><span class="m tw1-lv" data-tw1-lv>${s(r.lv || '')}</span><span class="tw1-m"><span class="tw1-sz" data-tw1-size>${s(r.sz)}</span><span class="tw1-rk" data-tw1-risk>${s(r.rk)}</span><span class="tw1-why${r.bad ? ' bad' : ''}"${r.bad ? ' data-ln4-why' : ''} data-tw1-why title="${s(why)}">${s(why)}</span></span>${b}</div>`;
   }
-  return `<div class="it ln4-row" data-ln4-row="${s(r.sym)}" data-ln4-kind="${r.kind}" data-ln4-state="${r.state}"${r.bad ? ` data-ln4-bad="${r.bad.k}"` : ''}><b>${s(r.sym)}</b>${tag}<span class="ln4-l2">${sec}${r.bad ? stx : ''}</span><span class="m" data-ln4-det>${r.det}</span>${r.bad ? '' : stx}${b}</div>`;
+  return `<div class="it ln4-row" data-port="${r.kind === 'sat' ? 'SAT' : (r.tag === 'COMP' ? 'COMP' : 'MMT')}" data-ln4-row="${s(r.sym)}" data-ln4-kind="${r.kind}" data-ln4-state="${r.state}"${r.bad ? ` data-ln4-bad="${r.bad.k}"` : ''}><b>${s(r.sym)}</b>${tag}<span class="ln4-l2">${sec}${r.bad ? stx : ''}</span><span class="m" data-ln4-det>${r.det}</span>${r.bad ? '' : stx}${b}</div>`;
 }
 /* LN4 §8 — Plan tab cards: same states as Today Act (Draft · Order working · Filled/Open · Add-on ›), same MMT/COMP tag (+½) · built from the same rows */
 function ln4CancelOrder(kind, id){
@@ -11332,7 +11345,7 @@ function ln4CancelOrder(kind, id){
 }
 function ln4PlanStripHtml(r){
   if(!r) return '';
-  const s = td3E, tag = r.kind === 'sat' ? `<span class="sc sat">SAT</span>` : `<span class="sc${r.tag === 'COMP' ? ' c' : ''}${r.half ? '' : ' pt'}" data-ln4-ptag="${r.tag}">${r.tag}${r.half ? ' ½' : ''}</span>`;
+  const s = td3E, tag = r.kind === 'sat' ? `<span class="sc sat" data-port="SAT">SAT</span>` : `<span class="sc${r.tag === 'COMP' ? ' c' : ''}${r.half ? '' : ' pt'}" data-port="${r.tag === 'COMP' ? 'COMP' : 'MMT'}" data-ln4-ptag="${r.tag}">${r.tag}${r.half ? ' ½' : ''}</span>`;
   const stx = r.bad ? `<span class="st r" data-ln4-why>${s(r.bad.why)}</span>` : `<span class="st ${r.state === 'draft' ? 'd' : r.state === 'open' ? 'f' : ''}" data-ln4-status>${s(r.status)}</span>`;
   const b = r.btn ? `<button type="button" class="go${r.btn.p ? ' p' : ''}${r.btn.fx ? ' fx' : ''}" data-ln4-btn${r.btn.dis ? ' disabled' : ''} onclick="event.stopPropagation();${r.btn.fn}">${s(r.btn.t)}</button>` : '';
   const cx = r.state === 'working' ? `<button type="button" class="go" data-ln4-cancel onclick="event.stopPropagation();ln4CancelOrder('${r.kind}','${s(r.id)}')">Cancel order</button>` : '';
@@ -17817,7 +17830,7 @@ function renderWatchlist(){
   const empty = wlStoreErr ? 'โหลด Watchlist ไม่สำเร็จ' : `No ${wl1Trk==='ladder' ? 'Compounder' : 'Momentum'} stocks yet — ⇩ Import your TradingView WATCHLIST.`;
   const legend = rows.some(r=>ideaRels(r.sym).length) ? '<div class="ideaLegend" data-idea-legend>▲ ได้ประโยชน์ · ▼ เสียประโยชน์ · ? รอตรวจ</div>' : '';
   const list = `<div class="panel wlList"><div class="wlListHead">${head}${wl1NoticeHtml()}${status}</div>
-    <div class="wlListBody" id="wlListBody"><div class="wlRows">${rows.map(r=>wl1RowHtml(r)).join('') || `<div class="empty">${empty}</div>`}</div>${legend}</div></div>`;
+    <div class="wlListBody" id="wlListBody"><div class="wlRows">${rows.map(r=>wl1RowHtml(r)).join('') || `<div class="empty">${empty}</div>`}</div>${wl1ArchHtml(A)}${legend}</div></div>`;
 
   const det = `<div class="wlDet">${wlSel ? wlDetailHtml(wlFind(wlSel)) : '<div class="panel"><div class="empty">เลือกหุ้นจากลิสต์</div></div>'}</div>`;
   /* 7Y — Research แสดงในแผงขวา ไม่เปิดเต็มหน้าแล้ว (ไม่มีโหมด rcExpanded) */
@@ -29231,7 +29244,7 @@ function bdSorted(items){
 }
 function bdFiltered(){ const all = bdItems(); return bdChip === 'all' ? all : all.filter(x=>x.tag === bdChip); }
 function bdHotTag(sym){ try{ const t = ln4SecTag(sym); return /data-ln4-sec="hot"/.test(t) ? t : ''; }catch(e){ return ''; } }
-function bdTagHtml(it){ return `<span class="sc${it.tag === 'SAT' ? ' sat' : (it.tag === 'COMP' ? ' c pt' : ' pt')}" data-bd-tag="${it.tag}">${it.tag}</span>`; }
+function bdTagHtml(it){ return `<span class="sc${it.tag === 'SAT' ? ' sat' : (it.tag === 'COMP' ? ' c pt' : ' pt')}" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}" data-bd-tag="${it.tag}">${it.tag}</span>`; }
 function bdToEntry(it){
   if(it.pct == null) return `<span class="bd-m" data-bd-pct="na">— to entry</span>`;
   const p = it.pct, a = Math.abs(p), t = (p < 0 ? '−' : '+') + a.toFixed(1) + '% to entry';
@@ -30071,8 +30084,8 @@ function re2Row(it, o){
   const btn3 = o.btn3 ? `<button type="button" class="btn o" data-re2-btn="update" onclick="event.stopPropagation();${o.fn3 || ''}">${e(o.btn3)}</button>` : '';
   const btn2 = o.btn2 ? `<button type="button" class="btn o" data-re2-btn="keep" onclick="event.stopPropagation();${o.fn2 || ''}">${e(o.btn2)}</button>` : '';
   const btn = btn3 + btn2 + (o.btn ? `<button type="button" class="btn${o.k === 'fill' || o.k === 'hw' ? ' o' : ''}" data-re2-btn="${o.k}"${o.dis ? ` disabled title="${e(o.title || '')}" data-re2-blocked="1"` : ''} onclick="event.stopPropagation();${o.fn || ''}"><span class="m">${e(o.btn)}</span><span class="p">${e(sh)}</span></button>` : '');
-  return `<div class="row re2-row" data-re2-row="${e(it.sym)}" data-re2-grp="${o.g}" data-re2-id="${e(it.id)}" role="button" tabindex="0" onclick="bdOpen('${e(it.id).replace(/'/g, "\\'")}')">
-    <div class="l1"><b>${e(it.sym)}</b><span class="tag">${e(it.tag)}</span>${o.chip ? `<span class="chip ${o.cc || ''} m" data-re2-chip-st>${e(o.chip)}</span>` : ''}${line ? '' : `<span class="q p">${e(q)}</span>`}<span class="sp"></span>${btn}</div>
+  return `<div class="row re2-row" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}" data-re2-row="${e(it.sym)}" data-re2-grp="${o.g}" data-re2-id="${e(it.id)}" role="button" tabindex="0" onclick="bdOpen('${e(it.id).replace(/'/g, "\\'")}')">
+    <div class="l1"><b>${e(it.sym)}</b><span class="tag" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}">${e(it.tag)}</span>${o.chip ? `<span class="chip ${o.cc || ''} m" data-re2-chip-st>${e(o.chip)}</span>` : ''}${line ? '' : `<span class="q p">${e(q)}</span>`}<span class="sp"></span>${btn}</div>
     ${line ? `<div class="num" data-re2-cardline><span>${e(line)}${o.why ? ' · ' : ''}</span><i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i></div>` : `<div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span>${q ? `<span class="p">${e(q)}${o.why ? ' · ' : ''}</span>` : ''}<i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div>`}</div>`;
 }
 function re2Model(acct){
@@ -30699,7 +30712,7 @@ function efCorePlaceHtml(){
   if(pb2.lv != null){ lim = efLevelRiskHtml(it, pv, pb2.lv) + lim; }   /* EF1b — this order's own risk */
   const setupOn = pb2.lv == null ? `<label class="pb2-q" data-ef-setup><input type="checkbox" id="efSetupCk"${tv1SetupLeft(it.sym) > 0 ? ' checked' : ''}> Setup ready today ✓</label>` : '';
   lim += setupOn;
-  return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order' + (pb2.lv != null ? ' #' + (pb2.lv + 1) : '') + ' · ' + it.sym, false)}<div class="pb2-cf" data-pb2-summary><b>${e(it.sym)}</b> <span class="bd-m">${e(it.tag)} · Limit${pb2.lv != null && it.levels && it.levels[pb2.lv] && it.levels[pb2.lv].px > 0 ? ' · #' + (pb2.lv + 1) + ' ' + e(td3Num(it.levels[pb2.lv].px)) : ''}</span><div class="pv-legs" data-pv-legs>${legs}</div><div class="pv-r2" data-pv-money>${money}</div></div>${lim}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}${pv && pv.plannedRiskDiff ? `<br><span data-ef-risk-diff class="ef-amber">Stored plan risk ${e(pvMoney(pv, pv.plannedRiskStored))} differs from the legs (${e(pvMoney(pv, pv.plannedRisk))}) — the legs are shown</span>` : ''}</div></details><div class="bd-m pb2-note">Records only — place the order at your broker.</div></div>`;
+  return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order' + (pb2.lv != null ? ' #' + (pb2.lv + 1) : '') + ' · ' + it.sym, false)}<div class="pb2-cf" data-pb2-summary><b>${e(it.sym)}</b> <span class="bd-m"><span class="sc" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}">${e(it.tag)}</span> · Limit${pb2.lv != null && it.levels && it.levels[pb2.lv] && it.levels[pb2.lv].px > 0 ? ' · #' + (pb2.lv + 1) + ' ' + e(td3Num(it.levels[pb2.lv].px)) : ''}</span><div class="pv-legs" data-pv-legs>${legs}</div><div class="pv-r2" data-pv-money>${money}</div></div>${lim}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}${pv && pv.plannedRiskDiff ? `<br><span data-ef-risk-diff class="ef-amber">Stored plan risk ${e(pvMoney(pv, pv.plannedRiskStored))} differs from the legs (${e(pvMoney(pv, pv.plannedRisk))}) — the legs are shown</span>` : ''}</div></details><div class="bd-m pb2-note">Records only — place the order at your broker.</div></div>`;
 }
 function efCorePlaceYes(){
   const s = pb2; if(!s || s.step !== 'cplace') return;
@@ -31132,6 +31145,17 @@ function wl1HwHtml(r){
 function wl1Sort(rows){
   const rk = r=>{ const st = wl1Status(r.item).k, done = wl1HwDone(r.item); if(!done && (st === 'hold' || st === 'addon')) return 0; if(!done && st === 'plan') return 1; if(st === 'none') return 2; return 3; };
   return rows.map(r=>[r, rk(r)]).sort((a, b)=>a[1] - b[1] || a[0].sym.localeCompare(b[0].sym)).map(x=>x[0]);
+}
+/* TS1b C — "Archived (n) ›" at the bottom of each Watch list · expands in place: ticker · archived date · reason · Restore (wlRestore) */
+function wl1ArchRows(A){ return (A.wl || []).filter(r=>r.item && r.item.archived === true && wl1TrkOf(r.item) === wl1Trk).sort((a, b)=>String(b.item.archived_at || '').localeCompare(String(a.item.archived_at || ''))); }
+function wl1ArchDate(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m ? Number(m[3]) + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(m[2]) - 1] : '—'; }
+function wl1ArchToggle(){ wlArchOpen = !wlArchOpen; renderWatchlist(); }
+function wl1ArchHtml(A){
+  const L = wl1ArchRows(A); if(!L.length) return '';
+  const e = escHtml;
+  const rows = wlArchOpen ? `<div class="wl1-arch-rows" data-wl1-arch-rows>${L.map(r=>{ const it = r.item, d = String(it.archived_at || '').slice(0, 10), rs = String(it.archived_reason || '').trim();
+    return `<div class="wl1-arch-r" data-wl1-arch-row="${e(r.sym)}"><b>${e(wl1Bare(r.sym))}</b><span class="d">${d ? e(wl1ArchDate(d)) : '—'}</span><span class="rs" title="${e(rs)}">${rs ? e(rs) : '—'}</span><button type="button" class="small" data-wl-restore onclick="event.stopPropagation();wlRestore('${e(it.ticker)}')">Restore</button></div>`; }).join('')}</div>` : '';
+  return `<div class="wl1-arch" data-wl1-arch><button type="button" class="wl1-arch-b" data-wl1-arch-toggle aria-expanded="${wlArchOpen}" onclick="wl1ArchToggle()">${wlArchOpen ? 'Show less ‹' : `Archived (${L.length}) ›`}</button>${rows}</div>`;
 }
 function wl1RowHtml(r){
   const it = r && r.item; if(!it) return '';
