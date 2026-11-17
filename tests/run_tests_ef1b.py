@@ -124,9 +124,75 @@ def run(pw, w, h):
         b.close()
 
 
+def core_planned():
+    c = copy.deepcopy(NVDA_CARD); c["ticker"] = "AVGO"; c["id"] = "cP"; c.pop("trade_id", None); c["lots"] = []
+    c.pop("track", None); c["status"] = "plan"; c.pop("px", None); c.pop("stopHistory", None); c["ln4"] = {}; c["log"] = []; c["plan"]["ps1"]["bucket"] = "winner"
+    c["plan"]["ps1"]["rows"] = [{"px": 158, "riskPct": 0.5, "qty": 2}, {"px": 150, "riskPct": 0.5, "qty": 2}]
+    c["plan"]["tp"] = 175; c["plan"]["stop"] = 150; c["stop"] = 150
+    return c
+
+
+def run2(pw, w, h):
+    tag = str(w)
+    # TS1 regression: no Setup tag, Momentum plan with entry + SL is placeable
+    b, page, ce, pe = launch(pw, w, h, doc_pv(), {"cP": core_planned()})
+    try:
+        js(page, "()=>{ tv1SetupLeft = (sym, held)=>{ const at = tv1SetupAt(sym); if(!at) return 0; if((held || tv1HeldKeys()).has(wlSymKey(sym))) return 0; const used = tv1TDays(at, tv1Today()); return used >= TV1_SETUP_DAYS ? 0 : TV1_SETUP_DAYS - used; }; delete getBook(tdHome()).settings.tvSetup; window.ps1MinStopMsg=()=>''; window.ftHwDone=()=>true; window.wl1HwDone=()=>true; re1Cache={}; switchTab('plan'); bdRender(); }"); page.wait_for_timeout(500)
+        check("[%s] S no Setup tag exists (tvSetup empty)" % tag, js(page, "()=>tv1SetupLeft('AVGO')") == 0)
+        it = js(page, "()=>{const i=bdItems().find(x=>x.id==='cP'); return i && {inc:i.inc, status:i.status}}")
+        check("[%s] S new Momentum plan with entry + SL is not Waiting (no 'needs Setup')" % tag, it and not it["inc"], it)
+        check("[%s] S Place order › visible on the card, not under 'Waiting for setup'" % tag, has(page, "[data-bd-card=cP] [data-bd-pill=place]") and not has(page, "[data-bd-wait]"))
+        page.click("[data-bd-card=cP] [data-bd-pill=place]"); page.wait_for_timeout(350)
+        sh = txt(page, "[data-ef-core-place]")
+        check("[%s] S confirm sheet shows one line 'Setup ready today ✓', unticked when the tag is off" % tag, "Setup ready today ✓" in sh and js(page, "()=>document.getElementById('efSetupCk').checked") is False, sh)
+        if w == 390: shot(page, "setup-sheet-390")
+        page.click("#efSetupCk"); page.click("[data-pb2-yes]"); page.wait_for_timeout(500)
+        v = js(page, "()=>({d:(getBook(tdHome()).settings.tvSetup||{})[wlSymKey('AVGO')], t:tv1Today()})")
+        check("[%s] S Confirm with the tick writes tvSetup[AVGO] = today (LN4 stats)" % tag, v["d"] == v["t"], v)
+        check("[%s] S order recorded" % tag, js(page, "()=>!!(coreCardsList.find(y=>y.id==='cP').ln4||{}).placedAt"))
+    finally:
+        b.close()
+    c = core_planned(); c["plan"]["stop"] = 0; c["stop"] = 0
+    b, page, ce, pe = launch(pw, w, h, doc_pv(), {"cP": c})
+    try:
+        js(page, "()=>{ tv1SetupLeft = (sym, held)=>{ const at = tv1SetupAt(sym); if(!at) return 0; if((held || tv1HeldKeys()).has(wlSymKey(sym))) return 0; const used = tv1TDays(at, tv1Today()); return used >= TV1_SETUP_DAYS ? 0 : TV1_SETUP_DAYS - used; }; switchTab('plan'); bdRender(); }"); page.wait_for_timeout(400)
+        check("[%s] S SL missing still goes to Waiting (needs SL)" % tag, js(page, "()=>{const i=bdItems().find(x=>x.id==='cP'); return !!(i && i.inc && /SL/.test(i.inc.text))}"))
+    finally:
+        b.close()
+    # Today row text = card format
+    b, page, ce, pe = launch(pw, w, h, doc_pv(), cards_pv())
+    try:
+        seed_n(page, 1)
+        row = js(page, "()=>{const r=document.querySelector('[data-re2-col=enter] [data-re2-row]'); return r? r.innerText.replace(/\\s+/g,' ') : ''}")
+        line = txt(page, "[data-re2-col=enter] [data-re2-cardline]")
+        import re as _re
+        check("[%s] T Enter row text = card format 'Buy #q @ px · SL · TP · Risk −$'" % tag, _re.search(r"Buy #[\d.]+ @ [\d,.]+ · SL [\d,.]+ · TP [\d,.]+ · Risk −\$", line or "") is not None, line)
+        check("[%s] T no 'plan … lot' / 'ready' / 'step' text on the row" % tag, not _re.search(r"plan |ready|step \d", row), row)
+        if w == 390: shot(page, "today-row-390")
+        if w == 1440: shot(page, "today-row-1440")
+        check("[%s] T no overflow" % tag, no_overflow(page) and not ce and not pe, ce + pe)
+    finally:
+        b.close()
+    # level sheet risk line
+    c = copy.deepcopy(NVDA_CARD)
+    b, page, ce, pe = launch(pw, w, h, doc_pv(), cards_pv())
+    try:
+        js(page, "()=>{ window.ps1MinStopMsg=()=>''; re1Cache={}; window.ftHwDone=()=>true; window.wl1HwDone=()=>true; switchTab('plan'); bdRender(); }"); page.wait_for_timeout(400)
+        cid = js(page, "()=>{ const it=bdItems().find(i=>i.kind==='core' && i.sym==='NVDA'); return it && it.id }")
+        js(page, "(id)=>bdPlaceLv(id,1)", cid); page.wait_for_timeout(400)
+        r = txt(page, "[data-ef-order-risk]")
+        import re as _re
+        check("[%s] L level sheet: 'This order: Buy #18 @ 140 · +Risk ฿… · total risk after fill x%%'" % tag, _re.match(r"This order: Buy #18 @ 140 · \+Risk ฿[\d.]+k? · total risk after fill [\d.]+%", r or "") is not None, r)
+        check("[%s] L level sheet has no Setup tick (first level only)" % tag, not has(page, "#efSetupCk"))
+        if w == 390: shot(page, "level-sheet-risk-390")
+        check("[%s] L no overflow / errors" % tag, no_overflow(page) and not ce and not pe, ce + pe)
+    finally:
+        b.close()
+
+
 with sync_playwright() as pw:
     for w, h in SIZES:
-        run(pw, w, h)
+        run(pw, w, h); run2(pw, w, h)
 fails = [r for r in results if not r[1]]
 print("\n%d checks pass · %d fail" % (len(results) - len(fails), len(fails)))
 sys.exit(1 if fails else 0)

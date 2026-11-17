@@ -110,7 +110,7 @@ def run(pw, w, h):
         check(f"{tag} 1 Planned sorted closest-to-entry first (AMD 1.4% before TSLA −20%)", col(page, "plan").index("ccPL") < col(page, "plan").index("ccFA"), col(page, "plan"))
         check(f"{tag} 1 Holding: needs-action first (add-on / stop below avg) before plain", col(page, "hold")[0] in ("ccST", "ccFU"))
         # ── 2c multiple entry levels ──
-        check(f"{tag} 2c one card per plan; Planned multi-level card shows 'Entry x +2 lower'", cnt(page, '[data-bd-card="ccML"]') == 1 and "+2 lower" in txt(page, '[data-bd-card="ccML"] [data-bd-lower]') and "ccML" in col(page, "plan"), txt(page, '[data-bd-card="ccML"] .bd-r2'))
+        check(f"{tag} 2c one card per plan; Planned multi-level card shows its 3 entry legs", cnt(page, '[data-bd-card="ccML"]') == 1 and cnt(page, '[data-bd-card="ccML"] [data-pv-leg="in"]') == 3 and "ccML" in col(page, "plan"), txt(page, '[data-bd-card="ccML"] .bd-r2'))
         check(f"{tag} 2c any level filled → ✅ Holding: 'Avg x' + 'Entries 1/3 · next 480 waiting'", "ccMH" in col(page, "hold") and js(page, "()=>!!document.querySelector('[data-bd-card=ccMH] [data-pv-done]')") and "@ 480" in txt(page, '[data-bd-card="ccMH"] [data-pv-legs]'), txt(page, '[data-bd-card="ccMH"] .bd-r3'))
         js(page, "()=>bdOpen('ccMH')"); settle(page, 300)
         lv = js(page, "()=>[...document.querySelectorAll('[data-bd-lv]')].map(e=>e.dataset.bdLv+':'+e.dataset.bdLvst)")

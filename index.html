@@ -11294,7 +11294,7 @@ function ln4LadderTip(){
 /* ── Act rows ── */
 function ln4CoreChecks(c){
   const pl = c.plan || {}, bucket = coreTrackOfCard(c) === 'ladder' ? 'ladder' : 'winner';
-  if(!(tv1SetupLeft(c.ticker) > 0)) return {k:'setup', why:'No Setup ✓', btn:'Setup ✓ ›'};
+  /* EF1b — Setup ✓ is no longer a block (its writer was removed in TS1): it is a one-line tick in the Place confirm sheet */
   const entry = +pl.entry, stop = +pl.stop;
   if(!(stop > 0)) return {k:'stop', why:'No stop', btn:'Set stop ›'};
   try{
@@ -30204,17 +30204,30 @@ function re2StopDue(L){   /* the same condition the To do item used: Momentum ho
   }catch(e){}
   return out;
 }
+function re2CardLine(it){   /* EF1b — same text as the card: "Buy #0.19 @ 2,643 · SL 2,628 · TP 2,684 · Risk −$285" */
+  try{
+    const pv = posView(it); if(!pv) return '';
+    const P = [], ins = (pv.legs || []).filter(l=>!l.out && !l.done);
+    if(ins.length) P.push(ins.map(l=>`${l.side} #${l.qty > 0 ? pvQtyTxt(l.qty, pv) : '—'} @ ${td3Num(l.px)}`).join(' + '));
+    if(pv.stop > 0) P.push('SL ' + td3Num(pv.stop));
+    const tp = (pv.legs || []).filter(l=>l.out && !l.done)[0]; if(tp && tp.px > 0) P.push('TP ' + td3Num(tp.px));
+    const rk = it.status === 'hold' ? pv.openRisk : pv.plannedRisk;
+    if(rk != null && rk > 0) P.push('Risk −' + pvMoney(pv, rk));
+    return P.join(' · ');
+  }catch(x){ return ''; }
+}
 function re2Row(it, o){
   const e = td3E, sr = (()=>{ try{ return tw1SizeRisk(it); }catch(x){ return {sz:'—', rk:'—'}; } })();
   if(sr.sz === '—'){ try{ const lots = it.kind === 'core' ? (it.ref.lots || []).reduce((a, l)=>a + (+l.qty || 0), 0) : 0, rw = it.kind === 'core' && it.ref.plan && it.ref.plan.ps1 && Array.isArray(it.ref.plan.ps1.rows) ? it.ref.plan.ps1.rows.reduce((a, r)=>a + (+r.qty || 0), 0) : 0, n = it.status === 'hold' && lots > 0 ? lots : rw; if(n > 0) sr.sz = '#' + fmt0(n); }catch(x){} }
-  const q = o.q != null ? o.q : [sr.sz, sr.rk].filter(x=>x && x !== '—').join(' · ') || '—';
+  const line = o.q == null && (o.g === 'enter' || o.g === 'manage') ? re2CardLine(it) : '';
+  const q = o.q != null ? o.q : line || [sr.sz, sr.rk].filter(x=>x && x !== '—').join(' · ') || '—';
   const sh = {place:'Place ›', cancel:'Cancel ›', fill:'Filled ✓', stop:'Stop ›', hw:'Homework ›', addon:'Add-on ›', fix:'Fix ›', complete:'Complete ›', edit:'Edit', review:'Review ›'}[o.k] || o.btn;
   const btn3 = o.btn3 ? `<button type="button" class="btn o" data-re2-btn="update" onclick="event.stopPropagation();${o.fn3 || ''}">${e(o.btn3)}</button>` : '';
   const btn2 = o.btn2 ? `<button type="button" class="btn o" data-re2-btn="keep" onclick="event.stopPropagation();${o.fn2 || ''}">${e(o.btn2)}</button>` : '';
   const btn = btn3 + btn2 + (o.btn ? `<button type="button" class="btn${o.k === 'fill' || o.k === 'hw' ? ' o' : ''}" data-re2-btn="${o.k}"${o.dis ? ` disabled title="${e(o.title || '')}" data-re2-blocked="1"` : ''} onclick="event.stopPropagation();${o.fn || ''}"><span class="m">${e(o.btn)}</span><span class="p">${e(sh)}</span></button>` : '');
   return `<div class="row re2-row" data-re2-row="${e(it.sym)}" data-re2-grp="${o.g}" data-re2-id="${e(it.id)}" role="button" tabindex="0" onclick="bdOpen('${e(it.id).replace(/'/g, "\\'")}')">
-    <div class="l1"><b>${e(it.sym)}</b><span class="tag">${e(it.tag)}</span>${o.chip ? `<span class="chip ${o.cc || ''} m" data-re2-chip-st>${e(o.chip)}</span>` : ''}<span class="q p">${e(q)}</span><span class="sp"></span>${btn}</div>
-    <div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span>${q ? `<span class="p">${e(q)}${o.why ? ' · ' : ''}</span>` : ''}<i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div></div>`;
+    <div class="l1"><b>${e(it.sym)}</b><span class="tag">${e(it.tag)}</span>${o.chip ? `<span class="chip ${o.cc || ''} m" data-re2-chip-st>${e(o.chip)}</span>` : ''}${line ? '' : `<span class="q p">${e(q)}</span>`}<span class="sp"></span>${btn}</div>
+    ${line ? `<div class="num" data-re2-cardline><span>${e(line)}${o.why ? ' · ' : ''}</span><i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i></div>` : `<div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span>${q ? `<span class="p">${e(q)}${o.why ? ' · ' : ''}</span>` : ''}<i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div>`}</div>`;
 }
 function re2Model(acct){
   const now = Date.now(), L = re1L(acct), all = (()=>{ try{ return bdItems().filter(x=>(x.acct || tdHome()) === acct); }catch(e){ return []; } })();
@@ -30229,7 +30242,7 @@ function re2Model(acct){
     if(re4Passed(it) && !pastKept){ enter.push({it, o:{g:'enter', chip:'passed entry · missed?', cc:'a', k:'cancel', btn:'Cancel plan ›', fn:`re4Open('${td3E(it.id).replace(/'/g, "\\'")}','plan',null,'missed')`, btn2:'Keep', fn2:`re4Keep('${td3E(it.id).replace(/'/g, "\\'")}')`, btn3:'Update levels ›', fn3:`bdEditLv('${td3E(it.id).replace(/'/g, "\\'")}')`, why:'passed entry · missed?', warn:true, lv:tw1Lv(it), d}}); return; }   /* RE-D §6 */
     if(!ready && !near) return;
     const p = bdPill(it, true), blocked = !!p.dis;
-    const why = blocked ? (p.title || 'Blocked') : pastKept ? '+' + d.toFixed(1) + '% past entry' : ready ? (d != null ? (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '% · ' : '') + 'ready' + (it.kind === 'sat' && L ? ' · step ' + L.sat.step.step : '') : (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '%';
+    const why = blocked ? (p.title || 'Blocked') : pastKept ? '+' + d.toFixed(1) + '% past entry' : ready ? (near && d != null ? (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '% to entry' : '') : (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '%';
     enter.push({it, o:{g:'enter', chip: ready ? 'Ready' : 'Near', cc: ready ? 'b rdy' : '', k:p.k, btn:p.t, fn:p.fn, dis:blocked, title:p.title, why, warn:blocked || pastKept, lv:tw1Lv(it), d}});
   });
   by.ord.forEach(it=>{
@@ -30819,20 +30832,36 @@ function efCorePlaceOpen(id, lv){
   if(bdPopOpen()) bdPopClose();
   pb2 = {step:'cplace', id, a:it.sym, lv:lv == null ? null : lv}; pb2Render();
 }
+function efLevelRiskHtml(it, pv, lv){   /* "This order: Buy #18 @ 140 · +Risk ฿18.2k · total risk after fill 1.9%" */
+  const e = bdE;
+  try{
+    const rw = it.ref.plan && it.ref.plan.ps1 && it.ref.plan.ps1.rows && it.ref.plan.ps1.rows[lv]; if(!rw || !(+rw.qty > 0) || !(+rw.px > 0)) return '';
+    const stop = pv && pv.stop > 0 ? pv.stop : +(it.ref.plan || {}).stop, r = re1CardModel(it.ref, +rw.qty, +rw.px, stop);
+    const risk = +rw.qty * Math.abs(+rw.px - stop) * ((r && r.spec && r.spec.fx) || 1);
+    let tot = ''; try{ const E = ps1E(it.acct || tdHome()), open = pv && pv.openRisk > 0 ? pv.openRisk : 0; if(E > 0) tot = ' · total risk after fill ' + ps1R2((open + risk) / E * 100) + '%'; }catch(x){}
+    return `<div class="bd-m" data-ef-order-risk>This order: Buy #${fmt0(+rw.qty)} @ ${td3Num(+rw.px)} · +Risk ฿${ps1M(risk)}${tot}</div>`;
+  }catch(x){ return ''; }
+}
 function efCorePlaceHtml(){
   const it = bdById(pb2.id); if(!it){ return '<div class="bd-m">Plan not found</div>'; }
   const e = bdE; let pv = null, g = null; try{ pv = posView(it); }catch(x){} try{ g = re1PlanGate(it.ref, 0); }catch(x){}
   const legs = pv ? (pv.legs || []).map(l=>pvLegChip(l, pv)).join('') : '';
   const money = pv ? pvMoneyLine(it, pv) : '';
-  const lim = g && g.model && g.model.limit && g.model.limit.text ? `<div class="bd-m" data-ef-limit>${e(g.model.limit.text)}</div>` : '';
+  if(pb2.lv != null){ try{ g = re1PlanGate(it.ref, pb2.lv); }catch(x){} }
+  let lim = g && g.model && g.model.limit && g.model.limit.text ? `<div class="bd-m" data-ef-limit>${e(g.model.limit.text)}</div>` : '';
   const f = g && g.model && g.model.formula ? g.model.formula : '';
+  if(pb2.lv != null){ lim = efLevelRiskHtml(it, pv, pb2.lv) + lim; }   /* EF1b — this order's own risk */
+  const setupOn = pb2.lv == null ? `<label class="pb2-q" data-ef-setup><input type="checkbox" id="efSetupCk"${tv1SetupLeft(it.sym) > 0 ? ' checked' : ''}> Setup ready today ✓</label>` : '';
+  lim += setupOn;
   return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order' + (pb2.lv != null ? ' #' + (pb2.lv + 1) : '') + ' · ' + it.sym, false)}<div class="pb2-cf" data-pb2-summary><b>${e(it.sym)}</b> <span class="bd-m">${e(it.tag)} · Limit${pb2.lv != null && it.levels && it.levels[pb2.lv] && it.levels[pb2.lv].px > 0 ? ' · #' + (pb2.lv + 1) + ' ' + e(td3Num(it.levels[pb2.lv].px)) : ''}</span><div class="pv-legs" data-pv-legs>${legs}</div><div class="pv-r2" data-pv-money>${money}</div></div>${lim}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}</div></details><div class="bd-m pb2-note">Records only — place the order at your broker.</div></div>`;
 }
 function efCorePlaceYes(){
   const s = pb2; if(!s || s.step !== 'cplace') return;
   const id = s.id, it = bdById(id); if(!it){ bdPopClose(); return; }
   if(!wl1PlaceGate(id, s.lv != null ? s.lv : undefined)) return;   /* the engine is checked again at Confirm */
+  const stp = document.getElementById('efSetupCk'), setup = !!(stp && stp.checked);
   bdPopClose();
+  if(setup){ try{ const k = wlSymKey(it.sym), td = tv1Today(); glWrite(S=>{ const m = Object.assign({}, S.tvSetup || {}); m[k] = td; S.tvSetup = m; }); }catch(e){} }   /* EF1b — LN4 stats keep reading tvSetup[KEY] = today */
   if(s.lv != null){ bdPlaceLv(id, s.lv, true); return; }
   const at = new Date().toISOString(), nm = it.sym;
   bdWriteWithLog(it, {ln4:{placedAt:at}}, 'order', 'Order placed · Entry ' + (it.entry > 0 ? td3Num(it.entry) : '—'));
