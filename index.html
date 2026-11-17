@@ -11416,6 +11416,7 @@ function ln4Place(kind, id){
   if(kind === 'sat'){ pb2PlaceOpen(id); return; }   /* PB1b §2b — Sat: one-tap 'Setup ready?' confirm (records only) */
   const nm = kind === 'core' ? (coreCardsList.find(x=>x.id === id) || {}).ticker : ((satIdeasList || []).find(x=>x.id === id) || {}).asset;
   if(kind === 'core' && !wl1PlaceGate(id)) return;   /* WL1 — homework cap */
+  if(kind === 'core'){ efCorePlaceOpen(id); return; }   /* EF1 C — same confirm sheet as Satellite (no native popup) */
   if(!confirm(`Placed at broker — ${nm || ''}?`)) return;
   const at = new Date().toISOString();
   { const it = bdById(id); if(it) bdWriteWithLog(it, {ln4:{placedAt:at}}, 'order', 'Order placed · Entry ' + (it.entry > 0 ? td3Num(it.entry) : '—')); else if(kind === 'core') coreWrite(id, {ln4:{placedAt:at}}); else sat7dWrite('satIdeas', id, {ln4:{placedAt:at}}); }   /* PB1 — status change appends to log */
@@ -30618,7 +30619,7 @@ function pb2OpenEdit(id, focus, direct){
 function pb2Back(){
   if(!pb2){ bdPopClose(); return; }
   const s = pb2.step;
-  if(s === 0 || s === 'place' || (s === 2 && pb2.direct)){ bdPopClose(); return; }
+  if(s === 0 || s === 'place' || s === 'cplace' || (s === 2 && pb2.direct)){ bdPopClose(); return; }
   pb2.step = s - 1; pb2Render();
 }
 bdPopClose = function(){ pb2 = null; clearTimeout(pb2HoldT); pb2HoldT = 0; const p = document.getElementById('bdPop'); if(p) p.remove(); };
@@ -30645,6 +30646,7 @@ function pb2StepHtml(){
     return `<div data-pb2-step="asset">${pb2Hd('Satellite · which asset?', false)}${L.map((a, i)=>`<button type="button" class="bd-opt${i === (pb2.sel || 0) ? ' bd-sel' : ''}" data-pb2-asset="${bdE(a.key)}" data-pb2-star="${a.star ? 1 : 0}"${a.plan ? ' data-pb2-exists="1"' : ''} onclick="pb2Pick(${i})"><kbd>${i + 1}</kbd><span class="bd-ot"><b>${a.star ? '<span class="pb2-star">★</span> ' : ''}${bdE(a.label)}</b><span class="bd-m">Macro ${bdE(pb2MacroTxt(a.key))}${a.plan ? ' · plan exists → edit' : ''}</span></span></button>`).join('') || '<div class="bd-m">No Sat assets — add one in Flow</div>'}</div>`;
   }
   if(s === 'place') return pb2PlaceHtml();
+  if(s === 'cplace') return efCorePlaceHtml();
   return `<div data-pb2-step="form">${pb2Hd(pb2Label(pb2.a), true)}<div id="pb2A"></div>${pb2InputsHtml()}<div id="pb2C"></div><div class="pb2-ft"><button type="button" class="go" data-pb2-draft onclick="pb2Save(true)">Save draft</button><button type="button" class="go p" data-pb2-save onclick="pb2Save(false)">Save plan</button></div></div>`;
 }
 function pb2Render(focusFirst){
@@ -30652,7 +30654,7 @@ function pb2Render(focusFirst){
   if(!pb2){ if(ov) ov.remove(); return; }
   if(!ov){ document.body.insertAdjacentHTML('beforeend', `<div id="bdPop" class="ui-sheet-backdrop bd-pop ln4" role="dialog" aria-modal="true" aria-label="New plan" onclick="if(event.target===this)bdPopClose()"><div class="ui-sheet bd-popb pb2" id="pb2Body"></div></div>`); ov = document.getElementById('bdPop'); }
   const box = document.getElementById('pb2Body'); box.innerHTML = pb2StepHtml();
-  box.classList.toggle('pb2-wide', pb2.step === 2 || pb2.step === 'place');
+  box.classList.toggle('pb2-wide', pb2.step === 2 || pb2.step === 'place' || pb2.step === 'cplace');
   if(pb2.step === 2){ pb2Refresh(); const f = pb2.focus; pb2.focus = ''; const el = f ? box.querySelector(f === 'SL' ? '[data-pb2-in="sl"]' : f === 'TP' ? '[data-pb2-in="tp"]' : f === 'Entry' ? '[data-pb2-in="entry"]' : f === 'Trend' ? '[data-pb2-tg="ema"]' : null) : null; if(el){ try{ el.focus(); if(el.select) el.select(); }catch(e){} } else if(focusFirst){ const en = box.querySelector('[data-pb2-in="entry"]'); if(en && !pb2.entry){ try{ en.focus(); }catch(e){} } } }
   else { const b = box.querySelector('.bd-opt.bd-sel') || box.querySelector('[data-pb2-yes]'); if(b) try{ b.focus(); }catch(e){} }
 }
@@ -30723,7 +30725,7 @@ function pb2Key(e){
     if(ed) return true;
     e.stopImmediatePropagation(); return true;
   }
-  if(st === 'place'){ if(k === 'Enter'){ stop(); pb2PlaceYes(); return true; } e.stopImmediatePropagation(); return true; }
+  if(st === 'place' || st === 'cplace'){ if(k === 'Enter'){ stop(); if(st === 'cplace') efCorePlaceYes(); else pb2PlaceYes(); return true; } e.stopImmediatePropagation(); return true; }
   return false;
 }
 /* ── save ── */
@@ -30798,6 +30800,30 @@ function efCarryAdopt(id){   /* a plan carried from last week is valid this week
     const wk = wpWeekKey(), patch = {week:wk, carried_from:(Array.isArray(idea.carried_from) ? idea.carried_from : []).concat([idea.week])};
     sat7dWrite('satIdeas', id, patch); Object.assign(idea, patch);
   }catch(e){}
+}
+/* ── EF1 C · Momentum / Compounder Place › → the same confirm sheet (one Confirm) ── */
+function efCorePlaceOpen(id){
+  const it = bdById(id); if(!it || it.kind !== 'core') return;
+  if(bdPopOpen()) bdPopClose();
+  pb2 = {step:'cplace', id, a:it.sym}; pb2Render();
+}
+function efCorePlaceHtml(){
+  const it = bdById(pb2.id); if(!it){ return '<div class="bd-m">Plan not found</div>'; }
+  const e = bdE; let pv = null, g = null; try{ pv = posView(it); }catch(x){} try{ g = re1PlanGate(it.ref, 0); }catch(x){}
+  const legs = pv ? (pv.legs || []).map(l=>pvLegChip(l, pv)).join('') : '';
+  const money = pv ? pvMoneyLine(it, pv) : '';
+  const lim = g && g.model && g.model.limit && g.model.limit.text ? `<div class="bd-m" data-ef-limit>${e(g.model.limit.text)}</div>` : '';
+  const f = g && g.model && g.model.formula ? g.model.formula : '';
+  return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order · ' + it.sym, false)}<div class="pb2-cf" data-pb2-summary><b>${e(it.sym)}</b> <span class="bd-m">${e(it.tag)} · Limit</span><div class="pv-legs" data-pv-legs>${legs}</div><div class="pv-r2" data-pv-money>${money}</div></div>${lim}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}</div></details><div class="bd-m pb2-note">Records only — place the order at your broker.</div></div>`;
+}
+function efCorePlaceYes(){
+  const s = pb2; if(!s || s.step !== 'cplace') return;
+  const id = s.id, it = bdById(id); if(!it){ bdPopClose(); return; }
+  if(!wl1PlaceGate(id)) return;   /* the engine is checked again at Confirm */
+  bdPopClose();
+  const at = new Date().toISOString(), nm = it.sym;
+  bdWriteWithLog(it, {ln4:{placedAt:at}}, 'order', 'Order placed · Entry ' + (it.entry > 0 ? td3Num(it.entry) : '—'));
+  try{ ln4Valid(id, nm || '', 'working'); ln4Toast(`${nm || ''}: Order working ✓`); }catch(e){}
 }
 /* ── Place order = one-tap confirm (records only) ── */
 function pb2PlaceOpen(id){
