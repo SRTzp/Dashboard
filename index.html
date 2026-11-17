@@ -29263,7 +29263,7 @@ function pvSatFail(i, onlyIfFails){
     const c = pb2Calc(i, pb2AcctOf(i));
     if(c.lot != null && !onlyIfFails){ why = 'Size not available'; }
     else if(c.lot != null) return null;
-    else why = c.msg || (c.model && c.model.reasonTexts && c.model.reasonTexts[0]) || 'Size could not be worked out';
+    else{ why = c.msg || (c.model && c.model.reasonTexts && c.model.reasonTexts[0]) || ''; if(!why && onlyIfFails) return null; why = why || 'Size could not be worked out'; }   /* no message from the sizing result → don't invent a block */
   }catch(e){ why = 'Size could not be worked out'; }
   if(/stop|SL|min/i.test(why) && !/size|lot/i.test(why)) k = 'stop';
   return {why, k, btn: k === 'stop' ? 'Fix stop ›' : 'Fix size ›'};
@@ -29379,7 +29379,7 @@ function bdCardHtml(it){
       if(it.size) st += `<span class="bd-m" data-bd-size>${e(it.size)}</span>`;
       try{ if(it.kind === 'core' && it.tag === 'COMP' && !ftHwDone(it.sym)) st += `<span class="bd-st a" data-pv-hw>Size limited to 50% · homework not done</span>`; }catch(x){}
     }else if(blk && blk.btn) st = `<span class="bd-m" data-pv-fixhint>Fix the plan to get a size</span>`;
-    const chipR = hold ? (pc.pv.R == null ? '' : `<b class="bd-r ${pc.pv.R >= 0 ? 'up' : 'dn'}" data-bd-r="${pc.pv.R >= 0 ? 'up' : 'dn'}">${pc.pv.R >= 0 ? '+' : '−'}${Math.abs(pc.pv.R).toFixed(1)}R</b>`) : (blk ? `<span class="pv-blk" data-pv-blocked>Blocked</span>` : re2ReadyBtn(it)) + (it.status === 'plan' ? re4CancelBtn(it, true) : '');
+    const chipR = hold ? (pc.pv.R == null ? '' : `<b class="bd-r ${pc.pv.R >= 0 ? 'up' : 'dn'}" data-bd-r="${pc.pv.R >= 0 ? 'up' : 'dn'}">${pc.pv.R >= 0 ? '+' : '−'}${Math.abs(pc.pv.R).toFixed(1)}R</b>`) : (blk ? `<span class="pv-blk" data-pv-blocked data-bd-blockedtag>Blocked</span>` : re2ReadyBtn(it)) + (it.status === 'plan' ? re4CancelBtn(it, true) : '');
     const sat = it.kind === 'sat' && it.pb && !it.inc && !hold; const tg = sat && !blk && it.pb.vf.tag ? `<span class="bd-st a" data-bd-trendtag>${bdE(it.pb.vf.tag)}</span>` : '';
     const wn = sat && it.pb.vf.warn ? `<span class="bd-st a" data-bd-nearwarn role="img" aria-label="nearest target" title="${bdE(SAT_NEAR_WARN)}">⚠️</span>` : '';
     return `<div class="bd-card pv-card" role="button" tabindex="0" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${blk ? ' data-pv-blk="1"' : ''} onclick="bdOpen('${id}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();bdOpen('${id}')}">

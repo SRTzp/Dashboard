@@ -111,7 +111,7 @@ def run(pw, w, h):
         check(f"{tag} 1 Holding: needs-action first (add-on / stop below avg) before plain", col(page, "hold")[0] in ("ccST", "ccFU"))
         # ── 2c multiple entry levels ──
         check(f"{tag} 2c one card per plan; Planned multi-level card shows 'Entry x +2 lower'", cnt(page, '[data-bd-card="ccML"]') == 1 and "+2 lower" in txt(page, '[data-bd-card="ccML"] [data-bd-lower]') and "ccML" in col(page, "plan"), txt(page, '[data-bd-card="ccML"] .bd-r2'))
-        check(f"{tag} 2c any level filled → ✅ Holding: 'Avg x' + 'Entries 1/3 · next 480 waiting'", "ccMH" in col(page, "hold") and "Entries 1/3" in txt(page, '[data-bd-card="ccMH"] [data-bd-entries]') and "next 480" in txt(page, '[data-bd-card="ccMH"] [data-bd-entries]') and "Avg" in txt(page, '[data-bd-card="ccMH"] .bd-r2'), txt(page, '[data-bd-card="ccMH"] .bd-r3'))
+        check(f"{tag} 2c any level filled → ✅ Holding: 'Avg x' + 'Entries 1/3 · next 480 waiting'", "ccMH" in col(page, "hold") and "Entries 1/3" in txt(page, '[data-bd-card="ccMH"] [data-bd-entries]') and "next 480" in txt(page, '[data-bd-card="ccMH"] [data-bd-entries]') and "avg entry" in txt(page, '[data-bd-card="ccMH"] [data-pv-kv]'), txt(page, '[data-bd-card="ccMH"] .bd-r3'))
         js(page, "()=>bdOpen('ccMH')"); settle(page, 300)
         lv = js(page, "()=>[...document.querySelectorAll('[data-bd-lv]')].map(e=>e.dataset.bdLv+':'+e.dataset.bdLvst)")
         check(f"{tag} 2c drawer ENTRIES lists each level with its state (#1 filled, #2/#3 planned)", lv == ["1:filled", "2:planned", "3:planned"], lv)
@@ -133,7 +133,7 @@ def run(pw, w, h):
         # ── 14 family tag · no price ──
         plan(page)
         check(f"{tag} 14 Family tag only on Family-account plan", cnt(page, '[data-bd-card="ccFM"] [data-bd-fam]') == 1 and cnt(page, '[data-bd-card="ccPL"] [data-bd-fam]') == 0)
-        check(f"{tag} 14 symbol without a price → '—' to entry, no errors", "—" in txt(page, '[data-bd-card="ccNP"] [data-bd-pct]'), txt(page, '[data-bd-card="ccNP"] .bd-r3'))
+        check(f"{tag} 14 symbol without a price → 'no live price' (PV1: never a bare dash), no errors", "no live price" in txt(page, '[data-bd-card="ccNP"] [data-bd-pct]'), txt(page, '[data-bd-card="ccNP"] .bd-r3'))
         # ── 3 pills ──
         pill = lambda i: js(page, "(i)=>{ const e=document.querySelector('[data-bd-card=\"'+i+'\"] [data-bd-pill]'); return e ? e.dataset.bdPill + '|' + e.className + '|' + e.innerText : null; }", i)
         check(f"{tag} 3 Planned < 2% → green 'Place order ›'; far → plain 'Edit'", pill("ccPL").startswith("place|go p") and pill("ccFA").startswith("edit|go|"), [pill("ccPL"), pill("ccFA")])
@@ -450,7 +450,7 @@ def pb1b(pw, w, h):
         tab(page, "plan"); open_form(page, 1)
         ak = st(page)["a"]
         check(f"{tag} 2 Trend starts UNSELECTED: EMA50/Structure ✓✗ both off, size says 'Choose trend', no MSS question", cnt(page, "[data-pb2-tg].yes, [data-pb2-tg].no") == 0 and label(page) == "Choose trend" and mssq(page) == 0, [cnt(page, "[data-pb2-tg].yes"), label(page)])
-        check(f"{tag} 2 no Setup checkboxes · no Range option · no MSS price field · exactly Entry/SL/TP inputs", cnt(page, "#pb2Body input[type=checkbox]") == 0 and cnt(page, "#pb2Body input") == 3 and "Range" not in txt(page, "#pb2Body") and "MSS price" not in txt(page, "#pb2Body"), txt(page, "#pb2Body"))
+        check(f"{tag} 2 no Setup checkboxes · no Range option · no MSS price field · exactly Entry/SL/TP inputs", cnt(page, "#pb2Body input[type=checkbox]") == 0 and cnt(page, "#pb2Body input:not([data-pb2-in=last])") == 3 and "Range" not in txt(page, "#pb2Body") and "MSS price" not in txt(page, "#pb2Body"), txt(page, "#pb2Body"))
         check(f"{tag} 2 grey Setup reminder line present (one line of text)", "Setup in TradingView: In Zone · Trend Neutral · EMA50 = HVN · Pivot MMT" in txt(page, "[data-pb2-rem]"), txt(page, "[data-pb2-rem]"))
         check(f"{tag} 2 order: Buy|Sell · Main|Family → Entry SL TP → TREND → size → reminder → macro → Save draft · Save plan", js(page, "()=>{ const q=s=>{const e=document.querySelector(s); return e?e.getBoundingClientRect().top:-1}; const a=[q('[data-pb2-seg]'),q('[data-pb2-prices]'),q('[data-pb2-trend]'),q('[data-pb2-size]'),q('[data-pb2-rem]'),q('[data-pb2-mac]'),q('[data-pb2-draft]')]; return a.every((x,i)=>x>0 && (i==0||x>a[i-1])); }"))
         fld(page, "entry", 2642); fld(page, "sl", 2628); fld(page, "tp", 2684)
