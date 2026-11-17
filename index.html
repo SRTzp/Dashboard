@@ -30229,7 +30229,7 @@ function re2Model(acct){
     if(re4Passed(it) && !pastKept){ enter.push({it, o:{g:'enter', chip:'passed entry · missed?', cc:'a', k:'cancel', btn:'Cancel plan ›', fn:`re4Open('${td3E(it.id).replace(/'/g, "\\'")}','plan',null,'missed')`, btn2:'Keep', fn2:`re4Keep('${td3E(it.id).replace(/'/g, "\\'")}')`, btn3:'Update levels ›', fn3:`bdEditLv('${td3E(it.id).replace(/'/g, "\\'")}')`, why:'passed entry · missed?', warn:true, lv:tw1Lv(it), d}}); return; }   /* RE-D §6 */
     if(!ready && !near) return;
     const p = bdPill(it, true), blocked = !!p.dis;
-    const why = blocked ? (p.title || 'Blocked') : pastKept ? '+' + d.toFixed(1) + '% past entry' : ready ? 'ready' + (it.kind === 'sat' && L ? ' · step ' + L.sat.step.step : '') : (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '%';
+    const why = blocked ? (p.title || 'Blocked') : pastKept ? '+' + d.toFixed(1) + '% past entry' : ready ? (d != null ? (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '% · ' : '') + 'ready' + (it.kind === 'sat' && L ? ' · step ' + L.sat.step.step : '') : (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '%';
     enter.push({it, o:{g:'enter', chip: ready ? 'Ready' : 'Near', cc: ready ? 'b' : '', k:p.k, btn:p.t, fn:p.fn, dis:blocked, title:p.title, why, warn:blocked || pastKept, lv:tw1Lv(it), d}});
   });
   by.ord.forEach(it=>{
@@ -30844,12 +30844,12 @@ function pb2PlaceHtml(){
 }
 function efSheetWarns(i, c){   /* amber lines inside the confirm sheet: news window · against Macro · limited by · replace pick · carried */
   const e = bdE, out = [];
-  try{ const n = c.c && c.c.newsWarn; if(n) out.push(`<div class="pb2-q ef-amber" data-ef-news>${e(n)}</div>`); }catch(x){}
-  try{ if(c.c && c.c.macroWarn) out.push(`<div class="pb2-q ef-amber" data-ef-macro>Against Macro</div>`); }catch(x){}
+  try{ const n = c.c && c.c.newsWarn; if(n) out.push(`<div class="bd-m ef-amber" data-ef-news>${e(n)}</div>`); }catch(x){}
+  try{ if(c.c && c.c.macroWarn) out.push(`<div class="bd-m ef-amber" data-ef-macro>Against Macro</div>`); }catch(x){}
   try{ const m = c.model || (c.c && c.c.re1); const lim = m && (m.limitedBy || (m.limit && m.limit.text)); if(lim) out.push(`<div class="bd-m" data-ef-limit>${e(lim)}</div>`); }catch(x){}
   if(pb2 && pb2.repC && pb2.repC.length){
     const k = pb2.repC[pb2.repI % pb2.repC.length], n = pb2.repC.length;
-    out.push(`<div class="pb2-q" data-ef-replace>Replace <b>${e(sat7dLabel(k))}</b> in this week's picks?${n > 1 ? ` <button type="button" class="go" data-ef-rep-next onclick="efRepNext()">Other ›</button>` : ''}</div>`);
+    out.push(`<div class="bd-m" data-ef-replace style="color:var(--text)">Replace <b>${e(sat7dLabel(k))}</b> in this week's picks?${n > 1 ? ` <button type="button" class="go" data-ef-rep-next onclick="efRepNext()">Other ›</button>` : ''}</div>`);
   }
   return out.join('');
 }

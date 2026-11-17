@@ -53,3 +53,6 @@ Counts are derived from reading the handlers (no live run); the EF1 tests (D) re
 ## Open questions
 - Today › Enter volume once Ready is automatic (see 3).
 - Core confirm sheet content (see 1).
+
+## Status (after D)
+A0 map · A admin blocks · B Ready / verify / news · C 2-tap Place · D tests — all pushed on `claude/ef1`. See `EF1-summary.md`.

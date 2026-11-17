@@ -160,7 +160,7 @@ def partC(pw, w, h):
         # ── Blocked: chip replaces Ready, reason, fix button names the fix, not sized
         cb = card_txt(page, "pb")
         check("[%s] C: blocked plan → red Blocked chip, no ⚑ Ready" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=pb]'); return !!c.querySelector('[data-pv-blocked]') && !c.querySelector('[data-re2-ready]')}"), cb)
-        check("[%s] C: blocked plan shows its real reason + Fix button (PV1b)" % tag, "Not picked this week" in cb and "Add to week" in cb and "Risk not sized" in cb, cb)
+        check("[%s] C: blocked plan shows its real reason + Fix button (PV1b)" % tag, "Not picked this week" not in cb and "Set min stop" in cb and "Open Settings" in cb and "Risk not sized" in cb, cb)   # EF1: an unpicked asset is no longer a block; the real block (min stop) shows
         js(page, "()=>{ re2ReadyToggle('pb'); }"); page.wait_for_timeout(300)
         check("[%s] C: Ready cannot be set while blocked" % tag, not js(page, "()=>!!satIdeasList.find(x=>x.id==='pb').ready"))
         js(page, "()=>{ satIdeasList.find(x=>x.id==='pb').ready = true; bdRender(); }"); page.wait_for_timeout(200)

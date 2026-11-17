@@ -322,11 +322,11 @@ def workflow(pw, w, h):
         })
         check(f"{tag} 4 no Watch item yet for FFIL / CNCL", "FFIL" not in wl_ids(page) and "CNCL" not in wl_ids(page), wl_ids(page))
         # cancelled order with no fill → nothing
-        js(page, "()=>ln4Place('core','cCN')"); settle(page, 400)
+        js(page, "()=>{ln4Place('core','cCN'); {const b=document.querySelector('[data-pb2-yes]'); if(b) b.click();}}"); settle(page, 400)
         js(page, "()=>bdCancelOrder('cCN')"); settle(page, 400)
         check(f"{tag} 4 placed then cancelled (never filled) → no auto-add to Watch / no Today task", "CNCL" not in wl_ids(page) and not [t for t in todo(page, "wl1hw:") if "CNCL" in t], wl_ids(page))
         # first partial fill
-        js(page, "()=>ln4Place('core','cFF')"); settle(page, 400)
+        js(page, "()=>{ln4Place('core','cFF'); {const b=document.querySelector('[data-pb2-yes]'); if(b) b.click();}}"); settle(page, 400)
         js(page, "()=>coreBuy1Open('cFF')"); settle(page, 400)
         info = js(page, "()=>({qty:document.getElementById('cbQty').value, err:document.getElementById('cbErr').innerText, dis:document.getElementById('cbSave').disabled})")
         check(f"{tag} 4 Filled ✓ form: default qty clamped to the homework cap (40 → 20) and Save enabled", info["qty"] == "20" and info["dis"] is False, info)
@@ -381,9 +381,9 @@ def caps(pw, w, h):
         })
         a = js(page, "()=>wl1Agg('CAPX','winner')")
         check(f"{tag} 5 homework not done → cap = 50% of full (full 100 → cap 50)", a["full"] == 100 and a["cap"] == 50 and a["pct"] == 50, a)
-        js(page, "()=>ln4Place('core','pA')"); settle(page, 300)
+        js(page, "()=>{ln4Place('core','pA'); {const b=document.querySelector('[data-pb2-yes]'); if(b) b.click();}}"); settle(page, 300)
         check(f"{tag} 5 plan A: first level 40 ≤ cap → order placed", js(page, "()=>!!(coreCardsList.find(x=>x.id==='pA').ln4||{}).placedAt"), "")
-        js(page, "()=>{ window.__wl1Msg=''; ln4Place('core','pB'); }"); settle(page, 300)
+        js(page, "()=>{ window.__wl1Msg=''; ln4Place('core','pB'); {const b=document.querySelector('[data-pb2-yes]'); if(b) b.click();}; }"); settle(page, 300)
         msg = js(page, "()=>window.__wl1Msg")
         check(f"{tag} 5 plan B (same stock) would make working 80 > 50 → BLOCKED across plans, reason shows allowed qty 10", not js(page, "()=>!!(coreCardsList.find(x=>x.id==='pB').ln4||{}).placedAt") and "homework not done" in msg and "allowed 10" in msg, msg)
         # fill form for plan A: hard error when above the cap, with allowed qty
@@ -395,9 +395,9 @@ def caps(pw, w, h):
         # done → ≤ 100% incl. held
         a = js(page, "()=>wl1Agg('DONE','winner')")
         check(f"{tag} 5 homework done → cap = 100% of full", a["done"] is True and a["cap"] == 100, a)
-        js(page, "()=>{ ln4Place('core','dA'); ln4Place('core','dB'); }"); settle(page, 300)
+        js(page, "()=>{ ln4Place('core','dA'); {const b=document.querySelector('[data-pb2-yes]'); if(b) b.click();}; ln4Place('core','dB'); {const b=document.querySelector('[data-pb2-yes]'); if(b) b.click();}; }"); settle(page, 300)
         placed = js(page, "()=>['dA','dB'].map(i=>!!(coreCardsList.find(x=>x.id===i).ln4||{}).placedAt)")
-        js(page, "()=>{ window.__wl1Msg=''; ln4Place('core','dC'); }"); settle(page, 300)
+        js(page, "()=>{ window.__wl1Msg=''; ln4Place('core','dC'); {const b=document.querySelector('[data-pb2-yes]'); if(b) b.click();}; }"); settle(page, 300)
         m2 = js(page, "()=>window.__wl1Msg")
         check(f"{tag} 5 done: A (40) + B (40) fit, third plan (+40 = 120 > 100) blocked ('total would exceed full size')", placed == [True, True] and not js(page, "()=>!!(coreCardsList.find(x=>x.id==='dC').ln4||{}).placedAt") and "exceed full size" in m2, [placed, m2])
         # held counts: 'total ≤ 100% incl. held'
