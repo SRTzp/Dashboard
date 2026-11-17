@@ -117,7 +117,21 @@ def launch(pw, w, h, doc, cards=None, deny=False, ff="green"):
     return browser, context, page, ce, pe, dialogs
 
 
+def rm1_shape(j):
+    """RM1: older fixtures give {"up": bool}. The app now reads state / inputs_asof / adj / sma → translate (input date = as_of, so freshness stays what the fixture meant)."""
+    if not isinstance(j, dict) or not isinstance(j.get("ratios"), dict): return j
+    import copy
+    j = copy.deepcopy(j); legs = {"ACWI_BIL": ("ACWI", "BIL"), "HYG_IEI": ("HYG", "IEI")}
+    for k, (a, b) in legs.items():
+        r = j["ratios"].get(k)
+        if isinstance(r, dict) and "state" not in r and isinstance(r.get("up"), bool):
+            d = str(j.get("as_of") or "")[:10]
+            r.update({"state": "green" if r["up"] else "red", "adj": True, "sma": [20, 50], "days_in_state": r.get("flip_days", 5), "inputs_asof": {a: d, b: d}, "bar": d, "sma20": 1.0, "sma50": 1.0})
+    return j
+
+
 def set_ff(page, j):
+    j = rm1_shape(j)
     page.evaluate("async (j)=>{ window.__FF_JSON = j; await ffLoadJson(true); }", j)
     page.wait_for_timeout(200)
 

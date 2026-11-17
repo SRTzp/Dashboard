@@ -111,7 +111,7 @@ def run(pw, w, h):
         check(f"{tag} 1 Holding: needs-action first (add-on / stop below avg) before plain", col(page, "hold")[0] in ("ccST", "ccFU"))
         # ── 2c multiple entry levels ──
         check(f"{tag} 2c one card per plan; Planned multi-level card shows 'Entry x +2 lower'", cnt(page, '[data-bd-card="ccML"]') == 1 and "+2 lower" in txt(page, '[data-bd-card="ccML"] [data-bd-lower]') and "ccML" in col(page, "plan"), txt(page, '[data-bd-card="ccML"] .bd-r2'))
-        check(f"{tag} 2c any level filled → ✅ Holding: 'Avg x' + 'Entries 1/3 · next 480 waiting'", "ccMH" in col(page, "hold") and js(page, "()=>!!document.querySelector('[data-bd-card=ccMH] [data-pv-done]')") and "Buy 480" in txt(page, '[data-bd-card="ccMH"] [data-pv-legs]'), txt(page, '[data-bd-card="ccMH"] .bd-r3'))
+        check(f"{tag} 2c any level filled → ✅ Holding: 'Avg x' + 'Entries 1/3 · next 480 waiting'", "ccMH" in col(page, "hold") and js(page, "()=>!!document.querySelector('[data-bd-card=ccMH] [data-pv-done]')") and "@ 480" in txt(page, '[data-bd-card="ccMH"] [data-pv-legs]'), txt(page, '[data-bd-card="ccMH"] .bd-r3'))
         js(page, "()=>bdOpen('ccMH')"); settle(page, 300)
         lv = js(page, "()=>[...document.querySelectorAll('[data-bd-lv]')].map(e=>e.dataset.bdLv+':'+e.dataset.bdLvst)")
         check(f"{tag} 2c drawer ENTRIES lists each level with its state (#1 filled, #2/#3 planned)", lv == ["1:filled", "2:planned", "3:planned"], lv)
@@ -270,7 +270,7 @@ def run(pw, w, h):
         js(page, "()=>document.getElementById('bdIn').remove()")
         page.keyboard.press("n"); settle(page, 300)
         keys = js(page, "()=>[...document.querySelectorAll('#bdPop .bd-opt')].map(e=>e.dataset.bdOpt+':'+e.innerText.replace(/\\s+/g,' '))")
-        check(f"{tag} 10 popup: S Momentum · D Compounder · F Satellite, each with its key badge and rule hint", len(keys) == 3 and keys[0].startswith("S:") and "0.35–0.50%" in keys[0] and keys[1].startswith("D:") and "stop ≥ 7%" in keys[1] and keys[2].startswith("F:") and "XAU" in keys[2], keys)
+        check(f"{tag} 10 popup: S Momentum · D Compounder · F Satellite, each with its key badge and rule hint", len(keys) == 3 and keys[0].startswith("S:") and "0.45%" in keys[0] and keys[1].startswith("D:") and "stop ≥ 7%" in keys[1] and keys[2].startswith("F:") and "XAU" in keys[2], keys)
         page.keyboard.press("ArrowDown"); page.keyboard.press("Enter"); settle(page, 700)
         check(f"{tag} 10 ↓ + Enter picks Compounder → existing core form (Compounder) on top of the tab", cnt(page, "#cnTicker") == 1 and js(page, "()=>coreNew && coreNew.track") == "ladder" and js(page, "()=>activeTab") == "plan", js(page, "()=>coreNew && coreNew.track"))
         js(page, "()=>coreSheetClose()")
@@ -667,7 +667,7 @@ def pb1c(pw, w, h):
         # ── order + sort + ★ ──
         order = js(page, "()=>[...document.querySelectorAll('#bdFlowTop [data-bd-rs],#bdFlowTop [data-bd-macro],#bdFlowTop [data-bd-events],#bdFlowTop [data-bd-rrg]')].map(e=>e.hasAttribute('data-bd-rs')?'risk':e.hasAttribute('data-bd-macro')?'macro':e.hasAttribute('data-bd-events')?'events':'rrg')")
         check(f"{tag} Flow order Risk → Macro → Events → RRG", order == ["risk", "macro", "events", "rrg"], order)
-        check(f"{tag} Risk strip: Momentum % · Compounder % · regime", all(cnt(page, s) == 1 for s in ("[data-bd-rs-mom]", "[data-bd-rs-comp]", "[data-bd-regime]")) and "%" in txt(page, "[data-bd-rs-mom]"), txt(page, "[data-bd-rs]"))
+        check(f"{tag} Risk strip: ONE New-entry budget % (Mom / Comp only when they differ) · regime reason", cnt(page, "[data-bd-regime]") == 1 and ((cnt(page, "[data-bd-rs-budget]") == 1 and cnt(page, "[data-bd-rs-mom]") == 0) or (cnt(page, "[data-bd-rs-mom]") == 1 and cnt(page, "[data-bd-rs-comp]") == 1)) and "%" in txt(page, "[data-bd-rs]"), txt(page, "[data-bd-rs]"))
         tiers = js(page, "()=>[...document.querySelectorAll('[data-bd-mc]')].map(e=>e.dataset.bdTier)")
         rk = {"HIGH": 0, "MED": 1, "LOW": 2, "NONE": 3}
         check(f"{tag} Macro cards sorted by impact HIGH → MED → LOW → none", [rk[t] for t in tiers] == sorted(rk[t] for t in tiers) and tiers and tiers[0] == "HIGH", tiers)

@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """PV1b — compact Plan cards · real Blocked reasons · legs (<=2 in / <=2 out) · Momentum optional tp2 / tp1Qty.  Run: python3 tests/run_tests_pv1b.py
 Screenshots -> tests/screenshots/pv1b-*.png (env PV1B_SHOTS = other folder)."""
-import os, sys, copy
+import os, re, sys, copy
 from playwright.sync_api import sync_playwright
 from pv1_common import *
 
 SHOTS = os.environ.get("PV1B_SHOTS") or K.SHOTS
 os.makedirs(SHOTS, exist_ok=True)
 SIZES = [(1440, 900), (1280, 800), (390, 844)]
+
+
+def txt(page, sel):
+    return js(page, "(s)=>{const e=document.querySelector(s);return e?e.innerText.replace(/\\s+/g,' ').trim():''}", sel)
 
 
 def shot(page, name):
@@ -47,7 +51,7 @@ def run(pw, w, h):
         js(page, SAT_JS); js(page, SAT_PLANS_JS); page.wait_for_timeout(700); refresh(page)
         js(page, "()=>{satWeekPickWrite(wpWeekKey(), ['XAUUSD','BTCUSD','XAGUSD']); switchTab('plan'); bdRender();}"); page.wait_for_timeout(500)
         t = ctext(page, "xp"); L = legs(page, "xp")
-        check("[%s] A Sat Planned Long 1/1 — Stop · Risk · Reward · R, Buy entry, Sell target" % tag, "Stop 2,628" in t and "Risk −$294" in t and "Reward +$882" in t and "3.0R" in t and [x["t"] for x in L] == ["Buy 2,642 ×0.21", "Sell 2,684 ×0.21"] and not any(x["done"] for x in L), [t, L])
+        check("[%s] A Sat Planned Long 1/1 — #qty · Stop · Risk · Reward +$X nR (R joined), chips Buy #0.21 @ 2,642 · Sell #0.21 @ 2,684" % tag, "Stop 2,628" in t and "Risk −$294" in t and "Reward +$882 3.0R" in t and "#0.21 Stop 2,628" in t and [x["t"] for x in L] == ["Buy #0.21 @ 2,642", "Sell #0.21 @ 2,684"] and not any(x["done"] for x in L), [t, L])
         L = legs(page, "ps")
         check("[%s] A Sat Planned Short 1/1 — entry = Sell, exit = Buy" % tag, [x["t"][:4] for x in L] == ["Sell", "Buy "] and [x["out"] for x in L] == [False, True], L)
         # two entries: exit covers ALL planned entries; Reward / R include every leg (XAU E1 2,642 x0.1 + E2 2,636 x0.18, stop 2,628, target 2,684)
@@ -55,11 +59,19 @@ def run(pw, w, h):
             c.lot = 0.1; c.c = Object.assign({}, c.c, {e2:{ok:true, px:2636, lot1:0.1, lot2:0.18, share:50}}); c.c.v2 = Object.assign({}, c.c.v2, {actualTHB: 284 * fx}); return c; };
           const i = satIdeasList.find(x=>x.id==='xp'); i.entry = 2642; i.entry2 = 2636; i.sl = 2628; i.tp = 2684; i.sleeve = 'main'; i.e2on = true; bdRender(); }"""); page.wait_for_timeout(300)
         t2 = ctext(page, "xp"); L2 = [x["t"] for x in legs(page, "xp")]
-        check("[%s] A two entries: legs Buy 2,642 ×0.1 · Buy 2,636 ×0.18 · Sell 2,684 ×0.28 (exit = sum of entry qty)" % tag, L2 == ["Buy 2,642 ×0.1", "Buy 2,636 ×0.18", "Sell 2,684 ×0.28"], L2)
+        check("[%s] A two entries: legs Buy #0.1 @ 2,642 · Buy #0.18 @ 2,636 · Sell #0.28 @ 2,684 (exit = sum of entry qty)" % tag, L2 == ["Buy #0.1 @ 2,642", "Buy #0.18 @ 2,636", "Sell #0.28 @ 2,684"], L2)
         pvx = js(page, "()=>{const p=posView(bdItems().find(x=>x.id==='xp')); return {rw:p.reward/p.fx, rk:p.plannedRisk/p.fx, r:p.rewardR}}")
         check("[%s] A two entries: Risk −$284 · Reward +$1,284 (shown compact as +$1.3k, same as the mockup) · 4.5R — every entry leg counted" % tag, "Risk −$284" in t2 and "Reward +$1.3k" in t2 and "4.5R" in t2 and abs(pvx["rw"] - 1284) < 0.01 and abs(pvx["rk"] - 284) < 0.01 and abs(pvx["r"] - 4.521) < 0.01, [t2, pvx])
         js(page, "()=>{ pb2Calc = window.__o; satIdeasList.find(x=>x.id==='xp').e2on = false; bdRender(); }"); page.wait_for_timeout(200)
-        check("[%s] A unsized chip reads 'Buy 30 · not sized' (no ×)" % tag, "Buy 30 · not sized" in " ".join(x["t"] for x in legs(page, "pb")) and "×not sized" not in ctext(page, "pb"), [x["t"] for x in legs(page, "pb")])
+        check("[%s] A unsized chip reads 'Buy #— @ 30 · not sized' (no ×)" % tag, "Buy #— @ 30 · not sized" in " ".join(x["t"] for x in legs(page, "pb")) and "×" not in " ".join(x["t"] for x in legs(page, "pb")), [x["t"] for x in legs(page, "pb")])
+        ml = js(page, """()=>{ const e=document.querySelector('[data-bd-card=xp] [data-pv-money]'), cs=getComputedStyle(e), lh=parseFloat(cs.lineHeight)||parseFloat(cs.fontSize)*1.3; return {h:e.getBoundingClientRect().height, lh, t:e.innerText.replace(/\\s+/g,' ').trim(), r:!!e.querySelector('[data-pv-reward] [data-pv-r]')}; }""")
+        if w >= 1280: check("[%s] A planned money line is ONE line (#qty · Stop · Risk · Reward +$X nR)" % tag, ml["h"] < ml["lh"] * 1.6 and ml["r"], ml)
+        check("[%s] A planned money line + chips carry no unit word / no ×" % tag, not re.search(r"\\b(lot|lots|sh|shares)\\b|×", ml["t"] + " " + " ".join(x["t"] for x in legs(page, "xp"))), ml)
+        js(page, "()=>{ if(bdPopOpen()) bdPopClose(); pb2 = {step:'place', id:'xp', a:'XAUUSD'}; pb2Render(); }"); page.wait_for_timeout(400)   # the card is Blocked (min stop) → open the sheet directly
+        cf = txt(page, "[data-pb2-order]")
+        check("[%s] A confirm sheet reads like an order ticket: 'Entry Buy #0.21 @ 2,642' (no unit word)" % tag, cf.startswith("Entry Buy #") and "@ 2,642" in cf and "lot" not in txt(page, "[data-pb2-summary]"), [cf, txt(page, "[data-pb2-summary]")])
+        check("[%s] A confirm sheet: no overflow" % tag, no_overflow(page))
+        js(page, "()=>{ bdPopClose(); }"); page.wait_for_timeout(200)
         check("[%s] A Short word is coloured Short; card has no six-box grid / helper text" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=ps]'); return c.querySelector('[data-pv-dir]').dataset.pvDir==='Short' && !c.querySelector('.pv-kv') && !/Fix the plan to get a size|not sized.*not sized|To entry/.test(c.innerText)}"))
         # Tactical = 2 targets, entry 2 is Main only
         js(page, "()=>{ const i=satIdeasList.find(x=>x.id==='xp'); i.sleeve='tactical'; i.e2on=false; i.entry2=null; bdRender(); }"); page.wait_for_timeout(300)
@@ -107,7 +119,7 @@ def run(pw, w, h):
         check("[%s] B Add to week › adds the asset to this week's picks" % tag, js(page, "()=>satIsPicked('XAUUSD')"))
         js(page, "()=>{ satWeekPickWrite(wpWeekKey(), ['XAUUSD','BTCUSD']); satIdeasList.find(x=>x.id==='pb').asset='BTCUSD'; re1Cache={}; bdRender(); }"); page.wait_for_timeout(300)
         z = blk("xp")
-        check("[%s] B lot exists but plan not ready → real reason (never 'Size not available'), real size / risk visible" % tag, z and z["why"] and z["why"] != "Size not available" and "Risk −$294" in z["t"] and "×0.21" in z["t"], z)
+        check("[%s] B lot exists but plan not ready → real reason (never 'Size not available'), real size / risk visible" % tag, z and z["why"] and z["why"] != "Size not available" and "Risk −$294" in z["t"] and "#0.21 @" in z["t"], z)
         zz = js(page, "()=>{ const i=Object.assign({}, satIdeasList.find(x=>x.id==='xp'), {sl:2642}); const c=pb2Calc(i,pb2AcctOf(i)); const z=pvSatBlockOf(i); return {lot:c.lot, msg:c.msg, z:z}; }")
         check("[%s] B no lot (sizing failed) → the sizing message with a Fix button (never 0)" % tag, zz["lot"] is None and zz["z"] and zz["z"]["why"] and zz["z"]["btn"] in ("Fix stop ›", "Fix size ›", "Open Settings ›"), zz)
         # carried
@@ -144,7 +156,7 @@ def run(pw, w, h):
         js(page, SAT_JS); page.wait_for_timeout(600); refresh(page)
         js(page, "()=>{switchTab('plan'); bdRender();}"); page.wait_for_timeout(400)
         t = ctext(page, "bi"); L = legs(page, "bi")
-        check("[%s] A Holding Sat after a partial exit: Banked +$20 · actual exit ✓ chip with real price × qty · remaining target dashed with the open qty" % tag, "Banked +$20" in t and any(x["out"] and x["done"] and x["t"].startswith("Sell 62,000") and "0.01" in x["t"] for x in L) and any(x["out"] and not x["done"] and "Sell 63,000" in x["t"] for x in L), [t, L])
+        check("[%s] A Holding Sat after a partial exit: Banked +$20 · actual exit ✓ chip with real price × qty · remaining target dashed with the open qty" % tag, "Banked +$20" in t and any(x["out"] and x["done"] and x["t"].startswith("Sell #") and "@ 62,000" in x["t"] and "0.01" in x["t"] for x in L) and any(x["out"] and not x["done"] and "@ 63,000" in x["t"] for x in L), [t, L])
     finally:
         b.close()
     # ---------- Momentum / Compounder
@@ -156,7 +168,7 @@ def run(pw, w, h):
         refresh(page); js(page, "()=>{switchTab('plan'); bdRender();}"); page.wait_for_timeout(400)
         mid = js(page, "()=>(bdItems().find(x=>x.sym==='AVGO')||{}).id")
         t = ctext(page, mid); L = legs(page, mid)
-        check("[%s] A Momentum Holding: Stop · Held · If stopped · (Banked) ; chips = fills ✓, pending entry, exits" % tag, mid and "Stop" in t and "If stopped" in t and any(x["done"] and x["t"].startswith("Buy 158") for x in L) and any((not x["done"]) and x["t"].startswith("Buy 150") for x in L), [t, L])
+        check("[%s] A Momentum Holding: Stop · Held · If stopped · (Banked) ; chips = fills ✓, pending entry, exits" % tag, mid and "Stop" in t and "If stopped" in t and any(x["done"] and x["t"].startswith("Buy #") and "@ 158" in x["t"] for x in L) and any((not x["done"]) and x["t"].startswith("Buy #") and "@ 150" in x["t"] for x in L), [t, L])
         check("[%s] A Momentum exits: only real closed rows are ✓; remaining targets dashed (no inferred hit)" % tag, [x for x in L if x["out"] and x["done"]] and all(not x["done"] for x in L if x["out"] and "190" in x["t"]), L)
     finally:
         b.close()
@@ -167,7 +179,7 @@ def run(pw, w, h):
         js(page, "()=>{ tv1SetupLeft=()=>1; }"); refresh(page); js(page, "()=>{switchTab('plan'); bdRender();}"); page.wait_for_timeout(400)
         mid = js(page, "()=>(bdItems().find(x=>x.sym==='AVGO')||{}).id")
         t = ctext(page, mid); L = legs(page, mid); q = [x["t"] for x in L]
-        check("[%s] A Momentum Planned 2/2: Buy 158 ×20 · Buy 150 ×15 · Sell 175 ×10 · Sell 190 ×25 (tp1Qty = 10, rest to target 2)" % tag, q == ["Buy 158 ×20", "Buy 150 ×15", "Sell 175 ×10", "Sell 190 ×25"], [q, t])
+        check("[%s] A Momentum Planned 2/2: Buy #20 @ 158 · Buy #15 @ 150 · Sell #10 @ 175 · Sell #25 @ 190 (tp1Qty = 10, rest to target 2)" % tag, q == ["Buy #20 @ 158", "Buy #15 @ 150", "Sell #10 @ 175", "Sell #25 @ 190"], [q, t])
         pv = js(page, "(i)=>{const p=posView(bdById(i)); return {rw:p.reward, rk:p.plannedRisk, r:p.rewardR}}", mid)
         # reward = (175-avg)*10 + (190-avg)*25 ; avg = (158*20+150*15)/35 ; * fx 33.76
         avg = (158 * 20 + 150 * 15) / 35.0; rw = ((175 - avg) * 10 + (190 - avg) * 25) * 33.76
@@ -175,7 +187,7 @@ def run(pw, w, h):
         # blank tp2 = single target behaviour
         js(page, "(i)=>{const c=coreCardsList.find(x=>x.ticker==='AVGO'); delete c.plan.tp2; delete c.plan.tp1Qty; bdRender();}", mid); page.wait_for_timeout(300)
         q = [x["t"] for x in legs(page, mid)]
-        check("[%s] A Momentum blank tp2 → single target for all shares" % tag, q[-1] == "Sell 175 ×35" and len(q) == 3, q)
+        check("[%s] A Momentum blank tp2 → single target for all shares" % tag, q[-1] == "Sell #35 @ 175" and len(q) == 3, q)
         # form
         js(page, "(i)=>coreNewOpen('main',{mode:'editw', id:coreCardsList.find(x=>x.ticker==='AVGO').id})", mid); page.wait_for_timeout(500)
         check("[%s] A Momentum form has optional Target 1 / Target 2 / Shares at target 1" % tag, js(page, "()=>!!document.querySelector('[data-pv-tp]') && !!document.querySelector('[data-pv-tp2]') && !!document.querySelector('[data-pv-tp1qty]')"))

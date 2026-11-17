@@ -44,6 +44,10 @@ PICK39 = ['XAUUSD', 'BTCUSD', 'BRENT']
 
 
 SEED_PLANS = (__name__ == '__main__')
+def _rm1_it(a, b):
+    return {"tf": "D", "sma": [20, 50], "adj": True, "state": "green", "up": True, "days_in_state": 20, "flip_days": 20, "bar": "2026-10-01", "inputs_asof": {a: "2026-10-01", b: "2026-10-01"}, "sma20": 1.2, "sma50": 1.1, "ratio": 1.3, "prev_week": {"up": True, "bar": "2026-09-25"}}
+RM1_FF = json.dumps({"as_of": "2026-10-02", "ver": 3, "ratios": {"ACWI_BIL": _rm1_it("ACWI", "BIL"), "HYG_IEI": _rm1_it("HYG", "IEI"),
+    "HYG_IEF": {"up": True, "flip_days": 3, "tf": "W"}, "HG_GC": {"up": True, "flip_days": 3, "tf": "W"}, "SPHB_SPLV": {"up": True, "flip_days": 3, "tf": "D"}, "RSP_SPY": {"up": True, "flip_days": 3, "tf": "D"}}})
 TZID = "Asia/Bangkok"   # WM1b — เทสเขตเวลาเครื่อง (run_tests_phase101 สลับเป็น UTC / America/New_York)
 
 
@@ -62,6 +66,7 @@ def launch(pw, w, h, doc=None, cards=None, iso=CLK, clean=False, ff=None, extra=
     browser = pw.chromium.launch(**lk)
     context = browser.new_context(viewport={"width": w, "height": h}, timezone_id=TZID)
     context.add_init_script(FF_STUB)
+    context.add_init_script("window.__FF_JSON = " + RM1_FF + ";")   # RM1: fresh green/green fund-flow file (see RM1_FF)
     if TD3_OTHER_DEV: context.add_init_script("try{ localStorage.setItem('dash.td3OtherDev','1'); }catch(e){}")
     if TD3_OTHER_OPEN: context.add_init_script("try{ localStorage.setItem('dash.td3Other','1'); }catch(e){}")   # TD3a — งานเดิมของ Today อยู่ใน Other ▸ (พับ lazy) → ชุดเก่าเปิดไว้ก่อน
     context.add_init_script("(" + P.CLOCK_JS + ")(" + json.dumps(iso) + ")")
@@ -72,7 +77,9 @@ def launch(pw, w, h, doc=None, cards=None, iso=CLK, clean=False, ff=None, extra=
     page.on("dialog", lambda d: (dialogs.append(d.message), d.accept()))
     page.route(re.compile(r"gstatic\.com/firebasejs"), lambda r: r.fulfill(status=200, content_type="application/javascript", body=base.MOCK_FB))
     page.route(re.compile(r"fonts\.(googleapis|gstatic)\.com"), lambda r: r.fulfill(status=200, content_type="text/css", body=""))
-    page.route(re.compile(r"fundflow\.json|open\.er-api\.com|api\.twelvedata\.com"), lambda r: r.fulfill(status=200, content_type="application/json", body="{}"))
+    page.route(re.compile(r"open\.er-api\.com|api\.twelvedata\.com"), lambda r: r.fulfill(status=200, content_type="application/json", body="{}"))
+    # RM1: missing fund-flow data now means the 80% fallback (never 100%) → suites that assume full size get a fresh green/green file (oldest input 1 Oct, harness clock 2 Oct)
+    page.route(re.compile(r"fundflow\.json"), lambda r: r.fulfill(status=200, content_type="application/json", body=RM1_FF))
     page.goto("file://" + INDEX, wait_until="load")
     page.wait_for_timeout(150)
     page.evaluate("() => localStorage.setItem('bkLastBackupAt', String(Date.now()))")
@@ -93,7 +100,7 @@ def launch(pw, w, h, doc=None, cards=None, iso=CLK, clean=False, ff=None, extra=
     page.fill("#authEmail", "test@example.com"); page.fill("#authPass", "password123"); page.click("#authSubmit")
     page.wait_for_selector("#mainWrap", state="visible", timeout=8000)
     page.wait_for_timeout(1200)
-    p24.set_ff(page, ff if ff is not None else {"as_of": "2026-10-02", "ratios": {"ACWI_BIL": {"up": False}, "HYG_IEI": {"up": True}}})
+    p24.set_ff(page, ff if ff is not None else {"as_of": "2026-10-02", "ratios": {"ACWI_BIL": {"up": True}, "HYG_IEI": {"up": True}}})   # RM1: default green/green (Momentum now takes the modifier; the old red/green default would make every plan 80 %)
     page.evaluate("()=>{ if(window.rsLoad) return rsLoad(true); }"); page.wait_for_timeout(600)
     page.evaluate("()=>render()"); page.wait_for_timeout(300)
     if SEED_PLANS and PK:   # PF2 — pick มีแผนใช้งานแล้ว = state C (เทสเก่าคาดว่า Today เงียบเมื่อปกติ)

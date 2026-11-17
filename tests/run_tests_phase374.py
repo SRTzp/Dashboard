@@ -86,7 +86,7 @@ def launch(pw, w, h):
     b, page, ce, pe = T.launch(pw, w, h, iso=T.NOW, picks=(), weekly=False)
     js(page, "()=>{ ln4Write(o=>{ delete o.starterFeatureOff; delete o.starterOff; o.re1StarterReset = true; }); }")   # RE-C1: Training (Starter ¼) ON for tests that exercise it
     page.route(re.compile(r"investing\.com"), lambda route: route.fulfill(status=200, content_type="text/html", body="<html><body></body></html>"))
-    P24.set_ff(page, P24.ff_json(True, True))
+    P24.set_ff(page, {"as_of": T.NOW[:10], "ratios": {"ACWI_BIL": {"up": True}, "HYG_IEI": {"up": True}}})   # RM1: fresh against the harness clock (ff_json uses the real date)
     js(page, "()=>{ try{ ['dash.ps1Off','dash.wl1Trk','dash.wl1CandNote','dash.sw2Hint.watch','wlSubMap'].forEach(k=>localStorage.removeItem(k)); }catch(e){} }")
     return b, page, ce, pe
 

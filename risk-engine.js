@@ -22,8 +22,10 @@
   var POLICY = {
     mom: { rptPct: 0.45, weeklyPct: 1.80, monthlyPct: 7.20, ammo: 4, homeworkCap: 0.5, starter: 0.25, releaseR: 1.5 },
     sat: { stepRpt: [0.20, 0.30, 0.30, 0.40], weeklyPct: 1.20, monthlyPct: 4.80, condReduced: 0.65, minRR: 1.5, staleOrderMs: DAY },
-    comp: { pilotPct: 0.50, addonPct: 0.50, heatCapPct: 6.0, starter: 0.25, lockLosses: 6, unlockDays: 7,
-            regime: { green: 1.0, one: 0.75, both: 0.50 }, freshDays: 4, staleCap: 0.75, homeworkCap: 0.5 },
+    comp: { pilotPct: 0.50, addonPct: 0.50, totalCapPct: 1.25, valueCapPct: 12.5, heatCapPct: 6.0, starter: 0.25, lockLosses: 6, unlockDays: 7, homeworkCap: 0.5 },
+    /* RM1 — shared new-entry budget modifier ("initial settings to test"). One signal result feeds sizing AND every view.
+       table[equity][credit]: green/red of ACWI/BIL (SMA 20/50) x HYG/IEI (SMA 20/50). Neutral / unavailable / stale -> fallback (never 100 %). All values + SMA periods are settings (rev 4: 100/80/80/60, fallback 80). */
+    regime: { table: { green: { green: 1.0, red: 0.80 }, red: { green: 0.80, red: 0.60 } }, fallback: 0.80, freshDays: 4, smaFast: 20, smaSlow: 50 },
     active: { weeklyPct: 3.0, monthlyPct: 12.0 },
     emergency: { triggerPct: 10, recoverPct: 5, factor: 0.5 },
     snapshot: { blockAfterDays: 14 }
@@ -50,6 +52,7 @@
     AMMO_OVERSHOOT:     { kind: 'flag',  text: 'Weekly losing-idea count is above 4 (accepted, new risk restricted)' },
     ACTIVE_WEEK:        { kind: 'block', text: 'Active (Momentum + Satellite) weekly 3% summary check exceeded' },
     ACTIVE_MONTH:       { kind: 'block', text: 'Active (Momentum + Satellite) monthly 12% summary check exceeded' },
+    COMP_VALUE_CAP:     { kind: 'block', text: 'Position value would exceed the 12.5% of account value cap' },
     SAT_LOCKED:         { kind: 'block', text: 'Satellite locked after a loss at Step 4 until the weekly reset' },
     SAT_QUEUE_BUSY:     { kind: 'block', text: 'Another Satellite setup is active in this account' },
     SAT_DAILY_LIMIT:    { kind: 'block', text: 'One setup per product per day already used' },
@@ -475,18 +478,58 @@
   }
 
   /* ═══ 11. Compounder ═══ */
-  /* signals: {acwi:true|false|null, hyg:true|false|null, asOf:'YYYY-MM-DD' | ms}  (asOf = the data's own last-US-session date from fundflow.json).
-     Fresh = asOf within 4 CALENDAR days of today (Asia/Bangkok). Missing / unparsable / future asOf = not fresh. (RE1-answers-A #2) */
-  function asOfMs(v) { if (num(v)) return v; if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return Date.parse(v + 'T00:00:00+07:00'); return null; }
+  /* RM1 — ONE shared regime result (sizing + every view).
+     signals: {acwi, hyg, asOf}  acwi / hyg = 'green' | 'red' | 'neutral' | 'unavailable' (legacy true / false / null still accepted: true = green, false = red, null = unavailable)
+     asOf = the OLDEST of the four input dates (fundflow.json inputs_asof — never the file's own as_of / run date). Fresh = age (today Asia/Bangkok - asOf) in 0..4 calendar days.
+     Modifier: both signals known -> table[equity][credit]; either neutral / unavailable, or no usable date -> fallback 75 %. Stale (age > 4) -> min(table value, fallback 75 %). Missing data never gives 100 %. */
+  function asOfMs(v) { if (num(v)) return v; if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) return Date.parse(v.slice(0, 10) + 'T00:00:00+07:00'); return null; }
   function calDaysBetween(aMs, bMs) { return Math.round((dayStart(bMs) - dayStart(aMs)) / DAY); }
+  function sigState(v) { return v === true ? 'green' : v === false ? 'red' : (v === 'green' || v === 'red' || v === 'neutral') ? v : 'unavailable'; }
+  function regimeModifier(eq, cr, cfg) {
+    var T = pol(cfg).regime, e = sigState(eq), c = sigState(cr);
+    return (e === 'green' || e === 'red') && (c === 'green' || c === 'red') ? T.table[e][c] : null;
+  }
   function regimeState(sig, now, cfg) {
-    var P = pol(cfg).comp, s = sig || {}, reds = 0, missing = 0;
-    ['acwi', 'hyg'].forEach(function (k) { if (s[k] === false) reds++; else if (s[k] !== true) missing++; });
+    var T = pol(cfg).regime, s = sig || {}, eq = sigState(s.acwi), cr = sigState(s.hyg);
+    var known = (eq === 'green' || eq === 'red') && (cr === 'green' || cr === 'red');
     var a = asOfMs(s.asOf), age = a === null ? null : calDaysBetween(a, now);
-    var fresh = age !== null && age >= 0 && age <= P.freshDays && !missing;
-    var base = reds === 0 ? P.regime.green : reds === 1 ? P.regime.one : P.regime.both;
-    var factor = fresh ? base : Math.min(base, P.staleCap);
-    return { reasons: [], factor: factor, base: base, reds: reds, missing: missing, fresh: !!fresh, ageDays: age, bothGreen: reds === 0 && !missing, stale: !fresh, flags: fresh ? [] : ['COMP_REGIME_STALE'] };
+    var dateFresh = age !== null && age >= 0 && age <= T.freshDays, fresh = dateFresh && known;   /* fresh = recent date AND both signals usable */
+    var base = known ? T.table[eq][cr] : T.fallback;
+    var factor = (known && dateFresh) ? base : Math.min(base, T.fallback);
+    var reds = (eq === 'red' ? 1 : 0) + (cr === 'red' ? 1 : 0), missing = (known ? 0 : (eq === 'green' || eq === 'red' ? 0 : 1) + (cr === 'green' || cr === 'red' ? 0 : 1));
+    var fallback = !known || !dateFresh;
+    return { reasons: [], factor: factor, modifier: factor, base: base, equity: eq, credit: cr, reds: reds, missing: missing, known: known, fresh: !!fresh, ageDays: age, asOf: typeof s.asOf === 'string' ? s.asOf.slice(0, 10) : null,
+      bothGreen: eq === 'green' && cr === 'green', dateFresh: dateFresh, stale: !fresh, fallback: fallback, flags: fallback ? ['COMP_REGIME_STALE'] : [] };
+  }
+  /* The one reader of fundflow.json: ratios.ACWI_BIL / HYG_IEI {state, inputs_asof:{..}} -> signals -> regimeState. demo / missing file -> both unavailable. */
+  function oldestInput(r) {
+    var m = null; if (!r || !r.inputs_asof) return null;
+    Object.keys(r.inputs_asof).forEach(function (k) { var v = r.inputs_asof[k]; if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) && (m === null || v < m)) m = v.slice(0, 10); });
+    return m;
+  }
+  function fundflowSignals(ff, cfg) {
+    var rat = (ff && !ff.demo && ff.ratios) || {}, A = rat.ACWI_BIL, H = rat.HYG_IEI, dates = [];
+    var P = pol(cfg).regime, st = function (r) {
+      if (!r || !(r.state === 'green' || r.state === 'red' || r.state === 'neutral')) return 'unavailable';
+      if (r.adj !== true || !r.sma || r.sma[0] !== P.smaFast || r.sma[1] !== P.smaSlow) return 'unavailable';   /* file built with other periods / unadjusted data -> never trusted */
+      return r.state;
+    };
+    [A, H].forEach(function (r) { if (r && r.inputs_asof) { var o = oldestInput(r); if (o) dates.push(o); else dates.push(null); } else dates.push(null); });
+    var asOf = dates.indexOf(null) >= 0 ? null : (dates[0] < dates[1] ? dates[0] : dates[1]);
+    return { acwi: st(A), hyg: st(H), asOf: asOf, acwiDays: A && A.days_in_state != null ? A.days_in_state : null, hygDays: H && H.days_in_state != null ? H.days_in_state : null,
+      acwiSma: A && A.sma20 != null ? [A.sma20, A.sma50] : null, hygSma: H && H.sma20 != null ? [H.sma20, H.sma50] : null, demo: !!(ff && ff.demo) || !ff };
+  }
+  function regimeFromFundflow(ff, now, cfg) {
+    var sg = fundflowSignals(ff, cfg), r = regimeState(sg, now, cfg);
+    r.signals = sg; r.acwiDays = sg.acwiDays; r.hygDays = sg.hygDays; r.acwiSma = sg.acwiSma; r.hygSma = sg.hygSma; r.demo = sg.demo;
+    return r;
+  }
+  /* one display line for every view: "75% of normal · equity red, credit green" */
+  function smaLabel(cfg) { var T = pol(cfg).regime; return 'SMA ' + T.smaFast + '/' + T.smaSlow; }
+  function regimeText(r) {
+    var pc = Math.round(r.factor * 100);
+    if (r.fallback) return { head: 'Modifier unavailable · fallback cap ' + pc + '%', short: pc + '% fallback', reason: !r.known ? 'a signal is missing' : 'data is stale' };
+    return { head: pc + '% of normal', short: pc + '%', reason: 'equity ' + r.equity + ', credit ' + r.credit };
   }
   function compFactor(regime, emergencyF) { return Math.min(regime.factor, num(emergencyF) ? emergencyF : 1); }   /* min(Regime, Emergency), never multiplied */
   /* heat = current open principal risk of live Compounder ideas (same idea-level calculation), cap 6 % */
@@ -523,7 +566,7 @@
   }
   /* kind: 'pilot' | 'topup' | 'addon' · o = {kind, starterOn, thesisDone, side, entryPx?, avgEntry?, factor? (= min(Regime, Emergency)), requestedPct (new order, % of week-start equity), usedPct (the ticker's existing tranches at their CURRENT stop + working orders, same basis)}
      Pilot: first 0.50 % (Starter ON: 0.25 %). Add-on / further buys (answers-A #16 · owner amendment): TOTAL-RISK rule only —
-       thesis done AND used + new <= 1.00 % (0.50 % without thesis; a Starter top-up may use that 0.50 % without thesis) AND new order alone <= 0.50 % x factor.
+       thesis done AND used + new <= 1.25 % x factor (0.50 % without thesis; a Starter top-up may use that 0.50 % without thesis) AND new order alone <= 0.50 % x factor.
        Entry may be above OR below the average entry; below only raises the warning ADDON_BELOW_ENTRY_WARN (never a block). No +1.5R, no breakeven-stop condition. */
   function compEntryCheck(o) {
     var P = pol(o.cfg).comp, reasons = [], flags = [], used = num(o.usedPct) ? o.usedPct : 0, req = num(o.requestedPct) ? o.requestedPct : 0, cap;
@@ -533,8 +576,9 @@
       if (used + req > cap + EPS) reasons.push('COMP_PHASE_CAP');
     } else if (o.kind === 'topup' || o.kind === 'addon') {
       if (o.kind === 'addon' && o.thesisDone !== true) reasons.push('ADDON_THESIS');
-      cap = o.thesisDone === true ? P.pilotPct + P.addonPct : P.pilotPct;
-      var alone = P.addonPct * (num(o.factor) ? o.factor : 1);
+      var fz = num(o.factor) ? o.factor : 1;
+      cap = o.thesisDone === true ? P.totalCapPct * fz : P.pilotPct;   /* RM1: total-risk cap 1.25 % x effective modifier with thesis · 0.50 % without */
+      var alone = P.addonPct * fz;
       if (used + req > cap + EPS || req > alone + EPS) reasons.push('ADDON_TOTAL_RISK');
       if (pos(o.entryPx) && pos(o.avgEntry) && (dirOf(o.side) === 1 ? o.entryPx < o.avgEntry - EPS : o.entryPx > o.avgEntry + EPS)) flags.push('ADDON_BELOW_ENTRY_WARN');
     } else return res(['UNKNOWN_DATA'], [], {});
@@ -551,7 +595,7 @@
     if (!b || !b.ok) return res(b ? b.reasons : ['NO_SNAPSHOT'], [], {});
     flags = flags.concat(b.flags || []);
     var ck = compStreak(i.cycles, i.unlocks, i.cfg); if (ck.locked) reasons.push('COMP_LOCKED');
-    var rg = regimeState(i.signals, i.now, i.cfg), f = compFactor(rg, i.emergencyFactor); flags = flags.concat(rg.flags);
+    var rg = i.regime || regimeState(i.signals, i.now, i.cfg), f = compFactor(rg, i.emergencyFactor); flags = flags.concat(rg.flags);
     var e = compEntryCheck(merge(i.entry || {}, { factor: f })); reasons = reasons.concat(e.reasons); flags = flags.concat(e.flags);
     var heat = compHeat(i.ideas, i.account, i.costsFor, b.weekEquity, b.currentEquity), cand = num(i.candidateRisk) ? i.candidateRisk : 0, P = pol(i.cfg).comp;
     if (heat.unknown.length) flags.push('COST_UNKNOWN');
@@ -629,7 +673,7 @@
     momentumState: momentumState, momentumCheck: momentumCheck,
     satCondition: satCondition, satEntryOrder: satEntryOrder, satStepState: satStepState, satEffectiveRpt: satEffectiveRpt, satQueueCheck: satQueueCheck,
     satStaleOrders: satStaleOrders, satDailyCheck: satDailyCheck, satBudgetCheck: satBudgetCheck, satCheck: satCheck,
-    regimeState: regimeState, asOfMs: asOfMs, compLegacyShape: compLegacyShape, sizeAttempt: sizeAttempt, compFactor: compFactor, compHeat: compHeat, compStreak: compStreak, compUnlockCheck: compUnlockCheck, compEntryCheck: compEntryCheck, compCheck: compCheck,
+    regimeState: regimeState, regimeModifier: regimeModifier, regimeFromFundflow: regimeFromFundflow, regimeText: regimeText, smaLabel: smaLabel, fundflowSignals: fundflowSignals, asOfMs: asOfMs, compLegacyShape: compLegacyShape, sizeAttempt: sizeAttempt, compFactor: compFactor, compHeat: compHeat, compStreak: compStreak, compUnlockCheck: compUnlockCheck, compEntryCheck: compEntryCheck, compCheck: compCheck,
     activeSummary: activeSummary, actionPolicy: actionPolicy, asFill: asFill, foldEvents: foldEvents
   };
 });
