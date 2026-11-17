@@ -139,7 +139,7 @@ def run(pw, w, h):
         check(f"{tag} 3 Planned < 2% → green 'Place order ›'; far → plain 'Edit'", pill("ccPL").startswith("place|go p") and pill("ccFA").startswith("edit|go|"), [pill("ccPL"), pill("ccFA")])
         check(f"{tag} 3 Ordered → 'Filled ✓'; Holding add-on rule met → green 'Add-on ›'; below avg → 'Edit' (never 'Raise stop')", pill("ccOR").startswith("fill") and pill("ccST").startswith("addon|go p") and pill("ccFU").startswith("edit") and "Raise" not in txt(page, "[data-bd-cols]"), [pill("ccOR"), pill("ccST"), pill("ccFU")])
         js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); if(x) bdSetSeg(x.status); }", "ccPL"); settle(page, 150)
-        page.locator('[data-bd-card="ccPL"] [data-bd-pill]').click(); settle(page, 800)
+        page.locator('[data-bd-card="ccPL"] [data-bd-pill]').click(); settle(page, 300); page.locator('[data-pb2-yes]').click(); settle(page, 800)   # EF1: Place › opens the confirm sheet; one Confirm
         check(f"{tag} 3 Place order → card moves to 📌 Ordered + log entry", "ccPL" in col(page, "ord") and "ccPL" not in col(page, "plan") and any(t.startswith("Order placed") for t in logs(page, "ccPL")), [col(page, "ord"), logs(page, "ccPL")])
         # drawer
         js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); if(x) bdSetSeg(x.status); }", "ccPL"); settle(page, 150)
@@ -528,7 +528,7 @@ def pb1b(pw, w, h):
         page.click("[data-pb2-save]"); settle(page, 500)
         i3 = last_idea(page)
         c3 = sat_card(page, i3)
-        check(f"{tag} 3b MSS unanswered: 🕓 Waiting — card says 'needs MSS answer', Complete › (no Place order)", c3 and "needs MSS answer" in c3["need"] and c3["pill"] == "complete", c3)
+        check(f"{tag} 3b MSS unanswered: 🕓 Waiting — card says 'Needs MSS (Structure = No)' (EF1 label), Complete › (no Place order)", c3 and "Needs MSS (Structure = No)" in c3["need"] and c3["pill"] == "complete", c3)
         js(page, "(i)=>td3SatOpen(i,'')", i3); settle(page, 300)
         check(f"{tag} 3b Complete › opens the same popup form (step 3), prices filled, no tab switch", pop_step(page) == "form" and js(page, "()=>document.querySelector('[data-pb2-in=entry]').value") == "150" and js(page, "()=>activeTab") == "plan")
         mss_click(page, False); page.click("[data-pb2-save]"); settle(page, 500)
@@ -560,7 +560,7 @@ def pb1b(pw, w, h):
         js(page, "()=>bdSetSeg('plan')"); settle(page, 150)
         page.locator(f'[data-bd-card="{i3}"] [data-bd-pill]').click(); settle(page, 400)
         check(f"{tag} 2b Place order opens 'Setup ready on Execution TF?' with the setup line, MSS line (MSS trade) and summary", pop_step(page) == "place" and "Setup ready on Execution TF?" in txt(page, "#pb2Body") and all(x in txt(page, "[data-pb2-checks]") for x in ("In Zone", "Trend Neutral", "EMA50 = HVN", "Pivot MMT")) and "MSS confirmed per your rules (candle closed)" in txt(page, "[data-pb2-mssok]") and "Buy" in txt(page, "[data-pb2-summary]") and "Entry" in txt(page, "[data-pb2-summary]") and "Counter trend @ MSS" in txt(page, "[data-pb2-summary]"), txt(page, "#pb2Body"))
-        check(f"{tag} 2b buttons [Not yet] [Yes · mark ordered] + 'records only' note", "Not yet" in txt(page, "[data-pb2-no]") and "Yes · mark ordered" in txt(page, "[data-pb2-yes]") and "place the order at your broker" in txt(page, "#pb2Body"))
+        check(f"{tag} 2b buttons [Not yet] [Confirm] (EF1: was 'Yes · mark ordered') + 'records only' note", "Not yet" in txt(page, "[data-pb2-no]") and "Confirm" in txt(page, "[data-pb2-yes]") and "place the order at your broker" in txt(page, "#pb2Body"))
         shot(page, "place-confirm", w)
         page.click("[data-pb2-no]"); settle(page, 300)
         d3 = idea_db(page, i3) or {}

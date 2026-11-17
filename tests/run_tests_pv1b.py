@@ -114,9 +114,7 @@ def run(pw, w, h):
         # unpicked
         js(page, "()=>{satWeekPickWrite(wpWeekKey(), []); re1Cache={}; bdRender();}"); page.wait_for_timeout(300)
         z = blk("xp")
-        check("[%s] B unpickBlock → 'Not picked this week' + Add to week ›" % tag, z and z["why"] == "Not picked this week" and z["btn"] == "Add to week ›", z)
-        js(page, "()=>document.querySelector('[data-bd-card=xp] [data-pv-fixbtn]').click()"); page.wait_for_timeout(400)
-        check("[%s] B Add to week › adds the asset to this week's picks" % tag, js(page, "()=>satIsPicked('XAUUSD')"))
+        check("[%s] B (EF1) an unpicked asset is no longer a block — no 'Not picked this week' / Add to week ›" % tag, z and z["why"] != "Not picked this week" and z["btn"] != "Add to week ›", z)
         js(page, "()=>{ satWeekPickWrite(wpWeekKey(), ['XAUUSD','BTCUSD']); satIdeasList.find(x=>x.id==='pb').asset='BTCUSD'; re1Cache={}; bdRender(); }"); page.wait_for_timeout(300)
         z = blk("xp")
         check("[%s] B lot exists but plan not ready → real reason (never 'Size not available'), real size / risk visible" % tag, z and z["why"] and z["why"] != "Size not available" and "Risk −$294" in z["t"] and "#0.21 @" in z["t"], z)
@@ -126,15 +124,12 @@ def run(pw, w, h):
         js(page, "()=>{ const i=satIdeasList.find(x=>x.id==='xp'); i.week='2000-01-03'; i.carried_from=null; re1Cache={}; bdRender(); }"); page.wait_for_timeout(300)
         z = blk("xp")
         ok = js(page, "()=>{const i=satIdeasList.find(x=>x.id==='xp'); return satV3IsCarried(i)}")
-        check("[%s] B carryBlock → 'Carried from last week' + Use this week ›" % tag, (not ok) or (z and z["why"] == "Carried from last week" and z["btn"] == "Use this week ›"), [ok, z])
-        if ok and z and z["btn"] == "Use this week ›":
-            js(page, "()=>document.querySelector('[data-bd-card=xp] [data-pv-fixbtn]').click()"); page.wait_for_timeout(400)
-            check("[%s] B Use this week › re-dates the plan to this week" % tag, js(page, "()=>!satV3IsCarried(satIdeasList.find(x=>x.id==='xp'))"))
+        check("[%s] B (EF1) a carried plan is no longer a block — no 'Carried from last week' / Use this week ›" % tag, (not ok) or (not z) or (z["why"] != "Carried from last week" and z["btn"] != "Use this week ›"), [ok, z])
         # news window
         js(page, "()=>{ window.newsSatBlock = ()=>({kind:'CPI', from:'19:15', to:'20:00', msg:'x'}); re1Cache={}; satIdeasList.find(x=>x.id==='ps').week = wpWeekKey(); bdRender(); }"); page.wait_for_timeout(300)
         z = blk("ps")
-        check("[%s] B newsBlock → 'News window · until 20:00 ICT', no button" % tag, z and z["why"] == "News window · until 20:00 ICT" and z["btn"] == "", z)
-        check("[%s] B Blocked chip, no ⚑ Ready; Ready cannot be set" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=ps]'); return !!c.querySelector('[data-pv-blocked]') && !c.querySelector('[data-re2-ready]')}"))
+        check("[%s] B (EF1) news window is a warning, not a block: amber 'News window until 20:00 ICT · size 65%%' on the card" % tag, "News window until 20:00 ICT · size 65%" in ctext(page, "ps") and (not z or z["why"] != "News window · until 20:00 ICT"), z)
+        check("[%s] B Blocked chip, no Ready chip / toggle" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=ps]'); return !!c.querySelector('[data-pv-blocked]') && !c.querySelector('[data-re2-ready]')}"))
         check("[%s] B no console / page errors" % tag, not ce and not pe, ce + pe)
         if w in (1440,):
             js(page, "()=>window.scrollTo(0,0)"); shot(page, "blocked-%d" % w)

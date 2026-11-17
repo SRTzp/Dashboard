@@ -113,19 +113,19 @@ def run_viewport(pw, w, h):
     b, page, ce, pe = launch(pw, w, h, None, cs)
     try:
         en = [r["sym"] for r in rows(page, "enter")]
-        check("[%s] Enter: 2.9%% in · −3.0%% in · 3.1%% out · no price out · ⚑ Ready in" % tag, "AAA" in en and "DDD" in en and "EEE" in en and "CCC" not in en and "BBB" in en, en)   # RE-D §6: >3% past entry shows as the amber 'passed entry · missed?' prompt (not a Near row)
+        check("[%s] Enter: EF1: Ready is automatic — every unblocked plan is in (2.9%% · −3.0%% · 3.1%% passed · no price · far)" % tag, "AAA" in en and "DDD" in en and "EEE" in en and "CCC" in en and "BBB" in en, en)   # RE-D §6: >3% past entry shows as the amber 'passed entry · missed?' prompt (not a Near row)
         t = {r["sym"]: r["t"] for r in rows(page, "enter")}
-        check("[%s] chips: Near with signed distance (+2.9%%) · ⚑ ready" % tag, "Near" in t.get("AAA", "") or w <= 560 and "+2.9%" in t.get("AAA", ""), t)
+        check("[%s] chips: Ready / Near with signed distance (+2.9%%)" % tag, ("Near" in t.get("AAA", "") or "Ready" in t.get("AAA", "") or w <= 560) and "+2.9%" in t.get("AAA", ""), t)
         check("[%s] marker is the signed distance of price from entry" % tag, "+2.9%" in t.get("AAA", "") and "−3.0%" in t.get("DDD", "") and "passed entry" in t.get("BBB", "") and "passed entry" in t.get("EEE", ""), t)   # RE-D §6: 3.1% and the far Ready plan are passed-entry prompts
         js(page, """()=>{ const i={id:'gs',v3:true,v2:true,asset:'XAUUSD',bias:'Long',entry:2642,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[]}; sat7dWrite('satIdeas','gs',i); satIdeasList.push(i); }"""); refresh(page)
         check("[%s] Satellite never auto-enters (no flag → not in Enter)" % tag, not any("XAU" in r["sym"] for r in rows(page, "enter")), rows(page, "enter"))
         js(page, "()=>{ satWeekPickWrite(wpWeekKey(), ['XAUUSD']); window.ps1MinStopMsg = ()=>''; }"); refresh(page)   # PV1b: a plan that cannot be placed (not picked / min stop unset) cannot be flagged Ready
-        js(page, "()=>re2ReadyToggle('gs')"); refresh(page)
-        check("[%s] Satellite enters by the flag only" % tag, any("XAU" in r["sym"] for r in rows(page, "enter")), rows(page, "enter"))
-        check("[%s] Ready stored as plan data (sat: ready + readyAt)" % tag, js(page, "()=>{const i=satIdeasList.find(x=>x.id==='gs');return i.ready===true && !!i.readyAt}"))
+        refresh(page)   # EF1: no flag to toggle — Ready is automatic
+        check("[%s] Satellite enters when it is Ready by rule (EF1: no manual flag)" % tag, any("XAU" in r["sym"] for r in rows(page, "enter")), rows(page, "enter"))
+        check("[%s] EF1: no ready flag is written any more" % tag, js(page, "()=>{const i=satIdeasList.find(x=>x.id==='gs');return !i.ready && !i.readyAt}"))
         # toggle on core card + drawer
-        js(page, "()=>re2ReadyToggle('e1')"); refresh(page)
-        check("[%s] core Ready toggle writes plan.ready + readyAt" % tag, js(page, "()=>{const c=coreCardsList.find(x=>x.id==='e1');return c.plan.ready===true && !!c.plan.readyAt}"))
+        refresh(page)
+        check("[%s] EF1: core plans carry no ready flag (automatic)" % tag, js(page, "()=>{const c=coreCardsList.find(x=>x.id==='e1');return !c.plan.ready}"))
         js(page, "()=>{ switchTab('plan'); }"); page.wait_for_timeout(400)
         check("[%s] ⚑ Ready button on the Planned card" % tag, js(page, "()=>document.querySelectorAll('[data-bd-card][data-bd-status=plan] [data-re2-ready]').length>=3"))
         if w in (390, 1440): shot(page, "planned-ready-%d" % w)
@@ -173,7 +173,7 @@ def run_viewport(pw, w, h):
         check("[%s] Snapshot due stays in To do" % tag, True)
         # no write changed a position or order quantity
         q0 = js(page, "()=>JSON.stringify([getBook('main').trades.map(t=>[t.id,t.qty,t.sl]), coreCardsList.map(c=>[c.id,c.lots,c.plan&&c.plan.ps1])])")
-        js(page, "()=>{ todayRefresh(true); bdRender(); re2ReadyToggle('o1'); }"); page.wait_for_timeout(300)
+        js(page, "()=>{ todayRefresh(true); bdRender(); }"); page.wait_for_timeout(300)
         q1 = js(page, "()=>JSON.stringify([getBook('main').trades.map(t=>[t.id,t.qty,t.sl]), coreCardsList.map(c=>[c.id,c.lots,c.plan&&c.plan.ps1])])")
         check("[%s] no write changes a position or order quantity" % tag, q0 == q1)
         check("[%s] no overflow with all three groups filled" % tag, no_overflow(page))

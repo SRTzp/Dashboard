@@ -122,7 +122,7 @@ def run_passed(pw, w, h):
         check("[%s] after Keep a ⚑ Ready plan stays as a normal Enter row: Place order + amber '+8.0%% past entry'" % tag, rr and rr["btn"] == "place" and "+8.0% past entry" in rr["t"] and js(page, "()=>!!document.querySelector('[data-re2-row=RRR] [data-re2-why].a')") and "passed entry" not in rr["t"], rr)
         if w in (390, 1440): shot(page, "ready-past-entry-%d" % w)
         js(page, "()=>document.querySelector('[data-re2-row=AAA] [data-re2-btn=keep]').click()"); page.wait_for_timeout(400)
-        check("[%s] Keep hides the prompt for that plan until the next day (plan untouched, no auto-cancel)" % tag, "AAA" not in {r["sym"] for r in rows(page, "enter")} and js(page, "()=>coreCardsList.find(c=>c.id==='pA').status")=="plan")
+        check("[%s] Keep clears the prompt (EF1: Ready is automatic, so the plan stays as a normal Enter row; plan untouched, no auto-cancel)" % tag, "passed entry" not in {r["sym"]: r["t"] for r in rows(page, "enter")}.get("AAA", "") and js(page, "()=>coreCardsList.find(c=>c.id==='pA').status")=="plan")
         js(page, "()=>{ ln4Write(o=>{ o.keep.pA = '2000-01-01'; }); }"); page.wait_for_timeout(300); refresh(page)
         check("[%s] next day the prompt is back" % tag, "AAA" in {r["sym"] for r in rows(page, "enter")})
         js(page, "()=>document.querySelector('[data-re2-row=AAA] [data-re2-btn=cancel]').click()"); page.wait_for_timeout(300)
