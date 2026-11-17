@@ -7,6 +7,7 @@
      stop (current stop) · initialStop (first stop, for R) · price · priceAt · priceSrc · equity (account) · pool (strategy pool)
      openRiskMoney  engine exposure for the held quantity (optional; when absent the loss at the current stop is computed here)
      plannedRiskMoney / plannedRiskPct  stored whole-plan risk (optional; when absent it is computed from `planned` + `stop`)
+     targets [{qty,px}] planned exits · exits [{qty,px}] exits already taken (display only: reward / banked)
      plannedValueMoney  whole-plan position value at the planned prices (optional; when absent computed from `planned`)
    Returns a flat object. Every figure that cannot be worked out is null and has a reason in why[<field>] — never 0, never an assumed value.
    Money is in account currency (price × qty × mult × fx). Percentages are plain numbers (1.2 = 1.2%). Planned rows never touch heldQty / cost / value. */
@@ -76,6 +77,17 @@
     var e0 = fills.length ? fills[0].px : (planned && planned.length ? planned[0].px : null), s0 = pos(+inp.initialStop) ? +inp.initialStop : stop;
     o.rUnit = (e0 !== null && s0 !== null && dir * (e0 - s0) > 0) ? dir * (e0 - s0) : null; if (o.rUnit === null) why.rUnit = 'no initial stop';
     o.R = (o.rUnit !== null && price !== null && o.avgEntry !== null) ? dir * (price - o.avgEntry) / o.rUnit : null; if (o.R === null) why.R = o.rUnit === null ? why.rUnit : price === null ? 'no live price' : 'nothing filled yet';
+    /* PV1b — display-only extras: initial stop · reward at the planned targets · banked on exits already taken (never feed sizing / risk / gates) */
+    o.initialStop = pos(+inp.initialStop) ? +inp.initialStop : null;
+    o.reward = null; o.rewardR = null; o.banked = null;
+    var tg = clean(inp.targets);
+    if (planned && planned.length && tg.length && uv !== null) {
+      var pq = sum(planned, function (r) { return r.qty; }), pa = sum(planned, function (r) { return r.qty * r.px; }) / pq;
+      o.reward = sum(tg, function (t) { return dir * (t.px - pa) * t.qty; }) * uv;
+      if (o.plannedRisk > 0) o.rewardR = o.reward / o.plannedRisk;
+    } else why.reward = !planned || !planned.length ? 'not sized' : !tg.length ? 'no target' : 'no FX';
+    var ex = clean(inp.exits);
+    if (ex.length && o.avgEntry !== null && uv !== null) o.banked = sum(ex, function (x) { return dir * (x.px - o.avgEntry) * x.qty; }) * uv;
     return o;
   }
   return { calc: calc };

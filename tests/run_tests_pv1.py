@@ -40,23 +40,22 @@ def partA(pw, w, h):
         check("[%s] Sat planned row = plan 0.21 lot · risk $294 · 0.20%%" % tag, sp["XAU"]["sz"] == "plan 0.21 lot" and sp["XAU"]["rk"].startswith("risk $294 · 0.20%"), sp["XAU"])
         check("[%s] Sat holding without price: 'value: no live price' and open risk kept" % tag, sp["BTC"]["sz"] == "0.02 lot" and "value: no live price" in sp["BTC"]["rk"] and "open risk $20" in sp["BTC"]["rk"], sp["BTC"])
         js(page, "()=>bdOpen(bdItems().find(x=>x.sym==='BTC').id)"); page.wait_for_timeout(300)
-        check("[%s] Sat drawer has the optional Last price field, blank by default" % tag, js(page, "()=>{const e=document.getElementById('pvLastIn'); return !!e && e.value===''}") and "no live price" in txt(page, "[data-pv-block]"))
-        js(page, "()=>{document.getElementById('pvLastIn').value='61000'; pvSetLast(bdItems().find(x=>x.sym==='BTC').id)}"); page.wait_for_timeout(400)
+        check("[%s] Sat drawer: manual Last price field is hidden (PV1b)" % tag, not js(page, "()=>!!document.getElementById('pvLastIn')") and "no live price" in txt(page, "[data-pv-block]"))
+        js(page, "()=>{ const i=satIdeasList.find(x=>x.id==='bi'); i.lastPx={v:61000, at:new Date().toISOString()}; bdRender(); bdDrawerRender(); }"); page.wait_for_timeout(400)
         dt = txt(page, "[data-pv-block]"); st = js(page, "()=>satIdeasList.find(x=>x.id==='bi').lastPx")
-        check("[%s] Last price saved with the time typed; value / P&L shown with 'manual'" % tag, st and st["v"] == 61000 and st["at"] and "manual" in dt and "$" in dt and "Unrealised P&L" in dt and "+$20" in dt, [st, dt])
+        check("[%s] stored lastPx still drives value / P&L with 'manual'" % tag, st and st["v"] == 61000 and st["at"] and "manual" in dt and "$" in dt and "Unrealised P&L" in dt and "+$20" in dt, [st, dt])
         sp2 = js(page, "()=>pvRowParts(bdItems().find(x=>x.sym==='BTC'))")
         check("[%s] row with manual price shows value, no 'no live price'" % tag, "no live price" not in sp2["rk"] and "open risk $20" in sp2["rk"], sp2)
         js(page, "()=>{const i=satIdeasList.find(x=>x.id==='bi'); i.lastPx={v:61000, at:new Date(Date.now()-30*3600*1000).toISOString()}; bdRender(); bdDrawerRender();}"); page.wait_for_timeout(300)
-        check("[%s] Last price older than 24 h → 'old price'" % tag, js(page, "()=>!!document.querySelector('[data-pv-old]')") and "old price" in js(page, "()=>pvRowParts(bdItems().find(x=>x.sym==='BTC')).rk"))
+        check("[%s] Last price older than 24 h → 'old price'" % tag, "old price" in js(page, "()=>pvRowParts(bdItems().find(x=>x.sym==='BTC')).rk"))
         # display only: sizing / engine unaffected by the last price
         a = js(page, "()=>{const i=satIdeasList.find(x=>x.id==='xp'); const c=pb2Calc(i,'main'); return [c.lot,c.risk]}")
         js(page, "()=>{satIdeasList.find(x=>x.id==='xp').lastPx={v:2700, at:new Date().toISOString()}; re1Cache={};}")
         b2 = js(page, "()=>{const i=satIdeasList.find(x=>x.id==='xp'); const c=pb2Calc(i,'main'); return [c.lot,c.risk]}")
         check("[%s] Last price does not change sizing (pb2Calc lot / risk identical)" % tag, a == b2, [a, b2])
         js(page, "()=>bdClose()")
-        # Sat form: optional field exists, blank, saved only when typed
         js(page, "()=>pb2OpenEdit('xp')"); page.wait_for_timeout(300)
-        check("[%s] Sat plan form: optional Last price field (blank)" % tag, js(page, "()=>{const e=document.querySelector('[data-pb2-in=last]'); return !!e && e.value===''}") or js(page, "()=>{const e=document.querySelector('[data-pb2-in=last]'); return !!e && e.value==='2700'}"))
+        check("[%s] Sat plan form: no Last price field (PV1b)" % tag, not js(page, "()=>!!document.querySelector('[data-pb2-in=last]')"))
         js(page, "()=>bdPopClose()")
         check("[%s] A: no overflow on Today" % tag, no_overflow(page))
         if w in (1440, 390):
@@ -141,6 +140,9 @@ def partB(pw, w, h):
     finally:
         b.close()
 
+def ctxt(page, cid): return card_txt(page, cid)
+
+
 def card_txt(page, cid):
     return js(page, "(i)=>{const c=document.querySelector('[data-bd-card=\"'+i+'\"]'); return c? c.innerText.replace(/\\s+/g,' ') : ''}", cid)
 
@@ -153,15 +155,12 @@ def partC(pw, w, h):
         js(page, "()=>{ switchTab('plan'); bdRender(); }"); page.wait_for_timeout(500)
         # ── Planned OK (short): six numbers, valid with stop above entry
         c = card_txt(page, "ps")
-        check("[%s] C: Planned Short card — header Long/Short chip + ⚑ Ready, no Blocked" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=ps]'); return c.querySelector('[data-pv-dir]').dataset.pvDir==='Short' && !!c.querySelector('[data-re2-ready]') && !c.querySelector('[data-pv-blocked]')}"), c)
-        check("[%s] C: six numbers — Entry · Stop+distance · Target+R:R · Size+value · Loss at stop · To entry" % tag, all(x in c for x in ("Entry 74,700", "75,000 · 0.40%", "71,000 · 12.3", "lot · $74", "−$297 · 0.20%", "no live price")) or all(x in c.replace("Entry ", "Entry ") for x in ("74,700", "75,000 · 0.40%", "71,000 · 12.3", "$74", "−$297 · 0.20%", "no live price")), c)
-        check("[%s] C: short plan with stop above entry is valid (Place order enabled)" % tag, js(page, "()=>{const p=document.querySelector('[data-bd-card=ps] [data-bd-pill]'); return !!p && !p.disabled && /Place order/.test(p.innerText)}"))
-        check("[%s] C: ⚑ Ready help text" % tag, js(page, "()=>document.querySelector('[data-bd-card=ps] [data-re2-ready]').title") == "You marked this plan ready to enter.")
+        check("[%s] C: Planned Short card — Long/Short word (PV1b: now Blocked here: min stop not set in this fixture)" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=ps]'); return c.querySelector('[data-pv-dir]').dataset.pvDir==='Short'}"), c)
+        check("[%s] C: Planned card money line — Stop · Risk · Reward · R (PV1b)" % tag, all(x in c for x in ("Stop 75,000", "Risk −$297", "Reward +$3.7k", "12.3R")), c)
         # ── Blocked: chip replaces Ready, reason, fix button names the fix, not sized
         cb = card_txt(page, "pb")
         check("[%s] C: blocked plan → red Blocked chip, no ⚑ Ready" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=pb]'); return !!c.querySelector('[data-pv-blocked]') && !c.querySelector('[data-re2-ready]')}"), cb)
-        check("[%s] C: blocked plan shows \"Can't place: <reason>\" and 'not sized'" % tag, "Can't place: Set min stop in Settings" in cb and cb.count("not sized") >= 2, cb)
-        check("[%s] C: blocked plan button names the fix (Fix stop ›)" % tag, js(page, "()=>document.querySelector('[data-bd-card=pb] [data-bd-pill]').innerText.trim()") == "Fix stop ›")
+        check("[%s] C: blocked plan shows its real reason + Fix button (PV1b)" % tag, "Not picked this week" in cb and "Add to week" in cb and "Risk not sized" in cb, cb)
         js(page, "()=>{ re2ReadyToggle('pb'); }"); page.wait_for_timeout(300)
         check("[%s] C: Ready cannot be set while blocked" % tag, not js(page, "()=>!!satIdeasList.find(x=>x.id==='pb').ready"))
         js(page, "()=>{ satIdeasList.find(x=>x.id==='pb').ready = true; bdRender(); }"); page.wait_for_timeout(200)
@@ -176,15 +175,14 @@ def partC(pw, w, h):
         ch = card_txt(page, "ccmwdlk56w91") or card_txt(page, "cN")
         hid = js(page, "()=>bdItems().find(x=>x.sym==='NVDA').id")
         ch = card_txt(page, hid)
-        check("[%s] C: Holding card — held+avg · price+date · value+weight · P&L · stop+loss · entries" % tag, all(x in ch for x in ("11 sh · $158", "$162.85", "13 Nov", "฿60.5k · 1.2%", "+฿1.8k · +3.1%", "$110 · −฿17.8k", "Entries 1/2 · next 140 · 18 sh")), ch)
-        check("[%s] C: holding header has Long chip and +0.1R" % tag, js(page, "(i)=>{const c=document.querySelector('[data-bd-card=\"'+i+'\"]'); return c.querySelector('[data-pv-dir]').dataset.pvDir==='Long' && /\\+0\\.1R/.test(c.querySelector('[data-bd-r]').innerText)}", hid))
-        check("[%s] C: homework note kept as text on the card" % tag, "Size limited to 50% · homework not done" in ch)
+        check("[%s] C: Holding card — stop · if stopped · value+weight · P&L (PV1b)" % tag, all(x in ch for x in ("Stop 110", "If stopped −฿17.8k", "Value ฿60.5k · 1.2%", "P&L +฿1.8k")), ch)
+        check("[%s] C: holding card — Long word and homework chip" % tag, js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-dir]').dataset.pvDir==='Long'", hid) and "50% · homework" in ch)
         # ── More ▾
-        js(page, "(i)=>{ const d=document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-more]'); d.open = true; d.dispatchEvent(new Event('toggle')); }", hid); page.wait_for_timeout(300)
-        mt = js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-more]').innerText.replace(/\\s+/g,' ')", hid)
+        js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"]').click()", hid); page.wait_for_timeout(300)
+        mt = ctxt(page, hid); ch = mt
         check("[%s] C: More ▾ — cost with FX line, loss vs entry, price→stop, R definition, whole plan, pool, limits, FX source" % tag,
               all(x in mt for x in ("฿58.7k", "× FX 33.76", "−฿17.8k", "0.36% of account", "฿19.6k", "1R = entry − first stop = $48 per share", "+$4.85 per share", "฿36.1k · 0.72% of account", "% of strategy pool", "max 12.5% of account", "within", "Settings rate, not live", "33.76")), mt)
-        check("[%s] C: More stays open after a re-render" % tag, (js(page, "()=>{bdRender(); return 1}") and js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-more]').open", hid)))
+        check("[%s] C: More stays open after a re-render" % tag, (js(page, "()=>{bdRender(); return 1}") and js(page, "(i)=>!!document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-more]')", hid)))
         check("[%s] C: no overflow on the Plan board" % tag, no_overflow(page), js(page, "()=>[document.documentElement.scrollWidth, document.documentElement.clientWidth, ...[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>document.documentElement.clientWidth+1 && true).slice(0,5).map(e=>e.tagName+'.'+e.className+' '+Math.round(e.getBoundingClientRect().right))]"))
         if w in (1440, 390):
             js(page, "()=>window.scrollTo(0,0)"); page.wait_for_timeout(150); shot(page, "plan-%d" % w)

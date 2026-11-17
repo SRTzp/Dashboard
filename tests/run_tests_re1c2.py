@@ -119,6 +119,7 @@ def run_viewport(pw, w, h):
         check("[%s] marker is the signed distance of price from entry" % tag, "+2.9%" in t.get("AAA", "") and "−3.0%" in t.get("DDD", "") and "passed entry" in t.get("BBB", "") and "passed entry" in t.get("EEE", ""), t)   # RE-D §6: 3.1% and the far Ready plan are passed-entry prompts
         js(page, """()=>{ const i={id:'gs',v3:true,v2:true,asset:'XAUUSD',bias:'Long',entry:2642,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[]}; sat7dWrite('satIdeas','gs',i); satIdeasList.push(i); }"""); refresh(page)
         check("[%s] Satellite never auto-enters (no flag → not in Enter)" % tag, not any("XAU" in r["sym"] for r in rows(page, "enter")), rows(page, "enter"))
+        js(page, "()=>{ satWeekPickWrite(wpWeekKey(), ['XAUUSD']); window.ps1MinStopMsg = ()=>''; }"); refresh(page)   # PV1b: a plan that cannot be placed (not picked / min stop unset) cannot be flagged Ready
         js(page, "()=>re2ReadyToggle('gs')"); refresh(page)
         check("[%s] Satellite enters by the flag only" % tag, any("XAU" in r["sym"] for r in rows(page, "enter")), rows(page, "enter"))
         check("[%s] Ready stored as plan data (sat: ready + readyAt)" % tag, js(page, "()=>{const i=satIdeasList.find(x=>x.id==='gs');return i.ready===true && !!i.readyAt}"))

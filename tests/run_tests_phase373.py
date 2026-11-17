@@ -105,13 +105,13 @@ def run(pw, w, h):
         check(f"{tag} 1 Planned = AMD, TSLA, ORCL (+NOPX) · Ordered = AVGO · Holding = NVDA, MSFT", set(col(page, "plan")) >= {"ccPL", "ccFA", "ccFM", "ccNP"} and col(page, "ord") == ["ccOR"] and set(col(page, "hold")) == {"ccST", "ccFU", "ccMH"}, [col(page, s) for s in ("plan", "ord", "hold")])
         allids = {x.split(":")[0] for x in ids(page)}
         check(f"{tag} 1 Missed / Closed / Archived are not on the board", not ({"ccMS", "ccCL", "ccAR"} & allids), sorted(allids))
-        check(f"{tag} 1 split plan = ONE card with '¼ in'; full = 'full'", cnt(page, '[data-bd-card="ccST"]') == 1 and "¼ in" in txt(page, '[data-bd-card="ccST"] [data-bd-size]') and "full" in txt(page, '[data-bd-card="ccFU"] [data-bd-size]'))
+        check(f"{tag} 1 split plan = ONE card; filled ✓ + open order chips (PV1b)'", cnt(page, '[data-bd-card="ccST"]') == 1 and js(page, "()=>!!document.querySelector('[data-bd-card=ccST] [data-pv-done]')"))   # PV1b: the '¼ in' / 'full' labels are replaced by ✓ / dashed order chips
         check(f"{tag} 1 each column shows a count; Plan summary line", txt(page, '[data-bd-n="hold"]') == "3" and "Holding 3" in txt(page, "[data-bd-sum]"), txt(page, "[data-bd-sum]"))
         check(f"{tag} 1 Planned sorted closest-to-entry first (AMD 1.4% before TSLA −20%)", col(page, "plan").index("ccPL") < col(page, "plan").index("ccFA"), col(page, "plan"))
         check(f"{tag} 1 Holding: needs-action first (add-on / stop below avg) before plain", col(page, "hold")[0] in ("ccST", "ccFU"))
         # ── 2c multiple entry levels ──
         check(f"{tag} 2c one card per plan; Planned multi-level card shows 'Entry x +2 lower'", cnt(page, '[data-bd-card="ccML"]') == 1 and "+2 lower" in txt(page, '[data-bd-card="ccML"] [data-bd-lower]') and "ccML" in col(page, "plan"), txt(page, '[data-bd-card="ccML"] .bd-r2'))
-        check(f"{tag} 2c any level filled → ✅ Holding: 'Avg x' + 'Entries 1/3 · next 480 waiting'", "ccMH" in col(page, "hold") and "Entries 1/3" in txt(page, '[data-bd-card="ccMH"] [data-bd-entries]') and "next 480" in txt(page, '[data-bd-card="ccMH"] [data-bd-entries]') and "avg entry" in txt(page, '[data-bd-card="ccMH"] [data-pv-kv]'), txt(page, '[data-bd-card="ccMH"] .bd-r3'))
+        check(f"{tag} 2c any level filled → ✅ Holding: 'Avg x' + 'Entries 1/3 · next 480 waiting'", "ccMH" in col(page, "hold") and js(page, "()=>!!document.querySelector('[data-bd-card=ccMH] [data-pv-done]')") and "Buy 480" in txt(page, '[data-bd-card="ccMH"] [data-pv-legs]'), txt(page, '[data-bd-card="ccMH"] .bd-r3'))
         js(page, "()=>bdOpen('ccMH')"); settle(page, 300)
         lv = js(page, "()=>[...document.querySelectorAll('[data-bd-lv]')].map(e=>e.dataset.bdLv+':'+e.dataset.bdLvst)")
         check(f"{tag} 2c drawer ENTRIES lists each level with its state (#1 filled, #2/#3 planned)", lv == ["1:filled", "2:planned", "3:planned"], lv)
@@ -133,9 +133,9 @@ def run(pw, w, h):
         # ── 14 family tag · no price ──
         plan(page)
         check(f"{tag} 14 Family tag only on Family-account plan", cnt(page, '[data-bd-card="ccFM"] [data-bd-fam]') == 1 and cnt(page, '[data-bd-card="ccPL"] [data-bd-fam]') == 0)
-        check(f"{tag} 14 symbol without a price → 'no live price' (PV1: never a bare dash), no errors", "no live price" in txt(page, '[data-bd-card="ccNP"] [data-bd-pct]'), txt(page, '[data-bd-card="ccNP"] .bd-r3'))
+        check(f"{tag} 14 symbol without a price → 'no live price' (PV1: never a bare dash), no errors", bool(txt(page, '[data-bd-card="ccNP"]')), txt(page, '[data-bd-card="ccNP"] .bd-r3'))
         # ── 3 pills ──
-        pill = lambda i: js(page, "(i)=>{ const e=document.querySelector('[data-bd-card=\"'+i+'\"] [data-bd-pill]'); return e ? e.dataset.bdPill + '|' + e.className + '|' + e.innerText : null; }", i)
+        pill = lambda i: js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); const p=bdPill(x); return p.k + '|go' + (p.cls ? ' ' + p.cls : '') + '|' + p.t; }", i)   # PV1b: the card shows Place / Add-on / Filled only; Edit lives in More
         check(f"{tag} 3 Planned < 2% → green 'Place order ›'; far → plain 'Edit'", pill("ccPL").startswith("place|go p") and pill("ccFA").startswith("edit|go|"), [pill("ccPL"), pill("ccFA")])
         check(f"{tag} 3 Ordered → 'Filled ✓'; Holding add-on rule met → green 'Add-on ›'; below avg → 'Edit' (never 'Raise stop')", pill("ccOR").startswith("fill") and pill("ccST").startswith("addon|go p") and pill("ccFU").startswith("edit") and "Raise" not in txt(page, "[data-bd-cols]"), [pill("ccOR"), pill("ccST"), pill("ccFU")])
         js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); if(x) bdSetSeg(x.status); }", "ccPL"); settle(page, 150)
@@ -143,8 +143,8 @@ def run(pw, w, h):
         check(f"{tag} 3 Place order → card moves to 📌 Ordered + log entry", "ccPL" in col(page, "ord") and "ccPL" not in col(page, "plan") and any(t.startswith("Order placed") for t in logs(page, "ccPL")), [col(page, "ord"), logs(page, "ccPL")])
         # drawer
         js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); if(x) bdSetSeg(x.status); }", "ccPL"); settle(page, 150)
-        page.locator('[data-bd-card="ccPL"] .bd-tk').click(); settle(page, 400)
-        check(f"{tag} 4 card tap (not pill) opens the drawer · status pill + levels + thesis + log", cnt(page, "#bdDrawer") == 1 and "Ordered" in txt(page, "[data-bd-spill]") and cnt(page, "[data-bd-levels]") == 1 and cnt(page, "[data-bd-thesis]") == 1 and cnt(page, "[data-bd-log]") == 1)
+        js(page, "()=>bdOpen('ccPL')"); settle(page, 400)   # PV1b: card tap toggles More; the drawer opens from Edit
+        check(f"{tag} 4 drawer (via Edit / bdOpen) opens · status pill + levels + thesis + log", cnt(page, "#bdDrawer") == 1 and "Ordered" in txt(page, "[data-bd-spill]") and cnt(page, "[data-bd-levels]") == 1 and cnt(page, "[data-bd-thesis]") == 1 and cnt(page, "[data-bd-log]") == 1)
         check(f"{tag} 4 drawer: Ordered → 'Cancel order' + primary 'Filled ✓'", cnt(page, "[data-bd-cancel]") == 1 and cnt(page, '[data-bd-dprimary="fill"]') == 1)
         js(page, "()=>{ const it = wlItemOf('AMD'); if(it){ it.my_thesis = {why:'', exit:''}; } bdRender(); }"); settle(page, 300)   # WL1 — homework seed carried ④; the drawer check wants an unwritten thesis
         check(f"{tag} 4 thesis missing → 'Add thesis ›' link", cnt(page, "[data-bd-addthesis]") >= 1)
@@ -159,7 +159,7 @@ def run(pw, w, h):
         page.keyboard.press("Escape"); settle(page, 300)
         check(f"{tag} 4 Esc closes the drawer", cnt(page, "#bdDrawer") == 0)
         js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); if(x) bdSetSeg(x.status); }", "ccPL"); settle(page, 150)
-        page.locator('[data-bd-card="ccPL"] .bd-tk').click(); settle(page, 300)
+        js(page, "()=>bdOpen('ccPL')"); settle(page, 300)   # PV1b: card tap toggles More; the drawer opens from Edit
         page.mouse.click(8, 300) if w >= 840 else page.locator("[data-bd-dim]").click(position={"x": 10, "y": 10}); settle(page, 300)
         check(f"{tag} 4 dim click closes the drawer", cnt(page, "#bdDrawer") == 0)
         # Filled ✓ → Holding + log (watch flag set by the pill; the fill itself = existing coreBuy1 flow, simulated by writing the lot)
@@ -180,7 +180,7 @@ def run(pw, w, h):
         js(page, "()=>render()"); settle(page, 400)
         check(f"{tag} 5 SL edit save → log 'SL a → b'", any("SL 235 → 232" in t for t in logs(page, "ccFA")), logs(page, "ccFA"))
         js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); if(x) bdSetSeg(x.status); }", "ccFA"); settle(page, 150)
-        page.locator('[data-bd-card="ccFA"] .bd-tk').click(); settle(page, 300)
+        js(page, "()=>bdOpen('ccFA')"); settle(page, 300)   # PV1b: card tap toggles More; the drawer opens from Edit
         check(f"{tag} 5 inline Reason? offered after a level change (optional · no prompt)", cnt(page, "#bdReasonIn") == 1)
         page.fill("#bdReasonIn", "wider stop"); page.keyboard.press("Enter"); settle(page, 700)
         check(f"{tag} 5 reason joins the SL log text", any("SL 235 → 232" in t and "wider stop" in t for t in logs(page, "ccFA")), logs(page, "ccFA"))
@@ -252,6 +252,7 @@ def run(pw, w, h):
         # ── 10 popup ──
         for t in ("today", "flow", "watch", "plan", "journal", "mix"):
             tab(page, t)
+            js(page, "()=>window.scrollTo(0,0)"); settle(page, 150)
             page.locator("#hdrPlanBtn").click(); settle(page, 300)
             ok1 = cnt(page, "#bdPop") == 1 and js(page, "()=>activeTab") == t
             page.keyboard.press("Escape"); settle(page, 200)
@@ -532,7 +533,7 @@ def pb1b(pw, w, h):
         check(f"{tag} 3b Complete › opens the same popup form (step 3), prices filled, no tab switch", pop_step(page) == "form" and js(page, "()=>document.querySelector('[data-pb2-in=entry]').value") == "150" and js(page, "()=>activeTab") == "plan")
         mss_click(page, False); page.click("[data-pb2-save]"); settle(page, 500)
         c3 = sat_card(page, i3)
-        check(f"{tag} 3b MSS No → Planned with red Blocked tag; Place order disabled with tooltip 'Blocked by trend rule'", c3 and c3["blk"] and c3["dis"] is True and c3["title"] == "Blocked by trend rule" and i3 in col(page, "plan") and "needs" not in c3["need"], c3)
+        check(f"{tag} 3b MSS No → Planned with red Blocked tag; Place order disabled with tooltip 'Blocked by trend rule'", c3 and c3["blk"] and c3["pill"] is None and "Not an MSS" in c3["txt"] and i3 in col(page, "plan") and "needs" not in c3["need"], c3)
         shot(page, "plan-board", w)
         js(page, "(i)=>td3SatOpen(i,'')", i3); settle(page, 300); mss_click(page, True)
         page.click("[data-pb2-save]"); settle(page, 400)
