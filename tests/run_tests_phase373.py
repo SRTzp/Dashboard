@@ -191,9 +191,9 @@ def run(pw, w, h):
         js(page, "()=>{ for(let i=0;i<60;i++) bdLogAdd('ccFM','note','n'+i); }"); settle(page, 600)
         check(f"{tag} 6 log capped at 50 entries (oldest dropped)", len((card_db(page, "ccFM") or {}).get("log", [])) == 50 and logs(page, "ccFM")[-1] == "n59", len((card_db(page, "ccFM") or {}).get("log", [])))
         # Fix risk for an over-cap plan
-        stub(page, "window.__badRisk = true; const o = ln4CoreChecks; window.ln4CoreChecks = function(c){ return c.ticker==='TSLA' ? {k:'risk', why:'Risk 0.6% > 0.5%', btn:'Fix risk ›'} : o(c); };")
+        stub(page, "window.__badRisk = true; const o = ln4CoreChecks; window.ln4CoreChecks = function(c){ return c.ticker==='TSLA' ? {k:'risk', why:'Risk 0.6% > 0.5%', btn:'Fix size ›'} : o(c); };")
         js(page, "()=>render()"); settle(page, 400)
-        check(f"{tag} 3 plan that breaks a cap → amber 'Fix risk ›'", pill("ccFA").startswith("fix|go fx") or pill("ccFA").startswith("fix"), pill("ccFA"))
+        check(f"{tag} 3 plan that breaks a cap → amber 'Fix size ›' (PV1: names the fix)", pill("ccFA").startswith("fix|go fx") or pill("ccFA").startswith("fix"), pill("ccFA"))
         # ── 13 close trade → Journal with thesis + log ──
         js(page, "()=>{ const it = wlItemOf('MSFT'); }")
         js(page, "()=>glWrite(S=>{}) ")
@@ -230,7 +230,7 @@ def run(pw, w, h):
         # ── 9 Today Act ──
         tab(page, "today")
         R = js(page, "()=>[...document.querySelectorAll('[data-ln4-act] [data-ln4-row]')].map(e=>e.dataset.ln4Row+'|'+((e.querySelector('[data-ln4-btn]')||{}).innerText||''))")
-        check(f"{tag} 9 Act follows the board (Fix risk → Add-on → < 2% → check fill), max 5", len(R) <= 5 and R and R[0].endswith("Fix risk ›") and any("Add-on" in r for r in R), R)
+        check(f"{tag} 9 Act follows the board (Fix risk → Add-on → < 2% → check fill), max 5", len(R) <= 5 and R and R[0].endswith("Fix size ›") and any("Add-on" in r for r in R), R)
         check(f"{tag} 9 no 'Raise stop' pill anywhere on Today Act", all("Raise" not in r for r in R))
         mo = cnt(page, "[data-bd-actmore]")
         if mo:

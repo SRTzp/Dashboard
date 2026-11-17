@@ -14,6 +14,10 @@ t('nvda openRisk', near(r.openRisk, 17825.28)); t('nvda openRisk%', near(r.openR
 t('nvda toStop', near(r.toStop, 19626.38)); t('nvda planned risk (computed) 36,055.68', near(r.plannedRisk, 36055.68), r.plannedRisk); t('nvda planned risk %', near(r.plannedRiskPct, 0.7184, 0.001));
 t('nvda R unit 48', r.rUnit === 48); t('nvda R 0.10', near(r.R, 4.85 / 48, 0.001));
 r = P.calc(Object.assign({}, nv, { plannedRiskMoney: 36055.68, plannedRiskPct: 0.7183551163532036 })); t('stored plan risk wins', r.plannedRisk === 36055.68 && r.plannedRiskPct === 0.7183551163532036);
+t('nvda planned value 11×158+18×140 = 4,258 × 33.76', near(P.calc(nv).plannedValue, 4258 * 33.76), P.calc(nv).plannedValue);
+r = P.calc({ dir: 'long', fx: 1, planned: [{ qty: 2, px: 10 }] }); t('plan value no FX needed when fx=1', r.plannedValue === 20);
+r = P.calc({ dir: 'long', fx: null, planned: [{ qty: 2, px: 10 }] }); t('plan value: no FX → null + reason', r.plannedValue === null && r.why.plannedValue === 'no FX');
+r = P.calc({ dir: 'long', fx: 1, planned: [{ qty: 2, px: 10 }], plannedValueMoney: 77 }); t('stored plan value wins', r.plannedValue === 77);
 // the two illustrative cases from the brief
 r = P.calc({ dir: 'long', fx: 33.5, fills: [{ qty: 29, px: 158 }], price: 158, equity: E }); t('29×158×33.5 = 153,497', Math.round(r.cost) === 153497, r.cost);
 r = P.calc({ dir: 'long', fx: 33.5, fills: [{ qty: 11, px: 158 }], price: 158, equity: E }); t('11×158×33.5 = 58,223', Math.round(r.cost) === 58223, r.cost);

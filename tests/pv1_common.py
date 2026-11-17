@@ -26,3 +26,7 @@ def doc_sat(extra_core=True):
 
 SAT_JS = """()=>{ sat7dWrite('satIdeas','bi',{id:'bi',v3:true,v2:true,asset:'BTCUSD',bias:'Long',entry:60000,sl:59000,tp:63000,status:'active',accts:{main:{trade_id:'h1'}},week:wpWeekKey(),setups:[]});
   sat7dWrite('satIdeas','xp',{id:'xp',v3:true,v2:true,asset:'XAUUSD',bias:'Long',entry:2642,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[],pb_acct:'main'}); }"""
+
+
+SAT_PLANS_JS = """()=>{ const mk=(id,a,b,e,s,t)=>{const i={id,v3:true,v2:true,asset:a,bias:b,entry:e,sl:s,tp:t,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[],pb_acct:'main'}; sat7dWrite('satIdeas',id,i);};
+  mk('ps','BTCUSD','Short',74700,75000,71000); mk('pb','XAGUSD','Long',30,29.5,32); }"""

@@ -7,6 +7,7 @@
      stop (current stop) · initialStop (first stop, for R) · price · priceAt · priceSrc · equity (account) · pool (strategy pool)
      openRiskMoney  engine exposure for the held quantity (optional; when absent the loss at the current stop is computed here)
      plannedRiskMoney / plannedRiskPct  stored whole-plan risk (optional; when absent it is computed from `planned` + `stop`)
+     plannedValueMoney  whole-plan position value at the planned prices (optional; when absent computed from `planned`)
    Returns a flat object. Every figure that cannot be worked out is null and has a reason in why[<field>] — never 0, never an assumed value.
    Money is in account currency (price × qty × mult × fx). Percentages are plain numbers (1.2 = 1.2%). Planned rows never touch heldQty / cost / value. */
 (function (root, factory) {
@@ -65,6 +66,11 @@
       o.plannedRisk = sum(planned, function (r) { return r.qty * Math.max(0, dir * (r.px - stop)); }) * uv; o.plannedRiskPct = equity !== null ? o.plannedRisk / equity * 100 : null;
       if (!(o.plannedRisk > 1e-9)) { o.plannedRisk = null; o.plannedRiskPct = null; why.plannedRisk = 'none · stop at or beyond entry'; }
     } else why.plannedRisk = !planned || !planned.length ? 'not sized' : stop === null ? 'no stop' : 'no FX';
+
+    o.plannedValue = null;
+    if (pos(+inp.plannedValueMoney)) o.plannedValue = +inp.plannedValueMoney;
+    else if (planned && planned.length && uv !== null) o.plannedValue = sum(planned, function (r) { return r.qty * r.px; }) * uv;
+    else if (planned && planned.length) why.plannedValue = 'no FX'; else why.plannedValue = 'not sized';
 
     /* R = one unit of initial risk per share = |first entry − first stop| */
     var e0 = fills.length ? fills[0].px : (planned && planned.length ? planned[0].px : null), s0 = pos(+inp.initialStop) ? +inp.initialStop : stop;

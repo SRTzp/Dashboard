@@ -141,6 +141,67 @@ def partB(pw, w, h):
     finally:
         b.close()
 
+def card_txt(page, cid):
+    return js(page, "(i)=>{const c=document.querySelector('[data-bd-card=\"'+i+'\"]'); return c? c.innerText.replace(/\\s+/g,' ') : ''}", cid)
+
+
+def partC(pw, w, h):
+    tag = str(w)
+    b, page, ce, pe = launch(pw, w, h, doc_pv(), cards_pv())
+    try:
+        js(page, SAT_PLANS_JS); page.wait_for_timeout(700); refresh(page)
+        js(page, "()=>{ switchTab('plan'); bdRender(); }"); page.wait_for_timeout(500)
+        # ── Planned OK (short): six numbers, valid with stop above entry
+        c = card_txt(page, "ps")
+        check("[%s] C: Planned Short card — header Long/Short chip + ⚑ Ready, no Blocked" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=ps]'); return c.querySelector('[data-pv-dir]').dataset.pvDir==='Short' && !!c.querySelector('[data-re2-ready]') && !c.querySelector('[data-pv-blocked]')}"), c)
+        check("[%s] C: six numbers — Entry · Stop+distance · Target+R:R · Size+value · Loss at stop · To entry" % tag, all(x in c for x in ("Entry 74,700", "75,000 · 0.40%", "71,000 · 12.3", "lot · $74", "−$297 · 0.20%", "no live price")) or all(x in c.replace("Entry ", "Entry ") for x in ("74,700", "75,000 · 0.40%", "71,000 · 12.3", "$74", "−$297 · 0.20%", "no live price")), c)
+        check("[%s] C: short plan with stop above entry is valid (Place order enabled)" % tag, js(page, "()=>{const p=document.querySelector('[data-bd-card=ps] [data-bd-pill]'); return !!p && !p.disabled && /Place order/.test(p.innerText)}"))
+        check("[%s] C: ⚑ Ready help text" % tag, js(page, "()=>document.querySelector('[data-bd-card=ps] [data-re2-ready]').title") == "You marked this plan ready to enter.")
+        # ── Blocked: chip replaces Ready, reason, fix button names the fix, not sized
+        cb = card_txt(page, "pb")
+        check("[%s] C: blocked plan → red Blocked chip, no ⚑ Ready" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=pb]'); return !!c.querySelector('[data-pv-blocked]') && !c.querySelector('[data-re2-ready]')}"), cb)
+        check("[%s] C: blocked plan shows \"Can't place: <reason>\" and 'not sized'" % tag, "Can't place: Set min stop in Settings" in cb and cb.count("not sized") >= 2, cb)
+        check("[%s] C: blocked plan button names the fix (Fix stop ›)" % tag, js(page, "()=>document.querySelector('[data-bd-card=pb] [data-bd-pill]').innerText.trim()") == "Fix stop ›")
+        js(page, "()=>{ re2ReadyToggle('pb'); }"); page.wait_for_timeout(300)
+        check("[%s] C: Ready cannot be set while blocked" % tag, not js(page, "()=>!!satIdeasList.find(x=>x.id==='pb').ready"))
+        js(page, "()=>{ satIdeasList.find(x=>x.id==='pb').ready = true; bdRender(); }"); page.wait_for_timeout(200)
+        check("[%s] C: an existing flag on a blocked plan is shown off, not deleted" % tag, js(page, "()=>satIdeasList.find(x=>x.id==='pb').ready === true") and not js(page, "()=>!!document.querySelector('[data-bd-card=pb] [data-re2-ready]')"))
+        # ── no generic wording anywhere (Plan + Today)
+        alltxt = js(page, "()=>document.body.innerText")
+        js(page, "()=>{switchTab('today'); todayRefresh(true);}"); page.wait_for_timeout(400)
+        tt = js(page, "()=>document.body.innerText")
+        check("[%s] C: 'Fix risk' / 'Risk / size not OK' removed from Plan and Today" % tag, "Fix risk" not in alltxt + tt and "Risk / size not OK" not in alltxt + tt)
+        js(page, "()=>{switchTab('plan'); bdRender();}"); page.wait_for_timeout(300)
+        # ── Holding: six numbers
+        ch = card_txt(page, "ccmwdlk56w91") or card_txt(page, "cN")
+        hid = js(page, "()=>bdItems().find(x=>x.sym==='NVDA').id")
+        ch = card_txt(page, hid)
+        check("[%s] C: Holding card — held+avg · price+date · value+weight · P&L · stop+loss · entries" % tag, all(x in ch for x in ("11 sh · $158", "$162.85", "13 Nov", "฿60.5k · 1.2%", "+฿1.8k · +3.1%", "$110 · −฿17.8k", "Entries 1/2 · next 140 · 18 sh")), ch)
+        check("[%s] C: holding header has Long chip and +0.1R" % tag, js(page, "(i)=>{const c=document.querySelector('[data-bd-card=\"'+i+'\"]'); return c.querySelector('[data-pv-dir]').dataset.pvDir==='Long' && /\\+0\\.1R/.test(c.querySelector('[data-bd-r]').innerText)}", hid))
+        check("[%s] C: homework note kept as text on the card" % tag, "Size limited to 50% · homework not done" in ch)
+        # ── More ▾
+        js(page, "(i)=>{ const d=document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-more]'); d.open = true; d.dispatchEvent(new Event('toggle')); }", hid); page.wait_for_timeout(300)
+        mt = js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-more]').innerText.replace(/\\s+/g,' ')", hid)
+        check("[%s] C: More ▾ — cost with FX line, loss vs entry, price→stop, R definition, whole plan, pool, limits, FX source" % tag,
+              all(x in mt for x in ("฿58.7k", "× FX 33.76", "−฿17.8k", "0.36% of account", "฿19.6k", "1R = entry − first stop = $48 per share", "+$4.85 per share", "฿36.1k · 0.72% of account", "% of strategy pool", "max 12.5% of account", "within", "Settings rate, not live", "33.76")), mt)
+        check("[%s] C: More stays open after a re-render" % tag, (js(page, "()=>{bdRender(); return 1}") and js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-more]').open", hid)))
+        check("[%s] C: no overflow on the Plan board" % tag, no_overflow(page), js(page, "()=>[document.documentElement.scrollWidth, document.documentElement.clientWidth, ...[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>document.documentElement.clientWidth+1 && true).slice(0,5).map(e=>e.tagName+'.'+e.className+' '+Math.round(e.getBoundingClientRect().right))]"))
+        if w in (1440, 390):
+            js(page, "()=>window.scrollTo(0,0)"); page.wait_for_timeout(150); shot(page, "plan-%d" % w)
+        if w == 390:
+            js(page, "()=>{ bdSetSeg('hold'); }"); page.wait_for_timeout(400)
+            js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"]').scrollIntoView({block:'start'})", hid); page.wait_for_timeout(500); shot(page, "holding-more-390")
+            js(page, "()=>{ bdSetSeg('plan'); }")
+        # ── same numbers on Today · Plan card · drawer
+        js(page, "()=>{switchTab('today'); todayRefresh(true);}"); page.wait_for_timeout(400)
+        today = " ".join(r["t"] for r in rows(page, "manage"))
+        js(page, "(i)=>bdOpen(i)", hid); page.wait_for_timeout(300)
+        dr = txt(page, "[data-pv-block]"); js(page, "()=>bdClose()")
+        check("[%s] C: value, weight, open risk equal on Today · Plan card · drawer" % tag, all(x in today for x in ("฿60.5k", "1.2%", "฿17.8k")) and all(x in ch for x in ("฿60.5k", "1.2%", "฿17.8k")) and all(x in dr for x in ("฿60.5k", "1.2%", "฿17.8k")), [today, ch, dr])
+        check("[%s] C: no console / page errors" % tag, not ce and not pe, ce + pe)
+    finally:
+        b.close()
+
 
 if __name__ == "__main__":
     only = os.environ.get("PV1_PARTS", "ABC").split(",") if False else list(os.environ.get("PV1_PARTS", "ABC"))
@@ -148,6 +209,7 @@ if __name__ == "__main__":
         for w, h in SIZES:
             if "A" in only: partA(pw, w, h)
             if "B" in only: partB(pw, w, h)
+            if "C" in only: partC(pw, w, h)
     bad = [r for r in results if not r[1]]
     print("%d checks pass · %d fail" % (len(results) - len(bad), len(bad)))
     sys.exit(1 if bad else 0)

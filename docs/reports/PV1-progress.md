@@ -40,3 +40,10 @@ Honest numbers for this holding (what posView must return): heldQty 11 · planne
 - Panel (stored data only): full Weekly Impact note + `carryover_th`; every `event_refs` event with time (ICT / date / ongoing), title, forecast / previous / actual, mechanism, scenarios, watch; Quarter view (bias, posture, quarter, confidence, why, change-if, drivers, since); sources + "Weekly Impact as of … ICT"; separate "Your note · this week" (same textarea/save). No Playbook → "No Playbook for X · Add ›" (opens the Playbook panel). No Weekly Impact → existing empty text.
 - `tests/run_tests_phase373.py`: the check "Macro card heights equal per row" contradicted the brief (no stretch) → replaced by "cards size independently".
 - Tests: run_tests_pv1 parts A+B = 111 pass at 1440/1280/390. Screenshots pv1-flow-open-1440/390.
+
+## Part C — done (commit 3)
+- Plan board cards: header (symbol · tag · Long/Short chip · ⚑ Ready / red Blocked / R chip), six always-visible numbers (Planned: Entry · Stop+distance · Target+R:R · Size+value · Loss at stop · To entry; Holding: Held+avg · Price+date · Value+weight · Unrealised P&L · Stop+loss if stopped · Entries+next), `More ▾` (cost+FX line, loss vs entry, price→stop, R definition, whole-plan risk, % pool, size limits, FX source; stays open across re-renders). Waiting (incomplete) plans keep the compact card.
+- Blocked plans: red chip replaces ⚑ Ready, "Can't place: <first reason of the sizing result>", button `Fix stop ›` / `Fix size ›`, size/loss "not sized"; Ready cannot be set while blocked; an existing flag is shown off, not deleted. Engine-gated plans keep their size and a disabled Place order with the reason. "Fix risk" / "Risk / size not OK" removed everywhere (Today included). Ready tooltip: "You marked this plan ready to enter."
+- Planned size value now needs the contract multiplier (`pos-view.js` gained `plannedValue`).
+- Phone Today row: wrap fix so 3-button prompts don't overflow at 360 (re1d regression found by the Part A snapshot run).
+- Tests: run_tests_pv1 A+B+C; phase373 'Fix risk ›' expectations → 'Fix size ›'.
