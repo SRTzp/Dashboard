@@ -121,6 +121,7 @@ def run_viewport(pw, w, h):
         check("[%s] Satellite never auto-enters (no flag → not in Enter)" % tag, not any("XAU" in r["sym"] for r in rows(page, "enter")), rows(page, "enter"))
         js(page, "()=>{ satWeekPickWrite(wpWeekKey(), ['XAUUSD']); window.ps1MinStopMsg = ()=>''; }"); refresh(page)   # PV1b: a plan that cannot be placed (not picked / min stop unset) cannot be flagged Ready
         refresh(page)   # EF1: no flag to toggle — Ready is automatic
+        js(page, "()=>{ if(typeof re2EnterAll !== 'undefined' && !re2EnterAll) re2EnterToggle(); }"); page.wait_for_timeout(300)   # EF1b: Enter shows the 3 closest Ready plans — expand "+N ›"
         check("[%s] Satellite enters when it is Ready by rule (EF1: no manual flag)" % tag, any("XAU" in r["sym"] for r in rows(page, "enter")), rows(page, "enter"))
         check("[%s] EF1: no ready flag is written any more" % tag, js(page, "()=>{const i=satIdeasList.find(x=>x.id==='gs');return !i.ready && !i.readyAt}"))
         # toggle on core card + drawer
