@@ -50,6 +50,16 @@ def run(pw, w, h):
         check("[%s] A Sat Planned Long 1/1 — Stop · Risk · Reward · R, Buy entry, Sell target" % tag, "Stop 2,628" in t and "Risk −$294" in t and "Reward +$882" in t and "3.0R" in t and [x["t"] for x in L] == ["Buy 2,642 ×0.21", "Sell 2,684 ×0.21"] and not any(x["done"] for x in L), [t, L])
         L = legs(page, "ps")
         check("[%s] A Sat Planned Short 1/1 — entry = Sell, exit = Buy" % tag, [x["t"][:4] for x in L] == ["Sell", "Buy "] and [x["out"] for x in L] == [False, True], L)
+        # two entries: exit covers ALL planned entries; Reward / R include every leg (XAU E1 2,642 x0.1 + E2 2,636 x0.18, stop 2,628, target 2,684)
+        js(page, """()=>{ const o = pb2Calc; window.__o = o; pb2Calc = function(i, a){ const c = o(i, a); if(i.id !== 'xp') return c; const fx = +getBook('main').settings.fx || 1;
+            c.lot = 0.1; c.c = Object.assign({}, c.c, {e2:{ok:true, px:2636, lot1:0.1, lot2:0.18, share:50}}); c.c.v2 = Object.assign({}, c.c.v2, {actualTHB: 284 * fx}); return c; };
+          const i = satIdeasList.find(x=>x.id==='xp'); i.entry = 2642; i.entry2 = 2636; i.sl = 2628; i.tp = 2684; i.sleeve = 'main'; i.e2on = true; bdRender(); }"""); page.wait_for_timeout(300)
+        t2 = ctext(page, "xp"); L2 = [x["t"] for x in legs(page, "xp")]
+        check("[%s] A two entries: legs Buy 2,642 ×0.1 · Buy 2,636 ×0.18 · Sell 2,684 ×0.28 (exit = sum of entry qty)" % tag, L2 == ["Buy 2,642 ×0.1", "Buy 2,636 ×0.18", "Sell 2,684 ×0.28"], L2)
+        pvx = js(page, "()=>{const p=posView(bdItems().find(x=>x.id==='xp')); return {rw:p.reward/p.fx, rk:p.plannedRisk/p.fx, r:p.rewardR}}")
+        check("[%s] A two entries: Risk −$284 · Reward +$1,284 (shown compact as +$1.3k, same as the mockup) · 4.5R — every entry leg counted" % tag, "Risk −$284" in t2 and "Reward +$1.3k" in t2 and "4.5R" in t2 and abs(pvx["rw"] - 1284) < 0.01 and abs(pvx["rk"] - 284) < 0.01 and abs(pvx["r"] - 4.521) < 0.01, [t2, pvx])
+        js(page, "()=>{ pb2Calc = window.__o; satIdeasList.find(x=>x.id==='xp').e2on = false; bdRender(); }"); page.wait_for_timeout(200)
+        check("[%s] A unsized chip reads 'Buy 30 · not sized' (no ×)" % tag, "Buy 30 · not sized" in " ".join(x["t"] for x in legs(page, "pb")) and "×not sized" not in ctext(page, "pb"), [x["t"] for x in legs(page, "pb")])
         check("[%s] A Short word is coloured Short; card has no six-box grid / helper text" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=ps]'); return c.querySelector('[data-pv-dir]').dataset.pvDir==='Short' && !c.querySelector('.pv-kv') && !/Fix the plan to get a size|not sized.*not sized|To entry/.test(c.innerText)}"))
         # Tactical = 2 targets, entry 2 is Main only
         js(page, "()=>{ const i=satIdeasList.find(x=>x.id==='xp'); i.sleeve='tactical'; i.e2on=false; i.entry2=null; bdRender(); }"); page.wait_for_timeout(300)

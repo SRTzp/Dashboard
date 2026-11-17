@@ -47,3 +47,14 @@ Root cause fixed in `pvSatFail`: a lot existed but the plan was not ready → "S
 - Other suites updated only where the card layout changed: `run_tests_aw1.py` (drawer opened via `bdOpen`, not card tap), `run_tests_re1d.py` (card header class), `run_tests_re1c2.py` (a plan must be placeable to be flagged Ready), `run_tests_phase373.py` (removed "¼ in" / "full" labels, Edit pill now in More, blocked card has no Place button, drawer via `bdOpen`, scroll before header click).
 - Regression: failures not worse than base (base fails: phase122 ×2, phase365 ×2, phase366 ×1, phase367 ×1, phase373 ×1, phase_cg1 ×1, phase_ht1 ×2).
 - Screenshots (force-added): `pv1b-plan-1440`, `pv1b-plan-390`, `pv1b-blocked-1440`, `pv1b-more-390`.
+
+## Fix round (17 Nov 2026)
+- **Exit quantity covers every planned entry.** Satellite planned total = entry-1 lot + entry-2 lot (was entry-1 only). A single target takes the sum; the TP1 % split applies to that total. `posView` now feeds both entry legs to the shared calc, so Reward and R include every leg. Test: XAU E1 2,642 ×0.1 + E2 2,636 ×0.18, stop 2,628, target 2,684 → `Sell 2,684 ×0.28`, Risk −$284, Reward $1,284 (card shows the compact +$1.3k, same format as the mockup), 4.5R.
+- **Unsized chip text** is now `Buy 30 · not sized` (no ×).
+
+## Plan board row count at 390 (same fixture: 3 Planned + 2 Holding cards, before = origin/main f4c029e, after = this branch)
+| Segment | Cards | Rows per card, summed (before → after) | Height of the cards (before → after) |
+|---|---|---|---|
+| Planned | 3 | 15 → 12 | 997 px → 461 px |
+| Holding | 2 | 8 → 6 | 605 px → 239 px |
+"Rows" = direct child blocks inside each card. After-state Planned cards include the Blocked line when one applies.

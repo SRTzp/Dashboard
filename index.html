@@ -29413,7 +29413,7 @@ function pvMoreRows(it, pv){
 }
 function pvLegChip(l, pv){
   const q = l.qty > 0 ? pvQtyTxt(l.qty, pv) : null;
-  return `<span class="pv-lg${l.done ? ' ok' : ''}" data-pv-leg="${l.out ? 'out' : 'in'}"${l.done ? ' data-pv-done="1"' : ''}>${l.side} ${td3Num(l.px)} <i>×</i>${q != null ? q : '<em>not sized</em>'}</span>`;
+  return `<span class="pv-lg${l.done ? ' ok' : ''}" data-pv-leg="${l.out ? 'out' : 'in'}"${l.done ? ' data-pv-done="1"' : ''}>${l.side} ${td3Num(l.px)} ${q != null ? '<i>×</i>' + q : '· <em>not sized</em>'}</span>`;
 }
 function pvMoneyLine(it, pv){
   const e = bdE, m = v=>pvMoney(pv, v), hold = it.status === 'hold', comp = it.kind === 'core' && it.tag === 'COMP';
@@ -29908,11 +29908,11 @@ function posView(it){
       try{ const r = RiskEngine.ideaResult(en.idea, en.L.costsFor ? en.L.costsFor(en.idea) : null); if(r && r.exposure != null) inp.openRiskMoney = r.exposure; }catch(e){}
     }else inp.fills = [];
     if(it.status !== 'hold'){   /* planned: size + risk come from the existing sizing (pb2Calc) · nothing recomputed */
-      try{ const c = pb2Calc(i, acct); if(c.lot != null){ inp.planned = [{qty:c.lot, px:+i.entry}]; const th = c.c && c.c.v2 ? c.c.v2.actualTHB : 0; if(th > 0) inp.plannedRiskMoney = th; if(c.c && c.c.chosen && +c.c.chosen.cfg.contract > 0) inp.mult = +c.c.chosen.cfg.contract; if(c.c && c.c.chosen && c.c.chosen.cfg.cur !== 'USD') inp.fx = 1; extra.planMsg = ''; } else extra.planMsg = c.msg || ''; extra.rr = c.rr; extra.pct = !!(c.c && c.c.chosen && c.c.chosen.cfg && c.c.chosen.cfg.sys === 'pct'); extra.planLabel = c.label; }catch(e){}
+      try{ const c = pb2Calc(i, acct); if(c.lot != null){ const e2 = c.c && c.c.e2 && c.c.e2.ok ? c.c.e2 : null; inp.planned = e2 ? [{qty:e2.lot1, px:+i.entry}, {qty:e2.lot2, px:+i.entry2}] : [{qty:c.lot, px:+i.entry}];   /* PV1b — every planned entry leg counts */ const th = c.c && c.c.v2 ? c.c.v2.actualTHB : 0; if(th > 0) inp.plannedRiskMoney = th; if(c.c && c.c.chosen && +c.c.chosen.cfg.contract > 0) inp.mult = +c.c.chosen.cfg.contract; if(c.c && c.c.chosen && c.c.chosen.cfg.cur !== 'USD') inp.fx = 1; extra.planMsg = ''; } else extra.planMsg = c.msg || ''; extra.rr = c.rr; extra.pct = !!(c.c && c.c.chosen && c.c.chosen.cfg && c.c.chosen.cfg.sys === 'pct'); extra.planLabel = c.label; }catch(e){}
     }
     /* PV1b — legs: entries (filled tranches · pending entry 2) · exits taken (engine exits) · targets TP1 / TP2 split by the Settings TP1 % */
     try{
-      const pc = pb2Calc(i, acct), cc = pc.c, e2 = cc && cc.e2 && cc.e2.ok ? cc.e2 : null, Q = pc.lot != null ? pc.lot : null, tps = satV2Tps(i, acct);
+      const pc = pb2Calc(i, acct), cc = pc.c, e2 = cc && cc.e2 && cc.e2.ok ? cc.e2 : null, Q = pc.lot != null ? (e2 ? e2.lot1 + e2.lot2 : pc.lot) : null, tps = satV2Tps(i, acct);
       if(en){ lg.dE = en.idea.tranches.map(t=>({px:+t.entry, qty:+t.qty})); lg.exits = (en.idea.exits || []).map(x=>({px:+x.price, qty:+x.qty})); }
       const filled = lg.dE.length;
       if(!en){ lg.pE = e2 ? [{px:+i.entry, qty:e2.lot1}, {px:+i.entry2, qty:e2.lot2}] : (+i.entry > 0 ? [{px:+i.entry, qty:Q}] : []); }
