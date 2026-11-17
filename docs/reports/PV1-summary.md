@@ -32,3 +32,7 @@ Existing tests intentionally changed: phase373 "card heights equal per row" → 
 - The dashboard backup/export omits core cards (plans, lots, prices) — separate issue.
 - Planned Sat entry 2 (split entries) is not shown as a second row in the card numbers.
 - No policy question found; no investment rule, sizing, limit or gate changed.
+
+## Final regression (committed tree vs base)
+Base `origin/main`: 34/41 ok, 7 failing (phase122, 365, 366, 367, 373, cg1, ht1 — the same pre-existing failures, e.g. phase373's 390 px `#hdrPlanBtn` click timeout).
+PV1: **37/44 ok, 7 failing — the identical set**, with per-suite fail counts equal to base (phase373 419 pass / 1 fail as on base). Added green suites: `sync_pv1`, `node pv1_posview`, `run_tests_pv1` (165 checks).
