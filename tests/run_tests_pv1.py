@@ -161,8 +161,8 @@ def partC(pw, w, h):
         cb = card_txt(page, "pb")
         check("[%s] C: blocked plan → red Blocked chip, no ⚑ Ready" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=pb]'); return !!c.querySelector('[data-pv-blocked]') && !c.querySelector('[data-re2-ready]')}"), cb)
         check("[%s] C: blocked plan shows its real reason + Fix button (PV1b)" % tag, "Not picked this week" not in cb and "Set min stop" in cb and "Open Settings" in cb and "Risk not sized" in cb, cb)   # EF1: an unpicked asset is no longer a block; the real block (min stop) shows
-        js(page, "()=>{ re2ReadyToggle('pb'); }"); page.wait_for_timeout(300)
-        check("[%s] C: Ready cannot be set while blocked" % tag, not js(page, "()=>!!satIdeasList.find(x=>x.id==='pb').ready"))
+        # EF1: the manual Ready toggle (re2ReadyToggle) was removed on purpose — nothing can set Ready on a blocked plan
+        check("[%s] C: Ready cannot be set while blocked (no toggle exists)" % tag, js(page, "()=>typeof re2ReadyToggle==='undefined' && !satIdeasList.find(x=>x.id==='pb').ready"))
         js(page, "()=>{ satIdeasList.find(x=>x.id==='pb').ready = true; bdRender(); }"); page.wait_for_timeout(200)
         check("[%s] C: an existing flag on a blocked plan is shown off, not deleted" % tag, js(page, "()=>satIdeasList.find(x=>x.id==='pb').ready === true") and not js(page, "()=>!!document.querySelector('[data-bd-card=pb] [data-re2-ready]')"))
         # ── no generic wording anywhere (Plan + Today)
@@ -175,7 +175,7 @@ def partC(pw, w, h):
         ch = card_txt(page, "ccmwdlk56w91") or card_txt(page, "cN")
         hid = js(page, "()=>bdItems().find(x=>x.sym==='NVDA').id")
         ch = card_txt(page, hid)
-        check("[%s] C: Holding card — stop · if stopped · value+weight · P&L (PV1b)" % tag, all(x in ch for x in ("Stop 110", "If stopped −฿17.8k", "Value ฿60.5k · 1.2%", "P&L +฿1.8k")), ch)
+        check("[%s] C: Holding card — stop · if stopped · value+weight · P&L (PV1b)" % tag, all(x in ch for x in ("Stop 110", "If stopped −฿17.8k", "Value ฿60.5k · 1.2%", "P&L +฿1,801")), ch)   # EF1b: exact money under 10k
         check("[%s] C: holding card — Long word and homework chip" % tag, js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-dir]').dataset.pvDir==='Long'", hid) and "50% · homework" in ch)
         # ── More ▾
         js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"]').click()", hid); page.wait_for_timeout(300)
@@ -195,7 +195,8 @@ def partC(pw, w, h):
         today = " ".join(r["t"] for r in rows(page, "manage"))
         js(page, "(i)=>bdOpen(i)", hid); page.wait_for_timeout(300)
         dr = txt(page, "[data-pv-block]"); js(page, "()=>bdClose()")
-        check("[%s] C: value, weight, open risk equal on Today · Plan card · drawer" % tag, all(x in today for x in ("฿60.5k", "1.2%", "฿17.8k")) and all(x in ch for x in ("฿60.5k", "1.2%", "฿17.8k")) and all(x in dr for x in ("฿60.5k", "1.2%", "฿17.8k")), [today, ch, dr])
+        check("[%s] C: value, weight, open risk equal on Today · Plan card · drawer" % tag, "฿17.8k" in today and   # EF1b: Today row uses the card format (risk only; value+weight live on the Plan card and drawer)
+               all(x in ch for x in ("฿60.5k", "1.2%", "฿17.8k")) and all(x in dr for x in ("฿60.5k", "1.2%", "฿17.8k")), [today, ch, dr])
         check("[%s] C: no console / page errors" % tag, not ce and not pe, ce + pe)
     finally:
         b.close()

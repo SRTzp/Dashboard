@@ -3407,6 +3407,12 @@ button.ccChip{cursor:pointer;min-height:24px}
   .hdrCmp{height:36px}.hdrCmp select{height:36px}
   .hdrCmp{padding:0 24px 0 10px}.hdrCmp:after{right:9px}
 }
+/* TS1b — Port with the account-compare label at phone width: the ＋ button sat under the label (hdrSub shrank to 4px while .hdrCmp stayed 34px wide). Tighten the row so brand · account switch · compare · 4 buttons fit. */
+@media (max-width:480px){
+  .topbar:has(#hdrSub.cmp) .acSw{margin-left:8px}
+  .topbar:has(#hdrSub.cmp) .acSwB{padding:6px 8px;min-width:40px}
+  .topbar:has(#hdrSub.cmp) .hbtns>button{width:36px;min-width:36px}
+}
 /* ===== AW1 — account switch in the top bar ===== */
 .topbar .topMid{display:flex;align-items:center;gap:10px;margin:0 auto;min-width:0}
 .acSw{display:flex;align-items:center;gap:2px;background:var(--surface);border-radius:var(--r-pill);padding:5px;box-shadow:var(--sh-1);flex:none}
@@ -10390,7 +10396,7 @@ const CG_GUIDE = {
   scanNew:['Goal: find who benefits from this event.', 'Paste in Claude → idea-scout scan → import JSON.', 'Then tick "เลือกศึกษา" on 1–2 segments.'],
   ask:['Goal: find the dated reason this sector turned.', 'Paste → scan → real driver? tick segments → pick.', 'No dated driver = price move, ignore.'],
   match:['Goal: check if these stocks share one driver.', 'Paste → idea-scout match.', 'Shared theme → import it as an idea.'],
-  pick:['Goal: get companies for the ticked segments.', 'Paste → idea-scout pick → import.', 'Then add them in TradingView and ⇩ Import into Watch.'],
+  pick:['Goal: get companies for the ticked segments.', 'Paste → idea-scout pick → import.', 'Add them in TradingView → ⇩ Import.'],
   update:['Goal: refresh evidence/status.', 'Paste → idea-scout update → import.']
 };
 const CG_COPY_FAIL = 'Copy failed — select and copy manually';
@@ -11530,13 +11536,18 @@ function ln4MoreHtml(M){
   try{ h += td4RemBanner(M); }catch(e){}
   return `<details class="ln4-more" data-ln4-moredet><summary>Details · risk · sectors · accounts</summary><div class="ln4-mb">${h}</div></details>`;
 }
+/* TS1b — Weekly News line (Today › Daily, under Find): the LN4 lean Today dropped it by accident (lean mockup keeps it) */
+function ln4NewsLine(){
+  try{ const d = stkLatest(); if(d && !stkIsRead(d.id)){ const rc = stkReadCount(d); return `<div class="td3-wn m" data-td3-wnews>Weekly News · ${rc[1] - rc[0]}/${rc[1]} unread · <button type="button" class="td3-lk" onclick="stkOpenView()">Read ›</button></div>`; } }catch(e){}
+  return '';
+}
 function ln4Html(M, W, wk){
   const status = ln4StatusHtml(M, W, wk);
   if(wk){
     const banner = !W.complete ? `<div class="td3-inc" data-td3-incomplete>This week's review is incomplete</div>` : '';
     return status + banner + `<div class="td3-pn wk" data-td3-panels>${td3WeekPanelHtml(W)}</div>`;
   }
-  return status + `<div class="td3-pn" data-td3-panels>${ln4ActHtml()}</div>` + ln4MoreHtml(M);
+  return status + `<div class="td3-pn" data-td3-panels>${ln4ActHtml()}${ln4NewsLine()}</div>` + ln4MoreHtml(M);
 }
 
 

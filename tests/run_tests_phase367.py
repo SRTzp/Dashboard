@@ -84,7 +84,7 @@ def tests(pw, w, h):
         check(f"{tag} thesis 31d shown · 29d hidden · missing shown (oldest/missing first)", txts == ["living-thesis: MSFT none", "living-thesis: AVGO 31d"], txts)
         setup(page, wl=[("A", 40), ("B", 50), ("C", 60)], pb="2026Q4", wi=True)
         txts = stxt(page)
-        check(f"{tag} 3 stale → 2 shown + '+1'", txts == ["living-thesis: C 60d", "living-thesis: B 50d"] and "+1 more" in line(page), [txts, line(page)])
+        check(f"{tag} 3 stale → all 3 chips shown, no '+N' (approved LN4 lean To do: Skills chips show all)", txts == ["living-thesis: C 60d", "living-thesis: B 50d", "living-thesis: A 40d"] and "+1 more" not in line(page), [txts, line(page)])
         # playbook
         at(page, "2026-12-26T05:00:00Z"); setup(page, pb="2026Q4", wi=True, wl=[])
         check(f"{tag} quarter end −5d, no next-quarter playbook → 'playbook: quarter end in 5d'", "playbook: quarter end in 5d" in line(page), line(page))
@@ -104,6 +104,7 @@ def tests(pw, w, h):
         page.locator('[data-ln4-todo^="sk:lt:"]').first.click(); settle(page, 400)
         cp = js(page, "()=>window.__cp.slice()")
         check(f"{tag} tapping a skill chip copies its prompt (starts with skill name) + CG1 toast", len(cp) == 1 and cp[0].startswith("living-thesis update: AVGO") and cnt(page, "#cgToast.show") == 1, cp)
+        js(page, "()=>{ ln4TodoAll=true; todayRefresh(true); }"); settle(page, 300)   # TS1b: To do chips are capped (+N ›) — expand so the idea-scout chip is in the DOM
         page.locator('[data-ln4-todo="sk:idea"]').evaluate("e=>e.click()"); settle(page, 400)
         cp = js(page, "()=>window.__cp.slice()")
         check(f"{tag} item tap copies that item's prompt", len(cp) == 2 and cp[1].startswith("idea-scout"), cp)
