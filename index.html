@@ -7638,7 +7638,7 @@ function re1BoxHtml(m, o){
     return `<div class="re1-box bad" data-re1-box data-re1-blocked="1" data-re1-strat="${e(m.strategy)}">${chip}${formula}<div class="re1-big" data-re1-block>Blocked · ${why}</div>${al ? `<div class="re1-f" data-re1-allowed>${e(al)}</div>` : ''}${m.roomLine ? `<div class="re1-f">${e(m.roomLine)}</div>` : ''}</div>`;
   }
   const flags = (m.flags || []).filter(f=>f !== 'SAT_REENTRY_TAG' && f !== 'SNAPSHOT_OLD' && f !== 'BASIS_FIRST').map(f=>Re1Adapter.rtext(f)).join(' · ');
-  return `<div class="re1-box" data-re1-box data-re1-strat="${e(m.strategy)}">${chip}${formula}<div class="re1-big" data-re1-size>${m.qty > 0 ? q(m.qty) + ' · ' + mon(m.money / fxd) : '—'}</div><div class="re1-f" data-re1-room>${e(m.roomLine || '')}</div>${flags ? `<div class="re1-w">${e(flags)}</div>` : ''}</div>`;
+  return `<div class="re1-box" data-re1-box data-re1-strat="${e(m.strategy)}">${chip}${formula}<div class="re1-big" data-re1-size>${m.qty > 0 ? q(m.qty) + ' · ' + mon(m.money / fxd) : '—'}${m.limit && m.qty > 0 ? ` <small data-re1-limit>· ${e(m.limit.text)}</small>` : ''}</div><div class="re1-f" data-re1-room>${e(m.roomLine || '')}</div>${flags ? `<div class="re1-w">${e(flags)}</div>` : ''}</div>`;
 }
 </script>
 
@@ -9348,7 +9348,7 @@ function tdBuild(){
   /* ── 🟡 fundflow เก่า ── */
   guard('ff-stale', ()=>{
     const F = coreFNow(); if(!F.stale) return;
-    add('a', mkTask({kind:'ff-stale', ico:'📉', html:`fundflow เก่า <b>${F.age==null ? '—' : F.age} วัน</b> — ค่า FF/ประตูไม่แม่น`, sub:'Flow', tags:[], go:'flow', args:{}, btn:'ไปที่ Flow →'}));
+    add('a', mkTask({kind:'ff-stale', ico:'📉', html:`Regime data <b>${F.age==null ? '—' : F.age} days</b> old — modifier at fallback`, sub:'Flow', tags:[], go:'flow', args:{}, btn:'ไปที่ Flow →'}));
   });
   /* ── 🟡 ราคาปิดเก่า/ไม่มี (รวมต่อบัญชี) ── */
   guard('stale', ()=>acctList.forEach(a=>{
@@ -10931,7 +10931,7 @@ function frRows(){
     if(extra && extra.force) st = extra.force;
     rows.push({key, name, age, st, stale: st==='stale' || st==='old', txt: age==null ? '—' : age + 'd'});
   };
-  try{ add('regime', 'Regime (fundflow.json)', ffJson ? ffBizDaysSince(ffJson.as_of) : null, 2); }catch(e){ add('regime', 'Regime (fundflow.json)', null, 2); }
+  try{ add('regime', 'Regime (fundflow.json)', ffJson ? rm1Regime().ageDays : null, RiskEngine.POLICY.regime.freshDays); }catch(e){ add('regime', 'Regime (fundflow.json)', null, RiskEngine.POLICY.regime.freshDays); }
   try{
     const cur = wiCurDoc(), oth = wiOtherDoc();
     if(cur) add('wi', 'Weekly Impact', 0, 0);
@@ -10967,25 +10967,22 @@ function ln4SetRender(){ const h = document.getElementById('ln4SetBox'); if(!h) 
    + `<div class="ln4-setrow" data-ln4-setexec><span><b>Exec goal</b><br><small>Valid setups taken per week</small></span><span class="ln4-val">≥ ${LN4_WEEK_GOAL}%</span></div>`; try{ re1DryMount(h); }catch(e){} }
 /* RG2a #2 — verdict 1 บรรทัดบนสุดของ Today: label จากคู่ Winner (EMA20/50) + factor ที่มีอยู่แล้ว (ไม่มีกฎใหม่) · แตะ → Flow › Regime */
 function tdRegimeVerdict(opt){
-  const J = ffJsonData(), R = (J && J.ratios) || {};
-  const W = ffPoolFactor('winner'), L = ffPoolFactor('ladder');
-  const a = R.ACWI_BIL ? !!R.ACWI_BIL.up : null, h = R.HYG_IEI ? !!R.HYG_IEI.up : null;
+  /* RM1 — Today's regime line = the shared result (SMA 20/50 state · oldest input date · effective budget) */
+  const E = rm1Eff(), r = E.r, nodata = !!r.demo || r.fallback && r.equity==='unavailable' && r.credit==='unavailable';
   let label = 'No data', st = 'grey';
-  if(!W.demo && a!==null && h!==null){
-    if(a && h){ label = 'Risk-ON'; st = 'green'; }
-    else if(a && !h){ label = 'Caution'; st = 'amber'; }
-    else if(!a && h){ label = 'Mixed'; st = 'amber'; }
-    else { label = 'Risk-OFF'; st = 'red'; }
+  if(!nodata){
+    if(r.equity==='green' && r.credit==='green'){ label = 'Risk-ON'; st = 'green'; }
+    else if(r.equity==='green' && r.credit==='red'){ label = 'Caution'; st = 'amber'; }
+    else if(r.equity==='red' && r.credit==='green'){ label = 'Mixed'; st = 'amber'; }
+    else if(r.equity==='red' && r.credit==='red'){ label = 'Risk-OFF'; st = 'red'; }
+    else { label = 'Check data'; st = 'amber'; }
   }
-  const nodata = st==='grey';
-  const old = !nodata && W.age!=null && W.age > 2;
-  let chipHasReg = false; if(opt && opt.dedupe){ try{ chipHasReg = ln4PortPills().indexOf('(regime)') >= 0; }catch(e){} }   /* UA1 — chip MMT ½ · COMP ½ (regime) บอกขนาดแล้ว → ป้าย Regime เหลือแค่ Risk-ON/OFF */
-  const rgf = (()=>{ try{ return Math.round(RiskEngine.regimeState({acwi:a, hyg:h, asOf:(J && J.as_of) || null}, Date.now()).factor * 100); }catch(e){ return L.cap; } })();
-  const full = (nodata || chipHasReg) ? label : `${label} · Compounder ${rgf}%`;
-  const short = label;   /* LN4c — phone: label only · W/L sizes live in Details */
-  const stF = old ? `<span class="st"> · data ${W.age}d old</span>` : '';
-  const stS = old ? `<span class="st"> · ${W.age}d old</span>` : '';
-  return `<button type="button" class="td3-rg" data-td3-rg data-rg-state="${st}" data-rg-label="${label}" data-rg-stale="${old?1:0}" aria-label="Regime: ${escHtml(full)}${old?' · data '+W.age+'d old':''}" onclick="tdRegimeGo()"><span class="d"></span><span class="t"><span class="rg-f">${escHtml(full)}</span><span class="rg-s">${escHtml(short)}</span></span>${old ? `<span class="rg-f">${stF}</span><span class="rg-s">${stS}</span>` : ''}</button>`;
+  const old = !nodata && r.stale && r.known;
+  let chipHasReg = false; if(opt && opt.dedupe){ try{ chipHasReg = ln4PortPills().indexOf('(regime)') >= 0; }catch(e){} }
+  const full = (nodata || chipHasReg) ? label : `${label} · New entries ${E.pc}%`;
+  const short = label;
+  const stF = old ? `<span class="st"> · data ${r.ageDays}d old</span>` : '', stS = old ? `<span class="st"> · ${r.ageDays}d old</span>` : '';
+  return `<button type="button" class="td3-rg" data-td3-rg data-rg-state="${st}" data-rg-label="${label}" data-rg-stale="${old?1:0}" data-rm1-pc="${E.pc}" aria-label="Regime: ${escHtml(full)} · ${E.sma}${old?' · data '+r.ageDays+'d old':''}" onclick="tdRegimeGo()"><span class="d"></span><span class="t"><span class="rg-f">${escHtml(full)}</span><span class="rg-s">${escHtml(short)}</span></span>${old ? `<span class="rg-f">${stF}</span><span class="rg-s">${stS}</span>` : ''}</button>`;
 }
 function tdRegimeGo(){
   try{ ln3FlowOpen.regime = true; }catch(e){}
@@ -11072,7 +11069,7 @@ function ln4PortPills(){   /* RE-C1 — ONE chip, only when abnormal: Emergency 
       if(L.sat.step.locked){ parts.push(nm + 'SAT locked'); red = true; regOnly = false; }
       if(L.comp.streak.locked){ parts.push(nm + 'COMP locked'); red = true; regOnly = false; }
     });
-    const F = RiskEngine.regimeState((re1L(tdHome()) || {}).signals || {}, Date.now()); if((F.factor < 1 || F.stale) && (re1L(tdHome()) || {}).signals && re1L(tdHome()).signals.asOf) parts.push('COMP ' + (F.factor <= 0.5 ? '½' : '¾') + ' (regime)');
+    const E = rm1Eff(); if(!E.demo && E.r.factor < 1) parts.push('Entries ' + Math.round(E.r.factor*100) + '% (regime)');
   }catch(e){}
   if(!parts.length) return '';
   return `<button type="button" class="pill ${red ? 'p-r' : 'p-a'} ln4-pchip" data-ln4-portpill="all" data-tw1-status title="Regime details" aria-label="${td3E(parts.join(' · '))} — open Regime details in Flow" onclick="tw1RegimeGo()" style="cursor:pointer">${td3E(parts.join(' · '))}</button>`;
@@ -11480,7 +11477,7 @@ function ln4TodoHtml(M){
 function ln4StatusHtml(M, W, wk){
   const rg = (()=>{ try{ return tdRegimeVerdict({dedupe:true}); }catch(e){ console.warn('td regime verdict:', e); return ''; } })();
   const sw = `<span class="sw" role="tablist" data-td3-sw><button type="button" role="tab" data-td3-tab="d" class="${!wk ? 'on' : ''}" aria-selected="${!wk}" onclick="td3SetMode('d')">Daily</button><button type="button" role="tab" data-td3-tab="w" class="${wk ? 'on' : ''}" aria-selected="${wk}" onclick="td3SetMode('w')">Weekend${W.complete ? '' : `<span class="td3-bd" data-td3-badge title="This week's review is incomplete" aria-label="This week's review is incomplete, ${W.n} of ${W.N} done">${W.n}/${W.N}</span>`}</button></span>`;
-  let wlLine = ''; try{ const Lh = re1L(tdHome()); if(Lh && Lh.signals && Lh.signals.asOf) wlLine = `<div class="line ln4-wl" data-ln4-wl><span class="k">SIZE</span><span class="m">Regime size · Compounder ${Math.round(Lh.regime.factor * 100)}%${Lh.emergency.active ? ' · Emergency ½ on new risk' : ''}</span></div>`; }catch(e){}
+  let wlLine = ''; try{ const Lh = re1L(tdHome()); if(Lh && Lh.signals && Lh.signals.asOf) wlLine = `<div class="line ln4-wl" data-ln4-wl><span class="k">SIZE</span><span class="m">New-entry budget ${rm1Eff().pc}%${Lh.emergency.active ? ' · emergency brake' : ''}</span></div>`; }catch(e){}
   const mg = wlLine + ln4MacroLine(M) + ln4GoalLine(M);
   const phone = !ln4Wide();   /* RE1-C2 — the old status text / chip moved into the Act risk strip */
   return `<div class="card ln4-card ln4-status" data-ln4-status>
@@ -13647,20 +13644,19 @@ function coreEff(c){
   try{ t = getBook(c.acct).trades.find(x=>x.id===c.trade_id) || null; }catch(e){}
   return (t && t.status==='open') ? {kind:'open', t} : {kind:'closed', t};
 }
-/* f ปัจจุบันจากแถบ Fund-flow (ffCoreNow · Calc.ffCoreCap) + ที่มา */
+/* RM1 — f = the shared regime modifier (fraction) + source text */
 function coreFNow(){
-  const C = ffCoreNow(), cap = C.cap;
-  const f = cap>=100 ? 1 : (cap>=75 ? 0.75 : 0.5);
-  let src = C.stale ? 'Regime เก่า · ใช้ค่าล่าสุด' : (C.red===0 ? 'เขียวทั้งคู่' : `แดง ${C.red} ตัว`);
-  if(C.missing && C.missing.length) src += ' · ไม่มีข้อมูล ' + C.missing.join('/');
+  const C = ffPoolFactor('winner'), f = C.f;
+  let src = C.fallback ? 'fallback ' + C.cap + '%' : ('equity ' + C.equity + ', credit ' + C.credit);
   return {f, src, stale:!!C.stale, missing:C.missing||[], age:C.age, demo:!!C.demo};
 }
 /* ข้อมูลระดับบัญชี: ถัง · เงินสดว่าง · ค่าตั้ง (฿) */
-/* FX — เตือน Fund-flow ในที่ที่ใช้ f (ไม่เปลี่ยนค่า f/เกณฑ์ 5 วัน) · demo > stale > ขาด ratio · สดปกติ = ว่าง */
+/* RM1 — one warning wording for every form that shows the modifier */
 function coreFWarn(F){
-  if(F.demo) return `⚠ ยังไม่มีข้อมูล Fund-flow · ไม่ลดขนาดไม้ (${Math.round(F.f*100)}%)`;
-  if(F.stale) return `⚠ Regime data is ${F.age==null?'—':F.age} business days old — size from last known state`;
-  if(F.missing && F.missing.length) return `⚠ Fund-flow ไม่มีข้อมูล ${F.missing.join('/')}`;
+  const cap = Math.round(F.f*100);
+  if(F.demo) return `⚠ No Fund-flow data · fallback cap ${cap}%`;
+  if(F.stale) return `⚠ Regime data is ${F.age==null?'—':F.age} days old · fallback cap ${cap}%`;
+  if(F.missing && F.missing.length) return `⚠ Regime signal missing (${F.missing.join('/')}) · fallback cap ${cap}%`;
   return '';
 }
 /* 7E-2b-1 — ฐานของบัญชี (ยังไม่มีบันได) · ทุกตัวเลขบันได/งบเรียก Calc.coreSize (ไม่มีสูตรซ้ำ) · ประตู/งบ/ชั้น 2 คิดเป็นบาท · ตารางบนการ์ดแสดงสกุลตลาด */
@@ -15436,6 +15432,7 @@ function ps1PlanFl(c){ const p = c && c.plan && c.plan.ps1; return p ? {ok:true,
 /* PS1b §7c — percentages are ROUNDED (not truncated) to 2 decimals from the same numbers as the shares */
 function ps1R2(x){ return (Math.round((+x + 1e-9) * 100) / 100).toFixed(2); }
 function ps1MultPill(p){   /* PS1c §10 — amber pill when a multiplier applies */
+  if(p && p.engine && p.engine.limit) return ` <span class="ps1Pill" data-ps1-tag data-rm1-limit>${escHtml(p.engine.limit)}</span>`;   /* RM1 — the one limiting rule */
   const mu = p.mult; if(!mu || !(mu.f > 0)) return p.tag ? ` <span class="ps1Pill" data-ps1-tag>${escHtml(p.tag)}</span>` : '';
   if(mu.f * mu.dd >= 1 - 1e-9) return '';
   return ` <span class="ps1Pill" data-ps1-tag>× regime ${Math.round(mu.f*100)}%${mu.dd < 1 - 1e-9 ? ' × half' : ''}</span>`;
@@ -15583,7 +15580,7 @@ function ps1FormRun0(n, rd, cx, mk, errs){
   n.re1Model = m;
   const inputErr = ['PRICE_MISSING','STOP_EQUALS_ENTRY','STOP_WRONG_SIDE','SPEC_MISSING','FX_MISSING','EQUITY_MISSING','NO_SNAPSHOT','SNAPSHOT_STALE','UNKNOWN_DATA'].filter(c=>m.reasons.indexOf(c) >= 0);
   const swSw = (bucket === 'ladder' && held) ? `<span class="ps1Seg re1-sw" data-re1-switch role="group"><button type="button" class="${(n.re1Kind||'addon')==='pilot'?'on':''}" data-re1-kind="pilot" onclick="re1Kind('pilot')">Pilot</button><button type="button" class="${(n.re1Kind||'addon')==='addon'?'on':''}" data-re1-kind="addon" onclick="re1Kind('addon')">Add-on${m.addon && m.addon.locked ? ' 🔒' : ''}</button></span>` : (bucket === 'ladder' ? `<span class="ps1Seg re1-sw" data-re1-switch role="group"><button type="button" class="on" data-re1-kind="pilot" aria-pressed="true">Pilot</button><button type="button" disabled data-re1-kind="addon" title="Add-on unlocks after the Pilot is filled">Add-on 🔒</button></span>` : '');
-  const lockNote = bucket === 'ladder' ? `<small class="re1-note" data-re1-addon-note>${m.addon && m.addon.locked ? 'Add-on unlocks with: ' + m.addon.missing.join(' · ') : 'Add-on: ticker total ≤ 1.00% with thesis done'}</small>` : '';
+  const lockNote = bucket === 'ladder' ? `<small class="re1-note" data-re1-addon-note>${m.addon && m.addon.locked ? 'Add-on unlocks with: ' + m.addon.missing.join(' · ') : 'Add-on: ticker total ≤ ' + RiskEngine.POLICY.comp.totalCapPct + '% × modifier with thesis done'}</small>` : '';
   const below = (m.flags || []).indexOf('ADDON_BELOW_ENTRY_WARN') >= 0 ? '<div class="re1-w" data-re1-below>Adding below entry — re-check ④ Wrong if</div>' : '';
   if(inputErr.length && !m.qty){ setBox(re1BoxHtml(Object.assign({}, m, {blocked:true}), {cur:'THB'}) ); mine.push(m.reasonTexts[0] || 'Cannot size'); setSum(''); setDet(''); return done(); }
   if(m.reasons.indexOf('LOT_BELOW_MIN') >= 0 && !m.qty){ mine.push(`Too small for 1 ${mk==='TH' ? 'lot (100)' : 'share'}`); setBox(re1BoxHtml(m, {cur:'THB'})); setSum(''); setDet(''); return done(); }
@@ -15594,7 +15591,7 @@ function ps1FormRun0(n, rd, cx, mk, errs){
     stops.forEach((x,i)=>{ ps1MetaSet('s', i, `−${Math.abs((x.px - avgPx) / avgPx * 100).toFixed(1)}%`); }); }
   const snap = {v:2, re1:true, bucket, E, Edate: L.basis.weekSnapDate || null, div, typed: m.effPct, mult:{f:1, dd:1}, ideaEff: m.effPct, rows: rowsQ, stops: stops.map(x=>({px:x.px, pct:x.pct})), qty:m.qty, avgEntry:avgPx, avgStop:stop,
     riskPct:m.moneyPct, riskMoney:m.money, tag:'', sizePct: m.qty * avgPx * div / E * 100, leftPct:null, trimmed:false, cashLimited:false, lot: mk==='TH' ? 100 : 1, maxSizePct:null, date:thaiToday(),
-    qtyFull: (m.sizing && m.sizing.qtyFull > 0) ? (bucket === 'ladder' ? m.sizing.qtyFull * 2 : m.sizing.qtyFull) : null, engine:{formula:m.formula, factors:m.factors, reasons:m.reasons, effPct:m.effPct, basis:L.basis.weekSnapDate || 'provisional'}};
+    qtyFull: (m.sizing && m.sizing.qtyFull > 0) ? (bucket === 'ladder' ? m.sizing.qtyFull * 2 : m.sizing.qtyFull) : null, engine:{formula:m.formula, factors:m.factors, reasons:m.reasons, effPct:m.effPct, limit: m.limit ? m.limit.text : null, basis:L.basis.weekSnapDate || 'provisional'}};
   if(m.minStopApplied) snap.ms = {rows:[{n:1, minPct:msPct, yourPct:Math.abs(avgPx - stop) / avgPx * 100}], multi:false, budget:m.effPct / 100 * E};
   if(stOn && addPx != null) snap.starter = {frac:0.25, fullRiskPct:m.effPct / 0.25, addPx};
   else if(stOn) snap.starter = {frac:0.25, fullRiskPct:m.effPct / 0.25};
@@ -16262,7 +16259,7 @@ function render(){
           <div class="sumCell sumLv-${lvl}" data-sum="open" data-level="${lvl}"><div class="sumL">ความเสี่ยงถึง Stop (ชั้น 2 · จากราคาปิด) · % ของถัง Momentum</div><div class="sumBig sumNw" data-sum-now><small>ตอนนี้ </small>${fmt2(riskNow)}<small>%</small></div><div class="sumFull" data-sum-full><small>ถ้าบันไดเต็ม </small><b>${fmt2(riskTank)}</b><small>%</small></div>${bar2}<div class="sumSub">฿${fmt0(riskTHBv)} · ≈ ${fmt2(pct(riskTHBv,cap))}% ของบัญชี</div>${cr && cr.missing>0?`<div class="sumSub" data-sum-missing>ขาดราคา ${cr.missing} ตัว (ไม่นับ)</div>`:''}${cr && cr.nNoCard>0?`<div class="sumSub" data-sum-nocard>ไม่มีการ์ด ${cr.nNoCard} ตัว (นับจากทุน)</div>`:''}${lvl==='over'?'<div class="sumSub"><span class="sumPill dn" data-stop-buy>งดซื้อเพิ่ม</span></div>':''}</div>
           <div class="sumCell" data-sum="held"><div class="sumL">Momentum pool · เงินที่ถือ</div><div class="sumBig sumNw">${fmt2(pct(wHeldS,tankW))}<small>% ของถัง Momentum</small></div><div class="sumSub sumNw">฿${fmt0(wHeldS)} / ฿${fmt0(tankW)}</div>${bar4}<div class="sumSub${spS&&spS.lOver?' sumNeg':''}" data-sum-l>Compounder ${fmt2(lPctS)}% ของถัง Compounder ฿${fmt0(tankL)}</div><div class="sumSub${spS&&(spS.overCommitted||spS.lOver)?' sumNeg':''}" data-sum-free>${freeTxt}</div></div>
           <div class="sumCell" data-sum="pos"><div class="sumL">ตำแหน่ง</div><div class="sumBig sumNw">${nOpen}<small> ตัว</small></div><div class="sumSub sumNw" data-sum-wl>W ${nW} · L ${nL}</div><div class="sumSub sumNw">ล็อกกำไร ${nLock} ตัว</div></div>
-          <div class="sumCell" data-sum="pools"><div class="sumL">Regime size</div><div class="sumBig sumNw">${Math.round(coreFNow().f*100)}<small>%</small></div><div class="sumSub">Compounder pool free ฿${fmt0(freeL)}</div></div>
+          <div class="sumCell" data-sum="pools"><div class="sumL">New-entry budget</div><div class="sumBig sumNw" data-rm1-pc>${rm1Eff().pc}<small>%</small></div><div class="sumSub">Compounder pool free ฿${fmt0(freeL)}</div></div>
           ${planCell}
         </div>
       </div>`;
@@ -21974,17 +21971,13 @@ const Calc = {
      acwi / hyg = true (เขียว) · false (แดง) · null (ไม่มีในไฟล์) · แดงตัวละ −25% · ต่ำสุด 50%
      ageDays = อายุ fundflow.json เป็นวันทำการ · เกิน staleDays (ค่าเริ่มต้น 5) → stale:true แต่ cap ยังคิดจากค่าล่าสุด (RG2a #1: ข้อมูลเก่าห้ามดีดกลับ 100%)
      ตัวที่ขาด (null) ไม่นับเป็นแดง — คิดจากตัวที่เหลือ แล้วคืนชื่อตัวที่ขาดใน missing[] ให้ผู้เรียกเตือน */
-  ffCoreCap({acwi, hyg, ageDays, staleDays}){
-    const lim = staleDays==null ? 5 : staleDays;
-    const missing = [];
-    if(acwi==null) missing.push('ACWI/BIL');
-    if(hyg==null)  missing.push('HYG/IEI');
-    const reds = [];
-    if(acwi===false) reds.push('ACWI/BIL');
-    if(hyg===false)  reds.push('HYG/IEI');
-    const stale = ageDays!=null && ageDays > lim;
-    const cap = Math.max(50, 100 - 25*reds.length);
-    return {cap, red:reds.length, reds, missing, stale, throttled: cap<100};
+  ffCoreCap({acwi, hyg, ageDays, staleDays}){   /* RM1 — table lives in the engine (RiskEngine.regimeModifier) · acwi / hyg = true | false | null */
+    const missing = [], reds = [];
+    if(acwi==null) missing.push('ACWI/BIL'); else if(acwi===false) reds.push('ACWI/BIL');
+    if(hyg==null) missing.push('HYG/IEI'); else if(hyg===false) reds.push('HYG/IEI');
+    const m = RiskEngine.regimeModifier(acwi, hyg), stale = ageDays!=null && ageDays > RiskEngine.POLICY.regime.freshDays;
+    const f = (m==null ? RiskEngine.POLICY.regime.fallback : (stale ? Math.min(m, RiskEngine.POLICY.regime.fallback) : m));
+    return {cap: Math.round(f*100), red: reds.length, reds, missing, stale, throttled: f<1};
   },
   /* 7D.4 — Setup ผ่านไหม: n/total ≥ minRatio (ค่าเริ่มต้น 0.65) · 2/3 ผ่าน · 3/4 ผ่าน · 2/4 ไม่ผ่าน · total=0 = ไม่ผ่าน */
   setupPass(n, total, minRatio){
@@ -27529,25 +27522,38 @@ function ffExposureNow(){
   const u = k => !!(r[k] && r[k].up);
   return ffExposure([u('ACWI_BIL'),u('HYG_IEF'),u('HG_GC')], u('SPHB_SPLV'));
 }
-/* F1 — เพดาน Core ปัจจุบัน (สูตรใน Calc.ffCoreCap) · ไม่มี fundflow.json จริง (ตัวอย่าง) = demo:true ผู้เรียกต้องไม่เอาไปย่อขนาดไม้ */
-function ffCoreNow(){ return ffPoolFactor('winner'); }
-/* RG2a — สัญญาณต่อ pool: 'winner' = EMA20/50 (ระดับบนของ ratio) · 'ladder' = EMA50/100 (ratio.slow)
-   ไฟล์เก่า (ไม่มี slow) → Compounder ใช้สถานะระดับบน + log ครั้งเดียว · คืน {cap, red, reds, missing, stale, age, demo, throttled} */
-let ffSlowWarned = false;
-function ffPoolFactor(pool){
-  if(pool !== 'ladder') return {cap:100, f:1, age:null, demo:false, stale:false, missing:[], pool:'winner', removed:true};   /* RE-C1 — Momentum regime throttle removed */
-  const J = ffJsonData(), R = (J && J.ratios) || {};
-  const g = k => {
-    const r = R[k]; if(!r) return null;
-    if(pool==='ladder'){
-      if(r.slow && typeof r.slow.up==='boolean') return !!r.slow.up;
-      if(ffJson && !ffSlowWarned && (k==='ACWI_BIL' || k==='HYG_IEI')){ ffSlowWarned = true; try{ console.log('fundflow.json ไม่มี slow (EMA50/100) — Compounder ใช้สถานะ EMA20/50 แทน'); }catch(e){} }
-    }
-    return !!r.up;
-  };
-  const age = ffBizDaysSince(J && J.as_of);
-  return Object.assign({age, demo: !ffJson, pool: pool==='ladder' ? 'ladder' : 'winner'}, Calc.ffCoreCap({acwi:g('ACWI_BIL'), hyg:g('HYG_IEI'), ageDays:age}));
+/* RM1 — THE one regime result. Every view (Flow · Today · Port · Risk room · Plan · drawer · forms) and the sizing engine read it from here.
+   Engine: RiskEngine.regimeFromFundflow (SMA 20/50 state · oldest-input freshness · table 100/80/80/60 · fallback 80). No second calculation anywhere. */
+const RM1_NAMES = {ACWI_BIL:'ACWI/BIL', HYG_IEI:'HYG/IEI'};
+function rm1Regime(){
+  try{ return RiskEngine.regimeFromFundflow(ffJson, Date.now()); }
+  catch(e){ return RiskEngine.regimeFromFundflow(null, Date.now()); }
 }
+/* emergency factor of the home account (same account Today's status line uses); 1 when unknown */
+function rm1EmergencyF(){ try{ const L = re1L(tdHome()); return L && typeof L.eF === 'number' ? L.eF : 1; }catch(e){ return 1; } }
+/* effective = min(regime modifier, emergency) · text = the one Flow / Today line */
+function rm1Eff(){
+  const r = rm1Regime(), eF = rm1EmergencyF(), f = Math.min(r.factor, eF), pc = Math.round(f*100), em = eF < r.factor;
+  let line;
+  if(r.fallback){ line = 'Modifier unavailable · fallback cap ' + Math.round(r.factor*100) + '%' + (em ? ' · effective ' + pc + '% (emergency brake)' : ''); }
+  else if(em){ line = 'New-entry budget: ' + pc + '% of normal · emergency brake.'; }
+  else { line = 'New-entry budget: ' + pc + '% of normal · equity ' + r.equity + ', credit ' + r.credit + '.'; }
+  return {r, eF, f, pc, em, line, sma: RiskEngine.smaLabel(), asOf: r.asOf, fresh: r.fresh, demo: r.demo};
+}
+function rm1Date(iso){ const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[3]) + ' ' + BD_MON[+m[2]-1] : '—'; }
+/* "SMA 20/50 · green 16 days · 16 Nov" for one ratio key */
+function rm1Chip(k){
+  const r = rm1Regime(), st = k==='ACWI_BIL' ? r.equity : r.credit, d = k==='ACWI_BIL' ? r.acwiDays : r.hygDays;
+  return {state: st, days: d, text: st==='unavailable' ? 'unavailable' : st + (d!=null ? ' ' + d + ' day' + (d===1?'':'s') : '')};
+}
+/* legacy-shaped view of the shared result for the older call sites (cap in %, f as a fraction) — regime only; emergency is applied by the caller (min) */
+function ffPoolFactor(pool){
+  const r = rm1Regime(), reds = [], missing = [];
+  [['ACWI_BIL', r.equity], ['HYG_IEI', r.credit]].forEach(x=>{ if(x[1]==='red') reds.push(RM1_NAMES[x[0]]); else if(x[1]!=='green') missing.push(RM1_NAMES[x[0]]); });
+  return {cap: Math.round(r.factor*100), f: r.factor, age: r.ageDays, demo: !!r.demo, stale: !!r.stale, fallback: !!r.fallback, red: reds.length, reds, missing, throttled: r.factor < 1,
+    pool: pool==='ladder' ? 'ladder' : 'winner', equity: r.equity, credit: r.credit, asOf: r.asOf};
+}
+function ffCoreNow(){ return ffPoolFactor('winner'); }
 function ffBizDaysSince(iso){
   const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return null;
   /* NUM2 — "วันนี้" = thaiToday() · นับแบบวันที่ล้วน (UTC) ไม่ขึ้นกับเขตเวลาเครื่อง */
@@ -27570,6 +27576,7 @@ async function ffLoadJson(force){
     ffJson = null; ffJsonErr = (e && e.message) || String(e);
   }finally{
     ffJsonLoading = false; ffJsonAt = Date.now();
+    try{ re1Cache = {}; if(typeof re1ModelCache !== 'undefined') re1ModelCache = {}; }catch(e){}   /* RM1 — a new fund-flow file changes every size: drop cached engine results */
     try{ ffRenderRegime(); }catch(e){}
     /* F1: การ์ด Heat ใน Port (render) อ่านเพดานจาก ffDeployCap — ต้องวาดใหม่หลังไฟล์มาถึง ไม่งั้นค้างค่าเก่าจนกว่าจะมี state เปลี่ยน */
     try{ render(); }catch(e){}
@@ -27584,10 +27591,13 @@ function ffRenderRegime(){
   const C = ffCoreNow(), age = C.age;
   const pc = v => v + '%';
   const col = v => v>=100 ? 'green' : v>=50 ? 'amber' : 'red';
-  const coreLabel = v => v>=100 ? 'Risk-on' : v>=75 ? 'ระวัง' : 'ลดไม้';
   const chip = def => {
     const r = R[def.k];
     if(!r) return `<span class="rsChip ghost">○ ${escHtml(def.nm)} —</span>`;
+    if(def.lay==='core'){   /* RM1 — the two formula ratios show the shared SMA 20/50 state, never a fast pair */
+      const ch = rm1Chip(def.k), col2 = ch.state==='green' ? 'green' : ch.state==='red' ? 'red' : 'ghost';
+      return `<button type="button" class="rsChip ${col2} ffRegChip${ffRegOpen===def.k?' on':''}" data-rm1-chip="${def.k}" data-rm1-state="${ch.state}" onclick="ffRegToggle('${def.k}')">● ${escHtml(def.nm)} · ${escHtml(RiskEngine.smaLabel())} · ${escHtml(ch.text)}</button>`;
+    }
     const up = !!r.up;
     const dir = def.k==='RSP_SPY' ? (up?' · กว้าง':' · ตลาดแคบ') : '';
     const days = (r.flip_days!=null) ? (' '+r.flip_days+(def.tf==='W'?'w':'d')) : '';
@@ -27605,34 +27615,32 @@ function ffRenderRegime(){
   if(ffRegOpen){
     const def = FF_RATIOS.find(d=>d.k===ffRegOpen), r = R[ffRegOpen];
     if(def){
-      let tip = '';
-      if(def.k==='HYG_IEI' && r){
-        const acwiUp = !!(R.ACWI_BIL && R.ACWI_BIL.up);
-        if(!acwiUp && r.up) tip = '<br>⚑ ACWI🔴 + HYG🟢 → credit ยังไม่ยืนยัน risk-off · รอ ACWI กลับ';
-        else if(acwiUp && !r.up) tip = '<br>⚑ ACWI🟢 + HYG🔴 → HYG มักนำหุ้น ระวัง' + ((r.flip_days||0)>=4 ? ' · risk-off ค้าง 4 สัปดาห์' : '');
-      }
+      if(def.lay==='core'){   /* RM1 — details: SMA values, state days, both input dates (More only) */
+        const ia = r && r.inputs_asof ? Object.keys(r.inputs_asof).map(k=>k + ' ' + rm1Date(r.inputs_asof[k])).join(' · ') : '—';
+        open = `<div class="ffRegOpen" data-rm1-open><b>${escHtml(def.nm)}</b> · daily · ${escHtml(def.why)}<br>` + (r && r.sma20!=null
+          ? `${escHtml(RiskEngine.smaLabel())} of the adjusted ratio: SMA${r.sma[0]} ${r.sma20} ${r.state==='red'?'&lt;':r.state==='green'?'&gt;':'='} SMA${r.sma[1]} ${r.sma50} · ${escHtml(rm1Chip(def.k).text)}<br>Inputs: ${escHtml(ia)}` : 'No data') + `</div>`;
+      } else {
       open = `<div class="ffRegOpen"><b>${escHtml(def.nm)}</b> · ${def.tf==='W'?'weekly':'daily'} · ${escHtml(def.why)}<br>`
-        + (r ? `EMA${(r.ema||[10,20])[0]} ${r.up?'&gt;':'&lt;'} EMA${(r.ema||[10,20])[1]} มา ${r.flip_days!=null?r.flip_days:'—'} แท่ง`
-             + (r.slow ? `<br>Compounder · EMA${r.slow.ema[0]} ${r.slow.up?'&gt;':'&lt;'} EMA${r.slow.ema[1]} มา ${r.slow.flip_days!=null?r.slow.flip_days:'—'} แท่ง` : '') : 'ไม่มีข้อมูล') + tip + `</div>`;
+        + (r ? `EMA${(r.ema||[10,20])[0]} ${r.up?'&gt;':'&lt;'} EMA${(r.ema||[10,20])[1]} มา ${r.flip_days!=null?r.flip_days:'—'} แท่ง` : 'ไม่มีข้อมูล') + `</div>`;
+      }
     }
   }
   /* คำเตือน = ส้ม เตือนเฉยๆ ไม่บล็อก */
   const W = [];
   if(isDemo) W.push(`⚠ <b>ข้อมูลตัวอย่าง</b> — ยังไม่มี fundflow.json (${escHtml(ffJsonLoading?'กำลังโหลด…':(ffJsonErr||'ยังไม่ได้โหลด'))}) · ห้ามใช้ตัดสินใจ`);
   else {
-    if(C.stale) W.push(`⚠ Regime data is ${age} business days old (as of ${escHtml(rsD(J.as_of))}) — <b>size from last known state</b> until the file updates`);
-    else if(age!=null && age>2) W.push(`⚠ ข้อมูลเก่า ${age} วันทำการ (as of ${escHtml(rsD(J.as_of))})`);
-    if(C.missing.length) W.push(`⚠ <b>${escHtml(C.missing.join(' · '))} ขาด</b> — คิดเพดานจากตัวที่เหลือ`);
+    if(C.stale) W.push(`⚠ Regime data is ${age} days old (oldest input ${escHtml(rm1Date(C.asOf))}) — <b>fallback cap ${C.cap}%</b> until the file updates`);
+    if(C.missing.length) W.push(`⚠ <b>${escHtml(C.missing.join(' · '))}</b> neutral or unavailable — <b>fallback cap ${C.cap}%</b>`);
   }
   const warn = W.map(t=>`<div class="ffRegWarn">${t}</div>`).join('');
-  const capShown = isDemo ? '—' : pc(C.cap);
+  const EF = rm1Eff(), capShown = isDemo ? '—' : pc(EF.pc);
   if(ln1On()){   /* LN3 — หัวข้อพับได้ + เตือน QT เป็นบรรทัดในหัวข้อนี้ (แทนแถบ QT ใหญ่) */
     const qtSet = !!(qe.date || qe.note);
-    host.innerHTML = `<details class="ln3-sec" data-ln3-sec="regime"${ln3FlowOpen.regime ? ' open' : ''} ontoggle="ln3FlowOpen.regime=this.open"><summary>Regime · เพดานลงเงิน Core <small data-ff-cap="core">${capShown}</small>${frTag('regime')}</summary>
-      <div class="ln3-when"><span class="when">${isDemo?'ตัวอย่าง':'as of '+escHtml(rsD(J.as_of))}</span> · <span class="rsChip ghost" style="cursor:pointer" onclick="ffLoadJson(true)">${ffJsonLoading?'กำลังโหลด…':'รีเฟรช'}</span></div>
+    host.innerHTML = `<details class="ln3-sec" data-ln3-sec="regime"${ln3FlowOpen.regime ? ' open' : ''} ontoggle="ln3FlowOpen.regime=this.open"><summary>Regime · new-entry budget <small data-ff-cap="core">${capShown}</small>${frTag('regime')}</summary>
+      <div class="ln3-when"><span class="when">${isDemo?'ตัวอย่าง':escHtml(EF.sma)+' · data '+escHtml(rm1Date(EF.asOf))}</span> · <span class="rsChip ghost" style="cursor:pointer" onclick="ffLoadJson(true)">${ffJsonLoading?'กำลังโหลด…':'รีเฟรช'}</span></div>
       ${warn}
-      <div class="ffRegRow"><span class="ffRegLbl">Core</span><span class="ffRegChips">${byLay('core')}<span class="ffRegNote">แดงตัวละ −25% · ต่ำสุด 50%</span></span>
-        <span class="ffRegX">${isDemo?'':`<span class="rsChip ${col(C.cap)}">${coreLabel(C.cap)}</span> `}<b>${capShown}</b>${isDemo?'':` <small class="mu" data-ff-cap="ladder">Compounder ${ffPoolFactor('ladder').cap}%</small>`}</span></div>
+      <div class="ffRegRow"><span class="ffRegLbl">Core</span><span class="ffRegChips">${byLay('core')}</span>
+        <span class="ffRegX">${isDemo?'':`<span class="rsChip ${col(EF.pc)}" data-rm1-line>${escHtml(EF.line)}</span> `}<b>${capShown}</b></span></div>
       <div class="ffRegRow"><span class="ffRegLbl">บริบท</span><span class="ffRegChips">${byLay('ctx')}<span class="ffRegNote">ไม่เข้าสูตร</span></span></div>
       ${open}
       <div class="ln3-qt" data-ln3-qt="1"><span>QE/QT: <b>${escHtml(qe.mode||'—')}</b>${qe.date ? ` <span class="mu">ตั้งเมื่อ ${escHtml(qe.date)}</span>` : ''}</span><button type="button" class="small" data-ln3-qt-edit onclick="ffOpenQe()">แก้ ✎</button></div>
@@ -27641,10 +27649,10 @@ function ffRenderRegime(){
     return;
   }
   host.innerHTML = `
-    <div class="rsCardTitle"><h3>Regime · เพดานลงเงิน Core${frTag('regime')}</h3><span class="when">${isDemo?'ตัวอย่าง':'as of '+escHtml(rsD(J.as_of))} · <span class="rsChip ghost" style="cursor:pointer" onclick="ffLoadJson(true)">${ffJsonLoading?'กำลังโหลด…':'รีเฟรช'}</span></span></div>
+    <div class="rsCardTitle"><h3>Regime · new-entry budget${frTag('regime')}</h3><span class="when">${isDemo?'ตัวอย่าง':escHtml(EF.sma)+' · data '+escHtml(rm1Date(EF.asOf))} · <span class="rsChip ghost" style="cursor:pointer" onclick="ffLoadJson(true)">${ffJsonLoading?'กำลังโหลด…':'รีเฟรช'}</span></span></div>
     ${warn}
-    <div class="ffRegRow"><span class="ffRegLbl">Core</span><span class="ffRegChips">${byLay('core')}<span class="ffRegNote">แดงตัวละ −25% · ต่ำสุด 50%</span></span>
-      <span class="ffRegX">${isDemo?'':`<span class="rsChip ${col(C.cap)}">${coreLabel(C.cap)}</span> `}<b data-ff-cap="core">${capShown}</b>${isDemo?'':` <small class="mu" data-ff-cap="ladder">Compounder ${ffPoolFactor('ladder').cap}%</small>`}</span></div>
+    <div class="ffRegRow"><span class="ffRegLbl">Core</span><span class="ffRegChips">${byLay('core')}</span>
+      <span class="ffRegX">${isDemo?'':`<span class="rsChip ${col(EF.pc)}" data-rm1-line>${escHtml(EF.line)}</span> `}<b data-ff-cap="core">${capShown}</b></span></div>
     <div class="ffRegRow"><span class="ffRegLbl">บริบท</span><span class="ffRegChips">${byLay('ctx')}<span class="ffRegNote">ไม่เข้าสูตร</span></span>
       <span class="ffRegX ffRegNote">QE/QT: ${escHtml(qe.mode||'—')}${qe.date?' · '+escHtml(qe.date):''}</span></div>
     ${open}`;
@@ -27675,12 +27683,13 @@ function ffChangesData(){
   const cur = ffCoreNow();
   let capPrev = null;
   if(pw('ACWI_BIL')!=null && pw('HYG_IEI')!=null) capPrev = Calc.ffCoreCap({acwi:pw('ACWI_BIL'), hyg:pw('HYG_IEI'), ageDays:null}).cap;
-  const flips = FF_RATIOS.filter(d=>R[d.k] && pw(d.k)!=null && !!R[d.k].up !== pw(d.k))
-    .map(d=>({k:d.k, nm:d.nm, from: pw(d.k)?'เขียว':'แดง', to: R[d.k].up?'เขียว':'แดง'}));
+  const flips = FF_RATIOS.filter(d=>R[d.k] && pw(d.k)!=null && (R[d.k].state==='green' || R[d.k].state==='red' || typeof R[d.k].up==='boolean') && (R[d.k].state ? R[d.k].state==='green' : !!R[d.k].up) !== pw(d.k))
+    .map(d=>({k:d.k, nm:d.nm, from: pw(d.k)?'เขียว':'แดง', to: (R[d.k].state ? R[d.k].state==='green' : !!R[d.k].up)?'เขียว':'แดง'}));
   const themes = ffThemeRows().filter(x=>x && !x.err && x.quad && x.prevQuad && x.quad!==x.prevQuad)
     .map(x=>({sym:String(x.sym), name:String(x.name||x.sym), from:x.prevQuad, to:x.quad}));
   const anyPrev = capPrev!=null || FF_RATIOS.some(d=>pw(d.k)!=null);
-  return {cap: cur.cap, capPrev, capChanged: capPrev!=null && capPrev!==cur.cap, flips, themes, anyPrev};
+  const effPc = rm1Eff().pc;
+  return {cap: effPc, capPrev, capChanged: capPrev!=null && capPrev!==effPc, flips, themes, anyPrev};
 }
 function ffRenderActionBar(){
   const host = document.getElementById('ffAction'); if(!host) return;
@@ -27690,22 +27699,22 @@ function ffRenderActionBar(){
   const R = (J && J.ratios) || {};
   /* บรรทัดสรุป */
   let sum;
-  if(demo) sum = 'ยังไม่มี fundflow.json จริง — ไม่ย่อขนาดไม้';
-  else if(C.stale) sum = 'ข้อมูลเก่า ' + age + ' วันทำการ — ไม่ลดเพดาน (Core 100%)';
-  else sum = 'Core ลงได้ ' + C.cap + '%' + (C.reds.length ? ' · ' + C.reds.join(' · ') + ' แดง' : ' · ไม่มีตัวแดง')
-           + (C.missing.length ? ' · ' + C.missing.join(' · ') + ' ขาด' : '');
+  const EF = rm1Eff();
+  if(demo) sum = 'No fund-flow data · fallback cap ' + EF.pc + '%';
+  else sum = EF.line;
   /* ป้ายความสดฝั่งขวาของบรรทัดสรุป: ≤2 วันทำการ = สด (ตรงกับเกณฑ์เตือนในการ์ด Regime) · demo/ไม่มีไฟล์ = ไม่มีป้าย */
   let fresh = '';
   if(!demo && age!=null){
-    fresh = `<span class="ffActFresh sumR${age>2?' warn':''}" data-ff="fresh"><i></i>${escHtml(rsD(J.as_of))} · ${age<=2 ? 'สด' : 'เก่า '+age+' วันทำการ'}</span>`;
+    fresh = `<span class="ffActFresh sumR${C.stale?' warn':''}" data-ff="fresh"><i></i>${escHtml(EF.sma)} · ${escHtml(rm1Date(C.asOf))} · ${C.stale ? age+' days old' : 'fresh'}</span>`;
   }
-  const capCls = demo ? '' : (C.stale||C.missing.length ? ' warn' : C.cap<100 ? ' warn' : '');
+  const capCls = demo ? '' : (C.stale||C.missing.length ? ' warn' : EF.pc<100 ? ' warn' : '');
   const go = (id) => `onclick="ffActGo('${id}')" onkeydown="if(event.key==='Enter')ffActGo('${id}')" role="button" tabindex="0"`;
 
   /* 1) Regime */
   const rg = (k, nm) => {
     const r = R[k];
     if(demo || !r) return `<div class="ffActRg sumRow">${nm}<span class="ffActPill sumPill nt na" data-rg="${k}">—</span></div>`;
+    if(k==='ACWI_BIL' || k==='HYG_IEI'){ const ch = rm1Chip(k); return `<div class="ffActRg sumRow">${nm} · ${escHtml(RiskEngine.smaLabel())}<span class="ffActPill sumPill ${ch.state==='green'?'up':ch.state==='red'?'dn':'nt na'}" data-rg="${k}">${ch.state==='green'?'↑ ':ch.state==='red'?'↓ ':''}${escHtml(ch.text)}</span></div>`; }
     const def = FF_RATIOS.find(d=>d.k===k), unit = (def && def.tf==='D') ? 'd' : 'w';
     const days = r.flip_days!=null ? ' · '+r.flip_days+unit : '';
     return `<div class="ffActRg sumRow">${nm}<span class="ffActPill sumPill ${r.up?'up':'dn'}" data-rg="${k}">${r.up?'↑ เขียว':'↓ แดง'}${days}</span></div>`;
@@ -27727,11 +27736,9 @@ function ffRenderActionBar(){
   /* 3) เพดาน Core */
   let why = '';
   if(demo) why = '';
-  else if(C.stale || C.missing.length) why = sum;
-  else if(C.reds.length) why = C.reds.map(escHtml).join(' · ') + ' แดง → ลด ' + (100-C.cap) + '%';
-  else why = 'ไม่มีตัวแดง';
+  else why = escHtml(EF.line);
   const capPrevTag = !demo && D && D.capChanged ? `<span class="ffActTag" data-cap="prev">สัปดาห์ก่อน ${D.capPrev}%</span>` : '';
-  const capCell = `<div class="ffActCell sumCell ffActClick${capCls}" data-ff="cap" ${go('ffRegime')}><div class="ffActL sumL">เพดาน Core</div><div class="ffActV sumBig">${demo ? '—' : C.cap + '%'}</div>`
+  const capCell = `<div class="ffActCell sumCell ffActClick${capCls}" data-ff="cap" ${go('ffRegime')}><div class="ffActL sumL">New-entry budget</div><div class="ffActV sumBig">${demo ? '—' : EF.pc + '%'}</div>`
     + (why ? `<div class="ffActWhy" data-cap="why">${why}</div>` : '') + capPrevTag + `</div>`;
 
   /* 4) Macro */
@@ -27751,14 +27758,14 @@ function ffRenderActionBar(){
     + (watch ? `<div class="ffActWatch" data-mac="watch"><b>ข้อควรติดตาม</b><div class="ffActWatchTx" data-mac="watch-tx">${escHtml(watch)}</div></div>` : '') + `</div>`;
 
   if(ln1On()){   /* LN3 — การ์ดสรุปเดียว: Core ลงเงินได้ % · Regime · ธีมนำ · Macro (แทนกล่อง 4 ช่อง) */
-    const rgTxt = k => { const r = R[k]; return (demo || !r) ? '—' : (r.up ? ln3Ar('▲ เขียว') : ln3Ar('▼ แดง')); };
+    const rgTxt = k => { const r = R[k]; if(demo || !r) return '—'; const ch = rm1Chip(k); return ch.state==='green' ? ln3Ar('▲ ' + ch.text) : ch.state==='red' ? ln3Ar('▼ ' + ch.text) : escHtml(ch.text); };
     const leadTxt = leads.length ? leads.map(sy=>escHtml(nameOf(sy) || sy)).join(' · ') + ' <span class="mu">(Outperforming ↗)</span>' : '—';
     const macTxt = mv ? macKeys.map(a=>{ const st = ((mv.assets||{})[a]||{}).stance; return `${escHtml(PB_SHORT[a]||a)} ${ln3Ar(escHtml(Calc.pbStanceIcon(st)))}`; }).join(' · ') + ` <span class="mu">${escHtml((mv.quarter||'') + (vNo?' '+vNo:''))}</span>` : (pbLoaded ? 'ยังไม่มี Playbook ใช้จริง' : 'กำลังโหลด Playbook…');
-    const cut = (!demo && !C.stale && C.cap < 100) ? `ลด ${100 - C.cap}% จาก Regime` : '';
+    const cut = '';
     host.innerHTML = `<div class="ln3-fhero" data-ln3-fhero="1">
-      <div class="ln3-fh"><span>Core ลงเงินได้</span>${fresh}</div>
-      <div class="ln3-fbig" data-ff-cap="hero">${demo ? '—' : C.cap + '%'} <span class="mu">${escHtml(demo ? sum : (C.stale || C.missing.length ? sum : cut))}</span></div>
-      <div class="ln3-fr" data-ff-row="regime" role="button" tabindex="0" ${go('ffRegime')}><span>Regime</span><span>ACWI/BIL ${rgTxt('ACWI_BIL')} · HYG/IEI ${rgTxt('HYG_IEI')}${flipTags}</span></div>
+      <div class="ln3-fh"><span>New-entry budget</span>${fresh}</div>
+      <div class="ln3-fbig" data-ff-cap="hero">${demo ? '—' : EF.pc + '%'} <span class="mu">${escHtml(sum)}</span></div>
+      <div class="ln3-fr" data-ff-row="regime" role="button" tabindex="0" ${go('ffRegime')}><span>Regime · ${escHtml(EF.sma)}</span><span>ACWI/BIL ${rgTxt('ACWI_BIL')} · HYG/IEI ${rgTxt('HYG_IEI')}${flipTags}</span></div>
       <div class="ln3-fr" data-ff-row="lead" role="button" tabindex="0" ${go('ffThemesPanel')}><span>ธีมนำ</span><span>${leadTxt}</span></div>
       <div class="ln3-fr" data-ff-row="macro" role="button" tabindex="0" ${go('pbPanel')}><span>Macro</span><span>${macTxt}</span></div></div>`;
     return;
@@ -30425,7 +30432,7 @@ function re4JournalHtml(){
 
 (function(){ const cni = coreNewIn; coreNewIn = function(){ const r = cni.apply(this, arguments); try{ re4CoreLock(); }catch(e){} return r; }; const pr = pb2Refresh; pb2Refresh = function(){ const r = pr.apply(this, arguments); try{ re4SatLock(); }catch(e){} return r; }; })();
 /* ── PB1 §9 — New plan popup (existing ＋ button / key N · from ANY tab) ── */
-const BD_NEW = [['S', 'Momentum (Stock)', 'MMT', '0.35–0.50% · stop ≥ 4%'], ['D', 'Compounder', 'COMP', '0.80–1.25% · stop ≥ 7%'], ['F', 'Satellite (Future)', 'SAT', 'XAU · BTC · S50 · Brent · 0.10–0.25%']];
+const BD_NEW = [['S', 'Momentum (Stock)', 'MMT', RiskEngine.POLICY.mom.rptPct.toFixed(2) + '% · stop ≥ 4%'], ['D', 'Compounder', 'COMP', (()=>{ const c = RiskEngine.POLICY.comp; return c.pilotPct.toFixed(2) + '–' + c.totalCapPct.toFixed(2) + '% · stop ≥ 7%'; })()], ['F', 'Satellite (Future)', 'SAT', 'XAU · BTC · S50 · Brent · 0.10–0.25%']];
 let bdPopSel = 0;
 function bdPopOpen(){ return !!document.getElementById('bdPop'); }
 function bdSheetsOpen(){ return !!document.querySelector('.ui-sheet-backdrop:not(.bd-pop), .overlay.show, .core-sheet, #bdDrawer, .cp-sheet'); }
@@ -30838,19 +30845,13 @@ function bdMacroLine(key){   /* Sat form: Macro: Bull · ⚠️ CPI Tue 19:30 */
   return {bias:b.t, ev: ev ? `${ev.t}${ev.w ? ' ' + ev.w : ''}` : ''};
 }
 function bdRiskHtml(){
-  let W = null, L = null; try{ W = ffPoolFactor('winner'); L = ffPoolFactor('ladder'); }catch(x){}
-  const J = (function(){ try{ return ffJsonData(); }catch(x){ return null; } })(), R = (J && J.ratios) || {};
-  const a = R.ACWI_BIL ? !!R.ACWI_BIL.up : null, h = R.HYG_IEI ? !!R.HYG_IEI.up : null, nodata = !W || W.demo || a === null || h === null;
-  let label = 'No data', cls = 'f', why = 'refresh Fund flow';
-  if(!nodata){
-    if(a && h){ label = 'Risk-ON'; cls = 'g'; why = 'stocks & credit up'; }
-    else if(a){ label = 'Caution'; cls = 'a'; why = 'credit not confirming'; }
-    else if(h){ label = 'Mixed'; cls = 'a'; why = 'stocks lagging cash'; }
-    else { label = 'Risk-OFF'; cls = 'r'; why = 'stocks & credit down'; }
-  }
-  const cap = o=>(o && !o.demo && o.cap != null) ? o.cap + '%' : '—';
-  const cc = o=>(o && !o.demo && o.cap != null) ? (o.cap >= 100 ? 'g' : o.cap > 0 ? 'a' : 'r') : 'f';
-  return `<div class="bd-sh bd-rsh">${bdNb(1)}<b>Risk · how much to deploy</b></div><div class="panel bd-rs" data-bd-rs>${bdNb(1)}<div class="bd-rc" data-bd-rs-mom><small><span class="bd-lf">Momentum</span><span class="bd-ls">Mom</span></small><b class="${cc(W)}">${cap(W)}</b></div><div class="bd-rc" data-bd-rs-comp><small><span class="bd-lf">Compounder</span><span class="bd-ls">Comp</span></small><b class="${cc(L)}">${cap(L)}</b></div><button type="button" class="bd-rc bd-rg2" data-bd-regime data-rg-label="${label}" onclick="tdRegimeGo()"><i class="${cls}"></i><span><b>${label}</b><em> · ${why}</em></span></button></div>`;
+  /* RM1 — Risk strip reads the shared result: one effective budget (min of regime modifier and emergency) for Momentum and Compounder, one line with the reason */
+  const E = rm1Eff(), r = E.r, nodata = E.demo;
+  const cc = v=>nodata ? 'f' : (v >= 100 ? 'g' : v > 0 ? 'a' : 'r'), pcs = nodata ? '—' : E.pc;
+  let cls = 'f';
+  if(!nodata) cls = (r.fallback || E.em) ? 'a' : (r.equity==='green' && r.credit==='green') ? 'g' : (r.equity==='red' && r.credit==='red') ? 'r' : 'a';
+  const dt = r.asOf ? ' · ' + E.sma + ' · ' + rm1Date(r.asOf) : '';
+  return `<div class="bd-sh bd-rsh">${bdNb(1)}<b>Risk · how much to deploy</b></div><div class="panel bd-rs" data-bd-rs>${bdNb(1)}<div class="bd-rc" data-bd-rs-mom><small><span class="bd-lf">Momentum</span><span class="bd-ls">Mom</span></small><b class="${cc(E.pc)}">${pcs}${nodata ? '' : '%'}</b></div><div class="bd-rc" data-bd-rs-comp><small><span class="bd-lf">Compounder</span><span class="bd-ls">Comp</span></small><b class="${cc(E.pc)}">${pcs}${nodata ? '' : '%'}</b></div><button type="button" class="bd-rc bd-rg2" data-bd-regime data-rg-label="${escHtml(E.line)}" data-rm1-pc="${E.pc}" onclick="tdRegimeGo()"><i class="${cls}"></i><span><b>${escHtml(nodata ? 'No Fund-flow data' : E.line)}</b><em>${escHtml(dt)}${r.stale && r.known ? ' · stale' : ''}</em></span></button></div>`;
 }
 function bdWkDoc(){ const wk = bdMacroWkKey(); return wiDocs[bdMacroWk === 0 ? wiCurMon() : Calc.wiMondayOfStrategy(wk)] || null; }
 function bdMacroItems(doc){

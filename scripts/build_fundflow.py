@@ -34,12 +34,21 @@ RATIOS = {
     'RSP_SPY':   ('RSP',   'SPY',  'D', (10, 20)),
 }
 SMA_KEYS = ('ACWI_BIL', 'HYG_IEI')   # RM1: ใช้ราคา adjusted + SMA 20/50
-SMA_PAIR = (20, 50)
+def _policy_sma():
+    """SMA periods are a policy setting: read POLICY.regime.smaFast / smaSlow from risk-engine.js (the app refuses a file built with other periods) · default 20/50"""
+    try:
+        src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'risk-engine.js'), encoding='utf-8').read()
+        import re
+        f, sl = re.search(r'smaFast:\s*(\d+)', src), re.search(r'smaSlow:\s*(\d+)', src)
+        if f and sl and 0 < int(f.group(1)) < int(sl.group(1)): return (int(f.group(1)), int(sl.group(1)))
+    except Exception: pass
+    return (20, 50)
+SMA_PAIR = _policy_sma()
 ADJ_SYMS = sorted({s for k in SMA_KEYS for s in RATIOS[k][:2]})            # ACWI BIL HYG IEI
 RAW_SYMS = sorted({s for k, v in RATIOS.items() if k not in SMA_KEYS for s in v[:2]})
 VER = 3
 MIN_BARS = 60          # น้อยกว่านี้ EMA ยังไม่นิ่ง → ไม่เขียนค่า ratio นั้น
-MIN_OBS_SMA = 50       # RM1: ต้องมีแท่งที่ align ได้อย่างน้อยเท่านี้ ไม่งั้น unavailable
+MIN_OBS_SMA = SMA_PAIR[1]   # RM1: the slow period = minimum aligned observations, otherwise unavailable
 NY_CLOSE = (16, 15)    # ตลาด US ปิด 16:00 + 15 นาที (America/New_York)
 
 
