@@ -3708,6 +3708,7 @@ summary.divlbl .set1sm{text-transform:none;letter-spacing:0}
   .re2-act .m,.re2-pc .m{display:none}.re2-act .p,.re2-pc .p{display:inline}.re2-act .rk.m{display:none}.re2-act .rk.ab,.re2-act .rk.ev{display:inline-block}
   .re2-col{background:none;padding:0}.re2-act .cols{gap:0}.re2-col .ch{margin:8px 2px 2px}.re2-col .ch b{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
   .re2-row{border:0;border-top:1px solid var(--border);border-radius:0;padding:6px 2px;margin:0}.re2-row .num{margin-top:1px;font-size:.78rem}.re2-row .btn{padding:5px 10px}.re2-col .none{display:none}.re2-col[data-re2-col] .none[data-re2-nothing]{display:block}
+  .re2-row .l1>.q{display:none}.re2-row .l1 b{flex:none}.re2-row .num{white-space:normal;overflow:visible}
   .re2-row .q{font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.re2-pc .rk3>div{display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:baseline}.re2-pc .rk3 small{grid-column:1/-1}
 }
 /* RE1-C1 — result box · risk rows · settings rows */
@@ -3913,6 +3914,7 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
 .bd-db{flex:1;overflow:auto;padding:10px 16px;min-height:0}
 .bd-sec{margin:0 0 14px}
 .bd-k{font:700 11.5px var(--sans);letter-spacing:.06em;color:var(--muted);margin:0 0 6px}
+.pv-tb{display:grid;gap:4px}.pv-r{display:flex;gap:10px;justify-content:space-between;font-size:13.5px;border-top:1px solid var(--line,#e6e8ee);padding:4px 0}.pv-r:first-child{border-top:0}.pv-r span{color:var(--muted);flex:none}.pv-r b{font-weight:600;text-align:right;min-width:0;overflow-wrap:anywhere}.pv-last{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}.pv-last label{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.pv-last input{width:110px;min-height:36px}.pv-last small{flex-basis:100%;color:var(--muted);font-size:12px}.pv-old{background:#f6ecd9;color:#a86a00;font-weight:700;font-size:11px;border-radius:999px;padding:2px 8px}.pb2-lastnote{grid-column:span 2;align-self:end;color:var(--muted);font-size:12px}
 .bd-lv{display:flex;gap:12px;flex-wrap:wrap;font-size:14px;color:var(--muted)}.bd-lv b{color:var(--text,#141518)}
 .bd-read{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:var(--bg,#EEF0F3);font-size:13.5px;text-align:left;width:100%;display:block;font-family:inherit;color:inherit}
 button.bd-read{cursor:pointer}
@@ -5731,6 +5733,84 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     capCheck: capCheck, addOnBudget: addOnBudget, addOnQty: addOnQty, satLots: satLots, positionRisk: positionRisk, gbLevel: gbLevel, panel: panel, floorLot: floorLot };
 });
 /* === ps1-size.js END === */
+/* === pos-view.js BEGIN (copy · do not edit here · edit pos-view.js and run tools/sync_pv1.py) === */
+/* pos-view.js — PV1 honest position numbers (pure functions · no DOM / clock / storage)
+   One formula for every surface (Today row · Plan card · drawer). Used two ways: Node (module.exports) for tests · browser (globalThis.PosView).
+   index.html carries a byte-for-byte copy between BEGIN/END markers (python3 tools/sync_pv1.py).
+   calc(inp) — inp:
+     dir 'long'|'short' · mult (contract multiplier, default 1) · fx (account-currency per 1 unit of price currency; 1 for same currency; null = missing) · fxSrc (text)
+     fills [{qty,px}]   filled lots only (held)           planned [{qty,px}]  every plan row, filled or not (null = not sized)
+     stop (current stop) · initialStop (first stop, for R) · price · priceAt · priceSrc · equity (account) · pool (strategy pool)
+     openRiskMoney  engine exposure for the held quantity (optional; when absent the loss at the current stop is computed here)
+     plannedRiskMoney / plannedRiskPct  stored whole-plan risk (optional; when absent it is computed from `planned` + `stop`)
+   Returns a flat object. Every figure that cannot be worked out is null and has a reason in why[<field>] — never 0, never an assumed value.
+   Money is in account currency (price × qty × mult × fx). Percentages are plain numbers (1.2 = 1.2%). Planned rows never touch heldQty / cost / value. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.PosView = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  var num = function (v) { return typeof v === 'number' && isFinite(v); };
+  var pos = function (v) { return num(v) && v > 0; };
+  function sum(rows, f) { return (rows || []).reduce(function (s, r) { return s + f(r); }, 0); }
+  function clean(rows) { return (rows || []).filter(function (r) { return r && pos(+r.qty) && pos(+r.px); }).map(function (r) { return { qty: +r.qty, px: +r.px }; }); }
+
+  function calc(inp) {
+    inp = inp || {};
+    var why = {}, o = { why: why };
+    var dir = String(inp.dir).toLowerCase() === 'short' ? -1 : 1, mult = pos(+inp.mult) ? +inp.mult : 1;
+    var fx = pos(+inp.fx) ? +inp.fx : null, uv = fx === null ? null : mult * fx;
+    var fills = clean(inp.fills), plannedRaw = inp.planned, planned = plannedRaw == null ? null : clean(plannedRaw);
+    var stop = pos(+inp.stop) ? +inp.stop : null, price = pos(+inp.price) ? +inp.price : null;
+    var equity = pos(+inp.equity) ? +inp.equity : null, pool = pos(+inp.pool) ? +inp.pool : null;
+    o.dir = dir === -1 ? 'short' : 'long'; o.mult = mult; o.fx = fx; o.fxSrc = inp.fxSrc || null; if (fx === null) why.fx = 'no FX';
+    o.stop = stop;
+
+    o.heldQty = sum(fills, function (r) { return r.qty; });
+    o.plannedQty = planned && planned.length ? sum(planned, function (r) { return r.qty; }) : null; if (o.plannedQty === null) why.plannedQty = 'not sized';
+    o.entriesDone = fills.length; o.entriesTotal = planned && planned.length ? Math.max(planned.length, fills.length) : (fills.length || null);
+    o.avgEntry = o.heldQty > 0 ? sum(fills, function (r) { return r.qty * r.px; }) / o.heldQty : null; if (o.avgEntry === null) why.avgEntry = 'no filled shares';
+
+    o.price = price; o.priceAt = inp.priceAt || null; o.priceSrc = inp.priceSrc || null; if (price === null) why.price = 'no live price';
+
+    o.cost = null; o.value = null; o.uPnl = null; o.uPnlPct = null; o.weightAcct = null; o.weightPool = null; o.toStop = null; o.openRisk = null; o.openRiskPct = null; o.stopPnl = null; o.stopPnlPct = null; o.openRiskNone = false;
+    if (o.heldQty > 0) {
+      if (uv === null) { ['cost', 'value', 'uPnl', 'uPnlPct', 'weightAcct', 'weightPool', 'toStop', 'openRisk', 'openRiskPct'].forEach(function (k) { why[k] = 'no FX'; }); }
+      else {
+        o.cost = sum(fills, function (r) { return r.qty * r.px; }) * uv;
+        if (price !== null) {
+          o.value = o.heldQty * price * uv;
+          o.uPnl = dir * (price - o.avgEntry) * o.heldQty * uv; o.uPnlPct = o.cost > 0 ? o.uPnl / o.cost * 100 : null;
+          o.weightAcct = equity !== null ? o.value / equity * 100 : null; if (equity === null) why.weightAcct = 'no account value';
+          o.weightPool = pool !== null ? o.value / pool * 100 : null; if (pool === null) why.weightPool = 'no strategy pool';
+          if (stop !== null) o.toStop = o.heldQty * Math.abs(price - stop) * uv; else why.toStop = 'no stop';
+        } else { ['value', 'uPnl', 'uPnlPct', 'weightAcct', 'weightPool', 'toStop'].forEach(function (k) { why[k] = 'no live price'; }); }
+        if (stop !== null) {
+          o.stopPnl = dir * (stop - o.avgEntry) * o.heldQty * uv; o.stopPnlPct = equity !== null ? o.stopPnl / equity * 100 : null;
+          var r = num(inp.openRiskMoney) ? inp.openRiskMoney : Math.max(0, -o.stopPnl);
+          if (r > 1e-9) { o.openRisk = r; o.openRiskPct = equity !== null ? r / equity * 100 : null; if (equity === null) why.openRiskPct = 'no account value'; }
+          else { o.openRiskNone = true; why.openRisk = 'none · stop at or beyond entry'; }
+        } else { why.openRisk = 'no stop'; why.stopPnl = 'no stop'; }
+      }
+    } else { ['cost', 'value', 'uPnl', 'uPnlPct', 'weightAcct', 'weightPool', 'toStop', 'openRisk', 'openRiskPct'].forEach(function (k) { why[k] = 'nothing filled yet'; }); }
+
+    /* whole-plan risk (stored figure wins; else computed from every planned row at the stop) */
+    o.plannedRisk = null; o.plannedRiskPct = null;
+    if (pos(+inp.plannedRiskMoney)) { o.plannedRisk = +inp.plannedRiskMoney; o.plannedRiskPct = num(+inp.plannedRiskPct) && inp.plannedRiskPct != null ? +inp.plannedRiskPct : (equity !== null ? o.plannedRisk / equity * 100 : null); }
+    else if (planned && planned.length && stop !== null && uv !== null) {
+      o.plannedRisk = sum(planned, function (r) { return r.qty * Math.max(0, dir * (r.px - stop)); }) * uv; o.plannedRiskPct = equity !== null ? o.plannedRisk / equity * 100 : null;
+      if (!(o.plannedRisk > 1e-9)) { o.plannedRisk = null; o.plannedRiskPct = null; why.plannedRisk = 'none · stop at or beyond entry'; }
+    } else why.plannedRisk = !planned || !planned.length ? 'not sized' : stop === null ? 'no stop' : 'no FX';
+
+    /* R = one unit of initial risk per share = |first entry − first stop| */
+    var e0 = fills.length ? fills[0].px : (planned && planned.length ? planned[0].px : null), s0 = pos(+inp.initialStop) ? +inp.initialStop : stop;
+    o.rUnit = (e0 !== null && s0 !== null && dir * (e0 - s0) > 0) ? dir * (e0 - s0) : null; if (o.rUnit === null) why.rUnit = 'no initial stop';
+    o.R = (o.rUnit !== null && price !== null && o.avgEntry !== null) ? dir * (price - o.avgEntry) / o.rUnit : null; if (o.R === null) why.R = o.rUnit === null ? why.rUnit : price === null ? 'no live price' : 'nothing filled yet';
+    return o;
+  }
+  return { calc: calc };
+});
+/* === pos-view.js END === */
 /* === risk-engine.js BEGIN (copy · do not edit here · edit risk-engine.js and run tools/sync_re1.py) === */
 /* risk-engine.js — RE1 risk engine (pure functions · no DOM / clock / storage / network)
    Spec: docs/briefs/RE1-decisions.md (rev 2) + docs/briefs/RE1-tech-spec.md. RE-A: NOT wired into index.html.
@@ -29389,6 +29469,43 @@ function bdLogHtml(it){
   const rs = (bdReason && bdReason.id === it.id) ? `<div class="bd-reason" data-bd-reason><input type="text" id="bdReasonIn" maxlength="200" placeholder="Reason? (optional)" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();bdReasonSave('${e(it.id)}')}"><button type="button" class="go" data-bd-reason-ok onclick="bdReasonSave('${e(it.id)}')">Add</button><button type="button" class="bd-link" data-bd-reason-skip onclick="bdReasonSkip()">Skip</button></div>` : '';
   return `<div class="bd-sec"><div class="bd-k">UPDATE LOG</div>${rs}<div class="bd-log" data-bd-log>${rows.length ? rows.map(x=>`<div class="bd-lr" data-bd-lr="${e(x.k)}"><span class="bd-ld">${e(bdLogDate(x.t))}</span> · ${e(x.txt)}</div>`).join('') : '<div class="bd-m">No updates yet</div>'}</div></div>`;
 }
+/* PV1 — numbers block in the drawer (same posView as the Today row / Plan card). Satellite also carries the optional manual Last price (display only). */
+function pvPriceTxt(pv){
+  if(pv.price == null) return pv.why.price || 'no live price';
+  const when = pv.priceAt ? (/^\d{4}-\d{2}-\d{2}T/.test(pv.priceAt) ? new Date(pv.priceAt).toLocaleString('en-GB', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok'}) : re1DayTxt(pv.priceAt)) : '';
+  return td3Num(pv.price) + (pv.priceSrc === 'manual' && pv.cur === '$' ? ' · manual' : '') + (when ? ' · ' + when : '');
+}
+function pvRowsFor(it, pv){
+  const na = k=>pv.why[k] || 'n/a', m = v=>pvMoney(pv, v), sat = it.kind === 'sat';
+  const q = v=>pvQtyTxt(v, pv) + (sat ? ' lot' : ' sh'), sgn = v=>(v >= 0 ? '+' : '−') + m(Math.abs(v));
+  const r = [];
+  if(it.status === 'hold'){
+    r.push(['Held', pv.heldQty > 0 ? q(pv.heldQty) + (pv.plannedQty != null && pv.plannedQty > pv.heldQty ? ' of ' + q(pv.plannedQty) + ' planned' : '') + (pv.avgEntry != null ? ' · avg ' + td3Num(pv.avgEntry) : '') : 'nothing filled yet']);
+    r.push(['Price', pvPriceTxt(pv) + (pv.stale ? ' · OLD PRICE' : '')]);
+    r.push(['Value', pv.value != null ? m(pv.value) + (pv.weightAcct != null ? ' · ' + pvPct(pv.weightAcct) + ' of account' : '') : na('value')]);
+    r.push(['Unrealised P&L', pv.uPnl != null ? sgn(pv.uPnl) + (pv.uPnlPct != null ? ' · ' + (pv.uPnlPct >= 0 ? '+' : '−') + Math.abs(pv.uPnlPct).toFixed(1) + '%' : '') : na('uPnl')]);
+    r.push(['Open risk', pv.openRisk != null ? m(pv.openRisk) + (pv.openRiskPct != null ? ' · ' + ps1R2(pv.openRiskPct) + '% of account' : '') + ' (loss at stop on held shares)' : na('openRisk')]);
+  }
+  r.push([it.status === 'hold' ? 'Whole plan' : 'Plan', pv.plannedQty != null ? q(pv.plannedQty) + (pv.plannedRisk != null ? ' · risk ' + m(pv.plannedRisk) + (pv.plannedRiskPct != null ? ' · ' + ps1R2(pv.plannedRiskPct) + '% of account' : '') + ' if all rows fill and stop out' : ' · risk: ' + na('plannedRisk')) : 'not sized' + (pv.planMsg ? ' — ' + pv.planMsg : '')]);
+  return r;
+}
+function pvDrawerHtml(it){
+  let pv; try{ pv = posView(it); }catch(e){ return ''; } if(!pv) return '';
+  const e = bdE, rows = pvRowsFor(it, pv).map(x=>`<div class="pv-r"><span>${e(x[0])}</span><b>${e(x[1])}</b></div>`).join('');
+  let last = '';
+  if(it.kind === 'sat' && it.status !== 'ord'){
+    const cur = it.ref.lastPx && +it.ref.lastPx.v > 0 ? it.ref.lastPx.v : '';
+    last = `<div class="pv-last" data-pv-last><label>Last price (optional) <input type="text" inputmode="decimal" autocomplete="off" id="pvLastIn" data-pv-lastin value="${e(cur)}" placeholder="blank = no live price"></label><button type="button" class="go" data-pv-lastset onclick="pvSetLast('${e(it.id)}')">Save</button><small>Display only — shows value and P&amp;L; never used for size or limits.</small>${pv.stale ? '<span class="pv-old" data-pv-old>old price</span>' : ''}</div>`;
+  }
+  return `<div class="bd-sec" data-pv-block><div class="bd-k">POSITION</div><div class="pv-tb" data-pv-tb>${rows}</div>${last}</div>`;
+}
+function pvSetLast(id){
+  const it = bdById(id); if(!it || it.kind !== 'sat') return; const el = document.getElementById('pvLastIn'); if(!el) return;
+  const v = pb2Num(el.value), old = it.ref.lastPx, now = new Date().toISOString();
+  const lp = v > 0 ? ((old && +old.v === v) ? old : {v, at:now}) : null;
+  sat7dWrite('satIdeas', id, {lastPx:lp, updated_at:now}); try{ it.ref.lastPx = lp; }catch(e){}
+  try{ bdRender(); bdDrawerRender(); todayRefresh(true); }catch(e){}
+}
 function bdDrawerHtml(it){
   const e = bdE, p = bdPill(it), id = e(it.id);
   const hot = it.kind === 'core' ? bdHotTag(it.sym) : '';
@@ -29400,7 +29517,7 @@ function bdDrawerHtml(it){
   if(it.status === 'hold' && p.k === 'edit') foot += `<button type="button" class="go" data-bd-close onclick="bdClosePos('${id}')">Close trade</button>`;
   else foot += prim;
   return `<div class="bd-dh"><span class="bd-grab" aria-hidden="true"></span><div class="bd-dh1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${it.fam ? '<span class="bd-fam">Family</span>' : ''}<span class="bd-stp" data-bd-spill>${pill}</span><span class="bd-sp"></span><button type="button" class="bd-x" data-bd-x aria-label="Close" onclick="bdClose()">✕</button></div></div>
-    <div class="bd-db">${bdLevelsHtml(it)}${bdEntriesHtml(it)}${it.kind === 'sat' ? bdChecksHtml(it) : bdThesisHtml(it)}${bdLogHtml(it)}</div>
+    <div class="bd-db">${bdLevelsHtml(it)}${pvDrawerHtml(it)}${bdEntriesHtml(it)}${it.kind === 'sat' ? bdChecksHtml(it) : bdThesisHtml(it)}${bdLogHtml(it)}</div>
     <div class="bd-df">${foot}</div>`;
 }
 function bdOpen(id){
@@ -29513,19 +29630,81 @@ function bdActRows(){
   });
   return rows;
 }
-/* TW1 — Today Act rows: size + risk read from the SAME saved plan numbers the Plan board / form show (plan.ps1 · pb2Calc) — no new calculation */
+/* ── PV1 — one source for position numbers. posView(it) gathers stored fills / plan / price / FX / equity and hands them to PosView.calc (pos-view.js); engine exposure (risk-engine ideaResult) is reused for open risk. Every surface (Today row · Plan card · drawer) reads this. ── */
+const PV_STALE_MS = 24 * 3600 * 1000;
+function pvEngineIdea(acct, kind, id){
+  try{ const L = re1L(acct); if(!L) return null; const key = kind === 'core' ? 'card' : 'satIdea';
+    const idea = (L.ideas || []).find(i=>L.info[i.id] && L.info[i.id][key] === id && i.status === 'holding'); return idea ? {L, idea} : null; }catch(e){ return null; }
+}
+function posView(it){
+  if(!it) return null;
+  const acct = it.acct || tdHome(), E = (()=>{ try{ return ps1E(acct); }catch(e){ return null; } })(), P = (()=>{ try{ return poolsOf(acct); }catch(e){ return null; } })();
+  const fxS = (()=>{ try{ const f = +getBook(acct).settings.fx; return f > 0 ? f : null; }catch(e){ return null; } })();
+  const inp = {equity:E, fxSrc:'Settings rate, not live'}; let cur = '฿', unit = 'sh', extra = {};
+  if(it.kind === 'core'){
+    const c = it.ref, pl = c.plan || {}, p = pl.ps1, mk = c.market || coreMarketOf(c.ticker);
+    inp.dir = 'long'; inp.fx = mk === 'US' ? fxS : 1; if(mk !== 'US') inp.fxSrc = 'THB · no conversion';
+    inp.fills = (c.lots || []).map(l=>({qty:+l.qty, px:+l.px}));
+    inp.planned = p && Array.isArray(p.rows) && p.rows.length ? p.rows.map(r=>({qty:+r.qty, px:+r.px})) : null;
+    inp.stop = it.status === 'hold' ? +it.sl : (+pl.stop || +it.sl);
+    inp.initialStop = +pl.stop > 0 ? +pl.stop : (p && p.stops && p.stops[0] ? +p.stops[0].px : (c.lots && c.lots[0] ? +c.lots[0].stop : null));
+    inp.price = +c.px > 0 ? +c.px : null; inp.priceAt = c.pxDate || null; inp.priceSrc = c.pxSrc || null;
+    if(p && +p.riskMoney > 0){ inp.plannedRiskMoney = +p.riskMoney; inp.plannedRiskPct = +p.riskPct > 0 ? +p.riskPct : null; }
+    if(P){ const tr = coreTrackOfCard(c); inp.pool = tr === 'ladder' ? P.ladder : P.winner; }
+    const en = it.status === 'hold' ? pvEngineIdea(acct, 'core', c.id) : null;
+    if(en){ try{ const r = RiskEngine.ideaResult(en.idea, en.L.costsFor ? en.L.costsFor(en.idea) : null); if(r && r.exposure != null) inp.openRiskMoney = r.exposure; }catch(e){} }
+    if(p && p.rows && p.rows.length > (it.k || 0)){ const nx = p.rows[(c.lots || []).length]; if(nx) extra.next = {px:+nx.px, qty:+nx.qty}; }
+    extra.hwCapped = !!(p && p.tag && /homework/i.test(p.tag));
+  }else{
+    const i = it.ref; cur = '$'; unit = 'lot';
+    inp.dir = i.bias === 'Short' ? 'short' : 'long'; inp.fx = fxS; inp.stop = +i.sl > 0 ? +i.sl : null; inp.initialStop = inp.stop;
+    if(P) inp.pool = P.sat;
+    const en = it.status === 'hold' ? pvEngineIdea(acct, 'sat', i.id) : null;
+    if(en){
+      const tq = en.idea.tranches.reduce((a, t)=>a + (+t.qty || 0), 0); let rem = tq; try{ rem = RiskEngine.ideaResult(en.idea, null).remainingQty; }catch(e){}
+      const k = tq > 0 && rem >= 0 ? rem / tq : 1; inp.fills = en.idea.tranches.map(t=>({qty:(+t.qty || 0) * k, px:+t.entry})); inp.mult = en.idea.tranches[0] ? en.idea.tranches[0].mult : 1; inp.fx = en.idea.tranches[0] ? en.idea.tranches[0].fx : fxS;
+      inp.initialStop = en.idea.tranches[0] && +en.idea.tranches[0].initialStop > 0 ? +en.idea.tranches[0].initialStop : inp.stop; if(en.idea.tranches[0] && +en.idea.tranches[0].stop > 0) inp.stop = +en.idea.tranches[0].stop;
+      try{ const r = RiskEngine.ideaResult(en.idea, en.L.costsFor ? en.L.costsFor(en.idea) : null); if(r && r.exposure != null) inp.openRiskMoney = r.exposure; }catch(e){}
+    }else inp.fills = [];
+    if(it.status !== 'hold'){   /* planned: size + risk come from the existing sizing (pb2Calc) · nothing recomputed */
+      try{ const c = pb2Calc(i, acct); if(c.lot != null){ inp.planned = [{qty:c.lot, px:+i.entry}]; const th = c.c && c.c.v2 ? c.c.v2.actualTHB : 0; if(th > 0) inp.plannedRiskMoney = th; extra.planMsg = ''; } else extra.planMsg = c.msg || ''; extra.rr = c.rr; }catch(e){}
+    }
+    if(i.lastPx && +i.lastPx.v > 0){ inp.price = +i.lastPx.v; inp.priceAt = i.lastPx.at || null; inp.priceSrc = 'manual'; const t = Date.parse(i.lastPx.at); extra.stale = !(t > 0) || Date.now() - t > PV_STALE_MS; }
+  }
+  const pv = PosView.calc(inp); pv.cur = cur; pv.unit = unit; Object.assign(pv, extra);
+  if(pv.price === null && it.kind === 'sat') pv.why.price = 'no live price';
+  return pv;
+}
+/* money in the surface's own currency: Core ฿ · Satellite $ (÷ the FX used) */
+function pvMoney(pv, v){ if(v == null || !isFinite(v)) return null; return pv.cur === '$' && pv.fx > 0 ? '$' + ps1M(v / pv.fx) : '฿' + ps1M(v); }
+function pvPct(v, d){ return v == null || !isFinite(v) ? null : (+v).toFixed(d == null ? (Math.abs(v) < 0.1 && v !== 0 ? 2 : 1) : d) + '%'; }
+function pvQtyTxt(v, pv){ return pv.unit === 'lot' ? satV2Lot(v) : fmt0(v); }
+/* A2 — the row text. Holding: #held/#planned · value · % of account · open risk. Planned / Ordered: plan #size · risk · %. Returns null when there is nothing stored to show (old cards) → caller keeps the old text */
+function pvRowParts(it){
+  const pv = posView(it); if(!pv) return null; const sat = it.kind === 'sat';
+  if(it.status === 'hold'){
+    if(!(pv.heldQty > 0)) return null;
+    const full = pv.plannedQty == null || Math.abs(pv.plannedQty - pv.heldQty) < 1e-9 || pv.plannedQty < pv.heldQty;
+    const sz = sat ? (full ? pvQtyTxt(pv.heldQty, pv) : pvQtyTxt(pv.heldQty, pv) + '/' + pvQtyTxt(pv.plannedQty, pv)) + ' lot' : '#' + fmt0(pv.heldQty) + (full ? '' : '/#' + fmt0(pv.plannedQty));
+    const val = pv.value != null ? pvMoney(pv, pv.value) : 'value: ' + pv.why.value;
+    const w = pv.weightAcct != null ? pvPct(pv.weightAcct) : null;
+    const orisk = pv.openRisk != null ? 'open risk ' + pvMoney(pv, pv.openRisk) : 'open risk: ' + (pv.why.openRisk || 'n/a');
+    return {sz, rk:[val, w, orisk, pv.stale ? 'old price' : ''].filter(Boolean).join(' · '), pv};
+  }
+  const sized = pv.plannedQty != null && pv.plannedQty > 0;
+  if(!sized) return {sz:'plan: not sized', rk:'', pv};
+  const rk = pv.plannedRisk != null ? 'risk ' + pvMoney(pv, pv.plannedRisk) + (pv.plannedRiskPct != null ? ' · ' + ps1R2(pv.plannedRiskPct) + '%' : '') : 'risk: ' + (pv.why.plannedRisk || 'n/a');
+  return {sz:'plan ' + (sat ? pvQtyTxt(pv.plannedQty, pv) + ' lot' : '#' + fmt0(pv.plannedQty)), rk, pv};
+}
+/* TW1 / PV1 — Today Act rows: numbers come from posView (held · planned · value · open risk) — no second formula */
 function tw1SizeRisk(it){
   const o = {sz:'—', rk:'—'};
+  try{ const r = pvRowParts(it); if(r){ o.sz = r.sz; o.rk = r.rk || '—'; o.pv = r.pv; return o; } }catch(e){ console.warn('pv row:', e); }
   if(it.kind === 'core'){
     const p = it.ref && it.ref.plan && it.ref.plan.ps1; if(!p) return o;
-    if(+p.qty > 0) o.sz = '#' + fmt0(p.qty);
-    if(+p.riskPct > 0) o.rk = (+p.riskMoney > 0 ? '฿' + ps1M(p.riskMoney) + ' · ' : '') + ps1R2(p.riskPct) + '%';
+    if(+p.qty > 0) o.sz = 'plan #' + fmt0(p.qty);
+    if(+p.riskPct > 0) o.rk = 'risk ' + (+p.riskMoney > 0 ? '฿' + ps1M(p.riskMoney) + ' · ' : '') + ps1R2(p.riskPct) + '%';
     return o;
-  }
-  const i = it.ref, acc = pb2AcctOf(i), c = pb2Calc(i, acc);
-  if(c.lot != null){
-    o.sz = satV2Lot(c.lot) + ' ' + (c.unit || 'lot');
-    if(c.risk != null){ let pc = ''; try{ const E = ps1E(acc), th = c.c && c.c.v2 ? c.c.v2.actualTHB : 0; if(E > 0 && th > 0) pc = ' · ' + ps1R2(th / E * 100) + '%'; }catch(e){} o.rk = satV2Money2(c.risk, c.cur) + pc; }
   }
   return o;
 }
@@ -29670,7 +29849,7 @@ function re2Row(it, o){
   const btn = btn3 + btn2 + (o.btn ? `<button type="button" class="btn${o.k === 'fill' || o.k === 'hw' ? ' o' : ''}" data-re2-btn="${o.k}"${o.dis ? ` disabled title="${e(o.title || '')}" data-re2-blocked="1"` : ''} onclick="event.stopPropagation();${o.fn || ''}"><span class="m">${e(o.btn)}</span><span class="p">${e(sh)}</span></button>` : '');
   return `<div class="row re2-row" data-re2-row="${e(it.sym)}" data-re2-grp="${o.g}" data-re2-id="${e(it.id)}" role="button" tabindex="0" onclick="bdOpen('${e(it.id).replace(/'/g, "\\'")}')">
     <div class="l1"><b>${e(it.sym)}</b><span class="tag">${e(it.tag)}</span>${o.chip ? `<span class="chip ${o.cc || ''} m" data-re2-chip-st>${e(o.chip)}</span>` : ''}<span class="q p">${e(q)}</span><span class="sp"></span>${btn}</div>
-    <div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span><i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div></div>`;
+    <div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span>${q ? `<span class="p">${e(q)}${o.why ? ' · ' : ''}</span>` : ''}<i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div></div>`;
 }
 function re2Model(acct){
   const now = Date.now(), L = re1L(acct), all = (()=>{ try{ return bdItems().filter(x=>(x.acct || tdHome()) === acct); }catch(e){ return []; } })();
@@ -29704,7 +29883,7 @@ function re2Model(acct){
       let ok = true; try{ const g = re1PlanGate(it.ref, 0); const m = g && g.model; ok = !(m && m.blocked && m.reasons.some(x=>['COMP_LOCKED', 'ADDON_THESIS', 'NO_SNAPSHOT', 'SNAPSHOT_STALE'].indexOf(x) >= 0)); }catch(x){}
       if(ok) o = {g:'manage', chip:'Holding', cc:'', k:'addon', btn:'Add-on ›', fn:`bdAddon('${td3E(it.id)}')`, why:'add-on allowed', warn:true, lv:''};
     }
-    if(!o && it.kind === 'core' && it.tag === 'COMP'){ let hw = true; try{ hw = !!ftHwDone(it.sym); }catch(x){} if(!hw) o = {g:'manage', chip:'Holding', cc:'', k:'hw', btn:'Do homework ›', fn:`td3HwGo('${td3E(it.sym)}','W','')`, why:'cap 50% · homework not done', warn:true, lv:''}; }
+    if(!o && it.kind === 'core' && it.tag === 'COMP'){ let hw = true; try{ hw = !!ftHwDone(it.sym); }catch(x){} if(!hw) o = {g:'manage', chip:'Holding', cc:'', k:'hw', btn:'Do homework ›', fn:`td3HwGo('${td3E(it.sym)}','W','')`, why:'size limited to 50% · homework not done', warn:true, lv:''}; }
     if(!o && it.kind === 'core'){ try{ const tw = ltTws(wlItemOf(it.sym)).filter(w=>w.level === 'broken' || w.level === 'review')[0]; if(tw) o = {g:'manage', chip:'Holding', cc:'', k:'review', btn:'Review ›', fn:`td3Screen('${td3E(it.sym)}')`, why:'tripwire ' + (tw.level === 'broken' ? 'hit' : 'review') + ' · ' + ltShort(tw.sig, 28), warn:true, lv:''}; }catch(x){} }
     if(o) manage.push({it, o}); else nothing++;
   });
@@ -30068,7 +30247,7 @@ function pb2OpenType(){
 function pb2OpenAsset(key, opt){   /* create (or edit when a plan exists) for one asset — straight to the form */
   const ex = pb2ExistingIdea(key); if(ex){ pb2OpenEdit(ex.id, opt && opt.focus, true); return; }
   if(bdPopOpen()) pb2 = null;
-  pb2 = {step:2, a:key, id:null, direct:!!(opt && opt.direct), dir:'Buy', acct:pb2AcctOf(null), entry:'', sl:'', tp:'', ema:null, str:null, mss:null, err:''};
+  pb2 = {step:2, a:key, id:null, direct:!!(opt && opt.direct), dir:'Buy', acct:pb2AcctOf(null), entry:'', sl:'', tp:'', last:'', ema:null, str:null, mss:null, err:''};
   pb2Render(true);
 }
 function pb2OpenEdit(id, focus, direct){
@@ -30076,7 +30255,7 @@ function pb2OpenEdit(id, focus, direct){
   const v = ln4VerifyOf(i);
   if(bdPopOpen()) pb2 = null;
   const n = x=>(+x > 0 ? String(+x) : '');
-  pb2 = {step:2, a:i.asset, id, direct:direct !== false, dir:pb2Side(i), acct:pb2AcctOf(i), entry:n(i.entry), sl:n(i.sl), tp:n(i.tp), ema:v.ema, str:v.st, mss:v.st === false ? v.mss : null, err:'', focus:focus || ''};
+  pb2 = {step:2, a:i.asset, id, direct:direct !== false, dir:pb2Side(i), acct:pb2AcctOf(i), entry:n(i.entry), sl:n(i.sl), tp:n(i.tp), last:n(i.lastPx && i.lastPx.v), ema:v.ema, str:v.st, mss:v.st === false ? v.mss : null, err:'', focus:focus || ''};
   pb2Render(true);
 }
 function pb2Back(){
@@ -30123,7 +30302,7 @@ function pb2Render(focusFirst){
 const pb2Seg = (items, cur, fn, attr)=>`<span class="pb2-seg" role="group">${items.map(x=>`<button type="button" class="${cur === x[0] ? 'on' : ''}" aria-pressed="${cur === x[0]}" data-${attr}="${bdE(x[0])}" onclick="${fn}('${bdE(x[0])}')">${bdE(x[1])}</button>`).join('')}</span>`;
 function pb2InputsHtml(){
   const f = (k, lab)=>`<label class="pb2-f"><span>${lab}</span><input type="text" inputmode="decimal" autocomplete="off" data-pb2-in="${k}" value="${bdE(pb2[k])}" oninput="pb2In('${k}',this.value)"></label>`;
-  return `<div class="pb2-in3" data-pb2-prices>${f('entry', 'Entry')}${f('sl', 'SL')}${f('tp', 'TP')}</div>`;
+  return `<div class="pb2-in3" data-pb2-prices>${f('entry', 'Entry')}${f('sl', 'SL')}${f('tp', 'TP')}</div><div class="pb2-in3 pv-last" data-pb2-lastrow>${f('last', 'Last price (optional)')}<small class="pb2-lastnote">Display only — shows value and P&amp;L. Never used for size or limits.</small></div>`;
 }
 function pb2TmpIdea(){
   const s = pb2, base = s.id ? sat7dIdea(s.id) : null;
@@ -30207,6 +30386,7 @@ function pb2SaveDo(draft){
   const s = pb2; if(!s) return;
   const i = pb2TmpIdea(), V = ln4VerifyOf(i), now = new Date().toISOString();
   const patch = {asset:s.a, bias:i.bias, entry:i.entry, sl:i.sl, tp:i.tp, ema50_ok:V.ema, structure_ok:V.st, mss:V.st === false ? V.mss : null, pb_acct:s.acct || null, pb2:true, updated_at:now};
+  { const lv = pb2Num(s.last), old = s.id ? (sat7dIdea(s.id) || {}).lastPx : null; if(lv > 0) patch.lastPx = (old && +old.v === lv) ? old : {v:lv, at:now}; else if(old) patch.lastPx = null; }   /* PV1 A4 — display only: never read by sizing / gates / limits */
   const txt = `Levels · Entry ${i.entry ? td3Num(i.entry) : '—'} · SL ${i.sl ? td3Num(i.sl) : '—'} · TP ${i.tp ? td3Num(i.tp) : '—'}`;
   let id = s.id;
   if(id){
