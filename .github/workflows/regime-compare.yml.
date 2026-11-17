@@ -1,0 +1,38 @@
+# RM1 research add-on (display only): SMA 10/20 vs 20/50 on ACWI/BIL + HYG/IEI, last 5 years → docs/reports/RM1-compare.md
+# Run by hand: Actions → regime-compare → Run workflow (Yahoo is rate-limited on the Mac)
+name: regime-compare
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: regime-compare
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: install yfinance
+        run: pip install --quiet yfinance
+      - name: selftest
+        run: python scripts/compare_regime.py --selftest
+      - name: compare
+        run: python scripts/compare_regime.py --out docs/reports/RM1-compare.md
+      - name: commit if changed
+        run: |
+          git config user.name  "regime-compare-bot"
+          git config user.email "regime-compare-bot@users.noreply.github.com"
+          git add docs/reports/RM1-compare.md
+          git diff --cached --quiet && { echo "no change"; exit 0; }
+          git commit -m "RM1: regime compare report"
+          git pull --rebase --autostash
+          git push
