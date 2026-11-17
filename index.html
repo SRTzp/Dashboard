@@ -11344,6 +11344,7 @@ function ln4RecordFill(id){
 function ln4RaiseStop(id){ try{ coreStopOpen(id); }catch(e){ coreOpenCard(id); } }
 function ln4AddOn(id){ try{ coreBuyAddOpen(id); }catch(e){ coreOpenCard(id); } }
 function ln4Fix(id, k, kind){
+  if(kind === 'sat' && (k === 'carry' || k === 'unpick' || k === 'note' || k === 'settings')){ pvSatAct(id, k); return; }   /* PV1b — blocked-reason buttons reuse the existing actions */
   if(kind === 'sat'){ td3SatOpen(id, k === 'setup' ? 'setup' : k === 'verify' ? 'setup' : k === 'stop' ? 'SL' : ''); return; }
   const c = coreCardsList.find(x=>x.id === id); if(!c) return;
   if(k === 'setup'){ switchTab('watch'); try{ wlSetView('wl'); }catch(e){} wlOpen(c.ticker); return; }
@@ -29295,23 +29296,69 @@ function bdToEntry(it){
   return `<span class="bd-m${nr ? ' near' : ''}" data-bd-pct="${nr ? 'near' : 'far'}">${t}</span>`;
 }
 /* ── PV1 Part C — Planned / Holding cards. Numbers: posView (Part A) / pb2Calc / plan.ps1. Reasons: the sizing result's own text. ── */
+function pvSatBlockOf(i){
+  /* PV1b — the FIRST real blocking item of a Satellite plan, in the brief's order. Thai source strings stay in their source; codes map to English here. null = nothing blocks. */
+  const acct = pb2AcctOf(i); let pc = null, c = null;
+  try{ pc = pb2Calc(i, acct); c = pc.c; }catch(e){ return null; }
+  const B = (why, k, btn)=>({why, k, btn:btn || '', code:k});
+  try{ if(ln4VerifyOf(i).blocked) return B(pc.msg || 'Blocked by trend rule', 'trend'); }catch(e){}
+  if(c){
+    if(c.carryBlock) return B('Carried from last week', 'carry', 'Use this week ›');
+    if(c.unpickBlock) return B('Not picked this week', 'unpick', 'Add to week ›');
+    if(c.noteBlock) return B('Needs a reason (against Macro)', 'note', 'Add note ›');
+    if(c.newsBlock){ let to = ''; try{ const nb = newsSatBlock(); to = nb ? nb.to : ''; }catch(e){} return B('News window' + (to ? ' · until ' + to + ' ICT' : ''), 'news'); }
+  }
+  if(pc.lot != null && c && c.ready) return null;   /* nothing blocks a plan that is sized and ready */
+  let msm = ''; try{ if(+i.entry > 0 && +i.sl > 0) msm = ps1MinStopMsg(acct, i.asset, i.entry, i.sl); else if(!ps1MinPct(acct, i.asset)) msm = ''; }catch(e){}
+  if(msm) return B(msm, 'settings', 'Open Settings ›');
+  const lm = (c && c.lotMsg) || pc.msg || '';
+  if(/Settings/i.test(lm)) return B(lm, 'settings', 'Open Settings ›');
+  if(pc.lot != null && c && !c.ready){
+    if(/stop|SL|min/i.test(lm) && !/size|lot/i.test(lm)) return B(lm, 'stop', 'Fix stop ›');
+    try{ const bl = re1SatBlocks(pc); if(bl.length) return B(bl[0], 'engine'); }catch(e){}
+    if(c.rrBlock) return B(String(c.rrBlock), 'engine');
+    const rd = (c.warns || []).filter(Boolean)[0]; if(rd) return B(String(rd), 'engine');
+    return null;
+  }
+  if(pc.lot == null){
+    const why = lm || (pc.model && pc.model.reasonTexts && pc.model.reasonTexts[0]) || '';
+    if(!why) return null;
+    if(/stop|SL|min/i.test(why) && !/size|lot/i.test(why)) return B(why, 'stop', 'Fix stop ›');
+    try{ const bl = re1SatBlocks(pc); if(bl.length && !pc.msg) return B(bl[0], 'engine'); }catch(e){}
+    return B(why, 'risk', 'Fix size ›');
+  }
+  return null;
+}
 function pvSatFail(i, onlyIfFails){
-  /* why a complete Satellite plan has no size: first text from the sizing result (pb2Calc msg / engine reasons) */
-  let why = '', k = 'risk';
+  /* why a complete Satellite plan cannot be placed. PV1b: when a lot exists but the plan calc is not ready, the real blocker is shown (not 'Size not available'). */
+  let why = '', k = 'risk', btn = '';
   try{
     const c = pb2Calc(i, pb2AcctOf(i));
-    if(c.lot != null && !onlyIfFails){ why = 'Size not available'; }
-    else if(c.lot != null) return null;
-    else{ why = c.msg || (c.model && c.model.reasonTexts && c.model.reasonTexts[0]) || ''; if(!why && onlyIfFails) return null; why = why || 'Size could not be worked out'; }   /* no message from the sizing result → don't invent a block */
+    if(c.lot != null){
+      if(onlyIfFails) return null;
+      const b = pvSatBlockOf(i); if(b) return {why:b.why, k:b.k, btn:b.btn};
+      return {why:'Not ready to place', k:'risk', btn:'Fix size ›'};
+    }
+    const b = pvSatBlockOf(i); if(b) return {why:b.why, k:b.k, btn:b.btn || 'Fix size ›'};
+    why = c.msg || (c.model && c.model.reasonTexts && c.model.reasonTexts[0]) || ''; if(!why && onlyIfFails) return null; why = why || 'Size could not be worked out';
   }catch(e){ why = 'Size could not be worked out'; }
   if(/stop|SL|min/i.test(why) && !/size|lot/i.test(why)) k = 'stop';
   return {why, k, btn: k === 'stop' ? 'Fix stop ›' : 'Fix size ›'};
 }
+function pvSatAct(id, k){
+  const i = sat7dIdea(id); if(!i) return;
+  if(k === 'carry'){ satV3CarryConfirm(id); }
+  else if(k === 'unpick'){ const r = satWeekPickAdd(i.asset); if(!r.ok){ try{ showGuideToast([r.msg]); }catch(e){} } }
+  else if(k === 'note'){ td3SatOpen(id, ''); return; }
+  else if(k === 'settings'){ openSettings(); return; }
+  try{ bdRender(); todayRefresh(true); }catch(e){}
+}
 function pvBlock(it){
   if(it.status !== 'plan' || it.inc) return null;
+  if(it.kind === 'sat'){ const b = pvSatBlockOf(it.ref); return b ? {why:b.why, btn:b.btn, k:b.k} : null; }
   const p = bdPill(it);
-  if(p.k === 'fix') return {why:(it.row && it.row.bad && it.row.bad.why) || (it.kind === 'sat' && (pvSatFail(it.ref) || {}).why) || 'No stop', btn:p.t};
-  if(p.dis){ let why = p.title; if(it.kind === 'sat' && it.blocked){ try{ why = pb2Calc(it.ref, pb2AcctOf(it.ref)).msg || why; }catch(e){} } return {why, btn:''}; }
+  if(p.k === 'fix') return {why:(it.row && it.row.bad && it.row.bad.why) || 'No stop', btn:p.t, k:(it.row && it.row.bad && it.row.bad.k) || 'risk'};
+  if(p.dis) return {why:p.title, btn:'', k:'engine'};
   return null;
 }
 let pvMoreOpen = new Set();
@@ -29408,7 +29455,7 @@ function pvCardHtml(it){
   const pill = showPill ? `<button type="button" class="go pv-go${p.cls ? ' ' + p.cls : ''}" data-bd-pill="${p.k}" onclick="event.stopPropagation();${p.fn}">${bdE(p.t)}</button>` : '';
   const x = it.status === 'plan' ? re4CancelBtn(it, true) : '';
   const legs = (pv.legs || []).map(l=>pvLegChip(l, pv)).join('');
-  const bl = blk ? `<div class="pv-bl" data-pv-warn role="alert"><span data-pv-why>${e(blk.why)}</span>${blk.btn ? `<button type="button" class="pv-fixbtn" data-pv-fixbtn="${e(blk.k || (/stop/i.test(blk.btn) ? 'stop' : 'risk'))}" onclick="event.stopPropagation();bdFix('${qid}','${e(blk.k || (/stop/i.test(blk.btn) ? 'stop' : 'risk'))}')">${e(blk.btn)}</button>` : ''}</div>` : '';
+  const bl = blk ? `<div class="pv-bl" data-pv-warn role="alert"><span data-pv-why>${e(blk.why)}</span>${blk.btn ? `<button type="button" class="pv-fixbtn" data-pv-fixbtn="${e(blk.k)}" onclick="event.stopPropagation();bdFix('${qid}','${e(blk.k)}')">${e(blk.btn)}</button>` : ''}</div>` : '';
   const open = pvMoreOpen.has(it.id);
   const more = open ? `<div class="pv-more2" data-pv-more onclick="event.stopPropagation()"><table class="pv-tb2">${pvMoreRows(it, pv)}</table><div class="pv-edit"><button type="button" class="pv-fixbtn" data-pv-edit onclick="event.stopPropagation();bdOpen('${qid}')">Edit</button></div></div>` : '';
   const html = `<div class="bd-card pv-card${open ? ' pv-open' : ''}" role="button" tabindex="0" aria-expanded="${open}" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${blk ? ' data-pv-blk="1"' : ''} onclick="pvCardTap('${qid}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();pvCardTap('${qid}')}">
