@@ -3900,6 +3900,12 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
 .pv-warn{background:var(--red-dim,#fbe6e4);color:var(--red,#c4372f);border-radius:9px;padding:6px 9px;font-size:12.5px;margin-top:8px;overflow-wrap:anywhere}.pv-warn b{font-weight:700}
 .pv-more{margin-top:8px;border-top:1px solid var(--border);padding-top:6px}.pv-more summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--blue);list-style:none;min-height:32px;display:flex;align-items:center}.pv-more summary::-webkit-details-marker{display:none}.pv-more summary .b{display:none}.pv-more[open] summary .a{display:none}.pv-more[open] summary .b{display:inline}
 .pv-card .bd-r3{flex-wrap:wrap}.pv-card .bd-r3>.bd-st,.pv-card .bd-r3>.bd-m{white-space:normal;overflow:visible}.pv-card .bd-r3>.go{margin-left:auto}
+.pv-r1{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}.pv-r1 .bd-sp{flex:1}.pv-dir{font-size:12px;font-weight:600}.pv-dir.l{color:var(--green)}.pv-dir.s{color:var(--red)}
+.pv-r2{display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:6px;font-size:13px;color:var(--muted)}.pv-r2 b{color:var(--text);font-weight:600}.pv-r2 b.dn{color:var(--red)}.pv-r2 b.up{color:var(--green)}.pv-r2 .na{font-style:normal;color:var(--muted)}
+.pv-legs{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.pv-lg{font-size:12.5px;padding:3px 7px;border-radius:7px;border:1px dashed #c9cdd5;white-space:nowrap}.pv-lg i{font-style:normal;color:var(--muted)}.pv-lg em{font-style:normal;color:var(--muted)}.pv-lg.ok{border:1px solid transparent;background:#f1f3f6;color:var(--muted)}.pv-lg.ok::before{content:"✓ ";color:var(--green)}
+.pv-bl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--red)}.pv-fixbtn{margin-left:auto;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid #e3c79a;color:#a8650a;background:var(--card,#fff);cursor:pointer;white-space:nowrap}
+.pv-more2{margin-top:8px;border-top:1px solid var(--border);padding-top:6px;cursor:default}.pv-edit{display:flex;justify-content:flex-end;margin-top:6px}.pv-card .pv-go{padding:3px 9px;font-size:12px}.pv-card{cursor:pointer;min-width:0;max-width:100%}.pv-card *{min-width:0}
+.pvTg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.pvTg3 label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}@media(max-width:560px){.pvTg3{grid-template-columns:1fr}}
 .pv-tb2{font-family:inherit;width:100%;table-layout:fixed;border-collapse:collapse;font-size:12.5px;margin-top:2px}.pv-tb2 td{font-family:var(--sans,inherit);font-size:12.5px;white-space:normal;padding:4px 0;border-top:1px solid var(--hair,#e6e8ee);vertical-align:top}.pv-tb2 tr:first-child td{border-top:0}.pv-tb2 td:first-child{padding-right:10px;width:52%;overflow-wrap:anywhere}.pv-tb2 td:last-child{text-align:right;font-weight:600;overflow-wrap:anywhere}.pv-tb2 .m{color:var(--muted);font-weight:400;display:block}
 @media(max-width:560px){.pv-kv{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .bd-r2{display:flex;gap:10px;flex-wrap:wrap;margin-top:7px;font-size:13px;color:var(--muted)}.bd-r2 b{color:var(--text,#141518);font-weight:600}
@@ -5755,6 +5761,7 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
      stop (current stop) · initialStop (first stop, for R) · price · priceAt · priceSrc · equity (account) · pool (strategy pool)
      openRiskMoney  engine exposure for the held quantity (optional; when absent the loss at the current stop is computed here)
      plannedRiskMoney / plannedRiskPct  stored whole-plan risk (optional; when absent it is computed from `planned` + `stop`)
+     targets [{qty,px}] planned exits · exits [{qty,px}] exits already taken (display only: reward / banked)
      plannedValueMoney  whole-plan position value at the planned prices (optional; when absent computed from `planned`)
    Returns a flat object. Every figure that cannot be worked out is null and has a reason in why[<field>] — never 0, never an assumed value.
    Money is in account currency (price × qty × mult × fx). Percentages are plain numbers (1.2 = 1.2%). Planned rows never touch heldQty / cost / value. */
@@ -5824,6 +5831,17 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
     var e0 = fills.length ? fills[0].px : (planned && planned.length ? planned[0].px : null), s0 = pos(+inp.initialStop) ? +inp.initialStop : stop;
     o.rUnit = (e0 !== null && s0 !== null && dir * (e0 - s0) > 0) ? dir * (e0 - s0) : null; if (o.rUnit === null) why.rUnit = 'no initial stop';
     o.R = (o.rUnit !== null && price !== null && o.avgEntry !== null) ? dir * (price - o.avgEntry) / o.rUnit : null; if (o.R === null) why.R = o.rUnit === null ? why.rUnit : price === null ? 'no live price' : 'nothing filled yet';
+    /* PV1b — display-only extras: initial stop · reward at the planned targets · banked on exits already taken (never feed sizing / risk / gates) */
+    o.initialStop = pos(+inp.initialStop) ? +inp.initialStop : null;
+    o.reward = null; o.rewardR = null; o.banked = null;
+    var tg = clean(inp.targets);
+    if (planned && planned.length && tg.length && uv !== null) {
+      var pq = sum(planned, function (r) { return r.qty; }), pa = sum(planned, function (r) { return r.qty * r.px; }) / pq;
+      o.reward = sum(tg, function (t) { return dir * (t.px - pa) * t.qty; }) * uv;
+      if (o.plannedRisk > 0) o.rewardR = o.reward / o.plannedRisk;
+    } else why.reward = !planned || !planned.length ? 'not sized' : !tg.length ? 'no target' : 'no FX';
+    var ex = clean(inp.exits);
+    if (ex.length && o.avgEntry !== null && uv !== null) o.banked = sum(ex, function (x) { return dir * (x.px - o.avgEntry) * x.qty; }) * uv;
     return o;
   }
   return { calc: calc };
@@ -15198,6 +15216,7 @@ function lfFormHtml(o){
       <div class="ps1Bk" data-ps1-sbox><div class="ps1Hd"><label for="cnStop"><span class="ps1Ht" id="cnSh">SL</span></label></div>
         <div class="ps1R" data-ps1-row="s0"><div class="ps1In"><input type="text" inputmode="decimal" id="cnStop" oninput="coreNewIn()"></div><span class="ps1Rx" id="cnS0x"></span></div><div id="cnSx" data-ps1-sx></div><button type="button" class="ps1Pl ps1Pl2" id="cnSplus" data-ps1-add="s" aria-label="Add SL row" onclick="ps1RowAdd('s')">＋ SL</button><div class="ps1Msg" id="cnSMsg" data-ps1-smsg style="display:none"></div></div>
       <div class="ps1C ps1RiskC" style="display:none"><div class="ps1RiskIn"><label for="cnRisk"><span id="cnRiskLbl">Risk %</span></label><input type="text" inputmode="decimal" id="cnRisk" oninput="coreNewRisk()"></div><span class="ps1Pill" id="cnRegPill" data-ps1-regpill style="display:none"></span><span class="ccSub" id="cnRiskHint" data-lf-riskhint></span><span id="cnFsrc" hidden></span></div></div>
+      ${coreNew && coreNew.track !== 'ladder' ? `<div class="ps1Bk pv-tgt" data-pv-tgt style="grid-column:1/-1"><div class="ps1Hd"><span class="ps1Ht">Targets <small class="mut">optional · display only</small></span></div><div class="pvTg3"><label>Target 1<input type="text" inputmode="decimal" id="cnTp" data-pv-tp autocomplete="off" placeholder="price"></label><label>Target 2<input type="text" inputmode="decimal" id="cnTp2" data-pv-tp2 autocomplete="off" placeholder="price"></label><label>Shares at target 1<input type="text" inputmode="decimal" id="cnTp1Qty" data-pv-tp1qty autocomplete="off" placeholder="rest goes to target 2"></label></div></div>` : ''}
       <div id="cnRe1" data-re1-host style="grid-column:1/-1;width:100%;min-width:0;clear:both"></div><div id="cnSplit" data-ps1-split></div>
       <div class="ccFfWarn ccStat warn" id="cnFwarn" data-cn-ffwarn style="display:none;margin:6px 0"></div>
       <div class="ccRes lf-res" id="cnRes"></div><div class="csSum" id="cnSum" data-cs-summary data-ps1-sum></div><div id="cnWl1" data-wl1-cap-host></div>
@@ -15259,7 +15278,7 @@ function coreNewOpen(acct, opt){
     <div class="ccErr" id="cnErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button type="button" class="ccBtn pri" id="cnSave" data-cn-save onclick="coreNewSave()" disabled>บันทึกแผน</button></div>`;
   coreSheet('new', ln1On() ? lfFormHtml({mode, cur, opt, cfg0, wl, wl0, title}) : legacyHtml);
-  if(mode==='editw' && cur && cur.plan){ const pl = cur.plan, set = (id, v)=>{ const el = coreEl(id); if(el && v!=null && v!=='') el.value = String(v); }; set('cnEntry', pl.entry); set('cnStop', pl.stop); set('cnRisk', pl.risk); coreNew.riskEdited = true; tw1LoadLevels(cur); }   /* LN4 — Fix risk / Set stop · TW1 — every saved entry + SL level */
+  if(mode==='editw' && cur && cur.plan){ const pl = cur.plan, set = (id, v)=>{ const el = coreEl(id); if(el && v!=null && v!=='') el.value = String(v); }; set('cnEntry', pl.entry); set('cnStop', pl.stop); set('cnRisk', pl.risk); set('cnTp', pl.tp); set('cnTp2', pl.tp2); set('cnTp1Qty', pl.tp1Qty); coreNew.riskEdited = true; tw1LoadLevels(cur); }   /* LN4 — Fix risk / Set stop · TW1 — every saved entry + SL level */
   coreNewLvDraw();
   try{ ps1Draw(); }catch(e){}
   coreNewIn();
@@ -15664,9 +15683,27 @@ function coreNewInL(n, rd, cx, cfg, mk, tier, errs, fortress){
   coreEl('cnLgates').innerHTML = coreGatesHtml(cp);
   if(!cp.allowed && errs.indexOf('กรอกระดับราคา · SL · งบ ให้ครบ')<0 && !(lc && !lc.nat.ok) && (cp.reasons||[]).some(r=>r!=='DD_BLOCK')) errs.push('วางบันไดไม่ผ่านครบเงื่อนไข');
 }
+/* PV1b — optional Momentum targets (plan.tp · plan.tp2 · plan.tp1Qty). Display only: nothing here feeds sizing, risk, gates or limits. Blank = single-target behaviour. */
+function pvTgtRead(){
+  const g = id=>{ const el = coreEl(id); if(!el) return null; const v = coreNum(el.value); return v > 0 ? v : null; };
+  if(!coreEl('cnTp')) return {tp:null, tp2:null, tp1Qty:null, none:true};
+  const tp = g('cnTp'), tp2 = g('cnTp2'), q = g('cnTp1Qty'), o = {tp, tp2, tp1Qty:q};
+  const ent = coreNum((coreEl('cnEntry') || {}).value);
+  if(tp2 && !tp) o.err = 'Target 2 needs Target 1';
+  else if(tp2 && !(q > 0)) o.err = 'Enter shares at target 1 (the rest goes to target 2)';
+  else if(q && !tp2) o.err = 'Shares at target 1 needs Target 2 (or clear it)';
+  else if(tp2 && tp2 <= tp) o.err = 'Target 2 must be above Target 1';
+  else if(tp && ent > 0 && tp <= ent) o.err = 'Target 1 must be above the entry';
+  return o;
+}
+function pvTgtApply(plan, tg){
+  if(!plan || !tg || tg.none) return;
+  ['tp', 'tp2', 'tp1Qty'].forEach(k=>{ if(tg[k] > 0) plan[k] = tg[k]; else delete plan[k]; });
+}
 function coreNewSave(){
   if(coreNew && coreNew.mode === 'new' && re4Due(coreNew.acct)) return;   /* RE-D §6 — Execution review due for the selected account */
   const errs = coreNewIn(); if(!errs || errs.length) return;
+  const tg = pvTgtRead(); if(tg.err){ const eb = coreEl('cnErr'); if(eb){ eb.textContent = tg.err; eb.style.display = ''; } return; }
   const n = coreNew, rd = coreNewRead(), cur = n.id ? coreCardsList.find(x=>x.id===n.id) : null;
   if(n.mode==='new' && !wlReady(rd.ticker) && !(n.ps1Last && n.strat!=='L')) return;   /* PL1·A5 — กันทางลัด · PS1b §8: fast-track plans may save */
   const now = new Date().toISOString();
@@ -15695,10 +15732,12 @@ function coreNewSave(){
   if(n.mode==='editw' && cur){
     const pl0 = cur.plan || {}, np = Object.assign({}, pl0, n.ps1Last ? {entry:n.ps1Last.rows[0].px, stop:n.ps1Last.stops[0].px, risk:n.ps1Last.typed, ps1:n.ps1Last} : {entry:rd.entry, stop:rd.stop});
     delete np.starter; delete np.addon; Object.assign(np, planX);
+    pvTgtApply(np, tg);
     coreSheetClose(); coreWrite(cur.id, {plan:np, stop:np.stop}); return;
   }
   const id = coreNewId();
   const card = Object.assign({acct:n.acct, ticker:rd.ticker, market:rd.mk, strategy:'W', ...(n.track==='ladder' ? {track:'ladder'} : {}), plan:(n.ps1Last ? Object.assign({entry:n.ps1Last.rows[0].px, stop:n.ps1Last.stops[0].px, risk:n.ps1Last.typed, ps1:n.ps1Last}, planX) : Object.assign({entry:rd.entry, stop:rd.stop}, (coreEl('cnRisk') && coreNum(coreEl('cnRisk').value)>0) ? {risk:+coreNum(coreEl('cnRisk').value)} : {})), stop:(n.ps1Last ? n.ps1Last.stops[0].px : rd.stop), stopHistory:[], px:null, pxDate:null, emaW:null, lots:[], trade_id:null, status:'plan', created_at:now}, tfields, csf);
+  if(card.plan) pvTgtApply(card.plan, tg);
   if(n.ps1Last && card.plan && !ftHwDone(rd.ticker)){   /* PS1b §8 — fast-track flag lives in data only */
     const ft = {at:now, due:posAddDaysISO(ftToday(), FT_DAYS)};
     card.plan.ft = ft; ftEnsureWl(rd.ticker, n.track, rd.mk, ft);
@@ -29297,6 +29336,9 @@ function pvMoreRows(it, pv){
   const e = bdE, m = v=>pvMoney(pv, v), nat = pvNat(it), na = k=>pv.why[k] || 'n/a', sat = it.kind === 'sat', u = sat ? 'lot' : 'sh';
   const row = (a, sub, v)=>`<tr><td>${e(a)}${sub ? ` <span class="m">${e(sub)}</span>` : ''}</td><td>${v}</td></tr>`;
   const t = [], hold = it.status === 'hold', fx = pv.fx;
+  if(it.kind === 'core' && (hold || pv.heldQty > 0)) t.push(row('Avg entry · price', pv.priceAt && !/T/.test(pv.priceAt) ? re1DayTxt(pv.priceAt) : '', pv.avgEntry != null ? nat + td3Num(pv.avgEntry) + ' · ' + (pv.price != null ? nat + td3Num(pv.price) : e(na('price'))) : e(na('avgEntry'))));
+  if(it.kind === 'core' && it.tag !== 'COMP' && hold) t.push(row('Unrealised P&L', '', pv.uPnl != null ? (pv.uPnl >= 0 ? '+' : '−') + m(Math.abs(pv.uPnl)) + (pv.uPnlPct != null ? ' · ' + (pv.uPnlPct >= 0 ? '+' : '−') + Math.abs(pv.uPnlPct).toFixed(1) + '%' : '') : e(na('uPnl'))));
+  { const d = pvDist(it, pv); if(d) t.push(row('Entry → stop', 'distance', e(d))); }
   if(hold || pv.heldQty > 0){
     const q = pvQtyTxt(pv.heldQty, pv);
     t.push(row('Cost of filled ' + (sat ? 'lots' : 'shares'), fx && pv.avgEntry != null ? `${q} × ${nat}${td3Num(pv.avgEntry)}${pv.fx !== 1 ? ' × FX ' + td3Num(pv.fx) : ''}` : '', pv.cost != null ? m(pv.cost) : e(na('cost'))));
@@ -29306,6 +29348,8 @@ function pvMoreRows(it, pv){
     t.push(row('Position value if filled', `${pvQtyTxt(pv.plannedQty, pv)} ${u} at the planned price${pv.entriesTotal > 1 ? 's' : ''}`, pv.plannedValue != null ? m(pv.plannedValue) : e(na('plannedValue'))));
   }
   t.push(row(pv.R != null && pv.R >= 0 ? '+' + pv.R.toFixed(1) + 'R' : pv.R != null ? '−' + Math.abs(pv.R).toFixed(1) + 'R' : 'R', pv.rUnit != null ? `1R = entry − first stop = ${nat}${td3Num(pv.rUnit)} per ${u === 'lot' ? 'lot' : 'share'}` : e(na('rUnit')), pv.R != null && pv.rUnit != null ? (pv.R >= 0 ? '+' : '−') + nat + td3Num(Math.abs(pv.R * pv.rUnit)) + ' per ' + (u === 'lot' ? 'lot' : 'share') : (pv.R == null ? e(na('R')) : '')));
+  try{ const outs = (pv.legs || []).filter(l=>l.out && !l.done && pv.rUnit > 0), b0 = pv.avgEntry != null ? pv.avgEntry : ((pv.legs || []).filter(l=>!l.out)[0] || {}).px;
+    if(outs.length && b0 > 0) t.push(row('R per target', `1R = ${nat}${td3Num(pv.rUnit)}`, e(outs.map(l=>td3Num(l.px) + ' → ' + ((pv.dir === 'short' ? -1 : 1) * (l.px - b0) / pv.rUnit).toFixed(1) + 'R').join(' · ')))); }catch(x){}
   t.push(row(hold ? 'If the whole plan fills' : 'Whole-plan risk', pv.plannedQty != null ? `${pvQtyTxt(pv.plannedQty, pv)} ${u} · loss at stop` : '', pv.plannedRisk != null ? m(pv.plannedRisk) + (pv.plannedRiskPct != null ? ' · ' + ps1R2(pv.plannedRiskPct) + '% of account' : '') : e(na('plannedRisk'))));
   if(it.kind === 'core') t.push(row('% of strategy pool', '', pv.weightPool != null ? pvPct(pv.weightPool) : e(hold ? na('weightPool') : 'nothing filled yet')));
   else t.push(row('% of Satellite pool', '', pv.weightPool != null ? pvPct(pv.weightPool) : e(hold ? na('weightPool') : 'nothing filled yet')));
@@ -29320,35 +29364,60 @@ function pvMoreRows(it, pv){
   t.push(row('FX', pv.fxSrc || '', pv.fx != null ? td3Num(pv.fx) + ' ฿/$' : e(pv.why.fx || 'no FX')));
   return t.join('');
 }
-function pvCardHtml(it){
-  let pv; try{ pv = posView(it); }catch(x){ return ''; } if(!pv) return '';
-  const e = bdE, id = e(it.id), hold = it.status === 'hold', sat = it.kind === 'sat', nat = pvNat(it), m = v=>pvMoney(pv, v), u = sat ? 'lot' : 'sh';
-  const cell = (lab, val, cls, attr)=>`<div${attr ? ' ' + attr : ''}><small>${e(lab)}</small><b${cls ? ' class="' + cls + '"' : ''}>${val}</b></div>`;
-  const na = t=>`<span class="na">${e(t)}</span>`;
-  const blk = hold ? null : pvBlock(it);
-  let cells = '', warn = '';
-  if(hold){
-    const q = pvQtyTxt(pv.heldQty, pv), multi = it.nl > 1, nx = pv.next;
-    cells += cell('Held · avg entry', pv.heldQty > 0 ? `${q} ${u}${pv.avgEntry != null ? ' · ' + nat + td3Num(pv.avgEntry) : ''}` : na('nothing filled yet'));
-    cells += cell('Price' + (pv.priceAt && !/T/.test(pv.priceAt) ? ' · ' + re1DayTxt(pv.priceAt) : ''), pv.price != null ? nat + td3Num(pv.price) + (pv.stale ? ' <small class="old">old price</small>' : '') : na(pv.why.price || 'no live price'));
-    cells += cell('Value · weight', pv.value != null ? m(pv.value) + (pv.weightAcct != null ? ' · ' + pvPct(pv.weightAcct) : '') : na(pv.why.value || 'no live price'));
-    cells += cell('Unrealised P&L', pv.uPnl != null ? (pv.uPnl >= 0 ? '+' : '−') + m(Math.abs(pv.uPnl)) + (pv.uPnlPct != null ? ' · ' + (pv.uPnlPct >= 0 ? '+' : '−') + Math.abs(pv.uPnlPct).toFixed(1) + '%' : '') : na(pv.why.uPnl || 'no live price'), pv.uPnl != null ? (pv.uPnl >= 0 ? 'g' : 'r') : '');
-    cells += cell('Stop · if stopped', pv.stop ? nat + td3Num(pv.stop) + ' · ' + (pv.stopPnl == null ? e(pv.why.stopPnl || 'n/a') : pv.stopPnl < 0 ? '−' + m(-pv.stopPnl) : 'no loss') : na('no stop'), pv.stopPnl != null && pv.stopPnl < 0 ? 'r' : '');
-    cells += cell('Entries · next', multi ? `<span data-bd-entries>Entries ${it.k}/${it.nl}${nx ? ' · next ' + bdFmt(nx.px) + (nx.qty > 0 ? ' · ' + td3Num(nx.qty) + ' ' + u : '') + (it.placed && it.placed.has(it.k) ? ' · ordered' : '') : ''}</span>` : '1/1 · filled');
-  }else{
-    const stop = pvDist(it, pv), rr = pvRR(it, pv), sized = pv.plannedQty != null && pv.plannedQty > 0 && !(blk && blk.btn);   /* a plan the sizing could not size shows 'not sized'; an engine-gated plan keeps its size */
-    cells += cell('Entry', `${bdFmt(it.entry)}${it.nl > 1 ? ` <small class="bd-m" data-bd-lower>+${it.nl - 1} lower</small>` : ''}`);
-    cells += cell('Stop · distance', `${bdFmt(it.sl)}${stop ? ' · ' + stop : ''}`);
-    cells += cell('Target · R:R', it.tp > 0 ? `${bdFmt(it.tp)}${rr ? ' · ' + rr : ''}` : na('no target'));
-    cells += cell(sat || true ? 'Size · value' : 'Size', sized ? `${pvQtyTxt(pv.plannedQty, pv)} ${u}${pv.plannedValue != null ? ' · ' + m(pv.plannedValue) : ''}` : na('not sized'));
-    cells += cell('Loss at stop', sized && pv.plannedRisk != null ? '−' + m(pv.plannedRisk) + (pv.plannedRiskPct != null ? ' · ' + ps1R2(pv.plannedRiskPct) + '%' : '') : na(sized ? (pv.why.plannedRisk || 'n/a') : 'not sized'), sized && pv.plannedRisk != null ? 'r' : '');
-    cells += cell('To entry', pvToEntry(it, pv));
-    if(blk) warn = `<div class="pv-warn" data-pv-warn role="alert"><b>Can't place:</b> ${e(blk.why)}</div>`;
-  }
-  const open = pvMoreOpen.has(it.id);
-  const more = `<details class="pv-more" data-pv-more${open ? ' open' : ''} onclick="event.stopPropagation()" ontoggle="pvMoreTog('${id.replace(/'/g, "\\'")}',this.open)"><summary><span class="a">More ▾</span><span class="b">Less ▴</span></summary><table class="pv-tb2">${pvMoreRows(it, pv)}</table></details>`;
-  return {cells, warn, more, pv, blk};
+function pvLegChip(l, pv){
+  const q = l.qty > 0 ? pvQtyTxt(l.qty, pv) : null;
+  return `<span class="pv-lg${l.done ? ' ok' : ''}" data-pv-leg="${l.out ? 'out' : 'in'}"${l.done ? ' data-pv-done="1"' : ''}>${l.side} ${td3Num(l.px)} <i>×</i>${q != null ? q : '<em>not sized</em>'}</span>`;
 }
+function pvMoneyLine(it, pv){
+  const e = bdE, m = v=>pvMoney(pv, v), hold = it.status === 'hold', comp = it.kind === 'core' && it.tag === 'COMP';
+  const sp = (lab, val, cls, at)=>`<span${at ? ' ' + at : ''}>${lab} <b${cls ? ' class="' + cls + '"' : ''}>${val}</b></span>`, na = t=>`<em class="na">${e(t)}</em>`;
+  const stopMoved = hold && pv.stop && pv.initialStop && Math.abs(pv.stop - pv.initialStop) > 1e-9;
+  const stop = sp('Stop', pv.stop ? td3Num(pv.stop) + (stopMoved ? (pv.stop > pv.initialStop ? ' ↑' : ' ↓') : '') : na('no stop'), '', 'data-pv-stop');
+  const ifs = ()=>{
+    if(pv.stopPnl == null) return sp('If stopped', na(pv.why.stopPnl || 'n/a'), '', 'data-pv-ifstopped');
+    if(pv.stopPnl < -0.5) return sp('If stopped', '−' + m(-pv.stopPnl), 'dn', 'data-pv-ifstopped="loss"');
+    if(pv.stopPnl > 0.5) return sp('If stopped', '+' + m(pv.stopPnl), 'up', 'data-pv-ifstopped="gain"');
+    return sp('If stopped', '±' + m(0), '', 'data-pv-ifstopped="zero"');
+  };
+  if(!hold){
+    const risk = pv.plannedRisk != null ? sp('Risk', '−' + m(pv.plannedRisk), 'dn', 'data-pv-risk') : sp('Risk', na(pv.why.plannedRisk || 'not sized'), '', 'data-pv-risk');
+    const rw = pv.reward != null ? sp('Reward', '+' + m(pv.reward), 'up', 'data-pv-reward') : sp('Reward', na(pv.why.reward || 'no target'), '', 'data-pv-reward');
+    const R = pv.rewardR != null ? `<span data-pv-r><b>${pv.rewardR.toFixed(1)}R</b></span>` : '';
+    return stop + risk + rw + R;
+  }
+  if(comp){
+    return stop + ifs() + sp('Value', pv.value != null ? m(pv.value) + (pv.weightAcct != null ? ' · ' + pvPct(pv.weightAcct) : '') : na(pv.why.value || 'no live price'), '', 'data-pv-value')
+      + sp('P&amp;L', pv.uPnl != null ? (pv.uPnl >= 0 ? '+' : '−') + m(Math.abs(pv.uPnl)) : na(pv.why.uPnl || 'no live price'), pv.uPnl != null ? (pv.uPnl >= 0 ? 'up' : 'dn') : '', 'data-pv-pnl');
+  }
+  const held = sp('Held', pv.heldQty > 0 ? pvQtyTxt(pv.heldQty, pv) : na('nothing filled yet'), '', 'data-pv-held');
+  const bk = pv.banked != null ? sp('Banked', (pv.banked >= 0 ? '+' : '−') + m(Math.abs(pv.banked)), pv.banked >= 0 ? 'up' : 'dn', 'data-pv-banked') : '';
+  return stop + held + ifs() + bk;
+}
+function pvCardHtml(it){
+  let pv; try{ pv = posView(it); }catch(x){ return null; } if(!pv) return null;
+  const e = bdE, id = e(it.id), qid = id.replace(/'/g, "\\'"), hold = it.status === 'hold', sat = it.kind === 'sat';
+  const blk = hold || it.status !== 'plan' ? null : pvBlock(it), p = bdPill(it);
+  const dirTxt = sat ? (it.ref.bias === 'Short' ? 'Short' : 'Long') : 'Long';
+  const hot = it.kind === 'core' ? bdHotTag(it.sym) : '', fam = it.fam ? `<span class="bd-fam" data-bd-fam>Family</span>` : '';
+  let state = '';
+  if(hold){ try{ if(it.kind === 'core' && it.tag === 'COMP' && !ftHwDone(it.sym)) state = `<span class="bd-st a" data-pv-hw>50% · homework</span>`; }catch(x){} if(it.flags.addon) state += `<span class="bd-st g">add-on ready</span>`; }
+  else if(it.status === 'plan') state = blk ? `<span class="pv-blk" data-pv-blocked data-bd-blockedtag>Blocked</span>` : re2ReadyBtn(it);
+  const wn = sat && it.pb && !it.inc && !hold && it.pb.vf.warn ? `<span class="bd-st a" data-bd-nearwarn role="img" aria-label="nearest target" title="${bdE(SAT_NEAR_WARN)}">⚠️</span>` : '';
+  const tg = sat && it.pb && !it.inc && !hold && !blk && it.pb.vf.tag ? `<span class="bd-st a" data-bd-trendtag>${bdE(it.pb.vf.tag)}</span>` : '';
+  const showPill = !blk && !p.dis && (p.k === 'place' || p.k === 'addon' || p.k === 'fill');
+  const pill = showPill ? `<button type="button" class="go pv-go${p.cls ? ' ' + p.cls : ''}" data-bd-pill="${p.k}" onclick="event.stopPropagation();${p.fn}">${bdE(p.t)}</button>` : '';
+  const x = it.status === 'plan' ? re4CancelBtn(it, true) : '';
+  const legs = (pv.legs || []).map(l=>pvLegChip(l, pv)).join('');
+  const bl = blk ? `<div class="pv-bl" data-pv-warn role="alert"><span data-pv-why>${e(blk.why)}</span>${blk.btn ? `<button type="button" class="pv-fixbtn" data-pv-fixbtn="${e(blk.k || (/stop/i.test(blk.btn) ? 'stop' : 'risk'))}" onclick="event.stopPropagation();bdFix('${qid}','${e(blk.k || (/stop/i.test(blk.btn) ? 'stop' : 'risk'))}')">${e(blk.btn)}</button>` : ''}</div>` : '';
+  const open = pvMoreOpen.has(it.id);
+  const more = open ? `<div class="pv-more2" data-pv-more onclick="event.stopPropagation()"><table class="pv-tb2">${pvMoreRows(it, pv)}</table><div class="pv-edit"><button type="button" class="pv-fixbtn" data-pv-edit onclick="event.stopPropagation();bdOpen('${qid}')">Edit</button></div></div>` : '';
+  const html = `<div class="bd-card pv-card${open ? ' pv-open' : ''}" role="button" tabindex="0" aria-expanded="${open}" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${blk ? ' data-pv-blk="1"' : ''} onclick="pvCardTap('${qid}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();pvCardTap('${qid}')}">
+    <div class="pv-r1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${fam}<span class="pv-dir ${dirTxt === 'Short' ? 's' : 'l'}" data-pv-dir="${dirTxt}">${dirTxt}</span>${tg}${wn}<span class="bd-sp"></span>${state}${pill}${x}</div>
+    <div class="pv-r2" data-pv-money>${pvMoneyLine(it, pv)}</div>
+    ${legs ? `<div class="pv-legs" data-pv-legs>${legs}</div>` : ''}${bl}${more}</div>`;
+  return {html, pv, blk};
+}
+function pvCardTap(id){ if(pvMoreOpen.has(id)) pvMoreOpen.delete(id); else pvMoreOpen.add(id); try{ bdRender(); }catch(e){} }
 function bdCardHtml(it){
   const p = bdPill(it), e = bdE, id = e(it.id);
   const fam = it.fam ? `<span class="bd-fam" data-bd-fam>Family</span>` : '';
@@ -29367,26 +29436,11 @@ function bdCardHtml(it){
   }else if(it.inc) l3 = `<span class="bd-m" data-bd-need>${e(it.inc.text)}</span>`;
   else l3 = bdToEntry(it);
   if(it.kind === 'sat' && it.pb && !it.inc){ const V = it.pb.vf, tg = it.blocked ? `<span class="bd-st r" data-bd-blockedtag>Blocked</span>` : V.tag ? `<span class="bd-st a" data-bd-trendtag>${bdE(V.tag)}</span>` : ''; const wn = V.warn ? `<span class="bd-st a" data-bd-nearwarn role="img" aria-label="nearest target" title="${bdE(SAT_NEAR_WARN)}">⚠️</span>` : ''; if(tg || wn) l3 = tg + wn + (it.pct == null ? '' : l3); }   /* PB1b — Card: trend tag + nearest-target warning icon */
-  /* PV1 Part C — six numbers always visible, the rest under More ▾. Waiting (incomplete) plans keep the compact layout. */
+  /* PV1b — compact Plan card: who · money · orders (+ Blocked line). Waiting (incomplete) plans keep the compact layout. */
   let pc = null; if(!it.inc){ try{ pc = pvCardHtml(it); }catch(x){ console.warn('pv card:', x); } }
   const dirTxt = it.kind === 'sat' ? (it.ref.bias === 'Short' ? 'Short' : 'Long') : 'Long';
   const dirChip = `<span class="chip ${dirTxt === 'Short' ? 'r' : ''}" data-pv-dir="${dirTxt}">${dirTxt}</span>`;
-  if(pc && pc.cells){
-    const hold = it.status === 'hold', blk = pc.blk;
-    let st = '';
-    if(hold){
-      if(it.flags.addon) st += `<span class="bd-st g">add-on ready</span>`; else if(it.flags.zero) st += `<span class="bd-st">0 risk</span>`;
-      if(it.size) st += `<span class="bd-m" data-bd-size>${e(it.size)}</span>`;
-      try{ if(it.kind === 'core' && it.tag === 'COMP' && !ftHwDone(it.sym)) st += `<span class="bd-st a" data-pv-hw>Size limited to 50% · homework not done</span>`; }catch(x){}
-    }else if(blk && blk.btn) st = `<span class="bd-m" data-pv-fixhint>Fix the plan to get a size</span>`;
-    const chipR = hold ? (pc.pv.R == null ? '' : `<b class="bd-r ${pc.pv.R >= 0 ? 'up' : 'dn'}" data-bd-r="${pc.pv.R >= 0 ? 'up' : 'dn'}">${pc.pv.R >= 0 ? '+' : '−'}${Math.abs(pc.pv.R).toFixed(1)}R</b>`) : (blk ? `<span class="pv-blk" data-pv-blocked data-bd-blockedtag>Blocked</span>` : re2ReadyBtn(it)) + (it.status === 'plan' ? re4CancelBtn(it, true) : '');
-    const sat = it.kind === 'sat' && it.pb && !it.inc && !hold; const tg = sat && !blk && it.pb.vf.tag ? `<span class="bd-st a" data-bd-trendtag>${bdE(it.pb.vf.tag)}</span>` : '';
-    const wn = sat && it.pb.vf.warn ? `<span class="bd-st a" data-bd-nearwarn role="img" aria-label="nearest target" title="${bdE(SAT_NEAR_WARN)}">⚠️</span>` : '';
-    return `<div class="bd-card pv-card" role="button" tabindex="0" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${blk ? ' data-pv-blk="1"' : ''} onclick="bdOpen('${id}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();bdOpen('${id}')}">
-    <div class="bd-r1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${fam}${dirChip}<span class="bd-sp"></span>${chipR}</div>
-    <div class="pv-kv" data-pv-kv>${pc.cells}</div>${pc.warn}
-    <div class="bd-r3">${tg}${wn}${st}<button type="button" class="go${p.cls ? ' ' + p.cls : ''}" data-bd-pill="${p.k}"${p.dis ? ` disabled title="${bdE(p.title)}" data-bd-blocked="1"` : ''} onclick="event.stopPropagation();${p.fn}">${bdE(p.t)}</button></div>${pc.more}</div>`;
-  }
+  if(pc && pc.html) return pc.html;
   return `<div class="bd-card" role="button" tabindex="0" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${it.inc ? ' data-bd-inc="1"' : ''} onclick="bdOpen('${id}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();bdOpen('${id}')}">
     <div class="bd-r1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${fam}${dirChip}${it.status === 'plan' ? re2ReadyBtn(it) + re4CancelBtn(it, true) : ''}</div>
     <div class="bd-r2">${r2}</div>
@@ -29626,7 +29680,7 @@ function pvDrawerHtml(it){
   let pv; try{ pv = posView(it); }catch(e){ return ''; } if(!pv) return '';
   const e = bdE, rows = pvRowsFor(it, pv).map(x=>`<div class="pv-r"><span>${e(x[0])}</span><b>${e(x[1])}</b></div>`).join('');
   let last = '';
-  if(it.kind === 'sat' && it.status !== 'ord'){
+  if(false && it.kind === 'sat' && it.status !== 'ord'){   /* PV1b — manual Last price hidden (stored lastPx untouched) */
     const cur = it.ref.lastPx && +it.ref.lastPx.v > 0 ? it.ref.lastPx.v : '';
     last = `<div class="pv-last" data-pv-last><label>Last price (optional) <input type="text" inputmode="decimal" autocomplete="off" id="pvLastIn" data-pv-lastin value="${e(cur)}" placeholder="blank = no live price"></label><button type="button" class="go" data-pv-lastset onclick="pvSetLast('${e(it.id)}')">Save</button><small>Display only — shows value and P&amp;L; never used for size or limits.</small>${pv.stale ? '<span class="pv-old" data-pv-old>old price</span>' : ''}</div>`;
   }
@@ -29774,6 +29828,7 @@ function posView(it){
   const acct = it.acct || tdHome(), E = (()=>{ try{ return ps1E(acct); }catch(e){ return null; } })(), P = (()=>{ try{ return poolsOf(acct); }catch(e){ return null; } })();
   const fxS = (()=>{ try{ const f = +getBook(acct).settings.fx; return f > 0 ? f : null; }catch(e){ return null; } })();
   const inp = {equity:E, fxSrc:'Settings rate, not live'}; let cur = '฿', unit = 'sh', extra = {};
+  const lg = {dE:[], pE:[], exits:[], T:[], q1:null};
   if(it.kind === 'core'){
     const c = it.ref, pl = c.plan || {}, p = pl.ps1, mk = c.market || coreMarketOf(c.ticker);
     inp.dir = 'long'; inp.fx = mk === 'US' ? fxS : 1; if(mk !== 'US') inp.fxSrc = 'THB · no conversion';
@@ -29788,6 +29843,12 @@ function posView(it){
     if(en){ try{ const r = RiskEngine.ideaResult(en.idea, en.L.costsFor ? en.L.costsFor(en.idea) : null); if(r && r.exposure != null) inp.openRiskMoney = r.exposure; }catch(e){} }
     if(p && p.rows && p.rows.length > (it.k || 0)){ const nx = p.rows[(c.lots || []).length]; if(nx) extra.next = {px:+nx.px, qty:+nx.qty}; }
     extra.hwCapped = !!(p && p.tag && /homework/i.test(p.tag));
+    /* PV1b — legs: filled lots (real px × qty) then the unfilled plan rows · exits actually taken (closed trade rows) · targets from the plan */
+    { const rows = inp.planned || (+pl.entry > 0 ? [{px:+pl.entry, qty:null}] : []), k = (c.lots || []).length;
+      lg.dE = (c.lots || []).map(l=>({px:+l.px, qty:+l.qty})); lg.pE = rows.slice(k).map(r=>({px:+r.px, qty:+r.qty > 0 ? +r.qty : null}));
+      lg.exits = en && en.idea.exits ? en.idea.exits.map(x=>({px:+x.price, qty:+x.qty})) : [];
+      const t1 = +pl.tp || +pl.target || 0, t2 = +pl.tp2 || 0, q1 = +pl.tp1Qty || 0;
+      lg.T = t1 > 0 ? (t2 > 0 && q1 > 0 ? [t1, t2] : [t1]) : []; lg.q1 = lg.T.length === 2 ? q1 : null; }
   }else{
     const i = it.ref; cur = '$'; unit = 'lot';
     inp.dir = i.bias === 'Short' ? 'short' : 'long'; inp.fx = fxS; inp.stop = +i.sl > 0 ? +i.sl : null; inp.initialStop = inp.stop;
@@ -29802,9 +29863,25 @@ function posView(it){
     if(it.status !== 'hold'){   /* planned: size + risk come from the existing sizing (pb2Calc) · nothing recomputed */
       try{ const c = pb2Calc(i, acct); if(c.lot != null){ inp.planned = [{qty:c.lot, px:+i.entry}]; const th = c.c && c.c.v2 ? c.c.v2.actualTHB : 0; if(th > 0) inp.plannedRiskMoney = th; if(c.c && c.c.chosen && +c.c.chosen.cfg.contract > 0) inp.mult = +c.c.chosen.cfg.contract; if(c.c && c.c.chosen && c.c.chosen.cfg.cur !== 'USD') inp.fx = 1; extra.planMsg = ''; } else extra.planMsg = c.msg || ''; extra.rr = c.rr; extra.pct = !!(c.c && c.c.chosen && c.c.chosen.cfg && c.c.chosen.cfg.sys === 'pct'); extra.planLabel = c.label; }catch(e){}
     }
+    /* PV1b — legs: entries (filled tranches · pending entry 2) · exits taken (engine exits) · targets TP1 / TP2 split by the Settings TP1 % */
+    try{
+      const pc = pb2Calc(i, acct), cc = pc.c, e2 = cc && cc.e2 && cc.e2.ok ? cc.e2 : null, Q = pc.lot != null ? pc.lot : null, tps = satV2Tps(i, acct);
+      if(en){ lg.dE = en.idea.tranches.map(t=>({px:+t.entry, qty:+t.qty})); lg.exits = (en.idea.exits || []).map(x=>({px:+x.price, qty:+x.qty})); }
+      const filled = lg.dE.length;
+      if(!en){ lg.pE = e2 ? [{px:+i.entry, qty:e2.lot1}, {px:+i.entry2, qty:e2.lot2}] : (+i.entry > 0 ? [{px:+i.entry, qty:Q}] : []); }
+      else if(e2 && filled < 2) lg.pE = [{px:+i.entry2, qty:e2.lot2}];
+      lg.T = [tps.tp1, tps.tp2].filter(v=>+v > 0).map(Number); if(lg.T.length === 2 && Q > 0 && tps.pct > 0) lg.q1 = Q * tps.pct / 100; else if(lg.T.length === 2) lg.T = [lg.T[0]];
+    }catch(x){}
     if(i.lastPx && +i.lastPx.v > 0){ inp.price = +i.lastPx.v; inp.priceAt = i.lastPx.at || null; inp.priceSrc = 'manual'; const t = Date.parse(i.lastPx.at); extra.stale = !(t > 0) || Date.now() - t > PV_STALE_MS; }
   }
+  /* PV1b — turn the leg facts into chips + feed the display-only reward / banked inputs (no sizing / risk input changes) */
+  const hold = it.status === 'hold', baseQ = hold ? (inp.fills || []).reduce((a, f)=>a + (+f.qty || 0), 0) : (inp.planned || []).reduce((a, f)=>a + (+f.qty || 0), 0);
+  const nEx = hold ? lg.exits.length : 0, rem = lg.T.slice(nEx), two = rem.length === 2 && lg.q1 > 0 && baseQ > 0;
+  const tq = two ? [Math.min(lg.q1, baseQ), baseQ - Math.min(lg.q1, baseQ)] : rem.map(()=>baseQ), tgs = rem.map((px, j)=>({px, qty:tq[j]})).filter(t=>t.qty > 0 || !(baseQ > 0));
+  inp.targets = hold ? null : tgs.filter(t=>t.qty > 0); inp.exits = hold ? lg.exits : null;
   const pv = PosView.calc(inp); pv.cur = cur; pv.unit = unit; Object.assign(pv, extra);
+  const short = pv.dir === 'short', eS = short ? 'Sell' : 'Buy', xS = short ? 'Buy' : 'Sell';
+  pv.legs = lg.dE.map(l=>({side:eS, px:l.px, qty:l.qty, done:true, out:false})).concat(lg.pE.map(l=>({side:eS, px:l.px, qty:l.qty, done:false, out:false})), lg.exits.map(x=>({side:xS, px:x.px, qty:x.qty, done:true, out:true})), tgs.map(t=>({side:xS, px:t.px, qty:t.qty > 0 ? t.qty : null, done:false, out:true})));
   if(pv.price === null && it.kind === 'sat') pv.why.price = 'no live price';
   return pv;
 }
@@ -30436,7 +30513,7 @@ function pb2Render(focusFirst){
 const pb2Seg = (items, cur, fn, attr)=>`<span class="pb2-seg" role="group">${items.map(x=>`<button type="button" class="${cur === x[0] ? 'on' : ''}" aria-pressed="${cur === x[0]}" data-${attr}="${bdE(x[0])}" onclick="${fn}('${bdE(x[0])}')">${bdE(x[1])}</button>`).join('')}</span>`;
 function pb2InputsHtml(){
   const f = (k, lab)=>`<label class="pb2-f"><span>${lab}</span><input type="text" inputmode="decimal" autocomplete="off" data-pb2-in="${k}" value="${bdE(pb2[k])}" oninput="pb2In('${k}',this.value)"></label>`;
-  return `<div class="pb2-in3" data-pb2-prices>${f('entry', 'Entry')}${f('sl', 'SL')}${f('tp', 'TP')}</div><div class="pb2-in3 pv-last" data-pb2-lastrow>${f('last', 'Last price (optional)')}<small class="pb2-lastnote">Display only — shows value and P&amp;L. Never used for size or limits.</small></div>`;
+  return `<div class="pb2-in3" data-pb2-prices>${f('entry', 'Entry')}${f('sl', 'SL')}${f('tp', 'TP')}</div>`;   /* PV1b — manual Last price hidden in the form (stored lastPx untouched) */
 }
 function pb2TmpIdea(){
   const s = pb2, base = s.id ? sat7dIdea(s.id) : null;
@@ -30520,7 +30597,7 @@ function pb2SaveDo(draft){
   const s = pb2; if(!s) return;
   const i = pb2TmpIdea(), V = ln4VerifyOf(i), now = new Date().toISOString();
   const patch = {asset:s.a, bias:i.bias, entry:i.entry, sl:i.sl, tp:i.tp, ema50_ok:V.ema, structure_ok:V.st, mss:V.st === false ? V.mss : null, pb_acct:s.acct || null, pb2:true, updated_at:now};
-  { const lv = pb2Num(s.last), old = s.id ? (sat7dIdea(s.id) || {}).lastPx : null; if(lv > 0) patch.lastPx = (old && +old.v === lv) ? old : {v:lv, at:now}; else if(old) patch.lastPx = null; }   /* PV1 A4 — display only: never read by sizing / gates / limits */
+  /* PV1b — Last price field hidden: lastPx is never read or written by this save */
   const txt = `Levels · Entry ${i.entry ? td3Num(i.entry) : '—'} · SL ${i.sl ? td3Num(i.sl) : '—'} · TP ${i.tp ? td3Num(i.tp) : '—'}`;
   let id = s.id;
   if(id){
