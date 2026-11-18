@@ -115,8 +115,8 @@ def run_viewport(pw, w, h):
         en = [r["sym"] for r in rows(page, "enter")]
         check("[%s] Enter: EF1: Ready is automatic — every unblocked plan is in (2.9%% · −3.0%% · 3.1%% passed · no price · far)" % tag, "AAA" in en and "DDD" in en and "EEE" in en and "CCC" in en and "BBB" in en, en)   # RE-D §6: >3% past entry shows as the amber 'passed entry · missed?' prompt (not a Near row)
         t = {r["sym"]: r["t"] for r in rows(page, "enter")}
-        check("[%s] chips: Ready / Near with signed distance (+2.9%%)" % tag, ("Near" in t.get("AAA", "") or "Ready" in t.get("AAA", "") or w <= 560) and "+2.9%" in t.get("AAA", ""), t)
-        check("[%s] marker is the signed distance of price from entry" % tag, "+2.9%" in t.get("AAA", "") and "−3.0%" in t.get("DDD", "") and "passed entry" in t.get("BBB", "") and "passed entry" in t.get("EEE", ""), t)   # RE-D §6: 3.1% and the far Ready plan are passed-entry prompts
+        check("[%s] chips: Ready / Near with signed distance (+2.9%%)" % tag, ("+2.9%" in t.get("AAA", "") or w <= 600), t)   # LR-F: rows follow the mockup — no Ready/Near chip (the header says "n ready"), no to-entry text on the phone
+        check("[%s] marker is the signed distance of price from entry" % tag, (w <= 600 or ("+2.9%" in t.get("AAA", "") and "−3.0%" in t.get("DDD", ""))) and "passed entry" in t.get("BBB", "") and "passed entry" in t.get("EEE", ""), t)   # RE-D §6: 3.1% and the far Ready plan are passed-entry prompts
         js(page, """()=>{ const i={id:'gs',v3:true,v2:true,asset:'XAUUSD',bias:'Long',entry:2642,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[]}; sat7dWrite('satIdeas','gs',i); satIdeasList.push(i); }"""); refresh(page)
         check("[%s] Satellite never auto-enters (no flag → not in Enter)" % tag, not any("XAU" in r["sym"] for r in rows(page, "enter")), rows(page, "enter"))
         js(page, "()=>{ satWeekPickWrite(wpWeekKey(), ['XAUUSD']); window.ps1MinStopMsg = ()=>''; }"); refresh(page)   # PV1b: a plan that cannot be placed (not picked / min stop unset) cannot be flagged Ready
@@ -165,7 +165,7 @@ def run_viewport(pw, w, h):
         check("[%s] Manage footer counts holdings that need nothing" % tag, ("need" in n) and str(hold_total - len(mg)) in n, [n, hold_total, len(mg)])
         links = js(page, "()=>[...document.querySelectorAll('[data-re2-link]')].map(a=>a.innerText.replace(/\\s+/g,' '))")
         tot = js(page, "()=>{const s=bdSorted(bdItems());return [s.plan.length,s.ord.length,s.hold.length]}")
-        check("[%s] header counts = all items in the Plan column, with a link" % tag, links == ["%d planned ›" % tot[0], "%d ordered ›" % tot[1], "%d holding ›" % tot[2]], [links, tot])
+        check("[%s] header counts = all items in the Plan column, with a link" % tag, links == ["All %d planned" % tot[0], "%d ordered ›" % tot[1], "%d holding ›" % tot[2]], [links, tot])
         js(page, "()=>document.querySelectorAll('[data-re2-link]')[1].click()"); page.wait_for_timeout(400)
         check("[%s] link opens the Plan board on that column" % tag, js(page, "()=>activeTab==='plan' && bdSeg==='ord'"))
         js(page, "()=>switchTab('today')"); refresh(page)
