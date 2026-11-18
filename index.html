@@ -4321,6 +4321,17 @@ html body .topbar.topbar.topbar .hbtns>#hdrMoreBtn:hover{border-color:var(--lr-m
 .lrHp{margin:0 0 10px;font:600 var(--lr-fs-5)/1.3 var(--lr-sans);color:var(--lr-muted)}
 .lrHp summary{cursor:pointer;padding:6px 0}
 .lrHpL{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0}
+
+/* LR1 — new-plan chooser account row · Core form account pill */
+.lrNewAcct{display:flex;gap:6px;margin:0 0 8px;padding:3px;background:var(--lr-seg);border-radius:12px}
+.lrNewAcct button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border:0;border-radius:9px;background:transparent;color:var(--lr-muted);font:500 var(--lr-fs-4)/1 var(--lr-sans);cursor:pointer;box-shadow:none}
+.lrNewAcct button b{font-weight:600}
+.lrNewAcct button.on{background:var(--lr-card);color:var(--lr-ink);box-shadow:0 1px 2px rgba(20,22,26,.12)}
+.lrNewAcct kbd{font:600 11px var(--lr-mono);color:var(--lr-muted);background:var(--lr-line);border-radius:5px;padding:2px 5px}
+.lrAcctPick{position:relative;display:inline-flex;max-width:100%}
+.lrAcctPill{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border:1px solid var(--lr-line2);border-radius:10px;background:var(--lr-card);font:500 var(--lr-fs-4)/1 var(--lr-sans);color:var(--lr-ink);white-space:nowrap}
+.lrAcctPill b{font-weight:700}.lrAcctPill u{text-decoration:none;color:var(--lr-muted);font-weight:600}
+.lrAcctPick select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px}
 </style>
 </head>
 <body>
@@ -8585,7 +8596,22 @@ function lrHiddenPortLine(){
   el.style.display = '';
   el.innerHTML = `<details data-lr-hp-d><summary>Hidden port: MMT (${list.length})</summary><div class="lrHpL">${list.map(c=>`<span class="lr-tag mmt" data-lr-hp-sym="${escHtml(c.ticker)}">${escHtml(c.ticker)}</span>`).join('')}</div></details>`;
 }
-function lrBdNew(){ return BD_NEW.filter(o=>{ try{ return lrPortOn(acctActive, o[2]); }catch(e){ return true; } }); }   /* New-plan options the active account shows */
+const LR_SAT_LBL = {XAUUSD:'XAU', BTCUSD:'BTC', BTC:'BTC', S50:'S50', BRENT:'Brent', GO:'GO'};
+function lrNewAcct0(){ return (pb2 && pb2.nacct && acctList.some(a=>a.id === pb2.nacct)) ? pb2.nacct : acctActive; }   /* account the New-plan chooser is set to (default = active) */
+function lrBdNew(acc){   /* New-plan options of that account: its acctDefaults ports; the Satellite line lists its products */
+  acc = acc || lrNewAcct0();
+  return BD_NEW.filter(o=>{ try{ return lrPortOn(acc, o[2]); }catch(e){ return true; } }).map(o=>{
+    if(o[2] !== 'SAT') return o;
+    try{ const pr = lrDef(acc).satProducts.map(k=>LR_SAT_LBL[k] || k).join(' · '), tail = String(o[3]).split(' · ').pop(); return [o[0], o[1], o[2], (pr ? pr + ' · ' : '') + tail]; }catch(e){ return o; }
+  });
+}
+function lrNewAcct(id){ if(!pb2 || pb2.step !== 0 || !acctList.some(a=>a.id === id)) return; pb2.nacct = id; bdPopSel = 0; pb2Render(); }
+function lrNewAcctRowHtml(){
+  if(acctList.length < 2) return '';
+  const cur = lrNewAcct0();
+  return `<div class="lrNewAcct" role="group" aria-label="Account" data-lr-nacct-row>${acctList.slice(0, 9).map((a, i)=>`<button type="button" class="${a.id === cur ? 'on' : ''}" data-lr-nacct="${escHtml(a.id)}" aria-pressed="${a.id === cur}" onclick="lrNewAcct('${escHtml(a.id).replace(/'/g, "\\'")}')">${lrAcctPill(a)}<b>${lrAcctShort(a)}</b><kbd>${i + 1}</kbd></button>`).join('')}</div>`;
+}
+function lrAcctShort(a){ const t = lrAcctTag(a); return escHtml(t === 'M' ? 'Main' : t === 'F' ? 'Family' : String((a && (a.name || a.id)) || '').trim()); }
 /* LR1·C — account tag: first account = M (Main) · second = F (Family) · any further account = its first letter (neutral) */
 function lrAcctTag(a){
   const i = Math.max(0, acctList.findIndex(x=>x.id === (a && a.id)));
@@ -15436,7 +15462,7 @@ function lfFormHtml(o){
   /* PS1c §2/§7 — the form has its OWN Momentum | Compounder switch (the only source of the plan's port) */
   const seg = isNew ? `<span class="ps1Seg" role="group" aria-label="Port" data-ps1-seg>${[['winner','Momentum','MMT'],['ladder','Compounder','Comp']].filter(x=>x[0] !== 'winner' || lrPortOn(coreNew.acct, 'MMT')).map(([k,f,sh])=>`<button type="button" data-ps1-port="${k}" class="${coreNew.track===k?'on':''}" aria-pressed="${coreNew.track===k}" onclick="coreFormPort('${k}')"><span class="f">${f}</span><span class="sh">${sh}</span></button>`).join('')}</span>` : '';
   return `<div class="ps1Frm"><div class="hd ps1Hh"><h3 style="margin:0" data-ps1-title>${isNew ? 'New plan' : title}<span class="ps1Note0 mut"> · % = of total portfolio</span></h3>${seg}<button type="button" class="ccLnk" data-lf-x aria-label="ปิด" onclick="coreSheetClose()">✕</button></div>
-    <div class="lfq c2" style="margin-top:8px"><div class="ccF"><label>บัญชี</label><div id="cnAcctBox"></div></div>
+    <div class="lfq c2" style="margin-top:8px"><div class="ccF"><label>Account</label><div id="cnAcctBox"></div></div>
       <div class="ccF"><label>Ticker${mode==='new' ? lrMktSegHtml() : ''}</label><input type="text" id="cnTicker" list="cnTickerList" autocomplete="off" autocapitalize="characters" placeholder="เช่น AAPL หรือ XXX.BK" value="${tkv}" ${cur?'readonly':''} oninput="coreNewIn()" onchange="lrTickerMkt()">
       <datalist id="cnTickerList">${wl.map(t=>`<option value="${escHtml(t)}"></option>`).join('')}</datalist></div></div>
     <div class="ps1WlNote mut" id="cnWlNote" data-ps1-wlnote style="display:none"></div>
@@ -15818,8 +15844,9 @@ function coreNewIn(){
   if(!shown.length){ shown = all; }
   if(!shown.some(a=>a.id===n.acct)) n.acct = shown[0].id;
   const box = coreEl('cnAcctBox');
-  const html = n.mode!=='new' ? `<b>${escHtml(td3AcctName(all.find(a=>a.id===n.acct)||{name:n.acct}))}</b>`
-    : `<select id="cnAcct" onchange="coreNewPick(this.value)">${shown.map(a=>`<option value="${escHtml(a.id)}"${a.id===n.acct?' selected':''}>${escHtml(td3AcctName(a))} · ${coreRiskCfg(a.id).market==='both'?(ln1On()?'US+TH':'ทั้งคู่'):coreRiskCfg(a.id).market}</option>`).join('')}</select>`
+  const aObj = all.find(a=>a.id===n.acct) || {id:n.acct, name:n.acct};
+  const html = n.mode!=='new' ? `<span class="lrAcctPill" data-lr-acct-pill>${lrAcctPill(aObj)} <b>${lrAcctShort(aObj)}</b></span>`
+    : `<span class="lrAcctPick" data-lr-acct-pick><span class="lrAcctPill" data-lr-acct-pill>${lrAcctPill(aObj)} <b>${lrAcctShort(aObj)}</b>${shown.length > 1 ? ' · <u>change</u>' : ''}</span><select id="cnAcct" aria-label="Account" onchange="coreNewPick(this.value)">${shown.map(a=>`<option value="${escHtml(a.id)}"${a.id===n.acct?' selected':''}>${escHtml(td3AcctName(a))} · ${coreRiskCfg(a.id).market==='both'?(ln1On()?'US+TH':'ทั้งคู่'):coreRiskCfg(a.id).market}</option>`).join('')}</select></span>`
     + (hidden>0 && !n.showAll ? ` <button type="button" class="ccBtn" id="cnShowAll" onclick="coreNewShowAll()">แสดงบัญชีอื่น</button> <span class="ccSub">ซ่อน ${hidden} บัญชีที่ตลาดไม่ตรงกับ ticker</span>` : '');
   if(box.dataset.h !== html){ box.innerHTML = html; box.dataset.h = html; }
   const cx0 = coreCtx(n.acct), cfg = cx0.cfg;
@@ -30747,6 +30774,7 @@ document.addEventListener('keydown', e=>{
     if(bdPopOpen()){
       if(pb2Key(e)) return;
       const c = e.code;
+      if(pb2 && pb2.step === 0 && /^[1-9]$/.test(e.key) && acctList[+e.key - 1]){ e.preventDefault(); e.stopImmediatePropagation(); lrNewAcct(acctList[+e.key - 1].id); return; }   /* LR1 — 1 / 2 = account */
       if(c === 'KeyS' || c === 'KeyD' || c === 'KeyF'){ e.preventDefault(); e.stopImmediatePropagation(); bdNewPick(c.slice(3)); return; }
       if(e.key === 'ArrowDown'){ e.preventDefault(); e.stopImmediatePropagation(); bdPopSelSet(bdPopSel + 1); return; }
       if(e.key === 'ArrowUp'){ e.preventDefault(); e.stopImmediatePropagation(); bdPopSelSet(bdPopSel - 1); return; }
@@ -30853,7 +30881,7 @@ function pb2Calc(i, accId){
 function pb2Assets(){
   const picked = satWeekPickList(), all = satAssets({all:true}).filter(a=>picked.includes(a.key) || wiAssetActive(a.key));
   const L = all.map((a, n)=>({key:a.key, n, star:picked.includes(a.key), label:sat7dLabel(a.key), plan:pb2ExistingIdea(a.key)}));
-  let dp = []; try{ dp = lrDef(acctActive).satProducts; }catch(e){}
+  let dp = []; try{ dp = lrDef(lrNewAcct0()).satProducts; }catch(e){}
   const dr = k=>{ const j = dp.indexOf(k); return j < 0 ? 99 : j; };   /* LR1·C — the account's SAT products first; others stay available */
   return L.sort((x, y)=>(y.star - x.star) || (dr(x.key) - dr(y.key)) || (x.n - y.n)).slice(0, 9);
 }
@@ -30867,7 +30895,7 @@ function pb2OpenType(){
   if(bdPopOpen() || bdSheetsOpen()) return;
   closeMoreMenu(); bdPopSel = 0;
   if(activeTab === 'plan' && bdChip !== 'all'){ const i = lrBdNew().findIndex(x=>x[2] === bdChip); if(i >= 0) bdPopSel = i; }
-  pb2 = {step:0}; pb2Render();
+  pb2 = {step:0, nacct:acctActive}; pb2Render();
 }
 function pb2OpenAsset(key, opt){   /* create (or edit when a plan exists) for one asset — straight to the form */
   const ex = pb2ExistingIdea(key); if(ex){ pb2OpenEdit(ex.id, opt && opt.focus, true); return; }
@@ -30892,23 +30920,25 @@ function pb2Back(){
 bdPopClose = function(){ pb2 = null; clearTimeout(pb2HoldT); pb2HoldT = 0; const p = document.getElementById('bdPop'); if(p) p.remove(); };
 bdNewOpen = function(){ pb2OpenType(); };   /* RE-D §6 — the ＋ button always opens; the review lock is checked in the form, against the selected account */
 bdNewPick = function(k){
-  if(k === 'S' && !lrBdNew().some(o=>o[0] === 'S')) k = 'D';   /* LR1·C — Momentum hidden for this account → Compounder */
-  if(k === 'F'){ pb2 = {step:1, sel:0}; pb2Render(); return; }
+  const na = lrNewAcct0();   /* LR1 — the account chosen in the chooser goes into the form */
+  if(k === 'S' && !lrBdNew(na).some(o=>o[0] === 'S')) k = 'D';   /* Momentum hidden for this account → Compounder */
+  if(k === 'F'){ pb2 = {step:1, sel:0, nacct:na}; pb2Render(); return; }
   bdPopClose();
-  if(k === 'S'){ planScope = 'stock'; try{ coreNewOpen(); }catch(e){ console.warn('bd new S:', e); } }
-  else if(k === 'D'){ planScope = 'ladder'; try{ coreNewOpen(); }catch(e){ console.warn('bd new D:', e); } }
+  if(k === 'S'){ planScope = 'stock'; try{ coreNewOpen(na); }catch(e){ console.warn('bd new S:', e); } }
+  else if(k === 'D'){ planScope = 'ladder'; try{ coreNewOpen(na); }catch(e){ console.warn('bd new D:', e); } }
   bdNewFrom = activeTab;
 };
 function pb2Pick(n){
   const L = pb2Assets(), a = L[n]; if(!a) return;
   if(a.plan){ pb2OpenEdit(a.plan.id, '', false); return; }
-  pb2 = {step:2, a:a.key, id:null, direct:false, dir:'Buy', acct:pb2AcctOf(null), entry:'', sl:'', tp:'', ema:null, str:null, mss:null, err:''}; pb2Render(true);
+  const na = pb2 && pb2.nacct, ac = (na && sat7dAccts().some(x=>x.id === na)) ? na : pb2AcctOf(null);   /* LR1 — Satellite opens with the chosen account's slot */
+  pb2 = {step:2, a:a.key, id:null, direct:false, dir:'Buy', acct:ac, entry:'', sl:'', tp:'', ema:null, str:null, mss:null, err:''}; pb2Render(true);
 }
 /* ── rendering ── */
 function pb2Hd(title, tag){ return `<div class="bd-ph pb2-h"><span class="pb2-hl"><button type="button" class="pb2-bk" data-pb2-back aria-label="Back" onclick="pb2Back()">‹</button><b>${bdE(title)}</b>${tag ? `<span class="sc sat">SAT</span>` : ''}</span><button type="button" class="bd-x" data-bd-popx aria-label="Close" onclick="bdPopClose()">✕</button></div>`; }
 function pb2StepHtml(){
   const s = pb2.step;
-  if(s === 0) return `<div data-pb2-step="type"><div class="bd-ph"><b>New plan</b><button type="button" class="bd-x" data-bd-popx aria-label="Close" onclick="bdPopClose()">✕</button></div>${lrBdNew().map((o, i)=>`<button type="button" class="bd-opt${i === bdPopSel ? ' bd-sel' : ''}" data-bd-opt="${o[0]}" onclick="bdNewPick('${o[0]}')"><kbd>${o[0]}</kbd><span class="sc${o[2] === 'SAT' ? ' sat' : (o[2] === 'COMP' ? ' c pt' : ' pt')}">${o[2]}</span><span class="bd-ot"><b>${o[1]}</b><span class="bd-m">${o[3]}</span></span></button>`).join('')}</div>`;
+  if(s === 0) return `<div data-pb2-step="type"><div class="bd-ph"><b>New plan</b><button type="button" class="bd-x" data-bd-popx aria-label="Close" onclick="bdPopClose()">✕</button></div>${lrNewAcctRowHtml()}${lrBdNew().map((o, i)=>`<button type="button" class="bd-opt${i === bdPopSel ? ' bd-sel' : ''}" data-bd-opt="${o[0]}" onclick="bdNewPick('${o[0]}')"><kbd>${o[0]}</kbd><span class="sc${o[2] === 'SAT' ? ' sat' : (o[2] === 'COMP' ? ' c pt' : ' pt')}">${o[2]}</span><span class="bd-ot"><b>${o[1]}</b><span class="bd-m">${o[3]}</span></span></button>`).join('')}</div>`;
   if(s === 1){
     const L = pb2Assets();
     return `<div data-pb2-step="asset">${pb2Hd('Satellite · which asset?', false)}${L.map((a, i)=>`<button type="button" class="bd-opt${i === (pb2.sel || 0) ? ' bd-sel' : ''}" data-pb2-asset="${bdE(a.key)}" data-pb2-star="${a.star ? 1 : 0}"${a.plan ? ' data-pb2-exists="1"' : ''} onclick="pb2Pick(${i})"><kbd>${i + 1}</kbd><span class="bd-ot"><b>${a.star ? '<span class="pb2-star">★</span> ' : ''}${bdE(a.label)}</b><span class="bd-m">Macro ${bdE(pb2MacroTxt(a.key))}${a.plan ? ' · plan exists → edit' : ''}</span></span></button>`).join('') || '<div class="bd-m">No Sat assets — add one in Flow</div>'}</div>`;
