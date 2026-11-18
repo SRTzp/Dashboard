@@ -145,7 +145,7 @@ def run(pw, w, h):
             due = js(p3, "()=>re4Due('main')")
             room = js(p3, "()=>{const c=document.querySelector('[data-re2-room] summary .chip');return c?c.innerText.trim():''}")
             st = js(p3, "()=>document.querySelector('[data-re2-state]').innerText.trim()")
-            ex = js(p3, "()=>{const c=document.querySelector('[data-re4-chip]');return c?c.innerText.trim():''}")
+            ex = js(p3, "()=>{const c=document.querySelector('[data-re4-chip]');return c?c.innerText.replace(/^[MF]\\s+/, '').trim():''}")   # LR2: the header chip carries the account pill
             check("[%s] execution review due: Risk room chip + Act state never say 'Review due'" % tag, due and "Review due" not in room and "Review due" not in st and room == "Normal", [due, room, st])
             check("[%s] execution-review signal still visible on Today: red '3 not taken' chip + To do item" % tag, ex == "3 not taken" and js(p3, "()=>re1TodoItems().some(i=>i.id==='re4rev:main')"), ex)
             check("[%s] no console / page errors (review run)" % tag, not ce3 and not pe3, ce3 + pe3)

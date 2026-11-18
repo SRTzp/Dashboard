@@ -30,10 +30,10 @@ def run(pw, w, h):
             check(f"{tag} LR2: Daily/Weekend switch sits right-aligned above the glance block (regime is a glance card now)", info["swBottom"] > info["swTop"], info)
             check(f"{tag} regime shows label only (no W/L)", "W " not in info["rgTxt"] and "L " not in info["rgTxt"], info)
             if info["hotTop"]: check(f"{tag} ≤3 lines before HOT", info["hotTop"] - info["top"] <= 120, info)
-        js(page, "()=>{ window.ln4HotSectors = ()=>[...['A','B','C','D','E'].map((x,i)=>({etf:'X'+x,name:'Sector '+x,k:i<3?'lead':'fresh',star:false,hot:true,ratio:5-i})), {etf:'XS',name:'Starred',k:'star',star:true,hot:false,ratio:0}]; todayRefresh(true); }"); settle(page, 400)
+        js(page, "()=>{ window.ln4HotSectors = ()=>[...['A','B','C','D','E'].map((x,i)=>({etf:'X'+x,name:'Sector '+x,k:i<3?'lead':'fresh',star:false,hot:true,ratio:5-i})), {etf:'XS',name:'Starred',k:'star',star:true,hot:false,ratio:0}]; todayRefresh(true); const d = document.querySelector('[data-ln4-moredet]'); if(d){ d.open = true; ln4Fit(); } }"); settle(page, 400)   # LR2: HOT lives in Details
         hot = js(page, "()=>({vis:[...document.querySelectorAll('[data-ln4-hotchip]')].filter(e=>e.getBoundingClientRect().height>0).length, more:[...document.querySelectorAll('[data-ln4-hotmore]')].filter(e=>e.getBoundingClientRect().height>0).map(e=>e.innerText), cls:[...document.querySelectorAll('[data-ln4-hotchip]')].map(e=>e.className)})")
         if w >= 900:
-            check(f"{tag} 5 HOT + 1 ★ all visible, no +N", hot["vis"] == 6 and not hot["more"], hot)
+            check(f"{tag} 5 HOT + 1 ★: LR2 side column fits what it can, the rest sits behind +N", hot["vis"] >= 1 and (hot["vis"] == 6 or (hot["more"] and hot["more"][0].startswith("+"))), hot)
         check(f"{tag} Leading teal (p-g) · Fresh blue (p-b) · never amber", any("p-g" in c for c in hot["cls"]) and any("p-b" in c for c in hot["cls"]) and not any("p-a" in c for c in hot["cls"]), hot)
         C.shot(page, f"ln4c-today-{w}.png")
         check(f"{tag} no errors", not ce and not pe, [ce[:2], pe[:2]])

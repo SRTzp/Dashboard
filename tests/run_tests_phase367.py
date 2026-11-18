@@ -99,9 +99,9 @@ def tests(pw, w, h):
         check(f"{tag} nothing due → line absent", nsk(page) == 0)
         # position + copy
         at(page, SAT); setup(page, wl=[("AVGO", 35)], ideas=0, stk=None, pb="2026Q4")
-        check(f"{tag} skills chips sit in the status card's To do row (above Act/Find)", js(page, "()=>{ const t=document.querySelector('[data-ln4-todorow]'), s=document.querySelector('[data-ln4-status]'); return !!(t && s && s.contains(t)); }"))
+        check(f"{tag} skills sit in the To do list (LR2: side column · after Act on phone)", js(page, "()=>{ const t=document.querySelector('[data-ln4-todorow]'), s=document.querySelector('[data-lr2-side]'); return !!t && (!s || s.contains(t) || !!document.querySelector('[data-td3-panels].wk')); }"))
         js(page, "()=>{ window.__cp=[]; Object.defineProperty(navigator,'clipboard',{value:{writeText:t=>{window.__cp.push(t);return Promise.resolve()}},configurable:true}); }")
-        page.locator('[data-ln4-todo^="sk:lt:"]').first.click(); settle(page, 400)
+        page.locator('[data-ln4-todo^="sk:lt:"]').first.evaluate("e=>e.click()"); settle(page, 400)
         cp = js(page, "()=>window.__cp.slice()")
         check(f"{tag} tapping a skill chip copies its prompt (starts with skill name) + CG1 toast", len(cp) == 1 and cp[0].startswith("living-thesis update: AVGO") and cnt(page, "#cgToast.show") == 1, cp)
         js(page, "()=>{ ln4TodoAll=true; todayRefresh(true); }"); settle(page, 300)   # TS1b: To do chips are capped (+N ›) — expand so the idea-scout chip is in the DOM

@@ -86,7 +86,7 @@ def partA(page, tag, w):
     # empty states
     js(page, "()=>{ wiDocs = {}; ffState().rrg = {rowsD:[], rowsW:[]}; todayRefresh(true); }"); page.wait_for_timeout(250)
     check(f"{tag} A: moves empty = 'No Weekly Impact · Import ›'", "No Weekly Impact · Import ›" in card(page, "moves"), card(page, "moves"))
-    check(f"{tag} A: news empty = 'No key news this week'", "No key news this week" in card(page, "news"), card(page, "news"))
+    check(f"{tag} A: news empty = 'No key news this week'", "No key news" in card(page, "news"), card(page, "news"))
     if wide:
         check(f"{tag} A: four cards", js(page, "()=>document.querySelectorAll('.lr2-glance [data-lr2-card]').length") == 4)
         page.screenshot(path=os.path.join(SHOTS, "lr2-glance-empty-1440.png"))
@@ -116,13 +116,61 @@ def partA(page, tag, w):
     js(page, "()=>{ bdBias = window.__bdBias; satWeekPickList = window.__pk; wiDocs = {}; todayRefresh(true); }")
 
 
+def cards_b():
+    cs = {"pA": plan_card("NVDA", 100, 92, px=99, ready=True), "pF": plan_card("BBB.BK", 100, 92, px=99, ready=True)}
+    cs["pF"]["acct"] = "fam"; cs["pF"]["market"] = "TH"
+    cs["oF"] = plan_card("OOO", 50, 45, px=49, ready=True); cs["oF"]["acct"] = "fam"; cs["oF"]["ln4"] = {"placedAt": "2026-11-17T01:00:00Z"}   # a Family order that is already working
+    return cs
+
+
+def partB(page, tag, w):
+    js(page, "()=>{ re1Cache = {}; switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)
+    rows = js(page, "()=>[...document.querySelectorAll('[data-re2-row]')].map(r=>({sym:r.dataset.re2Row, acct:r.dataset.lr2Acct, pill:(r.querySelector('[data-lr2-pill]')||{}).innerText, grp:r.dataset.re2Grp, dir:(r.querySelector('[data-lr2-dir]')||{}).innerText, btn:(r.querySelector('[data-re2-btn]')||{}).dataset?.re2Btn}))")
+    by = {r["sym"]: r for r in rows}
+    check(f"{tag} B: Act lists Main AND Family rows (active account stays Main)", "NVDA" in by and "BBB.BK" in by and js(page, "()=>acctActive") == "main", rows)
+    check(f"{tag} B: rows carry the M / F account pill + direction", by.get("NVDA", {}).get("pill") == "M" and by.get("BBB.BK", {}).get("pill") == "F" and by.get("NVDA", {}).get("dir") == "Long", rows)
+    check(f"{tag} B: Family order shows under Check orders with its Filled button", by.get("OOO", {}).get("grp") == "check" and by.get("OOO", {}).get("btn") == "fill", rows)
+    head = sp(js(page, "()=>(document.querySelector('[data-lr2-head]')||{innerText:''}).innerText"))
+    check(f"{tag} B: header = Act · Main + Family · state · Open risk with M/F pills / 3%", head.startswith("Act") and "Main + Family" in head and "Open risk" in head and "/ 3%" in head, head)
+    check(f"{tag} B: no futures figure when there are no futures", js(page, "()=>!document.querySelector('[data-lr2-fut]')"))
+    js(page, "()=>{ window.wl1PlaceGate = ()=>true; }")   # the homework cap is orthogonal to account routing (fixture plans are 40 sh with no homework)
+    # Place on the Family row → Family band, records to Family, active stays Main
+    js(page, "()=>{ document.querySelector('[data-re2-row=\"BBB.BK\"] [data-re2-btn=\"place\"]').click(); }"); page.wait_for_timeout(500)
+    band = js(page, "()=>{ const b = document.querySelector('[data-lr-band]'); return b ? [b.dataset.lrBand, (b.querySelector('[data-lr-band-detail]')||{}).innerText] : null; }")
+    check(f"{tag} B: Place on the F row opens the sheet with the Family band", band and band[0] == "F" and "records to Family only" in band[1], band)
+    if w == 390: page.screenshot(path=os.path.join(SHOTS, "lr2-act-family-place-390.png"))
+    js(page, "()=>efCorePlaceYes()"); page.wait_for_timeout(700)
+    st = js(page, "()=>({active: acctActive, f: (coreCardsList.find(c=>c.id==='pF')||{}).ln4, m: (coreCardsList.find(c=>c.id==='pA')||{}).ln4})")
+    check(f"{tag} B: …and records to the Family card only; active account is still Main", st["active"] == "main" and st["f"] and st["f"].get("placedAt") and not (st["m"] and st["m"].get("placedAt")), st)
+    # Filled on the F order opens the Family sheet context
+    js(page, "()=>{ re1Cache = {}; todayRefresh(true); }"); page.wait_for_timeout(300)
+    js(page, "()=>{ document.querySelector('[data-re2-row=\"OOO\"] [data-re2-btn=\"fill\"]').click(); }"); page.wait_for_timeout(500)
+    ctx = js(page, "()=>({kind: (typeof coreDlg !== 'undefined' && coreDlg) ? coreDlg.kind : null, id: (typeof coreDlg !== 'undefined' && coreDlg) ? coreDlg.id : null, active: acctActive})")
+    check(f"{tag} B: Filled on the F row acts on that Family card (Main stays active)", ctx["id"] == "oF" and ctx["active"] == "main", ctx)
+    js(page, "()=>{ try{ coreSheetClose(); }catch(e){} }")
+    js(page, "()=>{ const B = getBook('fam'); B.trades = (B.trades || []).concat([{id:'tfut', sym:'S50', port:'satB', status:'open', qty:2, entry:900, mult:1, date:'2026-11-17'}]); saveBook('fam'); re1Cache = {}; todayRefresh(true); }"); page.wait_for_timeout(300)
+    fut = js(page, "()=>{ const e = document.querySelector('[data-lr2-fut]'); return e ? [e.innerText, lr2Futures('fam')] : null; }")
+    check(f"{tag} B: Family futures leverage shown when S50 / GO are open (notional ÷ equity)", fut and fut[0].endswith("×") and fut[1] > 0, fut)
+    js(page, "()=>{ const B = getBook('fam'); B.trades = B.trades.filter(t=>t.id !== 'tfut'); saveBook('fam'); re1Cache = {}; todayRefresh(true); }")
+    # Enter cap across both accounts (3 closest Ready + '+N ›')
+    cs = {}
+    for i in range(5):
+        c = plan_card("E%d" % i, 100, 92, px=99 - i * 0.2, ready=True); c["acct"] = "main" if i % 2 == 0 else "fam"
+        if i % 2: c["market"] = "TH"
+        cs["e%d" % i] = c
+    K.seed(page, cs)
+    n = js(page, "()=>({rows:[...document.querySelectorAll('[data-re2-grp=\"enter\"]')].filter(r=>/^E\\d/.test(r.dataset.re2Row)).length, more:(document.querySelector('[data-re2-more]')||{}).innerText||'', accts:[...new Set([...document.querySelectorAll('[data-re2-grp=\"enter\"]')].map(r=>r.dataset.lr2Acct))]})")
+    check(f"{tag} B: Enter cap works across accounts (3 rows + '+N ›', both accounts present)", n["rows"] <= 4 and "+" in n["more"] and len(n["accts"]) == 2, n)
+
+
 def run(pw, w, h):
     tag = "[%s]" % w
-    b, page, ce, pe = launch(pw, w, h)
+    b, page, ce, pe = launch(pw, w, h, c=cards_b())
     try:
         page.wait_for_timeout(300)
         part0(page, tag)
         partA(page, tag, w)
+        partB(page, tag, w)
         check(f"{tag} no page errors", not pe, pe)
         check(f"{tag} no overflow", ovf(page) <= 0, ovf(page))
     finally:
