@@ -30078,7 +30078,7 @@ function re2CardLine(it){   /* EF1b — same text as the card: "Buy #0.19 @ 2,64
 function re2Row(it, o){
   const e = td3E, sr = (()=>{ try{ return tw1SizeRisk(it); }catch(x){ return {sz:'—', rk:'—'}; } })();
   if(sr.sz === '—'){ try{ const lots = it.kind === 'core' ? (it.ref.lots || []).reduce((a, l)=>a + (+l.qty || 0), 0) : 0, rw = it.kind === 'core' && it.ref.plan && it.ref.plan.ps1 && Array.isArray(it.ref.plan.ps1.rows) ? it.ref.plan.ps1.rows.reduce((a, r)=>a + (+r.qty || 0), 0) : 0, n = it.status === 'hold' && lots > 0 ? lots : rw; if(n > 0) sr.sz = '#' + fmt0(n); }catch(x){} }
-  const line = o.q == null && (o.g === 'enter' || o.g === 'manage') ? re2CardLine(it) : '';
+  const line = o.q == null && (o.g === 'enter' || o.g === 'check' || o.g === 'manage') ? re2CardLine(it) : '';   /* Check orders uses the same card line + the still-valid prompt */
   const q = o.q != null ? o.q : line || [sr.sz, sr.rk].filter(x=>x && x !== '—').join(' · ') || '—';
   const sh = {place:'Place ›', cancel:'Cancel ›', fill:'Filled ✓', stop:'Stop ›', hw:'Homework ›', addon:'Add-on ›', fix:'Fix ›', complete:'Complete ›', edit:'Edit', review:'Review ›'}[o.k] || o.btn;
   const btn3 = o.btn3 ? `<button type="button" class="btn o" data-re2-btn="update" onclick="event.stopPropagation();${o.fn3 || ''}">${e(o.btn3)}</button>` : '';
