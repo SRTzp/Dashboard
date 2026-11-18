@@ -43,8 +43,11 @@ ground/card/line/line2/ink/on-ink/text2/muted/seg · gain/loss/warn (+ink/bg) ·
 - New `run_tests_lr1.py` (104 checks × 3 widths incl. tabs, ⋯ handlers, pills, band text, Family/Main forms, market switch, defaults write, overflow 1440/1280/390), added to `run_regression.sh`.
 - Hook baseline = origin/main `index.html` (unchanged by RV1b).
 
-## 390 px page height (px, before → after)
-Today 893 → see final run below; header row 50 → 50. Phone touch targets are ≥ 44 px (bottom bar 44, account/＋/⋯ 44).
+## 390 px page height (scrollHeight, origin/main → branch)
+Today 893 → 889 · Plan 844 → 844 · Flow 1569 → 1565 · Watch 844 → 844 · Journal 1733 → 1729 · Port 2492 → 2492. Header row 50 → 50; bottom bar 45 → 45 (tabs 44 px). Touch targets ≥ 44 px (account, ＋ Plan, ⋯, tabs). No rows added on any screen; the only new line is the conditional "Hidden port: MMT (n)" in Family.
+
+## Verification
+Full `tests/run_regression.sh` after merging origin/main (RV1b): 52/52 ok, 0 failing (2081 s). Node suites unchanged (risk_engine 313 · re1_adapter 63 · re1c_live 88 · core_size · ps1 · ps1b · pv1_posview). Final 44 px bar tweak re-checked with hooks + lr1 + aw1 + ts1b.
 
 ## Not done in LR1 (later steps)
 English sync text; hiding Momentum in the Core page-level switch / Risk room for Family (data stays visible); Today/Plan layout (LR2/LR3).
