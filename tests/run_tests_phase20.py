@@ -148,10 +148,10 @@ def run(pw, w, h, label):
             if kind == "exit":
                 page.fill("#newReasonTag", "แท็กทดสอบ CL2b"); page.evaluate("() => addReasonTag()"); page.wait_for_timeout(200)
             page.evaluate("() => document.getElementById('reasonMgrOverlay').classList.remove('show')")
-        page.wait_for_timeout(1800)   # รอ debounce persist
+        page.wait_for_timeout(1800)   # รอ debounce persist (SH2: exit tags now live in settings.shared)
         bk = dump_book(page)
         check(f"{tag} ตัวจัดการแท็ก: เซฟแล้ว reasonTags.missed ใน mock ยังอยู่ (ไม่ถูกลบ/ไม่ถูกทับ) และ exit ได้แท็กใหม่",
-              bk and bk.get("reasonTags", {}).get("missed") == MISSED_TAGS and any(x["label"] == "แท็กทดสอบ CL2b" for x in bk["reasonTags"].get("exit", [])), json.dumps((bk or {}).get("reasonTags"), ensure_ascii=False)[:500])
+              bk and bk.get("reasonTags", {}).get("missed") == MISSED_TAGS and any(x["label"] == "แท็กทดสอบ CL2b" for x in bk["settings"]["shared"]["reasonTags"].get("exit", [])), json.dumps((bk or {}).get("reasonTags"), ensure_ascii=False)[:500])
         check(f"{tag} DEFAULT_REASON_TAGS.missed ยังอยู่ในโค้ด", page.evaluate("() => Array.isArray(DEFAULT_REASON_TAGS.missed) && DEFAULT_REASON_TAGS.missed.length > 0"))
         lbl = page.evaluate("() => [...document.querySelectorAll('.setsec label')].map(e=>e.textContent.trim()).filter(x=>/Closed Trade/.test(x))")
         check(f"{tag} ตั้งค่า: ป้ายขนาดฟอนต์ 'Closed Trade' ไม่อ้าง Missed", lbl == [], json.dumps(lbl, ensure_ascii=False))
@@ -171,9 +171,9 @@ def run(pw, w, h, label):
         # Industry manager
         page.evaluate("() => openIndustryManager()"); page.wait_for_timeout(150)
         page.fill("#newIndustryName", "CL2bIndustry"); page.evaluate("() => addIndustry()"); page.wait_for_timeout(150)
-        has = page.evaluate("() => state.industries.includes('CL2bIndustry')")
+        has = page.evaluate("() => sh().industries.includes('CL2bIndustry')")
         page.evaluate("() => deleteIndustry('CL2bIndustry')"); page.wait_for_timeout(150)
-        gone2 = page.evaluate("() => !state.industries.includes('CL2bIndustry')")
+        gone2 = page.evaluate("() => !sh().industries.includes('CL2bIndustry')")
         check(f"{tag} Industry manager: เพิ่ม/ลบ ได้", has and gone2, json.dumps([has, gone2]))
         page.evaluate("() => document.getElementById('industryOverlay').classList.remove('show')")
 
