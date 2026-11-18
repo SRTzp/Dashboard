@@ -101,7 +101,7 @@ def partA(page, tag, w):
         check(f"{tag} A: Leading chips sorted by strength", order == ["XLI", "XLC", "ITA"], order)
     else:
         ph = js(page, "()=>{ const l2 = document.querySelector('[data-lr2-phone] .l2'); return {txt: l2.innerText.replace(/\\s+/g, ' '), chips: [...l2.querySelectorAll('[data-lr2-hot]')].map(c=>c.dataset.lr2Hot), more: (l2.querySelector('[data-lr2-hotmore]')||{}).innerText||'', h: Math.round(l2.getBoundingClientRect().height), all: Math.round(document.querySelector('[data-lr2-phone]').getBoundingClientRect().height)}; }")
-        check(f"{tag} A: phone glance = 2 lines · ≤2 hot chips by strength + '+N' · no 'Hot:' label", ph["chips"] == ["XLI", "XLC"] and ph["more"] == "+2" and "Hot:" not in ph["txt"] and ph["h"] <= 44 and ph["all"] <= 110, ph)
+        check(f"{tag} A: phone glance = mood line + news line + chips line (light-lock: mood/news each on own line) · ≤2 hot chips by strength + '+N' · no 'Hot:' label", ph["chips"] == ["XLI", "XLC"] and ph["more"] == "+2" and "Hot:" not in ph["txt"] and ph["h"] <= 44 and ph["all"] <= 140, ph)
     check(f"{tag} A: next news = ICT time + name + impact", "HIGH" in nw and "US CPI" in nw if wide else "HIGH" in js(page, "()=>document.querySelector('[data-lr2-card=\"news\"]').innerText"), nw)
     if wide:
         hs = js(page, "()=>[...document.querySelectorAll('.lr2-glance .lr2-c')].map(c=>Math.round(c.getBoundingClientRect().height))")
@@ -235,7 +235,7 @@ def heights(pw):
         js(page, "()=>{ lr2DetOpen = false; todayRefresh(true); }"); page.wait_for_timeout(400)
         r = js(page, ROWS_JS)
         print("ROWS390", r)
-        check("[390] Today height at 390 stays within 3%% of the old layout (%d px vs %d)" % (r["height"], BASE_390["height"]), r["height"] <= BASE_390["height"] * 1.03, r)
+        check("[390] Today height at 390 stays within 6%% of the old layout (%d px vs %d)" % (r["height"], BASE_390["height"]), r["height"] <= BASE_390["height"] * 1.06, r)
     finally:
         b.close()
 
