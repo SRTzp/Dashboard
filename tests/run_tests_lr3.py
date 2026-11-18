@@ -151,7 +151,7 @@ def run(pw, w, h, parts):
 if __name__ == "__main__":
     parts = list(os.environ.get("LR3_PARTS", "ABC"))
     with sync_playwright() as pw:
-        for w, h in ((1440, 900), (1280, 800), (390, 844)):
+        for w, h in ((1440, 900), (1280, 800), (390, 844), (360, 740)):
             run(pw, w, h, parts)
             if "B" in parts:
                 import lr3_sheet; lr3_sheet.run_sat(pw, w, h, "[%s]" % w)

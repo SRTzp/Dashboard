@@ -38,6 +38,7 @@ def partB(page, tag, w):
     o = js(page, ORDER_JS)
     check(f"{tag} B core: order = account band · Orders to place (legs) · STOP row · Risk/Reward/Size tiles · Confirm · footnote", order_ok(o), o)
     check(f"{tag} B core: leg = 'BUY #40 @ 100 Limit · entry', stop row = 'Stop 92 …'", o and len(o["legs"]) == 1 and re.match(r"^BUY #\d+ @ 100 (Limit|Stop) · entry", o["legs"][0]) and o["stop_t"].startswith("STOP 92"), o and [o["legs"], o["stop_t"]])
+    check(f"{tag} B core: 'x% of account' has 2 decimals like Size", re.search(r"\d+\.\d{2}% of account", o["tilesT"]) is not None, o and o["tilesT"])
     check(f"{tag} B core: tiles read Risk · Reward · Size", o and all(k in o["tilesT"].lower() for k in ("risk", "reward", "size")), o and o["tilesT"])
     check(f"{tag} B core: Setup line (EF1b) still there, after the tiles", js(page, "()=>!!document.querySelector('[data-ef-core-place] [data-ef-setup]')") and o["tiles"] < o["setup"], o)
     st = js(page, "()=>{ const t=document.querySelector('[data-lr3-tiles]').getBoundingClientRect(), q=document.querySelector('[data-ef-setup]').getBoundingClientRect(), sh=document.querySelector('[data-ef-core-place]').getBoundingClientRect(); return {gap: Math.round(q.top - t.bottom), fullw: Math.abs(q.width - t.width) < 2, h: Math.round(q.height)}; }")
@@ -47,7 +48,7 @@ def partB(page, tag, w):
     if w < 600:
         s = js(page, STICKY_JS)
         check(f"{tag} B core 390: sticky footer · Confirm visible and ≥ 44 px", s and s["pos"] == "sticky" and s["h"] >= 44 and s["bottomOk"], s)
-        page.screenshot(path=os.path.join(SHOTS, "lr3-sheet-390.png"))
+        if w == 390: page.screenshot(path=os.path.join(SHOTS, "lr3-sheet-390.png"))
     if w == 1440: page.screenshot(path=os.path.join(SHOTS, "lr3-sheet-1440.png"))
     ov = js(page, "()=>document.documentElement.scrollWidth - innerWidth")
     check(f"{tag} B core: no overflow", ov <= 0, ov)

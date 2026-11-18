@@ -47,6 +47,8 @@ def partC(page, tag, w):
     check(f"{tag} C: footer Cancel · Save draft · Save plan keep their handlers", r["cancel"] and r["cancel"][0] == "Cancel" and "coreSheetClose" in r["cancel"][1] and r["draft"] and r["draft"][0] == "Save draft" and "bdDraftSave" in r["draft"][1] and r["save"] and r["save"][0] == "Save plan" and "coreNewSave" in r["save"][1] and r["pos"] == sorted(r["pos"]), r)
     pl = js(page, "()=>{ const h = e=>e.closest('.ps1Hd'); const a = document.getElementById('cnEplus'), b = document.getElementById('cnSplus'); return [!!h(a), !!h(b)]; }")
     check(f"{tag} C: '+ Entry' / '+ SL' sit in the label row", pl == [True, True], pl)
+    g = js(page, "()=>{ const r = id=>document.getElementById(id).getBoundingClientRect(); const e=r('cnEntry'), t=r('cnTicker'), sl=r('cnStop'), pe=r('cnEplus'), ps=r('cnSplus'); return {eh:Math.round(e.height), th:Math.round(t.height), ew:Math.round(e.width), sw:Math.round(sl.width), sameRow: Math.abs(e.top-sl.top)<2, plusH:[Math.round(pe.height),Math.round(ps.height)], plusRight: pe.left > e.left + e.width/2 && ps.left > sl.left + sl.width/2, nowrap: pe.height <= 40 && ps.height <= 40 && getComputedStyle(document.getElementById('cnEplus')).whiteSpace === 'nowrap'}; }")
+    check(f"{tag} C: Entry / SL side by side 50/50, same height as Ticker, '+ Entry' / '+ SL' small text buttons right of the label", g["sameRow"] and abs(g["ew"] - g["sw"]) <= 2 and g["eh"] >= g["th"] - 4 and g["plusRight"] and g["nowrap"], g)
     js(page, "()=>{ const t=document.getElementById('cnTicker'); t.value='NVDA'; coreNewIn(); }"); page.wait_for_timeout(250)
     fe = js(page, "()=>{ const f=document.getElementById('cnFerr_ticker'), t=document.getElementById('cnTicker'); return {txt:f.innerText, vis:f.getClientRects().length>0, below: f.getBoundingClientRect().top >= t.getBoundingClientRect().bottom - 1, top:Math.round(f.getBoundingClientRect().top - t.getBoundingClientRect().bottom), goto: !!document.getElementById('cnGoto'), general: document.getElementById('cnErr').style.display}; }")
     check(f"{tag} C: 'already exists' error sits under the Ticker field", fe["vis"] and fe["below"] and "already exists" in fe["txt"] and fe["top"] < 48 and fe["goto"], fe)
@@ -57,7 +59,7 @@ def partC(page, tag, w):
     if w < 600:
         s = js(page, """()=>{ const f = document.querySelector('.core-sheet .lf-btnrow'), b = document.querySelector('.core-sheet [data-cn-save]'); const r = b.getBoundingClientRect(); const bs = [...f.querySelectorAll('button')].map(x=>Math.round(x.getBoundingClientRect().top)); return {pos: getComputedStyle(f).position, h: Math.round(r.height), vis: r.bottom <= innerHeight + 1 && r.top >= 0, oneRow: new Set(bs).size === 1 && bs.length === 3}; }""")
         check(f"{tag} C: Core form 390 — sticky footer, Save plan visible, buttons ≥ 44 px", s["pos"] == "sticky" and s["vis"] and s["h"] >= 44 and s["oneRow"], s)
-        page.screenshot(path=os.path.join(SHOTS, "lr3-form-core-390.png"))
+        if w == 390: page.screenshot(path=os.path.join(SHOTS, "lr3-form-core-390.png"))
     ov = js(page, "()=>document.documentElement.scrollWidth - innerWidth")
     check(f"{tag} C: Core form no overflow", ov <= 0, ov)
     # labels above inputs (not beside)
