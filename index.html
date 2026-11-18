@@ -7698,7 +7698,7 @@ function indSafeUrl(u){
   return /^https?:\/\//i.test(s) ? s : '';   /* รับเฉพาะ http/https กัน javascript: หลุดเข้ามา */
 }
 function indLink(name){
-  const m = (state && state.industryLinks && typeof state.industryLinks==='object') ? state.industryLinks : null;
+  const m = (state) ? sh().industryLinks : null;
   const k = String(name||'').trim();
   if(!m || !k) return '';
   const hit = Object.keys(m).find(x=>x.toLowerCase()===k.toLowerCase());
@@ -7709,9 +7709,8 @@ function indOpen(name){
   if(u) window.open(u, '_blank', 'noopener');
 }
 function setIndustryLink(name, url){
-  if(!state.industryLinks || typeof state.industryLinks!=='object') state.industryLinks = {};
   const u = indSafeUrl(url);
-  if(u) state.industryLinks[name] = u; else delete state.industryLinks[name];
+  if(u) sh().industryLinks[name] = u; else delete sh().industryLinks[name];
   render();            /* onchange = ยิงตอนออกจากช่อง จึงวาดใหม่ได้โดยไม่แย่ง focus */
   renderIndustryList();
   schedulePersist();
@@ -7740,7 +7739,6 @@ const DEFAULTS = {
   limits:{trade:1,port:{core:20,satB:6},total:6}   /* 7E-1: limits.port = % ของถังตัวเอง (Core 20 · Sat 6) · total = % ของทุนบัญชี · ห้ามใส่ธง heatV2 ในนี้ (ธงต้องมาจากข้อมูลจริงเท่านั้น) */
 };
 const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
-const defaultWatchSortMode = () => ({core:'date',satB:'date'});
 const DEFAULT_FONT_SIZES = {wl:0.84, plan:0.8, closed:0.8};
 const DEFAULT_TABS_OFFSET = 0;
 /* ══════════ ระบบแท็กเหตุผล — ใช้ร่วมกัน 2 จุด: Closed / Cancelled ══════════
@@ -7796,18 +7794,15 @@ function cloneAllReasonTags(){
 /* กันพัง + ย้ายข้อมูลเก่า: เวอร์ชันก่อนเก็บไว้ที่ state.exitReasons (แบน ไม่มี kind) */
 function ensureReasonTags(kind){
   if(!state) return [];
-  if(!state.reasonTags || typeof state.reasonTags !== 'object') state.reasonTags = {};
-  if(Array.isArray(state.exitReasons) && state.exitReasons.length && !state.reasonTags.exit){
-    state.reasonTags.exit = state.exitReasons;   /* migrate ของเดิมมา ไม่ทิ้ง */
-  }
+  const SH = sh(); if(!SH.reasonTags || typeof SH.reasonTags !== 'object') SH.reasonTags = {};   /* SH2 — exitReasons เดิมถูกรวมตอนย้ายแล้ว */
   Object.keys(DEFAULT_REASON_TAGS).forEach(k=>{
-    if(!Array.isArray(state.reasonTags[k]) || !state.reasonTags[k].length) state.reasonTags[k] = cloneReasonTags(k);
+    if(!Array.isArray(SH.reasonTags[k]) || !SH.reasonTags[k].length) SH.reasonTags[k] = cloneReasonTags(k);
   });
-  return kind ? state.reasonTags[kind] : state.reasonTags;
+  return kind ? SH.reasonTags[kind] : SH.reasonTags;
 }
 function reasonTagById(kind, id){
   if(!id) return null;
-  const list = (state && state.reasonTags && Array.isArray(state.reasonTags[kind])) ? state.reasonTags[kind] : DEFAULT_REASON_TAGS[kind];
+  const list = (state && sh().reasonTags && Array.isArray(sh().reasonTags[kind])) ? sh().reasonTags[kind] : DEFAULT_REASON_TAGS[kind];
   return list.find(r=>r.id===id) || null;
 }
 /* คืน {label, offPlan, missing} สำหรับแสดงผล — ชื่อปัจจุบันมาก่อน snapshot เป็นตัวสำรอง */
@@ -8087,23 +8082,19 @@ function buildStateFromBookRaw(d, exists, acctIdForLog){
         }
       }
       const out = {...d,
-        settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[], industries:d.industries||[],
-        watchSortMode:{...defaultWatchSortMode(),...d.watchSortMode}, scoreCriteria: d.scoreCriteria!=null ? d.scoreCriteria : DEFAULT_SCORE_CRITERIA,
-        fontSizes:{...DEFAULT_FONT_SIZES,...d.fontSizes}, watchCollapsed:d.watchCollapsed||{}, tabsOffset: d.tabsOffset!=null ? d.tabsOffset : DEFAULT_TABS_OFFSET,
+        settings:{...cloneDefaults(),...d.settings}, trades:d.trades||[],
         /* บทเรียน (ธง migration แบบ tabsOffsetV2/satBNoteV1 เคยหายตอน rebuild แล้ววน persist ไม่รู้จบ): ธงที่เก็บบน state ต้อง copy ที่นี่เสมอ ·
            ธงใน settings ปลอดภัยกว่าเพราะ ...d.settings เหมาไปให้แล้ว — CL2-a ลบ migration ตัวเก่าทั้งหมดแล้ว แต่ข้อควรระวังยังใช้ได้กับธงใหม่ */
         exitReasons: Array.isArray(d.exitReasons) ? d.exitReasons : null,   /* เก็บไว้ให้ ensureReasonTags ย้ายเข้า reasonTags.exit */
         fundflow: (d.fundflow && typeof d.fundflow==='object') ? d.fundflow : defaultFundflow(),
-        scoreLabels: (d.scoreLabels && typeof d.scoreLabels==='object') ? d.scoreLabels : null,
-        journalView: (d.journalView && typeof d.journalView==='object') ? d.journalView : null,
-        reasonTags: (d.reasonTags && typeof d.reasonTags==='object') ? d.reasonTags : null,
-        industryLinks: (d.industryLinks && typeof d.industryLinks==='object') ? d.industryLinks : {}};  /* ★ ลิงก์ packet ของแต่ละ industry */
+        };   /* SH2 — industries · industryLinks · reasonTags · scoreLabels · scoreCriteria · journalView · fontSizes · tabsOffset · watchSortMode · watchCollapsed: ไม่ normalize/ไม่อ่านจาก book แล้ว ({...d} เก็บค่าเดิมไว้ไม่ลบ) */
+      try{ const hb = acctBooks[tdHome()], S0 = (hb && hb.settings && hb.settings.shared) || shObj; shApplyFx(out, S0); }catch(e){}
       /* sat_since — ต้อง "ไม่มี key นี้เลย" เมื่อค่าเป็น falsy (พฤติกรรมเดิมเป๊ะ) ไม่ใช่แค่เป็น undefined
          {...d} ด้านบนแปะ raw value มาให้แล้วไม่ว่า falsy หรือไม่ ต้องเช็คซ้ำแล้วลบออกเองตรงนี้ */
       if(d.sat_since) out.sat_since = d.sat_since; else delete out.sat_since;
       return out;
   } else {
-      return {settings:{...cloneDefaults(), heatV2:true}, trades:[], industries:[], watchSortMode:defaultWatchSortMode(), scoreCriteria:DEFAULT_SCORE_CRITERIA, fontSizes:{...DEFAULT_FONT_SIZES}, watchCollapsed:{}, tabsOffset:DEFAULT_TABS_OFFSET, reasonTags:cloneAllReasonTags(), industryLinks:{}};
+      return {settings:{...cloneDefaults(), heatV2:true}, trades:[]};
     }
 }
 
@@ -8231,7 +8222,7 @@ function acctBuildBook(raw, id){
   const savedState = state, savedActive = acctActive;
   try{
     state = st;
-    [ensureScoreLabels, ensureJournalView].forEach(f=>{ try{ f(); }catch(e){ console.warn('ensure (non-active book):', e); } });
+    /* SH2 — ensureScoreLabels / ensureJournalView ย้ายไปทำงานกับ settings.shared ของบัญชีหลักแล้ว: ห้ามเรียกตอนสลับ state ชั่วคราวนี้ (จะไปสร้าง shared บนบัญชีผิดตัว) */
   } finally { state = savedState; acctActive = savedActive; }
   return st;
 }
@@ -8793,8 +8784,7 @@ function startListening(){
     /* บันทึก "ที่มา" ของ state ก้อนที่เพิ่งสร้าง — true = สร้างจากข้อมูล server จริง, false = สร้างจาก cache ในเครื่อง
        ทุกการเขียนขึ้น server ต้องเช็ค flag นี้ ไม่ใช่เช็คแค่ serverConfirmed */
     stateFromServer = !snap.metadata.fromCache;
-    ensureScoreLabels();
-    ensureJournalView();
+    /* SH2 — ensureScoreLabels/ensureJournalView ทำงานกับ settings.shared (ย้ายครั้งเดียว + เขียน) → ไม่เรียกตอนโหลด ปล่อยให้ทำเมื่อใช้งานจริงหลัง gate */
     /* CL2-a §1.3 — เอกสารมีอยู่แล้วแต่ยังไม่รีเซ็ต (ไม่มี cl2aResetAt) และ snapshot มาจาก server → gate ครั้งเดียว · ไม่ render/persist/ดึง FX ตอนเปิด */
     if(acctDocExists && !acctExtra.cl2aResetAt && !snap.metadata.fromCache){ cl2aOpenGate(); return; }
     if(cl2aGateOn) cl2aHideGate();
@@ -8803,6 +8793,7 @@ function startListening(){
        ทับข้อมูลจริงบน server แบบเงียบๆ แค่เปิดหน้าเว็บดูเฉยๆ (ไม่ต้องแก้อะไร) ก็เกิดได้
        แก้โดยห้าม auto-persist จาก snapshot ที่ยังมาจาก cache (fromCache) — รอ snapshot ที่ยืนยันจาก server จริงก่อนเท่านั้น */
     if(!snap.metadata.fromCache){
+      try{ sh(); ffStore(); ensureScoreLabels(); ensureJournalView(); }catch(e){ console.warn('SH migrate:', e); }   /* SH1/SH2 — ย้ายค่าใช้ร่วมครั้งเดียวตอนโหลด (หลังผ่าน gate) ไม่ใช่ตอนสลับบัญชี */
       const ran = {heatV2: heatV2MigrateAll()};   /* 7E-1: heat = % ของถังตัวเอง · ทำครั้งเดียวต่อบัญชี (ธง settings.heatV2 อยู่ใน settings จึงถูกเก็บ/โหลดผ่าน ...d.settings เอง) */
       const changed = Object.keys(ran).filter(k=>ran[k]);
       if(changed.length){
@@ -8869,6 +8860,7 @@ function schedulePersist(){
   if(!uid || !state) return;
   if(cl2aGateOn) return;   /* CL2-a — ห้ามเขียนตอน gate เปิด (cl2aRun เรียก doPersist ตรงเอง) */
   if(!serverConfirmed || !stateFromServer){ missedPersistBeforeConfirm = true; return; }
+  try{ shSyncDirty(); }catch(e){}   /* SH2 */
   pendingLocalWrite = true;
   setSyncBadge('saving');
   clearTimeout(persistTimer);
@@ -16142,7 +16134,6 @@ function render(){
   if(cl2aGateOn) return;   /* CL2-a — gate รีเซ็ตเปิดอยู่ · กันการวาดจาก listener อื่น (wl · sat7d · pb · rrg · fx) */
   renderAcctBar();
   if(!state) return;
-  if(!state.fontSizes) state.fontSizes = {...DEFAULT_FONT_SIZES};
   applyFontSizes();
   const s = summarize();
   const L = state.settings.limits;
@@ -16280,10 +16271,10 @@ const JV_SRC = {
 };
 function ensureJournalView(kind){
   if(!state) return {col:false,y:'all',m:'all'};
-  if(!state.journalView || typeof state.journalView!=='object') state.journalView = {};
+  const SH = sh(); if(!SH.journalView || typeof SH.journalView!=='object') SH.journalView = {};
   JV_KINDS.forEach(k=>{
-    const v = state.journalView[k];
-    if(!v || typeof v!=='object') state.journalView[k] = {col:false, y:'all', m:'all'};
+    const v = SH.journalView[k];
+    if(!v || typeof v!=='object') SH.journalView[k] = {col:false, y:'all', m:'all'};
     else {
       if(typeof v.col!=='boolean') v.col = false;
       if(typeof v.y!=='string') v.y = 'all';
@@ -16291,7 +16282,7 @@ function ensureJournalView(kind){
       if(v.y==='all') v.m = 'all';
     }
   });
-  return kind ? state.journalView[kind] : state.journalView;
+  return kind ? SH.journalView[kind] : SH.journalView;
 }
 function jvMatch(kind, dateStr){
   const v = ensureJournalView(kind);
@@ -19905,7 +19896,7 @@ function matchRenderRes(){
 let wlAddEditing = null, wlMktTouched = false;
 function wlIndFill(){
   const set = new Set();
-  (Array.isArray(state && state.industries) ? state.industries : []).forEach(x=>{ if(x) set.add(String(x)); });
+  (state ? sh().industries : []).forEach(x=>{ if(x) set.add(String(x)); });
   wlItems.forEach(w=>{ if(w.industry) set.add(w.industry); });
   document.getElementById('wlIndList').innerHTML = [...set].sort((a,b)=>a.localeCompare(b)).map(x=>`<option value="${escHtml(x)}"></option>`).join('');
 }
@@ -20528,12 +20519,11 @@ function wlNoteDel(sym, side, id){
 }
 /* WL1 — FQC เลิกใช้ 1 ต.ค. 2569 · ใช้ Tier แทน · ข้อมูลเดิมใน Firestore ไม่ลบ */
 function openSystemSettings(){
-  if(!state.fontSizes) state.fontSizes = {...DEFAULT_FONT_SIZES};
-  if(state.tabsOffset==null) state.tabsOffset = DEFAULT_TABS_OFFSET;
-  document.getElementById('sizeWl').value = state.fontSizes.wl;
-  document.getElementById('sizePlan').value = state.fontSizes.plan;
-  document.getElementById('sizeClosed').value = state.fontSizes.closed;
-  document.getElementById('tabsOffset').value = state.tabsOffset;
+  const dv = devUiGet();   /* SH2 — ต่ออุปกรณ์ (localStorage) */
+  document.getElementById('sizeWl').value = dv.fontSizes.wl;
+  document.getElementById('sizePlan').value = dv.fontSizes.plan;
+  document.getElementById('sizeClosed').value = dv.fontSizes.closed;
+  document.getElementById('tabsOffset').value = dv.tabsOffset;
   bkRenderLastHint();
   renderAcctMgr();
   try{ tdSetOpen(); }catch(e){ console.warn('routine settings:', e); }   /* TD1 */
@@ -20548,23 +20538,21 @@ function saveSystemSettings(){
   const plan = parseFloat(document.getElementById('sizePlan').value)||DEFAULT_FONT_SIZES.plan;
   const closed = parseFloat(document.getElementById('sizeClosed').value)||DEFAULT_FONT_SIZES.closed;
   const tabsOffset = parseFloat(document.getElementById('tabsOffset').value);
-  state.fontSizes = {wl, plan, closed};
-  state.tabsOffset = isNaN(tabsOffset) ? DEFAULT_TABS_OFFSET : Math.max(0, tabsOffset);
+  devUiSet({fontSizes:{wl, plan, closed}, tabsOffset: isNaN(tabsOffset) ? DEFAULT_TABS_OFFSET : Math.max(0, tabsOffset)});   /* SH2 — เครื่องนี้เท่านั้น */
   applyFontSizes();
   document.getElementById('sysOverlay').classList.remove('show');
-  schedulePersist();
 }
 function applyFontSizes(){
-  const f = (state && state.fontSizes) || DEFAULT_FONT_SIZES;
+  const dv = devUiGet(), f = dv.fontSizes;
   document.documentElement.style.setProperty('--wlnote-size', f.wl+'rem');
   document.documentElement.style.setProperty('--plan-size', f.plan+'rem');
   document.documentElement.style.setProperty('--closed-size', f.closed+'rem');
-  const off = (state && state.tabsOffset!=null) ? state.tabsOffset : DEFAULT_TABS_OFFSET;
+  const off = dv.tabsOffset;
   document.documentElement.style.setProperty('--tabs-offset', off+'px');
 }
 function renderScorePop(port, editing){
   const pop = document.getElementById(`scorePop_${port}`); if(!pop) return;
-  const txt = state.scoreCriteria || DEFAULT_SCORE_CRITERIA;
+  const txt = sh().scoreCriteria || DEFAULT_SCORE_CRITERIA;
   if(editing){
     pop.innerHTML = `<textarea id="scoreCriteriaEdit_${port}">${escHtml(txt)}</textarea>
       <div class="btns">
@@ -20581,7 +20569,7 @@ function renderScorePop(port, editing){
 }
 function saveScoreCriteria(port){
   const ta = document.getElementById(`scoreCriteriaEdit_${port}`);
-  state.scoreCriteria = ta ? ta.value : state.scoreCriteria;
+  if(ta) sh().scoreCriteria = ta.value;
   renderScorePop(port, false);
   schedulePersist();
 }
@@ -20589,14 +20577,14 @@ document.addEventListener('click', ()=>{
   document.querySelectorAll('.scorePop.show').forEach(p=>p.classList.remove('show'));
 });
 function openIndustryManager(){
-  if(!Array.isArray(state.industries)) state.industries = [];
+  sh();
   document.getElementById('newIndustryName').value = '';
   renderIndustryList();
   document.getElementById('industryOverlay').classList.add('show');
 }
 function renderIndustryList(){
   const list = document.getElementById('industryList');
-  const items = (state.industries||[]).slice().sort((a,b)=>a.localeCompare(b));
+  const items = sh().industries.slice().sort((a,b)=>a.localeCompare(b));
   list.innerHTML = items.length ? items.map(ind=>{
     const esc = escHtml(ind).replace(/'/g,"\\'");
     const url = indLink(ind);
@@ -20615,17 +20603,16 @@ function addIndustry(){
   const input = document.getElementById('newIndustryName');
   const name = input.value.trim();
   if(!name){ alert('กรอกชื่อ Industry'); return; }
-  if(!Array.isArray(state.industries)) state.industries = [];
-  if(state.industries.some(x=>x.toLowerCase()===name.toLowerCase())){ alert('มี Industry นี้อยู่แล้ว'); return; }
-  state.industries.push(name);
+  if(sh().industries.some(x=>x.toLowerCase()===name.toLowerCase())){ alert('มี Industry นี้อยู่แล้ว'); return; }
+  sh().industries.push(name);
   input.value = '';
   renderIndustryList();
   schedulePersist();
 }
 function deleteIndustry(name){
   if(!confirm(`ลบ Industry "${name}"? (หุ้นที่เคยตั้งค่านี้ไว้จะยังคงมีชื่อเดิมติดอยู่ที่ตัวเอง แต่จะไม่มีใน list ให้เลือกอีก)`)) return;
-  state.industries = (state.industries||[]).filter(x=>x!==name);
-  if(state.industryLinks) delete state.industryLinks[name];
+  sh().industries = sh().industries.filter(x=>x!==name);
+  delete sh().industryLinks[name];
   renderIndustryList();
   schedulePersist();
 }
@@ -20730,7 +20717,7 @@ function deleteReasonTag(i){
 function resetReasonTags(){
   const kind = reasonMgrKind;
   if(!confirm(`คืน "${REASON_KINDS[kind].title}" กลับเป็นชุดเริ่มต้น? แท็กที่เพิ่มเองจะหายไป (ไม้เก่ายังเก็บชื่อเดิมไว้)`)) return;
-  ensureReasonTags(); state.reasonTags[kind] = cloneReasonTags(kind);
+  ensureReasonTags(); sh().reasonTags[kind] = cloneReasonTags(kind);
   afterReasonChange();
 }
 
@@ -20753,15 +20740,16 @@ const SCORE_LEVELS = ['3','2','1','0'];
 function cloneScoreLabels(){ return JSON.parse(JSON.stringify(DEFAULT_SCORE_LABELS)); }
 function ensureScoreLabels(kind){
   if(!state) return kind ? DEFAULT_SCORE_LABELS[kind] : DEFAULT_SCORE_LABELS;
-  if(!state.scoreLabels || typeof state.scoreLabels !== 'object') state.scoreLabels = cloneScoreLabels();
+  const SH = sh();
+  if(!SH.scoreLabels || typeof SH.scoreLabels !== 'object') SH.scoreLabels = cloneScoreLabels();
   Object.keys(DEFAULT_SCORE_LABELS).forEach(k=>{
-    if(!state.scoreLabels[k] || typeof state.scoreLabels[k] !== 'object') state.scoreLabels[k] = {...DEFAULT_SCORE_LABELS[k]};
+    if(!SH.scoreLabels[k] || typeof SH.scoreLabels[k] !== 'object') SH.scoreLabels[k] = {...DEFAULT_SCORE_LABELS[k]};
     SCORE_LEVELS.forEach(v=>{
-      const s = state.scoreLabels[k][v];
-      if(typeof s !== 'string' || !s.trim()) state.scoreLabels[k][v] = DEFAULT_SCORE_LABELS[k][v];
+      const s = SH.scoreLabels[k][v];
+      if(typeof s !== 'string' || !s.trim()) SH.scoreLabels[k][v] = DEFAULT_SCORE_LABELS[k][v];
     });
   });
-  return kind ? state.scoreLabels[kind] : state.scoreLabels;
+  return kind ? SH.scoreLabels[kind] : SH.scoreLabels;
 }
 function scoreLabelText(kind, v){
   if(v==null) return '';
@@ -21395,6 +21383,7 @@ async function autoFetchFxOnce(){
   if(rate){
     state.settings.fx = Math.round(rate*100)/100;
     state.settings.fxUpdatedAt = new Date().toISOString();
+    shFxPush();   /* SH2 */
     render();
     schedulePersist();
   }
@@ -21478,6 +21467,7 @@ function saveSettings(){
   if(state.settings.satPyrSplit == null) delete state.settings.satPyrSplit;
   if(state.settings.psRisk == null) delete state.settings.psRisk;
   if(state.settings.satV2 == null) delete state.settings.satV2;
+  try{ shFxPush(); }catch(e){ console.warn('shFxPush:', e); }   /* SH2 */
   document.getElementById('setOverlay').classList.remove('show');
   render();
   schedulePersist();
@@ -26060,11 +26050,106 @@ function ffStore(){
   let B; try{ B = getBook(home); }catch(e){ return null; }
   if(!B.settings || typeof B.settings!=='object') B.settings = {};
   if(B.settings.flowShared && typeof B.settings.flowShared==='object'){ ffTransient = null; return B.settings.flowShared; }
-  if(!(serverConfirmed && stateFromServer)) return ffTransient || (ffTransient = ffSharedMigrate());
+  if(!(serverConfirmed && stateFromServer) || cl2aGateOn || (acctDocExists && !acctExtra.cl2aResetAt)) return ffTransient || (ffTransient = ffSharedMigrate());   /* ห้ามเขียนก่อน gate รีเซ็ตผ่าน */
   B.settings.flowShared = ffSharedMigrate(); ffTransient = null;
   if(acctCtx === null) saveBook(home);
   return B.settings.flowShared;
 }
+/* SH2 — ค่าที่ใช้ร่วมกันทุกบัญชี (labels · industries · FX) → settings.shared ของบัญชีหลัก (เหตุผลเดียวกับ flowShared)
+   industries · industryLinks · reasonTags(+exitReasons เดิม) · scoreLabels · scoreCriteria · journalView · rsBench · fx · fxAuto · fxUpdatedAt
+   ย้ายครั้งเดียวหลัง server ยืนยัน: ค่าเดี่ยว = ของ Main (ไม่มี → บัญชีถัดไป) · ลิสต์ = union (Main ก่อน) · field เก่าในทุกบัญชีคงไว้ ไม่ลบ ไม่อ่านอีก
+   fx เป็นข้อยกเว้น: โค้ดอ่าน settings.fx ของแต่ละบัญชีอยู่ 20+ จุด → ค่าที่ใช้ร่วม "ซ้อนทับ" settings.fx ในหน่วยความจำของทุกบัญชี (shApplyFx) · ตัวจริงอยู่ที่ settings.shared.fx */
+let shTransient = null, shObj = null, shSig = '';
+const shFallbackObj = {};   /* ไม่มีบัญชีหลัก (ยังไม่โหลด) */
+function shMigrate(){
+  const home = tdHome(), ids = [home].concat(acctList.map(a=>a.id).filter(i=>i!==home));
+  const bookOf = id=>{ try{ return ((id===acctActive && state) ? state : acctBooks[id]) || {}; }catch(e){ return {}; } };
+  const out = {industries:[], industryLinks:{}, reasonTags:{}};
+  const seen = new Set();
+  ids.forEach(id=>{ (Array.isArray(bookOf(id).industries) ? bookOf(id).industries : []).forEach(x=>{ const v = String(x||'').trim(), k = v.toLowerCase(); if(v && !seen.has(k)){ seen.add(k); out.industries.push(v); } }); });
+  const lk = new Set();
+  ids.forEach(id=>{ const m = bookOf(id).industryLinks; if(m && typeof m==='object') Object.keys(m).forEach(n=>{ if(!lk.has(n.toLowerCase()) && indSafeUrl(m[n])){ lk.add(n.toLowerCase()); out.industryLinks[n] = m[n]; } }); });
+  const kinds = new Set(Object.keys(DEFAULT_REASON_TAGS));
+  ids.forEach(id=>{ const rt = bookOf(id).reasonTags; if(rt && typeof rt==='object') Object.keys(rt).forEach(k=>kinds.add(k)); });
+  kinds.forEach(kind=>{
+    const got = new Set(), list = [];
+    ids.forEach(id=>{
+      const b = bookOf(id), rt = b.reasonTags;
+      let arr = (rt && Array.isArray(rt[kind])) ? rt[kind] : [];
+      if(kind==='exit' && !arr.length && Array.isArray(b.exitReasons)) arr = b.exitReasons;   /* ของเดิมก่อนมี kind */
+      arr.forEach(t=>{ if(t && t.id && !got.has(t.id)){ got.add(t.id); list.push(JSON.parse(JSON.stringify(t))); } });
+    });
+    if(list.length) out.reasonTags[kind] = list;
+  });
+  ['scoreLabels','journalView'].forEach(k=>{ for(const id of ids){ const v = bookOf(id)[k]; if(v && typeof v==='object' && !Array.isArray(v)){ out[k] = JSON.parse(JSON.stringify(v)); break; } } });
+  for(const id of ids){ const v = bookOf(id).scoreCriteria; if(typeof v==='string'){ out.scoreCriteria = v; break; } }
+  ['rsBench','fx','fxAuto','fxUpdatedAt'].forEach(k=>{ for(const id of ids){ const st = bookOf(id).settings, v = st && st[k]; if(v!=null && !(k==='fx' && !(+v>0))){ out[k] = v; break; } } });
+  return out;
+}
+function shStore(){
+  const home = tdHome();
+  if(!home) return null;
+  let B; try{ B = getBook(home); }catch(e){ return null; }
+  if(!B.settings || typeof B.settings!=='object') B.settings = {};
+  let S = B.settings.shared;
+  if(!(S && typeof S==='object')){
+    if(!(serverConfirmed && stateFromServer) || cl2aGateOn || (acctDocExists && !acctExtra.cl2aResetAt)) return shTransient || (shTransient = shMigrate());   /* ห้ามเขียนก่อน gate รีเซ็ตผ่าน */
+    S = B.settings.shared = shMigrate(); shTransient = null; shObj = null;
+    if(acctCtx === null) saveBook(home);
+    shApplyFxAll(S);
+  } else shTransient = null;
+  if(S !== shObj){ shObj = S; shSig = JSON.stringify(S); }
+  return S;
+}
+function sh(){
+  const S = shStore() || shFallbackObj;
+  if(!Array.isArray(S.industries)) S.industries = [];
+  if(!S.industryLinks || typeof S.industryLinks!=='object') S.industryLinks = {};
+  return S;
+}
+/* ตัวตรวจ "ค่าใช้ร่วมเปลี่ยน" — เรียกจาก schedulePersist: ถ้า settings.shared ต่างจากที่ซิงก์ล่าสุด → ติดธง dirty ให้บัญชีหลักถูกเขียน (ไม่ต้องไล่แก้ทุกจุดที่ mutate) */
+function shSyncDirty(){
+  const h = tdHome();
+  if(!h || !shObj || shTransient) return;
+  const sig = JSON.stringify(shObj);
+  if(sig !== shSig){ shSig = sig; dirtyBooks.set(h, (dirtyBooks.get(h)||0) + 1); }
+}
+function shApplyFx(book, S){
+  try{
+    if(!book || !book.settings || !S || typeof S!=='object') return;
+    if(+S.fx > 0) book.settings.fx = +S.fx;
+    if(S.fxAuto != null) book.settings.fxAuto = S.fxAuto;
+    if(S.fxUpdatedAt) book.settings.fxUpdatedAt = S.fxUpdatedAt;
+  }catch(e){}
+}
+function shApplyFxAll(S){
+  acctList.forEach(a=>{ const b = (a.id===acctActive && state) ? state : acctBooks[a.id]; if(b && (b.__built || b===state)) shApplyFx(b, S); });
+}
+/* เรียกหลังแก้ settings.fx / fxAuto / fxUpdatedAt ของบัญชีที่เปิดอยู่ → ดันเข้า shared แล้วกระจายให้ทุกบัญชี */
+function shFxPush(){
+  const S = sh(), st = state.settings;
+  if(+st.fx > 0) S.fx = +st.fx;
+  if(st.fxAuto != null) S.fxAuto = st.fxAuto;
+  if(st.fxUpdatedAt) S.fxUpdatedAt = st.fxUpdatedAt;
+  shApplyFxAll(S);
+}
+/* fontSizes · tabsOffset → ต่ออุปกรณ์ (localStorage) · seed ครั้งเดียวจากของ Main */
+const DEV_UI_KEY = 'dash.devUi.v1';
+function devUiGet(){
+  let o = null;
+  try{ const r = localStorage.getItem(DEV_UI_KEY); o = r ? JSON.parse(r) : null; }catch(e){}
+  if(o && typeof o==='object' && o.fontSizes) return o;
+  let seed = {fontSizes:{...DEFAULT_FONT_SIZES}, tabsOffset:DEFAULT_TABS_OFFSET}, fromMain = false;
+  try{
+    const h = tdHome(), b = h ? ((h===acctActive && state) ? state : acctBooks[h]) : null;
+    if(b && (b.fontSizes || b.tabsOffset!=null) && serverConfirmed && stateFromServer){
+      seed = {fontSizes:{...DEFAULT_FONT_SIZES, ...(b.fontSizes||{})}, tabsOffset: b.tabsOffset!=null ? b.tabsOffset : DEFAULT_TABS_OFFSET}; fromMain = true;
+    }
+  }catch(e){}
+  if(fromMain || (serverConfirmed && stateFromServer)){ try{ localStorage.setItem(DEV_UI_KEY, JSON.stringify(seed)); }catch(e){} }
+  return seed;
+}
+function devUiSet(o){ try{ localStorage.setItem(DEV_UI_KEY, JSON.stringify(o)); }catch(e){} }
 function ffPersist(){ if(acctCtx !== null) return; const h = tdHome(); if(h && ffStore() && !ffTransient) saveBook(h); else schedulePersist(); }
 function ffState(){
   if(!state) return defaultFundflow();

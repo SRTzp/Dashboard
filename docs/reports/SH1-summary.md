@@ -48,3 +48,33 @@ Already on the home account (shared in effect, nothing to do): `candMeta, candRe
 
 ## Full regression (after SH1)
 `tests/run_regression.sh` now includes `run_tests_sh1`. Full run: **48/48 ok · 0 failing** (2510 s). Failing set: empty. `run_tests_sh1`: 14 checks pass · 0 fail.
+
+---
+
+# SH2 — shared labels / industries / FX (approved)
+
+## Moved to `settings.shared` on the home account
+`industries · industryLinks · reasonTags (+legacy exitReasons) · scoreLabels · scoreCriteria · journalView · rsBench · fx · fxAuto · fxUpdatedAt`.
+Same mechanism and reasons as `flowShared` (SH1). Code reads/writes via `sh()`; a hook in `schedulePersist` (`shSyncDirty`) flags the home book dirty whenever `settings.shared` changed, so every existing edit site persists without per-site changes.
+
+**Migrate once** (after server confirmation, after the reset gate): single values = Main's (next account if Main has none); lists = union, Main first (industries case-insensitive; industryLinks Main wins on clash; reasonTags union by tag id, Main's label wins; legacy `exitReasons` folded into `exit` when an account has no `reasonTags.exit`). Old fields in every book are left as stored and no longer read.
+
+## Per device (not synced)
+`fontSizes` + `tabsOffset` → `localStorage['dash.devUi.v1']`, seeded once from Main's stored values; no longer written to Firestore.
+
+## Removed dead code (stored data untouched)
+`watchSortMode` / `watchCollapsed` normalisation and defaults (`defaultWatchSortMode`) removed from the book builder; `{...d}` still carries any stored values through.
+**`sat_since` was NOT removed:** it is live (Sat "start counting trades" setting, read at `B.sat_since` in the Sat stats and shown in Settings). My SH1 audit said "likely dead" — that was wrong.
+
+## Deviation to know about: FX
+`settings.fx` is read in 20+ places per account (engine adapter, snapshots, pos sizing …). Instead of editing all of them, the shared FX is **overlaid onto every account's in-memory `settings.fx/fxAuto/fxUpdatedAt`** (`shApplyFx`), and edits (Settings save, auto-fetch) push back to `shared` (`shFxPush`). Consequence: an account's *stored* `settings.fx` is rewritten with the shared value the next time that account's book is written, so "old fields untouched" holds for everything except these three FX values. Source of truth is `settings.shared.fx`.
+
+## Bugs found by the regression and fixed
+- Migration wrote to Firestore **before** the CL2-a reset gate was confirmed (phase19) → migrations now wait for server confirmation and a passed gate.
+- Migration ran lazily on the first account switch, dirtying/writing the home book on a plain switch (phase10) → now runs once at load.
+- `acctBuildBook` temporarily swaps `state`, which made `sh()` create `shared` on the wrong account → the ensure* calls there were removed (they no longer touch the book).
+- phase20 tests updated to the new location (`settings.shared.reasonTags`, `sh().industries`).
+
+## Tests
+`tests/run_tests_sh2.py` (in `run_regression.sh`), 1440 + 390, 28 checks: union/Main-wins for industries, links, labels, criteria, reason tags; FX identical and equal across accounts; switch account → same labels/industries/FX; edits in Family show on Main; stored on home only; old fields untouched; font size seeded from Main, per device (a second browser context keeps 0.9 while the first is 1.3), not written to Firestore.
+**Full regression: 49/49 ok · 0 failing · 1121 s.**
