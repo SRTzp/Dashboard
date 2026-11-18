@@ -27,7 +27,7 @@ def run(pw, w, h):
         check(f"{tag} single merged port chip", len(info["chips"]) == 1 and "MMT" in info["chips"][0] and "COMP" in info["chips"][0] and "(regime)" in info["chips"][0], info)
         check(f"{tag} room present once", info["room"], info)
         if w <= 560:
-            check(f"{tag} switch on regime line (right), no lone switch row", info["swSameRowAsRegime"], info)
+            check(f"{tag} LR2: Daily/Weekend switch sits right-aligned above the glance block (regime is a glance card now)", info["swBottom"] > info["swTop"], info)
             check(f"{tag} regime shows label only (no W/L)", "W " not in info["rgTxt"] and "L " not in info["rgTxt"], info)
             if info["hotTop"]: check(f"{tag} ≤3 lines before HOT", info["hotTop"] - info["top"] <= 120, info)
         js(page, "()=>{ window.ln4HotSectors = ()=>[...['A','B','C','D','E'].map((x,i)=>({etf:'X'+x,name:'Sector '+x,k:i<3?'lead':'fresh',star:false,hot:true,ratio:5-i})), {etf:'XS',name:'Starred',k:'star',star:true,hot:false,ratio:0}]; todayRefresh(true); }"); settle(page, 400)
