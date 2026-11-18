@@ -211,8 +211,11 @@ def plan_filters(pw, w, h):
             btns:[...document.querySelectorAll('[data-bd-chip],[data-bd-segbtn]')].map(e=>{ const r = e.getBoundingClientRect(); return [Math.round(r.top + r.height/2), Math.round(r.left), Math.round(r.right)]; })}; }""")
         one = len({round(t[0] / 8) for t in g["btns"]}) == 1
         check(f"{tag} 4 type filters (All · MMT · COMP · Sat) and status chips (Planned · Ordered · Holding) = {len(g['btns'])} controls", len(g["btns"]) == 7, g["btns"])
-        check(f"{tag} 4 all 7 on ONE row" + (" (iPhone: fits at this width)" if w < 600 else ""), one, g)
-        check(f"{tag} 4 type filters left · status chips right", g["chipsRight"] <= g["segLeft"] + 1 and g["segRight"] <= g["rowRight"] + 1, g)
+        if w < 600:   # LR3 A: phone = segmented Planned · Ordered · Holding ABOVE the port chips (two rows), no overlap
+            check(f"{tag} 4 LR3 phone: status segments above the type filters", g["segTop"] < g["chipTop"] and g["segRight"] <= g["rowRight"] + 1, g)
+        else:
+            check(f"{tag} 4 all 7 on ONE row", one, g)
+            check(f"{tag} 4 type filters left · status chips right", g["chipsRight"] <= g["segLeft"] + 1 and g["segRight"] <= g["rowRight"] + 1, g)
         check(f"{tag} 4 no clipped / scrolling chips and no page overflow", g["chipsScroll"] <= 0 and W.ovf(page) <= 0, (g["chipsScroll"], W.ovf(page)))
         # behaviour unchanged
         js(page, "()=>bdSetChip('COMP')"); settle(page, 300)

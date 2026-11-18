@@ -3875,12 +3875,27 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
 .bd-col.bd-on{display:block}
 @media (min-width:840px){
   .bd-seg{display:none}
-  .bd-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
-  .bd-col{display:block;min-height:320px}
+  .bd-cols{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,3fr) minmax(0,4fr);gap:12px;align-items:start}
+  .bd-col{display:block;min-height:120px}
 }
 .bd-ch{display:flex;align-items:center;gap:6px;margin:2px 4px 10px;font-size:14px}
 .bd-n{background:var(--bg,#EEF0F3);color:var(--muted);border-radius:999px;padding:1px 8px;font:700 12.5px var(--sans)}
 .bd-none{color:var(--faint,#9AA0A9);font-size:13px;padding:18px 4px;text-align:center}
+/* LR3 A — board: 5 : 3 : 4 columns · empty column shrinks · segmented tabs above the port chips on phone · Waiting row · also-in link · hidden port */
+.bd-seg button{white-space:nowrap}.bd-seg button b{font:inherit}
+.bd-hint{font-size:12px;font-weight:500;color:var(--muted)}
+.bd-dot{font-style:normal;font-size:11px}
+.bd-chip.on .bd-dot{color:#fff!important}
+.bd-col.bd-empty{min-height:0!important;padding-bottom:6px}.bd-col.bd-empty .bd-ch{margin-bottom:2px}.bd-col.bd-empty .bd-none{padding:6px 4px;text-align:left}
+.bd-wait,.bd-hid{margin:2px 0 8px}
+.bd-wait>summary,.bd-hid>summary{cursor:pointer;font:600 13px var(--sans);color:var(--muted);padding:9px 12px;min-height:36px;border-radius:12px;background:var(--surface);border:1px solid var(--border);list-style:none}
+.bd-wait>summary::-webkit-details-marker,.bd-hid>summary::-webkit-details-marker{display:none}
+.bd-wait>summary::after,.bd-hid>summary::after{content:" ▸";float:right}.bd-wait[open]>summary::after,.bd-hid[open]>summary::after{content:" ▾"}
+.bd-wait>.bd-card,.bd-hid>.bd-card{margin-top:8px}
+.bd-also{border:1px solid var(--border);background:none;border-radius:999px;padding:2px 8px;font:600 12px var(--sans);cursor:pointer;color:#B4387A;border-color:#F0C9DD;min-height:0}
+.bd-also.m{color:var(--text,#141518);border-color:var(--border)}
+@media(min-width:840px){.bd-frow .bd-seg{order:2}}
+@media(max-width:839px){.bd-frow{flex-direction:column;align-items:stretch;gap:8px}.bd-frow .bd-seg{display:flex;width:100%}.bd-frow .bd-seg button{flex:1}}
 .bd-sub{font:700 12.5px var(--sans);color:var(--muted);margin:12px 4px 6px}
 .bd-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:11px 12px;margin-bottom:8px;cursor:pointer;min-width:0}
 .bd-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.07)}
@@ -29811,7 +29826,38 @@ function bdSorted(items){
   by.hold.sort((a, b)=>(((b.flags.addon || b.flags.below) ? 1 : 0) - ((a.flags.addon || a.flags.below) ? 1 : 0)) || ((b.R == null ? -1e9 : b.R) - (a.R == null ? -1e9 : a.R)));
   return by;
 }
-function bdFiltered(){ const all = bdItems(); return bdChip === 'all' ? all : all.filter(x=>x.tag === bdChip); }
+/* LR3 A — the board shows the ACTIVE account. A port the account hides (acctDefaults.ports) is not a column filter; its plans stay reachable under 'Hidden port: X (n)'. */
+const BD_PORT_L = {MMT:'MMT', COMP:'COMP', SAT:'SAT'};
+function bdActAcct(){ return acctActive || tdHome(); }
+function bdAcctItems(){ const a = bdActAcct(); let all = bdItems(); if(acctList.length > 1 && a) all = all.filter(x=>lr2AcctOf(x) === a); return all; }
+function bdPortsOn(){ const a = bdActAcct(); return BD_CHIPS.filter(k=>k !== 'all').filter(k=>{ try{ return lrPortOn(a, k); }catch(e){ return true; } }); }
+function bdChipNow(){ return bdChip === 'all' || bdPortsOn().includes(bdChip) ? bdChip : 'all'; }
+function bdFiltered(){ const on = bdPortsOn(), c = bdChipNow(); return bdAcctItems().filter(x=>on.includes(x.tag) && (c === 'all' || x.tag === c)); }
+function bdHiddenItems(){ const on = bdPortsOn(); return bdAcctItems().filter(x=>!on.includes(x.tag)); }
+/* 'also in F ›' — the other account holds a plan / order / holding on the same ticker (Sat: same asset). Tap = switch account, show and scroll to it. */
+let bdAlsoMemo = null;
+function bdAlsoOf(it){
+  if(acctList.length < 2) return null;
+  if(!bdAlsoMemo){ try{ bdAlsoMemo = bdItems(); }catch(e){ bdAlsoMemo = []; } }
+  const mine = lr2AcctOf(it);
+  const o = bdAlsoMemo.find(x=>x.id !== it.id && x.kind === it.kind && lr2AcctOf(x) !== mine && String(x.sym).toUpperCase() === String(it.sym).toUpperCase());
+  return o || null;
+}
+function bdAlsoHtml(it){
+  const o = bdAlsoOf(it); if(!o) return '';
+  const a = acctList.find(x=>x.id === lr2AcctOf(o)); if(!a) return '';
+  const t = lrAcctTag(a), q = s=>String(s).replace(/'/g, "\\'");
+  return `<button type="button" class="bd-also ${t === 'F' ? 'f' : 'm'}" data-bd-also="${bdE(t)}" onclick="event.stopPropagation();bdAlso('${q(a.id)}','${q(o.id)}')">also in ${bdE(t)} ›</button>`;
+}
+function bdAlso(acct, id){
+  acctSwitch(acct);
+  if(acctActive !== acct) return;
+  const it = bdItems().find(x=>x.id === id);
+  if(it){ bdChip = 'all'; bdSeg = it.status; try{ localStorage.setItem('dash.bdChip', 'all'); localStorage.setItem('dash.bdSeg', it.status); }catch(e){} }
+  try{ switchTab('plan'); }catch(e){}
+  bdRender();
+  setTimeout(()=>{ const n = document.querySelector(`[data-bd-card="${String(id).replace(/"/g, '\\"')}"]`); if(n){ try{ n.scrollIntoView({block:'center'}); n.focus({preventScroll:true}); }catch(e){} } }, 60);
+}
 function bdHotTag(sym){ try{ const t = ln4SecTag(sym); return /data-ln4-sec="hot"/.test(t) ? t : ''; }catch(e){ return ''; } }
 function bdTagHtml(it){ return `<span class="sc${it.tag === 'SAT' ? ' sat' : (it.tag === 'COMP' ? ' c pt' : ' pt')}" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}" data-bd-tag="${it.tag}">${it.tag}</span>`; }
 function bdToEntry(it){
@@ -29992,7 +30038,7 @@ function pvCardHtml(it){
   const open = pvMoreOpen.has(it.id);
   const more = open ? `<div class="pv-more2" data-pv-more onclick="event.stopPropagation()"><table class="pv-tb2">${pvMoreRows(it, pv)}</table><div class="pv-edit"><button type="button" class="pv-fixbtn" data-pv-edit onclick="event.stopPropagation();bdOpen('${qid}')">Edit</button></div></div>` : '';
   const html = `<div class="bd-card pv-card${open ? ' pv-open' : ''}" role="button" tabindex="0" aria-expanded="${open}" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${blk ? ' data-pv-blk="1"' : ''} onclick="pvCardTap('${qid}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();pvCardTap('${qid}')}">
-    <div class="pv-r1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${fam}<span class="pv-dir ${dirTxt === 'Short' ? 's' : 'l'}" data-pv-dir="${dirTxt}">${dirTxt}</span>${tg}${wn}${efMac}<span class="bd-sp"></span>${state}${pill}${x}</div>
+    <div class="pv-r1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${fam}<span class="pv-dir ${dirTxt === 'Short' ? 's' : 'l'}" data-pv-dir="${dirTxt}">${dirTxt}</span>${bdAlsoHtml(it)}${tg}${wn}${efMac}<span class="bd-sp"></span>${state}${pill}${x}</div>
     <div class="pv-r2" data-pv-money>${pvMoneyLine(it, pv)}</div>
     ${legs ? `<div class="pv-legs" data-pv-legs>${legs}</div>` : ''}${efNews}${bl}${more}</div>`;
   return {html, pv, blk};
@@ -30022,32 +30068,40 @@ function bdCardHtml(it){
   const dirChip = `<span class="chip ${dirTxt === 'Short' ? 'r' : ''}" data-pv-dir="${dirTxt}">${dirTxt}</span>`;
   if(pc && pc.html) return pc.html;
   return `<div class="bd-card" role="button" tabindex="0" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${it.inc ? ' data-bd-inc="1"' : ''} onclick="bdOpen('${id}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();bdOpen('${id}')}">
-    <div class="bd-r1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${fam}${dirChip}${it.status === 'plan' ? re2ReadyBtn(it) + re4CancelBtn(it, true) : ''}</div>
+    <div class="bd-r1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${fam}${dirChip}${bdAlsoHtml(it)}${it.status === 'plan' ? re2ReadyBtn(it) + re4CancelBtn(it, true) : ''}</div>
     <div class="bd-r2">${r2}</div>
     <div class="bd-r3">${l3}<button type="button" class="go${p.cls ? ' ' + p.cls : ''}" data-bd-pill="${p.k}"${p.dis ? ` disabled title="${bdE(p.title)}" data-bd-blocked="1"` : ''} onclick="event.stopPropagation();${p.fn}">${bdE(p.t)}</button></div></div>`;
 }
+function bdWaitHtml(wait){
+  return `<details class="bd-wait" data-bd-wait${bdWaitOpen ? ' open' : ''} ontoggle="bdWaitOpen=this.open"><summary>Waiting · ${wait.length} need entry or stop</summary>${wait.map(bdCardHtml).join('')}</details>`;
+}
+let bdWaitOpen = false;
 function bdColHtml(seg, list){
   let body;
   if(!list.length) body = `<div class="bd-none">Nothing here</div>`;
   else if(seg === 'plan'){
     const ready = list.filter(x=>!x.inc), wait = list.filter(x=>x.inc);
-    body = ready.map(bdCardHtml).join('') + (wait.length ? `<div class="bd-sub" data-bd-wait>🕓 Waiting for setup (${wait.length})</div>` + wait.map(bdCardHtml).join('') : '');
-    if(!ready.length && wait.length) body = `<div class="bd-sub" data-bd-wait>🕓 Waiting for setup (${wait.length})</div>` + wait.map(bdCardHtml).join('');
+    body = ready.map(bdCardHtml).join('') + (wait.length ? bdWaitHtml(wait) : '');
   }else body = list.map(bdCardHtml).join('');
-  return `<section class="bd-col${bdSeg === seg ? ' bd-on' : ''}" data-bd-col="${seg}"><div class="bd-ch"><b>${BD_SEG_L[seg]}</b><span class="bd-n" data-bd-n="${seg}">${list.length}</span></div>${body}</section>`;
+  return `<section class="bd-col${bdSeg === seg ? ' bd-on' : ''}${list.length ? '' : ' bd-empty'}" data-bd-col="${seg}"><div class="bd-ch"><b>${BD_SEG_L[seg]}</b><span class="bd-n" data-bd-n="${seg}">${list.length}</span>${seg === 'plan' && list.length ? '<span class="bd-sp"></span><span class="bd-hint">closest to entry first</span>' : ''}</div>${body}</section>`;
 }
 function bdRiskNow(){ try{ const L = re1L(tdHome()); if(L && L.basis.ok && L.active) return {used: L.active.weekUsed / L.basis.weekEquity * 100, cap: RiskEngine.POLICY.active.weeklyPct}; }catch(e){} return null; }   /* RE-C1 — Active (Momentum + Satellite) week usage vs 3% summary check; was PS1 principal / 5% total cap */
 function bdSummary(items){
-  const H = items.filter(x=>x.status === 'hold').length, rk = bdRiskNow();
-  return `<span class="bd-sum" data-bd-sum><b>${items.length}</b> plan${items.length === 1 ? '' : 's'} · Holding <b>${H}</b>${rk ? ` · risk in use <b>${ps1Pct(rk.used, 1)}</b> / ${ps1Pct(rk.cap, 0)}` : ''}</span>`;
+  const n = k=>items.filter(x=>x.status === k).length;
+  let rk = null; try{ rk = lr2OpenRisk(bdActAcct()); }catch(e){}   /* LR3 — the SAME per-account value as Today's Act header (Active week usage ÷ week equity) */
+  return `<span class="bd-sum" data-bd-sum><b>${n('plan')}</b> planned · <b>${n('ord')}</b> ordered · <b>${n('hold')}</b> holding${rk != null ? ` · open risk <b data-bd-orisk>${re1Pct(rk)}</b> / ${RiskEngine.POLICY.active.weeklyPct}%` : ''}</span>`;
 }
 function bdBoardHtml(){
-  const items = bdFiltered(), by = bdSorted(items), e = bdE;
-  const chips = BD_CHIPS.map(k=>`<button type="button" class="bd-chip${bdChip === k ? ' on' : ''}" data-bd-chip="${k}" aria-pressed="${bdChip === k}" onclick="bdSetChip('${k}')">${k === 'all' ? 'All' : k === 'SAT' ? 'Sat' : k}</button>`).join('');
-  const seg = `<div class="bd-seg" role="tablist" data-bd-seg>${BD_SEGS.map(s=>`<button type="button" role="tab" class="${bdSeg === s ? 'on' : ''}" aria-selected="${bdSeg === s}" data-bd-segbtn="${s}" onclick="bdSetSeg('${s}')">${BD_SEG_L[s].split(' ')[0]} ${by[s].length}</button>`).join('')}</div>`;
+  bdAlsoMemo = null;
+  const items = bdFiltered(), by = bdSorted(items), e = bdE, cur = bdChipNow(), hid = bdHiddenItems();
+  const dot = {MMT:'#2F5BD3', COMP:'#0F766E', SAT:'#6741B8'};
+  const chips = ['all'].concat(bdPortsOn()).map(k=>`<button type="button" class="bd-chip${cur === k ? ' on' : ''}" data-bd-chip="${k}" aria-pressed="${cur === k}" onclick="bdSetChip('${k}')">${k === 'all' ? 'All' : `<i class="bd-dot" style="color:${dot[k]}">●</i> ${k}`}</button>`).join('');
+  const seg = `<div class="bd-seg" role="tablist" data-bd-seg>${BD_SEGS.map(s=>`<button type="button" role="tab" class="${bdSeg === s ? 'on' : ''}" aria-selected="${bdSeg === s}" data-bd-segbtn="${s}" onclick="bdSetSeg('${s}')">${BD_SEG_L[s].replace(/^\S+\s/, '')} <b>${by[s].length}</b></button>`).join('')}</div>`;
+  const hp = {}; hid.forEach(x=>{ (hp[x.tag] = hp[x.tag] || []).push(x); });
+  const hidden = Object.keys(hp).map(k=>`<details class="bd-hid" data-bd-hidden="${k}"><summary>Hidden port: ${k} (${hp[k].length})</summary>${hp[k].map(bdCardHtml).join('')}</details>`).join('');
   return `<div class="bd-head"><h2>Plans</h2>${bdSummary(items)}</div>
-    <div class="bd-frow" data-bd-frow><div class="bd-chips" data-bd-chips>${chips}</div>${seg}</div>
-    <div class="bd-cols" data-bd-cols>${BD_SEGS.map(s=>bdColHtml(s, by[s])).join('')}</div>`;
+    <div class="bd-frow" data-bd-frow>${seg}<div class="bd-chips" data-bd-chips>${chips}</div></div>
+    <div class="bd-cols" data-bd-cols>${BD_SEGS.map(s=>bdColHtml(s, by[s])).join('')}</div>${hidden}`;
 }
 function bdBoardOn(){ return !bdEditMode; }
 function bdChrome(){
