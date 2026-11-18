@@ -4335,7 +4335,7 @@ html body .topbar.topbar.topbar .hbtns>#hdrMoreBtn:hover{border-color:var(--lr-m
 /* ══ LR2·B — one Act list (Main + Family): stacked groups · account pill · direction ══ */
 .lr2-act .lr2-cols{display:flex!important;flex-direction:column;gap:14px}.lr2-act .lr2-cols>.re2-col{width:auto;min-width:0}
 .lr2-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.lr2-head .sp{flex:1}
-.lr2-bdg{font:600 var(--lr-fs-6)/1 var(--lr-sans);color:var(--lr-text2);background:var(--lr-seg);padding:4px 8px;border-radius:var(--lr-r-pill)}
+.lr2-cause{font:600 var(--lr-fs-6)/1 var(--lr-sans);color:var(--lr-muted)}.lr2-bdg{font:600 var(--lr-fs-6)/1 var(--lr-sans);color:var(--lr-text2);background:var(--lr-seg);padding:4px 8px;border-radius:var(--lr-r-pill)}
 .lr2-orisk{font:400 var(--lr-fs-5)/1.2 var(--lr-sans);color:var(--lr-muted);display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.lr2-orisk b{color:var(--lr-ink)}
 .re2-row .lr-acc,.lr2-head .lr-acc{padding:3px 6px;font-size:12px;min-width:20px}
 .lr2-dir{font:600 var(--lr-fs-6)/1 var(--lr-sans)}.lr2-dir.lg{color:var(--lr-gain)}.lr2-dir.sh{color:var(--lr-loss)}
@@ -4353,6 +4353,8 @@ html body .topbar.topbar.topbar .hbtns>#hdrMoreBtn:hover{border-color:var(--lr-m
 .lr2-more{all:unset;cursor:pointer;min-height:36px;display:flex;align-items:center;font:600 var(--lr-fs-5)/1 var(--lr-sans);color:var(--lr-muted)}
 .lr2-todo .ln4-det{margin:4px 0}
 .re2-pc .rk3.no-mom{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:560px){.lr2-status{padding:8px 12px 2px!important}.lr2-status .lr2-ph{margin-bottom:6px}.lr2-calm{display:none!important}.lr2-side .pair{gap:0}.lr2-side .pair>.card{border-radius:0;border-bottom-width:0;padding:10px 14px}.lr2-side .pair>.card:first-child{border-radius:14px 14px 0 0}.lr2-side .pair>.card:last-child{border-radius:0 0 14px 14px;border-bottom-width:1px}.lr2-side .pair>.card:only-child{border-radius:14px}.lr2-side{gap:10px}.lr2-todo{padding:10px 14px}.lr2-glance,.lr2-ph{margin-bottom:8px}.lr2-viewrow{margin-bottom:8px}}
+@media (max-width:560px){.lr2-ph{padding:8px 12px;gap:0}.lr2-ph .l1,.lr2-ph .l2{gap:2px 6px}.lr2-th{margin:0 0 2px!important;min-height:20px}.lr2-th b{font-size:14px!important}.lr2-ti,.lr2-tb{min-height:40px!important}.lr2-todo{padding:8px 14px 6px!important}.lr2-viewrow{margin-bottom:6px!important}.lr2-head{gap:6px 8px}.lr2-act{padding-top:10px!important;padding-bottom:6px!important}}
 /* ══ LR2·A — Market at a glance: 4 equal cards (desktop) · one two-line block (phone) ══ */
 .lr2-viewrow{display:flex;justify-content:flex-end;align-items:center;margin-bottom:12px}
 .lr2-glance{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 16px}
@@ -11836,7 +11838,9 @@ function ln4MoreHtml(M){
   try{ h += td3OverviewDaily(M); }catch(e){}
   try{ if(!ln4GoalOpen) h += td3GoalsHtml(M); }catch(e){}
   try{ h += td4RemBanner(M); }catch(e){}
-  return `<details class="ln4-more" data-ln4-moredet ontoggle="try{ln4Fit()}catch(e){}"><summary>Details · risk · sectors · accounts</summary><div class="ln4-mb">${h}</div></details>`;
+  let det = '', dOpen = false;
+  if(!ln4Wide()){ try{ det = lr2SideCards(); dOpen = lr2DetOpen === true; }catch(e){} }
+  return `<details class="ln4-more" data-ln4-moredet${dOpen ? ' open' : ''} ontoggle="lr2DetOpen=this.open;try{ln4Fit()}catch(e){}"><summary>Details · risk · sectors · accounts</summary><div class="ln4-mb">${det}${h}</div></details>`;
 }
 /* TS1b — Weekly News line (Today › Daily, under Find): the LN4 lean Today dropped it by accident (lean mockup keeps it) */
 function ln4NewsLine(){
@@ -11849,7 +11853,7 @@ function ln4Html(M, W, wk){
     const banner = !W.complete ? `<div class="td3-inc" data-td3-incomplete>This week's review is incomplete</div>` : '';
     return status + ln4TodoHtml(M) + banner + `<div class="td3-pn wk" data-td3-panels>${td3WeekPanelHtml(W)}</div>`;
   }
-  return status + `<div class="lr2-main" data-lr2-main><div class="lr2-actcol"><div class="td3-pn" data-td3-panels>${ln4ActHtml()}</div></div><aside class="lr2-side" data-lr2-side>${ln4TodoHtml(M)}${lr2SideCards()}${ln4MoreHtml(M)}</aside></div>`;
+  return status + `<div class="lr2-main" data-lr2-main><div class="lr2-actcol"><div class="td3-pn" data-td3-panels>${ln4ActHtml()}</div></div><aside class="lr2-side" data-lr2-side>${ln4TodoHtml(M)}${ln4Wide() ? lr2SideCards() : ''}${ln4MoreHtml(M)}</aside></div>`;
 }
 
 
@@ -30576,7 +30580,7 @@ function re2StripHtml(acct, label){
   const e = td3E, S = re2State(acct), R = re2Room(acct), ev = re2EvData(Date.now());
   const ab = S.ab || {}, nm = {mmt:'MMT', sat:'SAT', comp:'COMP'};
   const chip = (k, txt)=>{ const c = ab[k]; return `<span class="rk${c ? ' ' + c + ' ab' : ' m'}" data-re2-chip="${k}">${c === 'r' ? e(nm[k]) + ' locked' : txt}</span>`; };
-  let h = `<div class="h re2-strip" data-re2-strip="${e(acct)}"><b>${label ? e(label) + ' · ' : ''}Act</b><span class="dot ${S.c}"></span><b class="nm re2-st ${S.c}" data-re2-state${aw1SnapAttr(S)}>${e(S.t)}</b>`;
+  let h = `<div class="h re2-strip${S.c === 'g' && !(()=>{ try{ return re4Due(acct); }catch(x){ return false; } })() ? ' lr2-calm' : ''}" data-re2-strip="${e(acct)}"><b>${label ? e(label) + ' · ' : ''}Act</b><span class="dot ${S.c}"></span><b class="nm re2-st ${S.c}" data-re2-state${aw1SnapAttr(S)}>${e(S.t)}</b>`;
   if(R){
     if((()=>{ try{ return lrPortOn(acct, 'MMT'); }catch(x){ return true; } })()) h += chip('mmt', `MMT <b>${R.mom.left}</b> idea${R.mom.left === 1 ? '' : 's'} · ${re1Pct(R.mom.room)}`);
     h += chip('sat', `SAT step <b>${R.sat.step}</b> · ${re1Pct(R.sat.rpt)}`);
@@ -30754,7 +30758,7 @@ function lr2ActHead(accts){
   const fut = accts.map(id=>({id, v:lr2Futures(id)})).filter(x=>x.v != null);
   const rtxt = risk.length ? `<span class="num lr2-orisk" data-lr2-orisk>Open risk ${risk.map(x=>`${accts.length > 1 ? pill(x.id) + ' ' : ''}<b>${re1Pct(x.v)}</b>`).join(' · ')} / ${cap}%${fut.map(x=>` · ${pill(x.id)} futures <b data-lr2-fut>${x.v.toFixed(1)}×</b>`).join('')}</span>` : '';
   let exec = ''; accts.forEach(a=>{ try{ if(re4Due(a)){ const ac = acctList.find(x=>x.id === a); exec += `<button type="button" class="rk r ab" data-re2-chip="exec" data-re4-chip data-lr2-exec="${e(a)}" title="Execution review due" onclick="re4ReviewOpen('${e(a)}')">${ac && accts.length > 1 ? lrAcctPill(ac) + ' ' : ''}${re4Counted(a).length} not taken</button>`; } }catch(err){} });
-  return `<div class="h re2-strip lr2-head" data-re2-strip="all" data-lr2-head><b>Act</b><span class="lr2-bdg" data-lr2-bdg>${e(lr2AcctWord(accts))}</span><span class="dot ${S.c}"></span><b class="nm re2-st ${S.c}" data-lr2-state data-re2-state${aw1SnapAttr(S)}>${e(S.t)}</b>${exec}<span class="sp"></span>${rtxt}</div>`;
+  return `<div class="h re2-strip lr2-head" data-re2-strip="all" data-lr2-head><b>Act</b><span class="lr2-bdg" data-lr2-bdg>${e(lr2AcctWord(accts))}</span><span class="dot ${S.c}"></span><b class="nm re2-st ${S.c}" data-lr2-state data-re2-state${aw1SnapAttr(S)}>${e(S.t)}</b>${S.cause && ({mmt:'MMT', sat:'SAT', comp:'COMP', emerg:'Emergency', snap:'Snapshot'})[S.cause] ? `<span class="lr2-cause" data-lr2-cause>${({mmt:'MMT', sat:'SAT', comp:'COMP', emerg:'Emergency', snap:'Snapshot'})[S.cause]}</span>` : ''}${exec}<span class="sp"></span>${rtxt}</div>`;
 }
 function lr2Sort(rows){   /* passed-entry prompts first · then closest to entry · same symbol on both accounts sit next to each other */
   const key = r=>r.o && r.o.chip === 'passed entry · missed?' ? -1 : (r.o.d == null ? 1e9 : Math.abs(r.o.d));
@@ -30762,6 +30766,8 @@ function lr2Sort(rows){   /* passed-entry prompts first · then closest to entry
   s.forEach((r, i)=>{ if(used.has(i)) return; used.add(i); out.push(r); s.forEach((q, j)=>{ if(!used.has(j) && q.it.sym === r.it.sym){ used.add(j); out.push(q); } }); });
   return out;
 }
+let lr2DetOpen = null;
+function lr2Abnormal(){ try{ return lr2ActAccts().some(a=>{ try{ return re2State(a).c !== 'g' || re4Due(a); }catch(e){ return false; } }); }catch(e){ return false; } }
 function lr2SideCards(){
   let accts = []; try{ accts = lr2ActAccts(); }catch(e){}
   return `<div class="pair re2-pair lr2-pair" data-lr2-pair>${accts.map(a=>re2RoomCard(a)).join('')}${re2EventsCard()}</div>`;

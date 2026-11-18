@@ -163,6 +163,60 @@ def partB(page, tag, w):
     check(f"{tag} B: Enter cap works across accounts (3 rows + '+N ›', both accounts present)", n["rows"] <= 4 and "+" in n["more"] and len(n["accts"]) == 2, n)
 
 
+def partC(page, tag, w):
+    wide = w >= 900
+    js(page, "()=>{ lr2DetOpen = false; re1Cache = {}; switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(400)
+    g = js(page, """()=>{ const r = s=>{ const e = document.querySelector(s); return e ? e.getBoundingClientRect() : null; }; const a = r('[data-lr2-main] .lr2-actcol'), sd = r('[data-lr2-side]'), td = r('[data-ln4-todorow]'), dt = r('[data-ln4-moredet]'), act = r('[data-ln4-act]');
+      return {a: a && [a.left, a.top, a.width], s: sd && [sd.left, sd.top, sd.width], todoTop: td && td.top, actBottom: act && act.bottom, detTop: dt && dt.top, todoBottom: td && td.bottom, open: document.querySelector('[data-ln4-moredet]').open}; }""")
+    if wide:
+        check(f"{tag} C: desktop — side column (~1/3) sits to the right of Act", g["s"] and g["s"][0] > g["a"][0] + g["a"][2] - 2 and 0.25 < g["s"][2] / (g["s"][2] + g["a"][2]) < 0.45, g)
+    else:
+        check(f"{tag} C: phone — To do comes after Act", g["todoTop"] >= g["actBottom"] - 2, g)
+    check(f"{tag} C: Details · risk · sectors · accounts is collapsed and comes after To do", g["open"] is False and g["detTop"] >= g["todoBottom"] - 2, g)
+    n = js(page, "()=>[...document.querySelectorAll('[data-lr2-ti]')].length")
+    check(f"{tag} C: To do is a short list (max {4 if wide else 3} rows)", 1 <= n <= (4 if wide else 3), n)
+    row = js(page, "()=>{ const r = document.querySelector('[data-lr2-ti]'); return r ? [!!r.querySelector('.lr2-tg'), !!r.querySelector('.t'), !!r.querySelector('.lk'), r.querySelector('button').getAttribute('onclick') || r.querySelector('button').dataset.ln4Todogrp] : null; }")
+    check(f"{tag} C: each To do row = tag · one line · one link (same handler as before)", row and row[0] and row[1] and row[2] and row[3], row)
+    # many items → '+N ›'
+    js(page, """()=>{ window.__oti = ln4TodoItems; ln4TodoItems = ()=>['a','b','c','d','e','f'].map((x, i)=>({c:'a', id:'t:'+x, t:'Task '+x, fn:"void(0)"})); todayRefresh(true); }"""); page.wait_for_timeout(250)
+    m = js(page, "()=>({rows: document.querySelectorAll('[data-lr2-ti]').length, more: (document.querySelector('[data-ln4-todomore]')||{}).innerText})")
+    check(f"{tag} C: 6 items → {4 if wide else 3} rows + '+N ›'", m["rows"] == (4 if wide else 3) and m["more"] == "+%d ›" % (6 - (4 if wide else 3)), m)
+    js(page, "()=>{ ln4TodoItems = window.__oti; todayRefresh(true); }")
+    # missing Playbook is a To do item (FLOW tag)
+    pb = js(page, "()=>{ const r = [...document.querySelectorAll('[data-lr2-ti]')].find(x=>/playbook/i.test(x.innerText)); return r ? r.innerText.replace(/\\s+/g,' ') : null; }")
+    check(f"{tag} C: missing Playbook shows as a To do item (FLOW · … · Add ›)", pb is not None and "FLOW" in pb and "Add" in pb, pb)
+    # Risk room: Family has no Momentum
+    js(page, "()=>{ lr2DetOpen = true; todayRefresh(true); }"); page.wait_for_timeout(250)
+    rr = js(page, "()=>({main: !!document.querySelector('[data-lr2-room=main] [data-re2-rr=mom]'), fam: !!document.querySelector('[data-lr2-room=fam] [data-re2-rr=mom]'), famSat: !!document.querySelector('[data-lr2-room=fam] [data-re2-rr=sat]'), pills: [...document.querySelectorAll('[data-lr2-room] summary .lr-acc')].map(e=>e.innerText), famSum: (document.querySelector('[data-lr2-room=fam] summary .s')||{}).innerText})")
+    check(f"{tag} C: Risk room — Momentum for Main only; Family shows SAT + COMP; M / F pills", rr["main"] and not rr["fam"] and rr["famSat"] and rr["pills"] == ["M", "F"] and "MMT" not in rr["famSum"], rr)
+    js(page, "()=>{ lr2DetOpen = false; todayRefresh(true); }"); page.wait_for_timeout(200)
+    ct = js(page, "()=>{ const d = document.querySelector('[data-ln4-moredet]'); d.open = true; const k = ['[data-ln4-hot]', '[data-ln4-macro]', '[data-ln4-goal]', '[data-ln4-wl]', '[data-ln4-today]'].map(s=>!!d.querySelector(s) || (s === '[data-ln4-today]')); return k; }")
+    check(f"{tag} C: HOT · MACRO · GOAL · SIZE lines live inside Details (hooks kept)", all(ct), ct)
+    check(f"{tag} C: weekly news hook still rendered by ln4NewsLine", "data-td3-wnews" in js(page, "()=>ln4NewsLine.toString()"))
+
+
+BASE_390 = {"height": 975, "rows": 12}   # origin/main (+ LR2 commit 0) at 390 with the same fixture · measured with tools in docs/reports/LR2-summary.md
+
+
+def heights(pw):
+    """Row / height count at 390 for the Main-only fixture (3 plans incl. one working order) with Details collapsed — Today must not get longer"""
+    c = {"pA": plan_card("NVDA", 100, 92, px=99, ready=True), "pB": plan_card("AAPL", 100, 92, px=101, ready=True), "oM": plan_card("OOO", 50, 45, px=49, ready=True)}
+    c["oM"]["ln4"] = {"placedAt": "2026-11-17T01:00:00Z"}
+    b, page, ce, pe = launch(pw, 390, 844, c=c)
+    try:
+        js(page, "()=>{ lr2DetOpen = false; todayRefresh(true); }"); page.wait_for_timeout(400)
+        r = js(page, ROWS_JS)
+        print("ROWS390", r)
+        check("[390] Today height at 390 stays within 3%% of the old layout (%d px vs %d)" % (r["height"], BASE_390["height"]), r["height"] <= BASE_390["height"] * 1.03, r)
+    finally:
+        b.close()
+
+
+ROWS_JS = """()=>{ const vis = e=>e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+  const rows = [...document.querySelectorAll('.re2-row,.re2-col .ch,[data-ln4-todo],.re2-pc summary,.ln4-more>summary,.re2-strip:not(.lr2-calm),[data-lr2-head],[data-lr2-ph]')].filter(vis);
+  return {rows: rows.length, height: document.documentElement.scrollHeight}; }"""
+
+
 def run(pw, w, h):
     tag = "[%s]" % w
     b, page, ce, pe = launch(pw, w, h, c=cards_b())
@@ -171,6 +225,7 @@ def run(pw, w, h):
         part0(page, tag)
         partA(page, tag, w)
         partB(page, tag, w)
+        partC(page, tag, w)
         check(f"{tag} no page errors", not pe, pe)
         check(f"{tag} no overflow", ovf(page) <= 0, ovf(page))
     finally:
@@ -181,6 +236,7 @@ if __name__ == "__main__":
     with sync_playwright() as pw:
         for w, h in ((1440, 900), (1280, 800), (390, 844)):
             run(pw, w, h)
+        heights(pw)
     bad = [r for r in results if not r[1]]
     print("SUMMARY lr2: %d checks, %d failing" % (len(results), len(bad)))
     for r in bad: print("FAIL", r[0])
