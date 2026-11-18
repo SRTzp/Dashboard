@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import rrg_verify as V
 
 SYMS, BENCH = V.SYMS, 'SPY'
+EXTRA = ['ARTY']   # not in RRG_SYMS: candidate replacement for IRBO (finding 6) — checked, never used by the app
 HIGH_YIELD = ['XLU', 'XLRE', 'XLP', 'XLE', 'KRE', 'XLF']
 SNAPS = [('10:30', '≈ 11:30 ET · 23:30 ICT'), ('12:30', '≈ 13:30 ET · 01:30 ICT'), ('14:30', '≈ 15:30 ET · 03:30 ICT')]
 EVAL_YEARS = 5
@@ -28,11 +29,12 @@ EVAL_YEARS = 5
 # ------------------------------------------------------------------ providers
 def yahoo_daily(years=EVAL_YEARS + 2):
     import yfinance as yf
-    raw = yf.download(SYMS + [BENCH], period=f'{years}y', interval='1d', auto_adjust=False, group_by='ticker', progress=False, threads=False)
+    raw = yf.download(SYMS + EXTRA + [BENCH], period=f'{years}y', interval='1d', auto_adjust=False, group_by='ticker', progress=False, threads=False)
     out = {}
-    for s in SYMS + [BENCH]:
+    for s in SYMS + EXTRA + [BENCH]:
         try:
             d = raw[s][['Close', 'Adj Close']].dropna()
+            if d.empty: print('no data', s, '(empty)'); continue
             d.index = [x.strftime('%Y-%m-%d') for x in d.index]
             out[s] = d
         except Exception as e: print('no data', s, e)
@@ -41,11 +43,13 @@ def yahoo_daily(years=EVAL_YEARS + 2):
 
 def yahoo_hourly():
     import yfinance as yf
-    raw = yf.download(SYMS + [BENCH], period='730d', interval='1h', auto_adjust=False, group_by='ticker', progress=False, threads=False)
+    raw = yf.download(SYMS + EXTRA + [BENCH], period='730d', interval='1h', auto_adjust=False, group_by='ticker', progress=False, threads=False)
     out = {}
-    for s in SYMS + [BENCH]:
+    for s in SYMS + EXTRA + [BENCH]:
         try:
-            d = raw[s][['Close']].dropna(); idx = d.index.tz_convert('America/New_York') if d.index.tz else d.index
+            d = raw[s][['Close']].dropna()
+            if d.empty: continue
+            idx = d.index.tz_convert('America/New_York') if d.index.tz else d.index
             d = d.copy(); d['date'] = [x.strftime('%Y-%m-%d') for x in idx]; d['hm'] = [x.strftime('%H:%M') for x in idx]; out[s] = d
         except Exception as e: print('no hourly', s, e)
     return out
@@ -104,6 +108,7 @@ REL = {'lead': 'out', 'weak': 'out', 'imp': 'under', 'lag': 'under', 'flat': 'ne
 
 def history(dates, c_raw, c_adj, bench_raw, bench_adj, tf, window_days):
     """per eval bar: state on raw vs adjusted. Returns dict of rates"""
+    if len(dates) == 0: return {'n': 0, 'diff_pct': None, 'rel_diff_pct': None, 'mean_abs_dratio': None, 'mean_abs_dmom': None, 'raw_flip_pct': 0.0}
     if tf == 'W':
         wd, cr, br = weekly_arrays(dates, c_raw, bench_raw); _, ca, ba = weekly_arrays(dates, c_adj, bench_adj); idx = [i for i, x in enumerate(wd) if x >= window_days]
         # the last week may be unfinished — keep only closed weeks
@@ -151,8 +156,7 @@ def partial_sim(daily, hourly, sym, last_n):
 # ------------------------------------------------------------------ pipeline
 def td_cases(daily, ref, use='Close'):
     cases, bench = [], [{'datetime': d, 'close': '%.6f' % v, 'high': '%.6f' % v} for d, v in zip(daily[BENCH].index[::-1], daily[BENCH][use].to_numpy()[::-1])]
-    for s in SYMS:
-        if s not in daily: continue
+    for s in [k for k in daily if k != BENCH]:
         e = [{'datetime': d, 'close': '%.6f' % v, 'high': '%.6f' % v} for d, v in zip(daily[s].index[::-1], daily[s][use].to_numpy()[::-1])]
         cases.append({'id': s, 'sym': s, 'ref': ref, 'etf': e, 'bench': bench})
     return cases
@@ -165,16 +169,19 @@ def app_rows(cases):
 
 
 def run(daily, hourly, ref, syms, partial_n, td_export=None):
-    syms = [s for s in syms if s in daily]
-    res = {'asof': ref, 'syms': syms, 'rows': {}, 'hist': {}, 'partial': {}, 'bench': {}, 'td': None}
+    nodata = [s for s in syms if s not in daily or len(daily[s]) == 0]
+    for s in nodata: print('no data', s, '— skipped')
+    syms = [s for s in syms if s not in nodata]
+    res = {'asof': ref, 'syms': syms, 'nodata': nodata, 'rows': {}, 'hist': {}, 'partial': {}, 'bench': {}, 'td': None}
     cases = td_cases({k: v for k, v in daily.items() if k in syms + [BENCH]}, ref)
     app = app_rows(cases); py = V.run(cases); bad = V.cmp(app, py); res['mismatches'] = [list(map(str, b)) for b in bad]
     adj_app = app_rows(td_cases({k: v for k, v in daily.items() if k in syms + [BENCH]}, ref, 'Adj Close'))
     for s in syms:
         res['rows'][s] = {'app': app['rows'][s], 'py': py['rows'][s], 'adj': adj_app['rows'][s]}
     start = (dt.date.fromisoformat(ref) - dt.timedelta(days=int(365.25 * EVAL_YEARS))).isoformat()
-    for s in syms:
+    for s in list(syms):
         e, b = daily[s], daily[BENCH]; dates = sorted(set(e.index) & set(b.index))
+        if not dates: res['nodata'].append(s); res['syms'].remove(s); res['rows'].pop(s, None); print('no overlapping dates', s, '— skipped'); continue
         a = lambda df, c: df.loc[dates, c].to_numpy()
         res['hist'][s] = {tf: history(dates, a(e, 'Close'), a(e, 'Adj Close'), a(b, 'Close'), a(b, 'Adj Close'), tf, start) for tf in ('D', 'W')}
         p = partial_sim(daily, hourly, s, partial_n) if hourly else None
@@ -207,7 +214,8 @@ def md(res, out_md):
         for tf, k in (('D', 'd'), ('W', 'w')):
             a, j, h = res['rows'][s]['app'][k], res['rows'][s]['adj'][k], res['hist'][s][tf]
             if 'err' in a or 'err' in j: L.append(f'| {s} | {tf} | {a.get("err", a.get("quad"))} | {j.get("err", j.get("quad"))} | | | | | | | |'); continue
-            L.append(f"| {s}{' ★' if s in HIGH_YIELD else ''} | {tf} | {a['quad']} | {j['quad']}{'' if a['quad'] == j['quad'] else ' ✗'} | {a['days']}/{j['days']} | {a['ratio']:.2f}/{j['ratio']:.2f} | {a['mom']:.2f}/{j['mom']:.2f} | {fmt(h['diff_pct'])} | {fmt(h['rel_diff_pct'])} | {fmt(h['mean_abs_dratio'], 2)} | {fmt(h['raw_flip_pct'])} |")
+            L.append(f"| {s}{' ★' if s in HIGH_YIELD else ''}{' (extra)' if s in EXTRA else ''} | {tf} | {a['quad']} | {j['quad']}{'' if a['quad'] == j['quad'] else ' ✗'} | {a['days']}/{j['days']} | {a['ratio']:.2f}/{j['ratio']:.2f} | {a['mom']:.2f}/{j['mom']:.2f} | {fmt(h['diff_pct'])} | {fmt(h['rel_diff_pct'])} | {fmt(h['mean_abs_dratio'], 2)} | {fmt(h['raw_flip_pct'])} |")
+    if res.get('nodata'): L += ['', '**No data (skipped):** ' + ', '.join(res['nodata']) + ' — no rows from the provider (delisted / renamed ticker).']
     L += ['', '★ = high-yield ETFs expected to be most affected (XLU, XLRE, XLP, XLE, KRE, XLF).', '']
     for tf in ('D', 'W'):
         hy = [res['hist'][s][tf]['diff_pct'] for s in res['syms'] if s in HIGH_YIELD and res['hist'][s][tf]['diff_pct'] is not None]
@@ -234,11 +242,13 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser(); ap.add_argument('--out', default='docs/reports/RV1-data'); ap.add_argument('--selftest', action='store_true'); ap.add_argument('--td-export'); a = ap.parse_args()
     if a.selftest:
         syms = ['XLU', 'XLK', 'KRE']; daily, hourly = synth(3.2, syms); ref = daily[BENCH].index[-1]
-        res = run(daily, hourly, ref, syms, 40)
-        ok = (not res['mismatches']) and all(res['hist'][s]['D']['n'] > 300 for s in syms) and res['partial'] and res['bench']['spy_vs_spy']['D'].startswith('คำนวณไม่ได้')
+        daily['DEAD'] = pd.DataFrame({'Close': [], 'Adj Close': []}, dtype=float)   # delisted ticker: empty frame, must be reported + skipped, not crash
+        res = run(daily, hourly, ref, syms + ['DEAD', 'GONE'], 40)
+        ok = res['nodata'] == ['DEAD', 'GONE'] and res['syms'] == syms and history([], [], [], [], [], 'W', '2020-01-01')['n'] == 0
+        ok = ok and (not res['mismatches']) and all(res['hist'][s]['D']['n'] > 300 for s in syms) and res['partial'] and res['bench']['spy_vs_spy']['D'].startswith('คำนวณไม่ได้')
         md(res, os.path.join(tempfile.gettempdir(), 'rrg_selftest.md')); print('PASS rrg_data_check selftest' if ok else 'FAIL rrg_data_check selftest', res['mismatches'][:3], res['bench']); sys.exit(0 if ok else 1)
     daily = yahoo_daily(); hourly = yahoo_hourly(); ref = dt.date.today().isoformat()
-    res = run(daily, hourly, ref, SYMS, 250, a.td_export)
+    res = run(daily, hourly, ref, SYMS + EXTRA, 250, a.td_export)
     res['asof'] = daily[BENCH].index[-1]
     os.makedirs(os.path.dirname(a.out) or '.', exist_ok=True)
     json.dump(res, open(a.out + '.json', 'w'), separators=(',', ':')); md(res, a.out + '.md'); print('wrote', a.out + '.json/.md')
