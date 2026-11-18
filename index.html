@@ -4299,6 +4299,25 @@ html body .topbar.topbar.topbar .hbtns>#hdrMoreBtn:hover{border-color:var(--lr-m
   html body .topbar.topbar.topbar .tabbtn.on{background:var(--lr-seg);box-shadow:none;font-weight:700}
   html body .topbar.topbar.topbar .tabbtn.on:before{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--lr-ink)}
 }
+
+/* ══ LR1·C — account band · market segment · defaults editor · hidden-port line ══ */
+.lr-band{display:flex;align-items:center;flex-wrap:wrap;gap:4px 0;font:600 var(--lr-fs-5)/1.35 var(--lr-sans);padding:8px 10px;margin:0 0 10px;border-radius:var(--lr-r-btn);background:var(--lr-seg);color:var(--lr-text2)}
+.lr-band .lr-acc{margin-right:2px}
+.lr-band-m{background:var(--lr-seg)}
+.lr-band-f{background:rgba(180,56,122,.1);color:var(--lr-acc-f)}
+.lrMktSeg{display:inline-flex;gap:2px;margin-left:8px;padding:2px;background:var(--lr-seg);border-radius:8px;vertical-align:middle}
+.lrMktSeg button{font:600 11px/1 var(--lr-sans);padding:0 8px;height:24px;min-height:24px;border:0;border-radius:6px;background:transparent;color:var(--lr-muted);box-shadow:none;cursor:pointer}
+.lrMktSeg button.on{background:var(--lr-card);color:var(--lr-ink);box-shadow:0 1px 2px rgba(20,22,26,.12)}
+@media (max-width:560px){.lrMktSeg button{height:32px;min-height:32px;padding:0 10px}}
+.lrDef{margin-top:8px;border:1px solid var(--border);border-radius:10px;padding:6px 10px}
+.lrDef summary{cursor:pointer;font-weight:600;font-size:.84rem;display:flex;align-items:center;gap:8px}
+.lrDefB{display:flex;flex-direction:column;gap:8px;padding:8px 0 2px}
+.lrDefR{display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;font-size:.84rem}
+.lrDefR>span{min-width:110px;color:var(--muted)}
+.lrDefR input[type=text]{flex:1 1 180px;min-width:0}
+.lrHp{margin:0 0 10px;font:600 var(--lr-fs-5)/1.3 var(--lr-sans);color:var(--lr-muted)}
+.lrHp summary{cursor:pointer;padding:6px 0}
+.lrHpL{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0}
 </style>
 </head>
 <body>
@@ -4377,6 +4396,7 @@ html body .topbar.topbar.topbar .hbtns>#hdrMoreBtn:hover{border-color:var(--lr-m
   <button type="button" role="menuitem" class="lrMi" onclick="openSystemSettings()">🛠<span class="lrMiLbl">System settings</span></button>
 </div>
 
+<div id="lrHiddenPort" class="lrHp" data-lr-hidden-port style="display:none"></div>
 <!-- ---- TD1: แท็บ วันนี้ (Daily routine + รายการต้องทำ · อ่านอย่างเดียวจากฟังก์ชันเดิม) ---- -->
 <div id="tabToday"></div>
 
@@ -8496,8 +8516,73 @@ function renderAcctBar(){
   const hint = document.getElementById('acctPortsHint');   /* AW1 — the ⋯ menu account picker is gone; hint kept null-safe */
   if(hint){ const on = acctPorts(); hint.textContent = (acctList.length>1 && on.length<ACCT_PORT_KEYS.length) ? on.map(k=>PORTS[k].name.split(' — ')[0]).join(' · ') : ''; }
   try{ aw1Render(); }catch(e){ console.warn('aw1 switch:', e); }
+  try{ lrHiddenPortLine(); }catch(e){}
 }
 /* AW1 §1 — account switch in the top bar (all tabs) · §3 badge for the inactive account */
+/* LR1·C — per-account defaults: book.settings.acctDefaults (additive · nothing migrated · built-ins apply until the user edits). Defaults PRE-FILL, they never lock. */
+const LR_DEF_BUILTIN = {
+  M:{markets:['US','TH'], market:'US', currency:'USD', currencies:['USD','THB'], ports:['MMT','COMP','SAT'], brokers:['IBKR','Webull'], satProducts:['XAUUSD','BTCUSD','S50','BRENT']},
+  F:{markets:['TH'], market:'TH', currency:'THB', currencies:['THB'], ports:['COMP','SAT'], brokers:[], satProducts:['S50','GO']}
+};
+const LR_MKT_CCY = {US:'USD', TH:'THB'};
+function lrDef(id){
+  const a = acctList.find(x=>x.id === id) || acctCurrent(), t = lrAcctTag(a), base = LR_DEF_BUILTIN[t] || LR_DEF_BUILTIN.M;
+  let sv = null; try{ const b = getBook(a.id); sv = b && b.settings && b.settings.acctDefaults; }catch(e){}
+  const o = Object.assign({}, base, (sv && typeof sv === 'object') ? sv : {});
+  ['markets','currencies','ports','brokers','satProducts'].forEach(k=>{ if(!Array.isArray(o[k])) o[k] = base[k].slice(); });
+  if(!o.markets.length) o.markets = base.markets.slice();
+  if(!o.markets.includes(o.market)) o.market = o.markets[0];
+  o.currency = LR_MKT_CCY[o.market] || o.currency;
+  return o;
+}
+function lrPortOn(id, port){ return lrDef(id).ports.includes(port); }   /* UI visibility only — data of a hidden port is never removed */
+function lrDefSet(id){
+  const box = document.querySelector('[data-lr-defaults="' + id + '"]'); if(!box) return;
+  const csv = sel=>String((box.querySelector(sel) || {}).value || '').split(/[,\s]+/).map(x=>x.trim()).filter(Boolean);
+  const checked = sel=>[...box.querySelectorAll(sel + ':checked')].map(x=>x.value);
+  const mk = checked('[data-lr-def-mkt]'), ports = checked('[data-lr-def-port]');
+  if(!mk.length || !ports.length){ alert('Keep at least one market and one port'); renderAcctMgr(); return; }
+  const market = (box.querySelector('[data-lr-def-market]') || {}).value;
+  const val = {markets:mk, market:mk.includes(market) ? market : mk[0], currencies:mk.map(m=>LR_MKT_CCY[m]), ports, brokers:csv('[data-lr-def-brokers]'), satProducts:csv('[data-lr-def-sat]')};
+  val.currency = LR_MKT_CCY[val.market];
+  try{ const b = getBook(id); b.settings.acctDefaults = val; saveBook(id); }catch(e){ console.warn('lrDefSet:', e); }
+  renderAcctMgr(); try{ renderAcctBar(); }catch(e){}
+}
+let lrDefOpen = new Set();
+function lrDefToggle(id, open){ if(open) lrDefOpen.add(id); else lrDefOpen.delete(id); }
+function lrDefHtml(a){
+  const d = lrDef(a.id), e = escHtml;
+  return `<details class="lrDef" data-lr-defaults="${e(a.id)}" ${lrDefOpen.has(a.id) ? 'open' : ''} ontoggle="lrDefToggle('${e(a.id)}',this.open)" style="flex-basis:100%"><summary>${lrAcctPill(a)} Defaults for new plans</summary>
+    <div class="lrDefB"><div class="lrDefR"><span>Markets</span>${['US','TH'].map(m=>`<label><input type="checkbox" data-lr-def-mkt value="${m}" ${d.markets.includes(m) ? 'checked' : ''} onchange="lrDefSet('${e(a.id)}')">${m}</label>`).join('')}</div>
+    <div class="lrDefR"><span>Default market</span><select data-lr-def-market onchange="lrDefSet('${e(a.id)}')">${d.markets.map(m=>`<option value="${m}" ${m === d.market ? 'selected' : ''}>${m} · ${LR_MKT_CCY[m]}</option>`).join('')}</select></div>
+    <div class="lrDefR"><span>Ports</span>${[['MMT','Momentum'],['COMP','Compounder'],['SAT','Satellite']].map(([k,n])=>`<label><input type="checkbox" data-lr-def-port value="${k}" ${d.ports.includes(k) ? 'checked' : ''} onchange="lrDefSet('${e(a.id)}')">${n}</label>`).join('')}</div>
+    <div class="lrDefR"><span>Brokers</span><input type="text" data-lr-def-brokers value="${e(d.brokers.join(', '))}" placeholder="IBKR, Webull" onchange="lrDefSet('${e(a.id)}')"></div>
+    <div class="lrDefR"><span>SAT products</span><input type="text" data-lr-def-sat value="${e(d.satProducts.join(', '))}" placeholder="XAUUSD, BTCUSD, S50, BRENT" onchange="lrDefSet('${e(a.id)}')"></div>
+    <div class="hint">Pre-fills a new plan. Not a lock — you can still pick another market or product in the form. Hiding a port only hides it from this account's new-plan forms; saved data stays visible.</div></div></details>`;
+}
+/* account band for the Place confirm sheets: M · Main account · IBKR · US · USD · records to Main only */
+function lrBandHtml(accId, market, ccy){
+  const a = acctList.find(x=>x.id === accId); if(!a) return '';
+  const t = lrAcctTag(a), d = lrDef(a.id), short = t === 'M' ? 'Main' : t === 'F' ? 'Family' : String(a.name || a.id).trim();
+  const parts = [lrAcctLabel(a)]; if(d.brokers[0]) parts.push(d.brokers[0]);
+  parts.push(market, ccy, 'records to ' + short + ' only');
+  return `<div class="lr-band ${t === 'M' ? 'lr-band-m' : t === 'F' ? 'lr-band-f' : ''}" data-lr-band="${escHtml(t)}">${lrAcctPill(a)}<span> · ${parts.map(escHtml).join(' · ')}</span></div>`;
+}
+function lrBandCore(it){ const mk = coreMarketOf(it && it.sym); return lrBandHtml((it && it.acct) || (it && it.ref && it.ref.acct) || tdHome(), mk, LR_MKT_CCY[mk]); }
+function lrBandSat(i){
+  const acc = pb2AcctOf(i), pr = (typeof PRODUCTS !== 'undefined' && PRODUCTS[i && i.asset]) || null, ccy = pr && pr.cur ? pr.cur : 'USD';
+  return lrBandHtml(acc, ccy === 'THB' ? 'TH' : 'US', ccy);
+}
+/* Family: MMT is hidden from new-plan forms — existing MMT data stays visible under one "Hidden port" line */
+function lrHiddenPortLine(){
+  const el = document.getElementById('lrHiddenPort'); if(!el) return;
+  let list = [];
+  try{ if(acctActive && !lrPortOn(acctActive, 'MMT')) list = (coreCardsList || []).filter(c=>c.acct === acctActive && c.status !== 'closed' && c.status !== 'cancelled' && coreTrackOfCard(c) === 'winner'); }catch(e){}
+  if(!list.length){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  el.innerHTML = `<details data-lr-hp-d><summary>Hidden port: MMT (${list.length})</summary><div class="lrHpL">${list.map(c=>`<span class="lr-tag mmt" data-lr-hp-sym="${escHtml(c.ticker)}">${escHtml(c.ticker)}</span>`).join('')}</div></details>`;
+}
+function lrBdNew(){ return BD_NEW.filter(o=>{ try{ return lrPortOn(acctActive, o[2]); }catch(e){ return true; } }); }   /* New-plan options the active account shows */
 /* LR1·C — account tag: first account = M (Main) · second = F (Family) · any further account = its first letter (neutral) */
 function lrAcctTag(a){
   const i = Math.max(0, acctList.findIndex(x=>x.id === (a && a.id)));
@@ -8606,6 +8691,7 @@ function renderAcctMgr(){
         <span class="acctSw" title="สีประจำบัญชี">${ACCT_PALETTE.map(c=>`<i class="${acctColor(a)===c?'on':''}" style="background:${c}" onclick="acctSetColor('${a.id}','${c}')"></i>`).join('')}</span>
         <label class="${a.showInMix!==false?'on':''}"><input type="checkbox" ${a.showInMix!==false?'checked':''} onchange="acctSetShow('${a.id}',this.checked)">แสดงในหน้ารวม</label>
       </div>
+      ${lrDefHtml(a)}
       <div class="acctPorts" style="flex-basis:100%">
         ${ACCT_PORT_KEYS.map(k=>{
           const on = a.ports.includes(k);
@@ -15341,10 +15427,10 @@ function lfFormHtml(o){
   const tkv = cur ? escHtml(cur.ticker) : escHtml(coreNorm(opt.ticker||''));
   const isNew = mode==='new' && !!coreNew && coreNew.strat==='W';
   /* PS1c §2/§7 — the form has its OWN Momentum | Compounder switch (the only source of the plan's port) */
-  const seg = isNew ? `<span class="ps1Seg" role="group" aria-label="Port" data-ps1-seg>${[['winner','Momentum','MMT'],['ladder','Compounder','Comp']].map(([k,f,sh])=>`<button type="button" data-ps1-port="${k}" class="${coreNew.track===k?'on':''}" aria-pressed="${coreNew.track===k}" onclick="coreFormPort('${k}')"><span class="f">${f}</span><span class="sh">${sh}</span></button>`).join('')}</span>` : '';
+  const seg = isNew ? `<span class="ps1Seg" role="group" aria-label="Port" data-ps1-seg>${[['winner','Momentum','MMT'],['ladder','Compounder','Comp']].filter(x=>x[0] !== 'winner' || lrPortOn(coreNew.acct, 'MMT')).map(([k,f,sh])=>`<button type="button" data-ps1-port="${k}" class="${coreNew.track===k?'on':''}" aria-pressed="${coreNew.track===k}" onclick="coreFormPort('${k}')"><span class="f">${f}</span><span class="sh">${sh}</span></button>`).join('')}</span>` : '';
   return `<div class="ps1Frm"><div class="hd ps1Hh"><h3 style="margin:0" data-ps1-title>${isNew ? 'New plan' : title}<span class="ps1Note0 mut"> · % = of total portfolio</span></h3>${seg}<button type="button" class="ccLnk" data-lf-x aria-label="ปิด" onclick="coreSheetClose()">✕</button></div>
     <div class="lfq c2" style="margin-top:8px"><div class="ccF"><label>บัญชี</label><div id="cnAcctBox"></div></div>
-      <div class="ccF"><label>Ticker</label><input type="text" id="cnTicker" list="cnTickerList" autocomplete="off" autocapitalize="characters" placeholder="เช่น AAPL หรือ XXX.BK" value="${tkv}" ${cur?'readonly':''} oninput="coreNewIn()">
+      <div class="ccF"><label>Ticker${mode==='new' ? lrMktSegHtml() : ''}</label><input type="text" id="cnTicker" list="cnTickerList" autocomplete="off" autocapitalize="characters" placeholder="เช่น AAPL หรือ XXX.BK" value="${tkv}" ${cur?'readonly':''} oninput="coreNewIn()" onchange="lrTickerMkt()">
       <datalist id="cnTickerList">${wl.map(t=>`<option value="${escHtml(t)}"></option>`).join('')}</datalist></div></div>
     <div class="ps1WlNote mut" id="cnWlNote" data-ps1-wlnote style="display:none"></div>
     <div class="csBan" id="cnStarBox" data-cs-banner style="display:none"></div>
@@ -15381,6 +15467,9 @@ function coreNewOpen(acct, opt){
   coreNew = {acct:a0, strat: (mode==='new' || mode==='editw') ? 'W' : 'L', track: mode==='editw' ? coreTrackOfCard(cur) : mode==='new' ? ((opt.strat==='L' || planScope==='ladder') ? 'ladder' : 'winner') : 'ladder', mode,
    /* RG2b — Winner กับ Ladder แยกหน้า: กลยุทธ์กำหนดจากหน้าที่เปิด (ไม่มีตัวเลือก W/L ในฟอร์ม · ไม่มีโหมดแปลง) */
    id: cur ? cur.id : null, f:null, showAll:false, nlv:2, lv:['','',''], sl:'', budEdited:false, ne:1, ns:1, pxE:['','',''], pxS:['','',''], spE:['','','',''], pcS:['','','',''], ps1Last:null, drafts:{}, wlTrack:null};
+  /* LR1·C — account defaults pre-fill the form: market (US/TH) and, when the account hides Momentum, the Compounder track. Not locks. */
+  coreNew.mkt = cur ? coreMarketOf(cur.ticker) : (opt.ticker ? coreMarketOf(coreNorm(opt.ticker)) : lrDef(a0).market); coreNew.mktTouched = !!opt.ticker;
+  if(mode==='new' && !lrPortOn(a0, 'MMT') && coreNew.track === 'winner') coreNew.track = 'ladder';
   /* PS1c §2 — the Watchlist track only sets the STARTING port of the form (a ticker given when it opens); after that only the form switch changes it */
   if(mode==='new' && opt.ticker){ const wi1 = coreWlItem(coreNorm(opt.ticker)); if(wi1 && !(opt.strat==='L')) coreNew.track = wlTrackOf(wi1); }
   coreTi = coreTiState(cur);
@@ -15417,6 +15506,7 @@ function coreNewOpen(acct, opt){
   if(mode==='editw' && cur && cur.plan){ const pl = cur.plan, set = (id, v)=>{ const el = coreEl(id); if(el && v!=null && v!=='') el.value = String(v); }; set('cnEntry', pl.entry); set('cnStop', pl.stop); set('cnRisk', pl.risk); set('cnTp', pl.tp); set('cnTp2', pl.tp2); set('cnTp1Qty', pl.tp1Qty); coreNew.riskEdited = true; tw1LoadLevels(cur); }   /* LN4 — Fix risk / Set stop · TW1 — every saved entry + SL level */
   coreNewLvDraw();
   try{ ps1Draw(); }catch(e){}
+  try{ lrMktSync(); }catch(e){}
   coreNewIn();
 }
 /* TW1 — Update levels / Edit plan must load ALL saved entry + SL rows (plan.ps1.rows / .stops). Before: only plan.entry / plan.stop (row 1) were restored, so a 2–3 entry plan reopened with one row and a save dropped the rest. */
@@ -15437,7 +15527,40 @@ function tw1LoadLevels(cur){
 }
 function coreNewF(f){ if(!coreNew) return; coreNew.f = f; coreNewIn(); }
 function coreNewRisk(){ if(!coreNew) return; coreNew.riskEdited = true; coreNewIn(); }
-function coreNewPick(id){ if(!coreNew) return; coreNew.acct = id; coreNewIn(); }
+function coreNewPick(id){ if(!coreNew) return; coreNew.acct = id; try{ lrFormAcct(); }catch(e){ console.warn('lrFormAcct:', e); } coreNewIn(); }
+/* LR1·C — market segment (US · USD | TH · THB) in the new-plan form; switching it adds/removes .BK on a typed ticker (market = .BK suffix everywhere else) */
+function lrMktSegHtml(){
+  const m = (coreNew && coreNew.mkt) || 'US';
+  return `<span class="lrMktSeg" role="group" aria-label="Market" data-lr-mkt-seg>${['US','TH'].map(k=>`<button type="button" data-lr-mkt="${k}" class="${m === k ? 'on' : ''}" aria-pressed="${m === k}" onclick="lrMktSet('${k}')">${k} · ${LR_MKT_CCY[k]}</button>`).join('')}</span>`;
+}
+function lrMktSync(){
+  const m = (coreNew && coreNew.mkt) || 'US';
+  document.querySelectorAll('[data-lr-mkt]').forEach(b=>{ const on = b.getAttribute('data-lr-mkt') === m; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  const t = coreEl('cnTicker'); if(t && !t.readOnly) t.placeholder = m === 'TH' ? 'e.g. PTT.BK' : 'e.g. AAPL';
+}
+function lrMktSet(m){
+  if(!coreNew || coreNew.mode !== 'new') return;
+  coreNew.mkt = m; coreNew.mktTouched = true;
+  const t = coreEl('cnTicker');
+  if(t && !t.readOnly){ const v = coreNorm(t.value); if(v){ t.value = m === 'TH' ? (/\.BK$/.test(v) ? v : v + '.BK') : v.replace(/\.BK$/, ''); } }
+  lrMktSync(); coreNewIn();
+}
+function lrTickerMkt(){
+  const n = coreNew, t = coreEl('cnTicker'); if(!n || !t || t.readOnly || n.mode !== 'new') return;
+  const v = coreNorm(t.value); if(!v) return;
+  if(/\.BK$/.test(v)) n.mkt = 'TH'; else if(n.mkt === 'TH') t.value = v + '.BK';   /* the form's market is TH → a plain ticker means the Thai listing */
+  lrMktSync(); coreNewIn();
+}
+function lrFormAcct(){   /* the plan's account changed inside the form → re-apply that account's defaults (unless the user already picked a market) */
+  const n = coreNew; if(!n || n.mode !== 'new') return;
+  if(!n.mktTouched){ n.mkt = lrDef(n.acct).market; }
+  const seg = document.querySelector('[data-ps1-seg]');
+  if(seg){
+    if(!lrPortOn(n.acct, 'MMT') && n.track === 'winner') coreFormPort('ladder');
+    seg.querySelectorAll('[data-ps1-port="winner"]').forEach(b=>{ b.style.display = lrPortOn(n.acct, 'MMT') ? '' : 'none'; });
+  }
+  lrMktSync();
+}
 function coreNewShowAll(){ if(!coreNew) return; coreNew.showAll = true; coreNewIn(); }
 function coreNewBud(){ if(!coreNew) return; coreNew.budEdited = true; coreNewIn(); }
 function coreNewLvDraw(){
@@ -15682,7 +15805,7 @@ function coreNewIn(){
   }
   coreTiWlShow(rd.ticker);
   const all = acctList.filter(a=>(a.ports || ACCT_PORT_KEYS).includes('core'));
-  const match = a=>{ const m = coreRiskCfg(a.id).market; return !rd.mk || m==='both' || m===rd.mk; };
+  const match = a=>{ const m = coreRiskCfg(a.id).market; return !rd.mk || m==='both' || m===rd.mk || lrDef(a.id).markets.includes(rd.mk); };   /* LR1·C — an account's allowed markets (defaults) also count */
   let shown = n.showAll ? all : all.filter(match);
   const hidden = all.length - shown.length;
   if(!shown.length){ shown = all; }
@@ -30579,14 +30702,15 @@ function bdNewOpen(){
   if(bdPopOpen() || bdSheetsOpen()) return;
   closeMoreMenu();
   bdPopSel = 0;
-  if(activeTab === 'plan' && !bdEditMode && bdChip !== 'all'){ const i = BD_NEW.findIndex(x=>x[2] === bdChip); if(i >= 0) bdPopSel = i; }
-  document.body.insertAdjacentHTML('beforeend', `<div id="bdPop" class="ui-sheet-backdrop bd-pop ln4" role="dialog" aria-modal="true" aria-label="New plan" onclick="if(event.target===this)bdPopClose()"><div class="ui-sheet bd-popb"><div class="bd-ph"><b>New plan</b><button type="button" class="bd-x" data-bd-popx aria-label="Close" onclick="bdPopClose()">✕</button></div>${BD_NEW.map((o, i)=>`<button type="button" class="bd-opt${i === bdPopSel ? ' bd-sel' : ''}" data-bd-opt="${o[0]}" onclick="bdNewPick('${o[0]}')"><kbd>${o[0]}</kbd><span class="sc${o[2] === 'SAT' ? ' sat' : (o[2] === 'COMP' ? ' c pt' : ' pt')}">${o[2]}</span><span class="bd-ot"><b>${o[1]}</b><span class="bd-m">${o[3]}</span></span></button>`).join('')}</div></div>`);
+  if(activeTab === 'plan' && !bdEditMode && bdChip !== 'all'){ const i = lrBdNew().findIndex(x=>x[2] === bdChip); if(i >= 0) bdPopSel = i; }
+  document.body.insertAdjacentHTML('beforeend', `<div id="bdPop" class="ui-sheet-backdrop bd-pop ln4" role="dialog" aria-modal="true" aria-label="New plan" onclick="if(event.target===this)bdPopClose()"><div class="ui-sheet bd-popb"><div class="bd-ph"><b>New plan</b><button type="button" class="bd-x" data-bd-popx aria-label="Close" onclick="bdPopClose()">✕</button></div>${lrBdNew().map((o, i)=>`<button type="button" class="bd-opt${i === bdPopSel ? ' bd-sel' : ''}" data-bd-opt="${o[0]}" onclick="bdNewPick('${o[0]}')"><kbd>${o[0]}</kbd><span class="sc${o[2] === 'SAT' ? ' sat' : (o[2] === 'COMP' ? ' c pt' : ' pt')}">${o[2]}</span><span class="bd-ot"><b>${o[1]}</b><span class="bd-m">${o[3]}</span></span></button>`).join('')}</div></div>`);
   try{ const b = document.querySelector('#bdPop .bd-opt.bd-sel'); if(b) b.focus(); }catch(e){}
 }
 function bdPopClose(){ const p = document.getElementById('bdPop'); if(p) p.remove(); }
-function bdPopSelSet(i){ bdPopSel = (i + BD_NEW.length) % BD_NEW.length; document.querySelectorAll('#bdPop .bd-opt').forEach((b, j)=>b.classList.toggle('bd-sel', j === bdPopSel)); const b = document.querySelector('#bdPop .bd-opt.bd-sel'); if(b) try{ b.focus(); }catch(e){} }
+function bdPopSelSet(i){ bdPopSel = (i + lrBdNew().length) % lrBdNew().length; document.querySelectorAll('#bdPop .bd-opt').forEach((b, j)=>b.classList.toggle('bd-sel', j === bdPopSel)); const b = document.querySelector('#bdPop .bd-opt.bd-sel'); if(b) try{ b.focus(); }catch(e){} }
 function bdNewPick(k){
   bdPopClose();
+  if(k === 'S' && !lrBdNew().some(o=>o[0] === 'S')) k = 'D';   /* LR1·C — Momentum hidden for this account → Compounder */
   if(k === 'S'){ planScope = 'stock'; try{ coreNewOpen(); }catch(e){ console.warn('bd new S:', e); } }
   else if(k === 'D'){ planScope = 'ladder'; try{ coreNewOpen(); }catch(e){ console.warn('bd new D:', e); } }
   else if(k === 'F'){ if(activeTab !== 'plan') switchTab('plan'); bdEditOn(); }
@@ -30602,7 +30726,7 @@ document.addEventListener('keydown', e=>{
       if(c === 'KeyS' || c === 'KeyD' || c === 'KeyF'){ e.preventDefault(); e.stopImmediatePropagation(); bdNewPick(c.slice(3)); return; }
       if(e.key === 'ArrowDown'){ e.preventDefault(); e.stopImmediatePropagation(); bdPopSelSet(bdPopSel + 1); return; }
       if(e.key === 'ArrowUp'){ e.preventDefault(); e.stopImmediatePropagation(); bdPopSelSet(bdPopSel - 1); return; }
-      if(e.key === 'Enter'){ e.preventDefault(); e.stopImmediatePropagation(); bdNewPick(BD_NEW[bdPopSel][0]); return; }
+      if(e.key === 'Enter'){ e.preventDefault(); e.stopImmediatePropagation(); bdNewPick(lrBdNew()[bdPopSel][0]); return; }
       if(e.key === 'Escape' || e.key === 'Esc'){ e.preventDefault(); e.stopImmediatePropagation(); bdPopClose(); return; }
       e.stopImmediatePropagation(); return;
     }
@@ -30705,7 +30829,9 @@ function pb2Calc(i, accId){
 function pb2Assets(){
   const picked = satWeekPickList(), all = satAssets({all:true}).filter(a=>picked.includes(a.key) || wiAssetActive(a.key));
   const L = all.map((a, n)=>({key:a.key, n, star:picked.includes(a.key), label:sat7dLabel(a.key), plan:pb2ExistingIdea(a.key)}));
-  return L.sort((x, y)=>(y.star - x.star) || (x.n - y.n)).slice(0, 9);
+  let dp = []; try{ dp = lrDef(acctActive).satProducts; }catch(e){}
+  const dr = k=>{ const j = dp.indexOf(k); return j < 0 ? 99 : j; };   /* LR1·C — the account's SAT products first; others stay available */
+  return L.sort((x, y)=>(y.star - x.star) || (dr(x.key) - dr(y.key)) || (x.n - y.n)).slice(0, 9);
 }
 function pb2ExistingIdea(key){
   return (satIdeasList || []).find(x=>x && x.v3 && x.asset === key && x.status !== 'closed' && x.status !== 'cancelled' && satV3ClosedKind(x) == null && ['draft', 'plan'].includes(satV3PlanRowState(x))) || null;
@@ -30716,7 +30842,7 @@ function pb2Label(a){ return sat7dLabel(a); }
 function pb2OpenType(){
   if(bdPopOpen() || bdSheetsOpen()) return;
   closeMoreMenu(); bdPopSel = 0;
-  if(activeTab === 'plan' && bdChip !== 'all'){ const i = BD_NEW.findIndex(x=>x[2] === bdChip); if(i >= 0) bdPopSel = i; }
+  if(activeTab === 'plan' && bdChip !== 'all'){ const i = lrBdNew().findIndex(x=>x[2] === bdChip); if(i >= 0) bdPopSel = i; }
   pb2 = {step:0}; pb2Render();
 }
 function pb2OpenAsset(key, opt){   /* create (or edit when a plan exists) for one asset — straight to the form */
@@ -30742,6 +30868,7 @@ function pb2Back(){
 bdPopClose = function(){ pb2 = null; clearTimeout(pb2HoldT); pb2HoldT = 0; const p = document.getElementById('bdPop'); if(p) p.remove(); };
 bdNewOpen = function(){ pb2OpenType(); };   /* RE-D §6 — the ＋ button always opens; the review lock is checked in the form, against the selected account */
 bdNewPick = function(k){
+  if(k === 'S' && !lrBdNew().some(o=>o[0] === 'S')) k = 'D';   /* LR1·C — Momentum hidden for this account → Compounder */
   if(k === 'F'){ pb2 = {step:1, sel:0}; pb2Render(); return; }
   bdPopClose();
   if(k === 'S'){ planScope = 'stock'; try{ coreNewOpen(); }catch(e){ console.warn('bd new S:', e); } }
@@ -30757,7 +30884,7 @@ function pb2Pick(n){
 function pb2Hd(title, tag){ return `<div class="bd-ph pb2-h"><span class="pb2-hl"><button type="button" class="pb2-bk" data-pb2-back aria-label="Back" onclick="pb2Back()">‹</button><b>${bdE(title)}</b>${tag ? `<span class="sc sat">SAT</span>` : ''}</span><button type="button" class="bd-x" data-bd-popx aria-label="Close" onclick="bdPopClose()">✕</button></div>`; }
 function pb2StepHtml(){
   const s = pb2.step;
-  if(s === 0) return `<div data-pb2-step="type"><div class="bd-ph"><b>New plan</b><button type="button" class="bd-x" data-bd-popx aria-label="Close" onclick="bdPopClose()">✕</button></div>${BD_NEW.map((o, i)=>`<button type="button" class="bd-opt${i === bdPopSel ? ' bd-sel' : ''}" data-bd-opt="${o[0]}" onclick="bdNewPick('${o[0]}')"><kbd>${o[0]}</kbd><span class="sc${o[2] === 'SAT' ? ' sat' : (o[2] === 'COMP' ? ' c pt' : ' pt')}">${o[2]}</span><span class="bd-ot"><b>${o[1]}</b><span class="bd-m">${o[3]}</span></span></button>`).join('')}</div>`;
+  if(s === 0) return `<div data-pb2-step="type"><div class="bd-ph"><b>New plan</b><button type="button" class="bd-x" data-bd-popx aria-label="Close" onclick="bdPopClose()">✕</button></div>${lrBdNew().map((o, i)=>`<button type="button" class="bd-opt${i === bdPopSel ? ' bd-sel' : ''}" data-bd-opt="${o[0]}" onclick="bdNewPick('${o[0]}')"><kbd>${o[0]}</kbd><span class="sc${o[2] === 'SAT' ? ' sat' : (o[2] === 'COMP' ? ' c pt' : ' pt')}">${o[2]}</span><span class="bd-ot"><b>${o[1]}</b><span class="bd-m">${o[3]}</span></span></button>`).join('')}</div>`;
   if(s === 1){
     const L = pb2Assets();
     return `<div data-pb2-step="asset">${pb2Hd('Satellite · which asset?', false)}${L.map((a, i)=>`<button type="button" class="bd-opt${i === (pb2.sel || 0) ? ' bd-sel' : ''}" data-pb2-asset="${bdE(a.key)}" data-pb2-star="${a.star ? 1 : 0}"${a.plan ? ' data-pb2-exists="1"' : ''} onclick="pb2Pick(${i})"><kbd>${i + 1}</kbd><span class="bd-ot"><b>${a.star ? '<span class="pb2-star">★</span> ' : ''}${bdE(a.label)}</b><span class="bd-m">Macro ${bdE(pb2MacroTxt(a.key))}${a.plan ? ' · plan exists → edit' : ''}</span></span></button>`).join('') || '<div class="bd-m">No Sat assets — add one in Flow</div>'}</div>`;
@@ -30944,7 +31071,7 @@ function efCorePlaceHtml(){
   if(pb2.lv != null){ lim = efLevelRiskHtml(it, pv, pb2.lv) + lim; }   /* EF1b — this order's own risk */
   const setupOn = pb2.lv == null ? `<label class="pb2-q" data-ef-setup><input type="checkbox" id="efSetupCk"${tv1SetupLeft(it.sym) > 0 ? ' checked' : ''}> Setup ready today ✓</label>` : '';
   lim += setupOn;
-  return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order' + (pb2.lv != null ? ' #' + (pb2.lv + 1) : '') + ' · ' + it.sym, false)}<div class="pb2-cf" data-pb2-summary><b>${e(it.sym)}</b> <span class="bd-m"><span class="sc" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}">${e(it.tag)}</span> · Limit${pb2.lv != null && it.levels && it.levels[pb2.lv] && it.levels[pb2.lv].px > 0 ? ' · #' + (pb2.lv + 1) + ' ' + e(td3Num(it.levels[pb2.lv].px)) : ''}</span><div class="pv-legs" data-pv-legs>${legs}</div><div class="pv-r2" data-pv-money>${money}</div></div>${lim}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}${pv && pv.plannedRiskDiff ? `<br><span data-ef-risk-diff class="ef-amber">Stored plan risk ${e(pvMoney(pv, pv.plannedRiskStored))} differs from the legs (${e(pvMoney(pv, pv.plannedRisk))}) — the legs are shown</span>` : ''}</div></details><div class="bd-m pb2-note">Records only — place the order at your broker.</div></div>`;
+  return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order' + (pb2.lv != null ? ' #' + (pb2.lv + 1) : '') + ' · ' + it.sym, false)}${lrBandCore(it)}<div class="pb2-cf" data-pb2-summary><b>${e(it.sym)}</b> <span class="bd-m"><span class="sc" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}">${e(it.tag)}</span> · Limit${pb2.lv != null && it.levels && it.levels[pb2.lv] && it.levels[pb2.lv].px > 0 ? ' · #' + (pb2.lv + 1) + ' ' + e(td3Num(it.levels[pb2.lv].px)) : ''}</span><div class="pv-legs" data-pv-legs>${legs}</div><div class="pv-r2" data-pv-money>${money}</div></div>${lim}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}${pv && pv.plannedRiskDiff ? `<br><span data-ef-risk-diff class="ef-amber">Stored plan risk ${e(pvMoney(pv, pv.plannedRiskStored))} differs from the legs (${e(pvMoney(pv, pv.plannedRisk))}) — the legs are shown</span>` : ''}</div></details><div class="bd-m pb2-note">Records only — place the order at your broker.</div></div>`;
 }
 function efCorePlaceYes(){
   const s = pb2; if(!s || s.step !== 'cplace') return;
@@ -30973,7 +31100,7 @@ function pb2PlaceHtml(){
   const V = ln4VerifyOf(i), acc = pb2AcctOf(i), c = pb2Calc(i, acc), e = bdE;
   const ex = (acctList.length > 1 && acc) ? ' · ' + e(pb2AcctName(acc)) : '';
   const list = `<ol class="pb2-chk" data-pb2-checks>${PB2_CHECKS.map(c=>`<li data-pb2-chk><span class="pb2-cn" aria-hidden="true"></span><span class="pb2-ct"><b>${bdE(c[0])}</b>${c[1] ? `<small>${bdE(c[1])}</small>` : ''}</span></li>`).join('')}</ol>`;
-  return `<div data-pb2-step="place">${pb2Hd('Setup ready on Execution TF?', false)}${list}${V.ask ? `<div class="pb2-q" data-pb2-mssok>MSS confirmed per your rules (candle closed)</div>` : ''}<div class="pb2-cf" data-pb2-summary><b>${pb2Side(i)} ${e(sat7dLabel(i.asset))}</b>${ex}<br><span data-pb2-order>Entry ${pb2Side(i)} #<b>${c.lot != null ? satV2Lot(c.lot) : '—'}</b> @ <b>${bdFmt(i.entry)}</b> · Limit</span> · SL <b>${bdFmt(i.sl)}</b> · TP <b>${bdFmt(i.tp)}</b><br>${e(c.label)}${c.lot != null ? ` · Risk ${satV2Money2(c.risk, c.cur)}${c.rr ? ` · Reward ${satV2Money2(c.risk * parseFloat(c.rr), c.cur)} · R:R ${e(c.rr)}` : ''}` : ' · not sized'}${c.c && c.c.re1 && c.c.re1.newsCut ? '' : ''}</div>${efSheetWarns(i, c)}${(c.c && c.c.re1NeedsReentry) ? `<label class="pb2-q" data-re1-reentry><input type="checkbox" ${re1ReTap === i.id ? 'checked' : ''} onchange="re1ReentryTap('${e(i.id)}', this.checked)"> <b>Re-entry</b> · same direction and zone · Trend inputs unchanged · one closed candle since the stop</label>` : ''}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes ${(c.c && c.c.re1NeedsReentry) ? 'disabled' : ''} onclick="pb2PlaceYes()">Confirm</button></div>${efSheetMore(i, c)}<div class="bd-m pb2-note">One tap confirms all 4 · records only — place the order at your broker.</div></div>`;
+  return `<div data-pb2-step="place">${pb2Hd('Setup ready on Execution TF?', false)}${lrBandSat(i)}${list}${V.ask ? `<div class="pb2-q" data-pb2-mssok>MSS confirmed per your rules (candle closed)</div>` : ''}<div class="pb2-cf" data-pb2-summary><b>${pb2Side(i)} ${e(sat7dLabel(i.asset))}</b>${ex}<br><span data-pb2-order>Entry ${pb2Side(i)} #<b>${c.lot != null ? satV2Lot(c.lot) : '—'}</b> @ <b>${bdFmt(i.entry)}</b> · Limit</span> · SL <b>${bdFmt(i.sl)}</b> · TP <b>${bdFmt(i.tp)}</b><br>${e(c.label)}${c.lot != null ? ` · Risk ${satV2Money2(c.risk, c.cur)}${c.rr ? ` · Reward ${satV2Money2(c.risk * parseFloat(c.rr), c.cur)} · R:R ${e(c.rr)}` : ''}` : ' · not sized'}${c.c && c.c.re1 && c.c.re1.newsCut ? '' : ''}</div>${efSheetWarns(i, c)}${(c.c && c.c.re1NeedsReentry) ? `<label class="pb2-q" data-re1-reentry><input type="checkbox" ${re1ReTap === i.id ? 'checked' : ''} onchange="re1ReentryTap('${e(i.id)}', this.checked)"> <b>Re-entry</b> · same direction and zone · Trend inputs unchanged · one closed candle since the stop</label>` : ''}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes ${(c.c && c.c.re1NeedsReentry) ? 'disabled' : ''} onclick="pb2PlaceYes()">Confirm</button></div>${efSheetMore(i, c)}<div class="bd-m pb2-note">One tap confirms all 4 · records only — place the order at your broker.</div></div>`;
 }
 function efSheetWarns(i, c){   /* amber lines inside the confirm sheet: news window · against Macro · limited by · replace pick · carried */
   const e = bdE, out = [];
