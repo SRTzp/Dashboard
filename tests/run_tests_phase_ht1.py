@@ -58,31 +58,15 @@ def todo(pw, w, h, syms=SYMS, label=""):
         T.go_today(page)
         js(page, "()=>todayRefresh(true)"); T.settle(page, 400)
         q = lambda sel: js(page, "(s)=>document.querySelectorAll(s).length", sel)
-        if w >= 900:
-            vis = js(page, VIS); more = js(page, MORE)
-            if len(syms) <= 4:   # approved cap: 4 chips + "+N ›"
-                check(f"{tag} all {len(syms)} stock chips show, no +N", vis == syms and more == "", [vis, more])
-            else:
-                import re
-                n = int(re.sub(r"\D", "", more) or 0)
-                check(f"{tag} {len(syms)} items: +N › appears, shown + N = {len(syms)}", n > 0 and len(vis) + n == len(syms) and vis == syms[:len(vis)], [vis, more])
-            ok = js(page, "()=>{ const r = document.querySelector('[data-ln4-ltin]'); return r.scrollWidth <= r.clientWidth + 1; }")
-            check(f"{tag} chips fit the row (no clipped chip)", ok)
-            check(f"{tag} no grouped chip, no expand panel", q("[data-ln4-todogrp=lt]") == 0 and q("[data-ln4-todolist]") == 0)
-            js(page, "()=>{ window.__toastN = 0; const o = window.showGuideToast; window.showGuideToast = function(){ window.__toastN++; try{ return o.apply(this, arguments); }catch(e){} }; window.__sk1LastPrompt = ''; document.querySelector('[data-ln4-ltchip=MU]').click(); }"); T.settle(page, 400)
-            check(f"{tag} chip copies that stock's prompt + CG1 toast", js(page, "()=>window.__sk1LastPrompt") == "living-thesis update: MU" and js(page, "()=>window.__toastN") >= 1)
-            if len(syms) > 7:
-                js(page, "()=>document.querySelector('[data-ln4-ltmore]').click()"); T.settle(page, 300)
-                check(f"{tag} +N › shows all inline + 'less ‹'", len(js(page, VIS)) == len(syms) and js(page, MORE) == "less ‹" and q("[data-ln4-todolist]") == 0, js(page, MORE))
-                js(page, "()=>document.querySelector('[data-ln4-ltmore]').click()"); T.settle(page, 300)
-                v1 = len(js(page, VIS))
-                page.set_viewport_size({"width": 1000, "height": h}); T.settle(page, 500)
-                v2 = len(js(page, VIS))
-                page.set_viewport_size({"width": w, "height": h}); T.settle(page, 500)
-                check(f"{tag} recomputed on resize (1000px shows fewer, back restores)", v2 < v1 and len(js(page, VIS)) == v1, [v1, v2])
-        else:
-            t = js(page, "()=>{ const e = document.querySelector('[data-ln4-todogrp=lt]'); return e ? e.innerText.trim() : null; }")
-            check(f"{tag} grouped chip 'living-thesis · 7 stocks ›'", t == "living-thesis · 7 stocks ›" and q("[data-ln4-ltchip]") == 0, t)
+        # LR2 C: To do is a short list on every width — the living-thesis stocks are ONE row "living-thesis · N stocks" that opens the list of stock chips (each copies its prompt)
+        t = js(page, "()=>{ const e = document.querySelector('[data-ln4-todogrp=lt]'); return e ? e.innerText.replace(/\\s+/g, ' ').trim() : null; }")
+        n = len(syms)
+        check(f"{tag} one grouped row 'living-thesis · {n} stocks' (no inline stock chips in the list)", t is not None and t.startswith(f"living-thesis · {n} stocks") and q("[data-ln4-ltchip]") == 0, t)
+        js(page, "()=>document.querySelector('[data-ln4-todogrp=lt]').click()"); T.settle(page, 300)
+        check(f"{tag} opening the row lists every stock chip", q("[data-ln4-todolist=lt] [data-ln4-todo]") == n, q("[data-ln4-todolist=lt] [data-ln4-todo]"))
+        js(page, "()=>{ window.__toastN = 0; const o = window.showGuideToast; window.showGuideToast = function(){ window.__toastN++; try{ return o.apply(this, arguments); }catch(e){} }; window.__sk1LastPrompt = ''; [...document.querySelectorAll('[data-ln4-todolist=lt] [data-ln4-todo]')].find(b=>/MU/.test(b.innerText)).click(); }"); T.settle(page, 400)
+        check(f"{tag} a stock chip copies that stock's prompt + CG1 toast", js(page, "()=>window.__sk1LastPrompt") == "living-thesis update: MU" and js(page, "()=>window.__toastN") >= 1)
+        check(f"{tag} list is at most {4 if w >= 900 else 3} rows + '+N ›'", q("[data-lr2-ti]") <= (4 if w >= 900 else 3))
         check(f"{tag} no page errors", not pe, pe)
     finally:
         b.close()

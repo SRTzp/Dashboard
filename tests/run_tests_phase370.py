@@ -79,7 +79,7 @@ def run(pw):
         P120.ps_on(page)
         # Today
         T.go_today(page)
-        page.locator("[data-ln4-more]").click(); settle(page, 300)
+        js(page, "()=>{ const d = document.querySelector('[data-ln4-moredet]'); if(d) d.open = true; }"); settle(page, 300)   # LR2: HOT / MACRO / GOAL live in Details (always expanded there)
         scan(page, tag, "today", "[data-ln4]")
         # Watch
         for t_ in ("AAA", "BBB"):   # WL1 — the Candidate list is gone: the Watch list is the lean list

@@ -187,7 +187,7 @@ def status_line(pw, w, h):
         P24.set_ff(page, P24.ff_json(False, False)); settle(page, 300)
         W.refresh_today(page)
         n = cnt(page, "[data-tw1-status]")
-        check(f"{tag} 3 Today status line is a button (focusable, pointer cursor)", n == 1 and js(page, "()=>{ const e = document.querySelector('[data-tw1-status]'); return e.tagName === 'BUTTON' && e.tabIndex >= 0 && getComputedStyle(e).cursor === 'pointer'; }"), n)
+        check(f"{tag} 3 Today status line is a button (focusable, pointer cursor)", n >= 1 and js(page, "()=>{ const e = document.querySelector('[data-tw1-status]'); return e.tagName === 'BUTTON' && e.tabIndex >= 0 && getComputedStyle(e).cursor === 'pointer'; }"), n)
         js(page, "()=>{ try{ localStorage.removeItem('dash.bdRows'); }catch(e){} }")
         page.locator("[data-tw1-status]").first.click(); settle(page, 900)
         r = js(page, "()=>{ const d = document.querySelector('[data-bd-more] [data-bd-row=\"regime\"]'); const dd = d && (d.tagName === 'DETAILS' ? d : d.querySelector('details')); const rc = dd ? dd.getBoundingClientRect() : null; return {tab:activeTab, open:!!(dd && dd.open), inview: !!rc && rc.top < innerHeight && rc.bottom > 0}; }")

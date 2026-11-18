@@ -103,7 +103,7 @@ def ports(pw, w, h):
         check(f"{tag} C2: Today no overflow", ovf(page) <= 0, ovf(page))
         js(page, "()=>{ switchTab('mix'); }"); page.wait_for_timeout(500)
         if w == 390:
-            hit = js(page, "()=>{ const e=document.getElementById('hdrPlanBtn'), r=e.getBoundingClientRect(); return e.contains(document.elementFromPoint(r.left+r.width/2, r.top+r.height/2)); }  /* LR1: the button now holds label spans */")
+            hit = js(page, "()=>{ window.scrollTo(0, 0); const e=document.getElementById('hdrPlanBtn'), r=e.getBoundingClientRect(); return e.contains(document.elementFromPoint(r.left+r.width/2, r.top+r.height/2)); }  /* LR1: the button now holds label spans */")
             check(f"{tag} Port: ＋ button is not covered by the account-compare label", hit)
             page.screenshot(path=os.path.join(SHOTS, "ts1b-port-390.png"))
         check(f"{tag} Port: no overflow", ovf(page) <= 0, ovf(page))

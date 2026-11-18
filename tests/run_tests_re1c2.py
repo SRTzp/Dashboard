@@ -22,7 +22,7 @@ def check(name, ok, detail=""):
 def launch(pw, w, h, d=None, c=None):
     b, ctx, page, ce, pe, dl = P39.launch(pw, w, h, doc=d or doc_c(), cards=c if c is not None else cards(), clean=True)
     page.add_style_tag(content=NOANIM); page.wait_for_timeout(500)
-    js(page, "()=>{ tv1SetupLeft = ()=>1; switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)   # Setup ✓ present (board treats plans without it as Waiting)
+    js(page, "()=>{ if(typeof lr2DetOpen !== 'undefined') lr2DetOpen = true; tv1SetupLeft = ()=>1; switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)   # Setup ✓ present (board treats plans without it as Waiting)
     return b, page, ce, pe
 
 
@@ -70,7 +70,7 @@ def run_viewport(pw, w, h):
     # ── strip: Normal + events chip hidden without data
     b, page, ce, pe = launch(pw, w, h)
     try:
-        st = txt(page, "[data-re2-strip]")
+        st = txt(page, "[data-lr2-room=main] [data-re2-strip]")
         check("[%s] strip Normal: green state + MMT / SAT / COMP values" % tag, "Normal" in st and js(page, "()=>document.querySelector('[data-re2-state]').classList.contains('g')") and ("MMT" in st and "SAT" in st and "COMP" in st if w > 560 else True), st)
         check("[%s] no event data → no event chip" % tag, js(page, "()=>!document.querySelector('[data-re2-evchip]')"))
         check("[%s] old status text removed from the top card (no risk line / port chip)" % tag, js(page, "()=>!document.querySelector('[data-ln4-status] [data-ln4-risk], [data-ln4-status] [data-ln4-portpill]')"))
@@ -91,12 +91,12 @@ def run_viewport(pw, w, h):
             nm = txt(page, "[data-re2-state]")
             cl = js(page, "()=>document.querySelector('[data-re2-state]').className")
             ok = (col in cl.split()) and ((name.split()[0] == "Locked" and nm == "Locked") or (name == "Half size" and nm == "Half size") or (name == "Snapshot due" and nm == "Snapshot due") or (name == "Snapshot stale" and nm == "Snapshot stale"))
-            if chip: ok = ok and (chip in txt(page, "[data-re2-strip]")) and js(page, "(k)=>document.querySelector('[data-re2-chip=\"'+k+'\"]').classList.contains('r')", chip.split()[0].lower())
-            check("[%s] strip %s → %s %s" % (tag, name, "red" if col == "r" else "amber", ("+ chip '" + chip + "'") if chip else ""), ok, [nm, cl, txt(page, "[data-re2-strip]")])
+            if chip: ok = ok and (chip in txt(page, "[data-lr2-room=main] [data-re2-strip]")) and js(page, "(k)=>document.querySelector('[data-re2-chip=\"'+k+'\"]').classList.contains('r')", chip.split()[0].lower())
+            check("[%s] strip %s → %s %s" % (tag, name, "red" if col == "r" else "amber", ("+ chip '" + chip + "'") if chip else ""), ok, [nm, cl, txt(page, "[data-lr2-room=main] [data-re2-strip]")])
             if w == 1440 and name == "Locked SAT": shot(page, "locked-1440")
             if w == 390 and name == "Locked SAT": shot(page, "locked-390")
             if w <= 560 and name == "Locked SAT":
-                vis = js(page, "()=>[...document.querySelectorAll('[data-re2-strip] .rk')].filter(e=>getComputedStyle(e).display!=='none').map(e=>e.dataset.re2Chip||e.dataset.re2Evchip)")
+                vis = js(page, "()=>[...document.querySelectorAll('[data-lr2-room=main] [data-re2-strip] .rk')].filter(e=>getComputedStyle(e).display!=='none').map(e=>e.dataset.re2Chip||e.dataset.re2Evchip)")
                 check("[%s] phone strip: only abnormal chips visible" % tag, vis == ["sat"], vis)
         # worst wins
         override(page, "C.emergency = Object.assign({}, L.emergency, {active:true}); C.sat = Object.assign({}, L.sat, {step:Object.assign({}, L.sat.step, {locked:true})})")
@@ -209,14 +209,14 @@ def run_pair(pw, w, h):
         js(page, "()=>switchTab('today')"); page.wait_for_timeout(400)
         det = js(page, "()=>[...document.querySelectorAll('.re2-pair details')].map(d=>d.open)")
         if w <= 560:
-            check("[%s] iPhone: both rows collapsed, one line each" % tag, det == [False, False] and js(page, "()=>[...document.querySelectorAll('.re2-pair summary')].every(s=>s.getBoundingClientRect().height<48)"), det)
+            check("[%s] iPhone: both rows collapsed, one line each" % tag, all(x is False for x in det) and js(page, "()=>[...document.querySelectorAll('.re2-pair summary')].every(s=>s.getBoundingClientRect().height<48)"), det)   # LR2: Risk room = one line per account × port (no summary tiles) · the events card stays collapsed
             if w == 390: shot(page, "today-390-collapsed-pair")
             js(page, "()=>document.querySelectorAll('.re2-pair summary').forEach(s=>s.click())"); page.wait_for_timeout(300)
             check("[%s] iPhone: rows open full width" % tag, js(page, "()=>[...document.querySelectorAll('.re2-pair details')].every(d=>d.open) && [...document.querySelectorAll('.re2-pair .card')].every(c=>c.getBoundingClientRect().width>document.documentElement.clientWidth*0.85)"))
             check("[%s] open pair has no overflow" % tag, no_overflow(page))
             if w == 390: shot(page, "today-390-open")
         else:
-            check("[%s] Mac: both open side by side" % tag, det == [True, True] and js(page, "()=>{const c=[...document.querySelectorAll('.re2-pair .card')].map(e=>e.getBoundingClientRect());return Math.abs(c[0].top-c[1].top)<2}"), det)
+            check("[%s] LR2: Mac — Risk room is one line per account × port inside Details; events card collapsed" % tag, not any(det) and js(page, "()=>document.querySelectorAll('[data-lr2-risk] .lr2-rl[data-lr2-rl]').length") >= 3, det)
         check("[%s] no console / page errors" % tag, not ce and not pe, ce + pe)
     finally:
         b.close()
@@ -228,10 +228,10 @@ def run_accounts(pw, w, h):
     b, page, ce, pe = launch(pw, w, h, None, cs)
     try:
         main = [r["sym"] for r in rows(page, "enter")]
-        check("[%s] two accounts never mixed: Main's Act has no Family plan" % tag, "FAMX" not in main and js(page, "()=>document.querySelectorAll('[data-re2-act]').length===1"), main)
+        check("[%s] LR2: one Act list shows Main AND Family rows, each with its account pill" % tag, "FAMX" in main and js(page, "()=>document.querySelectorAll('[data-re2-act]').length===1 && [...document.querySelectorAll('[data-re2-row=FAMX] [data-lr2-pill]')].map(e=>e.innerText).join()==='F'"), main)
         js(page, "()=>{ acctActive='fam'; re1Cache={}; todayRefresh(true); }"); page.wait_for_timeout(400)
         fam = [r["sym"] for r in rows(page, "enter")]
-        check("[%s] selector → Family: Act and strip follow it, Main's rows are gone" % tag, "FAMX" in fam and js(page, "()=>document.querySelector('[data-re2-strip]').dataset.re2Strip==='fam'") and not any(r["sym"] == "NVDA" for r in rows(page, "check")), fam)
+        check("[%s] LR2: switching the active account does not change Today's Act (both accounts stay)" % tag, "FAMX" in fam and js(page, "()=>!!document.querySelector('[data-lr2-room=fam] [data-re2-strip]')") and any(r["sym"] == "NVDA" for r in rows(page, "check")), fam)
     finally:
         b.close()
 

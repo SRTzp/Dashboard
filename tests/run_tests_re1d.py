@@ -145,14 +145,14 @@ def run_review(pw, w, h):
     b, page, ce, pe = launch(pw, w, h, d, cs)
     try:
         base = L_snapshot(page)
-        check("[%s] 2 counted (Missed + Hesitated), reasons 3–8 ignored, last week ignored → no flag" % tag, js(page, "()=>re4Counted('main').length")==2 and not js(page, "()=>re4Due('main')") and "not taken" not in txt(page, "[data-re2-strip]"), js(page, "()=>re4Counted('main').length"))
+        check("[%s] 2 counted (Missed + Hesitated), reasons 3–8 ignored, last week ignored → no flag" % tag, js(page, "()=>re4Counted('main').length")==2 and not js(page, "()=>re4Due('main')") and not js(page, "()=>!!document.querySelector('[data-lr2-exec=main]')"), js(page, "()=>re4Counted('main').length"))   # LR2: header shows each account that is due (Family is due in this fixture)
         check("[%s] no flag: 'New plan' enabled, no review To do, nothing new visible" % tag, js(page, "()=>!document.getElementById('hdrPlanBtn').disabled") and ("Execution review · " + js(page, "()=>re4AcctName('main')")) not in js(page, "()=>document.body.innerText"))
         # the 3rd counted one
         js(page, "()=>{ coreWrite('x5', {acct:'main', ticker:'X5', market:'US', strategy:'W', status:'cancelled', cancelReason:'missed', cancelledAt:new Date().toISOString(), plan:{entry:10, stop:9}}); }"); page.wait_for_timeout(600); refresh(page)
-        st = txt(page, "[data-re2-strip]")
-        check("[%s] 3 → red chip '3 not taken' on the Today strip" % tag, js(page, "()=>{const c=document.querySelector('[data-re4-chip]');return !!c && c.innerText.trim()==='3 not taken' && c.classList.contains('r')}"), st)
+        st = txt(page, "[data-lr2-room=main] [data-re2-strip]")
+        check("[%s] 3 → red chip '3 not taken' on the Today strip" % tag, js(page, "()=>{const c=document.querySelector('[data-lr2-exec=main]');return !!c && c.innerText.replace(/^M\\s+/,'').trim()==='3 not taken' && c.classList.contains('r')}"), st)
         check("[%s] AW1 §6: strip state no longer says 'Review due' (the red '3 not taken' chip carries it)" % tag, "Review due" not in txt(page, "[data-re2-state]"), txt(page, "[data-re2-state]"))
-        todo = js(page, "()=>[...document.querySelectorAll('[data-ln4-status] *')].map(e=>e.innerText||'').join(' | ')")
+        todo = js(page, "()=>[...document.querySelectorAll('[data-ln4-status] *, [data-ln4-todorow] *')].map(e=>e.innerText||'').join(' | ')")
         check("[%s] To do shows 'Execution review · <account>'" % tag, "Execution review · " in todo, todo[:300])
         # other actions stay open
         board(page)
@@ -172,9 +172,9 @@ def run_review(pw, w, h):
         check("[%s] Done stays disabled with one note only" % tag, js(page, "()=>document.getElementById('rvDone').disabled"))
         js(page, "()=>{document.getElementById('rvChange').value='resting orders'; re4RevIn(); re4RevDone();}"); page.wait_for_timeout(500)
         check("[%s] Done: stored with date in Journal data, flag closed, New plan unlocked" % tag, js(page, "()=>{const r=ln4Cfg().exrev;return r&&r.length===1&&r[0].acct==='main'&&r[0].day&&r[0].stopped==='froze'&&r[0].change==='resting orders'}") and not js(page, "()=>re4Due('main')") and js(page, "()=>!re4Due('main')"))
-        check("[%s] chip and To do are gone after the review" % tag, js(page, "()=>!document.querySelector('[data-re4-chip]')") and ("Execution review · " + js(page, "()=>re4AcctName('main')")) not in js(page, "()=>document.body.innerText"))
+        check("[%s] chip and To do are gone after the review" % tag, js(page, "()=>!document.querySelector('[data-lr2-exec=main]')") and ("Execution review · " + js(page, "()=>re4AcctName('main')")) not in js(page, "()=>document.body.innerText"))
         js(page, "()=>{ coreWrite('x6', {acct:'main', ticker:'X6', market:'US', strategy:'W', status:'cancelled', cancelReason:'hesitated', cancelledAt:new Date().toISOString(), plan:{entry:10, stop:9}}); }"); page.wait_for_timeout(600); refresh(page)
-        check("[%s] a 4th Missed / Hesitated the same week reopens it" % tag, js(page, "()=>re4Due('main')") and js(page, "()=>document.querySelector('[data-re4-chip]').innerText.trim()")=="4 not taken")
+        check("[%s] a 4th Missed / Hesitated the same week reopens it" % tag, js(page, "()=>re4Due('main')") and js(page, "()=>document.querySelector('[data-lr2-exec=main]').innerText.replace(/^M\\s+/,'').trim()")=="4 not taken")
         check("[%s] accounts are separate: Family has 3 and is due, Main's review did not close it" % tag, js(page, "()=>re4Counted('fam').length")==3 and js(page, "()=>re4Due('fam')"))
         # week reset: shift the harness clock past the week boundary
         js(page, "()=>{ const real = Date.now; const off = 4*86400000; window.__realNow = real; Date.now = ()=>real()+off; }"); refresh(page)

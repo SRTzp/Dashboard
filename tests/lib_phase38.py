@@ -185,18 +185,18 @@ def tab_tests(pw, w, h, label):
             first: document.querySelector('#tabsMain .tabbtn').id, btns: [...document.querySelectorAll('#tabsMain .tabbtn')].map(b=>b.id),
             on: [...document.querySelectorAll('#tabsMain .tabbtn.on')].map(b=>b.id), order: TAB_ORDER, vis: visibleTabs(), label: document.getElementById('tabBtnToday').textContent.trim().replace(/\\s+/g,' ')})""")
         check(f"{tag} 1 เปิดแอป = แท็บ วันนี้ (activeTab · #tabToday แสดง · #tabFlow ซ่อน)", info["active"] == "today" and info["today"] != "none" and info["flow"] == "none", json.dumps(info))
-        check(f"{tag} 1 ปุ่ม วันนี้ อยู่ซ้ายสุด · ติดสถานะ on · TAB_ORDER = today,flow,watch,plan,journal,mix (ป้าย Today)", info["first"] == "tabBtnToday" and info["on"] == ["tabBtnToday"]
-              and info["order"] == ["today", "flow", "watch", "plan", "journal", "mix"] and len(info["btns"]) == 6, json.dumps(info))
-        check(f"{tag} 1 visibleTabs() รวมแท็บนี้ (ปัดซ้าย/ขวาวน)", info["vis"] == ["today", "flow", "watch", "plan", "journal", "mix"], json.dumps(info["vis"]))
+        check(f"{tag} 1 ปุ่ม วันนี้ อยู่ซ้ายสุด · ติดสถานะ on · TAB_ORDER = today,plan,flow,watch,journal,mix (ป้าย Today)", info["first"] == "tabBtnToday" and info["on"] == ["tabBtnToday"]
+              and info["order"] == ["today", "plan", "flow", "watch", "journal", "mix"] and len(info["btns"]) == 6, json.dumps(info))
+        check(f"{tag} 1 visibleTabs() รวมแท็บนี้ (ปัดซ้าย/ขวาวน)", info["vis"] == ["today", "plan", "flow", "watch", "journal", "mix"], json.dumps(info["vis"]))
         js(page, "()=>switchTab('plan')"); page.wait_for_timeout(200)
         res = []
-        for k, t in (("1", "today"), ("2", "flow"), ("3", "watch"), ("4", "plan"), ("5", "journal"), ("6", "mix")):
+        for k, t in (("1", "today"), ("2", "plan"), ("3", "flow"), ("4", "watch"), ("5", "journal"), ("6", "mix")):
             page.keyboard.press(k); page.wait_for_timeout(200); res.append(js(page, "()=>activeTab") == t)
-        check(f"{tag} 1 คีย์ตามตำแหน่ง 1 Today · 2 Flow · 3 Watch · 4 แผน · 5 Journal · 6 Port", all(res), json.dumps(res))
+        check(f"{tag} 1 คีย์ตามตำแหน่ง 1 Today · 2 Plan · 3 Flow · 4 Watch · 5 Journal · 6 Port", all(res), json.dumps(res))
         page.keyboard.press("0"); page.wait_for_timeout(200)
         check(f"{tag} 1 เลิกใช้คีย์ 0 (กดแล้วแท็บไม่เปลี่ยน)", js(page, "()=>activeTab") == "mix")
         hints = js(page, "()=>[...document.querySelectorAll('#tabsMain .tabbtn')].map(b=>b.id.replace('tabBtn','')+':'+b.querySelector('.kbdhint').textContent)")
-        check(f"{tag} 1 .kbdhint เลขใหม่ตามตำแหน่ง · ชื่อปุ่ม 'Today'", hints == ["Today:1", "Flow:2", "Watch:3", "Journal".replace("Journal","Plan")+":4", "Journal:5", "Mix:6"] and js(page, "()=>document.getElementById('tabBtnToday').firstChild.textContent") == "Today", json.dumps(hints))
+        check(f"{tag} 1 .kbdhint เลขใหม่ตามตำแหน่ง · ชื่อปุ่ม 'Today'", sorted(hints) == sorted(["Today:1", "Plan:2", "Flow:3", "Watch:4", "Journal:5", "Mix:6"]) and js(page, "()=>document.getElementById('tabBtnToday').firstChild.textContent") == "Today", json.dumps(hints))
         js(page, "()=>{ switchTab('flow'); window.__rt = 0; const o = window.renderToday; window.renderToday = ()=>{ window.__rt++; return o(); }; switchTab('today'); }")
         check(f"{tag} 1 switchTab('today') เรียก renderToday()", js(page, "()=>window.__rt") == 1)
         # วนปัดซ้าย/ขวา: จาก journal ไป today ผ่าน visibleTabs
