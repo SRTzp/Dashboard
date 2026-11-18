@@ -28,6 +28,7 @@ FAST=(
   "node ps1_size|node tests/ps1_size_test.js"
   "node ps1b_size|node tests/ps1b_size_test.js"
   "node pv1_posview|node tests/pv1_posview_test.js"
+  "hooks superset (LR1 A0)|python3 tests/hooks_test.py"
   "node aw1 (wrapper → run_tests_aw1.py)|node tests/aw1_test.js"
 )
 # ---- browser suites (python): the core set, then the rest
