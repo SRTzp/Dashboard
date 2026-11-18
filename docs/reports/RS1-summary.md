@@ -6,9 +6,9 @@ Branch `claude/rs1-data` · scope: `scripts/build_prices.py`, `data/universe_{us
 | list | symbols in file | had ≥253 Yahoo bars on 2026-11-18 (n in rsTable) | source |
 |---|---|---|---|
 | US | 518 (S&P 500 = 503, Nasdaq 100 = 101, overlap 86) | **514** | en.wikipedia.org *List of S&P 500 companies*; api.nasdaq.com nasdaq100 list; fetched 2026-11-18 |
-| TH | 100 | **100** | **approximate — see below** |
+| TH | 100 | **100** | **approximate — replace with official SET100** (see below) |
 
-**TH list is NOT the official SET100.** set.or.th is behind bot protection (403) and Wikipedia only lists SET50 ("as of 2025"). The file = 51 SET50 names from Wikipedia + 49 large/liquid SET names I wrote by hand, each verified to have ≥253 Yahoo bars. **Please replace with the official list** (set.or.th → SET100 → constituents) — one name per line. Ratings are percentiles, so a wrong tail shifts TH ratings a little, not wildly.
+**TH universe: approximate — replace with official SET100 (left as is, per instruction).** set.or.th is behind bot protection (403) and Wikipedia only lists SET50 ("as of 2025"). The file = 51 SET50 names from Wikipedia + 49 large/liquid SET names I wrote by hand, each verified to have ≥253 Yahoo bars. **Please replace with the official list** (set.or.th → SET100 → constituents) — one name per line. Ratings are percentiles, so a wrong tail shifts TH ratings a little, not wildly.
 
 ## Runtime (local, Mac, live Yahoo)
 ~26 s for 618 universe symbols + 16 sample tickers + 2 benchmarks (chunks of 80, `auto_adjust=True`, 2y). The weekly job adds a few seconds. Action timeout proposed 20 min (huge margin). Yahoo is rate-limited from the Mac; the Action runner wasn't tested here — first Action run is the real check.
@@ -24,37 +24,56 @@ Branch `claude/rs1-data` · scope: `scripts/build_prices.py`, `data/universe_{us
 - **Changed existing behaviour:** the weekly writes used `set()` (overwrite), which would have wiped `rs`; both writers now `set(..., merge=True)`. RS failure is caught and cannot fail the weekly job.
 - Watchlist-only tickers now get a `prices/{ySym}` doc with **no `close`/`ema10w`**. Worth checking the app's price listener (index.html ~13812) tolerates that when the UI half lands.
 
-## Issue to decide: TH RS line (`^SET.BK`)
-Yahoo returns **1 row** for `^SET.BK` (also ^SET50/^SET100/^SETHD) over every period I tried, today. So TH `line / newHigh / newHigh5d` are `null` with `reason: 'bench<252'`; TH **ratings still work** (they don't need the benchmark). It may be transient — re-check on the first Action run. Fallback if it persists: `TDEX.BK` (SET50 ETF; returns 483 bars) as TH bench — one-line change to `RS_BENCH`, but it deviates from the brief, so I did not do it. Your call.
+## TH benchmark (resolved)
+Rule: use `^SET.BK` if it has ≥ 252 rows, else `TDEX.BK` (SET50 ETF); the one actually used is written to `rs.bench`. On 2026-11-18 Yahoo returned **1 row** for `^SET.BK` (also ^SET50/^SET100/^SETHD) and 483 for `TDEX.BK`, so all TH rows used `TDEX.BK` and now have `line` / `newHigh` / `newHigh5d`. Re-evaluated on every run, so it switches back to `^SET.BK` by itself when Yahoo recovers. Reasons: `bench<252` now only occurs if *both* are short. US bench stays `SPY`.
 
 ## Sample ratings (live run, asOf 2026-11-18)
 TradingView/IBD column is blank: I can't read TradingView or IBD from here. Please fill from the TradingView RS Rating indicator for a sanity check (the brief says approximate is fine).
 
-| ticker | rating | 4w ago | line | newHigh / 5d | TV/IBD |
-|---|---|---|---|---|---|
-| NVDA | 5 | 70 | down | – / – | |
-| AAPL | 89 | 82 | up | ✔ / ✔ | |
-| MSFT | 67 | 86 | flat | – / – | |
-| TSLA | 36 | 46 | up | – / – | |
-| META | 53 | 61 | down | – / – | |
-| PLTR | 35 | 94 | down | – / – | |
-| INTC | 15 | 95 | down | – / – | |
-| KO | 87 | 86 | up | – / ✔ | |
-| UNH | 66 | 67 | down | – / – | |
-| PTT.BK | 43 | 64 | null (bench) | null | |
-| ADVANC.BK | 31 | 33 | null (bench) | null | |
-| DELTA.BK | 3 | 41 | null (bench) | null | |
-| AOT.BK | 59 | 39 | null (bench) | null | |
-| CPALL.BK | 46 | 20 | null (bench) | null | |
-| TTB.BK | 75 | 71 | null (bench) | null | |
+| ticker | rating | 4w ago | line | newHigh / 5d | bench | TV/IBD |
+|---|---|---|---|---|---|---|
+| NVDA | 5 | 70 | down | – / – | SPY | |
+| AAPL | 89 | 82 | up | ✔ / ✔ | SPY | |
+| MSFT | 67–68 | 86 | flat | – / – | SPY | |
+| TSLA | 36 | 46 | up | – / – | SPY | |
+| META | 53 | 61 | down | – / – | SPY | |
+| PLTR | 35–37 | 94 | down | – / – | SPY | |
+| INTC | 15 | 95 | down | – / – | SPY | |
+| KO | 85–87 | 86 | up | – / ✔ | SPY | |
+| UNH | 66 | 67 | down | – / – | SPY | |
+| PTT.BK | 43 | 64 | down | – / – | TDEX.BK | |
+| AOT.BK | 59 | 39 | up | – / – | TDEX.BK | |
 
-Observations: some jumps look large (INTC 95 → 15, PLTR 94 → 35 in 4 weeks) — consistent with the 40%-weight 3-month return rolling off a big move, but worth eyeballing against TradingView first. (US rows were run before the `reason` rename; values unchanged.)
+(Ranges: two live runs minutes apart differed by 1–2 points because Yahoo returned 512 vs 514 usable US symbols — a few universe tickers fail intermittently. Immaterial for a display rating.) The TV/IBD column is still blank — I can't read TradingView/IBD; please fill it in.
+
+## Sanity check — returns, score, rating (now vs 20 sessions ago)
+Score = 0.4·r3m + 0.2·r6m + 0.2·r9m + 0.2·r12m. US universe n = 512 (live run 2026-11-18; "−20s" = 2026-10-21, rated against the table as of that day).
+
+| ticker | when | r3m | r6m | r9m | r12m | score | rating |
+|---|---|---|---|---|---|---|---|
+| INTC | now | −41.4% | −54.6% | +20.9% | +55.4% | −0.122 | **15** |
+| INTC | −20s | −7.3% | +42.4% | +71.4% | +144.0% | +0.487 | **95** |
+| PLTR | now | −10.5% | +13.5% | +15.4% | −9.1% | −0.002 | **37** |
+| PLTR | −20s | +63.5% | +32.2% | +22.0% | +11.1% | +0.385 | **94** |
+| MSFT | now | +4.7% | +20.1% | +26.9% | +0.1% | +0.113 | **68** |
+| MSFT | −20s | +39.9% | +23.6% | +20.8% | +4.0% | +0.256 | **86** |
+| KO | now | +8.6% | +21.3% | +26.2% | +41.9% | +0.213 | **85** |
+| KO | −20s | +14.9% | +25.7% | +31.2% | +39.0% | +0.251 | **86** |
+| JNJ | now | +3.6% | +21.5% | +13.4% | +41.2% | +0.167 | **80** |
+| JNJ | −20s | −0.1% | +15.2% | +20.1% | +36.1% | +0.143 | **72** |
+
+**Why the big jumps are real, not a bug.** The rating is a pure function of the returns above; I checked the arithmetic against raw closes.
+- **INTC** closed 92.96 on 2026-10-21 and 53.95 now (−42% in 20 sessions; it was ~127 at its high inside the last 60 sessions). Because the 20-session-ago window anchors on 63/126/189/252 sessions back from a *high*, r3m was only −7% and r6m +42% then; now every anchor is measured from the post-crash price, so r3m −41% and r6m −55%. r3m carries 40% weight, so the score swings from +0.49 to −0.12 and the rank from 95 → 15.
+- **PLTR** is the same shape: 201.72 → 155.70 (−23% in 20 sessions) flips r3m from +64% to −10%; score +0.39 → 0.00, rating 94 → 37.
+- **MSFT** (r3m +40% → +5%) drops 86 → 68 for the same reason, milder. **KO / JNJ**, with steady multi-month returns, barely move (86→85, 72→80).
+
+Takeaway: the design (40% on 3 months) makes the rating fast — a name that gains or loses ~25–40% in a month can move 50+ points. That matches the IBD-style behaviour; if it's too jumpy for watchlist ordering, lower the 3m weight — a one-line change in `RS_WEIGHTS`.
 
 ## Tests
-`python3 tests/rs1_selftest.py` → 34 checks OK (weighted score, percentile/ties/clamp, <252 bars → null + reason, TH mapping & bench, RS-line ±2% band, newHigh / newHigh5d, bench gaps, run_rs with fake fetch/write). Added as a step in the proposed workflow. Not added to `run_regression.sh` (not touched).
+`python3 tests/rs1_selftest.py` → 39 checks OK (weighted score, percentile/ties/clamp, <252 bars → null + reason, TH mapping & bench, RS-line ±2% band, TH bench rule (^SET.BK ≥252 else TDEX.BK, recorded in `bench`), newHigh / newHigh5d, bench gaps, run_rs with fake fetch/write). Added as a step in the proposed workflow. Not added to `run_regression.sh` (not touched).
 
 ## For you to do
 1. Paste `docs/proposals/prices.yml` over `.github/workflows/prices.yml` (adds Mon–Thu 22:30 UTC cron, selftest step, 20-min timeout; weekend crons kept).
-2. Replace `data/universe_th.txt` with the official SET100.
-3. Decide TH benchmark (above) · fill the TV/IBD column.
+2. Replace `data/universe_th.txt` with the official SET100 (approximate until then).
+3. Fill the TV/IBD column.
 4. Run the workflow manually once and check `prices/_meta.rsTable` in Firestore.

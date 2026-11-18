@@ -24,6 +24,7 @@ RS_LINE_WIN = 20             # ความชัน RS line
 RS_LINE_BAND = 0.02          # ±2%
 RS_HI_WIN = 252
 RS_BENCH = {'us': 'SPY', 'th': '^SET.BK'}
+RS_BENCH_FALLBACK = {'th': 'TDEX.BK'}   # SET50 ETF · ใช้เมื่อ ^SET.BK มี < 252 แถว (Yahoo ส่ง index มาไม่ครบ)
 RS_MIN_UNIVERSE = 30         # universe ที่ดึงได้น้อยกว่านี้ → ไม่ให้ rating (reason universe<30)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -237,11 +238,23 @@ def rs_table(universe_closes, ysym_market):
     return out
 
 
-def rs_for(ysym, rows, bench_rows, table):
-    """สร้าง dict rs ของ 1 ตัว · rows/bench_rows = [(date, adj close)] (None = ดึงไม่ได้) · table = rsTable[mkt] หรือ None"""
+def pick_bench(m, clean):
+    """benchmark ของตลาด m → (symbol, rows) · หลัก ถ้า ≥ 252 แถว ไม่งั้นลอง fallback ที่ ≥ 252 แถว ไม่งั้นคืนหลัก (rows อาจสั้น/None)"""
+    main = RS_BENCH[m]
+    if len(clean.get(main) or []) >= RS_HI_WIN:
+        return main, clean[main]
+    fb = RS_BENCH_FALLBACK.get(m)
+    if fb and len(clean.get(fb) or []) >= RS_HI_WIN:
+        return fb, clean[fb]
+    return main, clean.get(main)
+
+
+def rs_for(ysym, rows, bench_rows, table, bench_sym=None):
+    """สร้าง dict rs ของ 1 ตัว · rows/bench_rows = [(date, adj close)] (None = ดึงไม่ได้) · table = rsTable[mkt] หรือ None
+    bench_sym = ชื่อ benchmark ที่ใช้จริง (บันทึกใน 'bench')"""
     m = rs_market(ysym)
     rs = {'rating': None, 'rating4wAgo': None, 'line': None, 'newHigh': None, 'newHigh5d': None,
-          'bench': RS_BENCH[m], 'asOf': rows[-1][0].isoformat() if rows else None}
+          'bench': bench_sym or RS_BENCH[m], 'asOf': rows[-1][0].isoformat() if rows else None}
     if not rows:
         rs['reason'] = 'no-data'
         return rs
@@ -295,7 +308,7 @@ def run_rs(syms, universe, fetch_many, write, now):
     """syms {ySym: ticker} · universe [ySym] · fetch_many(list)->{ySym: [(date, adj close)]} (ตัวที่ดึงไม่ได้ = ไม่มี key)
     เขียน prices/{ySym} {'rs':…} + prices/_meta {'rsTable':…} · คืน (n_rated, failed list)"""
     benches = list(RS_BENCH.values())
-    need = list(dict.fromkeys(list(universe) + list(syms) + benches))
+    need = list(dict.fromkeys(list(universe) + list(syms) + benches + list(RS_BENCH_FALLBACK.values())))
     data = fetch_many(need)
     clean = {y: _rows(r) for y, r in data.items() if r is not None and len(r)}
     table = rs_table({y: clean[y] for y in universe if y in clean}, rs_market)
@@ -303,7 +316,8 @@ def run_rs(syms, universe, fetch_many, write, now):
     for y, tk in syms.items():
         rows = clean.get(y)
         m = rs_market(y)
-        rs = rs_for(y, rows, clean.get(RS_BENCH[m]), table.get(m))
+        bsym, brows = pick_bench(m, clean)
+        rs = rs_for(y, rows, brows, table.get(m), bsym)
         if not rows:
             failed.append({'ySym': y, 'why': 'no-data'})
         write(y, {'sym': tk, 'ySym': y, 'rs': rs})

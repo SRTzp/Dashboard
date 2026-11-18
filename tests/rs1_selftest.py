@@ -54,6 +54,17 @@ t('keys', set(full) >= {'rating', 'rating4wAgo', 'line', 'newHigh', 'newHigh5d',
 t('bench<252', bp.rs_for('PTT.BK', long_, rows([100.0]), {'cuts': cuts, 'cuts4w': cuts})['reason'] == 'bench<252')
 t('no-bench', bp.rs_for('PTT.BK', long_, None, {'cuts': cuts, 'cuts4w': cuts})['reason'] == 'no-bench')
 
+# bench fallback: ^SET.BK ≥252 → ใช้ ^SET.BK · ไม่ถึง → TDEX.BK · ไม่มีทั้งคู่ → ^SET.BK (reason bench<252)
+tdex, setix = rows([100.0 + i * 0.1 for i in range(300)]), rows([100.0 + i * 0.2 for i in range(300)])
+t('bench main', bp.pick_bench('th', {'^SET.BK': setix, 'TDEX.BK': tdex})[0] == '^SET.BK')
+t('bench 252', bp.pick_bench('th', {'^SET.BK': setix[:252], 'TDEX.BK': tdex})[0] == '^SET.BK' and bp.pick_bench('th', {'^SET.BK': setix[:251], 'TDEX.BK': tdex})[0] == 'TDEX.BK')
+t('bench fb', bp.pick_bench('th', {'^SET.BK': rows([100.0]), 'TDEX.BK': tdex}) == ('TDEX.BK', tdex))
+t('bench none', bp.pick_bench('th', {'^SET.BK': rows([100.0])})[0] == '^SET.BK' and bp.pick_bench('us', {'SPY': setix})[0] == 'SPY')
+sh = {}
+bp.run_rs({'T1.BK': 'T1'}, [f'T{i}.BK' for i in range(40)], lambda ys: {**{f'T{i}.BK': tdex for i in range(40)}, '^SET.BK': rows([100.0]), 'TDEX.BK': tdex},
+          lambda k, d: sh.setdefault(k, {}).update(d), dt.datetime(2026, 11, 18, tzinfo=dt.timezone.utc))
+t('run_rs bench', sh['T1.BK']['rs']['bench'] == 'TDEX.BK' and sh['T1.BK']['rs']['line'] is not None)
+
 # 4 · TH ticker mapping + market/bench
 t('map PTT', bp.to_ysym('ptt', 'TH') == 'PTT.BK' and bp.to_ysym('PTT.BK') == 'PTT.BK' and bp.to_ysym(' aapl ') == 'AAPL')
 t('bench th', bp.rs_for('PTT.BK', short, None, None)['bench'] == '^SET.BK' and bp.rs_market('PTT.BK') == 'th')
