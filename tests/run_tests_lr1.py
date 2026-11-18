@@ -59,7 +59,7 @@ def run(pw, w, h):
         if w == 1440: page.screenshot(path=os.path.join(SHOTS, "lr1-top-1440.png"))
         if w == 390: page.screenshot(path=os.path.join(SHOTS, "lr1-top-390.png"))
         js(page, "()=>document.getElementById('hdrMoreBtn').click()"); page.wait_for_timeout(200)
-        items = js(page, "()=>[...document.querySelectorAll('#moreMenu .lrMiLbl')].filter(b=>b.offsetParent!==null).map(b=>b.innerText.trim())")
+        items = js(page, "()=>[...document.querySelectorAll('#moreMenu .lrMiLbl')].filter(b=>b.offsetParent!==null).map(b=>b.textContent.trim())")
         check(f"{tag} B: ⋯ menu lists Portfolio settings · Industries · System settings with text labels", all(x in items for x in ("Portfolio settings", "Industries", "System settings")), items)
         if w == 1440: page.screenshot(path=os.path.join(SHOTS, "lr1-menu-1440.png"))
         called = []
@@ -88,12 +88,12 @@ def run(pw, w, h):
         # ── C · Main new-plan form: defaults US/USD, MMT present
         js(page, "()=>{ acctSwitch('main'); }"); page.wait_for_timeout(500)
         js(page, "()=>coreNewOpen()"); page.wait_for_timeout(400)
-        st = js(page, "()=>({w:!!document.querySelector('[data-ps1-port=winner]'), l:!!document.querySelector('[data-ps1-port=ladder]'), mk:[...document.querySelectorAll('[data-lr-mkt].on')].map(b=>b.innerText.trim())})")
+        st = js(page, "()=>({w:!!document.querySelector('[data-ps1-port=winner]'), l:!!document.querySelector('[data-ps1-port=ladder]'), mk:[...document.querySelectorAll('[data-lr-mkt].on')].map(b=>b.textContent.trim())})")
         check(f"{tag} C: Main form — Momentum + Compounder, market defaults to US · USD", st["w"] and st["l"] and st["mk"] == ["US · USD"], st)
         # switching market in the form works (a Thai Compounder in Main)
         js(page, "()=>{ const t=document.getElementById('cnTicker'); t.value='PTT'; t.dispatchEvent(new Event('input')); }")
         js(page, "()=>document.querySelector('[data-lr-mkt=TH]').click()"); page.wait_for_timeout(200)
-        st = js(page, "()=>({t:document.getElementById('cnTicker').value, mk:[...document.querySelectorAll('[data-lr-mkt].on')].map(b=>b.innerText.trim()), acct:coreNew.acct})")
+        st = js(page, "()=>({t:document.getElementById('cnTicker').value, mk:[...document.querySelectorAll('[data-lr-mkt].on')].map(b=>b.textContent.trim()), acct:coreNew.acct})")
         check(f"{tag} C: Main can switch to TH in the form → ticker PTT.BK, THB, still Main", st["t"] == "PTT.BK" and st["mk"] == ["TH · THB"] and st["acct"] == "main", st)
         js(page, "()=>document.querySelector('[data-lr-mkt=US]').click()"); page.wait_for_timeout(150)
         check(f"{tag} C: switching back to US removes .BK", js(page, "()=>document.getElementById('cnTicker').value") == "PTT")
@@ -101,7 +101,7 @@ def run(pw, w, h):
         # ── C · Family form
         js(page, "()=>{ acctSwitch('fam'); }"); page.wait_for_timeout(500)
         js(page, "()=>coreNewOpen()"); page.wait_for_timeout(400)
-        st = js(page, "()=>({w:!!document.querySelector('[data-ps1-port=winner]'), l:!!document.querySelector('[data-ps1-port=ladder]'), mk:[...document.querySelectorAll('[data-lr-mkt].on')].map(b=>b.innerText.trim()), track:coreNew.track, txt:document.querySelector('.ps1Frm').innerText})")
+        st = js(page, "()=>({w:!!document.querySelector('[data-ps1-port=winner]'), l:!!document.querySelector('[data-ps1-port=ladder]'), mk:[...document.querySelectorAll('[data-lr-mkt].on')].map(b=>b.textContent.trim()), track:coreNew.track, txt:document.querySelector('.ps1Frm').innerText})")
         check(f"{tag} C: Family form — no Momentum/MMT, Compounder only, defaults to TH · THB", (not st["w"]) and st["l"] and st["mk"] == ["TH · THB"] and st["track"] == "ladder" and "Momentum" not in st["txt"], st)
         if w == 390: page.screenshot(path=os.path.join(SHOTS, "lr1-family-form-390.png"))
         check(f"{tag} C: Family form fits the width", ovf(page) <= 0, ovf(page))
