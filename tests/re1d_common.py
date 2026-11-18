@@ -22,6 +22,7 @@ def check(name, ok, detail=""):
 def launch(pw, w, h, d=None, c=None):
     b, ctx, page, ce, pe, dl = P39.launch(pw, w, h, doc=d or doc_c(), cards=c if c is not None else cards(), clean=True)
     page.add_style_tag(content=NOANIM); page.wait_for_timeout(500)
+    js(page, "()=>{ if(typeof re2GrpAll !== 'undefined') re2GrpAll = {enter:true, check:true, manage:true}; }")   # LR-F: the phone caps every Act group at 2 rows — the older suites read every row
     js(page, "()=>{ if(typeof lr2DetOpen !== 'undefined') lr2DetOpen = true; switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)   # LR2: phone keeps Details (risk room) open in tests · Setup ✓ present (board treats plans without it as Waiting)
     return b, page, ce, pe
 

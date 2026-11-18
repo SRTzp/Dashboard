@@ -124,7 +124,7 @@ def run(pw, w, h):
         # ── §5 ✕ on the Planned card
         js(page, "()=>{ switchTab('plan'); bdSetSeg('plan'); bdRender(); }"); page.wait_for_timeout(350)
         x = js(page, "()=>{const c=document.querySelector('[data-bd-status=plan] [data-re4-card]');if(!c)return null;const r=c.getBoundingClientRect(),cs=getComputedStyle(c);return {t:c.innerText.trim(),w:Math.round(r.width),h:Math.round(r.height),label:c.getAttribute('aria-label'),title:c.title,br:cs.borderRadius,hit:getComputedStyle(c,'::after').content}}")
-        check("[%s] Planned card: round ✕ (28 px), aria-label + title 'Cancel plan'" % tag, x and x["t"] == "✕" and x["w"] == 28 and x["h"] == 28 and x["label"] == "Cancel plan" and x["title"] == "Cancel plan", x)
+        check("[%s] Planned card: round ✕ (LR-F: 44 px phone · 32 px desktop), aria-label + title 'Cancel plan'" % tag, x and x["t"] == "✕" and x["w"] == (44 if mobile else 32) and x["h"] == (44 if mobile else 32) and x["label"] == "Cancel plan" and x["title"] == "Cancel plan", x)
         if mobile: check("[%s] iPhone: ✕ has a 44 px hit area (::after)" % tag, x and x["hit"] != "none" and x["hit"] != "normal", x)
         before = js(page, "()=>JSON.stringify(coreCardsList.map(c=>[c.id,c.status]))")
         js(page, "()=>document.querySelector('[data-bd-status=plan] [data-re4-card]').click()"); page.wait_for_timeout(300)

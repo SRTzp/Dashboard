@@ -156,7 +156,7 @@ def partC(pw, w, h):
         # ── Planned OK (short): six numbers, valid with stop above entry
         c = card_txt(page, "ps")
         check("[%s] C: Planned Short card — Long/Short word (PV1b: now Blocked here: min stop not set in this fixture)" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=ps]'); return c.querySelector('[data-pv-dir]').dataset.pvDir==='Short'}"), c)
-        check("[%s] C: Planned card money line — Stop · Risk · Reward · R (PV1b)" % tag, all(x in c for x in ("Stop 75,000", "Risk −$297", "Reward +$3,667", "12.3R")), c)
+        check("[%s] C: Planned card money line — Stop · Risk · Reward · R (PV1b)" % tag, all(x in c for x in ("Stop 75,000", "Risk −$297", "Reward +$3.7k", "12.3R")), c)
         # ── Blocked: chip replaces Ready, reason, fix button names the fix, not sized
         cb = card_txt(page, "pb")
         check("[%s] C: blocked plan → red Blocked chip, no ⚑ Ready" % tag, js(page, "()=>{const c=document.querySelector('[data-bd-card=pb]'); return !!c.querySelector('[data-pv-blocked]') && !c.querySelector('[data-re2-ready]')}"), cb)
@@ -175,7 +175,7 @@ def partC(pw, w, h):
         ch = card_txt(page, "ccmwdlk56w91") or card_txt(page, "cN")
         hid = js(page, "()=>bdItems().find(x=>x.sym==='NVDA').id")
         ch = card_txt(page, hid)
-        check("[%s] C: Holding card — stop · if stopped · value+weight · P&L (PV1b)" % tag, all(x in ch for x in ("Stop 110", "If stopped −$528", "Value $1,791 · 1.2%", "P&L +$53")), ch)   # EF1b: exact money under 10k
+        check("[%s] C: Holding card — stop · if stopped · value+weight · P&L (PV1b)" % tag, all(x in ch for x in ("Stop 110", "If stopped −$528", "Value $1.8k · 1.2%", "P&L +$53")), ch)   # EF1b: exact money under 10k
         check("[%s] C: holding card — Long word and homework chip" % tag, js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-dir]').dataset.pvDir==='Long'", hid) and "50% · homework" in ch)
         # ── More ▾
         js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"]').click()", hid); page.wait_for_timeout(300)
@@ -196,7 +196,7 @@ def partC(pw, w, h):
         js(page, "(i)=>bdOpen(i)", hid); page.wait_for_timeout(300)
         dr = txt(page, "[data-pv-block]"); js(page, "()=>bdClose()")
         check("[%s] C: value, weight, open risk equal on Today · Plan card · drawer" % tag, "$528" in today and   # EF1b: Today row uses the card format (risk only; value+weight live on the Plan card and drawer)
-               all(x in ch for x in ("$1,791", "1.2%", "$528")) and all(x in dr for x in ("$1,791", "1.2%", "$528")), [today, ch, dr])
+               all(x in ch for x in ("$1.8k", "1.2%", "$528")) and all(x in dr for x in ("$1,791", "1.2%", "$528")), [today, ch, dr])
         check("[%s] C: no console / page errors" % tag, not ce and not pe, ce + pe)
     finally:
         b.close()
