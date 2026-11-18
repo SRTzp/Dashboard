@@ -12,10 +12,12 @@ function fn(name) {   // whole top-level function by brace matching
   for (; i < src.length; i++) { if (src[i] === '{') d++; else if (src[i] === '}' && --d === 0) break; }
   return src.slice(a, i + 1);
 }
-const code = block('const RRG_BUILD', '/* ---------- ดึงราคาจาก Twelve Data') + '\n' + fn('rrgSeries') + '\n' + fn('rrgBuildRows') + '\nlet REF = null; function rrgToday(){ return REF; }\n';
-const ctx = vm.createContext({ Math, Date, Map, Array, Object, console });
-vm.runInContext(code + '\nthis.__api = {RRG_SYMS, RRG_BENCH, RRG_CFG, RRG_K, RRG_HYST, RRG_MODEL, rrgSeries, rrgBuildRows, rrgCompute, rrgToWeekly, setRef:(r)=>{REF=r;}};', ctx);
-const A = ctx.__api;
+const code = block('const RRG_BUILD', '/* ---------- ดึงราคาจาก Twelve Data') + '\n' + fn('rrgSeries') + '\n' + fn('rrgBuildRows') + '\nlet rrgTrimDate = "";\n' + fn('rrgEtNow') + '\n' + fn('rrgProvCut') + '\nlet REF = null; function rrgToday(){ return REF; }\n';
+let NOW = Date.UTC(2030, 0, 15, 12, 0);   // fixed fake clock (after the close in New York) so synthetic data is never "today"
+class FakeDate extends Date { constructor(...a) { a.length ? super(...a) : super(NOW); } static now() { return NOW; } }
+const ctx = vm.createContext({ Math, Date: FakeDate, Intl, Map, Array, Object, console, parseInt });
+vm.runInContext(code + '\nthis.__api = {RRG_SYMS, RRG_BENCH, RRG_CFG, RRG_K, RRG_HYST, RRG_MODEL, rrgSeries, rrgBuildRows, rrgCompute, rrgToWeekly, setRef:(r)=>{REF=r;}, rrgProvCut, rrgEtNow, getTrim:()=>rrgTrimDate};', ctx);
+const A = ctx.__api; A.setNow = (ms) => { NOW = ms; };
 if (require.main === module) {
   const cases = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')), out = {};
   for (const c of cases) {
