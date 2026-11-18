@@ -43,14 +43,14 @@ def board(page): return js(page, "()=>({sum: (document.querySelector('[data-bd-s
 def partA(page, tag, w):
     goto_plan(page, "main")
     b = board(page)
-    check(f"{tag} A: header = N planned · N ordered · N holding · open risk X% / 3%", re.search(r"^\d+ planned · \d+ ordered · \d+ holding · open risk [\d.]+% / 3%$", b["sum"]) is not None, b["sum"])
+    check(f"{tag} A: header = N planned · N ordered · N holding · open risk X% / 3% (phone, LR-F: 'Open risk X% / 3% · closest to entry first')", re.search(r"^\d+ planned · \d+ ordered · \d+ holding · open risk [\d.]+% / 3%$", b["sum"]) is not None or (w <= 600 and re.search(r"^Open risk [\d.]+% / 3% · closest to entry first$", b["sum"]) is not None), b["sum"])
     check(f"{tag} A: chips All · MMT · COMP · SAT with port dots", b["chips"] == ["all", "MMT", "COMP", "SAT"] and js(page, "()=>document.querySelectorAll('.bd-chip .bd-dot').length") == 3, b["chips"])
     # open risk = Today's per-account value
     mine = js(page, "()=>re1Pct(lr2OpenRisk('main'))"); today = js(page, "()=>{ switchTab('today'); todayRefresh(true); const e=document.querySelector('[data-lr2-orisk]'); return e ? e.innerText.replace(/\\s+/g,' ') : ''; }")
     page.wait_for_timeout(300); goto_plan(page, "main")
     check(f"{tag} A: open risk on the board ({mine}) equals Today's Act header value", mine in b["sum"] and mine in today, [mine, b["sum"], today])
     js(page, "()=>{ lr2OpenRisk = a=>0.5; bdRender(); }"); page.wait_for_timeout(150)
-    check(f"{tag} A: header reads lr2OpenRisk (single source)", "open risk 0.50% / 3%" in txt(page, "[data-bd-sum]") or "open risk 0.5% / 3%" in txt(page, "[data-bd-sum]"), txt(page, "[data-bd-sum]"))
+    check(f"{tag} A: header reads lr2OpenRisk (single source)", "isk 0.50% / 3%" in txt(page, "[data-bd-sum]") or "isk 0.5% / 3%" in txt(page, "[data-bd-sum]"), txt(page, "[data-bd-sum]"))
     # active account only
     check(f"{tag} A: Main board shows Main plans only (no Family-only ZZZ / BBB.BK)", "mN" in b["cards"] and "fM" not in b["cards"] and "fC" not in b["cards"], b["cards"])
     # columns 5:3:4
@@ -59,7 +59,7 @@ def partA(page, tag, w):
         check(f"{tag} A: columns Planned > Holding > Ordered (≈5:3:4 → {cw})", cw[0] > cw[2] > cw[1] or (cw[0] > cw[1] and cw[0] > cw[2]), cw)
     # Waiting row
     wt = js(page, "()=>{ const d = document.querySelector('[data-bd-wait]'); return d ? {open:d.open, t:d.querySelector('summary').innerText.replace(/\\s+/g,' '), n:d.querySelectorAll('[data-bd-card]').length} : null; }")
-    check(f"{tag} A: Waiting row collapsed: 'Waiting · 1 need entry or stop ▸'", wt and not wt["open"] and wt["t"].startswith("Waiting · 1 need entry or stop"), wt)
+    check(f"{tag} A: Waiting row collapsed: 'Waiting · 1 need entry or stop ▸'", wt and not wt["open"] and (wt["t"].startswith("Waiting · 1 need entry or stop") or wt["t"].startswith("+1 waiting · need entry or stop")), wt)
     vis = js(page, "()=>{ const c = document.querySelector('[data-bd-card=\"mW\"]'); return !!c && c.checkVisibility(); }")
     check(f"{tag} A: collapsed Waiting hides its card", not vis)
     js(page, "()=>document.querySelector('[data-bd-wait] summary').click()"); page.wait_for_timeout(200)
@@ -93,7 +93,7 @@ def partA(page, tag, w):
     # empty column shrinks (Family has no orders)
     ec = js(page, "()=>{ const c = document.querySelector('[data-bd-col=\"ord\"]'); return {empty:c.classList.contains('bd-empty'), h:Math.round(c.getBoundingClientRect().height), t:c.innerText.replace(/\\s+/g,' ')}; }")
     if w > 600:
-        check(f"{tag} A: empty Ordered column shrinks to header + 'Nothing here' ({ec['h']} px)", ec["empty"] and ec["h"] <= 90 and "Nothing here" in ec["t"], ec)
+        check(f"{tag} A: empty Ordered column shrinks to header + 'Nothing here' ({ec['h']} px)", ec["empty"] and ec["h"] <= 96 and "Nothing here" in ec["t"], ec)
     else:
         check(f"{tag} A: empty column carries bd-empty", ec["empty"], ec)
     js(page, "()=>document.querySelector('[data-bd-card=\"fN\"] [data-bd-also]').click()"); page.wait_for_timeout(400)

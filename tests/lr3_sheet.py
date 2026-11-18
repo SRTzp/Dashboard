@@ -62,7 +62,7 @@ def partB(page, tag, w):
     # two-level plan opened normally: both legs
     js(page, "()=>efCorePlaceOpen('mA')"); page.wait_for_timeout(400)
     o3 = js(page, ORDER_JS)
-    check(f"{tag} B two entries: two legs entry 1/2 · 2/2, one stop row with the target", o3 and len(o3["legs"]) == 2 and "entry 1/2" in o3["legs"][0] and "entry 2/2" in o3["legs"][1] and "target" in o3["stop_t"], o3 and [o3["legs"], o3["stop_t"]])
+    check(f"{tag} B two entries: two legs entry 1/2 · 2/2, one stop row with the target", o3 and len(o3["legs"]) == 2 and "entry 1/2" in o3["legs"][0] and "entry 2/2" in o3["legs"][1] and "target" in o3["stop_t"].lower(), o3 and [o3["legs"], o3["stop_t"]])
     close(page)
 
 
@@ -74,7 +74,7 @@ def run_sat(pw, w, h, tag):
         js(page, "()=>{ satWeekPickWrite(wpWeekKey(), ['XAUUSD','BTCUSD','XAGUSD']); switchTab('plan'); bdRender(); if(bdPopOpen()) bdPopClose(); pb2 = {step:'place', id:'xp', a:'XAUUSD'}; pb2Render(); }"); page.wait_for_timeout(450)
         o = js(page, ORDER_JS)
         check(f"{tag} B sat: order = band · legs · STOP row · tiles · checks · Confirm · footnote", order_ok(o, True) and o["tiles"] < o["setup"], o)
-        check(f"{tag} B sat: leg 'BUY #0.21 @ 2,642', STOP row with target and sell", o and o["legs"] and re.match(r"^BUY #0\.21 @ 2,642", o["legs"][0]) and o["stop_t"].startswith("STOP 2,628") and "target" in o["stop_t"], o and [o["legs"], o["stop_t"]])
+        check(f"{tag} B sat: leg 'BUY #0.21 @ 2,642', STOP row with target and sell", o and o["legs"] and re.match(r"^BUY #0\.21 @ 2,642", o["legs"][0]) and o["stop_t"].startswith("STOP 2,628") and "target" in o["stop_t"].lower(), o and [o["legs"], o["stop_t"]])
         check(f"{tag} B sat: data-pb2-order kept on the first leg", js(page, "()=>!!document.querySelector('[data-pb2-order]')"))
         if w < 600:
             s = js(page, STICKY_JS)

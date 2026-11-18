@@ -210,7 +210,7 @@ def partFix(page, tag, w):
     h = js(page, """()=>{ const v = document.querySelector('.lr2-viewrow'), st = document.querySelector('[data-ln4-status]'), g = document.querySelector('[data-lr2-glance]'), sw = document.querySelector('[data-td3-sw]'), t = document.querySelector('[data-lr2-title]'), d = document.querySelector('[data-lr2-date]');
       const rv = v.getBoundingClientRect(), rg = g.getBoundingClientRect(), rs = sw.getBoundingClientRect(), rt = t.getBoundingClientRect();
       return {title: t.innerText, date: d.innerText, hv: Math.round(rv.height), gap: Math.round(rg.top - rv.bottom), swInRow: rs.top >= rv.top - 1 && rs.bottom <= rv.bottom + 1, titleLeft: rt.left < rs.left, filled: rt.width > 20}; }""")
-    check(f"{tag} F2: Daily/Weekend sits in the page-header row with 'Today' + date (no empty band above the glance)", h["title"] == "Today" and re.match(r"^[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}$", h["date"]) and h["swInRow"] and h["titleLeft"] and h["hv"] <= 48, h)
+    check(f"{tag} F2: Daily/Weekend sits in the page-header row with 'Today' + date (no empty band above the glance)", h["title"] == "Today" and re.match(r"^[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}( · US market opens \d\d:\d\d ICT)?$", h["date"]) and h["swInRow"] and h["titleLeft"] and h["hv"] <= 48, h)
     nm = js(page, "()=>RRG_SYMS.map(r=>[r.s, lr2SecShort(r.s)])")
     bad = [x for x in nm if not x[1] or len(x[1]) > 12 or x[1] == x[0] or re.search(r"\d", x[1])]
     check(f"{tag} F3: every RRG symbol has a short sector name (≤12 chars, not the ticker): {len(nm)} checked", not bad and len({x[1] for x in nm}) == len(nm), bad)
@@ -235,7 +235,7 @@ def heights(pw):
         js(page, "()=>{ lr2DetOpen = false; todayRefresh(true); }"); page.wait_for_timeout(400)
         r = js(page, ROWS_JS)
         print("ROWS390", r)
-        check("[390] Today height at 390 stays within 6%% of the old layout (%d px vs %d)" % (r["height"], BASE_390["height"]), r["height"] <= BASE_390["height"] * 1.06, r)
+        check("[390] Today height at 390 stays within 3%% of the old layout (%d px vs %d)" % (r["height"], BASE_390["height"]), r["height"] <= BASE_390["height"] * 1.03, r)
     finally:
         b.close()
 

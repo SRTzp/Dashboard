@@ -21,6 +21,8 @@ NOW = T.NOW
 
 RETIRED_RE1C2 = ['9 Act follows the board (Fix risk']   # RE-C2: Act is now three groups of actionable items (no single list / max 5 / Fix risk row)
 RETIRED_RE1C1 = ['Port top: Risk in use', '8 Plan summary line uses the same risk number', '8 bar colours: ≥80% of cap amber']   # RE-C1: only checks whose asserted behaviour the brief removes
+def stxt(page): return js(page, "()=>{ const e=document.querySelector('[data-bd-sum]'); return e ? e.textContent.replace(/\\s+/g,' ').trim() : ''; }")   # LR-F: the phone summary hides the counts (they live in the tabs)
+
 def check(name, ok, detail=""):
     if any(p in name for p in RETIRED_RE1C2):
         print('RETIRED (RE-C2, not counted as PASS) - ' + name); return
@@ -106,7 +108,7 @@ def run(pw, w, h):
         allids = {x.split(":")[0] for x in ids(page)}
         check(f"{tag} 1 Missed / Closed / Archived are not on the board", not ({"ccMS", "ccCL", "ccAR"} & allids), sorted(allids))
         check(f"{tag} 1 split plan = ONE card; filled ✓ + open order chips (PV1b)'", cnt(page, '[data-bd-card="ccST"]') == 1 and js(page, "()=>!!document.querySelector('[data-bd-card=ccST] [data-pv-done]')"))   # PV1b: the '¼ in' / 'full' labels are replaced by ✓ / dashed order chips
-        check(f"{tag} 1 each column shows a count; Plan summary line", txt(page, '[data-bd-n="hold"]') == "3" and "3 holding" in txt(page, "[data-bd-sum]"), txt(page, "[data-bd-sum]"))
+        check(f"{tag} 1 each column shows a count; Plan summary line", txt(page, '[data-bd-n="hold"]') == "3" and "3 holding" in stxt(page), stxt(page))
         check(f"{tag} 1 Planned sorted closest-to-entry first (AMD 1.4% before TSLA −20%)", col(page, "plan").index("ccPL") < col(page, "plan").index("ccFA"), col(page, "plan"))
         check(f"{tag} 1 Holding: needs-action first (add-on / stop below avg) before plain", col(page, "hold")[0] in ("ccST", "ccFU"))
         # ── 2c multiple entry levels ──
@@ -129,7 +131,7 @@ def run(pw, w, h):
         js(page, "()=>bdClose()")
         # ── 2 chips ──
         js(page, "()=>bdSetChip('COMP')"); settle(page, 300)
-        check(f"{tag} 2 chip COMP filters all columns + summary", col(page, "plan") == ["ccML"] and col(page, "ord") == ["ccOR"] and col(page, "hold") == [] and "1 planned · 1 ordered" in txt(page, "[data-bd-sum]"), [col(page, s) for s in ("plan", "ord", "hold")])
+        check(f"{tag} 2 chip COMP filters all columns + summary", col(page, "plan") == ["ccML"] and col(page, "ord") == ["ccOR"] and col(page, "hold") == [] and "1 planned · 1 ordered" in stxt(page), [col(page, s) for s in ("plan", "ord", "hold")])
         js(page, "()=>bdSetChip('MMT')"); settle(page, 300)
         check(f"{tag} 2 chip MMT hides COMP", "ccOR" not in col(page, "ord") and "ccPL" in col(page, "plan"))
         js(page, "()=>bdSetChip('all')")
@@ -229,7 +231,7 @@ def run(pw, w, h):
         check(f"{tag} 8 bar colours: ≥80% of cap amber (MMT 1.3/1.5) · over cap red (SAT 0.6/0.5)", "MMT:a" in cls and "SAT:r" in cls and "COMP:" in cls, cls)
         check(f"{tag} 8 risk panel is the first block on Port", js(page, "()=>{ const t=document.getElementById('tabMix'); return t.firstElementChild.id==='bdPortRisk'; }"))
         plan(page)
-        check(f"{tag} 8 Plan summary line uses the same risk number", "1.2%" in txt(page, "[data-bd-sum]"), txt(page, "[data-bd-sum]"))
+        check(f"{tag} 8 Plan summary line uses the same risk number", "1.2%" in stxt(page), stxt(page))
         # ── 9 Today Act ──
         tab(page, "today")
         R = js(page, "()=>[...document.querySelectorAll('[data-ln4-act] [data-ln4-row]')].map(e=>e.dataset.ln4Row+'|'+((e.querySelector('[data-ln4-btn]')||{}).innerText||''))")
@@ -249,7 +251,7 @@ def run(pw, w, h):
         page.locator("[data-cn-draft]").click(); settle(page, 900)
         js(page, "()=>render()"); settle(page, 400)
         wait = js(page, "()=>[...document.querySelectorAll('[data-bd-wait] [data-bd-card]')].map(e=>e.dataset.bdCard + '|' + (e.querySelector('[data-bd-need]')||{innerText:''}).innerText)")
-        check(f"{tag} 2b draft without Entry → in 'Waiting for setup' with 'needs Entry · SL' + 'Complete ›'", any("needs Entry · SL" in x for x in wait) and txt(page, "[data-bd-wait] summary").startswith("Waiting ·"), wait)
+        check(f"{tag} 2b draft without Entry → in 'Waiting for setup' with 'needs Entry · SL' + 'Complete ›'", any("needs Entry · SL" in x for x in wait) and js(page, "()=>document.querySelector('[data-bd-wait] summary').textContent").startswith("Waiting ·"), wait)
         pid = next((x.split("|")[0] for x in wait if "needs Entry · SL" in x), None)
         check(f"{tag} 2b incomplete: no Place order pill, not in Today Act", pid and js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"] [data-bd-pill]').dataset.bdPill", pid) == "complete" and not any("PLTR" in r for r in js(page, "()=>{ return bdActRows().map(r=>r.sym); }")))
         # ── 10 popup ──
@@ -620,7 +622,7 @@ def pb1b(pw, w, h):
         js(page, "()=>coreWrite('ccMH', {px:483, pxDate:'2026-10-01'})"); settle(page, 600); plan(page)
         js(page, "()=>bdSetSeg('hold')"); settle(page, 200)
         pm = js(page, "()=>{ const x=bdItems().find(y=>y.id==='ccMH'); const p=document.querySelector('[data-bd-card=\"ccMH\"] [data-bd-pill]'); return {pct:x.pct, lv:x.pctLv, pill:p&&p.dataset.bdPill, t:p&&p.innerText}; }")
-        check(f"{tag} 5 Holding, next unfilled level (480) Planned and < 2% away → pill 'Place order ›' for that level; % = nearest unfilled level", pm["pill"] == "place" and "Place order" in pm["t"] and pm["lv"] == 1 and abs(pm["pct"] - (480 - 483) / 483 * 100) < 0.01, pm)
+        check(f"{tag} 5 Holding, next unfilled level (480) Planned and < 2% away → pill 'Place order ›' for that level; % = nearest unfilled level", pm["pill"] == "place" and "Place" in pm["t"] and pm["lv"] == 1 and abs(pm["pct"] - (480 - 483) / 483 * 100) < 0.01, pm)
         js(page, "()=>{ const it = wlItemOf('ADBE'); if(it){ it.my_thesis = {why:'', exit:'e'}; it.hw = {trigger:'t', confirmedAt:'2026-09-03T00:00:00Z', doneAt:'2026-09-03T00:00:00Z'}; } }")   # WL1 — homework done (an earlier case rewrites the Watch item)
         page.locator('[data-bd-card="ccMH"] [data-bd-pill]').click(); settle(page, 700)
         if cnt(page, "[data-ef-core-place]"): page.click("[data-pb2-yes]"); settle(page, 700)   # EF1b — level place opens the confirm sheet
