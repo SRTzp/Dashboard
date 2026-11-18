@@ -143,7 +143,7 @@ def run(pw, w, h):
         b3, p3, ce3, pe3 = launch(pw, w, h, d3, cs3)
         try:
             due = js(p3, "()=>re4Due('main')")
-            room = js(p3, "()=>{const c=document.querySelector('[data-re2-room] summary .chip');return c?c.innerText.trim():''}")
+            room = js(p3, "()=>{const c=document.querySelector('[data-lr2-room=main] .lr2-rs');return c?c.textContent.trim():''}")
             st = js(p3, "()=>document.querySelector('[data-re2-state]').innerText.trim()")
             ex = js(p3, "()=>{const c=document.querySelector('[data-re4-chip]');return c?c.innerText.replace(/^[MF]\\s+/, '').trim():''}")   # LR2: the header chip carries the account pill
             check("[%s] execution review due: Risk room chip + Act state never say 'Review due'" % tag, due and "Review due" not in room and "Review due" not in st and room == "Normal", [due, room, st])

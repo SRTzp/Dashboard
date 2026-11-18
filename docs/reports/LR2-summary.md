@@ -11,15 +11,16 @@ Zero feature loss: `tests/hooks_test.py` (ids · names · data-* · inline handl
 | `TAB_ORDER` today·flow·watch·plan… | `today·plan·flow·watch·journal·mix` → keys 1 Today · 2 Plan · 3 Flow · 4 Watch · 5 Journal · 6 Port; swipe/slide follow the bar; tooltips `Today · 1`; digits ignored while `#bdPop` chooser, a sheet or a drawer is open |
 | Status card: Risk-ON · HOT · MACRO · GOAL · SIZE · TODAY events · To do | **Glance band**: 4 equal cards (desktop) / one 2-line block (phone). HOT · MACRO · GOAL · SIZE · TODAY events (all hooks) → Details |
 | One Act block per account (active account only) | **One Act list for Main + Family** (rows from `re2Model` per account, sorted closest-first, same symbol on both accounts adjacent) |
-| Risk room + Next events under Act | Side column (desktop) / inside Details (phone). Risk room per account with M/F pill; Momentum hidden where the account does not use it |
+| Risk room + Next events under Act | **Inside Details (collapsed) on every width**: ONE card, one line per account × port (`M · MMT 1 of 4 ideas · room 1.68% / 1.8%`, `M · SAT step 1 · room 1.2% / 1.2%`, `F · COMP room 6% / 6% · regime 100%`) — no tiles, no truncation at 1440 / 1280; Family has no Momentum line; locked / reduced shows as a small chip on its line |
 | To do = chips in the status card | **To do** = short list in the side column (desktop, ≤4 + `+N ›`) / after Act (phone, ≤3): tag · one line · one link. Grouped items (living-thesis / homework) = one row that opens the stock chips |
 | Weekly News line (TS1b) | Same hook, under the glance band |
-| Act strip chips (MMT/SAT/COMP room, `N not taken`, event chip) | State + cause + `N not taken` (per account, red) in the Act header; the full strip (all old hooks) sits in each account's Risk room card (hidden on phone while calm) |
+| Act strip chips (MMT/SAT/COMP room, `N not taken`, event chip) | State (now the Regime-details button) + cause + `N not taken` per account in the Act header. The old strip markup is kept visually hidden (`.lr2-vh`, aria-hidden, `tabindex=-1`) so every hook stays — nothing is shown twice |
+| Daily / Weekend switch alone on a row | Page-header row: **Today** · date on the left, switch on the right (no empty band above the cards) |
 
 ## Glance data (no new source)
 1. **Market mood** — `rm1Regime()` (RiskEngine.regimeState): green+green = Risk-on · one red = Mixed · red+red = Risk-off · unavailable / stale / demo = Unclear (tints green / amber / amber / grey). Line 2 = `rm1Eff().pc` ("New entries at N% size"). `tdRegimeVerdict()` now calls the same `lr2Mood()` — one rule.
 2. **This week moves** — Weekly Impact current doc (`wiCurDoc`, `wiTier`) + Playbook bias (`bdBias`): up to 2 HIGH/MED chips `XAU ▲ HIGH`; line 2 = the quiet assets. No doc → "No Weekly Impact · Import ›".
-3. **Hot sectors · vs SPY** — shared RRG Daily rows (`ffState().rrg.rowsD`): ≤3 Leading by strength (↗), first Improving (⤴), ≤2 Lagging (↘); short sector names; one non-wrapping chip row; fixed card height.
+3. **Hot sectors · vs SPY** — shared RRG Daily rows (`ffState().rrg.rowsD`): ≤3 Leading by strength (↗), first Improving (⤴), ≤2 Lagging (↘); one non-wrapping chip row; fixed card height. Names come from `LR2_SEC` — an explicit short name for **all 23 RRG symbols** (e.g. XLC → Comm, ITA → Defense, SMH → Semis, XLY → Cons. Disc.; tested: ≤12 chars, never the ticker). The old HOT line in Details uses the same names. Phone: line 2 = ≤2 moves chips + ≤2 hot chips + `+N`, no `Hot:` label.
 4. **Next news** — `re2EvData` (Weekly Impact events + Settings key-news days), HIGH/MED within 7 days; time in ICT. None → "No key news this week".
 Taps: mood → Flow ▸ Regime · moves → Flow ▸ Weekly Impact · hot → Flow ▸ Leadership · news → calendar.
 
@@ -39,9 +40,15 @@ Adjusted (and why — layout changed, behaviour kept): `phase370` (HOT/MACRO/GOA
 | | rows | page height |
 |---|---|---|
 | before (origin/main + LR2-0) | 12 | 975 px |
-| after, Main only | 12 | 1001 px (+2.7 %) |
+| after, Main only | 10 | 1002 px (+2.8 %) |
 | after, + one Family plan row | 13 | 1071 px |
-The +26 px is the account pill / direction / 2-line header; the glance band, To do list and collapsed Details saved the rest. **Today at 390 is therefore not strictly shorter (+2.7 % in that fixture)** — flagged for review.
+The +27 px is the account pill / direction / 2-line header; the glance band, To do list and collapsed Details saved the rest. **Today at 390 is therefore not strictly shorter (+2.7 % in that fixture)** — flagged for review.
+
+## Follow-up fixes (this round)
+1. Risk room → Details, one line per account × port (above). 2. Page-header row with the switch. 3. Short sector names for every RRG symbol (+ HOT line). 4. Phone glance 2 lines, ≤2 hot chips + `+N`, no orphan label. 5. To do card left-aligned (title at the card padding, rows flush, no tinted box; was inheriting the old centred `.todo r` styles). Tests: `run_tests_lr2.py` now 150 checks (risk lines per account × port, no clipping / tiles / visible duplicate strip chips, header row, name map ×23, To do alignment, phone glance). Adjusted: `re1c2` (no per-account summary tiles any more), `aw1` (risk-room state read from the hidden chip). Phone page height with the same fixture: **1002 px vs 975 before (+2.8 %)**, rows 10 vs 12.
+
+## Full regression (`bash tests/run_regression.sh`) — final state
+**53/53 ok · 0 failing · 1119 s** (node + every browser suite). Hook test (`tests/hooks_test.py`): PASS, superset of baseline.
 
 ## Notes
 - B and C are one commit (see top). The brief's "Verify every Act action path" was done by reading the paths above plus the Place/Filled tests; Sat Place/Filled on a Family idea share `pb2AcctOf` and were not separately exercised.

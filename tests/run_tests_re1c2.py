@@ -209,14 +209,14 @@ def run_pair(pw, w, h):
         js(page, "()=>switchTab('today')"); page.wait_for_timeout(400)
         det = js(page, "()=>[...document.querySelectorAll('.re2-pair details')].map(d=>d.open)")
         if w <= 560:
-            check("[%s] iPhone: both rows collapsed, one line each" % tag, all(x is False for x in det) and len(det) >= 2 and js(page, "()=>[...document.querySelectorAll('.re2-pair summary')].every(s=>s.getBoundingClientRect().height<48)"), det)
+            check("[%s] iPhone: both rows collapsed, one line each" % tag, all(x is False for x in det) and js(page, "()=>[...document.querySelectorAll('.re2-pair summary')].every(s=>s.getBoundingClientRect().height<48)"), det)   # LR2: Risk room = one line per account × port (no summary tiles) · the events card stays collapsed
             if w == 390: shot(page, "today-390-collapsed-pair")
             js(page, "()=>document.querySelectorAll('.re2-pair summary').forEach(s=>s.click())"); page.wait_for_timeout(300)
             check("[%s] iPhone: rows open full width" % tag, js(page, "()=>[...document.querySelectorAll('.re2-pair details')].every(d=>d.open) && [...document.querySelectorAll('.re2-pair .card')].every(c=>c.getBoundingClientRect().width>document.documentElement.clientWidth*0.85)"))
             check("[%s] open pair has no overflow" % tag, no_overflow(page))
             if w == 390: shot(page, "today-390-open")
         else:
-            check("[%s] Mac: both open side by side" % tag, len(det) >= 2 and all(det), det)   # LR2: the side column stacks the cards
+            check("[%s] LR2: Mac — Risk room is one line per account × port inside Details; events card collapsed" % tag, not any(det) and js(page, "()=>document.querySelectorAll('[data-lr2-risk] .lr2-rl[data-lr2-rl]').length") >= 3, det)
         check("[%s] no console / page errors" % tag, not ce and not pe, ce + pe)
     finally:
         b.close()

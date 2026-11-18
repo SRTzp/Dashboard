@@ -65,7 +65,7 @@ def seed_rrg(page):
     js(page, """()=>{
       const mk = (s, q, r)=>({sym:s, quad:q, ratio:r, mom:100, dMom:0.3, model:RRG_MODEL, err:null});
       const f = ffState();
-      f.rrg = {rowsD:[mk('XLC','lead',103), mk('XLI','lead',105), mk('ITA','lead',101), mk('XLK','lead',99.9), mk('SMH','imp',98), mk('XLK2','lag',90), mk('IGV','lag',92), mk('XLU','lag',95)], rowsW:[], build:RRG_BUILD, model:RRG_MODEL, lastBar:rrgToday(), day:rrgToday()};
+      f.rrg = {rowsD:[mk('XLC','lead',103), mk('XLI','lead',105), mk('ITA','lead',101), mk('XLK','lead',99.9), mk('SMH','imp',98), mk('XLP','lag',90), mk('IGV','lag',92), mk('XLU','lag',95)], rowsW:[], build:RRG_BUILD, model:RRG_MODEL, lastBar:rrgToday(), day:rrgToday()};
       todayRefresh(true); }""")
     page.wait_for_timeout(250)
 
@@ -95,9 +95,13 @@ def partA(page, tag, w):
     js(page, """()=>{ const B = getBook(tdHome()); B.settings.newsEvents = []; saveBook(tdHome()); todayRefresh(true); }"""); page.wait_for_timeout(200)
     mv = card(page, "moves"); hot = card(page, "hot"); nw = card(page, "news")
     check(f"{tag} A: moves chips XAU ▲ HIGH · BTC ▼ MED, quiet assets on line 2", "XAU ▲" in mv and "BTC ▼" in mv and ("HIGH" in mv and "MED" in mv if wide else True) and (("quiet" in mv) if wide else True), mv)
-    check(f"{tag} A: hot sectors = up to 3 Leading by strength (↗, names) then first Improving ⤴ + Lagging ↘", ("↗ Industrials" in hot or "↗ Infra" in hot or "XLI" not in hot) and hot.count("↗") == 3 and "⤴" in hot and (hot.count("↘") == 2 if wide else True), hot)
-    order = js(page, "()=>[...document.querySelectorAll('[data-lr2-hot]')].map(c=>c.dataset.lr2Hot)")
-    check(f"{tag} A: Leading chips sorted by strength", order == ["XLI", "XLC", "ITA"], order)
+    if wide:
+        check(f"{tag} A: hot sectors = up to 3 Leading by strength (↗, names) then first Improving ⤴ + Lagging ↘", hot.count("↗") == 3 and "⤴" in hot and hot.count("↘") == 2, hot)
+        order = js(page, "()=>[...document.querySelectorAll('[data-lr2-hot]')].map(c=>c.dataset.lr2Hot)")
+        check(f"{tag} A: Leading chips sorted by strength", order == ["XLI", "XLC", "ITA"], order)
+    else:
+        ph = js(page, "()=>{ const l2 = document.querySelector('[data-lr2-phone] .l2'); return {txt: l2.innerText.replace(/\\s+/g, ' '), chips: [...l2.querySelectorAll('[data-lr2-hot]')].map(c=>c.dataset.lr2Hot), more: (l2.querySelector('[data-lr2-hotmore]')||{}).innerText||'', h: Math.round(l2.getBoundingClientRect().height), all: Math.round(document.querySelector('[data-lr2-phone]').getBoundingClientRect().height)}; }")
+        check(f"{tag} A: phone glance = 2 lines · ≤2 hot chips by strength + '+N' · no 'Hot:' label", ph["chips"] == ["XLI", "XLC"] and ph["more"] == "+2" and "Hot:" not in ph["txt"] and ph["h"] <= 44 and ph["all"] <= 110, ph)
     check(f"{tag} A: next news = ICT time + name + impact", "HIGH" in nw and "US CPI" in nw if wide else "HIGH" in js(page, "()=>document.querySelector('[data-lr2-card=\"news\"]').innerText"), nw)
     if wide:
         hs = js(page, "()=>[...document.querySelectorAll('.lr2-glance .lr2-c')].map(c=>Math.round(c.getBoundingClientRect().height))")
@@ -187,12 +191,36 @@ def partC(page, tag, w):
     check(f"{tag} C: missing Playbook shows as a To do item (FLOW · … · Add ›)", pb is not None and "FLOW" in pb and "Add" in pb, pb)
     # Risk room: Family has no Momentum
     js(page, "()=>{ lr2DetOpen = true; todayRefresh(true); }"); page.wait_for_timeout(250)
-    rr = js(page, "()=>({main: !!document.querySelector('[data-lr2-room=main] [data-re2-rr=mom]'), fam: !!document.querySelector('[data-lr2-room=fam] [data-re2-rr=mom]'), famSat: !!document.querySelector('[data-lr2-room=fam] [data-re2-rr=sat]'), pills: [...document.querySelectorAll('[data-lr2-room] summary .lr-acc')].map(e=>e.innerText), famSum: (document.querySelector('[data-lr2-room=fam] summary .s')||{}).innerText})")
-    check(f"{tag} C: Risk room — Momentum for Main only; Family shows SAT + COMP; M / F pills", rr["main"] and not rr["fam"] and rr["famSat"] and rr["pills"] == ["M", "F"] and "MMT" not in rr["famSum"], rr)
+    rr = js(page, """()=>{ const L = a=>[...document.querySelectorAll('[data-lr2-room="'+a+'"] .lr2-rl[data-lr2-rl]')].map(r=>({k:r.dataset.lr2Rl, pill:(r.querySelector('.lr-acc')||{}).innerText, tag:(r.querySelector('.lr-tag')||{}).innerText, t:r.querySelector('.t').innerText.replace(/\\s+/g,' '), clip:r.querySelector('.t').scrollWidth > r.querySelector('.t').clientWidth + 1}));
+      const vis = [...document.querySelectorAll('[data-lr2-risk] [data-re2-chip]')].filter(e=>{ if(e.closest('.lr2-vh')) { const w = e.closest('.lr2-vh').getBoundingClientRect(); return w.width > 2 || w.height > 2; } const r = e.getBoundingClientRect(); return r.width > 2 && r.height > 2; }).length;
+      return {main: L('main'), fam: L('fam'), strips: vis, tiles: document.querySelectorAll('[data-lr2-risk] .rk3, [data-lr2-risk] summary').length, det: !!document.querySelector('[data-ln4-moredet] [data-lr2-risk]')}; }""")
+    mt = rr["main"][0]["t"] if rr["main"] else ""
+    check(f"{tag} C: Risk room = ONE line per account × port inside Details ('M · MMT 1 of 4 ideas · room x / y'): Main 3 lines, Family 2 (no Momentum)", rr["det"] and [x["k"] for x in rr["main"]] == ["mom", "sat", "comp"] and [x["k"] for x in rr["fam"]] == ["sat", "comp"] and all(x["pill"] == "M" for x in rr["main"]) and all(x["pill"] == "F" for x in rr["fam"]) and rr["main"][0]["tag"] == "MMT" and re.match(r"^\d+ of \d+ ideas · room [\d.]+% / [\d.]+%$", mt), rr)
+    if wide: check(f"{tag} C: no truncated risk lines · no tiles · no visible duplicated strip chips", not any(x["clip"] for x in rr["main"] + rr["fam"]) and rr["tiles"] == 0 and rr["strips"] == 0, rr)
+    else: check(f"{tag} C: no tiles · no visible duplicated strip chips (lines may ellipsise on phone)", rr["tiles"] == 0 and rr["strips"] == 0, rr)
     js(page, "()=>{ lr2DetOpen = false; todayRefresh(true); }"); page.wait_for_timeout(200)
     ct = js(page, "()=>{ const d = document.querySelector('[data-ln4-moredet]'); d.open = true; const k = ['[data-ln4-hot]', '[data-ln4-macro]', '[data-ln4-goal]', '[data-ln4-wl]', '[data-ln4-today]'].map(s=>!!d.querySelector(s) || (s === '[data-ln4-today]')); return k; }")
     check(f"{tag} C: HOT · MACRO · GOAL · SIZE lines live inside Details (hooks kept)", all(ct), ct)
     check(f"{tag} C: weekly news hook still rendered by ln4NewsLine", "data-td3-wnews" in js(page, "()=>ln4NewsLine.toString()"))
+
+
+def partFix(page, tag, w):
+    wide = w >= 900
+    js(page, "()=>{ lr2DetOpen = false; switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(300)
+    h = js(page, """()=>{ const v = document.querySelector('.lr2-viewrow'), st = document.querySelector('[data-ln4-status]'), g = document.querySelector('[data-lr2-glance]'), sw = document.querySelector('[data-td3-sw]'), t = document.querySelector('[data-lr2-title]'), d = document.querySelector('[data-lr2-date]');
+      const rv = v.getBoundingClientRect(), rg = g.getBoundingClientRect(), rs = sw.getBoundingClientRect(), rt = t.getBoundingClientRect();
+      return {title: t.innerText, date: d.innerText, hv: Math.round(rv.height), gap: Math.round(rg.top - rv.bottom), swInRow: rs.top >= rv.top - 1 && rs.bottom <= rv.bottom + 1, titleLeft: rt.left < rs.left, filled: rt.width > 20}; }""")
+    check(f"{tag} F2: Daily/Weekend sits in the page-header row with 'Today' + date (no empty band above the glance)", h["title"] == "Today" and re.match(r"^[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}$", h["date"]) and h["swInRow"] and h["titleLeft"] and h["hv"] <= 48, h)
+    nm = js(page, "()=>RRG_SYMS.map(r=>[r.s, lr2SecShort(r.s)])")
+    bad = [x for x in nm if not x[1] or len(x[1]) > 12 or x[1] == x[0] or re.search(r"\d", x[1])]
+    check(f"{tag} F3: every RRG symbol has a short sector name (≤12 chars, not the ticker): {len(nm)} checked", not bad and len({x[1] for x in nm}) == len(nm), bad)
+    seed_rrg(page)
+    txt = card(page, "hot")
+    check(f"{tag} F3: Hot / Cooling line shows sector names only (Staples, Software, Utilities … never tickers)", (not wide) or ("Staples" in txt and "Software" in txt and not re.search(r"\\bX[A-Z]{2,3}\\d?\\b", txt)), txt)
+    t = js(page, """()=>{ const c = document.querySelector('[data-ln4-todorow]'), r = c.getBoundingClientRect(), th = c.querySelector('.lr2-th b').getBoundingClientRect(), tg = c.querySelector('.lr2-tg'), b = c.querySelector('.lr2-tb'), cs = getComputedStyle(b);
+      const a = c.querySelector('.lr2-ti').getBoundingClientRect(), bt = b.getBoundingClientRect(), tgr = tg.getBoundingClientRect();
+      return {titleOffset: Math.round(th.left - r.left), align: getComputedStyle(c).textAlign, bg: cs.backgroundColor, bd: cs.borderTopWidth, rowOffset: Math.round(tgr.left - r.left), tbGap: Math.round(bt.left - tgr.right)}; }""")
+    check(f"{tag} F5: To do card is left-aligned like the design (title at the card's left padding, rows flush, no tinted box)", t["titleOffset"] <= 20 and t["align"] in ("left", "start") and t["bg"] in ("rgba(0, 0, 0, 0)", "transparent") and t["bd"] == "0px" and t["rowOffset"] <= 20, t)
 
 
 BASE_390 = {"height": 975, "rows": 12}   # origin/main (+ LR2 commit 0) at 390 with the same fixture · measured with tools in docs/reports/LR2-summary.md
@@ -226,6 +254,7 @@ def run(pw, w, h):
         partA(page, tag, w)
         partB(page, tag, w)
         partC(page, tag, w)
+        partFix(page, tag, w)
         check(f"{tag} no page errors", not pe, pe)
         check(f"{tag} no overflow", ovf(page) <= 0, ovf(page))
     finally:
