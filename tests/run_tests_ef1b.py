@@ -220,7 +220,7 @@ def run3(pw, w, h):
         if w == 390: shot(page, "card-header-390")
         page.click("[data-bd-card=cP] [data-bd-pill=place]"); page.wait_for_timeout(400)
         sh = txt(page, "[data-ef-core-place]")
-        check("[%s] M sheet shows the same Risk −฿540 · Reward +฿2,836 · 5.3R" % tag, "Risk −฿540" in sh and "Reward +฿2,836" in sh and "5.3R" in sh and "$" not in sh, sh)
+        check("[%s] M sheet shows the same Risk −฿540 · Reward +฿2,836 · 5.3R (LR3: Risk / Reward / Size tiles)" % tag, "RISK −฿540" in sh.upper() and "REWARD +฿2,836" in sh.upper() and "5.3R" in sh and "$" not in sh, sh)
         more = js(page, "()=>{const d=document.querySelector('[data-ef-more]'); return d? d.innerText : ''}")
         diff = js(page, "()=>{const e=document.querySelector('[data-ef-risk-diff]'); return e ? e.textContent : ''}")
         check("[%s] M More flags that the stored plan risk differs from the legs" % tag, "differs from the legs" in (diff or "") and "36.1k" in diff, diff)

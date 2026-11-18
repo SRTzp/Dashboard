@@ -4138,6 +4138,24 @@ html body.lf-lean #tabFlow[style*="display: block"]{display:flex!important;flex-
 .pb2-ft .go{flex:1;min-height:40px;text-align:center}
 .pb2-cf{border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin:8px 0 0;font-size:13.5px;line-height:1.7;overflow-wrap:anywhere}
 .pb2-note{margin:8px 0 0}
+/* LR3 B — confirm sheet */
+.lr3-lbl{font:600 11px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.lr3-ord{margin:10px 0 0}.lr3-legs{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.lr3-leg{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:var(--bg,#F7F8FA);min-width:0}
+.lr3-leg.lr3-stop{background:none;border:1px dashed var(--border)}
+.lr3-side{font:700 12px var(--sans);min-width:36px}.lr3-side.up{color:#12805C}.lr3-side.dn{color:#C2362F}
+.lr3-q,.lr3-px{font-size:18px;font-weight:700}.lr3-at{color:var(--muted)}.lr3-sp{flex:1}
+.lr3-ty{font-size:12px;color:var(--muted);text-align:right;min-width:0;overflow-wrap:anywhere}
+.lr3-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 0}
+.lr3-tile{border:1px solid var(--border);border-radius:12px;padding:9px 10px;min-width:0}.lr3-tile .lr3-lbl{font-size:10px}
+.lr3-tile>b{font-size:17px;display:block;margin-top:2px;overflow-wrap:anywhere}.lr3-tile .dn{color:#C2362F}.lr3-tile .up{color:#12805C}
+.lr3-sub{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.lr3-foot{margin-top:6px}
+.lr3-tiles~.pb2-q,.lr3-tiles~.pb2-chk{margin-top:10px}
+@media(max-width:600px){
+  .lr3-foot{position:sticky;bottom:0;z-index:3;background:var(--surface,#fff);padding:8px 0 6px;box-shadow:0 -8px 10px -8px rgba(0,0,0,.18)}
+  .lr3-foot .pb2-ft{margin-top:0}.lr3-foot .pb2-ft .go{min-height:44px}.lr3-foot .pb2-note{text-align:center;margin-top:6px}
+}
 .pb2 .bd-opt{box-sizing:border-box}
 .ln4 .go[disabled]{opacity:.4;cursor:not-allowed}
 .bd-st.r{color:var(--red);font-weight:700}
@@ -31395,18 +31413,47 @@ function efLevelRiskHtml(it, pv, lv){   /* "This order: Buy #18 @ 140 · +Risk �
     return `<div class="bd-m" data-ef-order-risk>This order: Buy #${fmt0(+rw.qty)} @ ${td3Num(+rw.px)} · +Risk ฿${ps1M(risk)}${tot}</div>`;
   }catch(x){ return ''; }
 }
+/* ── LR3 B — confirm sheet body shared by Core and Satellite: Orders to place (one row per entry leg + STOP row) · Risk / Reward / Size tiles ── */
+function lr3Sheet(it, model, lv, fb){
+  const e = bdE; let pv = null; try{ pv = posView(it); }catch(x){}
+  const long = !(it.kind === 'sat' && it.ref && it.ref.bias === 'Short');
+  const legsAll = pv ? (pv.legs || []) : [], ent = legsAll.filter(l=>!l.out), outs = legsAll.filter(l=>l.out);
+  const qty = l=>l.qty > 0 ? pvQtyTxt(l.qty, pv) : null;
+  const typ = l=>{ if(it.kind === 'core' && it.px > 0 && l.px > 0) return (l.side === 'Buy' ? l.px > it.px : l.px < it.px) ? 'Stop' : 'Limit'; return 'Limit'; };
+  const shown = lv != null ? ent.filter((l, j)=>j === lv) : ent;
+  let rows = shown.map((l, j)=>{
+    const k = lv != null ? lv + 1 : j + 1, q = qty(l), buy = String(l.side).toLowerCase() === 'buy';
+    return `<div class="lr3-leg num" data-pv-leg="in" data-lr3-leg${j === 0 ? ' data-pb2-order' : ''}><span class="lr3-side ${buy ? 'up' : 'dn'}">${buy ? 'BUY' : 'SELL'}</span><b class="lr3-q">#${q != null ? q : '—'}</b><span class="lr3-at">@</span><b class="lr3-px">${td3Num(l.px)}</b><span class="lr3-sp"></span><span class="lr3-ty">${typ(l)}${ent.length > 1 ? ` · entry ${k}/${ent.length}` : ' · entry'}${q != null ? '' : ' · not sized'}</span></div>`;
+  }).join('');
+  if(!rows && fb && fb.px > 0){ rows = `<div class="lr3-leg num" data-pv-leg="in" data-lr3-leg data-pb2-order><span class="lr3-side ${fb.buy ? 'up' : 'dn'}">${fb.buy ? 'BUY' : 'SELL'}</span><b class="lr3-q">#${fb.qty != null ? fb.qty : '—'}</b><span class="lr3-at">@</span><b class="lr3-px">${td3Num(fb.px)}</b><span class="lr3-sp"></span><span class="lr3-ty">Limit · entry${fb.qty != null ? '' : ' · not sized'}</span></div>`; }
+  const stop = pv && pv.stop > 0 ? pv.stop : (fb && fb.sl > 0 ? fb.sl : (+it.sl > 0 ? +it.sl : null));
+  const tg = outs.filter(l=>l.px > 0), tq = outs.filter(l=>l.qty > 0).map(l=>'#<b>' + pvQtyTxt(l.qty, pv) + '</b>');
+  const tgTxt = tg.length ? ` · target${tg.length > 1 ? 's' : ''} <b>${tg.map(l=>td3Num(l.px)).join(' / ')}</b>${tq.length ? ' · ' + (long ? 'sell' : 'buy') + ' ' + tq.join(' + ') : ''}` : (fb && fb.tp > 0 ? ` · target <b>${td3Num(fb.tp)}</b>` : '');
+  const stopRow = `<div class="lr3-leg lr3-stop num" data-lr3-stop><span class="lr3-side dn">STOP</span><b class="lr3-px">${stop != null ? td3Num(stop) : '—'}</b><span class="lr3-sp"></span><span class="lr3-ty">${stop != null ? tgTxt.replace(/^ · /, '') : 'no stop'}</span></div>`;
+  const orders = `<div class="lr3-ord" data-pb2-summary data-lr3-orders><div class="lr3-lbl">Orders to place</div><div class="lr3-legs" data-pv-legs>${rows}${stopRow}</div></div>`;
+  /* tiles */
+  let risk = null, riskPct = null, rew = null, rewR = null, cur = null;
+  if(pv){ risk = pv.plannedRisk; riskPct = pv.plannedRiskPct; rew = pv.reward; rewR = pv.rewardR; }
+  const mny = v=>pv ? pvMoney(pv, v) : (fb && fb.fmt ? fb.fmt(v) : null);
+  if(fb && (risk == null) && fb.risk != null){ risk = fb.risk; riskPct = fb.riskPct; }
+  if(fb && (rew == null) && fb.reward != null){ rew = fb.reward; rewR = fb.rewardR; }
+  const eff = model && model.effPct != null ? re1Pct(model.effPct, 2) : null, lim = model && model.limit && model.limit.text ? model.limit.text : '';
+  const tile = (lab, val, sub, cls, at)=>`<div class="lr3-tile" ${at}><div class="lr3-lbl">${lab}</div><b class="num ${cls || ''}">${val}</b><div class="lr3-sub num">${sub}</div></div>`;
+  const tiles = `<div class="lr3-tiles" data-lr3-tiles>${
+    tile('Risk', risk != null && mny(risk) ? '−' + mny(risk) : '—', riskPct != null ? pvPct(riskPct) + ' of account' : 'not sized', 'dn', 'data-lr3-risk')
+  }${tile('Reward', rew != null && mny(rew) ? '+' + mny(rew) : '—', rewR != null ? rewR.toFixed(1) + 'R' : 'no target', 'up', 'data-lr3-reward')
+  }${tile('Size', eff || '—', lim ? `<span class="ef-amber" data-ef-limit>${e(lim)}</span>` : 'full size', '', 'data-lr3-size')}</div>`;
+  return {orders, tiles, pv};
+}
 function efCorePlaceHtml(){
   const it = bdById(pb2.id); if(!it){ return '<div class="bd-m">Plan not found</div>'; }
-  const e = bdE; let pv = null, g = null; try{ pv = posView(it); }catch(x){} try{ g = re1PlanGate(it.ref, 0); }catch(x){}
-  const legs = pv ? (pv.legs || []).map(l=>pvLegChip(l, pv)).join('') : '';
-  const money = pv ? pvMoneyLine(it, pv) : '';
-  if(pb2.lv != null){ try{ g = re1PlanGate(it.ref, pb2.lv); }catch(x){} }
-  let lim = g && g.model && g.model.limit && g.model.limit.text ? `<div class="bd-m" data-ef-limit>${e(g.model.limit.text)}</div>` : '';
-  const f = g && g.model && g.model.formula ? g.model.formula : '';
-  if(pb2.lv != null){ lim = efLevelRiskHtml(it, pv, pb2.lv) + lim; }   /* EF1b — this order's own risk */
+  const e = bdE; let g = null; try{ g = re1PlanGate(it.ref, pb2.lv != null ? pb2.lv : 0); }catch(x){}
+  const m = g && g.model ? g.model : null, S = lr3Sheet(it, m, pb2.lv != null ? pb2.lv : null), pv = S.pv;
+  const f = m && m.formula ? m.formula : '';
+  const lvRisk = pb2.lv != null ? efLevelRiskHtml(it, pv, pb2.lv) : '';   /* EF1b — this order's own risk */
   const setupOn = pb2.lv == null ? `<label class="pb2-q" data-ef-setup><input type="checkbox" id="efSetupCk"${tv1SetupLeft(it.sym) > 0 ? ' checked' : ''}> Setup ready today ✓</label>` : '';
-  lim += setupOn;
-  return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order' + (pb2.lv != null ? ' #' + (pb2.lv + 1) : '') + ' · ' + it.sym, false)}${lrBandCore(it)}<div class="pb2-cf" data-pb2-summary><b>${e(it.sym)}</b> <span class="bd-m"><span class="sc" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}">${e(it.tag)}</span> · Limit${pb2.lv != null && it.levels && it.levels[pb2.lv] && it.levels[pb2.lv].px > 0 ? ' · #' + (pb2.lv + 1) + ' ' + e(td3Num(it.levels[pb2.lv].px)) : ''}</span><div class="pv-legs" data-pv-legs>${legs}</div><div class="pv-r2" data-pv-money>${money}</div></div>${lim}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}${pv && pv.plannedRiskDiff ? `<br><span data-ef-risk-diff class="ef-amber">Stored plan risk ${e(pvMoney(pv, pv.plannedRiskStored))} differs from the legs (${e(pvMoney(pv, pv.plannedRisk))}) — the legs are shown</span>` : ''}</div></details><div class="bd-m pb2-note">Records only — place the order at your broker.</div></div>`;
+  const money = pv ? pvMoneyLine(it, pv) : '';
+  return `<div data-pb2-step="place" data-ef-core-place>${pb2Hd('Place order' + (pb2.lv != null ? ' #' + (pb2.lv + 1) : '') + ' · ' + it.sym, false)}${lrBandCore(it)}${S.orders}${S.tiles}${lvRisk}${setupOn}<details class="pb2-more" data-ef-more><summary>More ▾</summary><div class="bd-m"><div class="pv-r2" data-pv-money>${money}</div>Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}${pv && pv.plannedRiskDiff ? `<br><span data-ef-risk-diff class="ef-amber">Stored plan risk ${e(pvMoney(pv, pv.plannedRiskStored))} differs from the legs (${e(pvMoney(pv, pv.plannedRisk))}) — the legs are shown</span>` : ''}</div></details><div class="lr3-foot"><div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><div class="bd-m pb2-note">Records only · place the order at your broker</div></div></div>`;
 }
 function efCorePlaceYes(){
   const s = pb2; if(!s || s.step !== 'cplace') return;
@@ -31432,16 +31479,19 @@ function pb2PlaceOpen(id){
 }
 function pb2PlaceHtml(){
   const i = sat7dIdea(pb2.id); if(!i){ return '<div class="bd-m">Plan not found</div>'; }
-  const V = ln4VerifyOf(i), acc = pb2AcctOf(i), c = pb2Calc(i, acc), e = bdE;
-  const ex = (acctList.length > 1 && acc) ? ' · ' + e(pb2AcctName(acc)) : '';
+  const V = ln4VerifyOf(i), acc = pb2AcctOf(i), c = pb2Calc(i, acc), e = bdE, it = bdById(pb2.id);
   const list = `<ol class="pb2-chk" data-pb2-checks>${PB2_CHECKS.map(c=>`<li data-pb2-chk><span class="pb2-cn" aria-hidden="true"></span><span class="pb2-ct"><b>${bdE(c[0])}</b>${c[1] ? `<small>${bdE(c[1])}</small>` : ''}</span></li>`).join('')}</ol>`;
-  return `<div data-pb2-step="place">${pb2Hd('Setup ready on Execution TF?', false)}${lrBandSat(i)}${list}${V.ask ? `<div class="pb2-q" data-pb2-mssok>MSS confirmed per your rules (candle closed)</div>` : ''}<div class="pb2-cf" data-pb2-summary><b>${pb2Side(i)} ${e(sat7dLabel(i.asset))}</b>${ex}<br><span data-pb2-order>Entry ${pb2Side(i)} #<b>${c.lot != null ? satV2Lot(c.lot) : '—'}</b> @ <b>${bdFmt(i.entry)}</b> · Limit</span> · SL <b>${bdFmt(i.sl)}</b> · TP <b>${bdFmt(i.tp)}</b><br>${e(c.label)}${c.lot != null ? ` · Risk ${satV2Money2(c.risk, c.cur)}${c.rr ? ` · Reward ${satV2Money2(c.risk * parseFloat(c.rr), c.cur)} · R:R ${e(c.rr)}` : ''}` : ' · not sized'}${c.c && c.c.re1 && c.c.re1.newsCut ? '' : ''}</div>${efSheetWarns(i, c)}${(c.c && c.c.re1NeedsReentry) ? `<label class="pb2-q" data-re1-reentry><input type="checkbox" ${re1ReTap === i.id ? 'checked' : ''} onchange="re1ReentryTap('${e(i.id)}', this.checked)"> <b>Re-entry</b> · same direction and zone · Trend inputs unchanged · one closed candle since the stop</label>` : ''}<div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes ${(c.c && c.c.re1NeedsReentry) ? 'disabled' : ''} onclick="pb2PlaceYes()">Confirm</button></div>${efSheetMore(i, c)}<div class="bd-m pb2-note">One tap confirms all 4 · records only — place the order at your broker.</div></div>`;
+  const m = c.model || (c.c && c.c.re1) || null, side = pb2Side(i);
+  const fb = {px:+i.entry, sl:+i.sl, tp:+i.tp, buy:side === 'Buy', qty:c.lot != null ? satV2Lot(c.lot) : null, fmt:v=>satV2Money2(v, c.cur),
+    risk:c.lot != null ? c.risk : null, riskPct:null, reward:c.lot != null && c.rr ? c.risk * parseFloat(c.rr) : null, rewardR:c.rr ? parseFloat(c.rr) : null};
+  const S = it ? lr3Sheet(it, m, null, fb) : {orders:'', tiles:''};
+  return `<div data-pb2-step="place">${pb2Hd('Setup ready on Execution TF?', false)}${lrBandSat(i)}${S.orders}${S.tiles}${list}${V.ask ? `<div class="pb2-q" data-pb2-mssok>MSS confirmed per your rules (candle closed)</div>` : ''}${efSheetWarns(i, c)}${(c.c && c.c.re1NeedsReentry) ? `<label class="pb2-q" data-re1-reentry><input type="checkbox" ${re1ReTap === i.id ? 'checked' : ''} onchange="re1ReentryTap('${e(i.id)}', this.checked)"> <b>Re-entry</b> · same direction and zone · Trend inputs unchanged · one closed candle since the stop</label>` : ''}${efSheetMore(i, c)}<div class="lr3-foot"><div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button type="button" class="go p" data-pb2-yes ${(c.c && c.c.re1NeedsReentry) ? 'disabled' : ''} onclick="pb2PlaceYes()">Confirm</button></div><div class="bd-m pb2-note">One tap confirms all 4 · records only · place the order at your broker</div></div></div>`;
 }
 function efSheetWarns(i, c){   /* amber lines inside the confirm sheet: news window · against Macro · limited by · replace pick · carried */
   const e = bdE, out = [];
   try{ const n = c.c && c.c.newsWarn; if(n) out.push(`<div class="bd-m ef-amber" data-ef-news>${e(n)}</div>`); }catch(x){}
   try{ if(c.c && c.c.macroWarn) out.push(`<div class="bd-m ef-amber" data-ef-macro>Against Macro</div>`); }catch(x){}
-  try{ const m = c.model || (c.c && c.c.re1); const lim = m && (m.limitedBy || (m.limit && m.limit.text)); if(lim) out.push(`<div class="bd-m" data-ef-limit>${e(lim)}</div>`); }catch(x){}
+  try{ const m = c.model || (c.c && c.c.re1); const lim = m && m.limitedBy; if(lim && !(m.limit && m.limit.text)) out.push(`<div class="bd-m" data-ef-limit>${e(lim)}</div>`); }catch(x){}
   if(pb2 && pb2.repC && pb2.repC.length){
     const k = pb2.repC[pb2.repI % pb2.repC.length], n = pb2.repC.length;
     out.push(`<div class="bd-m" data-ef-replace style="color:var(--text)">Replace <b>${e(sat7dLabel(k))}</b> in this week's picks?${n > 1 ? ` <button type="button" class="go" data-ef-rep-next onclick="efRepNext()">Other ›</button>` : ''}</div>`);
@@ -31451,7 +31501,7 @@ function efSheetWarns(i, c){   /* amber lines inside the confirm sheet: news win
 function efRepNext(){ if(!pb2 || !pb2.repC) return; pb2.repI = (pb2.repI + 1) % pb2.repC.length; pb2Render(); }
 function efSheetMore(i, c){   /* size working lives under More */
   const e = bdE; let f = ''; try{ const m = c.model || (c.c && c.c.re1); f = m && m.formula ? m.formula : ''; }catch(x){}
-  return `<details class="pb2-more" data-ef-more><summary>More</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}${(c.c && c.c.carried) ? '<br>Carried from last week' : ''}</div></details>`;
+  return `<details class="pb2-more" data-ef-more><summary>More ▾</summary><div class="bd-m">Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}${(c.c && c.c.carried) ? '<br>Carried from last week' : ''}</div></details>`;
 }
 function pb2PlaceNo(){ re1ReTap = null; bdPopClose(); }
 function re1ReentryTap(id, on){ re1ReTap = on ? id : null; const b = document.querySelector('[data-pb2-yes]'); if(b) b.disabled = !on; }
