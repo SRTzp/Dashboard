@@ -213,9 +213,8 @@ def plan_filters(pw, w, h):
         check(f"{tag} 4 type filters (All · MMT · COMP · Sat) and status chips (Planned · Ordered · Holding) = {len(g['btns'])} controls", len(g["btns"]) == 7, g["btns"])
         if w < 600:   # LR3 A: phone = segmented Planned · Ordered · Holding ABOVE the port chips (two rows), no overlap
             check(f"{tag} 4 LR3 phone: status segments above the type filters", g["segTop"] < g["chipTop"] and g["segRight"] <= g["rowRight"] + 1, g)
-        else:
-            check(f"{tag} 4 all 7 on ONE row", one, g)
-            check(f"{tag} 4 type filters left · status chips right", g["chipsRight"] <= g["segLeft"] + 1 and g["segRight"] <= g["rowRight"] + 1, g)
+        else:   # LR3 fix: the segment control exists only at <= 600 px; desktop shows the three columns + the 4 port chips on one row
+            check(f"{tag} 4 desktop: segment control hidden, 4 port chips on ONE row", js(page, "()=>getComputedStyle(document.querySelector('[data-bd-seg]')).display === 'none'") and len({round(t[0] / 8) for t in g["btns"] if t[2] > 0}) == 1, g)
         check(f"{tag} 4 no clipped / scrolling chips and no page overflow", g["chipsScroll"] <= 0 and W.ovf(page) <= 0, (g["chipsScroll"], W.ovf(page)))
         # behaviour unchanged
         js(page, "()=>bdSetChip('COMP')"); settle(page, 300)

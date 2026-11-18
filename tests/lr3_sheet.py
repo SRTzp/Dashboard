@@ -40,6 +40,8 @@ def partB(page, tag, w):
     check(f"{tag} B core: leg = 'BUY #40 @ 100 Limit · entry', stop row = 'Stop 92 …'", o and len(o["legs"]) == 1 and re.match(r"^BUY #\d+ @ 100 (Limit|Stop) · entry", o["legs"][0]) and o["stop_t"].startswith("STOP 92"), o and [o["legs"], o["stop_t"]])
     check(f"{tag} B core: tiles read Risk · Reward · Size", o and all(k in o["tilesT"].lower() for k in ("risk", "reward", "size")), o and o["tilesT"])
     check(f"{tag} B core: Setup line (EF1b) still there, after the tiles", js(page, "()=>!!document.querySelector('[data-ef-core-place] [data-ef-setup]')") and o["tiles"] < o["setup"], o)
+    st = js(page, "()=>{ const t=document.querySelector('[data-lr3-tiles]').getBoundingClientRect(), q=document.querySelector('[data-ef-setup]').getBoundingClientRect(), sh=document.querySelector('[data-ef-core-place]').getBoundingClientRect(); return {gap: Math.round(q.top - t.bottom), fullw: Math.abs(q.width - t.width) < 2, h: Math.round(q.height)}; }")
+    check(f"{tag} B core: 'Setup ready today' is its own full-width row below the tiles (no overlap)", st["gap"] >= 6 and st["fullw"] and st["h"] >= 40, st)
     check(f"{tag} B core: Not yet / Confirm / records-only footnote", js(page, "()=>!!document.querySelector('[data-pb2-no]') && !!document.querySelector('[data-pb2-yes]') && /Records only/.test(document.querySelector('.pb2-note').innerText)"))
     check(f"{tag} B core: More ▾ holds size working", js(page, "()=>{ const d=document.querySelector('[data-ef-core-place] [data-ef-more]'); return !!d && /More/.test(d.querySelector('summary').innerText) && !d.open; }"))
     if w < 600:

@@ -72,11 +72,11 @@ def partA(page, tag, w):
     by = {x["id"]: x["also"] for x in al}
     check(f"{tag} A: 'also in F ›' only on the ticker both accounts hold (NVDA)", sp(by.get("mN")) == "also in F ›" and by.get("mA") is None and by.get("mO") is None, by)
     # phone segmented tabs
-    if w < 600:
+    if w <= 600:
         sg = js(page, "()=>{ const s = document.querySelector('[data-bd-seg]'), c = document.querySelector('[data-bd-chips]'); return {t:[...s.querySelectorAll('button')].map(b=>b.innerText.replace(/\\s+/g,' ')), above: s.getBoundingClientRect().bottom <= c.getBoundingClientRect().top + 1, vis:[...document.querySelectorAll('.bd-col')].filter(c=>c.getClientRects().length).length}; }")
         check(f"{tag} A: phone segmented Planned · Ordered · Holding with counts, above the chips, one column visible", sg["t"][0].startswith("Planned") and sg["t"][1].startswith("Ordered") and sg["t"][2].startswith("Holding") and sg["above"] and sg["vis"] == 1, sg)
     else:
-        check(f"{tag} A: desktop shows all three columns", js(page, "()=>[...document.querySelectorAll('.bd-col')].filter(c=>c.getClientRects().length).length") == 3)
+        check(f"{tag} A: desktop shows all three columns and NO segment control", js(page, "()=>[...document.querySelectorAll('.bd-col')].filter(c=>c.getClientRects().length).length") == 3 and js(page, "()=>getComputedStyle(document.querySelector('[data-bd-seg]')).display") == "none")
     js(page, "()=>{ bdSeg = 'plan'; bdRender(); }")
     if w == 1440: shot(page, "lr3-plan-1440")
     if w == 390: shot(page, "lr3-plan-390")
@@ -92,12 +92,34 @@ def partA(page, tag, w):
     check(f"{tag} A: Family NVDA shows 'also in M ›'", sp(back) == "also in M ›", back)
     # empty column shrinks (Family has no orders)
     ec = js(page, "()=>{ const c = document.querySelector('[data-bd-col=\"ord\"]'); return {empty:c.classList.contains('bd-empty'), h:Math.round(c.getBoundingClientRect().height), t:c.innerText.replace(/\\s+/g,' ')}; }")
-    if w >= 840:
+    if w > 600:
         check(f"{tag} A: empty Ordered column shrinks to header + 'Nothing here' ({ec['h']} px)", ec["empty"] and ec["h"] <= 90 and "Nothing here" in ec["t"], ec)
     else:
         check(f"{tag} A: empty column carries bd-empty", ec["empty"], ec)
     js(page, "()=>document.querySelector('[data-bd-card=\"fN\"] [data-bd-also]').click()"); page.wait_for_timeout(400)
     check(f"{tag} A: …and back to Main", js(page, "()=>acctActive") == "main")
+
+
+def partA2(page, tag, w):
+    goto_plan(page, "main")
+    js(page, "()=>{ const s = getBook('main').settings; s.fx = 33.5; bdRender(); }"); page.wait_for_timeout(300)
+    card = txt(page, '[data-bd-card="mN"] [data-pv-money]')
+    check(f"{tag} F1: Main (USD) plan card shows $ not ฿", "$" in card and "฿" not in card, card)
+    # tiles + % of account on the same base as Size %
+    js(page, "()=>efCorePlaceOpen('mA')"); page.wait_for_timeout(400)
+    t = js(page, "()=>{ const m = document.querySelector('[data-lr3-risk]'), z = document.querySelector('[data-lr3-size]'); const pv = posView(bdById('mA')); const B = lr3Base('main'); return {risk: m.innerText.replace(/\\s+/g,' '), size: z.innerText.replace(/\\s+/g,' '), pct: pv.plannedRisk / B * 100, base: B, weq: re1L('main').basis.weekEquity, cur: (pv.dcur)}; }")
+    check(f"{tag} F1: sheet tiles in $ and 'x% of account' uses the engine week equity (same base as Size %)", "$" in t["risk"] and "฿" not in t["risk"] and t["base"] == t["weq"] and (("%.2g" % t["pct"]) in t["risk"] or ("%.1f" % t["pct"]) in t["risk"] or ("%.2f" % t["pct"]) in t["risk"]), t)
+    ro = js(page, "()=>{ const e=document.querySelector('[data-ef-order-risk]'); return e ? e.innerText : ''; }")
+    check(f"{tag} F1: no ฿ left in the sheet text", "฿" not in txt(page, "[data-ef-core-place]"), txt(page, "[data-ef-core-place]"))
+    js(page, "()=>{ bdPopClose(); }")
+    # blocked reason = one short line, full text under More
+    goto_plan(page, "main")
+    bl = js(page, "()=>{ const c=document.querySelector('[data-bd-card=\"mN\"]'); const w=c.querySelector('[data-pv-why]'); if(!w) return null; const r=w.getBoundingClientRect(); return {t:w.innerText, title:w.title, h:Math.round(r.height), lh:parseFloat(getComputedStyle(w).lineHeight)||16}; }")
+    check(f"{tag} F3: Blocked reason is one short line ('Blocked · MMT weekly limit 4/4')", bl and bl["t"].startswith("Blocked · ") and len(bl["t"]) <= 60 and bl["h"] <= bl["lh"] * 1.6, bl)
+    js(page, "()=>pvCardTap('mN')"); page.wait_for_timeout(250)
+    full = txt(page, '[data-bd-card="mN"] [data-pv-whyfull]')
+    check(f"{tag} F3: full engine text is under More", len(full) > len(bl["t"]) if bl else False, full)
+    js(page, "()=>pvCardTap('mN')")
 
 
 def heights(pw):
@@ -115,7 +137,7 @@ def run(pw, w, h, parts):
     b, page, ce, pe = launch(pw, w, h, c=cards_board())
     try:
         page.wait_for_timeout(300)
-        if "A" in parts: partA(page, tag, w)
+        if "A" in parts: partA(page, tag, w); partA2(page, tag, w)
         if "B" in parts:
             import lr3_sheet; lr3_sheet.partB(page, tag, w)
         if "C" in parts:
