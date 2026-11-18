@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import rrg_verify as V
 
 SYMS, BENCH = V.SYMS, 'SPY'
-EXTRA = ['ARTY', 'ROBO']   # not in RRG_SYMS: candidate replacements for IRBO (finding 6) — checked, never used by the app
+EXTRA = ['ARTY']   # not in RRG_SYMS: candidate replacements for IRBO (finding 6) — checked, never used by the app
 HIGH_YIELD = ['XLU', 'XLRE', 'XLP', 'XLE', 'KRE', 'XLF']
 SNAPS = [('10:30', '≈ 11:30 ET · 23:30 ICT'), ('12:30', '≈ 13:30 ET · 01:30 ICT'), ('14:30', '≈ 15:30 ET · 03:30 ICT')]
 EVAL_YEARS = 5
