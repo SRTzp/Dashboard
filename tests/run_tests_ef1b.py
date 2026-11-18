@@ -141,7 +141,7 @@ def run2(pw, w, h):
         check("[%s] S no Setup tag exists (tvSetup empty)" % tag, js(page, "()=>tv1SetupLeft('AVGO')") == 0)
         it = js(page, "()=>{const i=bdItems().find(x=>x.id==='cP'); return i && {inc:i.inc, status:i.status}}")
         check("[%s] S new Momentum plan with entry + SL is not Waiting (no 'needs Setup')" % tag, it and not it["inc"], it)
-        check("[%s] S Place order › visible on the card, not under 'Waiting for setup'" % tag, has(page, "[data-bd-card=cP] [data-bd-pill=place]") and not has(page, "[data-bd-wait]"))
+        check("[%s] S Place order › visible on the card, not under 'Waiting for setup'" % tag, has(page, "[data-bd-card=cP] [data-bd-pill=place]") and not has(page, "[data-bd-wait]"))  # LR3: no Waiting row
         page.click("[data-bd-card=cP] [data-bd-pill=place]"); page.wait_for_timeout(350)
         sh = txt(page, "[data-ef-core-place]")
         check("[%s] S confirm sheet shows one line 'Setup ready today ✓', unticked when the tag is off" % tag, "Setup ready today ✓" in sh and js(page, "()=>document.getElementById('efSetupCk').checked") is False, sh)
@@ -220,7 +220,7 @@ def run3(pw, w, h):
         if w == 390: shot(page, "card-header-390")
         page.click("[data-bd-card=cP] [data-bd-pill=place]"); page.wait_for_timeout(400)
         sh = txt(page, "[data-ef-core-place]")
-        check("[%s] M sheet shows the same Risk −฿540 · Reward +฿2,836 · 5.3R" % tag, "Risk −฿540" in sh and "Reward +฿2,836" in sh and "5.3R" in sh and "$" not in sh, sh)
+        check("[%s] M sheet shows the same Risk −฿540 · Reward +฿2,836 · 5.3R (LR3: Risk / Reward / Size tiles)" % tag, "RISK −฿540" in sh.upper() and "REWARD +฿2,836" in sh.upper() and "5.3R" in sh and "$" not in sh, sh)
         more = js(page, "()=>{const d=document.querySelector('[data-ef-more]'); return d? d.innerText : ''}")
         diff = js(page, "()=>{const e=document.querySelector('[data-ef-risk-diff]'); return e ? e.textContent : ''}")
         check("[%s] M More flags that the stored plan risk differs from the legs" % tag, "differs from the legs" in (diff or "") and "36.1k" in diff, diff)

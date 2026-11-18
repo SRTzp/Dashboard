@@ -24,15 +24,15 @@ def partA(pw, w, h):
         js(page, SAT_JS); page.wait_for_timeout(700); refresh(page)
         r = {x["sym"]: x["t"] for x in rows(page, "manage")}
         t = r.get("NVDA", "")
-        check("[%s] A2 holding row = card format: next leg · SL · open Risk ฿17.8k" % tag, "Buy #18 @ 140 · SL 110 · Risk −฿17.8k" in t, t)
-        check("[%s] A2 old plan-total numbers are gone from the holding row (no ฿36.1k / 0.72%% / cap 50%%)" % tag, "36.1k" not in t and "0.72%" not in t and "cap 50%" not in t, t)
+        check("[%s] A2 holding row = card format: next leg · SL · open Risk $528" % tag, "Buy #18 @ 140 · SL 110 · Risk −$528" in t, t)
+        check("[%s] A2 old plan-total numbers are gone from the holding row (no $1,068 / 0.72%% / cap 50%%)" % tag, "36.1k" not in t and "0.72%" not in t and "cap 50%" not in t, t)
         check("[%s] A2 homework note stays text, not a number" % tag, "size limited to 50% · homework not done" in t, t)
         pv = js(page, "()=>{const it=bdItems().find(x=>x.sym==='NVDA'); return posView(it)}")
         check("[%s] posView NVDA: held 11 · planned 29 · cost · value · plan risk" % tag, pv["heldQty"] == 11 and pv["plannedQty"] == 29 and abs(pv["cost"] - 58674.88) < .01 and abs(pv["value"] - 60475.976) < .01 and abs(pv["plannedRisk"] - 36055.68) < .01 and abs(pv["openRisk"] - 17825.28) < .01, pv)
         # drawer shows the same numbers
         js(page, "()=>bdOpen(bdItems().find(x=>x.sym==='NVDA').id)"); page.wait_for_timeout(300)
         dt = txt(page, "[data-pv-block]")
-        check("[%s] drawer POSITION block: same value, weight, open risk, whole plan" % tag, "฿60.5k" in dt and "1.2% of account" in dt and "฿17.8k" in dt and "29 sh" in dt and "฿36.1k" in dt and "0.72% of account" in dt, dt)
+        check("[%s] drawer POSITION block: same value, weight, open risk, whole plan" % tag, "$1,791" in dt and "1.2% of account" in dt and "$528" in dt and "29 sh" in dt and "$1,068" in dt and "0.72% of account" in dt, dt)
         check("[%s] drawer: price + date shown, no bare dash" % tag, "162.85" in dt and "13 Nov" in dt and " — " not in dt.replace("—", "—") .replace(" — ", "") if False else "162.85" in dt and "13 Nov" in dt, dt)
         js(page, "()=>bdClose()")
         # Satellite: planned row, holding without price, holding with manual Last price
@@ -175,13 +175,13 @@ def partC(pw, w, h):
         ch = card_txt(page, "ccmwdlk56w91") or card_txt(page, "cN")
         hid = js(page, "()=>bdItems().find(x=>x.sym==='NVDA').id")
         ch = card_txt(page, hid)
-        check("[%s] C: Holding card — stop · if stopped · value+weight · P&L (PV1b)" % tag, all(x in ch for x in ("Stop 110", "If stopped −฿17.8k", "Value ฿60.5k · 1.2%", "P&L +฿1,801")), ch)   # EF1b: exact money under 10k
+        check("[%s] C: Holding card — stop · if stopped · value+weight · P&L (PV1b)" % tag, all(x in ch for x in ("Stop 110", "If stopped −$528", "Value $1,791 · 1.2%", "P&L +$53")), ch)   # EF1b: exact money under 10k
         check("[%s] C: holding card — Long word and homework chip" % tag, js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-dir]').dataset.pvDir==='Long'", hid) and "50% · homework" in ch)
         # ── More ▾
         js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"]').click()", hid); page.wait_for_timeout(300)
         mt = ctxt(page, hid); ch = mt
         check("[%s] C: More ▾ — cost with FX line, loss vs entry, price→stop, R definition, whole plan, pool, limits, FX source" % tag,
-              all(x in mt for x in ("฿58.7k", "× FX 33.76", "−฿17.8k", "0.36% of account", "฿19.6k", "1R = entry − first stop = $48 per share", "+$4.85 per share", "฿36.1k · 0.72% of account", "% of strategy pool", "max 12.5% of account", "within", "Settings rate, not live", "33.76")), mt)
+              all(x in mt for x in ("$1,738", "× FX 33.76", "−$528", "0.36% of account", "$581", "1R = entry − first stop = $48 per share", "+$4.85 per share", "$1,068 · 0.72% of account", "% of strategy pool", "max 12.5% of account", "within", "Settings rate, not live", "33.76")), mt)
         check("[%s] C: More stays open after a re-render" % tag, (js(page, "()=>{bdRender(); return 1}") and js(page, "(i)=>!!document.querySelector('[data-bd-card=\"'+i+'\"] [data-pv-more]')", hid)))
         check("[%s] C: no overflow on the Plan board" % tag, no_overflow(page), js(page, "()=>[document.documentElement.scrollWidth, document.documentElement.clientWidth, ...[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>document.documentElement.clientWidth+1 && true).slice(0,5).map(e=>e.tagName+'.'+e.className+' '+Math.round(e.getBoundingClientRect().right))]"))
         if w in (1440, 390):
@@ -195,8 +195,8 @@ def partC(pw, w, h):
         today = " ".join(r["t"] for r in rows(page, "manage"))
         js(page, "(i)=>bdOpen(i)", hid); page.wait_for_timeout(300)
         dr = txt(page, "[data-pv-block]"); js(page, "()=>bdClose()")
-        check("[%s] C: value, weight, open risk equal on Today · Plan card · drawer" % tag, "฿17.8k" in today and   # EF1b: Today row uses the card format (risk only; value+weight live on the Plan card and drawer)
-               all(x in ch for x in ("฿60.5k", "1.2%", "฿17.8k")) and all(x in dr for x in ("฿60.5k", "1.2%", "฿17.8k")), [today, ch, dr])
+        check("[%s] C: value, weight, open risk equal on Today · Plan card · drawer" % tag, "$528" in today and   # EF1b: Today row uses the card format (risk only; value+weight live on the Plan card and drawer)
+               all(x in ch for x in ("$1,791", "1.2%", "$528")) and all(x in dr for x in ("$1,791", "1.2%", "$528")), [today, ch, dr])
         check("[%s] C: no console / page errors" % tag, not ce and not pe, ce + pe)
     finally:
         b.close()
