@@ -4379,12 +4379,12 @@ html body .topbar.topbar.topbar .hbtns>#hdrMoreBtn:hover{border-color:var(--lr-m
 
   <div class="topMid" id="topMid">
   <div class="tabs" id="tabsMain">
-    <button type="button" class="tabbtn on" id="tabBtnToday" data-t="Today" onclick="switchTab('today')">Today<span class="tdBadge" id="tabBadgeToday" style="display:none"></span> <span class="kbdhint">1</span></button>
-    <button type="button" class="tabbtn" id="tabBtnPlan" data-t="แผน" onclick="switchTab('plan')">Plan <span class="kbdhint">4</span></button>
-    <button type="button" class="tabbtn" id="tabBtnFlow" data-t="Flow" onclick="switchTab('flow')">Flow <span class="kbdhint">2</span></button>
-    <button type="button" class="tabbtn" id="tabBtnWatch" data-t="Watch" onclick="switchTab('watch')">Watch <span class="kbdhint">3</span></button>
-    <button type="button" class="tabbtn" id="tabBtnJournal" data-t="Journal" onclick="switchTab('journal')">Journal <span class="kbdhint">5</span></button>
-    <button type="button" class="tabbtn" id="tabBtnMix" data-t="Port" onclick="switchTab('mix')">Port <span class="kbdhint">6</span></button>
+    <button type="button" class="tabbtn on" id="tabBtnToday" title="Today · 1" data-t="Today" onclick="switchTab('today')">Today<span class="tdBadge" id="tabBadgeToday" style="display:none"></span> <span class="kbdhint">1</span></button>
+    <button type="button" class="tabbtn" id="tabBtnPlan" title="Plan · 2" data-t="แผน" onclick="switchTab('plan')">Plan <span class="kbdhint">2</span></button>
+    <button type="button" class="tabbtn" id="tabBtnFlow" title="Flow · 3" data-t="Flow" onclick="switchTab('flow')">Flow <span class="kbdhint">3</span></button>
+    <button type="button" class="tabbtn" id="tabBtnWatch" title="Watch · 4" data-t="Watch" onclick="switchTab('watch')">Watch <span class="kbdhint">4</span></button>
+    <button type="button" class="tabbtn" id="tabBtnJournal" title="Journal · 5" data-t="Journal" onclick="switchTab('journal')">Journal <span class="kbdhint">5</span></button>
+    <button type="button" class="tabbtn" id="tabBtnMix" title="Port · 6" data-t="Port" onclick="switchTab('mix')">Port <span class="kbdhint">6</span></button>
   </div>
   <div class="acSw" id="acSw" role="group" aria-label="Account" style="display:none"></div><!-- AW1 — account switch -->
   </div>
@@ -12688,7 +12688,8 @@ function glSetWReset(){ if(!tdDraft) return; tdDraft.week = GL_WEEK_DEF.map(x=>(
 /* ================= tabs ================= */
 /* activeTab เป็นสถานะหน้าจอล้วน — ห้ามเก็บลง state/Firestore */
 /* 6 แท็บ (TD1: แท็บ วันนี้ อยู่ซ้ายสุด · F1: ระบบข่าวถูกถอดออกแล้ว) */
-const TAB_ORDER = ['today','flow','watch','plan','journal','mix'];
+/* LR2 — ตามลำดับแถบ: 1 Today · 2 Plan · 3 Flow · 4 Watch · 5 Journal · 6 Port */
+const TAB_ORDER = ['today','plan','flow','watch','journal','mix'];
 const TAB_MAP = {
   today:'tabToday', flow:'tabFlow', mix:'tabMix', watch:'tabWatch', plan:'tabPlan', journal:'tabJournal'
 };
@@ -12866,9 +12867,10 @@ document.addEventListener('keydown', (e)=>{
   if(e.defaultPrevented) return;
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   if(document.querySelector('.overlay.show')) return; // อย่าสลับแท็บขณะเปิด modal อยู่
+  if(/^[1-9]$/.test(e.key) && (bdPopOpen() || bdSheetsOpen() || td3SheetUp())) return;   /* LR2 — เลขในตัวเลือก New plan (1/2 = บัญชี) หรือ sheet/drawer = ไม่สลับแท็บ */
   if((e.code==='Period' || e.code==='Slash') && !e.shiftKey && acctList.length>1 && !td3SheetUp()){ if(aw1Step(e.code==='Slash' ? 1 : -1)){ e.preventDefault(); return; } }   /* AW1 — . previous · / next account (e.code → Thai layout works · Shift+/ stays the help overlay) */
   const n = parseInt(e.key,10);
-  if(n>=1 && n<=TAB_ORDER.length){ switchTab(TAB_ORDER[n-1]); return; }   /* TD1 — คีย์ตามตำแหน่ง: 1 Today · 2 Flow · 3 Watch · 4 แผน · 5 Journal · 6 Port */
+  if(n>=1 && n<=TAB_ORDER.length){ switchTab(TAB_ORDER[n-1]); return; }   /* TD1/LR2 — คีย์ตามตำแหน่ง: 1 Today · 2 Plan · 3 Flow · 4 Watch · 5 Journal · 6 Port */
   kbHandle(e);
 });
 
