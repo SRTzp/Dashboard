@@ -45,3 +45,6 @@ Top-level book fields:
 Already on the home account (shared in effect, nothing to do): `candMeta, candReasons, candAddLog, subGoals, goals, goalLog, weekLog, weekTasks, dailyExtra, routine/routineLog, satWeekPick, satAssetCfg, satCustomAssets, sectorNotes, tvInfo, tvSetup, newsRead, newsEvents, ln4, satPbLink`.
 
 **Suggested next step:** SH2 = move `industries, industryLinks, reasonTags(+exitReasons), scoreLabels, scoreCriteria, journalView, rsBench` to a `settings.shared*` block on home with the same migrate-once rule (Main wins; for lists, union). UI prefs (`fontSizes, tabsOffset, watchSortMode, watchCollapsed`) and FX: tell me per-device vs shared.
+
+## Full regression (after SH1)
+`tests/run_regression.sh` now includes `run_tests_sh1`. Full run: **48/48 ok · 0 failing** (2510 s). Failing set: empty. `run_tests_sh1`: 14 checks pass · 0 fail.
