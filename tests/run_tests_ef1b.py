@@ -141,7 +141,7 @@ def run2(pw, w, h):
         check("[%s] S no Setup tag exists (tvSetup empty)" % tag, js(page, "()=>tv1SetupLeft('AVGO')") == 0)
         it = js(page, "()=>{const i=bdItems().find(x=>x.id==='cP'); return i && {inc:i.inc, status:i.status}}")
         check("[%s] S new Momentum plan with entry + SL is not Waiting (no 'needs Setup')" % tag, it and not it["inc"], it)
-        check("[%s] S Place order › visible on the card, not under 'Waiting for setup'" % tag, has(page, "[data-bd-card=cP] [data-bd-pill=place]") and not has(page, "[data-bd-wait]"))
+        check("[%s] S Place order › visible on the card, not under 'Waiting for setup'" % tag, has(page, "[data-bd-card=cP] [data-bd-pill=place]") and not has(page, "[data-bd-wait]"))  # LR3: no Waiting row
         page.click("[data-bd-card=cP] [data-bd-pill=place]"); page.wait_for_timeout(350)
         sh = txt(page, "[data-ef-core-place]")
         check("[%s] S confirm sheet shows one line 'Setup ready today ✓', unticked when the tag is off" % tag, "Setup ready today ✓" in sh and js(page, "()=>document.getElementById('efSetupCk').checked") is False, sh)

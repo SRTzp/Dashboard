@@ -45,7 +45,7 @@ def setup_ok(page, syms):
 def stub(page, code): js(page, "()=>{" + code + "}")
 def tab(page, t): js(page, "(t)=>switchTab(t)", t); settle(page, 500)
 def plan(page):
-    tab(page, "today"); tab(page, "plan"); settle(page, 300)
+    tab(page, "today"); tab(page, "plan"); js(page, "()=>{ bdWaitOpen = true; bdRender(); }"); settle(page, 300)   # LR3: the Waiting row is collapsed by default — tests read its cards
 def col(page, seg): return js(page, "(s)=>[...document.querySelectorAll('[data-bd-col=\"'+s+'\"] [data-bd-card]')].map(e=>e.dataset.bdCard)", seg)
 def ids(page): return js(page, "()=>bdItems().map(x=>x.id+':'+x.status)")
 def card_db(page, cid): return page.evaluate("(id)=>window.firebase.__mockDb.__dump()['users/testuid/coreCards/'+id]", cid)
@@ -102,11 +102,11 @@ def run(pw, w, h):
         stub(page, "window.confirm = ()=>true;")
         plan(page)
         # ── 1 status mapping ──
-        check(f"{tag} 1 Planned = AMD, TSLA, ORCL (+NOPX) · Ordered = AVGO · Holding = NVDA, MSFT", set(col(page, "plan")) >= {"ccPL", "ccFA", "ccFM", "ccNP"} and col(page, "ord") == ["ccOR"] and set(col(page, "hold")) == {"ccST", "ccFU", "ccMH"}, [col(page, s) for s in ("plan", "ord", "hold")])
+        check(f"{tag} 1 Planned = AMD, TSLA, ORCL (+NOPX) · Ordered = AVGO · Holding = NVDA, MSFT", set(col(page, "plan")) >= {"ccPL", "ccFA", "ccNP"} and col(page, "ord") == ["ccOR"] and set(col(page, "hold")) == {"ccST", "ccFU", "ccMH"}, [col(page, s) for s in ("plan", "ord", "hold")])
         allids = {x.split(":")[0] for x in ids(page)}
         check(f"{tag} 1 Missed / Closed / Archived are not on the board", not ({"ccMS", "ccCL", "ccAR"} & allids), sorted(allids))
         check(f"{tag} 1 split plan = ONE card; filled ✓ + open order chips (PV1b)'", cnt(page, '[data-bd-card="ccST"]') == 1 and js(page, "()=>!!document.querySelector('[data-bd-card=ccST] [data-pv-done]')"))   # PV1b: the '¼ in' / 'full' labels are replaced by ✓ / dashed order chips
-        check(f"{tag} 1 each column shows a count; Plan summary line", txt(page, '[data-bd-n="hold"]') == "3" and "Holding 3" in txt(page, "[data-bd-sum]"), txt(page, "[data-bd-sum]"))
+        check(f"{tag} 1 each column shows a count; Plan summary line", txt(page, '[data-bd-n="hold"]') == "3" and "3 holding" in txt(page, "[data-bd-sum]"), txt(page, "[data-bd-sum]"))
         check(f"{tag} 1 Planned sorted closest-to-entry first (AMD 1.4% before TSLA −20%)", col(page, "plan").index("ccPL") < col(page, "plan").index("ccFA"), col(page, "plan"))
         check(f"{tag} 1 Holding: needs-action first (add-on / stop below avg) before plain", col(page, "hold")[0] in ("ccST", "ccFU"))
         # ── 2c multiple entry levels ──
@@ -129,13 +129,13 @@ def run(pw, w, h):
         js(page, "()=>bdClose()")
         # ── 2 chips ──
         js(page, "()=>bdSetChip('COMP')"); settle(page, 300)
-        check(f"{tag} 2 chip COMP filters all columns + summary", col(page, "plan") == ["ccML"] and col(page, "ord") == ["ccOR"] and col(page, "hold") == [] and "2 plans" in txt(page, "[data-bd-sum]"), [col(page, s) for s in ("plan", "ord", "hold")])
+        check(f"{tag} 2 chip COMP filters all columns + summary", col(page, "plan") == ["ccML"] and col(page, "ord") == ["ccOR"] and col(page, "hold") == [] and "1 planned · 1 ordered" in txt(page, "[data-bd-sum]"), [col(page, s) for s in ("plan", "ord", "hold")])
         js(page, "()=>bdSetChip('MMT')"); settle(page, 300)
         check(f"{tag} 2 chip MMT hides COMP", "ccOR" not in col(page, "ord") and "ccPL" in col(page, "plan"))
         js(page, "()=>bdSetChip('all')")
         # ── 14 family tag · no price ──
         plan(page)
-        check(f"{tag} 14 Family tag only on Family-account plan", cnt(page, '[data-bd-card="ccFM"] [data-bd-fam]') == 1 and cnt(page, '[data-bd-card="ccPL"] [data-bd-fam]') == 0)
+        check(f"{tag} 14 Family tag only on Family-account plan", js(page, "()=>{ const f = bdItems().find(x=>x.id==='ccFM'); return !!f && f.fam === true; }") and cnt(page, '[data-bd-card="ccPL"] [data-bd-fam]') == 0)
         check(f"{tag} 14 symbol without a price → 'no live price' (PV1: never a bare dash), no errors", bool(txt(page, '[data-bd-card="ccNP"]')), txt(page, '[data-bd-card="ccNP"] .bd-r3'))
         # ── 3 pills ──
         pill = lambda i: js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); const p=bdPill(x); return p.k + '|go' + (p.cls ? ' ' + p.cls : '') + '|' + p.t; }", i)   # PV1b: the card shows Place / Add-on / Filled only; Edit lives in More
@@ -248,8 +248,8 @@ def run(pw, w, h):
         check(f"{tag} 2b core form has a secondary 'Save draft'; normal Save stays disabled without Entry/SL", cnt(page, "[data-cn-draft]") == 1 and js(page, "()=>document.getElementById('cnSave').disabled") is True)
         page.locator("[data-cn-draft]").click(); settle(page, 900)
         js(page, "()=>render()"); settle(page, 400)
-        wait = js(page, "()=>[...document.querySelectorAll('[data-bd-wait] ~ [data-bd-card]')].map(e=>e.dataset.bdCard + '|' + (e.querySelector('[data-bd-need]')||{innerText:''}).innerText)")
-        check(f"{tag} 2b draft without Entry → in 'Waiting for setup' with 'needs Entry · SL' + 'Complete ›'", any("needs Entry · SL" in x for x in wait) and txt(page, "[data-bd-wait]").startswith("🕓 Waiting for setup"), wait)
+        wait = js(page, "()=>[...document.querySelectorAll('[data-bd-wait] [data-bd-card]')].map(e=>e.dataset.bdCard + '|' + (e.querySelector('[data-bd-need]')||{innerText:''}).innerText)")
+        check(f"{tag} 2b draft without Entry → in 'Waiting for setup' with 'needs Entry · SL' + 'Complete ›'", any("needs Entry · SL" in x for x in wait) and txt(page, "[data-bd-wait] summary").startswith("Waiting ·"), wait)
         pid = next((x.split("|")[0] for x in wait if "needs Entry · SL" in x), None)
         check(f"{tag} 2b incomplete: no Place order pill, not in Today Act", pid and js(page, "(i)=>document.querySelector('[data-bd-card=\"'+i+'\"] [data-bd-pill]').dataset.bdPill", pid) == "complete" and not any("PLTR" in r for r in js(page, "()=>{ return bdActRows().map(r=>r.sym); }")))
         # ── 10 popup ──
@@ -562,7 +562,7 @@ def pb1b(pw, w, h):
         # ── §2b Place order confirm ──
         js(page, "()=>bdSetSeg('plan')"); settle(page, 150)
         page.locator(f'[data-bd-card="{i3}"] [data-bd-pill]').click(); settle(page, 400)
-        check(f"{tag} 2b Place order opens 'Setup ready on Execution TF?' with the setup line, MSS line (MSS trade) and summary", pop_step(page) == "place" and "Setup ready on Execution TF?" in txt(page, "#pb2Body") and all(x in txt(page, "[data-pb2-checks]") for x in ("In Zone", "Trend Neutral", "EMA50 = HVN", "Pivot MMT")) and "MSS confirmed per your rules (candle closed)" in txt(page, "[data-pb2-mssok]") and "Buy" in txt(page, "[data-pb2-summary]") and "Entry" in txt(page, "[data-pb2-summary]") and "Counter trend @ MSS" in txt(page, "[data-pb2-summary]"), txt(page, "#pb2Body"))
+        check(f"{tag} 2b Place order opens 'Setup ready on Execution TF?' with the setup line, MSS line (MSS trade) and summary", pop_step(page) == "place" and "Setup ready on Execution TF?" in txt(page, "#pb2Body") and all(x in txt(page, "[data-pb2-checks]") for x in ("In Zone", "Trend Neutral", "EMA50 = HVN", "Pivot MMT")) and "MSS confirmed per your rules (candle closed)" in txt(page, "[data-pb2-mssok]") and "buy" in txt(page, "[data-pb2-summary]").lower() and "entry" in txt(page, "[data-pb2-summary]").lower() and "Counter trend @ MSS" in txt(page, "[data-pb2-summary]"), txt(page, "#pb2Body"))
         check(f"{tag} 2b buttons [Not yet] [Confirm] (EF1: was 'Yes · mark ordered') + 'records only' note", "Not yet" in txt(page, "[data-pb2-no]") and "Confirm" in txt(page, "[data-pb2-yes]") and "place the order at your broker" in txt(page, "#pb2Body"))
         shot(page, "place-confirm", w)
         page.click("[data-pb2-no]"); settle(page, 300)

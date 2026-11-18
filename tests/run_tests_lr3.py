@@ -133,6 +133,8 @@ if __name__ == "__main__":
             run(pw, w, h, parts)
             if "B" in parts:
                 import lr3_sheet; lr3_sheet.run_sat(pw, w, h, "[%s]" % w)
+            if "C" in parts:
+                import lr3_forms; lr3_forms.run_sat(pw, w, h, "[%s]" % w)
         if "A" in parts: heights(pw)
     bad = [r for r in results if not r[1]]
     print("SUMMARY lr3: %d checks, %d failing" % (len(results), len(bad)))
