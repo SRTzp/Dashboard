@@ -1,0 +1,46 @@
+# RV1 B research (display only · no effect on the app): does the data source change the Flow › RRG state?
+# Copy to .github/workflows/rrg-data-check.yml, then Actions → rrg-data-check → Run workflow (Yahoo is rate-limited on the Mac).
+# Writes docs/reports/RV1-data.{md,json} and docs/reports/RV1-summary.md on the branch it runs on. No secrets, no API key.
+name: rrg-data-check
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rrg-data-check
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: install
+        run: pip install --quiet yfinance pandas numpy
+      - name: selftests
+        run: |
+          python tests/rrg_verify_test.py
+          python scripts/rrg_data_check.py --selftest
+      - name: data check (5y · 23 symbols · raw vs adjusted · partial bar · benchmark)
+        run: python scripts/rrg_data_check.py --out docs/reports/RV1-data
+      - name: summary report
+        run: python tools/rrg_report.py
+      - name: commit if changed
+        run: |
+          git config user.name  "rrg-data-check-bot"
+          git config user.email "rrg-data-check-bot@users.noreply.github.com"
+          git add docs/reports/RV1-data.md docs/reports/RV1-data.json docs/reports/RV1-summary.md
+          git diff --cached --quiet && { echo "no change"; exit 0; }
+          git commit -m "RV1: data check + summary report (generated)"
+          git pull --rebase --autostash
+          git push
