@@ -26035,10 +26035,40 @@ function defaultFundflow(){
 }
 const FF_STALE_DAYS = 10;
 let rrgHydrated = false;   /* ล้าง err/loading ที่ค้างมาจาก Firestore ครั้งเดียวตอนโหลด */
+/* SH1 — Flow = ข้อมูลตลาด/งานวิจัย ต้องเหมือนกันทุกบัญชี → เก็บที่เดียว: settings.flowShared ของบัญชีหลัก (tdHome) · ไม่อ่าน/ไม่ลบ state.fundflow รายบัญชีอีก (ของเก่าคงไว้เฉย ๆ)
+   ทำไมไม่ใช้ collection แยก: ไม่ต้องแก้ Firestore Rules · อยู่ใน doc เดียวกับ books จึงเข้า backup/restore เองและ snapshot เดียวซิงก์ครบ · เขียนผ่าน saveBook(home) แบบเดียวกับ goals/ln4
+   ย้ายครั้งเดียว (ffSharedMigrate): ทั้งก้อน = fundflow ของบัญชีหลัก · rrg = ของบัญชีที่ rrg.at ใหม่กว่า (ชนะเฉพาะเมื่อมีแถว D หรือ W) */
+let ffTransient = null;   /* ก่อน server ยืนยัน: อ่านได้ แต่ห้ามเก็บ/ย้ายลงบัญชี (กัน cache เก่าถูกเขียนทับ) */
+function ffSharedMigrate(){
+  const home = tdHome(), ids = acctList.map(a=>a.id);
+  const oldOf = id=>{ try{ const b = (id===acctActive && state) ? state : (acctBooks[id] || null); return (b && b.fundflow && typeof b.fundflow==='object') ? b.fundflow : null; }catch(e){ return null; } };
+  const main = oldOf(home);
+  const out = main ? JSON.parse(JSON.stringify(main)) : defaultFundflow();
+  let best = null, bestAt = '';
+  ids.forEach(id=>{
+    const o = oldOf(id), r = o && o.rrg;
+    if(!r || typeof r!=='object' || !((r.rowsD||[]).length || (r.rowsW||[]).length)) return;
+    const at = String(r.at || '');
+    if(!best || at > bestAt){ best = r; bestAt = at; }
+  });
+  if(best) out.rrg = JSON.parse(JSON.stringify(best));
+  return out;
+}
+function ffStore(){
+  const home = tdHome();
+  if(!home) return null;
+  let B; try{ B = getBook(home); }catch(e){ return null; }
+  if(!B.settings || typeof B.settings!=='object') B.settings = {};
+  if(B.settings.flowShared && typeof B.settings.flowShared==='object'){ ffTransient = null; return B.settings.flowShared; }
+  if(!(serverConfirmed && stateFromServer)) return ffTransient || (ffTransient = ffSharedMigrate());
+  B.settings.flowShared = ffSharedMigrate(); ffTransient = null;
+  if(acctCtx === null) saveBook(home);
+  return B.settings.flowShared;
+}
+function ffPersist(){ if(acctCtx !== null) return; const h = tdHome(); if(h && ffStore() && !ffTransient) saveBook(h); else schedulePersist(); }
 function ffState(){
   if(!state) return defaultFundflow();
-  if(!state.fundflow || typeof state.fundflow!=='object') state.fundflow = defaultFundflow();
-  const f=state.fundflow, d=defaultFundflow();
+  const f = ffStore() || (state.fundflow = (state.fundflow && typeof state.fundflow==='object') ? state.fundflow : defaultFundflow()), d=defaultFundflow();
   /* ver 2: ตัด ARKK/QQQ ออกจากชั้น 2 + เพิ่ม ctx (RSP/SPY) — รีเซ็ตชุด proxy ครั้งเดียว */
   if((f.ver||1) < 2){ f.l1=d.l1; f.l2=d.l2; f.ctx=d.ctx; f.ver=2; }
   /* ver 5 (เฟส 4): ตัด IWO/IWN ออกจากชั้น 2 — เหลือ SPHB/SPLV ตัวเดียว
@@ -26089,7 +26119,7 @@ function ffState(){
 }
 function ffToday(){ try{ return new Date().toLocaleDateString('th-TH',{day:'numeric',month:'short'}); }catch(e){ return thaiToday(); } }
 function ffEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function ffTouch(){ const f=ffState(); f.updated=ffToday(); f.updatedIso=thaiToday(); renderFundflow(); schedulePersist(); }
+function ffTouch(){ const f=ffState(); f.updated=ffToday(); f.updatedIso=thaiToday(); renderFundflow(); ffPersist(); }
 function ffLog(msg){ const f=ffState(); f.log.unshift({d:ffToday(), m:msg}); if(f.log.length>40) f.log.length=40; }
 const FF_TF={W:'weekly',D:'daily','4H':'4H'};
 
@@ -26363,7 +26393,7 @@ function rrgSetTf(tf){
   if(f.rrgTf === tf) return;
   f.rrgTf = (tf==='W' ? 'W' : 'D');
   ffRenderThemes();     /* ข้อมูลคำนวณไว้ทั้งสองแบบแล้ว สลับดูไม่ต้องยิง API */
-  schedulePersist();
+  ffPersist();
 }
 /* ตอบกลับมี 2 รูปแบบ: ขอตัวเดียว = {values:[]} · ขอหลายตัว = {SYM:{values:[]}} */
 function rrgUnpack(json, syms){
@@ -26492,6 +26522,7 @@ function rrgReset(){
   try{ ffState().rrg.loading = false; }catch(e){}
 }
 function rrgRefresh(force){
+  if(!(serverConfirmed && stateFromServer)) return Promise.resolve();   /* SH1 — ยังไม่ยืนยันกับ server: ห้ามดึง (ผลจะไม่มีที่เก็บ) */
   const f = ffState();
   const key = rrgKey();
   if(!key){ f.rrg = {err:'nokey', at:''}; renderFundflow(); return Promise.resolve(); }
@@ -26576,7 +26607,7 @@ async function rrgRun(f, key, gen){
       /* state ใหม่ (จาก snapshot) อาจไม่มี pending → คำนวณจากแถวที่มีโมเดลใหม่ ไม่ใช่เชื่อ pending เดิมอย่างเดียว */
       f.rrg.pending = (Array.isArray(f.rrg.pending) ? f.rrg.pending : need).filter(s=>chunks[ci].indexOf(s) < 0);
       f.rrg.loading = true;
-      renderFundflow(); schedulePersist();
+      renderFundflow(); ffPersist();
     }
     cur();
     if(f.rrg.pending.length === 0){      /* ครบทุก symbol + SPY → ตราโมเดลใหม่ได้ */
@@ -26597,14 +26628,14 @@ async function rrgRun(f, key, gen){
   rrgBusy = false;      /* ก่อน render สุดท้าย — ffState() ผูก loading กับ rrgBusy */
   cur().rrg.loading = false;
   renderFundflow();
-  schedulePersist();
+  ffPersist();
 }
 function rrgManualRefresh(){ return rrgRefresh(true); }
 /* ดึงอัตโนมัติครั้งเดียวต่อการเปิดหน้า และเฉพาะเมื่อแคชไม่ใช่ของวันนี้
    — renderFundflow() ถูกเรียกบ่อยมาก ถ้าไม่กันไว้จะยิง API รัวจนโควตาหมด */
 let rrgAutoDone = false;
 function rrgAutoOnce(){
-  if(rrgAutoDone || !state || cl2aGateOn) return;
+  if(rrgAutoDone || !state || cl2aGateOn || !(serverConfirmed && stateFromServer)) return;   /* SH1 — รอ server ยืนยันก่อน */
   const f = ffState();
   if(!rrgKey()) return;                                  /* ยังไม่ใส่ key — ไม่ต้องพยายาม */
   if(rrgCacheFresh(f)) return;
@@ -27340,7 +27371,7 @@ function ffToggleThemes(){
   const f = ffState();
   f.themesCol = !ffThemesColEff(); f.themesColUser = true;
   ffApplyThemesCol();
-  schedulePersist();   /* ไม่ใช้ ffTouch — การยุบ/ขยายไม่ใช่การแก้บอร์ด ไม่ควรขยับวันที่อัปเดต */
+  ffPersist();   /* ไม่ใช้ ffTouch — การยุบ/ขยายไม่ใช่การแก้บอร์ด ไม่ควรขยับวันที่อัปเดต */
 }
 function ffSetCtx(v){
   const c=ffState().ctx;
@@ -28652,7 +28683,7 @@ function ffRenderSettings(){
     +'<div class="hint" style="margin:-4px 0 4px">แก้บ่อย = กำลังจูนเข้าหาความอยาก ไม่ใช่ปรับปรุงระบบ</div>'
     +(f.log.length ? f.log.slice(0,12).map(l=>'<div class="ffMini" style="padding:2px 0">'+ffEsc(l.d)+' — '+ffEsc(l.m)+'</div>').join('') : '<div class="hint">ยังไม่มี</div>');
 }
-function ffEditField(list,i,k,v){ ffState()[list][i][k]=v; schedulePersist(); if(k==='w'){ ffLog('ปรับน้ำหนัก '+ffState()[list][i].r+' → '+v); renderFundflow(); } }
+function ffEditField(list,i,k,v){ ffState()[list][i][k]=v; ffPersist(); if(k==='w'){ ffLog('ปรับน้ำหนัก '+ffState()[list][i].r+' → '+v); renderFundflow(); } }
 function ffAddProxy(list){
   ffState()[list].push({id:idFF(), r:'', tf:(list==='l1'?'W':'D'), w:2, v:1, n:'', f:''});
   ffLog('เพิ่ม proxy ใน '+(list==='l1'?'ชั้น 1':'ชั้น 2')); ffRenderSettings(); ffTouch();
