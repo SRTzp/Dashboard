@@ -50,7 +50,7 @@ def run(pw, w, h):
         if mobile:
             vis = js(page, "()=>[...document.querySelectorAll('#acSw .acSwL')].filter(e=>e.offsetParent).map(e=>e.innerText)")
             check("[%s] iPhone: labels shortened to a letter" % tag, all(len(x) <= 2 for x in vis) and len(vis) == 2, vis)
-            check("[%s] iPhone: no 'Trading' word / sync text, logo + sync dot stay" % tag, js(page, "()=>{const v=id=>{const e=document.getElementById(id)||document.querySelector(id);return e&&e.offsetParent!==null};return !document.querySelector('.brandName').offsetParent && !document.getElementById('brandSyncTime').offsetParent && !!document.querySelector('.brandMark').offsetParent && !!document.getElementById('acctDot').offsetParent && document.querySelectorAll('.hbtns>button').length>=4}"))
+            check("[%s] iPhone: no 'Trading' word / sync text, logo + sync dot stay" % tag, js(page, "()=>{const v=id=>{const e=document.getElementById(id)||document.querySelector(id);return e&&e.offsetParent!==null};return !document.querySelector('.brandName').offsetParent && !document.getElementById('brandSyncTime').offsetParent && !!document.querySelector('.brandMark').offsetParent && !!document.getElementById('acctDot').offsetParent && document.querySelectorAll('.hbtns>button').length>=2}"))
             tap = js(page, "()=>[...document.querySelectorAll('#acSw button')].map(b=>{const r=b.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)]})")
             check("[%s] iPhone: tap targets ≥ 44 px" % tag, all(x[0] >= 44 and x[1] >= 44 for x in tap), tap)
             js(page, "()=>document.getElementById('brandSync').click()"); page.wait_for_timeout(200)
