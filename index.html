@@ -4301,10 +4301,12 @@ html body .topbar.topbar.topbar .hbtns>#hdrMoreBtn:hover{border-color:var(--lr-m
 }
 
 /* ══ LR1·C — account band · market segment · defaults editor · hidden-port line ══ */
-.lr-band{display:flex;align-items:center;flex-wrap:wrap;gap:4px 0;font:600 var(--lr-fs-5)/1.35 var(--lr-sans);padding:8px 10px;margin:0 0 10px;border-radius:var(--lr-r-btn);background:var(--lr-seg);color:var(--lr-text2)}
-.lr-band .lr-acc{margin-right:2px}
+.lr-band{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font:500 var(--lr-fs-5)/1.35 var(--lr-sans);padding:8px 10px;margin:0 0 10px;border-radius:var(--lr-r-btn);background:var(--lr-seg);color:var(--lr-text2)}
+.lr-band .lr-band-n{font-weight:700;font-size:var(--lr-fs-4);color:var(--lr-ink)}
+.lr-band .lr-band-d{flex:1 0 100%;min-width:0;overflow-wrap:anywhere}
 .lr-band-m{background:var(--lr-seg)}
-.lr-band-f{background:rgba(180,56,122,.1);color:var(--lr-acc-f)}
+.lr-band-f{background:rgba(180,56,122,.1)}
+.lr-band-f .lr-band-n{color:var(--lr-acc-f)}
 .lrMktSeg{display:inline-flex;gap:2px;margin-left:8px;padding:2px;background:var(--lr-seg);border-radius:8px;vertical-align:middle}
 .lrMktSeg button{font:600 11px/1 var(--lr-sans);padding:0 8px;height:24px;min-height:24px;border:0;border-radius:6px;background:transparent;color:var(--lr-muted);box-shadow:none;cursor:pointer}
 .lrMktSeg button.on{background:var(--lr-card);color:var(--lr-ink);box-shadow:0 1px 2px rgba(20,22,26,.12)}
@@ -8565,9 +8567,9 @@ function lrDefHtml(a){
 function lrBandHtml(accId, market, ccy){
   const a = acctList.find(x=>x.id === accId); if(!a) return '';
   const t = lrAcctTag(a), d = lrDef(a.id), short = t === 'M' ? 'Main' : t === 'F' ? 'Family' : String(a.name || a.id).trim();
-  const parts = [lrAcctLabel(a)]; if(d.brokers[0]) parts.push(d.brokers[0]);
+  const parts = []; if(d.brokers[0]) parts.push(d.brokers[0]);
   parts.push(market, ccy, 'records to ' + short + ' only');
-  return `<div class="lr-band ${t === 'M' ? 'lr-band-m' : t === 'F' ? 'lr-band-f' : ''}" data-lr-band="${escHtml(t)}">${lrAcctPill(a)}<span> · ${parts.map(escHtml).join(' · ')}</span></div>`;
+  return `<div class="lr-band ${t === 'M' ? 'lr-band-m' : t === 'F' ? 'lr-band-f' : ''}" data-lr-band="${escHtml(t)}">${lrAcctPill(a)}<b class="lr-band-n" data-lr-band-name>${escHtml(lrAcctLabel(a))}</b><span class="lr-band-d" data-lr-band-detail>${parts.map(escHtml).join(' · ')}</span></div>`;
 }
 function lrBandCore(it){ const mk = coreMarketOf(it && it.sym); return lrBandHtml((it && it.acct) || (it && it.ref && it.ref.acct) || tdHome(), mk, LR_MKT_CCY[mk]); }
 function lrBandSat(i){
@@ -9197,6 +9199,10 @@ function closeMoreMenu(){
   const m = document.getElementById('moreMenu'); if(m) m.classList.remove('show');
   const b = document.getElementById('hdrMoreBtn'); if(b) b.setAttribute('aria-expanded','false');
 }
+/* LR1 — the ⋯ menu closes: after an item is chosen · when any sheet/modal opens · on Esc (outside click already did) */
+document.addEventListener('click', e=>{ const m = document.getElementById('moreMenu'); if(m && m.classList.contains('show') && e.target.closest && e.target.closest('#moreMenu button:not([hidden])')) setTimeout(closeMoreMenu, 0); });
+document.addEventListener('keydown', e=>{ if(e.key !== 'Escape') return; const m = document.getElementById('moreMenu'); if(m && m.classList.contains('show')){ e.preventDefault(); e.stopImmediatePropagation(); closeMoreMenu(); try{ document.getElementById('hdrMoreBtn').focus(); }catch(x){} } }, true);
+try{ new MutationObserver(()=>{ const m = document.getElementById('moreMenu'); if(m && m.classList.contains('show') && document.querySelector('.ui-sheet-backdrop, .overlay.show, .core-sheet, #bdDrawer, .cp-sheet, #bdPop')) closeMoreMenu(); }).observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['class','style']}); }catch(e){}
 function moreMenuGo(what){
   closeMoreMenu();
   if(what==='journal') switchTab('journal');
