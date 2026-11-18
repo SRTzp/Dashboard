@@ -4433,7 +4433,7 @@ html body .sc.sc.sc[data-port="COMP"]{background:var(--port-comp-bg);color:var(-
       <div class="hint">Relative = vs SPY, not price going up/down.<br>Price chip = the ETF's own trend (40W EMA weekly / 50D EMA daily).<br>Cycle: Recovering → Strengthening → Fading → Worsening.<br>Custom model, not JdK RRG.</div>
     </details>
     <div id="ffThemes" style="margin-top:4px"></div>
-    <div class="hint" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">⚠ SMH · IRBO · IGV · HACK เกาะกลุ่มเทคเดียวกันเกือบหมด — นับ breadth ได้ แต่อย่าถือว่าเป็นเสียงอิสระจากกัน</div>
+    <div class="hint" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">⚠ SMH · ROBO · IGV · HACK เกาะกลุ่มเทคเดียวกันเกือบหมด — นับ breadth ได้ แต่อย่าถือว่าเป็นเสียงอิสระจากกัน</div>
     </div>
   </div>
 
@@ -7946,7 +7946,7 @@ function wlStart(){
       const t = wlNormTicker(x.ticker || d.id);
       return {ticker:t, market:(x.market==='TH'||x.market==='US') ? x.market : wlGuessMarket(t), port:'core',
               note:String(x.note==null?'':x.note), industry:String(x.industry==null?'':x.industry).trim(), added_at:x.added_at||'',
-              sector_etf:(typeof x.sector_etf==='string' && sectorValid(x.sector_etf)) ? x.sector_etf : '',   /* RG2a #7 */
+              sector_etf:(v=>(typeof v==='string' && sectorValid(v)) ? v : '')(x.sector_etf==='IRBO' ? 'ROBO' : x.sector_etf),   /* RG2a #7 */
               ladder_watch:x.ladder_watch===true, ladder_watch_set:typeof x.ladder_watch==='boolean', ladder_state:LDR_STATES.includes(x.ladder_state) ? x.ladder_state : 'Base',   /* RG2b #20 */
               ladder_dist:(x.ladder_dist && typeof x.ladder_dist==='object' && !Array.isArray(x.ladder_dist)) ? x.ladder_dist : {},
               tier:(x.tier==='A'||x.tier==='B') ? x.tier : null,                                   /* 7E-2b-2 */
@@ -17374,7 +17374,7 @@ const SECTOR_KW = [   /* คำใน industry (ตัวพิมพ์เล�
   [/semi|chip|foundry/, 'SMH'], [/software|saas|cloud/, 'IGV'], [/cyber|security/, 'HACK'], [/regional bank/, 'KRE'], [/bank|insur|financ|broker|asset manag|payment/, 'XLF'],
   [/biotech|genom|pharma discovery/, 'XBI'], [/health|medic|pharma|drug|hospital/, 'XLV'], [/oil|gas|energy|coal|uranium/, 'XLE'], [/utilit|electric power|water util/, 'XLU'],
   [/aerospace|defen[cs]e/, 'ITA'], [/airline|travel|cruise/, 'JETS'], [/homebuild|home build|construction/, 'XHB'], [/infrastructure|engineering/, 'PAVE'],
-  [/retail|e-?commerce/, 'XRT'], [/space|satellite/, 'ARKX'], [/robot|\bai\b|artificial/, 'IRBO'], [/material|chemical|mining|steel|metal/, 'XLB'],
+  [/retail|e-?commerce/, 'XRT'], [/space|satellite/, 'ARKX'], [/robot|\bai\b|artificial/, 'ROBO'], [/material|chemical|mining|steel|metal/, 'XLB'],
   [/media|telecom|communicat|entertainment|internet/, 'XLC'], [/industrial|machinery|transport|logistic/, 'XLI'], [/consumer disc|auto|apparel|restaurant|leisure/, 'XLY'],
   [/consumer stap|food|beverage|grocer|household|tobacco/, 'XLP'], [/real estate|reit|property/, 'XLRE'], [/hardware|technology|electronic|computer|it service/, 'XLK']
 ];
@@ -17612,9 +17612,10 @@ function tv1IdeaBackfill(){   /* existing idea-sourced Candidates: add source/id
 }
 /* ── sector / HOT ── */
 function tv1EtfOf(sym, item){
-  if(item && item.sector_etf && item.sector_etf !== 'TH') return item.sector_etf;
+  const L = e=>e === 'IRBO' ? 'ROBO' : e;   /* RV1b — ลิงก์เก่าที่เก็บไว้เป็น IRBO */
+  if(item && item.sector_etf && item.sector_etf !== 'TH') return L(item.sector_etf);
   const m = td3MetaOf(sym), inf = tv1InfoOf(sym);
-  if(m.sector_etf && m.sector_etf !== 'TH' && sectorValid(m.sector_etf)) return m.sector_etf;
+  if(m.sector_etf && m.sector_etf !== 'TH' && sectorValid(L(m.sector_etf))) return L(m.sector_etf);
   if(!item && !m.industry && !inf.i && !m.sector){ try{ const h = tv1IdeaFor(sym, m); if(h){ const o = tv1IdeaSector(h.v, h.c); if(o.etf) return o.etf; } }catch(e){} }   /* not yet backfilled / not migrated: read it from the idea */
   for(const t of [item && item.industry, m.industry, inf.i, inf.s, m.sector]){ const s = sectorSuggest(t); if(s) return s; }
   return '';
@@ -26295,7 +26296,7 @@ function ffSet(list,i,v){
      => breadth จึงนับจาก rsTrend (= raw ตัวดิบก่อน z-score) > 0
         ซึ่งแปลว่า EMA12(rs) > EMA26(rs) = ชนะ SPY อยู่จริง ๆ ณ ตอนนี้ (ดู ffRenderThemes)
 ============================================================================== */
-const RRG_BUILD = 7;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง
+const RRG_BUILD = 8;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง
                           + ใช้ทิ้งแคชอัตโนมัติเมื่อรูปร่างแถวเปลี่ยน (ดู ffState) */
 const RRG_BENCH = 'SPY';
 const RRG_SYMS = [
@@ -26304,7 +26305,7 @@ const RRG_SYMS = [
   {s:'JETS', n:'Airlines'},       {s:'IGV',  n:'Software'},       {s:'XRT',  n:'Retail'},
   {s:'HACK', n:'Cybersecurity'},  {s:'XLF',  n:'Financials'},     {s:'KRE',  n:'Regional Banks'},
   {s:'XLE',  n:'Energy'},         {s:'XLV',  n:'Health Care'},    {s:'ITA',  n:'Aerospace/Defense'},
-  {s:'SMH',  n:'Semiconductors'}, {s:'ARKX', n:'Space'},          {s:'IRBO', n:'AI / Robotics'},
+  {s:'SMH',  n:'Semiconductors'}, {s:'ARKX', n:'Space'},          {s:'ROBO', n:'Robotics'},
   {s:'XLK',  n:'Technology'},     {s:'XLI',  n:'Industrials'},    {s:'XLY',  n:'Consumer Discretionary'},
   {s:'XLP',  n:'Consumer Staples'}, {s:'XLRE', n:'Real Estate'}
 ];
@@ -26459,6 +26460,17 @@ function rrgCompute(closes, highs, bench, tfKey, opt){
 /* ---------- ดึงราคาจาก Twelve Data ---------- */
 function rrgKey(){ return ((state && state.settings && state.settings.tdKey) || '').trim(); }
 function rrgToday(){ return thaiToday(); }
+/* RV1b — นาฬิกา America/New_York: ตลาดปิด 16:00 ET · ให้เวลา 15 นาทีให้ข้อมูลปิดนิ่ง → 16:15 ET
+   rrgProvCut() = วัน ET ของวันนี้ ถ้ายังไม่ถึง 16:15 ET (แท่งของวันนั้นเป็นแท่งระหว่างวัน ห้ามใช้) · ไม่งั้น null
+   rrgTrimDate = วันที่ที่ถูกทิ้งแท่งจริงใน run นี้ → เก็บเป็น rrg.prov เพื่อดึงใหม่หลังปิด */
+let rrgTrimDate = '';
+function rrgEtNow(){
+  const p = {};
+  new Intl.DateTimeFormat('en-CA', {timeZone:'America/New_York', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23'})
+    .formatToParts(new Date(Date.now())).forEach(x=>{ p[x.type] = x.value; });
+  return {date: p.year+'-'+p.month+'-'+p.day, mins: parseInt(p.hour,10)*60 + parseInt(p.minute,10)};
+}
+function rrgProvCut(){ const e = rrgEtNow(); return e.mins < 16*60+15 ? e.date : null; }
 /* RRG1 D — สดต้อง: ดึงวันนี้ + โมเดลปัจจุบัน + แท่งล่าสุดของตลาดไม่เก่าเกิน RRG_MAXAGE วันปฏิทิน (หลวม ๆ ไม่ผูกปฏิทินวันหยุด) */
 const RRG_MAXAGE = 4;
 function rrgBarsFresh(r, today){
@@ -26470,7 +26482,8 @@ function rrgOutdated(r){ return !!(r && ((r.rowsD||[]).length || (r.rowsW||[]).l
 /* RRG1b — แถวที่มีแต่ผลโมเดลเก่า: ห้ามใส่กล่อง/ป้ายสถานะใหม่ (Leading เก่า ≠ Outperforming) */
 function rrgWaiting(x){ return !!(x && !x.err && x.model !== RRG_MODEL); }
 function rrgCacheFresh(f){
-  return !!(f && f.rrg && f.rrg.day === rrgToday() && (f.rrg.rowsD||[]).length && f.rrg.model === RRG_MODEL && rrgBarsFresh(f.rrg));
+  return !!(f && f.rrg && f.rrg.day === rrgToday() && (f.rrg.rowsD||[]).length && f.rrg.model === RRG_MODEL && rrgBarsFresh(f.rrg)
+    && !(f.rrg.prov && rrgProvCut() !== f.rrg.prov));   /* RV1b — ดึงตอนตลาดยังเปิด (ทิ้งแท่งวันนี้) → หลังปิดถือว่าเก่า ดึงใหม่ */
 }
 function rrgTf(){ return ffState().rrgTf === 'W' ? 'W' : 'D'; }
 function rrgSetTf(tf){
@@ -26505,10 +26518,13 @@ async function rrgFetchBatch(syms, key){
 }
 /* Twelve Data ส่งใหม่->เก่า · เราต้องเก่า->ใหม่ และต้องจับวันให้ตรงกับ SPY ก่อนหาร */
 function rrgSeries(values){
-  const m = new Map();
+  const m = new Map(), cut = rrgProvCut();
   (values||[]).forEach(v=>{
     const c = parseFloat(v.close), h = parseFloat(v.high);
-    if(v.datetime && c>0) m.set(v.datetime, {c, h: h>0?h:c});
+    if(!(v.datetime && c>0)) return;
+    /* RV1b — ราคา "วันนี้" (ET) ก่อน 16:15 ET ยังไม่ใช่ราคาปิด → ทิ้งแท่งนั้น (รวมทั้ง SPY และตัวอย่าง Weekly preview ที่ใช้ซีรีส์เดียวกัน) */
+    if(cut && String(v.datetime).slice(0,10) >= cut){ rrgTrimDate = cut; return; }
+    m.set(v.datetime, {c, h: h>0?h:c});
   });
   return m;
 }
@@ -26652,7 +26668,7 @@ async function rrgRun(f, key, gen){
   try{
     /* คิวค้าง (pending) จาก run ก่อนที่ไม่จบ → ทำต่อเฉพาะที่เหลือ · ไม่มี = เริ่มใหม่ทั้งชุด */
     const resume = Array.isArray(f.rrg.pending) && f.rrg.pending.length > 0;
-    if(!resume){ f.rrg.pending = RRG_SYMS.map(x=>x.s); rrgBenchMap = null; }
+    if(!resume){ f.rrg.pending = RRG_SYMS.map(x=>x.s); rrgBenchMap = null; rrgTrimDate = ''; f.rrg.prov = ''; }
     const need = f.rrg.pending.slice();
     const all = (rrgBenchMap ? [] : [RRG_BENCH]).concat(need);
     const chunks = [];
@@ -26690,13 +26706,14 @@ async function rrgRun(f, key, gen){
         rrgMergeRow(f.rrg.rowsD, r.d); rrgMergeRow(f.rrg.rowsW, r.w);
       });
       /* state ใหม่ (จาก snapshot) อาจไม่มี pending → คำนวณจากแถวที่มีโมเดลใหม่ ไม่ใช่เชื่อ pending เดิมอย่างเดียว */
+      if(rrgTrimDate) f.rrg.prov = rrgTrimDate;
       f.rrg.pending = (Array.isArray(f.rrg.pending) ? f.rrg.pending : need).filter(s=>chunks[ci].indexOf(s) < 0);
       f.rrg.loading = true;
       renderFundflow(); ffPersist();
     }
     cur();
     if(f.rrg.pending.length === 0){      /* ครบทุก symbol + SPY → ตราโมเดลใหม่ได้ */
-      f.rrg = Object.assign({}, f.rrg, {build:RRG_BUILD, model:RRG_MODEL, lastBar:[...rrgBenchMap.keys()].sort().pop(), day:rrgToday(), at:new Date().toISOString(), loading:false, err:'', errRaw:''});
+      f.rrg = Object.assign({}, f.rrg, {build:RRG_BUILD, model:RRG_MODEL, lastBar:[...rrgBenchMap.keys()].sort().pop(), day:rrgToday(), at:new Date().toISOString(), prov:(rrgTrimDate || f.rrg.prov || ''), loading:false, err:'', errRaw:''});
       delete f.rrg.pending;
       try{ sdRebaseline(); }catch(e){ console.warn('sdRebaseline:', e); }
     }
@@ -27143,8 +27160,8 @@ function rrgFreshTxt(r){
   r = r || ffState().rrg || {};
   if(rrgOutdated(r)) return 'Outdated model — refresh pending';
   if(r.day !== rrgToday()) return 'Not fetched today · stale';
-  if(!rrgBarsFresh(r)) return 'Market data as of ' + (r.lastBar || '—') + ' · stale';
-  return 'Fresh · market data as of ' + r.lastBar;
+  if(!rrgBarsFresh(r)) return 'As of ' + (r.lastBar || '—') + ' close · stale';
+  return 'Fresh · as of ' + r.lastBar + ' close' + (r.prov && rrgProvCut() === r.prov ? " · today's bar is added after the 16:15 ET close" : '');
 }
 function rrgDetailsHtml(x, tf){
   if(x.err || x.model !== RRG_MODEL) return '';
@@ -31128,7 +31145,7 @@ function bdRrgHtml(){
     const mo = hid > 0 ? `<button type="button" class="bd-qm" data-bd-qmore="${q[0]}" onclick="bdRrgMoreSet('${q[0]}',true)">+${hid}</button>` : (open && all.length > 3 ? `<button type="button" class="bd-qm" data-bd-qmore="${q[0]}" onclick="bdRrgMoreSet('${q[0]}',false)">less</button>` : '');
     return `<div class="panel bd-qt" data-bd-quad="${q[0]}"><b style="color:${q[3]}">${q[1]}</b><div class="qs">${q[2]}</div><div class="bd-qr">${rows || '<span class="m">—</span>'}</div><div class="bd-qi">${inl || '<span class="m">—</span>'}</div>${mo}</div>`;
   }).join('');
-  const tip = 'Relative = vs SPY, not price going up/down. Motion = RS momentum over the last bars (↗ speeding up · → slowing · ↘ slowing fast). SMH · IRBO · IGV · HACK overlap heavily — breadth is not four independent votes.';
+  const tip = 'Relative = vs SPY, not price going up/down. Motion = RS momentum over the last bars (↗ speeding up · → slowing · ↘ slowing fast). SMH · ROBO · IGV · HACK overlap heavily — breadth is not four independent votes.';
   return `<div class="bd-sh">${bdNb(4)}<b><span class="bd-lf">RRG · sectors vs SPY</span><span class="bd-ls">RRG · vs SPY</span></b><button type="button" class="bd-info" data-bd-rrginfo title="${e(tip)}" aria-label="How to read" onclick="sdToast(this.title)">ⓘ</button><span class="sp"></span><span class="ffSeg bd-seg" data-bd-rrgtf><button type="button" class="${tf === 'D' ? 'on-cur' : ''}" onclick="rrgSetTf('D')">Daily</button><button type="button" class="${tf === 'W' ? 'on-cur' : ''}" onclick="rrgSetTf('W')">Weekly</button></span></div><div class="bd-g bd-g4 bd-rq" data-bd-rrg>${tiles}</div><div class="bd-leg" data-bd-rrgleg>↗ speeding up · → slowing · ↘ slowing fast (per sector)</div>`;
 }
 function bdFullWeek(){ bdOpenRow('wi'); }

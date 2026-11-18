@@ -21,7 +21,7 @@ import numpy as np, pandas as pd
 K = 0.10
 FAST, SLOW = 12, 26
 TF = {'D': dict(win=252, lag=5), 'W': dict(win=52, lag=4)}
-SYMS = ['XLU','PAVE','XHB','XLB','XLC','XBI','JETS','IGV','XRT','HACK','XLF','KRE','XLE','XLV','ITA','SMH','ARKX','IRBO','XLK','XLI','XLY','XLP','XLRE']
+SYMS = ['XLU','PAVE','XHB','XLB','XLC','XBI','JETS','IGV','XRT','HACK','XLF','KRE','XLE','XLV','ITA','SMH','ARKX','ROBO','XLK','XLI','XLY','XLP','XLRE']
 
 
 def ema(x, n): return pd.Series(x, dtype=float).ewm(span=n, adjust=False).mean().to_numpy()
