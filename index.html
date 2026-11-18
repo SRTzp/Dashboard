@@ -4601,7 +4601,6 @@ html body .lr2-side details>summary{font-size:14px;font-weight:600;color:var(--t
   html body .lr2-act .re2-col .ch a{display:none}
   html body .re2-main .l1{flex-wrap:wrap}
   html body .re2-row .lrf-why:not(.a){display:none}
-  html body .re2-row .lrf-why.a{flex:1 1 100%}
 }
 @media (max-width:600px){
   html body .ln4 .lr2-viewrow{grid-template-columns:auto 1fr auto;grid-template-areas:"h d sw";align-items:baseline;gap:8px}
@@ -4613,6 +4612,24 @@ html body .lr2-side details>summary,html body .lr2-side details>summary *{color:
   html body .ln4 .r.lr2-viewrow{grid-template-columns:auto 1fr auto!important;grid-template-areas:"h d sw"!important;align-items:baseline;gap:8px}
   html body .lr2-act .re2-col .ch b{font-size:12px}
   html body .ln4 .lr2-viewrow .sw button{height:36px;min-height:36px}
+}
+/* LR-F C2 — Today at 390: 2 rows per group · every row exactly 2 lines · blocked = chip + short reason · nowrap */
+html body .lr2-c .big,html body .lr2-mood b,html body .lr2-ph .lr2-mood b{white-space:nowrap}
+html body .lr2-none{grid-column:auto}html body .lr2-none .t2{white-space:normal}
+html body .re2-row .lrf-lp{display:none}
+html body .re2-row .lrf-hb{display:none!important}
+html body .re2-row .lrf-blk{font-size:12px;font-weight:600;background:#FBE9E8;color:#C2362F;padding:4px 8px;border-radius:999px}
+html body .re2-row .lrf-blkline{color:#C2362F}
+@media (max-width:600px){
+  html body .re2-row .lrf-lw{display:none}html body .re2-row .lrf-lp{display:inline}
+  html body .re2-main .num{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html body .re2-main .l1{flex-wrap:nowrap;overflow:hidden}
+  html body .re2-row .lrf-why:not(.a){display:none}
+  html body .re2-row .lrf-why.a{display:inline;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  html body .re2-row .lrf-blkline .pv-bp{display:none}
+  html body .re2-row .btn[data-re2-btn="update"]{display:none}
+  html body .lr2-act .re2-row{height:68px;box-sizing:border-box;padding:0 12px}
+  html body .re2-main .num *,html body .re2-main .num{font-variant-numeric:tabular-nums}
 }
 </style>
 </head>
@@ -11566,14 +11583,16 @@ function lr2GlanceHtml(){
   const moodAttrs = `data-td3-rg data-rg-state="${M.st}" data-rg-label="${M.label}" data-rg-stale="${M.old ? 1 : 0}" data-rm1-pc="${E.pc}" aria-label="Regime: ${e(M.label)} · New entries ${E.pc}% size · ${E.sma}${M.old ? ' · data ' + r.ageDays + 'd old' : ''}"`;
   if(!wide){
     return `<div class="lr2-ph ${M.st}" data-lr2-glance data-lr2-phone>
-      <div class="l1"><button type="button" class="lr2-mood" data-lr2-card="mood" ${moodAttrs} onclick="tdRegimeGo()"><b>${M.label}</b><span class="num">entries <b>${E.pc}%</b></span></button><span class="sp"></span>${nw ? `<button type="button" class="lr2-nx num" data-lr2-card="news" onclick="td3GoCal()">${e(nw.title.replace(/^US /, ''))} ${e(nw.when)} <b class="${nw.imp === 'HIGH' ? 'hi' : 'md'}">${nw.imp}</b></button>` : `<button type="button" class="lr2-nx num" data-lr2-card="news" onclick="td3GoCal()">No key news</button>`}</div>
-      <div class="l2">${mvEmpty ? `<button type="button" class="lr2-nx" data-lr2-card="moves" onclick="lr2Go('moves')">No Weekly Impact · Import ›</button>` : `<button type="button" class="lr2-chs" data-lr2-card="moves" onclick="lr2Go('moves')">${mvChips || '<span class="lr2-q">Moves quiet</span>'}</button>`}${hot.has && hot.lead.length ? `<button type="button" class="lr2-chs" data-lr2-card="hot" onclick="lr2Go('hot')">${hot.lead.slice(0, hotMax).map(x=>`<span class="lr2-ch up" data-lr2-hot="${e(x.sym)}">↗ ${e(x.nm)}</span>`).join('')}${hotRest > 0 ? `<span class="lr2-ch lr2-n" data-lr2-hotmore>+${hotRest}</span>` : ''}</button>` : `<button type="button" class="lr2-chs" data-lr2-card="hot" onclick="lr2Go('hot')"><span class="lr2-q">${hot.has ? 'No leading sectors' : 'No sector data'}</span></button>`}</div></div>`;
+      <div class="l1"><button type="button" class="lr2-mood" data-lr2-card="mood" ${moodAttrs} onclick="tdRegimeGo()"><b>${M.label}</b><span class="num">entries <b>${E.pc}%</b></span></button><span class="sp"></span>${nw ? `<button type="button" class="lr2-nx num" data-lr2-card="news" onclick="td3GoCal()">${e(nw.title.replace(/^US /, ''))} ${e(nw.when)} <b class="${nw.imp === 'HIGH' ? 'hi' : 'md'}">${nw.imp}</b></button>` : ''}</div>
+      ${(mvEmpty && !hot.has && !nw) ? `<div class="l2"><button type="button" class="lr2-nx" data-lr2-card="none" onclick="lr2Go('moves')">No news or sector data this week · Import ›</button></div>` : (mvEmpty && !hot.has) ? '' : `<div class="l2">${mvEmpty ? '' : `<button type="button" class="lr2-chs" data-lr2-card="moves" onclick="lr2Go('moves')">${mvChips || '<span class="lr2-q">Moves quiet</span>'}</button>`}${hot.has && hot.lead.length ? `<button type="button" class="lr2-chs" data-lr2-card="hot" onclick="lr2Go('hot')">${hot.lead.slice(0, hotMax).map(x=>`<span class="lr2-ch up" data-lr2-hot="${e(x.sym)}">↗ ${e(x.nm)}</span>`).join('')}${hotRest > 0 ? `<span class="lr2-ch lr2-n" data-lr2-hotmore>+${hotRest}</span>` : ''}</button>` : ''}</div>`}</div>`;
   }
-  return `<section class="lr2-glance" data-lr2-glance aria-label="Market at a glance">
-    <button type="button" class="lr2-c lr2-mood ${M.st}" data-lr2-card="mood" ${moodAttrs} onclick="tdRegimeGo()"><span class="lbl">Market mood</span><b class="big">${M.label}</b><span class="num t2">${M.old ? `data ${r.ageDays}d old · ` : ''}New entries at <b>${E.pc}%</b> size</span></button>
-    <button type="button" class="lr2-c" data-lr2-card="moves" onclick="lr2Go('moves')"><span class="lbl">This week moves</span>${mvEmpty ? `<span class="t2 lr2-empty">No Weekly Impact · Import ›</span>` : `<span class="chs">${mvChips || '<span class="lr2-q">No HIGH / MED moves</span>'}</span><span class="t3">${e(quiet)}</span>`}</button>
-    <button type="button" class="lr2-c" data-lr2-card="hot" onclick="lr2Go('hot')"><span class="lbl">Hot sectors · vs SPY</span>${!hot.has ? `<span class="t2 lr2-empty">No sector data · open Flow ›</span>` : `<span class="chs">${hotChips || '<span class="lr2-q">No leading sectors</span>'}</span><span class="t3">${hot2}</span>`}</button>
-    <button type="button" class="lr2-c" data-lr2-card="news" onclick="td3GoCal()"><span class="lbl">Next news</span>${nw ? `<b class="big num">${newsTxt}</b><span class="t2">${newsTail}</span>` : `<span class="t2 lr2-empty">No key news this week</span>`}</button></section>`;
+  const hotOn = hot.has, none1 = mvEmpty && !hotOn && !nw;   /* LR-F — empty items are hidden; all empty → one line */
+  const cards = [`<button type="button" class="lr2-c lr2-mood ${M.st}" data-lr2-card="mood" ${moodAttrs} onclick="tdRegimeGo()"><span class="lbl">Market mood</span><b class="big">${M.label}</b><span class="num t2">${M.old ? `data ${r.ageDays}d old · ` : ''}New entries at <b>${E.pc}%</b> size</span></button>`];
+  if(!mvEmpty) cards.push(`<button type="button" class="lr2-c" data-lr2-card="moves" onclick="lr2Go('moves')"><span class="lbl">This week moves</span><span class="chs">${mvChips || '<span class="lr2-q">No HIGH / MED moves</span>'}</span><span class="t3">${e(quiet)}</span></button>`);
+  if(hotOn) cards.push(`<button type="button" class="lr2-c" data-lr2-card="hot" onclick="lr2Go('hot')"><span class="lbl">Hot sectors · vs SPY</span><span class="chs">${hotChips || '<span class="lr2-q">No leading sectors</span>'}</span><span class="t3">${hot2}</span></button>`);
+  if(nw) cards.push(`<button type="button" class="lr2-c" data-lr2-card="news" onclick="td3GoCal()"><span class="lbl">Next news</span><b class="big num">${newsTxt}</b><span class="t2">${newsTail}</span></button>`);
+  if(none1) cards.push(`<button type="button" class="lr2-c lr2-none" data-lr2-card="none" onclick="lr2Go('moves')"><span class="t2 lr2-empty">No news or sector data this week · Import ›</span></button>`);
+  return `<section class="lr2-glance" data-lr2-glance aria-label="Market at a glance" style="grid-template-columns:repeat(${cards.length},minmax(0,1fr))">${cards.join('')}</section>`;
 }
 function tdRegimeGo(){
   try{ ln3FlowOpen.regime = true; }catch(e){}
@@ -30942,13 +30961,13 @@ function re2StopDue(L){   /* the same condition the To do item used: Momentum ho
   }catch(e){}
   return out;
 }
-function re2CardLine(it){   /* EF1b — same text as the card: "Buy #0.19 @ 2,643 · SL 2,628 · TP 2,684 · Risk −$285" */
+function re2CardLine(it, short){   /* EF1b — same text as the card: "Buy #0.19 @ 2,643 · SL 2,628 · TP 2,684 · Risk −$285" */
   try{
     const pv = posView(it); if(!pv) return '';
     const P = [], ins = (pv.legs || []).filter(l=>!l.out && !l.done);
-    if(ins.length) P.push(ins.map(l=>`${l.side} #${l.qty > 0 ? pvQtyTxt(l.qty, pv) : '—'} @ ${td3Num(l.px)}`).join(' + '));
+    if(ins.length) P.push((short ? ins.slice(0, 1) : ins).map(l=>`${l.side} #${l.qty > 0 ? pvQtyTxt(l.qty, pv) : '—'} @ ${td3Num(l.px)}`).join(' + '));
     if(pv.stop > 0) P.push('SL ' + td3Num(pv.stop));
-    const tp = (pv.legs || []).filter(l=>l.out && !l.done)[0]; if(tp && tp.px > 0) P.push('TP ' + td3Num(tp.px));
+    const tp = (pv.legs || []).filter(l=>l.out && !l.done)[0]; if(!short && tp && tp.px > 0) P.push('TP ' + td3Num(tp.px));
     const rk = it.status === 'hold' ? pv.openRisk : pv.plannedRisk;
     if(rk != null && rk > 0) P.push('Risk −' + pvMoney(pv, rk));
     return P.join(' · ');
@@ -30959,15 +30978,18 @@ function re2Row(it, o){
   if(sr.sz === '—'){ try{ const lots = it.kind === 'core' ? (it.ref.lots || []).reduce((a, l)=>a + (+l.qty || 0), 0) : 0, rw = it.kind === 'core' && it.ref.plan && it.ref.plan.ps1 && Array.isArray(it.ref.plan.ps1.rows) ? it.ref.plan.ps1.rows.reduce((a, r)=>a + (+r.qty || 0), 0) : 0, n = it.status === 'hold' && lots > 0 ? lots : rw; if(n > 0) sr.sz = '#' + fmt0(n); }catch(x){} }
   const line = o.q == null && (o.g === 'enter' || o.g === 'check' || o.g === 'manage') ? re2CardLine(it) : '';   /* Check orders uses the same card line + the still-valid prompt */
   const q = o.q != null ? o.q : line || [sr.sz, sr.rk].filter(x=>x && x !== '—').join(' · ') || '—';
+  const blkd = !!(o.dis && o.k === 'place');   /* LR-F — blocked: red chip + the ONE short reason · no faded Place button (kept hidden) */
   const sh = {place:'Place', cancel:'Cancel ›', fill:'Filled', stop:'Stop ›', hw:'Homework', addon:'Add-on ›', fix:'Fix ›', complete:'Complete ›', edit:'Edit', review:'Review ›'}[o.k] || o.btn;
   const btn3 = o.btn3 ? `<button type="button" class="btn o" data-re2-btn="update" onclick="event.stopPropagation();${o.fn3 || ''}">${e(o.btn3)}</button>` : '';
   const btn2 = o.btn2 ? `<button type="button" class="btn o" data-re2-btn="keep" onclick="event.stopPropagation();${o.fn2 || ''}">${e(o.btn2)}</button>` : '';
-  const btn = btn3 + btn2 + (o.btn ? `<button type="button" class="btn${o.k === 'fill' || o.k === 'hw' ? ' o' : ''}" data-re2-btn="${o.k}"${o.dis ? ` disabled title="${e(o.title || '')}" data-re2-blocked="1"` : ''} onclick="event.stopPropagation();${o.fn || ''}"><span class="m">${e(o.btn)}</span><span class="p">${e(sh)}</span></button>` : '');
+  const btn = btn3 + btn2 + (o.btn ? `<button type="button" class="btn${o.k === 'fill' || o.k === 'hw' ? ' o' : ''}${blkd ? ' lrf-hb' : ''}" data-re2-btn="${o.k}"${o.dis ? ` disabled title="${e(o.title || '')}" data-re2-blocked="1"` : ''} onclick="event.stopPropagation();${o.fn || ''}"><span class="m">${e(o.btn)}</span><span class="p">${e(sh)}</span></button>` : '');
   const hc = (['Ready', 'Ordered', 'Holding', 'Near'].indexOf(o.chip) >= 0 || (line && o.why && o.chip === o.why)) ? ' lrf-hc' : '';
-  const whyL1 = line && o.why ? `<i class="lrf-why ${o.warn ? 'a' : ''}" data-re2-why>${e(o.why)}</i>` : '';
+  const whyL1 = line && o.why && !blkd ? `<i class="lrf-why ${o.warn ? 'a' : ''}" data-re2-why>${e(o.why)}</i>` : '';
+  const shortLine = line ? re2CardLine(it, true) : '';
+  const blkLine = blkd ? `<div class="num lrf-blkline" data-re2-cardline><span><span class="pv-bp">Blocked · </span>${e(lr3ShortWhy(o.title || o.why || '', it))}</span><i class="a" data-re2-why hidden>${e(o.why || '')}</i></div>` : '';
   return `<div class="row re2-row" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}" data-re2-row="${e(it.sym)}" data-re2-grp="${o.g}" data-re2-id="${e(it.id)}" data-lr2-acct="${e(it.acct || tdHome() || '')}" role="button" tabindex="0" onclick="bdOpen('${e(it.id).replace(/'/g, "\\'")}')">
-    <div class="re2-main"><div class="l1"><b>${e(it.sym)}</b><span class="tag" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}">${e(it.tag)}</span>${lr2RowPill(it)}${lr2Dir(it)}${o.chip ? `<span class="chip ${o.cc || ''} m${hc}" data-re2-chip-st>${e(o.chip)}</span>` : ''}${line ? '' : `<span class="q p">${e(q)}</span>`}${whyL1}</div>
-    ${line ? `<div class="num" data-re2-cardline><span>${e(line)}</span></div>` : `<div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span>${q ? `<span class="p">${e(q)}${o.why ? ' · ' : ''}</span>` : ''}<i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div>`}</div>
+    <div class="re2-main"><div class="l1"><b>${e(it.sym)}</b><span class="tag" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}">${e(it.tag)}</span>${lr2RowPill(it)}${lr2Dir(it)}${blkd ? `<span class="chip r m lrf-blk" data-re2-chip-st>Blocked</span>` : o.chip ? `<span class="chip ${o.cc || ''} m${hc}" data-re2-chip-st>${e(o.chip)}</span>` : ''}${line ? '' : `<span class="q p">${e(q)}</span>`}${whyL1}</div>
+    ${blkd ? blkLine : line ? `<div class="num" data-re2-cardline title="${e(line)}"><span class="lrf-lw">${e(line)}</span><span class="lrf-lp">${e(shortLine)}</span></div>` : `<div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span>${q ? `<span class="p">${e(q)}${o.why ? ' · ' : ''}</span>` : ''}<i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div>`}</div>
     <div class="re2-btns">${btn}</div></div>`;
 }
 function re2Model(acct){
@@ -31008,22 +31030,28 @@ function re2Model(acct){
   });
   return {acct, L, enter, check, manage, nothing, tot:{plan:by.plan.length, ord:by.ord.length, hold:by.hold.length}};
 }
-let re2EnterAll = false;
+let re2EnterAll = false, re2GrpAll = {};
+function re2GrpToggle(k){ re2GrpAll[k] = !re2GrpAll[k]; try{ todayRefresh(true); }catch(e){} }
 function re2EnterToggle(){ re2EnterAll = !re2EnterAll; try{ todayRefresh(true); }catch(e){} }
 /* EF1b — Enter shows the 3 Ready plans closest to entry; the rest sit behind "+N ›" (expands in place) */
 function re2EnterCap(rows){
   const isR = r=>r.o && r.o.chip === 'Ready', rd = rows.filter(isR);
-  if(rd.length <= 3) return rows;
+  if(rd.length <= 3 || !ln4Wide()) return rows;   /* phone: the 2-row cap in re2GroupHtml handles it */
   const key = r=>r.o.d == null ? 1e9 : Math.abs(r.o.d);
   const keep = new Set(rd.slice().sort((a, b)=>key(a) - key(b)).slice(0, 3));
   const n = rd.length - 3;
-  const out = re2EnterAll ? rows.slice() : rows.filter(r=>!isR(r) || keep.has(r));
+  const out = (re2EnterAll || !ln4Wide()) ? rows.slice() : rows.filter(r=>!isR(r) || keep.has(r));
   out.push({more:true, n});
   return out;
 }
 function re2GroupHtml(key, title, rows, total, seg, none){
   const e = td3E, lab = {plan:'planned', ord:'ordered', hold:'holding'}[seg];
-  return `<div class="col re2-col" data-re2-col="${key}"><div class="ch"><b>${title}</b><span class="mut" data-re2-n data-lrf-sub="${({enter:' ready' + (lr2ActAccts().length > 1 ? ' · both accounts' : '') + ' · closest first', check:' working', manage:' holding'})[key] || ''}">${rows.filter(r=>!r.more).length}</span><a href="#" data-re2-link onclick="event.preventDefault();bdSetSeg('${seg}');switchTab('plan')">${key === 'enter' ? 'All ' + total + ' ' + lab : total + ' ' + lab + ' ›'}</a></div>${rows.length ? rows.map(r=>r.more ? `<button type="button" class="re2-more" data-re2-more onclick="re2EnterToggle()">${re2EnterAll ? 'Show less ‹' : '+' + r.n + ' ›'}</button>` : re2Row(r.it, r.o)).join('') : `<div class="none">${none}</div>`}</div>`;
+  if(!ln4Wide()){   /* LR-F — phone: at most 2 rows per group, then '+N more ›' */
+    const real = rows.filter(r=>!r.more);
+    if(real.length > 2) rows = (re2GrpAll[key] ? real : real.slice(0, 2)).concat([{more:true, n:real.length - 2, grp:key}]);
+    else rows = real;
+  }
+  return `<div class="col re2-col" data-re2-col="${key}"><div class="ch"><b>${title}</b><span class="mut" data-re2-n data-lrf-sub="${({enter:' ready' + (lr2ActAccts().length > 1 ? ' · both accounts' : '') + ' · closest first', check:' working', manage:' holding'})[key] || ''}">${rows.filter(r=>!r.more).length}</span><a href="#" data-re2-link onclick="event.preventDefault();bdSetSeg('${seg}');switchTab('plan')">${key === 'enter' ? 'All ' + total + ' ' + lab : total + ' ' + lab + ' ›'}</a></div>${rows.length ? rows.map(r=>r.more ? (r.grp ? `<button type="button" class="re2-more" data-re2-more onclick="re2GrpToggle('${r.grp}')">${re2GrpAll[r.grp] ? 'Show less ‹' : '+' + r.n + ' more ›'}</button>` : `<button type="button" class="re2-more" data-re2-more onclick="re2EnterToggle()">${re2EnterAll ? 'Show less ‹' : '+' + r.n + ' ›'}</button>`) : re2Row(r.it, r.o)).join('') : `<div class="none">${none}</div>`}</div>`;
 }
 function re2RoomCard(acct){
   const R = re2Room(acct), S = re2State(acct), acc = acctList.find(x=>x.id === acct), pill = acc && acctList.length > 1 ? lrAcctPill(acc) : '', e = td3E;

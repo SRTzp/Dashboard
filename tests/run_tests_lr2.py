@@ -85,10 +85,10 @@ def partA(page, tag, w):
     set_regime(page, "green", "green", "fresh")
     # empty states
     js(page, "()=>{ wiDocs = {}; ffState().rrg = {rowsD:[], rowsW:[]}; todayRefresh(true); }"); page.wait_for_timeout(250)
-    check(f"{tag} A: moves empty = 'No Weekly Impact · Import ›'", "No Weekly Impact · Import ›" in card(page, "moves"), card(page, "moves"))
-    check(f"{tag} A: news empty = 'No key news this week'", "No key news" in card(page, "news"), card(page, "news"))
+    check(f"{tag} A: all three empty = mood + ONE line 'No news or sector data this week · Import ›' (LR-F: empty items are hidden)", "No news or sector data this week · Import ›" in card(page, "none") and card(page, "moves") == "" and card(page, "hot") == "", card(page, "none"))
+    check(f"{tag} A: empty news / moves / sector cards are not drawn", card(page, "news") == "", card(page, "news"))
     if wide:
-        check(f"{tag} A: four cards", js(page, "()=>document.querySelectorAll('.lr2-glance [data-lr2-card]').length") == 4)
+        check(f"{tag} A: two cards (mood + empty line)", js(page, "()=>document.querySelectorAll('.lr2-glance [data-lr2-card]').length") == 2)   # mood + the one empty line
         page.screenshot(path=os.path.join(SHOTS, "lr2-glance-empty-1440.png"))
     # filled
     seed_wi(page); seed_rrg(page)
@@ -163,8 +163,9 @@ def partB(page, tag, w):
         if i % 2: c["market"] = "TH"
         cs["e%d" % i] = c
     K.seed(page, cs)
+    js(page, "()=>{ re2GrpAll = {}; todayRefresh(true); }"); page.wait_for_timeout(300)
     n = js(page, "()=>({rows:[...document.querySelectorAll('[data-re2-grp=\"enter\"]')].filter(r=>/^E\\d/.test(r.dataset.re2Row)).length, more:(document.querySelector('[data-re2-more]')||{}).innerText||'', accts:[...new Set([...document.querySelectorAll('[data-re2-grp=\"enter\"]')].map(r=>r.dataset.lr2Acct))]})")
-    check(f"{tag} B: Enter cap works across accounts (3 rows + '+N ›', both accounts present)", n["rows"] <= 4 and "+" in n["more"] and len(n["accts"]) == 2, n)
+    check(f"{tag} B: Enter cap works across accounts (3 rows + '+N ›', both accounts present · phone: 2 rows + '+N more ›')", (n["rows"] <= 2 and "+" in n["more"]) if w <= 600 else (n["rows"] <= 4 and "+" in n["more"] and len(n["accts"]) == 2), n)
 
 
 def partC(page, tag, w):

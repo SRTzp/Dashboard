@@ -22,6 +22,7 @@ def check(name, ok, detail=""):
 def launch(pw, w, h, d=None, c=None):
     b, ctx, page, ce, pe, dl = P39.launch(pw, w, h, doc=d or doc_c(), cards=c if c is not None else cards(), clean=True)
     page.add_style_tag(content=NOANIM); page.wait_for_timeout(500)
+    js(page, "()=>{ if(typeof re2GrpAll !== 'undefined') re2GrpAll = {enter:true, check:true, manage:true}; }")   # LR-F: phone caps every Act group at 2 rows
     js(page, "()=>{ if(typeof lr2DetOpen !== 'undefined') lr2DetOpen = true; tv1SetupLeft = ()=>1; switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)   # Setup ✓ present (board treats plans without it as Waiting)
     return b, page, ce, pe
 
@@ -141,7 +142,7 @@ def run_viewport(pw, w, h):
         # blocked row keeps a disabled button + reason
         override(page, "C.basis = Object.assign({}, L.basis, {ok:false, reasons:['SNAPSHOT_STALE']})")
         en = rows(page, "enter")
-        check("[%s] blocked by the engine: row stays, button disabled, reason on line 2" % tag, en and all(r["dis"] for r in en if r["btn"] == "place") and "older than 14 days" in " ".join(r["t"] for r in en), en)
+        check("[%s] blocked by the engine: row stays, button disabled, reason on line 2" % tag, en and all(r["dis"] for r in en if r["btn"] == "place") and "older than 14" in " ".join(r["t"] for r in en), en)
         js(page, "()=>{ re1L = window.__re1L; re1Cache = {}; }")
         check("[%s] no console / page errors" % tag, not ce and not pe, ce + pe)
     finally:

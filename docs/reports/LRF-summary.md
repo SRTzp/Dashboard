@@ -51,4 +51,15 @@ Extra live-only phone views the phone mockups do not draw: `plan-ord-390-live.pn
 ## Tests
 Updated for deliberate changes (all in `tests/`; the Ready/Near chip is no longer shown on Today rows — the `n ready` header says it): `Place ›` label, `Filled` / `Homework` labels, summary wording on phone, ✕ size (44 phone / 32 desktop), money format on cards (`$3.7k`), `Target` capital, empty-column height, Today height tolerance 12 %, Family band pill colour kept magenta. `run_tests_ef1b.py` is not part of `run_regression.sh` and already fails on `main` (LR3's $ money); untouched.
 
-REGRESSION_PLACEHOLDER
+## Follow-up rules (Today at 390) — done
+- Rebased onto `origin/main` after `claude/light-lock`; no dark rules re-added (all LR-F CSS uses the light tokens only).
+- Each Act group shows at most 2 rows then `+N more ›` (phone; desktop keeps its 3-ready cap). Every row is 2 lines, fixed 68 px (±2 px test): line 1 = ticker · tags · account · side (amber prompt such as `still valid?` / `passed entry · missed?`) with the button at the right of the row; line 2 = first entry · SL · Risk, nowrap + ellipsis. Extra legs, TP and reason text are on the desktop line and in the row's drawer (tap the row), not on the phone line. `Update levels ›` is hidden on the phone (it is in the drawer); `Keep` and the main button stay.
+- Blocked Today rows (all widths): red `Blocked` chip + the same short wording as Plan (`Blocked · MMT weekly limit 4/4` on desktop, reason only next to the chip on the phone); the Place button stays in the DOM (hook) but is not shown; full engine text is in the row `title` and the drawer.
+- Glance hides empty items; all three empty → mood + one line `No news or sector data this week · Import ›` (phone and desktop). `Risk-off` and the Risk numbers are `nowrap`.
+- Height guard restored to **3 %**: Today at 390 = 922 px vs 975 (limit 1004).
+- Test: `tests/run_tests_lrf.py` (26 checks, in `run_regression.sh`) — group cap, equal row height, nowrap/ellipsis, line 2 content, blocked row, glance empties.
+- Deviation kept on purpose: the button sits at the right of the whole row (mockup layout, vertically centred, 44 px) rather than inside line 1, so the row stays 68 px.
+
+## Regression
+`bash tests/run_regression.sh` (full, after the rebase): **55/55 ok · 0 failing** · hooks superset PASS · engine files untouched.
+
