@@ -52,16 +52,46 @@ def form(pw, w, h):
         def fill(e, s, t):
             for k, v in (("entry", e), ("sl", s), ("tp", t)):
                 js(page, "([k,v])=>{ const i = document.querySelector('[data-pb2-in=\"'+k+'\"]'); i.value = v; pb2In(k, v); }", [k, v])
+        js(page, "()=>pb2Set_dir('Buy')")   # manual pick wins over auto
         fill("2643", "2660", "2600")   # Buy with SL above entry
         st = js(page, "()=>({m: (document.querySelector('[data-pb2-side]')||{}).innerText, s: document.querySelector('[data-pb2-save]').disabled, d: document.querySelector('[data-pb2-draft]').disabled})")
-        check(f"{tag} Buy + SL above entry: red line 'look like a Short' + Save off", st["m"] and "These levels look like a Short · Switch to Short ›" in st["m"] and st["s"] and st["d"], st)
+        check(f"{tag} Buy + SL above entry: red line 'look like a Short' + Save off", st["m"] and "These levels look like a Short · Switch to Short ›" in st["m"] and st["s"] and not st["d"], st)
         js(page, "()=>document.querySelector('[data-sd-switch]').click()"); page.wait_for_timeout(300)
         st = js(page, "()=>({dir: pb2.dir, line: !!document.querySelector('[data-pb2-side]'), s: document.querySelector('[data-pb2-save]').disabled, v: [pb2.entry, pb2.sl, pb2.tp]})")
         check(f"{tag} switch -> Sell, numbers kept, line gone, Save on", st["dir"] == "Sell" and not st["line"] and not st["s"] and st["v"] == ["2643", "2660", "2600"], st)
-        js(page, "()=>pb2Set_dir('Buy')"); page.wait_for_timeout(200)   # mirror: Short-side numbers read back as Buy
+        js(page, "()=>pb2Set_dir('Buy')"); page.wait_for_timeout(200)
         fill("2643", "2620", "2700"); js(page, "()=>pb2Set_dir('Sell')"); page.wait_for_timeout(200)
         st = js(page, "()=>({m: (document.querySelector('[data-pb2-side]')||{}).innerText, s: document.querySelector('[data-pb2-save]').disabled})")
         check(f"{tag} Sell + SL below entry: line says 'look like a Long' + Save off", st["m"] and "These levels look like a Long · Switch to Long ›" in st["m"] and st["s"], st)
+        check(f"{tag} no page errors", not pe, pe)
+    finally:
+        b.close()
+
+
+def auto(pw, w, h):
+    tag = "[%s auto]" % w
+    b, page, ce, pe = launch(pw, w, h, c=LF.cards_today())
+    try:
+        js(page, "()=>{ pb2OpenAsset('XAUUSD', {direct:true}); }"); page.wait_for_timeout(400)
+        def fill(k, v): js(page, "([k,v])=>{ const i = document.querySelector('[data-pb2-in=\"'+k+'\"]'); i.value = v; pb2In(k, v); }", [k, v])
+        fill("entry", "2643"); st = js(page, "()=>({d: pb2.dir, a: !!document.querySelector('[data-pb2-auto]')})")
+        check(f"{tag} entry only: no auto yet", st["d"] == "Buy" and not st["a"], st)
+        fill("sl", "2660"); st = js(page, "()=>({d: pb2.dir, a: !!document.querySelector('[data-pb2-auto]'), w: !!document.querySelector('[data-pb2-side]')})")
+        check(f"{tag} SL > entry -> Sell + 'auto' tag, no wrong-side line", st["d"] == "Sell" and st["a"] and not st["w"], st)
+        fill("sl", "2620"); st = js(page, "()=>({d: pb2.dir, a: !!document.querySelector('[data-pb2-auto]')})")
+        check(f"{tag} SL < entry -> Buy (auto follows the numbers)", st["d"] == "Buy" and st["a"], st)
+        js(page, "()=>pb2Set_dir('Sell')"); fill("tp", "2700"); st = js(page, "()=>({d: pb2.dir, a: !!document.querySelector('[data-pb2-auto]'), m: (document.querySelector('[data-pb2-side]')||{}).innerText, s: document.querySelector('[data-pb2-save]').disabled})")
+        check(f"{tag} manual Sell wins: auto tag gone, contradiction -> switch line, Save plan off", st["d"] == "Sell" and not st["a"] and "Switch to Long" in (st["m"] or "") and st["s"], st)
+        fill("sl", "2600"); st = js(page, "()=>pb2.dir")
+        check(f"{tag} manual pick is not overridden by later edits", st == "Sell", st)
+        js(page, "()=>pb2Save(true)"); page.wait_for_timeout(500)
+        r = js(page, "()=>{ const i = (satIdeasList||[]).find(x=>x && x.asset === 'XAUUSD' && x.pb2); return i ? {w: i.wrongSide, bias: i.bias} : null; }")
+        check(f"{tag} draft saves with the wrong side, flagged wrongSide:true", r and r["w"] is True and r["bias"] == "Short", r)
+        LF.today(page); js(page, "()=>{ re2GrpAll = {enter:true, check:true, manage:true}; todayRefresh(true); }"); page.wait_for_timeout(400)
+        rows = js(page, "()=>!!document.querySelector('.re2-row[data-re2-row=\"XAU\"]')")
+        check(f"{tag} flagged draft is not on Today", rows is False, rows)
+        pl = js(page, "()=>{ const i = (satIdeasList||[]).find(x=>x && x.asset === 'XAUUSD' && x.pb2); pb2PlaceOpen(i.id); return !!document.querySelector('[data-pb2-step=\"place\"]'); }")
+        check(f"{tag} flagged draft cannot open Place", pl is False, pl)
         check(f"{tag} no page errors", not pe, pe)
     finally:
         b.close()
@@ -97,7 +127,7 @@ if __name__ == "__main__":
         for w, h in ((1440, 900), (390, 844)):
             sat_case(pw, w, h, "Long", 2660, 2600, "Short", "Wrong side: SL above entry for Long")
             sat_case(pw, w, h, "Short", 2620, 2700, "Long", "Wrong side: SL below entry for Short")
-            form(pw, w, h); stored(pw, w, h)
+            form(pw, w, h); auto(pw, w, h); stored(pw, w, h)
         core(pw, 1440, 900)
     bad = [r for r in results if not r[1]]
     print("SUMMARY sd1: %d checks, %d failing" % (len(results), len(bad)))
