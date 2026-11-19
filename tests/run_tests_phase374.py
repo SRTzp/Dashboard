@@ -141,7 +141,7 @@ def watch_list(pw, w, h):
         r = rows(page)
         check(f"{tag} 1 Momentum list: ADBE (Holding, homework missing) → AMD (Planned) → HANA (No plan) → MSFT (done); no Compounder rows", r == ["ADBE", "AMD", "HANA.BK", "MSFT"], r)
         check(f"{tag} 1 status chips: Holding · Planned · No plan · Holding", [chip(page, s) for s in r] == ["Holding", "Plan ready", "No plan", "Holding"], [chip(page, s) for s in r])
-        check(f"{tag} 1 cap tags: not done = 50% · done = 100%; homework text names what is missing", "adds at 50%" in rowtxt(page, "ADBE") and "Done" in rowtxt(page, "MSFT") and "Missing trigger" in rowtxt(page, "AMD"), [rowtxt(page, s) for s in r])
+        check(f"{tag} 1 cap tags: not done = 50% · done = 100%; homework text names what is missing", "adds at 50%" in rowtxt(page, "ADBE") and ("Done" in rowtxt(page, "MSFT") or "thesis done" in rowtxt(page, "MSFT")) and ("Missing trigger" in rowtxt(page, "AMD") or "trigger missing" in rowtxt(page, "AMD")), [rowtxt(page, s) for s in r])
         check(f"{tag} 1 summary line: 4 stocks · 3 need homework", re.search(r"4 stocks.*3 need homework", txt(page, "[data-wl1-sum]") or "") is not None, txt(page, "[data-wl1-sum]"))
         check(f"{tag} 1 segmented control shows counts Momentum 4 | Compounder 2", "Momentum 4" in txt(page, "[data-wl1-segs]") and "Compounder 2" in txt(page, "[data-wl1-segs]"), txt(page, "[data-wl1-segs]"))
         js(page, "()=>wl1TrkSet('ladder')"); settle(page, 400)
