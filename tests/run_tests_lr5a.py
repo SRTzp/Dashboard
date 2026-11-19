@@ -47,9 +47,9 @@ def run(pw, w, h):
             nx = {s: row(page, s, "[data-lr5-next]") for s in o}
             check(f"{tag} A: Next check — GE 28 Nov · AVGO 2 Dec · others —", nx["GE"] == "28 Nov" and nx["AVGO"] == "2 Dec" and nx["AAPL"] == "—" and nx["PLTR"] == "—", nx)
             sec = {s: row(page, s, "[data-lr5-sec]") for s in o}
-            check(f"{tag} A: Sector vs SPY — Technology ↘ · Semiconductors ⤴ · Industrials ↗ · Software ↘", sec["AAPL"] == "Technology ↘" and sec["AVGO"] == "Semiconductors ⤴" and sec["GE"] == "Industrials ↗" and sec["PLTR"] == "Software ↘", sec)
+            check(f"{tag} A: Sector vs SPY — Tech ↘ · Semis ⤴ · Industrials ↗ · Software ↘", sec["AAPL"] == "Tech ↘" and sec["AVGO"] == "Semis ⤴" and sec["GE"] == "Industrials ↗" and sec["PLTR"] == "Software ↘", sec)
             hdr = js(page, "()=>[...document.querySelectorAll('.lr5-th .lbl')].map(x=>x.innerText)")
-            check(f"{tag} A: table header Stock · Status · Sector vs SPY · RS · Thesis · homework · Next check", [x.lower() for x in hdr] == ["stock", "status", "sector vs spy", "rs", "thesis · homework", "next check"], hdr)
+            check(f"{tag} A: table header Stock · Status · Sector vs SPY · RS · Thesis · homework · Next check", [x.lower() for x in hdr] == ["stock", "status", "sector vs spy", "rs · from high", "thesis · homework", "next check"], hdr)
         # ---- RS
         rs = {s: js(page, "(s)=>{ const e = document.querySelector('[data-lr5-row][data-sym=\"'+s+'\"] .c-rs [data-lr5-rs]'); return e ? {t:e.innerText.replace(/\\s+/g,' ').trim(), v:e.dataset.lr5Rs, arrow:(e.querySelector('[data-lr5-arrow]')||{dataset:{}}).dataset.lr5Arrow||'', nh:!!e.querySelector('[data-lr5-newhigh]'), tip:e.getAttribute('title')||''} : null; }", s) for s in o}
         if desk:
@@ -57,7 +57,7 @@ def run(pw, w, h):
             check(f"{tag} B: missing RS → '—' with the reason in the tooltip (history<252 · no data)", rs["AMD"]["t"] == "—" and "252" in rs["AMD"]["tip"] and rs["PLTR"]["t"] == "—" and "No RS data" in rs["PLTR"]["tip"], rs)
         else:
             ph = {s: row(page, s, ".l2") for s in o}
-            check(f"{tag} B: phone — RS sits at the end of line 2 ('… · RS 87 ↗')", ph["AAPL"].endswith("RS 87 ↗") and ph["GE"].endswith("RS 91 →") and ph["AVGO"].endswith("RS 64 ↘") and "RS" not in ph["PLTR"] and "RS" not in ph["AMD"], ph)
+            check(f"{tag} B: phone — RS sits at the end of line 2 ('… · RS 87 ↗')", ph["AAPL"].endswith("RS 87 ↗ new high") and ph["GE"].endswith("RS 91 →") and ph["AVGO"].endswith("RS 64 ↘") and "RS" not in ph["PLTR"] and "RS" not in ph["AMD"], ph)
             check(f"{tag} B: phone line 2 — amber homework note when missing · 'Industrials · thesis done 8 Nov' when done", ph["AAPL"].startswith("Homework not started · adds at 50%") and ph["PLTR"] == "Homework not started" and ph["GE"].startswith("Industrials · thesis done 8 Nov"), ph)
         # ---- one line per row · no overflow
         dims = js(page, "()=>[...document.querySelectorAll('[data-lr5-row]')].map(r=>({s:r.dataset.sym, h:Math.round(r.getBoundingClientRect().height), cells:[...r.children].filter(c=>getComputedStyle(c).display!=='none' && !c.classList.contains('lr5-id')).map(c=>Math.round(c.getBoundingClientRect().height)), l2:(r.querySelector('.l2')||{getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height}))")
@@ -95,19 +95,19 @@ def run(pw, w, h):
         # ---- detail panel
         if desk:
             js(page, "()=>wlOpen('AAPL')"); page.wait_for_timeout(300)
-            det = js(page, "()=>{ const d = document.querySelector('[data-lr5-det]'); const f = k=>{ const e = d.querySelector('[data-lr5-f=\"'+k+'\"]'); return e ? e.innerText.replace(/\\s+/g,' ').trim() : null; }; return {sym:d.dataset.lr5Det, head:d.querySelector('.lr5-dh').innerText.replace(/\\s+/g,' ').trim(), why:f('why'), trigger:f('trigger'), exit:f('exit'), sector:f('sector'), main:d.querySelector('[data-lr5-main]').innerText.trim(), mainBlack:getComputedStyle(d.querySelector('[data-lr5-main]')).backgroundColor, hint:d.querySelector('.lr5-hint').innerText, amber:getComputedStyle(d.querySelector('[data-lr5-empty]')).color, link:(d.querySelector('[data-lr5-rs-link]')||{}).href||''}; }")
+            det = js(page, "()=>{ const d = document.querySelector('[data-lr5-det]'); const f = k=>{ const e = d.querySelector('[data-lr5-f=\"'+k+'\"]'); return e ? e.innerText.replace(/\\s+/g,' ').trim() : null; }; return {sym:d.dataset.lr5Det, head:d.querySelector('.lr5-dh').innerText.replace(/\\s+/g,' ').trim(), why:f('why'), trigger:f('trigger'), exit:f('exit'), sector:f('sector') + ' ' + f('rs'), main:d.querySelector('[data-lr5-main]').innerText.trim(), mainBlack:getComputedStyle(d.querySelector('[data-lr5-main]')).backgroundColor, hint:d.querySelector('.lr5-hint').innerText, amber:getComputedStyle(d.querySelector('[data-lr5-empty]')).color, link:(d.querySelector('[data-lr5-rs-link]')||{}).href||''}; }")
             check(f"{tag} D: detail AAPL — header 'AAPL Holding NASDAQ · Technology'", det["sym"] == "AAPL" and det["head"].startswith("AAPL Holding NASDAQ · Technology"), det)
             check(f"{tag} D: WHY 'Not written yet' in amber · TRIGGER — · EXIT WHEN —", det["why"] == "WHY Not written yet" and det["amber"] == "rgb(154, 91, 0)" and det["trigger"] == "TRIGGER —" and det["exit"] == "EXIT WHEN —", det)
             check(f"{tag} D: SECTOR VS SPY 'Technology (XLK) ↘ lagging · 12d' + RS 'RS 87 ← 72 (4 wks ago) · line ↗ · new high 18 Nov' + TradingView RS link", "Technology (XLK) ↘ lagging · 12d" in det["sector"] and "RS 87 ← 72 (4 wks ago) · line ↗ · new high 18 Nov" in det["sector"] and "RS chart on TradingView ↗" in det["sector"] and "tradingview.com/chart" in det["link"], det)
             check(f"{tag} D: one black main action 'Do homework ›' + hint about ⋯", det["main"] == "Do homework ›" and det["mainBlack"] == "rgb(20, 22, 26)" and "Full thesis, news and archive are in ⋯" in det["hint"], det)
             js(page, "()=>wlOpen('AVGO')"); page.wait_for_timeout(300)
-            d2 = js(page, "()=>{ const d = document.querySelector('[data-lr5-det]'); const f = k=>d.querySelector('[data-lr5-f=\"'+k+'\"]').innerText.replace(/\\s+/g,' ').trim(); return {why:f('why'), trigger:f('trigger'), exit:f('exit'), main:d.querySelector('[data-lr5-main]').innerText.trim(), sector:f('sector')}; }")
+            d2 = js(page, "()=>{ const d = document.querySelector('[data-lr5-det]'); const f = k=>d.querySelector('[data-lr5-f=\"'+k+'\"]').innerText.replace(/\\s+/g,' ').trim(); return {why:f('why'), trigger:f('trigger'), exit:f('exit'), main:d.querySelector('[data-lr5-main]').innerText.trim(), sector:f('sector') + ' ' + f('rs')}; }")
             check(f"{tag} D: AVGO panel — WHY / TRIGGER / EXIT WHEN from the thesis · main 'Open plan ›' · RS line ↘, no new high", d2["why"] == "WHY AI networking share" and d2["trigger"] == "TRIGGER Break of the 4-week base" and d2["exit"] == "EXIT WHEN Hyperscaler capex cut" and d2["main"] == "Open plan ›" and "RS 64 ← 70 (4 wks ago) · line ↘" in d2["sector"] and "new high" not in d2["sector"], d2)
             js(page, "()=>wlOpen('PLTR')"); page.wait_for_timeout(300)
-            d3 = js(page, "()=>document.querySelector('[data-lr5-f=\"sector\"]').innerText.replace(/\\s+/g,' ').trim()")
+            d3 = js(page, "()=>['sector','rs'].map(k=>document.querySelector('[data-lr5-f=\\\"'+k+'\\\"]').innerText).join(' ').replace(/\\s+/g,' ').trim()")
             check(f"{tag} D: PLTR panel (no RS data) → 'RS — …' + the TradingView link, no 0 / NaN", d3.startswith("SECTOR VS SPY Software (IGV)") and "RS — the daily price job has not covered this stock" in d3 and "RS chart on TradingView" in d3 and "NaN" not in d3, d3)
             js(page, "()=>wlOpen('AMD')"); page.wait_for_timeout(300)
-            d4 = js(page, "()=>document.querySelector('[data-lr5-f=\"sector\"]').innerText.replace(/\\s+/g,' ').trim()")
+            d4 = js(page, "()=>['sector','rs'].map(k=>document.querySelector('[data-lr5-f=\\\"'+k+'\\\"]').innerText).join(' ').replace(/\\s+/g,' ').trim()")
             check(f"{tag} D: AMD panel (rating null · history<252) → reason shown", "less than 252 sessions" in d4, d4)
             # ⋯ menu
             js(page, "()=>wlOpen('AVGO')"); page.wait_for_timeout(250)
