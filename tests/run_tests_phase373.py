@@ -229,7 +229,7 @@ def run(pw, w, h):
         check(f"{tag} 8 Port top: Risk in use 1.2% / 5% · Week loss · Room · Open plans · COMP/MMT/SAT used / cap", "1.2% / 5%" in rk and "Room" in rk and "Open plans" in rk and all(k in rk for k in ("COMP", "MMT", "SAT")), rk)
         cls = js(page, "()=>[...document.querySelectorAll('[data-bd-bucket]')].map(e=>e.dataset.bdBucket+':'+(e.classList.contains('r')?'r':e.classList.contains('a')?'a':''))")
         check(f"{tag} 8 bar colours: ≥80% of cap amber (MMT 1.3/1.5) · over cap red (SAT 0.6/0.5)", "MMT:a" in cls and "SAT:r" in cls and "COMP:" in cls, cls)
-        check(f"{tag} 8 risk panel is the first block on Port", js(page, "()=>{ const t=document.getElementById('tabMix'); return t.firstElementChild.id==='bdPortRisk'; }"))
+        check(f"{tag} 8 risk panel is the first block under Port › More (LR5c)", js(page, "()=>{ const t=document.getElementById('tabMix'); const m = t.querySelector('[data-lr5c-more]'); return t.firstElementChild.id==='lr5cHost' && m && m.firstElementChild.tagName==='SUMMARY' && m.children[1].id==='bdPortRisk'; }"))
         plan(page)
         check(f"{tag} 8 Plan summary line uses the same risk number", "1.2%" in stxt(page), stxt(page))
         # ── 9 Today Act ──
