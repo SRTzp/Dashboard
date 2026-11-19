@@ -27034,6 +27034,8 @@ function ffState(){
   /* แคชที่เก็บไว้เป็นผลลัพธ์ ไม่ใช่ราคาดิบ — พอตรรกะเปลี่ยน แถวเก่าจะขาด field ใหม่และคำนวณย้อนไม่ได้
      ล้าง day ทิ้งให้ดึงใหม่รอบเดียว (19 เครดิตจากโควตา 800/วัน) แทนที่จะโชว์ค่าที่ผิดเงียบ ๆ
      หมายเหตุ: rrgRefresh ต้องเขียน build กลับลงไปด้วย ไม่งั้นจะดึงใหม่ทุกครั้งที่เปิดหน้า */
+  /* LR4 tail — IRBO is gone (→ ROBO): drop stale IRBO rows, and any duplicate sym, so nothing ever draws it */
+  ['rowsD','rowsW'].forEach(k=>{ const seen = {}; f.rrg[k] = f.rrg[k].filter(r=>{ const y = r && r.sym === 'IRBO' ? 'ROBO' : (r && r.sym); if(!y || seen[y]) return false; seen[y] = 1; if(r.sym === 'IRBO') r.sym = 'ROBO'; return true; }); });
   if(f.rrg.build !== RRG_BUILD){ f.rrg.build = RRG_BUILD; f.rrg.day = ''; }
   if(f.rrgTf !== 'D' && f.rrgTf !== 'W') f.rrgTf = 'D';
   /* err/loading ถูกเซฟลง Firestore ไปด้วย — ถ้าไม่ล้างตอนโหลด จะค้างโชว์ error เก่าข้ามวัน
@@ -27152,7 +27154,7 @@ function ffSet(list,i,v){
      => breadth จึงนับจาก rsTrend (= raw ตัวดิบก่อน z-score) > 0
         ซึ่งแปลว่า EMA12(rs) > EMA26(rs) = really beating SPY ๆ ณ ตอนนี้ (ดู ffRenderThemes)
 ============================================================================== */
-const RRG_BUILD = 8;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง
+const RRG_BUILD = 9;   /* เพิ่มเลขนี้ทุกครั้งที่แก้ตรรกะ RRG — ใช้เช็คว่าเบราว์เซอร์โหลดไฟล์ใหม่จริง
                           + ใช้ทิ้งแคชอัตโนมัติเมื่อรูปร่างแถวเปลี่ยน (ดู ffState) */
 const RRG_BENCH = 'SPY';
 const RRG_SYMS = [
@@ -32329,10 +32331,22 @@ function lr4ChartHtml(rows, ph){
       pts.slice(0, -1).forEach((p, i)=>{ s += `<circle cx="${p[0]}" cy="${p[1]}" r="${[1.5, 1.8, 2, 2.5][Math.min(3, i + (4 - (pts.length - 1)))]}" fill="${col}" fill-opacity="${[.2, .28, .35, .55][Math.min(3, i + (4 - (pts.length - 1)))]}"/>`; });
     }else s += `<circle cx="${end[0]}" cy="${end[1]}" r="3.5" fill="${col}"/>`;
     s += `</g>`;
-    const w = x.sym.length * (ph ? 6.2 : 7) + 4, h = ph ? 11 : 13;
-    let lx = end[0] + 8, anc = 'start'; if(lx + w > W - 2){ lx = end[0] - 8; anc = 'end'; }
-    const bx = anc === 'start' ? lx : lx - w, box = [bx, end[1] - h / 2, bx + w, end[1] + h / 2];
-    if(!placed.some(b=>box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])){ placed.push(box); lab.push(`<text class="pt" x="${lx}" y="${end[1]}" text-anchor="${anc}" dominant-baseline="central" data-lr4-lbl="${bdE(x.sym)}">${bdE(x.sym)}</text>`); }
+    const w = x.sym.length * (ph ? 6.2 : 7) + 4, h = ph ? 11 : 13, hit = bx=>{ const k = [bx[0], bx[1], bx[2], bx[3]]; return placed.some(q=>k[0] < q[2] && k[2] > q[0] && k[1] < q[3] && k[3] > q[1]); };
+    /* every dot gets a label: try right/left × a few vertical nudges (leader line when moved), else keep it as a hover title */
+    let done = false;
+    for(const off of [0, -h, h, -2 * h, 2 * h, -3 * h, 3 * h]){
+      for(const side of [1, -1]){
+        const lx = end[0] + side * 8, anc = side > 0 ? 'start' : 'end'; if(side > 0 ? lx + w > W - 2 : lx - w < 2) continue;
+        const ly = Math.min(H - h / 2 - 1, Math.max(h / 2 + 1, end[1] + off)), bx = anc === 'start' ? lx : lx - w, box = [bx, ly - h / 2, bx + w, ly + h / 2];
+        if(hit(box)) continue;
+        placed.push(box);
+        if(off) lab.push(`<line class="ld" x1="${end[0]}" y1="${end[1]}" x2="${lx - side * 2}" y2="${ly}" stroke="${col}" stroke-opacity=".6" stroke-width=".8"/>`);
+        lab.push(`<text class="pt" x="${lx}" y="${ly}" text-anchor="${anc}" dominant-baseline="central" data-lr4-lbl="${bdE(x.sym)}"><title>${bdE(x.sym)}</title>${bdE(x.sym)}</text>`);
+        done = true; break;
+      }
+      if(done) break;
+    }
+    if(!done) s = s.replace('</g>', `<title>${bdE(x.sym)}</title></g>`) .replace(/^<g /, `<g data-lr4-hover="1" `);
     return s;
   }).join('');
   const tfw = rrgTf() === 'W' ? 'weeks' : 'days';

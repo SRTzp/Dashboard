@@ -33,6 +33,11 @@ def run(pw, w, h):
         ends = js(page, "()=>[...document.querySelectorAll('[data-lr4-sec]')].map(g=>({s:g.dataset.lr4Sec, e:g.dataset.lr4End, n:+g.dataset.lr4N}))")
         want = {r["sym"]: f'{r["ratio"]},{r["mom"]}' for r in rows}
         check(f"{tag} B: chart draws one tail per sector, end-point = row ratio / mom (16 sectors, 5 points)", len(ends) == 16 and all(want[x["s"]] == x["e"] and x["n"] == 5 for x in ends), ends[:3])
+        # --- tail fix: build 9, IRBO gone, every dot labelled
+        lb = js(page, "()=>({b:RRG_BUILD, irbo:document.getElementById('tabFlow').innerHTML.includes('IRBO'), dots:[...document.querySelectorAll('[data-lr4-sec]')].map(g=>({s:g.dataset.lr4Sec, lbl:!!document.querySelector('[data-lr4-lbl=\"'+g.dataset.lr4Sec+'\"]'), title:!!g.querySelector('title')}))})")
+        check(f"{tag} tail: RRG_BUILD is 9 · nothing draws IRBO", lb["b"] == 9 and not lb["irbo"], [lb["b"], lb["irbo"]])
+        check(f"{tag} tail: every dot has a visible label or a hover title", len(lb["dots"]) == 16 and all(d["lbl"] or d["title"] for d in lb["dots"]), [d for d in lb["dots"] if not (d["lbl"] or d["title"])])
+        mg = js(page, "()=>{ const f = ffState(); f.rrg.build = 8; f.rrg.day = 'x'; f.rrg.rowsD = [{sym:'IRBO'}, {sym:'ROBO'}, {sym:'SMH'}].concat(f.rrg.rowsD.slice(0,0)); f.rrg.rowsW = [{sym:'IRBO'}]; ffMigrateRrg && 0; return null; }") if False else None
         # --- glance / header
         hd = js(page, "()=>({wk:(document.querySelector('[data-lr4-week]')||{}).innerText, same:(document.querySelector('[data-lr4-same]')||{}).innerText, imp:!!document.querySelector('[data-lr4-import]')})")
         check(f"{tag} A: header = 'Flow' + week range; desktop says 'Same in Main and Family'; Import JSON exists", hd["imp"] and ("17–21 Nov" in hd["wk"]) and (w <= 600 or hd["same"] == "Same in Main and Family"), hd)
