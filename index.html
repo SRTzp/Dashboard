@@ -8410,7 +8410,7 @@ function re1FillInfo(c, qty, px, stop){
 /* engine-only Satellite blocks for Place order (pre-existing form blocks such as min-stop notes stay as before) */
 function re1SatBlocks(c){
   const m = c && c.c && c.c.re1; if(!m) return [];
-  const skip = ['SAT_REENTRY_COND','PRICE_MISSING','SPEC_MISSING','FX_MISSING','LOT_BELOW_MIN','UNKNOWN_DATA','SAT_COND_INCOMPLETE','SAT_COND_BLOCKED','SAT_BAD_ORDER','SAT_RR'];
+  const skip = ['SAT_REENTRY_COND','PRICE_MISSING','SPEC_MISSING','FX_MISSING','LOT_BELOW_MIN','UNKNOWN_DATA','SAT_COND_INCOMPLETE','SAT_COND_BLOCKED','SAT_RR'];
   return m.reasons.map((x, i)=>skip.indexOf(x) < 0 ? m.reasonTexts[i] : null).filter(Boolean);
 }
 function re1BoardGate(it){
@@ -30937,7 +30937,8 @@ function bdItems(){
       else if(!ord){
         const M = pb2Model(i);   /* PB1b §3b — Waiting = missing/invalid Entry·SL·TP, wrong side, R:R < 1.5, Trend not chosen (MSS unanswered) */
         it.pb = M; it.blocked = M.blocked;
-        if(!M.complete) it.inc = {need:M.need, text:M.text, first:M.first};
+        { const w = M.wrong ? sdWrongOf(i) : null; if(w){ it.sd = w; if(i.wrongSide) it.sdDraft = true; } }   /* SD1 — wrong side = Blocked + one-tap switch (nothing is changed until the tap) */
+        if(!M.complete && !it.sd) it.inc = {need:M.need, text:M.text, first:M.first};
         if(it.inc && !(+i.entry > 0)){ it.known = (i.zone || i.note) ? String(i.zone || '') : ''; }
       }
       out.push(it);
@@ -30952,6 +30953,7 @@ function nearEntry(pct){ return pct != null && isFinite(pct) && Math.abs(pct) <=
 function bdPill(it, force){
   const id = it.id, q = s=>String(s).replace(/'/g, "\\'"), r = it.row || {}, bad = r.bad;
   if(it.status === 'plan'){
+    if(it.sd) return {t:it.sd.btn, cls:'fx', fn:`sdFlip('${q(id)}')`, k:'place', dis:true, title:it.sd.why, sd:it.sd};   /* SD1 */
     if(it.inc) return {t:'Complete ›', cls:'', fn:`bdComplete('${q(id)}')`, k:'complete'};
     if(it.blocked) return {t:'Place ›', cls:'', fn:'', k:'place', dis:true, title:'Blocked by trend rule'};   /* PB1b §3b — complete but the Trend rule says Blocked */
     { const g = re1BoardGate(it); if(g) return {t:'Place ›', cls:'', fn:'', k:'place', dis:true, title:g, re1:true}; }   /* RE-C1 — engine limit */
@@ -30969,7 +30971,7 @@ function bdPill(it, force){
 }
 function bdUrgency(it){   /* §8 Today Act order: Fix risk → Add-on → Planned within NEAR_ENTRY_PCT → Ordered */
   const p = bdPill(it);
-  if(p.dis && p.re1) return 2.6;   /* RE-C1 — an engine-blocked plan stays visible in Act (reason shown, button disabled) */
+  if(p.dis && (p.re1 || p.sd)) return 2.6;   /* RE-C1 — an engine-blocked plan stays visible in Act (reason shown, button disabled) */
   if(p.dis) return 9;
   if(p.k === 'fix') return 0; if(p.k === 'addon') return 1;
   if(p.k === 'place') return it.pct != null && nearEntry(it.pct) ? 2 : 2.5;
@@ -31029,6 +31031,7 @@ function pvSatBlockOf(i){
   const acct = pb2AcctOf(i); let pc = null, c = null;
   try{ pc = pb2Calc(i, acct); c = pc.c; }catch(e){ return null; }
   const B = (why, k, btn)=>({why, k, btn:btn || '', code:k});
+  { const w = sdWrongOf(i); if(w) return B(w.why, 'side', w.btn); }   /* SD1 */
   try{ if(ln4VerifyOf(i).blocked) return B(pc.msg || 'Blocked by trend rule', 'trend'); }catch(e){}
   if(c){
     if(c.carryBlock) return B('Carried from last week', 'carry', 'Use this week ›');
@@ -31092,6 +31095,7 @@ function pvBlock(it){
 /* LR3 fix — a Blocked reason is ONE short line on the card ('MMT weekly limit 4/4'); the full engine text lives under More */
 function lr3ShortWhy(why, it){
   const w = String(why || '').trim();
+  if(/^Wrong side:/.test(w)) return w;   /* SD1 — the full sentence is the line */
   let m = /Weekly Momentum ammunition \((\d+)\)/i.exec(w); if(m) return `MMT weekly limit ${m[1]}/${m[1]}`;
   m = /Weekly (Satellite|Sat)[^(]*\((\d+)\)/i.exec(w); if(m) return `SAT weekly limit ${m[2]}/${m[2]}`;
   m = /^(.*?)(?: — | · |: |\. )/.exec(w); let t = (m ? m[1] : w).replace(/\s*\(.*$/, '').trim();
@@ -31392,7 +31396,9 @@ function bdEditLv(id){
   else td3SatOpen(id, '');
 }
 function bdFix(id, k){
-  const it = bdById(id); if(!it) return; bdSnap(id);
+  const it = bdById(id); if(!it) return;
+  if(k === 'side'){ sdFlip(id); return; }   /* SD1 */
+  bdSnap(id);
   if(it.kind === 'sat'){ ln4Fix(id, k, 'sat'); return; }
   try{ coreNewOpen(it.ref.acct, {mode:'editw', id}); }catch(e){ console.warn('bd fix:', e); return; }
   setTimeout(()=>{ const el = document.getElementById(k === 'stop' ? 'cnStop' : 'cnRisk'); if(el){ try{ el.focus(); el.select(); }catch(e){} } }, 350);
@@ -31530,7 +31536,7 @@ function bdDrawerHtml(it){
   const e = bdE, p = bdPill(it), id = e(it.id);
   const hot = it.kind === 'core' ? bdHotTag(it.sym) : '';
   const pill = {plan:'📝 Planned', ord:'📌 Ordered', hold:'✅ Holding'}[it.status];
-  const prim = `<button type="button" class="go${p.cls ? ' ' + p.cls : ''}" data-bd-dprimary="${p.k}"${p.dis ? ` disabled title="${e(p.title)}" data-bd-blocked="1"` : ''} onclick="${p.fn}">${e(p.t)}</button>`;
+  const prim = `<button type="button" class="go${p.cls ? ' ' + p.cls : ''}" data-bd-dprimary="${p.k}"${p.dis && !p.sd ? ` disabled title="${e(p.title)}" data-bd-blocked="1"` : ''}${p.sd ? ' data-sd-fix' : ''} onclick="${p.fn}">${e(p.t)}</button>`;
   let foot = (it.status === 'plan' ? re2ReadyBtn(it) + re4CancelBtn(it, false) : '') + `<button type="button" class="go" data-bd-update onclick="bdEditLv('${id}')">Update levels</button>`;
   if(it.status === 'ord' || (it.status === 'hold' && it.lvOrdered)) foot += `<button type="button" class="go" data-bd-cancel onclick="bdCancelOrder('${id}')">Cancel order</button>`;
   if(it.status === 'hold' && it.kind === 'sat') foot += `<button type="button" class="go" data-bd-satstop onclick="re1SatStopOpen('${id}')">Move stop</button>`;   /* RE-D §2 */
@@ -31934,7 +31940,8 @@ function re2Row(it, o){
   const plbl = o.k === 'place' && acT && acT !== 'M' ? 'Place · ' + acT : '';
   const btn3 = o.btn3 ? `<button type="button" class="btn o" data-re2-btn="update" onclick="event.stopPropagation();${o.fn3 || ''}">${e(o.btn3)}</button>` : '';
   const btn2 = o.btn2 ? `<button type="button" class="btn o" data-re2-btn="keep" onclick="event.stopPropagation();${o.fn2 || ''}">${e(o.btn2)}</button>` : '';
-  const btn = btn3 + btn2 + (o.btn ? `<button type="button" class="btn${o.k === 'fill' || o.k === 'hw' ? ' o' : ''}${blkd ? ' lrf-hb' : ''}" data-re2-btn="${o.k}"${o.dis ? ` disabled title="${e(o.title || '')}" data-re2-blocked="1"` : ''} onclick="event.stopPropagation();${o.fn || ''}"><span class="m">${e(plbl || o.btn)}</span><span class="p">${e(plbl || sh)}</span></button>` : '');
+  const sdB = o.sd ? `<button type="button" class="btn o" data-sd-fix onclick="event.stopPropagation();${o.fn}">${e(o.sd.btn)}</button>` : '';
+  const btn = sdB + btn3 + btn2 + (o.btn && !o.sd ? `<button type="button" class="btn${o.k === 'fill' || o.k === 'hw' ? ' o' : ''}${blkd ? ' lrf-hb' : ''}" data-re2-btn="${o.k}"${o.dis ? ` disabled title="${e(o.title || '')}" data-re2-blocked="1"` : ''} onclick="event.stopPropagation();${o.fn || ''}"><span class="m">${e(plbl || o.btn)}</span><span class="p">${e(plbl || sh)}</span></button>` : '');
   const hc = (['Ready', 'Ordered', 'Holding', 'Near'].indexOf(o.chip) >= 0 || (line && o.why && o.chip === o.why)) ? ' lrf-hc' : '';
   const whyL1 = line && o.why && !blkd ? `<i class="lrf-why ${o.warn ? 'a' : ''}" data-re2-why>${e(o.why)}</i>` : '';
   const shortLine = line ? (o.g === 'manage' && re2HoldLine(it) ? line : re2CardLine(it, true)) : '';
@@ -31963,10 +31970,11 @@ function re2Model(acct){
     const pastKept = re4Passed(it) && re4Kept(it.id);   /* Keep: a ⚑ Ready plan stays as a normal Enter row (amber '+x.x% past entry'); an unflagged one hides until tomorrow */
     if(pastKept && !ready) return;
     if(re4Passed(it) && !pastKept){ enter.push({it, o:{g:'enter', chip:'passed entry · missed?', cc:'a', k:'cancel', btn:'Cancel plan ›', fn:`re4Open('${td3E(it.id).replace(/'/g, "\\'")}','plan',null,'missed')`, btn2:'Keep', fn2:`re4Keep('${td3E(it.id).replace(/'/g, "\\'")}')`, btn3:'Update levels ›', fn3:`bdEditLv('${td3E(it.id).replace(/'/g, "\\'")}')`, why:'passed entry · missed?', warn:true, lv:tw1Lv(it), d}}); return; }   /* RE-D §6 */
-    if(!ready && !near) return;
+    if(it.sdDraft) return;   /* SD1 — wrong-side drafts stay off Today */
+    if(!ready && !near && !it.sd) return;
     const p = bdPill(it, true), blocked = !!p.dis;
     const why = blocked ? (p.title || 'Blocked') : pastKept ? '+' + d.toFixed(1) + '% past entry' : ready ? (near && d != null ? (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '% to entry' : '') : (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '%';
-    enter.push({it, o:{g:'enter', chip: ready ? 'Ready' : 'Near', cc: ready ? 'b rdy' : '', k:p.k, btn:(p.k === 'place' ? 'Place' : p.t), fn:p.fn, dis:blocked, title:p.title, why, warn:blocked || pastKept, lv:tw1Lv(it), d}});
+    enter.push({it, o:{g:'enter', chip: ready ? 'Ready' : 'Near', cc: ready ? 'b rdy' : '', k:p.k, btn:(p.k === 'place' ? 'Place' : p.t), fn:p.fn, dis:blocked, title:p.title, sd:p.sd || null, why, warn:blocked || pastKept, lv:tw1Lv(it), d}});
   });
   by.ord.forEach(it=>{
     const age = re2Age(it, now), old = age != null && age > RE2_DAY, n = old ? Math.max(1, Math.floor(age / RE2_DAY)) : 0;
@@ -32398,6 +32406,30 @@ function pb2Model(i){
   const text = (miss.length ? 'Needs ' + miss.join(' · ') : '') + (miss.length && issues.length ? ' · ' : '') + issues.join(' · ');
   return {need:miss, issues, text, complete:!text, blocked:!text && vf.blocked === true, vf, first, wrong};
 }
+/* SD1 — wrong-side guard: the text + the one-tap fix for a plan whose Entry / SL / TP point the other way */
+function sdWrongOf(i){
+  try{
+    if(!i || !(i.bias === 'Long' || i.bias === 'Short')) return null;
+    const e = +i.entry, s = +i.sl, t = +i.tp, sell = i.bias === 'Short';
+    const slBad = e > 0 && s > 0 && (sell ? s <= e : s >= e), tpBad = !slBad && e > 0 && t > 0 && (sell ? t >= e : t <= e);
+    if(!slBad && !tpBad) return null;
+    const to = sell ? 'Long' : 'Short';
+    return {to, why:`Wrong side: ${slBad ? 'SL' : 'TP'} ${slBad ? (sell ? 'below' : 'above') : (sell ? 'above' : 'below')} entry for ${i.bias}`, btn:`Switch to ${to} ›`};
+  }catch(x){ return null; }
+}
+function sdFlip(id){
+  const i = sat7dIdea(id); if(!i) return;
+  const w = sdWrongOf(i); if(!w) return;
+  const patch = {bias:w.to, wrongSide:false, updated_at:new Date().toISOString()};
+  const it = bdById(id);
+  if(it){ try{ bdWriteWithLog(it, patch, 'edit', 'Side switched to ' + w.to); }catch(x){ sat7dWrite('satIdeas', id, patch); } } else sat7dWrite('satIdeas', id, patch);
+  Object.assign(i, patch);
+  try{ bdRender(); }catch(e){}
+  try{ bdDrawerRender(); }catch(e){}
+  try{ todayRefresh(true); }catch(e){}
+  if(pb2 && pb2.step === 'place' && pb2.id === id){ try{ pb2Render(); }catch(e){} }
+}
+function sdFormFlip(){ if(!pb2 || pb2.step !== 2) return; pb2.manual = true; pb2.auto = false; pb2.dir = pb2.dir === 'Sell' ? 'Buy' : 'Sell'; pb2.err = ''; pb2Refresh(); }
 /* size (lot · risk · label) through the existing sizing code, one account */
 function pb2Calc(i, accId){
   const out = {lot:null, risk:null, cur:'USD', unit:'', msg:'', rr:null, label:'', col:'f', c:null, model:null};
@@ -32445,7 +32477,7 @@ function pb2OpenEdit(id, focus, direct){
   const v = ln4VerifyOf(i);
   if(bdPopOpen()) pb2 = null;
   const n = x=>(+x > 0 ? String(+x) : '');
-  pb2 = {step:2, a:i.asset, id, direct:direct !== false, dir:pb2Side(i), acct:pb2AcctOf(i), entry:n(i.entry), sl:n(i.sl), tp:n(i.tp), last:n(i.lastPx && i.lastPx.v), ema:v.ema, str:v.st, mss:v.st === false ? v.mss : null, err:'', focus:focus || ''};
+  pb2 = {step:2, a:i.asset, id, direct:direct !== false, dir:pb2Side(i), acct:pb2AcctOf(i), entry:n(i.entry), sl:n(i.sl), tp:n(i.tp), last:n(i.lastPx && i.lastPx.v), ema:v.ema, str:v.st, mss:v.st === false ? v.mss : null, err:'', focus:focus || '', manual:true};
   pb2Render(true);
 }
 function pb2Back(){
@@ -32485,7 +32517,7 @@ function pb2StepHtml(){
   }
   if(s === 'place') return pb2PlaceHtml();
   if(s === 'cplace') return efCorePlaceHtml();
-  return `<div data-pb2-step="form">${pb2Hd(pb2Label(pb2.a), true)}<div id="pb2A"></div>${pb2InputsHtml()}<div id="pb2C"></div><div class="pb2-ft"><button type="button" class="go" data-pb2-draft onclick="pb2Save(true)">Save draft</button><button type="button" class="go p" data-pb2-save onclick="pb2Save(false)">Save plan</button></div></div>`;
+  return `<div data-pb2-step="form">${pb2Hd(pb2Label(pb2.a), true)}<div id="pb2A"></div>${pb2InputsHtml()}<div id="pb2C"></div><div class="pb2-ft"><button type="button" class="go" data-pb2-draft onclick="pb2Save(true)">Save draft</button><button type="button" class="go p" data-enter-primary data-pb2-save onclick="pb2Save(false)">Save plan</button></div></div>`;
 }
 function pb2Render(focusFirst){
   let ov = document.getElementById('bdPop');
@@ -32505,15 +32537,17 @@ function pb2TmpIdea(){
   const s = pb2, base = s.id ? sat7dIdea(s.id) : null;
   return Object.assign({}, base || {}, {id:s.id || '__pb2', v3:true, v2:true, sleeve:base ? satV2Sleeve(base) : 'main', asset:s.a, bias:s.dir === 'Sell' ? 'Short' : 'Long', entry:pb2Num(s.entry), sl:pb2Num(s.sl), tp:pb2Num(s.tp), ema50_ok:s.ema, structure_ok:s.str, mss:s.str === false ? s.mss : null, accts:(base && base.accts) || {}, week:(base && base.week) || wpWeekKey(), tf:(base && base.tf) || '4H'});
 }
+function box_sd(bad){ document.querySelectorAll('[data-pb2-save]').forEach(b=>{ b.disabled = !!bad; }); }
 function pb2Refresh(){
   if(!pb2 || pb2.step !== 2) return;
   const a = document.getElementById('pb2A'), c = document.getElementById('pb2C'); if(!a || !c) return;
   const A = sat7dAccts(), i = pb2TmpIdea(), M = pb2Model(i), V = M.vf, e = bdE;
-  a.innerHTML = `<div class="pb2-r" data-pb2-seg>${pb2Seg([['Buy', 'Buy'], ['Sell', 'Sell']], pb2.dir, 'pb2Set_dir', 'pb2-dir')}${A.length > 1 ? pb2Seg(A.map(x=>[x.id, td3AcctName(x)]), pb2.acct, 'pb2Set_acct', 'pb2-acct') : ''}</div>`;
+  a.innerHTML = `<div class="pb2-r" data-pb2-seg>${pb2Seg([['Buy', 'Buy'], ['Sell', 'Sell']], pb2.dir, 'pb2Set_dir', 'pb2-dir')}${pb2.auto && !pb2.manual ? '<small class="bd-m" data-pb2-auto title="Side set from Entry and SL">auto</small>' : ''}${A.length > 1 ? pb2Seg(A.map(x=>[x.id, td3AcctName(x)]), pb2.acct, 'pb2Set_acct', 'pb2-acct') : ''}</div>`;
   const sell = pb2.dir === 'Sell', en = pb2Num(pb2.entry), sl = pb2Num(pb2.sl), tp = pb2Num(pb2.tp);
   const bad = (en && sl && (sell ? sl <= en : sl >= en)) || (en && tp && (sell ? tp >= en : tp <= en));
   const calc = pb2Calc(i, pb2.acct), tg = k=>`<span class="pb2-tg" role="group"><button type="button" class="${pb2[k] === true ? 'yes' : ''}" aria-pressed="${pb2[k] === true}" data-pb2-tg="${k}" data-v="1" onclick="pb2Tg('${k}',true)">✓</button><button type="button" class="${pb2[k] === false ? 'no' : ''}" aria-pressed="${pb2[k] === false}" data-pb2-tg="${k}" data-v="0" onclick="pb2Tg('${k}',false)">✗</button></span>`;
-  let h = bad ? `<div class="pb2-bad" data-pb2-side>${sell ? 'Sell needs SL > Entry > TP' : 'Buy needs SL < Entry < TP'}</div>` : '';
+  let h = bad ? `<div class="pb2-bad" data-pb2-side>These levels look like a ${sell ? 'Long' : 'Short'} · <button type="button" class="pv-fixbtn" data-sd-switch onclick="sdFormFlip()">Switch to ${sell ? 'Long' : 'Short'} ›</button></div>` : '';
+  try{ box_sd(!!bad); }catch(x){}
   h += `<div class="pb2-trow" data-pb2-trend><span class="pb2-k"><span class="pb2-lf">TREND HTF</span><span class="pb2-ls">HTF</span></span><span class="pb2-p"><span>EMA50</span>${tg('ema')}</span><span class="pb2-p"><span class="pb2-lf">Structure</span><span class="pb2-ls">Struct.</span>${tg('str')}</span><button type="button" class="pb2-all" data-pb2-all title="Hold ${PB2_HOLD_MS / 1000} s — EMA50 ✓ + Structure ✓" aria-label="Hold to set EMA50 ✓ and Structure ✓" onpointerdown="pb2HoldStart(event,this)" onpointerup="pb2HoldEnd(this)" onpointerleave="pb2HoldEnd(this)" onpointercancel="pb2HoldEnd(this)" onclick="event.preventDefault()" oncontextmenu="return false"><i></i><span>all ✓</span></button></div>`;
   if(V.ask) h += `<div class="pb2-q" data-pb2-mss><b>Is this entry an MSS on the higher TF?</b>${pb2Seg([['1', 'Yes'], ['0', 'No']], pb2.mss === true ? '1' : pb2.mss === false ? '0' : '', 'pb2Mss', 'pb2-mss')}</div>`;
   const det = calc.lot != null ? `${satV2Lot(calc.lot)} ${e(calc.unit)} · risk ${satV2Money2(calc.risk, calc.cur)} at SL${calc.rr ? ' · R:R ' + calc.rr : ''}` : (calc.rr ? `R:R ${calc.rr}` : '');
@@ -32527,8 +32561,15 @@ function pb2Refresh(){
   c.innerHTML = h;
 }
 /* ── form handlers ── */
-function pb2In(k, v){ if(!pb2) return; pb2[k] = v; pb2.err = ''; pb2Refresh(); }
-function pb2Set_dir(v){ pb2.dir = v === 'Sell' ? 'Sell' : 'Buy'; pb2.err = ''; pb2Refresh(); }
+function pb2In(k, v){
+  if(!pb2) return; pb2[k] = v; pb2.err = '';
+  if((k === 'entry' || k === 'sl') && !pb2.manual){   /* SD1 — auto side from Entry + SL (a manual pick wins) */
+    const en = pb2Num(pb2.entry), sl = pb2Num(pb2.sl);
+    if(en > 0 && sl > 0 && sl !== en){ pb2.dir = sl < en ? 'Buy' : 'Sell'; pb2.auto = true; }
+  }
+  pb2Refresh();
+}
+function pb2Set_dir(v){ pb2.dir = v === 'Sell' ? 'Sell' : 'Buy'; pb2.manual = true; pb2.auto = false; pb2.err = ''; pb2Refresh(); }
 function pb2Set_acct(v){ pb2.acct = v; pb2Refresh(); }
 function pb2Tg(k, v){
   pb2[k] = (pb2[k] === v) ? null : v;   /* tap again = unselect */
@@ -32560,6 +32601,14 @@ function pb2Key(e){
   }
   if(st === 2){
     if(t && t.matches && t.matches('[data-pb2-all]') && (k === ' ' || k === 'Enter')){ stop(); if(e.type === 'keydown' && !e.repeat) pb2HoldStart(null, t); return true; }
+    if(ed && k === 'Enter' && !e.isComposing && e.keyCode !== 229 && !e.repeat && !e.shiftKey){   /* SD1/EN1 — Enter = Save plan, but never past a disabled Save */
+      stop();
+      const sv = document.querySelector('[data-pb2-save]');
+      if(sv && !sv.disabled){ sv.click(); return true; }
+      const el = (pb2 && sdWrongOf(pb2TmpIdea())) ? document.querySelector('[data-pb2-in="sl"]') : (Array.from(document.querySelectorAll('[data-pb2-in]')).find(x=>x.value === '') || null);
+      if(el){ try{ el.focus(); el.select && el.select(); }catch(x){} }
+      return true;
+    }
     if(ed) return true;
     e.stopImmediatePropagation(); return true;
   }
@@ -32569,6 +32618,7 @@ function pb2Key(e){
 /* ── save ── */
 function pb2Save(draft){
   if(!pb2 || pb2.step !== 2) return;
+  if(!draft){ const t0 = pb2TmpIdea(); if(sdWrongOf(t0)) return; }   /* SD1 — Save plan stays off until the levels match the side (a draft may keep them) */
   if(!pb2.id && re4Due(pb2.acct)) return;   /* RE-D §6 — Execution review due for the selected account */
   const i = pb2TmpIdea();
   if(!(i.entry > 0 || i.sl > 0 || i.tp > 0)){ pb2.err = 'Enter Entry · SL · TP first'; pb2Refresh(); return; }
@@ -32581,7 +32631,7 @@ function pb2CounterAsk(){
 function pb2SaveDo(draft){
   const s = pb2; if(!s) return;
   const i = pb2TmpIdea(), V = ln4VerifyOf(i), now = new Date().toISOString();
-  const patch = {asset:s.a, bias:i.bias, entry:i.entry, sl:i.sl, tp:i.tp, ema50_ok:V.ema, structure_ok:V.st, mss:V.st === false ? V.mss : null, pb_acct:s.acct || null, pb2:true, updated_at:now};
+  const patch = {asset:s.a, bias:i.bias, entry:i.entry, sl:i.sl, tp:i.tp, ema50_ok:V.ema, structure_ok:V.st, mss:V.st === false ? V.mss : null, pb_acct:s.acct || null, pb2:true, wrongSide:!!sdWrongOf(i), updated_at:now};   /* SD1 — a wrong-side draft is flagged; it never reaches Today / Place */
   /* PV1b — Last price field hidden: lastPx is never read or written by this save */
   const txt = `Levels · Entry ${i.entry ? td3Num(i.entry) : '—'} · SL ${i.sl ? td3Num(i.sl) : '—'} · TP ${i.tp ? td3Num(i.tp) : '—'}`;
   let id = s.id;
@@ -32714,13 +32764,15 @@ function efCorePlaceYes(){
 /* ── Place order = one-tap confirm (records only) ── */
 function pb2PlaceOpen(id){
   const i = sat7dIdea(id); if(!i) return;
-  const M = pb2Model(i); if(!M.complete || M.blocked) return;
-  { const c0 = pb2Calc(i, pb2AcctOf(i)), bl = re1SatBlocks(c0); if(bl.length){ re1Toast('Place order blocked — ' + bl[0]); return; } }   /* RE-C1 — engine gate (re-entry confirm is taken on the next step) */
+  const M = pb2Model(i), sdw = sdWrongOf(i); if(sdw && i.wrongSide) return;   /* SD1 — draft: never Place */
+  if((!M.complete && !sdw) || M.blocked) return;   /* SD1 — a wrong-side plan still opens the sheet: it shows Blocked + the switch */
+  if(!sdw){ const c0 = pb2Calc(i, pb2AcctOf(i)), bl = re1SatBlocks(c0); if(bl.length){ re1Toast('Place order blocked — ' + bl[0]); return; } }   /* RE-C1 — engine gate (re-entry confirm is taken on the next step) */
   re1ReTap = null;
   if(bdPopOpen()) bdPopClose();
   { const ps = efPickState(i); pb2 = {step:'place', id, a:i.asset, repC:ps.full ? ps.cands : null, repI:0}; }   /* EF1 — picks full → the sheet carries the replace choice */
   pb2Render();
 }
+function sdBanner(i){ const w = sdWrongOf(i); return w ? `<div class="pv-bl pv-bx" data-sd-banner role="alert"><span><span class="pv-bp">Blocked · </span>${bdE(w.why)}</span><button type="button" class="pv-fixbtn" data-sd-fix onclick="sdFlip('${bdE(i.id)}')">${bdE(w.btn)}</button></div>` : ''; }
 function pb2PlaceHtml(){
   const i = sat7dIdea(pb2.id); if(!i){ return '<div class="bd-m">Plan not found</div>'; }
   const V = ln4VerifyOf(i), acc = pb2AcctOf(i), c = pb2Calc(i, acc), e = bdE, it = bdById(pb2.id);
@@ -32729,7 +32781,7 @@ function pb2PlaceHtml(){
   const fb = {px:+i.entry, sl:+i.sl, tp:+i.tp, buy:side === 'Buy', qty:c.lot != null ? satV2Lot(c.lot) : null, label:c.label, fmt:v=>satV2Money2(v, c.cur),
     risk:c.lot != null ? c.risk : null, riskPct:null, reward:c.lot != null && c.rr ? c.risk * parseFloat(c.rr) : null, rewardR:c.rr ? parseFloat(c.rr) : null};
   const S = it ? lr3Sheet(it, m, null, fb) : {orders:'', tiles:''};
-  return `<div data-pb2-step="place">${it ? lrfPlaceHd(it, 'Place order') : pb2Hd('Setup ready on Execution TF?', false)}${lrBandSat(i)}${S.orders}${S.tiles}<div class="lr3-lbl lrf-q">Setup ready on Execution TF?</div>${list}${V.ask ? `<div class="pb2-q" data-pb2-mssok>MSS confirmed per your rules (candle closed)</div>` : ''}${efSheetWarns(i, c)}${(c.c && c.c.re1NeedsReentry) ? `<label class="pb2-q" data-re1-reentry><input type="checkbox" ${re1ReTap === i.id ? 'checked' : ''} onchange="re1ReentryTap('${e(i.id)}', this.checked)"> <b>Re-entry</b> · same direction and zone · Trend inputs unchanged · one closed candle since the stop</label>` : ''}${efSheetMore(i, c)}<div class="lr3-foot"><div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button data-enter-primary type="button" class="go p" data-pb2-yes ${(c.c && c.c.re1NeedsReentry) ? 'disabled' : ''} onclick="pb2PlaceYes()">Confirm</button></div><div class="bd-m pb2-note">One tap confirms all 4 · records only · place the order at your broker</div></div></div>`;
+  return `<div data-pb2-step="place">${it ? lrfPlaceHd(it, 'Place order') : pb2Hd('Setup ready on Execution TF?', false)}${lrBandSat(i)}${sdBanner(i)}${S.orders}${S.tiles}<div class="lr3-lbl lrf-q">Setup ready on Execution TF?</div>${list}${V.ask ? `<div class="pb2-q" data-pb2-mssok>MSS confirmed per your rules (candle closed)</div>` : ''}${efSheetWarns(i, c)}${(c.c && c.c.re1NeedsReentry) ? `<label class="pb2-q" data-re1-reentry><input type="checkbox" ${re1ReTap === i.id ? 'checked' : ''} onchange="re1ReentryTap('${e(i.id)}', this.checked)"> <b>Re-entry</b> · same direction and zone · Trend inputs unchanged · one closed candle since the stop</label>` : ''}${efSheetMore(i, c)}<div class="lr3-foot"><div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button data-enter-primary type="button" class="go p" data-pb2-yes ${((c.c && c.c.re1NeedsReentry) || sdWrongOf(i)) ? 'disabled' : ''} onclick="pb2PlaceYes()">Confirm</button></div><div class="bd-m pb2-note">One tap confirms all 4 · records only · place the order at your broker</div></div></div>`;
 }
 function efSheetWarns(i, c){   /* amber lines inside the confirm sheet: news window · against Macro · limited by · replace pick · carried */
   const e = bdE, out = [];
@@ -32752,6 +32804,7 @@ function re1ReentryTap(id, on){ re1ReTap = on ? id : null; const b = document.qu
 function pb2PlaceYes(){
   const s = pb2; if(!s || s.step !== 'place') return;
   const id = s.id, it = bdById(id), i = sat7dIdea(id); if(!it || !i){ bdPopClose(); return; }
+  if(sdWrongOf(i)){ re1Toast('Place order blocked — ' + sdWrongOf(i).why); return; }   /* SD1 */
   const V = ln4VerifyOf(i), acc = pb2AcctOf(i), c = pb2Calc(i, acc), at = new Date().toISOString();
   { const bl = re1SatBlocks(c).concat(c.c && c.c.re1NeedsReentry ? ['Re-entry not confirmed'] : []); if(bl.length){ re1Toast('Place order blocked — ' + bl[0]); return; } }
   { const rk = (s.repC && s.repC.length) ? s.repC[s.repI % s.repC.length] : null; const pk = efPickEnsure(i, rk); if(!pk.ok){ re1Toast(pk.msg || 'Could not update this week\'s picks'); return; } efCarryAdopt(id); }   /* EF1 — admin steps, no block */
