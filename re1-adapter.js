@@ -343,7 +343,7 @@
       out.positions = rowsOut;
 
       // Orders that would be blocked today (Ordered + complete Planned), evaluated as a NEW order against everything else
-      var blocked = [];
+      var blocked = [], ddStopNow = basis.ok && liveEmergency(basis.snaps || [], S.cashFlows || []).stopped === true;
       ideas.filter(function (i) { return i.status === 'ordered' || i.status === 'planned'; }).forEach(function (i) {
         var others = ideas.filter(function (x) { return x !== i; }), plan = i.plan || {}, w = i.workingOrders, e0 = w[0] ? w[0].entry : plan.entry, s0 = w[0] ? w[0].stop : plan.stop;
         var risk = w.length ? sumBy(w, function (x) { return pos(x.qty) && pos(x.entry) && pos(x.stop) ? x.qty * Math.abs(x.entry - x.stop) * (x.mult > 0 ? x.mult : 1) * (x.fx > 0 ? x.fx : 1) : 0; }) : (plan.levels && pos(s0) ? sumBy(plan.levels, function (l) { return pos(l.qty) && pos(l.px) ? l.qty * Math.abs(l.px - s0) : 0; }) : null);
@@ -361,6 +361,7 @@
           var h2 = R.compHeat(fxIdeas(others, A.fx, basis.weekFx), acc.id, costsFor, basis.weekEquity, basis.currentEquity); if (risk !== null && h2.money + risk > basis.weekEquity * R.POLICY.comp.heatCapPct / 100 + 1e-7) r.push('COMP_HEAT');
           f = f.concat(regime.flags);
         }
+        if (basis.ok && ddStopNow) r.unshift('DD_STOP');
         if (r.length) blocked.push({ id: i.id, sym: i.sym, strategy: i.strategy, status: i.status, reasons: Array.from(new Set(r)), flags: Array.from(new Set(f)), candidateRisk: risk });
       });
       out.wouldBeBlocked = blocked;
@@ -473,13 +474,13 @@
   }
   /* Emergency: replay every confirmed snapshot in order (evaluated AT a snapshot). Reference = month-start basis of that snapshot. */
   function liveEmergency(snaps, flows) {
-    var st = null, out = { active: false, factor: 1, declinePct: null, refEquity: null };
+    var st = null, out = { active: false, stopped: false, factor: 1, declinePct: null, refEquity: null };
     var fl = (flows || []).map(function (f) { return { at: flowAt(f), amount: n(f.amount) }; }).filter(function (f) { return f.at !== null && f.amount !== null; });
     snaps.filter(function (x) { return !x.provisional; }).forEach(function (sn, i, arr) {
       var upto = arr.slice(0, i + 1), ms = R.bkk.monthStart(sn.at), ref = null; upto.forEach(function (x) { if (x.at <= ms) ref = x; }); if (!ref) ref = upto[0];
       var e = R.emergencyStep(st, sn, { equity: ref.equity, at: ref.at }, fl);
-      st = { active: e.active, refEquity: e.refEquity, refStartMs: e.refStartMs };
-      out = { active: e.active, factor: e.factor, declinePct: e.declinePct, refEquity: e.refEquity, refStartMs: e.refStartMs, evaluatedAt: sn.at };
+      st = { active: e.active, stopped: e.stopped, refEquity: e.refEquity, refStartMs: e.refStartMs };
+      out = { active: e.active, stopped: e.stopped === true, factor: e.factor, declinePct: e.declinePct, refEquity: e.refEquity, refStartMs: e.refStartMs, evaluatedAt: sn.at };
     });
     return out;
   }
@@ -583,8 +584,9 @@
     var f = function (ideas) { return R.satBudgetCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: exceptId === undefined ? ideas : otherIds(ideas, exceptId), costsFor: L.costsFor, candidateRisk: candRisk }); };
     return mergeDual(f(L.ideasW), f(L.ideasM), 'sat');
   }
-  function baseModel(L, strat) { return { strategy: strat, acct: L.acct, ok: false, blocked: true, reasons: [], reasonTexts: [], flags: [], formula: '', effPct: null, qty: 0, money: null, roomLine: '', allowedQty: 0, chip: null, factors: [] }; }
+  function baseModel(L, strat) { return { ddStop: !!(L.emergency && L.emergency.stopped), strategy: strat, acct: L.acct, ok: false, blocked: true, reasons: [], reasonTexts: [], flags: [], formula: '', effPct: null, qty: 0, money: null, roomLine: '', allowedQty: 0, chip: null, factors: [] }; }
   function finish(m, d) {
+    if (m.ddStop && m.reasons.indexOf('DD_STOP') < 0) m.reasons.unshift('DD_STOP'); if (m.ddStop) m.allowedQty = 0;
     var seen = {}; m.reasons = m.reasons.filter(function (c) { if (seen[c]) return false; seen[c] = 1; return true; });
     m.reasonTexts = m.reasons.map(function (c) { return rtext(c, d); }); m.blocked = m.reasons.length > 0; m.ok = !m.blocked && m.qty > 0; return m;
   }

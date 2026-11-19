@@ -417,5 +417,31 @@ const costsOf = () => C;
   eq(b2.weekEquity, 5100000, 'RE-C1 a snapshot dated Monday (as-of Monday 00:00) IS the week-start basis');
 }
 
+// ═══ AU2 · DD_STOP — 20% below the reference stops NEW entries (all strategies); recovery steps stop → half size → full ═══
+{
+  const nov = T('2026-11-01T09:00:00'), mref = { equity: 1000000, at: nov }, at = T('2026-11-12T20:00:00'), step = (st, eqv, ref) => R.emergencyStep(st, { at, equity: eqv, confirmed: true }, ref || mref, []);
+  eq(R.POLICY.emergency.stopPct, 20, 'AU2 stopPct 20');
+  let s = step(null, 810000); ok(s.active && !s.stopped && s.factor === 0.5, 'AU2 −19% → half size only, no stop');
+  s = step(null, 800000); ok(s.stopped && s.active && s.factor === 0.5, 'AU2 exactly −20% → stopped (and half size state kept)'); near(s.declinePct, 20, 'AU2 decline 20');
+  s = step(null, 799999); ok(s.stopped, 'AU2 below −20% → stopped');
+  s = step(null, 800001); ok(!s.stopped, 'AU2 −19.9999% does not stop');
+  let st = step(null, 780000);
+  s = step(st, 840000); ok(s.stopped && s.active, 'AU2 −16% still stopped (recovers only above −15%)');
+  s = step(s, 850000); ok(s.stopped, 'AU2 exactly −15% still stopped');
+  s = step(s, 850001); ok(!s.stopped && s.active && s.factor === 0.5, 'AU2 above −15% → stop lifted, half size remains');
+  s = step(s, 950001); ok(!s.stopped && !s.active && s.factor === 1, 'AU2 above −5% → full size');
+  s = R.emergencyStep(null, { at, equity: 700000, confirmed: false }, mref, []); ok(!s.stopped, 'AU2 unconfirmed snapshot ignored');
+  // the three checks refuse new orders; fills / reductions / stop moves stay allowed
+  const b = basis(), mom = R.momentumCheck({ now: NOW, account: 'main', basis: b, ideas: [], costsFor: costsNone, candidate: { ideaId: 'n', riskMoney: 10 }, ddStop: true });
+  has(mom, 'DD_STOP', 'AU2 Momentum blocked'); ok(!mom.allowed, 'AU2 Momentum not allowed');
+  no(R.momentumCheck({ now: NOW, account: 'main', basis: b, ideas: [], costsFor: costsNone, candidate: { ideaId: 'n', riskMoney: 10 }, ddStop: false }), 'DD_STOP', 'AU2 off → no DD_STOP');
+  has(R.satCheck({ now: NOW, account: 'main', basis: b, ideas: [], attempts: [], condition: { trend: 'ok' }, order: {}, candidateRisk: 1, ddStop: true }), 'DD_STOP', 'AU2 Satellite blocked');
+  has(R.compCheck({ now: NOW, account: 'main', basis: b, ideas: [], cycles: [], unlocks: [], signals: { acwi: true, hyg: true, asOf: '2026-11-18' }, entry: { kind: 'pilot', requestedPct: 0.5, thesisDone: true }, emergencyFactor: 1, ddStop: true }), 'DD_STOP', 'AU2 Compounder blocked');
+  ok(R.REASONS.DD_STOP && R.REASONS.DD_STOP.kind === 'block' && /20% below its peak/.test(R.REASONS.DD_STOP.text), 'AU2 reason text');
+  const blk = { reasons: ['DD_STOP'], flags: [] };
+  ['order', 'addon', 'topup', 'edit_increase'].forEach(a => ok(R.actionPolicy(a, blk).accepted === false, 'AU2 ' + a + ' refused'));
+  ['fill', 'close', 'reduce', 'partial_close', 'stop_update', 'cancel'].forEach(a => ok(R.actionPolicy(a, blk).accepted === true, 'AU2 ' + a + ' always allowed'));
+}
+
 console.log((f ? 'FAIL ' : 'PASS ') + (n - f) + '/' + n + ' risk-engine assertions');
 process.exit(f ? 1 : 0);

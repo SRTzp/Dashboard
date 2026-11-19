@@ -4373,6 +4373,8 @@ html body .topbar.topbar.topbar .hbtns>#hdrMoreBtn:hover{border-color:var(--lr-m
 .lr2-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.lr2-head .sp{flex:1}
 .lr2-cause{font:600 var(--lr-fs-6)/1 var(--lr-sans);color:var(--lr-muted)}.lr2-bdg{font:600 var(--lr-fs-6)/1 var(--lr-sans);color:var(--lr-text2);background:var(--lr-seg);padding:4px 8px;border-radius:var(--lr-r-pill)}
 .lr2-orisk{font:400 var(--lr-fs-5)/1.2 var(--lr-sans);color:var(--lr-muted);display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.lr2-orisk b{color:var(--lr-ink)}
+.au2-ex{all:unset;cursor:pointer;white-space:nowrap;flex:none;font:inherit;color:var(--lr-muted)}.au2-ex.g{color:var(--green)}.au2-ex.a{color:var(--amber)}.au2-ex.n{color:var(--lr-muted)}.au2-ex .au2-p{display:none}.au2-ex:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+@media (max-width:600px){.au2-ex .au2-d{display:none}.au2-ex .au2-p{display:inline}.lr2-orisk{flex-wrap:nowrap;white-space:nowrap}}
 .re2-row .lr-acc,.lr2-head .lr-acc{padding:3px 6px;font-size:12px;min-width:20px}
 .lr2-dir{font:600 var(--lr-fs-6)/1 var(--lr-sans)}.lr2-dir.lg{color:var(--lr-gain)}.lr2-dir.sh{color:var(--lr-loss)}
 /* ══ LR2·C — Act column + quiet side column (To do · Risk room · events · Details) ══ */
@@ -6296,7 +6298,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
        table[equity][credit]: green/red of ACWI/BIL (SMA 20/50) x HYG/IEI (SMA 20/50). Neutral / unavailable / stale -> fallback (never 100 %). All values + SMA periods are settings (rev 4: 100/80/80/60, fallback 80). */
     regime: { table: { green: { green: 1.0, red: 0.80 }, red: { green: 0.80, red: 0.60 } }, fallback: 0.80, freshDays: 4, smaFast: 20, smaSlow: 50 },
     active: { weeklyPct: 3.0, monthlyPct: 12.0 },
-    emergency: { triggerPct: 10, recoverPct: 5, factor: 0.5 },
+    emergency: { triggerPct: 10, recoverPct: 5, factor: 0.5, stopPct: 20 },   /* AU2: stopPct = new entries stopped; leaves the stop at stopPct − (triggerPct − recoverPct) = 15 %, then half size until recoverPct */
     snapshot: { blockAfterDays: 14 }
   };
   var STRATS = { winner: 'winner', mom: 'winner', momentum: 'winner', sat: 'sat', satellite: 'sat', ladder: 'ladder', comp: 'ladder', compounder: 'ladder' };
@@ -6346,6 +6348,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
     COMP_UNLOCK_STALE:  { kind: 'block', text: 'Unlock blocked: regime data not fresh' },
     COMP_UNLOCK_NOTE:   { kind: 'block', text: 'Unlock needs a written review note' },
     COMP_UNLOCK_CONFIRM:{ kind: 'block', text: 'Unlock needs an explicit confirm' },
+    DD_STOP:            { kind: 'block', text: 'Account is 20% below its peak · new entries stopped' },
     EMERGENCY_ON:       { kind: 'flag',  text: 'Emergency: risk factor 0.5' },
     FILL_OVER_LIMIT:    { kind: 'flag',  text: 'Actual fill exceeds a limit — accepted, new risk restricted' },
     UNKNOWN_DATA:       { kind: 'block', text: 'Required data missing' }
@@ -6527,14 +6530,19 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
      Trigger: cash-flow-adjusted decline >= 10 % from the reference. Keeps its reference across month change until adjusted decline is above −5 %. */
   function flowsSince(flows, fromMs, toMs) { var s = 0; (flows || []).forEach(function (f) { if (f && num(f.amount) && f.at > fromMs && f.at <= toMs) s += f.amount; }); return s; }
   function emergencyStep(state, snap, monthRef, flows, cfg) {
-    var E = pol(cfg).emergency, st = { active: !!(state && state.active), refEquity: state && state.refEquity, refStartMs: state && state.refStartMs };
-    if (!snap || !snap.confirmed || !pos(snap.equity)) return merge(st, { factor: st.active ? E.factor : 1, changed: false, declinePct: null });
+    var E = pol(cfg).emergency, st = { active: !!(state && state.active), stopped: !!(state && state.stopped), refEquity: state && state.refEquity, refStartMs: state && state.refStartMs };
+    var fac = function () { return st.active ? E.factor : 1; };
+    if (!snap || !snap.confirmed || !pos(snap.equity)) return merge(st, { factor: fac(), changed: false, declinePct: null });
     var ref = st.active ? { equity: st.refEquity, at: st.refStartMs } : (monthRef && pos(monthRef.equity) ? { equity: monthRef.equity, at: monthRef.at } : null);
-    if (!ref) return merge(st, { factor: st.active ? E.factor : 1, changed: false, declinePct: null });
+    if (!ref) return merge(st, { factor: fac(), changed: false, declinePct: null });
     var adj = snap.equity - flowsSince(flows, ref.at, snap.at), dec = (ref.equity - adj) / ref.equity * 100, was = st.active, changed = false;
     if (!st.active && dec >= E.triggerPct - EPS) { st.active = true; st.refEquity = ref.equity; st.refStartMs = ref.at; changed = true; }
     else if (st.active && dec < E.recoverPct - EPS) { st.active = false; st.refEquity = null; st.refStartMs = null; changed = true; }
-    return merge(st, { factor: st.active ? E.factor : 1, changed: changed, declinePct: dec, was: was });
+    /* AU2 — stop at stopPct (same reference as the half-size rule); steps back to half size with the same recovery gap, then full size */
+    var stopOff = (E.stopPct || 0) - (E.triggerPct - E.recoverPct);
+    if (E.stopPct > 0) { if (!st.stopped && dec >= E.stopPct - EPS) st.stopped = true; else if (st.stopped && dec < stopOff - EPS) st.stopped = false; }
+    if (!st.active) st.stopped = false;
+    return merge(st, { factor: fac(), changed: changed, declinePct: dec, was: was });
   }
 
   /* ═══ 7. Sizing (all strategies) ═══
@@ -6634,6 +6642,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
   function momentumCheck(i) {
     var b = i.basis; if (!b || !b.ok) return res(b ? b.reasons : ['NO_SNAPSHOT'], [], {});
     var S = momentumState(i), P = S.P, cand = i.candidate || {}, reasons = [], flags = (b.flags || []).slice();
+    if (i.ddStop === true) reasons.push('DD_STOP');
     var risk = num(cand.riskMoney) && cand.riskMoney >= 0 ? cand.riskMoney : null;
     if (risk === null) reasons.push('UNKNOWN_DATA');
     var wCap = b.weekEquity * P.weeklyPct / 100, mCap = b.monthEquity * P.monthlyPct / 100;
@@ -6735,6 +6744,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
   /* Full Satellite gate for a NEW order (not a fill). */
   function satCheck(i) {
     var reasons = [], flags = [], st = satStepState(i.attempts, i.now, i.cfg);
+    if (i.ddStop === true) reasons.push('DD_STOP');
     if (st.locked) reasons.push('SAT_LOCKED');
     var cond = satCondition(i.condition); reasons = reasons.concat(cond.reasons); flags = flags.concat(cond.flags);
     var ord = satEntryOrder(i.order); reasons = reasons.concat(ord.reasons);
@@ -6864,6 +6874,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
     if (!b || !b.ok) return res(b ? b.reasons : ['NO_SNAPSHOT'], [], {});
     flags = flags.concat(b.flags || []);
     var ck = compStreak(i.cycles, i.unlocks, i.cfg); if (ck.locked) reasons.push('COMP_LOCKED');
+    if (i.ddStop === true) reasons.push('DD_STOP');
     var rg = i.regime || regimeState(i.signals, i.now, i.cfg), f = compFactor(rg, i.emergencyFactor); flags = flags.concat(rg.flags);
     var e = compEntryCheck(merge(i.entry || {}, { factor: f })); reasons = reasons.concat(e.reasons); flags = flags.concat(e.flags);
     var heat = compHeat(i.ideas, i.account, i.costsFor, b.weekEquity, b.currentEquity), cand = num(i.candidateRisk) ? i.candidateRisk : 0, P = pol(i.cfg).comp;
@@ -7293,7 +7304,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
       out.positions = rowsOut;
 
       // Orders that would be blocked today (Ordered + complete Planned), evaluated as a NEW order against everything else
-      var blocked = [];
+      var blocked = [], ddStopNow = basis.ok && liveEmergency(basis.snaps || [], S.cashFlows || []).stopped === true;
       ideas.filter(function (i) { return i.status === 'ordered' || i.status === 'planned'; }).forEach(function (i) {
         var others = ideas.filter(function (x) { return x !== i; }), plan = i.plan || {}, w = i.workingOrders, e0 = w[0] ? w[0].entry : plan.entry, s0 = w[0] ? w[0].stop : plan.stop;
         var risk = w.length ? sumBy(w, function (x) { return pos(x.qty) && pos(x.entry) && pos(x.stop) ? x.qty * Math.abs(x.entry - x.stop) * (x.mult > 0 ? x.mult : 1) * (x.fx > 0 ? x.fx : 1) : 0; }) : (plan.levels && pos(s0) ? sumBy(plan.levels, function (l) { return pos(l.qty) && pos(l.px) ? l.qty * Math.abs(l.px - s0) : 0; }) : null);
@@ -7311,6 +7322,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
           var h2 = R.compHeat(fxIdeas(others, A.fx, basis.weekFx), acc.id, costsFor, basis.weekEquity, basis.currentEquity); if (risk !== null && h2.money + risk > basis.weekEquity * R.POLICY.comp.heatCapPct / 100 + 1e-7) r.push('COMP_HEAT');
           f = f.concat(regime.flags);
         }
+        if (basis.ok && ddStopNow) r.unshift('DD_STOP');
         if (r.length) blocked.push({ id: i.id, sym: i.sym, strategy: i.strategy, status: i.status, reasons: Array.from(new Set(r)), flags: Array.from(new Set(f)), candidateRisk: risk });
       });
       out.wouldBeBlocked = blocked;
@@ -7423,13 +7435,13 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
   }
   /* Emergency: replay every confirmed snapshot in order (evaluated AT a snapshot). Reference = month-start basis of that snapshot. */
   function liveEmergency(snaps, flows) {
-    var st = null, out = { active: false, factor: 1, declinePct: null, refEquity: null };
+    var st = null, out = { active: false, stopped: false, factor: 1, declinePct: null, refEquity: null };
     var fl = (flows || []).map(function (f) { return { at: flowAt(f), amount: n(f.amount) }; }).filter(function (f) { return f.at !== null && f.amount !== null; });
     snaps.filter(function (x) { return !x.provisional; }).forEach(function (sn, i, arr) {
       var upto = arr.slice(0, i + 1), ms = R.bkk.monthStart(sn.at), ref = null; upto.forEach(function (x) { if (x.at <= ms) ref = x; }); if (!ref) ref = upto[0];
       var e = R.emergencyStep(st, sn, { equity: ref.equity, at: ref.at }, fl);
-      st = { active: e.active, refEquity: e.refEquity, refStartMs: e.refStartMs };
-      out = { active: e.active, factor: e.factor, declinePct: e.declinePct, refEquity: e.refEquity, refStartMs: e.refStartMs, evaluatedAt: sn.at };
+      st = { active: e.active, stopped: e.stopped, refEquity: e.refEquity, refStartMs: e.refStartMs };
+      out = { active: e.active, stopped: e.stopped === true, factor: e.factor, declinePct: e.declinePct, refEquity: e.refEquity, refStartMs: e.refStartMs, evaluatedAt: sn.at };
     });
     return out;
   }
@@ -7533,8 +7545,9 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
     var f = function (ideas) { return R.satBudgetCheck({ basis: L.basis, now: L.now, account: L.acct, ideas: exceptId === undefined ? ideas : otherIds(ideas, exceptId), costsFor: L.costsFor, candidateRisk: candRisk }); };
     return mergeDual(f(L.ideasW), f(L.ideasM), 'sat');
   }
-  function baseModel(L, strat) { return { strategy: strat, acct: L.acct, ok: false, blocked: true, reasons: [], reasonTexts: [], flags: [], formula: '', effPct: null, qty: 0, money: null, roomLine: '', allowedQty: 0, chip: null, factors: [] }; }
+  function baseModel(L, strat) { return { ddStop: !!(L.emergency && L.emergency.stopped), strategy: strat, acct: L.acct, ok: false, blocked: true, reasons: [], reasonTexts: [], flags: [], formula: '', effPct: null, qty: 0, money: null, roomLine: '', allowedQty: 0, chip: null, factors: [] }; }
   function finish(m, d) {
+    if (m.ddStop && m.reasons.indexOf('DD_STOP') < 0) m.reasons.unshift('DD_STOP'); if (m.ddStop) m.allowedQty = 0;
     var seen = {}; m.reasons = m.reasons.filter(function (c) { if (seen[c]) return false; seen[c] = 1; return true; });
     m.reasonTexts = m.reasons.map(function (c) { return rtext(c, d); }); m.blocked = m.reasons.length > 0; m.ok = !m.blocked && m.qty > 0; return m;
   }
@@ -7983,7 +7996,7 @@ function re1Fx(x){ return String(Math.round(x * 10000) / 10000); }
 function re1PortBlock(id){
   const L = re1L(id), e = escHtml; if(!L) return '';
   const b = L.basis, P = Re1Adapter && RiskEngine.POLICY, eq = b.ok ? b.weekEquity : null, pc = v=>eq > 0 ? v / eq * 100 : null, bar = (u, cap)=>`<div class="re1-bar"><i style="width:${Math.max(0, Math.min(100, cap > 0 && u != null ? u / cap * 100 : 0)).toFixed(0)}%"></i></div>`;
-  const state = !b.ok ? (b.reasons[0] === 'NO_SNAPSHOT' ? ['No snapshot', 'r'] : ['Snapshot stale', 'r']) : L.emergency.active ? ['Emergency ×0.5', 'r'] : b.provisional ? ['Provisional', 'a'] : !b.confirmedThisWeek ? ['Snapshot due', 'a'] : ['Normal', ''];
+  const state = !b.ok ? (b.reasons[0] === 'NO_SNAPSHOT' ? ['No snapshot', 'r'] : ['Snapshot stale', 'r']) : L.emergency.stopped ? ['Stopped · DD 20%', 'r'] : L.emergency.active ? ['Emergency ×0.5', 'r'] : b.provisional ? ['Provisional', 'a'] : !b.confirmedThisWeek ? ['Snapshot due', 'a'] : ['Normal', ''];
   const head = `<div class="t" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${e(re1Name(id))}</b><small class="re1-note" style="margin:0" data-re1-basis>${b.ok ? `week-start ${re1Money(eq)} · ${b.provisional ? 'provisional (entered capital)' : 'snapshot ' + e(re1DayTxt(b.weekSnapDate)) + (L.fx > 0 ? ' · FX ' + (b.weekFx > 0 ? re1Fx(b.weekFx) + ' (snapshot)' : re1Fx(L.fx) + ' (current rate — snapshot has no FX)') : '')}` : 'no usable equity basis'}</small><span class="re1-chip ${state[1]}" data-re1-state>${e(state[0])}</span></div>`;
   if(!b.ok) return `<div class="re1-pc" data-re1-port="${e(id)}">${head}<div class="re1-f">${e(b.reasons.map(c=>RiskEngine.REASONS[c] ? RiskEngine.REASONS[c].text : c).join(' · '))} — new risk-increasing orders are blocked. Confirm a snapshot in Settings.</div></div>`;
   const m = L.mom.chk, sb = L.sat.budget, ms = L.mom.state, st = L.sat.step, hh = L.comp.heat, rg = L.regime, ac = L.active;
@@ -11597,7 +11610,8 @@ function ln4PortPills(){   /* RE-C1 — ONE chip, only when abnormal: Emergency 
       const L = re1L(id); if(!L) return; const nm = re1Accts().length > 1 ? re1Name(id) + ' ' : '';
       if(!L.basis.ok){ parts.push(nm + (L.basis.reasons[0] === 'NO_SNAPSHOT' ? 'no snapshot' : 'snapshot stale')); red = true; regOnly = false; return; }
       if(!L.basis.confirmedThisWeek && !L.basis.provisional){ parts.push(nm + 'snapshot due'); regOnly = false; }
-      if(L.emergency.active){ parts.push(nm + 'Emergency ½'); red = true; regOnly = false; }
+      if(L.emergency.stopped){ parts.push(nm + 'Stopped · DD 20%'); red = true; regOnly = false; }
+      else if(L.emergency.active){ parts.push(nm + 'Emergency ½'); red = true; regOnly = false; }
       if(L.sat.step.locked){ parts.push(nm + 'SAT locked'); red = true; regOnly = false; }
       if(L.comp.streak.locked){ parts.push(nm + 'COMP locked'); red = true; regOnly = false; }
     });
@@ -11791,7 +11805,48 @@ function ln4Exec(){
   const w = ln4Week(), L = ln4ValidList().filter(x=>x.day >= w.from && x.day <= w.to);
   return {x: L.filter(e=>e.taken).length, y: L.length};
 }
-function ln4Valid(id, sym, via, extra){ return ln4Write(o=>{ o.valid = o.valid || {}; o.valid[id] = Object.assign({day:thaiToday(), sym, at:new Date().toISOString(), via}, extra || {}); }); }
+function ln4Valid(id, sym, via, extra){
+  let ac = null; try{ if(via === 'working'){ const it = bdById(id); ac = it && it.acct || tdHome(); } }catch(e){}
+  return ln4Write(o=>{ o.valid = o.valid || {}; o.valid[id] = Object.assign({day:thaiToday(), sym, at:new Date().toISOString(), via}, extra || {}); if(via === 'working') au2Stamp(o, id, sym, ac); });   /* AU2 B — a plan placed before it was ever seen Ready still counts */
+}
+/* ── AU2 B — execution rate: ONE helper for the Today chip and the Journal card. Ledger ln4.rdy[id] = {day, wk, acct, sym} = the week the plan first reached Ready (or was placed). ── */
+function au2Stamp(o, id, sym, acct){ o.rdy = o.rdy && typeof o.rdy === 'object' ? o.rdy : {}; if(!o.rdy[id]) o.rdy[id] = {day:thaiToday(), wk:tdMonday(thaiToday()), acct:acct || tdHome(), sym:sym || ''}; }
+const AU2_FINE = ['invalidated', 'thesis'];   /* a correct skip is not a miss */
+let au2Seen = {};
+function au2Sync(){   /* stamp newly Ready plans (deferred write, once per plan) */
+  try{
+    const fresh = bdItems().filter(it=>!(ln4Cfg().rdy || {})[it.id] && !au2Seen[it.id] && re2ReadyOf(it));
+    if(!fresh.length) return; fresh.forEach(it=>{ au2Seen[it.id] = 1; });
+    setTimeout(()=>{ try{ ln4Write(o=>{ fresh.forEach(it=>au2Stamp(o, it.id, it.sym, it.acct || tdHome())); }); }catch(e){} }, 0);
+  }catch(e){}
+}
+function au2Outcome(id){   /* 'ok' placed · 'skip' correctly skipped (out of the denominator) · 'miss' hesitated/missed/other · 'un' unanswered · 'gone' deleted */
+  const c = ln4Cfg(), v = (c.valid || {})[id] || null; let it = null; try{ it = bdItems().find(x=>x.id === id) || null; }catch(e){}
+  if((v && v.via === 'working' && !v.missed && !v.notTaken) || (it && it.status !== 'plan')) return 'ok';
+  let r = ''; try{ const e = re4Entries().find(x=>x.id === id && x.scope === 'plan'); r = e ? e.reason : ''; }catch(e){}
+  if(!r && v && (v.missed || v.notTaken)) r = v.reason || 'missed';
+  if(r) return AU2_FINE.indexOf(r) >= 0 ? 'skip' : 'miss';
+  if(it) return 'un';
+  const live = (coreCardsList || []).some(x=>x.id === id && x.archived !== true && x.status !== 'cancelled') || (satIdeasList || []).some(x=>x.id === id && x.status !== 'cancelled');
+  return live ? 'un' : 'gone';
+}
+function au2Exec(pred){   /* pred(rec) → include · returns {x placed, y plans that reached Ready (minus correct skips), miss, un, ids} */
+  const rdy = ln4Cfg().rdy || {}, o = {x:0, y:0, miss:0, un:0, skip:0};
+  Object.keys(rdy).forEach(id=>{ const r = rdy[id]; if(!r || !pred(r)) return; const k = au2Outcome(id); if(k === 'gone' || k === 'skip'){ if(k === 'skip') o.skip++; return; } o.y++; if(k === 'ok') o.x++; else if(k === 'miss') o.miss++; else o.un++; });
+  o.tone = o.y === 0 ? 'n' : (o.miss + o.un === 0 ? 'g' : 'a'); return o;
+}
+function au2WeekExec(accts){ const wk = tdMonday(thaiToday()); return au2Exec(r=>r.wk === wk && (!accts || accts.indexOf(r.acct) >= 0)); }
+function au2PeriodExec(accts, per){ return au2Exec(r=>(!accts || accts.indexOf(r.acct) >= 0) && lr5InPeriod(r.day, per)); }
+function au2ChipHtml(accts){
+  au2Sync(); let e; try{ e = au2WeekExec(accts); }catch(err){ return ''; }
+  const full = e.y ? `Placed ${e.x}/${e.y} this week` : 'Placed — this week', short = e.y ? `${e.x}/${e.y}${e.tone === 'g' ? ' ✓' : ''}` : '—';
+  return `<button type="button" class="au2-ex ${e.tone}" data-au2-exec data-au2-tone="${e.tone}" data-au2-x="${e.x}" data-au2-y="${e.y}" title="Plans placed this week · tap for Not taken" onclick="au2ExecGo()"><span class="au2-sep">·</span> <span class="au2-d">${full}</span><span class="au2-p">${short}</span></button>`;
+}
+function au2ExecGo(){
+  try{ LR5.per = 'week'; LR5.port = 'all'; LR5.sel = null; LR5.ntOpen = true; }catch(e){}
+  try{ switchTab('journal'); }catch(e){}
+  setTimeout(()=>{ try{ if(window.matchMedia('(max-width:600px)').matches && !document.querySelector('[data-lr5-ntsheet]')) lr5NtSheet(); }catch(e){} }, 60);
+}
 function ln4ExecTip(){ const e = ln4Exec(); ln4Toast(`Valid setups taken this week ${e.x}/${e.y} · goal ≥ ${LN4_WEEK_GOAL}% · profit not counted`); }
 const LN4_WEEK_GOAL = 80;
 /* ── Act rows ── */
@@ -15755,7 +15810,7 @@ function lr5KpiHtml(s, phone){
     res:`<div class="lr5-k" data-lr5-k="result"><span class="lbl">${phone ? 'Result' : 'Result · net'}</span><b class="num ${lr5Cls(s.thb)}">${res}</b>${sm(`${s.nR ? lr5Rtxt(s.rSum) + ' · ' : ''}${s.n} trade${s.n === 1 ? '' : 's'}`)}</div>`,
     win:`<div class="lr5-k" data-lr5-k="win"><span class="lbl">Win rate · avg R</span><b class="num">${s.win === null ? '—' : s.win + '%'}</b>${sm(`win ${s.rW === null ? '—' : lr5Rtxt(s.rW)} · loss ${s.rL === null ? '—' : lr5Rtxt(s.rL)}`)}</div>`,
     fol:`<div class="lr5-k" data-lr5-k="followed"><span class="lbl">${phone ? 'Followed plan' : 'Followed the plan'}</span><b class="num ${s.n && s.followed === s.n ? 'up' : ''}">${s.n ? s.followed + ' / ' + s.n : '—'}</b>${sm(phone ? `win rate ${s.win === null ? '—' : s.win + '%'}` : `${s.disc} discretionary exit${s.disc === 1 ? '' : 's'}`)}</div>`,
-    nt:`<div class="lr5-k warn" data-lr5-k="nottaken"><span class="lbl">Not taken</span><b class="num">${s.nt}</b>${sm(phone ? `${s.hes} hesitated` : [s.hes ? s.hes + ' hesitated' : '', s.mis ? s.mis + ' missed' : '', s.inv ? s.inv + ' invalidated' : '', s.other ? s.other + ' other' : ''].filter(Boolean).join(' · ') || 'none')}</div>`,
+    nt:`<div class="lr5-k warn" data-lr5-k="nottaken"><span class="lbl">Not taken</span><b class="num">${s.nt}</b>${sm((phone ? `${s.hes} hesitated` : [s.hes ? s.hes + ' hesitated' : '', s.mis ? s.mis + ' missed' : '', s.inv ? s.inv + ' invalidated' : '', s.other ? s.other + ' other' : ''].filter(Boolean).join(' · ') || 'none') + au2JournalExec())}</div>`,
     rev:`<div class="lr5-k" data-lr5-k="toreview"><span class="lbl">To review</span><b class="num">${s.toReview}</b>${sm(phone ? 'tap to add reason' : 'closed, no reason yet')}</div>`
   };
   return phone ? cards.res + cards.fol + cards.nt + cards.rev : cards.res + cards.win + cards.fol + cards.nt + cards.rev;
@@ -15773,6 +15828,7 @@ function lr5PhoneRowHtml(x){
     <div class="lr5-pm1"><div class="lr5-l1"><b>${symDisp(x.sym)}</b>${lr5Tag(x)}${lr5AccPill(x)}<span class="lr5-dt">${lr5Day(x.date)}</span></div>${second}</div>
     <div class="lr5-pr2 num">${lr5Rhtml(x)}<span class="${x.pnl >= 0 ? 'up' : 'dn'}">${lr5Money(x.pnl, x.cs)}</span></div></div>`;
 }
+function au2JournalExec(){ try{ const e = au2PeriodExec(lrSwIds('journal'), LR5.per); return e.y ? ` · <span data-au2-jx class="au2-jx ${e.tone}">placed ${e.x}/${e.y}</span>` : ''; }catch(err){ return ''; } }
 function lr5NtListHtml(nt){
   const e = escHtml, day = x=>{ try{ return lr5Day(RiskEngine.bkk.dayKey(Date.parse(x.at))); }catch(err){ return lr5Day(String(x.at).slice(0, 10)); } };
   return nt.map(x=>`<div class="lr5-nrow" data-lr5-nt-row="${e(x.id)}"><b>${e(x.sym)}</b><span class="lr5-rs">${e(re4Short(x.reason))}</span><span class="lr5-nn">${e(day(x))} · ${e(x.strat)}${x.note ? ' · ' + e(x.note) : ''}</span></div>`).join('') || '<div class="lr5-nrow"><span class="lr5-nn">Nothing skipped in this period.</span></div>';
@@ -28091,7 +28147,8 @@ function re2State(acct){   /* worst wins · the strategy that causes it names it
   if(!b.ok){ set(b.reasons[0] === 'NO_SNAPSHOT' ? 'No snapshot' : 'Snapshot stale', 'r', 'snap'); }
   else {
     if(!b.confirmedThisWeek && !b.provisional){ set('Snapshot due', 'a', 'snap'); }
-    if(L.emergency.active){ set('Half size', 'a', 'emerg'); }
+    if(L.emergency.stopped){ set('Stopped · DD 20%', 'r', 'emerg'); }
+    else if(L.emergency.active){ set('Half size', 'a', 'emerg'); }
     if(R){
       if(R.mom.left <= 0){ set('Locked', 'r', 'mmt'); ab.mmt = 'r'; }
       if(R.sat.locked){ set('Locked', 'r', 'sat'); ab.sat = 'r'; }
@@ -28334,7 +28391,7 @@ function lr2ActHead(accts){
   const cap = RiskEngine.POLICY.active.weeklyPct, pill = id=>{ const a = acctList.find(x=>x.id === id); return a ? lrAcctPill(a) : ''; };
   const risk = accts.map(id=>({id, v:lr2OpenRisk(id)})).filter(x=>x.v != null);
   const fut = accts.map(id=>({id, v:lr2Futures(id)})).filter(x=>x.v != null);
-  const rtxt = risk.length ? `<span class="num lr2-orisk" data-lr2-orisk>Open risk ${risk.map(x=>`${accts.length > 1 ? pill(x.id) + ' ' : ''}<b>${re1Pct(x.v)}</b>`).join(' · ')} / ${cap}%${fut.map(x=>` · ${pill(x.id)} futures <b data-lr2-fut>${x.v.toFixed(1)}×</b>`).join('')}</span>` : '';
+  const rtxt = risk.length ? `<span class="num lr2-orisk" data-lr2-orisk>Open risk ${risk.map(x=>`${accts.length > 1 ? pill(x.id) + ' ' : ''}<b>${re1Pct(x.v)}</b>`).join(' · ')} / ${cap}%${fut.map(x=>` · ${pill(x.id)} futures <b data-lr2-fut>${x.v.toFixed(1)}×</b>`).join('')}${au2ChipHtml(accts)}</span>` : `<span class="num lr2-orisk" data-lr2-orisk>${au2ChipHtml(accts)}</span>`;
   let exec = ''; accts.forEach(a=>{ try{ if(re4Due(a)){ const ac = acctList.find(x=>x.id === a); exec += `<button type="button" class="rk r ab" data-re2-chip="exec" data-re4-chip data-lr2-exec="${e(a)}" title="Execution review due" onclick="re4ReviewOpen('${e(a)}')">${ac && accts.length > 1 ? lrAcctPill(ac) + ' ' : ''}${re4Counted(a).length} not taken</button>`; } }catch(err){} });
   return `<div class="h re2-strip lr2-head" data-re2-strip="all" data-lr2-head><b>Act</b><span class="lr2-bdg" data-lr2-bdg>${e(lr2AcctWord(accts))}</span><span class="dot ${S.c}"></span><button type="button" class="nm re2-st lr2-stb ${S.c}" data-lr2-state data-re2-state data-tw1-status title="Regime details" aria-label="${e(S.t)} — open Regime details in Flow" onclick="tw1RegimeGo()"${aw1SnapAttr(S)}>${e(S.t)}</button>${S.cause && ({mmt:'MMT', sat:'SAT', comp:'COMP', emerg:'Emergency', snap:'Snapshot'})[S.cause] ? `<span class="lr2-cause" data-lr2-cause>${({mmt:'MMT', sat:'SAT', comp:'COMP', emerg:'Emergency', snap:'Snapshot'})[S.cause]}</span>` : ''}${exec}<span class="sp"></span>${rtxt}</div>`;
 }

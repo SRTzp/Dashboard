@@ -27,7 +27,7 @@
        table[equity][credit]: green/red of ACWI/BIL (SMA 20/50) x HYG/IEI (SMA 20/50). Neutral / unavailable / stale -> fallback (never 100 %). All values + SMA periods are settings (rev 4: 100/80/80/60, fallback 80). */
     regime: { table: { green: { green: 1.0, red: 0.80 }, red: { green: 0.80, red: 0.60 } }, fallback: 0.80, freshDays: 4, smaFast: 20, smaSlow: 50 },
     active: { weeklyPct: 3.0, monthlyPct: 12.0 },
-    emergency: { triggerPct: 10, recoverPct: 5, factor: 0.5 },
+    emergency: { triggerPct: 10, recoverPct: 5, factor: 0.5, stopPct: 20 },   /* AU2: stopPct = new entries stopped; leaves the stop at stopPct − (triggerPct − recoverPct) = 15 %, then half size until recoverPct */
     snapshot: { blockAfterDays: 14 }
   };
   var STRATS = { winner: 'winner', mom: 'winner', momentum: 'winner', sat: 'sat', satellite: 'sat', ladder: 'ladder', comp: 'ladder', compounder: 'ladder' };
@@ -77,6 +77,7 @@
     COMP_UNLOCK_STALE:  { kind: 'block', text: 'Unlock blocked: regime data not fresh' },
     COMP_UNLOCK_NOTE:   { kind: 'block', text: 'Unlock needs a written review note' },
     COMP_UNLOCK_CONFIRM:{ kind: 'block', text: 'Unlock needs an explicit confirm' },
+    DD_STOP:            { kind: 'block', text: 'Account is 20% below its peak · new entries stopped' },
     EMERGENCY_ON:       { kind: 'flag',  text: 'Emergency: risk factor 0.5' },
     FILL_OVER_LIMIT:    { kind: 'flag',  text: 'Actual fill exceeds a limit — accepted, new risk restricted' },
     UNKNOWN_DATA:       { kind: 'block', text: 'Required data missing' }
@@ -258,14 +259,19 @@
      Trigger: cash-flow-adjusted decline >= 10 % from the reference. Keeps its reference across month change until adjusted decline is above −5 %. */
   function flowsSince(flows, fromMs, toMs) { var s = 0; (flows || []).forEach(function (f) { if (f && num(f.amount) && f.at > fromMs && f.at <= toMs) s += f.amount; }); return s; }
   function emergencyStep(state, snap, monthRef, flows, cfg) {
-    var E = pol(cfg).emergency, st = { active: !!(state && state.active), refEquity: state && state.refEquity, refStartMs: state && state.refStartMs };
-    if (!snap || !snap.confirmed || !pos(snap.equity)) return merge(st, { factor: st.active ? E.factor : 1, changed: false, declinePct: null });
+    var E = pol(cfg).emergency, st = { active: !!(state && state.active), stopped: !!(state && state.stopped), refEquity: state && state.refEquity, refStartMs: state && state.refStartMs };
+    var fac = function () { return st.active ? E.factor : 1; };
+    if (!snap || !snap.confirmed || !pos(snap.equity)) return merge(st, { factor: fac(), changed: false, declinePct: null });
     var ref = st.active ? { equity: st.refEquity, at: st.refStartMs } : (monthRef && pos(monthRef.equity) ? { equity: monthRef.equity, at: monthRef.at } : null);
-    if (!ref) return merge(st, { factor: st.active ? E.factor : 1, changed: false, declinePct: null });
+    if (!ref) return merge(st, { factor: fac(), changed: false, declinePct: null });
     var adj = snap.equity - flowsSince(flows, ref.at, snap.at), dec = (ref.equity - adj) / ref.equity * 100, was = st.active, changed = false;
     if (!st.active && dec >= E.triggerPct - EPS) { st.active = true; st.refEquity = ref.equity; st.refStartMs = ref.at; changed = true; }
     else if (st.active && dec < E.recoverPct - EPS) { st.active = false; st.refEquity = null; st.refStartMs = null; changed = true; }
-    return merge(st, { factor: st.active ? E.factor : 1, changed: changed, declinePct: dec, was: was });
+    /* AU2 — stop at stopPct (same reference as the half-size rule); steps back to half size with the same recovery gap, then full size */
+    var stopOff = (E.stopPct || 0) - (E.triggerPct - E.recoverPct);
+    if (E.stopPct > 0) { if (!st.stopped && dec >= E.stopPct - EPS) st.stopped = true; else if (st.stopped && dec < stopOff - EPS) st.stopped = false; }
+    if (!st.active) st.stopped = false;
+    return merge(st, { factor: fac(), changed: changed, declinePct: dec, was: was });
   }
 
   /* ═══ 7. Sizing (all strategies) ═══
@@ -365,6 +371,7 @@
   function momentumCheck(i) {
     var b = i.basis; if (!b || !b.ok) return res(b ? b.reasons : ['NO_SNAPSHOT'], [], {});
     var S = momentumState(i), P = S.P, cand = i.candidate || {}, reasons = [], flags = (b.flags || []).slice();
+    if (i.ddStop === true) reasons.push('DD_STOP');
     var risk = num(cand.riskMoney) && cand.riskMoney >= 0 ? cand.riskMoney : null;
     if (risk === null) reasons.push('UNKNOWN_DATA');
     var wCap = b.weekEquity * P.weeklyPct / 100, mCap = b.monthEquity * P.monthlyPct / 100;
@@ -466,6 +473,7 @@
   /* Full Satellite gate for a NEW order (not a fill). */
   function satCheck(i) {
     var reasons = [], flags = [], st = satStepState(i.attempts, i.now, i.cfg);
+    if (i.ddStop === true) reasons.push('DD_STOP');
     if (st.locked) reasons.push('SAT_LOCKED');
     var cond = satCondition(i.condition); reasons = reasons.concat(cond.reasons); flags = flags.concat(cond.flags);
     var ord = satEntryOrder(i.order); reasons = reasons.concat(ord.reasons);
@@ -595,6 +603,7 @@
     if (!b || !b.ok) return res(b ? b.reasons : ['NO_SNAPSHOT'], [], {});
     flags = flags.concat(b.flags || []);
     var ck = compStreak(i.cycles, i.unlocks, i.cfg); if (ck.locked) reasons.push('COMP_LOCKED');
+    if (i.ddStop === true) reasons.push('DD_STOP');
     var rg = i.regime || regimeState(i.signals, i.now, i.cfg), f = compFactor(rg, i.emergencyFactor); flags = flags.concat(rg.flags);
     var e = compEntryCheck(merge(i.entry || {}, { factor: f })); reasons = reasons.concat(e.reasons); flags = flags.concat(e.flags);
     var heat = compHeat(i.ideas, i.account, i.costsFor, b.weekEquity, b.currentEquity), cand = num(i.candidateRisk) ? i.candidateRisk : 0, P = pol(i.cfg).comp;
