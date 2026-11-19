@@ -39,7 +39,7 @@ def run(pw, w, h):
             hdr = js(page, "()=>[...document.querySelectorAll('.lr5-th .lbl')].map(x=>x.innerText.toLowerCase())")
             check(f"{tag} D: column header 'RS · from high'", "rs · from high" in hdr, hdr)
             tw = js(page, "()=>{ const t = document.querySelector('.lr5-tbl'); const l = document.querySelector('.lr5-list'); return {sw:t.scrollWidth, cw:t.clientWidth, lw:l.clientWidth, rs:[...document.querySelectorAll('.c-rs')].every(c=>c.scrollWidth <= c.clientWidth + 1)} }")
-            check(f"{tag} D: the column does not widen the table (min-width 900 unchanged · no cell clipped · nothing scrolls at 1440)", tw["sw"] <= max(tw["cw"], 900) and tw["rs"] and tw["sw"] <= tw["lw"], tw)
+            check(f"{tag} D: the column does not widen the table (min-width 900 unchanged · no cell clipped · nothing scrolls at 1440)", tw["sw"] <= max(tw["cw"], 900) and tw["rs"] and (tw["sw"] <= tw["lw"] or w < 1440), tw)
             lg = js(page, "()=>{ const l = document.querySelector('[data-wl2-legend]'); return l ? l.innerText.replace(/\\s+/g,' ') : null }")
             check(f"{tag} D: legend under the table (0 to −10% · −10 to −25% · beyond −25% · new high)", lg and "0 to −10%" in lg and "beyond −25%" in lg and "new high" in lg, lg)
         else:
@@ -48,6 +48,14 @@ def run(pw, w, h):
             check(f"{tag} D: phone line 2 ends with 'RS 98 ↘ −42%' (new high chip · old doc → rating only)", all(got[s].endswith(exp[s]) for s in exp), got)
             pos = js(page, "()=>[...document.querySelectorAll('[data-lr5-row]')].filter(r=>r.querySelector('[data-lr5-rs-phone]')).map(r=>{ const l = r.querySelector('.l2').getBoundingClientRect(), p = r.querySelector('[data-lr5-rs-phone]').getBoundingClientRect(), t = r.querySelector('.l2 .t').getBoundingClientRect(); return {s:r.dataset.sym, pin:Math.abs(l.right - p.right) <= 1, noOverlap:t.right <= p.left + 1, h:Math.round(l.height)} })")
             check(f"{tag} D: RS pinned right on line 2, left text ellipsizes, never overlaps, one line", all(x["pin"] and x["noOverlap"] and x["h"] <= 22 for x in pos), pos)
+        if desk:
+            hd = js(page, "()=>{ const h = document.querySelector('.lr5-hd'); const k = [...h.children].filter(c=>getComputedStyle(c).display !== 'none'); const tops = k.map(c=>Math.round(c.getBoundingClientRect().top + c.getBoundingClientRect().height / 2)); return {rows:Math.max(...tops) - Math.min(...tops), add:document.querySelector('.lr5-add').getBoundingClientRect().right <= innerWidth, h:h.getBoundingClientRect().height, sw:document.documentElement.scrollWidth - innerWidth} }")
+            check(f"{tag} H: header is ONE row (nothing wraps · '+ Add stock' on the same line · no overflow)", hd["rows"] <= 6 and hd["add"] and hd["sw"] <= 0 and hd["h"] <= 50, hd)
+            tr = js(page, "()=>[...document.querySelectorAll('[data-lr5-row] .sec .nm')].map(n=>({t:n.innerText, cut:n.scrollWidth > n.clientWidth + 1, title:n.closest('.sec').title})).filter(x=>x.cut)")
+            check(f"{tag} H: no sector cell truncated in the fixture", tr == [], tr)
+            sn = js(page, "()=>({a:row, }) " if False else "()=>[...document.querySelectorAll('[data-lr5-row]')].map(r=>[r.dataset.sym, (r.querySelector('.sec .nm')||{}).innerText, (r.querySelector('.sec')||{title:''}).title])")
+            d = {x[0]: x for x in sn}
+            check(f"{tag} H: short names — GLBE Software · MU Semis · AAPL Tech · full name in the tooltip", d["GLBE"][1] == "Software" and d["MU"][1] == "Semis" and d["AAPL"][1] == "Tech" and "Semiconductors (SMH)" in d["MU"][2], d)
         # ---- G: Exch? chip
         ex = js(page, "()=>{ const r = document.querySelector('[data-lr5-row][data-sym=GLBE]'); const q = r.querySelector('[data-wl1-exq]'), c = r.querySelector('[data-wl1-chip]'); if(!q) return null; const a = q.getBoundingClientRect(), s = c.getBoundingClientRect(), n = r.querySelector('.wlRn').getBoundingClientRect(); return {ws:getComputedStyle(q).whiteSpace, apart:a.right <= s.left + 0.5 || a.bottom <= s.top || s.bottom <= a.top, after:a.left >= n.right - 0.5, h:Math.round(a.height), txt:q.options[0].text} }")
         check(f"{tag} G: GLBE 'Exch?' chip — nowrap, one line, after the ticker, does not overlap the status chip", ex and ex["ws"] == "nowrap" and ex["apart"] and ex["after"] and ex["txt"] == "Exch?" and ex["h"] <= 44, ex)
@@ -56,6 +64,11 @@ def run(pw, w, h):
         opts = js(page, "()=>[...document.querySelectorAll('[data-lr5-sort] option')].map(o=>o.textContent)")
         check(f"{tag} F: Sort options — Default · RS high first · Near high + RS · Next check soonest · Homework first", opts == ["Default", "RS high first", "Near high + RS", "Next check soonest", "Homework first"], opts)
         page.select_option(sel, "nearhigh"); page.wait_for_timeout(300)
+        lab = js(page, "()=>document.querySelector('[data-lr5-sort-wrap] .t').innerText.trim()")
+        check(f"{tag} H: Sort label shows the active sort — 'Sort: Near high + RS ▾' (plain 'Sort ▾' on Default)", lab == "Sort: Near high + RS ▾", lab)
+        if desk:
+            hd2 = js(page, "()=>{ const h = document.querySelector('.lr5-hd'); const k = [...h.children].filter(c=>getComputedStyle(c).display !== 'none'); const t = k.map(c=>Math.round(c.getBoundingClientRect().top + c.getBoundingClientRect().height / 2)); return Math.max(...t) - Math.min(...t) }")
+            check(f"{tag} H: header still one row with the longer Sort label", hd2 <= 6, hd2)
         o = js(page, ROWS)
         near = ["GE", "AAPL", "TEAM", "RELY"]; nodata = [x for x in ("AMD", "PLTR", "NVDA") if x in o]; far = ["MU", "AVGO", "GLBE"]
         check(f"{tag} F: Near high + RS — by rating (GE 91 · AAPL 87 · TEAM 76 · RELY 63), unrated next, rows beyond −25% below (MU 98 · AVGO 64 · GLBE 54)", o[:4] == near and o[-3:] == far and sorted(o[4:-3]) == sorted(nodata), o)
@@ -119,7 +132,7 @@ def run(pw, w, h):
 
 def main():
     with sync_playwright() as pw:
-        for w, h in ((1440, 900), (390, 844), (360, 780)):
+        for w, h in ((1440, 900), (1280, 800), (390, 844), (360, 780)):
             run(pw, w, h)
     bad = [r for r in results if not r[1]]
     print(f"SUMMARY WL2: {len(results) - len(bad)}/{len(results)} pass")

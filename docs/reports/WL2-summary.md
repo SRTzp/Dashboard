@@ -34,3 +34,6 @@ nowrap, shrinks inside its cell (`overflow:hidden`), no overlap with the status 
 
 ## Final regression
 `bash tests/run_regression.sh` after the RS-card move (rebased on origin/main): **62/62 ok · 0 failing** (1131s). Hooks superset PASS. Branch diff vs origin/main contains only WL2 files (screenshots under `tests/screenshots/wl2/`, force-added because the folder is gitignored).
+
+## Last fix
+Header stays one row at ≥1024px (spacer gives way, then the summary ellipsizes; checked at 1280 and 1440). Sector column uses short names (Semis, Cons. Disc., Software, Tech, Financials, Industrials, Comm …; full name in the tooltip and detail). Sort button shows the active sort ("Sort: Near high + RS"). `run_tests_wl2` 108/108, `run_tests_lr5a` 160/160, `run_tests_lr5b` 111/111, hooks superset PASS. Full `run_regression.sh` not re-run after this change.

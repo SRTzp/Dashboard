@@ -47,7 +47,7 @@ def run(pw, w, h):
             nx = {s: row(page, s, "[data-lr5-next]") for s in o}
             check(f"{tag} A: Next check — GE 28 Nov · AVGO 2 Dec · others —", nx["GE"] == "28 Nov" and nx["AVGO"] == "2 Dec" and nx["AAPL"] == "—" and nx["PLTR"] == "—", nx)
             sec = {s: row(page, s, "[data-lr5-sec]") for s in o}
-            check(f"{tag} A: Sector vs SPY — Technology ↘ · Semiconductors ⤴ · Industrials ↗ · Software ↘", sec["AAPL"] == "Technology ↘" and sec["AVGO"] == "Semiconductors ⤴" and sec["GE"] == "Industrials ↗" and sec["PLTR"] == "Software ↘", sec)
+            check(f"{tag} A: Sector vs SPY — Tech ↘ · Semis ⤴ · Industrials ↗ · Software ↘", sec["AAPL"] == "Tech ↘" and sec["AVGO"] == "Semis ⤴" and sec["GE"] == "Industrials ↗" and sec["PLTR"] == "Software ↘", sec)
             hdr = js(page, "()=>[...document.querySelectorAll('.lr5-th .lbl')].map(x=>x.innerText)")
             check(f"{tag} A: table header Stock · Status · Sector vs SPY · RS · Thesis · homework · Next check", [x.lower() for x in hdr] == ["stock", "status", "sector vs spy", "rs · from high", "thesis · homework", "next check"], hdr)
         # ---- RS

@@ -4839,6 +4839,12 @@ html body .lr5 .lr5-seg button.on{color:var(--lr-ink);background:#fff;box-shadow
 html body .lr5 .lr5-sum{font-size:13px;color:var(--lr-muted);min-width:0}
 html body .lr5 .lr5-sum b{color:var(--lr-warn);font-weight:700}
 html body .lr5 .lr5-sp{flex:1 1 0;min-width:0}
+@media (min-width:1024px){   /* WL2 — the header stays ONE row: the spacer gives way first, then the summary ellipsizes */
+  html body .lr5 .lr5-hd{flex-wrap:nowrap}
+  html body .lr5 .lr5-hd>*{flex:none}
+  html body .lr5 .lr5-hd>.lr5-sp{flex:1 1 0}
+  html body .lr5 .lr5-hd>.lr5-sum{flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
 html body .lr5 .btn{font:600 13px/1 var(--lr-sans);border-radius:10px;padding:0 14px;height:36px;border:1px solid var(--lr-line2);background:#fff;color:var(--lr-ink);cursor:pointer;white-space:nowrap;box-shadow:none;display:inline-flex;align-items:center;justify-content:center}
 html body .lr5 .btn:hover{border-color:var(--lr-muted);background:#fff}
 html body .lr5 .btn.pri{background:var(--lr-ink);border-color:var(--lr-ink);color:#fff}
@@ -4846,7 +4852,7 @@ html body .lr5 .btn.pri:hover{background:var(--lr-ink);opacity:.9}
 html body .lr5 .btn.sm{height:32px}
 html body .lr5 .lr5-add .sm,html body .lr5 .lr5-act .sm{display:none}
 html body .lr5 .lr5-find{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--lr-line2);border-radius:10px;background:#fff;font-size:13px;color:var(--lr-muted);box-sizing:border-box}
-html body .lr5 .lr5-find input{border:0;outline:0;font:14px var(--lr-sans);width:140px;background:transparent;color:var(--lr-ink);padding:0;min-height:0;height:auto;box-shadow:none}
+html body .lr5 .lr5-find input{border:0;outline:0;font:14px var(--lr-sans);width:140px;min-width:0;background:transparent;color:var(--lr-ink);padding:0;min-height:0;height:auto;box-shadow:none}
 html body .lr5 .lr5-pick{position:relative;display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 10px;border:1px solid var(--lr-line2);border-radius:10px;background:#fff;font:600 13px/1 var(--lr-sans);color:var(--lr-text2);cursor:pointer;box-sizing:border-box}
 html body .lr5 .lr5-pick.on{border-color:var(--lr-ink);color:var(--lr-ink)}
 html body .lr5 .lr5-pick .ic{display:none}
@@ -33140,6 +33146,7 @@ function wl5RsPhone(it){
   return `<span class="lr5-rsp num" data-lr5-rs-phone>RS ${x.rating} ${wl5Arrow(x.line)}${pc}</span>`;
 }
 function wl5SecRow(etf){ try{ return rrgRowsNow().find(x=>x && x.sym === etf && !x.err && x.quad && !rrgWaiting(x)) || null; }catch(e){ return null; } }
+const WL2_SHORT = {SMH:'Semis', XLY:'Cons. Disc.', XLP:'Cons. Staples', IGV:'Software', XLK:'Tech', XLF:'Financials', XLI:'Industrials', XLC:'Comm', XLV:'Health', XLB:'Materials', XLE:'Energy', XLU:'Utilities', XLRE:'Real Estate', ITA:'Aero/Def', PAVE:'Infra', XHB:'Homebuilders', JETS:'Airlines', XBI:'Biotech', XRT:'Retail', HACK:'Cyber', KRE:'Reg. Banks', ARKX:'Space', ROBO:'Robotics'};   /* WL2 — short sector names for the table column (full name in the tooltip + detail) */
 const WL5_QUAD = {lead:['↗', 'up', 'leading'], imp:['⤴', 'imp', 'improving'], weak:['↘', 'wk', 'weakening'], lag:['↘', 'dn', 'lagging'], flat:['→', 'fl', 'neutral']};
 function wl5Sec(it){
   let etf = ''; try{ etf = tv1EtfOf(it.ticker, it); }catch(e){}
@@ -33152,7 +33159,7 @@ function wl5SecCell(it){
   const s = wl5Sec(it), e = escHtml;
   if(!s) return '<span class="sec miss" data-lr5-sec="none">—</span>';
   const q = WL5_QUAD[s.quad];
-  return `<span class="sec" data-lr5-sec="${e(s.etf)}" title="${e(s.name + ' (' + s.etf + ')' + (q ? ' · ' + q[2] : ''))}"><span class="nm">${e(s.name)}</span>${q ? ` <span class="${q[1]}" data-lr5-quad="${s.quad}">${q[0]}</span>` : ''}</span>`;
+  return `<span class="sec" data-lr5-sec="${e(s.etf)}" title="${e(s.name + ' (' + s.etf + ')' + (q ? ' · ' + q[2] : ''))}"><span class="nm">${e(WL2_SHORT[s.etf] || s.name)}</span>${q ? ` <span class="${q[1]}" data-lr5-quad="${s.quad}">${q[0]}</span>` : ''}</span>`;
 }
 function wl5NextOf(it){
   const d = String(it.next_check_date || '');
@@ -33224,7 +33231,7 @@ function wl5Pickers(all){
   const c = wl5Counts(all), e = escHtml;
   const so = WL5_SORTS.map(([k, n])=>`<option value="${k}"${wl5Sort === k ? ' selected' : ''}>${n}</option>`).join('');
   const fo = WL5_FILTERS.map(([k, n])=>`<option value="${k}"${wl5Filter === k ? ' selected' : ''}>${n} (${c[k]})</option>`).join('');
-  return `<span class="lr5-pick${wl5Sort !== 'default' ? ' on' : ''}" data-lr5-sort-wrap title="${wl5Sort === 'nearhigh' ? 'Ranks by RS, but rows more than 25% below their high go to the bottom.' : 'Sort'}"><span class="t">Sort ▾</span><span class="ic">${WL5_IC_SORT}</span><select data-lr5-sort aria-label="Sort" onchange="wl5SortSet(this.value)">${so}</select></span>`
+  return `<span class="lr5-pick${wl5Sort !== 'default' ? ' on' : ''}" data-lr5-sort-wrap title="${wl5Sort === 'nearhigh' ? 'Ranks by RS, but rows more than 25% below their high go to the bottom.' : 'Sort'}"><span class="t">${wl5Sort !== 'default' ? 'Sort: ' + escHtml((WL5_SORTS.find(x=>x[0] === wl5Sort) || ['', ''])[1]) : 'Sort'} ▾</span><span class="ic">${WL5_IC_SORT}</span><select data-lr5-sort aria-label="Sort" onchange="wl5SortSet(this.value)">${so}</select></span>`
     + `<span class="lr5-pick${wl5Filter !== 'all' ? ' on' : ''}" data-lr5-filter-wrap><span class="t">Filter ▾</span><span class="ic">${WL5_IC_FILT}</span><select data-lr5-filter aria-label="Filter" onchange="wl5FilterSet(this.value)">${fo}</select></span>`;
 }
 /* header: Watch · strategy tabs (+ Ideas) · summary · search · add — shared by the stock list and the Ideas list */
