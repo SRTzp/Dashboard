@@ -30,3 +30,6 @@ Branch `claude/lr5b` (from `origin/main`, rebased before the final run). Spec: `
 
 ## Tests
 New `tests/run_tests_lr5b.py` (106 checks at 1440/390/360) in `run_regression.sh`: stats by hand, moved-stop R, no-stop R, Both sum + currencies, period/port filters, Not taken, review round-trip (persisted), no Thai (Details open), overflow, one line per row. Proofs in `tests/screenshots/lr5b/`: `journal-1440-side.png`, `journal-390-side.png`, `journal-390-review-live.png`, `journal-1440-both-live.png`.
+
+## Regression
+First full run: 55/59 — hooks superset (`data-lb="ไม้"` literal, restored), and three older suites that read the old Journal while it is collapsed under `Details ▾` (`run_tests_re1d`, `run_tests_phase20`, `run_tests_phase373`): they now open `#lr5Det` first; assertions unchanged. After the fixes: re1d 336/336, phase20 76/76, phase373 475/475, hooks PASS. Final full `tests/run_regression.sh` result below.

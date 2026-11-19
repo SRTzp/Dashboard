@@ -74,7 +74,7 @@ def run_core(pw, w, h):
         e = js(page, "()=>ln4Exec()")
         check("[%s] Exec goal: Missed / Hesitated = a valid setup NOT taken (denominator +1, numerator same)" % tag, e["y"] == y0 + 1, [y0, e])
         # Journal › Not taken
-        js(page, "()=>{ switchTab('journal'); render(); }"); page.wait_for_timeout(400)
+        js(page, "()=>{ switchTab('journal'); render(); document.getElementById('lr5Det').open = true; }"); page.wait_for_timeout(400)   # LR5b: the old Journal lives under Details
         j = js(page, "()=>{const d=document.querySelector('[data-re4-nottaken]');return d?{open:d.open,sum:d.querySelector('summary').innerText.trim(),rows:d.querySelectorAll('[data-re4-nt-row]').length,counts:d.querySelector('[data-re4-counts]').textContent}:null}")
         check("[%s] Journal: one collapsed row 'Not taken · 2 this week ›'" % tag, j and not j["open"] and j["sum"] == "Not taken · 2 this week ›" and j["rows"] == 2, j)
         check("[%s] Journal: count per reason for week / month" % tag, j and "Missed 1 wk · 1 mo" in j["counts"] and "Invalidated 1 wk · 1 mo" in j["counts"], j)

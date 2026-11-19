@@ -209,7 +209,7 @@ def run(pw, w, h):
         page.locator("#cpConfirmBtn").click(); settle(page, 800)
         tr = js(page, "()=>{ const t = getBook('main').trades.find(x=>x.id==='tFU'); return t ? {s:t.status, log:(t.log||[]).map(x=>x.txt), th:!!t.thesis} : null; }")
         check(f"{tag} 13 closed trade carries the update log + thesis snapshot, last log = Closed", tr and tr["s"] == "closed" and tr["th"] and tr["log"] and tr["log"][-1].startswith("Closed @"), tr)
-        tab(page, "journal")
+        tab(page, "journal"); js(page, "()=>{ document.getElementById('lr5Det').open = true; }")   # LR5b: old Journal under Details
         check(f"{tag} 13 Journal shows 'log N entries ›' collapsed under the trade", cnt(page, "[data-bd-jlog]") >= 1 and "entr" in txt(page, "[data-bd-jlog] summary"), txt(page, "[data-bd-jlog] summary"))
         # ── 7 Flow / Plan placement ──
         tab(page, "flow")
