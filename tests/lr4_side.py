@@ -28,7 +28,7 @@ def live(pw, w, h, name, prep=None):
     b, page, pe = C.open_flow(pw, w, h)
     try:
         if prep: prep(page)
-        p = os.path.join(OUT, f"{name}-{w}-live.png"); page.screenshot(path=p, full_page=True)
+        page.evaluate("()=>{ try{ tw1TipHide(); }catch(e){} document.querySelectorAll('[data-tw1-tip]').forEach(n=>n.remove()); }"); page.mouse.move(2, 2); p = os.path.join(OUT, f"{name}-{w}-live.png"); page.screenshot(path=p, full_page=True)
         H = js(page, "()=>document.documentElement.scrollHeight")
         return p, H
     finally:

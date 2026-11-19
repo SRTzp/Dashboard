@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """LR4 — Flow tab: RRG tail end-point = current ratio/mom (same rrgCompute path) · Daily/Weekly toggle · empty states (no Weekly Impact / no RRG / no events) · calendar + macro tabs · no Thai in #tabFlow · no overflow at 360/390/1440.
 Run: python3 tests/run_tests_lr4.py"""
-import sys
+import re, sys
 from playwright.sync_api import sync_playwright
 import net_stub
 from re1d_common import js, check, results
@@ -70,6 +70,11 @@ def run(pw, w, h):
         op = js(page, "()=>({det:document.getElementById('lr4Det').open, row:document.querySelector('[data-bd-row=\"rrg\"]').open})")
         check(f"{tag} C: 'All 23 sectors ›' opens Details › RRG details (current list)", op["det"] and op["row"], op)
         js(page, "()=>{ document.getElementById('lr4Det').open = false; }")
+        # --- LR4 last pass: header = ONE row, ONE week picker · tooltip clear · every tile has a reason line
+        hr = js(page, "()=>{ const h=document.querySelector('[data-lr4-head]'), k=[...h.children].filter(e=>e.getClientRects().length).map(e=>e.getBoundingClientRect()); const sel=document.querySelectorAll('#tabFlow [data-bd-wk]'); const o=sel[0]?sel[0].selectedOptions[0].textContent:''; return {n:sel.length, inHead:!!(sel[0]&&h.contains(sel[0])), tops:k.map(r=>Math.round(r.top+r.height/2)), hh:Math.round(h.getBoundingClientRect().height), opt:o, add:document.querySelectorAll('#tabFlow [data-bd-addasset]').length, tip:document.querySelectorAll('[data-tw1-tip]').length, miss:[...document.querySelectorAll('[data-bd-mc]')].filter(e=>!(e.querySelector('[data-bd-reason]')||{innerText:''}).innerText.trim()).length}; }")
+        check(f"{tag} 6: Flow header is ONE row (all items share a centre line, height < 64)", max(hr["tops"]) - min(hr["tops"]) <= 12 and hr["hh"] < 64, hr)
+        check(f"{tag} 6: exactly one week picker in #tabFlow, inside the header; text '{'' if w <= 600 else 'Week '}17–21 Nov'", hr["n"] == 1 and hr["inHead"] and hr["opt"] == (("" if w <= 600 else "Week ") + "17–21 Nov"), hr)
+        check(f"{tag} 2/4: no name tooltip on load · every asset tile has a reason line (No catalyst when empty)", hr["tip"] == 0 and hr["miss"] == 0, hr)
         # --- calendar + macro
         mq = js(page, "()=>({chip:[...document.querySelectorAll('[data-lr4-qmiss]')].map(c=>c.innerText.trim()), det:document.getElementById('lr4Det').open})")
         check(f"{tag} C: 'Q4 missing' chip when there is no playbook · Details closed by default", any("Q4 missing" in c for c in mq["chip"]) and not mq["det"], mq)
@@ -79,6 +84,8 @@ def run(pw, w, h):
             js(page, "()=>lr4CalTab('macro')"); page.wait_for_timeout(200)
             mv = js(page, "()=>({pb:document.getElementById('pbPanel').getClientRects().length > 0, grid:document.getElementById('lr4CalGrid').getClientRects().length > 0})")
             check(f"{tag} C: Macro quarter tab shows #pbPanel and hides the grid", mv["pb"] and not mv["grid"], mv)
+            mt = js(page, "()=>{ const p=document.getElementById('pbPanel'); return {t:p.innerText.replace(/\\s+/g,' ').trim(), nb:p.querySelectorAll('.bd-nb').length, ttl:p.querySelectorAll('.bd-sh b').length}; }")
+            check(f"{tag} 1: Macro tab English only ('No playbook yet · Paste JSON'), no numbered '5' header, no inner card title", "No playbook yet" in mt["t"] and "Paste JSON" in mt["t"] and mt["nb"] == 0 and mt["ttl"] == 0 and not re.search("[\u0E00-\u0E7F]", mt["t"]), mt)
             js(page, "()=>lr4CalTab('cal')")
             js(page, "()=>{ switchTab('today'); td3GoCal(); }"); page.wait_for_timeout(400)
             check(f"{tag} C: Today's 'US calendar ↗' (td3GoCal) lands on the Flow calendar card", js(page, "()=>activeTab === 'flow' && (()=>{ const r = document.getElementById('lr4Cal').getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0; })()"))
@@ -86,6 +93,8 @@ def run(pw, w, h):
             js(page, "()=>document.querySelector('[data-lr4-calrow]').click()"); page.wait_for_timeout(300)
             sh = js(page, "()=>({sheet:!!document.querySelector('[data-lr4-sheet]'), days:document.querySelectorAll('.lr4-sheet [data-lr4-day]').length, txt:(document.querySelector('[data-lr4-sheet]')||{innerText:''}).innerText})")
             check(f"{tag} C: phone 'Economic calendar · 5 this week ›' opens the calendar as a sheet", sh["sheet"] and sh["days"] == 5 and "CPI" in sh["txt"], sh)
+            sx = js(page, "()=>{ const x=document.querySelector('[data-lr4-sheetx]').getBoundingClientRect(), h=document.querySelector('.lr4-sheet .hd').getBoundingClientRect(), l=document.querySelector('.lr4-sheet .lr4-inv-s'); return {w:Math.round(x.width), h:Math.round(x.height), right:Math.round(h.right-x.right), link:!!l && l.getBoundingClientRect().top < h.bottom, fs:l?parseFloat(getComputedStyle(l).fontSize):0}; }")
+            check(f"{tag} 3: phone sheet has a 44px x close at top right and a small 'Investing.com ↗' link in the header line", sx["w"] >= 44 and sx["h"] >= 44 and sx["right"] <= 16 and sx["link"] and sx["fs"] <= 12, sx)
             js(page, "()=>document.querySelector('[data-lr4-sheetx]').click()"); page.wait_for_timeout(200)
             js(page, "()=>document.querySelector('[data-lr4-macrow]').click()"); page.wait_for_timeout(200)
             check(f"{tag} C: phone 'Macro quarter ›' row reveals the playbook panel", js(page, "()=>document.getElementById('pbPanel').getClientRects().length > 0"))
