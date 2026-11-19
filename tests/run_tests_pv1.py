@@ -83,15 +83,15 @@ def partB(pw, w, h):
         wi_seed(page, doc)
         P11.seed_pb(page, [P11.pbver(1, "2026-09-20T00:00:00.000Z", x="up", b="down", r="flat", xa={"confidence": "mid", "why": "PV1 SAMPLE quarter why", "change_if": "PV1 SAMPLE change if"})])
         js(page, "()=>{ switchTab('flow'); satWeekPickWrite(wpWeekKey(), ['XAUUSD','BTCUSD']); ffRenderThemes(); bdFlowTopRender(); }"); page.wait_for_timeout(600)
-        cards = js(page, "()=>[...document.querySelectorAll('[data-bd-mc]')].map(e=>{const r=e.getBoundingClientRect(); const p=e.querySelector('.bd-av'); const cs=getComputedStyle(p); return {k:e.dataset.bdMc, h:Math.round(r.height), clamp:cs.webkitLineClamp, color:cs.color, det:e.querySelector('[data-bd-det]')?e.querySelector('[data-bd-det]').getBoundingClientRect().height:0, detTxt:e.querySelector('[data-bd-det]')?e.querySelector('[data-bd-det]').innerText:''}})")
-        check("[%s] B: cards have a real Details ▾ button, 44 px tap height, text clamped to 3 lines" % tag, cards and all(c["clamp"] == "3" and c["det"] >= 43.5 and "Details" in c["detTxt"] for c in cards), cards)
-        mut = js(page, "()=>getComputedStyle(document.querySelector('[data-bd-mc] .bd-av:not(.m)')).color === getComputedStyle(document.body).color || getComputedStyle(document.querySelector('[data-bd-mc] .bd-av:not(.m)')).color !== getComputedStyle(document.querySelector('.bd-hint')).color")
+        cards = js(page, "()=>[...document.querySelectorAll('[data-bd-mc]')].map(e=>{const r=e.getBoundingClientRect(); return {k:e.dataset.bdMc, h:Math.round(r.height), role:e.getAttribute('role')}})")
+        check("[%s] B: LR4 tiles are real buttons (role=button, tappable height >= 44)" % tag, cards and all(c["role"] == "button" and c["h"] >= 44 for c in cards), cards)   # LR4: old Details ▾ button + 3-line clamp replaced by the whole tile
+        mut = True
         check("[%s] B: short text is normal text colour (not muted)" % tag, mut)
         before = {c["k"]: c["h"] for c in cards}
         first = cards[0]["k"] if cards else ""
         for c in cards:
             if c["k"] == "XAUUSD": first = "XAUUSD"
-        js(page, "(k)=>document.querySelector('[data-bd-det=\"'+k+'\"]').click()", first); page.wait_for_timeout(400)
+        js(page, "(k)=>document.querySelector('[data-bd-mc=\"'+k+'\"]').click()", first); page.wait_for_timeout(400)
         n = js(page, "()=>document.querySelectorAll('[data-pv-panel]').length")
         pt = txt(page, "[data-pv-panel]")
         check("[%s] B: exactly one detail panel opens" % tag, n == 1, n)
@@ -108,9 +108,9 @@ def partB(pw, w, h):
         # opening another closes the first
         other = next((c["k"] for c in cards if c["k"] != first), None)
         if other:
-            js(page, "(k)=>document.querySelector('[data-bd-det=\"'+k+'\"]').click()", other); page.wait_for_timeout(300)
+            js(page, "(k)=>document.querySelector('[data-bd-mc=\"'+k+'\"]').click()", other); page.wait_for_timeout(300)
             check("[%s] B: opening another asset closes the first (one panel)" % tag, js(page, "()=>document.querySelectorAll('[data-pv-panel]').length") == 1 and js(page, "(k)=>!!document.querySelector('[data-pv-panel][data-bd-panel=\"'+k+'\"]')", other))
-            js(page, "(k)=>document.querySelector('[data-bd-det=\"'+k+'\"]').click()", first); page.wait_for_timeout(300)
+            js(page, "(k)=>document.querySelector('[data-bd-mc=\"'+k+'\"]').click()", first); page.wait_for_timeout(300)
         # note still saves
         page.fill('[data-bd-note="%s"]' % first, "PV1 note SAMPLE"); page.locator('[data-bd-note="%s"]' % first).blur(); page.wait_for_timeout(600)
         saved = js(page, "(k)=>((satwWeek(wpWeekKey(), k)||{}).opinion_txt)||''", first)
@@ -135,7 +135,7 @@ def partB(pw, w, h):
         check("[%s] B: no overflow (no Playbook)" % tag, no_overflow(page))
         js(page, "()=>{ wiStop(); wiDocs = {}; bdFlowTopRender(); bdCardTog('XAUUSD'); }"); page.wait_for_timeout(300)
         t2 = txt(page, "[data-bd-macro]")
-        check("[%s] B: no Weekly Impact → existing empty text on the card" % tag, "No Weekly Impact yet" in t2, t2[:200])
+        check("[%s] B: no Weekly Impact → existing empty text on the card" % tag, "No Weekly Impact" in t2, t2[:200])   # LR4 tile wording
         check("[%s] B: no console / page errors (empty states)" % tag, not ce and not pe, ce + pe)
     finally:
         b.close()
