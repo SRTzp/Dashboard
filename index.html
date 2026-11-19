@@ -4515,10 +4515,10 @@ a.rh-tk{color:inherit;text-decoration:none}a.rh-tk:hover{text-decoration:underli
 .lr5-hd{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.lr5-hd h1{margin:0;font-size:26px;letter-spacing:-.01em;font-weight:700}
 .lr5-ports{display:flex;gap:6px;flex-wrap:wrap}.lr5-ports button{font:600 13px/1 var(--lr-sans);height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--lr-line2);background:#fff;color:var(--lr-text2);cursor:pointer}
 .lr5-ports button.on{background:var(--lr-ink);color:#fff;border-color:var(--lr-ink)}
-.lr5 .lbl{font:600 11px/1 var(--lr-sans);letter-spacing:.06em;text-transform:uppercase;color:var(--lr-muted)}
+.lr5 .lbl,.lr5-rv .lbl{font:600 11px/1 var(--lr-sans);letter-spacing:.06em;text-transform:uppercase;color:var(--lr-muted)}
 .lr5-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
 .lr5-k{background:#fff;border:1px solid var(--lr-line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
-.lr5-k b{font-size:26px;font-weight:700}.lr5-k .lr5-ksub{font-size:13px;color:var(--lr-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr5-k b{font-size:26px;font-weight:700}.lr5-k .lr5-ksub{font-size:13px;color:var(--lr-muted)}
 .lr5-k.warn{background:var(--lr-warn-bg);border-color:#F3DDB5}.lr5-k.warn .lbl{color:#7A4A00}.lr5-k.warn b{color:#9A5B00}.lr5-k.warn .lr5-ksub{color:var(--lr-text2)}
 .lr5 .up{color:var(--lr-gain)}.lr5 .dn{color:var(--lr-loss)}.lr5-r.up{color:var(--lr-gain-ink)}.lr5-r.dn{color:var(--lr-loss-ink)}
 .lr5-cols{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
@@ -17633,6 +17633,13 @@ const LR5_PORT = [['all', 'All'], ['MMT', 'MMT'], ['COMP', 'COMP'], ['SAT', 'SAT
 const LR5_WHY = [['planned', 'Planned exit'], ['stop', 'Stop'], ['gap', 'Gap / slippage'], ['disc', 'Discretionary']];
 const LR5_WHY_TX = {planned:'Planned exit', stop:'Stop', gap:'Gap / slippage', disc:'Discretionary', other:'Other'};
 const LR5_EXIT_EN = {tp:'Hit TP as planned', sl:'Hit SL as planned', trail:'Trailing / lock profit', partial:'Scaled out', early:'Exited before plan', thesis:'Thesis changed / wrong', time:'Time stop', risk:'Reduced risk', other:'Other'};
+const LR5_CANCEL_EN = {setupgone:'Setup broke before entry', ranaway:'Price ran away', better:'Better trade available', market:'Market conditions changed', riskfull:'Risk is full', mind:'Changed my mind', fear:'Fear / did not dare to enter', cother:'Other'};
+function lr5ReasonTag(kind, t){   /* the existing tag, but the built-in Thai default names are shown in English (stored data untouched) */
+  const id = kind === 'exit' ? t.exitReason : t.cancelTag, en = (kind === 'exit' ? LR5_EXIT_EN : LR5_CANCEL_EN)[id];
+  let d = null; try{ d = reasonDisplay(kind, t); }catch(e){}
+  if(en && d && /[\u0E00-\u0E3E\u0E40-\u0E7F]/.test(d.label || '')) return `<span class="tag${d.offPlan ? ' loss' : ''}">${escHtml(en)}</span>`;
+  return reasonTagHtml(kind, t);
+}
 const LR5_EXMAP = {tp:'planned', sl:'stop', trail:'planned', partial:'planned', time:'planned', early:'disc', thesis:'disc', risk:'disc', other:'other'};   /* existing exit-reason tag ids → the four "why it closed" chips */
 function lr5Day(iso){ const s = String(iso || '').slice(0, 10); if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '—'; return (+s.slice(8, 10)) + ' ' + LR5_MON[+s.slice(5, 7) - 1]; }
 function lr5Utc(s){ return Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)); }
@@ -17732,7 +17739,7 @@ function lr5RowHtml(x){
     <span>${lr5Day(x.date)}</span><span class="lr5-tr"><b>${symDisp(x.sym)}</b>${lr5Tag(x)}${lr5AccPill(x)}</span>${lr5Rhtml(x)}<span class="${x.pnl >= 0 ? 'up' : 'dn'}">${lr5Money(x.pnl, x.cs)}</span>${lr5PlanHtml(x)}<span class="lr5-rl">${rs}${lesson}</span></div>`;
 }
 function lr5PhoneRowHtml(x){
-  const second = x.why ? `<div class="lr5-l2">${lr5Chip(x.why)}<span class="lr5-pm ${x.plan.k}">${x.plan.k === 'ok' ? '✓ plan' : x.plan.tx.replace('× ', '✗ ').toLowerCase()}</span></div>` : '<div class="lr5-l2"><span class="lr5-nl">add a reason · needs a lesson</span></div>';
+  const second = x.why ? `<div class="lr5-l2">${lr5Chip(x.why)}<span class="lr5-pm ${x.plan.k}">${x.plan.k === 'ok' ? '✓ plan' : x.plan.tx.replace('× ', '✗ ').toLowerCase()}</span></div>` : `<div class="lr5-l2"><span class="lr5-nl">add a reason · needs a lesson</span>${x.plan.k === 'no' ? `<span class="lr5-pm no">${x.plan.tx.replace('× ', '✗ ').toLowerCase()}</span>` : ''}</div>`;
   return `<div class="lr5-pr" role="button" tabindex="0" data-lr5-row="${escHtml(x.key)}" onclick="lr5Pick('${escHtml(x.key)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();lr5Pick('${escHtml(x.key)}')}">
     <div class="lr5-pm1"><div class="lr5-l1"><b>${symDisp(x.sym)}</b>${lr5Tag(x)}${lr5AccPill(x)}<span class="lr5-dt">${lr5Day(x.date)}</span></div>${second}</div>
     <div class="lr5-pr2 num">${lr5Rhtml(x)}<span class="${x.pnl >= 0 ? 'up' : 'dn'}">${lr5Money(x.pnl, x.cs)}</span></div></div>`;
@@ -18013,8 +18020,7 @@ function renderJournalBody(A){
   function jReasonCell(t){
     const lg = jBdLogHtml(t);
     if(!t.exitReason && !t.exitNote) return `<span style="color:var(--muted)">—</span>` + lg;
-    const dsp = (()=>{ try{ return reasonDisplay('exit', t); }catch(e){ return null; } })(), en = LR5_EXIT_EN[t.exitReason];
-    const tag = (en && dsp && /[\u0E00-\u0E3E\u0E40-\u0E7F]/.test(dsp.label || '')) ? `<span class="tag${dsp.offPlan?' loss':''}">${escHtml(en)}</span>` : reasonTagHtml('exit', t);   /* LR5b — default tag names shown in English */
+    const tag = lr5ReasonTag('exit', t);   /* LR5b — default tag names shown in English */
     const note = t.exitNote ? `<div style="color:var(--muted);white-space:normal;margin-top:3px">${escHtml(t.exitNote)}</div>` : '';
     return tag + note + lg;
   }
@@ -18126,7 +18132,7 @@ function renderJournalBody(A){
     document.getElementById(cfg.countId).textContent =
       all.length ? `(${list.length})${jvP.y==='all'?'':` · ${jvLabel(cfg.kind)}`}` : '';
     const reasonHtml = t => {
-      const tag = reasonTagHtml(cfg.kind, t);
+      const tag = lr5ReasonTag(cfg.kind, t);
       const note = t[REASON_KINDS[cfg.kind].noteField];
       return (tag || '') + (note ? `<div style="color:var(--muted);white-space:normal;margin-top:3px">${escHtml(note)}</div>` : '')
              || `<span style="color:var(--muted)">—</span>`;

@@ -67,11 +67,13 @@ def run(pw, w, h):
         counts = {}
         for per in ("week", "month", "quarter", "all"):
             setp(page, "per", per); counts[per] = len(rows(page))
-        check(f"{tag} C: period filters (Main): Week 1 (XAU) · Month 5 · Quarter 6 (+Oct) · All 7 (+Aug)", counts == {"week": 1, "month": 5, "quarter": 6, "all": 7}, counts)
+        check(f"{tag} C: period filters (Main): Week 1 (XAU) · Month 5 · Quarter 6 (+Oct) · All 9 (+Aug: GE · CAT scale-out = 1 row · UBER)", counts == {"week": 1, "month": 5, "quarter": 6, "all": 9}, counts)
         setp(page, "per", "week"); k = kpis(page)
         check(f"{tag} C: Week · not taken counts only 17–23 Nov (LLY 'thesis' → 1 other)", k["nottaken"]["big"] == "1", k["nottaken"])
         setp(page, "per", "all"); k = kpis(page)
         check(f"{tag} C: All · not taken includes September (5 = 3 hesitated … wait main only: GE · CAT · OLD hesitated · TSLA missed · LLY other)", k["nottaken"]["big"] == "5", k["nottaken"])
+        setp(page, "per", "all"); rs9 = {x["k"].split(":")[1]: x for x in rows(page)}
+        check(f"{tag} B: scale-out legs are ONE row on the blended R (+1.5R) · off-plan trade reads × Off plan", "+1.5R" in rs9["sg2"]["t"] and ("off plan" in rs9["u1"]["t"].lower()), [rs9["sg2"]["t"], rs9["u1"]["t"]])
         setp(page, "per", "month")
         # --- port filters
         pick(page, "journal", "both")

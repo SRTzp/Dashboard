@@ -33,6 +33,11 @@ def closed_main():
         T(id="o1", sym="AVGO", port="core", cur="USD", qty=10, entry=100, sl=90, sl0=90, status="closed", exitPrice=120, date="2025-10-01", exitDate="2025-10-20", exitReason="tp", posGroup="o1"),
         # August (all only)
         T(id="g1", sym="GE", port="core", cur="USD", qty=10, entry=100, sl=90, sl0=90, status="closed", exitPrice=90, date="2025-08-01", exitDate="2025-08-10", exitReason="sl", posGroup="g1"),
+        # August scale-out (2 legs = ONE row: +100 and +200 on risk 100 + 100 = +1.5R) · an off-plan trade · a cancelled trade (Details only)
+        T(id="sg1", sym="CAT", port="core", cur="USD", qty=10, entry=100, sl=90, sl0=90, status="closed", exitPrice=110, date="2025-08-02", exitDate="2025-08-12", exitReason="partial", posGroup="sg"),
+        T(id="sg2", sym="CAT", port="core", cur="USD", qty=10, entry=100, sl=90, sl0=90, status="closed", exitPrice=120, date="2025-08-02", exitDate="2025-08-14", exitReason="tp", posGroup="sg"),
+        T(id="u1", sym="UBER", port="core", cur="USD", qty=10, entry=100, sl=90, sl0=90, status="closed", exitPrice=95, date="2025-08-03", exitDate="2025-08-15", unplanned=True, posGroup="u1"),
+        T(id="cx1", sym="SHOP", port="core", cur="USD", qty=10, entry=100, sl=90, status="cancelled", date="2025-11-08", cancelDate="2025-11-09", cancelTag="fear", posGroup="cx1"),
     ]
 
 
