@@ -33,7 +33,9 @@ def check(name, ok, detail=""):
 
 def shot(page, name):
     page.wait_for_timeout(900)
-    try: page.screenshot(path=os.path.join(SHOTS, name), full_page=True)
+    try:
+        page.add_style_tag(content="@media (max-width:600px){#tabsMain{display:none!important}}")  # CLEAN1
+        page.screenshot(path=os.path.join(SHOTS, name), full_page=True)
     except Exception as e: print("shot fail", name, e)
 
 

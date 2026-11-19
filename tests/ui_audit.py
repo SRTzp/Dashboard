@@ -293,6 +293,7 @@ def crop(page, f, path_png):
         x0 = max(0, r["x"] - 120); y0 = max(0, r["y"] - 60)
         ww = min(W - x0, max(r["w"] + 240, 360)); hh = min(H - y0, r["h"] + 120)
         if ww < 10 or hh < 10: return False
+        page.add_style_tag(content="@media (max-width:600px){#tabsMain{display:none!important}}")  # CLEAN1
         page.screenshot(path=path_png, full_page=True, clip={"x": x0, "y": y0, "width": ww, "height": hh})
         return True
     except Exception:

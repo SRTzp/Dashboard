@@ -27,6 +27,7 @@ def live(pw, w, h, name, prep=None):
     b, page, pe = C.open_journal(pw, w, h)
     try:
         js(page, "()=>lrSwPick('journal','both')"); page.wait_for_timeout(300)
+        page.add_style_tag(content="@media (max-width:600px){#tabsMain{display:none!important}}")  # CLEAN1: whole-page shots hide the nav only at <=600px
         if prep: prep(page)
         page.mouse.move(2, 2); p = os.path.join(OUT, f"{name}-{w}-live.png"); page.screenshot(path=p, full_page=True)
         return p

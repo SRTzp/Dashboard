@@ -4794,7 +4794,6 @@ html body .re2-row .lrf-blkline{color:#C2362F}
   html body .re2-main .l1{flex-wrap:nowrap;overflow:hidden}
   html body .re2-row .lrf-why:not(.a){display:none}
   html body .re2-row .lrf-why.a{display:inline;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  html body .re2-row .lrf-blkline .pv-bp{display:none}
   html body .re2-row .btn[data-re2-btn="update"]{display:none}
   html body .lr2-act .re2-row{height:68px;box-sizing:border-box;padding:0 12px}
   html body .re2-main .num *,html body .re2-main .num{font-variant-numeric:tabular-nums}
@@ -31807,11 +31806,19 @@ function re2Row(it, o){
   const hc = (['Ready', 'Ordered', 'Holding', 'Near'].indexOf(o.chip) >= 0 || (line && o.why && o.chip === o.why)) ? ' lrf-hc' : '';
   const whyL1 = line && o.why && !blkd ? `<i class="lrf-why ${o.warn ? 'a' : ''}" data-re2-why>${e(o.why)}</i>` : '';
   const shortLine = line ? (o.g === 'manage' && re2HoldLine(it) ? line : re2CardLine(it, true)) : '';
-  const blkLine = blkd ? `<div class="num lrf-blkline" data-re2-cardline><span><span class="pv-bp">Blocked · </span>${e(lr3ShortWhy(o.title || o.why || '', it))}</span><i class="a" data-re2-why hidden>${e(o.why || '')}</i></div>` : '';
+  const alN = blkd ? re2AllowedN(it) : null;   /* CLEAN1 — the engine's allowedQty (omitted when null / 0) */
+  const blkLine = blkd ? `<div class="num lrf-blkline" data-re2-cardline><span><span class="pv-bp">Blocked · </span>${e(lr3ShortWhy(o.title || o.why || '', it))}${alN > 0 ? `<span data-re2-allowed> · allowed #${fmt0(alN)}</span>` : ''}</span><i class="a" data-re2-why hidden>${e(o.why || '')}</i></div>` : '';
   return `<div class="row re2-row" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}" data-re2-row="${e(it.sym)}" data-re2-grp="${o.g}" data-re2-id="${e(it.id)}" data-lr2-acct="${e(it.acct || tdHome() || '')}" role="button" tabindex="0" onclick="bdOpen('${e(it.id).replace(/'/g, "\\'")}')">
     <div class="re2-main"><div class="l1"><b>${e(it.sym)}</b><span class="tag" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}">${e(it.tag)}</span>${lr2RowPill(it)}${lr2Dir(it)}${same}${blkd ? `<span class="chip r m lrf-blk" data-re2-chip-st>Blocked</span>` : o.chip ? `<span class="chip ${o.cc || ''} m${hc}" data-re2-chip-st>${e(o.chip)}</span>` : ''}${line ? '' : `<span class="q p">${e(q)}</span>`}${whyL1}</div>
     ${blkd ? blkLine : line ? `<div class="num" data-re2-cardline title="${e(line)}"><span class="lrf-lw">${e(line)}</span><span class="lrf-lp">${e(shortLine)}</span></div>` : `<div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span>${q ? `<span class="p">${e(q)}${o.why ? ' · ' : ''}</span>` : ''}<i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div>`}</div>
     <div class="re2-btns">${btn}</div></div>`;
+}
+function re2AllowedN(it){
+  try{
+    if(it.kind === 'sat'){ const i = it.ref, c = pb2Calc(i, pb2AcctOf(i)), m = c && c.c && c.c.re1; return m && m.allowedQty > 0 ? m.allowedQty : null; }
+    if(it.kind === 'core'){ const g = re1PlanGate(it.ref, 0), m = g && g.model; return m && m.allowedQty > 0 ? m.allowedQty : null; }
+  }catch(e){}
+  return null;
 }
 function re2Model(acct){
   const now = Date.now(), L = re1L(acct), all = (()=>{ try{ return bdItems().filter(x=>(x.acct || tdHome()) === acct); }catch(e){ return []; } })();
@@ -31884,7 +31891,7 @@ function re2RoomCard(acct){
   if(!R) return `<div class="lr2-rrw" data-re2-room data-lr2-room="${e(acct)}"><div class="lr2-rl">${pill}<span class="t"><span class="rw">Risk room — ${e(S.t)} · confirm a snapshot in Settings</span><span class="rp">Risk room — confirm a snapshot in Settings</span></span></div><div class="lr2-vh" aria-hidden="true">${strip}</div></div>`;
   return `<div class="lr2-rrw" data-re2-room data-lr2-room="${e(acct)}" data-lr2-state-c="${S.c}">`
     + (mm ? ln('mom', 'data-re2-rr="mom"', 'MMT', 'mmt', `${R.mom.left} of ${R.mom.max} ideas · room ${re1Pct(R.mom.room)} / ${re1Pct(R.mom.cap)}`, `${R.mom.left}/${R.mom.max}`) : '')
-    + ln('sat', 'data-re2-rr="sat"', 'SAT', 'sat', `step ${R.sat.step} · room ${re1Pct(R.sat.room)} / ${re1Pct(R.sat.cap)}${R.sat.busy ? ' · queue busy' : ''}`, `step ${R.sat.step}`)
+    + ln('sat', 'data-re2-rr="sat"', 'SAT', 'sat', `step ${R.sat.step} · ${re1Pct(R.sat.room).replace('%', '')}/${re1Pct(R.sat.cap)}${R.sat.busy ? ' · busy' : ''}`, `step ${R.sat.step}`)
     + ln('comp', 'data-re2-rr="comp"', 'COMP', 'comp', `room ${re1Pct(R.comp.room, 1)} / ${R.comp.cap}% · regime ${R.comp.regime}%`, `${re1Pct(R.comp.room, 1).replace('%', '')}/${R.comp.cap}%`)
     + `<span class="chip ${S.c} lr2-rs"${aw1SnapAttr(S, true)} hidden>${e(S.t)}</span><div class="lr2-vh" aria-hidden="true">${strip}</div></div>`;
 }

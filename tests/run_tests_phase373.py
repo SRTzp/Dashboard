@@ -751,6 +751,7 @@ def pb1d(pw, w, h):
         SH = SHOTS_C.replace('pb1c-', 'pb1d-')
         page.screenshot(path=f"{SH}flow-{w}.png")
         if w != 390:
+            page.add_style_tag(content="@media (max-width:600px){#tabsMain{display:none!important}}")  # CLEAN1
             page.screenshot(path=f"{SH}flow-{w}-full.png", full_page=True)
         settle(page, 700); ov0 = js(page, "()=>getComputedStyle(document.getElementById('tabFlow')).opacity")
         check(f"{tag} no opacity / overlay left on the Flow page after load (tab fade-in finished)", float(ov0) == 1.0 and not js(page, "()=>bdFormUp()"), ov0)
