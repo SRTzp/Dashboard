@@ -20,7 +20,7 @@ def app(pw, w, h):
         "ccAV": P24.card("ccAV", "main", "AVGO", plan={"entry": 341.2, "stop": 320}, px=330, pxDate="2026-10-01", track="ladder"),
     }
     b, page, ce, pe = T.launch(pw, w, h, iso=T.NOW, picks=("XAUUSD",), weekly=False)
-    sh = lambda n, sel=None: (page.locator(sel).first.screenshot(path=f"{RAW}/{n}-{w}.png") if sel else page.screenshot(path=f"{RAW}/{n}-{w}.png", full_page=True))
+    sh = lambda n, sel=None: (page.locator(sel).first.screenshot(path=f"{RAW}/{n}-{w}.png") if sel else (page.add_style_tag(content="@media (max-width:600px){#tabsMain{display:none!important}}"), page.screenshot(path=f"{RAW}/{n}-{w}.png", full_page=True))[1])
     try:
         import lib_phase13 as P13
         P24.set_ff(page, P24.ff_json(True, True))

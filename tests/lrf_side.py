@@ -43,6 +43,7 @@ def live(pw, w, h, tab, name, prep=None, full=False):
     b, page, ce, pe = launch(pw, w, h, d=d, c=cs)
     try:
         go(page, tab)
+        page.add_style_tag(content="@media (max-width:600px){#tabsMain{display:none!important}}")  # CLEAN1: whole-page shots hide the nav only at <=600px
         if prep: prep(page)
         p = os.path.join(OUT, f"{name}-{w}-live.png")
         page.screenshot(path=p, full_page=full)

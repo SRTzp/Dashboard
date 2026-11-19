@@ -27,6 +27,7 @@ def side(pw, a, b_, out, w):
 def live(pw, w, h, name, prep=None):
     b, page, pe = C.open_flow(pw, w, h)
     try:
+        page.add_style_tag(content="@media (max-width:600px){#tabsMain{display:none!important}}")  # CLEAN1: whole-page shots hide the nav only at <=600px
         if prep: prep(page)
         page.evaluate("()=>{ try{ tw1TipHide(); }catch(e){} document.querySelectorAll('[data-tw1-tip]').forEach(n=>n.remove()); }"); page.mouse.move(2, 2); p = os.path.join(OUT, f"{name}-{w}-live.png"); page.screenshot(path=p, full_page=True)
         H = js(page, "()=>document.documentElement.scrollHeight")

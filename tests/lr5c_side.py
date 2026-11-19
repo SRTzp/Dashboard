@@ -14,6 +14,7 @@ S.OUT = OUT
 def live(pw, w, h, name, view="both"):
     b, page, pe = C.open_port(pw, w, h, view=view)
     try:
+        page.add_style_tag(content="@media (max-width:600px){#tabsMain{display:none!important}}")  # CLEAN1: whole-page shots hide the nav only at <=600px
         page.mouse.move(2, 2); p = os.path.join(OUT, f"{name}-{w}-live.png"); page.screenshot(path=p, full_page=True); return p
     finally:
         b.close()
