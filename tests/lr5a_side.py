@@ -28,7 +28,7 @@ def side(pw, a, b_, out, w):
 def live(pw, w, h, name, prep=None, ideas=False, full=True):
     b, page, pe = C.open_watch(pw, w, h, ideas=ideas)
     try:
-        page.add_style_tag(content=HIDE_NAV)
+        if w <= 600: page.add_style_tag(content=HIDE_NAV)
         js(page, "()=>{ switchTab('watch'); wlSetView('wl'); renderWatchlist(); }"); page.wait_for_timeout(400)
         if prep: prep(page)
         page.mouse.move(2, 2); p = os.path.join(OUT, f"{name}-{w}-live.png"); page.screenshot(path=p, full_page=full)
