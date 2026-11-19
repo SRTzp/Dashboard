@@ -3008,7 +3008,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .ccStat small{font-size:.72rem}
 .ccStat.warn,.ccStat.lv-warn{background:var(--amber-dim)}.ccStat.lv-warn b{color:var(--amber)}
 .ccStat.lv-over{background:var(--red-dim)}.ccStat.lv-over b{color:var(--red)}
-/* DD1 — ชิป DD บนแถบบัญชี + แถบแจ้ง + ตารางใน sheet */
+/* DD chip on the account bar + notice bar + table in the sheet */
 .ddChip{font:inherit;font-size:.78rem;font-weight:600;border-radius:var(--r-chip);padding:3px 10px;border:1px solid transparent;cursor:pointer;white-space:nowrap;background:var(--soft);color:var(--muted);min-height:26px;box-shadow:none}
 .ddChip.dd-reduce{background:rgba(224,181,46,.18);color:var(--amber)}
 .ddChip.dd-pause{background:var(--red-dim);color:var(--red)}
@@ -9545,7 +9545,7 @@ document.addEventListener('click', (e)=>{
 
 /* ══════════════════════════════════════════════════════════════════════════
    TD1 — แท็บ "วันนี้" (Daily routine + รายการต้องทำ) · อ่านอย่างเดียวจากฟังก์ชันเดิม — ไม่มีกติกาใหม่
-   งาน = เรียก ddEval · ddBucketsOf · coreView/coreEff · coreAddBlockReason · coreGate · coreAcctRisk · satV3PlanAcctCalc(satV3ReadyAccts) ·
+   Tasks come from: ddEval · ddBucketsOf · coreView/coreEff · coreAddBlockReason · coreGate · satV3PlanAcctCalc(satV3ReadyAccts) ·
          satPyrCheck · satWeekMap · Thesis ใน Watchlist (wlRowsAll/ltTws/ltCats) ตรง ๆ · เงื่อนไขอยู่ที่ฟังก์ชันเดิมทั้งหมด (ที่นี่แค่รวบรวมและเรียงตามความด่วน)
    เขียนเฉพาะ settings.routine / settings.routineLog (เมื่อกดติ๊ก/บันทึกค่าตั้ง) ของ "บัญชีแรก" (acctList[0]) — คงที่เมื่อสลับบัญชี · ผ่าน saveBook · รอ server ยืนยันแบบ ddSync
    ══════════════════════════════════════════════════════════════════════════ */
@@ -13412,8 +13412,8 @@ function coreRiskCfg(acctId){
   return cfg;
 }
 /* ═══════════════════════════════════════════════════════════════════════════
-   DD1 — เบรกชั้น 3 (DD ของถัง) · Core + Sat แยกถัง แยกบัญชี · ปกติ → ลดขนาด → พัก → ฟื้นตัว
-   ตัวคิด stage = Calc.coreSize.ddStep (core-size.js · บริสุทธิ์) · ที่นี่ = รวบรวมข้อมูล (equity ต่อถัง) + เก็บ state + บล็อก + หน้าจอ
+   Drawdown brake (layer 3) — per bucket (Core + Sat), per account · normal → reduce size → pause → recover
+   The stage maths is pure (see ddEval); this block collects equity per bucket, keeps the state, blocks, and draws the screen
    state เก็บที่ settings.ddState[core|sat] = {peak, baseAt, tank, stage, stageSince, pauseUntil, review{text,at}, recoverDd0, weekly{weekKey:ddPct}, rebasedAt}
    ddEval = อ่านล้วน (ไม่เขียน) · ddSync = เขียนเฉพาะเมื่อค่าเปลี่ยน (เรียกท้าย render หลังยืนยัน server) · แก้ทุนถัง (tank ≠ ที่เก็บ) = rebase อัตโนมัติ
    equity — Core: ทุนถัง + P&L ไม้ Core ที่ปิดตั้งแต่ baseAt + กำไร/ขาดทุนไม้ที่ถือ (qty × (ราคาปิดสัปดาห์ − ทุนเฉลี่ย)) · ไม่มีราคา = 0 + นับ "ขาดราคา"
@@ -13467,7 +13467,7 @@ function realizedPnlTHBOf(t){
   const p = realizedPnlOf(t); if(p===null) return null;
   return tradeCur(t)==='USD' ? p*state.settings.fx : p;
 }
-/* DD1 §0 — SL ตอนเข้า (ไว้คิด R): sl0 ที่เก็บกับไม้ · ไม้ Core เก่าที่ไม่มี sl0 → Stop แรกในประวัติของการ์ด (stopHistory[0].from) · ไม่มี = null (R คิดจาก SL ปัจจุบันแบบเดิม) */
+/* Entry stop (for R): sl0 stored with the trade · an old Core trade without sl0 falls back to the first stop in the card history (stopHistory[0].from) · none = null (R then uses the current SL) */
 function sl0Of(t){
   if(t && t.sl0>0) return +t.sl0;
   if(t && t.port==='core'){
@@ -13478,7 +13478,7 @@ function sl0Of(t){
 }
 function realizedROf(t){
   const pnl = realizedPnlOf(t); if(pnl===null) return null;
-  const s0 = sl0Of(t);   /* DD1 — R ใช้ SL ตอนเข้า (เลื่อน SL ทีหลังไม่เปลี่ยน R) · PY1 ไม้เติม = sl0 ของตัวเองอยู่แล้ว */
+  const s0 = sl0Of(t);   /* R uses the entry SL (moving the SL later does not change R) · an add-on trade already carries its own sl0 */
   const risk = s0!=null ? Math.abs(t.entry - s0) * t.qty * (t.mult||1) : riskOf(t);
   return risk>0 ? pnl/risk : null;
 }
@@ -14230,7 +14230,7 @@ function coreAddBlockReason(v, cx){
    rows[{lv, px, cost, qty, risk, status:'wait'|'bought'|'cancelled', by?, fill?{qty,px,at}}] · tot{avg, qty, riskPct, cap, over} · o{sym} */
 /* ══════════ LN3fix — แผน Core แบบ Lean ══════════
    กล่องมืดกล่องเดียว (เลือกบัญชี · Risk ชั้น 2 · Momentum/Compounder/เงินว่าง/DD/FF) + การ์ดแถว 2 บรรทัด · ฟอร์มกะทัดรัด
-   อ่านค่าจาก coreCtx / coreAcctRisk / coreGate / ddEval เดิม (ไม่เปลี่ยนสูตร) · โค้ดขึ้นต้น lf */
+   Reads coreCtx / coreGate / ddEval (no formula change) · all code here starts with lf */
 const LF_CORE_KEY = 'lf_core_acc';
 let lfCoreMem = null, lfDetOpen = false;
 function lfCoreAccts(){ return viewAccounts().filter(a=>(a.ports || ACCT_PORT_KEYS).includes('core')); }
@@ -14263,7 +14263,7 @@ function lfSideHint(){
     <div class="mut" style="margin-top:4px">วางแผนหุ้นตัวใหม่ — ฟอร์มจะเปิดตรงนี้</div></div>` : '';
 }
 /* LN3fix3c §4 — Risk Core ของ "ทุกบัญชี" พร้อมกัน: หนึ่งแถวต่อบัญชี · เตือนใต้แถวของบัญชีนั้น · พับรายละเอียดอันเดียว · สวิตช์บัญชีย้ายลงเหนือรายการการ์ด (เลือกเฉพาะการ์ด)
-   อ่านค่าจาก coreCtx/coreAcctRisk/coreGate/ddEval เดิม (ไม่เปลี่ยนสูตร/เพดาน) */
+   Reads coreCtx / coreGate / ddEval (no formula or cap change) */
 /* คำในโหมด Lean: W → Winners · L / บันได → Ladder · ระบบ Week → Winners (แก้เฉพาะข้อความที่เห็น ไม่แตะ attribute/ค่าเก็บ) */
 function lfWordsStr(s){
   return s.replace(/(?<!Compounder \()ถัวตามแนวรับ(?:\s*\(L\))?/g, 'Compounder').replace(/ระบบ Week/g, 'Momentum').replace(/บันไดถัว|บันได/g, 'Compounder')
@@ -14337,7 +14337,7 @@ function coreCloseCardOfTrade(t, A, by){
   }
 }
 /* ══════════ LN3fix2 — ไม้เร่ง (Momentum) · Risk % ต่อไม้ · การ์ด Core ตัวเลขน้อย ══════════
-   2 ชั้นต่อการ์ด: Base (trade หลัก · SL = card.stop) + ไม้เร่ง (trade แยก c.acc_trade_id · SL เร่ง = trade.sl · c.stopAcc) · ทุกสูตรผ่าน Calc.coreSize.addLot / firstLot */
+   2 ชั้นต่อการ์ด: Base (trade หลัก · SL = card.stop) + ไม้เร่ง (trade แยก c.acc_trade_id · SL เร่ง = trade.sl · c.stopAcc) · all sizing goes through RE1 */
 /* PS1 §3 — add-on for cards made from a PS1 plan: new idea budget only when every tranche stop >= its average entry; else what is left.
    Size cap + bucket/total caps re-checked. Amounts in the market currency (v.div converts to THB). */
 function ps1AddCalc(c, o, cx, v, out){
@@ -14905,7 +14905,7 @@ function coreNewIn(){
       if(sv) sv.textContent = ftMode ? 'Save plan (homework due)' : 'Save plan';
     }
   } else if(!isL){
-    /* AU1 — no pre-PS1 first-lot sizing any more (CoreSize.firstLot is gone): the engine sizes every plan (ps1FormRun → RE1). A form without the sizing box only checks levels. */
+    /* AU1 — no pre-PS1 first-lot sizing any more (the old first-lot calculator is gone): the engine sizes every plan (ps1FormRun → RE1). A form without the sizing box only checks levels. */
     if(!(rd.entry>0) || !(rd.stop>0)) errs.push('Enter Entry and Stop');
     else if(wrongSideOf('Long', rd.entry, rd.stop, null) === 'SL') errs.push('Entry must be above Stop');
     coreEl('cnSave').textContent = 'Save plan';
@@ -15090,7 +15090,7 @@ function coreBuyAddSave(){
   const c = d.c, A = c.acct, B = getBook(A), cx = coreCtxC(c);
   const t = B.trades.find(x=>x.id===c.trade_id); if(!t || t.status!=='open'){ coreSheetClose(); return; }
   const oldSl = +t.sl, newQty = (+t.qty) + d.qty;
-  if(!(t.sl0>0) && oldSl>0) t.sl0 = oldSl;   /* DD1 — ไม้เก่าไม่มี sl0: เก็บ Stop ก่อนย้าย */
+  if(!(t.sl0>0) && oldSl>0) t.sl0 = oldSl;   /* an old trade without sl0: keep the stop from before the move */
   t.entry = ((+t.entry)*(+t.qty) + d.px*d.qty) / newQty;
   t.qty = newQty;
   t.sl = d.stop;
@@ -15135,7 +15135,7 @@ function coreStopSave(){
   if(!coreStopIn()) return;
   const c = coreCardsList.find(x=>x.id===coreDlg.id), ns = coreNum(coreEl('csStop').value); if(!c) return;
   const A = c.acct, B = getBook(A), t = B.trades.find(x=>x.id===c.trade_id); if(!t || t.status!=='open'){ coreSheetClose(); return; }
-  const old = +t.sl; if(!(t.sl0>0) && old>0) t.sl0 = old; t.sl = ns; re1StopMark(t, ns, !!(coreEl('csConf') && coreEl('csConf').checked), A, c.id); saveBook(A);   /* DD1 — sl0 ไม่ถูกแตะ (ไม้เก่าไม่มี = เก็บ Stop ก่อนย้ายครั้งแรก) */
+  const old = +t.sl; if(!(t.sl0>0) && old>0) t.sl0 = old; t.sl = ns; re1StopMark(t, ns, !!(coreEl('csConf') && coreEl('csConf').checked), A, c.id); saveBook(A);   /* sl0 is not touched (an old trade without sl0 keeps the stop from before the first move) */
   const hist = (c.stopHistory || []).concat([{date:posThaiToday(), from:old, to:ns}]);
   const patch = {stop:ns, stopHistory:hist};
   coreSheetClose();
@@ -16181,7 +16181,7 @@ function poolsPortHtml(ids){
 }
 /* ══════════════════════════════════════════════════════════════════════════
    LN3 — แท็บ Port แบบ Lean: กล่องสรุปเดียว · ปุ่ม รวม/บัญชี · บรรทัดบัญชี · โครงพอร์ต · การ์ด Core (วงกลมเดียวสลับ หุ้น/Industry + พับความเสี่ยง Core) · การ์ด Sat
-   ข้อมูล/สูตรชุดเดิม (mixAcctStats · withState · coreAcctRisk · ddEval) · แบบเดิม = renderPortfolioMix เดิมทุกบรรทัด
+   Same data as before (mixAcctStats · withState · ddEval)
    ══════════════════════════════════════════════════════════════════════════ */
 const LN3_PORT_KEY = 'ln3_port_acc';
 let ln3PortAcc = null, ln3PieBy = 'sym';
@@ -20024,7 +20024,7 @@ function makeTradeObject(o){
     if(o[k]!==undefined) t[k] = o[k];
     else if(prevTrade && prevTrade[k]!==undefined) t[k] = prevTrade[k];
   });
-  /* DD1 §0 — sl0 = SL ตอนเข้า · ไม้ใหม่ = SL ที่ส่งมา · แก้ SL ทีหลัง (ไม้ open/closed) ไม่แตะ · แก้ไม้ plan (ยังไม่เข้า) = ตาม SL ใหม่ · ไม้เก่าไม่มี sl0 = ใช้ SL ก่อนแก้ (ถ้ามี) · o.sl0 ส่งมาเอง (ไม้เติม) ชนะ */
+  /* sl0 = SL at entry · a new trade takes the SL passed in · editing the SL later (open/closed trade) leaves it alone · editing a plan trade (not entered yet) follows the new SL · an old trade without sl0 uses the SL before the edit (if any) · an o.sl0 passed in (add-on) wins */
   if(o.sl0>0) t.sl0 = +o.sl0;
   else if(!prevTrade || prevTrade.status==='plan') { if(o.sl>0) t.sl0 = +o.sl; }
   else if(prevTrade.sl0>0) t.sl0 = +prevTrade.sl0;
@@ -20834,7 +20834,7 @@ function satRiskCfg(accId){
   const macroNeutral = 1, macroAgainst = 1;   /* RG2b — ถอดตัวคูณขนาดตาม Macro (Neutral/Against) · ขนาดไม้ Sat ไม่ลดตาม Macro แล้ว (key เดิมเก็บไว้ ไม่อ่าน) */
   const v2sp = (s.satV2 && typeof s.satV2==='object') ? satV2ParseSplit(s.satV2.splitMain) : null;   /* PV2c — แบ่งไม้ Main (ตั้งค่า Sat v2) เป็นแหล่งเดียว */
   const pyrSplit = v2sp ? v2sp : satPyrSplitValid(s.satPyrSplit) ? s.satPyrSplit.slice() : SAT_PYR_SPLIT_DEF.slice();   /* PY2 — สัดส่วนไม้ (% ของงบ) ต่อบัญชี */
-  return {rpt, rptHi, heatMax, newMax, macroNeutral, macroAgainst, pyrSplit};   /* AU1 — read-only legacy numbers; no DD1 fields any more */   /* DD1 — + ddReduce/ddPause/ddPauseWeeks/ddRecoverR */
+  return {rpt, rptHi, heatMax, newMax, macroNeutral, macroAgainst, pyrSplit};   /* read-only legacy numbers; no drawdown-brake fields any more */
 }
 /* ══════════════════════════════════════════════════════════════════════════
    PV2a — โครงพอร์ต v2: Core 70 / Satellite 30 (Main Swing + Tactical Swing) · ตั้งค่า Sat ต่อบัญชีเก็บที่ settings.satV2 (ไม่มี key = ค่าเริ่มต้น)
@@ -21000,7 +21000,7 @@ const Calc = {
      riskAmount = เงินเสี่ยงต่อไม้ "ในสกุลของสัญญา" (แปลง USD/THB มาก่อนแล้วจากผู้เรียก) · dist = |entry-sl|
      คืน {lot:number|null, msg:string} — lot=null,msg='' = ข้อมูลไม่พอให้คำนวณ · lot=null,msg=... = คำนวณได้แต่ต่ำกว่า minLot */
   /* SET1 — ระบบ "% loss" (BTC · ETH · หุ้น): ขนาดสถานะ $ = เงินเสี่ยง ÷ (|Entry−SL| ÷ Entry) · qty = สถานะ ÷ Entry · ปัดลงตาม qtyStep (หุ้น TH = 100)
-     แยกจาก satLot (ระบบ lot) ชัดเจน · คืน {pos, qty, stopPct, msg} — qty=null,msg='' = ข้อมูลไม่พอ · qty=null,msg=... = ต่ำกว่าขั้นต่ำ */
+     Separate from the lot system · returns {pos, qty, stopPct, msg} — qty=null,msg='' = not enough data · qty=null,msg=... = below the minimum */
   /* F1 — เพดานลงเงิน Core แบบ f (เจ้าของสูตรเดียว: ffDeployCap('core') · แถบดำแท็บ Flow · ฟอร์มเพิ่มไม้เดิม · Port Heat · ตั้งค่า Sizing อ่านจากตรงนี้)
      acwi / hyg = true (เขียว) · false (แดง) · null (ไม่มีในไฟล์) · แดงตัวละ −25% · ต่ำสุด 50%
      ageDays = อายุ fundflow.json เป็นวันทำการ · เกิน staleDays (ค่าเริ่มต้น 5) → stale:true แต่ cap ยังคิดจากค่าล่าสุด (RG2a #1: ข้อมูลเก่าห้ามดีดกลับ 100%)
@@ -21624,7 +21624,7 @@ function sat7dLabel(a){ const c = satLabelCustom(a); if(c) return c; const d = s
 function symDisp(sym){ const d = satAssets({all:true}).find(x=>x.key===sym); return escHtml(satLabelCustom(sym) || (d && d.custom ? d.label : (sym==null ? '' : String(sym)))); }
 
 /* ── SET1 — สเปคสินค้า (hard-code ที่เดียว) · ขนาดไม้อ่านจาก "สินค้า" อย่างเดียว ไม่ผ่านโบรก ──
-   ระบบ Lot: มูลค่าต่อ 1 จุด (perPoint) · lotStep · minLot · สกุล → Calc.satLot · ระบบ % loss: qtyStep → Calc.pctLoss
+   Lot system: value per point (perPoint) · lotStep · minLot · currency · % loss system: qtyStep
    สินค้าที่เพิ่มเอง = settings.products {<NAME>:{sys:'lot',perPoint,lotStep,minLot,cur} | {sys:'pct',qtyStep}} (ที่เก็บเดียวกับ satAssetCfg) */
 const PRODUCTS = {
   XAUUSD:{name:'XAUUSD', sys:'lot', perPoint:100, lotStep:0.01, minLot:0.01, cur:'USD'},
@@ -22550,10 +22550,6 @@ function satAcStep(ideaId, condId, key, on){
   if(!on) satAcEditing.delete(`${ideaId}|${condId}|${key}`);
   satAcWrite(ideaId, condId, b=>{ b.steps = Object.assign({}, b.steps, {[key]: !!on}); return b; });
 }
-function satAcSetTf(ideaId, condId, tf){
-  if(!SAT_BRK_TFS.includes(tf)) return;
-  satAcWrite(ideaId, condId, b=>{ b.brk_tf = tf; return b; });
-}
 /* ระดับ Break Price / Break Vol (> 0) · ว่าง = ลบ และเอาติ๊กข้อนั้นออก · ค่าผิด (0 / ลบ / ตัวอักษร) = ไม่เขียน */
 function satAcSetLevel(ideaId, condId, key, val){
   if(key!=='brk_px' && key!=='vol_px') return;
@@ -22633,11 +22629,6 @@ function satAcSync(ideaId, condId, wasComplete){
   satAcRender();
 }
 /* ── AC2 — หน้าตาการ์ดเงื่อนไข: ปิดแท่ง [4H|D] → Break Price → Break Vol → Pullback → TP/Inval → ขาด ── */
-function satAcTickHtml(idea, c, k, ok, mode){
-  if(mode==='plan') return '';
-  const id = escHtml(idea.id), cid = escHtml(c.id), on = satAcSteps(c)[k];
-  return `<button type="button" class="ui-ack${on?' ui-on':''}${(ok||on)?'':' ui-dis'}" data-step="${k}" role="checkbox" aria-checked="${on}" aria-pressed="${on}" ${(ok||on)?'':`aria-disabled="true" title="${escHtml(k==='pb' ? (satAcPbBlock(c) || '') : 'กรอก Price ก่อน')}"`} onclick="satAcStep('${id}','${cid}','${k}',${!on})">${on?'✓':''}</button>`;
-}
 /* mode: 'plan' ขั้นวางแผน (ไม่มีช่องติ๊ก) · 'work' หน้างานยังไม่ Active · 'active' ใต้แถบ Active (เฉพาะบรรทัดสรุป/แถวที่ติ๊กไม่ครบ) */
 
 /* ── 7D.5 — รายการปุ่มลัดเงื่อนไข (ใช้ร่วมทุก asset) · users/{uid}/satConfig/conditionTemplates = {items:[{id,text}]}
@@ -22688,7 +22679,7 @@ function satV3SetupsReady(idea){
   return {n: checked.length, total: setups.length, ratio, pass, complete: pass};
 }
 /* คำนวณต่อบัญชี — เทียบเท่า sat7dCalc() เดิมทุกจุด (โบรก/lot/heat/โควตา) เว้นแต่ "ครบ checklist" แทนด้วย setup
-   ซึ่งเป็นแค่คำเตือน (Setup ไม่ครบ · ไม่ใช่นอกแผน) ไม่ใช่ตัวบล็อกความพร้อมต่อบัญชี — ผ่าน Calc.satLot/Calc.heat/Calc.readiness เดิมทั้งหมด */
+   which is only a warning (incomplete setup, not off-plan) and does not block readiness per account — lot / heat / quota are unchanged */
 function satV3PlanAcctCalc(idea, accId, f2c){
   if(idea && idea.v2) return satV2PlanCalc(idea, accId, f2c);   /* PV2a — แผนฟอร์มใหม่ */
   /* AU1 (D3) — an old (v1) plan is read-only: no lot, no heat, never Ready. Only the engine (RE1) sizes, and only v2 plans reach it.
@@ -22783,7 +22774,7 @@ function satV3SaveSlot(ideaId, accId, offplanAcct){
 function satV3SaveOffplanAccount(ideaId, accId){
   const idea = sat7dIdea(ideaId); if(!idea) return;
   const c = satV3PlanAcctCalc(idea, accId);
-  if(c.newsBlock || c.rrBlock || c.noteBlock || c.unpickBlock || c.carryBlock || (c.blocks && c.blocks.length)) return;   /* PV2b · SR1 — สวน Bias สัปดาห์ · DD1 — พัก · ST1 — ช่วงข่าว / R:R = ไม่มีทางลัดนอกแผน */
+  if(c.newsBlock || c.rrBlock || c.noteBlock || c.unpickBlock || c.carryBlock || (c.blocks && c.blocks.length)) return;   /* PV2b · SR1 — สวน Bias สัปดาห์ · pause · ST1 — ช่วงข่าว / R:R = ไม่มีทางลัดนอกแผน */
   if(c.lot!=null) satV3SaveSlot(idea.id, accId, !c.ready);   /* SU — บัญชีไม่ ready = นอกแผนจริง (ธงเดิม) · Setup ไม่ครบแยกเป็น setup_incomplete ใน satV3SaveSlot */
 }
 /* ── ★ CRITICAL FIX (25 ก.ย.): plan/open row อ่านจากไม้ในสมุดจริงของแต่ละบัญชี (status plan/open ผูก port satB)
@@ -22835,12 +22826,6 @@ function satV3ClosedDelClose(){ document.querySelectorAll('.s7del-sheet').forEac
    plan: อาจมีหลายบัญชี → รวมเป็น 1 แถว (ตัวเลขจากบัญชีแรกที่ยังเป็น plan) + ปุ่ม [เข้าแล้ว]/[ยกเลิก] ทำทุกบัญชีที่ยัง plan
    open: 1 แถวต่อ 1 บัญชีที่เปิดอยู่จริง (ราคาเข้าจริงต่างกันได้ต่อบัญชี) ใช้ openClosePos/openTradeEdit ตรง ๆ */
 /* TD4b — บรรทัดบริบทแผน Sat: Main · 4H · Long · Zone 4,230–4,250 (ชนิดแผน · Focus TF · Focus Bias · Zone) · ส่วนที่ไม่มี = ข้าม (ไม่แสดง —) */
-function satCtxParts(idea){
-  if(!idea) return [];
-  const tac = satV2Sleeve(idea)==='tactical', a0 = sat7dAccts()[0], cfg = satV2Cfg(a0 ? a0.id : null);
-  const tf = pfTfNorm(idea.tf) || pfTfNorm(tac ? cfg.tfTac : cfg.tfMain), z = String(idea.zone_act_txt || '').trim();
-  return [tac ? 'Tactical' : 'Main', tf, idea.bias==='Long' ? 'Long' : idea.bias==='Short' ? 'Short' : '', z ? 'Zone ' + z : ''].filter(Boolean);
-}
 /* ══════════════════════════════════════════════════════════════════════════
    PY1 — เติมไม้ Future (Pyramid) · 1 ครั้ง · 50% ของ lot ไม้แรก · ไม้เติมไม่นับโควตาไม้ใหม่ · นับ heat ตามความเสี่ยงจริง
    ══════════════════════════════════════════════════════════════════════════ */
@@ -23136,7 +23121,7 @@ if(document.fonts && document.fonts.ready) document.fonts.ready.then(pf2ClampLat
 
 /* ══════════════════════════════════════════════════════════════════════════
    LN2 — หัวกล่อง Strategy แบบ Lean: เลือกบัญชี (ทีละบัญชี) + กล่องความเสี่ยงเดียว · อ่านค่าจาก satV2Risk/satV2Caps/satV2Brake/ddEval เดิม (ไม่เปลี่ยนสูตร)
-   heat/RPT/ไม้ใหม่ ไม่แสดงในหัว แต่ heat ยังตรวจเบื้องหลัง (satV2PlanCalc → Calc.readiness) · โค้ดทั้งหมดขึ้นต้น ln2
+   heat / RPT / new count are not shown in the header; heat is still checked in the background (satV2PlanCalc) · all code here starts with ln2
    ══════════════════════════════════════════════════════════════════════════ */
 const LN2_KEY = 'ln2_acc';
 let ln2Mem = null, ln2DetOpen = false;
