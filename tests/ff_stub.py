@@ -43,3 +43,10 @@ AU1_SHIM = r"""(function(){
 """
 FF_STUB = FF_STUB + AU1_SHIM
 FF_STUB_BASE = FF_STUB_BASE + AU1_SHIM
+
+# AU1 — satV3SaveReadyAccounts (old "save every Ready account" helper, no UI caller) lives here for the news-window suite (phase51)
+AU1_SHIM2 = r"""window.satV3IdeaDelete = function(ideaId){ var c = sat7dCol('satIdeas'); if(!c) return; return c.doc(ideaId).delete().catch(function(e){ console.warn('satV3IdeaDelete', e); }); };
+window.satV3SaveReadyAccounts = function(ideaId){ var idea = sat7dIdea(ideaId); if(!idea) return; if(idea.v2) satV3IdeaWrite(ideaId, {counter_trend: ln4VerifyOf(idea).counter === true}); sat7dAccts().forEach(function(a){ var s = (idea.accts||{})[a.id] || {}; if(s.trade_id || s.skip) return; if(satV3PlanAcctCalc(idea, a.id).ready) satV3SaveSlot(idea.id, a.id); }); };
+"""
+FF_STUB = FF_STUB + AU1_SHIM2
+FF_STUB_BASE = FF_STUB_BASE + AU1_SHIM2

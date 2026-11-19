@@ -71,74 +71,8 @@ def run_viewport(pw, width, height, label):
     ok_login = page.eval_on_selector("#mainWrap", "el => el.style.display !== 'none'")
     check(f"[{label}] login + main app loads", ok_login)
 
-    # ---- §7 canonical numeric cases, via Calc.satLot directly (pure) ----
-    xau_pure = page.evaluate("""
-      () => Calc.satLot({riskAmount: 13000/33, dist: 20, contract: 100, lotStep: 0.01, minLot: 0.01})
-    """)
-    check(f"[{label}] Calc.satLot XAUUSD pure -> 0.15 lot",
-          xau_pure.get("lot") is not None and abs(xau_pure["lot"] - 0.19) < 1e-9,
-          json.dumps(xau_pure))
-
-    s50_pure = page.evaluate("""
-      () => Calc.satLot({riskAmount: 13000, dist: 10, contract: 200, lotStep: 1, minLot: 1})
-    """)
-    check(f"[{label}] Calc.satLot S50 pure -> 5 สัญญา",
-          s50_pure.get("lot") == 6, json.dumps(s50_pure))
-
-    # ---- §7 canonical numeric cases, via the LIVE code path (sat7dCalc -> delegates to Calc.satLot) ----
-    page.evaluate("() => { const s=getBook('main').settings; s.satRisk={rpt:1.25, rptHi:1.5}; }")   # SR1 — fixture: ค่าเดิม 1.25/1.5 (ตัวเลขคาดหวังเดิมคงไว้)
-    xau_live = page.evaluate("""
-      () => sat7dCalc({asset:'XAUUSD', bias:'Long', entry:2650, sl:2630,
-                        checks:{g1:true,g2:true,g3:true,setup:true}, invalidation:'test',
-                        accts:{main:{broker:'XM'}}}, 'main')
-    """)
-    check(f"[{label}] sat7dCalc (live path) XAUUSD main/XM -> 0.15 lot",
-          xau_live.get("lot") is not None and abs(xau_live["lot"] - 0.15) < 1e-9,
-          json.dumps({k: xau_live.get(k) for k in ("lot","lotMsg","warns","ready")}))
-
-    s50_live = page.evaluate("""
-      () => sat7dCalc({asset:'S50', bias:'Long', entry:900, sl:890,
-                        checks:{g1:true,g2:true,g3:true,setup:true}, invalidation:'test',
-                        accts:{main:{broker:'Pi'}}}, 'main')
-    """)
-    check(f"[{label}] sat7dCalc (live path) S50 main/Pi -> 5 สัญญา",
-          s50_live.get("lot") == 5,
-          json.dumps({k: s50_live.get(k) for k in ("lot","lotMsg","warns","ready")}))
-
-    # BTC not configured for any broker on 'main' -> should degrade to "—"/warning, not throw
-    btc_live = page.evaluate("""
-      () => sat7dCalc({asset:'BTCUSD', bias:'Long', entry:60000, sl:59000,
-                        checks:{}, invalidation:'', accts:{}}, 'main')
-    """)
-    check(f"[{label}] sat7dCalc BTCUSD (SET1: built-in % loss spec, no broker) -> lot computed, no throw",
-          btc_live.get("lot") is not None and (btc_live.get("chosen") or {}).get("cfg", {}).get("sys") == "pct" and isinstance(btc_live.get("warns"), list),   # SET1 — BTC มีสเปค % loss ในตัว (ไม่ต้องตั้งโบรก) → คำนวณได้
-          json.dumps(btc_live))
-
-    # SL wrong side -> no lot computed, 'SL ผิดฝั่ง' warning
-    wrongside = page.evaluate("""
-      () => sat7dCalc({asset:'XAUUSD', bias:'Long', entry:2650, sl:2670,
-                        checks:{g1:true,g2:true,g3:true,setup:true}, invalidation:'x',
-                        accts:{main:{broker:'XM'}}}, 'main')
-    """)
-    check(f"[{label}] sat7dCalc SL ผิดฝั่ง -> lot null + 'SL ผิดฝั่ง' in warns",
-          wrongside.get("lot") is None and "SL ผิดฝั่ง" in wrongside.get("warns", []),
-          json.dumps(wrongside))
-
-    # accounts don't mix: fam only has 'IC' registered (not 'XM') and its own (smaller) capital.satB — must not
-    # borrow main's broker list or capital when computing for 'fam'
-    fam_live = page.evaluate("""
-      () => sat7dCalc({asset:'XAUUSD', bias:'Long', entry:2650, sl:2630,
-                        checks:{g1:true,g2:true,g3:true,setup:true}, invalidation:'x',
-                        accts:{fam:{broker:'XM'}}}, 'fam')
-    """)
-    fam_brokers = sorted(o["broker"] for o in fam_live.get("opts", []))
-    fam_cap = fam_live.get("base", {}).get("cap")
-    main_cap = xau_live.get("base", {}).get("cap")
-    check(f"[{label}] sat7dCalc 2 บัญชีไม่ปนกัน — fam เห็นแค่โบรกของตัวเอง (IC) ไม่ใช่ของ main (XM)",
-          fam_brokers == [""], json.dumps(fam_brokers))   # SET1 — ไม่มีโบรก: ทุกบัญชีเห็นตัวเลือกเดียว = สเปคสินค้า (ตัวเลือก broker ว่าง)
-    check(f"[{label}] sat7dCalc 2 บัญชีไม่ปนกัน — ถัง Sat ของ fam ต่างจาก main (ไม่ยืมทุนข้ามบัญชี)",
-          fam_cap is not None and main_cap is not None and abs(fam_cap - main_cap) > 1,
-          f"fam_cap={fam_cap} main_cap={main_cap}")
+    # ---- §7 Sat lot / broker cases ----
+    retired(f"[{label}] §7 Calc.satLot / sat7dCalc / satV3StrategyBarHtml numeric cases", "AU1 — the legacy Sat calculators (Calc.satLot, sat7dCalc, v1 plan sizing) and the hidden Sat strategy panel were deleted; the engine (RE1) sizes Sat — see tests/risk_engine_test.js, re1_adapter_test.js, ps1b_size_test.js")
 
     # ---- §0.5 — unknown top-level field round-trips through buildStateFromBookRaw ----
     probe = page.evaluate("() => (state && state._probeX) || null")
@@ -225,16 +159,7 @@ def run_viewport(pw, width, height, label):
     sat_panel = page.evaluate("() => !!document.getElementById('satV3Panel') && !document.getElementById('sat7dPanel')")   # CL2-a: เหลือ #satV3Panel ตัวเดียว
     check(f"[{label}] แท็บแผน (scope future) มี #satV3Panel เหมือนเดิม (CL2-a: #sat7dPanel ถูกลบ)", sat_panel)
 
-    # weekly Sat entry-card save flow (7D.2): create an idea via the real sat7dWrite path, verify it lands in mock satIdeas collection
-    page.evaluate("""
-      () => { document.getElementById('s7NewAsset') && (document.getElementById('s7NewAsset').value='XAUUSD');
-              document.getElementById('s7NewBias') && (document.getElementById('s7NewBias').value='Long');
-              sat7dNew(); }
-    """)
-    page.wait_for_timeout(200)
-    ideas_doc = page.evaluate("() => window.firebase.__mockDb.__dump()")
-    idea_written = any(k.startswith("users/testuid/satIdeas/") for k in ideas_doc.keys())
-    check(f"[{label}] 7D.2 entry-card save flow: sat7dNew() เขียน satIdeas/ จริง", idea_written, str(list(ideas_doc.keys())))
+    retired(f"[{label}] 7D.2 entry-card save flow: sat7dNew() writes satIdeas/", "AU1 — sat7dNew (the old weekly Sat entry card) was deleted; Sat plans are created by satV2NewPlan / pb2SaveDo (covered by sd1 · lr3 · lr5 suites)")
 
     # Core-only Add Trade restriction: opening Add Trade (scope=core context) must not expose satB-only fields improperly;
     # smoke check: the global Add Trade function exists and running it while on Core scope doesn't throw.

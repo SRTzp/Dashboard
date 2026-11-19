@@ -223,7 +223,7 @@ def grep_tests():
     for n in must_not:
         left = cnt(n, allow="CL2A_DROP_KEYS")   # ยกเว้นรายการ key เดิมของ cl2aStripLegacy
         check(f"grep index.html: ไม่เจอ {n} (ยกเว้นรายการ key ใน cl2aStripLegacy)", not left, json.dumps([i + 1 for i in left][:5]))
-    must = ["jReviewCell", "discScore", "setupScore", "cloneScoreLabels", "escHtml", "openIndustryManager", "scoreLabelText", "makeTradeObject", "closePosOverlay", "Calc.newCount", "cl2aStripLegacy"]
+    must = ["jReviewCell", "discScore", "setupScore", "cloneScoreLabels", "escHtml", "openIndustryManager", "scoreLabelText", "makeTradeObject", "closePosOverlay", "cl2aStripLegacy"]
     for n in must:
         check(f"grep index.html: ยังเจอ {n}", any(n in t for t in lines))
     for n in ["ggRow", "ggScoreOfSym", "SETUPS", "setupFactor"]:

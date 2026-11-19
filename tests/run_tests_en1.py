@@ -8,11 +8,11 @@ from re1d_common import js, launch, check, results
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = open(os.path.join(HERE, "..", "index.html"), encoding="utf-8").read()
 
-# every form named in the brief has its primary marked (static, by handler)
-PRIMARY = {"New/Edit plan Core": ["coreNewSave", "coreStopSave"], "Sat plan": ["pbSave", "satPyrSave"], "Record buy/sell": ["coreBuy1Save", "coreBuyAddSave", "coreLBuySave", "corePxSave", "saveTradeEdit", "lfAddSave"],
+# every form named in the brief has its primary marked (static, by handler)  — AU1: satPyrSave / coreLBuySave / lfAddSave removed with their dead forms
+PRIMARY = {"New/Edit plan Core": ["coreNewSave", "coreStopSave"], "Sat plan": ["pbSave"], "Record buy/sell": ["coreBuy1Save", "coreBuyAddSave", "corePxSave", "saveTradeEdit"],
            "Place order": ["pb2PlaceYes", "efCorePlaceYes"], "Journal Save review": ["lr5Save", "jBackfillSave"], "Watch": ["wl2UseThesis", "wlNoteSave", "wlAddSave"], "Settings": ["saveSettings", "saveSystemSettings"],
            "Import sheets": ["wiSave", "stkSave", "ltImpSave", "ideaImpSave", "tv1ImportApply"]}
-NOENTER = ["confirmClosePos", "coreDelGo", "satV3ClosedDelGo", "re4Go", "coreDeleteClosed", "cl2aRun", "bkRestoreRun"]
+NOENTER = ["confirmClosePos", "re4Go", "cl2aRun", "bkRestoreRun"]   # AU1: coreDelGo / satV3ClosedDelGo / coreDeleteClosed were deleted with the legacy Core cards and Sat panel
 
 
 def static():
