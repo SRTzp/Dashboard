@@ -84,6 +84,10 @@ def auto(pw, w, h):
         check(f"{tag} manual Sell wins: auto tag gone, contradiction -> switch line, Save plan off", st["d"] == "Sell" and not st["a"] and "Switch to Long" in (st["m"] or "") and st["s"], st)
         fill("sl", "2600"); st = js(page, "()=>pb2.dir")
         check(f"{tag} manual pick is not overridden by later edits", st == "Sell", st)
+        # Enter on a blocked form: Save plan stays off, focus goes to SL
+        js(page, "()=>document.querySelector('[data-pb2-in=\"entry\"]').focus()"); page.keyboard.press("Enter"); page.wait_for_timeout(300)
+        en = js(page, "()=>({f: document.activeElement && document.activeElement.dataset.pb2In, open: !!document.querySelector('[data-pb2-step=\"form\"]'), prim: document.querySelector('[data-pb2-save]').hasAttribute('data-enter-primary')})")
+        check(f"{tag} Enter on the blocked form does not save and focuses SL; Save plan keeps data-enter-primary", en["f"] == "sl" and en["open"] and en["prim"], en)
         js(page, "()=>pb2Save(true)"); page.wait_for_timeout(500)
         r = js(page, "()=>{ const i = (satIdeasList||[]).find(x=>x && x.asset === 'XAUUSD' && x.pb2); return i ? {w: i.wrongSide, bias: i.bias} : null; }")
         check(f"{tag} draft saves with the wrong side, flagged wrongSide:true", r and r["w"] is True and r["bias"] == "Short", r)
@@ -93,6 +97,20 @@ def auto(pw, w, h):
         pl = js(page, "()=>{ const i = (satIdeasList||[]).find(x=>x && x.asset === 'XAUUSD' && x.pb2); pb2PlaceOpen(i.id); return !!document.querySelector('[data-pb2-step=\"place\"]'); }")
         check(f"{tag} flagged draft cannot open Place", pl is False, pl)
         check(f"{tag} no page errors", not pe, pe)
+    finally:
+        b.close()
+
+
+def enter_ok(pw, w, h):
+    tag = "[%s enter]" % w
+    b, page, ce, pe = launch(pw, w, h, c=LF.cards_today())
+    try:
+        js(page, "()=>{ pb2OpenAsset('XAUUSD', {direct:true}); }"); page.wait_for_timeout(400)
+        for k, v in (("entry", "2643"), ("sl", "2620"), ("tp", "2700")): js(page, "([k,v])=>{ const i = document.querySelector('[data-pb2-in=\"'+k+'\"]'); i.value = v; pb2In(k, v); }", [k, v])
+        js(page, "()=>{ pb2Tg('ema', true); pb2Tg('str', true); document.querySelector('[data-pb2-in=\"tp\"]').focus(); }")
+        page.keyboard.press("Enter"); page.wait_for_timeout(500)
+        n = js(page, "()=>(satIdeasList||[]).filter(x=>x && x.asset === 'XAUUSD' && x.pb2).length")
+        check(f"{tag} Enter on a consistent form saves the plan", n == 1, n)
     finally:
         b.close()
 
@@ -127,7 +145,7 @@ if __name__ == "__main__":
         for w, h in ((1440, 900), (390, 844)):
             sat_case(pw, w, h, "Long", 2660, 2600, "Short", "Wrong side: SL above entry for Long")
             sat_case(pw, w, h, "Short", 2620, 2700, "Long", "Wrong side: SL below entry for Short")
-            form(pw, w, h); auto(pw, w, h); stored(pw, w, h)
+            form(pw, w, h); auto(pw, w, h); enter_ok(pw, w, h); stored(pw, w, h)
         core(pw, 1440, 900)
     bad = [r for r in results if not r[1]]
     print("SUMMARY sd1: %d checks, %d failing" % (len(results), len(bad)))

@@ -32517,7 +32517,7 @@ function pb2StepHtml(){
   }
   if(s === 'place') return pb2PlaceHtml();
   if(s === 'cplace') return efCorePlaceHtml();
-  return `<div data-pb2-step="form">${pb2Hd(pb2Label(pb2.a), true)}<div id="pb2A"></div>${pb2InputsHtml()}<div id="pb2C"></div><div class="pb2-ft"><button type="button" class="go" data-pb2-draft onclick="pb2Save(true)">Save draft</button><button type="button" class="go p" data-pb2-save onclick="pb2Save(false)">Save plan</button></div></div>`;
+  return `<div data-pb2-step="form">${pb2Hd(pb2Label(pb2.a), true)}<div id="pb2A"></div>${pb2InputsHtml()}<div id="pb2C"></div><div class="pb2-ft"><button type="button" class="go" data-pb2-draft onclick="pb2Save(true)">Save draft</button><button type="button" class="go p" data-enter-primary data-pb2-save onclick="pb2Save(false)">Save plan</button></div></div>`;
 }
 function pb2Render(focusFirst){
   let ov = document.getElementById('bdPop');
@@ -32601,6 +32601,14 @@ function pb2Key(e){
   }
   if(st === 2){
     if(t && t.matches && t.matches('[data-pb2-all]') && (k === ' ' || k === 'Enter')){ stop(); if(e.type === 'keydown' && !e.repeat) pb2HoldStart(null, t); return true; }
+    if(ed && k === 'Enter' && !e.isComposing && e.keyCode !== 229 && !e.repeat && !e.shiftKey){   /* SD1/EN1 — Enter = Save plan, but never past a disabled Save */
+      stop();
+      const sv = document.querySelector('[data-pb2-save]');
+      if(sv && !sv.disabled){ sv.click(); return true; }
+      const el = (pb2 && sdWrongOf(pb2TmpIdea())) ? document.querySelector('[data-pb2-in="sl"]') : (Array.from(document.querySelectorAll('[data-pb2-in]')).find(x=>x.value === '') || null);
+      if(el){ try{ el.focus(); el.select && el.select(); }catch(x){} }
+      return true;
+    }
     if(ed) return true;
     e.stopImmediatePropagation(); return true;
   }
