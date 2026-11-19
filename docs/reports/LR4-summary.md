@@ -31,5 +31,11 @@ Old suites asserted the retired layout; they now assert the same behaviour on th
 - `run_tests_pv1.py`: tiles replace the card Details button; tap on the tile opens the same panel.
 - New `run_tests_lr4.py` (61 checks at 1440/390/360) in `run_regression.sh`.
 
+## Last pass
+Macro quarter tab English only (no numbered header / inner title, hooks kept) · tooltip cleared on render and before screenshots · phone sheet 44 px × close + small Investing.com link · "No catalyst" on tiles without a reason · Flow header is one row with the single week picker (the same `data-bd-wk` element moved from the section header; picker text "Week 17–21 Nov ▾" / "17–21 Nov ▾"). `run_tests_lr4`: 73/73.
+
+## Regression
+Rebased onto `origin/main`, full `tests/run_regression.sh`: **58/58 ok · 0 failing** (1116 s). Hooks superset PASS.
+
 ## Proof
 `tests/screenshots/lr4/`: `flow-1440-side.png`, `flow-390-side.png`, `flow-390-calendar-live.png`, `flow-1440-macro-live.png` (+ live/mock).
