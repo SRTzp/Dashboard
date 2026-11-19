@@ -31,3 +31,15 @@ FF_STUB = LN1_LEGACY_SEED + FF_STUB_BASE
 READY_STUB = "window.addEventListener('load', function(){ var o = window.wlReady; if(typeof o === 'function'){ window.wlReady = function(s){ return window.__READY_REAL ? o(s) : true; }; } });\n"
 FF_STUB = FF_STUB + READY_STUB
 FF_STUB_BASE = FF_STUB_BASE + READY_STUB
+
+# AU1 — test-only setters. The old Sat form handlers that wrote single fields (satV2SetDir / satV3PlanEdit / satV2Edit / satV2SetSleeve) were deleted with the hidden Sat strategy panel;
+# several legacy suites still use them to seed plans, so they live here (the app no longer has them).
+AU1_SHIM = r"""(function(){
+  window.satV2SetDir = function(id, dir){ var i = sat7dIdea(id); if(!i || !i.v2 || (dir!=='Long' && dir!=='Short' && dir!=='') || (i.bias||'')===dir) return; satV3IdeaWrite(id, {bias: dir}); };
+  window.satV3PlanEdit = function(id, f, v){ if(['entry','sl','tp','cancel_level'].indexOf(f) >= 0){ var n = parseFloat(v); v = isFinite(n) ? n : null; } else v = String(v==null ? '' : v); var p = {}; p[f] = v; sat7dWrite('satIdeas', id, p); };
+  window.satV2Edit = function(id, f, v){ var i = sat7dIdea(id); if(!i || !i.v2) return; if(f==='tf'){ var t = String(v==null ? '' : v).trim().slice(0, 8); if(t) sat7dWrite('satIdeas', id, {tf: t}); else satV3Render({force:true}); return; } if(f==='setup_note'){ sat7dWrite('satIdeas', id, {setup_note: String(v==null ? '' : v).trim().slice(0, SAT_V2_NOTE_MAX)}); } };
+  window.satV2SetSleeve = function(id, sv){ var i = sat7dIdea(id); if(!i || !i.v2 || (sv!=='main' && sv!=='tactical') || satV2Sleeve(i)===sv) return; if(sv==='tactical' && !satIsPicked(i.asset)) return; var a0 = (sat7dAccts()[0] || {}).id, cfg = satV2Cfg(a0), old = satV2Sleeve(i), oldTf = old==='tactical' ? cfg.tfTac : cfg.tfMain, tf = String(i.tf || '').trim(); sat7dWrite('satIdeas', id, {sleeve: sv, tf: (!tf || tf===oldTf) ? (sv==='tactical' ? cfg.tfTac : cfg.tfMain) : tf}); };
+})();
+"""
+FF_STUB = FF_STUB + AU1_SHIM
+FF_STUB_BASE = FF_STUB_BASE + AU1_SHIM
