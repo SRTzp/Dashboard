@@ -49,7 +49,7 @@ def run(pw, w, h):
             sec = {s: row(page, s, "[data-lr5-sec]") for s in o}
             check(f"{tag} A: Sector vs SPY — Technology ↘ · Semiconductors ⤴ · Industrials ↗ · Software ↘", sec["AAPL"] == "Technology ↘" and sec["AVGO"] == "Semiconductors ⤴" and sec["GE"] == "Industrials ↗" and sec["PLTR"] == "Software ↘", sec)
             hdr = js(page, "()=>[...document.querySelectorAll('.lr5-th .lbl')].map(x=>x.innerText)")
-            check(f"{tag} A: table header Stock · Status · Sector vs SPY · RS · Thesis · homework · Next check", [x.lower() for x in hdr] == ["stock", "status", "sector vs spy", "rs", "thesis · homework", "next check"], hdr)
+            check(f"{tag} A: table header Stock · Status · Sector vs SPY · RS · Thesis · homework · Next check", [x.lower() for x in hdr] == ["stock", "status", "sector vs spy", "rs · from high", "thesis · homework", "next check"], hdr)
         # ---- RS
         rs = {s: js(page, "(s)=>{ const e = document.querySelector('[data-lr5-row][data-sym=\"'+s+'\"] .c-rs [data-lr5-rs]'); return e ? {t:e.innerText.replace(/\\s+/g,' ').trim(), v:e.dataset.lr5Rs, arrow:(e.querySelector('[data-lr5-arrow]')||{dataset:{}}).dataset.lr5Arrow||'', nh:!!e.querySelector('[data-lr5-newhigh]'), tip:e.getAttribute('title')||''} : null; }", s) for s in o}
         if desk:
@@ -57,7 +57,7 @@ def run(pw, w, h):
             check(f"{tag} B: missing RS → '—' with the reason in the tooltip (history<252 · no data)", rs["AMD"]["t"] == "—" and "252" in rs["AMD"]["tip"] and rs["PLTR"]["t"] == "—" and "No RS data" in rs["PLTR"]["tip"], rs)
         else:
             ph = {s: row(page, s, ".l2") for s in o}
-            check(f"{tag} B: phone — RS sits at the end of line 2 ('… · RS 87 ↗')", ph["AAPL"].endswith("RS 87 ↗") and ph["GE"].endswith("RS 91 →") and ph["AVGO"].endswith("RS 64 ↘") and "RS" not in ph["PLTR"] and "RS" not in ph["AMD"], ph)
+            check(f"{tag} B: phone — RS sits at the end of line 2 ('… · RS 87 ↗')", ph["AAPL"].endswith("RS 87 ↗ new high") and ph["GE"].endswith("RS 91 →") and ph["AVGO"].endswith("RS 64 ↘") and "RS" not in ph["PLTR"] and "RS" not in ph["AMD"], ph)
             check(f"{tag} B: phone line 2 — amber homework note when missing · 'Industrials · thesis done 8 Nov' when done", ph["AAPL"].startswith("Homework not started · adds at 50%") and ph["PLTR"] == "Homework not started" and ph["GE"].startswith("Industrials · thesis done 8 Nov"), ph)
         # ---- one line per row · no overflow
         dims = js(page, "()=>[...document.querySelectorAll('[data-lr5-row]')].map(r=>({s:r.dataset.sym, h:Math.round(r.getBoundingClientRect().height), cells:[...r.children].filter(c=>getComputedStyle(c).display!=='none' && !c.classList.contains('lr5-id')).map(c=>Math.round(c.getBoundingClientRect().height)), l2:(r.querySelector('.l2')||{getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height}))")

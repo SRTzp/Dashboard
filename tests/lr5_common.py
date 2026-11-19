@@ -67,6 +67,8 @@ RS = {
     "AMD": {"rating": None, "rating4wAgo": None, "line": "flat", "newHigh": False, "newHigh5d": False, "bench": "SPY", "asOf": "2026-11-18", "reason": "history<252"},
 }
 
+SECT = {}   # WL2 — optional {ySym: {sector, industry}} on the price docs
+
 FIX_JS = """([px])=>{
   const mk = (sym, quad, days)=>Object.assign({model:RRG_MODEL}, {sym, name:sym, quad, ratio:100, mom:100, dMom:0.1, days, prevDays:3, err:null, tail:[[100, 100]]});
   const rows = [mk('XLK', 'lag', 12), mk('SMH', 'imp', 4), mk('XLI', 'lead', 11), mk('IGV', 'lag', 10)];
@@ -85,7 +87,7 @@ def seed(page, with_ideas=False):
             page.evaluate("([i,d])=>firebase.firestore().collection('users').doc('testuid').collection('ideas').doc(i).set(d)", [d["id"], {"idea": {k: v for k, v in d.items() if k != "log"}, "idea_log": d.get("log", []), "user": {}}])
         page.wait_for_timeout(500)
     rows = items()
-    px = {k: {"rs": v, "close": 100.0, "closeDate": "2026-11-18"} for k, v in RS.items()}
+    px = {k: {"rs": v, "close": 100.0, "closeDate": "2026-11-18", **SECT.get(k, {})} for k, v in RS.items()}
     js(page, WL_JS, [rows, px])
     px["PLTR"] = {"name": "watchlist-only ticker: no close, no rs"}   # a price doc without close (must not break the listener or show a 0 price)
     for k, v in px.items():
