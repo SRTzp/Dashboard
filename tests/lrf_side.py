@@ -71,9 +71,19 @@ def make(pw, screen, w, h, mfile, tab, prep=None, full=False):
     print("wrote", f"{name}-{w}-side.png")
 
 
+def fam_fixture(page):
+    """LR-F2 — a 2-account book: Main (above) + Family = XAU same idea (Family size) · MSFT core plan · open S50 futures (F futures leverage in the open-risk line)."""
+    K.seed(page, {"fM": dict(plan_card("MSFT", 400, 380, px=401, ready=True), acct="fam")})
+    js(page, """()=>{ sat7dWrite('satIdeas','fX',{id:'fX',v3:true,v2:true,ready:true,readyAt:new Date().toISOString(),asset:'XAUUSD',bias:'Long',entry:2643,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[],pb_acct:'fam'});
+      const FB = getBook('fam'); FB.settings.psRisk = Object.assign({}, FB.settings.psRisk||{}, {minStop:{XAUUSD:0.1}}); 
+      const B = getBook('fam'); B.trades = (B.trades || []).concat([{id:'tfut', sym:'S50', port:'fut', status:'open', qty:80, entry:900, mult:1, date:'2026-11-17'}]); saveBook('fam'); (satIdeasList || []).filter(i=>i && i.asset === 'XAUUSD').forEach(i=>sat7dWrite('satIdeas', i.id, Object.assign({}, i, {ready:true, readyAt:new Date().toISOString()}))); re1Cache = {}; }""")
+    page.wait_for_timeout(400)
+
+
 def today_prep(page):
     import run_tests_lr2 as L2
-    js(page, "()=>{ lr2DetOpen = false; }"); L2.seed_wi(page); L2.seed_rrg(page); L2.set_regime(page, "red", "red"); page.wait_for_timeout(300)
+    fam_fixture(page)
+    js(page, "()=>{ re2GrpAll = {}; lr2DetOpen = false; }"); L2.seed_wi(page); L2.seed_rrg(page); L2.set_regime(page, "red", "red"); page.wait_for_timeout(300)
 
 
 def sheet_prep(page):
@@ -99,3 +109,4 @@ if __name__ == "__main__":
             for (w, h, f, tab, prep, full) in JOBS[s]:
                 make(pw, s, w, h, f, tab, prep, full)
         if "plan" in want: extras(pw)
+        if "today" in want: live(pw, 390, 844, "today", "today-full", prep=today_prep, full=True)   # LR-F2: whole phone page incl. To do → Risk room → Details

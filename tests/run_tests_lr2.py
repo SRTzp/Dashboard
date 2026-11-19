@@ -194,9 +194,9 @@ def partC(page, tag, w):
     js(page, "()=>{ lr2DetOpen = true; todayRefresh(true); }"); page.wait_for_timeout(250)
     rr = js(page, """()=>{ const L = a=>[...document.querySelectorAll('[data-lr2-room="'+a+'"] .lr2-rl[data-lr2-rl]')].map(r=>({k:r.dataset.lr2Rl, pill:(r.querySelector('.lr-acc')||{}).innerText, tag:(r.querySelector('.lr-tag')||{}).innerText, t:r.querySelector('.t').innerText.replace(/\\s+/g,' '), clip:r.querySelector('.t').scrollWidth > r.querySelector('.t').clientWidth + 1}));
       const vis = [...document.querySelectorAll('[data-lr2-risk] [data-re2-chip]')].filter(e=>{ if(e.closest('.lr2-vh')) { const w = e.closest('.lr2-vh').getBoundingClientRect(); return w.width > 2 || w.height > 2; } const r = e.getBoundingClientRect(); return r.width > 2 && r.height > 2; }).length;
-      return {main: L('main'), fam: L('fam'), strips: vis, tiles: document.querySelectorAll('[data-lr2-risk] .rk3, [data-lr2-risk] summary').length, det: !!document.querySelector('[data-ln4-moredet] [data-lr2-risk]')}; }""")
+      return {main: L('main'), fam: L('fam'), strips: vis, tiles: document.querySelectorAll('[data-lr2-risk] .rk3, [data-lr2-risk] summary').length, det: !!document.querySelector('[data-lr2-side] > [data-lr2-risk]') && !document.querySelector('[data-ln4-moredet] [data-lr2-risk]')}; }""")
     mt = rr["main"][0]["t"] if rr["main"] else ""
-    check(f"{tag} C: Risk room = ONE line per account × port inside Details ('M · MMT 1 of 4 ideas · room x / y'): Main 3 lines, Family 2 (no Momentum)", rr["det"] and [x["k"] for x in rr["main"]] == ["mom", "sat", "comp"] and [x["k"] for x in rr["fam"]] == ["sat", "comp"] and all(x["pill"] == "M" for x in rr["main"]) and all(x["pill"] == "F" for x in rr["fam"]) and rr["main"][0]["tag"] == "MMT" and re.match(r"^\d+ of \d+ ideas · room [\d.]+% / [\d.]+%$", mt), rr)
+    check(f"{tag} C: Risk room = ONE line per account × port in its own card under To do ('M · MMT 1 of 4 ideas · room x / y'): Main 3 lines, Family 2 (no Momentum)", rr["det"] and [x["k"] for x in rr["main"]] == ["mom", "sat", "comp"] and [x["k"] for x in rr["fam"]] == ["sat", "comp"] and all(x["pill"] == "M" for x in rr["main"]) and all(x["pill"] == "F" for x in rr["fam"]) and rr["main"][0]["tag"] == "MMT" and re.match(r"^(\d+ of \d+ ideas · room [\d.]+% / [\d.]+%|\d+/\d+)$", mt), rr)
     if wide: check(f"{tag} C: no truncated risk lines · no tiles · no visible duplicated strip chips", not any(x["clip"] for x in rr["main"] + rr["fam"]) and rr["tiles"] == 0 and rr["strips"] == 0, rr)
     else: check(f"{tag} C: no tiles · no visible duplicated strip chips (lines may ellipsise on phone)", rr["tiles"] == 0 and rr["strips"] == 0, rr)
     js(page, "()=>{ lr2DetOpen = false; todayRefresh(true); }"); page.wait_for_timeout(200)
@@ -211,7 +211,7 @@ def partFix(page, tag, w):
     h = js(page, """()=>{ const v = document.querySelector('.lr2-viewrow'), st = document.querySelector('[data-ln4-status]'), g = document.querySelector('[data-lr2-glance]'), sw = document.querySelector('[data-td3-sw]'), t = document.querySelector('[data-lr2-title]'), d = document.querySelector('[data-lr2-date]');
       const rv = v.getBoundingClientRect(), rg = g.getBoundingClientRect(), rs = sw.getBoundingClientRect(), rt = t.getBoundingClientRect();
       return {title: t.innerText, date: d.innerText, hv: Math.round(rv.height), gap: Math.round(rg.top - rv.bottom), swInRow: rs.top >= rv.top - 1 && rs.bottom <= rv.bottom + 1, titleLeft: rt.left < rs.left, filled: rt.width > 20}; }""")
-    check(f"{tag} F2: Daily/Weekend sits in the page-header row with 'Today' + date (no empty band above the glance)", h["title"] == "Today" and re.match(r"^[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}( · US market opens \d\d:\d\d ICT)?$", h["date"]) and h["swInRow"] and h["titleLeft"] and h["hv"] <= 48, h)
+    check(f"{tag} F2: Daily/Weekend sits in the page-header row with 'Today' + date (no empty band above the glance)", h["title"] == "Today" and re.match(r"^[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}( · US market opens \d\d:\d\d ICT)?$|^[A-Z][a-z]{2} \d{1,2}( · US \d\d:\d\d)?$", h["date"]) and h["swInRow"] and h["titleLeft"] and h["hv"] <= 48, h)
     nm = js(page, "()=>RRG_SYMS.map(r=>[r.s, lr2SecShort(r.s)])")
     bad = [x for x in nm if not x[1] or len(x[1]) > 12 or x[1] == x[0] or re.search(r"\d", x[1])]
     check(f"{tag} F3: every RRG symbol has a short sector name (≤12 chars, not the ticker): {len(nm)} checked", not bad and len({x[1] for x in nm}) == len(nm), bad)
@@ -236,7 +236,7 @@ def heights(pw):
         js(page, "()=>{ lr2DetOpen = false; todayRefresh(true); }"); page.wait_for_timeout(400)
         r = js(page, ROWS_JS)
         print("ROWS390", r)
-        check("[390] Today height at 390 stays within 3%% of the old layout (%d px vs %d)" % (r["height"], BASE_390["height"]), r["height"] <= BASE_390["height"] * 1.03, r)
+        check("[390] Today height at 390 stays within 3%% of the old layout (%d px vs %d)" % (r["height"], BASE_390["height"]), r["height"] <= BASE_390["height"] * 1.03, r)   # LR-F2: includes the open Risk room card (one line per account on the phone)
     finally:
         b.close()
 

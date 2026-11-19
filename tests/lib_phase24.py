@@ -319,7 +319,7 @@ def buy_pyramid_checks(pw, w, h, label, mk="TH"):
               page.evaluate("()=>[cbPx,cbQty,cbDate,cbStop].map(e=>e.value).join('|')"))
         if mk == "TH":
             page.fill("#cbQty", "750")
-            check(f"{tag} จำนวนที่ไม่ใช่ทวีคูณ 100 → แจ้ง 'จะปัดลงเป็น 700'", "จะปัดลงเป็น 700" in (txt(page, "#cbErr") or ""))
+            check(f"{tag} qty not a multiple of 100 → 'Rounded down to 700 for the market lot'", "Rounded down to 700" in (txt(page, "#cbErr") or ""))
             page.fill("#cbQty", "700")
         page.click("#cbSave"); page.wait_for_timeout(600)
         tr = book_trades(page)

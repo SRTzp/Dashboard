@@ -24,7 +24,7 @@ def partA(pw, w, h):
         js(page, SAT_JS); page.wait_for_timeout(700); refresh(page)
         r = {x["sym"]: x["t"] for x in rows(page, "manage")}
         t = r.get("NVDA", "")
-        check("[%s] A2 holding row = card format: next leg · SL · open Risk $528" % tag, "Buy #18 @ 140 · SL 110 · Risk −$528" in t, t)
+        check("[%s] A2 holding row (LR-F2): Held #n · Stop · If stopped −$ · Next Buy #m @ p" % tag, "Held #11 · Stop 110 · If stopped −$528 · Next Buy #18 @ 140" in t, t)
         check("[%s] A2 old plan-total numbers are gone from the holding row (no $1,068 / 0.72%% / cap 50%%)" % tag, "36.1k" not in t and "0.72%" not in t and "cap 50%" not in t, t)
         check("[%s] A2 homework note stays text, not a number" % tag, "size limited to 50% · homework not done" in t, t)
         pv = js(page, "()=>{const it=bdItems().find(x=>x.sym==='NVDA'); return posView(it)}")
