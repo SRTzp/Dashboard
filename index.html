@@ -25477,8 +25477,7 @@ function satRrCheck(idea){
   const e = (satE2Avg(idea) || +idea.entry), s = +idea.sl, tp = +idea.tp;
   if(!(e>0) || !(s>0) || e===s) return null;
   if(!(tp>0)) return {ok:false, rr:null, msg:`ต้องมี TP แรกก่อน — R:R ขั้นต่ำ ${SAT_RR_MIN}`};
-  const short = satV3SideOf(idea)==='Short';
-  if(short ? tp>=e : tp<=e) return {ok:false, rr:null, msg:'TP แรกอยู่ผิดฝั่งของ Entry'};
+  if(wrongSideOf(satV3SideOf(idea), e, null, tp) === 'TP') return {ok:false, rr:null, msg:'TP แรกอยู่ผิดฝั่งของ Entry'};   /* AU1 */
   const rr = Math.abs(tp-e)/Math.abs(e-s), ok = rr >= SAT_RR_MIN - 1e-9;
   return {ok, rr, msg: ok ? '' : `R:R ${satRrFmt(rr)} ต่ำกว่า ${SAT_RR_MIN} — ปรับ Entry / Stop / TP`};
 }
@@ -32395,10 +32394,8 @@ function pb2Model(i){
   if(!(e > 0)){ miss.push('Entry'); first = first || 'Entry'; }
   if(!(s > 0)){ miss.push('SL'); first = first || 'SL'; }
   if(!(t > 0)){ miss.push('TP'); first = first || 'TP'; }
-  let wrong = false;
-  if(e > 0 && s > 0 && (sell ? s <= e : s >= e)) wrong = true;
-  if(e > 0 && t > 0 && (sell ? t >= e : t <= e)) wrong = true;
-  if(wrong){ issues.push('wrong side'); first = first || (e > 0 && s > 0 && (sell ? s <= e : s >= e) ? 'SL' : 'TP'); }
+  const ws = wrongSideOf(i.bias, e, s, t), wrong = !!ws;   /* AU1 — one wrong-side helper, built on the engine's satEntryOrder */
+  if(wrong){ issues.push('wrong side'); first = first || ws; }
   else if(e > 0 && s > 0 && t > 0){ const c = satRrCheck(i); if(c && c.rr != null && !c.ok){ issues.push(`R:R ${satRrFmt(c.rr)} < ${SAT_RR_MIN}`); first = first || 'TP'; } }
   const vf = ln4VerifyOf(i);
   if(vf.unset){ miss.push('EMA50 + Structure'); first = first || 'Trend'; }
@@ -32407,14 +32404,25 @@ function pb2Model(i){
   return {need:miss, issues, text, complete:!text, blocked:!text && vf.blocked === true, vf, first, wrong};
 }
 /* SD1 — wrong-side guard: the text + the one-tap fix for a plan whose Entry / SL / TP point the other way */
+/* AU1 — the ONE wrong-side check: which leg ('SL' | 'TP' | null) sits on the wrong side of Entry for this side.
+   Built on RiskEngine.satEntryOrder (SAT_BAD_ORDER): each leg is tested with the other leg replaced by a valid probe, so SL and TP are told apart without a second rule. */
+function wrongSideOf(side, entry, sl, tp){
+  try{
+    if(!(side === 'Long' || side === 'Short')) return null;
+    const e = +entry, s = +sl, t = +tp, E = window.RiskEngine; if(!(e > 0) || !E) return null;
+    const sd = side === 'Short' ? 'short' : 'long', long = sd === 'long';
+    const bad = o=>{ const r = E.satEntryOrder(Object.assign({side: sd, entry: e}, o)); return r.reasons.indexOf('SAT_BAD_ORDER') >= 0; };
+    if(s > 0 && bad({stop: s, tp: long ? e * 2 : e * 0.5})) return 'SL';
+    if(t > 0 && bad({stop: long ? e * 0.5 : e * 1.5, tp: t})) return 'TP';
+    return null;
+  }catch(x){ return null; }
+}
 function sdWrongOf(i){
   try{
     if(!i || !(i.bias === 'Long' || i.bias === 'Short')) return null;
-    const e = +i.entry, s = +i.sl, t = +i.tp, sell = i.bias === 'Short';
-    const slBad = e > 0 && s > 0 && (sell ? s <= e : s >= e), tpBad = !slBad && e > 0 && t > 0 && (sell ? t >= e : t <= e);
-    if(!slBad && !tpBad) return null;
-    const to = sell ? 'Long' : 'Short';
-    return {to, why:`Wrong side: ${slBad ? 'SL' : 'TP'} ${slBad ? (sell ? 'below' : 'above') : (sell ? 'above' : 'below')} entry for ${i.bias}`, btn:`Switch to ${to} ›`};
+    const w = wrongSideOf(i.bias, i.entry, i.sl, i.tp); if(!w) return null;
+    const sell = i.bias === 'Short', slBad = w === 'SL', to = sell ? 'Long' : 'Short';
+    return {to, why:`Wrong side: ${w} ${slBad ? (sell ? 'below' : 'above') : (sell ? 'above' : 'below')} entry for ${i.bias}`, btn:`Switch to ${to} ›`};
   }catch(x){ return null; }
 }
 function sdFlip(id){
