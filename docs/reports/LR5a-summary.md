@@ -39,4 +39,4 @@ Branch `claude/lr5a` (from `origin/main`). Parts: A desktop table + panel → B 
 `tests/screenshots/lr5a/`: `watch-1440-side.png`, `watch-390-side.png`, `watch-390-sheet-live.png`, `watch-1440-ideas-live.png` (+ live/mock). Bottom nav hidden in whole-page shots.
 
 ## Regression
-See the line at the end (full `tests/run_regression.sh` after rebase onto `origin/main`).
+Rebased onto `origin/main`, full `tests/run_regression.sh`: **60/60 ok · 0 failing** (1138 s). Hooks superset PASS. `rrg_hold_test` added to the run. The phone sheet sits below the app modals (z-index 40) so import/answer dialogs stay clickable.
