@@ -115,7 +115,7 @@ def run(pw, w, h, label):
         check(f"{tag} ปุ่ม 📥 Import / ปุ่ม Missed ในตารางแผนไม่อยู่ใน DOM", not page.evaluate("() => !!document.querySelector('[onclick*=\"openImportCL\"],[onclick*=\"openMissedModal\"],[onclick*=\"openIdeaModal\"]')"))
 
         # ───── Journal ─────
-        page.evaluate("() => switchTab('journal')"); page.wait_for_timeout(300)
+        page.evaluate("() => { switchTab('journal'); document.getElementById('lr5Det').open = true; }"); page.wait_for_timeout(300)   # LR5b: old Journal under Details
         kinds = page.evaluate("() => [JV_KINDS, JINC_STATUS]")
         check(f"{tag} Journal: JV_KINDS = closed+cancel · JINC_STATUS = closed+cancelled", kinds == [["closed", "cancel"], ["closed", "cancelled"]], json.dumps(kinds))
         heads = page.evaluate("() => [...document.querySelectorAll('#tabJournal .panel-head h2')].map(e=>e.innerText.replace(/\\s+/g,' ').trim()).filter(Boolean)")
