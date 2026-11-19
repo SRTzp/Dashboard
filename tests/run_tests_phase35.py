@@ -208,19 +208,8 @@ def checks(pw, w, h, label):
         # 9 ─ CAND1
         open_cand(page, "CAND1")
         check(f"{tag} 9 CAND1 (candidate): noneปุ่ม + Note · noneชิป Screen (WL4: เดิมมี 'Screen 9/15') · noneส่วนโน้ต", n(page, "[data-wl-addnote]") == 0 and "Screen" not in (txt(page, ".ltChips") or "") and n(page, "[data-wl-note]") == 0, txt(page, ".ltChips") or "")
-        # 10 ─ ช่องเช็ก Tier (WL2 · เติมจาก Thesis แทนช่องเช็กในแท็บ Research): thesis.tier_inputs → ติ๊ก 3 ช่อง
-        def fill_chk(tk):
-            page.evaluate("()=>{ switchTab('plan'); }"); page.wait_for_timeout(150)
-            page.evaluate("(a)=>coreNewOpen(a)", "main"); page.wait_for_selector('.core-sheet [data-core-sheet="new"]')
-            page.fill("#cnTicker", tk); page.wait_for_timeout(120); page.click("#tiFillTh"); page.wait_for_timeout(150)
-            r = page.evaluate("()=>Object.fromEntries(['fcf3y','capret','ocf'].map(k=>[k,(()=>{ const on=[...document.querySelectorAll('[data-tk=\"'+k+'\"] button.on')].map(b=>b.dataset.v); return on.length ? on[0]==='1' : null; })()]))")
-            page.evaluate("()=>coreSheetClose()"); page.wait_for_timeout(100); return r
-        v1 = fill_chk("AVGO")
-        check(f"{tag} 10 เติมจาก Thesis AVGO: ช่องเช็ก Tier = FCF 3 ปี ✓ · ปันผล/ซื้อคืน ✓ · OCF ✓", v1 == {"fcf3y": True, "capret": True, "ocf": True}, json.dumps(v1))
-        d = copy.deepcopy(dump(page)["users/testuid/watchlist/AVGO"]["thesis"]); d["tier_inputs"]["capitalReturn"]["v"] = False; d["tier_inputs"]["ocfPositive"]["v"] = None
-        put_thesis(page, "AVGO", d)
-        v2 = fill_chk("AVGO")
-        check(f"{tag} 10 ค่า yes/no/? → FCF 3 ปี ✓ · ปันผล/ซื้อคืน ✗ · OCF ? (ยังไม่ตอบ) · thesis ใน doc ไม่ถูกแก้ด้วยการเติม", v2 == {"fcf3y": True, "capret": False, "ocf": None} and dump(page)["users/testuid/watchlist/AVGO"]["thesis"]["tier_inputs"]["capitalReturn"]["v"] is False, json.dumps(v2))
+        # 10 ─ ช่องเช็ก Tier (WL2) — the A/B tier box lived in the pre-Lean Core form template, which AU1 deleted (CoreSize.classifyTier is gone)
+        print("RETIRED - " + tag + " 10 Tier check boxes filled from Thesis tier_inputs :: AU1 deleted the pre-Lean Core form (tier box) and the tier calculator")
         # 11 ─ ค่าตั้ง SR1
         hint = page.evaluate("()=>{ const e=document.getElementById('satHeatHint'); return e ? e.textContent : null; }")
         if not hint:

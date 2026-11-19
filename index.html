@@ -14030,7 +14030,8 @@ function ps1Settings(accId){
 }
 function ps1Raw(accId){ const r = ps1Settings(accId).psRisk; return (r && typeof r==='object') ? r : {}; }
 function ps1Cfg(accId){ return Ps1.cfg(Object.assign({}, ps1Raw(accId), {weights: poolPctOf(ps1Settings(accId))})); }
-function ps1E(accId){ return poolsOf(accId || acctActive).total; }
+/* AU1 (D4) — the account base for every % is the engine's (RE1) week-start equity, never a capital-based fallback. No confirmed snapshot (and no RE1 provisional base) = 0 = "not sized": the UI says "Confirm a snapshot in Settings ›". */
+function ps1E(accId){ try{ const L = re1L(accId || acctActive); if(L && L.basis && L.basis.ok && L.basis.weekEquity > 0) return L.basis.weekEquity; }catch(e){} return 0; }
 /* E date = latest of FX date / newest Core price date for this account */
 function ps1EDate(accId){
   const id = accId || acctActive, s = ps1Settings(id), ds = [];
@@ -28962,7 +28963,7 @@ function efLevelRiskHtml(it, pv, lv){   /* "This order: Buy #18 @ 140 · +Risk �
 }
 /* ── LR3 B — confirm sheet body shared by Core and Satellite: Orders to place (one row per entry leg + STOP row) · Risk / Reward / Size tiles ── */
 /* ONE base for '% of account' on the sheet: the engine's week equity — the same base Size % (effPct) is computed on */
-function lr3Base(acct){ try{ const L = re1L(acct); if(L && L.basis && L.basis.weekEquity > 0) return L.basis.weekEquity; }catch(e){} try{ return ps1E(acct); }catch(e){ return null; } }
+function lr3Base(acct){ try{ const E = ps1E(acct); return E > 0 ? E : null; }catch(e){ return null; } }   /* AU1 (D4) — engine base only */
 function lr3Sheet(it, model, lv, fb){
   const e = bdE; let pv = null; try{ pv = posView(it); }catch(x){}
   const long = !(it.kind === 'sat' && it.ref && it.ref.bias === 'Short');
