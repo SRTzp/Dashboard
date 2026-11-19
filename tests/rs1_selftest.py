@@ -111,5 +111,20 @@ n, failed = bp.run_rs({'NEW': 'NEW', 'MISSING': 'MISSING', 'T39.BK': 'T39'}, lis
                       lambda k, d: store.setdefault(k, {}).update(d), dt.datetime(2026, 11, 18, tzinfo=dt.timezone.utc))
 t('run_rs', n == 2 and [f['ySym'] for f in failed] == ['MISSING'] and store['NEW']['rs']['rating'] >= 90
   and store['MISSING']['rs']['reason'] == 'no-data' and store['_meta']['rsTable']['us']['n'] == 60)
+# 7 · WL2 — hi52 / offHigh / r3m..r12m (additive) + sector cache
+h = bp.rs_hi_ret(rows([100.0] * 100 + [200.0] + [150.0] * 199 + [100.0]))
+t('wl2 hi', h['hi52'] == 200.0 and h['hi52Date'] == (D0 + dt.timedelta(days=100)).isoformat() and h['offHigh'] == -0.5)
+t('wl2 ret', h['r3m'] == round(100 / 150 - 1, 4) and h['r12m'] is not None)
+sh = bp.rs_hi_ret(rows([100.0 + i for i in range(100)]))
+t('wl2 short', sh['hi52'] is None and sh['offHigh'] is None and sh['r3m'] is not None and sh['r6m'] is None)
+t('wl2 empty', bp.rs_hi_ret([])['offHigh'] is None and 'hi52' in bp.rs_for('AAPL', long_, long_, {'cuts': cuts, 'cuts4w': cuts}))
+fz = bp.rs_for('AAPL', long_, long_, {'cuts': cuts, 'cuts4w': cuts})
+t('wl2 at high', fz['offHigh'] == 0.0 and fz['hi52Date'] == long_[-1][0].isoformat() and fz['rating'] == full['rating'])
+st2, calls = {}, []
+def sf(y): calls.append(y); return {'sector': 'Technology', 'industry': 'Semiconductors'}
+bp.run_rs({'NEW': 'NEW', 'T39.BK': 'T39'}, list(uni), lambda ys: {y: data[y] for y in ys if y in data}, lambda k, d: st2.setdefault(k, {}).update(d),
+          dt.datetime(2026, 11, 18, tzinfo=dt.timezone.utc), sf, {'T39.BK'})
+t('wl2 sector once', calls == ['NEW'] and st2['NEW']['sector'] == 'Technology' and st2['NEW']['industry'] == 'Semiconductors' and 'sector' not in st2['T39.BK'])
+t('wl2 rs keys', 'offHigh' in st2['NEW']['rs'] and st2['NEW']['rs']['rating'] >= 90)
 t('universe file', len(bp.load_universe(os.path.join(bp.ROOT, 'data', 'universe_th.txt'))) == 100)
 print(f'RS1 selftest OK · {ok} checks')

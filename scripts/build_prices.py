@@ -249,6 +249,25 @@ def pick_bench(m, clean):
     return main, clean.get(main)
 
 
+def rs_hi_ret(rows):
+    """WL2 — {hi52, hi52Date, offHigh, r3m, r6m, r9m, r12m} จาก adj close (ใช้ 252 แท่งล่าสุดรวมวันนี้ · offHigh = close/hi52 − 1 · rNm = return 63/126/189/252 sessions)
+    ฟิลด์ที่แท่งไม่พอ = None · เพิ่มอย่างเดียว ไม่แตะสูตร rating"""
+    out = {'hi52': None, 'hi52Date': None, 'offHigh': None, 'r3m': None, 'r6m': None, 'r9m': None, 'r12m': None}
+    if not rows:
+        return out
+    cl = [float(c) for _, c in rows]
+    t = cl[-1]
+    win = rows[-RS_HI_WIN:]
+    if len(rows) >= RS_HI_WIN and t > 0:
+        d, h = max(win, key=lambda x: (float(x[1]), x[0]))      # เสมอกัน → วันล่าสุด
+        h = float(h)
+        out['hi52'], out['hi52Date'], out['offHigh'] = round(h, 4), d.isoformat(), round(t / h - 1, 4)
+    for key, (n, _w) in zip(('r3m', 'r6m', 'r9m', 'r12m'), RS_WEIGHTS):
+        if len(cl) > n and cl[-1 - n] > 0 and t > 0:
+            out[key] = round(t / cl[-1 - n] - 1, 4)
+    return out
+
+
 def rs_for(ysym, rows, bench_rows, table, bench_sym=None):
     """สร้าง dict rs ของ 1 ตัว · rows/bench_rows = [(date, adj close)] (None = ดึงไม่ได้) · table = rsTable[mkt] หรือ None
     bench_sym = ชื่อ benchmark ที่ใช้จริง (บันทึกใน 'bench')"""
@@ -258,6 +277,7 @@ def rs_for(ysym, rows, bench_rows, table, bench_sym=None):
     if not rows:
         rs['reason'] = 'no-data'
         return rs
+    rs.update(rs_hi_ret(rows))      # WL2 — เพิ่มอย่างเดียว
     if len(rows) < RS_MIN_BARS:
         rs['reason'] = 'history<252'
     elif not table or not table.get('cuts'):
@@ -304,7 +324,7 @@ def pick_rs_tickers(cards, watch):
     return seen
 
 
-def run_rs(syms, universe, fetch_many, write, now):
+def run_rs(syms, universe, fetch_many, write, now, sector_fetch=None, have_sector=()):
     """syms {ySym: ticker} · universe [ySym] · fetch_many(list)->{ySym: [(date, adj close)]} (ตัวที่ดึงไม่ได้ = ไม่มี key)
     เขียน prices/{ySym} {'rs':…} + prices/_meta {'rsTable':…} · คืน (n_rated, failed list)"""
     benches = list(RS_BENCH.values())
@@ -320,7 +340,15 @@ def run_rs(syms, universe, fetch_many, write, now):
         rs = rs_for(y, rows, brows, table.get(m), bsym)
         if not rows:
             failed.append({'ySym': y, 'why': 'no-data'})
-        write(y, {'sym': tk, 'ySym': y, 'rs': rs})
+        doc = {'sym': tk, 'ySym': y, 'rs': rs}
+        if sector_fetch and y not in have_sector:      # WL2 — sector/industry ครั้งเดียวต่อ ticker (cache = ฟิลด์ใน prices/{ySym})
+            try:
+                si = sector_fetch(y) or {}
+                if si.get('sector') or si.get('industry'):
+                    doc['sector'], doc['industry'] = si.get('sector') or '', si.get('industry') or ''
+            except Exception as ex:
+                print('sector fetch failed', y, str(ex)[:60])
+        write(y, doc)
         n += rs['rating'] is not None
     write('_meta', {'rsTable': table, 'rsRunAt': now.isoformat()})
     print(f'rs: rated {n}/{len(syms)} · universe us {table.get("us", {}).get("n", 0)} th {table.get("th", {}).get("n", 0)}'
@@ -363,6 +391,13 @@ def _yf_fetch_many(syms, chunk=80):
     return out
 
 
+def _yf_sector(ysym):
+    """WL2 — {'sector','industry'} จาก yfinance (ETF/ดัชนีไม่มี → {})"""
+    import yfinance as yf
+    info = yf.Ticker(ysym).info or {}
+    return {'sector': str(info.get('sector') or ''), 'industry': str(info.get('industry') or '')}
+
+
 def main():
     import firebase_admin
     from firebase_admin import credentials, firestore
@@ -390,7 +425,8 @@ def main():
         watch = [d.to_dict() or {} for d in base.collection('watchlist').stream()]
         uni = [to_ysym(t) for t in load_universe(os.path.join(ROOT, 'data', 'universe_us.txt'))] + \
               [to_ysym(t, 'TH') for t in load_universe(os.path.join(ROOT, 'data', 'universe_th.txt'))]
-        run_rs(pick_rs_tickers(cards, watch), uni, _yf_fetch_many, write, now)
+        have = {d.id for d in base.collection('prices').stream() if (d.to_dict() or {}).get('sector') or (d.to_dict() or {}).get('industry')}
+        run_rs(pick_rs_tickers(cards, watch), uni, _yf_fetch_many, write, now, _yf_sector, have)
     except Exception as ex:
         print('rs failed:', str(ex)[:200])
     return code
