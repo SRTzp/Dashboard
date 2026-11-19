@@ -33,3 +33,5 @@ New `tests/run_tests_lr5b.py` (106 checks at 1440/390/360) in `run_regression.sh
 
 ## Regression
 First full run: 55/59 — hooks superset (`data-lb="ไม้"` literal, restored), and three older suites that read the old Journal while it is collapsed under `Details ▾` (`run_tests_re1d`, `run_tests_phase20`, `run_tests_phase373`): they now open `#lr5Det` first; assertions unchanged. After the fixes: re1d 336/336, phase20 76/76, phase373 475/475, hooks PASS. Final full `tests/run_regression.sh` result below.
+
+Final: rebased on `origin/main`, full `tests/run_regression.sh` → **59/59 ok · 0 failing** (1127 s). Hooks superset PASS. (One earlier run showed a one-off `run_tests_lr2` crash under load; it passed alone 150/150 and in this run.)
