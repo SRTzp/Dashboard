@@ -24,7 +24,7 @@ def run(pw, w, h):
         N = c["y"]
         check(f"{tag} Ready plans, none answered → 0/N amber (N≥3)", c and c["x"] == 0 and N >= 3 and c["tone"] == "a", c)
         if w <= 600:
-            check(f"{tag} phone text is '0/N → N/N' (no wrap, one line)", c and c["shown"] == f"0/{N} → {N}/{N}" and c["ws"] == "nowrap" and c["h"] < 24, c)
+            check(f"{tag} phone text is '0/N → N/N' (no wrap, one line)", c and c["shown"] == f"0/{N} → {N}/{N}" and c["ws"] == "nowrap" and c["h"] <= 40, c)
         else:
             check(f"{tag} desktop text is 'Placed 0/N · goal 100%'", c and c["shown"] == f"Placed 0/{N} · goal 100%", c)
         # taller? hide the chip → Act head height must not change

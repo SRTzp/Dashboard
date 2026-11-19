@@ -17,3 +17,10 @@
 - `tests/run_tests_au2.py` 59/59 (chip text desktop/phone, nowrap, not taller, tap target, neutral vs miss rules, goal 80/90/100 colours, tooltip, setting, checklist item incl. grey = met, history + streak + reason text, adapter peak, peak store, state chip). In `run_regression.sh`.
 - re1_adapter 63/63, re1c_live 88/88, hooks superset PASS, syntax OK, sync_re1 OK.
 - **Full `run_regression.sh` NOT run** — AU1 is not merged and the Mac is busy. After AU1 merges: rebase `claude/au2` and run it once.
+
+## Rebase onto main (AU1 merged) · full regression
+- Rebased `claude/au2` onto origin/main (clean, no conflicts; RE1-only paths from AU1 kept). `sync_re1.py --check` OK.
+- Full `run_regression.sh`: 66/68 on the first run (1052s). The 2 failures were both caused by AU2:
+  - `phase366` (Weekend review): expected 7 items; AU2 adds the auto item `wk_exec` → 8. Test expectations updated (8 rows, header 2/8, bar 25%, tags/numbers incl. the new row).
+  - `phase370` (tap targets ≥ 36px): the execution chip was a 16px-high button on the phone. The chip now has a 36px hit area (`padding:10px 2px; margin:-10px 0`, so the header line height is unchanged). The `au2` phone-chip test now checks one line (h ≤ 40) instead of h < 24.
+- After the fixes I re-ran only `phase366` (116 pass), `phase370` (27 pass) and `au2` (59/59). I did NOT re-run the whole regression a second time; the CSS change is limited to the chip.
