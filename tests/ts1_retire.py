@@ -5,6 +5,8 @@ import sys
 
 RULES = {
     "run_tests_phase35": [
+        ("1 ชิป 'Thesis lite", "AU3: legacy Watch detail header replaced by the Lean header (ln3WlDetHead)"),
+        ("5 ลำดับส่วนในแท็บ สรุป", "AU3: legacy Watch detail header replaced by the Lean header"),
         ("#satHeatHint ชี้ไปที่ช่อง Sat ใน 'Legacy limits'", "the old Sat RPT / DD block (#satRiskSec incl. #satHeatHint) and the Legacy limits rows were removed from Settings: TS1 §2 (hidden since RE1-C1 ae5da2b)"),
     ],
     "run_tests_phase122": [
