@@ -142,10 +142,78 @@ def peak_case(pw):
     finally:
         b.close()
 
+def cd_case(pw, w, h):
+    """AU2 C + D — answer buttons on the passed-entry row, Save → Place order now / Later, Today height.
+    The fixture re-emits its cards shortly after a write, so each answer is checked in the same tick (write → refresh → read)."""
+    tag = "[%s C/D]" % w
+    b, page, ce, pe = launch(pw, w, h, c=LF.cards_today())
+    try:
+        LF.today(page); settle(page, 900); settle(page)
+        ids = js(page, "()=>Object.keys(ln4Cfg().rdy||{})")
+        core = js(page, "(ids)=>ids.filter(id=>(coreCardsList||[]).some(x=>x.id===id && x.status==='plan' && x.plan && +x.plan.entry>0))", ids)
+        K, K2 = core[0], core[1]
+        js(page, "()=>{ window.coreWrite = (i, p)=>{ const c = coreCardsRaw.find(x=>x.id===i); if(c) Object.assign(c, p); coreApplyPx(); re1Cache = {}; return Promise.resolve(true); }; }")
+        mk = "(id)=>{ const c = coreCardsRaw.find(x=>x.id===id); c.px = +c.plan.entry * 1.10; c.pxDate = thaiToday(); coreApplyPx(); re1Cache = {}; todayRefresh(true); }"
+        js(page, mk, K); js(page, mk, K2); settle(page, 800)
+        row = "(id)=>{ const t = coreCardsList.find(x=>x.id===id).ticker; return document.querySelector('[data-re2-row=' + t + ']'); }"
+        CH = "(()=>{ const b = document.querySelector('[data-au2-exec]'); return {x:+b.dataset.au2X, y:+b.dataset.au2Y, tone:b.dataset.au2Tone}; })()"
+        btns = js(page, "(id)=>{ const r = (%s)(id); return r ? [...r.querySelectorAll('button')].map(b=>b.dataset.re2Btn) : null; }" % row, K)
+        check(f"{tag} passed-entry row has Placed + Not taken › buttons", btns and "placed" in btns and "cancel" in btns, btns)
+        hh = js(page, "()=>{ const H = ()=>document.documentElement.scrollHeight, a = H(), bs = [...document.querySelectorAll('[data-re2-grp=enter] [data-re2-btn=placed], [data-re2-grp=enter] [data-re2-btn=cancel]')], old = bs.map(b=>b.innerHTML); bs.forEach(b=>{ b.innerHTML = b.dataset.re2Btn === 'placed' ? 'Keep' : 'Cancel plan ›'; }); const o = H(); bs.forEach((b, i)=>{ b.innerHTML = old[i]; }); return {n:bs.length, now:a, old:o}; }")
+        check(f"{tag} the passed-entry row with the new buttons is not taller than with the old ones (Keep / Cancel plan ›)", hh["n"] >= 2 and hh["now"] <= hh["old"] + 1, hh)
+        c0 = js(page, "()=>" + CH)
+        js(page, "(id)=>{ (%s)(id).querySelector('[data-re2-btn=placed]').click(); }" % row, K); page.wait_for_timeout(600)
+        sh = js(page, "()=>({k: coreDlg && coreDlg.kind, has: !!document.getElementById('cbSave')})")
+        check(f"{tag} Placed opens the record-fill sheet", sh["k"] == "buy1" and sh["has"], sh)
+        c1 = js(page, "()=>{ document.getElementById('cbQty').value = '100'; coreBuy1In(); coreBuy1Save(); todayRefresh(true); return " + CH + "; }")
+        check(f"{tag} after the fill the chip counts it as placed (x +1)", c1["x"] == c0["x"] + 1 and c1["y"] == c0["y"], [c0, c1])
+        js(page, "()=>{ document.getElementById('cbSave') && coreSheetClose(); }")
+        # Not taken → reason, row disappears, chip updates
+        js(page, "(id)=>{ (%s)(id).querySelector('[data-re2-btn=cancel]').click(); }" % row, K2); page.wait_for_timeout(500)
+        pre = js(page, "()=>{ const r = document.getElementById('cxReason'); return r ? r.value : null; }")
+        check(f"{tag} Not taken › opens the reason picker (Missed preselected)", pre == "missed", pre)
+        opts = js(page, "()=>[...document.getElementById('cxReason').options].map(o=>o.value).join()")
+        check(f"{tag} picker offers Missed / Hesitated / Invalidated / Thesis", all(k in opts for k in ("missed", "hesitated", "invalidated", "thesis")), opts)
+        r2 = js(page, "(id)=>{ const r = document.getElementById('cxReason'); r.value = 'invalidated'; re4In(); const t = coreCardsList.find(x=>x.id===id).ticker; re4Go(); todayRefresh(true); return {gone: !document.querySelector('[data-re2-row=' + t + ']'), chip: " + CH + "}; }", K2)
+        check(f"{tag} Not taken · Invalidated: the row is gone and the chip leaves it out (y −1)", r2["gone"] and r2["chip"]["y"] == c1["y"] - 1, [c1, r2])
+        # last week's unanswered plan: in last week's rate, not in this week's chip
+        lw = js(page, "()=>{ const pw = posAddDaysISO(tdMonday(thaiToday()), -7); ln4Write(q=>{ q.rdy = q.rdy || {}; q.rdy.oldwk = {day:posAddDaysISO(tdMonday(thaiToday()), -3), wk:pw, acct:tdHome(), sym:'OLD'}; }); coreCardsRaw.push({id:'oldwk', ticker:'OLD', acct:tdHome(), status:'plan', plan:{entry:10, stop:9}}); coreApplyPx(); todayRefresh(true); const e = au2WeekExec(null, pw); return {y:e.y, un:e.un, chip:" + CH + "}; }")
+        check(f"{tag} last week's unanswered plan counts as unanswered in last week's rate, not in this week's chip", lw["y"] == 1 and lw["un"] == 1 and lw["chip"]["y"] == r2["chip"]["y"], [lw, r2])
+        # D — Save plan: Place order now · Later (remembered per device)
+        js(page, "()=>{ try{ localStorage.removeItem('dash.au2PlaceNow'); }catch(e){} switchTab('plan'); }"); page.wait_for_timeout(300)
+        js(page, "()=>{ coreNewOpen(tdHome(), {mode:'new'}); }"); page.wait_for_timeout(500)
+        pc = js(page, "()=>{ const r = document.querySelector('[data-au2-pcrow]'); if(!r) return null; const bs = [...r.querySelectorAll('button')]; return {t:r.innerText.replace(/\\s+/g,' ').trim(), pressed:bs.map(b=>b.getAttribute('aria-pressed')), h:Math.round(r.getBoundingClientRect().height), bh:bs.map(b=>Math.round(b.getBoundingClientRect().height))}; }")
+        check(f"{tag} Save plan form shows 'Place order now (stop/limit at your broker) · Later', Later by default", pc and pc["t"].startswith("Place order now") and "stop/limit at your broker" in pc["t"] and pc["t"].endswith("Later") and pc["pressed"] == ["false", "true"], pc)
+        check(f"{tag} the choice is one line with ≥ 36px targets", pc and pc["h"] <= 44 and min(pc["bh"]) >= 36, pc)
+        js(page, "()=>document.querySelector('[data-au2-pc=now]').click()")
+        mem = js(page, "()=>localStorage.getItem('dash.au2PlaceNow')")
+        check(f"{tag} 'Place order now' is remembered on this device", mem == "1", mem)
+        js(page, "()=>{ coreSheetClose(); coreNewOpen(tdHome(), {mode:'new'}); }"); page.wait_for_timeout(400)
+        again = js(page, "()=>[...document.querySelectorAll('[data-au2-pc]')].map(b=>b.getAttribute('aria-pressed')).join()")
+        check(f"{tag} reopening the form keeps the last choice", again == "true,false", again)
+        js(page, "()=>{ coreSheetClose(); }")
+        P = core[2]
+        flow = js(page, """(id)=>{ const calls = []; window.__o = window.ln4Place; window.ln4Place = (k, i)=>calls.push([k, i]); window.__calls = calls;
+          const it = bdById(id), p = it && bdPill(it, true); return {pill: p ? [p.k, !!p.dis] : null}; }""", P)
+        js(page, "(id)=>{ localStorage.setItem('dash.au2PlaceNow', '1'); au2AfterSave(id); }", P); page.wait_for_timeout(700)
+        n1 = js(page, "()=>window.__calls.length")
+        js(page, "(id)=>{ localStorage.setItem('dash.au2PlaceNow', '0'); au2AfterSave(id); }", P); page.wait_for_timeout(700)
+        n2 = js(page, "()=>window.__calls.length")
+        okp = bool(flow["pill"]) and flow["pill"][0] == "place" and flow["pill"][1] is False
+        check(f"{tag} the plan under test is complete and allowed (Place enabled)", okp, flow)
+        check(f"{tag} Save + 'Place order now' opens Place order straight away; 'Later' only saves", n1 == 1 and n2 == 1, [n1, n2])
+        # blocked plan + 'now' → nothing opens
+        js(page, "()=>{ window.__calls.length = 0; localStorage.setItem('dash.au2PlaceNow', '1'); au2AfterSave('nonexistent'); }"); page.wait_for_timeout(3300)
+        check(f"{tag} an unknown / blocked plan never opens Place order", js(page, "()=>window.__calls.length") == 0)
+        js(page, "()=>{ window.ln4Place = window.__o; try{ localStorage.removeItem('dash.au2PlaceNow'); }catch(e){} }")
+        check(f"{tag} no page errors", not pe, pe)
+    finally:
+        b.close()
+
 
 if __name__ == "__main__":
     with sync_playwright() as pw:
-        for w, h in ((1280, 900), (390, 844)): run(pw, w, h); goal_case(pw, w, h)
+        for w, h in ((1280, 900), (390, 844)): run(pw, w, h); goal_case(pw, w, h); cd_case(pw, w, h)
         peak_case(pw)
         stop_chip(pw)
     bad = [r for r in results if not r[1]]

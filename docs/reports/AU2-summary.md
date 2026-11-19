@@ -24,3 +24,18 @@
   - `phase366` (Weekend review): expected 7 items; AU2 adds the auto item `wk_exec` → 8. Test expectations updated (8 rows, header 2/8, bar 25%, tags/numbers incl. the new row).
   - `phase370` (tap targets ≥ 36px): the execution chip was a 16px-high button on the phone. The chip now has a 36px hit area (`padding:10px 2px; margin:-10px 0`, so the header line height is unchanged). The `au2` phone-chip test now checks one line (h ≤ 40) instead of h < 24.
 - After the fixes I re-ran only `phase366` (116 pass), `phase370` (27 pass) and `au2` (59/59). I did NOT re-run the whole regression a second time; the CSS change is limited to the chip.
+
+# AU2 — Parts C + D
+
+## Done
+**C · every Ready plan gets an answer** — the Today "passed entry · missed?" row now reads `Update levels › · Placed · Not taken ›` (same three buttons as before, so the row is no taller: Keep → Placed, Cancel plan › → Not taken ›). `Placed` opens the existing record-fill flow (Core: Record buy #1 · Sat: Filled); `Not taken ›` opens the existing reason picker (Missed preselected; Hesitated / Invalidated / Thesis or news changed …). The row stays until answered; both answers go through the same `au2Exec` helper, so the Today chip updates when the row is answered (Placed → x+1; Invalidated / Thesis → leaves the denominator; Missed / Hesitated stay in). Unanswered plans from last week stay in last week's rate (Journal history) and are not in this week's chip (each plan keeps its first Ready week).
+**D · Place the order when planning** — under the buttons of the New plan form (Core and Sat) a one-line choice `Place order now (stop/limit at your broker) · Later`; default Later, last choice remembered per device (`localStorage dash.au2PlaceNow`). After a new plan is saved, "Place order now" opens the existing Place order sheet straight away, only if the plan is complete and allowed (Place pill enabled; a blocked / incomplete plan just saves). Drafts, edits and Ladder saves do not show or use it. No extra dialog.
+
+## Notes
+- The Keep action still exists in code (data hook kept for the hooks superset) but the passed-entry row no longer offers it; `re4Keep` tests now call it directly.
+- Test fixture re-emits cards after a write, so `run_tests_au2` checks each answer in the same tick (write → refresh → read chip).
+
+## Tests
+- `tests/run_tests_au2.py` 91/91 (desktop + 390): answer buttons present, Placed → record-fill sheet and chip x+1, Not taken → reason picker, row gone and chip y−1, last-week unanswered kept out of this week's chip, row not taller than the old buttons, Save choice text / default / 36px targets / remembered per device, Place now opens Place order (allowed plan) vs Later only saves, no page errors.
+- `run_tests_re1d.py` updated for the new buttons.
+- Hooks superset PASS · full `run_regression.sh` 68/68, 0 failing (one clean run, 1036s).
