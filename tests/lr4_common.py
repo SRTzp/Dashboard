@@ -32,6 +32,7 @@ FIX_JS = """([rows])=>{
   const ev = (title, n, hm, kind)=>({title, label_th:title, scheduled_at: at(n, hm), time_status:'confirmed', status:'scheduled', kind:kind || 'other'});
   const doc = {id: mon, week: mon, events:{eia:ev('EIA crude', 2, '21:30'), cpi:ev('US CPI', 3, '20:30', 'cpi'), jc:ev('Jobless claims', 3, '20:30'), fed:ev('Fed speaker', 4, '02:00'), rs:ev('Retail sales', 4, '20:30')},
     assets:{XAUUSD:{impact:'HIGH', event_refs:['cpi','fed'], note:'Real yields + dollar drive gold · CPI Thu'}, BTCUSD:{impact:'MED', event_refs:['cpi'], note:'ETF flows mixed · credit risk-off'}, S50:{impact:'LOW', event_refs:['rs','jc']}, GO:{impact:'MED', event_refs:['eia'], note:'Crude inventories Wed'}}};
+  try{ wiStop(); }catch(e){}   /* keep the fixture: no snapshot listener refills wiDocs */
   wiDocs = {}; wiDocs[mon] = doc; wiLoaded = true; wiErr = '';
   if(!window.__bdBias){ window.__bdBias = bdBias; window.__pk = satWeekPickList; }
   satWeekPickList = ()=>['XAUUSD','BTCUSD','S50','GO'];
