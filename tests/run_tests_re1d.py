@@ -108,7 +108,7 @@ def run_passed(pw, w, h):
     b, page, ce, pe = launch(pw, w, h, doc_c(), cs)
     try:
         en = {r["sym"]: r for r in rows(page, "enter")}
-        check("[%s] Enter: >3%% past entry → amber 'passed entry · missed?' with Cancel plan › / Keep" % tag, "AAA" in en and "passed entry" in en["AAA"]["t"] and js(page, "()=>[...document.querySelectorAll('[data-re2-row=AAA] button')].map(b=>b.dataset.re2Btn).join()") == "update,keep,cancel", en.get("AAA"))
+        check("[%s] Enter: >3%% past entry → amber 'passed entry · missed?' with Update levels › / Placed / Not taken ›" % tag, "AAA" in en and "passed entry" in en["AAA"]["t"] and js(page, "()=>[...document.querySelectorAll('[data-re2-row=AAA] button')].map(b=>b.dataset.re2Btn).join()") == "update,placed,cancel", en.get("AAA"))
         check("[%s] prompt has a third action 'Update levels ›'" % tag, js(page, "()=>[...document.querySelectorAll('[data-re2-row=AAA] button')].some(b=>b.dataset.re2Btn==='update' && b.innerText.replace(/\\s+/g,' ').indexOf('Update levels')>=0)"))
         check("[%s] Enter: 2.9%% and 3.1%% are not 'passed' prompts at the boundary rule (≤3%% is Near, >3%% past entry is passed)" % tag, "BBB" in en and "passed entry" not in en["BBB"]["t"] and "CCC" in en and "passed entry" in en["CCC"]["t"], [en.get("BBB"), en.get("CCC")])
         check("[%s] prompt row is amber" % tag, js(page, "()=>!!document.querySelector('[data-re2-row=AAA] [data-re2-why].a')"))
@@ -117,11 +117,11 @@ def run_passed(pw, w, h):
         js(page, "()=>document.querySelector('[data-re2-row=AAA] [data-re2-btn=update]').click()"); page.wait_for_timeout(500)
         check("[%s] Update levels › opens the existing edit form for that plan" % tag, js(page, "()=>!!document.getElementById('cnEntry') && coreNew && coreNew.id==='pA'"))
         js(page, "()=>{ coreSheetClose(); switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(300)
-        js(page, "()=>document.querySelector('[data-re2-row=RRR] [data-re2-btn=keep]').click()"); page.wait_for_timeout(400)
+        js(page, "()=>{ re4Keep('pR'); todayRefresh(true); }"); page.wait_for_timeout(400)
         rr = {r["sym"]: r for r in rows(page, "enter")}.get("RRR")
         check("[%s] after Keep a ⚑ Ready plan stays as a normal Enter row: Place order + amber '+8.0%% past entry'" % tag, rr and rr["btn"] == "place" and "+8.0% past entry" in rr["t"] and js(page, "()=>!!document.querySelector('[data-re2-row=RRR] [data-re2-why].a')") and "passed entry" not in rr["t"], rr)
         if w in (390, 1440): shot(page, "ready-past-entry-%d" % w)
-        js(page, "()=>document.querySelector('[data-re2-row=AAA] [data-re2-btn=keep]').click()"); page.wait_for_timeout(400)
+        js(page, "()=>{ re4Keep('pA'); todayRefresh(true); }"); page.wait_for_timeout(400)
         check("[%s] Keep clears the prompt (EF1: Ready is automatic, so the plan stays as a normal Enter row; plan untouched, no auto-cancel)" % tag, "passed entry" not in {r["sym"]: r["t"] for r in rows(page, "enter")}.get("AAA", "") and js(page, "()=>coreCardsList.find(c=>c.id==='pA').status")=="plan")
         js(page, "()=>{ ln4Write(o=>{ o.keep.pA = '2000-01-01'; }); }"); page.wait_for_timeout(300); refresh(page)
         check("[%s] next day the prompt is back" % tag, "AAA" in {r["sym"] for r in rows(page, "enter")})

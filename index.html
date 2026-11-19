@@ -4141,6 +4141,10 @@ html body.lf-lean #tabFlow[style*="display: block"]{display:flex!important;flex-
 .pb2-rem{background:var(--surface2);border-radius:10px;padding:8px 10px;font-size:13px;color:var(--muted);margin:0 0 8px}
 .pb2-mac{font-size:13px;color:var(--muted);margin:0 0 12px}.pb2-mac b{color:var(--text)}
 .pb2-ft{display:flex;gap:8px;margin:12px 0 0}
+.au2-pc{display:flex;align-items:center;gap:6px;margin:6px 0 2px;font-size:12px;color:var(--muted,#666);white-space:nowrap;overflow:hidden}
+.au2-pc button{background:none;border:0;padding:8px 2px;font:inherit;color:inherit;cursor:pointer;min-height:36px}
+.au2-pc button[aria-pressed="true"]{color:var(--text,#14161A);font-weight:600;text-decoration:underline}
+.au2-pc small{font-size:11px;font-weight:400;opacity:.8}
 .pb2-ft .go{flex:1;min-height:40px;text-align:center}
 .pb2-cf{border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin:8px 0 0;font-size:13.5px;line-height:1.7;overflow-wrap:anywhere}
 .pb2-note{margin:8px 0 0}
@@ -11892,6 +11896,24 @@ function au2ChipHtml(accts){
   const full = e.y ? `Placed ${e.x}/${e.y} · goal ${e.goal}%${e.met ? ' ✓' : ''}` : 'Placed — · goal ' + e.goal + '%', short = e.y ? (e.met ? `${e.x}/${e.y} ✓` : `${e.x}/${e.y} → ${e.need}/${e.y}`) : '—';
   return `<button type="button" class="au2-ex ${e.tone}" data-au2-exec data-au2-tone="${e.tone}" data-au2-x="${e.x}" data-au2-y="${e.y}" data-au2-goal="${e.goal}" title="${td3E(e.tip)}" aria-label="${td3E(e.tip)}" onclick="au2ExecGo()"><span class="au2-sep">·</span> <span class="au2-d">${full}</span><span class="au2-p">${short}</span></button>`;
 }
+function au2Placed(id){   /* AU2 C — answer "Placed" on a passed-entry plan: the existing record-fill flow (Core: Record buy #1 · Sat: filled) */
+  try{ ln4RecordFill(id); }catch(e){ console.warn('au2 placed:', e); }
+}
+/* AU2 D — Save plan: 'Place order now' | 'Later' (remembered per device) */
+function au2PlaceNow(){ try{ return localStorage.getItem('dash.au2PlaceNow') === '1'; }catch(e){ return false; } }
+function au2PlaceSet(on){ try{ localStorage.setItem('dash.au2PlaceNow', on ? '1' : '0'); }catch(e){} document.querySelectorAll('[data-au2-pc]').forEach(b=>b.setAttribute('aria-pressed', (b.dataset.au2Pc === 'now') === !!on ? 'true' : 'false')); }
+function au2PlaceChoiceHtml(){
+  const on = au2PlaceNow();
+  return `<div class="au2-pc" data-au2-pcrow><button type="button" data-au2-pc="now" aria-pressed="${on}" onclick="au2PlaceSet(true)">Place order now <small>(stop/limit at your broker)</small></button><span aria-hidden="true">·</span><button type="button" data-au2-pc="later" aria-pressed="${!on}" onclick="au2PlaceSet(false)">Later</button></div>`;
+}
+function au2AfterSave(id){   /* a complete, allowed new plan + 'Place order now' → the existing Place order sheet; otherwise nothing */
+  if(!au2PlaceNow() || !id) return;
+  let n = 0; const t = setInterval(()=>{
+    n++; let it = null; try{ it = bdById(id); }catch(e){}
+    if(it){ clearInterval(t); try{ const p = bdPill(it, true); if(it.status === 'plan' && p && p.k === 'place' && !p.dis && p.fn) ln4Place(it.kind, id); }catch(e){ console.warn('au2 place:', e); } }
+    else if(n > 20) clearInterval(t);
+  }, 150);
+}
 function au2ExecGo(){
   try{ LR5.per = 'week'; LR5.port = 'all'; LR5.sel = null; LR5.ntOpen = true; }catch(e){}
   try{ switchTab('journal'); }catch(e){}
@@ -14780,7 +14802,7 @@ function lfFormHtml(o){
       <div class="ccRes" id="cnLres"></div><div id="cnLgates"></div></div>
     <div class="ccErr" id="cnErr" style="display:none"></div>
     <!-- CS1 — the 'Save Tier only' button is not in the plan form: evaluate the stock in Edit Stock Evaluation (Candidate / Watchlist) -->
-    <div class="lf-btnrow"><button type="button" class="ccBtn" data-lf-cancel onclick="coreSheetClose()">Cancel</button><button type="button" class="ccBtn" id="cnDraft" data-cn-draft onclick="bdDraftSave()">Save draft</button><button data-enter-primary type="button" class="ccBtn pri" id="cnSave" data-cn-save onclick="coreNewSave()" disabled>Save plan</button></div></div>`;
+    <div class="lf-btnrow"><button type="button" class="ccBtn" data-lf-cancel onclick="coreSheetClose()">Cancel</button><button type="button" class="ccBtn" id="cnDraft" data-cn-draft onclick="bdDraftSave()">Save draft</button><button data-enter-primary type="button" class="ccBtn pri" id="cnSave" data-cn-save onclick="coreNewSave()" disabled>Save plan</button></div>${coreNew && coreNew.mode === 'new' && coreNew.strat !== 'L' ? au2PlaceChoiceHtml() : ''}</div>`;
 }
 
 /* แผน Core ใหม่ (＋ / T เมื่อ scope = หุ้น) · 7E-2b-1: Tier คำนวณ + สลับกลยุทธ์ W/L · opt {mode:'convert'|'edit', id} = แปลงแผน W → L / แก้แผนบันได */
@@ -15224,6 +15246,7 @@ function coreNewSave(){
   try{ card.log = [bdMk('create', 'Plan created · Entry ' + (card.plan && +card.plan.entry > 0 ? td3Num(+card.plan.entry) : '—') + ' · SL ' + (card.plan && +card.plan.stop > 0 ? td3Num(+card.plan.stop) : '—'))]; }catch(e){}   /* PB1 */
   coreWrite(id, card);
   try{ bdSavedToast(); }catch(e){}
+  au2AfterSave(id);
   { const want = n.track==='ladder' ? 'ladder' : 'stock'; if(planScope!==want && (planScope==='stock' || planScope==='ladder')) setPlanScope(want); }   /* PL1·A8 — โชว์การ์ดใหม่ในหน้าของ track ตัวเอง */
 }
 
@@ -28302,7 +28325,7 @@ function re2Row(it, o){
   const sameW = re2SameIdea(it), same = sameW ? `<span class="lrf-same" data-lrf-same>· same idea, ${e(sameW)} size</span>` : '';
   const plbl = o.k === 'place' && acT && acT !== 'M' ? 'Place · ' + acT : '';
   const btn3 = o.btn3 ? `<button type="button" class="btn o" data-re2-btn="update" onclick="event.stopPropagation();${o.fn3 || ''}">${e(o.btn3)}</button>` : '';
-  const btn2 = o.btn2 ? `<button type="button" class="btn o" data-re2-btn="keep" onclick="event.stopPropagation();${o.fn2 || ''}">${e(o.btn2)}</button>` : '';
+  const btn2 = o.btn2 ? `<button type="button" class="btn o" ${o.fn2 && o.fn2.indexOf('au2Placed') === 0 ? 'data-re2-btn="placed"' : 'data-re2-btn="keep"'} onclick="event.stopPropagation();${o.fn2 || ''}">${e(o.btn2)}</button>` : '';
   const sdB = o.sd ? `<button type="button" class="btn o" data-sd-fix onclick="event.stopPropagation();${o.fn}">${e(o.sd.btn)}</button>` : '';
   const btn = sdB + btn3 + btn2 + (o.btn && !o.sd ? `<button type="button" class="btn${o.k === 'fill' || o.k === 'hw' ? ' o' : ''}${blkd ? ' lrf-hb' : ''}" data-re2-btn="${o.k}"${o.dis ? ` disabled title="${e(o.title || '')}" data-re2-blocked="1"` : ''} onclick="event.stopPropagation();${o.fn || ''}"><span class="m">${e(plbl || o.btn)}</span><span class="p">${e(plbl || sh)}</span></button>` : '');
   const hc = (['Ready', 'Ordered', 'Holding', 'Near'].indexOf(o.chip) >= 0 || (line && o.why && o.chip === o.why)) ? ' lrf-hc' : '';
@@ -28332,7 +28355,7 @@ function re2Model(acct){
     const near = nearEntry(d);
     const pastKept = re4Passed(it) && re4Kept(it.id);   /* Keep: a ⚑ Ready plan stays as a normal Enter row (amber '+x.x% past entry'); an unflagged one hides until tomorrow */
     if(pastKept && !ready) return;
-    if(re4Passed(it) && !pastKept){ enter.push({it, o:{g:'enter', chip:'passed entry · missed?', cc:'a', k:'cancel', btn:'Cancel plan ›', fn:`re4Open('${td3E(it.id).replace(/'/g, "\\'")}','plan',null,'missed')`, btn2:'Keep', fn2:`re4Keep('${td3E(it.id).replace(/'/g, "\\'")}')`, btn3:'Update levels ›', fn3:`bdEditLv('${td3E(it.id).replace(/'/g, "\\'")}')`, why:'passed entry · missed?', warn:true, lv:tw1Lv(it), d}}); return; }   /* RE-D §6 */
+    if(re4Passed(it) && !pastKept){ enter.push({it, o:{g:'enter', chip:'passed entry · missed?', cc:'a', k:'cancel', btn:'Not taken ›', fn:`re4Open('${td3E(it.id).replace(/'/g, "\\'")}','plan',null,'missed')`, btn2:'Placed', fn2:`au2Placed('${td3E(it.id).replace(/'/g, "\\'")}')`, btn3:'Update levels ›', fn3:`bdEditLv('${td3E(it.id).replace(/'/g, "\\'")}')`, why:'passed entry · missed?', warn:true, lv:tw1Lv(it), d}}); return; }   /* RE-D §6 */
     if(it.sdDraft) return;   /* SD1 — wrong-side drafts stay off Today */
     if(!ready && !near && !it.sd) return;
     const p = bdPill(it, true), blocked = !!p.dis;
@@ -28889,7 +28912,7 @@ function pb2StepHtml(){
   }
   if(s === 'place') return pb2PlaceHtml();
   if(s === 'cplace') return efCorePlaceHtml();
-  return `<div data-pb2-step="form">${pb2Hd(pb2Label(pb2.a), true)}<div id="pb2A"></div>${pb2InputsHtml()}<div id="pb2C"></div><div class="pb2-ft"><button type="button" class="go" data-pb2-draft onclick="pb2Save(true)">Save draft</button><button type="button" class="go p" data-enter-primary data-pb2-save onclick="pb2Save(false)">Save plan</button></div></div>`;
+  return `<div data-pb2-step="form">${pb2Hd(pb2Label(pb2.a), true)}<div id="pb2A"></div>${pb2InputsHtml()}<div id="pb2C"></div><div class="pb2-ft"><button type="button" class="go" data-pb2-draft onclick="pb2Save(true)">Save draft</button><button type="button" class="go p" data-enter-primary data-pb2-save onclick="pb2Save(false)">Save plan</button></div>${!pb2.id ? au2PlaceChoiceHtml() : ''}</div>`;
 }
 function pb2Render(focusFirst){
   let ov = document.getElementById('bdPop');
@@ -29024,6 +29047,7 @@ function pb2SaveDo(draft){
   try{ bdRender(); }catch(e){}
   try{ todayRefresh(true); }catch(e){}
   try{ bdSavedToast(); }catch(e){}
+  if(!s.id && !draft) au2AfterSave(id);
 }
 /* ── EF1 A · admin steps happen by themselves ── */
 function efAssetBusy(key){   /* an asset with an open / planned trade or plan must not be dropped from this week's picks */
