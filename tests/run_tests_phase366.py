@@ -63,19 +63,19 @@ def tests(pw, w, h):
         set_trades(page, [], [])
         T.go_today(page); weekend(page)
         # ── 1 order · tags · header · bar ──
-        check(f"{tag} 1 Weekend = ONE list of 7 in routine order", ids(page) == ["wk_impact", "wk_assets", "wk_news", "wk_cands", "wk_ideas", "wk_stops", "wk_chg"], ids(page))
+        check(f"{tag} 1 Weekend = ONE list of 8 in routine order (AU2: + wk_exec)", ids(page) == ["wk_impact", "wk_assets", "wk_news", "wk_cands", "wk_ideas", "wk_stops", "wk_chg", "wk_exec"], ids(page))
         check(f"{tag} 1 one panel only (no Overview/Core/Satellite panels)", cnt(page, "[data-td3-panels] > [data-td3-panel]") == 1 and cnt(page, '[data-td3-panel="week"]') == 1 and cnt(page, '[data-td3-panel="ov"],[data-td3-panel="core"],[data-td3-panel="sat"]') == 0)
         tags = js(page, "()=>[...document.querySelectorAll('[data-td3-wk]')].map(e=>e.querySelector('[data-td3-gt]').innerText)")
-        check(f"{tag} 1 group tags SAT · SAT · CORE · CORE · OVERVIEW · CORE · OVERVIEW", tags == ["SAT", "SAT", "CORE", "CORE", "OVERVIEW", "CORE", "OVERVIEW"], tags)
+        check(f"{tag} 1 group tags SAT · SAT · CORE · CORE · OVERVIEW · CORE · OVERVIEW · CORE", tags == ["SAT", "SAT", "CORE", "CORE", "OVERVIEW", "CORE", "OVERVIEW", "CORE"], tags)
         nums = js(page, "()=>[...document.querySelectorAll('[data-td3-wk]')].map(e=>e.querySelector('.td3-ck').innerText)")
         # stops auto-ticked (no positions) → ⑥ shows ✓
-        check(f"{tag} 1 rows numbered 1..7 (✓ when done)", nums == ["1", "2", "3", "4", "5", "✓", "7"], nums)
+        check(f"{tag} 1 rows numbered 1..8 (✓ when done)", nums == ["1", "2", "3", "4", "5", "✓", "7", "✓"], nums)
         hd = txt(page, "[data-td3-panel=week] .td3-wkh")
-        check(f"{tag} 1 header 'Weekend review · n/N done · ~45 min' (n/N = counted items: 1/7 — Raise stops auto-ticks with no positions)", hd == "Weekend review · 1/7 done · ~45 min", hd)
+        check(f"{tag} 1 header 'Weekend review · n/N done · ~45 min' (n/N = counted items: 2/8 — Raise stops and Execution goal (no Ready plans = met) auto-tick)", hd == "Weekend review · 2/8 done · ~45 min", hd)
         bar = js(page, "()=>{ const b=document.querySelector('[data-td3-bar]'); return [b.getAttribute('aria-valuenow'), b.getAttribute('aria-valuemax'), b.firstElementChild.style.width]; }")
-        check(f"{tag} 1 progress bar matches n/N (1/7 = 14%)", bar == ["1", "7", "14%"], bar)
+        check(f"{tag} 1 progress bar matches n/N (2/8 = 25%)", bar == ["2", "8", "25%"], bar)
         sw = txt(page, "[data-td3-badge]")
-        check(f"{tag} 1 Weekend tab badge uses the same n/N", sw == "1/7", sw)
+        check(f"{tag} 1 Weekend tab badge uses the same n/N", sw == "2/8", sw)
         # ── 2 ⑤ ideas ──
         set_ideas(page, ["2026-09-20T03:00:00Z", "2026-10-05T03:00:00Z"])   # last week · next week
         check(f"{tag} 5 ideas of other weeks are not counted → 'New ideas 0/2' · not ticked · button 'Flow ›'", "New ideas 0/2" in txt(page, '[data-td3-wk="wk_ideas"] .nm') and done(page, "wk_ideas") == "false" and txt(page, '[data-td3-wk="wk_ideas"] [data-td3-wgo]') == "Flow ›" and "Flow › Fresh → Ask why › → idea-scout" in sub(page, "wk_ideas"), [txt(page, '[data-td3-wk="wk_ideas"]')])
@@ -235,10 +235,10 @@ def tests(pw, w, h):
         if w == 390:
             # WK1fix: every row's text uses the width (no one-char-per-line wrap)
             wd = js(page, "()=>[...document.querySelectorAll('[data-td3-wk]')].map(e=>{ const n=e.querySelector('.nm'); const r=n.getBoundingClientRect(); const lh=parseFloat(getComputedStyle(n).lineHeight)||16; return [e.dataset.td3Wk, Math.round(r.width), Math.round(r.height/lh), Math.round(e.getBoundingClientRect().width)]; })")
-            check(f"{tag} WK1fix 390 all 7 rows: text block >= 55% of row width · no char-per-line wrap", len(wd) == 7 and all(x[1] >= 0.55 * x[3] and x[2] <= 8 for x in wd), wd)
+            check(f"{tag} WK1fix 390 all 8 rows: text block >= 55% of row width · no char-per-line wrap", len(wd) == 8 and all(x[1] >= 0.55 * x[3] and x[2] <= 8 for x in wd), wd)
             # WK1fix2: tag and first word of the title share the same line top (tag never alone on its own line)
             td = js(page, "()=>[...document.querySelectorAll('[data-td3-wk]')].map(e=>{ const g=e.querySelector('[data-td3-gt]'); const x=e.querySelector('.td3-wtx'); const rg=g.getBoundingClientRect(); const rg2=document.createRange(); const tn=[...x.childNodes].find(n=>n.nodeType===3&&n.textContent.trim()); rg2.setStart(tn, tn.textContent.search(/\\S/)); rg2.setEnd(tn, tn.textContent.search(/\\S/)+1); const rc=rg2.getBoundingClientRect(); return [e.dataset.td3Wk, Math.round(rg.top), Math.round(rc.top), Math.round(rg.bottom), Math.round(rc.bottom)]; })")
-            check(f"{tag} WK1fix2 390 all 7 rows: tag and first title word on the same line (overlapping vertical span)", len(td) == 7 and all(x[2] < x[3] and x[4] > x[1] and abs(x[1] - x[2]) <= 8 for x in td), td)
+            check(f"{tag} WK1fix2 390 all 8 rows: tag and first title word on the same line (overlapping vertical span)", len(td) == 8 and all(x[2] < x[3] and x[4] > x[1] and abs(x[1] - x[2]) <= 8 for x in td), td)
         check(f"{tag} no overflow on the Weekend list", T.ovf(page) <= 0, T.ovf(page))
     finally:
         b.close()
