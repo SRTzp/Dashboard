@@ -31,7 +31,7 @@ def typ(page, a, v):
 
 
 def open_sheet(page):
-    G.go_today(page); page.locator("[data-gl-valopen]").click(); wait(page, 300)
+    G.go_today(page); js(page, "()=>glValOpen()"); wait(page, 300)
 
 
 def tests(pw, w, h, label):
@@ -83,14 +83,14 @@ def tests(pw, w, h, label):
         check(f"{tag} 5 ไม่บันทึกค่าที่ค้าง: goalLog ว่าง", G.settings(page, "goalLog") in (None, {}), json.dumps(G.settings(page, "goalLog")))
         js(page, "()=>document.getElementById('setOverlay').classList.remove('show')")
         # ลิงก์ของบัญชีที่ไม่ใช่ active → สลับบัญชีแล้วเปิดตั้งค่าของบัญชีนั้น
-        G.go_today(page); page.locator("[data-gl-valopen]").click(); wait(page, 300)
+        G.go_today(page); js(page, "()=>glValOpen()"); wait(page, 300)
         typ(page, "fam", "2380000")
         page.locator('[data-gl-valcmp="fam"] [data-gl-capgo]').click(); wait(page, 600)
         st = js(page, "()=>({act:acctActive, set:document.getElementById('setOverlay').classList.contains('show'), core:document.getElementById('sCore').value})")
         check(f"{tag} 5 ลิงก์ของ Family → สลับเป็นบัญชี Family แล้วเปิดตั้งค่า (เงินต้น 2000000)", st == {"act": "fam", "set": True, "core": "2000000"}, json.dumps(st))
         # ไม่มีค่าค้าง → เปิดทันที
         js(page, "()=>{ document.getElementById('setOverlay').classList.remove('show'); acctSwitch('main'); }"); wait(page, 400)
-        G.go_today(page); page.locator("[data-gl-valopen]").click(); wait(page, 300)
+        G.go_today(page); js(page, "()=>glValOpen()"); wait(page, 300)
         typ(page, "main", "145000"); l0 = warn(page, "main")
         # ลบค่าก่อน = ไม่มีลิงก์ → จำลองเรียก glCapGo ตรง ๆ ตอนช่องว่าง
         typ(page, "main", "")

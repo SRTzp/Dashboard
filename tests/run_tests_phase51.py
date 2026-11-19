@@ -263,57 +263,8 @@ def sat_tests(pw, w, h, label):
 
 # ───────────────────────── 5 Today ─────────────────────────
 def today_tests(pw, w, h, label):
-    tag = f"[{ENGINE}/{label}]"
-    browser, context, page, ce, pe, dialogs = P39.launch(pw, w, h, doc=P38.doc38(clean=True), clean=True, iso="2026-10-14T03:00:00Z")
-    try:
-        held = T("tx", "satB", "open", sym="XAUUSD", entry=2400, sl=2390, qty=0.1, cur="USD", date="2026-10-13", openedAt="2026-10-13")
-        def state(iso, events, trades):
-            js(page, "([ev,tr])=>{ const B=getBook('main'); B.settings.newsEvents = ev; B.trades = tr; saveBook('main'); }", [events, trades])
-            set_clock(page, iso)
-            js(page, "()=>{ switchTab('today'); todayRefresh(); }"); page.wait_for_timeout(350)
-            return {"r": P38.kinds(page, "r"), "a": P38.kinds(page, "a"), "b": P38.kinds(page, "b")}
-        CPI = [{"date": "2026-10-14", "kind": "CPI", "time": "19:30"}]
-        s = state("2026-10-14T03:00:00Z", CPI, [held])
-        txt = re.sub(r"\s+", " ", page.locator('.tdRow[data-kind="news"]').first.text_content()) if page.locator('.tdRow[data-kind="news"]').count() else ""
-        check(f"{tag} 5 วัน CPI + มีไม้ Sat เปิด → แถวด่วน 📰 พร้อมเช็กลิสต์ (ยกเลิก limit · Stop มาจุดเข้า · ถือตามกฎ · เช็ก Stop ที่ broker)",
-              s["r"].count("news") == 1 and "CPI" in txt and "19:30" in txt and "ยกเลิก limit ที่ค้าง" in txt and "Stop มาจุดเข้า" in txt and "ถือตามกฎ" in txt and "Stop ที่ broker" in txt and "XAU" in txt, json.dumps(s) + txt)
-        shot(page, f"st1-today-news-{label.replace('px','')}.png")
-        if w < 600:
-            bad = overflow(page, [".tdRow[data-kind='news']", "#todayPanel"]) if page.locator("#todayPanel").count() else overflow(page, [".tdRow[data-kind='news']"])
-            check(f"{tag} 5 390px แถวข่าวไม่ล้นแนวนอน", not bad, json.dumps(bad))
-        page.locator('.tdRow[data-kind="news"]').first.click(); page.wait_for_timeout(500)
-        check(f"{tag} 5 แตะแถว = ไปหน้า Sat (แผงไม้)", js(page, "()=>activeTab") == "plan", js(page, "()=>activeTab"))
-        s = state("2026-10-14T03:00:00Z", CPI, [])
-        txt = re.sub(r"\s+", " ", page.locator('.tdRow[data-kind="news"]').first.text_content()) if page.locator('.tdRow[data-kind="news"]').count() else ""
-        check(f"{tag} 5 วัน CPI ไม่มีไม้ → แถวกลุ่มภายในสัปดาห์ 1 บรรทัด 'งดเปิดไม้ใหม่ 18:30–20:00' (ไม่ด่วน)", s["a"].count("news") == 1 and s["r"].count("news") == 0 and "งดเปิดไม้ใหม่ 18:30–20:00" in txt, json.dumps(s) + txt)
-        s = state("2026-10-14T12:59:00Z", CPI, [held])
-        check(f"{tag} 5 19:59 ยังมีแถว (ข่าว + 30 นาที = 20:00)", s["r"].count("news") == 1, json.dumps(s))
-        s = state("2026-10-14T13:00:00Z", CPI, [held])
-        check(f"{tag} 5 20:00 → แถวหาย (มีไม้)", "news" not in s["r"] + s["a"] + s["b"], json.dumps(s))
-        s = state("2026-10-14T13:00:00Z", CPI, [])
-        check(f"{tag} 5 20:00 → แถวหาย (ไม่มีไม้)", "news" not in s["r"] + s["a"] + s["b"], json.dumps(s))
-        s = state("2026-10-13T03:00:00Z", CPI, [held])
-        check(f"{tag} 5 วันก่อน CPI (13 ต.ค.) → ยังไม่มีแถว (CPI ขึ้นเฉพาะวันข่าว)", "news" not in s["r"] + s["a"] + s["b"], json.dumps(s))
-        FO = [{"date": "2026-10-29", "kind": "FOMC", "time": "01:00"}]
-        s = state("2026-10-28T03:00:00Z", FO, [held])
-        txt = re.sub(r"\s+", " ", page.locator('.tdRow[data-kind="news"]').first.text_content()) if page.locator('.tdRow[data-kind="news"]').count() else ""
-        check(f"{tag} 5 FOMC วันที่ 29 01:00 → แถวขึ้นตั้งแต่วันที่ 28 (มีไม้) พร้อมเช็กลิสต์", s["r"].count("news") == 1 and "FOMC" in txt and "01:00" in txt, json.dumps(s) + txt)
-        s = state("2026-10-28T03:00:00Z", FO, [])
-        check(f"{tag} 5 FOMC ไม่มีไม้ → ไม่มีแถว (FOMC ไม่งดเปิดไม้)", "news" not in s["r"] + s["a"] + s["b"], json.dumps(s))
-        s = state("2026-10-28T18:30:00Z", FO, [held])   # 29 ต.ค. 01:30
-        check(f"{tag} 5 หลัง 01:30 (ข่าว + 30 นาที) → แถวหาย", "news" not in s["r"] + s["a"] + s["b"], json.dumps(s))
-        s = state("2026-10-14T03:00:00Z", [], [held])
-        check(f"{tag} 5 ไม่มีวันข่าว → ไม่มีแถว (ปกติ = เงียบ)", "news" not in s["r"] + s["a"] + s["b"], json.dumps(s))
-        s = state("2026-10-14T03:00:00Z", [{"date": "2026-10-14", "kind": "NFP", "time": "20:30"}], [held])
-        txt = re.sub(r"\s+", " ", page.locator('.tdRow[data-kind="news"]').first.text_content()) if page.locator('.tdRow[data-kind="news"]').count() else ""
-        check(f"{tag} 5 NFP 20:30 (นอก DST) → แถวด่วนแสดงเวลา 20:30", s["r"].count("news") == 1 and "NFP" in txt and "20:30" in txt, json.dumps(s) + txt)
-        pend = js(page, "()=>getBook('main').trades.filter(t=>t.port==='satB').length")
-        check(f"{tag} 5 ไม้ที่ order รอเข้า (status plan) ก็นับ → แถวด่วน", state("2026-10-14T03:00:00Z", CPI, [dict(held, status="plan")])["r"].count("news") == 1)
-        # ไม่นับในเพดานแถว Ideas (ID4) — แถวข่าวไม่ใช่ kind idea-*
-        check(f"{tag} 5 แถวข่าวไม่ใช่แถว Ideas (kind=news · ไม่นับเพดาน 2 แถว)", not any(k.startswith("idea-") for k in ["news"]))
-        check(f"{tag} 5 ไม่มี console error", not ce and not pe, json.dumps(ce[:3] + pe[:3], ensure_ascii=False))
-    finally:
-        browser.close()
+    # AU3 — RETIRED: section 5 drove the legacy Today news rows (.tdRow[data-kind=news]); the legacy Today was removed with ln1On(). Body in git history.
+    print(f"RETIRED - [{ENGINE}/{label}] 5 Today news rows (CPI / FOMC / NFP) :: AU3 removed the legacy Today")
 
 
 def main():
