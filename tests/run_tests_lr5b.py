@@ -6,7 +6,7 @@ import re, sys, json
 from playwright.sync_api import sync_playwright
 import net_stub
 from re1d_common import js, check, results
-import lr5_common as C
+import lr5b_common as C
 import lib_phase38 as P38
 
 THAI = """()=>{ const out = []; const w = document.createTreeWalker(document.getElementById('tabJournal'), NodeFilter.SHOW_TEXT); let n; while(n = w.nextNode()){ if(/[\\u0E00-\\u0E3E\\u0E40-\\u0E7F]/.test(n.nodeValue)) out.push(n.nodeValue.trim().slice(0, 60)); }
@@ -99,6 +99,7 @@ def run(pw, w, h):
         before = json.dumps(C.js(page, "()=>getBook('fam').trades.map(t=>t.review||null)"))
         js(page, "()=>lr5Pick('main:x1')"); page.wait_for_timeout(250)
         rv = js(page, "()=>(document.querySelector('[data-lr5-review]')||{innerText:''}).innerText.replace(/\\s+/g,' ')")
+        check(f"{tag} C: Planned entry has size too (#0.21 @ 2,642 twice)", rv.count("#0.21 @ 2,642") == 2, rv[:200])
         check(f"{tag} C: review shows Planned vs Actual (stop 2,628 → 2,623.81 gap · −1.3R) and the planned-stop note (1R = 14)", "2,628" in rv and "(gap)" in rv and "−1.3R" in rv and "1R = 14" in rv and "never the moved one" in rv, rv[:300])
         check(f"{tag} C: review has the four reason chips + optional lesson + Save review", js(page, "()=>[...document.querySelectorAll('[data-lr5-why-btn]')].map(b=>b.innerText).join('|')") == "Planned exit|Stop|Gap / slippage|Discretionary" and js(page, "()=>!!document.querySelector('[data-lr5-lesson]') && !!document.querySelector('[data-lr5-save]')"))
         js(page, "()=>document.querySelector('[data-lr5-why-btn=\"gap\"]').click()"); page.wait_for_timeout(100)
@@ -123,6 +124,9 @@ def run(pw, w, h):
         check(f"{tag} D: no Thai characters in #tabJournal (Details open)", not th, th[:8])
         js(page, "()=>{ document.getElementById('lr5Det').open = false; }")
         ov = js(page, "()=>document.documentElement.scrollWidth - innerWidth")
+        if ph:
+            g = js(page, "()=>{ const h = document.querySelector('#lr5Host .lr5-hd').getBoundingClientRect(), w = document.querySelector('#lr5Host [data-lr-sw]').getBoundingClientRect(); return Math.round(w.top - h.bottom); }")
+            check(f"{tag} D: phone header sits right above the account switch (gap ≤ 12px)", g <= 12, g)
         check(f"{tag} D: no horizontal page overflow", ov <= 1, ov)
         if ph:
             ls = js(page, "()=>[...document.querySelectorAll('.lr5-pr .lr5-l1,.lr5-pr .lr5-l2')].map(e=>Math.round(e.getBoundingClientRect().height))")

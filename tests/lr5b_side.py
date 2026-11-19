@@ -3,7 +3,7 @@
 Run: python3 tests/lr5b_side.py"""
 import os, base64
 from playwright.sync_api import sync_playwright
-import lr5_common as C
+import lr5b_common as C
 from re1d_common import js
 
 HERE = os.path.dirname(os.path.abspath(__file__))
