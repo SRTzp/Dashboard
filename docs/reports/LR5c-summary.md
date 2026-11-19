@@ -26,4 +26,4 @@ Light only · English · no engine / data-job changes. Reuses the LR5b switch (`
 - **Thai → English** under Port › More (summary box, account line, pie titles / legend incl. "Unspecified" and "Cash", Core risk fold, Sat line, pool line, privacy tooltip, account names via `lrAcctName`). Stored keys / data untouched. The test checks the whole `#tabMix` with every `<details>` opened, in Both / Main / Family. The old non-default legacy renderer (dev flag only) is not covered.
 
 ## Regression
-`run_regression.sh` on the rebased branch: **62/62 ok · 0 failing** (1140 s). New suite `run_tests_lr5c.py`: 59/59.
+`run_regression.sh` on the rebased branch: **63/63 ok · 0 failing** (1132 s, after rebasing onto WL2). New suite `run_tests_lr5c.py`: 59/59.
