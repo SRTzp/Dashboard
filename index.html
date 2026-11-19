@@ -11930,11 +11930,6 @@ function ln4RowHtml(r){
   return `<div class="it ln4-row" data-port="${r.kind === 'sat' ? 'SAT' : (r.tag === 'COMP' ? 'COMP' : 'MMT')}" data-ln4-row="${s(r.sym)}" data-ln4-kind="${r.kind}" data-ln4-state="${r.state}"${r.bad ? ` data-ln4-bad="${r.bad.k}"` : ''}><b>${s(r.sym)}</b>${tag}<span class="ln4-l2">${sec}${r.bad ? stx : ''}</span><span class="m" data-ln4-det>${r.det}</span>${r.bad ? '' : stx}${b}</div>`;
 }
 /* LN4 §8 — Plan tab cards: same states as Today Act (Draft · Order working · Filled/Open · Add-on ›), same MMT/COMP tag (+½) · built from the same rows */
-function ln4CancelOrder(kind, id){
-  { const it = bdById(id); if(it){ bdCancelOrder(id); return; } }
-  if(kind === 'core') coreWrite(id, {ln4:{placedAt:null}}); else sat7dWrite('satIdeas', id, {ln4:{placedAt:null}});
-  ln4Toast('Order cancelled');
-}
 function ln4ActHtml(){
   const core = ln4CoreRows(), sat = ln4SatRows();
   let body = '';
@@ -12123,7 +12118,6 @@ function ln4CounterBack(){ document.querySelectorAll('.ln4-cs').forEach(e=>e.rem
 function ln4CounterOk(id){ ln4CounterBack(); satV3SaveReadyAccounts(id, true); }
 /* ✓ all — press-and-hold 0.8 s */
 let ln4AllT = 0;
-function ln4AllDone(el){ const id = el.dataset.ln4All; if(!id) return; satV3IdeaWrite(id, {setup_ck: PF_SETUP_CK.map(x=>x[0])}); satV3Render({force:true}); }
 function ln4MacroWarn(idea){
   try{
     const F = satV3F2c(idea), hasTr = pfHasTrend(idea); if(!hasTr) return '';
@@ -12709,29 +12703,6 @@ function glCalc(a, g, today){
   R.need = (!R.reached && !R.overdue && now > 0) ? Math.pow(g.target/now, 365/rem) - 1 : null;
   R.age = last ? glDays(last.d, today) : null;
   return R;
-}
-function glAcctHtml(R){
-  const g = R.g, p = Math.round(R.progress), pTxt = String(p).replace('-', '−') + '%';
-  const wd = Math.max(0, Math.min(100, R.progress));
-  let l3;
-  if(!R.hasVal) l3 = `<span data-gl-novalue>ยังไม่กรอกค่าพอร์ต</span>`;
-  else {
-    const parts = [];
-    if(R.reached) parts.push(`<span class="up" data-gl-reached>✓ ถึงเป้าแล้ว</span>`);
-    else {
-      parts.push(Math.abs(R.vs) < 0.01 ? `<span data-gl-status="on">ตามเส้นทาง (${glSigned(R.vs*100, 1)}%)</span>`
-        : R.vs >= 0.01 ? `<span class="up" data-gl-status="fast">เร็วกว่าเส้นทาง ${glSigned(R.vs*100, 1)}%</span>`
-        : `<span class="wa" data-gl-status="slow">ช้ากว่าเส้นทาง ${glSigned(R.vs*100, 1)}%</span>`);
-      parts.push(R.overdue ? `<span class="wa" data-gl-overdue>เลยกำหนด</span>`
-        : R.need != null ? `<span data-gl-need>ต้องโต ${(R.need*100).toFixed(1)}%/ปี<span class="glFull"> จากนี้</span></span>` : `<span data-gl-need>ต้องโต —</span>`);
-    }
-    const stale = R.age > GL_STALE_DAYS;
-    parts.push(`<span${stale ? ' class="wa"' : ''} data-gl-asof>กรอก ${ddDateTxt(R.last.d)}${stale ? ` (${R.age} วัน)` : ''}</span>`);
-    l3 = parts.join(' · ');
-  }
-  return `<div class="glA" data-gl-acct="${escHtml(R.a.id)}"><div class="glL1"><b>${escHtml(R.a.name)}</b><span class="glNum" data-gl-num>${glMoney(R.now, g.cur)} → ${glMoney(g.target, g.cur, true)} · ${glThaiDate(g.deadline)}</span><span class="glPct" data-gl-pct>${pTxt}</span></div>`
-    + `<div class="glBar" data-gl-bar><i style="width:${wd}%"></i><span class="glExp" data-gl-exp style="left:${R.mark.toFixed(1)}%"></span></div>`
-    + `<div class="glL3" data-gl-l3>${l3}</div></div>`;
 }
 
 /* ── % งาน Daily ── */
@@ -14741,19 +14712,7 @@ let ps1TodayOpen = null;
 /* PS1b §9 — stock share counts show as #45 (display only · Sat stays in lots) */
 /* PS1b §7c — percentages are ROUNDED (not truncated) to 2 decimals from the same numbers as the shares */
 function ps1R2(x){ return (Math.round((+x + 1e-9) * 100) / 100).toFixed(2); }
-function ps1MultPill(p){   /* PS1c §10 — amber pill when a multiplier applies */
-  if(p && p.engine && p.engine.limit) return ` <span class="ps1Pill" data-ps1-tag data-rm1-limit>${escHtml(p.engine.limit)}</span>`;   /* RM1 — the one limiting rule */
-  const mu = p.mult; if(!mu || !(mu.f > 0)) return p.tag ? ` <span class="ps1Pill" data-ps1-tag>${escHtml(p.tag)}</span>` : '';
-  if(mu.f * mu.dd >= 1 - 1e-9) return '';
-  return ` <span class="ps1Pill" data-ps1-tag>× regime ${Math.round(mu.f*100)}%${mu.dd < 1 - 1e-9 ? ' × half' : ''}</span>`;
-}
 /* MS1 — SL tighter than the min stop: amber pill + "Risk if SL hit … · budget …" (the user's SL is kept; size is on the min distance) */
-function ps1MsHtml(p){
-  const ms = p && p.ms; if(!ms || !ms.rows.length) return '';
-  const g = v=>String(+(+v).toFixed(2));
-  const pills = ms.rows.map(x=>`<span class="ln4-cp a" data-ms1-pill>🛡️ Sized on min stop ${g(x.minPct)}% (your SL ${g(x.yourPct)}%)${ms.multi ? ' · entry ' + x.n : ''}</span>`).join(' ');
-  return `<div class="ps1Ms" data-ms1>${pills} <span data-ms1-risk>Risk if SL hit ฿${ps1M(p.riskMoney)} · budget ฿${ps1M(ms.budget)}</span></div>`;
-}
 function ps1M(v){ v = +v; return v >= 1e6 ? (v/1e6).toFixed(2) + 'M' : v >= 1e3 ? (v/1e3).toFixed(1) + 'k' : String(Math.round(v)); }
 /* PS1b §7d — Details = 3 lines max */
 function ps1RowAdd(kind){
@@ -21651,10 +21610,6 @@ function satPinToggle(key){
   });
   if(ok){ try{ satV3Render({force:true}); }catch(e){} }
 }
-function satPinBtnHtml(key){
-  const on = satPinned(key), e = escHtml(key);
-  return `<button type="button" class="satPin${on ? ' on' : ''}" data-sat-pin="${e}" aria-pressed="${on}" aria-label="${on ? 'Unpin' : 'Pin'} ${escHtml(sat7dLabel(key))}" onclick="event.stopPropagation();satPinToggle('${e}')">${on ? '★' : '☆'}</button>`;
-}
 function satPinMk(key){ return satPinned(key) ? '<span class="satPinMk" data-sat-pinmk title="Pinned">★</span> ' : ''; }
 function satAssets(opts){
   const all = SAT_ASSETS.concat(satCustomList().map(c=>({key:c.key, label:c.label, ff:null, unit:c.unit, custom:true})));
@@ -22150,10 +22105,6 @@ function satwSetSupport(asset, text){
    ลบจนหมด (values กลายเป็น []) ยังคง satwWrite({support:[]}) เสมอ — เขียนอาร์เรย์ว่างจริง ไม่ข้าม ไม่ delete field
    → รอบถัดไป satV3SupportDisplay เจอ Array.isArray([])===true จะไม่ fallback กลับไปที่ levels เดิมอีก */
 /* WM1 §7 — Note · This week: ไม่ carry อัตโนมัติ · Copy last week = Note ของ Asset เดียวกันสัปดาห์ก่อน เฉพาะเมื่อมี (ซ่อนเมื่อไม่มี) · ถามก่อนทับข้อความเดิม · Clear = เฉพาะ Asset นี้ สัปดาห์นี้ */
-function satwPrevNote(asset){
-  const pk = satwPrevWeekKey(wpWeekKey()), pw = satWeekMap[pk] && satWeekMap[pk][asset];
-  return (pw && typeof pw.opinion_txt==='string' && pw.opinion_txt.trim()) ? pw.opinion_txt : '';
-}
 function satwCopyFromPrev(asset){
   const wk = wpWeekKey(), pk = satwPrevWeekKey(wk), pw = satWeekMap[pk] && satWeekMap[pk][asset];
   if(!pw){ alert('ไม่มีข้อมูลสัปดาห์ก่อนของ '+sat7dLabel(asset)); return; }
@@ -22207,8 +22158,6 @@ function waMacHtml(key){ const l = waMacroLabel(key); return `<span class="waMac
 const LF_SAT_KEY = 'lf_sat_asset';
 let lfSatMem = null;
 function lfSatSet(asset){ lfSatMem = asset; try{ localStorage.setItem(LF_SAT_KEY, asset); }catch(e){} }
-function waMenuToggle(k){ waMenu = (k===null || waMenu===k) ? null : k; satV3Render(); }
-function waGoCard(k){ lfSatSet(k); satV3Render({force:true}); }
 function waRemove(k){
   const r = satWeekPickRemove(k);
   if(r.ok){ const wk = wpWeekKey(), d = satWeekDropList(wk); if(!d.includes(k)) satWeekDropWrite(wk, d.concat([k])); }   /* TR1fix — จำไว้ ไม่ให้ auto-pick ใส่กลับ */ waMsg = r.ok ? '' : r.msg; waMenu = null;
@@ -22284,31 +22233,8 @@ function rrCaller(){
     return out.join(' < ');
   }catch(e){ return '?'; }
 }
-function rrBadge(){
-  if(!rrDbg.on) return;
-  let b = document.getElementById('rrDbgBadge');
-  if(!b){ b = document.createElement('div'); b.id = 'rrDbgBadge'; b.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:99999;max-width:min(92vw,420px);background:rgba(0,0,0,.82);color:#9f9;font:11px/1.35 ui-monospace,Menlo,monospace;padding:5px 8px;border-radius:6px;pointer-events:none;white-space:pre-wrap;word-break:break-all'; document.body.appendChild(b); }
-  b.textContent = `satV3Render ${rrDbg.calls} (วาดจริง ${rrDbg.drawn} · ข้าม ${rrDbg.skipped})\n` + rrDbg.causes.slice(-5).reverse().join('\n');
-}
 /* RR1/RR2 — รักษา <img> กราฟเดิมไว้ (URL เดิม = node เดิม ไม่โหลดใหม่)
    RR2: <img> เดิมห้ามเข้า template.content (คนละ document = adopt แล้วโหลดใหม่ → กระพริบ) · เก็บ ref ก่อนวาด → วาดเสร็จใน document หลักแล้วค่อยสลับกลับ */
-function rrCollectImgs(oldRoot){
-  const olds = {};
-  oldRoot.querySelectorAll('.vwImg[data-src]').forEach(sp=>{
-    const k = sp.dataset.src, n = sp.querySelector('img, a.vwBad');
-    if(n) (olds[k] = olds[k] || []).push({n, bad: sp.dataset.vwBad});
-  });
-  return olds;
-}
-function rrRestoreImgs(root, olds){
-  root.querySelectorAll('.vwImg[data-src]').forEach(sp=>{
-    const o = olds[sp.dataset.src] && olds[sp.dataset.src].shift(); if(!o) return;
-    const cur = sp.querySelector('img'); if(!cur) return;
-    cur.replaceWith(o.n);
-    if(o.bad) sp.dataset.vwBad = o.bad; else delete sp.dataset.vwBad;
-  });
-}
-function rrInputKey(x){ return x.tagName + '|' + (x.type||'') + '|' + Array.from(x.attributes).filter(a=>/^(data-|name$|id$|placeholder$)/.test(a.name)).map(a=>a.name+'='+a.value).join(';'); }
 /* RR1fix — กันเรียกซ้อน: วาดอยู่แล้วมีคนเรียกอีก (เช่น handler ของ blur/change ที่ยิงตอนช่องโฟกัสถูกถอดออก) → จดไว้แล้ววาดอีก 1 รอบหลังจบ (สูงสุด 2 รอบต่อการเรียก) */
 let rrBusy = false, rrPending = null;
 function satV3Render(opts){
@@ -22707,35 +22633,10 @@ function satAcSync(ideaId, condId, wasComplete){
   satAcRender();
 }
 /* ── AC2 — หน้าตาการ์ดเงื่อนไข: ปิดแท่ง [4H|D] → Break Price → Break Vol → Pullback → TP/Inval → ขาด ── */
-function satAcTfHtml(idea, c, extra){
-  const id = escHtml(idea.id), cid = escHtml(c.id), tf = satAcTf(c);
-  return `<div class="ui-acr ui-ac-tfr"><span class="ui-ac-k">ปิดแท่ง</span><span class="ui-ac-seg" role="group" data-ac-tf="1">${SAT_BRK_TFS.map(t=>`<button type="button" data-tf="${t}" aria-pressed="${t===tf}" class="${t===tf?'ui-on':''}" onclick="satAcSetTf('${id}','${cid}','${t}')">${t}</button>`).join('')}</span>${extra||''}</div>`;
-}
-function satAcSumLvl(c, k, idea){
-  const v = satAcLvl(c, k+'_px');
-  return v==null ? '<b>—</b>' : `<b>${fmt2(v)}</b>${satAcArrowHtml(satAcDir(c, k+'_dir', idea))}`;
-}
-function satAcSumHtml(idea, c, grp, inner){
-  const id = escHtml(idea.id), cid = escHtml(c.id);
-  return `<div class="ui-acr ui-acs" data-sum="${grp}" role="button" tabindex="0" onclick="satAcEditOpen('${id}','${cid}','${grp}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();satAcEditOpen('${id}','${cid}','${grp}')}"><span class="ui-ack ui-on" aria-hidden="true">✓</span> <span class="ui-acs-t">${inner}</span></div>`;
-}
 function satAcTickHtml(idea, c, k, ok, mode){
   if(mode==='plan') return '';
   const id = escHtml(idea.id), cid = escHtml(c.id), on = satAcSteps(c)[k];
   return `<button type="button" class="ui-ack${on?' ui-on':''}${(ok||on)?'':' ui-dis'}" data-step="${k}" role="checkbox" aria-checked="${on}" aria-pressed="${on}" ${(ok||on)?'':`aria-disabled="true" title="${escHtml(k==='pb' ? (satAcPbBlock(c) || '') : 'กรอก Price ก่อน')}"`} onclick="satAcStep('${id}','${cid}','${k}',${!on})">${on?'✓':''}</button>`;
-}
-function satAcLvlRowHtml(idea, c, k, mode, noBtn){
-  const id = escHtml(idea.id), cid = escHtml(c.id), px = k+'_px', dr = k+'_dir';
-  const v = satAcLvl(c, px), dir = satAcDir(c, dr, idea), ok = v!=null || c.legacy_ok===true;
-  return `<div class="ui-acr" data-row="${k}">${satAcTickHtml(idea, c, k, ok, mode)}<span class="ui-ac-nm">${k==='brk'?'Break Price':'Break Vol'}</span>`
-    + (noBtn ? `<span class="ui-adir ui-adir-ro" data-dir-ro="${k}" data-dir-v="${dir}" aria-hidden="true">${satAcArrowHtml(dir)}</span>`
-      : `<button type="button" class="ui-adir" data-dir="${k}" data-dir-v="${dir}" title="สลับทิศ ▲▼ (Break Price + Vol)" onclick="satAcSetDir('${id}','${cid}','${dr}','${dir==='up'?'dn':'up'}')">${satAcArrowHtml(dir)}</button>`)
-    + `<input type="text" inputmode="decimal" class="ui-ain" data-ac-px="${k}" placeholder="Price" value="${v==null?'':escHtml(String(v))}" onchange="satAcSetLevel('${id}','${cid}','${px}',this.value)"></div>`;
-}
-function satAcPbRowHtml(idea, c, mode){
-  const id = escHtml(idea.id), cid = escHtml(c.id), z = satAcZone(c), blk = satAcPbBlock(c);
-  return `<div class="ui-acr" data-row="pb">${satAcTickHtml(idea, c, 'pb', !blk, mode)}<span class="ui-ac-nm">Pullback</span>`
-    + `<input type="text" inputmode="text" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" class="ui-ain${satAcBadPb===c.id?' ui-bad':''}" data-ac-pb="1"${z && z.auto ? ' data-auto="1"' : ''} placeholder="Price หรือ 2405-2412" value="${escHtml(satAcZoneTxt(c))}" onchange="satAcSetPb('${id}','${cid}',this.value)"></div>`;
 }
 /* mode: 'plan' ขั้นวางแผน (ไม่มีช่องติ๊ก) · 'work' หน้างานยังไม่ Active · 'active' ใต้แถบ Active (เฉพาะบรรทัดสรุป/แถวที่ติ๊กไม่ครบ) */
 
@@ -22940,7 +22841,6 @@ function satCtxParts(idea){
   const tf = pfTfNorm(idea.tf) || pfTfNorm(tac ? cfg.tfTac : cfg.tfMain), z = String(idea.zone_act_txt || '').trim();
   return [tac ? 'Tactical' : 'Main', tf, idea.bias==='Long' ? 'Long' : idea.bias==='Short' ? 'Short' : '', z ? 'Zone ' + z : ''].filter(Boolean);
 }
-function satCtxHtml(idea, cls){ const l = satCtxParts(idea); return l.length ? `<div class="sat-ctx ${cls || ''}" data-sat-ctx="${escHtml(idea.id)}">${escHtml(l.join(' · '))}</div>` : ''; }
 /* ══════════════════════════════════════════════════════════════════════════
    PY1 — เติมไม้ Future (Pyramid) · 1 ครั้ง · 50% ของ lot ไม้แรก · ไม้เติมไม่นับโควตาไม้ใหม่ · นับ heat ตามความเสี่ยงจริง
    ══════════════════════════════════════════════════════════════════════════ */
@@ -23243,7 +23143,6 @@ let ln2Mem = null, ln2DetOpen = false;
 /* PF1 — ฟอร์มประเมินการเทรด 3 แถว (Main + Tactical): TF | Trend | Classify · Zone Activation + Zone · Setup 3 ข้อ
    ค่าทั้งหมดเป็นของแผนนั้น (satIdeas) · Trend = idea.bias (Up=Long · Down=Short) · Classify/Zone/Setup เป็นข้อมูลประกอบ ไม่เปลี่ยนสูตร Risk/ไม้/บล็อก */
 /* CS1 — กฎ Tactical / Main (Plan › Sat) */
-function satIdeaHasTrade(idea){ return Object.values((idea && idea.accts) || {}).some(x=>x && x.trade_id); }
 /* Tactical ที่เข้าแล้ว (open) แต่ไม่มี Main ถืออยู่ในบัญชีนั้น · แผน Tactical ที่ยังไม่เข้าไม่นับ */
 function satTacHeldNoMain(accId, asset){
   if(!accId) return false;
@@ -23254,11 +23153,6 @@ function satMainBlockedFor(asset){ try{ return sat7dAccts().some(a=>satTacHeldNo
 function satMainBlockMsg(asset){ return 'Close the Tactical (' + ((typeof IDEA_ASSET_LBL!=='undefined' && IDEA_ASSET_LBL[asset]) || sat7dLabel(asset)) + ') first'; }
 const PF_SETUP_CK = [['in_zone', 'In Zone'], ['mmt_shift_pivot', 'MMT Neutral'], ['align_ma50', 'Pivot align MA']];   /* LN4 §4d — renamed + reordered · stored keys unchanged */
 /* LN3 — สวน Macro: กล่องโผล่เฉพาะตอนทิศสวน Macro (หรือนอก Macro) · เหตุผลบังคับ (ว่าง = บันทึกไม่ได้ — noteBlock เดิม) · เก็บ macro_note + macro_why · ขนาดไม้ตาม factor macroAgainst ในตั้งค่า */
-function ln3MacroWhy(ideaId, v){
-  const idea = sat7dIdea(ideaId); if(!idea) return;
-  const t = String(v==null ? '' : v).trim().slice(0, SAT_MACRO_NOTE_MAX);
-  satV3IdeaWrite(ideaId, {macro_note: t, macro_why: t}); satV3Render();
-}
 /* LN3 — บรรทัดเดียวใต้ขนาดไม้: Main `ไม้ 1/3 · 50/30/20` · Tactical `TP1 … (2R·50%) · TP2 … (3R)` */
 /* LN3 — แถวแผนเทรดบรรทัดเดียว: `XAUUSD [Main] ▲ 4,180 / 4,117` + สถานะ · มีไม้ → บรรทัด 2 `● lot $ · … · รวม $x/$cap` */
 /* PF3b — accordion ร่างแผน: กางได้ทีละฟอร์ม (satActiveDraft = id ของร่างที่กาง · null = พับหมด) · ค่าที่กรอกอยู่ใน idea (onchange → satIdeas) เสมอ — พับ/สลับไม่สร้างฟอร์มใหม่จากค่าเริ่ม */
@@ -23273,9 +23167,6 @@ function satDraftFlush(){
   }catch(e){}
 }
 function ln3ToggleDraft(id){ satDraftFlush(); satActiveDraft = (satActiveDraft===id) ? null : id; try{ const ix = sat7dIdea(id); if(ix && ix.asset) lfSatSet(ix.asset); }catch(e){} satV3Render({force:true}); }
-function ln3TradeRiskTHB(t, fx){
-  return t.status==='open' ? posOpenRisk(t, fx).thb : Math.abs((+t.entry) - (+t.sl)) * (+t.qty || 0) * (t.mult || 1) * (tradeCur(t)==='USD' ? fx : 1);
-}
 /* ══════════ LN3fix2 — แผน Sat "แผน & ไม้ที่ถือ" (แทนส่วน Positions + บรรทัด heat ท้ายหน้า) ══════════
    แถวที่เข้าแล้ว/นอกแผน: กางเป็นค่าเริ่ม · แตะหัวแถวพับ/กาง · ต่อบัญชี 2 บรรทัด · ⋯ = ปิด · แก้ · ยกเลิก · ลบ (ฟังก์ชันเดิมของ Positions) */
 let lfHeldClosed = new Set();
@@ -25682,7 +25573,6 @@ function wiSelect(id){
   satV3Render({force:true}); try{ todayRefresh(); }catch(e){} try{ pbRender(); }catch(e){}
 }
 /* ─ การ์ด Strategy: แถบ Weekly Impact ─ */
-function wiCardToggle(id){ if(wiCardOpen.has(id)) wiCardOpen.delete(id); else wiCardOpen.add(id); satV3Render({force:true}); try{ bdFlowTopRender(); }catch(e){} }
 /* ─ ＋ Asset sheet: ป้ายระดับ + บรรทัดสรุป · เรียง HIGH → MED → LOW → ไม่มีข้อมูล (คงลำดับเดิมในกลุ่ม) ─ */
 function wiSheetBadge(id){
   const doc = wiCurDoc(), x = wiEntry(id, doc), t = wiTier(id, doc), s = escHtml;
@@ -28696,7 +28586,6 @@ function bdCardTog(k){ const was = bdMacOpen.has(k); bdMacOpen.clear(); if(!was)
 function bdMacMoreSet(v){ bdMacMore = !!v; bdFlowTopRender(); }
 function bdNoteSave(k, v){ try{ satwSetOpinion(k, v); }catch(x){ console.warn('bd note:', x); } setTimeout(()=>{ try{ bdFlowTopRender(); }catch(x){} }, 0); }
 /* RRG per-sector motion = the EXISTING per-sector calc (rrgSpeed on the RS-momentum change · same data as the ⚡ speeding up / slowing fast tags) */
-function bdMotion(x){ const sp = rrgSpeed(x && x.dMom); return sp.fast ? (sp.dir > 0 ? 'up' : 'fast') : 'slow'; }
 const BD_MV = {up:['↗', 'speeding up'], slow:['→', 'slowing'], fast:['↘', 'slowing fast']};
 const BD_RQ = [['lead', 'LEADING', 'Beating SPY · momentum up', 'var(--teal)'], ['imp', 'IMPROVING', 'Lagging SPY · momentum up', 'var(--blue)'], ['weak', 'WEAKENING', 'Beating SPY · momentum down', 'var(--amber)'], ['lag', 'LAGGING', 'Lagging SPY · momentum down', 'var(--red)']];
 function bdRrgRows(){
@@ -28737,8 +28626,6 @@ function tw1TipHide(){
   document.addEventListener('contextmenu', e=>{ if(hit(e) && (tw1LpDone && Date.now() - tw1LpDone < 3000 || e.pointerType === 'touch' || 'ontouchstart' in window)) e.preventDefault(); }, true);   /* no callout popup after a long-press */
   window.addEventListener('scroll', tw1TipHide, {passive:true, capture:true});
 })();
-function bdFullWeek(){ bdOpenRow('wi'); }
-function bdRrgMoreSet(q, v){ bdRrgMore[q] = !!v; bdFlowTopRender(); }
 /* ══ LR4 — Flow tab matches Flow.dc.html / FlowPhone.dc.html: header · glance · asset tiles · RRG chart + speed list · Calendar / Macro tabs · Details. Same data as before (no new source, no RRG / regime change). ══ */
 function lr4Phone(){ try{ return window.matchMedia('(max-width:560px)').matches; }catch(e){ return false; } }
 function lr4WeekRange(key){
@@ -29098,7 +28985,6 @@ function wl1Sort(rows){
 /* TS1b C — "Archived (n) ›" at the bottom of each Watch list · expands in place: ticker · archived date · reason · Restore (wlRestore) */
 function wl1ArchRows(A){ return (A.wl || []).filter(r=>r.item && r.item.archived === true && wl1TrkOf(r.item) === wl1Trk).sort((a, b)=>String(b.item.archived_at || '').localeCompare(String(a.item.archived_at || ''))); }
 function wl1ArchDate(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m ? Number(m[3]) + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(m[2]) - 1] : '—'; }
-function wl1ArchToggle(){ wlArchOpen = !wlArchOpen; renderWatchlist(); }
 
 /* ═══ LR5a — Watch tab as in docs/briefs/lr/Watch.dc.html + WatchPhone.dc.html ═══
    One table row per stock (Stock · Status · Sector vs SPY · RS · Thesis · homework · Next check · one action) + detail panel (bottom sheet on phone).
