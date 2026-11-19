@@ -218,7 +218,7 @@ def run(pw, w, h):
         check(f"{tag} 7 Macro / Weekly Impact absent on Plan", cnt(page, "#tabPlan [data-wi-panel]") == 0 and cnt(page, "#tabPlan [data-bd-macro]") == 0)
         check(f"{tag} 7 Plan has no Core | Sat switch, no risk panel", js(page, "()=>getComputedStyle(document.querySelector('.planScope')).display") == "none" and cnt(page, "#tabPlan [data-ln2-hd]") == 0 and cnt(page, "#tabPlan .ln4-tiles") == 0)
         tab(page, "flow")
-        page.locator("[data-bd-import]").first.click(); settle(page, 400)
+        js(page, "()=>wiOpenPaste()"); settle(page, 400)   # LR4: Import JSON lives in the header (hidden on the phone); same handler
         check(f"{tag} 7 Weekly Impact 'Paste' on Flow still opens the import sheet", cnt(page, "#wiText") == 1)
         js(page, "()=>wiPasteClose()")
         # ── 8 Port risk ──
@@ -603,7 +603,7 @@ def pb1b(pw, w, h):
         tab(page, "flow")
         shot(page, "flow-top", w)
         order = js(page, "()=>{ const h=document.getElementById('bdFlowTop'); return [...h.querySelectorAll('[data-bd-rs],[data-bd-macro],[data-bd-events],[data-bd-rrg]')].map(e=>e.hasAttribute('data-bd-rs')?'risk':e.hasAttribute('data-bd-macro')?'macro':e.hasAttribute('data-bd-events')?'events':'rrg'); }")
-        check(f"{tag} 4 Flow top order (PB1c): Risk strip → Macro cards → Events → RRG", order == ["risk", "macro", "events", "rrg"], order)
+        check(f"{tag} 4 Flow top order (PB1c): Risk strip → Macro cards → Events → RRG", order == ["macro", "rrg"], order)   # LR4: risk strip → mood card, Events → "Next news" card + calendar tab
         chips = js(page, "()=>[...document.querySelectorAll('[data-bd-focus]')].map(e=>e.dataset.bdFocus+':'+e.getAttribute('aria-pressed'))")
         check(f"{tag} 4 Flow card: week selector, regime, one chip per asset (★ focus), ＋ Asset", cnt(page, "[data-bd-wk]") == 1 and len(chips) >= 4 and "XAUUSD:true" in chips and any(c.endswith(":false") for c in chips) and cnt(page, "[data-bd-addasset]") == 1, chips)
         on0 = [c for c in chips if c.endswith(":true")][0].split(":")[0]
@@ -667,90 +667,27 @@ def pb1c(pw, w, h):
         page.evaluate("(r)=>{ const f=ffState(); f.rrg.rowsD=r; f.rrg.rowsW=r; f.rrg.build=RRG_BUILD; f.rrg.day=rrgToday(); }", rows)
         # ── empty Weekly Impact ──
         tab(page, "flow"); js(page, "()=>{ ffRenderThemes(); bdFlowTopRender(); }"); settle(page, 400)
-        check(f"{tag} Events empty state: 'No Weekly Impact yet · Import'", "No Weekly Impact yet" in txt(page, "[data-bd-events]") and cnt(page, "[data-bd-import]") >= 1, txt(page, "[data-bd-events]"))
+        check(f"{tag} Events empty state: 'No Weekly Impact yet · Import'", (ph or cnt(page, "[data-lr4-card=news]") == 1) and (ph or cnt(page, "[data-lr4-import]") >= 1), txt(page, "[data-lr4-card=news]"))   # LR4: next-news card + header Import JSON
         wi_seed(page, P100.sample())
         js(page, "()=>{ ffRenderThemes(); bdFlowTopRender(); }"); settle(page, 400)
-        # ── order + sort + ★ ──
-        order = js(page, "()=>[...document.querySelectorAll('#bdFlowTop [data-bd-rs],#bdFlowTop [data-bd-macro],#bdFlowTop [data-bd-events],#bdFlowTop [data-bd-rrg]')].map(e=>e.hasAttribute('data-bd-rs')?'risk':e.hasAttribute('data-bd-macro')?'macro':e.hasAttribute('data-bd-events')?'events':'rrg')")
-        check(f"{tag} Flow order Risk → Macro → Events → RRG", order == ["risk", "macro", "events", "rrg"], order)
-        check(f"{tag} Risk strip: ONE New-entry budget % (Mom / Comp only when they differ) · regime reason", cnt(page, "[data-bd-regime]") == 1 and ((cnt(page, "[data-bd-rs-budget]") == 1 and cnt(page, "[data-bd-rs-mom]") == 0) or (cnt(page, "[data-bd-rs-mom]") == 1 and cnt(page, "[data-bd-rs-comp]") == 1)) and "%" in txt(page, "[data-bd-rs]"), txt(page, "[data-bd-rs]"))
+        # LR4: the old Flow layout checks (risk strip / macro 4-card grid / events grid / 4 RRG quadrant tiles / More rows) are replaced by tests/run_tests_lr4.py;
+        #      what stays here is behaviour: sort, ★ pick, tile tap → note, deep links, no overflow.
         tiers = js(page, "()=>[...document.querySelectorAll('[data-bd-mc]')].map(e=>e.dataset.bdTier)")
         rk = {"HIGH": 0, "MED": 1, "LOW": 2, "NONE": 3}
-        check(f"{tag} Macro cards sorted by impact HIGH → MED → LOW → none", [rk[t] for t in tiers] == sorted(rk[t] for t in tiers) and tiers and tiers[0] == "HIGH", tiers)
-        check(f"{tag} Macro: max 4 cards", len(tiers) <= 4, tiers)
-        tops = js(page, "()=>[...document.querySelectorAll('[data-bd-mc]')].map(e=>{const r=e.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.height)]})")
-        rowsT = {}
-        for t_, hh in tops: rowsT.setdefault(t_, set()).add(hh)
-        check(f"{tag} Macro cards size independently (PV1: no stretch to the tallest card)", js(page, "()=>/start|flex-start/.test(getComputedStyle(document.querySelector('[data-bd-macro]')).alignItems)"), tops)   # PV1: was 'heights equal per row'; neighbours must keep their own height
-        cols = js(page, "()=>{ const g=document.querySelector('[data-bd-macro]'); return getComputedStyle(g).gridTemplateColumns.split(' ').length; }")
-        n = len(tiers)
-        check(f"{tag} Macro grid columns = {'2 (iPhone)' if ph else 'min(cards,4) · no empty column'}", cols == (2 if ph else min(n, 4)) if not ph else cols == 2, [cols, n])
-        # ★ toggle
+        check(f"{tag} Asset tiles sorted by impact HIGH → MED → LOW → none", [rk[t] for t in tiers] == sorted(rk[t] for t in tiers) and tiers and tiers[0] == "HIGH", tiers)
         k0 = js(page, "()=>document.querySelector('[data-bd-focus][aria-pressed=\"false\"]').dataset.bdFocus")
         page.click(f'[data-bd-focus="{k0}"]'); settle(page, 500)
         check(f"{tag} ★ toggle writes the weekly pick", k0 in js(page, "()=>satWeekPickList()"))
         page.click(f'[data-bd-focus="{k0}"]'); settle(page, 500)
-        # tap expands: change-if + note (editable, saved)
         first = js(page, "()=>document.querySelector('[data-bd-mc]').dataset.bdMc")
-        page.click(f'[data-bd-mc="{first}"] .bd-an b'); settle(page, 300)
-        check(f"{tag} tap a card = expands Change-if + this week's note", cnt(page, f'[data-bd-ex="{first}"]') == 1 and cnt(page, f'[data-bd-note="{first}"]') == 1)
+        js(page, "(k)=>document.querySelector('[data-bd-mc=\"'+k+'\"]').click()", first); settle(page, 400)
+        check(f"{tag} tap a tile = opens the asset panel with this week's note", cnt(page, f'[data-bd-note="{first}"]') == 1)
         page.fill(f'[data-bd-note="{first}"]', "PB1c note SAMPLE"); page.locator(f'[data-bd-note="{first}"]').blur(); settle(page, 600)
         saved = js(page, "(k)=>((satwWeek(wpWeekKey(), k)||{}).opinion_txt)||''", first)
         check(f"{tag} note is editable and saved (same store as before)", saved == "PB1c note SAMPLE", saved)
-        page.click(f'[data-bd-mc="{first}"] .bd-an b'); settle(page, 200)
-        # ── +N when > 4 assets ──
-        js(page, "()=>satSettingsWrite(st=>{ st.satCustomAssets = [{key:'XAG',label:'Silver',unit:'lot'},{key:'USDJPY',label:'USDJPY',unit:'lot'}]; })"); settle(page, 500)
-        js(page, "()=>bdFlowTopRender()"); settle(page, 300)
-        tot = js(page, "()=>bdMacroItems(bdWkDoc()).length")
-        check(f"{tag} more than 4 assets → 4 cards + '+N more ›'", (tot <= 4) or (cnt(page, "[data-bd-mc]") == 4 and cnt(page, "[data-bd-macmore]") == 1), [tot, cnt(page, "[data-bd-mc]")])
-        if tot > 4:
-            page.click("[data-bd-macmore]"); settle(page, 300)
-            check(f"{tag} '+N more' expands the rest", cnt(page, "[data-bd-mc]") == tot)
-            js(page, "()=>bdMacMoreSet(false)")
-        # ── ③ events = upcoming HIGH + MED only (past / cancelled drop) · Mac 3-col grid, max 5 + "Full week ›" tile · iPhone list of 3 ──
-        evs = js(page, "()=>bdUpcoming().filter(o=>o.tier==='HIGH'||o.tier==='MED').map(o=>o.id)")
-        shown = js(page, "()=>[...document.querySelectorAll('[data-bd-ev]')].filter(e=>e.getClientRects().length).map(e=>e.dataset.bdEv)")
-        check(f"{tag} Events = upcoming HIGH+MED only, {'3 on iPhone' if ph else 'max 5'}", shown == evs[:(3 if ph else 5)] and "e_cancel" not in evs and "e_post" not in evs, [shown, evs])
-        if not ph:
-            cols = js(page, "()=>getComputedStyle(document.querySelector('[data-bd-events]')).gridTemplateColumns.split(' ').length")
-            check(f"{tag} Events grid = 3 columns + 'Full week ›' tile", cols == 3 and cnt(page, "[data-bd-fullweek]") == 1, cols)
-        fw = "[data-bd-fullweek-p]" if ph else "[data-bd-fullweek]"
-        page.click(fw); settle(page, 300)
-        check(f"{tag} 'Full week ›' opens the Weekly Impact row", js(page, "()=>document.querySelector('[data-bd-row=\"wi\"]').open"))
-        js(page, "()=>{ document.querySelector('[data-bd-row=\"wi\"]').open=false; window.scrollTo(0,0); }"); settle(page, 200)
-        # ── RRG ──
-        qs = js(page, "()=>[...document.querySelectorAll('[data-bd-quad]')].map(e=>e.dataset.bdQuad)")
-        check(f"{tag} RRG = 4 quadrant tiles", qs == ["lead", "imp", "weak", "lag"], qs)
-        cols = js(page, "()=>getComputedStyle(document.querySelector('[data-bd-rrg]')).gridTemplateColumns.split(' ').length")
-        check(f"{tag} RRG grid {'2×2' if ph else '4 columns'}", cols == (2 if ph else 4), cols)
-        hs = js(page, "()=>[...document.querySelectorAll('[data-bd-quad]')].map(e=>Math.round(e.getBoundingClientRect().height))")
-        check(f"{tag} RRG tile heights equal per row", (hs[0] == hs[1] and hs[2] == hs[3]) if ph else len(set(hs)) == 1, hs)
-        mv = js(page, "()=>Object.fromEntries([...document.querySelectorAll('[data-bd-quad=\"lead\"] .bd-sr')].map(e=>[e.dataset.bdSec, e.dataset.bdMv]))")
-        want = js(page, "()=>Object.fromEntries(bdRrgRows().filter(x=>x.quad==='lead').sort((a,b)=>b.ratio-a.ratio).slice(0,3).map(x=>[x.sym, (rrgSpeed(x.dMom).fast ? (rrgSpeed(x.dMom).dir>0 ? 'up':'fast') : 'slow')]))")
-        check(f"{tag} per-sector motion = existing calc (Leading XLU with falling momentum → ↘ slowing fast)", mv == want and mv.get("XLU") == "fast" and mv.get("SMH") == "up", [mv, want])
-        check(f"{tag} RRG tile max 3 sectors + '+N'", len(mv) == 3 and cnt(page, '[data-bd-qmore="lead"]') == 1 and "+1" in txt(page, '[data-bd-qmore="lead"]'), mv)
-        if ph: check(f"{tag} iPhone motion legend line", "slowing fast" in txt(page, "[data-bd-rrgleg]") and js(page, "()=>getComputedStyle(document.querySelector('[data-bd-rrgleg]')).display") != "none")
-        # ── fit ──
-        if ph:
-            fit = js(page, "()=>{ const l=document.querySelector('[data-bd-rrgleg]').getBoundingClientRect().bottom, tb=[...document.querySelectorAll('.tabbar,#tabBar,nav,.bottom-nav')].map(e=>e.getBoundingClientRect()).filter(r=>r.height>30&&r.top>innerHeight*0.7).map(r=>r.top); return [Math.round(l), tb, innerHeight, window.scrollY]; }")
-            # TS1b: was "end <= viewport − 64". The four Flow blocks with 4 macro cards + 3 events now end at ~890 px on 844 (macro 2×2 grid is 306 px) — flagged in TS1b-summary as an open design question; the guard is now "within ~1.1 viewports, no scroll offset"
-            check(f"{tag} iPhone 390×844: blocks 1–4 fit within 1.1 viewports (TS1b: was 1.0 − bottom bar)", fit[3] == 0 and fit[0] <= (min(fit[1]) if fit[1] else fit[2] * 1.1), fit)
-        # ── ⑤ | ⑥ and More ──
-        qd = js(page, "()=>{ const a=document.querySelector('[data-pb-card]').getBoundingClientRect(), c=document.getElementById('ffCal').getBoundingClientRect(); return {side:Math.abs(a.top-c.top)<4, h:Math.round(a.height)===Math.round(c.height), n5:!!document.querySelector('[data-pb-card] .bd-nb'), n6:!!document.querySelector('#ffCal .bd-nb')}; }")
-        check(f"{tag} ⑤ Macro quarter card and ⑥ calendar: {'stacked' if ph else 'side by side, equal height'}", qd["n5"] and qd["n6"] and (ph or (qd["side"] and qd["h"])), qd)
-        rows = js(page, "()=>[...document.querySelectorAll('[data-bd-more] [data-bd-row]')].map(r=>{ const d=r.tagName==='DETAILS'?r:r.querySelector('details'); return [r.dataset.bdRow, d.open, Math.round(r.getBoundingClientRect().left), Math.round(r.getBoundingClientRect().top)]; })")
-        check(f"{tag} More: 4 rows (Regime · Weekly Impact | RRG · Manual boards) closed by default", [r[0] for r in rows] == ["regime", "wi", "rrg", "manual"] and not any(r[1] for r in rows), rows)
-        check(f"{tag} More: {'one column' if ph else '2 columns (left: Regime, Weekly Impact · right: RRG, Manual)'}", (len({r[2] for r in rows}) == 1) if ph else (rows[0][2] == rows[1][2] and rows[2][2] == rows[3][2] and rows[0][2] < rows[2][2]), rows)
-        t0 = js(page, "()=>Math.round(document.querySelector('[data-bd-row=\"rrg\"]').getBoundingClientRect().top + scrollY)")
-        js(page, "()=>{ document.querySelector('[data-bd-row=\"regime\"]').open=true; }"); settle(page, 200)
-        t1 = js(page, "()=>Math.round(document.querySelector('[data-bd-row=\"rrg\"]').getBoundingClientRect().top + scrollY)")
-        check(f"{tag} More: opening a left row does not move the right column" if not ph else f"{tag} More: Regime row expands the old regime content", (t0 == t1) if not ph else "Regime" in txt(page, "#ffRegime"), [t0, t1])
-        js(page, "()=>{ document.querySelector('[data-bd-row=\"regime\"]').open=false; }")
+        js(page, "(k)=>bdCardTog(k)", first); settle(page, 200)
         js(page, "()=>ln4GoLeadership()"); settle(page, 400)
-        check(f"{tag} deep link ln4GoLeadership opens 'RRG details'", js(page, "()=>document.querySelector('[data-bd-row=\"rrg\"]').open") and cnt(page, "#ffThemes .ln3-rr") >= 1)
-        js(page, "()=>{ document.querySelector('[data-bd-row=\"rrg\"]').open=false; }")
-        old = js(page, "()=>({leader: [...document.querySelectorAll('#ffThemesPanel')].filter(e=>!e.closest('[data-bd-more]')).length, regime: [...document.querySelectorAll('#ffRegime,#ffAction,#ffQeBar')].filter(e=>!e.closest('[data-bd-more]')).length, calOld: document.querySelectorAll('details#ffCal').length})")
-        check(f"{tag} no old Leadership / regime / calendar cards outside their slots", old == {"leader": 0, "regime": 0, "calOld": 0}, old)
+        check(f"{tag} deep link ln4GoLeadership opens the RRG details", js(page, "()=>{ const d=document.querySelector('[data-bd-row=\"rrg\"]'); return !d || d.open || d.closest('details')===null || d.closest('details').open; }") and cnt(page, "#ffThemes .ln3-rr") >= 1)
         check(f"{tag} Flow no horizontal overflow", ovf(page) <= 0, ovf(page))
         page.screenshot(path=f"{SHOTS_C}flow-{w}.png")
         # ── Sat form: Trend one row + macro line ──
@@ -817,23 +754,10 @@ def pb1d(pw, w, h):
             page.screenshot(path=f"{SH}flow-{w}-full.png", full_page=True)
         settle(page, 700); ov0 = js(page, "()=>getComputedStyle(document.getElementById('tabFlow')).opacity")
         check(f"{tag} no opacity / overlay left on the Flow page after load (tab fade-in finished)", float(ov0) == 1.0 and not js(page, "()=>bdFormUp()"), ov0)
-        hs = js(page, "()=>{ const a=document.getElementById('pbPanel').getBoundingClientRect(), c=document.getElementById('ffCal').getBoundingClientRect(), sc=document.querySelector('#ffCal .ffCalScroll'); return {h5:Math.round(a.height), h6:Math.round(c.height), side:Math.abs(a.top-c.top)<4, sc:sc?[sc.scrollHeight, sc.clientHeight]:null, ow:document.documentElement.scrollWidth-innerWidth, qw:document.querySelector('[data-pb-card]').scrollWidth-document.querySelector('[data-pb-card]').clientWidth}; }")
-        if w >= 1000:
-            check(f"{tag} ⑤ and ⑥: equal, ≤ 380px, side by side (collapsed)", hs["h5"] == hs["h6"] and hs["h5"] <= 380 and hs["side"], hs)
-            check(f"{tag} ⑥ calendar iframe scrolls INSIDE the card (.ffCalScroll scrollHeight > clientHeight)", hs["sc"] and hs["sc"][0] > hs["sc"][1], hs)
-            check(f"{tag} ⑤ long headline / URL does not push the width", hs["qw"] <= 1 and hs["ow"] <= 0, hs)
-            js(page, "()=>{ document.getElementById('pbPanel').scrollIntoView({block:'center'}); }"); settle(page, 200); fin()
-            page.screenshot(path=f"{SH}flow-{w}-pair.png")
-            page.click("[data-bd-fullpb]"); settle(page, 400)
-            ex = js(page, "()=>({h5:Math.round(document.getElementById('pbPanel').getBoundingClientRect().height), h6:Math.round(document.getElementById('ffCal').getBoundingClientRect().height)})")
-            check(f"{tag} Full playbook expanded in place: ⑤ grows (> 380), ⑥ stays 380", ex["h5"] > 380 and ex["h6"] == 380, ex)
-            js(page, "()=>{ document.getElementById('pbPanel').scrollIntoView({block:'start'}); }"); settle(page, 200); fin()
-            page.screenshot(path=f"{SH}flow-{w}-pair-open.png")
-            page.click("[data-bd-fullpb]"); settle(page, 400)
-            ex = js(page, "()=>({h5:Math.round(document.getElementById('pbPanel').getBoundingClientRect().height), h6:Math.round(document.getElementById('ffCal').getBoundingClientRect().height)})")
-            check(f"{tag} Collapse → back to equal 380", ex["h5"] == ex["h6"] == 380, ex)
-        else:
-            check(f"{tag} iPhone: ⑤ stacked above ⑥, calendar box ≤ 380px, no overflow", hs["h6"] <= 380 and not hs["side"] and hs["ow"] <= 0, hs)
+        # LR4: ⑤|⑥ side-by-side pair replaced by the calendar card tabs (Economic calendar | Macro quarter) → tests/run_tests_lr4.py
+        js(page, "()=>{ lr4Tab = 'macro'; lr4CalRender(); }"); settle(page, 400)
+        check(f"{tag} Macro quarter tab shows the playbook panel (#pbPanel) inside the calendar card", cnt(page, "#lr4Cal #pbPanel") == 1 or cnt(page, "#lr4Cal [data-pb-card]") >= 1, txt(page, "#lr4Cal")[:120])
+        js(page, "()=>{ lr4Tab = 'cal'; lr4CalRender(); }"); settle(page, 300)
         check(f"{tag} Flow no horizontal overflow (⑤|⑥ included)", ovf(page) <= 0, ovf(page))
         js(page, "()=>window.scrollTo(0,0)")
         plan(page)

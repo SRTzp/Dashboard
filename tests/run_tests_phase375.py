@@ -246,14 +246,14 @@ def rrg_tip(pw, w, h):
         rows = page.evaluate("(" + RF.MODELIZE_JS + ")", rows)
         page.evaluate("(r)=>{ const f=ffState(); f.rrg.rowsD=r; f.rrg.rowsW=r; f.rrg.build=RRG_BUILD; f.rrg.day=rrgToday(); }", rows)
         js(page, "()=>{ switchTab('flow'); ffRenderThemes(); bdFlowTopRender(); }"); settle(page, 800)
-        tiles = js(page, "()=>[...document.querySelectorAll('[data-bd-rrg] [data-bd-sec], [data-bd-rrg] .il')].map(e=>({sym:(e.dataset.bdSec||e.innerText.replace(/[^A-Z]/g,'')), name:e.getAttribute('data-tw1-name'), title:e.getAttribute('title'), vis:!!e.offsetParent}))")
+        tiles = js(page, "()=>[...document.querySelectorAll('[data-bd-rrg] [data-bd-sec], [data-bd-rrg] .il, [data-bd-rrg] [data-tw1-name]')].map(e=>({sym:(e.dataset.bdSec||(e.innerText||e.textContent||'').replace(/[^A-Z]/g,'')), name:e.getAttribute('data-tw1-name'), title:e.getAttribute('title'), vis:e.getClientRects().length>0}))")
         vis = [t for t in tiles if t["vis"]]
         check(f"{tag} 5 RRG tiles render ETF tickers ({len(vis)} visible)", len(vis) > 0, tiles[:4])
         nm = [t for t in vis if t["name"]]
         check(f"{tag} 5 every visible ticker with a known name carries it (data + title)", all(t["title"] == t["name"] for t in nm) and len(nm) > 0, nm[:4])
         miss = [t["sym"] for t in vis if not t["name"]]
         check(f"{tag} 5 tickers without a name show the ticker only (none invented): {miss}", all(t["title"] is None for t in vis if not t["name"]), miss)
-        sel = "[data-bd-rrg] .bd-sr[data-tw1-name]" if w >= 700 else "[data-bd-rrg] .il[data-tw1-name]"
+        sel = "[data-bd-rrg] .lr4-speed .li[data-tw1-name]" if w >= 700 else "[data-bd-rrg] g[data-tw1-name]"   # LR4: speed list rows on desktop, chart groups on the phone
         first = js(page, "(s)=>{ const e = document.querySelector(s); return e ? e.getAttribute('data-tw1-name') : null; }", sel)
         if w >= 700:
             page.locator(sel).first.hover(); settle(page, 250)
