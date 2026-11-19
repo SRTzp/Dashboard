@@ -9,12 +9,13 @@ Start after AU1 Phase B is merged. Decided by SRTp 19 Nov 2026: no daily loss li
 - Applies to Momentum, Compounder and Sat. No override.
 - UI: the existing state chip on the Act header shows "Stopped · DD 20%"; Blocked rows use the reason text. Engine tests: the trigger, block vs allowed actions, and recovery.
 
-## B. Execution chip on Today (no new row)
-- At the end of the Act "Open risk" line: `· Placed 4/5 this week` (desktop) / `· 4/5 ✓` (phone, nowrap; it never wraps the line).
-- Count for the current week, both accounts: denominator = plans that reached Ready this week; numerator = placed. A plan answered "Not taken" with reason invalidated or thesis/news changed is removed from the denominator (a correct skip is not a miss). Hesitated / missed / unanswered stay in.
-- Colours: green = all placed or correctly skipped · amber = ≥1 hesitated, missed or unanswered · grey = no Ready plans this week.
-- Tap → Journal › Not taken, filtered to this week.
-- Journal stat card "Followed / Not taken" also shows the same execution rate (one formula, one helper).
+## B. Execution goal (revised 19 Nov)
+- Setting `executionGoalPct` (default 100, options 80/90/100).
+- Count for the current week, both accounts: denominator = plans that reached Ready this week; numerator = placed. A plan answered "Not taken" with reason Invalidated or Thesis/news changed is removed from the denominator (a correct skip is not a miss). Hesitated / missed / unanswered stay in.
+- Today chip at the end of the Act "Open risk" line: `· Placed 4/5 · goal 100%` (phone `· 4/5 → 5/5`, nowrap; it never wraps the line). Green ✓ when rate ≥ goal; amber when below (tooltip: n unanswered / n hesitated); grey when no Ready plans this week. Tap → Journal › Not taken (this week).
+- Weekly checklist: new item "Execution goal met" (auto from the rate; grey weeks count as met).
+- Journal: weekly execution history + streak ("Goal met 3 weeks in a row"); Invalidated / Thesis-changed answers list their reason text in the weekly review.
+- Same formula/helper everywhere; Today 390 must not get taller.
 
 ## C. Every Ready plan gets an answer
 - The existing "passed entry · missed?" row on Today gets two buttons: `Placed` (opens the record-fill flow) and `Not taken ›` (the existing reason picker: Missed / Hesitated / Invalidated / Thesis or news changed). The row stays until it's answered.

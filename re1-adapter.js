@@ -343,7 +343,7 @@
       out.positions = rowsOut;
 
       // Orders that would be blocked today (Ordered + complete Planned), evaluated as a NEW order against everything else
-      var blocked = [], ddStopNow = basis.ok && liveEmergency(basis.snaps || [], S.cashFlows || []).stopped === true;
+      var blocked = [], ddStopNow = basis.ok && liveEmergency(basis.snaps || [], S.cashFlows || [], S.re1 && S.re1.peak).stopped === true;
       ideas.filter(function (i) { return i.status === 'ordered' || i.status === 'planned'; }).forEach(function (i) {
         var others = ideas.filter(function (x) { return x !== i; }), plan = i.plan || {}, w = i.workingOrders, e0 = w[0] ? w[0].entry : plan.entry, s0 = w[0] ? w[0].stop : plan.stop;
         var risk = w.length ? sumBy(w, function (x) { return pos(x.qty) && pos(x.entry) && pos(x.stop) ? x.qty * Math.abs(x.entry - x.stop) * (x.mult > 0 ? x.mult : 1) * (x.fx > 0 ? x.fx : 1) : 0; }) : (plan.levels && pos(s0) ? sumBy(plan.levels, function (l) { return pos(l.qty) && pos(l.px) ? l.qty * Math.abs(l.px - s0) : 0; }) : null);
@@ -473,15 +473,19 @@
       reasons: [], flags: flags, snaps: snaps, provisional: prov, provisionalUntil: prov ? cut + RP.snapshot.blockAfterDays * DAY : null, weekSnapDate: wk.bkkDate || null, lastDate: last.bkkDate || null, confirmedThisWeek: !prov && last.at >= ws };
   }
   /* Emergency: replay every confirmed snapshot in order (evaluated AT a snapshot). Reference = month-start basis of that snapshot. */
-  function liveEmergency(snaps, flows) {
+  function liveEmergency(snaps, flows, peakState) {
     var st = null, out = { active: false, stopped: false, factor: 1, declinePct: null, refEquity: null };
     var fl = (flows || []).map(function (f) { return { at: flowAt(f), amount: n(f.amount) }; }).filter(function (f) { return f.at !== null && f.amount !== null; });
-    snaps.filter(function (x) { return !x.provisional; }).forEach(function (sn, i, arr) {
+    var real = snaps.filter(function (x) { return !x.provisional; });
+    real.forEach(function (sn, i, arr) {
       var upto = arr.slice(0, i + 1), ms = R.bkk.monthStart(sn.at), ref = null; upto.forEach(function (x) { if (x.at <= ms) ref = x; }); if (!ref) ref = upto[0];
       var e = R.emergencyStep(st, sn, { equity: ref.equity, at: ref.at }, fl);
-      st = { active: e.active, stopped: e.stopped, refEquity: e.refEquity, refStartMs: e.refStartMs };
-      out = { active: e.active, stopped: e.stopped === true, factor: e.factor, declinePct: e.declinePct, refEquity: e.refEquity, refStartMs: e.refStartMs, evaluatedAt: sn.at };
+      st = { active: e.active, refEquity: e.refEquity, refStartMs: e.refStartMs };
+      out = { active: e.active, stopped: false, factor: e.factor, declinePct: e.declinePct, refEquity: e.refEquity, refStartMs: e.refStartMs, evaluatedAt: sn.at };
     });
+    /* AU2 — DD_STOP is measured from the confirmed-equity PEAK, not the month start */
+    var d = R.ddStopStep(peakState || null, real, fl);
+    out.stopped = d.stopped === true; out.ddPct = d.ddPct; out.peakP = d.peakP; out.peakAt = d.peakAt; out.peakEquity = d.peakEquity;
     return out;
   }
   /* RE-C2 §6 — Costs switch: OFF (default) = the whole cost feature is dormant: costs count as 0 (known, all zero) → net = gross, net-breakeven = entry, never Unknown. ONE flag, read here (src.costsOn === true = ON = RE-C1 behaviour). */
@@ -502,7 +506,7 @@
     var cap = S.capital || {}, pc = src.portCur || { core: 'THB', satB: 'USD' }, ports = acc.ports || ['core', 'satB'];
     var coreV = ports.indexOf('core') >= 0 && n(cap.core) !== null ? n(cap.core) * (pc.core === 'USD' ? (fx || 0) : 1) : 0, satV = ports.indexOf('satB') >= 0 && n(cap.satB) !== null ? n(cap.satB) * (pc.satB === 'USD' ? (fx || 0) : 1) : 0;
     var basis = liveBasis(S, now, coreV + satV), flows = Array.isArray(S.cashFlows) ? S.cashFlows : [];
-    var emergency = liveEmergency(basis.snaps || [], flows), eF = emergency.factor;
+    var emergency = liveEmergency(basis.snaps || [], flows, S.re1 && S.re1.peak), eF = emergency.factor;
     var rowsById = {}; ((src.books && src.books[acctId] && src.books[acctId].trades) || []).forEach(function (t) { if (t) rowsById[t.id] = t; });
     var rowsOf = function (idea) { return (idea.rowIds || []).map(function (id) { return rowsById[id]; }).filter(Boolean); };
     var costOverrideOf = function (idea) { var o = null; rowsOf(idea).forEach(function (t) { if (t.costOverride && typeof t.costOverride === 'object') o = t.costOverride; }); return o; };

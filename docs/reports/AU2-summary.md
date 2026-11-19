@@ -1,19 +1,19 @@
 # AU2 — Parts A + B (C and D deferred until AU1 is merged)
 
-## Done
-**A · DD_STOP** — `POLICY.emergency.stopPct: 20`; `emergencyStep` returns `stopped`; reason `DD_STOP` ("Account is 20% below its peak · new entries stopped") blocks new orders in `momentumCheck`, `satCheck`, `compCheck` (flag `ddStop`) and in every adapter model via `finish()` (Momentum / Sat / Compounder sizing, Place sheet, Blocked rows, `wouldBeBlocked`). `actionPolicy` untouched: fills, closes, reductions, stop moves stay allowed. No override. Chips: Act state chip and Port/Today status pill show "Stopped · DD 20%" (red).
-**B · Execution chip** — end of the Act "Open risk" line: `· Placed x/y this week` (desktop) / `· x/y` (+ ` ✓` when green, phone, nowrap). Green / amber / grey as briefed. Tap → Journal, period Week, Not taken open (sheet on phone). Journal "Not taken" card adds `placed x/y` from the same helper (`au2Exec`).
+## Done (revised 19 Nov brief)
+**A · DD_STOP (peak basis)** — new engine function `ddStopStep(state, snaps, flows)`: drawdown from the PEAK of confirmed equity snapshots, cash-flow adjusted (performance equity = equity − flows since the first snapshot; drawdown = (peak − now) / (peak + flows), so deposits / withdrawals never move it). Stops at ≥ 20% (`stopPct`), lifts when back within 15% (`stopRecoverPct`) of the peak. The 10% half-size rule is unchanged (month-start basis, `emergencyStep` restored to its original form). The peak is stored per account in `settings.re1.peak = {peakP, peakAt}` (raised only; used as a floor so deleting old snapshots cannot lower it). `DD_STOP` blocks new orders in Momentum / Sat / Compounder checks and every adapter model; `actionPolicy` untouched (fills, closes, reductions, stop moves allowed). Act state chip + Port pill show "Stopped · DD 20%".
+**B · Execution goal** — Settings › Execution goal 80/90/100 (`ln4.executionGoalPct`, default 100). Chip at the end of the Open risk line: `· Placed 4/5 · goal 100%` (phone `· 4/5 → 5/5`, nowrap, one line). Green ✓ when rate ≥ goal, amber below (tooltip: placed · n unanswered · n hesitated · missed/other · goal), grey with no Ready plans. Tap → Journal › Not taken, week. Weekend checklist has the auto item "Execution goal met" (grey week = met). Journal has an "Execution" section: last 8 weeks (x/y, met / below goal), streak ("Goal met 3 weeks in a row"), and the Invalidated / Thesis / Blocked / Room / Error answers listed with their reason text + note. One helper (`au2Exec`) feeds chip, checklist, Journal card and history.
+**Rules** — misses = hesitated, missed, other, unanswered. Neutral (out of the denominator) = invalidated, thesis, blocked, room, error.
 
-## Doubts / decisions to check
-1. **Reference equity.** Brief says "peak confirmed equity" but also "same basis as the existing emergency rule" (month-start / retained reference). I used the existing emergency reference; no new peak tracking.
-2. **Recovery.** "Same recovery rule": emergency has a 5-pt gap (trigger 10 → recover 5). The stop lifts when the drop is back above 15% (20 − 5), then half size stays until above −5%, then full size.
-3. **Ready is derived, not stored**, so I added a small ledger `ln4.rdy[id] = {day, wk, acct, sym}`, stamped the first time a plan is seen Ready (deferred write from the Act head render) or when it is placed (`ln4Valid(..,'working')` — covers all four place flows). A plan belongs to the week it first reached Ready; it is not re-stamped in later weeks (so a plan still Ready next week is not double counted, and last week's unanswered ones stay in last week).
-4. Only `invalidated` and `thesis` answers leave the denominator, literally as briefed. `room`, `blocked`, `error`, `other` count as misses — you may want `error`/`blocked` treated as correct skips.
-5. Plans deleted/archived without any answer drop out of the count.
-6. Journal card uses the Journal's own account switch and period; the chip uses the accounts on Today. For the same accounts and period=week they are equal (tested).
+## Notes / doubts
+1. "Ready" is derived, so a ledger `ln4.rdy[id] = {day, wk, acct, sym}` is stamped when a plan is first seen Ready (deferred write) or placed. A plan belongs to its first Ready week and is not re-stamped later. Plans deleted with no answer drop out.
+2. Streak: the running week counts as met while it is grey or at/above goal; a running week below goal is skipped (not counted, doesn't break). Weeks before the first ledger week are not counted.
+3. Peak: if the only snapshot is the peak, drawdown is 0. Mid-week provisional (unconfirmed) snapshots are ignored. After a lift, a new drop to −20% of the SAME peak stops again.
+4. Journal card / history follow the Journal's account switch; the chip and checklist cover all accounts.
+5. Peak write happens from the Act head render (deferred, only when it rises).
 
 ## Tests
-- `node tests/risk_engine_test.js` 340/340 (new AU2 block: trigger, recovery 15 / 5, three checks block, actionPolicy).
-- `tests/run_tests_au2.py` 28/28 (chip counts/colours, skip removal, hesitated stays, phone nowrap one line, no taller Act head/page, tap → Journal week Not taken, Journal card = helper, state chip, adapter `stopped`). Added to `run_regression.sh`.
-- re1_adapter 63/63, re1c_live 88/88, hooks superset PASS, check_syntax OK, sync_re1 OK.
-- **Full `run_regression.sh` NOT run**: AU1 (`origin/claude/au1`) was not merged when I finished and the Mac was busy. Rebase on main after AU1 merges and run it once.
+- `node tests/risk_engine_test.js` 353/353 (peak tracking, new peak, flows both ways, trigger 20% boundary, lift 15% boundary, stored-peak floor, unconfirmed, half-size rule unchanged, block vs allowed actions).
+- `tests/run_tests_au2.py` 59/59 (chip text desktop/phone, nowrap, not taller, tap target, neutral vs miss rules, goal 80/90/100 colours, tooltip, setting, checklist item incl. grey = met, history + streak + reason text, adapter peak, peak store, state chip). In `run_regression.sh`.
+- re1_adapter 63/63, re1c_live 88/88, hooks superset PASS, syntax OK, sync_re1 OK.
+- **Full `run_regression.sh` NOT run** — AU1 is not merged and the Mac is busy. After AU1 merges: rebase `claude/au2` and run it once.

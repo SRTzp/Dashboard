@@ -27,7 +27,7 @@
        table[equity][credit]: green/red of ACWI/BIL (SMA 20/50) x HYG/IEI (SMA 20/50). Neutral / unavailable / stale -> fallback (never 100 %). All values + SMA periods are settings (rev 4: 100/80/80/60, fallback 80). */
     regime: { table: { green: { green: 1.0, red: 0.80 }, red: { green: 0.80, red: 0.60 } }, fallback: 0.80, freshDays: 4, smaFast: 20, smaSlow: 50 },
     active: { weeklyPct: 3.0, monthlyPct: 12.0 },
-    emergency: { triggerPct: 10, recoverPct: 5, factor: 0.5, stopPct: 20 },   /* AU2: stopPct = new entries stopped; leaves the stop at stopPct − (triggerPct − recoverPct) = 15 %, then half size until recoverPct */
+    emergency: { triggerPct: 10, recoverPct: 5, factor: 0.5, stopPct: 20, stopRecoverPct: 15 },   /* AU2: DD_STOP vs the confirmed-equity PEAK (ddStopStep) — stops at 20 %, lifts within 15 %; the 10 % half-size rule keeps its month-start basis */
     snapshot: { blockAfterDays: 14 }
   };
   var STRATS = { winner: 'winner', mom: 'winner', momentum: 'winner', sat: 'sat', satellite: 'sat', ladder: 'ladder', comp: 'ladder', compounder: 'ladder' };
@@ -259,19 +259,31 @@
      Trigger: cash-flow-adjusted decline >= 10 % from the reference. Keeps its reference across month change until adjusted decline is above −5 %. */
   function flowsSince(flows, fromMs, toMs) { var s = 0; (flows || []).forEach(function (f) { if (f && num(f.amount) && f.at > fromMs && f.at <= toMs) s += f.amount; }); return s; }
   function emergencyStep(state, snap, monthRef, flows, cfg) {
-    var E = pol(cfg).emergency, st = { active: !!(state && state.active), stopped: !!(state && state.stopped), refEquity: state && state.refEquity, refStartMs: state && state.refStartMs };
-    var fac = function () { return st.active ? E.factor : 1; };
-    if (!snap || !snap.confirmed || !pos(snap.equity)) return merge(st, { factor: fac(), changed: false, declinePct: null });
+    var E = pol(cfg).emergency, st = { active: !!(state && state.active), refEquity: state && state.refEquity, refStartMs: state && state.refStartMs };
+    if (!snap || !snap.confirmed || !pos(snap.equity)) return merge(st, { factor: st.active ? E.factor : 1, changed: false, declinePct: null });
     var ref = st.active ? { equity: st.refEquity, at: st.refStartMs } : (monthRef && pos(monthRef.equity) ? { equity: monthRef.equity, at: monthRef.at } : null);
-    if (!ref) return merge(st, { factor: fac(), changed: false, declinePct: null });
+    if (!ref) return merge(st, { factor: st.active ? E.factor : 1, changed: false, declinePct: null });
     var adj = snap.equity - flowsSince(flows, ref.at, snap.at), dec = (ref.equity - adj) / ref.equity * 100, was = st.active, changed = false;
     if (!st.active && dec >= E.triggerPct - EPS) { st.active = true; st.refEquity = ref.equity; st.refStartMs = ref.at; changed = true; }
     else if (st.active && dec < E.recoverPct - EPS) { st.active = false; st.refEquity = null; st.refStartMs = null; changed = true; }
-    /* AU2 — stop at stopPct (same reference as the half-size rule); steps back to half size with the same recovery gap, then full size */
-    var stopOff = (E.stopPct || 0) - (E.triggerPct - E.recoverPct);
-    if (E.stopPct > 0) { if (!st.stopped && dec >= E.stopPct - EPS) st.stopped = true; else if (st.stopped && dec < stopOff - EPS) st.stopped = false; }
-    if (!st.active) st.stopped = false;
-    return merge(st, { factor: fac(), changed: changed, declinePct: dec, was: was });
+    return merge(st, { factor: st.active ? E.factor : 1, changed: changed, declinePct: dec, was: was });
+  }
+  /* AU2 — DD_STOP: drawdown from the PEAK (high-water mark) of confirmed equity snapshots, cash-flow adjusted (deposits / withdrawals never move it).
+     Flows after the first snapshot only. Performance equity P(t) = equity(t) − Σflows(first, t]. peakP = max P (floored by the stored state.peakP).
+     Drawdown now = (peakP − P_now) / (peakP + F_now) — the peak expressed in today's capital. Stops at >= stopPct; lifts when back within stopRecoverPct of the peak.
+     snaps = [{at, equity, confirmed}] (any order) · flows = [{at, amount}] · state = {peakP, peakAt, stopped} (stored per account, optional). */
+  function ddStopStep(state, snaps, flows, cfg) {
+    var E = pol(cfg).emergency, list = (snaps || []).filter(function (x) { return x && x.confirmed !== false && !x.provisional && num(x.at) && pos(x.equity); }).sort(function (a, b) { return a.at - b.at; });
+    var peakP = state && num(state.peakP) ? state.peakP : null, peakAt = state && num(state.peakAt) ? state.peakAt : null, stopped = false, dd = null, F = 0;
+    if (!list.length) return { stopped: false, ddPct: null, peakP: peakP, peakAt: peakAt, peakEquity: null, flowAdj: 0 };
+    var t0 = list[0].at;
+    list.forEach(function (sn) {
+      F = flowsSince(flows, t0, sn.at); var P = sn.equity - F;
+      if (peakP === null || P > peakP + EPS) { peakP = P; peakAt = sn.at; }
+      var den = peakP + F; dd = den > 0 ? (peakP - P) / den * 100 : null;
+      if (dd !== null) { if (!stopped && dd >= E.stopPct - EPS) stopped = true; else if (stopped && dd <= E.stopRecoverPct + EPS) stopped = false; }
+    });
+    return { stopped: stopped, ddPct: dd, peakP: peakP, peakAt: peakAt, peakEquity: peakP + F, flowAdj: F };
   }
 
   /* ═══ 7. Sizing (all strategies) ═══
@@ -676,7 +688,7 @@
     bkk: bkk, outcome: outcome,
     resolveCosts: resolveCosts, exitCost: exitCost,
     ideaResult: ideaResult, ideaRealizedNet: ideaRealizedNet, realizedEvents: realizedEvents, netBreakevenStop: netBreakevenStop, ammoReleased: ammoReleased, rMultiple: rMultiple,
-    snapshotBasis: snapshotBasis, emergencyStep: emergencyStep, emergencyFactor: emergencyFactor,
+    snapshotBasis: snapshotBasis, emergencyStep: emergencyStep, ddStopStep: ddStopStep, emergencyFactor: emergencyFactor,
     sizeOrder: sizeOrder, entryFraction: entryFraction, floorLot: floorLot,
     realizedPeriod: realizedPeriod, exposures: exposures,
     momentumState: momentumState, momentumCheck: momentumCheck,

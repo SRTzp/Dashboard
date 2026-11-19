@@ -417,20 +417,30 @@ const costsOf = () => C;
   eq(b2.weekEquity, 5100000, 'RE-C1 a snapshot dated Monday (as-of Monday 00:00) IS the week-start basis');
 }
 
-// ═══ AU2 · DD_STOP — 20% below the reference stops NEW entries (all strategies); recovery steps stop → half size → full ═══
+// ═══ AU2 · DD_STOP — 20% below the confirmed-equity PEAK (cash-flow adjusted) stops NEW entries; lifts within 15% of the peak ═══
 {
-  const nov = T('2026-11-01T09:00:00'), mref = { equity: 1000000, at: nov }, at = T('2026-11-12T20:00:00'), step = (st, eqv, ref) => R.emergencyStep(st, { at, equity: eqv, confirmed: true }, ref || mref, []);
-  eq(R.POLICY.emergency.stopPct, 20, 'AU2 stopPct 20');
-  let s = step(null, 810000); ok(s.active && !s.stopped && s.factor === 0.5, 'AU2 −19% → half size only, no stop');
-  s = step(null, 800000); ok(s.stopped && s.active && s.factor === 0.5, 'AU2 exactly −20% → stopped (and half size state kept)'); near(s.declinePct, 20, 'AU2 decline 20');
-  s = step(null, 799999); ok(s.stopped, 'AU2 below −20% → stopped');
-  s = step(null, 800001); ok(!s.stopped, 'AU2 −19.9999% does not stop');
-  let st = step(null, 780000);
-  s = step(st, 840000); ok(s.stopped && s.active, 'AU2 −16% still stopped (recovers only above −15%)');
-  s = step(s, 850000); ok(s.stopped, 'AU2 exactly −15% still stopped');
-  s = step(s, 850001); ok(!s.stopped && s.active && s.factor === 0.5, 'AU2 above −15% → stop lifted, half size remains');
-  s = step(s, 950001); ok(!s.stopped && !s.active && s.factor === 1, 'AU2 above −5% → full size');
-  s = R.emergencyStep(null, { at, equity: 700000, confirmed: false }, mref, []); ok(!s.stopped, 'AU2 unconfirmed snapshot ignored');
+  const d0 = T('2026-09-01T09:00:00'), sn = (k, e) => ({ at: d0 + k * 7 * D, equity: e, confirmed: true }), dd = (snaps, flows, st) => R.ddStopStep(st || null, snaps, flows || []);
+  eq(R.POLICY.emergency.stopPct, 20, 'AU2 stopPct 20'); eq(R.POLICY.emergency.stopRecoverPct, 15, 'AU2 lift at 15');
+  let r = dd([sn(0, 1000000), sn(1, 1200000), sn(2, 1000000)]); ok(!r.stopped, 'AU2 −16.7% from the 1.2M peak → not stopped'); near(r.ddPct, 16.6667, 'AU2 dd from the peak', 1e-3); eq(r.peakEquity, 1200000, 'AU2 peak = highest snapshot'); eq(r.peakAt, d0 + 7 * D, 'AU2 peak date');
+  r = dd([sn(0, 1000000), sn(1, 1200000), sn(2, 960000)]); ok(r.stopped, 'AU2 exactly −20% of the peak → stopped'); near(r.ddPct, 20, 'AU2 dd 20');
+  r = dd([sn(0, 1000000), sn(1, 1200000), sn(2, 960001)]); ok(!r.stopped, 'AU2 −19.9999% → not stopped');
+  r = dd([sn(0, 1000000), sn(1, 1200000), sn(2, 900000), sn(3, 1000000)]); ok(r.stopped, 'AU2 back to −16.7% is still stopped (lifts within 15%)');
+  r = dd([sn(0, 1000000), sn(1, 1200000), sn(2, 900000), sn(3, 1020000)]); ok(!r.stopped, 'AU2 exactly −15% of the peak → lifted');
+  r = dd([sn(0, 1000000), sn(1, 1200000), sn(2, 900000), sn(3, 1020001)]); ok(!r.stopped, 'AU2 above the lift line → open');
+  r = dd([sn(0, 1000000), sn(1, 1200000), sn(2, 900000), sn(3, 1020000), sn(4, 1100000), sn(5, 950000)]); ok(r.stopped, 'AU2 after a lift, 950k vs the 1.2M peak (−20.8%) stops again'); 
+  // a new, higher peak resets the reference
+  r = dd([sn(0, 1000000), sn(1, 1200000), sn(2, 900000), sn(3, 1020000), sn(4, 1500000), sn(5, 1250000)]); ok(!r.stopped, 'AU2 new peak 1.5M, 1.25M is −16.7% → not stopped'); eq(r.peakEquity, 1500000, 'AU2 peak raised');
+  // cash flows: deposits and withdrawals do not move the drawdown
+  r = dd([sn(0, 1000000), sn(1, 1500000)], [{ at: d0 + 3 * D, amount: 500000 }]); ok(!r.stopped && Math.abs(r.ddPct) < 1e-9, 'AU2 a deposit is not a peak');
+  r = dd([sn(0, 1000000), sn(1, 1500000), sn(2, 1200000)], [{ at: d0 + 3 * D, amount: 500000 }]); ok(r.stopped && Math.abs(r.ddPct - 20) < 1e-6, 'AU2 after a 500k deposit, 1.2M is −20% of the adjusted peak (1.5M) → stopped'); r = dd([sn(0, 1000000), sn(1, 1500000), sn(2, 1250000)], [{ at: d0 + 3 * D, amount: 500000 }]); ok(!r.stopped, 'AU2 …and 1.25M is −16.7% → not stopped'); 
+  r = dd([sn(0, 1000000), sn(1, 500000)], [{ at: d0 + 3 * D, amount: -500000 }]); ok(!r.stopped && Math.abs(r.ddPct) < 1e-9, 'AU2 a withdrawal is not a loss');
+  r = dd([sn(0, 1000000), sn(1, 1100000), sn(2, 820000)], [{ at: d0 + 10 * D, amount: 100000 }]); near(r.ddPct, (1100000 - 720000) / 1200000 * 100, 'AU2 drawdown uses performance equity over (peak + flows)', 1e-6);
+  r = dd([sn(0, 1000000), sn(1, 900000)], [], { peakP: 1400000, peakAt: d0 - 30 * D }); ok(r.stopped && r.peakP === 1400000, 'AU2 a stored peak is a floor (older snapshots deleted)');
+  r = dd([{ at: d0, equity: 1000000, confirmed: true }, { at: d0 + D, equity: 700000, confirmed: false }]); ok(!r.stopped, 'AU2 unconfirmed snapshot ignored');
+  r = dd([]); ok(!r.stopped && r.ddPct === null, 'AU2 no snapshots → not stopped');
+  // the 10% half-size rule keeps its month-start basis and is unaffected
+  const mref = { equity: 1000000, at: T('2026-11-01T09:00:00') };
+  let es = R.emergencyStep(null, { at: T('2026-11-12T20:00:00'), equity: 900000, confirmed: true }, mref, []); ok(es.active && es.factor === 0.5, 'AU2 half size still from the month start');
   // the three checks refuse new orders; fills / reductions / stop moves stay allowed
   const b = basis(), mom = R.momentumCheck({ now: NOW, account: 'main', basis: b, ideas: [], costsFor: costsNone, candidate: { ideaId: 'n', riskMoney: 10 }, ddStop: true });
   has(mom, 'DD_STOP', 'AU2 Momentum blocked'); ok(!mom.allowed, 'AU2 Momentum not allowed');
