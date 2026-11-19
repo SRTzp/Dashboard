@@ -21,6 +21,7 @@ def main():
                 page.wait_for_timeout(500)
             l, H = S.live(pw, w, h, "wl2", prep, full=(w >= 1024))
             S.side(pw, m, l, os.path.join(OUT, f"wl2-{w}-side.png"), w); print("wl2", w, "ok")
+            if w < 600: import shutil; shutil.copy(l, os.path.join(OUT, "wl2-390-sheet.png"))
         for w, h in ((360, 780),):
             def prep(page): js(page, "()=>{ wl5Sort = 'nearhigh'; renderWatchlist(); }"); page.wait_for_timeout(300)
             S.live(pw, w, h, "wl2-list", prep, full=False)

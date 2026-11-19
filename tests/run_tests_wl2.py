@@ -76,6 +76,8 @@ def run(pw, w, h):
             page.locator("[data-lr5-row][data-sym=MU]").click(position={"x": 20, "y": 14}); page.wait_for_timeout(400)
             t = js(page, "()=>document.querySelector('.lr5-det').innerText.replace(/\\s+/g,' ')")
             check(f"{tag} E: sheet shows RS 98 ← 99 · −42% from 52w high (1,255 · 18 Jun) · 3m … 12m · From living thesis", all(x in t for x in ("RS 98 ← 99 (4 wks ago)", "−42% from 52w high (1,255 · 18 Jun)", "3m −7% · 6m +50% · 9m +85% · 12m +200%")) and "from living thesis" in t.lower(), t)
+        pos = js(page, "()=>{ const c = document.querySelector('.lr5-det [data-lr5-f=rs]'), f = document.querySelector('.lr5-det [data-wl2-from]'); const bg = getComputedStyle(c).backgroundColor; return {above:!!(c.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING), bg, first:c.parentElement.querySelector('[data-lr5-f]') === c} }")
+        check(f"{tag} E: RS block is the grey card at the top, above 'From living thesis'", pos["above"] and pos["bg"] == "rgb(247, 248, 250)" and pos["first"], pos)
         # Use this thesis — MU (all blank)
         use = js(page, "()=>{ const u = document.querySelector('[data-wl2-use]'); const m = document.querySelector('[data-lr5-main]'); return u ? {t:u.innerText.trim(), above:!!(u.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING), h:Math.round(u.getBoundingClientRect().height)} : null }")
         check(f"{tag} B: 'Use this thesis ✓' shows above the main action (44px)", use and use["t"] == "Use this thesis ✓" and use["above"] and use["h"] >= 44, use)

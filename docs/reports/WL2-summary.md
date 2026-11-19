@@ -25,7 +25,7 @@ Compounder (not in the brief): needs Why + Exit, so it copies lt thesis → `my_
 nowrap, shrinks inside its cell (`overflow:hidden`), no overlap with the status chip.
 
 ## Deviations from the mockup
-- Detail RS block stays under "Sector vs SPY" (LR5a layout, existing tests) instead of a grey card at the top.
+- (resolved in wrap-up) The RS block is now the grey card at the top of the detail, above "From living thesis".
 - Sort is still the native select (note in its tooltip), not a custom menu.
 - Muted % uses the app token `#5F6672` (mock `#8A919C`) for contrast.
 
