@@ -492,7 +492,7 @@ def grep_tests():
     html = open(INDEX, encoding="utf-8").read()
     for k in ["SAT_V3_ON", "SAT7D_ON", "SAT_VIEW_ON", "wpBulletsLeft", "sbPlanOf", "renderSBPlan", "szSatBCalc", "phase7m", "__legacyWatchlist", "wlHasWrapper", "resetAll", "ensureSatACap25", "satA:{name"]:
         check(f"grep index.html: ไม่พบ '{k}'", html.count(k) == 0, str(html.count(k)))
-    for k in ["wpWeekKey", "wpWeekRangeText", "wpOpenedKey", "makeTradeObject", "closePosOverlay", "Calc.newCount"]:
+    for k in ["wpWeekKey", "wpWeekRangeText", "wpOpenedKey", "makeTradeObject", "closePosOverlay"]:
         check(f"grep index.html: ยังพบ '{k}'", html.count(k) > 0)
 
 

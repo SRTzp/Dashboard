@@ -128,6 +128,12 @@ def settings_tests(pw, w, h, label):
 
 # ───────────────────────── 2-4 Sat: ช่วงงด · R:R · TP2 ─────────────────────────
 def sat_tests(pw, w, h, label):
+    # AU1 — RETIRED: sections 2–4 (news-window block · R:R chip · TP2 line) drove v1 Sat plans through satV3PlanAcctCalc / satV3SaveReadyAccounts and asserted text in the hidden
+    # Sat strategy panel (#satV3Panel). v1 plans are read-only now (never Ready), the panel and the old save helpers are deleted, and R:R / order rules are engine rules
+    # (RiskEngine.satEntryOrder · tests/risk_engine_test.js · run_tests_sd1.py). The old body is in git history before the AU1 commits on claude/au1-b.
+    print(f"RETIRED - [{ENGINE}/{label}] 2-4 Sat news window · R:R · TP2 on v1 plans :: AU1 (v1 plans read-only; legacy panel + calculators deleted)")
+    return
+    tag = f"[{ENGINE}/{label}]"
     tag = f"[{ENGINE}/{label}]"
     browser, context, page, ce, pe, dialogs = P37.launch(pw, w, h)
     try:
