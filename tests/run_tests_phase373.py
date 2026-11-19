@@ -504,11 +504,11 @@ def pb1b(pw, w, h):
         check(f"{tag} 3 ✗✗ MSS No → Blocked", label(page) == "Blocked" and warn(page) == 0, label(page))
         # side check + R:R
         page.click('[data-pb2-dir="Sell"]'); settle(page, 80)
-        check(f"{tag} 2 side check: Sell with SL < Entry < TP → red 'Sell needs SL > Entry > TP'", "Sell needs SL > Entry > TP" in txt(page, "[data-pb2-side]"), txt(page, "[data-pb2-side]"))
+        check(f"{tag} 2 side check: Sell with SL < Entry < TP → SD1 red 'look like a Long'", "look like a Long · Switch to Long" in txt(page, "[data-pb2-side]"), txt(page, "[data-pb2-side]"))
         page.click('[data-pb2-dir="Buy"]'); settle(page, 80)
         check(f"{tag} 2 side check clears when levels are on the right side (Buy)", cnt(page, "[data-pb2-side]") == 0)
         fld(page, "sl", 2650)
-        check(f"{tag} 2 Buy with SL above Entry → red 'Buy needs SL < Entry < TP'", "Buy needs SL < Entry < TP" in txt(page, "[data-pb2-side]"), txt(page, "[data-pb2-side]"))
+        check(f"{tag} 2 Buy with SL above Entry → SD1 red 'look like a Short'", "look like a Short · Switch to Short" in txt(page, "[data-pb2-side]"), txt(page, "[data-pb2-side]"))
         fld(page, "sl", 2628)
         # screenshot of the plain form
         page.evaluate("()=>{ pb2.ema=true; pb2.str=true; pb2.mss=null; pb2Refresh(); }"); settle(page, 100)
