@@ -10430,7 +10430,6 @@ function td4BackRowsHtml(list, attr, sel){
   return list.map(x=>`<label class="td4-br" data-td4-brow="${e(x.key)}"><input type="checkbox" ${attr}="${e(x.key)}"${sel && sel.has(x.key) ? ' checked' : ''}${sel ? ` onchange="td4BackPick('${e(x.key)}',this.checked)"` : ''}> <b>${e(x.sym)}</b> · ${x.market} · dismissed ${e(td4DayTxt(x.dismissed_at))} · from "${e(ltShort(x.from, 36))}"</label>`).join('');
 }
 function td4BackPick(k, on){ if(on) td4BackSel.add(k); else td4BackSel.delete(k); }
-function td4BackToggle(){ td4BackOpen = !td4BackOpen; try{ renderWatchlist(); }catch(e){} }
 function td4MetaPatchMany(patches){
   return glWrite(S=>{
     const m = Object.assign({}, (S.candMeta && typeof S.candMeta==='object' && !Array.isArray(S.candMeta)) ? S.candMeta : {});
@@ -10441,19 +10440,6 @@ function td4MetaPatchMany(patches){
     });
     if(Object.keys(m).length) S.candMeta = m; else delete S.candMeta;
   });
-}
-function td4BackApply(mode){
-  if(mode==='later'){ td4BackOpen = false; td4BackSel = new Set(); try{ renderWatchlist(); }catch(e){} return; }
-  const L = td4BackList(), now = new Date().toISOString(), patches = {};
-  L.forEach(x=>{
-    const on = td4BackSel.has(x.key);
-    if(mode==='bring' && on) patches[x.key] = {dismissed:null, dismissed_at:null, asked_stamp:null, cand_at:now, restored_at:now};
-    else if(mode==='keep' && !on) patches[x.key] = {asked_stamp:x.stamp};
-  });
-  if(Object.keys(patches).length && !td4MetaPatchMany(patches)) return;
-  Object.keys(patches).forEach(k=>td4BackSel.delete(k));
-  if(!td4BackList().length) td4BackOpen = false;
-  try{ renderWatchlist(); }catch(e){}
 }
 /* Import preview (idea-scout): ticker ที่เคยลบและอยู่ในไอเดียนี้ — ใช้ตอนกดบันทึก */
 function td4BackPrev(p){
@@ -11949,14 +11935,6 @@ function ln4CancelOrder(kind, id){
   if(kind === 'core') coreWrite(id, {ln4:{placedAt:null}}); else sat7dWrite('satIdeas', id, {ln4:{placedAt:null}});
   ln4Toast('Order cancelled');
 }
-function ln4PlanStripHtml(r){
-  if(!r) return '';
-  const s = td3E, tag = r.kind === 'sat' ? `<span class="sc sat" data-port="SAT">SAT</span>` : `<span class="sc${r.tag === 'COMP' ? ' c' : ''}${r.half ? '' : ' pt'}" data-port="${r.tag === 'COMP' ? 'COMP' : 'MMT'}" data-ln4-ptag="${r.tag}">${r.tag}${r.half ? ' ½' : ''}</span>`;
-  const stx = r.bad ? `<span class="st r" data-ln4-why>${s(r.bad.why)}</span>` : `<span class="st ${r.state === 'draft' ? 'd' : r.state === 'open' ? 'f' : ''}" data-ln4-status>${s(r.status)}</span>`;
-  const b = r.btn ? `<button type="button" class="go${r.btn.p ? ' p' : ''}${r.btn.fx ? ' fx' : ''}" data-ln4-btn${r.btn.dis ? ' disabled' : ''} onclick="event.stopPropagation();${r.btn.fn}">${s(r.btn.t)}</button>` : '';
-  const cx = r.state === 'working' ? `<button type="button" class="go" data-ln4-cancel onclick="event.stopPropagation();ln4CancelOrder('${r.kind}','${s(r.id)}')">Cancel order</button>` : '';
-  return `<div class="ln4 ln4-pc" data-ln4-pc="${s(r.sym)}" data-ln4-state="${r.state}">${tag}<span class="m">${s(r.det || '')}</span>${stx}${cx}${b}</div>`;
-}
 function ln4ActHtml(){
   const core = ln4CoreRows(), sat = ln4SatRows();
   let body = '';
@@ -12145,8 +12123,6 @@ function ln4CounterBack(){ document.querySelectorAll('.ln4-cs').forEach(e=>e.rem
 function ln4CounterOk(id){ ln4CounterBack(); satV3SaveReadyAccounts(id, true); }
 /* ✓ all — press-and-hold 0.8 s */
 let ln4AllT = 0;
-function ln4AllDown(el, ev){ if(ev && ev.button > 0) return; clearTimeout(ln4AllT); el.classList.add('hold'); ln4AllT = setTimeout(()=>{ ln4AllT = 0; ln4AllDone(el); }, 800); }
-function ln4AllUp(el){ if(ln4AllT){ clearTimeout(ln4AllT); ln4AllT = 0; } el.classList.remove('hold'); }
 function ln4AllDone(el){ const id = el.dataset.ln4All; if(!id) return; satV3IdeaWrite(id, {setup_ck: PF_SETUP_CK.map(x=>x[0])}); satV3Render({force:true}); }
 function ln4MacroWarn(idea){
   try{
@@ -12757,12 +12733,6 @@ function glAcctHtml(R){
     + `<div class="glBar" data-gl-bar><i style="width:${wd}%"></i><span class="glExp" data-gl-exp style="left:${R.mark.toFixed(1)}%"></span></div>`
     + `<div class="glL3" data-gl-l3>${l3}</div></div>`;
 }
-function glGoalHtml(M){
-  const rows = glAccts();
-  if(!rows.length) return `<div class="glCard" data-gl-goal><button type="button" class="glSetup" data-gl-setup onclick="glGoSettings()">🎯 ตั้งเป้าหมาย Port →</button></div>`;
-  return `<div class="glCard" data-gl-goal><div class="glH"><span>🎯 เป้าหมาย Port</span><button type="button" class="glAct" data-gl-valopen onclick="glValOpen()">＋ กรอกค่าพอร์ต</button></div>`
-    + rows.map(x=>glAcctHtml(glCalc(x.a, x.g, M.today))).join('') + `</div>`;
-}
 
 /* ── % งาน Daily ── */
 function glDayStat(day, M){
@@ -12797,17 +12767,6 @@ function glWeekStat(M){
 function glRangeTxt(a, b){
   const pa = a.split('-'), pb = b.split('-'), sm = DD_MONTHS[+pa[1]-1], em = DD_MONTHS[+pb[1]-1];
   return pa[1]===pb[1] ? `${+pa[2]}–${+pb[2]} ${em}` : `${+pa[2]} ${sm}–${+pb[2]} ${em}`;
-}
-function glDailyPanel(M, S){
-  if(!S) return `<div class="glPanel" data-gl-pd><div class="glRest" data-gl-rest>วันหยุด — ไม่มีงานรายวัน</div></div>`;
-  const chip = (k, t, v) => v.N ? `<span class="glChip" data-gl-chip="${k}">${t} ${v.n}/${v.N}</span>` : '';
-  const ex = S.ex;
-  return `<div class="glPanel" data-gl-pd><div class="glL1"><b>วันนี้ ${GL_DAYS_S[M.dow]} ${ddDateTxt(M.today)}</b><span class="glPct" data-gl-dpct>${S.n}/${S.N} · ${S.pct}%</span></div>`
-    + `<div class="glBar"><i style="width:${S.pct}%"></i></div>`
-    + `<div class="glChips">${chip('slots', 'ช่วงเวลา', S.c.slots)}${chip('sat', 'เช็กแผน Sat', S.c.sat)}${chip('hw', 'การบ้าน', S.c.hw)}${chip('extra', 'งานอื่น', S.c.extra)}</div>`
-    + (ex.length ? `<div class="glSub">งานอื่นวันนี้</div>` + ex.map(e=>{ const on = S.l.extra.includes(e.id);
-        return `<div class="glRow" data-gl-xrow="${escHtml(e.id)}"><button type="button" class="glCk${on ? ' on' : ''}" data-gl-xtick="${escHtml(e.id)}" aria-pressed="${on}" aria-label="ติ๊ก ${escHtml(e.name)}" onclick="glTickExtra('${escHtml(e.id)}')">${on ? '✓' : ''}</button><span class="nm">${escHtml(e.name)}</span></div>`; }).join('') : '')
-    + `<div class="glSub">ช่วงเวลา · เช็กแผน Sat · การบ้าน ติ๊กที่ด้านล่าง · ตั้งรายการงานอื่นได้ที่ ตั้งค่าระบบ → Daily routine</div></div>`;
 }
 function glWeeklyPanel(M, W){
   return `<div class="glPanel" data-gl-pw><div class="glL1"><b>สัปดาห์นี้ ${glRangeTxt(W.mon, W.sun)}</b><span class="glPct" data-gl-wpct>${W.n}/${W.N} · ${W.pct}%</span></div>`
@@ -14108,7 +14067,6 @@ function ps1MinInfo(accId, asset, entry, sl){
   if(r.err!=='TOO_TIGHT') return null;
   return {minPts:r.minPts, pts:r.pts, minDist:r.minDist, pct};
 }
-function ms1Txt(inf){ return `Sized on min stop ${fmt2(inf.minPts)} pts (your SL ${fmt2(inf.pts)})`; }
 /* ── Loss limits: state lives in settings.lossState = {startAt, ports:{winner|ladder|sat:{peak,half,low,stopped,log[]}}} (new key only) ── */
 const LOSS_PORTS = ['ladder','winner','sat'];
 const LOSS_LBL = {ladder:'Compounder', winner:'Momentum', sat:'Sat'};
@@ -14781,7 +14739,6 @@ function ps1Model(A){
 }
 let ps1TodayOpen = null;
 /* PS1b §9 — stock share counts show as #45 (display only · Sat stays in lots) */
-function shN(q){ return '#' + fmt0(q); }
 /* PS1b §7c — percentages are ROUNDED (not truncated) to 2 decimals from the same numbers as the shares */
 function ps1R2(x){ return (Math.round((+x + 1e-9) * 100) / 100).toFixed(2); }
 function ps1MultPill(p){   /* PS1c §10 — amber pill when a multiplier applies */
@@ -14789,15 +14746,6 @@ function ps1MultPill(p){   /* PS1c §10 — amber pill when a multiplier applies
   const mu = p.mult; if(!mu || !(mu.f > 0)) return p.tag ? ` <span class="ps1Pill" data-ps1-tag>${escHtml(p.tag)}</span>` : '';
   if(mu.f * mu.dd >= 1 - 1e-9) return '';
   return ` <span class="ps1Pill" data-ps1-tag>× regime ${Math.round(mu.f*100)}%${mu.dd < 1 - 1e-9 ? ' × half' : ''}</span>`;
-}
-function ps1SumHtml(p, o){
-  /* PS1c §10 — `#57 · 4.0% · Avg 103.64 · Risk ฿9.9k (0.20%)` · every % = of TOTAL portfolio · pill when a multiplier applies (o.pill === false → shown beside Risk per idea) */
-  const f2 = ps1R2, ent2 = p.rows.length>1;
-  const money = p.riskMoney > 0 ? `฿${ps1M(p.riskMoney)} (` : '';
-  return `#<b data-ps1-qty>${fmt0(p.qty)}</b> · <b data-ps1-size>${(+p.sizePct).toFixed(1)}%</b>`
-    + (ent2 ? ` · Avg <b>${p.avgEntry!=null ? f2(p.avgEntry) : '—'}</b>` : '')
-    + ` · Risk ${money}<b data-ps1-risk>${f2(p.riskPct)}%</b>${money ? ')' : ''}${(o && o.pill === false) ? '' : ps1MultPill(p)}`
-    + ps1MsHtml(p);
 }
 /* MS1 — SL tighter than the min stop: amber pill + "Risk if SL hit … · budget …" (the user's SL is kept; size is on the min distance) */
 function ps1MsHtml(p){
@@ -17336,25 +17284,6 @@ document.addEventListener('keydown', ev=>{ if(ev.key==='Escape' && document.getE
 
 /* ── Sat: แถบกราฟใต้หัวการ์ด (1 ภาพ / สินค้า / สัปดาห์) ── */
 let vwSatEdit = '', vwSatMsg = '', vwSatDraft = '';
-function vwSatOpen(asset){
-  vwSatEdit = asset; vwSatMsg = ''; vwSatDraft = '';
-  satV3Render();
-  const i = document.querySelector('[data-vw-sat-in]'); if(i){ try{ i.focus(); }catch(e){} }
-}
-function vwSatCancel(){ vwSatEdit = ''; vwSatMsg = ''; vwSatDraft = ''; satV3Render(); }
-function vwSatSave(asset){
-  const i = document.querySelector('[data-vw-sat-in]'), url = String(i ? i.value : vwSatDraft).trim();
-  vwSatDraft = url;
-  if(!tvSnapImg(url)){ vwSatMsg = TV_BAD; satV3Render(); const j = document.querySelector('[data-vw-sat-in]'); if(j){ try{ j.focus(); }catch(e){} } return; }
-  vwSatEdit = ''; vwSatMsg = ''; vwSatDraft = '';
-  satwWrite(asset, {chart:{url, at:thaiToday()}, updated_at:new Date().toISOString()});
-  satV3Render();
-}
-function vwSatDel(asset){
-  vwSatEdit = ''; vwSatMsg = ''; vwSatDraft = '';
-  satwWrite(asset, {chart:null, updated_at:new Date().toISOString()});
-  satV3Render();
-}
 
 /* ── หุ้น: stockNotes ── */
 let snMap = {}, snErr = null, snUnsub = null, snUnsubUid = null;
@@ -18707,7 +18636,6 @@ function trdPlanFinish(id, key){
   try{ todayRefresh(); }catch(e){}
   pbGoPlan();
 }
-function trdGoIdea(id){ try{ switchTab('watch'); }catch(e){} wlView = 'idea'; ideaKind = 'all'; ideaFilter = 'all'; ideaSel = String(id||''); ideaMenu = ''; try{ localStorage.setItem('ideaSelLast', ideaSel); }catch(e){} if(wlNarrow()){ wlMobOpen = true; } renderWatchlist(); }
 
 /* ═══════ ID2 — Ideas ↔ Watchlist / Candidates · ผูกกันแค่ ticker ตอนแสดงผล (wlSymKey) · ไม่เก็บ field อ้างอิงข้ามกัน ═══════
    ไอเดียที่ "นับ" = status (ที่ผู้ใช้ตั้งชนะ) เป็น need_evidence หรือ ready · ▲ = candidates[] ที่ state ≠ park · ▼ = losers[] · screen = ต่อท้าย ? */
@@ -21061,7 +20989,6 @@ const SAT_MACRO_NOTE_MAX = 80;   /* WA1 — เหตุผลที่เข้
 /* 7E-4 — MR (เทรดสวน Bias สั้น ๆ ที่แนว): ระยะ Entry จากแนว (% · ค่าเดียวทุก asset ตอนนี้ — ผู้ใช้จะตั้งต่อ asset ทีหลัง → แก้ที่ satMrDistPct จุดเดียว) · ถือนานเกินกี่วันถึงเตือน */
 /* MR ปิดไว้ 1 ต.ค. 2569 — ผู้ใช้: 1 Bias · 1 ทิศ · 1 Setup · เปิดคืน = SAT_MR_ENABLED true (หรือ window.SAT_MR_ENABLED = true) */
 let SAT_MR_ENABLED = false;
-function satMrOn(){ return (typeof window!=='undefined' && typeof window.SAT_MR_ENABLED==='boolean') ? window.SAT_MR_ENABLED : SAT_MR_ENABLED; }
 const SAT_MR_DIST_PCT = 1;
 const SAT_MR_HOLD_MAX = 2;
 function satMrDistPct(asset){ return SAT_MR_DIST_PCT; }
@@ -21735,7 +21662,6 @@ function satAssets(opts){
   return satPinSort(satWeekPickList(opts && opts.wk).map(k=>all.find(a=>a.key===k)).filter(Boolean), a=>a.key);   /* WA1fix — เฉพาะที่เลือกสัปดาห์นั้น · ไม่มี pick = ว่าง (ไม่มีโหมด legacy) */
 }
 function satIsPicked(key){ return satAssets().some(a=>a.key===key); }
-function satUnpickMsg(){ return 'ไม่ได้เลือกสัปดาห์นี้ — เพิ่มกลับก่อน'; }
 function satUnit(key){ const a = satAssets({all:true}).find(x=>x.key===key); return a && a.custom ? a.unit : (SAT7D_UNIT[key] || 'lot'); }
 function satLabelCustom(key){ const c = satAssetCfg()[key]; return (c && typeof c.label==='string' && c.label.trim()) ? c.label.trim() : ''; }
 function sat7dLabel(a){ const c = satLabelCustom(a); if(c) return c; const d = satAssets({all:true}).find(x=>x.key===a); return d ? d.label : a; }
@@ -22213,57 +22139,21 @@ function satwTally(w, asset, atTime){
 function satwWrite(asset, patch){
   return sat7dWrite('satWeek', wpWeekKey(), {[asset]: patch});
 }
-function satwSetComp(asset, comp, v){
-  const cur = satwWeek(wpWeekKey(), asset), c = (cur && cur.comps && cur.comps[comp]) || {};
-  const nv = (c.v===v ? null : v);   /* กดซ้ำ = ล้างค่า */
-  satwWrite(asset, {comps:{[comp]: Object.assign({}, c, {v: nv})}, updated_at:new Date().toISOString()});
-}
-function satwSetCompNote(asset, comp, note){
-  const cur = satwWeek(wpWeekKey(), asset), c = (cur && cur.comps && cur.comps[comp]) || {};
-  satwWrite(asset, {comps:{[comp]: Object.assign({}, c, {note: String(note||'')})}, updated_at:new Date().toISOString()});
-}
 /* ★ 7D.3 Phase 2 — field ใหม่ของ satWeek: why (เหตุผล 1 ประโยค) / support / resistance (แนวรับ/แนวต้าน ตัวเลข[])
    ไม่ลบ field เดิม (inv_note/comps.zone.levels) — ดู satV3WhyValue()/satV3SupportDisplay() สำหรับ fallback ตอนแสดงผล */
-function satwSetWhy(asset, val){
-  satwWrite(asset, {why: String(val||''), updated_at:new Date().toISOString()});
-}
 function satwSetSupport(asset, text){
   const values = String(text||'').split(/[,\s]+/).map(x=>parseFloat(x.trim())).filter(n=>isFinite(n));
   satwWrite(asset, {support: values, updated_at:new Date().toISOString()});
-}
-function satwSetResistance(asset, text){
-  const values = String(text||'').split(/[,\s]+/).map(x=>parseFloat(x.trim())).filter(n=>isFinite(n));
-  satwWrite(asset, {resistance: values, updated_at:new Date().toISOString()});
 }
 /* 7D.3 รอบ 3 — ลบค่าแนวรับ/แนวต้านทีละค่า (ปุ่ม ✕ บนชิป) · ทำงานได้แม้ค่าที่เห็นยัง fallback มาจาก comps.zone.levels เดิม
    (กรณีนั้นจะสร้าง field support/resistance จริงขึ้นมาใหม่ทันที โดยไม่ไปแก้/ลบ comps.zone.levels เดิม)
    ลบจนหมด (values กลายเป็น []) ยังคง satwWrite({support:[]}) เสมอ — เขียนอาร์เรย์ว่างจริง ไม่ข้าม ไม่ delete field
    → รอบถัดไป satV3SupportDisplay เจอ Array.isArray([])===true จะไม่ fallback กลับไปที่ levels เดิมอีก */
-function satwRemoveSupportValue(asset, idx){
-  const w = satwWeek(wpWeekKey(), asset);
-  const values = satV3SupportDisplay(w).values.slice();
-  values.splice(idx, 1);
-  satwWrite(asset, {support: values, updated_at:new Date().toISOString()});
-}
-function satwRemoveResistanceValue(asset, idx){
-  const w = satwWeek(wpWeekKey(), asset);
-  const values = satV3ResistanceDisplay(w).values.slice();
-  values.splice(idx, 1);
-  satwWrite(asset, {resistance: values, updated_at:new Date().toISOString()});
-}
 /* WM1 §7 — Note · This week: ไม่ carry อัตโนมัติ · Copy last week = Note ของ Asset เดียวกันสัปดาห์ก่อน เฉพาะเมื่อมี (ซ่อนเมื่อไม่มี) · ถามก่อนทับข้อความเดิม · Clear = เฉพาะ Asset นี้ สัปดาห์นี้ */
 function satwPrevNote(asset){
   const pk = satwPrevWeekKey(wpWeekKey()), pw = satWeekMap[pk] && satWeekMap[pk][asset];
   return (pw && typeof pw.opinion_txt==='string' && pw.opinion_txt.trim()) ? pw.opinion_txt : '';
 }
-function satwCopyNote(asset){
-  const prev = satwPrevNote(asset); if(!prev) return;
-  const cur = String((satwWeek(wpWeekKey(), asset) || {}).opinion_txt || '').trim();
-  if(cur && !confirm('แทนที่ Note ของสัปดาห์นี้ด้วยของสัปดาห์ก่อน?')) return;
-  satwWrite(asset, {opinion_txt: prev, updated_at:new Date().toISOString()});
-  satV3Render({force:true});
-}
-function satwClearNote(asset){ satwWrite(asset, {opinion_txt: '', updated_at:new Date().toISOString()}); satV3Render({force:true}); }
 function satwCopyFromPrev(asset){
   const wk = wpWeekKey(), pk = satwPrevWeekKey(wk), pw = satWeekMap[pk] && satWeekMap[pk][asset];
   if(!pw){ alert('ไม่มีข้อมูลสัปดาห์ก่อนของ '+sat7dLabel(asset)); return; }
@@ -22301,10 +22191,6 @@ const SAT_V3_CYCLE = [null, 'up', 'flat', 'down'];   /* แตะวน: ว่�
 /* F2c — ขนาดไม้ตามกฎของสัปดาห์: Macro (Playbook) + Trend ของสัปดาห์ + ด้านของ Bias */
 function satMacroFactors(accId){ return {neutral:1, against:1, mr:1}; }   /* LN4 §4d — Macro no longer cuts Sat size (warning only): every factor = 1.0 */   /* RG2b — ตัวคูณ Macro ของไม้ปกติถอดแล้ว (neutral/against = 1) · MR (ปิดอยู่) ยังใช้ SAT_MACRO_CUT ตายตัว */
 /* F2c — บรรทัดท่าทีผสม (▼▬ ลง/ผสม · posture) = ชิ้นเดียวกับ .pbMix ของ F2b · ข้อมูล ไม่ใช่คำเตือน */
-function satMixLineHtml(m){
-  return (m && (m.state==='up_flat' || m.state==='down_flat'))
-    ? `<div class="pbMix">${escHtml(Calc.pbStanceText(m.state))}${m.posture?' · '+escHtml(m.posture):''}</div>` : '';
-}
 /* ── WA1 — Asset ที่เลือกสัปดาห์นี้ (1–3) · ป้าย Macro · ＋ Asset · ไม้ค้าง ── */
 let waMenu = null, waMsg = '', waSearch = '';
 function pbFocusOf(pbKey){ try{ const mv = pbLatestActive(); return !!(mv && mv.assets && mv.assets[pbKey] && mv.assets[pbKey].focus===true); }catch(e){ return false; } }
@@ -22321,23 +22207,6 @@ function waMacHtml(key){ const l = waMacroLabel(key); return `<span class="waMac
 const LF_SAT_KEY = 'lf_sat_asset';
 let lfSatMem = null;
 function lfSatSet(asset){ lfSatMem = asset; try{ localStorage.setItem(LF_SAT_KEY, asset); }catch(e){} }
-function waBarHtml(wk, nShown){
-  const e = escHtml, cur = wk===wpWeekKey();
-  const picks = satAssets({wk});
-  let h = '<div class="waBar" data-wa-bar="1" role="group" aria-label="Asset ที่เลือกสัปดาห์นี้">';
-  const lfSel = lfSatSel(picks.map(a=>a.key));
-  h = h.replace('class="waBar"', 'class="waBar lf"');
-  picks.forEach(a=>{
-    h += `<span class="waChip lf-at${a.key===lfSel ? ' on' : ''}" data-wa-chip="${e(a.key)}" data-lf-at="${e(a.key)}">${satPinBtnHtml(a.key)}<button type="button" class="waName" onclick="waGoCard('${e(a.key)}')">${e(sat7dLabel(a.key))}</button>${waMacHtml(a.key)}${cur?`<button type="button" class="waMore" data-wa-more="${e(a.key)}" aria-label="ตัวเลือก ${e(sat7dLabel(a.key))}" aria-expanded="${waMenu===a.key}" onclick="waMenuToggle('${e(a.key)}')">⋯</button>`:''}</span>`;
-
-  });
-  if(cur && picks.length < SAT_WEEK_PICK_MAX) h += `<button type="button" class="waAdd" data-wa-add="1" onclick="waSheetOpen()">＋ Asset</button>`;
-  h += '</div>';
-  if(waMenu && picks.some(a=>a.key===waMenu)) h += `<div class="waMenu" data-wa-menu="${e(waMenu)}" role="menu"><button type="button" class="waBtn" data-wa-remove="1" onclick="waRemove('${e(waMenu)}')">เอาออกจากสัปดาห์นี้</button><button type="button" class="waBtn" onclick="waMenuToggle(null)">ปิด</button></div>`;
-  if(waMsg) h += `<div class="waMsg" data-wa-msg="1">${e(waMsg)}</div>`;
-  if(!nShown) h += `<div class="waEmpty" data-wa-empty="1">ยังไม่ได้เลือก Asset สัปดาห์นี้ — เริ่มจาก Macro (แท็บ Flow) หรือ ＋ Asset <button type="button" class="waBtn" data-wa-flow="1" onclick="switchTab('flow')">ไปแท็บ Flow</button></div>`;
-  return h;
-}
 function waMenuToggle(k){ waMenu = (k===null || waMenu===k) ? null : k; satV3Render(); }
 function waGoCard(k){ lfSatSet(k); satV3Render({force:true}); }
 function waRemove(k){
@@ -22389,11 +22258,6 @@ function waParkedList(){
   return out;
 }
 let waParkOpen = false;
-function waParkedHtml(){
-  const p = waParkedList(); if(!p.length) return '';
-  const e = escHtml, canAdd = satWeekPickList().length < SAT_WEEK_PICK_MAX;
-  return `<details class="waPark" data-wa-park="1"${waParkOpen?' open':''} ontoggle="waParkOpen=this.open"><summary>ไม้ค้าง · ไม่ได้เลือกสัปดาห์นี้ (${p.length})</summary>${p.map(x=>`<div class="waParkR" data-park="${e(x.key)}"><b>${e(sat7dLabel(x.key))}</b><span>แผน ${x.plans} · ไม้ ${x.trades}</span>${canAdd?`<button type="button" class="waBtn" data-park-add="${e(x.key)}" onclick="waPick('${e(x.key)}')">เพิ่มกลับ</button>`:''}</div>`).join('')}<div class="waHint">จัดการแผน/ไม้เดิมได้ตามปกติ · เปิดไม้ใหม่ไม่ได้จนกว่าจะเพิ่มกลับ</div></details>`;
-}
 /* PF2 — เอา prompt "เริ่มสัปดาห์ใหม่" (LN3fix3 nwHtml/nwStart…) ออกแล้ว · สัปดาห์ใหม่เริ่มว่าง (ไม่เลือก Asset ให้) · ข้อมูล satWeekStart เดิมยังอยู่ แต่ไม่อ่าน/เขียนแล้ว */
 /* LN3fix3c — ช่องของสัปดาห์ที่ต้อง "เริ่มว่าง" (Trend · Zone · B&P · Shift · My opinion · เก่า S/R) · ไม่แตะ trend_log / กราฟ / Macro / แผน / ไม้ · ใช้ร่วม nwStart() กับ ＋ Asset */
 function satWeekFreshPatch(){ return {opinion_txt:'', updated_at:new Date().toISOString()}; }   /* PF1 — ล้างเฉพาะความเห็น · ฟิลด์ Trend/Zone/Shift เก่าของ Strategy ไม่แตะ ไม่ใช้ */
@@ -22451,72 +22315,6 @@ function satV3Render(opts){
   if(rrDbg.on){ rrDbg.calls++; rrDbg.causes.push(rrCaller()); }
   try{ satCarrySync(); }catch(e){}   /* AU1 — the Sat strategy panel is never drawn (Plan edit mode is gone since PB1b) */
   pf2ClampLater();
-}
-function rrSatDraw(opts){
-  const el = document.getElementById('satV3Panel');
-  if(!el) return;
-  const force = !!(opts && opts.force);
-  const err = (satErr ? `<div class="s7Err">โหลดไอเดีย Sat ไม่สำเร็จ (${escHtml(satErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satIdeas</div>` : '')
-    + (satDelErr ? `<div class="s7Err" data-sat-del-err>ลบแผนไม่สำเร็จ (${escHtml(satDelErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satIdeas แล้วลองใหม่</div>` : '')
-    + (satWeekErr ? `<div class="s7Err">โหลด Bias สัปดาห์ไม่สำเร็จ (${escHtml(satWeekErr)}) — ตรวจ Firestore Rules ของ users/{uid}/satWeek</div>` : '')
-    + (satConfigErr ? `<div class="s7Err">อ่านรายการ Setup ที่ตั้งเองไม่สำเร็จ (${escHtml(satConfigErr)}) — ใช้ค่าเริ่มต้น (Sweep/BigBar/Break Trendline) ไปพลาง ตรวจ Firestore Rules ของ users/{uid}/satConfig เมื่อพร้อม deploy</div>` : '')
-    + (satConfigTplErr ? `<div class="s7Err">อ่านรายการปุ่มลัดเงื่อนไขไม่สำเร็จ (${escHtml(satConfigTplErr)}) — ใช้ค่าเริ่มต้นไปพลาง</div>` : '');
-  satCarrySync();   /* CO1 */
-  const accts = sat7dAccts();
-  let html;
-  if(!accts.length){ html = '<div class="panel-head"><h2>แผนเทรด Sat</h2></div><div class="empty">ไม่มีบัญชีที่เปิดพอร์ต Sat</div>'; }
-  else html = `<div class="panel-head s7Head"><h2><span class="dot" style="background:#DCA84B;display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px"></span>แผนเทรด Sat</h2>
-      <div class="s7Tools"><button class="small ghost" onclick="sat7dBrokerOpen()">Sat assets</button></div></div>
-    ${err}
-    <div class="lf-sat-g"><div class="lf-sat-l">${satV3StrategyBarHtml()}</div><div class="lf-sat-r">${satV3PlansSectionHtml()}${satV3ClosedPlansHtml()}</div></div>`;
-  /* RR1 — HTML เหมือนเดิมทุกตัวอักษร = ไม่แตะ DOM (กันภาพกระตุก/กราฟโหลดซ้ำ/โฟกัสหาย) · satV3Render({force:true}) บังคับวาดใหม่ */
-  const sig = html.replace(/ style="aspect-ratio:[^"]*"/g, '');   /* สัดส่วนภาพที่เพิ่งรู้ตอนโหลดไม่นับเป็นข้อมูลเปลี่ยน */
-  const same = !force && el._rrHtml === sig && el.firstChild;
-  if(same){ if(rrDbg.on){ rrDbg.skipped++; rrBadge(); } }
-  else {
-    if(rrDbg.on){ rrDbg.drawn++; }
-    /* เก็บสถานะหน้าจอก่อนวาดทับ: ช่องที่โฟกัส (+ cursor) · ค่าที่พิมพ์ค้าง · scroll */
-    const ae = document.activeElement, hadFocus = !!(ae && el.contains(ae) && ae !== el);
-    const ins = Array.from(el.querySelectorAll('input,textarea,select'));
-    const saved = ins.map(x=>({key: rrInputKey(x), value: x.value, checked: x.checked, dirty: (x.type==='checkbox'||x.type==='radio') ? x.checked!==x.defaultChecked : (x.tagName==='SELECT' ? false : x.value!==x.defaultValue)}));
-    const focusIdx = hadFocus ? ins.indexOf(ae) : -1;
-    const focusKey = hadFocus ? (focusIdx>=0 ? saved[focusIdx].key : rrInputKey(ae)) : '';
-    let sel = null; try{ if(focusIdx>=0 && ae.selectionStart!=null) sel = [ae.selectionStart, ae.selectionEnd]; }catch(e){}
-    const sy = window.scrollY, sx = window.scrollX;
-    const tpl = document.createElement('template'); tpl.innerHTML = html;
-    const rrOlds = rrCollectImgs(el);
-    if(hadFocus){ try{ ae.blur(); }catch(e){} }   /* RR1fix — blur ก่อนถอดช่อง: handler ที่ยิงตอนนี้ถูกตัวกันซ้อนจดไว้ ไม่แทรกกลาง replaceChildren */
-    el.replaceChildren(tpl.content);
-    rrRestoreImgs(el, rrOlds);
-    el._rrHtml = sig;
-    /* "โฟกัสช่องพิมพ์ทันที" ตอนเปิดช่องเพิ่ม/แก้ Setup ใหม่ (แทน prompt() ชั่วคราวของ Phase 3) */
-    const af = el.querySelector('[data-autofocus]');
-    if(af){ af.focus(); if(af.select) af.select(); }
-    else if(hadFocus){
-      /* คืนค่าที่พิมพ์ค้าง + โฟกัส/cursor (ช่องเดิม = key เดียวกันที่ลำดับเดิม) */
-      const nins = Array.from(el.querySelectorAll('input,textarea,select'));
-      saved.forEach((sv, i)=>{
-        const nx = nins[i]; if(!nx || rrInputKey(nx)!==sv.key || !sv.dirty) return;
-        if(nx.type==='checkbox'||nx.type==='radio') nx.checked = sv.checked; else nx.value = sv.value;
-      });
-      const tgt = (focusIdx>=0 && nins[focusIdx] && rrInputKey(nins[focusIdx])===focusKey) ? nins[focusIdx] : null;
-      if(tgt){ try{ tgt.focus({preventScroll:true}); if(sel) tgt.setSelectionRange(sel[0], sel[1]); }catch(e){} }
-    }
-    if(window.scrollY !== sy || window.scrollX !== sx){ try{ window.scrollTo(sx, sy); }catch(e){} }
-    rrBadge();
-  }
-  if(!accts.length) return;
-  /* 7D.4 — เงื่อนไขที่เพิ่งเพิ่ม (ปุ่มลัด/+ เพิ่มเอง): โฟกัสช่องข้อความ วางเคอร์เซอร์ท้ายข้อความให้พิมพ์ต่อได้ทันที */
-  if(satV3ScrollTo){
-    const card = el.querySelector(`.ui-plan[data-id="${satV3ScrollTo}"]`);
-    satV3ScrollTo = null;
-    const cell = card && card.closest('.ui-pcell');
-    if(cell) cell.scrollIntoView({block: cell.getBoundingClientRect().height <= window.innerHeight - 170 ? 'nearest' : 'start', behavior:'auto'});
-  }
-  if(satV3FocusCond){
-    const ci = el.querySelector(`[data-cond-text="${satV3FocusCond}"]`) || el.querySelector(`[data-cond="${satV3FocusCond}"] [data-ac-px="brk"]`);
-    if(ci){ satV3FocusCond = null; ci.focus(); const n = ci.value.length; try{ ci.setSelectionRange(n, n); }catch(e){} }
-  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -22802,11 +22600,6 @@ function satAcLabel(c, idea){
   const p = satAcLabelParts(c, idea), a = d=>d==='dn'?'▼':'▲';
   return `B&P ${p.tf} · ${p.bTxt}${p.b==null?'':a(p.bDir)} / ${p.oTxt}${p.o==null?'':a(p.oDir)}`;
 }
-function satAcLabelHtml(c, idea){
-  if(c && c.kind!=='mr' && String(c.text||'').trim() && satAcLvl(c,'brk_px')==null && satAcLvl(c,'vol_px')==null) return escHtml(String(c.text));
-  const p = satAcLabelParts(c, idea);
-  return `B&amp;P ${p.tf} · ${p.bTxt}${p.b==null?'':satAcArrowHtml(p.bDir)} / ${p.oTxt}${p.o==null?'':satAcArrowHtml(p.oDir)}`;
-}
 /* เขียนค่าของข้อ (แปลงข้อเก่าเป็นรูปใหม่ในตัว) แล้วตรวจ Activate
    ข้อเก่าที่ active อยู่แล้วแต่ยังไม่มีตัวเลข Break (ไม่มี steps / AC1) → legacy_ok:true = ไม่นับตัวเลข Break/Pullback → แก้ TF / กรอกเพิ่มแล้วไม่หลุด Active */
 function satAcWrite(ideaId, condId, mut){
@@ -22945,26 +22738,6 @@ function satAcPbRowHtml(idea, c, mode){
     + `<input type="text" inputmode="text" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" class="ui-ain${satAcBadPb===c.id?' ui-bad':''}" data-ac-pb="1"${z && z.auto ? ' data-auto="1"' : ''} placeholder="Price หรือ 2405-2412" value="${escHtml(satAcZoneTxt(c))}" onchange="satAcSetPb('${id}','${cid}',this.value)"></div>`;
 }
 /* mode: 'plan' ขั้นวางแผน (ไม่มีช่องติ๊ก) · 'work' หน้างานยังไม่ Active · 'active' ใต้แถบ Active (เฉพาะบรรทัดสรุป/แถวที่ติ๊กไม่ครบ) */
-function satAcRowHtml(idea, c, mode){
-  if(!satAcIs(c)) return '';
-  mode = mode || (idea.planned===true ? 'work' : 'plan');
-  const st = satAcSteps(c), ed = k=> mode!=='plan' && satAcEditing.has(`${idea.id}|${c.id}|${k}`);
-  const sumOn = k=> mode!=='plan' && st[k] && !ed(k);
-  let h = `<div class="ui-ac ui-ac2" data-ac="${escHtml(c.id)}" data-ac-mode="${mode}">`;
-  if(mode!=='active') h += satAcTfHtml(idea, c, mode!=='active' && satV3CondLive(idea).length ? `<button type="button" class="ui-btn ui-cond-x" title="${satV3CondSaved(idea, c)?'ยกเลิกเงื่อนไขข้อนี้ (ซ่อน ไม่ลบ)':'ลบเงื่อนไขข้อนี้ (ยังไม่เคยบันทึก)'}" onclick="satV3CondCancel('${escHtml(idea.id)}','${escHtml(c.id)}')">✕</button>` : '');
-  if(sumOn('brk') && sumOn('vol')) h += satAcSumHtml(idea, c, 'break', `<span class="ui-acs-p"><b>Break</b> Price ${satAcSumLvl(c,'brk',idea)} ·</span> <span class="ui-acs-p">Vol ${satAcSumLvl(c,'vol',idea)}</span>`);   /* POL1 — 2 ส่วน nowrap ตัดบรรทัดได้ระหว่างส่วน (ไม่ตัดทิ้ง) */
-  else {
-    h += sumOn('brk') ? satAcSumHtml(idea, c, 'brk', `<b>Break</b> Price ${satAcSumLvl(c,'brk',idea)}`) : satAcLvlRowHtml(idea, c, 'brk', mode);
-    h += sumOn('vol') ? satAcSumHtml(idea, c, 'vol', `<b>Break</b> Vol ${satAcSumLvl(c,'vol',idea)}`) : satAcLvlRowHtml(idea, c, 'vol', mode, !sumOn('brk'));   /* ESC1 — ปุ่มทิศอยู่แถว Price · Vol อ่านอย่างเดียว (ยกเว้น Price เป็นบรรทัดสรุป → ปุ่มอยู่แถว Vol) */
-  }
-  h += sumOn('pb') ? satAcSumHtml(idea, c, 'pb', `Pullback <b>${escHtml(satAcZoneTxt(c) || '—')}</b>`) : satAcPbRowHtml(idea, c, mode);
-  if(mode!=='active'){
-    h += satV3CondNumsHtml(idea, c);
-    const miss = satAcMissing(c);
-    if(mode==='work') h += `<div class="ui-ac-s">${miss.length ? `<span class="ui-hint ui-ac-miss" data-ac-miss="1">ขาด: ${miss.map(escHtml).join(' · ')}</span>` : `<span class="ui-hint ui-ac-miss" data-ac-miss="1">ครบแล้ว</span>`}</div>`;
-  }
-  return h + `</div>`;
-}
 
 /* ── 7D.5 — รายการปุ่มลัดเงื่อนไข (ใช้ร่วมทุก asset) · users/{uid}/satConfig/conditionTemplates = {items:[{id,text}]}
    ไม่มีเอกสาร = ค่าเริ่มต้น (ไม่ error) · แก้ = เพิ่ม/แก้ชื่อ/ลบ แบบเดียวกับรายการ Setup ── */
@@ -22998,10 +22771,6 @@ function satV3F2c(idea, at){
           mac, align, rule, driver, off, factor: mrAct ? fx.mr : (off ? 1 : rule.factor), outside, needNote, reason, side, recent, shift, note, at, mr: !!mrAct, mrLevel: mrAct ? +mrAct.mr_level : null};
 }
 /* AC2 — ขั้นหน้างาน (มีข้อ Activate): แถบ `● Active · 4H` + `TP … · Inval …` (แตะ = แก้ TP/Inval/TF) · ใต้แถบ = บรรทัดสรุป · ข้อ MR ใช้บรรทัดสรุป/ปุ่มเดิม */
-function satAcTpTxt(c){
-  const f = v=> (v==null || v==='') ? null : fmt2(+v), a = f(c.tp_from), b = f(c.tp_to);
-  return a && b && a!==b ? `${a}–${b}` : (a || b || '—');
-}
 /* ✕ บนการ์ดร่าง = ลบร่าง (ไม่แตะสมุด) · ตัวเดียวกับปุ่มลบในตัวกรอง "ปิดแล้ว" (ลบเฉพาะเอกสารไอเดีย ไม่มีเงื่อนไข
    ต่างกัน — ฝั่ง UI เป็นคนกำหนดว่าจะโชว์ปุ่มนี้ตอนไหน: การ์ดร่าง (ยังไม่มี trade_id ที่ไหนเลย) กับตัวกรองปิดแล้วเท่านั้น) */
 /* setup ครบ/ไม่ครบ — เตือนเท่านั้น ไม่บล็อกการบันทึก (ตามสเปก) */
@@ -23249,10 +23018,6 @@ function satPyrSiblings(t, A){
 }
 function satPyrSibling(t, A){ const l = satPyrSiblings(t, A); return l.length ? l[0] : null; }
 /* ST1 — ข้อความ TP ของไม้: มี tp2 = "TP1 x · TP2 y" · ไม่มี (ไม้เก่า) = "TP x" เดิม */
-function satTpTxt(t){
-  const a = t.tp!=null ? fmt2(t.tp) : '—';
-  return (t.tp2!=null && isFinite(+t.tp2)) ? `TP1 ${a} · TP2 ${fmt2(t.tp2)}` : `TP ${a}`;
-}
 /* ══════════════════════════════════════════════════════════════════════════
    PV2a — แผน Sat ฟอร์มใหม่ (idea.v2) · กรอก Setup · ทิศ · Entry · SL · TF/ส่วน (Main|Tactical) ตั้งค่าที่ตั้งค่า › Sat
    ขนาดไม้ = min(Risk$ ÷ ระยะ SL, เพดานมูลค่า) ปัดลงตาม lot step · แผนเดิม (kind bp / มี conditions) ไม่แตะ
@@ -23479,7 +23244,6 @@ let ln2Mem = null, ln2DetOpen = false;
    ค่าทั้งหมดเป็นของแผนนั้น (satIdeas) · Trend = idea.bias (Up=Long · Down=Short) · Classify/Zone/Setup เป็นข้อมูลประกอบ ไม่เปลี่ยนสูตร Risk/ไม้/บล็อก */
 /* CS1 — กฎ Tactical / Main (Plan › Sat) */
 function satIdeaHasTrade(idea){ return Object.values((idea && idea.accts) || {}).some(x=>x && x.trade_id); }
-function satTacLock(idea, tac){ return !!tac && satClsKey(idea)!=='clear' && !satIdeaHasTrade(idea); }
 /* Tactical ที่เข้าแล้ว (open) แต่ไม่มี Main ถืออยู่ในบัญชีนั้น · แผน Tactical ที่ยังไม่เข้าไม่นับ */
 function satTacHeldNoMain(accId, asset){
   if(!accId) return false;
@@ -23490,26 +23254,12 @@ function satMainBlockedFor(asset){ try{ return sat7dAccts().some(a=>satTacHeldNo
 function satMainBlockMsg(asset){ return 'Close the Tactical (' + ((typeof IDEA_ASSET_LBL!=='undefined' && IDEA_ASSET_LBL[asset]) || sat7dLabel(asset)) + ') first'; }
 const PF_SETUP_CK = [['in_zone', 'In Zone'], ['mmt_shift_pivot', 'MMT Neutral'], ['align_ma50', 'Pivot align MA']];   /* LN4 §4d — renamed + reordered · stored keys unchanged */
 /* LN3 — สวน Macro: กล่องโผล่เฉพาะตอนทิศสวน Macro (หรือนอก Macro) · เหตุผลบังคับ (ว่าง = บันทึกไม่ได้ — noteBlock เดิม) · เก็บ macro_note + macro_why · ขนาดไม้ตาม factor macroAgainst ในตั้งค่า */
-function ln3MacroBoxHtml(idea, F){
-  if(!F || !F.needNote) return '';
-  const e = escHtml, id = e(idea.id), ag = F.align==='against';
-  const arrow = F.mac.state==='up' || F.mac.state==='up_flat' ? '▲' : (F.mac.state==='down' || F.mac.state==='down_flat') ? '▼' : '';
-  return `<div class="ln3-mw" data-ln3-macro-box="1">⚠ ${ag ? 'สวน' : 'นอก'} Macro ${ln3Ar(arrow)} · ใส่เหตุผล<input type="text" data-macro-note="1" maxlength="${SAT_MACRO_NOTE_MAX}" placeholder="เหตุผล (บังคับ)" aria-label="เหตุผลที่เข้าสวน/นอก Macro" value="${e(F.reason)}" onchange="ln3MacroWhy('${id}',this.value)"></div>`;
-}
 function ln3MacroWhy(ideaId, v){
   const idea = sat7dIdea(ideaId); if(!idea) return;
   const t = String(v==null ? '' : v).trim().slice(0, SAT_MACRO_NOTE_MAX);
   satV3IdeaWrite(ideaId, {macro_note: t, macro_why: t}); satV3Render();
 }
 /* LN3 — บรรทัดเดียวใต้ขนาดไม้: Main `ไม้ 1/3 · 50/30/20` · Tactical `TP1 … (2R·50%) · TP2 … (3R)` */
-function ln3LegLine(idea, tac, tps, accs){
-  const a0 = accs[0]; if(!a0) return '';
-  if(tac){
-    return `<div class="ln3-leg" data-ln3-leg="tactical">${tps && tps.tp1!=null ? `TP1 ${fmt2(tps.tp1)} (${fmt2(tps.r1)}R·${tps.pct}%) · TP2 ${fmt2(tps.tp2)} (${fmt2(tps.r2)}R)` : `TP1 ${fmt2(tps.r1)}R·${tps.pct}% · TP2 ${fmt2(tps.r2)}R (คิดให้จาก Entry/SL)`}</div>`;
-  }
-  const sp = satV2Split(a0.id, 'main');
-  return sp.length > 1 ? `<div class="ln3-leg" data-ln3-leg="main">ไม้ 1/${sp.length} · ${sp.join('/')}</div>` : '';
-}
 /* LN3 — แถวแผนเทรดบรรทัดเดียว: `XAUUSD [Main] ▲ 4,180 / 4,117` + สถานะ · มีไม้ → บรรทัด 2 `● lot $ · … · รวม $x/$cap` */
 /* PF3b — accordion ร่างแผน: กางได้ทีละฟอร์ม (satActiveDraft = id ของร่างที่กาง · null = พับหมด) · ค่าที่กรอกอยู่ใน idea (onchange → satIdeas) เสมอ — พับ/สลับไม่สร้างฟอร์มใหม่จากค่าเริ่ม */
 let satActiveDraft = null;
@@ -23531,29 +23281,6 @@ function ln3TradeRiskTHB(t, fx){
 let lfHeldClosed = new Set();
 document.addEventListener('click', ()=>document.querySelectorAll('#satV3Panel .lf-mn').forEach(x=>{ x.style.display = 'none'; }));
 
-function ln3PlanRowHtml(idea){
-  const e = escHtml, st = satV3PlanRowState(idea), draft = st==='draft', tac = satV2Sleeve(idea)==='tactical';
-  const dir = pfTrendHtml(idea) + pfClassifyHtml(idea);   /* PF1 — สถานะบนแถวแผน: ▲ Up / ▼ Down + Classify */
-  const px = idea.entry!=null && idea.entry!=='' ? `<span class="lf-px"><span class="ek">Entry</span> ${fmt2(+idea.entry)} · <span class="ek">SL</span> ${idea.sl!=null && idea.sl!=='' ? fmt2(+idea.sl) : '—'}</span>` : '—';
-  const lfSelRow = lfSatSel(satAssets({wk: wpWeekKey()}).map(x=>x.key))===idea.asset;
-  const trades = satV3EffectiveTrades(idea).concat(satV3PyrOpenTrades(idea).filter(x=>!satV3EffectiveTrades(idea).some(y=>y.trade.id===x.trade.id)));
-  const nOpen = trades.filter(x=>x.trade.status==='open').length;
-  const status = draft ? (satActiveDraft===idea.id ? 'ร่าง ▾' : 'ร่าง ›') : (nOpen ? `เข้าแล้ว ${nOpen}` : 'รอเข้า');
-  const stCls = draft ? 'ln3-tag' : (nOpen ? 'ln3-tag ok' : 'ln3-tag');
-  let l2 = '';
-  if(trades.length){
-    const accs = sat7dAccts(), tot = {r:0, c:0}, seen = new Set();
-    const parts = trades.map(({accId, trade})=>{
-      const a = accs.find(x=>x.id===accId) || {}, M = satV2Money(accId), fx = M.fx || 1;
-      if(!seen.has(accId)){ seen.add(accId); const R = {sat:0, core:0, byAsset:{}}, CP = {sat:0, asset:0, total:0, core:0}, ar = R.byAsset[idea.asset]; tot.r += ar ? ar.tot / fx : 0; tot.c += CP.asset / fx; }
-      return `<b style="color:${acctColor(a)}">●</b> ${satV2Lot(trade.qty)} ${satV2Usd(ln3TradeRiskTHB(trade, fx), fx)}`;
-    });
-    l2 = `<div class="ln3-p2" data-ln3-p2="1">${parts.join(' · ')} · รวม <span data-ln3-ptot="1">$${fmt0(Math.round(tot.r))}</span>/<span data-ln3-pcap="1">$${fmt0(Math.round(tot.c))}</span></div>`;
-  }
-  const click = draft ? ` data-ln3-draft="1" role="button" tabindex="0" onclick="ln3ToggleDraft('${e(idea.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ln3ToggleDraft('${e(idea.id)}')}"` : '';
-  const click2 = draft ? click : ` onclick="lfSatPick('${e(idea.asset)}')"`;
-  return `<div class="ln3-prow${lfSelRow ? ' lf-sel' : ''}" data-ln3-row="${e(idea.id)}" data-lf-asset="${e(idea.asset)}" data-ln3-state="${st}"${click2}><span class="ln3-pm">${satPinMk(idea.asset)}<b>${e(sat7dLabel(idea.asset))}</b> <span class="ln3-tag ${tac ? 'tc' : 'mn'}">${tac ? 'Tactical' : 'Main'}</span> ${dir} ${px}</span><span class="${stCls}" data-ln3-status="1">${status}</span>${satCtxHtml(idea)}${l2}</div>`;
-}
 /* การ์ดร่าง (ยังไม่ได้บันทึก order สักบัญชี) — UI.planCard + adapter Sat (sizeLine/rowExtra จาก satV3PlanAcctCalc) */
 const satV3PlanAdapter = {
   sizeLine(model, a){
@@ -25197,11 +24924,6 @@ function ffExposureTest(){
   return ok;
 }
 function ffJsonData(){ return ffJson || FF_DEMO; }
-function ffExposureNow(){
-  const r = (ffJsonData().ratios)||{};
-  const u = k => !!(r[k] && r[k].up);
-  return ffExposure([u('ACWI_BIL'),u('HYG_IEF'),u('HG_GC')], u('SPHB_SPLV'));
-}
 /* RM1 — THE one regime result. Every view (Flow · Today · Port · Risk room · Plan · drawer · forms) and the sizing engine read it from here.
    Engine: RiskEngine.regimeFromFundflow (SMA 20/50 state · oldest-input freshness · table 100/80/80/60 · fallback 80). No second calculation anywhere. */
 const RM1_NAMES = {ACWI_BIL:'ACWI/BIL', HYG_IEI:'HYG/IEI'};
@@ -25960,14 +25682,6 @@ function wiSelect(id){
   satV3Render({force:true}); try{ todayRefresh(); }catch(e){} try{ pbRender(); }catch(e){}
 }
 /* ─ การ์ด Strategy: แถบ Weekly Impact ─ */
-function wiStripHtml(id){
-  const s = escHtml, doc = wiCurDoc(), x = wiEntry(id, doc), t = wiTier(id, doc), open = wiCardOpen.has(id);
-  const head = `Weekly Impact · ${s(wiRangeText(wiCurMon()))}`;
-  if(!doc || !x) return `<div class="wiStrip" data-wi-strip="${s(id)}"><div class="wiS1">${head}</div><div class="wiS2"><span class="wiTierP wi-NA" data-wi-pill="NONE">No data</span><span class="wiSm">${doc ? "Not in this week's snapshot" : 'Weekly Impact not pasted yet'}</span></div></div>`;
-  const ev = wiMainEvents(id, doc)[0], line = ev ? (ev.e.label_th || ev.e.title) + ' · ' + wiEvTimeText(ev.e) : (x.note || '—');
-  return `<div class="wiStrip" data-wi-strip="${s(id)}"><div class="wiS1">${head}</div>
-    <div class="wiS2"><span class="wiTierP wi-${t || 'NA'}" data-wi-pill="${t || 'NONE'}">${s(wiTierTxt(t))}</span><span class="wiSL">${s(line)}</span><button type="button" class="ln1-link" data-wi-more="${s(id)}" aria-expanded="${open}" onclick="event.stopPropagation();wiCardToggle('${s(id)}')">${open ? 'Less' : 'More'}</button></div>${open ? `<div class="wiCardDet">${wiDetailHtml(id, doc)}</div>` : ''}</div>`;
-}
 function wiCardToggle(id){ if(wiCardOpen.has(id)) wiCardOpen.delete(id); else wiCardOpen.add(id); satV3Render({force:true}); try{ bdFlowTopRender(); }catch(e){} }
 /* ─ ＋ Asset sheet: ป้ายระดับ + บรรทัดสรุป · เรียง HIGH → MED → LOW → ไม่มีข้อมูล (คงลำดับเดิมในกลุ่ม) ─ */
 function wiSheetBadge(id){
@@ -27152,22 +26866,10 @@ function lr3ShortWhy(why, it){
   return t || 'Blocked';
 }
 let pvMoreOpen = new Set();
-function pvMoreTog(id, on){ if(on) pvMoreOpen.add(id); else pvMoreOpen.delete(id); }
 function pvNat(it){ return it.kind === 'sat' ? '$' : ((it.ref.market || coreMarketOf(it.ref.ticker)) === 'US' ? '$' : '฿'); }
 function pvDist(it, pv){
   const d = Math.abs(+it.entry - +it.sl); if(!(d > 0) || !(+it.entry > 0)) return '';
   return (it.kind === 'sat' && !pv.pct) ? td3Num(d) + ' pts' : (d / +it.entry * 100).toFixed(2) + '%';
-}
-function pvRR(it, pv){
-  if(it.kind === 'sat' && pv.rr) return pv.rr;
-  const e = +it.entry, s = +it.sl, t = +it.tp; if(!(e > 0 && s > 0 && t > 0) || e === s) return '';
-  return (Math.abs(t - e) / Math.abs(e - s)).toFixed(1);
-}
-function pvToEntry(it, pv){
-  let pc = it.pct; if(it.kind === 'sat' && pv.price > 0 && +it.entry > 0) pc = (+it.entry - pv.price) / pv.price * 100;
-  if(pc == null || !isFinite(pc)) return `<span class="bd-m" data-bd-pct="na">${bdE(pv.why.price || 'no live price')}</span>`;
-  const nr = nearEntry(pc);
-  return `<span class="${nr ? 'near' : ''}" data-bd-pct="${nr ? 'near' : 'far'}">${pc < 0 ? '−' : '+'}${Math.abs(pc).toFixed(1)}%${it.kind === 'sat' && pv.priceSrc === 'manual' ? ' <small class="bd-m">manual</small>' : ''}</span>`;
 }
 function pvMoreRows(it, pv){
   const e = bdE, m = v=>pvMoney(pv, v, true), nat = pvNat(it), na = k=>pv.why[k] || 'n/a', sat = it.kind === 'sat', u = sat ? 'lot' : 'sh';
@@ -27336,7 +27038,6 @@ function bdColHtml(seg, list){
   }else body = list.map(bdCardHtml).join('');
   return `<section class="bd-col${bdSeg === seg ? ' bd-on' : ''}${list.length ? '' : ' bd-empty'}" data-bd-col="${seg}"><div class="bd-ch"><b>${BD_SEG_L[seg]}</b><span class="bd-n" data-bd-n="${seg}">${list.length}</span>${seg === 'plan' && list.length ? '<span class="bd-sp"></span><span class="bd-hint">closest to entry first</span>' : ''}</div>${body}</section>`;
 }
-function bdRiskNow(){ try{ const L = re1L(tdHome()); if(L && L.basis.ok && L.active) return {used: L.active.weekUsed / L.basis.weekEquity * 100, cap: RiskEngine.POLICY.active.weeklyPct}; }catch(e){} return null; }   /* RE-C1 — Active (Momentum + Satellite) week usage vs 3% summary check; was PS1 principal / 5% total cap */
 function bdSummary(items){
   const n = k=>items.filter(x=>x.status === k).length;
   let rk = null; try{ rk = lr2OpenRisk(bdActAcct()); }catch(e){}   /* LR3 — the SAME per-account value as Today's Act header (Active week usage ÷ week equity) */
@@ -27830,13 +27531,6 @@ function tw1Why(it, p, r){
    ═══════════════════════════════════════════════════════════════════════════════════════════════ */
 const RE2_NEAR_PCT = NEAR_ENTRY_PCT, RE2_DAY = 86400000;
 let re2Open = {};
-function re2Accts(){   /* §0 — follow the account selector (shown when >1 account); no selector → one block per account that has any plan / order / holding */
-  try{
-    if(acctList.length > 1 && acctActive) return [acctActive];
-    const has = acctList.map(a=>a.id).filter(id=>{ try{ return bdItems().some(x=>(x.acct || tdHome()) === id); }catch(e){ return false; } });
-    return has.length ? has : [tdHome()].filter(Boolean);
-  }catch(e){ return [tdHome()].filter(Boolean); }
-}
 function re2Day(ms){ return new Intl.DateTimeFormat('en-US', {timeZone:'Asia/Bangkok', weekday:'short'}).format(new Date(ms)) + ' ' + newsHM(ms); }
 /* upcoming events (cached data only): Weekly Impact docs (this / adjacent weeks) + the CPI / NFP / FOMC dates from Settings · Thai time */
 function re2Events(now){
@@ -28094,12 +27788,6 @@ function re2EventsCard(){
   return `<div class="card ln4-card re2-pc" data-re2-events><details${o ? ' open' : ''} ontoggle="re2Open.ev=this.open"><summary><b><span class="m">Next events</span><span class="p">Events</span></b><span class="s">${sum}</span>${wc}</summary>
     ${l3.map(x=>`<div class="ev" data-re2-ev><time>${e(re2Day(x.ts))}</time><span class="chip ${x.imp === 'HIGH' ? 'r' : 'a'}">${x.imp}</span><b>${e(x.title)}</b><span class="mut">${e(x.assets.slice(0, 3).join(' · '))}</span></div>`).join('') || '<div class="none">No HIGH / MED events ahead</div>'}</details></div>`;
 }
-function re2BlockHtml(acct, label){
-  const M = re2Model(acct), foot = M.nothing > 0 ? `<div class="none" data-re2-nothing>${M.nothing} holding${M.nothing === 1 ? ' needs' : 's need'} nothing</div>` : '';
-  const g1 = re2GroupHtml('enter', 'Enter', re2EnterCap(M.enter), M.tot.plan, 'plan', 'Nothing to enter'), g2 = re2GroupHtml('check', 'Check orders', M.check, M.tot.ord, 'ord', 'Nothing to check'),
-    g3 = re2GroupHtml('manage', 'Manage', M.manage, M.tot.hold, 'hold', 'Nothing to manage').replace(/<\/div>$/, foot + '</div>');
-  return `<div class="card ln4-card re2-act" data-ln4-act data-re2-act="${td3E(acct)}">${re2StripHtml(acct, label)}<div class="cols re2-cols">${g1}${g2}${g3}</div></div><div class="pair re2-pair">${re2RoomCard(acct)}${re2EventsCard()}</div>`;
-}
 /* LR2 B — ONE Act list for Main + Family. Rows come from re2Model(account) (same rules as before) and carry their account; every button acts on the ROW's account (items / cards / ideas hold it) — the active account is never switched. */
 function lr2AcctOf(it){ return (it && it.acct) || tdHome(); }
 function lr2RowPill(it){
@@ -28147,7 +27835,6 @@ function lr2Sort(rows){   /* passed-entry prompts first · then closest to entry
   return out;
 }
 let lr2DetOpen = null;
-function lr2Abnormal(){ try{ return lr2ActAccts().some(a=>{ try{ return re2State(a).c !== 'g' || re4Due(a); }catch(e){ return false; } }); }catch(e){ return false; } }
 /* LR-F2 — Risk room = its own card (same style as To do) in the side column · Details keeps events / sectors / accounts */
 function lr2SideCards(){ return re2EventsCard(); }
 function lr2RiskCard(){
@@ -28437,7 +28124,6 @@ function pb2AcctOf(i){
   try{ const k = Object.keys((i && i.accts) || {}).find(a=>i.accts[a] && i.accts[a].trade_id && A.some(x=>x.id === a)); if(k) return k; }catch(e){}
   return A[0] ? A[0].id : null;
 }
-function pb2AcctName(id){ const a = acctList.find(x=>x.id === id); return a ? td3AcctName(a) : String(id || ''); }
 /* the model every surface uses (card · drawer · Place order): what is missing, wrong side, R:R, Trend rule */
 function pb2Model(i){
   const e = +i.entry, s = +i.sl, t = +i.tp, sell = i.bias === 'Short', miss = [], issues = []; let first = '';
@@ -28947,26 +28633,6 @@ function bdMacroLine(key){   /* Sat form: Macro: Bull · ⚠️ CPI Tue 19:30 */
   const b = bdBias(key), ev = bdNextEvFor(key);
   return {bias:b.t, ev: ev ? `${ev.t}${ev.w ? ' ' + ev.w : ''}` : ''};
 }
-function bdRiskHtml(){
-  /* RM1 — ONE value "New-entry budget N%" (shared result = min of regime modifier and emergency). Momentum / Compounder are shown separately only when they differ.
-     The reason sits on its own line and wraps: "equity red · credit red · SMA 20/50 · data 16 Nov" */
-  const E = rm1Eff(), r = E.r, nodata = E.demo;
-  const vals = {mom: E.pc, comp: E.pc};   /* both strategies take min(modifier, emergency) today; a strategy-specific brake would differ here */
-  const cc = v=>nodata ? 'f' : (v >= 100 ? 'g' : v > 0 ? 'a' : 'r'), pc = v=>nodata ? '—' : v + '%';
-  let cls = 'f';
-  if(!nodata) cls = (r.fallback || E.em) ? 'a' : (r.equity==='green' && r.credit==='green') ? 'g' : (r.equity==='red' && r.credit==='red') ? 'r' : 'a';
-  const parts = [];
-  if(nodata) parts.push('No Fund-flow data');
-  else {
-    if(r.fallback) parts.push('Modifier unavailable · fallback cap ' + Math.round(r.factor*100) + '%' + (E.em ? ' · effective ' + E.pc + '% (emergency brake)' : ''));
-    else { if(E.em) parts.push('emergency brake'); parts.push('equity ' + r.equity, 'credit ' + r.credit); }
-    parts.push(E.sma); if(r.asOf) parts.push('data ' + rm1Date(r.asOf)); if(r.stale && r.known) parts.push('stale');
-  }
-  const cells = vals.mom === vals.comp
-    ? `<div class="bd-rc" data-bd-rs-budget><small>New-entry budget</small><b class="${cc(vals.mom)}">${pc(vals.mom)}</b></div>`
-    : `<div class="bd-rc" data-bd-rs-mom><small><span class="bd-lf">Momentum</span><span class="bd-ls">Mom</span></small><b class="${cc(vals.mom)}">${pc(vals.mom)}</b></div><div class="bd-rc" data-bd-rs-comp><small><span class="bd-lf">Compounder</span><span class="bd-ls">Comp</span></small><b class="${cc(vals.comp)}">${pc(vals.comp)}</b></div>`;
-  return `<div class="bd-sh bd-rsh">${bdNb(1)}<b>Risk · how much to deploy</b></div><div class="panel bd-rs" data-bd-rs>${bdNb(1)}${cells}<button type="button" class="bd-rc bd-rg2" data-bd-regime data-rg-label="${escHtml(E.line)}" data-rm1-pc="${E.pc}" onclick="tdRegimeGo()"><i class="${cls}"></i><span data-bd-reason>${escHtml(parts.join(' · '))}</span></button></div>`;
-}
 function bdWkDoc(){ const wk = bdMacroWkKey(); return wiDocs[bdMacroWk === 0 ? wiCurMon() : Calc.wiMondayOfStrategy(wk)] || null; }
 function bdMacroItems(doc){
   const wk = bdMacroWkKey(), picks = satWeekPickList(wk);
@@ -29026,25 +28692,9 @@ function pvFlowPanelHtml(it, cur){
     <div class="pv-grid"><div><h4>Why it matters this week</h4>${why}<h4>Catalysts</h4>${cat}<div class="pv-src" data-pv-src>${srcH ? 'Sources: ' + srcH : ''}${srcH && asof ? ' · ' : ''}${asof}</div></div>
     <div><h4>Quarter view (Playbook)</h4>${qv}<div class="pv-mine" data-bd-ex="${k}"><h4>Your note · this week</h4><textarea id="bdn-${k}" data-bd-note="${k}" rows="4" maxlength="600" placeholder="This week's view, one paragraph"${cur ? '' : ' disabled'} onchange="bdNoteSave('${k}',this.value)">${e(note)}</textarea></div></div></div></div>`;
 }
-function bdMcHtml(it, cur){
-  const e = bdE, k = e(it.key), open = bdMacOpen.has(it.key);
-  const star = `<button type="button" class="bd-star${it.star ? ' on' : ''}" data-bd-focus="${k}" aria-pressed="${it.star}" aria-label="${it.star ? 'Unfocus' : 'Focus'} ${k} this week"${cur ? '' : ' disabled'} onclick="event.stopPropagation();bdFocusToggle('${k}')">${it.star ? '★' : '☆'}</button>`;
-  let reason = ''; try{ const en = it.doc ? wiEntry(it.key, it.doc) : null; reason = String((en && en.note) || '').trim(); }catch(x){}   /* PB1d §2 — THIS WEEK's reason from Weekly Impact */
-  return `<div class="bd-ac${open ? ' open' : ''}" data-bd-mc="${k}" data-bd-tier="${it.tier || 'NONE'}" onclick="bdCardTog('${k}')"><div class="bd-an"><b>${e(bdAsShort(it.key))}</b><span class="bd-lv ${it.tier || 'NA'}">${it.tier || '—'}</span><span class="sp"></span>${star}</div><p class="bd-av${reason ? '' : ' m'}" data-bd-reason>${e(reason || (it.doc ? 'Not in this week\'s Weekly Impact' : 'No Weekly Impact yet'))}</p><div class="bd-ai"><span class="bd-bias ${it.bias.k}">${e(it.bias.t)}</span><span class="m">quarter bias</span><button type="button" class="bd-det" data-bd-det="${k}" aria-expanded="${open}" aria-controls="pvp-${k}" onclick="event.stopPropagation();bdCardTog('${k}')">${open ? 'Close ▴' : 'Details ▾'}</button></div></div>`;
-}
 function bdCardTog(k){ const was = bdMacOpen.has(k); bdMacOpen.clear(); if(!was) bdMacOpen.add(k); bdFlowTopRender(); try{ const c = document.querySelector('[data-bd-det="' + k + '"]'); if(c) c.focus(); }catch(x){} }   /* PV1 — one open panel at a time */
 function bdMacMoreSet(v){ bdMacMore = !!v; bdFlowTopRender(); }
 function bdNoteSave(k, v){ try{ satwSetOpinion(k, v); }catch(x){ console.warn('bd note:', x); } setTimeout(()=>{ try{ bdFlowTopRender(); }catch(x){} }, 0); }
-function bdEventsHtml(){
-  const e = bdE, hd = (extra)=>`<div class="bd-sh bd-evh">${bdNb(3)}<b>Events to watch</b><small class="bd-hint">Thai time · HIGH + MED</small><span class="sp"></span>${extra}</div>`;
-  if(!wiLoaded) return hd('') + `<div class="bd-evr bd-evr0" data-bd-events><span class="m">Loading events…</span></div>`;
-  if(wiErr) return hd('') + `<div class="bd-evr bd-evr0" data-bd-events><span class="m">Weekly Impact unavailable</span> · <button type="button" class="bd-lnk" data-bd-import onclick="wiOpenPaste()">Import</button></div>`;
-  const hasDoc = !!(wiCurDoc() || wiDocs[Calc.wiAddDays(wiCurMon(), -7)]);
-  const all = bdUpcoming().filter(o=>o.tier === 'HIGH' || o.tier === 'MED');
-  if(!all.length) return hd('') + `<div class="bd-evr bd-evr0" data-bd-events data-bd-evn="0"><span class="m">${hasDoc ? 'No HIGH / MED events coming up this week' : 'No Weekly Impact yet'}</span> · <button type="button" class="bd-lnk" data-bd-import onclick="wiOpenPaste()">Import</button></div>`;
-  const L = all.slice(0, 5), pill = o=>`<div class="bd-ev" data-bd-ev="${e(o.id)}"><span class="tm">${e(bdEvWhen(o.e))}</span><span class="bd-lv ${o.tier}">${o.tier}</span><b>${e(String(o.e.title || o.e.label_th || '').slice(0, 28))}</b><span class="as">${e(o.assets.map(bdAsShort).join(' · '))}</span></div>`;
-  return hd(`<button type="button" class="bd-lnk bd-fwp" data-bd-fullweek-p onclick="bdFullWeek()">Full week ›</button><button type="button" class="bd-lnk bd-impm" data-bd-import onclick="wiOpenPaste()">Import</button>`) + `<div class="bd-evr" data-bd-events data-bd-evn="${L.length}">${L.map(pill).join('')}<button type="button" class="bd-ev bd-fw" data-bd-fullweek onclick="bdFullWeek()">Full week${all.length > L.length ? ' (' + all.length + ')' : ''} ›</button></div>`;
-}
 /* RRG per-sector motion = the EXISTING per-sector calc (rrgSpeed on the RS-momentum change · same data as the ⚡ speeding up / slowing fast tags) */
 function bdMotion(x){ const sp = rrgSpeed(x && x.dMom); return sp.fast ? (sp.dir > 0 ? 'up' : 'fast') : 'slow'; }
 const BD_MV = {up:['↗', 'speeding up'], slow:['→', 'slowing'], fast:['↘', 'slowing fast']};
@@ -29087,19 +28737,6 @@ function tw1TipHide(){
   document.addEventListener('contextmenu', e=>{ if(hit(e) && (tw1LpDone && Date.now() - tw1LpDone < 3000 || e.pointerType === 'touch' || 'ontouchstart' in window)) e.preventDefault(); }, true);   /* no callout popup after a long-press */
   window.addEventListener('scroll', tw1TipHide, {passive:true, capture:true});
 })();
-function bdRrgHtml(){
-  const e = bdE, tf = rrgTf(), ok = bdRrgRows();
-  const tiles = BD_RQ.map(q=>{
-    const all = ok.filter(x=>x.quad === q[0]).sort((a, b)=>b.ratio - a.ratio), open = !!bdRrgMore[q[0]], vis = open ? all : all.slice(0, 3), hid = all.length - vis.length;
-    const rsv = x=>{ const v = (+x.ratio || 100) - 100; return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1); };
-    const rows = vis.map(x=>{ const m = BD_MV[bdMotion(x)]; return `<div class="bd-sr" data-bd-sec="${e(x.sym)}" data-bd-mv="${bdMotion(x)}"${tw1NameAttr(x.sym)}><span class="sy">${e(x.sym)}</span><em class="mv ${bdMotion(x)}">${m[0]}<span class="mt"> ${m[1]}</span></em><i>${rsv(x)}</i></div>`; }).join('');
-    const inl = vis.map(x=>`<span class="il" data-bd-mv="${bdMotion(x)}"${tw1NameAttr(x.sym)}>${e(x.sym)}<em class="mv ${bdMotion(x)}">${BD_MV[bdMotion(x)][0]}</em></span>`).join('');
-    const mo = hid > 0 ? `<button type="button" class="bd-qm" data-bd-qmore="${q[0]}" onclick="bdRrgMoreSet('${q[0]}',true)">+${hid}</button>` : (open && all.length > 3 ? `<button type="button" class="bd-qm" data-bd-qmore="${q[0]}" onclick="bdRrgMoreSet('${q[0]}',false)">less</button>` : '');
-    return `<div class="panel bd-qt" data-bd-quad="${q[0]}"><b style="color:${q[3]}">${q[1]}</b><div class="qs">${q[2]}</div><div class="bd-qr">${rows || '<span class="m">—</span>'}</div><div class="bd-qi">${inl || '<span class="m">—</span>'}</div>${mo}</div>`;
-  }).join('');
-  const tip = 'Relative = vs SPY, not price going up/down. Motion = RS momentum over the last bars (↗ speeding up · → slowing · ↘ slowing fast). SMH · ROBO · IGV · HACK overlap heavily — breadth is not four independent votes.';
-  return `<div class="bd-sh">${bdNb(4)}<b><span class="bd-lf">RRG · sectors vs SPY</span><span class="bd-ls">RRG · vs SPY</span></b><button type="button" class="bd-info" data-bd-rrginfo title="${e(tip)}" aria-label="How to read" onclick="sdToast(this.title)">ⓘ</button><span class="sp"></span><span class="ffSeg bd-seg" data-bd-rrgtf><button type="button" class="${tf === 'D' ? 'on-cur' : ''}" onclick="rrgSetTf('D')">Daily</button><button type="button" class="${tf === 'W' ? 'on-cur' : ''}" onclick="rrgSetTf('W')">Weekly</button></span></div><div class="bd-g bd-g4 bd-rq" data-bd-rrg>${tiles}</div><div class="bd-leg" data-bd-rrgleg>↗ speeding up · → slowing · ↘ slowing fast (per sector)</div>`;
-}
 function bdFullWeek(){ bdOpenRow('wi'); }
 function bdRrgMoreSet(q, v){ bdRrgMore[q] = !!v; bdFlowTopRender(); }
 /* ══ LR4 — Flow tab matches Flow.dc.html / FlowPhone.dc.html: header · glance · asset tiles · RRG chart + speed list · Calendar / Macro tabs · Details. Same data as before (no new source, no RRG / regime change). ══ */
@@ -29462,30 +29099,6 @@ function wl1Sort(rows){
 function wl1ArchRows(A){ return (A.wl || []).filter(r=>r.item && r.item.archived === true && wl1TrkOf(r.item) === wl1Trk).sort((a, b)=>String(b.item.archived_at || '').localeCompare(String(a.item.archived_at || ''))); }
 function wl1ArchDate(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m ? Number(m[3]) + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(m[2]) - 1] : '—'; }
 function wl1ArchToggle(){ wlArchOpen = !wlArchOpen; renderWatchlist(); }
-function wl1ArchHtml(A){
-  const L = wl1ArchRows(A); if(!L.length) return '';
-  const e = escHtml;
-  const rows = wlArchOpen ? `<div class="wl1-arch-rows" data-wl1-arch-rows>${L.map(r=>{ const it = r.item, d = String(it.archived_at || '').slice(0, 10), rs = String(it.archived_reason || '').trim();
-    return `<div class="wl1-arch-r" data-wl1-arch-row="${e(r.sym)}"><b>${e(wl1Bare(r.sym))}</b><span class="d">${d ? e(wl1ArchDate(d)) : '—'}</span><span class="rs" title="${e(rs)}">${rs ? e(rs) : '—'}</span><button type="button" class="small" data-wl-restore onclick="event.stopPropagation();wlRestore('${e(it.ticker)}')">Restore</button></div>`; }).join('')}</div>` : '';
-  return `<div class="wl1-arch" data-wl1-arch><button type="button" class="wl1-arch-b" data-wl1-arch-toggle aria-expanded="${wlArchOpen}" onclick="wl1ArchToggle()">${wlArchOpen ? 'Show less ‹' : `Archived (${L.length}) ›`}</button>${rows}</div>`;
-}
-function wl1RowHtml(r){
-  const it = r && r.item; if(!it) return '';
-  const e = escHtml, st = wl1Status(it), done = wl1HwDone(it), miss = wl1HwMissing(it), req = wl1HwReq(it), ex = wl1Exch(it);
-  const hwTxt = done ? '✓ homework done' : (miss.length === req.length ? 'homework not started' : 'homework · ' + miss.map(x=>x.s).join(' · ') + ' missing');
-  const act = !done ? `<button type="button" class="wl1-act p" data-wl1-act onclick="event.stopPropagation();wlOpen('${e(it.ticker)}')">Do homework ›</button>` : `<button type="button" class="wl1-act" data-wl1-act onclick="event.stopPropagation();wlOpen('${e(it.ticker)}')">Open ›</button>`;
-  return `<div class="wlR wl1-row${wlSel === r.sym ? ' on' : ''}" data-sym="${e(r.sym)}" data-wl1-row data-wl1-status="${st.k}" data-wl1-key="${e(wl1KeyOf(it))}" onclick="wlOpen(this.dataset.sym)">
-    <div class="l1"><b class="wlRn">${e(wl1Bare(r.sym))}</b>${ex ? `<small class="wl1-ex">${e(ex)}</small>` : wl1ExSelHtml(it)}<span class="wl1-st ${st.cls}" data-wl1-chip>${e(st.label)}</span></div>
-    <div class="l2"><span class="wl1-cap-tag c${done ? 100 : 50}" data-wl1-captag>${done ? 100 : 50}%</span><span class="wl1-hwt${done ? ' ok' : ' no'}" data-wl1-hwt>${e(hwTxt)}</span>${act}</div></div>`;
-}
-function wl1Head(A, rows){
-  const all = A.wl.filter(r=>!(r.item && r.item.archived === true)), nM = all.filter(r=>wl1TrkOf(r.item) === 'winner').length, nC = all.length - nM;
-  const need = rows.filter(r=>wl1Status(r.item).k !== 'none' && !wl1HwDone(r.item)).length;
-  const seg = (k, n)=>`<button type="button" class="${wl1Trk === k ? 'on' : ''}" data-wl1-seg="${k}" aria-pressed="${wl1Trk === k}" onclick="wl1TrkSet('${k}')">${WL1_TRK_L[k]} <span>${n}</span></button>`;
-  return `<div class="wlHead wl1-hd" data-wl1-hd><div class="wl1-seg" data-wl1-segs>${seg('winner', nM)}${seg('ladder', nC)}</div>
-    <div class="wl1-sumrow"><span class="wl1-sum" data-wl1-sum>${rows.length} stock${rows.length === 1 ? '' : 's'}${need ? ` · <b>${need} need${need === 1 ? 's' : ''} homework</b>` : ''}</span><span class="wl1-ic">
-    <button type="button" class="ic" data-wl1-ideas title="Ideas" aria-label="Ideas" onclick="wlSetView('idea')">💡</button><button type="button" class="ic" data-wl1-import title="Import from TradingView" aria-label="Import from TradingView" onclick="wl1ImpOpen()">⇩</button></span></div></div>`;
-}
 
 /* ═══ LR5a — Watch tab as in docs/briefs/lr/Watch.dc.html + WatchPhone.dc.html ═══
    One table row per stock (Stock · Status · Sector vs SPY · RS · Thesis · homework · Next check · one action) + detail panel (bottom sheet on phone).
@@ -29494,7 +29107,6 @@ const WL5_SORTS = [['default', 'Default'], ['rs', 'RS high first'], ['nearhigh',
 const WL5_FILTERS = [['all', 'All'], ['hold', 'Holding'], ['plan', 'Plan ready'], ['none', 'No plan'], ['need', 'Needs homework']];
 let wl5Sort = 'default', wl5Filter = 'all', wl5Q = '', wl5FullSym = '';
 try{ const s = localStorage.getItem('dash.wl5Sort'), f = localStorage.getItem('dash.wl5Filter'); if(WL5_SORTS.some(x=>x[0] === s)) wl5Sort = s; if(WL5_FILTERS.some(x=>x[0] === f)) wl5Filter = f; }catch(e){}
-function wl5Sym(it){ return escHtml(it.ticker); }
 function wl5Status(it){
   const st = wl1Status(it);
   if(st.k === 'hold') return {k:st.k, label:'Holding', cls:'hold', tip:'Holding'};
