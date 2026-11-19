@@ -425,7 +425,7 @@ def run_guarantees(pw):
         check("Place order IS blocked by the engine when a limit is hit (4 ideas reserved)", g["ok"] is False and "ammunition" in g["msg"].lower(), g)
         js(page, "()=>{ document.getElementById('setOverlay').classList.remove('show'); switchTab('plan'); }"); page.wait_for_timeout(300)
         js(page, "()=>{ coreBuy1Open('cQ'); document.getElementById('cbPx').value='50'; document.getElementById('cbQty').value='40'; coreBuy1In(); }"); page.wait_for_timeout(200)
-        check("Filled ✓ over a cap: Save stays enabled and the form says it is accepted + flagged", js(page, "()=>!document.getElementById('cbSave').disabled") and "flagged" in js(page, "()=>document.getElementById('cbErr').innerText"), js(page, "()=>document.getElementById('cbErr').innerText"))
+        check("Filled ✓ over a cap: Save stays enabled and the form says it is recorded anyway (amber)", js(page, "()=>!document.getElementById('cbSave').disabled") and "Recorded anyway" in js(page, "()=>document.getElementById('cbErr').innerText"), js(page, "()=>document.getElementById('cbErr').innerText"))
         shot(page, "fill-flagged-over-cap-1440")
         js(page, "()=>coreBuy1Save()"); page.wait_for_timeout(400)
         fl = js(page, "()=>getBook('main').trades.find(t=>t.sym==='NEWQ')")

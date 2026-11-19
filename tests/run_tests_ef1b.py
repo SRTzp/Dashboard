@@ -24,7 +24,7 @@ def has(page, sel):
 def seed_n(page, n):
     js(page, """(n)=>{ for(let k=1;k<=n;k++) sat7dWrite('satIdeas','xp'+k,{id:'xp'+k,v3:true,v2:true,asset:'XAUUSD',bias:'Long',entry:2642+k,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[],pb_acct:'main'}); }""", n)
     page.wait_for_timeout(600); refresh(page)
-    js(page, "()=>{ window.ps1MinStopMsg = ()=>''; re1Cache = {}; satWeekPickWrite(wpWeekKey(), ['XAUUSD']); switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)
+    js(page, "()=>{ re2GrpAll = {}; window.ps1MinStopMsg = ()=>''; re1Cache = {}; satWeekPickWrite(wpWeekKey(), ['XAUUSD']); switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)
 
 
 def enter_rows(page):
@@ -38,17 +38,18 @@ def run(pw, w, h):
         seed_n(page, 5)
         n_ready = js(page, "()=>bdItems().filter(i=>i.status==='plan' && re2ReadyOf(i)).length")
         check("[%s] 1 fixture: 5 Ready plans" % tag, n_ready == 5, n_ready)
-        check("[%s] 1 Today › Enter shows 3 Ready plans + '+2 ›'" % tag, enter_rows(page) == 3 and txt(page, "[data-re2-more]") == "+2 ›", [enter_rows(page), txt(page, "[data-re2-more]")])
-        check("[%s] 1 header count = rows shown (3)" % tag, txt(page, "[data-re2-col=enter] [data-re2-n]") == "3")
+        cap = 3 if w > 600 else 2; mtxt = "+2 ›" if w > 600 else "+3 more ›"   # LR-F: phone shows 2 rows per group
+        check("[%s] 1 Today › Enter shows %d Ready plans + '%s'" % (tag, cap, mtxt), enter_rows(page) == cap and txt(page, "[data-re2-more]") == mtxt, [enter_rows(page), txt(page, "[data-re2-more]")])
+        check("[%s] 1 header count = rows shown (%d)" % (tag, cap), txt(page, "[data-re2-col=enter] [data-re2-n]") == str(cap))
         if w == 390: shot(page, "today-390-collapsed")
         if w == 1440: shot(page, "today-1440-collapsed")
         page.click("[data-re2-more]"); page.wait_for_timeout(300)
         check("[%s] 1 '+2 ›' expands in place: 5 rows, still on Today" % tag, enter_rows(page) == 5 and js(page, "()=>activeTab") == 'today', enter_rows(page))
         if w == 390: shot(page, "today-390-expanded")
         page.click("[data-re2-more]"); page.wait_for_timeout(300)
-        check("[%s] 1 'Show less' collapses back to 3" % tag, enter_rows(page) == 3)
+        check("[%s] 1 'Show less' collapses back to %d" % (tag, cap), enter_rows(page) == cap)
         js(page, "()=>{ bdItems().filter(i=>i.status==='plan').slice(0,2).forEach(i=>sat7dWrite('satIdeas', i.id, {status:'cancelled', archived:true})); refresh_=1; re1Cache={}; todayRefresh(true); }"); page.wait_for_timeout(400)
-        check("[%s] 1 3 or fewer Ready plans: no '+N' button" % tag, not has(page, "[data-re2-more]") and enter_rows(page) <= 3, enter_rows(page))
+        check("[%s] 1 3 or fewer Ready plans: no '+N' button" % tag, (w <= 600 or not has(page, "[data-re2-more]")) and enter_rows(page) <= cap, enter_rows(page))
         check("[%s] 1 no overflow / errors" % tag, no_overflow(page) and not ce and not pe, ce + pe)
     finally:
         b.close()
@@ -144,11 +145,11 @@ def run2(pw, w, h):
         check("[%s] S Place order › visible on the card, not under 'Waiting for setup'" % tag, has(page, "[data-bd-card=cP] [data-bd-pill=place]") and not has(page, "[data-bd-wait]"))  # LR3: no Waiting row
         page.click("[data-bd-card=cP] [data-bd-pill=place]"); page.wait_for_timeout(350)
         sh = txt(page, "[data-ef-core-place]")
-        check("[%s] S confirm sheet shows one line 'Setup ready today ✓', unticked when the tag is off" % tag, "Setup ready today ✓" in sh and js(page, "()=>document.getElementById('efSetupCk').checked") is False, sh)
+        check("[%s] S confirm sheet shows NO visible Setup checkbox; the hidden #efSetupCk stays, checked (LR-F2 11)" % tag, "Setup ready today" not in sh and js(page, "()=>{ const c = document.getElementById('efSetupCk'); return !!c && c.checked && c.getClientRects().length === 0; }"), sh)
         if w == 390: shot(page, "setup-sheet-390")
-        page.click("#efSetupCk"); page.click("[data-pb2-yes]"); page.wait_for_timeout(500)
+        page.click("[data-pb2-yes]"); page.wait_for_timeout(500)   # LR-F2 11: Confirm without touching anything
         v = js(page, "()=>({d:(getBook(tdHome()).settings.tvSetup||{})[wlSymKey('AVGO')], t:tv1Today()})")
-        check("[%s] S Confirm with the tick writes tvSetup[AVGO] = today (LN4 stats)" % tag, v["d"] == v["t"], v)
+        check("[%s] S Confirm (nothing touched) writes tvSetup[AVGO] = today (LN4 stats) and Watch shows 'Setup ✓'" % tag, v["d"] == v["t"] and js(page, "()=>tv1GroupOf({sym:'AVGO', port:'core'})") == "Setup ✓", v)
         check("[%s] S order recorded" % tag, js(page, "()=>!!(coreCardsList.find(y=>y.id==='cP').ln4||{}).placedAt"))
     finally:
         b.close()
@@ -166,7 +167,7 @@ def run2(pw, w, h):
         row = js(page, "()=>{const r=document.querySelector('[data-re2-col=enter] [data-re2-row]'); return r? r.innerText.replace(/\\s+/g,' ') : ''}")
         line = txt(page, "[data-re2-col=enter] [data-re2-cardline]")
         import re as _re
-        check("[%s] T Enter row text = card format 'Buy #q @ px · SL · TP · Risk −$'" % tag, _re.search(r"Buy #[\d.]+ @ [\d,.]+ · SL [\d,.]+ · TP [\d,.]+ · Risk −\$", line or "") is not None, line)
+        check("[%s] T Enter row text = card format 'Buy #q @ px · SL · TP · Risk −$'" % tag, _re.search((r"Buy #[\d.]+ @ [\d,.]+ · SL [\d,.]+ · TP [\d,.]+ · Risk −\$" if w > 600 else r"Buy #[\d.]+ @ [\d,.]+ · SL [\d,.]+ · Risk −\$"), line or "") is not None, line)
         check("[%s] T no 'plan … lot' / 'ready' / 'step' text on the row" % tag, not _re.search(r"plan |ready|step \d", row), row)
         if w == 390: shot(page, "today-row-390")
         if w == 1440: shot(page, "today-row-1440")
@@ -197,7 +198,7 @@ def run2(pw, w, h):
         js(page, "(id)=>bdPlaceLv(id,1)", cid); page.wait_for_timeout(400)
         r = txt(page, "[data-ef-order-risk]")
         import re as _re
-        check("[%s] L level sheet: 'This order: Buy #18 @ 140 · +Risk ฿… · total risk after fill x%%'" % tag, _re.match(r"This order: Buy #18 @ 140 · \+Risk ฿[\d.]+k? · total risk after fill [\d.]+%", r or "") is not None, r)
+        check("[%s] L level sheet: 'This order: Buy #18 @ 140 · +Risk ฿… · total risk after fill x%%'" % tag, _re.match(r"This order: Buy #18 @ 140 · \+Risk \$[\d.]+k? · total risk after fill [\d.]+%", r or "") is not None, r)
         check("[%s] L level sheet has no Setup tick (first level only)" % tag, not has(page, "#efSetupCk"))
         if w == 390: shot(page, "level-sheet-risk-390")
         check("[%s] L no overflow / errors" % tag, no_overflow(page) and not ce and not pe, ce + pe)
@@ -211,8 +212,8 @@ def run3(pw, w, h):
     try:
         js(page, "()=>{ tv1SetupLeft = (sym, held)=>{ const at = tv1SetupAt(sym); if(!at) return 0; return 1; }; window.ps1MinStopMsg=()=>''; window.ftHwDone=()=>true; window.wl1HwDone=()=>true; re1Cache={}; switchTab('plan'); bdRender(); }"); page.wait_for_timeout(500)
         card_t = js(page, "()=>document.querySelector('[data-bd-card=cP]').innerText.replace(/\\s+/g,' ')")
-        check("[%s] M card: Risk −฿540 · Reward +฿2,836 · 5.3R (legs × FX 33.76; stored ps1.riskMoney ignored)" % tag, "Risk −฿540" in card_t and "Reward +฿2,836" in card_t and "5.3R" in card_t, card_t)
-        check("[%s] M card has no '$' on a ฿ value" % tag, "$" not in card_t, card_t)
+        check("[%s] M card: Risk −$16 · Reward +$84 · 5.3R (legs × FX 33.76; stored ps1.riskMoney ignored)" % tag, "Risk −$16" in card_t and "Reward +$84" in card_t and "5.3R" in card_t, card_t)
+        check("[%s] M card has no '฿' on a $ value (Main = USD)" % tag, "฿" not in card_t, card_t)
         pv = js(page, "()=>{const p=posView(bdItems().find(i=>i.id==='cP')); return {r:p.plannedRisk, w:p.reward, R:p.rewardR, st:p.plannedRiskStored, d:p.plannedRiskDiff}}")
         check("[%s] M posView: risk 540.16 · reward 2835.84 · R 5.25 · stored kept aside + flagged" % tag, abs(pv["r"] - 540.16) < 0.01 and abs(pv["w"] - 2835.84) < 0.01 and abs(pv["R"] - 5.2500) < 0.01 and pv["st"] and pv["d"], pv)
         r1 = js(page, "()=>{const r=document.querySelector('[data-bd-card=cP] .pv-r1'); const t=[...r.children].map(e=>Math.round(e.getBoundingClientRect().top)); const x=r.querySelector('.bd-cxx').getBoundingClientRect(), p=r.querySelector('[data-bd-pill]').getBoundingClientRect(); return {one: Math.abs(x.top - p.top) < 14, xr:x.right, cr:r.getBoundingClientRect().right}}")
@@ -220,10 +221,10 @@ def run3(pw, w, h):
         if w == 390: shot(page, "card-header-390")
         page.click("[data-bd-card=cP] [data-bd-pill=place]"); page.wait_for_timeout(400)
         sh = txt(page, "[data-ef-core-place]")
-        check("[%s] M sheet shows the same Risk −฿540 · Reward +฿2,836 · 5.3R (LR3: Risk / Reward / Size tiles)" % tag, "RISK −฿540" in sh.upper() and "REWARD +฿2,836" in sh.upper() and "5.3R" in sh and "$" not in sh, sh)
+        check("[%s] M sheet shows the same Risk −฿540 · Reward +฿2,836 · 5.3R (LR3: Risk / Reward / Size tiles)" % tag, "RISK −$16" in sh.upper() and "REWARD +$84" in sh.upper() and "5.3R" in sh and "฿" not in sh, sh)
         more = js(page, "()=>{const d=document.querySelector('[data-ef-more]'); return d? d.innerText : ''}")
         diff = js(page, "()=>{const e=document.querySelector('[data-ef-risk-diff]'); return e ? e.textContent : ''}")
-        check("[%s] M More flags that the stored plan risk differs from the legs" % tag, "differs from the legs" in (diff or "") and "36.1k" in diff, diff)
+        check("[%s] M More flags that the stored plan risk differs from the legs" % tag, "differs from the legs" in (diff or "") and "$1.1k" in diff, diff)
         if w == 390: shot(page, "sheet-money-390")
     finally:
         b.close()
