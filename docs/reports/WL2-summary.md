@@ -31,3 +31,6 @@ nowrap, shrinks inside its cell (`overflow:hidden`), no overlap with the status 
 
 ## Tests
 `tests/run_tests_wl2.py` (64 checks at 1440 / 390 / 360), `lr5a` expectations updated (header "RS · from high", phone "new high" chip). Added to `run_regression.sh`. Hooks superset unchanged; no engine changes.
+
+## Final regression
+`bash tests/run_regression.sh` after the RS-card move (rebased on origin/main): **62/62 ok · 0 failing** (1131s). Hooks superset PASS. Branch diff vs origin/main contains only WL2 files (screenshots under `tests/screenshots/wl2/`, force-added because the folder is gitignored).
