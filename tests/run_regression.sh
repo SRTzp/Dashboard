@@ -21,6 +21,7 @@ FAST=(
   "sync_pv1|python3 tools/sync_pv1.py --check"
   "rrg_verify (app rrgCompute == pandas)|python3 tests/rrg_verify_test.py"
   "rrg_close_cut (ET 16:15 fake clock)|node tests/rrg_close_cut_test.js"
+  "rrg_hold (RRG hold rule)|python3 tests/rrg_hold_test.py"
   "rrg_data_check selftest (offline)|python3 scripts/rrg_data_check.py --selftest"
   "node risk_engine|node tests/risk_engine_test.js"
   "node re1_adapter|node tests/re1_adapter_test.js"
@@ -34,7 +35,7 @@ FAST=(
 )
 # ---- browser suites (python): the core set, then the rest
 CORE="run_tests_pv1 run_tests_re1d run_tests_re1c run_tests_re1c2 run_tests_re1b run_tests_ts1 run_tests_ts1b run_tests_phase364 run_tests_phase374 run_tests_phase375 run_tests_phase372 run_tests_phase370"
-REST="run_tests run_tests_phase1 run_tests_phase2 run_tests_phase10 run_tests_phase19 run_tests_phase20 run_tests_phase35 run_tests_phase49 run_tests_phase50 run_tests_phase51 run_tests_phase57 run_tests_phase363 run_tests_phase_sw2 run_tests_phase122 run_tests_phase365 run_tests_phase366 run_tests_phase367 run_tests_phase373 run_tests_phase_cg1 run_tests_phase_ht1 run_tests_sh1 run_tests_sh2 run_tests_lr1 run_tests_lr2 run_tests_lr3 run_tests_lrf run_tests_lrf2 run_tests_ef1b run_tests_lr4"
+REST="run_tests run_tests_phase1 run_tests_phase2 run_tests_phase10 run_tests_phase19 run_tests_phase20 run_tests_phase35 run_tests_phase49 run_tests_phase50 run_tests_phase51 run_tests_phase57 run_tests_phase363 run_tests_phase_sw2 run_tests_phase122 run_tests_phase365 run_tests_phase366 run_tests_phase367 run_tests_phase373 run_tests_phase_cg1 run_tests_phase_ht1 run_tests_sh1 run_tests_sh2 run_tests_lr1 run_tests_lr2 run_tests_lr3 run_tests_lrf run_tests_lrf2 run_tests_ef1b run_tests_lr4 run_tests_lr5a"
 if [ $QUICK = 1 ]; then BROWSER="$CORE"; else BROWSER="$CORE $REST"; fi
 
 line() { # name rc seconds log
