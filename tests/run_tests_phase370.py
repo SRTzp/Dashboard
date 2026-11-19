@@ -89,7 +89,7 @@ def run(pw):
         page.locator('[data-wl1-row][data-sym="AAA"]').click(); settle(page, 300)
         js(page, "()=>wlBack && wlBack()"); settle(page, 300)
         scan(page, tag, "watch", "#watchGroups")
-        rows = js(page, "()=>[...document.querySelectorAll('[data-wl1-row] .l1')].map(e=>(()=>{ const c=[...e.children].map(k=>{const r=k.getBoundingClientRect(); return r.top+r.height/2;}); return Math.max(...c)-Math.min(...c) < 12 ? 1 : 2; })())")
+        rows = js(page, "()=>[...document.querySelectorAll('[data-wl1-row] .lr5-id')].map(e=>(()=>{ const c=[...e.children].map(k=>{const r=k.getBoundingClientRect(); return r.top+r.height/2;}); return Math.max(...c)-Math.min(...c) < 12 ? 1 : 2; })())")
         check(f"{tag} watch: symbol · exchange · status chip on one line", rows and all(x == 1 for x in rows), rows)
         # Core form
         js(page, "()=>{ switchTab('plan'); setPlanScope('stock'); }"); settle(page, 500)
