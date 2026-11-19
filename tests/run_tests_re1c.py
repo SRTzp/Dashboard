@@ -284,7 +284,7 @@ def run_logic(pw):
         check("Emergency on at a confirmed snapshot (−12% from month start) — Main only", st["em"] and not fm["em"] and st["eF"] == 0.5, [st, fm])
         plan_form(page, "AMD", 182.5, 170)
         check("form shows 'emergency 50%' in the formula", "emergency 50%" in box(page), box(page))
-        js(page, "()=>{ document.getElementById('setOverlay').classList.remove('show'); coreSheetClose(); switchTab('mix'); }"); page.wait_for_timeout(600)
+        js(page, "()=>{ document.getElementById('setOverlay').classList.remove('show'); coreSheetClose(); switchTab('mix'); const m = document.querySelector('[data-lr5c-more]'); if(m) m.open = true; }"); page.wait_for_timeout(600)   # LR5c — the old Port sections live under More
         page.add_style_tag(content=NOANIM)
         blocks = js(page, "()=>document.querySelectorAll('[data-re1-port]').length")
         check("Port shows one risk block per account (2, never combined)", blocks == 2, blocks)
@@ -376,7 +376,7 @@ def run_logic(pw):
     try:
         st = js(page, "()=>re1L('main').comp.streak")
         check("six consecutive losing ticker-cycles → Compounder locked", st["locked"] is True, st)
-        js(page, "()=>{ coreSheetClose && coreSheetClose(); switchTab('mix'); }"); page.wait_for_timeout(500)
+        js(page, "()=>{ coreSheetClose && coreSheetClose(); switchTab('mix'); const m = document.querySelector('[data-lr5c-more]'); if(m) m.open = true; }"); page.wait_for_timeout(500)
         check("Port shows the unlock flow (note + confirm)", js(page, "()=>!!document.querySelector('[data-re1-unlock]')"))
         js(page, "()=>{ document.getElementById('re1UnN_main').value='reviewed'; document.getElementById('re1UnC_main').checked=true; re1Unlock('main'); }"); page.wait_for_timeout(300)
         er = js(page, "()=>document.getElementById('re1UnE_main').innerText")
