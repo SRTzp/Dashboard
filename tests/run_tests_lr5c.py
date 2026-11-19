@@ -8,8 +8,8 @@ import net_stub
 from re1d_common import js, check, results
 import lr5c_common as C
 
-THAI = """()=>{ const out = []; const w = document.createTreeWalker(document.getElementById('lr5cHost'), NodeFilter.SHOW_TEXT); let n; while(n = w.nextNode()){ if(/[\\u0E00-\\u0E3E\\u0E40-\\u0E7F]/.test(n.nodeValue)) out.push(n.nodeValue.trim().slice(0, 60)); }
-  document.querySelectorAll('#lr5cHost [title],#lr5cHost [aria-label]').forEach(e=>['title', 'aria-label'].forEach(a=>{ const v = e.getAttribute(a); if(v && /[\\u0E00-\\u0E3E\\u0E40-\\u0E7F]/.test(v)) out.push('@' + a + ' ' + v.slice(0, 60)); })); return out; }"""
+THAI = """()=>{ const out = []; const w = document.createTreeWalker(document.getElementById('tabMix'), NodeFilter.SHOW_TEXT); let n; while(n = w.nextNode()){ if(/[\\u0E00-\\u0E3E\\u0E40-\\u0E7F]/.test(n.nodeValue)) out.push(n.nodeValue.trim().slice(0, 60)); }
+  document.querySelectorAll('#tabMix [title],#tabMix [aria-label],#tabMix [placeholder]').forEach(e=>['title', 'aria-label'].forEach(a=>{ const v = e.getAttribute(a); if(v && /[\\u0E00-\\u0E3E\\u0E40-\\u0E7F]/.test(v)) out.push('@' + a + ' ' + v.slice(0, 60)); })); return out; }"""
 # by hand (fx 33): AAPL 30×200×33 = 198,000 · XAU 0.05×2640×100×33 = 435,600 · NVDA (11+5)×100×33 = 52,800 · PTT 3,000×33 = 99,000 · S50 notional 4×900×200 = 720,000
 HAND = {"AAPL": 198000, "XAUUSD": 435600, "NVDA": 52800, "PTT.BK": 99000, "S50": 720000}
 # stops: AAPL 10×30×33 = 9,900 · XAU 40×0.05×100×33 = 6,600 · NVDA 5×11×33 + 5×5×33 = 2,640 · PTT 3×3,000 = 9,000 · S50 20×4×200 = 16,000
@@ -36,9 +36,12 @@ def run(pw, w, h):
         if ph:
             check(f"{tag} B: phone rows are 2 lines (ticker·tag·total / qty·stop) and ≤ 76px", all(r["lines"] == 2 and r["h"] <= 76 for r in rows), [(r["k"], r["lines"], r["h"]) for r in rows])
         else:
-            pcts = js(page, "()=>{ const o = {}; document.querySelectorAll('tbody [data-lr5c-row]').forEach(r=>o[r.dataset.lr5cRow] = parseFloat(r.querySelector('[data-lr5c-p]').innerText)); o.__cash = parseFloat(document.querySelector('[data-lr5c-cashrow] [data-lr5c-p]').innerText); return o; }")
-            cash = pcts.pop("__cash"); s = sum(v for k, v in pcts.items() if k != "S50") + cash
-            check(f"{tag} B: % of household — stock rows + cash = 100 ±0.5 (S50 is notional, listed apart)", abs(s - 100) <= 0.5, (s, pcts, cash))
+            pcts = js(page, "()=>{ const o = {}; document.querySelectorAll('tbody [data-lr5c-row]').forEach(r=>o[r.dataset.lr5cRow] = r.querySelector('[data-lr5c-p]').innerText.trim()); o.__cash = document.querySelector('[data-lr5c-cashrow] [data-lr5c-p]').innerText.trim(); return o; }")
+            cash = float(pcts.pop("__cash").rstrip("%")); num = {k: float(v.rstrip("%")) for k, v in pcts.items() if v != "—"}
+            s = sum(num.values()) + cash
+            check(f"{tag} B: futures notional is not part of the household — S50 shows '—' in %, the value keeps 'notional'", pcts["S50"] == "—" and "notional" in rm["S50"], pcts)
+            check(f"{tag} B: % of household — stock rows + cash = 100 ±0.5 and never above 100.5", abs(s - 100) <= 0.5 and s <= 100.5, (s, pcts, cash))
+            check(f"{tag} B: 'at cost' wording — card 'Total value · at cost' and column 'Value · at cost'", js(page, "()=>document.querySelector('[data-lr5c-card=\"total\"] .lbl').textContent.trim()") == "Total value · at cost" and "Value · at cost" in js(page, "()=>document.querySelector('.lr5c-tbl thead').textContent"))
         # open risk = Today's (same function) and the card shows each account's own value
         risk = js(page, "()=>({m:re1Pct(lr2OpenRisk('main')), f:re1Pct(lr2OpenRisk('fam')), card:document.querySelector('[data-lr5c-riskleg]').innerText.replace(/\\s+/g,' '), cap:RiskEngine.POLICY.active.weeklyPct})")
         check(f"{tag} B: open risk — each account's own % of {risk['cap']}% (never combined)", risk["m"] in risk["card"] and risk["f"] in risk["card"] and risk["card"].count("of 3%") == 2, risk)
@@ -54,6 +57,7 @@ def run(pw, w, h):
         r1 = js(page, "()=>[...document.querySelectorAll('[data-lr5c-row]')].map(r=>r.dataset.lr5cRow)")
         t1 = js(page, "()=>document.querySelector('[data-lr5c-total]').innerText")
         check(f"{tag} C: Main view — only Main's positions, total in Main's currency ($), no futures card, no household note", r1 == ["XAUUSD", "AAPL", "NVDA"] and t1.startswith("$") and js(page, "()=>!document.querySelector('[data-lr5c-card=\"fut\"]') && !document.querySelector('[data-lr5c-note]')"), [r1, t1])
+        check(f"{tag} C: Main view card also says 'Total value · at cost'", js(page, "()=>document.querySelector('[data-lr5c-card=\"total\"] .lbl').textContent.trim()") == "Total value · at cost")
         js(page, "()=>lrSwPick('port','fam')"); page.wait_for_timeout(300)
         r2 = js(page, "()=>[...document.querySelectorAll('[data-lr5c-row]')].map(r=>r.dataset.lr5cRow)")
         check(f"{tag} C: Family view — Family's positions + the futures card", r2 == ["S50", "PTT.BK", "NVDA"] and js(page, "()=>!!document.querySelector('[data-lr5c-card=\"fut\"]')"), r2)
@@ -62,8 +66,12 @@ def run(pw, w, h):
         more = js(page, "()=>{ const d = document.querySelector('[data-lr5c-more]'); d.open = true; return {sum:!!d.querySelector('#mixSummary'), body:!!d.querySelector('#mixBody'), risk:!!d.querySelector('#bdPortRisk'), txt:d.querySelector('#mixBody').innerText.length > 20}; }")
         check(f"{tag} C: More ▾ keeps the existing summary, risk blocks and per-account sections", more["sum"] and more["body"] and more["risk"] and more["txt"], more)
         js(page, "()=>{ document.querySelector('[data-lr5c-more]').open = false; }")
-        th = js(page, THAI)
-        check(f"{tag} D: no Thai in the new Port block", th == [], th)
+        th = []
+        for v in ("both", "main", "fam"):
+            js(page, "(v)=>{ lrSwPick('port', v); document.querySelectorAll('#tabMix details').forEach(d=>d.open = true); }", v); page.wait_for_timeout(300)
+            th += [v + ': ' + x for x in js(page, THAI)]
+        js(page, "()=>{ lrSwPick('port','both'); document.querySelectorAll('#tabMix details').forEach(d=>d.open = false); }"); page.wait_for_timeout(200)
+        check(f"{tag} D: no Thai anywhere in the Port tab — new block and Port › More opened (Both / Main / Family)", th == [], th)
         ov = js(page, "()=>({doc:document.documentElement.scrollWidth - document.documentElement.clientWidth, host:(()=>{ const h = document.getElementById('lr5cHost'); return [...h.querySelectorAll('.lr5c-card,.lr5c-list,.lr5-hd')].filter(e=>e.scrollWidth > e.clientWidth + 1).length; })()})")
         check(f"{tag} D: no horizontal overflow", ov["doc"] <= 0 and ov["host"] == 0, ov)
         if w <= 390:

@@ -20,5 +20,10 @@ Light only · English · no engine / data-job changes. Reuses the LR5b switch (`
 ## Proof
 `tests/screenshots/lr5c/` — `port-1440-side.png`, `port-390-side.png`, `port-1440-main-live.png`, `port-1440-family-live.png`. Tests: `tests/run_tests_lr5c.py` (54 checks, 1440 / 390 / 360), in `run_regression.sh`.
 
+## Wrap-up changes
+- **% of household**: futures notional is not part of the household — S50 / GO rows show "—" (value keeps "notional"); stock rows + Cash = 100 ±0.5. The test now asserts the sum is within 100 ±0.5 and never above 100.5.
+- **At cost**: card "Total value · at cost" (Both / Main / Family), column "Value · at cost" (shown in every view).
+- **Thai → English** under Port › More (summary box, account line, pie titles / legend incl. "Unspecified" and "Cash", Core risk fold, Sat line, pool line, privacy tooltip, account names via `lrAcctName`). Stored keys / data untouched. The test checks the whole `#tabMix` with every `<details>` opened, in Both / Main / Family. The old non-default legacy renderer (dev flag only) is not covered.
+
 ## Regression
-Full run on the rebased branch: 60/62 ok; the 2 failing suites (re1c, phase373) read the old Port sections that now sit under More ▾ — tests updated to open More; both re-run alone: re1c 203/0, phase373 475/0. Not re-run as one full pass afterwards. New suite lr5c 54/54.
+`run_regression.sh` on the rebased branch: **62/62 ok · 0 failing** (1140 s). New suite `run_tests_lr5c.py`: 59/59.
