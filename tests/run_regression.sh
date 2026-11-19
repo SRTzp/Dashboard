@@ -21,6 +21,7 @@ FAST=(
   "sync_pv1|python3 tools/sync_pv1.py --check"
   "rrg_verify (app rrgCompute == pandas)|python3 tests/rrg_verify_test.py"
   "rrg_close_cut (ET 16:15 fake clock)|node tests/rrg_close_cut_test.js"
+  "rrg_hold (RRG hold rule)|python3 tests/rrg_hold_test.py"
   "rrg_data_check selftest (offline)|python3 scripts/rrg_data_check.py --selftest"
   "node risk_engine|node tests/risk_engine_test.js"
   "node re1_adapter|node tests/re1_adapter_test.js"
