@@ -13490,6 +13490,10 @@ function kbHandle(e){
       if(wl1Blocked()) return;
       e.preventDefault(); rs2StepPreset(e.key==='ArrowRight' ? 1 : -1); return;
     }
+    if((e.key==='ArrowDown' || e.key==='ArrowUp') && !rs2Phone()){
+      if(wl1Blocked()) return;
+      e.preventDefault(); rs2StepRow(e.key==='ArrowDown' ? 1 : -1); return;
+    }
     if(e.code==='Space' && !rs2Phone() && rs2.sel && !wl1Blocked() && !(e.target && e.target.closest && e.target.closest('button, a, [role=tab], summary'))){
       e.preventDefault(); rs2.tick[rs2.sel] ? delete rs2.tick[rs2.sel] : (rs2.tick[rs2.sel] = true); rs2.last = rs2.sel; renderWatchlist(); return;
     }
@@ -29860,6 +29864,14 @@ function rs2OpenWl(sym){
   try{ if(it) wl1SegGo(wl1TrkOf(it)); else wlSetView('wl'); wlOpen(sym); }catch(e){ console.warn('rs2 open wl:', e); }
 }
 /* ← / → on Screen: Leaders ↔ Emerging ↔ Pullback, stops at the ends */
+function rs2StepRow(d){   /* ↑/↓ moves the selected row through the rows shown · stops at the ends · keeps it in view */
+  const V = rs2View().slice(0, rs2.shown); if(!V.length) return false;
+  const i = V.findIndex(r=>r.t === rs2.sel), j = i < 0 ? (d > 0 ? 0 : V.length - 1) : i + d;
+  if(j < 0 || j >= V.length || j === i) return false;
+  rs2.sel = V[j].t; rs2.addTo = 'winner'; renderWatchlist();
+  try{ const lb = document.querySelector('.lr5-screen .wlListBody'), row = lb && lb.querySelector('.rs2r.on'); if(row){ const t = row.offsetTop, b = t + row.offsetHeight; if(t < lb.scrollTop) lb.scrollTop = t; else if(b > lb.scrollTop + lb.clientHeight) lb.scrollTop = b - lb.clientHeight; } }catch(x){}
+  return true;
+}
 function rs2StepPreset(d){
   const ks = Object.keys(rs2Presets()), i = ks.indexOf(rs2.preset), j = i + d;
   if(j < 0 || j >= ks.length) return false;
