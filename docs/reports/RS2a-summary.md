@@ -54,3 +54,25 @@ Updated existing tests only for the 4th segment / phone labels (`run_tests_lr5a`
 
 
 **Final: `JOBS=2 bash tests/run_regression.sh` → 70/70 ok, 0 failing, 2124 s** (hooks superset PASS · rs2 selftest PASS · run_tests_rs2a 134/134).
+
+---
+
+## RS2a2 — Screen polish (market cap · header sort · tab moves · compact add)
+
+Brief: `docs/briefs/RS2a2-brief.md` (SRTp, 20 Nov 2026). Base = the RS2a mockups (`ScreenRS.dc.html` / `ScreenRSPhone.dc.html`), no new mockup. Side-by-side PNGs (mockup | live): `tests/screenshots/rs2a2/screen-{1440,390}-side.png`, `screen-1440-sorted-side.png`, `screen-390-sheet-side.png`.
+
+1. **M.Cap replaces Price.** Job: `rs2/_mc` cache `{sym: [shares, date]}` (yfinance `fast_info` shares; market cap ÷ last price as fallback); row key `mc` = shares × that day's close (so it stays current daily). A name is looked up when missing (any run); stale (> 7 days) ones only on the weekly full run → a warm daily run makes **0 calls**. Errors are not cached and stop after 30 in a row; "Yahoo has no shares" is cached as 0 for the week. 240 s budget per run. Desktop column `M.Cap` (`$4.4T` / `$860M`, missing `—`); Price moved to the detail line (`Price 182.40 · M.Cap $4.4T · Avg $vol … · Earnings …`). Filter ▾ gets `Min M.Cap` (off by default; Any/$300M/$1B/$2B/$10B/$50B).
+2. **Header sort (desktop).** `RS`, `from high`, `M.Cap`, `Avg $vol`, `Earnings` are buttons (`data-rs2-th`); 2nd click flips; ▲/▼ on the active one; Sort ▾ shows the same choice (+ "reversed"); a missing M.Cap / earnings date is always last; choice + direction remembered (`dash.rs2b`); **Reset now clears the sort too**. Sort ▾ gained `M.Cap` and `Earnings soonest`. Phone keeps only Sort ▾.
+3. **Segments.** Tab / Shift+Tab cycle Momentum → Compounder → Ideas → Screen (`wl1SegStep`; same `wl1Blocked` + typing guards). Phone: swipe on the list area = previous/next (no wrap); ignored on buttons/tabs/inputs/selects/filter strip and with any sheet open.
+4. **Compact add.** Row `+` (30 px desktop, 44 px phone) → adds to Momentum as No plan → muted `✓` in place, no navigation. Detail: `Add to [Momentum] [Compounder]` (Momentum preselected, resets per stock) above `+ Add to Watch`; Compounder writes `ladder_watch:true` (the field Edit uses); `it.src` as before. Already watching → `On Watch · Momentum ✓` (or Compounder).
+5. **Phone detail sheet (new).** RS2a hid the detail on phone, so there was nowhere to show M.Cap / Add to. Tapping a row now opens a bottom sheet with the same detail (✕ / backdrop / Esc closes). This is an addition the brief implied ("detail sheet").
+
+**Mockup differences:** `Price` header → `M.Cap`; `+ Watch` / `Watching ✓` pills → `+` / `✓`; clickable headers with ▲▼; `Add to` toggle in the detail; phone sheet (not drawn in the phone mockup). Everything else as RS2a.
+
+**Hooks:** kept all (`data-rs2-add` new/done/archived, `data-rs2-add-big`, …); added `data-rs2-th`, `data-rs2-addto`, `data-rs2-mc`, `data-rs2-sheet`. Hooks superset PASS. Class `c-px` was renamed `c-mc` (not a hook).
+
+**Tests:** `tests/run_tests_rs2a2.py` 73 checks (1440/390/360) · `rs2_selftest.py` +5 (M.Cap cache fresh/stale/missing/error/no-data) · `run_tests_rs2a.py` updated for M.Cap/`✓`/Min M.Cap (134/134) · `run_tests_phase374.py` updated: Tab/Shift+Tab/swipe now cover 4 segments. Added `run_tests_rs2a2` to `run_regression.sh`.
+
+**M.Cap coverage / runtime: not measured live** — no Yahoo run from this machine (it throttles per-ticker endpoints right after the bulk download, see RS2a doubts above). Expect the first runs to fill gradually (≤ 240 s each, best RS first) and settle to ~0 s once warm; `_meta.mcN` now records how many rows carry `mc` — read it after the first Actions runs for the real coverage %. Workflow file: **no change needed** (`docs/proposals/prices.yml` untouched).
+
+**RS2a2 final: `JOBS=2 bash tests/run_regression.sh` → 71/71 ok, 0 failing, 1943 s** (hooks superset PASS · rs2 selftest 58 PASS · run_tests_rs2a 134/134 · run_tests_rs2a2 73/73).

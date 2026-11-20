@@ -249,7 +249,7 @@ def _r(v, k):
 
 
 def compact(x, rows, a, rs, m3=None, m1=None):
-    """short-key row: t n e s i | r (12M rating) p (4w ago) m3 m1 (3M / 1M ratings) l h o x xd c v | a3 a6 a9 a12 (returns) | nx (next earnings)"""
+    """short-key row: t n e s i | r (12M rating) p (4w ago) m3 m1 (3M / 1M ratings) l h o x xd c v | a3 a6 a9 a12 (returns) | nx (next earnings) | mc (market cap USD, added after compact())"""
     row = {'t': x['t'], 'n': x['n'], 'e': x['e'], 'r': rs['rating'], 'p': rs.get('rating4wAgo'), 'm3': m3, 'm1': m1,
            'l': {'up': 'u', 'down': 'd', 'flat': 'f'}.get(rs.get('line'), ''),
            'h': 2 if rs.get('newHigh') else 1 if rs.get('newHigh5d') else 0,
@@ -312,6 +312,52 @@ def with_earnings(rows, cache, today):
         d = cache.get(r['t'])
         if d and d >= today:
             r['nx'] = d
+    return rows
+
+
+MC_BUDGET_S = 240
+MC_FRESH_DAYS = 7
+
+
+def _age_days(d, today):
+    try:
+        return (dt.date.fromisoformat(today) - dt.date.fromisoformat(d)).days
+    except Exception:
+        return 9999
+
+
+def fill_mcaps(tickers, cache, today, budget_s=MC_BUDGET_S, getter=None, clock=time.time, refresh=False):
+    """market-cap cache {sym: [shares, 'YYYY-MM-DD']} (shares 0 = Yahoo has none) · a name is looked up when it is MISSING; a STALE one (> 7 days) only when `refresh` (the weekly run)
+    → a warm daily run makes no calls · stops at the time budget or after MAX_MISS errors in a row · an error is NOT cached · returns lookups made"""
+    getter = getter or _yf_shares
+    t0, n, miss = clock(), 0, 0
+    for y in tickers:
+        c = cache.get(y)
+        if c and (not refresh or _age_days(c[1], today) <= MC_FRESH_DAYS):
+            continue
+        if clock() - t0 > budget_s or miss >= MAX_MISS:
+            break
+        n += 1
+        try:
+            sh = getter(y)
+        except Exception:
+            miss += 1
+            continue
+        miss = 0
+        try:
+            sh = float(sh or 0)
+        except Exception:
+            sh = 0.0
+        cache[y] = [sh if sh == sh and sh > 0 else 0, today]
+    return n
+
+
+def with_mcaps(rows, cache):
+    """rows get mc (USD) = cached shares × last close · missing → no key (the screen shows —)"""
+    for r in rows:
+        c = cache.get(r['t'])
+        if c and c[0] and r.get('c'):
+            r['mc'] = int(round(c[0] * r['c']))
     return rows
 
 
@@ -384,6 +430,22 @@ def _yf_earn(y):
     if isinstance(cal, dict):
         return cal.get('Earnings Date')
     return None
+
+
+def _yf_shares(y):
+    """shares outstanding from yfinance fast_info (market cap ÷ last price as the fallback) · 0 when unknown"""
+    import yfinance as yf
+    fi = yf.Ticker(y).fast_info
+    def g(k):
+        try:
+            return fi[k]
+        except Exception:
+            return None
+    sh = g('shares')
+    if not sh:
+        mc, px = g('marketCap'), g('lastPrice')
+        sh = mc / px if mc and px else 0
+    return sh
 
 
 def stooq_symbol(y):
@@ -510,6 +572,12 @@ def build(base, now, seed_sectors=None):
         if full and fill_earnings(earn_candidates(rows), ecache, today):
             earn_ref.set({'m': ecache, 'at': now.isoformat()})
         with_earnings(rows, ecache, today)
+        mref = col.document('_mc')
+        ms = mref.get()
+        mcache = dict((ms.to_dict() or {}).get('m') or {}) if ms.exists else {}
+        if fill_mcaps([r['t'] for r in rows], mcache, today, refresh=full):
+            mref.set({'m': mcache, 'at': now.isoformat()})
+        with_mcaps(rows, mcache)
         as_of = table['asOf']
         docs = split_docs(as_of, rows)
         for k, v in docs.items():
@@ -520,7 +588,7 @@ def build(base, now, seed_sectors=None):
              'universeAt': now.isoformat() if full else meta.get('universeAt'), 'failedChunks': bad, 'dlRatio': round(dl_ratio, 3),
              'parts': len(docs) - 1 if 'parts' in docs['latest'] else 0, 'bytes': {k: doc_bytes(v) for k, v in docs.items()},
              'cuts': table['cuts'], 'cuts4w': table['cuts4w'], 'cuts3m': table.get('cuts3m'), 'cuts1m': table.get('cuts1m'),
-             'cutsN': table['n'], 'sample': table.get('sample'), 'seed': table.get('seed'), 'cutsStale': stale, 'earnN': len(ecache),
+             'cutsN': table['n'], 'sample': table.get('sample'), 'seed': table.get('seed'), 'cutsStale': stale, 'earnN': len(ecache), 'mcN': sum(1 for r in rows if r.get('mc')),
              'source': os.environ.get('RS2_SOURCE', 'yahoo') or 'yahoo', 'error': None, 'rule': 'close>=10 and adv50>=10M'}
         col.document('_meta').set(m)
         print('rs2: liquid %d · rated %d · table n %s (sample %s%s) · docs %s · %ds' % (n_liq, n_rated, table['n'], table.get('sample'), ' STALE' if stale else '', {k: doc_bytes(v) for k, v in docs.items()}, time.time() - t0))
