@@ -32,11 +32,11 @@ def check(name, ok, detail=""):
     print(("PASS" if ok else "FAIL") + " - " + name + (("  :: " + d) if (d and not ok) else ""))
 
 
-def wl_doc(t, trk=False, exch="NASDAQ", why="", exit_="", trigger="", confirmed=False, thesis=None):
+def wl_doc(t, trk=False, exch="NASDAQ", why="", exit_="", trigger="", confirmed=False, thesis=None, evidence=""):
     d = {"ticker": t, "market": "TH" if t.endswith(".BK") else "US", "port": "core", "note": "", "industry": "", "added_at": "2026-09-01T00:00:00Z",
          "ladder_watch": bool(trk), "ladder_state": "Base"}
     if exch: d["exch"] = exch
-    if why or exit_: d["my_thesis"] = {"why": why, "exit": exit_, "updated_at": "2026-09-02T00:00:00Z"}
+    if why or exit_: d["my_thesis"] = {"why": why, "exit": exit_, "evidence": evidence, "updated_at": "2026-09-02T00:00:00Z"}
     hw = {}
     if trigger: hw["trigger"] = trigger
     if confirmed: hw["confirmedAt"] = "2026-09-03T00:00:00Z"; hw["doneAt"] = "2026-09-03T00:00:00Z"
@@ -107,7 +107,7 @@ def seed_main(page):
         "AMD": wl_doc("AMD", exit_="Breaks 165 on volume"),                                                    # Planned · trigger missing
         "MSFT": wl_doc("MSFT", exit_="Azure growth < 25%", trigger="Close above 430", confirmed=True),        # Holding · done
         "HANA.BK": wl_doc("HANA.BK", exch="SET"),                                                              # No plan
-        "NVDA": wl_doc("NVDA", trk=True, why="AI capex cycle", exit_="Hyperscaler capex cut", confirmed=True),  # COMP · Holding · Add-on planned
+        "NVDA": wl_doc("NVDA", trk=True, why="AI capex cycle", evidence="Data-center revenue", exit_="Hyperscaler capex cut", confirmed=True),  # COMP · Holding · Add-on planned
         "AVGO": wl_doc("AVGO", trk=True),                                                                      # COMP · No plan
     })
     put_cards(page, fixtures_cards())
@@ -141,7 +141,7 @@ def watch_list(pw, w, h):
         r = rows(page)
         check(f"{tag} 1 Momentum list: ADBE (Holding, homework missing) → AMD (Planned) → HANA (No plan) → MSFT (done); no Compounder rows", r == ["ADBE", "AMD", "HANA.BK", "MSFT"], r)
         check(f"{tag} 1 status chips: Holding · Planned · No plan · Holding", [chip(page, s) for s in r] == ["Holding", "Plan ready", "No plan", "Holding"], [chip(page, s) for s in r])
-        check(f"{tag} 1 cap tags: not done = 50% · done = 100%; homework text names what is missing", "adds at 50%" in rowtxt(page, "ADBE") and ("Done" in rowtxt(page, "MSFT") or "thesis done" in rowtxt(page, "MSFT")) and ("Missing trigger" in rowtxt(page, "AMD") or "trigger missing" in rowtxt(page, "AMD")), [rowtxt(page, s) for s in r])
+        check(f"{tag} 1 cap tags: not done = 50% · done = 100%; homework text names what is missing", "adds at 50%" in rowtxt(page, "ADBE") and ("Done" in rowtxt(page, "MSFT") or "thesis done" in rowtxt(page, "MSFT")) and ("Missing trigger" in rowtxt(page, "AMD") or "trigger missing" in rowtxt(page, "AMD") or "1 of 2 · Trigger missing" in rowtxt(page, "AMD")), [rowtxt(page, s) for s in r])
         check(f"{tag} 1 summary line: 4 stocks · 3 need homework", re.search(r"4 stocks.*3 need homework", txt(page, "[data-wl1-sum]") or "") is not None, txt(page, "[data-wl1-sum]"))
         check(f"{tag} 1 segmented control shows counts Momentum 4 | Compounder 2", re.search(r"Mom(entum)? 4", txt(page, "[data-wl1-segs]") or "") is not None and re.search(r"Comp(ounder)? 2", txt(page, "[data-wl1-segs]") or "") is not None, txt(page, "[data-wl1-segs]"))
         js(page, "()=>wl1TrkSet('ladder')"); settle(page, 400)
@@ -172,7 +172,7 @@ def watch_list(pw, w, h):
         js(page, "()=>wl5Full('ADBE')"); settle(page, 500)
         on = js(page, "()=>{ const t=document.querySelector('[data-lt-tabs] .ltTab.on'); return t ? t.dataset.ltTab : null; }")
         check(f"{tag} 1 panel ALWAYS opens on Summary (old per-ticker memory ignored)", on == "sum", on)
-        check(f"{tag} 1 panel ends with the Homework block: ✗ ④ ✗ Trigger · Fill ④ › · 'I've reviewed this' disabled", js(page, "()=>{ const h=document.querySelector('[data-wl1-hw]'); return !!h && h.dataset.wl1HwState==='todo' && !!h.querySelector('[data-wl1-fill]') && h.querySelector('[data-wl1-confirm]').disabled; }"), txt(page, "[data-wl1-hw]"))
+        check(f"{tag} 1 panel ends with the Homework block: ✗ ④ ✗ Trigger · Fill ④ › · 'I've reviewed this' disabled", js(page, "()=>{ const h=document.querySelector('[data-wl1-hw]'); return !!h && h.dataset.wl1HwState==='todo' && !!h.querySelector('[data-wl1-fill]'); }   /* HW1: the Full-thesis block is one line 'Homework n of m · Continue ›' (the confirm button lives on the Homework page) */"), txt(page, "[data-wl1-hw]"))
         if w >= 1024:
             shot(page, f"mac-split-{w}")
         else:
@@ -195,7 +195,7 @@ def keys_swipe(pw, w, h):
             check(f"{tag} 2 Tab → Compounder; first row selected (AVGO)", trk() == "ladder" and js(page, "()=>wlSel") == "AVGO", [trk(), js(page, "()=>wlSel")])
             page.keyboard.press("Shift+Tab"); settle(page, 300)
             check(f"{tag} 2 Shift+Tab goes back to Momentum (RS2a2: Tab now cycles Momentum → Compounder → Ideas → Screen)", trk() == "winner" and js(page, "()=>wlView") == "wl", trk())
-            js(page, "()=>wl5Full('ADBE')"); settle(page, 400)
+            js(page, "()=>hwOpen('ADBE')"); settle(page, 400)   # HW1: the Trigger box is on the Homework page
             page.focus("[data-wl1-trigger]"); page.keyboard.press("Tab"); settle(page, 200)
             check(f"{tag} 2 Tab while typing in a field is ignored", trk() == "winner", trk())
             js(page, "()=>{ document.activeElement.blur(); wl1ImpOpen(); }"); settle(page, 300)
@@ -335,10 +335,10 @@ def workflow(pw, w, h):
         go_watch(page)
         check(f"{tag} 4 Watch row = Holding · 50%", chip(page, "FFIL") == "Holding" and "50%" in rowtxt(page, "FFIL"), rowtxt(page, "FFIL"))
         # homework: fields + confirm
-        js(page, "()=>wl5Full('FFIL')"); settle(page, 500)
+        js(page, "()=>hwOpen('FFIL')"); settle(page, 500)   # HW1: confirm = Save · mark done on the Homework page
         check(f"{tag} 4 homework needs fields AND confirm: confirm disabled while ④ / trigger empty", js(page, "()=>document.querySelector('[data-wl1-confirm]').disabled"), "")
         page.evaluate("()=>wlCol().doc('FFIL').update({my_thesis:{why:'',exit:'Loses 90',updated_at:new Date().toISOString()}, hw:{trigger:'Close > 101'}})"); settle(page, 700)
-        js(page, "()=>wl5Full('FFIL')"); settle(page, 400)
+        js(page, "()=>hwOpen('FFIL')"); settle(page, 400)
         check(f"{tag} 4 text alone is not 'done': fields filled but not reviewed → still 50% / task stays", js(page, "()=>wl1HwDone(wlItemOf('FFIL'))") is False and js(page, "()=>!document.querySelector('[data-wl1-confirm]').disabled") and js(page, "()=>wl1CapPct(wlItemOf('FFIL'))") == 50, "")
         page.locator("[data-wl1-confirm]").click(); settle(page, 900)
         db = wl_db(page)["FFIL"]

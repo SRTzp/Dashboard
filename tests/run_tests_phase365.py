@@ -44,6 +44,7 @@ def seed(page):
 
 
 def view(page, sym):
+    js(page, "()=>{ wlMtHtml = wlMtLegacyHtml; }")   # HW1: the My Thesis tab now draws the Homework form; this suite keeps covering the old editor (still in the file, unrendered)
     js(page, "(s)=>{ switchTab('watch'); wlSetView('wl'); renderWatchlist(); wlOpen(s); wlSetSub('view'); }", sym); settle(page, 600)
 
 

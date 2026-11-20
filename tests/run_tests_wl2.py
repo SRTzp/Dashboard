@@ -84,36 +84,13 @@ def run(pw, w, h):
             check(f"{tag} E: '−42% from 52w high (1,255 · 18 Jun)' in amber", d["off"] == "−42% from 52w high (1,255 · 18 Jun)" and d["offc"] == RGB["amb"], d)
             check(f"{tag} E: returns '3m −7% · 6m +50% · 9m +85% · 12m +200%'", d["rets"] == "3m −7% · 6m +50% · 9m +85% · 12m +200%", d["rets"])
             check(f"{tag} E: Holdings ↗ link next to the sector (SMH holdings page)", "Holdings ↗" in d["sec"] and d["hold"] and "/smh/" in d["hold"].lower(), d)
-            check(f"{tag} B: block labelled 'From living thesis'", d["from"].lower() == "from living thesis", d["from"])
+            print(f"RETIRED - {tag} B: block labelled 'From living thesis' :: HW1 — detail panel redesigned (HomeworkWatch2.html A)")
         else:
             page.locator("[data-lr5-row][data-sym=MU]").click(position={"x": 20, "y": 14}); page.wait_for_timeout(400)
             t = js(page, "()=>document.querySelector('.lr5-det').innerText.replace(/\\s+/g,' ')")
-            check(f"{tag} E: sheet shows RS 98 ← 99 · −42% from 52w high (1,255 · 18 Jun) · 3m … 12m · From living thesis", all(x in t for x in ("RS 98 ← 99 (4 wks ago)", "−42% from 52w high (1,255 · 18 Jun)", "3m −7% · 6m +50% · 9m +85% · 12m +200%")) and "from living thesis" in t.lower(), t)
-        pos = js(page, "()=>{ const c = document.querySelector('.lr5-det [data-lr5-f=rs]'), f = document.querySelector('.lr5-det [data-wl2-from]'); const bg = getComputedStyle(c).backgroundColor; return {above:!!(c.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING), bg, first:c.parentElement.querySelector('[data-lr5-f]') === c} }")
-        check(f"{tag} E: RS block is the grey card at the top, above 'From living thesis'", pos["above"] and pos["bg"] == "rgb(247, 248, 250)" and pos["first"], pos)
-        # Use this thesis — MU (all blank)
-        use = js(page, "()=>{ const u = document.querySelector('[data-wl2-use]'); const m = document.querySelector('[data-lr5-main]'); return u ? {t:u.innerText.trim(), above:!!(u.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING), h:Math.round(u.getBoundingClientRect().height)} : null }")
-        check(f"{tag} B: 'Use this thesis ✓' shows above the main action (44px)", use and use["t"] == "Use this thesis ✓" and use["above"] and use["h"] >= 44, use)
-        pre = js(page, "()=>{ const it = wlItemOf('MU'); return {done:wl1HwDone(it), cap:wl1CapPct(it), my:wlMyThesis(it).exit, trg:(it.hw||{}).trigger||''} }")
-        check(f"{tag} B: before — homework not done, cap 50%, exit/trigger blank", pre == {"done": False, "cap": 50, "my": "", "trg": ""}, pre)
-        page.click("[data-wl2-use]"); page.wait_for_timeout(500)
-        post = js(page, "()=>{ const it = wlItemOf('MU'), lt = wl2Lt(it); return {done:wl1HwDone(it), cap:wl1CapPct(it), exitOk:wlMyThesis(it).exit === lt.exit && !!lt.exit, trgOk:it.hw.trigger === lt.trigger && !!lt.trigger, conf:!!it.hw.confirmedAt, d:!!it.hw.doneAt, btn:!!document.querySelector('[data-wl2-use]')} }")
-        check(f"{tag} B: after — wl1HwDone true · cap 100% · lt exit → my exit · lt trigger → hw.trigger · confirmedAt + doneAt · button gone", post == {"done": True, "cap": 100, "exitOk": True, "trgOk": True, "conf": True, "d": True, "btn": False}, post)
-        if desk:
-            hw = row(page, "MU", "[data-wl1-hwt]")
-            check(f"{tag} B: MU row shows 'Done <date>'", hw.startswith("Done ") and "Not started" not in hw, hw)
-        else:
-            check(f"{tag} B: MU phone line 2 says 'thesis done'", "thesis done" in row(page, "MU", ".l2"), row(page, "MU", ".l2"))
-        # blanks only — NVDA has its own exit
-        if desk:
-            js(page, "()=>wlOpen('NVDA')"); page.wait_for_timeout(300)
-        else:
-            js(page, "()=>{ wlBack(); }"); page.wait_for_timeout(200); js(page, "()=>wlOpen('NVDA')"); page.wait_for_timeout(350)
-        page.click("[data-wl2-use]"); page.wait_for_timeout(500)
-        nv = js(page, "()=>{ const it = wlItemOf('NVDA'), lt = wl2Lt(it); return {done:wl1HwDone(it), exit:wlMyThesis(it).exit, trgOk:it.hw.trigger === lt.trigger} }")
-        check(f"{tag} B: never overwrites — NVDA keeps 'My own exit', trigger filled, homework done", nv == {"done": True, "exit": "My own exit", "trgOk": True}, nv)
-        nb = js(page, "()=>{ wlOpen('AVGO'); return !!document.querySelector('[data-wl2-use]') }")
-        check(f"{tag} B: no button when homework is already done (AVGO) or there is no living thesis (AAPL)", nb is False and js(page, "()=>{ wlOpen('AAPL'); return !!document.querySelector('[data-wl2-use]') }") is False)
+            check(f"{tag} E: sheet shows RS 98 ← 99 · −42% from 52w high (1,255 · 18 Jun) · 3m … 12m", all(x in t for x in ("RS 98 ← 99 (4 wks ago)", "−42% from 52w high (1,255 · 18 Jun)", "3m −7% · 6m +50% · 9m +85% · 12m +200%")), t)   # HW1: no "From living thesis" block
+        print(f"RETIRED - {tag} E: RS block above 'From living thesis' :: HW1 — that block is gone")
+        print(f"RETIRED - {tag} B: 'Use this thesis ✓' button · confirm · never overwrites · no button when done :: HW1 — the button is no longer rendered (wl2UseThesis / data-wl2-use stay as dead hooks)")
         # ---- C: sector auto-fill
         sc = js(page, "()=>({glbe:tv1EtfOf('GLBE', wlItemOf('GLBE')), mu:tv1EtfOf('MU', wlItemOf('MU')), plain:tv1EtfOf('ZZZZ', null)})")
         check(f"{tag} C: sector from the price doc — GLBE (Software) → IGV · MU keeps manual SMH · unknown → ''", sc == {"glbe": "IGV", "mu": "SMH", "plain": ""}, sc)
