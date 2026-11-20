@@ -5068,6 +5068,11 @@ html body .lr5 .hw1-body{display:grid;grid-template-columns:minmax(0,1fr) minmax
 html body .lr5 .hw1-facts,html body .lr5 .hw1-mine{background:#fff;border:1px solid var(--lr-line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
 html body .lr5 .hw1-fh{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
 html body .lr5 .hw1-fh .mut{font-size:12px;color:var(--lr-muted);text-align:right}
+html body .lr5 .hw1-fh .hw1-imp{flex:none;margin-left:8px;align-self:center}
+html body .lr5 .hw1-steps{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+html body .lr5 .hw1-cmd{font:inherit;font-size:12px;padding:2px 8px;border:1px solid var(--lr-line,#ccc);border-radius:6px;background:transparent;color:inherit;cursor:pointer}
+@media (max-width:1023px){html body .lr5 .hw1-cmd,html body .lr5 .hw1-steps .hw1-lnk{min-height:44px}}
+@media (max-width:1023px){html body .lr5 .hw1-fh .hw1-imp{min-height:44px;min-width:44px}}
 html body .lr5 .hw1-lg{font-size:12px;color:var(--lr-muted);display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
 html body .lr5 .hw1-k{font:500 11px/1 var(--lr-mono);padding:3px 5px;border-radius:5px;background:#EEF0F3;color:var(--lr-text2);flex:none;white-space:nowrap}
 html body .lr5 .hw1-fr{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:10px;align-items:baseline;font-size:13px;padding:6px 0;border-top:1px solid var(--lr-line);min-width:0}
@@ -10970,7 +10975,7 @@ document.addEventListener('keydown', ev=>{
     const box = ev.target && ev.target.closest ? ev.target.closest('[data-wl-mt][data-wl-mt-mode="edit"]') : null; if(!box) return;
     const t = box.dataset.wlMt;
     if((ev.metaKey || ev.ctrlKey) && ev.key === 'Enter'){ ev.preventDefault(); ev.stopPropagation(); wlMtSave(t); }
-    else if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); wlMtCancel(t); }
+    else if(ev.key === 'Escape' && !box.closest('[data-hw1-page]')){ ev.preventDefault(); ev.stopPropagation(); wlMtCancel(t); }   /* HW1b — on the Homework page Esc blurs the field first, then goes back (the draft stays) */
   }catch(e){}
 }, true);
 window.addEventListener('beforeunload', ev=>{
@@ -13598,8 +13603,12 @@ function kbOpenWatchView(view){
   if(activeTab!=='watch') switchTab('watch');
   wlSetView(view);
 }
+function hw1BackOn(){ return activeTab==='watch' && wlView==='wl' && !wlNarrow() && !!wl5FullSym && wl5FullSym===wlSel; }   /* HW1b — Homework page or Full thesis view on desktop */
+function hw1PopsOpen(){ return Array.from(document.querySelectorAll('[data-hw1-page] [data-hw1-row][aria-expanded="true"]')); }
+function hw1BackGo(){ if(hwSym && hwSym===wlSel) hwBack(); else wl5FullOff(); }   /* Homework → list · Full thesis → summary */
 function kbHandle(e){
   if(!kbAppReady()) return;
+  if(e.key==='Backspace' && hw1BackOn() && !wl1Blocked() && !hw1PopsOpen().length){ e.preventDefault(); hw1BackGo(); return; }   /* HW1b */
   /* ID1 — Tab / Shift+Tab วน Watchlist → Ideas → Candidates (เฉพาะแท็บ Watch · ไม่มี sheet/overlay · นอกเงื่อนไข = ปล่อยตามปกติของเบราว์เซอร์) */
   if(e.key==='Tab' && activeTab==='watch' && !e.ctrlKey && !e.metaKey && !e.altKey){
     /* WL1 — Tab (old Candidate/Watchlist toggle scope) = Momentum ⇄ Compounder · ignored while typing / with a popup or sheet open · Shift+Tab = normal focus */
@@ -19656,7 +19665,9 @@ const ltTable = (head, rows) => `<div class="ltTw"><table><tr>${head.map(x=>`<th
 const ltStack = items => items.map(h=>`<div class="ltStk">${h}</div>`).join('');
 
 /* ── ตัวช่วยอ่าน thesis ── */
-const wlThesisOf = it => (it && it.thesis && typeof it.thesis==='object') ? it.thesis : null;
+const wlThesisRaw = it => (it && it.thesis && typeof it.thesis==='object') ? it.thesis : null;
+const ltFactsOnly = th => !!(th && th.mode==='facts' && !(th.sections && typeof th.sections==='object' && !Array.isArray(th.sections)));   /* HW1c — a facts-only thesis = "no AI thesis yet" */
+const wlThesisOf = it => { const th = wlThesisRaw(it); return th && !ltFactsOnly(th) ? th : null; };
 const ltArr = v => Array.isArray(v) ? v.filter(x=>x && typeof x==='object' && !Array.isArray(x)) : [];
 function ltTws(it){   /* tripwire + level ที่แสดงจริง (กด "hit" = broken) */
   const th = wlThesisOf(it); if(!th) return [];
@@ -19750,7 +19761,7 @@ function ltFactsCheck(f){   /* → {ok:f} | {err:'first problem'} — never thro
   }catch(e){ return {err:'facts could not be read'}; }
 }
 function ltFacts(it){   /* → validated facts object or null (for HW1) */
-  const th = wlThesisOf(it); if(!th || th.facts===undefined || th.facts===null) return null;
+  const th = wlThesisRaw(it); if(!th || th.facts===undefined || th.facts===null) return null;
   const r = ltFactsCheck(th.facts); return r.ok || null;
 }
 function ltTrend(row){   /* → 'accel' | 'slow' | 'rising' | 'falling' | 'steady' */
@@ -19779,6 +19790,15 @@ function ltParse(text, bound){   /* → {err} | {th, log} */
   { const te = impTypeErr(o, IMP_LT_SPEC) || (o.summary && typeof o.summary==='object' && !Array.isArray(o.summary) ? impTypeErr(o.summary, IMP_LT_SUM_SPEC, 'summary') : ''); if(te) return {err:te}; if(o.sections!==undefined && o.sections!==null && typeof o.summary==='object' && o.summary && o.summary.thesis!==undefined && !Array.isArray(o.summary.thesis)) return {err:'Field summary.thesis must be a list (array) (this file has ' + impTypeName(o.summary.thesis) + ') — nothing saved'}; }
   const sym = String(o.sym==null?'':o.sym).trim();
   if(!sym) return {err:'The JSON has no sym (stock name)'};
+  const noSec = !(o.sections && typeof o.sections==='object' && !Array.isArray(o.sections));
+  if((noSec || o.mode==='facts') && o.facts!==undefined && o.facts!==null && noSec){   /* HW1c — facts-only import */
+    const fr = ltFactsCheck(o.facts); if(fr.err) return {err:'Fact Sheet not valid — ' + fr.err + ' (nothing else in this file to import)'};
+    if(bound && wlSymCmp(sym) !== wlSymCmp(bound)) return {err:'This JSON is for ' + sym + ' not ' + bound};
+    const sm = (o.summary && typeof o.summary==='object' && !Array.isArray(o.summary)) ? o.summary : {};
+    const th = {facts:fr.ok, summary:{biz:String(sm.biz==null ? fr.ok.biz : sm.biz)}, catalysts:ltArr(o.catalysts), mode:'facts', sym};
+    ['date','asOf','basis'].forEach(k=>{ if(typeof o[k]==='string') th[k] = o[k]; });
+    return {th, log:[], factsOnly:true};
+  }
   if(!o.summary || typeof o.summary!=='object' || Array.isArray(o.summary)) return {err:'summary must be an object'};
   const sec = (o.sections && typeof o.sections==='object' && !Array.isArray(o.sections)) ? o.sections : null;
   if(!sec) return {err:'No sections'};
@@ -19809,6 +19829,13 @@ function ltMergeLog(old, inc){
 }
 function ltDiffHtml(it, p){
   const th = p.th, e = escHtml, rows = [];
+  if(p.factsOnly){
+    const old = it && wlThesisOf(it);
+    rows.push('Fact Sheet only: ' + e(th.facts.track) + ' · ' + e(th.facts.asOf) + ' · ' + e(th.facts.date) + (it && ltFacts(it) ? ' (replaces the old one)' : ''));
+    rows.push(old ? 'Your thesis (summary, sections, KPIs, tripwires, evidence) stays <b>unchanged</b>' : 'No AI thesis yet — only the Fact Sheet is stored');
+    if(old){ const have = new Set(ltArr(old.catalysts).map(c=>String(c.date) + '|' + String(c.event))), nw = ltArr(th.catalysts).filter(c=>!have.has(String(c.date) + '|' + String(c.event))).length; rows.push('New catalysts to add: ' + nw); }
+    return `<div class="ltPrev" data-lt-prev><b>Valid — review before saving</b><ul>${rows.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+  }
   if(!it){
     rows.push(`Create <b>${e(wlNormTicker(th.sym))}</b> new in the Watchlist (Core.${e(th.market==='TH'?'TH':'US')})`);
     rows.push('Status: ' + e((LT_STATUS[th.summary.status]||[th.summary.status||'—'])[0]) + ' · thesis date: ' + e(th.date||'—'));
@@ -19892,6 +19919,25 @@ function ltImpSave(){
   const th = p.th, key = wlSymCmp(th.sym), it = wlItems.find(w=>wlSymCmp(w.ticker)===key) || null;
   let ticker, pr;
   if(!it){ alert(td4PipeMsg(th.sym, 'import')); return; }   /* TD4a */
+  if(p.factsOnly){   /* HW1c — replace only thesis.facts (+ new catalysts) of an existing thesis; never summary/sections/kpi/tripwires/evidence/log-of-thesis */
+    const raw = wlThesisRaw(it), full = raw && !ltFactsOnly(raw);
+    let nt, logs = it.thesis_log || [];
+    if(full){
+      const have = new Set(ltArr(raw.catalysts).map(c=>String(c.date) + '|' + String(c.event)));
+      nt = Object.assign({}, raw, {facts:th.facts, catalysts:ltArr(raw.catalysts).concat(th.catalysts.filter(c=>!have.has(String(c.date) + '|' + String(c.event))))});
+      logs = ltMergeLog(logs, [{date:thaiToday(), new:'facts updated (' + th.facts.asOf + ')'}]);
+    } else nt = th;
+    const upd = full ? {thesis:nt, thesis_log:logs} : {thesis:nt};
+    ticker = it.ticker; it.thesis = nt; if(full) it.thesis_log = logs;
+    Promise.resolve(wlCol().doc(ticker).update(upd)).catch(e=>{ alert('Import failed: ' + ((e && (e.code||e.message)) || e)); });
+    const fromHw = ltImp && ltImp.bound && typeof hw1On === 'function' && hw1On();
+    if(!fromHw){ wlView = 'wl'; wlSel = ticker; wlSub = ''; }
+    wlMenu = '';
+    ltSheetClose();
+    try{ renderWatchlist(); }catch(e){}
+    try{ sdToast('Fact Sheet updated (' + th.facts.asOf + ') · your notes and the AI thesis are unchanged'); }catch(e){}
+    return;
+  }
   if(!it){
     ticker = wlNormTicker(th.sym);
     const market = (th.market==='TH' || th.market==='US') ? th.market : wlGuessMarket(ticker);
@@ -21125,6 +21171,7 @@ document.querySelectorAll('.overlay').forEach(o=>{
    ลำดับ: lightbox กราฟ → กล่องคำศัพท์/popover/เมนูลอย → sheet → .overlay.show → (ไม่มีอะไรเปิด) Watch กลับรายการ
    ปิดผ่านฟังก์ชันปิดเดิมของแต่ละตัว ไม่ลบ DOM เอง */
 function escCloseTop(){
+  if(typeof ltImp !== 'undefined' && ltImp){ ltSheetClose(); return true; }   /* HW1b — the import sheet closes through its own closer (clears ltImp) */
   if(document.getElementById('vwLb')){ vwLbClose(); return true; }
   if(document.getElementById('bdPop')){ pb2Back(); return true; }   /* PB1 · PB1b: Esc = back one step */
   if(bdOpenId && document.getElementById('bdDrawer')){ bdClose(); return true; }   /* PB1 */
@@ -21169,6 +21216,12 @@ function escCloseTop(){
   }
   { const sp = document.querySelector('.stk-panel');   /* NS1 — แผงข่าวรายสัปดาห์ (Mac) */
     if(sp){ if(document.activeElement && sp.contains(document.activeElement) && kbEditableTarget(document.activeElement)){ document.activeElement.blur(); return true; } stkCloseView(); return true; } }
+  if(hw1BackOn()){   /* HW1b — Esc on the Homework page / Full thesis: field blur → popover close → back (sheets/menus above already closed first) */
+    const ae = document.activeElement;
+    if(ae && kbEditableTarget(ae)){ ae.blur(); return true; }
+    const po = hw1PopsOpen(); if(po.length){ po.forEach(hw1PopToggle); return true; }
+    hw1BackGo(); return true;
+  }
   if(wlFull){ wlFullSet(false); return true; }   /* LN3fix3b — ป๊อปอัป/เมนู/sheet ข้างบนปิดก่อน · Esc ถัดไปย่อกลับ */
   if(activeTab==='watch' && wlResearchExpanded){ if(wlNarrow()) wlBack(); else wlSetSub('sum'); return true; }
   if(activeTab==='watch' && wlMobOpen && wlNarrow() && !kbEditableTarget(document.activeElement)){ wlBack(); return true; }   /* เดิมอยู่ใน kbHandle */
@@ -30247,10 +30300,10 @@ function wl2UseThesis(sym){
 }
 function wl5Menu(r){
   const e = escHtml, it = r.item, sym = e(r.sym), th = wlThesisOf(it), open = wlMenu === r.sym, items = [];
-  items.push(`<button type="button" role="menuitem" data-lr5-full onclick="wlMenu='';wl5Full(this.dataset.sym,'sum')" data-sym="${sym}">Full thesis</button>`);
+  if(th) items.push(`<button type="button" role="menuitem" data-lr5-full onclick="wlMenu='';wl5Full(this.dataset.sym,'sum')" data-sym="${sym}">Full thesis</button>`);
   items.push(`<button type="button" role="menuitem" data-lr5-news onclick="wlMenu='';wl5Full(this.dataset.sym,'${th ? 'trk' : 'view'}')" data-sym="${sym}">News &amp; catalysts</button>`);
   items.push(`<button type="button" role="menuitem" data-ln3-edit data-sym="${sym}" onclick="wlMenu='';wlOpenEdit(this.dataset.sym)">Edit</button>`);
-  items.push(`<button type="button" role="menuitem" data-lt-import data-sym="${sym}" onclick="wlMenu='';ltImportOpen(this.dataset.sym)">Import thesis</button>`);
+  items.push(`<button type="button" role="menuitem" data-lt-import data-sym="${sym}" onclick="wlMenu='';ltImportOpen(this.dataset.sym)">Import JSON</button>`);
   if(th) items.push(`<button type="button" role="menuitem" data-lt-export data-sym="${sym}" onclick="ltExport(this.dataset.sym)">Export JSON</button><button type="button" role="menuitem" data-lt-history data-sym="${sym}" onclick="ltHistoryOpen(this.dataset.sym)">History (${(it.thesis_history || []).length})</button>`);
   items.push(`<button type="button" role="menuitem" data-wl-archive-m data-sym="${sym}" onclick="wlMenu='';wlArchiveOpen(this.dataset.sym)">Archive…</button>`);
   if(wlCanDelete(it)) items.push(`<button type="button" role="menuitem" class="danger" data-ln3-del data-sym="${sym}" onclick="wlMenu='';wlDeleteItem(this.dataset.sym)">Delete</button>`);
@@ -30366,7 +30419,7 @@ function hw1Refresh(t){
     const f = root.querySelector('[data-hw1-f="' + k + '"]'); if(f){ f.classList.toggle('ok', ok); f.classList.toggle('no', !ok); }
   });
   ['why', 'exit', 'trigger'].forEach(k=>{
-    const b = root.querySelector('[data-hw1-cmp-btn="' + k + '"]'); if(b) b.hidden = wlBlank(v[k]);
+    const b = root.querySelector('[data-hw1-cmp-btn="' + k + '"]'); if(b) b.hidden = wlBlank(v[k]) || ltFactsOnly(wlThesisRaw(it));
     const m = root.querySelector('[data-hw1-cmp="' + k + '"] [data-hw1-cmp-mine]'); if(m) m.textContent = v[k];
   });
 }
@@ -30383,6 +30436,11 @@ function hw1PopHtml(o, inTr){
   rows.push(['Source', hw1SrcHtml(o.src)]);
   const inner = `<div class="hw1-pop" data-hw1-pop${inTr ? '' : ' hidden'}>${rows.map(r=>`<b>${r[0]}</b><span>${r[1]}</span>`).join('')}${o.note ? `<span class="warn" data-hw1-pop-note>${e(o.note)}</span>` : ''}</div>`;
   return inTr ? `<tr class="hw1-poptr" hidden><td colspan="6">${inner}</td></tr>` : inner;
+}
+function hw1CopyCmd(el){
+  const txt = el.dataset.cmd || '', done = ()=>{ try{ sdToast('Copied'); }catch(e){} };
+  const fb = ()=>{ try{ const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }catch(e){} done(); };
+  try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fb); else fb(); }catch(e){ fb(); }
 }
 function hw1PopToggle(el){
   const nx = el.nextElementSibling; if(!nx) return;
@@ -30406,7 +30464,7 @@ function hw1FactsHtml(it){
     if(biz) rows.push(hw1FRow('Business', e(biz)));
     ltArr(th && th.kpi).slice(0, 3).forEach(k=>{ if(k && k.name) rows.push(hw1FRow('KPI', e(String(k.name) + (k.base ? ' · ' + k.base : '')))); });
     ltNextCats(it).slice(0, 2).forEach(c=>rows.push(hw1FRow('Catalyst', e(wl1ArchDate(c.date) + ' · ' + ltShort(c.event, 70)))));
-    return `<div class="hw1-facts" data-hw1-facts="fallback"><div class="hw1-fh"><span class="lbl">Facts</span></div>${rows.join('') || '<div class="hw1-fr"><span class="l"></span><span class="v mut">No living thesis yet — Import it in ⋯</span><span></span></div>'}<div class="hw1-mut" data-hw1-nofacts>Full Fact Sheet: run living-thesis (lite or facts mode)</div></div>`;
+    return `<div class="hw1-facts" data-hw1-facts="fallback"><div class="hw1-fh"><span class="lbl">Facts</span></div>${rows.join('') || ''}<div class="hw1-mut hw1-steps" data-hw1-nofacts><b>No Fact Sheet yet</b><div data-hw1-step="1">1. Copy the command and run it in Claude: <button type="button" class="hw1-cmd" data-hw1-copycmd data-cmd="living-thesis facts ${e(wl1Bare(it.ticker))}" onclick="hw1CopyCmd(this)">living-thesis facts ${e(wl1Bare(it.ticker))} ⧉</button></div><div data-hw1-step="2">2. Paste the JSON it gives you: <button type="button" class="hw1-lnk" data-hw1-import-link data-sym="${e(it.ticker)}" onclick="ltImportOpen(this.dataset.sym)">Import JSON ›</button></div></div></div>`;
   }
   const rows = [];
   rows.push(hw1FRow('Business', e(f.biz)));
@@ -30430,7 +30488,7 @@ function hw1FactsHtml(it){
     more = `<details class="hw1-more" data-hw1-more><summary>More facts ▾ <span class="mut">${gs.map(e).join(' · ')}</span></summary>${gs.map(g=>`<div class="hw1-gh">${e(g.charAt(0).toUpperCase() + g.slice(1))}</div>${f.more.filter(x=>x.g === g).map(lineRow).join('')}`).join('')}</details>`;
   }
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.date);
-  return `<div class="hw1-facts" data-hw1-facts="full"><div class="hw1-fh"><span class="lbl">Fact Sheet · AI · numbers only</span><span class="mut">${e(f.asOf)}${m ? ' · ' + wl1ArchDate(f.date) : ''} · tap a row for formula + source</span></div>
+  return `<div class="hw1-facts" data-hw1-facts="full"><div class="hw1-fh"><span class="lbl">Fact Sheet · AI · numbers only</span><span class="mut">${e(f.asOf)}${m ? ' · ' + wl1ArchDate(f.date) : ''} · tap a row for formula + source</span><button type="button" class="btn sm hw1-imp" data-hw1-import data-sym="${e(it.ticker)}" title="Paste a newer living-thesis JSON" onclick="ltImportOpen(this.dataset.sym)">Update ›</button></div>
     <div class="hw1-lg" data-hw1-legend>${hw1Tag('rpt')} from filing · ${hw1Tag('calc')} calculated, tap for formula · ${hw1Tag('mgmt')} management says</div>${rows.join('')}${more}</div>`;
 }
 
@@ -30439,7 +30497,7 @@ function hw1Fld(it, k, req){
   const e = escHtml, t = it.ticker, v = hw1Vals(it)[k], L = hw1Lbl(it, k), ok = !wlBlank(v);
   const at = k === 'why' ? 'data-wl-mt-why ' : k === 'exit' ? 'data-wl-mt-exit ' : k === 'trigger' ? 'data-wl1-trigger ' : '';
   const chip = req ? `<span class="hw1-c ${ok ? 'ok' : 'req'}" data-hw1-chip="${k}">${ok ? 'filled' : 'required'}</span>` : '<span class="hw1-c opt">optional</span>';
-  const cmp = (k === 'why' || k === 'exit' || k === 'trigger') ? `<button type="button" class="hw1-cmp" data-hw1-cmp-btn="${k}" ${ok ? '' : 'hidden'} onclick="hw1CmpToggle('${e(t)}','${k}')">Compare with thesis ›</button><div class="hw1-cmpb" data-hw1-cmp="${k}" hidden></div>` : '';
+  const cmp = (k === 'why' || k === 'exit' || k === 'trigger') ? `<button type="button" class="hw1-cmp" data-hw1-cmp-btn="${k}" ${ok && !ltFactsOnly(wlThesisRaw(it)) ? '' : 'hidden'} onclick="hw1CmpToggle('${e(t)}','${k}')">Compare with thesis ›</button><div class="hw1-cmpb" data-hw1-cmp="${k}" hidden></div>` : '';
   return `<div class="hw1-fld ${req ? (ok ? 'ok' : 'no') : 'opt'}" data-hw1-f="${k}"${req ? ` data-wl1-hwi="${k}"` : ''}><label class="hw1-fl${req ? '' : ' o'}" for="hw1-${k}">${e(L.n)} ${chip}</label>${L.hint ? `<div class="hw1-hint">${e(L.hint)}</div>` : ''}<textarea id="hw1-${k}" ${at}data-wl-mt-ta data-hw1-ta="${k}" rows="${req ? 2 : 1}" maxlength="${k === 'trigger' ? 1000 : 2000}" spellcheck="false" placeholder="${e(L.ph)}" oninput="wlMtIn('${e(t)}','${k}',this.value,this)">${e(v)}</textarea>${cmp}</div>`;
 }
 function hw1PlanFn(it){ const s = escHtml(it.ticker).replace(/'/g, '&#39;'); return wl1Status(it).k === 'none' ? `wlOpenCorePlan('${s}')` : `wl5OpenPlan('${s}')`; }
@@ -30515,7 +30573,7 @@ function hw1PageHtml(r){
   const it = r && r.item; if(!it) return '<div class="panel"><div class="empty">Stock not found</div></div>';
   const e = escHtml, t = it.ticker, st = wl5Status(it), v = hw1Vals(it), p = hw1Prog(it, v), done = wl1HwDone(it) && !p.miss.length, seg = hw1Seg[t] || (p.n === 0 ? 'facts' : 'mine');
   return `<div class="hw1-pg" data-hw1-page="${e(t)}" data-hw1-show="${seg}" data-hw1-track="${wl1TrkOf(it) === 'ladder' ? 'compounder' : 'momentum'}">
-    <div class="hw1-top"><button type="button" class="btn sm hw1-back" data-hw1-back onclick="hwBack()"><span class="lg">‹ Watch</span><span class="sm" aria-label="Back to Watch">‹</span></button><b class="hw1-t">${e(wl1Bare(t))} · Homework</b><span class="st ${st.cls} hw1-st" data-hw1-chip-st>${e(st.label)}</span><span class="hw1-ctx" data-hw1-ctx>${hw1CtxLine(it)}</span>
+    <div class="hw1-top"><button type="button" class="btn sm hw1-back" data-hw1-back title="Back (Esc or Backspace)" onclick="hwBack()"><span class="lg">‹ Watch</span><span class="sm" aria-label="Back to Watch">‹</span></button><b class="hw1-t">${e(wl1Bare(t))} · Homework</b><span class="st ${st.cls} hw1-st" data-hw1-chip-st>${e(st.label)}</span><span class="hw1-ctx" data-hw1-ctx>${hw1CtxLine(it)}</span>
       <span class="hw1-pr"><b data-hw1-prog>${done ? '✓ Done' : p.n + ' of ' + p.tot}</b><span class="bar"><i data-hw1-bar style="width:${Math.round(100 * p.n / p.tot)}%"></i></span></span></div>
     <div class="hw1-segw" role="tablist"><button type="button" role="tab" data-hw1-seg="facts" class="${seg === 'facts' ? 'on' : ''}" aria-selected="${seg === 'facts'}" onclick="hw1SegSet('${e(t)}','facts')">Facts</button><button type="button" role="tab" data-hw1-seg="mine" class="${seg === 'mine' ? 'on' : ''}" aria-selected="${seg === 'mine'}" onclick="hw1SegSet('${e(t)}','mine')">My thesis</button></div>
     <div class="hw1-body">${hw1FactsHtml(it)}${hw1MineHtml(it)}</div></div>`;
