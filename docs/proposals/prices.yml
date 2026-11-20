@@ -1,4 +1,5 @@
 # ราคาปิดสัปดาห์ + EMA10 ของหุ้น Core (PX1) + RS line / RS Rating 1–99 ของ Watchlist+Candidates+Core (RS1) → Firestore users/{uid}/prices
+# RS2a — build_prices.py now also writes users/{uid}/rs2/* (ranked liquid-US list) · ต้องมี Firestore Rules สำหรับ rs2 (อ่านได้เฉพาะเจ้าของ · เขียนผ่าน service account)
 # ใช้ secret FIREBASE_SA + FIREBASE_UID · ไม่ commit อะไรกลับ repo
 name: prices
 
@@ -19,7 +20,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30      # RS2a — ~7 min locally (≈ 5,000 symbols on the weekly full scan + sector lookups); 30 leaves margin on the runner
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -27,6 +28,8 @@ jobs:
           python-version: '3.11'
       - name: RS1 selftest (ไม่แตะเน็ต)
         run: python tests/rs1_selftest.py
+      - name: RS2a selftest (ไม่แตะเน็ต)
+        run: python tests/rs2_selftest.py
       - name: ติดตั้งแพ็กเกจ
         run: pip install --quiet yfinance pandas firebase-admin
       - name: ดึงราคา + เขียน Firestore

@@ -28,7 +28,7 @@ def run(pw, w, h):
         js(page, "()=>{ switchTab('watch'); wlSetView('wl'); renderWatchlist(); }"); page.wait_for_timeout(500)
         # ---- header
         hd = js(page, "()=>({h1:document.querySelector('.lr5-h1').innerText, segs:[...document.querySelectorAll('[data-wl1-segs] button')].map(b=>b.innerText.replace(/\\s+/g,' ').trim()), sum:document.querySelector('[data-wl1-sum]').innerText.replace(/\\s+/g,' ').trim(), find:!!document.querySelector('[data-lr5-q]') && getComputedStyle(document.querySelector('[data-lr5-q]').closest('label')).display !== 'none', add:document.querySelector('[data-wl1-import]').innerText.trim()})")
-        check(f"{tag} A: header = Watch · Momentum 5 · Compounder 1 · Ideas 2", hd["h1"] == "Watch" and hd["segs"] == ["Momentum 5", "Compounder 1", "Ideas 2"], hd)
+        check(f"{tag} A: header = Watch · Momentum 5 · Compounder 1 · Ideas 2", hd["h1"] == "Watch" and hd["segs"] in (["Momentum 5", "Compounder 1", "Ideas 2", "Screen"], ["Mom 5", "Comp 1", "Ideas 2", "Screen"]), hd)   # RS2a: 4th segment Screen · phone short labels (ScreenRSPhone mockup)
         check(f"{tag} A: summary line '5 stocks · 3 need homework'" + (" · shared by Main and Family" if desk else ""), hd["sum"].startswith("5 stocks · 3 need homework") and (("shared by Main and Family" in hd["sum"]) if desk else True), hd["sum"])
         check(f"{tag} A: desktop has Find ticker + '+ Add stock'; phone has '+ Add' only", (hd["find"] and hd["add"] == "+ Add stock") if desk else (not hd["find"] and hd["add"] == "+ Add"), hd)
         # ---- rows + statuses
