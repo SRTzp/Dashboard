@@ -43,7 +43,7 @@ def run(pw, w, h):
         # ---- homework / sector / next check text (desktop cells)
         if desk:
             hw = {s: row(page, s, "[data-wl1-hwt]") for s in o}
-            check(f"{tag} A: homework cell — 'Not started · adds at 50%' (Holding) · 'Not started' · 'Done 8 Nov · aero cycle'", hw["AAPL"] == "Not started · adds at 50%" and hw["PLTR"] == "Not started" and hw["GE"] == "Done 8 Nov · aero cycle" and hw["AVGO"].startswith("Done 12 Nov · AI networking"), hw)
+            check(f"{tag} A: homework cell — 'Not started · adds at 50%' (Holding) · 'Not started' · 'Done 8 Nov · aero cycle'", hw["AAPL"] == "Not started · adds at 50%" and hw["PLTR"] == "Not started" and hw["GE"] == "Done 8 Nov" and hw["AVGO"].startswith("Done 12 Nov"), hw)
             nx = {s: row(page, s, "[data-lr5-next]") for s in o}
             check(f"{tag} A: Next check — GE 28 Nov · AVGO 2 Dec · others —", nx["GE"] == "28 Nov" and nx["AVGO"] == "2 Dec" and nx["AAPL"] == "—" and nx["PLTR"] == "—", nx)
             sec = {s: row(page, s, "[data-lr5-sec]") for s in o}
@@ -58,7 +58,7 @@ def run(pw, w, h):
         else:
             ph = {s: row(page, s, ".l2") for s in o}
             check(f"{tag} B: phone — RS sits at the end of line 2 ('… · RS 87 ↗')", ph["AAPL"].endswith("RS 87 ↗ new high") and ph["GE"].endswith("RS 91 →") and ph["AVGO"].endswith("RS 64 ↘") and "RS" not in ph["PLTR"] and "RS" not in ph["AMD"], ph)
-            check(f"{tag} B: phone line 2 — amber homework note when missing · 'Industrials · thesis done 8 Nov' when done", ph["AAPL"].startswith("Homework not started · adds at 50%") and ph["PLTR"] == "Homework not started" and ph["GE"].startswith("Industrials · thesis done 8 Nov"), ph)
+            check(f"{tag} B: phone line 2 — amber homework note when missing · 'Industrials · thesis done 8 Nov' when done", ph["AAPL"].startswith("Homework not started · adds at 50%") and ph["PLTR"] == "Homework not started" and ph["GE"].startswith("Industrials · Done 8 Nov"), ph)
         # ---- one line per row · no overflow
         dims = js(page, "()=>[...document.querySelectorAll('[data-lr5-row]')].map(r=>({s:r.dataset.sym, h:Math.round(r.getBoundingClientRect().height), cells:[...r.children].filter(c=>getComputedStyle(c).display!=='none' && !c.classList.contains('lr5-id')).map(c=>Math.round(c.getBoundingClientRect().height)), l2:(r.querySelector('.l2')||{getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height}))")
         if desk: check(f"{tag} A: every row is ONE line (≤ 64px · no cell wraps)", all(d["h"] <= 64 for d in dims) and all(max(d["cells"]) <= 44 for d in dims), dims)
@@ -95,17 +95,17 @@ def run(pw, w, h):
         # ---- detail panel
         if desk:
             js(page, "()=>wlOpen('AAPL')"); page.wait_for_timeout(300)
-            det = js(page, "()=>{ const d = document.querySelector('[data-lr5-det]'); const f = k=>{ const e = d.querySelector('[data-lr5-f=\"'+k+'\"]'); return e ? e.innerText.replace(/\\s+/g,' ').trim() : null; }; return {sym:d.dataset.lr5Det, head:d.querySelector('.lr5-dh').innerText.replace(/\\s+/g,' ').trim(), why:f('why'), trigger:f('trigger'), exit:f('exit'), sector:f('sector') + ' ' + f('rs'), main:d.querySelector('[data-lr5-main]').innerText.trim(), mainBlack:getComputedStyle(d.querySelector('[data-lr5-main]')).backgroundColor, hint:d.querySelector('.lr5-hint').innerText, amber:getComputedStyle(d.querySelector('[data-lr5-empty]')).color, link:(d.querySelector('[data-lr5-rs-link]')||{}).href||''}; }")
-            check(f"{tag} D: detail AAPL — header 'AAPL Holding NASDAQ · Technology'", det["sym"] == "AAPL" and det["head"].startswith("AAPL Holding NASDAQ · Technology"), det)
-            check(f"{tag} D: WHY 'Not written yet' in amber · TRIGGER — · EXIT WHEN —", det["why"] == "WHY Not written yet" and det["amber"] == "rgb(154, 91, 0)" and det["trigger"] == "TRIGGER —" and det["exit"] == "EXIT WHEN —", det)
-            check(f"{tag} D: SECTOR VS SPY 'Technology (XLK) ↘ lagging · 12d' + RS 'RS 87 ← 72 (4 wks ago) · line ↗ · new high 18 Nov' + TradingView RS link", "Technology (XLK) ↘ lagging · 12d" in det["sector"] and "RS 87 ← 72 (4 wks ago) · line ↗ · new high 18 Nov" in det["sector"] and "RS chart on TradingView ↗" in det["sector"] and "tradingview.com/chart" in det["link"], det)
-            check(f"{tag} D: one black main action 'Do homework ›' + hint about ⋯", det["main"] == "Do homework ›" and det["mainBlack"] == "rgb(20, 22, 26)" and "Full thesis, news and archive are in ⋯" in det["hint"], det)
+            det = js(page, "()=>{ const d = document.querySelector('[data-lr5-det]'); const f = k=>{ const e = d.querySelector('[data-lr5-f=\"'+k+'\"]'); return e ? e.innerText.replace(/\\s+/g,' ').trim() : null; }; return {sym:d.dataset.lr5Det, head:d.querySelector('.lr5-dh').innerText.replace(/\\s+/g,' ').trim(), trigger:f('trigger'), exit:f('exit'), sector:f('sector') + ' ' + f('rs'), main:d.querySelector('[data-lr5-main]').innerText.trim(), mainBlack:getComputedStyle(d.querySelector('[data-lr5-main]')).backgroundColor, amber:getComputedStyle(d.querySelector('[data-lr5-empty]')).color, link:(d.querySelector('[data-lr5-rs-link]')||{}).href||''}; }")
+            check(f"{tag} D: detail AAPL — header 'AAPL Holding NASDAQ · Technology'", det["sym"] == "AAPL" and det["head"].startswith("AAPL Holding NASDAQ · Momentum"), det)
+            check(f"{tag} D: WHY 'Not written yet' in amber · TRIGGER — · EXIT WHEN —", det["amber"] == "rgb(154, 91, 0)" and det["trigger"] == "Trigger Not written yet" and det["exit"] == "Changes if Not written yet", det)
+            check(f"{tag} D: SECTOR VS SPY 'Technology (XLK) ↘ lagging · 12d' + RS 'RS 87 ← 72 (4 wks ago) · line ↗ · new high 18 Nov' + TradingView RS link", "Tech ↘ vs SPY" in det["sector"] and "RS 87 ← 72 (4 wks ago) · line ↗ · new high 18 Nov" in det["sector"] and "RS chart on TradingView ↗" in det["sector"] and "tradingview.com/chart" in det["link"], det)
+            check(f"{tag} D: one black main action 'Do homework ›' + hint about ⋯", det["main"] == "Continue homework ›" and det["mainBlack"] == "rgb(20, 22, 26)", det)   # HW1: hint line gone
             js(page, "()=>wlOpen('AVGO')"); page.wait_for_timeout(300)
-            d2 = js(page, "()=>{ const d = document.querySelector('[data-lr5-det]'); const f = k=>d.querySelector('[data-lr5-f=\"'+k+'\"]').innerText.replace(/\\s+/g,' ').trim(); return {why:f('why'), trigger:f('trigger'), exit:f('exit'), main:d.querySelector('[data-lr5-main]').innerText.trim(), sector:f('sector') + ' ' + f('rs')}; }")
-            check(f"{tag} D: AVGO panel — WHY / TRIGGER / EXIT WHEN from the thesis · main 'Open plan ›' · RS line ↘, no new high", d2["why"] == "WHY AI networking share" and d2["trigger"] == "TRIGGER Break of the 4-week base" and d2["exit"] == "EXIT WHEN Hyperscaler capex cut" and d2["main"] == "Open plan ›" and "RS 64 ← 70 (4 wks ago) · line ↘" in d2["sector"] and "new high" not in d2["sector"], d2)
+            d2 = js(page, "()=>{ const d = document.querySelector('[data-lr5-det]'); const f = k=>d.querySelector('[data-lr5-f=\"'+k+'\"]').innerText.replace(/\\s+/g,' ').trim(); return {trigger:f('trigger'), exit:f('exit'), main:d.querySelector('[data-lr5-main]').innerText.trim(), sector:f('sector') + ' ' + f('rs')}; }")
+            check(f"{tag} D: AVGO panel — WHY / TRIGGER / EXIT WHEN from the thesis · main 'Open plan ›' · RS line ↘, no new high", d2["trigger"] == "Trigger Break of the 4-week base" and d2["exit"] == "Changes if Hyperscaler capex cut" and d2["main"] == "Open plan ›" and "RS 64 ← 70 (4 wks ago) · line ↘" in d2["sector"] and "new high" not in d2["sector"], d2)
             js(page, "()=>wlOpen('PLTR')"); page.wait_for_timeout(300)
             d3 = js(page, "()=>['sector','rs'].map(k=>document.querySelector('[data-lr5-f=\\\"'+k+'\\\"]').innerText).join(' ').replace(/\\s+/g,' ').trim()")
-            check(f"{tag} D: PLTR panel (no RS data) → 'RS — …' + the TradingView link, no 0 / NaN", d3.startswith("SECTOR VS SPY Software (IGV)") and "RS — the daily price job has not covered this stock" in d3 and "RS chart on TradingView" in d3 and "NaN" not in d3, d3)
+            check(f"{tag} D: PLTR panel (no RS data) → 'RS — …' + the TradingView link, no 0 / NaN", d3.startswith("Software") and "RS — the daily price job has not covered this stock" in d3 and "RS chart on TradingView" in d3 and "NaN" not in d3, d3)
             js(page, "()=>wlOpen('AMD')"); page.wait_for_timeout(300)
             d4 = js(page, "()=>['sector','rs'].map(k=>document.querySelector('[data-lr5-f=\\\"'+k+'\\\"]').innerText).join(' ').replace(/\\s+/g,' ').trim()")
             check(f"{tag} D: AMD panel (rating null · history<252) → reason shown", "less than 252 sessions" in d4, d4)
@@ -134,7 +134,7 @@ def run(pw, w, h):
             page.locator("[data-lr5-row][data-sym=AAPL]").click(position={"x": 20, "y": 14}); page.wait_for_timeout(400)
             sh = js(page, "()=>{ const d = document.querySelector('.lr5-det'); const r = d.getBoundingClientRect(); return {open:document.querySelector('[data-lr5]').classList.contains('open'), pos:getComputedStyle(d).position, bottom:Math.round(innerHeight - r.bottom), h:Math.round(r.height), vh:innerHeight, txt:d.innerText.replace(/\\s+/g,' ').trim(), close:Math.round(d.querySelector('[data-lr5-close]').getBoundingClientRect().height)}; }")
             check(f"{tag} C: tapping a row opens the detail as a bottom sheet (fixed · bottom 0 · ≤ 88% of the screen)", sh["open"] and sh["pos"] == "fixed" and sh["bottom"] == 0 and sh["h"] <= sh["vh"] * 0.88 + 2, sh)
-            check(f"{tag} C: sheet carries the same content as the desktop panel (WHY · TRIGGER · EXIT WHEN · sector · RS · Do homework ›)", all(x in sh["txt"] for x in ("WHY Not written yet", "TRIGGER", "EXIT WHEN", "Technology (XLK) ↘ lagging · 12d", "RS 87 ← 72 (4 wks ago)", "RS chart on TradingView ↗", "Do homework ›")), sh["txt"])
+            check(f"{tag} C: sheet carries the same content as the desktop panel (WHY · TRIGGER · EXIT WHEN · sector · RS · Do homework ›)", all(x in sh["txt"] for x in ("Not written yet", "Trigger", "Changes if", "Tech ↘ vs SPY", "RS 87 ← 72 (4 wks ago)", "RS chart on TradingView ↗", "Continue homework ›")), sh["txt"])
             check(f"{tag} C: sheet × is a 36px+ tap target and closes it", sh["close"] >= 36)
             check(f"{tag} E: no Thai in the sheet", js(page, THAI) == [], js(page, THAI))
             page.click("[data-lr5-close]"); page.wait_for_timeout(300)
