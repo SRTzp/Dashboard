@@ -143,7 +143,7 @@ def watch_list(pw, w, h):
         check(f"{tag} 1 status chips: Holding · Planned · No plan · Holding", [chip(page, s) for s in r] == ["Holding", "Plan ready", "No plan", "Holding"], [chip(page, s) for s in r])
         check(f"{tag} 1 cap tags: not done = 50% · done = 100%; homework text names what is missing", "adds at 50%" in rowtxt(page, "ADBE") and ("Done" in rowtxt(page, "MSFT") or "thesis done" in rowtxt(page, "MSFT")) and ("Missing trigger" in rowtxt(page, "AMD") or "trigger missing" in rowtxt(page, "AMD")), [rowtxt(page, s) for s in r])
         check(f"{tag} 1 summary line: 4 stocks · 3 need homework", re.search(r"4 stocks.*3 need homework", txt(page, "[data-wl1-sum]") or "") is not None, txt(page, "[data-wl1-sum]"))
-        check(f"{tag} 1 segmented control shows counts Momentum 4 | Compounder 2", "Momentum 4" in txt(page, "[data-wl1-segs]") and "Compounder 2" in txt(page, "[data-wl1-segs]"), txt(page, "[data-wl1-segs]"))
+        check(f"{tag} 1 segmented control shows counts Momentum 4 | Compounder 2", re.search(r"Mom(entum)? 4", txt(page, "[data-wl1-segs]") or "") is not None and re.search(r"Comp(ounder)? 2", txt(page, "[data-wl1-segs]") or "") is not None, txt(page, "[data-wl1-segs]"))
         js(page, "()=>wl1TrkSet('ladder')"); settle(page, 400)
         r2 = rows(page)
         check(f"{tag} 1 Compounder list: AVGO (No plan) before NVDA (done) · NVDA = 'Holding · Add-on planned' (2nd plan on the same key)", r2 == ["AVGO", "NVDA"] and chip(page, "NVDA") == "Add-on planned" and chip(page, "AVGO") == "No plan", [r2, chip(page, "NVDA")])

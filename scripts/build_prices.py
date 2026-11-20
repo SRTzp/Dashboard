@@ -324,7 +324,7 @@ def pick_rs_tickers(cards, watch):
     return seen
 
 
-def run_rs(syms, universe, fetch_many, write, now, sector_fetch=None, have_sector=()):
+def run_rs(syms, universe, fetch_many, write, now, sector_fetch=None, have_sector=(), us_table=None):
     """syms {ySym: ticker} · universe [ySym] · fetch_many(list)->{ySym: [(date, adj close)]} (ตัวที่ดึงไม่ได้ = ไม่มี key)
     เขียน prices/{ySym} {'rs':…} + prices/_meta {'rsTable':…} · คืน (n_rated, failed list)"""
     benches = list(RS_BENCH.values())
@@ -332,6 +332,8 @@ def run_rs(syms, universe, fetch_many, write, now, sector_fetch=None, have_secto
     data = fetch_many(need)
     clean = {y: _rows(r) for y, r in data.items() if r is not None and len(r)}
     table = rs_table({y: clean[y] for y in universe if y in clean}, rs_market)
+    if us_table:        # RS2a — US ratings use the liquid-universe table built by build_rs2 (same table as the Screen list)
+        table['us'] = {k: us_table[k] for k in ('asOf', 'n', 'cuts', 'cuts4w') if k in us_table}
     failed, n = [], 0
     for y, tk in syms.items():
         rows = clean.get(y)
@@ -423,10 +425,16 @@ def main():
     code = run(cards, _yf_fetch, write, now)
     try:        # RS1 — ล้มแล้วไม่ทำให้งานราคารายสัปดาห์เดิมล้ม
         watch = [d.to_dict() or {} for d in base.collection('watchlist').stream()]
-        uni = [to_ysym(t) for t in load_universe(os.path.join(ROOT, 'data', 'universe_us.txt'))] + \
-              [to_ysym(t, 'TH') for t in load_universe(os.path.join(ROOT, 'data', 'universe_th.txt'))]
+        us_table = None
+        try:        # RS2a — liquid US universe + ranked list (own try: a failure keeps yesterday's rs2 doc and falls back to universe_us.txt)
+            import build_rs2
+            us_table = build_rs2.build(base, now)
+        except Exception as ex:
+            print('rs2 failed:', str(ex)[:200])
+        us_file = [] if us_table else [to_ysym(t) for t in load_universe(os.path.join(ROOT, 'data', 'universe_us.txt'))]
+        uni = us_file + [to_ysym(t, 'TH') for t in load_universe(os.path.join(ROOT, 'data', 'universe_th.txt'))]
         have = {d.id for d in base.collection('prices').stream() if (d.to_dict() or {}).get('sector') or (d.to_dict() or {}).get('industry')}
-        run_rs(pick_rs_tickers(cards, watch), uni, _yf_fetch_many, write, now, _yf_sector, have)
+        run_rs(pick_rs_tickers(cards, watch), uni, _yf_fetch_many, write, now, _yf_sector, have, us_table)
     except Exception as ex:
         print('rs failed:', str(ex)[:200])
     return code
