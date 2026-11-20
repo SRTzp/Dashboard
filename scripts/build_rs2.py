@@ -371,6 +371,79 @@ def with_sectors(rows, sectors):
     return rows
 
 
+# ── RS2a3 — Today alerts: compare today's rows with the previous run → rs2/changes {asOf, prevAsOf, items:[{sym,k,from,to}]} ──
+CHG_MAX = 30
+CHG_TOP = 3        # d (new Leader) and e (new Emerging) keep the best 3 by RS
+CHG_DROP = 15      # c: RS fell this much or more vs 4 weeks ago
+CHG_ORDER = 'bdace'  # priority inside the 30-cap (b left Leaders · a new 52w high · d new Leader · c RS drop · e new Emerging) — c/e are off by default in the app, so they go last
+
+
+def watch_syms(watch):
+    """Watch tickers (US only) in the row-key form used by the table (BRK.B → BRK-B)"""
+    out = set()
+    for w in watch or []:
+        t = str((w.get('ticker') if isinstance(w, dict) else w) or '').strip().upper()
+        if not t or t.endswith('.BK') or (isinstance(w, dict) and w.get('market') == 'TH'):
+            continue
+        out.add(t.split(':')[-1].replace('.', '-'))
+    return out
+
+
+def changes_diff(prev_rows, rows, watch, as_of, prev_as_of):
+    """no previous run → empty list · a/b/c are for stocks on Watch, d/e for stocks that are not · ≤ 30 items, compact"""
+    doc = {'asOf': as_of, 'prevAsOf': prev_as_of or '', 'items': []}
+    if not prev_rows:
+        return doc
+    prev = {r['t']: r for r in prev_rows}
+    wl = watch_syms(watch)
+    lead, emer = PRESETS['leaders'], PRESETS['emerging']
+    safe = lambda f, r: bool(r) and bool(f(r))
+    by = {k: [] for k in CHG_ORDER}
+    for r in rows:
+        t, p = r['t'], prev.get(r['t'])
+        if p is None:
+            if t in wl or r['r'] < 90:
+                continue
+        if t in wl:
+            if p is not None and safe(lead, p) and not safe(lead, r):
+                by['b'].append((r['r'], {'sym': t, 'k': 'b', 'from': p['r'], 'to': r['r']}))
+            if r.get('h') == 2 and (p is None or p.get('h') != 2):
+                by['a'].append((r['r'], {'sym': t, 'k': 'a', 'from': r['r'], 'to': r['r']}))
+            if p is not None and r.get('p') is not None and r['r'] - r['p'] <= -CHG_DROP:
+                by['c'].append((r['p'] - r['r'], {'sym': t, 'k': 'c', 'from': r['p'], 'to': r['r']}))
+        else:
+            if safe(lead, r) and r['r'] >= 90 and not safe(lead, p):
+                by['d'].append((r['r'], {'sym': t, 'k': 'd', 'from': p['r'] if p else None, 'to': r['r']}))
+            if p is not None and safe(emer, r) and not safe(emer, p):
+                by['e'].append((r['r'], {'sym': t, 'k': 'e', 'from': p['r'], 'to': r['r']}))
+    items = []
+    for k in CHG_ORDER:
+        L = sorted(by[k], key=lambda x: (-x[0], x[1]['sym']))
+        items += [x[1] for x in (L[:CHG_TOP] if k in 'de' else L)]
+    doc['items'] = items[:CHG_MAX]
+    return doc
+
+
+def load_rows(col):
+    """the rows of rs2/latest (+ parts) → (rows, asOf) · missing / unreadable → ([], '')"""
+    try:
+        s = col.document('latest').get()
+        if not s.exists:
+            return [], ''
+        d = s.to_dict() or {}
+        if d.get('parts'):
+            rows = []
+            for i in range(int(d['parts'])):
+                ps = col.document('latest_%d' % i).get()
+                rows += ((ps.to_dict() or {}).get('rows') or []) if ps.exists else []
+            return rows, d.get('asOf') or ''
+        return list(d.get('rows') or []), d.get('asOf') or ''
+    except Exception as ex:
+        print('rs2 changes: previous rows unreadable:', str(ex)[:120])
+        return [], ''
+
+
+
 def split_docs(as_of, rows, limit=DOC_LIMIT, part_rows=PART_ROWS):
     """→ {docId: dict} · one doc 'latest' when it fits `limit` bytes, else latest (header with parts) + latest_0..k (≤ part_rows rows each)"""
     one = {'asOf': as_of, 'n': len(rows), 'rows': rows}
@@ -517,7 +590,7 @@ def fill_sectors(rows, cache, budget_s=SECTOR_BUDGET_S, getter=None, clock=time.
     return n
 
 
-def build(base, now, seed_sectors=None):
+def build(base, now, seed_sectors=None, watch=None):
     """run the whole job against Firestore `base` (users/{uid}) → the whole-market table used (dict) or None on failure. Keeps yesterday's doc on failure.
     weekly (universe stale / RS2_FULL=1): all symbols → liquid list + random non-liquid sample → new table (kept in rs2/_meta.cuts…) + earnings lookups
     daily: stored liquid list → scores mapped with the stored table"""
@@ -579,11 +652,17 @@ def build(base, now, seed_sectors=None):
             mref.set({'m': mcache, 'at': now.isoformat()})
         with_mcaps(rows, mcache)
         as_of = table['asOf']
+        prev_rows, prev_as_of = load_rows(col)      # RS2a3 — read BEFORE latest is overwritten
         docs = split_docs(as_of, rows)
         for k, v in docs.items():
             col.document(k).set(v)
         if full:
             uni_ref.set({'liquid': liq, 'at': now.isoformat()})
+        try:        # RS2a3 — own try: a failure never blocks the table. Same asOf again (a re-run) keeps the diff already written.
+            if prev_as_of != as_of:
+                col.document('changes').set(changes_diff(prev_rows, rows, watch, as_of, prev_as_of))
+        except Exception as ex:
+            print('rs2 changes failed:', str(ex)[:120])
         m = {'asOf': as_of, 'n': n_liq, 'nRated': n_rated, 'runAt': now.isoformat(), 'runSecs': round(time.time() - t0),
              'universeAt': now.isoformat() if full else meta.get('universeAt'), 'failedChunks': bad, 'dlRatio': round(dl_ratio, 3),
              'parts': len(docs) - 1 if 'parts' in docs['latest'] else 0, 'bytes': {k: doc_bytes(v) for k, v in docs.items()},

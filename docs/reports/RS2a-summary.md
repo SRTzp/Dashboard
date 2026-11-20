@@ -76,3 +76,26 @@ Brief: `docs/briefs/RS2a2-brief.md` (SRTp, 20 Nov 2026). Base = the RS2a mockups
 **M.Cap coverage / runtime: not measured live** — no Yahoo run from this machine (it throttles per-ticker endpoints right after the bulk download, see RS2a doubts above). Expect the first runs to fill gradually (≤ 240 s each, best RS first) and settle to ~0 s once warm; `_meta.mcN` now records how many rows carry `mc` — read it after the first Actions runs for the real coverage %. Workflow file: **no change needed** (`docs/proposals/prices.yml` untouched).
 
 **RS2a2 final: `JOBS=2 bash tests/run_regression.sh` → 71/71 ok, 0 failing, 1943 s** (hooks superset PASS · rs2 selftest 58 PASS · run_tests_rs2a 134/134 · run_tests_rs2a2 73/73).
+
+---
+
+## RS2a3 — Screen: undo / change after add · ←/→ presets · tick + TradingView .txt · Today alerts
+
+Brief: `docs/briefs/RS2a3-brief.md` (SRTp, 20 Nov 2026). Base = RS2a/RS2a2 Screen + mockup `docs/briefs/lr/ScreenRS3.html`. Side-by-side PNGs (mockup | live): `tests/screenshots/rs2a3/screen-1440-side.png`, `today-side.png`, `screen-390-side.png`, `screen-390-sheet-side.png`.
+
+1. **Undo / change after `+`.** One toast (new add replaces it) for 8 s: `Added NVDA to Momentum · Undo · Move to Compounder`. Undo deletes the item only if Screen created it and it has no plan / homework / notes / thesis; else `Edited — remove it from Watch instead`. Move to … writes `ladder_watch` (same field as Edit); the toast then offers the way back. The `✓` is now a button → menu `Momentum ✓ / Compounder` · `Open in Watch ›` · `Remove from Watch` (same guard; disabled with the reason: `has a plan`, `has homework or notes`, `not added from Screen`). Detail on Watch: `On Watch · Momentum ✓` + `Change ▾` (same menu). Phone: the menu is a bottom sheet.
+2. **←/→ on Screen** step Leaders ↔ Emerging ↔ Pullback, stop at the ends; not while typing or with a menu/sheet open; other views unchanged.
+3. **Tick + .txt (desktop).** Checkbox column first; header = all rows shown (incl. "Show more"), Shift+click range, Space ticks the selected row, selection clears on preset/filter change (not on sort). Selection actions (`N selected · Download for TradingView (.txt) · Add to Watch · Clear`) sit **in the preset row as in the mockup**, not in a new bar above the table (the brief said "a bar"; the mockup says "no extra height" — I followed the mockup). File = one line `EXCH:SYMBOL,…` in list order (`NYSE:BRK.B`), `screen-<preset>-YYYY-MM-DD.txt`. Batch Add to Watch → Momentum, skips names on Watch, one summary toast with Undo (removes only what the batch created). Phone: no checkboxes; new header `⋯` menu = `Download shown list (.txt)` (all rows of the preset/filter) · Filter · Reset.
+4. **Today alerts.** Job: `build_rs2.py` reads the previous `rs2/latest` before overwriting and writes `rs2/changes` `{asOf, prevAsOf, items:[{sym,k,from,to}]}` (≤ 30; a/b/c for Watch stocks, d/e for others; d and e top 3 by RS; no previous run → empty; same asOf re-run keeps the existing doc). `build_prices.py` now passes the Watch list to `build_rs2.build(watch=…)`. App: up to 3 rows in Today's existing **To do** list (tag SCREEN, priority b → a → d, then c, e if on), never folded behind `+N`; tap → Watch › Screen with that row selected (the search is set to the ticker so it shows even if it left Leaders — clear it to go back). Hidden once Screen has been viewed (or a line tapped) for that `asOf`. Settings › App › **Screen alerts**: toggles a–e (a, b, d on), stored in the browser (`dash.rs2Alerts`).
+
+**Not done / notes:** ↑/↓ row moving is HW1's — not in this branch (no HW1 on main yet), so Space ticks whichever row you last clicked. Today alert text is English; no live Firestore run of `rs2/changes` (selftest + mock only). Firestore Rules: the app reads `users/{uid}/rs2/changes` — the existing `rs2/{doc}` read rule covers it. Existing RS2a/RS2a2 tests updated only for `✓` no longer being disabled.
+
+**Tests:** `tests/run_tests_rs2a3.py` 100 checks (Screen 1440/390/360 + Today 1440/390) · `rs2_selftest.py` 70 (+12 changes diff) · `run_tests_rs2a` 134/134 · `run_tests_rs2a2` 73/73 · hooks superset PASS (added only). Added `run_tests_rs2a3` to `run_regression.sh`.
+
+**RS2a3 final: `JOBS=2 bash tests/run_regression.sh` → 72/72 ok, 0 failing, 1979 s** (hooks superset PASS · rs2 selftest 70 · run_tests_rs2a 134/134 · run_tests_rs2a2 73/73 · run_tests_rs2a3 100/100).
+
+**RS2a3 rebased on LT2 (#84): `JOBS=2 bash tests/run_regression.sh` → 73/73 ok, 0 failing, 1988 s** (run_tests_rs2a3 100/100 · run_tests_lt2 100/100 · rs2 selftest 70 · hooks superset PASS). HW1 not on main yet — ↑/↓ + Space merge pending its rebase.
+
+**RS2a3 rebased on LT2 + HW1: `JOBS=2 bash tests/run_regression.sh` → 74/74 ok, 0 failing, 2004 s** (run_tests_rs2a3 101/101 · run_tests_hw1 308/308 · run_tests_lt2 100/100 · rs2 selftest 70 · hooks superset PASS). HW1 does not provide ↑/↓ on Screen, so RS2a3 adds it: ↑/↓ moves the selected row (stops at the ends), Space ticks it.
+
+**RS2a3-keys: Homework page ↑/↓ scroll the page (never change the stock or close it; typing in a field untouched) · Screen ↓ on the last shown row loads the next 50. `JOBS=2 bash tests/run_regression.sh` → 74/74 ok, 0 failing, 2176 s** (run_tests_rs2a3 109/109 · run_tests_hw1 308/308 · hooks superset PASS).
