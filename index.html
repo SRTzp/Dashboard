@@ -5069,6 +5069,9 @@ html body .lr5 .hw1-facts,html body .lr5 .hw1-mine{background:#fff;border:1px so
 html body .lr5 .hw1-fh{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
 html body .lr5 .hw1-fh .mut{font-size:12px;color:var(--lr-muted);text-align:right}
 html body .lr5 .hw1-fh .hw1-imp{flex:none;margin-left:8px;align-self:center}
+html body .lr5 .hw1-steps{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+html body .lr5 .hw1-cmd{font:inherit;font-size:12px;padding:2px 8px;border:1px solid var(--lr-line,#ccc);border-radius:6px;background:transparent;color:inherit;cursor:pointer}
+@media (max-width:1023px){html body .lr5 .hw1-cmd,html body .lr5 .hw1-steps .hw1-lnk{min-height:44px}}
 @media (max-width:1023px){html body .lr5 .hw1-fh .hw1-imp{min-height:44px;min-width:44px}}
 html body .lr5 .hw1-lg{font-size:12px;color:var(--lr-muted);display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
 html body .lr5 .hw1-k{font:500 11px/1 var(--lr-mono);padding:3px 5px;border-radius:5px;background:#EEF0F3;color:var(--lr-text2);flex:none;white-space:nowrap}
@@ -19913,7 +19916,7 @@ function ltImpSave(){
   let ticker, pr;
   if(!it){ alert(td4PipeMsg(th.sym, 'import')); return; }   /* TD4a */
   if(p.factsOnly){   /* HW1c — replace only thesis.facts (+ new catalysts) of an existing thesis; never summary/sections/kpi/tripwires/evidence/log-of-thesis */
-    const raw = wlThesisRaw(it), full = raw && !ltFactsOnly(raw), msg = 'Fact Sheet imported (' + th.facts.asOf + ') · thesis ' + (full ? 'unchanged' : 'not changed');
+    const raw = wlThesisRaw(it), full = raw && !ltFactsOnly(raw);
     let nt, logs = it.thesis_log || [];
     if(full){
       const have = new Set(ltArr(raw.catalysts).map(c=>String(c.date) + '|' + String(c.event)));
@@ -19926,9 +19929,9 @@ function ltImpSave(){
     const fromHw = ltImp && ltImp.bound && typeof hw1On === 'function' && hw1On();
     if(!fromHw){ wlView = 'wl'; wlSel = ticker; wlSub = ''; }
     wlMenu = '';
-    const ml = document.getElementById('ltModal');
-    if(ml){ const pv = ml.querySelector('#ltPrev'); if(pv) pv.innerHTML = `<div class="ltPrev" data-lt-result role="status"><b>${escHtml(msg)}</b></div>`; const b = ml.querySelector('.btns'); if(b) b.innerHTML = '<button type="button" class="primary" data-lt-close onclick="ltSheetClose()">Close</button>'; const ta = ml.querySelector('#ltJson'); if(ta) ta.readOnly = true; const er = ml.querySelector('#ltErr'); if(er) er.textContent = ''; }
+    ltSheetClose();
     try{ renderWatchlist(); }catch(e){}
+    try{ sdToast('Fact Sheet updated (' + th.facts.asOf + ') · your notes and the AI thesis are unchanged'); }catch(e){}
     return;
   }
   if(!it){
@@ -30289,7 +30292,7 @@ function wl5Menu(r){
   if(th) items.push(`<button type="button" role="menuitem" data-lr5-full onclick="wlMenu='';wl5Full(this.dataset.sym,'sum')" data-sym="${sym}">Full thesis</button>`);
   items.push(`<button type="button" role="menuitem" data-lr5-news onclick="wlMenu='';wl5Full(this.dataset.sym,'${th ? 'trk' : 'view'}')" data-sym="${sym}">News &amp; catalysts</button>`);
   items.push(`<button type="button" role="menuitem" data-ln3-edit data-sym="${sym}" onclick="wlMenu='';wlOpenEdit(this.dataset.sym)">Edit</button>`);
-  items.push(`<button type="button" role="menuitem" data-lt-import data-sym="${sym}" onclick="wlMenu='';ltImportOpen(this.dataset.sym)">Import thesis</button>`);
+  items.push(`<button type="button" role="menuitem" data-lt-import data-sym="${sym}" onclick="wlMenu='';ltImportOpen(this.dataset.sym)">Import JSON</button>`);
   if(th) items.push(`<button type="button" role="menuitem" data-lt-export data-sym="${sym}" onclick="ltExport(this.dataset.sym)">Export JSON</button><button type="button" role="menuitem" data-lt-history data-sym="${sym}" onclick="ltHistoryOpen(this.dataset.sym)">History (${(it.thesis_history || []).length})</button>`);
   items.push(`<button type="button" role="menuitem" data-wl-archive-m data-sym="${sym}" onclick="wlMenu='';wlArchiveOpen(this.dataset.sym)">Archive…</button>`);
   if(wlCanDelete(it)) items.push(`<button type="button" role="menuitem" class="danger" data-ln3-del data-sym="${sym}" onclick="wlMenu='';wlDeleteItem(this.dataset.sym)">Delete</button>`);
@@ -30423,6 +30426,11 @@ function hw1PopHtml(o, inTr){
   const inner = `<div class="hw1-pop" data-hw1-pop${inTr ? '' : ' hidden'}>${rows.map(r=>`<b>${r[0]}</b><span>${r[1]}</span>`).join('')}${o.note ? `<span class="warn" data-hw1-pop-note>${e(o.note)}</span>` : ''}</div>`;
   return inTr ? `<tr class="hw1-poptr" hidden><td colspan="6">${inner}</td></tr>` : inner;
 }
+function hw1CopyCmd(el){
+  const txt = el.dataset.cmd || '', done = ()=>{ try{ sdToast('Copied'); }catch(e){} };
+  const fb = ()=>{ try{ const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }catch(e){} done(); };
+  try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fb); else fb(); }catch(e){ fb(); }
+}
 function hw1PopToggle(el){
   const nx = el.nextElementSibling; if(!nx) return;
   const open = nx.hidden; nx.hidden = !open;
@@ -30445,7 +30453,7 @@ function hw1FactsHtml(it){
     if(biz) rows.push(hw1FRow('Business', e(biz)));
     ltArr(th && th.kpi).slice(0, 3).forEach(k=>{ if(k && k.name) rows.push(hw1FRow('KPI', e(String(k.name) + (k.base ? ' · ' + k.base : '')))); });
     ltNextCats(it).slice(0, 2).forEach(c=>rows.push(hw1FRow('Catalyst', e(wl1ArchDate(c.date) + ' · ' + ltShort(c.event, 70)))));
-    return `<div class="hw1-facts" data-hw1-facts="fallback"><div class="hw1-fh"><span class="lbl">Facts</span><button type="button" class="btn sm hw1-imp" data-hw1-import data-sym="${e(it.ticker)}" title="Paste living-thesis JSON (facts or full)" onclick="ltImportOpen(this.dataset.sym)">Import ›</button></div>${rows.join('') || '<div class="hw1-fr"><span class="l"></span><span class="v mut">No Fact Sheet yet</span><span></span></div>'}<div class="hw1-mut" data-hw1-nofacts>No Fact Sheet yet — run living-thesis facts ${e(wl1Bare(it.ticker))}, then <button type="button" class="hw1-lnk" data-hw1-import-link data-sym="${e(it.ticker)}" onclick="ltImportOpen(this.dataset.sym)">Import ›</button></div></div>`;
+    return `<div class="hw1-facts" data-hw1-facts="fallback"><div class="hw1-fh"><span class="lbl">Facts</span></div>${rows.join('') || ''}<div class="hw1-mut hw1-steps" data-hw1-nofacts><b>No Fact Sheet yet</b><div data-hw1-step="1">1. Copy the command and run it in Claude: <button type="button" class="hw1-cmd" data-hw1-copycmd data-cmd="living-thesis facts ${e(wl1Bare(it.ticker))}" onclick="hw1CopyCmd(this)">living-thesis facts ${e(wl1Bare(it.ticker))} ⧉</button></div><div data-hw1-step="2">2. Paste the JSON it gives you: <button type="button" class="hw1-lnk" data-hw1-import-link data-sym="${e(it.ticker)}" onclick="ltImportOpen(this.dataset.sym)">Import JSON ›</button></div></div></div>`;
   }
   const rows = [];
   rows.push(hw1FRow('Business', e(f.biz)));
@@ -30469,7 +30477,7 @@ function hw1FactsHtml(it){
     more = `<details class="hw1-more" data-hw1-more><summary>More facts ▾ <span class="mut">${gs.map(e).join(' · ')}</span></summary>${gs.map(g=>`<div class="hw1-gh">${e(g.charAt(0).toUpperCase() + g.slice(1))}</div>${f.more.filter(x=>x.g === g).map(lineRow).join('')}`).join('')}</details>`;
   }
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.date);
-  return `<div class="hw1-facts" data-hw1-facts="full"><div class="hw1-fh"><span class="lbl">Fact Sheet · AI · numbers only</span><span class="mut">${e(f.asOf)}${m ? ' · ' + wl1ArchDate(f.date) : ''} · tap a row for formula + source</span><button type="button" class="btn sm hw1-imp" data-hw1-import data-sym="${e(it.ticker)}" title="Paste living-thesis JSON (facts or full)" onclick="ltImportOpen(this.dataset.sym)">Import ›</button></div>
+  return `<div class="hw1-facts" data-hw1-facts="full"><div class="hw1-fh"><span class="lbl">Fact Sheet · AI · numbers only</span><span class="mut">${e(f.asOf)}${m ? ' · ' + wl1ArchDate(f.date) : ''} · tap a row for formula + source</span><button type="button" class="btn sm hw1-imp" data-hw1-import data-sym="${e(it.ticker)}" title="Paste a newer living-thesis JSON" onclick="ltImportOpen(this.dataset.sym)">Update ›</button></div>
     <div class="hw1-lg" data-hw1-legend>${hw1Tag('rpt')} from filing · ${hw1Tag('calc')} calculated, tap for formula · ${hw1Tag('mgmt')} management says</div>${rows.join('')}${more}</div>`;
 }
 

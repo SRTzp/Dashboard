@@ -22,3 +22,9 @@ Full thesis view stays under ⋯ › Full thesis (it shows only when a full thes
 ## Proof
 - `tests/run_tests_hw1c.py`: facts-only on a stock with a full thesis (only facts changes, log +1, sections intact) · facts-only on a stock without thesis (no "No sections", no Full thesis item, Compare hidden, Homework shows the Fact Sheet) · invalid facts-only → error · full JSON unchanged behaviour · Import › from the Homework page binds to the stock and returns to the page with the draft kept · fallback link · phone Facts tab.
 - Hooks superset PASS · one clean `JOBS=2 bash tests/run_regression.sh` · `docs/reports/HW1c-summary.md`. No unrelated PNGs.
+
+## Delta (final UI, supersedes item 2 wording)
+1. No Fact Sheet: "No Fact Sheet yet" + 2 numbered steps — "1. Copy the command and run it in Claude: `living-thesis facts TICKER` ⧉" (chip copies, toast "Copied") · "2. Paste the JSON it gives you: Import JSON ›". No other import button/link in this state.
+2. Fact Sheet present: header button `Update ›` (tooltip `Paste a newer living-thesis JSON`).
+3. Success closes the sheet by itself; toast `Fact Sheet updated (Q3 FY26) · your notes and the AI thesis are unchanged` (facts-only); a full JSON keeps today's message. Errors stay in the sheet.
+4. ⋯ menu item "Import thesis" → "Import JSON" (keeps `data-lt-import`).

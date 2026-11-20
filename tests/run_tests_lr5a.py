@@ -113,7 +113,7 @@ def run(pw, w, h):
             js(page, "()=>wlOpen('AVGO')"); page.wait_for_timeout(250)
             page.click("[data-lr5-det] [data-lt-menu]"); page.wait_for_timeout(250)
             mi = js(page, "()=>[...document.querySelectorAll('[data-lr5-det] .ltMenu [role=menuitem]')].map(b=>b.innerText.trim())")
-            check(f"{tag} D: ⋯ menu holds Full thesis · News & catalysts · Archive… · Edit · Import · Export · History", all(x in mi for x in ("Full thesis", "News & catalysts", "Archive…", "Edit", "Import thesis", "Export JSON")), mi)
+            check(f"{tag} D: ⋯ menu holds Full thesis · News & catalysts · Archive… · Edit · Import · Export · History", all(x in mi for x in ("Full thesis", "News & catalysts", "Archive…", "Edit", "Import JSON", "Export JSON")), mi)
             js(page, "()=>wlOpen('PLTR')"); page.wait_for_timeout(250); page.click("[data-lr5-det] [data-lt-menu]"); page.wait_for_timeout(250)
             check(f"{tag} D: Delete is in the ⋯ menu for a stock with no plan (PLTR)", "Delete" in js(page, "()=>[...document.querySelectorAll('[data-lr5-det] .ltMenu [role=menuitem]')].map(b=>b.innerText.trim())"))
             js(page, "()=>{ wlMenu = ''; wlOpen('AVGO'); }"); page.wait_for_timeout(250); page.click("[data-lr5-det] [data-lt-menu]"); page.wait_for_timeout(250)
