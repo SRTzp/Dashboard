@@ -13482,6 +13482,7 @@ function kbHandle(e){
     if(wlFull || (wlFullOk() && !wlFullBlocked())){ e.preventDefault(); wlFullSet(!wlFull); }
     return;
   }
+  if(activeTab==='watch' && (e.key==='ArrowDown' || e.key==='ArrowUp') && hw1On()){ e.preventDefault(); hw1Scroll(e.key==='ArrowDown' ? 1 : -1); return; }   /* RS2a3 — Homework page: ↑/↓ scroll the page (like the Full thesis view), never change the stock or close it */
   if(wlFull && activeTab==='watch' && (e.key==='ArrowDown' || e.key==='ArrowUp')){ e.preventDefault(); wlFullScroll(e.key==='ArrowDown' ? 1 : -1); return; }
   if(sk1Key(e)) return;   /* SK1 — Today: ←/→ = Daily/Weekend */
   /* RS2a3 — Screen: ←/→ switch the preset (stop at the ends) · Space ticks the selected row (desktop) · same guards as the other keys */
@@ -29865,8 +29866,10 @@ function rs2OpenWl(sym){
 }
 /* ← / → on Screen: Leaders ↔ Emerging ↔ Pullback, stops at the ends */
 function rs2StepRow(d){   /* ↑/↓ moves the selected row through the rows shown · stops at the ends · keeps it in view */
-  const V = rs2View().slice(0, rs2.shown); if(!V.length) return false;
-  const i = V.findIndex(r=>r.t === rs2.sel), j = i < 0 ? (d > 0 ? 0 : V.length - 1) : i + d;
+  const All = rs2View(); let V = All.slice(0, rs2.shown); if(!V.length) return false;
+  const i = V.findIndex(r=>r.t === rs2.sel);
+  if(d > 0 && i === V.length - 1 && V.length < All.length){ rs2.shown += RS2_PAGE; V = All.slice(0, rs2.shown); }   /* ↓ on the last shown row = Show more, then on to the next row */
+  const j = i < 0 ? (d > 0 ? 0 : V.length - 1) : i + d;
   if(j < 0 || j >= V.length || j === i) return false;
   rs2.sel = V[j].t; rs2.addTo = 'winner'; renderWatchlist();
   try{ const lb = document.querySelector('.lr5-screen .wlListBody'), row = lb && lb.querySelector('.rs2r.on'); if(row){ const t = row.offsetTop, b = t + row.offsetHeight; if(t < lb.scrollTop) lb.scrollTop = t; else if(b > lb.scrollTop + lb.clientHeight) lb.scrollTop = b - lb.clientHeight; } }catch(x){}
@@ -30061,6 +30064,10 @@ const HW1_L = {
   catalyst:{n:'Catalyst', h:'Catalyst', hint:'', ph:'e.g. Q3 earnings 28 Jan'}
 };
 let hwSym = '', hw1Seg = {}, hw1Opt = {};
+function hw1Scroll(dir){   /* the Homework page scrolls inside its own box when it has one, else the window */
+  const box = ['.hw1-pg', '.lr5.hw .wlDet.lr5-det', '.hw1-body'].map(q=>document.querySelector(q)).find(el=>el && el.scrollHeight > el.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(el).overflowY));
+  if(box) box.scrollBy({top: dir * 60}); else window.scrollBy({top: dir * 60});
+}
 function hw1On(){ return !!hwSym && hwSym === wlSel && wl5FullSym === wlSel && wlView === 'wl'; }
 function hw1Lbl(it, k){ return (k === 'why' && wl1TrkOf(it) !== 'ladder') ? Object.assign({}, HW1_L.why, {n:'Why buy', h:'Why-buy', hint:'What is improving and not yet priced in?', ph:'e.g. Revenue growth is speeding up and the stock is near its high'}) : HW1_L[k]; }
 function hw1Vals(it){ const t = it.ticker; wlMtLoadDrafts(t); const d = wlMtDraft[t] || {}, s = wlMtSaved(it), o = {}; WL_MT_FIELDS.forEach(k=>{ o[k] = d[k] != null ? String(d[k]) : s[k]; }); return o; }

@@ -140,6 +140,13 @@ def desk(pw, w, h):
         check(f"{tag} 4 Space toggles the tick of the selected row (NVDA)", js(page, "()=>!!rs2.tick.NVDA") is True and js(page, "()=>document.querySelector('[data-rs2-selcount]').innerText") == "4 selected")
         page.keyboard.press("Space"); page.wait_for_timeout(250)
         check(f"{tag} 4 …and again un-ticks it", js(page, "()=>!rs2.tick.NVDA") is True)
+        js(page, "()=>{ rs2.shown = 50; rs2.sel = rs2View()[49].t; renderWatchlist(); }"); page.wait_for_timeout(300)
+        o50 = js(page, "()=>rs2View().map(r=>r.t)")
+        page.keyboard.press("ArrowDown"); page.wait_for_timeout(350)
+        check(f"{tag} 4 ↓ on the last shown row (50) with Show more → loads the next 50 and moves to row 51", js(page, "()=>rs2.shown") == 100 and js(page, "()=>rs2.sel") == o50[50] and len(js(page, ROWS)) == 87, [js(page, "()=>rs2.shown"), js(page, "()=>rs2.sel"), o50[50]])
+        js(page, "()=>{ rs2.sel = rs2View()[86].t; renderWatchlist(); }"); page.keyboard.press("ArrowDown"); page.wait_for_timeout(250)
+        check(f"{tag} 4 ↓ on the very last row (nothing more to load) stays", js(page, "()=>rs2.sel") == o50[86] and js(page, "()=>rs2.shown") == 100)
+        js(page, "()=>{ rs2.shown = 50; rs2.sel = rs2View()[0].t; renderWatchlist(); }"); page.wait_for_timeout(250)
         page.click("[data-rs2-preset=emerging]"); page.wait_for_timeout(300)
         check(f"{tag} 4 selection clears when the preset changes", js(page, "()=>!document.querySelector('[data-rs2-selbar]')"))
         page.click("[data-rs2-preset=leaders]"); page.wait_for_timeout(300)
@@ -173,6 +180,37 @@ def desk(pw, w, h):
         o = over(page)
         check(f"{tag} 7 no horizontal overflow (tick column + bar + toast)", o["sw"] <= 0 and o["bad"] == 0, o)
         check(f"{tag} 7 page errors none", not pe, pe[:2])
+    finally:
+        b.close()
+
+
+def hwpage(pw):
+    import hw1_common as H
+    tag = "[1440]"
+    b, page, pe = H.open_hw(pw, 1440, 480)
+    try:
+        H.go(page, "AAPL", "winner")
+        POS = "()=>({sel:wlSel, on:hw1On(), pg:!!document.querySelector('[data-hw1-page=AAPL]'), y:Math.round(window.scrollY + [...document.querySelectorAll('.hw1-pg, .lr5.hw .wlDet.lr5-det, .hw1-body')].reduce((a, el)=>a + el.scrollTop, 0))})"
+        a = js(page, POS)
+        check(f"{tag} 11 Homework page open on AAPL", a["sel"] == "AAPL" and a["on"] and a["pg"], a)
+        js(page, "()=>document.activeElement && document.activeElement.blur()")
+        for _ in range(3): page.keyboard.press("ArrowDown"); page.wait_for_timeout(120)
+        page.wait_for_timeout(300); b1 = js(page, POS)
+        check(f"{tag} 11 ↓ ↓ ↓ on the Homework page: same stock (AAPL), page still open, and it scrolled", b1["sel"] == "AAPL" and b1["on"] and b1["pg"] and b1["y"] > a["y"], [a, b1])
+        for _ in range(2): page.keyboard.press("ArrowUp"); page.wait_for_timeout(120)
+        page.wait_for_timeout(300); c1 = js(page, POS)
+        check(f"{tag} 11 ↑ ↑ scrolls back up — still AAPL, page open", c1["sel"] == "AAPL" and c1["on"] and c1["pg"] and c1["y"] < b1["y"], [b1, c1])
+        for _ in range(60): page.keyboard.press("ArrowUp")
+        page.wait_for_timeout(300)
+        for _ in range(60): page.keyboard.press("ArrowDown")
+        page.wait_for_timeout(300); d1 = js(page, POS)
+        check(f"{tag} 11 many ↓ presses past the bottom never jump to the next stock or close the page", d1["sel"] == "AAPL" and d1["on"] and d1["pg"], d1)
+        ta = "[data-hw1-ta]"
+        if js(page, "(q)=>!!document.querySelector(q)", ta):
+            page.focus(ta); page.keyboard.press("ArrowDown"); page.keyboard.press("ArrowUp"); page.wait_for_timeout(200)
+            e1 = js(page, POS)
+            check(f"{tag} 11 typing in a field: arrows are not handled by the page (stock + page unchanged)", e1["sel"] == "AAPL" and e1["on"] and e1["pg"], e1)
+        check(f"{tag} 11 page errors none", not pe, pe[:2])
     finally:
         b.close()
 
@@ -268,6 +306,7 @@ def today(pw, w, h):
 def main():
     with sync_playwright() as pw:
         desk(pw, 1440, 900)
+        hwpage(pw)
         phone(pw, 390, 844)
         phone(pw, 360, 740)
         today(pw, 1440, 900)
