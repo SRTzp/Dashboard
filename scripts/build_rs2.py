@@ -27,6 +27,9 @@ DOC_LIMIT = 900 * 1024        # bytes per Firestore doc (hard limit 1 MiB)
 PART_ROWS = 500
 UNIVERSE_REFRESH_DAYS = 6     # full symbol scan weekly; other days re-use the stored liquid list
 SECTOR_BUDGET_S = 300         # yfinance .info lookups per run (cached in rs2/_sectors; converges over a few runs)
+SECTOR_BUDGET_CATCHUP_S = 420  # RS2b — used while industry coverage < IND_COV_MIN (whole run stays well under 15 min)
+IND_COV_MIN = 0.90
+GROUP_MIN_N = 5               # RS2b — an industry needs ≥ 5 liquid stocks to get a Group RS / rank
 EXCH = {'Q': 'NASDAQ', 'G': 'NASDAQ', 'S': 'NASDAQ', 'N': 'NYSE', 'A': 'AMEX'}   # nasdaqlisted market category / otherlisted exchange
 
 _BAD_NAME = re.compile(
@@ -371,6 +374,46 @@ def with_sectors(rows, sectors):
     return rows
 
 
+def ind_coverage(rows):
+    """RS2b — (indN, indCov): liquid rows that have an industry, and that ÷ all liquid rows"""
+    n = len(rows)
+    k = sum(1 for r in rows if r.get('i'))
+    return k, (round(k / float(n), 3) if n else 0.0)
+
+
+def group_stats(rows, min_n=GROUP_MIN_N):
+    """RS2b — Group RS: average 12M rating of all liquid stocks in an industry · only industries with ≥ min_n liquid stocks · rank 1 = strongest
+    (equal averages share a rank: 1, 2, 2, 4 — avg is rounded to 0.1 first so the shown number and the rank agree; ties list the bigger group first)
+    → [{ind, sec, n, avg, rank}] sorted by rank · sets r['gr'] on every row of a ranked industry (and removes a stale one elsewhere)"""
+    by = {}
+    for r in rows:
+        i = r.get('i')
+        if i and isinstance(r.get('r'), (int, float)):
+            by.setdefault(i, []).append(r)
+    gs = []
+    for i, L in by.items():
+        if len(L) < min_n:
+            continue
+        secs = {}
+        for r in L:
+            if r.get('s'):
+                secs[r['s']] = secs.get(r['s'], 0) + 1
+        sec = sorted(secs.items(), key=lambda kv: (-kv[1], kv[0]))[0][0] if secs else ''
+        gs.append({'ind': i, 'sec': sec, 'n': len(L), 'avg': round(sum(r['r'] for r in L) / float(len(L)), 1)})
+    gs.sort(key=lambda g: (-g['avg'], -g['n'], g['ind']))
+    prev = None
+    for k, g in enumerate(gs):
+        g['rank'] = prev['rank'] if prev and prev['avg'] == g['avg'] else k + 1
+        prev = g
+    rk = {g['ind']: g['rank'] for g in gs}
+    for r in rows:
+        if r.get('i') in rk:
+            r['gr'] = rk[r['i']]
+        else:
+            r.pop('gr', None)
+    return gs
+
+
 # ── RS2a3 — Today alerts: compare today's rows with the previous run → rs2/changes {asOf, prevAsOf, items:[{sym,k,from,to}]} ──
 CHG_MAX = 30
 CHG_TOP = 3        # d (new Leader) and e (new Emerging) keep the best 3 by RS
@@ -636,10 +679,19 @@ def build(base, now, seed_sectors=None, watch=None):
         cache = dict((snap.to_dict() or {}).get('m') or {}) if snap.exists else {}
         for k, v in (seed_sectors or {}).items():
             cache.setdefault(k, v)
-        got = fill_sectors(rows, cache)
+        if full:        # RS2b — weekly runs refill the entries that came back without an industry first
+            for r in rows:
+                v = cache.get(r['t'])
+                if v is not None and not v.partition('|')[2]:
+                    del cache[r['t']]
+        cov0 = ind_coverage(with_sectors([dict(r) for r in rows], cache))[1]
+        got = fill_sectors(rows, cache, budget_s=SECTOR_BUDGET_S if cov0 >= IND_COV_MIN else SECTOR_BUDGET_CATCHUP_S)
         if got:
             sec_ref.set({'m': cache, 'at': now.isoformat()})
         with_sectors(rows, cache)
+        groups = group_stats(rows)
+        ind_n, ind_cov = ind_coverage(rows)
+        print('rs2: industry coverage %.1f%% (%d of %d) · %d groups (≥ %d liquid stocks)' % (ind_cov * 100, ind_n, len(rows), len(groups), GROUP_MIN_N))
         es = earn_ref.get()
         ecache = dict((es.to_dict() or {}).get('m') or {}) if es.exists else {}
         if full and fill_earnings(earn_candidates(rows), ecache, today):
@@ -667,7 +719,7 @@ def build(base, now, seed_sectors=None, watch=None):
              'universeAt': now.isoformat() if full else meta.get('universeAt'), 'failedChunks': bad, 'dlRatio': round(dl_ratio, 3),
              'parts': len(docs) - 1 if 'parts' in docs['latest'] else 0, 'bytes': {k: doc_bytes(v) for k, v in docs.items()},
              'cuts': table['cuts'], 'cuts4w': table['cuts4w'], 'cuts3m': table.get('cuts3m'), 'cuts1m': table.get('cuts1m'),
-             'cutsN': table['n'], 'sample': table.get('sample'), 'seed': table.get('seed'), 'cutsStale': stale, 'earnN': len(ecache), 'mcN': sum(1 for r in rows if r.get('mc')),
+             'indN': ind_n, 'indCov': ind_cov, 'groups': groups, 'cutsN': table['n'], 'sample': table.get('sample'), 'seed': table.get('seed'), 'cutsStale': stale, 'earnN': len(ecache), 'mcN': sum(1 for r in rows if r.get('mc')),
              'source': os.environ.get('RS2_SOURCE', 'yahoo') or 'yahoo', 'error': None, 'rule': 'close>=10 and adv50>=10M'}
         col.document('_meta').set(m)
         print('rs2: liquid %d · rated %d · table n %s (sample %s%s) · docs %s · %ds' % (n_liq, n_rated, table['n'], table.get('sample'), ' STALE' if stale else '', {k: doc_bytes(v) for k, v in docs.items()}, time.time() - t0))

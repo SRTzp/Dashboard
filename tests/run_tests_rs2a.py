@@ -134,7 +134,7 @@ def run(pw, w, h):
         else:
             page.click("[data-rs2-more-filters]"); page.wait_for_timeout(250)
         fp = js(page, "()=>[...document.querySelectorAll('[data-rs2-filter-panel] [data-rs2-f]')].map(e=>e.dataset.rs2F)")
-        check(f"{tag} H: the Filter panel holds RS min · % from high · new high only · sector · min $vol", fp == ["rsMin", "near", "nh", "sector", "vol", "mcMin"], fp)
+        check(f"{tag} H: the Filter panel holds RS min · % from high · new high only · sector · industry (RS2b) · min $vol", fp == ["rsMin", "near", "nh", "sector", "ind", "vol", "mcMin"], fp)
         page.select_option("[data-rs2-f=rsMin]", "90"); page.wait_for_timeout(250)
         check(f"{tag} H: changing a filter in the panel applies it (9 rows) and the button shows the count", len(js(page, ROWS)) == 9 and js(page, "()=>!!document.querySelector('[data-rs2-filter-panel]')"), js(page, ROWS))
         js(page, "()=>rs2Reset()"); js(page, "()=>{ rs2.fOpen = false; renderWatchlist(); }")

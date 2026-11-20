@@ -241,4 +241,24 @@ t('changes: capped at 30 items · d (new Leader) keeps only the best 3', len(bd[
 bd2 = b.changes_diff(big_prev[60:], big_cur[60:], [], '2026-11-19', '2026-11-18')
 t('changes: d capped at 3 (best RS first)', [x['k'] for x in bd2['items']] == ['d', 'd', 'd'] and len(bd2['items']) == 3)
 t('changes: compact items {sym,k,from,to}', all(set(x) == {'sym', 'k', 'from', 'to'} for x in d['items']))
+# 11 · RS2b — industry coverage + Group RS
+def G(t, i, r, sec='Technology'):
+    return {'t': t, 'i': i, 'r': r, 's': sec}
+
+
+gr = [G('A%d' % k, 'Semis', 90 + k) for k in range(5)] + [G('B%d' % k, 'Software', 80) for k in range(6)] + [G('C%d' % k, 'Banks', 80, 'Financial Services') for k in range(5)] \
+    + [G('D%d' % k, 'Tiny', 99) for k in range(4)] + [G('E%d' % k, '', 99) for k in range(3)] + [G('F%d' % k, 'Utilities', 60, 'Utilities') for k in range(5)]
+gs = b.group_stats(gr)
+by = {g['ind']: g for g in gs}
+t('group avg = mean of the 12M ratings of the liquid stocks in the industry (Semis 90..94 → 92.0)', by['Semis']['avg'] == 92.0 and by['Semis']['n'] == 5 and by['Software']['avg'] == 80.0)
+t('≥ 5 liquid stocks rule: 4-stock industry (even with RS 99) and no-industry rows get no group', 'Tiny' not in by and '' not in by and len(gs) == 4)
+t('rank 1 = strongest; equal averages share a rank, the next one skips (1, 2, 2, 4); bigger group listed first', [(g['ind'], g['rank']) for g in gs] == [('Semis', 1), ('Software', 2), ('Banks', 2), ('Utilities', 4)])
+t('every group carries ind · sec (most common sector) · n · avg · rank', all(set(g) == {'ind', 'sec', 'n', 'avg', 'rank'} for g in gs) and by['Banks']['sec'] == 'Financial Services')
+t('rows get gr = their industry rank; rows of small / unknown industries get none', all(r['gr'] == by[r['i']]['rank'] for r in gr if r['i'] in by) and all('gr' not in r for r in gr if r['i'] in ('Tiny', '')))
+gr[0]['gr'] = 7; gr2 = [dict(x) for x in gr[:3]]
+t('a stale gr is removed when the industry no longer qualifies', 'gr' not in b.group_stats(gr2)[0:0] or all('gr' not in r for r in gr2))
+t('avg is rounded to 0.1 before ranking (91.04 and 91.0 tie)', [g['rank'] for g in b.group_stats([G('p%d' % k, 'P', 91 + (0.2 if k == 0 else 0)) for k in range(5)] + [G('q%d' % k, 'Q', 91) for k in range(5)])] == [1, 1])
+n_, c_ = b.ind_coverage(gr)
+t('coverage counter: indN = rows with an industry · indCov = indN ÷ rows', n_ == 25 and c_ == round(25 / 28.0, 3) and b.ind_coverage([]) == (0, 0.0))
+t('catch-up budget is bigger than the normal one and the run stays < 15 min', b.SECTOR_BUDGET_CATCHUP_S > b.SECTOR_BUDGET_S and b.SECTOR_BUDGET_CATCHUP_S + b.EARN_BUDGET_S + b.MC_BUDGET_S <= 900)
 print('PASS %d checks' % ok)
