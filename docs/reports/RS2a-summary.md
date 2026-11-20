@@ -115,3 +115,5 @@ Brief: `docs/briefs/RS2b-brief.md` (SRTp, 20 Nov 2026). Mockup `docs/briefs/lr/S
 **Coverage / groups / runtime: not measured live** — no Yahoo run from this machine. Expect industry coverage to climb over the first runs (best-rated names first); read `_meta.indCov` and `_meta.groups.length` after the first Actions runs. Runtime: worst case +120 s on days with coverage < 90%, no change once ≥ 90%.
 
 **Tests.** `tests/run_tests_rs2b.py` 141 checks (1440 · 1280 · 390 · 360) · `rs2_selftest.py` 79 (+9: group avg, ≥ 5 rule, ranks incl. ties, rounding, stale `gr`, coverage counter, budget) · hooks superset PASS (added only: `data-rs2-view`, `data-rs2-ind-row`, `data-rs2-ith`, `data-rs2-indchip`, …). Added `run_tests_rs2b` to `run_regression.sh`.
+
+**RS2b final: `JOBS=2 bash tests/run_regression.sh` → 76/76 ok, 0 failing, 2108 s** (hooks superset PASS · rs2 selftest 79 · run_tests_rs2a 134/134 (Filter-panel field list now includes Industry) · run_tests_rs2b 141/141).
