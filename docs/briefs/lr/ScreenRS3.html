@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>RS2a3 · Screen tick/export · undo · Today alerts (sample)</title>
+<style>
+body{margin:0;background:#E9EBEF;font:14px/1.45 Inter,system-ui,sans-serif;color:#14161A}
+.cap{font:600 12px Inter,sans-serif;color:#5F6672;padding:18px 24px 8px}
+.frame{background:#F4F5F7;margin:0 24px 6px;border:1px solid #D5D9DF;border-radius:12px;overflow:hidden;position:relative}
+.top{display:flex;align-items:center;gap:10px;padding:14px 20px;background:#fff;border-bottom:1px solid #E1E4E9}
+h1{font-size:20px;margin:0 6px 0 0}
+.seg{display:flex;gap:2px;background:#EEF0F3;border-radius:10px;padding:3px}
+.seg span{font:500 13px Inter,sans-serif;color:#5F6672;padding:6px 11px;border-radius:8px}.seg .on{background:#fff;color:#14161A;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.mut{color:#8A919C;font-size:13px}.up{color:#0E6B4C;font-weight:600}.dn{color:#A62D27;font-weight:600}.amb{color:#9A5B00;font-weight:600}
+.btn{font:600 13px/1 Inter,sans-serif;border-radius:10px;padding:0 13px;height:32px;border:1px solid #E1E4E9;background:#fff;color:#14161A;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn.pri{background:#14161A;color:#fff;border-color:#14161A}.btn.gh{border-color:transparent;background:transparent;color:#5F6672}
+.kbd{font:500 11px "JetBrains Mono",monospace;border:1px solid #D5D9DF;border-bottom-width:2px;border-radius:5px;padding:0 5px;color:#5F6672;background:#fff}
+.body{padding:14px 20px;display:flex;flex-direction:column;gap:10px}
+.sel{display:flex;align-items:center;gap:8px;font-size:13px;padding-left:12px;border-left:1px solid #E1E4E9}
+.bar{display:flex;align-items:center;gap:10px;background:#14161A;color:#fff;border-radius:12px;padding:8px 10px 8px 14px;font-size:13px}
+.bar .btn{height:30px}.bar .btn.w{background:#fff;color:#14161A;border-color:#fff}.bar .btn.o{background:transparent;color:#fff;border-color:#4A4F57}
+.panel{background:#fff;border:1px solid #E1E4E9;border-radius:12px;overflow:visible}
+.r{display:grid;grid-template-columns:28px 150px 110px 150px 90px 90px 90px 1fr;gap:12px;align-items:center;padding:10px 14px;border-top:1px solid #F0F1F4;font-size:13px;font-variant-numeric:tabular-nums}
+.r.h{border-top:0}.r.h span{font:600 11px Inter,sans-serif;color:#8A919C;text-transform:uppercase;letter-spacing:.05em}
+.r.on{background:#F7F8FA;box-shadow:inset 3px 0 0 #14161A}.r.sel{background:#F3F6FD}
+.cb{width:16px;height:16px;border:1.5px solid #B9BFC8;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#fff;background:#fff}
+.cb.x{background:#14161A;border-color:#14161A}.cb.part{background:#14161A;border-color:#14161A}
+.tk b{font-size:14px}.tk span{color:#8A919C;margin-left:6px}
+.add{justify-self:end;width:30px;height:30px;border:1px solid #E1E4E9;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;background:#fff}
+.add.ok{color:#0E6B4C;background:#E3F3F1;border-color:#CFE9E2}
+.nh{font-size:11px;font-weight:600;color:#0E6B4C;background:#E3F3F1;padding:2px 6px;border-radius:999px;margin-left:6px}
+.menu{position:absolute;right:14px;top:34px;width:230px;background:#fff;border:1px solid #E1E4E9;border-radius:12px;box-shadow:0 8px 24px rgba(20,22,26,.14);padding:6px;z-index:5;font-size:13px}
+.mi{display:flex;justify-content:space-between;padding:8px 10px;border-radius:8px}.mi.on{background:#F4F5F7;font-weight:600}.mi.dis{color:#A3A9B2}
+.hr{height:1px;background:#F0F1F4;margin:4px 0}
+.toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:#fff;color:#14161A;border:1px solid #E1E4E9;border-radius:12px;padding:10px 12px 10px 16px;display:flex;gap:14px;align-items:center;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.toast a{color:#2F5BD3;font-weight:600;text-decoration:none}
+.note{font-size:12px;color:#5F6672;background:#FFF4E0;border-radius:8px;padding:6px 10px}
+/* today */
+.today{background:#fff;border:1px solid #E1E4E9;border-radius:12px;margin:0 24px 6px;width:560px}
+.th{display:flex;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #F0F1F4}
+.tr{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid #F0F1F4;font-size:13px}
+.tag{font:500 11px "JetBrains Mono",monospace;color:#5F6672;background:#EEF0F3;border-radius:4px;padding:1px 5px}
+/* phone */
+.ph{width:390px;margin:0 24px 24px;background:#fff;border:1px solid #D5D9DF;border-radius:22px;overflow:hidden;position:relative;height:430px}
+.pr{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid #F0F1F4;font-size:13px}
+.pm{position:absolute;right:12px;top:52px;width:250px;background:#fff;border:1px solid #E1E4E9;border-radius:12px;box-shadow:0 8px 24px rgba(20,22,26,.14);padding:6px;font-size:14px}
+.pm .mi{padding:12px 10px}
+</style></head><body>
+
+<div class="cap">A · Screen 1440 · 3 rows ticked · selection actions sit in the preset row (no extra height, no new bar) · ✓ menu on GE · light toast after “+” on PLTR</div>
+<div class="frame" style="padding-bottom:70px">
+  <div class="top"><h1>Watch</h1>
+    <div class="seg"><span>Momentum 6</span><span>Compounder 2</span><span>Ideas 2</span><span class="on">Screen</span></div>
+    <span class="mut">2,190 liquid US stocks · <b style="color:#14161A">86 match</b> · as of 19 Nov close</span></div>
+  <div class="body">
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="seg"><span class="on">Leaders</span><span>Emerging</span><span>Pullback</span></div>
+      <span class="btn">Filter ▾</span><span class="btn gh">Reset</span>
+      <span class="sel" style="margin-left:auto"><b>3 selected</b><span class="btn">⤓ TradingView .txt</span><span class="btn">+ Add to Watch</span><span class="btn gh">Clear</span></span>
+    </div>
+
+    <div class="panel" style="position:relative">
+      <div class="r h"><span><span class="cb part">–</span></span><span>Stock</span><span>Sector vs SPY</span><span>RS · from high ▼</span><span>M.Cap</span><span>Avg $vol</span><span>Earnings</span><span></span></div>
+      <div class="r sel"><span class="cb x">✓</span><span class="tk"><b>NVDA</b><span>NVIDIA</span></span><span>Semis <span class="dn">↘</span></span><span><b>99</b> <span class="up">↗</span> <span class="nh">new high</span></span><span>$4.4T</span><span>$38.1B</span><span class="amb">in 6d</span><span class="add ok">✓</span></div>
+      <div class="r sel"><span class="cb x">✓</span><span class="tk"><b>ZETA</b><span>Zeta Global</span></span><span>Software <span class="dn">↘</span></span><span><b>99</b> <span class="up">↗</span> <span class="mut">−14%</span></span><span>$6.0B</span><span>$190M</span><span>4 Feb</span><span class="add">+</span></div>
+      <div class="r sel on"><span class="cb x">✓</span><span class="tk"><b>PLTR</b><span>Palantir</span></span><span>Software <span class="dn">↘</span></span><span><b>97</b> <span class="up">↗</span> <span class="mut">−8%</span></span><span>$390B</span><span>$5.2B</span><span>2 Feb</span><span class="add ok">✓</span></div>
+      <div class="r"><span class="cb"></span><span class="tk"><b>APP</b><span>AppLovin</span></span><span>Software <span class="dn">↘</span></span><span><b>96</b> <span class="up">↗</span> <span class="mut">−11%</span></span><span>$210B</span><span>$3.1B</span><span>11 Feb</span><span class="add">+</span></div>
+      <div class="r" style="position:relative"><span class="cb"></span><span class="tk"><b>GE</b><span>GE Aerospace</span></span><span>Industrials <span class="up">↗</span></span><span><b>91</b> → <span class="mut">−6%</span></span><span>$320B</span><span>$1.1B</span><span>21 Jan</span><span class="add ok">✓</span>
+        <div class="menu"><div class="mi on">Momentum <span>✓</span></div><div class="mi">Move to Compounder</div><div class="hr"></div><div class="mi">Open in Watch ›</div><div class="mi dis">Remove from Watch <span style="font-size:11px">has a plan</span></div></div></div>
+    </div>
+    <div class="note">Annotation (not built) · keys: ←/→ preset · ↑/↓ row · Space tick · ⇧+click range (shown as tooltips) · File content: <code>NASDAQ:NVDA,NASDAQ:ZETA,NASDAQ:PLTR</code> · name <code>screen-leaders-2026-11-20.txt</code> · TradingView › Watchlist › Import list</div>
+  </div>
+  <div class="toast">Added <b>PLTR</b> to Momentum <a href="#">Undo</a><a href="#">Move to Compounder</a><span style="opacity:.5">✕</span></div>
+</div>
+
+<div class="cap">B · Today › existing list · up to 3 Screen lines (priority: left Leaders → new high → new Leader) · tap opens Screen on that row</div>
+<div class="today">
+  <div class="th"><b>Today</b><span class="mut">Screen changes vs 18 Nov</span></div>
+  <div class="tr"><span class="dn">↘</span><span><b>ZETA</b> left Leaders · RS 78 (was 84) · on Watch</span><span class="tag">screen</span></div>
+  <div class="tr"><span class="up">▲</span><span><b>GE</b> new 52-week high · on Watch</span><span class="tag">screen</span></div>
+  <div class="tr"><span>＋</span><span>New Leader: <b>CRDO</b> RS 95 · not on Watch</span><span class="tag">screen</span></div>
+  </div>
+
+<div class="cap">C · Phone 390 · no tick boxes · ⋯ menu downloads the shown list · ✓ tap = same menu as a sheet</div>
+<div class="ph">
+  <div style="display:flex;align-items:center;gap:8px;padding:14px 16px"><b style="font-size:18px">Screen</b><span class="mut">Leaders · 86</span><span style="margin-left:auto;font-size:20px">⋯</span></div>
+  <div class="pm"><div class="mi">⤓ Download shown list (.txt) <span class="mut">86</span></div><div class="mi">Filter</div><div class="mi">Reset</div></div>
+  <div class="pr"><b>NVDA</b> RS 99 <span class="up">↗</span> <span class="mut">−0%</span><span class="add ok" style="margin-left:auto;width:44px;height:44px">✓</span></div>
+  <div class="pr"><b>ZETA</b> RS 99 <span class="up">↗</span> <span class="mut">−14%</span><span class="add" style="margin-left:auto;width:44px;height:44px">+</span></div>
+  <div class="pr"><b>PLTR</b> RS 97 <span class="up">↗</span> <span class="mut">−8%</span><span class="add ok" style="margin-left:auto;width:44px;height:44px">✓</span></div>
+  <div class="pr"><b>APP</b> RS 96 <span class="up">↗</span> <span class="mut">−11%</span><span class="add" style="margin-left:auto;width:44px;height:44px">+</span></div>
+</div>
+</body></html>
