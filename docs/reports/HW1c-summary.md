@@ -21,3 +21,7 @@
 - Esc order (in `escCloseTop`): sheets and menus first (incl. the import sheet, now closed through `ltSheetClose` so `ltImp` is cleared) → blur a focused field → close an open Fact Sheet popover → go back.
 - One existing behaviour changed: the thesis-editor capture handler used to make Esc in a field "Discard your unsaved changes?". On the Homework page it now defers to the rule above (Esc blurs, the draft stays). The My thesis tab outside the Homework page is unchanged.
 - `tests/run_tests_hw1b.py`: 54/54 (1440 + 1280). `run_tests_hw1b` appended to the REST list.
+
+## Final proof (HW1c + HW1b, rebased on origin/main with RS2b)
+- `JOBS=2 bash tests/run_regression.sh`: 78/78 ok, 0 failing.
+- `run_tests_hw1c` 68/68 · `run_tests_hw1b` 54/54 · `run_tests_hw1` 308/308 · hooks superset PASS.
