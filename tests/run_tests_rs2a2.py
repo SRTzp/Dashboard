@@ -123,7 +123,7 @@ def desk(pw, w, h):
         before = js(page, "()=>({v:wlView, trk:wl1Trk})")
         page.click("[data-rs2-row][data-sym=PLTR] [data-rs2-add=new]"); page.wait_for_timeout(600)
         st = js(page, "()=>{ const b = document.querySelector('[data-rs2-row][data-sym=PLTR] [data-rs2-add]'); const i = wlItemOf('PLTR'); return {a:b.dataset.rs2Add, d:b.disabled, t:b.innerText.trim(), v:wlView, trk:i ? wl1TrkOf(i) : null, sel:rs2.sel} }")
-        check(f"{tag} 4 + adds PLTR to Momentum and shows ✓ in the same row — still on Screen, no navigation", st["a"] == "done" and st["d"] and st["t"] == "✓" and st["trk"] == "winner" and st["v"] == "screen" and before["v"] == "screen", st)
+        check(f"{tag} 4 + adds PLTR to Momentum and shows ✓ (now a menu button) in the same row — still on Screen, no navigation", st["a"] == "done" and not st["d"] and st["t"] == "✓" and st["trk"] == "winner" and st["v"] == "screen" and before["v"] == "screen", st)
         col = js(page, "()=>getComputedStyle(document.querySelector('[data-rs2-row][data-sym=PLTR] [data-rs2-add]')).color")
         check(f"{tag} 4 the ✓ is muted (grey, not a button)", col == "rgb(95, 102, 114)" or col.startswith("rgb(9") or col.startswith("rgb(1"), col)
         # ---- 5 Add to (detail)

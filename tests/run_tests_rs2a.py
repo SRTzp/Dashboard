@@ -63,7 +63,7 @@ def run(pw, w, h):
         src = it and it["src"] or {}
         check(f"{tag} D: it.src = {{from:'screen', preset:'leaders', r12:97, r3:94, r1:88, at}}", src.get("from") == "screen" and src.get("preset") == "leaders" and src.get("r12") == 97 and src.get("r3") == 94 and src.get("r1") == 88 and str(src.get("at", "")).startswith("20"), src)
         st = js(page, "()=>{ const b = document.querySelector('[data-rs2-row][data-sym=PLTR] [data-rs2-add]'); return {a:b.dataset.rs2Add, d:b.disabled, t:b.innerText} }")
-        check(f"{tag} D: the button becomes 'Watching ✓' (disabled) at once", st["a"] == "done" and st["d"] and ("Watching" in st["t"] or "✓" in st["t"]), st)
+        check(f"{tag} D: the button becomes 'Watching ✓' (a menu button since RS2a3, no longer disabled) at once", st["a"] == "done" and not st["d"] and ("Watching" in st["t"] or "✓" in st["t"]), st)
         js(page, "()=>{ wlSetView('wl'); wl1TrkSet('winner'); }"); page.wait_for_timeout(300)
         inm = js(page, "()=>[...document.querySelectorAll('[data-lr5-row]')].map(r=>r.dataset.sym)")
         check(f"{tag} D: PLTR is now on the Momentum list (and COST stays Compounder)", "PLTR" in inm and "NVDA" in inm, inm)

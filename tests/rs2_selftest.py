@@ -214,4 +214,31 @@ b.fill_mcaps(['A', 'B'], mc3, '2026-11-20', getter=lambda y: None)
 t('"Yahoo has no shares" is cached as 0 (retried next week), not retried daily', mc3 == {'A': [0, '2026-11-20'], 'B': [0, '2026-11-20']} and b.fill_mcaps(['A'], mc3, '2026-11-20', getter=lambda y: 1 / 0) == 0)
 mr = b.with_mcaps([{'t': 'FRESH', 'c': 10.0}, {'t': 'NONE', 'c': 10.0}, {'t': 'Z', 'c': 10.0}], {'FRESH': [1e9, '2026-11-18'], 'NONE': [0, '2026-11-19']})
 t('rows get mc = shares × close; no cache / 0 shares → no mc key', mr[0]['mc'] == 10000000000 and 'mc' not in mr[1] and 'mc' not in mr[2])
+# 10 · RS2a3 — changes diff (Today alerts)
+def R(t, r, o=-0.05, h=0, p=None, m3=70, m1=70):
+    return {'t': t, 'r': r, 'o': o, 'h': h, 'p': p if p is not None else r, 'm3': m3, 'm1': m1}
+
+
+WL = [{'ticker': 'PLTR', 'market': 'US'}, {'ticker': 'GE'}, {'ticker': 'BRK.B'}, {'ticker': 'HANA.BK', 'market': 'TH'}, {'ticker': 'NVDA'}, {'ticker': 'AMD'}]
+prev = [R('PLTR', 84), R('GE', 91, h=1), R('BRK-B', 88), R('NVDA', 99, h=2), R('AMD', 90, p=90), R('CRDO', 78), R('ZZZ', 70), R('EMX', 60, o=-0.3, m3=80, m1=80), R('LDR', 95)]
+cur = [R('PLTR', 78), R('GE', 91, h=2), R('BRK-B', 88, o=-0.2), R('NVDA', 99, h=2), R('AMD', 70, p=90), R('CRDO', 95), R('ZZZ', 72), R('EMX', 62, o=-0.3, m3=92, m1=93), R('LDR', 96), R('NEWB', 97)]
+d = b.changes_diff(prev, cur, WL, '2026-11-19', '2026-11-18')
+by = {(x['sym'], x['k']): x for x in d['items']}
+t('changes: asOf / prevAsOf carried', d['asOf'] == '2026-11-19' and d['prevAsOf'] == '2026-11-18')
+t('changes b: Watch stock that left Leaders (PLTR RS 84→78 · BRK-B 12% → 20% from high; BRK.B on Watch matches BRK-B)', by[('PLTR', 'b')]['from'] == 84 and by[('PLTR', 'b')]['to'] == 78 and ('BRK-B', 'b') in by and ('AMD', 'b') in by)
+t('changes a: new 52w high only when it was not one yesterday (GE yes · NVDA already had it → no)', ('GE', 'a') in by and ('NVDA', 'a') not in by)
+t('changes d: new Leader with RS ≥ 90 that is NOT on Watch (CRDO 78→95, NEWB new) — LDR was already a Leader → no', ('CRDO', 'd') in by and ('NEWB', 'd') in by and ('LDR', 'd') not in by)
+t('changes d never lists a Watch stock; a/b never list a non-Watch stock', not any(x['k'] == 'd' and x['sym'] in ('PLTR', 'GE', 'AMD', 'NVDA') for x in d['items']) and not any(x['k'] in 'ab' and x['sym'] in ('CRDO', 'NEWB', 'LDR') for x in d['items']))
+t('changes c: Watch RS down ≥ 15 vs 4 weeks ago (AMD 90→70) · e: new Emerging not on Watch (EMX)', ('AMD', 'c') in by and by[('AMD', 'c')]['from'] == 90 and ('EMX', 'e') in by and ('PLTR', 'c') not in by)
+t('changes: priority order is b, a, d, c, e', [x['k'] for x in d['items']] == sorted([x['k'] for x in d['items']], key=lambda k: b.CHG_ORDER.index(k)))
+t('changes: a Thai (.BK) Watch ticker is ignored', 'HANA' not in {x['sym'] for x in d['items']} and b.watch_syms(WL) == {'PLTR', 'GE', 'BRK-B', 'NVDA', 'AMD'})
+e0 = b.changes_diff([], cur, WL, '2026-11-19', '')
+t('changes: no previous run → empty list (still has asOf)', e0['items'] == [] and e0['asOf'] == '2026-11-19' and e0['prevAsOf'] == '')
+big_prev = [R('N%03d' % i, 99, o=-0.05) for i in range(60)] + [R('X%02d' % i, 70) for i in range(10)]
+big_cur = [R('N%03d' % i, 70) for i in range(60)] + [R('X%02d' % i, 95) for i in range(10)]
+bd = b.changes_diff(big_prev, big_cur, [{'ticker': 'N%03d' % i} for i in range(60)], '2026-11-19', '2026-11-18')
+t('changes: capped at 30 items · d (new Leader) keeps only the best 3', len(bd['items']) == 30 and all(x['k'] == 'b' for x in bd['items']))
+bd2 = b.changes_diff(big_prev[60:], big_cur[60:], [], '2026-11-19', '2026-11-18')
+t('changes: d capped at 3 (best RS first)', [x['k'] for x in bd2['items']] == ['d', 'd', 'd'] and len(bd2['items']) == 3)
+t('changes: compact items {sym,k,from,to}', all(set(x) == {'sym', 'k', 'from', 'to'} for x in d['items']))
 print('PASS %d checks' % ok)

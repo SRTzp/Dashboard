@@ -428,7 +428,7 @@ def main():
         us_table = None
         try:        # RS2a — liquid US universe + ranked list (own try: a failure keeps yesterday's rs2 doc and falls back to universe_us.txt)
             import build_rs2
-            us_table = build_rs2.build(base, now)
+            us_table = build_rs2.build(base, now, watch=watch)
         except Exception as ex:
             print('rs2 failed:', str(ex)[:200])
         us_file = [] if us_table else [to_ysym(t) for t in load_universe(os.path.join(ROOT, 'data', 'universe_us.txt'))]
