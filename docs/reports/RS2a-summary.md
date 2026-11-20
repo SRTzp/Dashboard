@@ -1,58 +1,56 @@
-# RS2a — Ranked RS list (Watch › Screen) · summary (2026-11-20)
+# RS2a — Ranked RS list (Watch › Screen) · summary (updated 2026-11-20 for the final brief)
 
-Branch `claude/rs2a` (from origin/main f2781d5). Scope: `scripts/build_rs2.py` (new) · `scripts/build_prices.py` (calls it) · `index.html` (Screen view only) · tests · `docs/proposals/prices.yml`. **No engine changes** (risk-engine / re1 / core-size / ps1 / pv1 untouched), **no workflow edit** (proposal only).
+Branch `claude/rs2a`. First pass was built from the old brief; **RS2a-fix** re-copied the 20 Nov brief + mockups (Leaders / Emerging / Pullback) and implemented the delta. Scope: `scripts/build_rs2.py` · `scripts/build_prices.py` · `index.html` (Screen view + a `src` field on watchlist items) · tests · `docs/proposals/prices.yml`. **No engine changes, no workflow edit.**
 
-## Data numbers (live run against Yahoo + Nasdaq Trader, Mac, 2026-11-20, asOf 2026-11-19 close)
+## Data numbers (live run, Mac, 2026-11-20 — weekly full path with the whole-market table)
 | | |
 |---|---|
-| Common stocks after symbol-file filtering (NYSE + Nasdaq + NYSE American) | **5,080** |
-| **Liquid universe** (close ≥ $10 and 50-day avg $ volume ≥ $10M) | **2,179** (brief expected 1,800–2,200) |
-| Rated (≥ 253 bars; the rest are recent IPOs) = rows in the list | 2,120 |
-| Runtime, full weekly scan incl. 300 s of sector lookups | **431 s (7.2 min)** — target < 15 min. Daily runs skip the 5,080-symbol scan (only the ~2,179 liquid names) → expect ~4–5 min |
-| `rs2/latest` size | **409 KB** with 1,207 of 2,120 sectors filled; ≈ 470 KB when all are filled (limit 900 KB; split into `latest_0..k` of ≤ 500 rows automatically if it ever grows — tested) |
-| `rs2/_meta` | asOf, n (liquid), nRated, runAt, runSecs, universeAt, failedChunks, parts, bytes, error, rule · the liquid name list lives in `rs2/_universe` (kept out of `_meta` so the app reads a small doc) |
+| Common stocks after symbol-file filtering | 5,080 |
+| Liquid universe (close ≥ $10 · 50-day avg $vol ≥ $10M) | **2,179** · rated / in the list: **2,120** |
+| Whole-market table (`rs2/_meta.cuts`, `cuts4w`, `cuts3m`, `cuts1m`) | **n = 3,620** = 2,120 liquid + **1,500 random non-liquid** (seed `2026-W47`), `cutsStale: false`, 100% of symbols downloaded |
+| Runtime | **462 s** (7.7 min) incl. sector/earnings lookups (target < 15 min) |
+| `rs2/latest` | **434 KB** (≈ 500 KB when sectors/earnings are filled; limit 900 KB, auto-split tested) |
+| Preset sizes on the live data | Leaders 376 · Emerging 31 · Pullback 27 |
 
-## 10 ratings sanity check (new liquid-universe table vs the RS1 numbers in RS1-summary, 2026-11-18)
-RS1 table was ~512 S&P 500 + Nasdaq 100 names; the new table is 2,120 liquid stocks and one trading day later, so a one-time shift is expected (brief: "note it").
-| ticker | RS1 (18 Nov) | RS2a (19 Nov) | 4w ago | line | from high |
-|---|---|---|---|---|---|
-| NVDA | 5 | 8 | 59 | ↘ | −39% |
-| AAPL | 89 | 84 | 79 | ↗ | −2% |
-| MSFT | 68 | 71 | 80 | ↗ | −10% |
-| TSLA | 36 | 38 | 43 | ↗ | −24% |
-| META | 53 | 51 | 43 | → | −23% |
-| PLTR | 37 | 41 | 89 | ↘ | −27% |
-| INTC | 15 | 30 | 90 | ↘ | −61% |
-| KO | 85 | 82 | 83 | ↗ | −3% |
-| UNH | 66 | 39 | 67 | ↘ | −24% |
-| AVGO | — | 38 | 20 | ↗ | −28% |
-Mostly ±5. Big movers: **UNH 66→39, INTC 15→30** (a broader universe has many more small/mid caps that did worse/better than the megacaps; INTC's 12m return is huge so it now sits above more low-cap losers). Not a formula change: `build_rs2` calls the RS1 functions (`rs_table`, `rs_for`) unchanged — selftest checks the list rating equals `rs_for` on the same table, and that `run_rs` rates Watch stocks from the same cuts. Please eyeball a few against TradingView/IBD.
+## Old vs new ratings, same 10 tickers (old = liquid-only table, 19 Nov · new = whole-market table, 20 Nov run)
+Whole-market grading is easier than liquid-only (the 1,500 sampled non-liquid names are mostly weaker), so ratings rise by ~5–15 once — expected ("ratings will shift once").
+| ticker | old 12M | new 12M | new 3M | new 1M |
+|---|---|---|---|---|
+| NVDA | 8 | 24 | 22 | 9 |
+| AAPL | 84 | 86 | 92 | 71 |
+| MSFT | 71 | 76 | 81 | 46 |
+| TSLA | 38 | 51 | 81 | 55 |
+| META | 51 | 60 | 88 | 30 |
+| PLTR | 41 | 53 | 43 | 17 |
+| INTC | 30 | 44 | 17 | 6 |
+| KO | 82 | 85 | 85 | 77 |
+| UNH | 39 | 52 | 43 | 21 |
+| AVGO | 38 | 51 | 62 | 74 |
+(Part of the move is also one extra trading day.) The formula is untouched; Watch ratings use the same stored table (`run_rs(..., us_table=)`).
 
-## What changed
-- **`scripts/build_rs2.py`**: symbol-file parser (drops ETFs, test issues, non-normal status, warrants, units, rights, preferreds, notes, funds, Arca/BATS; BRK.B → BRK-B), `adv50`/liquidity filter, chunked yfinance download (200/call, sleep, retry once, failed chunk counted and skipped), rows with short keys (`t n e s i r p l h o x xd c v a3 a6 a9 a12`), doc split, sector cache (`rs2/_sectors`, time-budgeted lookups best-rated first — converges over ~2–3 runs), weekly universe refresh (`UNIVERSE_REFRESH_DAYS=6`, `RS2_FULL=1` forces), failure → `_meta.error`, yesterday's doc untouched.
-- **`build_prices.py`**: `main()` runs `build_rs2.build()`; the returned liquid-universe table becomes the **US RS table for the Watch ratings** (`run_rs(..., us_table=)`), so one stock = one rating everywhere. If rs2 fails it falls back to `data/universe_us.txt` as before. TH unchanged.
-- **UI** (`index.html`): Watch segment **Screen** (4th), `wlView==='screen'`, `rs2*` functions + CSS block (`.rs2-*`). Desktop = table + detail panel + chips; phone = 2-line rows with `+`/`✓`, 50 rows then Show more, `⚲` reveals Avg $vol + Reset. Phone segment labels are now Mom/Comp (mockup).
-- Proof: `tests/rs2_selftest.py` (29 offline checks; added to run_regression FAST list), `tests/run_tests_rs2a.py` (104 checks at 1440/390/360 + states: filters, sorts, search, + Watch round-trip, archived, missing data, empty/no doc, split docs), `tests/rs2a_side.py` → `tests/screenshots/rs2a/screen-{1440,390}-side.png` (mockup left | live right).
-- Two existing tests updated for the new 4th segment / phone short labels: `run_tests_lr5a` (A header), `run_tests_phase374` (segment counts).
+## Delta implemented
+1. **Weekly whole-market table**: weekly full run scores liquid + a seeded random 1,500 non-liquid names (≥ 252 bars) → `_meta.cuts/cuts4w/cuts3m/cuts1m` (+ `cutsN`, `sample`, `seed`, `asOf`). Daily runs map scores with the stored table. < 80% of requested symbols downloaded → keep last table + `cutsStale`; no stored table yet → liquid+sample table still flagged stale. **Stooq reader** (`parse_stooq_csv`, `_stooq_fetch_chunk`) behind `RS2_SOURCE=stooq`, off; **not needed — Yahoo worked** (it was not tested against the live Stooq service; Stooq prices are unadjusted).
+2. **`m3` / `m1` per row** = 3-month and 1-month RS ratings (return ranked on the same table method, own cut-offs). `r` = 12M rating, `p` = rating 4 weeks ago (kept in data, no longer shown on Screen).
+3. **UI**: segmented presets Leaders (default) / Emerging / Pullback (thresholds in `RS2_PRESET_DEFAULTS`, overridable via localStorage `dash.rs2Presets`; the job's `PRESETS` mirror them); `Filter ▾` panel = RS min · % from high · new high only · sector · min $vol (button shows the count) + Reset; RS 4W column removed; conditional **3M · 1M** column (Emerging/Pullback only); phone line 2 ends `3M 94 · 1M 88` in those presets; detail line `12M x · 3M y · 1M z` with falling values amber (≥ 30-point fall red).
+4. **Earnings**: weekly cached lookup (`rs2/_earn`) for names matching any preset (cap 300, best RS first); row key `nx`; "in Nd" amber ≤ 7 days; names not looked up fall back to a Watch next-check date, else "—".
+5. **`+ Watch`** saves `it.src = {from:'screen', preset, r12, r3, r1, at}` (watchlist items now carry `src` through the snapshot mapping).
+
+## Tests / proof
+`tests/rs2_selftest.py` 53 offline checks (cut-offs from a known synthetic set, clamp, 1M/3M ratings, sample determinism, stale-table path ×4, symbol conversion, Stooq CSV, earnings cache, miss guard) · `tests/run_tests_rs2a.py` 134 checks at 1440/390/360 (presets, Filter panel, new column, phone line 2, detail colours, `src`, thresholds override, states, split docs) · side-by-side PNGs `tests/screenshots/rs2a/screen-{1440,390}-side.png` (force-added) · hooks superset PASS.
+Updated existing tests only for the 4th segment / phone labels (`run_tests_lr5a`, `run_tests_phase374`).
 
 ## For you to do (not done by me)
 1. Paste `docs/proposals/prices.yml` into `.github/workflows/prices.yml` (adds the rs2 selftest step; timeout 20 → 30 min).
 2. **Firestore Rules**: the app reads `users/{uid}/rs2/*` (get on `_meta`, `latest`, `latest_i`). If your rules only list known sub-collections, add `match /users/{uid}/rs2/{doc} { allow read: if request.auth.uid == uid; }`. Without it Screen shows "Could not load the ranked list (…permission-denied) · Retry".
 3. First Action run: the weekly full scan has only been run from my Mac. Check Actions log for `rs2: liquid …` and `_meta.error`.
 
-## Doubts / decisions I made unattended
-- **Earnings column**: the mockup has it, the brief's column list doesn't, and there is no cheap bulk earnings-date source. It shows a date only for stocks already on Watch (next check / thesis catalyst, amber when ≤ 7 days) and `—` otherwise. Say if you want a real earnings feed (per-ticker yfinance calendar calls are too slow for 2k names) or the column dropped.
-- **Filter UI**: brief says one `Filter ▾`; the mockup has chips (RS · distance · new high · sector · $vol · Reset) — I followed the mockup. Sort has 5 options (Near high + RS default, RS high first, Closest to high, Biggest RS gain, Avg $vol). Filters + sort persist in localStorage (`dash.rs2`).
-- **RS options** include "Any RS"/"Any distance" in addition to 70/80/90 and 10/15/25 so you can see everything.
-- **New-high chip** uses the same rule as Watch (new high within the last 5 sessions).
-- **Universe edge cases**: ADRs / foreign ordinary shares are included (they're US-listed common-equivalents); anything with "Fund", "Trust … Preferred", "Acquisition Corp", rights/warrants/units/notes in the name is dropped. Class shares appear as `BRK-B` (Yahoo form); + Watch stores that ticker as-is so prices work.
-- **History** is 410 calendar days (~280 sessions) rather than exactly "13 months" — 13 months is ~273 sessions, too tight for the 4-weeks-ago rating (needs 273).
-- **Weekly universe refresh**: daily runs reuse `rs2/_universe`; a stock that becomes liquid mid-week appears at the next weekly scan (names that fall below the filter drop out immediately).
-- Sector lookups are cached; the first 2–3 runs fill the sector column progressively (rows without a sector show "—" in the Sector column and are skipped by the sector filter).
-- Real-Firestore behaviour (rules, 1 MiB doc limit, GitHub runner speed/rate limits) is untested here; only the in-memory mock + Yahoo from a Mac were exercised.
-- Phone detail: the mockup has no phone detail panel, so tapping a row does nothing on phone (the `+` is the action).
+## Doubts / things to know
+- **Yahoo throttled the per-ticker endpoints right after the bulk download** (HTTP 429 / "Invalid Crumb"): on the live run **0 of 300 earnings lookups returned a date** and the sector cache stayed small. The earnings path is unit-tested but **not proven live**. Misses are no longer cached and the job stops a lookup loop after 30 misses in a row; on the GitHub runner (different IP, weekly schedule) it may behave better. If not, a separate small earnings job / another source is the fix. Until then the Earnings column is "—" except stocks on Watch (next check date).
+- Sector column fills progressively; rows without a sector show "—".
+- The weekly scan still downloads every symbol (it needs prices to know who is liquid); the 1,500 sample is drawn from the non-liquid names that downloaded with ≥ 252 bars. The "80% download" rule is therefore applied to all requested symbols, not only the sample.
+- A past earnings date is hidden (shows "—").
+- Filter is an inline panel below the presets (not a popover) — works the same on phone via ⚲.
+- Real Firestore (rules, doc limits) and the GitHub runner are still untested.
 
-## Regression
-Full `bash tests/run_regression.sh`: see the final line appended below.
 
-**Full `run_regression.sh` (after updating the two segment tests): 69/70 ok, 1164 s.** hooks superset PASS · rs2 selftest PASS · run_tests_rs2a 104/104 PASS. The one failure, `run_tests_lr2`, crashed with `Cannot read properties of null (reading 'click')` on the Today screen under 4-way parallel load; run alone it passes (150 checks, 0 failing), and it passed in the earlier full run (68/70, whose only 2 failures were the segment-count tests I then updated). Not a clean 70/70 in a single run — I did not spend a third 20-minute run on it; re-run `JOBS=2 bash tests/run_regression.sh` if you want that proof.
+**Final: `JOBS=2 bash tests/run_regression.sh` → 70/70 ok, 0 failing, 2124 s** (hooks superset PASS · rs2 selftest PASS · run_tests_rs2a 134/134).

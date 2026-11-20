@@ -87,7 +87,7 @@ rows, table, liq, nrated = b.rs2_rows(info, data, bench)
 tk = {r['t'] for r in rows}
 t('liquidity filter applied (cheap / thin / no data out)', 'CHEAP' not in tk and 'THIN' not in tk and 'NODATA' not in tk)
 t('liquid list = 41 (40 risers + NEW) · rated = 40 (NEW has < 253 bars)', len(liq) == 41 and nrated == 40 and 'NEW' not in tk)
-t('table is the liquid-universe table', table and table['n'] == 40 and len(table['cuts']) == 99)
+t('table = liquid + non-liquid sample (≥ 252 bars): 40 risers + CHEAP + THIN', table and table['n'] == 42 and len(table['cuts']) == 99 and table['sample'] == 2 and len(table['cuts3m']) == 99 and len(table['cuts1m']) == 99)
 t('sorted by rating desc', [r['r'] for r in rows] == sorted((r['r'] for r in rows), reverse=True) and rows[0]['t'] == 'L39')
 r0 = rows[0]
 t('row has every short key', all(k in r0 for k in ('t', 'n', 'e', 'r', 'p', 'l', 'h', 'o', 'x', 'xd', 'c', 'v', 'a3', 'a6', 'a9', 'a12')))
@@ -148,8 +148,54 @@ t('universe refresh: none → stale · 7 days → stale · 2 days → fresh',
   and not b.universe_stale({'universeAt': (now - dt.timedelta(days=2)).isoformat(), 'liquid': [1]}, now))
 
 # 6 · build_prices.run_rs accepts the liquid table for US
-tab = {'asOf': '2026-11-18', 'n': 40, 'cuts': table['cuts'], 'cuts4w': table['cuts4w']}
+tab = {'asOf': '2026-11-18', 'n': 42, 'cuts': table['cuts'], 'cuts4w': table['cuts4w']}
 wr = {}
 bp.run_rs({'L10': 'L10'}, [], lambda need: {y: data[y]['close'] if y in data else bench for y in need if y in data or y in ('SPY',)} | {'SPY': bench}, lambda k, v: wr.__setitem__(k, v), now, us_table=tab)
-t('Watch rating for a US stock comes from the liquid table', wr['L10']['rs']['rating'] == [r for r in rows if r['t'] == 'L10'][0]['r'] and wr['_meta']['rsTable']['us']['n'] == 40)
+t('Watch rating for a US stock comes from the liquid table', wr['L10']['rs']['rating'] == [r for r in rows if r['t'] == 'L10'][0]['r'] and wr['_meta']['rsTable']['us']['n'] == 42)
+
+# 7 · weekly whole-market table: cuts from a known synthetic set, clamp, 1M/3M ratings, sample, stale path, symbol conversion
+syn = [{'s12': i / 100, 's4': i / 100, 's3': i / 100, 's1': i / 100} for i in range(100)]
+tb = b.build_table(syn, '2026-11-18', {'sample': 40})
+t('table: 99 cuts each, ascending, n = 100, extra kept', tb['n'] == 100 and tb['sample'] == 40 and all(len(tb[k]) == 99 and tb[k] == sorted(tb[k]) for k in ('cuts', 'cuts4w', 'cuts3m', 'cuts1m')))
+t('cuts of 0.00..0.99 are the linear percentiles (1st = 0.0099, 50th = 0.495, 99th = 0.9801)', abs(tb['cuts'][0] - 0.0099) < 1e-9 and abs(tb['cuts'][49] - 0.495) < 1e-9 and abs(tb['cuts'][98] - 0.9801) < 1e-9)
+t('rating 1–99 + clamp outside the table range', bp.rs_rating(-5, tb['cuts']) == 1 and bp.rs_rating(5, tb['cuts']) == 99 and bp.rs_rating(0.495, tb['cuts']) in (50, 51))
+t('rate_ret: 1M / 3M use their own cuts · None stays None', b.rate_ret(0.5, tb['cuts1m']) in (50, 51) and b.rate_ret(None, tb['cuts1m']) is None and b.rate_ret(0.5, None) is None)
+t('ret(): 21 / 63 session returns', abs(b.ret([100.0] * 60 + [110.0] * 1, 21) - 0.1) < 1e-12 and b.ret([1.0] * 20, 21) is None)
+t('table needs ≥ 30 scored names', b.build_table(syn[:20], 'x') is None)
+last = {'asOf': '2026-11-11', 'n': 90, 'cuts': [0.1] * 99, 'cuts4w': [0.1] * 99}
+nt = {'asOf': '2026-11-18', 'n': 100, 'cuts': [0.2] * 99}
+t('stale path: ≥ 80% downloaded → new table, not stale', b.choose_table(nt, 0.95, last) == (nt, False))
+t('stale path: < 80% downloaded → keep LAST week\'s table, cutsStale', b.choose_table(nt, 0.79, last) == (last, True))
+t('stale path: no new table → last table, stale', b.choose_table(None, 1.0, last) == (last, True))
+t('stale path: nothing stored yet → new table but flagged stale', b.choose_table(nt, 0.5, None) == (nt, True))
+s1 = b.pick_sample(['S%04d' % i for i in range(3000)], 1500, '2026-W47')
+t('sample: 1,500 distinct, deterministic per seed, different next week', len(set(s1)) == 1500 and s1 == b.pick_sample(['S%04d' % i for i in range(3000)], 1500, '2026-W47') and s1 != b.pick_sample(['S%04d' % i for i in range(3000)], 1500, '2026-W48'))
+t('sample: fewer names than k → all of them', len(b.pick_sample(['A', 'B', 'C'], 1500, 'x')) == 3)
+t('week_seed', b.week_seed(dt.datetime(2026, 11, 20)) == '2026-W47')
+t('symbol conversion BRK.B → BRK-B · Stooq form', b.ysym_of('BRK.B') == 'BRK-B' and b.ysym_of('bf.b') == 'BF-B' and b.stooq_symbol('BRK-B') == 'brk-b.us')
+today = dt.date.today()
+csv = 'Date,Open,High,Low,Close,Volume\n' + '\n'.join('%s,1,1,1,%d,1000' % ((today - dt.timedelta(days=i)).isoformat(), 10 + i) for i in (500, 3, 2, 1))
+sd = b.parse_stooq_csv(csv)
+t('Stooq CSV reader: keeps the last 410 days only, close + volume', len(sd['close']) == 3 and sd['vol'] == [1000.0] * 3 and b.parse_stooq_csv('No data') == {} and b.parse_stooq_csv('') == {})
+t('Stooq reader is off unless RS2_SOURCE=stooq', b.fetch_fn() is b._yf_fetch_chunk)
+# 3M / 1M ratings land on the rows
+r3 = [r for r in rows if r['t'] == 'L39'][0]
+t('rows carry m3 / m1 ratings (1–99) and the 12M rating', 1 <= r3['m3'] <= 99 and 1 <= r3['m1'] <= 99 and 'p' in r3)
+t('rows rated from a STORED table (daily path) equal rows rated from a fresh one', [r['r'] for r in b.rs2_rows(info, data, bench, table)[0]] == [r['r'] for r in rows])
+# 8 · earnings cache
+t('parse_earn: date / datetime / list / string / junk', b.parse_earn(dt.date(2026, 12, 3)) == '2026-12-03' and b.parse_earn([dt.date(2026, 12, 5), dt.date(2026, 12, 3)]) == '2026-12-03' and b.parse_earn('2026-12-03 00:00:00') == '2026-12-03' and b.parse_earn(None) == '' and b.parse_earn('soon') == '')
+pr = [{'t': 'A', 'r': 90, 'o': -0.05, 'm3': 80, 'm1': 70}, {'t': 'B', 'r': 60, 'o': -0.5, 'm3': 50, 'm1': 50}, {'t': 'C', 'r': 80, 'o': -0.4, 'm3': 95, 'm1': 92}, {'t': 'D', 'r': 90, 'o': -0.05, 'm3': 85, 'm1': 40}, {'t': 'E', 'r': 99, 'o': 0.0, 'm3': None, 'm1': None}]
+t('earnings candidates = names matching Leaders / Emerging / Pullback only (A leaders · C emerging · D pullback · E leaders), capped', b.earn_candidates(pr) == ['A', 'C', 'D', 'E'] and b.earn_candidates(pr, 2) == ['A', 'C'])
+ec = {'A': '2026-12-01', 'C': '2026-01-01'}
+asked = []
+nl = b.fill_earnings(['A', 'C', 'D'], ec, '2026-11-20', getter=lambda y: (asked.append(y), dt.date(2026, 12, 9))[1])
+t('earnings lookup only for missing / past dates', asked == ['C', 'D'] and nl == 2 and ec['C'] == '2026-12-09')
+ec2 = {}
+nf = b.fill_earnings(['T%d' % i for i in range(100)], ec2, '2026-11-20', getter=lambda y: 1 / 0)
+t('failing lookups are not cached, not fatal, and stop after 30 misses in a row (rate-limit guard)', ec2 == {} and nf == b.MAX_MISS)
+sc = {}
+ns = b.fill_sectors(rows, sc, getter=lambda y: ('', ''))
+t('empty sector answers are not cached and stop after 30 misses', sc == {} and ns == min(len(rows), b.MAX_MISS))
+rr = b.with_earnings([{'t': 'A'}, {'t': 'C'}, {'t': 'Z'}], {'A': '2026-12-01', 'C': '2026-11-01'}, '2026-11-20')
+t('rows get nx only for upcoming dates', rr[0].get('nx') == '2026-12-01' and 'nx' not in rr[1] and 'nx' not in rr[2])
 print('PASS %d checks' % ok)
