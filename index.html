@@ -4398,6 +4398,25 @@ html body .topbar.topbar.topbar .hbtns>#hdrMoreBtn:hover{border-color:var(--lr-m
 .re2-pc .rk3.no-mom{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (max-width:560px){.lr2-status{padding:8px 12px 2px!important}.lr2-status .lr2-ph{margin-bottom:6px}.lr2-calm{display:none!important}.lr2-side .pair{gap:0}.lr2-side .pair>.card{border-radius:0;border-bottom-width:0;padding:10px 14px}.lr2-side .pair>.card:first-child{border-radius:14px 14px 0 0}.lr2-side .pair>.card:last-child{border-radius:0 0 14px 14px;border-bottom-width:1px}.lr2-side .pair>.card:only-child{border-radius:14px}.lr2-side{gap:10px}.lr2-todo{padding:10px 14px}.lr2-glance,.lr2-ph{margin-bottom:8px}.lr2-viewrow{margin-bottom:8px}}
 @media (max-width:560px){.lr2-ph{padding:8px 12px;gap:0}.lr2-ph .l1,.lr2-ph .l2{gap:2px 6px}.lr2-th{margin:0 0 2px!important;min-height:20px}.lr2-th b{font-size:14px!important}.lr2-ti,.lr2-tb{min-height:40px!important}.lr2-todo{padding:8px 14px 6px!important}.lr2-viewrow{margin-bottom:6px!important}.lr2-head{gap:6px 8px}.lr2-act{padding-top:10px!important;padding-bottom:6px!important}}
+/* ══ TD5 — my own to-dos inside the To do card (tick · text · MINE · ×) · add input = last row ══ */
+.td5-ti{display:flex;align-items:center;gap:10px;border-top:1px solid var(--lr-line);min-height:44px;min-width:0;max-width:100%;box-sizing:border-box}
+.td5-ti.ed{align-items:flex-start;padding:8px 0}.td5-ti.ed .td5-ck{padding-top:8px;height:auto}
+.td5-ck{all:unset;box-sizing:border-box;cursor:pointer;flex:none;min-width:46px;width:46px;height:44px;display:flex;align-items:center;justify-content:center}
+span.td5-ck{cursor:default}
+.td5-ck i{width:18px;height:18px;border:1.5px solid var(--lr-muted);border-radius:50%;display:block;box-sizing:border-box;font:700 11px/15px var(--lr-sans);font-style:normal;text-align:center;color:#fff}
+.td5-ck:focus-visible,.td5-x:focus-visible,.td5-t:focus-visible,.td5-plus:focus-visible{outline:2px solid var(--lr-mmt);outline-offset:2px}
+.td5-ti.done .td5-ck i{background:var(--lr-gain-ink);border-color:var(--lr-gain-ink)}
+.td5-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:400 var(--lr-fs-4)/1.25 var(--lr-sans);color:var(--lr-ink);cursor:text}
+.td5-ti.done .td5-t{color:var(--lr-muted);text-decoration:line-through}
+.td5-x{all:unset;box-sizing:border-box;cursor:pointer;flex:none;width:28px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--lr-muted);font-size:16px}
+.td5-in{flex:1;min-width:0;box-sizing:border-box;font:400 14px/1.35 var(--lr-sans);border:1px solid var(--lr-line);border-radius:8px;padding:7px 9px;background:var(--lr-card);color:var(--lr-ink)}
+.td5-ta{resize:none;display:block}
+.td5-hint{font-size:11px;color:var(--lr-muted);padding:2px 0 4px 56px}
+.td5-plus{all:unset;box-sizing:border-box;cursor:pointer;flex:none;width:28px;height:28px;border:1px solid var(--lr-line);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:16px;line-height:1;color:var(--lr-ink);background:var(--lr-card);margin-left:6px}
+.td5-plus.on{background:var(--lr-ink);color:var(--lr-card);border-color:var(--lr-ink)}.td5-plus[disabled]{opacity:.4;cursor:not-allowed}
+.lr2-th .td5-plus{margin-left:0}.lr2-th .sp + .td5-plus{margin-right:6px}
+.td5-plus{margin-top:-7px;margin-bottom:-7px;position:relative}.td5-plus::after{content:'';position:absolute;inset:-8px}
+@media (max-width:560px){.td5-x{width:44px}.td5-in{font-size:16px}.td5-plus{width:44px;height:44px;margin-top:-12px;margin-bottom:-12px;margin-right:-8px;border-color:transparent;background:none}.td5-plus.on{background:none;border-color:transparent;color:var(--lr-ink)}.td5-plus::after{display:none}}
 /* ══ LR2 fixes — risk room lines (inside Details) · page header row · left-aligned To do · phone glance 2 lines ══ */
 .lr2-risk{padding:12px 14px!important;display:flex;flex-direction:column;gap:6px}
 .lr2-rt{font:600 var(--lr-fs-5)/1.2 var(--lr-sans);color:var(--lr-ink)}.lr2-rt .m{font-weight:400;color:var(--lr-muted)}
@@ -12260,8 +12279,10 @@ function ln4TodoGrouped(L){
   return out;
 }
 function ln4TodoHtml(M, wk){
-  const L0 = ln4TodoItems(M), e = ln4Exec(), news = wk ? '' : ln4NewsLine(); if(!L0.length && !e.y && !news) return '';   /* nothing to do and no valid setup yet = hidden */
-  const MAXT = ln4Wide() ? 4 : 3, L = ln4TodoGrouped(L0), Lb = L.filter(x=>!x.scr), Ls = L.filter(x=>x.scr), vis = ln4TodoAll ? Lb.concat(Ls) : Lb.slice(0, MAXT).concat(Ls);   /* RS2a3 — the (≤ 3) Screen lines are never hidden behind +N */
+  const L0 = ln4TodoItems(M), e = ln4Exec(), news = wk ? '' : ln4NewsLine();   /* TD5 — the card is always there: its last row is the add input */
+  const MAXT = ln4Wide() ? 4 : 3, L = ln4TodoGrouped(L0), Lb0 = L.filter(x=>!x.scr), Ls = L.filter(x=>x.scr);   /* RS2a3 — the (≤ 3) Screen lines are never hidden behind +N */
+  const mine = td5List().map(m=>({mine:true, c:'m', id:m.id, t:m.t})), Lb = Lb0.filter(x=>x.c === 'r').concat(mine, Lb0.filter(x=>x.c !== 'r'));   /* TD5 — red engine items · my to-dos (oldest first) · the rest; one list, one cap, one +N fold */
+  const vis = (ln4TodoAll ? Lb : Lb.slice(0, MAXT)).concat(Ls);
   const chip = x=>x.grp
     ? `<button type="button" class="pill ${x.c === 'r' ? 'p-r' : x.c === 'a' ? 'p-a' : 'p-n'}" data-ln4-todo="${td3E(x.id)}" data-ln4-todogrp="${td3E(x.grp)}" data-ln4-c="${x.c}" aria-expanded="${ln4TodoGrp === x.grp}" onclick="ln4TodoGroup('${td3E(x.grp)}')">${td3E(x.t)} ›</button>`
     : `<button type="button" class="pill ${x.c === 'r' ? 'p-r' : x.c === 'a' ? 'p-a' : 'p-n'}" data-ln4-todo="${td3E(x.id)}" data-ln4-c="${x.c}" onclick="${x.fn}">${td3E(x.t)}</button>`;
@@ -12275,6 +12296,7 @@ function ln4TodoHtml(M, wk){
   const panel = open ? `<div class="ln4-det r" data-ln4-todolist="${td3E(open.grp)}">${open.items.map(chip).join('')}</div>` : '';
   /* LR2 C — a short list: port / flow tag · one line · one link (max 4 on desktop, 3 on phone, then "+N ›") */
   const row = x=>{
+    if(x.mine) return td5Row(x);
     const cls = x.c === 'r' ? 'p-r' : x.c === 'a' ? 'p-a' : 'p-n', tg = lr2TodoTag(x), lk = x.grp ? 'Open ›' : lr2TodoLink(x);
     return x.grp
       ? `<div class="lr2-ti" data-lr2-ti><span class="lr-tag lr2-tg ${tg[1]}">${td3E(tg[0])}</span><button type="button" class="lr2-tb lr2-c-${x.c}" data-ln4-todo="${td3E(x.id)}" data-ln4-todogrp="${td3E(x.grp)}" data-ln4-c="${x.c}" aria-expanded="${ln4TodoGrp === x.grp}" onclick="ln4TodoGroup('${td3E(x.grp)}')"><span class="t">${td3E(x.t)}</span><span class="lk">${lk}</span></button></div>`
@@ -12282,8 +12304,78 @@ function ln4TodoHtml(M, wk){
   };
   const openG = L.find(x=>x.grp && x.grp === ln4TodoGrp);
   const panelG = openG ? `<div class="ln4-det r" data-ln4-todolist="${td3E(openG.grp)}">${openG.items.map(chip).join('')}</div>` : '';
-  return `<section class="lr2-todo" data-ln4-todorow aria-label="To do"><div class="lr2-th"><b>To do</b><span class="num">${L.length + (news ? 1 : 0)}</span><span class="sp"></span>${e.y ? `<button type="button" class="pill p-g" data-ln4-exec onclick="ln4ExecTip()">Exec ${e.x}/${e.y}</button>` : ''}</div>${vis.map(row).join('')}${news}${panelG}${Lb.length > MAXT ? `<button type="button" class="lr2-more" data-ln4-todomore onclick="ln4TodoMore()">${ln4TodoAll ? 'less ‹' : '+' + (Lb.length - MAXT) + ' ›'}</button>` : ''}</section>`;
+  return `<section class="lr2-todo" data-ln4-todorow aria-label="To do"><div class="lr2-th"><b>To do</b><span class="num">${L.length + (news ? 1 : 0) + mine.length}</span><span class="sp"></span>${td5Plus(mine.length)}${e.y ? `<button type="button" class="pill p-g" data-ln4-exec onclick="ln4ExecTip()">Exec ${e.x}/${e.y}</button>` : ''}</div>${td5AddRow()}${vis.map(row).join('')}${news}${panelG}${Lb.length > MAXT ? `<button type="button" class="lr2-more" data-ln4-todomore onclick="ln4TodoMore()">${ln4TodoAll ? 'less ‹' : '+' + (Lb.length - MAXT) + ' ›'}</button>` : ''}</section>`;
 }
+/* ══ TD5 — my own to-dos (Today › To do) ══
+   Stored in the user's existing app settings (home account book, same path as glWrite/candMeta): settings.myTodos = [{id, t, at, done:false}] · no new collection · done/deleted items leave the array, Undo writes them back
+   render stays pure: td5Row/td5AddRow only read td5List() + the small UI vars below; every change = glWrite (save + refresh) */
+const TD5_MAX = 30, TD5_LEN = 120;
+let td5Open = false, td5Draft = '', td5EditId = '', td5EditVal = '', td5Pend = new Set(), td5Undo = null, td5ToastT = 0;
+function td5List(){ try{ const a = tdSettings().myTodos; return Array.isArray(a) ? a.filter(x=>x && typeof x.id === 'string' && typeof x.t === 'string' && x.t) : []; }catch(e){ return []; } }
+function td5Write(fn){ return glWrite(S=>{ const a = Array.isArray(S.myTodos) ? S.myTodos.slice() : []; S.myTodos = fn(a) || a; }); }
+function td5Plus(n){
+  const full = n >= TD5_MAX;
+  return `<button type="button" class="td5-plus${td5Open ? ' on' : ''}" data-td5-plus aria-label="Add a to-do" aria-expanded="${td5Open}"${full ? ' disabled title="30 open — finish one first"' : ' title="Add a to-do"'} onclick="td5Toggle()">+</button>`;
+}
+function td5Toggle(){ if(td5List().length >= TD5_MAX && !td5Open) return; td5Open = !td5Open; td5Draft = ''; todayRefresh(true); }
+function td5Row(x){
+  const id = td3E(x.id), done = td5Pend.has(x.id);
+  const body = (td5EditId === x.id && !done)
+    ? `<textarea class="td5-in td5-ta" rows="2" data-td5-edit="${id}" maxlength="${TD5_LEN}" aria-label="Edit to-do" oninput="td5EditVal=this.value" onkeydown="td5EditKey(event,'${id}')" onblur="td5EditBlur('${id}')">${td3E(td5EditVal)}</textarea>`
+    : `<span class="td5-t" role="button" tabindex="0" title="${td3E(x.t)}" onclick="td5Edit('${id}')" onkeydown="if(event.key==='Enter'){event.preventDefault();td5Edit('${id}')}">${td3E(x.t)}</span>`;
+  return `<div class="td5-ti${done ? ' done' : ''}${td5EditId === x.id && !done ? ' ed' : ''}" data-td5-row="${id}"><button type="button" class="td5-ck" data-td5-tick aria-label="Mark done" onclick="td5Finish('${id}','Done')"><i>${done ? '✓' : ''}</i></button>${body}<button type="button" class="td5-x" data-td5-del aria-label="Delete" onclick="td5Finish('${id}','Deleted')">×</button></div>`;
+}
+function td5AddRow(){
+  if(!td5Open) return '';
+  return `<div class="td5-ti td5-add" data-td5-addrow><span class="td5-ck"><i style="border-style:dashed"></i></span><input type="text" class="td5-in" data-td5-add maxlength="${TD5_LEN}" aria-label="Add a to-do" autocomplete="off" value="${td3E(td5Draft)}" oninput="td5Draft=this.value;td5Count()" onkeydown="td5AddKey(event)"></div><div class="td5-hint" data-td5-hint>Enter save · Esc close · <span data-td5-n>${String(td5Draft).length}</span>/${TD5_LEN}</div>`;
+}
+function td5Count(){ const n = document.querySelector('[data-td5-n]'); if(n) n.textContent = String(td5Draft).length; }
+function td5AddKey(e){
+  if(e.isComposing || e.keyCode === 229) return;
+  if(e.key === 'Enter'){ e.preventDefault(); td5Add(); }
+  else if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); td5Open = false; td5Draft = ''; todayRefresh(true); }
+}
+function td5Add(){
+  const v = String(td5Draft || '').trim().slice(0, TD5_LEN).trim(); if(!v) return;
+  if(td5List().length >= TD5_MAX) return;
+  const it = {id:'td5' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), t:v, at:Date.now(), done:false};
+  td5Open = false; td5Draft = '';
+  if(!td5Write(a=>a.concat([it]))){ td5Open = true; td5Draft = v; }
+}
+function td5Edit(id){ const it = td5List().find(x=>x.id === id); if(!it) return; td5EditId = id; td5EditVal = it.t; td5Open = false; todayRefresh(true); }
+function td5EditKey(e, id){
+  if(e.isComposing || e.keyCode === 229) return;
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault(); const v = String(td5EditVal || '').trim().slice(0, TD5_LEN).trim();
+    td5EditId = ''; if(!v){ todayRefresh(true); return; }
+    td5Write(a=>a.map(x=>x.id === id ? Object.assign({}, x, {t:v}) : x));
+  } else if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); td5EditId = ''; todayRefresh(true); }
+}
+function td5EditBlur(id){ setTimeout(()=>{ try{ const el = document.querySelector('[data-td5-edit]'); if(td5EditId === id && (!el || document.activeElement !== el)){ td5EditId = ''; todayRefresh(true); } }catch(e){} }, 0); }
+/* tick / × : the row shows ✓ + strikethrough for a moment, then leaves · toast "Done|Deleted: <text> · Undo" (6 s) */
+function td5Finish(id, verb){
+  const a = td5List(), i = a.findIndex(x=>x.id === id); if(i < 0 || td5Pend.has(id)) return;
+  const it = a[i]; td5Pend.add(id); td5EditId = '';
+  try{ const r = document.querySelector('[data-td5-row="' + id + '"]'); if(r){ r.classList.add('done'); const k = r.querySelector('.td5-ck i'); if(k) k.textContent = '✓'; } }catch(e){}
+  setTimeout(()=>{
+    td5Pend.delete(id);
+    if(td5Write(b=>b.filter(x=>x.id !== id))){ td5Undo = {it, i}; td5ToastShow(`${verb}: ${it.t}`); } else todayRefresh(true);
+  }, 380);
+}
+function td5ToastShow(msg){
+  let el = document.getElementById('td5Toast');
+  if(!el){ el = document.createElement('div'); el.id = 'td5Toast'; el.className = 'td3-toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.innerHTML = `<span data-td5-toasttxt style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${td3E(msg)} · </span><button type="button" data-td5-undo onclick="td5UndoDo()">Undo</button>`;
+  el.style.display = 'flex'; clearTimeout(td5ToastT); td5ToastT = setTimeout(()=>{ el.style.display = 'none'; td5Undo = null; }, 6000);
+}
+function td5UndoDo(){
+  const u = td5Undo, el = document.getElementById('td5Toast'); if(!u) return;
+  td5Undo = null; clearTimeout(td5ToastT); if(el) el.style.display = 'none';
+  td5Write(a=>{ if(a.some(x=>x.id === u.it.id)) return a; a.splice(Math.min(u.i, a.length), 0, u.it); return a; });
+}
+/* a refresh replaces the card's DOM: keep focus + caret in the add input / inline edit */
+function td5Snap(){ try{ const a = document.activeElement; if(!a || !a.matches) return null; const k = a.matches('[data-td5-add]') ? 'add' : a.matches('[data-td5-edit]') ? 'edit' : ''; return k ? {k, s:a.selectionStart, e:a.selectionEnd} : null; }catch(e){ return null; } }
+function td5Restore(sn){ try{ if(!sn && td5EditId === '' && !td5Open) return; const q = td5EditId ? '[data-td5-edit]' : (sn && sn.k === 'add') ? '[data-td5-add]' : (sn && sn.k === 'edit') ? '[data-td5-edit]' : td5Open ? '[data-td5-add]' : ''; const el = q && document.querySelector(q); if(!el || el.disabled) return; const same = sn && ((sn.k === 'add') === el.matches('[data-td5-add]')); el.focus({preventScroll:true}); if(same && sn.s != null) el.setSelectionRange(sn.s, sn.e); else el.select(); }catch(e){} }
 /* tag = port / flow the item belongs to · link word = what the tap does */
 function lr2TodoTag(x){
   if(x.scr) return ['SCREEN', 'watch'];   /* RS2a3 */
@@ -12614,7 +12706,7 @@ function todayRefresh(force){
       const h = tdHtml(tdLast);
       if(host._rrHtml===h && host.firstChild){ tdBalance(); return; }   /* RR1 — HTML เหมือนเดิมทุกตัวอักษร = ไม่แตะ DOM (PF3: แค่ตรวจสมดุลคอลัมน์ซ้ำ — ไม่ย้ายถ้าอยู่ถูกที่แล้ว) */
       const sy = (activeTab==='today' && !cl2aGateOn) ? (window.pageYOffset || document.documentElement.scrollTop || 0) : null;   /* TD4c — วาดใหม่แล้วอยู่ตำแหน่งเดิม (กด Change/US-TH/Next batch ฯลฯ ไม่เด้งขึ้นบน) */
-      host.innerHTML = h; host._rrHtml = h;
+      const sn5 = td5Snap(); host.innerHTML = h; host._rrHtml = h; td5Restore(sn5);
       if(sy != null && sy > 0){ tdFocusFit(); tdBalance(); const ny = window.pageYOffset || document.documentElement.scrollTop || 0; if(Math.abs(ny - sy) > 1) window.scrollTo(0, sy); return; }
     }catch(e){ console.warn('today html:', e); }
     tdFocusFit(); tdBalance();
