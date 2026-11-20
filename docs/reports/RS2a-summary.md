@@ -93,3 +93,5 @@ Brief: `docs/briefs/RS2a3-brief.md` (SRTp, 20 Nov 2026). Base = RS2a/RS2a2 Scree
 **Tests:** `tests/run_tests_rs2a3.py` 100 checks (Screen 1440/390/360 + Today 1440/390) · `rs2_selftest.py` 70 (+12 changes diff) · `run_tests_rs2a` 134/134 · `run_tests_rs2a2` 73/73 · hooks superset PASS (added only). Added `run_tests_rs2a3` to `run_regression.sh`.
 
 **RS2a3 final: `JOBS=2 bash tests/run_regression.sh` → 72/72 ok, 0 failing, 1979 s** (hooks superset PASS · rs2 selftest 70 · run_tests_rs2a 134/134 · run_tests_rs2a2 73/73 · run_tests_rs2a3 100/100).
+
+**RS2a3 rebased on LT2 (#84): `JOBS=2 bash tests/run_regression.sh` → 73/73 ok, 0 failing, 1988 s** (run_tests_rs2a3 100/100 · run_tests_lt2 100/100 · rs2 selftest 70 · hooks superset PASS). HW1 not on main yet — ↑/↓ + Space merge pending its rebase.
