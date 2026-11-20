@@ -5068,6 +5068,8 @@ html body .lr5 .hw1-body{display:grid;grid-template-columns:minmax(0,1fr) minmax
 html body .lr5 .hw1-facts,html body .lr5 .hw1-mine{background:#fff;border:1px solid var(--lr-line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
 html body .lr5 .hw1-fh{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
 html body .lr5 .hw1-fh .mut{font-size:12px;color:var(--lr-muted);text-align:right}
+html body .lr5 .hw1-fh .hw1-imp{flex:none;margin-left:8px;align-self:center}
+@media (max-width:1023px){html body .lr5 .hw1-fh .hw1-imp{min-height:44px;min-width:44px}}
 html body .lr5 .hw1-lg{font-size:12px;color:var(--lr-muted);display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
 html body .lr5 .hw1-k{font:500 11px/1 var(--lr-mono);padding:3px 5px;border-radius:5px;background:#EEF0F3;color:var(--lr-text2);flex:none;white-space:nowrap}
 html body .lr5 .hw1-fr{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:10px;align-items:baseline;font-size:13px;padding:6px 0;border-top:1px solid var(--lr-line);min-width:0}
@@ -19656,7 +19658,9 @@ const ltTable = (head, rows) => `<div class="ltTw"><table><tr>${head.map(x=>`<th
 const ltStack = items => items.map(h=>`<div class="ltStk">${h}</div>`).join('');
 
 /* ── ตัวช่วยอ่าน thesis ── */
-const wlThesisOf = it => (it && it.thesis && typeof it.thesis==='object') ? it.thesis : null;
+const wlThesisRaw = it => (it && it.thesis && typeof it.thesis==='object') ? it.thesis : null;
+const ltFactsOnly = th => !!(th && th.mode==='facts' && !(th.sections && typeof th.sections==='object' && !Array.isArray(th.sections)));   /* HW1c — a facts-only thesis = "no AI thesis yet" */
+const wlThesisOf = it => { const th = wlThesisRaw(it); return th && !ltFactsOnly(th) ? th : null; };
 const ltArr = v => Array.isArray(v) ? v.filter(x=>x && typeof x==='object' && !Array.isArray(x)) : [];
 function ltTws(it){   /* tripwire + level ที่แสดงจริง (กด "hit" = broken) */
   const th = wlThesisOf(it); if(!th) return [];
@@ -19750,7 +19754,7 @@ function ltFactsCheck(f){   /* → {ok:f} | {err:'first problem'} — never thro
   }catch(e){ return {err:'facts could not be read'}; }
 }
 function ltFacts(it){   /* → validated facts object or null (for HW1) */
-  const th = wlThesisOf(it); if(!th || th.facts===undefined || th.facts===null) return null;
+  const th = wlThesisRaw(it); if(!th || th.facts===undefined || th.facts===null) return null;
   const r = ltFactsCheck(th.facts); return r.ok || null;
 }
 function ltTrend(row){   /* → 'accel' | 'slow' | 'rising' | 'falling' | 'steady' */
@@ -19779,6 +19783,15 @@ function ltParse(text, bound){   /* → {err} | {th, log} */
   { const te = impTypeErr(o, IMP_LT_SPEC) || (o.summary && typeof o.summary==='object' && !Array.isArray(o.summary) ? impTypeErr(o.summary, IMP_LT_SUM_SPEC, 'summary') : ''); if(te) return {err:te}; if(o.sections!==undefined && o.sections!==null && typeof o.summary==='object' && o.summary && o.summary.thesis!==undefined && !Array.isArray(o.summary.thesis)) return {err:'Field summary.thesis must be a list (array) (this file has ' + impTypeName(o.summary.thesis) + ') — nothing saved'}; }
   const sym = String(o.sym==null?'':o.sym).trim();
   if(!sym) return {err:'The JSON has no sym (stock name)'};
+  const noSec = !(o.sections && typeof o.sections==='object' && !Array.isArray(o.sections));
+  if((noSec || o.mode==='facts') && o.facts!==undefined && o.facts!==null && noSec){   /* HW1c — facts-only import */
+    const fr = ltFactsCheck(o.facts); if(fr.err) return {err:'Fact Sheet not valid — ' + fr.err + ' (nothing else in this file to import)'};
+    if(bound && wlSymCmp(sym) !== wlSymCmp(bound)) return {err:'This JSON is for ' + sym + ' not ' + bound};
+    const sm = (o.summary && typeof o.summary==='object' && !Array.isArray(o.summary)) ? o.summary : {};
+    const th = {facts:fr.ok, summary:{biz:String(sm.biz==null ? fr.ok.biz : sm.biz)}, catalysts:ltArr(o.catalysts), mode:'facts', sym};
+    ['date','asOf','basis'].forEach(k=>{ if(typeof o[k]==='string') th[k] = o[k]; });
+    return {th, log:[], factsOnly:true};
+  }
   if(!o.summary || typeof o.summary!=='object' || Array.isArray(o.summary)) return {err:'summary must be an object'};
   const sec = (o.sections && typeof o.sections==='object' && !Array.isArray(o.sections)) ? o.sections : null;
   if(!sec) return {err:'No sections'};
@@ -19809,6 +19822,13 @@ function ltMergeLog(old, inc){
 }
 function ltDiffHtml(it, p){
   const th = p.th, e = escHtml, rows = [];
+  if(p.factsOnly){
+    const old = it && wlThesisOf(it);
+    rows.push('Fact Sheet only: ' + e(th.facts.track) + ' · ' + e(th.facts.asOf) + ' · ' + e(th.facts.date) + (it && ltFacts(it) ? ' (replaces the old one)' : ''));
+    rows.push(old ? 'Your thesis (summary, sections, KPIs, tripwires, evidence) stays <b>unchanged</b>' : 'No AI thesis yet — only the Fact Sheet is stored');
+    if(old){ const have = new Set(ltArr(old.catalysts).map(c=>String(c.date) + '|' + String(c.event))), nw = ltArr(th.catalysts).filter(c=>!have.has(String(c.date) + '|' + String(c.event))).length; rows.push('New catalysts to add: ' + nw); }
+    return `<div class="ltPrev" data-lt-prev><b>Valid — review before saving</b><ul>${rows.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+  }
   if(!it){
     rows.push(`Create <b>${e(wlNormTicker(th.sym))}</b> new in the Watchlist (Core.${e(th.market==='TH'?'TH':'US')})`);
     rows.push('Status: ' + e((LT_STATUS[th.summary.status]||[th.summary.status||'—'])[0]) + ' · thesis date: ' + e(th.date||'—'));
@@ -19892,6 +19912,25 @@ function ltImpSave(){
   const th = p.th, key = wlSymCmp(th.sym), it = wlItems.find(w=>wlSymCmp(w.ticker)===key) || null;
   let ticker, pr;
   if(!it){ alert(td4PipeMsg(th.sym, 'import')); return; }   /* TD4a */
+  if(p.factsOnly){   /* HW1c — replace only thesis.facts (+ new catalysts) of an existing thesis; never summary/sections/kpi/tripwires/evidence/log-of-thesis */
+    const raw = wlThesisRaw(it), full = raw && !ltFactsOnly(raw), msg = 'Fact Sheet imported (' + th.facts.asOf + ') · thesis ' + (full ? 'unchanged' : 'not changed');
+    let nt, logs = it.thesis_log || [];
+    if(full){
+      const have = new Set(ltArr(raw.catalysts).map(c=>String(c.date) + '|' + String(c.event)));
+      nt = Object.assign({}, raw, {facts:th.facts, catalysts:ltArr(raw.catalysts).concat(th.catalysts.filter(c=>!have.has(String(c.date) + '|' + String(c.event))))});
+      logs = ltMergeLog(logs, [{date:thaiToday(), new:'facts updated (' + th.facts.asOf + ')'}]);
+    } else nt = th;
+    const upd = full ? {thesis:nt, thesis_log:logs} : {thesis:nt};
+    ticker = it.ticker; it.thesis = nt; if(full) it.thesis_log = logs;
+    Promise.resolve(wlCol().doc(ticker).update(upd)).catch(e=>{ alert('Import failed: ' + ((e && (e.code||e.message)) || e)); });
+    const fromHw = ltImp && ltImp.bound && typeof hw1On === 'function' && hw1On();
+    if(!fromHw){ wlView = 'wl'; wlSel = ticker; wlSub = ''; }
+    wlMenu = '';
+    const ml = document.getElementById('ltModal');
+    if(ml){ const pv = ml.querySelector('#ltPrev'); if(pv) pv.innerHTML = `<div class="ltPrev" data-lt-result role="status"><b>${escHtml(msg)}</b></div>`; const b = ml.querySelector('.btns'); if(b) b.innerHTML = '<button type="button" class="primary" data-lt-close onclick="ltSheetClose()">Close</button>'; const ta = ml.querySelector('#ltJson'); if(ta) ta.readOnly = true; const er = ml.querySelector('#ltErr'); if(er) er.textContent = ''; }
+    try{ renderWatchlist(); }catch(e){}
+    return;
+  }
   if(!it){
     ticker = wlNormTicker(th.sym);
     const market = (th.market==='TH' || th.market==='US') ? th.market : wlGuessMarket(ticker);
@@ -30247,7 +30286,7 @@ function wl2UseThesis(sym){
 }
 function wl5Menu(r){
   const e = escHtml, it = r.item, sym = e(r.sym), th = wlThesisOf(it), open = wlMenu === r.sym, items = [];
-  items.push(`<button type="button" role="menuitem" data-lr5-full onclick="wlMenu='';wl5Full(this.dataset.sym,'sum')" data-sym="${sym}">Full thesis</button>`);
+  if(th) items.push(`<button type="button" role="menuitem" data-lr5-full onclick="wlMenu='';wl5Full(this.dataset.sym,'sum')" data-sym="${sym}">Full thesis</button>`);
   items.push(`<button type="button" role="menuitem" data-lr5-news onclick="wlMenu='';wl5Full(this.dataset.sym,'${th ? 'trk' : 'view'}')" data-sym="${sym}">News &amp; catalysts</button>`);
   items.push(`<button type="button" role="menuitem" data-ln3-edit data-sym="${sym}" onclick="wlMenu='';wlOpenEdit(this.dataset.sym)">Edit</button>`);
   items.push(`<button type="button" role="menuitem" data-lt-import data-sym="${sym}" onclick="wlMenu='';ltImportOpen(this.dataset.sym)">Import thesis</button>`);
@@ -30366,7 +30405,7 @@ function hw1Refresh(t){
     const f = root.querySelector('[data-hw1-f="' + k + '"]'); if(f){ f.classList.toggle('ok', ok); f.classList.toggle('no', !ok); }
   });
   ['why', 'exit', 'trigger'].forEach(k=>{
-    const b = root.querySelector('[data-hw1-cmp-btn="' + k + '"]'); if(b) b.hidden = wlBlank(v[k]);
+    const b = root.querySelector('[data-hw1-cmp-btn="' + k + '"]'); if(b) b.hidden = wlBlank(v[k]) || ltFactsOnly(wlThesisRaw(it));
     const m = root.querySelector('[data-hw1-cmp="' + k + '"] [data-hw1-cmp-mine]'); if(m) m.textContent = v[k];
   });
 }
@@ -30406,7 +30445,7 @@ function hw1FactsHtml(it){
     if(biz) rows.push(hw1FRow('Business', e(biz)));
     ltArr(th && th.kpi).slice(0, 3).forEach(k=>{ if(k && k.name) rows.push(hw1FRow('KPI', e(String(k.name) + (k.base ? ' · ' + k.base : '')))); });
     ltNextCats(it).slice(0, 2).forEach(c=>rows.push(hw1FRow('Catalyst', e(wl1ArchDate(c.date) + ' · ' + ltShort(c.event, 70)))));
-    return `<div class="hw1-facts" data-hw1-facts="fallback"><div class="hw1-fh"><span class="lbl">Facts</span></div>${rows.join('') || '<div class="hw1-fr"><span class="l"></span><span class="v mut">No living thesis yet — Import it in ⋯</span><span></span></div>'}<div class="hw1-mut" data-hw1-nofacts>Full Fact Sheet: run living-thesis (lite or facts mode)</div></div>`;
+    return `<div class="hw1-facts" data-hw1-facts="fallback"><div class="hw1-fh"><span class="lbl">Facts</span><button type="button" class="btn sm hw1-imp" data-hw1-import data-sym="${e(it.ticker)}" title="Paste living-thesis JSON (facts or full)" onclick="ltImportOpen(this.dataset.sym)">Import ›</button></div>${rows.join('') || '<div class="hw1-fr"><span class="l"></span><span class="v mut">No Fact Sheet yet</span><span></span></div>'}<div class="hw1-mut" data-hw1-nofacts>No Fact Sheet yet — run living-thesis facts ${e(wl1Bare(it.ticker))}, then <button type="button" class="hw1-lnk" data-hw1-import-link data-sym="${e(it.ticker)}" onclick="ltImportOpen(this.dataset.sym)">Import ›</button></div></div>`;
   }
   const rows = [];
   rows.push(hw1FRow('Business', e(f.biz)));
@@ -30430,7 +30469,7 @@ function hw1FactsHtml(it){
     more = `<details class="hw1-more" data-hw1-more><summary>More facts ▾ <span class="mut">${gs.map(e).join(' · ')}</span></summary>${gs.map(g=>`<div class="hw1-gh">${e(g.charAt(0).toUpperCase() + g.slice(1))}</div>${f.more.filter(x=>x.g === g).map(lineRow).join('')}`).join('')}</details>`;
   }
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.date);
-  return `<div class="hw1-facts" data-hw1-facts="full"><div class="hw1-fh"><span class="lbl">Fact Sheet · AI · numbers only</span><span class="mut">${e(f.asOf)}${m ? ' · ' + wl1ArchDate(f.date) : ''} · tap a row for formula + source</span></div>
+  return `<div class="hw1-facts" data-hw1-facts="full"><div class="hw1-fh"><span class="lbl">Fact Sheet · AI · numbers only</span><span class="mut">${e(f.asOf)}${m ? ' · ' + wl1ArchDate(f.date) : ''} · tap a row for formula + source</span><button type="button" class="btn sm hw1-imp" data-hw1-import data-sym="${e(it.ticker)}" title="Paste living-thesis JSON (facts or full)" onclick="ltImportOpen(this.dataset.sym)">Import ›</button></div>
     <div class="hw1-lg" data-hw1-legend>${hw1Tag('rpt')} from filing · ${hw1Tag('calc')} calculated, tap for formula · ${hw1Tag('mgmt')} management says</div>${rows.join('')}${more}</div>`;
 }
 
@@ -30439,7 +30478,7 @@ function hw1Fld(it, k, req){
   const e = escHtml, t = it.ticker, v = hw1Vals(it)[k], L = hw1Lbl(it, k), ok = !wlBlank(v);
   const at = k === 'why' ? 'data-wl-mt-why ' : k === 'exit' ? 'data-wl-mt-exit ' : k === 'trigger' ? 'data-wl1-trigger ' : '';
   const chip = req ? `<span class="hw1-c ${ok ? 'ok' : 'req'}" data-hw1-chip="${k}">${ok ? 'filled' : 'required'}</span>` : '<span class="hw1-c opt">optional</span>';
-  const cmp = (k === 'why' || k === 'exit' || k === 'trigger') ? `<button type="button" class="hw1-cmp" data-hw1-cmp-btn="${k}" ${ok ? '' : 'hidden'} onclick="hw1CmpToggle('${e(t)}','${k}')">Compare with thesis ›</button><div class="hw1-cmpb" data-hw1-cmp="${k}" hidden></div>` : '';
+  const cmp = (k === 'why' || k === 'exit' || k === 'trigger') ? `<button type="button" class="hw1-cmp" data-hw1-cmp-btn="${k}" ${ok && !ltFactsOnly(wlThesisRaw(it)) ? '' : 'hidden'} onclick="hw1CmpToggle('${e(t)}','${k}')">Compare with thesis ›</button><div class="hw1-cmpb" data-hw1-cmp="${k}" hidden></div>` : '';
   return `<div class="hw1-fld ${req ? (ok ? 'ok' : 'no') : 'opt'}" data-hw1-f="${k}"${req ? ` data-wl1-hwi="${k}"` : ''}><label class="hw1-fl${req ? '' : ' o'}" for="hw1-${k}">${e(L.n)} ${chip}</label>${L.hint ? `<div class="hw1-hint">${e(L.hint)}</div>` : ''}<textarea id="hw1-${k}" ${at}data-wl-mt-ta data-hw1-ta="${k}" rows="${req ? 2 : 1}" maxlength="${k === 'trigger' ? 1000 : 2000}" spellcheck="false" placeholder="${e(L.ph)}" oninput="wlMtIn('${e(t)}','${k}',this.value,this)">${e(v)}</textarea>${cmp}</div>`;
 }
 function hw1PlanFn(it){ const s = escHtml(it.ticker).replace(/'/g, '&#39;'); return wl1Status(it).k === 'none' ? `wlOpenCorePlan('${s}')` : `wl5OpenPlan('${s}')`; }

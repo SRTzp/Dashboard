@@ -153,10 +153,10 @@ def run(pw, w, h):
         # ---- fallback (AVGO fixture thesis has no facts)
         H.go(page, "AVGO", "winner")
         fb = js(page, TXT, "[data-hw1-facts]") or ""
-        check(f"{tag} fallback: Business + KPI 'name · base' + catalysts + 'run living-thesis' line", "Full Fact Sheet: run living-thesis (lite or facts mode)" in fb and js(page, "()=>document.querySelector('[data-hw1-facts]').dataset.hw1Facts") == "fallback" and "KPI" in fb and "Catalyst" in fb, fb)
+        check(f"{tag} fallback: Business + KPI 'name · base' + catalysts + 'run living-thesis' line", "No Fact Sheet yet — run living-thesis facts" in fb and js(page, "()=>document.querySelector('[data-hw1-facts]').dataset.hw1Facts") == "fallback" and "KPI" in fb and "Catalyst" in fb, fb)
         check(f"{tag} fallback: no summary.thesis/next/breaker text", not any(x in js(page, "()=>document.querySelector('[data-hw1-page]').textContent") for x in ["ZQTHESIS0", "ZQNEXT", "ZQBREAKER"]))
         H.go(page, "SRC1", "winner")
-        check(f"{tag} no thesis at all: muted line, no crash", "Full Fact Sheet: run living-thesis" in (js(page, TXT, "[data-hw1-facts]") or ""))
+        check(f"{tag} no thesis at all: muted line, no crash", "No Fact Sheet yet — run living-thesis facts" in (js(page, TXT, "[data-hw1-facts]") or ""))
         # ---- hooks stay: Full thesis reachable from ⋯, ‹ Watch back
         check(f"{tag} one primary button on the page", js(page, "()=>document.querySelectorAll('[data-hw1-page] .btn.pri').length") == 1)
         js(page, "()=>{ wl5Full('AVGO','sum'); }"); page.wait_for_timeout(250)
