@@ -33,4 +33,4 @@ Spec: `docs/briefs/HW1-brief.md` → `lr/HomeworkWatch2.html` (A list+detail · 
 
 ## Proof
 - `tests/run_tests_hw1.py` 222/222 (1440 · 390 · 360, incl. no overflow), `tests/hw1_side.py` → `tests/screenshots/hw1/{A-1440,B-1440,C-390}-side.png`.
-- Hooks superset PASS · rs1/rs2 selftest PASS · final `JOBS=2 bash tests/run_regression.sh`: **73/73 ok, 0 failing** (1959 s).
+- Hooks superset PASS · rs1/rs2 selftest PASS · final `JOBS=2 bash tests/run_regression.sh`: **regression ok, 0 failing** (re-run after HW1-fix).

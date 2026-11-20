@@ -52,6 +52,8 @@ def run(pw, w, h):
 
         # ---- B/C · the page: Compounder
         H.go(page, "WHSE", "ladder")
+        LST = "()=>{ const l = document.querySelector('.lr5-list'); const r = l.getBoundingClientRect(), c = getComputedStyle(l); return c.display !== 'none' && r.width > 0 && r.height > 0; }"
+        if not phone: check(f"{tag} desktop: the Watch list is NOT visible on the Homework page (display/size)", js(page, LST) is False, js(page, "()=>getComputedStyle(document.querySelector('.lr5-list')).display"))
         check(f"{tag} page opens: list hidden", js(page, "()=>!!document.querySelector('[data-hw1-page=\"WHSE\"]') && document.querySelector('.lr5.full')!==null"))
         top = js(page, TXT, ".hw1-top") or ""
         check(f"{tag} top bar: title + progress 0 of 3", "WHSE · Homework" in top and "0 of 3" in top, top)
@@ -103,6 +105,7 @@ def run(pw, w, h):
         # ---- Fact Sheet (Compounder COST, facts)
         H.go(page, "COST", "ladder")
         check(f"{tag} COST page: Fact Sheet legend line", "rpt from filing · calc calculated, tap for formula · mgmt management says" in (js(page, TXT, "[data-hw1-legend]") or ""), js(page, TXT, "[data-hw1-legend]"))
+        check(f"{tag} Fact Sheet table: Inter + tabular-nums, mono only on tags", js(page, "()=>{ const t = document.querySelector('.hw1-q'), td = t.querySelector('td.n'); const f = e=>getComputedStyle(e).fontFamily; return f(t).includes('Inter') && !f(td).includes('Mono') && getComputedStyle(td).fontVariantNumeric.includes('tabular-nums') && getComputedStyle(document.querySelector('.hw1-k')).fontFamily.includes('Mono'); }"))
         facts = js(page, TXT, "[data-hw1-facts]") or ""
         check(f"{tag} Fact Sheet: Business · Revenue mix (seg pct% (+yoy)) · table trend words · Mgmt says · Missing", all(x in facts for x in ["Membership warehouse stores", "Food 40% (+7%)", "Fees 2% (+11%)", "Revenue y/y", "→ steady", "Mgmt says", "Renewal dip from new online sign-ups", "Missing", "Timing of next fee increase"]), facts[:600])
         check(f"{tag} trend words: ↗ accel. / ↘ slipping coloured", js(page, "()=>{ const t = k=>document.querySelector('[data-hw1-q=\"'+k+'\"] td.t'); const e = t('eps_yoy'), r = t('kpi_renewal'); return e.innerText.includes('↗ accel.') && e.classList.contains('up') && r.innerText.includes('↘ slipping') && r.classList.contains('dn'); }"))
@@ -158,6 +161,7 @@ def run(pw, w, h):
         check(f"{tag} one primary button on the page", js(page, "()=>document.querySelectorAll('[data-hw1-page] .btn.pri').length") == 1)
         js(page, "()=>{ wl5Full('AVGO','sum'); }"); page.wait_for_timeout(250)
         check(f"{tag} ⋯ › Full thesis still opens the full thesis view (no homework page)", js(page, "()=>!document.querySelector('[data-hw1-page]') && !!document.querySelector('.lr5-fullbar')"))
+        if not phone: check(f"{tag} desktop: the list is hidden in Full thesis too", js(page, "()=>{ const l = document.querySelector('.lr5-list'); const r = l.getBoundingClientRect(); return getComputedStyle(l).display === 'none' || r.width === 0; }"))
         check(f"{tag} Full thesis: one-line Homework status + Continue", js(page, "()=>!!document.querySelector('[data-wl1-hw]')"))
         # ---- layout
         H.go(page, "COST", "ladder")
@@ -186,6 +190,8 @@ def run(pw, w, h):
             check(f"{tag} desktop: button label 'Save · mark done'", (js(page, TXT, "[data-hw1-done]") or "") == "Save · mark done")
         # back
         js(page, "()=>{ window.confirm = ()=>true; hwBack(); }"); page.wait_for_timeout(250)
+        check(f"{tag} homework cell has a title tooltip with the full text", js(page, "()=>{ wlBack(); const r = [...document.querySelectorAll('[data-wl1-hwt]')]; return r.length > 0 && r.every(x=>x.title && x.title === x.innerText.trim()); }"))
+        check(f"{tag} ‹ Watch brings the list back (visible)", js(page, "()=>{ const l = document.querySelector('.lr5-list'); const r = l.getBoundingClientRect(); return getComputedStyle(l).display !== 'none' && r.width > 0 && r.height > 0; }"))
         check(f"{tag} ‹ Watch returns to the list", js(page, "()=>!document.querySelector('[data-hw1-page]') && !!document.querySelector('[data-lr5-row]')"))
         check(f"{tag} no console / page errors", not pe, pe)
     finally:
@@ -194,7 +200,7 @@ def run(pw, w, h):
 
 def main():
     with sync_playwright() as pw:
-        for w, h in ((1440, 900), (390, 844), (360, 800)):
+        for w, h in ((1440, 900), (1280, 800), (390, 844), (360, 800)):
             run(pw, w, h)
     bad = [r for r in results if not r[1]]
     print(f"SUMMARY HW1: {len(results) - len(bad)}/{len(results)} pass")
