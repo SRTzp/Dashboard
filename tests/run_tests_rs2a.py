@@ -32,10 +32,10 @@ def run(pw, w, h):
         # ---- row content
         if desk:
             t = js(page, TXT, "NVDA"); z = js(page, TXT, "ZETA"); ge = js(page, TXT, "GE")
-            check(f"{tag} C: NVDA row — name · RS 99 ↗ new high · 182.40 · $38.1B · in 6d · Watching ✓ (no RS 4w column)", t and "NVIDIA" in t and "99" in t and "new high" in t and "+3" not in t and "182.40" in t and "$38.1B" in t and "in 6d" in t and "Watching ✓" in t, t)
+            check(f"{tag} C: NVDA row — name · RS 99 ↗ new high · $4.4T · $38.1B · in 6d · ✓ (no RS 4w column)", t and "NVIDIA" in t and "99" in t and "new high" in t and "+3" not in t and "$4.4T" in t and "$38.1B" in t and "in 6d" in t and "✓" in t, t)
             check(f"{tag} C: ZETA −14% · $190M · 4 Feb · GE $1.1B", z and "−14%" in z and "$190M" in z and "4 Feb" in z and ge and "$1.1B" in ge, [z, ge])
             hdr = js(page, "()=>[...document.querySelectorAll('.rs2-th .lbl')].map(x=>x.innerText.trim().toLowerCase())")
-            check(f"{tag} C: header — Stock · Sector vs SPY · RS · from high · Price · Avg $vol · Earnings (Leaders: no 3M · 1M, no RS 4w)", hdr == ["stock", "sector vs spy", "rs · from high", "price", "avg $vol", "earnings"], hdr)
+            check(f"{tag} C: header — Stock · Sector vs SPY · RS · from high · M.Cap · Avg $vol · Earnings (Leaders: no 3M · 1M, no RS 4w)", hdr == ["stock", "sector vs spy", "rs · from high", "m.cap", "avg $vol", "earnings"], hdr)
             cols = js(page, "()=>{ const e = document.querySelector('[data-rs2-row][data-sym=ZETA] .rs2-rs'); const p = e.querySelector('.p'); return {g:getComputedStyle(e).gridTemplateColumns, ta:getComputedStyle(p).textAlign} }")
             check(f"{tag} C: RS cell is the 3-slot grid 24 · 16 · 64, % right-aligned", cols["g"] == "24px 16px 64px" and cols["ta"] == "right", cols)
             col = js(page, "()=>({amb:getComputedStyle(document.querySelector('[data-rs2-row][data-sym=NVDA] .c-e')).color, mut:getComputedStyle(document.querySelector('[data-rs2-row][data-sym=GE] [data-rs2-off]')).color})")
@@ -100,7 +100,7 @@ def run(pw, w, h):
         check(f"{tag} P: note names the preset rule", note.startswith("Emerging = 3M ≥ 90 and 1M ≥ 90 · 12M under 85"), note)
         if desk:
             hdr = js(page, "()=>[...document.querySelectorAll('.rs2-th .lbl')].map(x=>x.innerText.trim().toLowerCase())")
-            check(f"{tag} P: Emerging adds the '3M · 1M' column after RS · from high", hdr == ["stock", "sector vs spy", "rs · from high", "3m · 1m", "price", "avg $vol", "earnings", ""][:len(hdr)] and "3m · 1m" in hdr, hdr)
+            check(f"{tag} P: Emerging adds the '3M · 1M' column after RS · from high", hdr == ["stock", "sector vs spy", "rs · from high", "3m · 1m", "m.cap", "avg $vol", "earnings", ""][:len(hdr)] and "3m · 1m" in hdr, hdr)
             m = js(page, "()=>document.querySelector('[data-rs2-row][data-sym=EM9] [data-rs2-m]').innerText.trim()")
             check(f"{tag} P: EM9 3M · 1M cell = '90 · 92'", m == "90 · 92", m)
             e0 = js(page, TXT, "EM0")
@@ -134,7 +134,7 @@ def run(pw, w, h):
         else:
             page.click("[data-rs2-more-filters]"); page.wait_for_timeout(250)
         fp = js(page, "()=>[...document.querySelectorAll('[data-rs2-filter-panel] [data-rs2-f]')].map(e=>e.dataset.rs2F)")
-        check(f"{tag} H: the Filter panel holds RS min · % from high · new high only · sector · min $vol", fp == ["rsMin", "near", "nh", "sector", "vol"], fp)
+        check(f"{tag} H: the Filter panel holds RS min · % from high · new high only · sector · min $vol", fp == ["rsMin", "near", "nh", "sector", "vol", "mcMin"], fp)
         page.select_option("[data-rs2-f=rsMin]", "90"); page.wait_for_timeout(250)
         check(f"{tag} H: changing a filter in the panel applies it (9 rows) and the button shows the count", len(js(page, ROWS)) == 9 and js(page, "()=>!!document.querySelector('[data-rs2-filter-panel]')"), js(page, ROWS))
         js(page, "()=>rs2Reset()"); js(page, "()=>{ rs2.fOpen = false; renderWatchlist(); }")

@@ -198,4 +198,20 @@ ns = b.fill_sectors(rows, sc, getter=lambda y: ('', ''))
 t('empty sector answers are not cached and stop after 30 misses', sc == {} and ns == min(len(rows), b.MAX_MISS))
 rr = b.with_earnings([{'t': 'A'}, {'t': 'C'}, {'t': 'Z'}], {'A': '2026-12-01', 'C': '2026-11-01'}, '2026-11-20')
 t('rows get nx only for upcoming dates', rr[0].get('nx') == '2026-12-01' and 'nx' not in rr[1] and 'nx' not in rr[2])
+# 9 · market-cap cache (shares × close)
+mc = {'FRESH': [1e9, '2026-11-18'], 'STALE': [2e9, '2026-10-01'], 'NONE': [0, '2026-11-19']}
+asked = []
+nm = b.fill_mcaps(['FRESH', 'STALE', 'NONE', 'NEW'], mc, '2026-11-20', getter=lambda y: (asked.append(y), 5e8)[1])
+t('daily run (no refresh): only MISSING names are looked up — fresh, stale and "no data" cached ones are not', asked == ['NEW'] and nm == 1 and mc['NEW'] == [5e8, '2026-11-20'] and mc['STALE'] == [2e9, '2026-10-01'])
+asked = []
+b.fill_mcaps(['FRESH', 'STALE', 'NONE', 'NEW2'], mc, '2026-11-20', getter=lambda y: (asked.append(y), 6e8)[1], refresh=True)
+t('weekly run (refresh): stale (>7d) and missing are looked up, fresh ones are not', sorted(asked) == ['NEW2', 'STALE'] and mc['STALE'] == [6e8, '2026-11-20'] and mc['FRESH'] == [1e9, '2026-11-18'])
+mc2 = {}
+nz = b.fill_mcaps(['T%d' % i for i in range(100)], mc2, '2026-11-20', getter=lambda y: 1 / 0)
+t('failing lookups are not cached and stop after 30 in a row', mc2 == {} and nz == b.MAX_MISS)
+mc3 = {}
+b.fill_mcaps(['A', 'B'], mc3, '2026-11-20', getter=lambda y: None)
+t('"Yahoo has no shares" is cached as 0 (retried next week), not retried daily', mc3 == {'A': [0, '2026-11-20'], 'B': [0, '2026-11-20']} and b.fill_mcaps(['A'], mc3, '2026-11-20', getter=lambda y: 1 / 0) == 0)
+mr = b.with_mcaps([{'t': 'FRESH', 'c': 10.0}, {'t': 'NONE', 'c': 10.0}, {'t': 'Z', 'c': 10.0}], {'FRESH': [1e9, '2026-11-18'], 'NONE': [0, '2026-11-19']})
+t('rows get mc = shares × close; no cache / 0 shares → no mc key', mr[0]['mc'] == 10000000000 and 'mc' not in mr[1] and 'mc' not in mr[2])
 print('PASS %d checks' % ok)
