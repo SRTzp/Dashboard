@@ -10975,7 +10975,7 @@ document.addEventListener('keydown', ev=>{
     const box = ev.target && ev.target.closest ? ev.target.closest('[data-wl-mt][data-wl-mt-mode="edit"]') : null; if(!box) return;
     const t = box.dataset.wlMt;
     if((ev.metaKey || ev.ctrlKey) && ev.key === 'Enter'){ ev.preventDefault(); ev.stopPropagation(); wlMtSave(t); }
-    else if(ev.key === 'Escape'){ ev.preventDefault(); ev.stopPropagation(); wlMtCancel(t); }
+    else if(ev.key === 'Escape' && !box.closest('[data-hw1-page]')){ ev.preventDefault(); ev.stopPropagation(); wlMtCancel(t); }   /* HW1b — on the Homework page Esc blurs the field first, then goes back (the draft stays) */
   }catch(e){}
 }, true);
 window.addEventListener('beforeunload', ev=>{
@@ -13603,8 +13603,12 @@ function kbOpenWatchView(view){
   if(activeTab!=='watch') switchTab('watch');
   wlSetView(view);
 }
+function hw1BackOn(){ return activeTab==='watch' && wlView==='wl' && !wlNarrow() && !!wl5FullSym && wl5FullSym===wlSel; }   /* HW1b — Homework page or Full thesis view on desktop */
+function hw1PopsOpen(){ return Array.from(document.querySelectorAll('[data-hw1-page] [data-hw1-row][aria-expanded="true"]')); }
+function hw1BackGo(){ if(hwSym && hwSym===wlSel) hwBack(); else wl5FullOff(); }   /* Homework → list · Full thesis → summary */
 function kbHandle(e){
   if(!kbAppReady()) return;
+  if(e.key==='Backspace' && hw1BackOn() && !wl1Blocked() && !hw1PopsOpen().length){ e.preventDefault(); hw1BackGo(); return; }   /* HW1b */
   /* ID1 — Tab / Shift+Tab วน Watchlist → Ideas → Candidates (เฉพาะแท็บ Watch · ไม่มี sheet/overlay · นอกเงื่อนไข = ปล่อยตามปกติของเบราว์เซอร์) */
   if(e.key==='Tab' && activeTab==='watch' && !e.ctrlKey && !e.metaKey && !e.altKey){
     /* WL1 — Tab (old Candidate/Watchlist toggle scope) = Momentum ⇄ Compounder · ignored while typing / with a popup or sheet open · Shift+Tab = normal focus */
@@ -21167,6 +21171,7 @@ document.querySelectorAll('.overlay').forEach(o=>{
    ลำดับ: lightbox กราฟ → กล่องคำศัพท์/popover/เมนูลอย → sheet → .overlay.show → (ไม่มีอะไรเปิด) Watch กลับรายการ
    ปิดผ่านฟังก์ชันปิดเดิมของแต่ละตัว ไม่ลบ DOM เอง */
 function escCloseTop(){
+  if(typeof ltImp !== 'undefined' && ltImp){ ltSheetClose(); return true; }   /* HW1b — the import sheet closes through its own closer (clears ltImp) */
   if(document.getElementById('vwLb')){ vwLbClose(); return true; }
   if(document.getElementById('bdPop')){ pb2Back(); return true; }   /* PB1 · PB1b: Esc = back one step */
   if(bdOpenId && document.getElementById('bdDrawer')){ bdClose(); return true; }   /* PB1 */
@@ -21211,6 +21216,12 @@ function escCloseTop(){
   }
   { const sp = document.querySelector('.stk-panel');   /* NS1 — แผงข่าวรายสัปดาห์ (Mac) */
     if(sp){ if(document.activeElement && sp.contains(document.activeElement) && kbEditableTarget(document.activeElement)){ document.activeElement.blur(); return true; } stkCloseView(); return true; } }
+  if(hw1BackOn()){   /* HW1b — Esc on the Homework page / Full thesis: field blur → popover close → back (sheets/menus above already closed first) */
+    const ae = document.activeElement;
+    if(ae && kbEditableTarget(ae)){ ae.blur(); return true; }
+    const po = hw1PopsOpen(); if(po.length){ po.forEach(hw1PopToggle); return true; }
+    hw1BackGo(); return true;
+  }
   if(wlFull){ wlFullSet(false); return true; }   /* LN3fix3b — ป๊อปอัป/เมนู/sheet ข้างบนปิดก่อน · Esc ถัดไปย่อกลับ */
   if(activeTab==='watch' && wlResearchExpanded){ if(wlNarrow()) wlBack(); else wlSetSub('sum'); return true; }
   if(activeTab==='watch' && wlMobOpen && wlNarrow() && !kbEditableTarget(document.activeElement)){ wlBack(); return true; }   /* เดิมอยู่ใน kbHandle */
@@ -30562,7 +30573,7 @@ function hw1PageHtml(r){
   const it = r && r.item; if(!it) return '<div class="panel"><div class="empty">Stock not found</div></div>';
   const e = escHtml, t = it.ticker, st = wl5Status(it), v = hw1Vals(it), p = hw1Prog(it, v), done = wl1HwDone(it) && !p.miss.length, seg = hw1Seg[t] || (p.n === 0 ? 'facts' : 'mine');
   return `<div class="hw1-pg" data-hw1-page="${e(t)}" data-hw1-show="${seg}" data-hw1-track="${wl1TrkOf(it) === 'ladder' ? 'compounder' : 'momentum'}">
-    <div class="hw1-top"><button type="button" class="btn sm hw1-back" data-hw1-back onclick="hwBack()"><span class="lg">‹ Watch</span><span class="sm" aria-label="Back to Watch">‹</span></button><b class="hw1-t">${e(wl1Bare(t))} · Homework</b><span class="st ${st.cls} hw1-st" data-hw1-chip-st>${e(st.label)}</span><span class="hw1-ctx" data-hw1-ctx>${hw1CtxLine(it)}</span>
+    <div class="hw1-top"><button type="button" class="btn sm hw1-back" data-hw1-back title="Back (Esc or Backspace)" onclick="hwBack()"><span class="lg">‹ Watch</span><span class="sm" aria-label="Back to Watch">‹</span></button><b class="hw1-t">${e(wl1Bare(t))} · Homework</b><span class="st ${st.cls} hw1-st" data-hw1-chip-st>${e(st.label)}</span><span class="hw1-ctx" data-hw1-ctx>${hw1CtxLine(it)}</span>
       <span class="hw1-pr"><b data-hw1-prog>${done ? '✓ Done' : p.n + ' of ' + p.tot}</b><span class="bar"><i data-hw1-bar style="width:${Math.round(100 * p.n / p.tot)}%"></i></span></span></div>
     <div class="hw1-segw" role="tablist"><button type="button" role="tab" data-hw1-seg="facts" class="${seg === 'facts' ? 'on' : ''}" aria-selected="${seg === 'facts'}" onclick="hw1SegSet('${e(t)}','facts')">Facts</button><button type="button" role="tab" data-hw1-seg="mine" class="${seg === 'mine' ? 'on' : ''}" aria-selected="${seg === 'mine'}" onclick="hw1SegSet('${e(t)}','mine')">My thesis</button></div>
     <div class="hw1-body">${hw1FactsHtml(it)}${hw1MineHtml(it)}</div></div>`;
