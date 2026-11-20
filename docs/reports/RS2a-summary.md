@@ -95,3 +95,5 @@ Brief: `docs/briefs/RS2a3-brief.md` (SRTp, 20 Nov 2026). Base = RS2a/RS2a2 Scree
 **RS2a3 final: `JOBS=2 bash tests/run_regression.sh` → 72/72 ok, 0 failing, 1979 s** (hooks superset PASS · rs2 selftest 70 · run_tests_rs2a 134/134 · run_tests_rs2a2 73/73 · run_tests_rs2a3 100/100).
 
 **RS2a3 rebased on LT2 (#84): `JOBS=2 bash tests/run_regression.sh` → 73/73 ok, 0 failing, 1988 s** (run_tests_rs2a3 100/100 · run_tests_lt2 100/100 · rs2 selftest 70 · hooks superset PASS). HW1 not on main yet — ↑/↓ + Space merge pending its rebase.
+
+**RS2a3 rebased on LT2 + HW1: `JOBS=2 bash tests/run_regression.sh` → 74/74 ok, 0 failing, 2004 s** (run_tests_rs2a3 101/101 · run_tests_hw1 308/308 · run_tests_lt2 100/100 · rs2 selftest 70 · hooks superset PASS). HW1 does not provide ↑/↓ on Screen, so RS2a3 adds it: ↑/↓ moves the selected row (stops at the ends), Space ticks it.
