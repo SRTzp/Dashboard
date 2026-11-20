@@ -91,3 +91,5 @@ Brief: `docs/briefs/RS2a3-brief.md` (SRTp, 20 Nov 2026). Base = RS2a/RS2a2 Scree
 **Not done / notes:** ↑/↓ row moving is HW1's — not in this branch (no HW1 on main yet), so Space ticks whichever row you last clicked. Today alert text is English; no live Firestore run of `rs2/changes` (selftest + mock only). Firestore Rules: the app reads `users/{uid}/rs2/changes` — the existing `rs2/{doc}` read rule covers it. Existing RS2a/RS2a2 tests updated only for `✓` no longer being disabled.
 
 **Tests:** `tests/run_tests_rs2a3.py` 100 checks (Screen 1440/390/360 + Today 1440/390) · `rs2_selftest.py` 70 (+12 changes diff) · `run_tests_rs2a` 134/134 · `run_tests_rs2a2` 73/73 · hooks superset PASS (added only). Added `run_tests_rs2a3` to `run_regression.sh`.
+
+**RS2a3 final: `JOBS=2 bash tests/run_regression.sh` → 72/72 ok, 0 failing, 1979 s** (hooks superset PASS · rs2 selftest 70 · run_tests_rs2a 134/134 · run_tests_rs2a2 73/73 · run_tests_rs2a3 100/100).
