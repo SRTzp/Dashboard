@@ -18085,7 +18085,7 @@ function impTypeErr(o, spec, ctx){
 }
 const IMP_IDEA_SPEC = {s:['id','name','date','mode','status','audit'], a:['scope','origin','alt_explanations','assets','sources'], o:['user_notes','recheck','idea','mechanism','chain','call'], ao:['user_notes_check','evidence','kill','gaps','losers','candidates','log']};
 const IMP_LT_SUM_SPEC = {s:['status','biz','cycle','power','engine','price','risk','unknown','next','breaker','tier_note'], o:['call']};
-const IMP_LT_SPEC = {s:['sym','name','market','mode','date','asOf','basis','audit'], a:['sources'], o:['summary','sections','tier_inputs'], ao:['gaps','kpi','tripwires','catalysts','evidence','log']};
+const IMP_LT_SPEC = {s:['sym','name','market','mode','date','asOf','basis','audit'], a:['sources'], o:['summary','sections','tier_inputs'], ao:['gaps','kpi','tripwires','catalysts','evidence','log']};   /* LT2: `facts` is validated on its own (ltFactsCheck) — a bad one never blocks the import */
 function ideaParse(text){   /* → {err} | {idea, log, id} */
   if(!String(text==null?'':text).trim()) return {err:'Paste the JSON first'};
   const raw = ltTrimJson(text);
@@ -19386,6 +19386,83 @@ function ltStaleWhy(it){   /* เหตุผลที่ควรรัน livi
   return why;
 }
 
+/* ── LT2 · Fact Sheet (`facts`, optional block of living-thesis@1) — facts only: numbers, dates, sources, formulas, management's words ── */
+const LT_F_KIND = ['rpt','calc','mgmt','web'], LT_F_TRACK = ['compounder','momentum'];
+const LT_F_G = ['growth','profit','cash','expected','exposure','lastq'], LT_F_GM = ['segments','competition','capital','guidance','valuation','history','owners'];
+const LT_F_QK = ['rev_yoy','eps_yoy','gm','op_margin','shares_yoy'];
+const LT_F_LEVEL = k => k==='op_margin' || k==='gm' || /^kpi_.*(renewal|retention|margin|rate|util)/.test(k);
+function ltFactsCheck(f){   /* → {ok:f} | {err:'first problem'} — never throws */
+  const isO = x => x && typeof x==='object' && !Array.isArray(x), isS = x => typeof x==='string' && x.trim()!=='', isN = x => typeof x==='number' && isFinite(x);
+  const nm = (p, i) => p + '[' + i + ']';
+  try{
+    if(!isO(f)) return {err:'facts must be an object'};
+    if(!LT_F_TRACK.includes(f.track)) return {err:'facts.track must be compounder or momentum'};
+    if(!isS(f.asOf)) return {err:'facts.asOf must be text (e.g. Q3 FY26)'};
+    if(!isS(f.date) || !/^\d{4}-\d{2}-\d{2}$/.test(f.date)) return {err:'facts.date must be YYYY-MM-DD'};
+    if(!isS(f.biz)) return {err:'facts.biz must be text'};
+    if(f.biz.length>90) return {err:'facts.biz is over 90 characters'};
+    const line = (x, p, groups, needSrc) => {
+      if(!isO(x)) return p + ' must be an object';
+      if(!isS(x.text)) return p + '.text must be text';
+      if(x.text.length>80) return p + '.text is over 80 characters';
+      if(groups){ if(!groups.includes(x.g)) return p + '.g must be one of ' + groups.join('/'); if(!isS(x.label)) return p + '.label must be text'; }
+      if(!LT_F_KIND.includes(x.kind)) return p + '.kind must be one of ' + LT_F_KIND.join('/');
+      if(!isS(x.src)) return p + ' has no src (source)';
+      if(x.kind==='calc' && !isS(x.formula)) return p + ' is a calc without formula';
+      if(x.kind==='web' && !isS(x.date)) return p + ' is a web figure without date';
+      for(const k of ['period','note','formula']) if(x[k]!==undefined && x[k]!==null && typeof x[k]!=='string') return p + '.' + k + ' must be text';
+      return '';
+    };
+    if(!Array.isArray(f.mix)) return {err:'facts.mix must be a list'};
+    if(f.mix.length>4) return {err:'facts.mix has more than 4 items'};
+    for(let i=0;i<f.mix.length;i++){ const m = f.mix[i]; if(!isO(m) || !isS(m.seg) || !isN(m.pct) || (m.yoy!==undefined && m.yoy!==null && !isN(m.yoy))) return {err:nm('facts.mix', i) + ' needs seg (text) and pct (number)'}; }
+    if(f.mixMeta!==undefined && f.mixMeta!==null){ const m = f.mixMeta; if(!isO(m) || !isS(m.basis) || !isS(m.period) || !isS(m.src) || !LT_F_KIND.includes(m.kind)) return {err:'facts.mixMeta needs basis, period, src and a valid kind'}; }
+    if(!isO(f.q) || !Array.isArray(f.q.cols) || f.q.cols.length!==4 || !f.q.cols.every(isS)) return {err:'facts.q.cols must be exactly 4 columns'};
+    if(!Array.isArray(f.q.rows)) return {err:'facts.q.rows must be a list'};
+    let nk = 0;
+    for(let i=0;i<f.q.rows.length;i++){
+      const r = f.q.rows[i], p = nm('facts.q.rows', i);
+      if(!isO(r) || !isS(r.k)) return {err:p + '.k must be text'};
+      if(LT_F_QK.includes(r.k)){} else if(/^kpi_[a-z0-9_]+$/.test(r.k)){ if(++nk>2) return {err:'facts.q.rows has more than 2 kpi_ rows'}; } else return {err:p + '.k "' + String(r.k).slice(0,30) + '" is not a known row key'};
+      if(!isS(r.label)) return {err:p + '.label must be text'};
+      if(typeof r.unit!=='string') return {err:p + '.unit must be text'};
+      if(!Array.isArray(r.v) || r.v.length!==4) return {err:p + '.v must have exactly 4 values'};
+      if(!r.v.every(x=>x===null || isN(x))) return {err:p + '.v values must be numbers or null'};
+      if(!LT_F_KIND.includes(r.kind)) return {err:p + '.kind must be one of ' + LT_F_KIND.join('/')};
+      if(!isS(r.src)) return {err:p + ' has no src (source)'};
+      if(r.kind==='calc' && !isS(r.formula)) return {err:p + ' is a calc without formula'};
+    }
+    const lim = [['lines',10],['more',14],['mgmt',2],['missing',3]];
+    for(const [k,n] of lim){ if(f[k]===undefined || f[k]===null) continue; if(!Array.isArray(f[k])) return {err:'facts.' + k + ' must be a list'}; if(f[k].length>n) return {err:'facts.' + k + ' has more than ' + n + ' items'}; }
+    const L = f.lines || [], M = f.more || [], G = f.mgmt || [], X = f.missing || [];
+    for(let i=0;i<L.length;i++){ const e = line(L[i], nm('facts.lines', i), LT_F_G); if(e) return {err:e}; }
+    for(let i=0;i<M.length;i++){ const e = line(M[i], nm('facts.more', i), LT_F_GM); if(e) return {err:e}; }
+    for(let i=0;i<G.length;i++){ const x = G[i]; if(!isO(x) || !isS(x.text) || x.text.length>80 || !isS(x.src)) return {err:nm('facts.mgmt', i) + ' needs text (≤ 80 chars) and src'}; }
+    for(let i=0;i<X.length;i++) if(!isS(X[i])) return {err:nm('facts.missing', i) + ' must be text'};
+    const has = g => L.some(x=>x.g===g);
+    const need = f.track==='momentum' ? ['lastq','expected'] : ['cash','expected','exposure'];
+    const miss = need.filter(g=>!has(g)); if(miss.length) return {err:'a ' + f.track + ' Fact Sheet needs lines in group ' + miss.join(', ')};
+    if(f.track==='compounder' && !M.length) return {err:'a compounder Fact Sheet needs "more" items'};
+    return {ok:f};
+  }catch(e){ return {err:'facts could not be read'}; }
+}
+function ltFacts(it){   /* → validated facts object or null (for HW1) */
+  const th = wlThesisOf(it); if(!th || th.facts===undefined || th.facts===null) return null;
+  const r = ltFactsCheck(th.facts); return r.ok || null;
+}
+function ltTrend(row){   /* → 'accel' | 'slow' | 'rising' | 'falling' | 'steady' */
+  const v = row && Array.isArray(row.v) ? row.v.slice(-3) : [];
+  if(v.length<3 || !v.every(x=>typeof x==='number' && isFinite(x))) return 'steady';
+  const a = v[1]-v[0], b = v[2]-v[1], lvl = LT_F_LEVEL(String(row.k||''));
+  if(a>0 && b>0) return lvl ? 'rising' : 'accel';
+  if(a<0 && b<0) return lvl ? 'falling' : 'slow';
+  return 'steady';
+}
+function ltFactsLine(it){   /* muted line in the Full thesis view */
+  const f = ltFacts(it); if(!f) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.date), mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `<div class="mut" data-lt-facts-line style="font-size:12px;margin:6px 0">Fact Sheet · ${escHtml(f.asOf)} · ${m ? (+m[3]) + ' ' + mo[+m[2]-1] : escHtml(f.date)}</div>`;
+}
 /* ── Import: ตรวจ JSON ── */
 function ltTrimJson(t){ const s = String(t==null?'':t), a = s.indexOf('{'), b = s.lastIndexOf('}'); return a>=0 && b>a ? s.slice(a,b+1) : s; }
 function ltParse(text, bound){   /* → {err} | {th, log} */
@@ -19408,6 +19485,8 @@ function ltParse(text, bound){   /* → {err} | {th, log} */
   if(bound && wlSymCmp(sym) !== wlSymCmp(bound)) return {err:'This JSON is for ' + sym + ' not ' + bound};
   const th = {}; Object.keys(o).forEach(k=>{ if(k!=='log') th[k] = o[k]; });
   th.sym = sym;
+  let warn = '';
+  if(o.facts!==undefined && o.facts!==null){ const fr = ltFactsCheck(o.facts); if(fr.err){ delete th.facts; warn = 'Fact Sheet not imported — ' + fr.err + ' (the rest was imported)'; } else th.facts = fr.ok; } else delete th.facts;
   ['gaps','kpi','tripwires','catalysts','evidence','sources'].forEach(k=>{ th[k] = ltArr(o[k]); });
   th.tier_inputs = (o.tier_inputs && typeof o.tier_inputs==='object' && !Array.isArray(o.tier_inputs)) ? o.tier_inputs : {};
   { const seen = new Set(); th.terms = (Array.isArray(o.terms) ? o.terms : []).filter(t=>{
@@ -19417,7 +19496,7 @@ function ltParse(text, bound){   /* → {err} | {th, log} */
     }).slice(0,50).map(t=>({k:t.k.trim(), th:t.th})); }
   th.summary = Object.assign({}, o.summary);
   th.summary.thesis = Array.isArray(o.summary.thesis) ? o.summary.thesis.map(x=>String(x==null?'':x)) : [];
-  return {th, log: ltArr(o.log)};
+  return {th, log: ltArr(o.log), warn};
 }
 const ltLogKey = l => String(l && l.date) + '|' + String(l && l.new);
 function ltMergeLog(old, inc){
@@ -19451,6 +19530,8 @@ function ltDiffHtml(it, p){
   }
   const addLog = p.log.filter(l=>!(it ? it.thesis_log : []).some(o=>ltLogKey(o)===ltLogKey(l))).length;
   rows.push('New log entries to add: ' + addLog + ' lines');
+  if(th.facts) rows.push('Fact Sheet: ' + e(th.facts.track) + ' · ' + e(th.facts.asOf) + ' · ' + e(th.facts.date) + (it && wlThesisOf(it) && wlThesisOf(it).facts ? ' (replaces the old one)' : ''));
+  if(p.warn) rows.push('<span data-lt-facts-warn style="color:var(--amb,#9a5b00)">⚠ ' + e(p.warn) + '</span>');
   return `<div class="ltPrev" data-lt-prev><b>Valid — review before saving</b><ul>${rows.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
 }
 
@@ -29598,7 +29679,7 @@ function wl5DetHtml(r){
 }
 function wl5FullHtml(r){
   const back = `<button type="button" class="btn lr5-back" data-lr5-back onclick="wl5FullOff()">‹ Summary</button>`;
-  return `<div class="lr5-fullbar">${back}</div>` + wlDetailHtml(r);
+  return `<div class="lr5-fullbar">${back}</div>` + (r && r.item ? ltFactsLine(r.item) : '') + wlDetailHtml(r);
 }
 
 /* ── one-time Candidate → TradingView notice (candidate docs are kept; the Candidate list is gone) ── */
