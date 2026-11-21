@@ -22,3 +22,4 @@ Branch `claude/nt1b` (from origin/main with NT1 + PC2). Not merged.
 - `tests/run_tests_nt1b.py` (273 checks) — added to `run_regression.sh`.
 - Side-by-side PNGs: `tests/screenshots/nt1b/` (Today-1440, Ideas-card, New-idea-sheet, My-ideas-list, My-ideas-1440; Today-390 / My-ideas-390 live only).
 - Hooks superset: PASS.
+- Final: one clean `JOBS=2 bash tests/run_regression.sh` after the last code change — **83/83 ok · 0 failing** (2469 s).
