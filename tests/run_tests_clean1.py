@@ -46,7 +46,7 @@ def today(pw, w, h):
         try:
             js(page, "()=>{ serverConfirmed = true; stateFromServer = true; switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(400)
             s = js(page, "()=>{ const t = document.querySelector('[data-lr2-risk] [data-lr2-rl=\"sat\"] .rw'); return t ? {txt: t.innerText, sw: t.scrollWidth, cw: t.clientWidth, shown: t.getClientRects().length > 0} : null; }")
-            check(f"{tag} 3 desktop SAT line '0.2% · x/y%' (RK1: value, no step label) not truncated", s and s["shown"] and re.match(r"^[\d.]+% · [\d.]+/[\d.]+%", s["txt"]) is not None and s["sw"] <= s["cw"], s)
+            check(f"{tag} 3 SAT line text '0.2% · x/y%' (RK1: value, no step label) stays in the data (NT1b: shown in the tooltip, the row shows room)", s and re.match(r"^[\d.]+% · [\d.]+/[\d.]+%", s["txt"]) is not None, s)
         finally:
             b.close()
 

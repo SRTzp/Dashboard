@@ -26,7 +26,7 @@ def partA(pw, w, h):
         t = r.get("NVDA", "")
         check("[%s] A2 holding row (LR-F2): Held #n · Stop · If stopped −$ · Next Buy #m @ p" % tag, "Held #11 · Stop 110 · If stopped −$528 · Next Buy #18 @ 140" in t, t)
         check("[%s] A2 old plan-total numbers are gone from the holding row (no $1,068 / 0.72%% / cap 50%%)" % tag, "36.1k" not in t and "0.72%" not in t and "cap 50%" not in t, t)
-        check("[%s] A2 homework note stays text, not a number" % tag, "adds & risk above 1% locked · homework not done" in t, t)
+        check("[%s] A2 homework note stays text, not a number (NT1b: the Act row shows only the muted `Homework → unlocks adds ›`)" % tag, "Homework → unlocks adds ›" in t and "homework not done" not in t, t)
         pv = js(page, "()=>{const it=bdItems().find(x=>x.sym==='NVDA'); return posView(it)}")
         check("[%s] posView NVDA: held 11 · planned 29 · cost · value · plan risk" % tag, pv["heldQty"] == 11 and pv["plannedQty"] == 29 and abs(pv["cost"] - 58674.88) < .01 and abs(pv["value"] - 60475.976) < .01 and abs(pv["plannedRisk"] - 36055.68) < .01 and abs(pv["openRisk"] - 17825.28) < .01, pv)
         # drawer shows the same numbers
