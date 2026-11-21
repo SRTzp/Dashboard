@@ -72,7 +72,7 @@
     STOP_WRONG_SIDE:    { kind: 'block', text: 'Stop is on the wrong side of entry for this direction' },
     LOT_BELOW_MIN:      { kind: 'block', text: 'Budget does not cover the minimum lot' },
     COST_UNKNOWN:       { kind: 'flag',  text: 'Cost settings missing — costs not estimated (never treated as 0)' },
-    CAP_HOMEWORK:       { kind: 'flag',  text: 'Thesis not done — size limited to 50% of full' },
+    CAP_HOMEWORK:       { kind: 'flag',  text: 'Homework not done — size limited to 70% of full' },
     MONEY_WEEK:         { kind: 'block', text: 'Weekly loss budget would be exceeded' },
     MONEY_MONTH:        { kind: 'block', text: 'Monthly loss budget would be exceeded' },
     AMMO_EXHAUSTED:     { kind: 'block', text: 'Weekly Momentum ammunition (4) used or reserved' },

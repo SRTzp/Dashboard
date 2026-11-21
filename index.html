@@ -6903,7 +6903,7 @@ button.nt1-tk{cursor:pointer}button.nt1-tk:hover{border-color:var(--lr-muted)}
     STOP_WRONG_SIDE:    { kind: 'block', text: 'Stop is on the wrong side of entry for this direction' },
     LOT_BELOW_MIN:      { kind: 'block', text: 'Budget does not cover the minimum lot' },
     COST_UNKNOWN:       { kind: 'flag',  text: 'Cost settings missing — costs not estimated (never treated as 0)' },
-    CAP_HOMEWORK:       { kind: 'flag',  text: 'Thesis not done — size limited to 50% of full' },
+    CAP_HOMEWORK:       { kind: 'flag',  text: 'Homework not done — size limited to 70% of full' },
     MONEY_WEEK:         { kind: 'block', text: 'Weekly loss budget would be exceeded' },
     MONEY_MONTH:        { kind: 'block', text: 'Monthly loss budget would be exceeded' },
     AMMO_EXHAUSTED:     { kind: 'block', text: 'Weekly Momentum ammunition (4) used or reserved' },
@@ -14784,7 +14784,7 @@ function rk1FormErrs(){
 function rk1Derived(){
   const el = document.querySelector('[data-rk1-der]'); if(!el) return;
   const r = RiskEngine.riskValidate(rk1FormRead()), v = r.ok ? r.values : rk1Vals(), f = x=>(4 * x).toFixed(2);
-  el.innerHTML = `Weekly loss limit: Momentum <b>${f(v.mom)} %</b> · Sat <b>${f(v.sat)} %</b> (4 losing ideas)<br>Applies to new plans · saved plans and holdings keep their size<br>Still applied by the engine: regime 100 / 80 / 60 % · half size from −10 % · stop new entries at −20 %`;
+  el.innerHTML = `Weekly loss limit: Momentum <b>${f(v.mom)} %</b> · Sat <b>${f(v.sat)} %</b> (4 losing ideas)<br>Homework not done: <b>Momentum ${Math.round(RiskEngine.POLICY.hwFactor.mom * 100)}%</b> · <b>Compounder ${Math.round(RiskEngine.POLICY.hwFactor.comp * 100)}%</b> (adds locked)<br>Applies to new plans · saved plans and holdings keep their size<br>Still applied by the engine: regime 100 / 80 / 60 % · half size from −10 % · stop new entries at −20 %`;
 }
 function rk1Reset(){ rk1FormFill(RK1_DEF); try{ crOnInput(); }catch(e){} }
 /* Save: write shared.riskPerIdea only when a field changed (an untouched save keeps the stored value, or leaves it absent) */
@@ -27743,7 +27743,7 @@ function pvMoreRows(it, pv){
   try{
     const p = it.kind === 'core' && it.ref.plan && it.ref.plan.ps1; const lim = [];
     if(p && +p.maxSizePct > 0){ const cur = hold ? pv.weightAcct : (+p.sizePct > 0 ? +p.sizePct : null); lim.push(`max ${pvPct(+p.maxSizePct, 1)} of account · ${cur != null ? (cur > +p.maxSizePct + 1e-9 ? 'EXCEEDED (' + pvPct(cur, 1) + ')' : 'within (' + pvPct(cur, 1) + ')') : 'size not known'}`); }
-    if(it.kind === 'core' && it.tag === 'COMP' && !ftHwDone(it.sym)) lim.push('homework not done → size limited to 50%');
+    if(it.kind === 'core' && it.tag === 'COMP' && !ftHwDone(it.sym)) lim.push('homework not done → adds & risk above 1% locked');
     if(it.kind === 'sat') lim.push('weekly / step limits are checked by the engine when you place the order');
     t.push(row('Size limits', '', e(lim.join(' · ') || 'none stored')));
   }catch(x){}
@@ -27789,7 +27789,7 @@ function lrfCut(m){
   m.factors.forEach(f=>{ let x;
     if((x = /^REGIME_(\d+)$/.exec(f))){ p *= x[1] / 100; why.push('regime'); }
     else if((x = /^EMERGENCY_(\d+)$/.exec(f))){ p *= x[1] / 100; why.push('emergency brake'); }
-    else if(f === 'HOMEWORK_50'){ p *= .5; why.push('homework not done'); }
+    else if((x = /^HOMEWORK_(\d+)$/.exec(f))){ p *= x[1] / 100; why.push('homework not done'); }
     else if(f === 'STARTER_25'){ p *= .25; why.push('starter size'); }
     else if((x = /^NEWS_(\d+)$/.exec(f))){ p *= x[1] / 100; why.push('news window'); }
     else if(f === 'CONDITION_65'){ p *= .65; why.push('Trend reduced'); }
@@ -27817,7 +27817,7 @@ function pvCardHtml(it){
   const dirTxt = sat ? (it.ref.bias === 'Short' ? 'Short' : 'Long') : 'Long';
   const hot = it.kind === 'core' ? bdHotTag(it.sym) : '', fam = it.fam ? `<span class="bd-fam" data-bd-fam>Family</span>` : '';
   let state = '', ord = it.status === 'ord';
-  if(hold){ try{ if(it.kind === 'core' && it.tag === 'COMP' && !ftHwDone(it.sym)) state = `<span class="bd-st a" data-pv-hw>50% · homework</span>`; }catch(x){} if(it.flags.addon) state += `<span class="bd-st g">add-on ready</span>`; }
+  if(hold){ try{ if(it.kind === 'core' && it.tag === 'COMP' && !ftHwDone(it.sym)) state = `<span class="bd-st" data-pv-hw>Homework → unlocks adds</span>`; }catch(x){} if(it.flags.addon) state += `<span class="bd-st g">add-on ready</span>`; }
   else if(it.status === 'plan') state = blk ? `<span class="pv-blk" data-pv-blocked data-bd-blockedtag>Blocked</span>` : re2ReadyBtn(it);
   else if(ord){ let at = null; try{ at = it.ref && it.ref.ln4 && it.ref.ln4.placedAt; }catch(x){} const ag = lrfAge(at); if(ag) state = `<span class="pv-age" data-lrf-age>${ag}</span>`; }
   const wn = sat && it.pb && !it.inc && !hold && it.pb.vf.warn ? `<span class="bd-st a" data-bd-nearwarn role="img" aria-label="nearest target" title="${bdE(SAT_NEAR_WARN)}">⚠️</span>` : '';
@@ -28583,7 +28583,7 @@ function re2Model(acct){
       let ok = true; try{ const g = re1PlanGate(it.ref, 0); const m = g && g.model; ok = !(m && m.blocked && m.reasons.some(x=>['COMP_LOCKED', 'ADDON_THESIS', 'NO_SNAPSHOT', 'SNAPSHOT_STALE'].indexOf(x) >= 0)); }catch(x){}
       if(ok) o = {g:'manage', chip:'Holding', cc:'', k:'addon', btn:'Add-on ›', fn:`bdAddon('${td3E(it.id)}')`, why:'add-on allowed', warn:true, lv:''};
     }
-    if(!o && it.kind === 'core' && it.tag === 'COMP'){ let hw = true; try{ hw = !!ftHwDone(it.sym); }catch(x){} if(!hw) o = {g:'manage', chip:'Holding', cc:'', k:'hw', btn:'Homework', fn:`td3HwGo('${td3E(it.sym)}','W','')`, why:'size limited to 50% · homework not done', warn:true, lv:''}; }
+    if(!o && it.kind === 'core' && it.tag === 'COMP'){ let hw = true; try{ hw = !!ftHwDone(it.sym); }catch(x){} if(!hw) o = {g:'manage', chip:'Holding', cc:'', k:'hw', btn:'Homework', fn:`td3HwGo('${td3E(it.sym)}','W','')`, why:'adds & risk above 1% locked · homework not done', warn:true, lv:''}; }
     if(!o && it.kind === 'core'){ try{ const tw = ltTws(wlItemOf(it.sym)).filter(w=>w.level === 'broken' || w.level === 'review')[0]; if(tw) o = {g:'manage', chip:'Holding', cc:'', k:'review', btn:'Review ›', fn:`td3Screen('${td3E(it.sym)}')`, why:'tripwire ' + (tw.level === 'broken' ? 'hit' : 'review') + ' · ' + ltShort(tw.sig, 28), warn:true, lv:''}; }catch(x){} }
     if(o) manage.push({it, o}); else nothing++;
   });
@@ -30026,7 +30026,7 @@ function wl5Note(it){
   return w.length > 70 ? w.slice(0, 69) + '…' : w;
 }
 function wl5HwInfo(it){   /* {done, txt, short} — text of the homework cell + the phone variant (HW1) */
-  const done = wl1HwDone(it), miss = wl1HwMissing(it), req = wl1HwReq(it), k = wl1Status(it).k, adds = (k === 'hold' || k === 'addon') ? ' · adds at 50%' : '';
+  const done = wl1HwDone(it), miss = wl1HwMissing(it), req = wl1HwReq(it), k = wl1Status(it).k, adds = (k === 'hold' || k === 'addon') ? (wl1TrkOf(it) === 'ladder' ? ' · adds locked' : ' · adds at 70%') : '';
   if(done){ const cat = String((it.hw && it.hw.catalyst) || '').replace(/\s+/g, ' ').trim(), d = hw1DateOf(it.hw && it.hw.doneAt); return {done:true, txt:cat ? 'Done · ' + cat : 'Done' + (d ? ' ' + d : ''), short:'Done' + (cat ? ' · ' + cat : d ? ' ' + d : '')}; }
   if(miss.length === req.length) return {done:false, txt:'Not started' + adds, short:'Homework not started' + adds};
   const n = req.length - miss.length;
@@ -31657,7 +31657,7 @@ function hw1MineHtml(it){
   const optName = ladder ? 'Catalyst · Next check' : 'Why buy · Catalyst · Next check';
   const opt = `<details class="hw1-opt" data-hw1-opt ${hw1Opt[t] ? 'open' : ''} ontoggle="hw1OptToggle('${e(t)}',this)"><summary>Optional · ${optName}</summary>${ladder ? '' : hw1Fld(it, 'why', false)}${cat}${nc}</details>`;
   const size = done ? `<div class="hw1-size" data-hw1-size>Done · size cap 100% (next step: <button type="button" class="hw1-lnk" onclick="${hw1PlanFn(it)}">${planLbl}</button>)</div>`
-    : `<div class="hw1-size" data-hw1-size>After done: size cap 50% → 100% (next step: <button type="button" class="hw1-lnk" onclick="${hw1PlanFn(it)}">${planLbl}</button>)</div>`;
+    : `<div class="hw1-size" data-hw1-size>After done: ${wl1TrkOf(it) === 'ladder' ? 'adds &amp; risk above 1% unlock' : 'size 70% → 100%'} (next step: <button type="button" class="hw1-lnk" onclick="${hw1PlanFn(it)}">${planLbl}</button>)</div>`;
   return `<div class="hw1-mine" data-hw1-mine data-wl-mt="${e(t)}" data-wl-mt-mode="edit"><div class="hw1-mh"><span class="lbl">Your thesis</span><span class="wlMtDraft" data-wl-mt-draft ${dirty ? '' : 'hidden'}>Unsaved draft · <button type="button" class="hw1-lnk" data-wl-mt-ddisc onclick="wlMtDiscard('${e(t)}')">Discard</button></span></div>
     <div class="hw1-mscroll">${main}<div class="hw1-mut" data-hw1-plan-note>Price rules (stop, exit) live in the Plan card, not here.</div>${opt}</div>
     <div class="hw1-mfoot"><div class="hw1-btns"><button type="button" class="btn" data-hw1-draft data-wl-mt-save onclick="hw1Save('${e(t)}',false)">Save draft</button><button type="button" class="btn pri" data-hw1-done data-wl1-confirm ${p.miss.length ? 'disabled' : ''} onclick="hw1Done('${e(t)}')"><span class="lg">Save · mark done</span><span class="sm">Mark done</span></button><button type="button" class="hw1-lnk hw1-copy" data-hw1-copy onclick="hw1Copy('${e(t)}')">Copy for AI challenge ›</button></div>
@@ -31747,7 +31747,7 @@ function wl5DetHtml(r){   /* HW1 — A: header · context · Why on Watch · Hom
     <div class="lr5-rscard" data-lr5-f="rs"><span class="lbl">RS · from high</span>${wl5RsBlock(it)}</div>
     <div class="lr5-hwp" data-lr5-hwp><div class="r"><b>Homework ${n} of ${req.length}</b><span class="${done ? 'ok' : 'amb'}">${done ? 'Done' + (dd ? ' ' + e(dd) : '') : e(miss.length ? miss[0].h + ' missing' : 'not marked done')}</span></div><div class="bar"><i style="width:${Math.round(100 * n / req.length)}%"></i></div></div>
     <div class="lr5-fl">${l2}</div>
-    <div class="lr5-size" data-lr5-size>${done ? 'Size: up to 100% · set in Plan' : 'Size: 50% until homework is done → 100% · set in Plan'}</div>${mainBtn}</div>`;
+    <div class="lr5-size" data-lr5-size>${wl1TrkOf(it) === 'ladder' ? (done ? 'Adds &amp; risk above 1% unlocked' : 'Compounder: adds &amp; risk above 1% unlock when done') : (done ? 'Size: up to 100% · set in Plan' : 'Momentum: 70% until done')}</div>${mainBtn}</div>`;
 }
 function wl5FullHtml(r){
   const back = `<button type="button" class="btn lr5-back" data-lr5-back onclick="wl5FullOff()">‹ Summary</button>`;
@@ -31807,7 +31807,7 @@ function wl1TodoItems(){
   (wlItems || []).forEach(it=>{
     if(it.archived === true) return;
     const st = wl1Status(it);
-    if((st.k === 'hold' || st.k === 'addon') && !wl1HwDone(it)) out.push({c:'a', id:'wl1hw:' + wl1KeyOf(it), wl1:'hw', sym:it.ticker, t:`📚 ${wl1Bare(it.ticker)} · Holding · homework not done · cap 50%`, fn:`wl1Go('${q(it.ticker)}')`});
+    if((st.k === 'hold' || st.k === 'addon') && !wl1HwDone(it)) out.push({c:'a', id:'wl1hw:' + wl1KeyOf(it), wl1:'hw', sym:it.ticker, t:`📚 ${wl1Bare(it.ticker)} · Holding · homework not done · ${wl1TrkOf(it) === 'ladder' ? 'adds locked' : 'size 70%'}`, fn:`wl1Go('${q(it.ticker)}')`});
   });
   return out;
 }
@@ -31860,8 +31860,9 @@ function wl1Agg(sym, trk, o){
   let full = +o.extraFull || 0, held = 0, working = 0, mk = o.market || coreMarketOf(sym);
   cards.forEach(c=>{ full = Math.max(full, wl1FullQty(c)); held += wl1HeldQty(c); working += wl1WorkingQty(c, o.fillId === c.id); mk = c.market || mk; });
   const done = !!(it && wl1HwDone(it)), lot = wl1Lot(mk);
-  const cap = done ? full : Math.floor(full * 0.5 / lot + 1e-9) * lot;
-  return {full, held, working, done, cap, lot, pct:done ? 100 : 50, mk};
+  const hwF = done || trk === 'ladder' ? 1 : RiskEngine.POLICY.hwFactor.mom;   /* PC2 2e — Compounder: full size (homework unlocks adds); Momentum: 70% until done */
+  const cap = hwF >= 1 ? full : Math.floor((full + lot) * hwF / lot + 1e-9) * lot;   /* +1 lot: the engine's own 70% size may round one lot above 70% of the floored full size */
+  return {full, held, working, done, cap, lot, pct:Math.round(hwF * 100), mk};
 }
 function wl1Check(sym, trk, addQty, o){
   const a = wl1Agg(sym, trk, o);
@@ -31870,7 +31871,7 @@ function wl1Check(sym, trk, addQty, o){
   const ok = total <= a.cap + 1e-9;
   const msg = ok ? '' : (a.done
     ? `${wl1Bare(sym)}: total would exceed full size ${a.full} (held ${a.held} + working ${a.working} + this ${addQty}) — allowed ${allowed}`
-    : `${wl1Bare(sym)}: homework not done · max 50% = ${a.cap} (held ${a.held} + working ${a.working} + this ${addQty}) — allowed ${allowed}`);
+    : `${wl1Bare(sym)}: homework not done · max ${a.pct}% = ${a.cap} (held ${a.held} + working ${a.working} + this ${addQty}) — allowed ${allowed}`);
   return Object.assign({ok, allowed, total, msg}, a);
 }
 function wl1Say(msg){ window.__wl1Msg = msg; try{ sdToast(msg); }catch(e){ console.warn(msg); } }
