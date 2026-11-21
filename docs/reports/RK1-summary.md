@@ -32,9 +32,12 @@ Branch `claude/rk1` (from fresh origin/main). Not merged.
   - `re1d_common.py` / `run_tests_re1c2.py` (fixture plan qty 40 → 36 so saved plans stay inside the new size; re1c2 news checks now seed Weekly Impact instead of `settings.newsEvents`)
   - `run_tests_clean1.py` and `run_tests_lrf2.py` (SAT line "0.2% · x/y%" instead of "step n")
   - `run_tests_phase373.py` (popup subtitle 0.40 %)
-  - `run_tests_phase51.py`: tests the hidden Key-news-days form; removed from the regression list, file kept because `lib_phase54/100/106` import it (noted in `_retired/README.md`).
+  - `run_tests_phase51.py`: retired from the regression list because RK1 hides the Key-news-days form it fills; the news window is covered by `run_tests_rk1.py`. The file stays in `tests/` because `lib_phase54/100/106` import it as a helper (noted in `_retired/README.md`).
 - Side-by-side vs the mockup: `tests/screenshots/rk1/side-1440.png`, `side-390.png` (`tests/rk1_side.py`).
 
 ## Notes / judgement calls
 - The live Today (LR2/LN4) never rendered the routine slots; the hidden readers are mostly the legacy `tdBuild` / `td3OtherBody` paths. Today's visible items were already independent of them, so the visible change on Today is small.
 - Out-of-bounds values are blocked by disabling Save with an inline message (existing Settings pattern).
+
+## RK1-fix
+Rebased onto origin/main (HW1d, #90); `run_tests_rk1` appended to main's REST list. Risk-per-idea inputs restyled to match the mockup (rounded inputs, "%" inside, disabled grey "—" cells). Last full `JOBS=2` run: 79/80, the one failure being `run_tests_phase51` (now dropped from the list as above); no further full run after dropping it.
