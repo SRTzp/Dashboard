@@ -20,9 +20,13 @@
 
   /* ── Policy constants (RE1-decisions.md §1-§5). Overridable per call via cfg. ── */
   var POLICY = {
-    mom: { rptPct: 0.40, weeklyPct: 1.60, monthlyPct: 6.40, ammo: 4, homeworkCap: 0.5, starter: 0.25, releaseR: 1.5 },
+    mom: { rptPct: 0.40, weeklyPct: 1.60, monthlyPct: 6.40, ammo: 4, homeworkCap: 0.7, starter: 0.25, releaseR: 1.5 },
     sat: { stepRpt: [0.20, 0.20, 0.20, 0.20], weeklyPct: 0.80, monthlyPct: 3.20, condReduced: 0.65, minRR: 1.5, staleOrderMs: DAY },
-    comp: { pilotPct: 0.50, addonPct: 0.50, totalCapPct: 1.00, valueCapPct: 12.5, heatCapPct: 6.0, starter: 0.25, lockLosses: 6, unlockDays: 7, homeworkCap: 0.5 },
+    comp: { pilotPct: 0.50, addonPct: 0.50, totalCapPct: 1.00, valueCapPct: 12.5, heatCapPct: 6.0, starter: 0.25, lockLosses: 6, unlockDays: 7, homeworkCap: 1.0 },
+    /* PC2 2e — homework factor per strategy track when homework is NOT done (done = 100 %). Compounder: full size (homework unlocks adds + risk above 1 %). Momentum: 70 %. */
+    hwFactor: { comp: 1.00, mom: 0.70 },
+    /* PC2 — constants (not Settings) */
+    compRiskMax: 2.0, compHighMaxOpen: 2, momTopupDays: 5,
     /* RM1 — shared new-entry budget modifier ("initial settings to test"). One signal result feeds sizing AND every view.
        table[equity][credit]: green/red of ACWI/BIL (SMA 20/50) x HYG/IEI (SMA 20/50). Neutral / unavailable / stale -> fallback (never 100 %). All values + SMA periods are settings (rev 4: 100/80/80/60, fallback 80). */
     regime: { table: { green: { green: 1.0, red: 0.80 }, red: { green: 0.80, red: 0.60 } }, fallback: 0.80, freshDays: 4, smaFast: 20, smaSlow: 50 },
@@ -68,7 +72,7 @@
     STOP_WRONG_SIDE:    { kind: 'block', text: 'Stop is on the wrong side of entry for this direction' },
     LOT_BELOW_MIN:      { kind: 'block', text: 'Budget does not cover the minimum lot' },
     COST_UNKNOWN:       { kind: 'flag',  text: 'Cost settings missing — costs not estimated (never treated as 0)' },
-    CAP_HOMEWORK:       { kind: 'flag',  text: 'Thesis not done — size limited to 50% of full' },
+    CAP_HOMEWORK:       { kind: 'flag',  text: 'Homework not done — size limited to 70% of full' },
     MONEY_WEEK:         { kind: 'block', text: 'Weekly loss budget would be exceeded' },
     MONEY_MONTH:        { kind: 'block', text: 'Monthly loss budget would be exceeded' },
     AMMO_EXHAUSTED:     { kind: 'block', text: 'Weekly Momentum ammunition (4) used or reserved' },
@@ -90,6 +94,7 @@
     SAT_RR:             { kind: 'block', text: 'R:R below 1.5 or TP missing' },
     COMP_LOCKED:        { kind: 'block', text: 'Compounder locked after six consecutive losing ticker-cycles' },
     COMP_HEAT:          { kind: 'block', text: 'Compounder heat cap 6% would be exceeded' },
+    PLAN_TOTAL_RISK:    { kind: 'block', text: 'Total risk is over today\'s limit' },
     ADDON_THESIS:       { kind: 'block', text: 'Thesis not complete — Add-on / further buys need it' },
     ADDON_TOTAL_RISK:   { kind: 'block', text: 'Ticker total risk (existing tranches at current stop + this order) would exceed the plan limit' },
     ADDON_BELOW_ENTRY_WARN: { kind: 'flag', text: 'Adding below entry — re-check ④ Wrong if' },
@@ -348,7 +353,7 @@
   }
   /* Momentum / Compounder entry fraction of full size: homework cap (thesis done?) × starter (first entry only, when ON). usedFraction = already held + working. */
   function entryFraction(o) {
-    o = o || {}; var cap = o.homeworkDone === true ? 1 : POLICY.mom.homeworkCap;
+    o = o || {}; var cap = o.homeworkDone === true ? 1 : POLICY.hwFactor.mom;
     var first = o.starterOn === true && o.isFirstEntry === true ? POLICY.mom.starter : 1;
     var allow = Math.min(cap, first), used = num(o.usedFraction) ? o.usedFraction : 0;
     return { fraction: Math.max(0, Math.min(1, allow - used)), cap: cap, capped: o.homeworkDone !== true, firstEntry: first };
@@ -617,11 +622,16 @@
     if (o.kind === 'pilot') {
       cap = o.starterOn === true ? P.pilotPct * P.starter * 2 : P.pilotPct;      /* starter = 0.25 of the WHOLE plan (1 %) = half of Pilot */
       if (used + req > cap + EPS) reasons.push('COMP_PHASE_CAP');
+    } else if (o.kind === 'plan') {
+      /* PC2 §1 — a row that was in the plan BEFORE the first fill is part of the first build: no thesis needed; total (plan %) x homework factor (Compounder 100 %) x regime. */
+      var fzp = num(o.factor) ? o.factor : 1, pp = pos(o.planPct) ? o.planPct : P.totalCapPct;
+      cap = pp * POLICY.hwFactor.comp * fzp * (o.starterOn === true ? P.starter : 1);
+      if (used + req > cap + EPS) reasons.push('PLAN_TOTAL_RISK');
     } else if (o.kind === 'topup' || o.kind === 'addon') {
       if (o.kind === 'addon' && o.thesisDone !== true) reasons.push('ADDON_THESIS');
-      var fz = num(o.factor) ? o.factor : 1;
-      cap = o.thesisDone === true ? P.totalCapPct * fz : P.pilotPct;   /* RM1: total-risk cap (Settings, RK1 default 1.00 %) x effective modifier with thesis · 0.50 % without */
-      var alone = P.addonPct * fz;
+      var fz = num(o.factor) ? o.factor : 1, pa = pos(o.planPct) ? o.planPct : P.totalCapPct;
+      cap = o.thesisDone === true ? pa * fz : P.pilotPct;   /* RM1: total-risk cap (plan %, default Settings 1.00 %) x effective modifier with thesis · 0.50 % without */
+      var alone = o.noAlone === true ? Infinity : P.addonPct * fz;   /* PC2 2e: the add-on rule is the TOTAL-risk rule only (plan budget) */
       if (used + req > cap + EPS || req > alone + EPS) reasons.push('ADDON_TOTAL_RISK');
       if (pos(o.entryPx) && pos(o.avgEntry) && (dirOf(o.side) === 1 ? o.entryPx < o.avgEntry - EPS : o.entryPx > o.avgEntry + EPS)) flags.push('ADDON_BELOW_ENTRY_WARN');
     } else return res(['UNKNOWN_DATA'], [], {});

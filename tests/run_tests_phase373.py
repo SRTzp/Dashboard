@@ -107,17 +107,17 @@ def run(pw, w, h):
         check(f"{tag} 1 Planned = AMD, TSLA, ORCL (+NOPX) · Ordered = AVGO · Holding = NVDA, MSFT", set(col(page, "plan")) >= {"ccPL", "ccFA", "ccNP"} and col(page, "ord") == ["ccOR"] and set(col(page, "hold")) == {"ccST", "ccFU", "ccMH"}, [col(page, s) for s in ("plan", "ord", "hold")])
         allids = {x.split(":")[0] for x in ids(page)}
         check(f"{tag} 1 Missed / Closed / Archived are not on the board", not ({"ccMS", "ccCL", "ccAR"} & allids), sorted(allids))
-        check(f"{tag} 1 split plan = ONE card; filled ✓ + open order chips (PV1b)'", cnt(page, '[data-bd-card="ccST"]') == 1 and js(page, "()=>!!document.querySelector('[data-bd-card=ccST] [data-pv-done]')"))   # PV1b: the '¼ in' / 'full' labels are replaced by ✓ / dashed order chips
+        check(f"{tag} 1 split plan = ONE card; filled ✓ + open order chips (PV1b)'", cnt(page, '[data-bd-card="ccST"]') == 1 and js(page, "()=>!!document.querySelector('[data-bd-card=ccST] [data-pv-held]')"))   # PV1b: the '¼ in' / 'full' labels are replaced by ✓ / dashed order chips
         check(f"{tag} 1 each column shows a count; Plan summary line", txt(page, '[data-bd-n="hold"]') == "3" and "3 holding" in stxt(page), stxt(page))
         check(f"{tag} 1 Planned sorted closest-to-entry first (AMD 1.4% before TSLA −20%)", col(page, "plan").index("ccPL") < col(page, "plan").index("ccFA"), col(page, "plan"))
         check(f"{tag} 1 Holding: needs-action first (add-on / stop below avg) before plain", col(page, "hold")[0] in ("ccST", "ccFU"))
         # ── 2c multiple entry levels ──
-        check(f"{tag} 2c one card per plan; Planned multi-level card shows its 3 entry legs", cnt(page, '[data-bd-card="ccML"]') == 1 and cnt(page, '[data-bd-card="ccML"] [data-pv-leg="in"]') == 3 and "ccML" in col(page, "plan"), txt(page, '[data-bd-card="ccML"] .bd-r2'))
-        check(f"{tag} 2c any level filled → ✅ Holding: 'Avg x' + 'Entries 1/3 · next 480 waiting'", "ccMH" in col(page, "hold") and js(page, "()=>!!document.querySelector('[data-bd-card=ccMH] [data-pv-done]')") and "@ 480" in txt(page, '[data-bd-card="ccMH"] [data-pv-legs]'), txt(page, '[data-bd-card="ccMH"] .bd-r3'))
+        check(f"{tag} 2c one card per plan; Planned multi-level card shows its 3 entry legs", cnt(page, '[data-bd-card="ccML"]') == 1 and cnt(page, '[data-bd-card="ccML"] [data-pc2-chip]') == 3 and "ccML" in col(page, "plan"), txt(page, '[data-bd-card="ccML"] [data-pc2-chips]'))
+        check(f"{tag} 2c any level filled → ✅ Holding: 'Avg x' + 'Entries 1/3 · next 480 waiting'", "ccMH" in col(page, "hold") and js(page, "()=>!!document.querySelector('[data-bd-card=ccMH] [data-pc2-chip=filled]')") and "480" in txt(page, '[data-bd-card="ccMH"] [data-pc2-chips]'), txt(page, '[data-bd-card="ccMH"] .bd-r3'))
         js(page, "()=>bdOpen('ccMH')"); settle(page, 300)
         lv = js(page, "()=>[...document.querySelectorAll('[data-bd-lv]')].map(e=>e.dataset.bdLv+':'+e.dataset.bdLvst)")
         check(f"{tag} 2c drawer ENTRIES lists each level with its state (#1 filled, #2/#3 planned)", lv == ["1:filled", "2:planned", "3:planned"], lv)
-        check(f"{tag} 2c next level has its own action (Place order #2)", "Place order #2" in txt(page, "[data-bd-entries-list]"), txt(page, "[data-bd-entries-list]"))
+        check(f"{tag} 2c next level has its own action (Place order #2)", "Place ②" in txt(page, "[data-bd-entries-list]"), txt(page, "[data-bd-entries-list]"))
         page.locator('[data-bd-lvact="place"]').first.click(); settle(page, 500)
         check(f"{tag} 2c Place order #2 opens the confirm sheet (EF1b)", cnt(page, "[data-ef-core-place]") == 1)
         page.click("[data-pb2-yes]"); settle(page, 800)
@@ -141,7 +141,7 @@ def run(pw, w, h):
         check(f"{tag} 14 symbol without a price → 'no live price' (PV1: never a bare dash), no errors", bool(txt(page, '[data-bd-card="ccNP"]')), txt(page, '[data-bd-card="ccNP"] .bd-r3'))
         # ── 3 pills ──
         pill = lambda i: js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); const p=bdPill(x); return p.k + '|go' + (p.cls ? ' ' + p.cls : '') + '|' + p.t; }", i)   # PV1b: the card shows Place / Add-on / Filled only; Edit lives in More
-        check(f"{tag} 3 Planned < 2% → green 'Place order ›'; far → plain 'Edit'", pill("ccPL").startswith("place|go p") and pill("ccFA").startswith("edit|go|"), [pill("ccPL"), pill("ccFA")])
+        check(f"{tag} 3 Planned < 3% → primary 'Place'; far → secondary 'Place' (PC2 2c)", pill("ccPL").startswith("place|go p") and pill("ccFA").startswith("place|go|"), [pill("ccPL"), pill("ccFA")])
         check(f"{tag} 3 Ordered → 'Filled ✓'; Holding (Starter add-on removed, TS1b) → 'Edit'; below avg → 'Edit' (never 'Raise stop')", pill("ccOR").startswith("fill") and pill("ccST").startswith("edit") and pill("ccFU").startswith("edit") and "Raise" not in txt(page, "[data-bd-cols]"), [pill("ccOR"), pill("ccST"), pill("ccFU")])
         js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); if(x) bdSetSeg(x.status); }", "ccPL"); settle(page, 150)
         page.locator('[data-bd-card="ccPL"] [data-bd-pill]').click(); settle(page, 300); page.locator('[data-pb2-yes]').click(); settle(page, 800)   # EF1: Place › opens the confirm sheet; one Confirm
@@ -149,17 +149,17 @@ def run(pw, w, h):
         # drawer
         js(page, "(i)=>{ const x=bdItems().find(y=>y.id===i); if(x) bdSetSeg(x.status); }", "ccPL"); settle(page, 150)
         js(page, "()=>bdOpen('ccPL')"); settle(page, 400)   # PV1b: card tap toggles More; the drawer opens from Edit
-        check(f"{tag} 4 drawer (via Edit / bdOpen) opens · status pill + levels + thesis + log", cnt(page, "#bdDrawer") == 1 and "Ordered" in txt(page, "[data-bd-spill]") and cnt(page, "[data-bd-levels]") == 1 and cnt(page, "[data-bd-thesis]") == 1 and cnt(page, "[data-bd-log]") == 1)
+        check(f"{tag} 4 drawer (via Edit / bdOpen) opens · status pill + levels + thesis + log", cnt(page, "#bdDrawer") == 1 and "Ordered" in txt(page, "[data-bd-spill]") and cnt(page, "[data-pc2-grp=position]") == 1 and cnt(page, "[data-pc2-grp=homework]") == 1 and cnt(page, "[data-bd-log]") == 1)   # PC2: grouped drawer
         check(f"{tag} 4 drawer: Ordered → 'Cancel order' + primary 'Filled ✓'", cnt(page, "[data-bd-cancel]") == 1 and cnt(page, '[data-bd-dprimary="fill"]') == 1)
         js(page, "()=>{ const it = wlItemOf('AMD'); if(it){ it.my_thesis = {why:'', exit:''}; } bdRender(); }"); settle(page, 300)   # WL1 — homework seed carried ④; the drawer check wants an unwritten thesis
-        check(f"{tag} 4 thesis missing → 'Add thesis ›' link", cnt(page, "[data-bd-addthesis]") >= 1)
+        check(f"{tag} 4 homework group with 'Open ›' (replaces the old thesis box)", cnt(page, "[data-pc2-hwopen]") >= 1)
         page.locator("[data-bd-cancel]").click(); settle(page, 500)
         js(page, "()=>{document.getElementById('cxReason').value='hesitated'; document.getElementById('cxNote').value='chasing'; re4In(); re4Go();}"); settle(page, 1200)   # RE-D §6: reason sheet first
         js(page, "()=>bdOpen('ccPL')"); settle(page, 400)
         check(f"{tag} 3 Cancel order (no confirm) → back to 📝 Planned + log 'Order cancelled'", "ccPL" in col(page, "plan") and "Order cancelled" in logs(page, "ccPL")[-1], logs(page, "ccPL"))
         # RE-D §6 — RETIRED: inline 'Reason?' input after cancel (replaced by the reason sheet before the cancel; covered in run_tests_re1d.py)
         check(f"{tag} 5 cancel note is stored on the plan (reason sheet)", js(page, "()=>coreCardsList.find(c=>c.id==='ccPL').cancelNote") == "chasing")
-        lg = js(page, "()=>[...document.querySelectorAll('[data-bd-lr]')].map(e=>e.innerText)")
+        lg = js(page, "()=>{ document.querySelectorAll('#bdDr details').forEach(d=>d.open = true); return [...document.querySelectorAll('[data-bd-lr]')].map(e=>e.innerText); }")
         check(f"{tag} 4 log newest first", len(lg) >= 3 and "Order cancelled" in lg[0], lg)
         page.keyboard.press("Escape"); settle(page, 300)
         check(f"{tag} 4 Esc closes the drawer", cnt(page, "#bdDrawer") == 0)
@@ -191,7 +191,7 @@ def run(pw, w, h):
         check(f"{tag} 5 reason joins the SL log text", any("SL 235 → 232" in t and "wider stop" in t for t in logs(page, "ccFA")), logs(page, "ccFA"))
         js(page, "()=>bdClose()")
         # old doc without log + cap 50
-        check(f"{tag} 6 plan without log[] renders (synthetic 'Plan created' row)", "Plan created" in js(page, "()=>{ bdOpen('ccFM'); return document.getElementById('bdDr').innerText; }"))
+        check(f"{tag} 6 plan without log[] renders (synthetic 'Plan created' row)", "Plan created" in js(page, "()=>{ bdOpen('ccFM'); document.querySelectorAll('#bdDr details').forEach(d=>d.open = true); return document.getElementById('bdDr').innerText; }"))
         js(page, "()=>bdClose()")
         js(page, "()=>{ for(let i=0;i<60;i++) bdLogAdd('ccFM','note','n'+i); }"); settle(page, 600)
         check(f"{tag} 6 log capped at 50 entries (oldest dropped)", len((card_db(page, "ccFM") or {}).get("log", [])) == 50 and logs(page, "ccFM")[-1] == "n59", len((card_db(page, "ccFM") or {}).get("log", [])))
@@ -306,7 +306,7 @@ def run(pw, w, h):
             check(f"{tag} 10 iPhone: chips scroll row (nowrap) + segmented control with counts", cnt(page, "[data-bd-seg] button") == 3 and js(page, "()=>getComputedStyle(document.querySelector('[data-bd-chips]')).whiteSpace") == "nowrap")
             js(page, "()=>bdSetSeg('plan')"); settle(page, 300)
             vis = js(page, "()=>[...document.querySelectorAll('[data-bd-col]')].filter(e=>getComputedStyle(e).display!=='none').map(e=>e.dataset.bdCol)")
-            check(f"{tag} 10 iPhone: one column at a time", vis == ["plan"], vis)
+            check(f"{tag} 10 iPhone: PC2 one column, sections stacked", vis == ["plan", "ord", "hold"], vis)
             check(f"{tag} 10 no horizontal scroll on Plan", ovf(page) <= 0, ovf(page))
         else:
             plan(page)
@@ -538,7 +538,7 @@ def pb1b(pw, w, h):
         check(f"{tag} 3b Complete › opens the same popup form (step 3), prices filled, no tab switch", pop_step(page) == "form" and js(page, "()=>document.querySelector('[data-pb2-in=entry]').value") == "150" and js(page, "()=>activeTab") == "plan")
         mss_click(page, False); page.click("[data-pb2-save]"); settle(page, 500)
         c3 = sat_card(page, i3)
-        check(f"{tag} 3b MSS No → Planned with red Blocked tag; Place order disabled with tooltip 'Blocked by trend rule'", c3 and c3["blk"] and c3["pill"] is None and "Not an MSS" in c3["txt"] and i3 in col(page, "plan") and "needs" not in c3["need"], c3)
+        check(f"{tag} 3b MSS No → Planned with red Blocked tag; Place order disabled with tooltip 'Blocked by trend rule'", c3 and c3["blk"] and c3["dis"] and c3["title"] == "Blocked by trend rule" and "Not an MSS" in c3["txt"] and i3 in col(page, "plan") and "needs" not in c3["need"], c3)
         shot(page, "plan-board", w)
         js(page, "(i)=>td3SatOpen(i,'')", i3); settle(page, 300); mss_click(page, True)
         page.click("[data-pb2-save]"); settle(page, 400)

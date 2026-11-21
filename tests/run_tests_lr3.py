@@ -56,7 +56,7 @@ def partA(page, tag, w):
     # columns 5:3:4
     if w >= 1280:
         cw = js(page, "()=>[...document.querySelectorAll('.bd-col')].map(c=>Math.round(c.getBoundingClientRect().width))")
-        check(f"{tag} A: columns Planned > Holding > Ordered (≈5:3:4 → {cw})", cw[0] > cw[2] > cw[1] or (cw[0] > cw[1] and cw[0] > cw[2]), cw)
+        check(f"{tag} A: PC2 columns with cards share the width equally, the empty Ordered one is a slim 240px strip → {cw}", abs(cw[0] - cw[1]) <= 2 and cw[2] <= 241 and cw[0] > cw[2], cw)
     # Waiting row
     wt = js(page, "()=>{ const d = document.querySelector('[data-bd-wait]'); return d ? {open:d.open, t:d.querySelector('summary').innerText.replace(/\\s+/g,' '), n:d.querySelectorAll('[data-bd-card]').length} : null; }")
     check(f"{tag} A: Waiting row collapsed: 'Waiting · 1 need entry or stop ▸'", wt and not wt["open"] and (wt["t"].startswith("Waiting · 1 need entry or stop") or wt["t"].startswith("+1 waiting · need entry or stop")), wt)
@@ -74,7 +74,7 @@ def partA(page, tag, w):
     # phone segmented tabs
     if w <= 600:
         sg = js(page, "()=>{ const s = document.querySelector('[data-bd-seg]'), c = document.querySelector('[data-bd-chips]'); return {t:[...s.querySelectorAll('button')].map(b=>b.innerText.replace(/\\s+/g,' ')), above: s.getBoundingClientRect().bottom <= c.getBoundingClientRect().top + 1, vis:[...document.querySelectorAll('.bd-col')].filter(c=>c.getClientRects().length).length}; }")
-        check(f"{tag} A: phone segmented Planned · Ordered · Holding with counts, above the chips, one column visible", sg["t"][0].startswith("Planned") and sg["t"][1].startswith("Ordered") and sg["t"][2].startswith("Holding") and sg["above"] and sg["vis"] == 1, sg)
+        check(f"{tag} A: phone segmented Planned · Ordered · Holding with counts, above the chips, one column visible", sg["t"][0].startswith("Planned") and sg["t"][1].startswith("Ordered") and sg["t"][2].startswith("Holding") and sg["above"] and sg["vis"] == 3, sg)   # PC2: phone = one column, all three sections stacked
     else:
         check(f"{tag} A: desktop shows all three columns and NO segment control", js(page, "()=>[...document.querySelectorAll('.bd-col')].filter(c=>c.getClientRects().length).length") == 3 and js(page, "()=>getComputedStyle(document.querySelector('[data-bd-seg]')).display") == "none")
     js(page, "()=>{ bdSeg = 'plan'; bdRender(); }")
@@ -93,7 +93,7 @@ def partA(page, tag, w):
     # empty column shrinks (Family has no orders)
     ec = js(page, "()=>{ const c = document.querySelector('[data-bd-col=\"ord\"]'); return {empty:c.classList.contains('bd-empty'), h:Math.round(c.getBoundingClientRect().height), t:c.innerText.replace(/\\s+/g,' ')}; }")
     if w > 600:
-        check(f"{tag} A: empty Ordered column shrinks to header + 'Nothing here' ({ec['h']} px)", ec["empty"] and ec["h"] <= 96 and "Nothing here" in ec["t"], ec)
+        check(f"{tag} A: empty Ordered column = slim strip with 'Nothing waiting at the broker.' ({ec['h']} px)", ec["empty"] and ec["h"] <= 140 and "Nothing waiting at the broker." in ec["t"], ec)
     else:
         check(f"{tag} A: empty column carries bd-empty", ec["empty"], ec)
     js(page, "()=>document.querySelector('[data-bd-card=\"fN\"] [data-bd-also]').click()"); page.wait_for_timeout(400)
@@ -103,7 +103,7 @@ def partA(page, tag, w):
 def partA2(page, tag, w):
     goto_plan(page, "main")
     js(page, "()=>{ const s = getBook('main').settings; s.fx = 33.5; bdRender(); }"); page.wait_for_timeout(300)
-    card = txt(page, '[data-bd-card="mN"] [data-pv-money]')
+    card = txt(page, '[data-bd-card="mN"] [data-pc2-l3]')
     check(f"{tag} F1: Main (USD) plan card shows $ not ฿", "$" in card and "฿" not in card, card)
     # tiles + % of account on the same base as Size %
     js(page, "()=>efCorePlaceOpen('mA')"); page.wait_for_timeout(400)
@@ -114,12 +114,10 @@ def partA2(page, tag, w):
     js(page, "()=>{ bdPopClose(); }")
     # blocked reason = one short line, full text under More
     goto_plan(page, "main")
-    bl = js(page, "()=>{ const c=document.querySelector('[data-bd-card=\"mN\"]'); const w=c.querySelector('[data-pv-why]'); if(!w) return null; const r=w.getBoundingClientRect(); return {t:w.innerText, title:w.title, h:Math.round(r.height), lh:parseFloat(getComputedStyle(w).lineHeight)||16}; }")
-    check(f"{tag} F3: Blocked reason is one short line ('Blocked · MMT weekly limit 4/4')", bl and bl["t"].startswith("Blocked · ") and len(bl["t"]) <= 60 and bl["h"] <= bl["lh"] * 1.6, bl)
-    js(page, "()=>pvCardTap('mN')"); page.wait_for_timeout(250)
-    full = txt(page, '[data-bd-card="mN"] [data-pv-whyfull]')
-    check(f"{tag} F3: full engine text is under More", len(full) > len(bl["t"]) if bl else False, full)
-    js(page, "()=>pvCardTap('mN')")
+    bl = js(page, "()=>{ const c=document.querySelector('[data-bd-card=\"mN\"]'); const w=c.querySelector('[data-pc2-warn]'); if(!w) return null; const r=w.getBoundingClientRect(); return {t:w.innerText, title:w.title, h:Math.round(r.height), lh:parseFloat(getComputedStyle(w).lineHeight)||16}; }")
+    check(f"{tag} F3: Blocked reason is one short line ('Blocked · MMT weekly limit 4/4')", bl and bl["t"].startswith("⚠ ") and "MMT weekly limit 4/4" in bl["t"] and len(bl["t"]) <= 60 and bl["h"] <= bl["lh"] * 1.6, bl)
+    full = bl["title"] if bl else ""   # PC2: the full engine text is the tooltip (and the drawer's amber box)
+    check(f"{tag} F3: full engine text is in the tooltip / drawer", len(full) > len(bl["t"]) if bl else False, full)
 
 
 def heights(pw):

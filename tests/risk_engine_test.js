@@ -252,9 +252,9 @@ const costsOf = () => C;
   const s = R.sizeOrder(Object.assign({}, base, { stop: 95, minStopDist: 4 })); eq(s.qty, 900, 'G8 actual distance above the minimum: size on actual'); near(s.actualRisk, 4500, 'G8 full 0.45% risk');
   eq(R.sizeOrder(Object.assign({}, base, { stop: 95 })).qty, 900, 'G8 plan example: 1,000,000 · 0.45% · 100/95 → 900'); eq(R.sizeOrder(Object.assign({}, base, { stop: 95, factor: 0.5 })).qty, 450, 'G8 half → 450');
   // fraction (homework) and Starter
-  const hw = R.entryFraction({ homeworkDone: false }); near(hw.fraction, 0.5, 'G8 thesis not done → 50%'); eq(R.sizeOrder(Object.assign({}, base, { stop: 95, fraction: hw.fraction })).qty, 450, 'G8 homework cap halves qty');
+  const hw = R.entryFraction({ homeworkDone: false }); near(hw.fraction, 0.7, 'G8 homework not done → 70% (PC2 2e)'); eq(R.sizeOrder(Object.assign({}, base, { stop: 95, fraction: hw.fraction })).qty, 630, 'G8 homework factor 70% → 630');
   near(R.entryFraction({ homeworkDone: true, starterOn: true, isFirstEntry: true }).fraction, 0.25, 'G8 Starter ¼ first entry'); near(R.entryFraction({ homeworkDone: true, starterOn: true, isFirstEntry: false, usedFraction: 0.25 }).fraction, 0.75, 'G8 topup remainder 75%');
-  near(R.entryFraction({ homeworkDone: false, usedFraction: 0.5 }).fraction, 0, 'G8 addition blocked while thesis undone (nothing left under 50%)');
+  near(R.entryFraction({ homeworkDone: false, usedFraction: 0.7 }).fraction, 0, 'G8 addition blocked while homework undone (nothing left under 70%)');
   // the user's stop is never moved
   ok(!('stop' in r), 'G8 engine returns no moved stop');
   // short side
