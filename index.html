@@ -3939,6 +3939,8 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
 .pc2-seg{display:inline-flex;border:1px solid var(--border);border-radius:9px;overflow:hidden;align-self:flex-end}.pc2-seg button{border:0;background:var(--surface);padding:7px 11px;font:600 12px var(--sans);color:var(--muted);cursor:pointer}.pc2-seg button.on{background:#14161A;color:#fff}
 .pc2-exh{font-size:11.5px;margin-top:4px}#cnT1hint{padding-bottom:8px;font-size:12px}
 .pc2-rrow{display:flex;align-items:center;gap:8px;font-size:13px}.pc2-rrow select{border:1px solid var(--border);border-radius:9px;padding:5px 8px;font:600 13px var(--sans);font-variant-numeric:tabular-nums;background:var(--surface)}.pc2-rwhy{font-size:11.5px;margin-top:4px}
+.pc2-fill{display:block;margin:6px 0 2px;font:600 13px var(--sans)}.pc2-hwbox{border:1px solid var(--border);border-radius:12px;padding:10px;margin:6px 0;background:var(--surface2,#F7F8FA)}.pc2-hwh{font:600 12px var(--sans);color:var(--muted);margin-bottom:6px}
+.pc2-hf{display:block;margin-bottom:8px;font-size:12.5px}.pc2-hf span{display:block;font-weight:600;margin-bottom:3px}.pc2-hf i{font-weight:400;color:var(--muted)}.pc2-hf textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:9px;padding:7px 9px;font:13px var(--sans);resize:vertical}
 .bd-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:11px 12px;margin-bottom:8px;cursor:pointer;min-width:0}
 .bd-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.07)}
 .bd-card:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
@@ -28078,10 +28080,75 @@ function pc2FullQty(c){
   const lot = (c.market || coreMarketOf(c.ticker)) === 'TH' ? 100 : 1;
   return Math.floor(tot / f / lot + 1e-9) * lot;
 }
+/* ═══ PC2 2f/2g — Place sheet: Momentum homework at the decision · T1 sell · top up ═══ */
+function pc2PlaceExtras(it, pv){
+  if(it.kind !== 'core' || it.tag === 'COMP') return '';
+  const c = it.ref, hw = pc2Hw(c), e = bdE, id = e(c.ticker).replace(/'/g, "\\'"); let h = '';
+  const f = Math.round(RiskEngine.POLICY.hwFactor.mom * 100);
+  if(hw.done) h += `<div class="bd-m" data-pc2-size>full size ✓</div>`;
+  else{
+    const full = pc2FullQty(c), miss = Math.max(1, hw.tot - hw.n), it0 = wlItemOf(c.ticker), v = it0 ? hw1Vals(it0) : {};
+    h += `<div class="bd-m" data-pc2-size>${f}% · homework not done</div>`;
+    h += `<button type="button" class="bd-link pc2-fill" data-pc2-hwfill aria-expanded="${!!pb2.hwOpen}" onclick="pc2HwToggle()">Fill ${miss} line${miss === 1 ? '' : 's'} → full size${full > 0 ? ' #' + fmt0(full) : ''} ›</button>`;
+    if(pb2.hwOpen){
+      const fld = k=>{ const L = HW1_L[k]; return `<label class="pc2-hf"><span>${e(L.n)}${L.hint ? ` <i>${e(L.hint)}</i>` : ''}</span><textarea rows="2" data-pc2-hwin="${k}" maxlength="${k === 'trigger' ? 1000 : 2000}" placeholder="${e(L.ph)}" oninput="pc2HwIn('${id}','${k}',this.value)">${e(v[k] || '')}</textarea></label>`; };
+      h += `<div class="pc2-hwbox" data-pc2-hwbox><div class="pc2-hwh" data-pc2-hwprog>Homework · ${hw.n} of ${hw.tot}</div>${fld('exit')}${fld('trigger')}</div>`;
+    }
+  }
+  const lv = pb2.lv != null ? pb2.lv : (it.k || 0), rows = pc2Rows(c), q = rows[lv] && rows[lv].qty > 0 ? rows[lv].qty : (pv ? pv.plannedQty : null), t1 = q > 0 ? pc2T1(c, rows.reduce((a, r)=>a + (r.qty || 0), 0) || q) : null;
+  if(t1 && t1.sell > 0) h += `<div class="bd-m num" data-pc2-t1sell>T1 sell #${fmt0(t1.sell)} @ ${td3Num(t1.px)} · rest trails</div>`;
+  return h;
+}
+function pc2HwToggle(){ if(!pb2) return; pb2.hwOpen = !pb2.hwOpen; pb2Render(); }
+let pc2HwBusy = false;
+function pc2HwIn(sym, k, v){
+  wlMtIn(sym, k, v, null);
+  const it = wlItemOf(sym); if(!it) return; const p = hw1Prog(it, hw1Vals(it));
+  const h = document.querySelector('[data-pc2-hwprog]'); if(h) h.textContent = `Homework · ${p.n} of ${p.tot}`;
+  if(!p.miss.length && !pc2HwBusy){
+    pc2HwBusy = true;
+    hw1Save(sym, true).then(ok=>{ pc2HwBusy = false; if(!ok) return; const c = (coreCardsList || []).find(x=>wlSymCmp(x.ticker) === wlSymCmp(sym) && bdById(x.id)); if(c) pc2HwResize(c); setTimeout(()=>{ try{ bdRender(); if(pb2 && pb2.step === 'cplace'){ pb2.hwOpen = true; pb2Render(); } }catch(e){} }, 60); });
+  }
+}
+/* homework just became done: the UNFILLED rows of this Momentum plan go to full size (filled rows and other plans are never touched) */
+function pc2HwResize(c){
+  try{
+    const pl = c.plan || {}, rows = pc2Rows(c), k = (c.lots || []).length; if(!rows.length || !rows.some(r=>r.qty > 0)) return;
+    let f = RiskEngine.POLICY.hwFactor.mom; const fa = pl.ps1 && pl.ps1.engine && pl.ps1.engine.factors; const h = (fa || []).map(x=>/^HOMEWORK_(\d+)$/.exec(x)).filter(Boolean)[0]; if(h) f = +h[1] / 100; else if(fa && fa.length) return;
+    const lot = (c.market || coreMarketOf(c.ticker)) === 'TH' ? 100 : 1;
+    const nr = (pl.ps1.rows || []).map((r, i)=>i >= k && +r.qty > 0 ? Object.assign({}, r, {qty: Math.floor(+r.qty / f / lot + 1e-9) * lot}) : r);
+    const eng = Object.assign({}, pl.ps1.engine || {}, {factors:(fa || []).filter(x=>!/^HOMEWORK_/.test(x))});
+    coreWrite(c.id, {plan: Object.assign({}, pl, {ps1: Object.assign({}, pl.ps1, {rows:nr, engine:eng})})});
+    try{ const it = (coreCardsList || []).find(x=>x.id === c.id); if(it) it.plan = Object.assign({}, pl, {ps1: Object.assign({}, pl.ps1, {rows:nr, engine:eng})}); }catch(e){}
+  }catch(e){ console.warn('pc2 resize:', e); }
+}
+/* Top up (2f): a new row after the first fill, stamped with the first-fill date so it stays part of the first build */
 function pc2TopUpGo(id){
   const it = bdById(id); if(!it) return; const tu = pc2TopUpInfo(it); if(!tu) return;
-  efCorePlaceOpen(id, null, {topUp:true});
+  const c = it.ref, pl = c.plan || {}, rows = pc2Rows(c).map(r=>Object.assign({px:r.px, qty:r.qty}, r.createdAt ? {createdAt:r.createdAt} : {})), lots = c.lots || [];
+  while(rows.length < lots.length) rows.push({px:+lots[rows.length].px, qty:+lots[rows.length].qty});
+  const ff = pc2FirstFill(c), px = +c.px > 0 ? +c.px : +it.entry;
+  rows.push({px, qty:tu.qty, createdAt: ff ? ff + 'T00:00:00.000Z' : new Date().toISOString()});
+  const ps1 = Object.assign({}, pl.ps1 || {}, {rows});
+  coreWrite(c.id, {plan: Object.assign({}, pl, {ps1})});
+  try{ c.plan = Object.assign({}, pl, {ps1}); }catch(e){}
+  setTimeout(()=>{ try{ bdRender(); efCorePlaceOpen(id, rows.length - 1); }catch(e){ console.warn('topup:', e); } }, 120);
 }
+/* T1 limit sell as a second, optional order (holding Momentum position) */
+function pc2T1Info(it){ const c = it.ref; let pv = null; try{ pv = posView(it); }catch(e){} if(!pv || !(pv.heldQty > 0)) return null; const exQ = pv.legs.filter(l=>l.out && l.done).reduce((a, l)=>a + (+l.qty || 0), 0), t1 = pc2T1(c, pv.heldQty); if(!t1 || !(t1.sell > 0) || exQ > 0) return null; return {t1, pv}; }
+function pc2T1SheetHtml(it, pv){
+  const i = pc2T1Info(it), e = bdE; if(!i) return `<div data-pb2-step="place">${lrfPlaceHd(it, 'Place T1 sell')}<div class="bd-m">No T1 sell to place</div></div>`;
+  const t1 = i.t1, rew = pv && pv.avgEntry != null && pv.fx != null ? (t1.px - pv.avgEntry) * t1.sell * (pv.mult || 1) * pv.fx : null;
+  return `<div data-pb2-step="place" data-ef-core-place data-pc2-t1sheet>${lrfPlaceHd(it, 'Place T1 sell')}${lrBandCore(it)}<div class="lr3-ord" data-lr3-orders><div class="lr3-lbl">Order to place</div><div class="lr3-legs"><div class="lr3-leg num" data-lr3-leg><span class="lr3-side dn">SELL</span><b class="lr3-q">#${fmt0(t1.sell)}</b><span class="lr3-at">@</span><b class="lr3-px">${td3Num(t1.px)}</b><span class="lr3-sp"></span><span class="lr3-ty">Limit · T1</span></div></div></div>
+    <div class="bd-m num">${rew != null ? 'Locks <b class="up">+' + pvMoney(pv, rew) + '</b> · ' : ''}the rest (#${fmt0(i.pv.heldQty - t1.sell)}) trails your stop</div>
+    <div class="lr3-foot"><div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button data-enter-primary type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><div class="bd-m pb2-note">Records only · place the order at your broker</div></div></div>`;
+}
+function pc2T1Yes(it){
+  const i = pc2T1Info(it); bdPopClose(); if(!i) return;
+  bdWriteWithLog(it, {ln4:{t1PlacedAt:new Date().toISOString()}}, 'order', `T1 limit sell placed #${fmt0(i.t1.sell)} @ ${td3Num(i.t1.px)}`);
+  try{ ln4Toast(`${it.sym}: T1 sell order working ✓`); }catch(e){}
+}
+function pc2T1Open(id){ efCorePlaceOpen(id, null, {t1:true}); }
 function pvCardTap(id){ if(pvMoreOpen.has(id)) pvMoreOpen.delete(id); else pvMoreOpen.add(id); try{ bdRender(); }catch(e){} }
 function bdCardHtml(it){
   const p = bdPill(it), e = bdE, id = e(it.id);
@@ -28467,6 +28534,7 @@ function bdDrawerHtml(it){
   if(it.status === 'hold' && p.k === 'edit') foot += `<button type="button" class="go" data-bd-close onclick="bdClosePos('${id}')">Close trade</button>`;
   else foot += prim;
   if(it.status === 'hold') foot += `<button type="button" class="go" data-pc2-editplan-foot onclick="bdEditLv('${id}')">Edit plan</button>`;
+  if(it.status === 'hold' && it.kind === 'core' && it.tag !== 'COMP'){ try{ if(pc2T1Info(it)) foot += `<button type="button" class="go" data-pc2-t1place onclick="pc2T1Open('${id}')">${it.ref.ln4 && it.ref.ln4.t1PlacedAt ? 'T1 sell placed ✓' : 'Place T1 sell'}</button>`; }catch(e){} }
   return `<div class="bd-dh"><span class="bd-grab" aria-hidden="true"></span><div class="bd-dh1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${it.fam ? '<span class="bd-fam">Family</span>' : ''}<span class="bd-stp" data-bd-spill>${pill}</span><span class="bd-sp"></span><button type="button" class="bd-x" data-bd-x aria-label="Close" onclick="bdClose()">✕</button></div></div>
     <div class="bd-db">${bdDrawerBody(it)}</div>
     <div class="bd-df">${foot}</div>`;
@@ -28642,7 +28710,9 @@ function posView(it){
   /* PV1b — turn the leg facts into chips + feed the display-only reward / banked inputs (no sizing / risk input changes) */
   const hold = it.status === 'hold', baseQ = hold ? (inp.fills || []).reduce((a, f)=>a + (+f.qty || 0), 0) : (inp.planned || []).reduce((a, f)=>a + (+f.qty || 0), 0);
   const nEx = hold ? lg.exits.length : 0, rem = lg.T.slice(Math.min(nEx, Math.max(0, lg.T.length - 1))), two = rem.length === 2 && lg.q1 > 0 && baseQ > 0;
-  const tq = two ? [Math.min(lg.q1, baseQ), baseQ - Math.min(lg.q1, baseQ)] : rem.map(()=>baseQ), tgs = rem.map((px, j)=>({px, qty:tq[j]})).filter(t=>t.qty > 0 || !(baseQ > 0));
+  const tq = two ? [Math.min(lg.q1, baseQ), baseQ - Math.min(lg.q1, baseQ)] : rem.map(()=>baseQ);
+  if(it.kind === 'core' && coreTrackOfCard(it.ref) !== 'ladder' && rem.length === 1){ const t1o = pc2T1(it.ref, baseQ); if(t1o && t1o.sell > 0) tq[0] = t1o.sell; }   /* PC2 2g — the T1 order sells the T1 share (default 50 %), the rest trails */
+  const tgs = rem.map((px, j)=>({px, qty:tq[j]})).filter(t=>t.qty > 0 || !(baseQ > 0));
   inp.targets = hold ? null : tgs.filter(t=>t.qty > 0); inp.exits = hold ? lg.exits : null;
   const pv = PosView.calc(inp); pv.cur = cur; pv.unit = unit; Object.assign(pv, extra);
   /* LR3 fix — money shows in the ACCOUNT's currency (Main = USD → $ = ฿ ÷ Settings FX); the numbers themselves stay in ฿ */
@@ -29612,10 +29682,10 @@ function efCarryAdopt(id){   /* a plan carried from last week is valid this week
   }catch(e){}
 }
 /* ── EF1 C · Momentum / Compounder Place › → the same confirm sheet (one Confirm) ── */
-function efCorePlaceOpen(id, lv){
+function efCorePlaceOpen(id, lv, opts){
   const it = bdById(id); if(!it || it.kind !== 'core') return;
   if(bdPopOpen()) bdPopClose();
-  pb2 = {step:'cplace', id, a:it.sym, lv:lv == null ? null : lv}; pb2Render();
+  pb2 = {step:'cplace', id, a:it.sym, lv:lv == null ? null : lv, t1:!!(opts && opts.t1), hwOpen:false}; pb2Render();
 }
 function efLevelRiskHtml(it, pv, lv){   /* "This order: Buy #18 @ 140 · +Risk ฿18.2k · total risk after fill 1.9%" */
   const e = bdE;
@@ -29670,11 +29740,13 @@ function efCorePlaceHtml(){
   const lvRisk = pb2.lv != null ? efLevelRiskHtml(it, pv, pb2.lv) : '';   /* EF1b — this order's own risk */
   const setupOn = pb2.lv == null ? `<label class="pb2-q" data-ef-setup hidden style="display:none!important"><input type="checkbox" id="efSetupCk" checked> Setup ready today</label>` : '';
   const money = pv ? pvMoneyLine(it, pv) : '';
-  return `<div data-pb2-step="place" data-ef-core-place>${lrfPlaceHd(it, 'Place order' + (pb2.lv != null ? ' #' + (pb2.lv + 1) : ''))}${lrBandCore(it)}${S.orders}${S.tiles}${lvRisk}${setupOn}<details class="pb2-more" data-ef-more><summary>More · size working, FX, limits</summary><div class="bd-m"><div class="pv-r2" data-pv-money>${money}</div>Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}${pv && pv.plannedRiskDiff ? `<br><span data-ef-risk-diff class="ef-amber">Stored plan risk ${e(pvMoney(pv, pv.plannedRiskStored))} differs from the legs (${e(pvMoney(pv, pv.plannedRisk))}) — the legs are shown</span>` : ''}</div></details><div class="lr3-foot"><div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button data-enter-primary type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><div class="bd-m pb2-note">Records only · place the order at your broker</div></div></div>`;
+  if(pb2.t1) return pc2T1SheetHtml(it, pv);
+  return `<div data-pb2-step="place" data-ef-core-place>${lrfPlaceHd(it, 'Place order' + (pb2.lv != null ? ' ' + ('①②③④'[pb2.lv] || '#' + (pb2.lv + 1)) : ''))}${lrBandCore(it)}${S.orders}${pc2PlaceExtras(it, pv)}${S.tiles}${lvRisk}${setupOn}<details class="pb2-more" data-ef-more><summary>More · size working, FX, limits</summary><div class="bd-m"><div class="pv-r2" data-pv-money>${money}</div>Size = risk ÷ (entry − stop) × FX${f ? '<br>' + e(f) : ''}${pv && pv.plannedRiskDiff ? `<br><span data-ef-risk-diff class="ef-amber">Stored plan risk ${e(pvMoney(pv, pv.plannedRiskStored))} differs from the legs (${e(pvMoney(pv, pv.plannedRisk))}) — the legs are shown</span>` : ''}</div></details><div class="lr3-foot"><div class="pb2-ft"><button type="button" class="go" data-pb2-no onclick="pb2PlaceNo()">Not yet</button><button data-enter-primary type="button" class="go p" data-pb2-yes onclick="efCorePlaceYes()">Confirm</button></div><div class="bd-m pb2-note">Records only · place the order at your broker</div></div></div>`;
 }
 function efCorePlaceYes(){
   const s = pb2; if(!s || s.step !== 'cplace') return;
   const id = s.id, it = bdById(id); if(!it){ bdPopClose(); return; }
+  if(s.t1){ pc2T1Yes(it); return; }
   if(!wl1PlaceGate(id, s.lv != null ? s.lv : undefined)) return;   /* the engine is checked again at Confirm */
   const stp = document.getElementById('efSetupCk'), setup = !!(stp && stp.checked);
   bdPopClose();
