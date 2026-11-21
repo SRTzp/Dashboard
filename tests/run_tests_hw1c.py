@@ -40,7 +40,7 @@ def run(pw, w, h):
         js(page, "()=>ltImpSave()"); page.wait_for_timeout(400)
         after = json.loads(js(page, SNAP, "COST"))
         toast = js(page, "()=>[...document.querySelectorAll('body *')].map(e=>e.children.length?'':e.textContent).filter(t=>t.indexOf('Fact Sheet updated')===0)[0]||''")
-        check(f"{tag} toast names what changed", toast == "Fact Sheet updated (Q4 FY26) · your notes and the AI thesis are unchanged", toast)
+        check(f"{tag} toast names what changed", toast == "Fact Sheet updated (Q4 FY26) · missing: cash, exposure, more · made for momentum, shown as Compounder · your notes and the AI thesis are unchanged", toast)
         check(f"{tag} sheet closed by itself", js(page, "()=>ltImp === null && !document.getElementById('ltOverlay').classList.contains('show')"))
         keep = ["summary", "sections", "kpi", "tripwires", "evidence", "tier_inputs", "sources", "gaps", "date", "terms"]
         check(f"{tag} COST: summary/sections/kpi/tripwires/evidence untouched", all(before["th"].get(k) == after["th"].get(k) for k in keep))
@@ -95,7 +95,7 @@ def run(pw, w, h):
         check(f"{tag} fallback: 'No Fact Sheet yet' + 2 numbered steps", "No Fact Sheet yet" in fb and "1. Copy the command and run it in Claude: living-thesis facts ZZ" in fb and "2. Paste the JSON it gives you: Import JSON ›" in fb, fb)
         check(f"{tag} fallback: no other import button or link", js(page, "()=>document.querySelectorAll('[data-hw1-page] [data-hw1-import]').length") == 0 and js(page, "()=>document.querySelectorAll('[data-hw1-import-link]').length") == 1)
         js(page, "()=>{ window.__cp = null; Object.defineProperty(navigator, 'clipboard', {value:{writeText:(t)=>{ window.__cp = t; return Promise.resolve(); }}, configurable:true}); document.querySelector('[data-hw1-copycmd]').click(); }"); page.wait_for_timeout(300)
-        check(f"{tag} command chip copies 'living-thesis facts ZZ' + toast Copied", js(page, "()=>window.__cp") == "living-thesis facts ZZ" and js(page, "()=>[...document.querySelectorAll('body *')].some(e=>!e.children.length && e.textContent==='Copied')"))
+        check(f"{tag} command chip copies 'living-thesis facts ZZ' + toast Copied", js(page, "()=>window.__cp") == "living-thesis facts ZZ compounder" and js(page, "()=>[...document.querySelectorAll('body *')].some(e=>!e.children.length && e.textContent==='Copied')"))
         if phone: check(f"{tag} phone: chip and Import JSON › >= 44px", js(page, "()=>[...document.querySelectorAll('[data-hw1-copycmd],[data-hw1-import-link]')].every(b=>b.getBoundingClientRect().height >= 44)"))
         js(page, "()=>document.querySelector('[data-hw1-import-link]').click()"); page.wait_for_timeout(250)
         check(f"{tag} link opens the import sheet bound to ZZ", "ZZ" in (js(page, TXT, "#ltModal h3") or "") and js(page, "()=>ltImp && ltImp.bound") == "ZZ")

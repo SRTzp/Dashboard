@@ -19705,20 +19705,21 @@ const LT_F_KIND = ['rpt','calc','mgmt','web'], LT_F_TRACK = ['compounder','momen
 const LT_F_G = ['growth','profit','cash','expected','exposure','lastq'], LT_F_GM = ['segments','competition','capital','guidance','valuation','history','owners'];
 const LT_F_QK = ['rev_yoy','eps_yoy','gm','op_margin','shares_yoy'];
 const LT_F_LEVEL = k => k==='op_margin' || k==='gm' || /^kpi_.*(renewal|retention|margin|rate|util)/.test(k);
-function ltFactsCheck(f){   /* → {ok:f} | {err:'first problem'} — never throws */
+function ltFactsCheck(f, trk){   /* → {ok:f, miss:[groups], made:track|''} | {err:'first problem'} — never throws · HW1d: trk = the Watch track (default f.track); missing required groups are not errors */
   const isO = x => x && typeof x==='object' && !Array.isArray(x), isS = x => typeof x==='string' && x.trim()!=='', isN = x => typeof x==='number' && isFinite(x);
   const nm = (p, i) => p + '[' + i + ']';
   try{
     if(!isO(f)) return {err:'facts must be an object'};
+    f = JSON.parse(JSON.stringify(f));   /* HW1d — never mutate the caller's object */
     if(!LT_F_TRACK.includes(f.track)) return {err:'facts.track must be compounder or momentum'};
     if(!isS(f.asOf)) return {err:'facts.asOf must be text (e.g. Q3 FY26)'};
     if(!isS(f.date) || !/^\d{4}-\d{2}-\d{2}$/.test(f.date)) return {err:'facts.date must be YYYY-MM-DD'};
     if(!isS(f.biz)) return {err:'facts.biz must be text'};
-    if(f.biz.length>90) return {err:'facts.biz is over 90 characters'};
+    if(f.biz.length>90) f.biz = f.biz.slice(0,90).trim();   /* HW1d — trim, don't fail */
     const line = (x, p, groups, needSrc) => {
       if(!isO(x)) return p + ' must be an object';
       if(!isS(x.text)) return p + '.text must be text';
-      if(x.text.length>80) return p + '.text is over 80 characters';
+      if(x.text.length>80) x.text = x.text.slice(0,80).trim();
       if(groups){ if(!groups.includes(x.g)) return p + '.g must be one of ' + groups.join('/'); if(!isS(x.label)) return p + '.label must be text'; }
       if(!LT_F_KIND.includes(x.kind)) return p + '.kind must be one of ' + LT_F_KIND.join('/');
       if(!isS(x.src)) return p + ' has no src (source)';
@@ -19747,22 +19748,27 @@ function ltFactsCheck(f){   /* → {ok:f} | {err:'first problem'} — never thro
       if(r.kind==='calc' && !isS(r.formula)) return {err:p + ' is a calc without formula'};
     }
     const lim = [['lines',10],['more',14],['mgmt',2],['missing',3]];
-    for(const [k,n] of lim){ if(f[k]===undefined || f[k]===null) continue; if(!Array.isArray(f[k])) return {err:'facts.' + k + ' must be a list'}; if(f[k].length>n) return {err:'facts.' + k + ' has more than ' + n + ' items'}; }
+    for(const [k,n] of lim){ if(f[k]===undefined || f[k]===null) continue; if(!Array.isArray(f[k])) return {err:'facts.' + k + ' must be a list'}; if(f[k].filter(x=>!(k==='missing' && typeof x==='string' && / — not in this Fact Sheet$/.test(x))).length>n) return {err:'facts.' + k + ' has more than ' + n + ' items'}; }
     const L = f.lines || [], M = f.more || [], G = f.mgmt || [], X = f.missing || [];
     for(let i=0;i<L.length;i++){ const e = line(L[i], nm('facts.lines', i), LT_F_G); if(e) return {err:e}; }
     for(let i=0;i<M.length;i++){ const e = line(M[i], nm('facts.more', i), LT_F_GM); if(e) return {err:e}; }
-    for(let i=0;i<G.length;i++){ const x = G[i]; if(!isO(x) || !isS(x.text) || x.text.length>80 || !isS(x.src)) return {err:nm('facts.mgmt', i) + ' needs text (≤ 80 chars) and src'}; }
+    for(let i=0;i<G.length;i++){ const x = G[i]; if(!isO(x) || !isS(x.text) || !isS(x.src)) return {err:nm('facts.mgmt', i) + ' needs text and src'}; if(x.text.length>80) x.text = x.text.slice(0,80).trim(); }
     for(let i=0;i<X.length;i++) if(!isS(X[i])) return {err:nm('facts.missing', i) + ' must be text'};
     const has = g => L.some(x=>x.g===g);
-    const need = f.track==='momentum' ? ['lastq','expected'] : ['cash','expected','exposure'];
-    const miss = need.filter(g=>!has(g)); if(miss.length) return {err:'a ' + f.track + ' Fact Sheet needs lines in group ' + miss.join(', ')};
-    if(f.track==='compounder' && !M.length) return {err:'a compounder Fact Sheet needs "more" items'};
-    return {ok:f};
+    const T = LT_F_TRACK.includes(trk) ? trk : f.track;
+    const need = T==='momentum' ? ['lastq','expected'] : ['cash','expected','exposure'];
+    const miss = need.filter(g=>!has(g));
+    if(T==='compounder' && !M.length) miss.push('more');
+    if(miss.length){
+      f.missing = (f.missing || []).slice();
+      miss.forEach(g=>{ const t = g.charAt(0).toUpperCase() + g.slice(1) + ' — not in this Fact Sheet'; if(!f.missing.includes(t)) f.missing.push(t); });
+    }
+    return {ok:f, miss, made:(T!==f.track ? f.track : ''), shown:T};
   }catch(e){ return {err:'facts could not be read'}; }
 }
 function ltFacts(it){   /* → validated facts object or null (for HW1) */
   const th = wlThesisRaw(it); if(!th || th.facts===undefined || th.facts===null) return null;
-  const r = ltFactsCheck(th.facts); return r.ok || null;
+  const r = ltFactsCheck(th.facts, wl1TrkOf(it)==='ladder' ? 'compounder' : 'momentum'); return r.ok || null;
 }
 function ltTrend(row){   /* → 'accel' | 'slow' | 'rising' | 'falling' | 'steady' */
   const v = row && Array.isArray(row.v) ? row.v.slice(-3) : [];
@@ -19792,12 +19798,13 @@ function ltParse(text, bound){   /* → {err} | {th, log} */
   if(!sym) return {err:'The JSON has no sym (stock name)'};
   const noSec = !(o.sections && typeof o.sections==='object' && !Array.isArray(o.sections));
   if((noSec || o.mode==='facts') && o.facts!==undefined && o.facts!==null && noSec){   /* HW1c — facts-only import */
-    const fr = ltFactsCheck(o.facts); if(fr.err) return {err:'Fact Sheet not valid — ' + fr.err + ' (nothing else in this file to import)'};
+    const itB = wlItems.find(w=>wlSymCmp(w.ticker)===wlSymCmp(bound || sym)) || null;
+    const fr = ltFactsCheck(o.facts, itB ? (wl1TrkOf(itB)==='ladder' ? 'compounder' : 'momentum') : undefined); if(fr.err) return {err:'Fact Sheet not valid — ' + fr.err + ' (nothing else in this file to import)'};
     if(bound && wlSymCmp(sym) !== wlSymCmp(bound)) return {err:'This JSON is for ' + sym + ' not ' + bound};
     const sm = (o.summary && typeof o.summary==='object' && !Array.isArray(o.summary)) ? o.summary : {};
     const th = {facts:fr.ok, summary:{biz:String(sm.biz==null ? fr.ok.biz : sm.biz)}, catalysts:ltArr(o.catalysts), mode:'facts', sym};
     ['date','asOf','basis'].forEach(k=>{ if(typeof o[k]==='string') th[k] = o[k]; });
-    return {th, log:[], factsOnly:true};
+    return {th, log:[], factsOnly:true, fMiss:fr.miss, fMade:fr.made, fShown:fr.shown};
   }
   if(!o.summary || typeof o.summary!=='object' || Array.isArray(o.summary)) return {err:'summary must be an object'};
   const sec = (o.sections && typeof o.sections==='object' && !Array.isArray(o.sections)) ? o.sections : null;
@@ -19935,7 +19942,7 @@ function ltImpSave(){
     wlMenu = '';
     ltSheetClose();
     try{ renderWatchlist(); }catch(e){}
-    try{ sdToast('Fact Sheet updated (' + th.facts.asOf + ') · your notes and the AI thesis are unchanged'); }catch(e){}
+    try{ sdToast('Fact Sheet updated (' + th.facts.asOf + ')' + ((p.fMiss||[]).length ? ' · missing: ' + p.fMiss.join(', ') : '') + (p.fMade ? ' · made for ' + p.fMade + ', shown as ' + (p.fShown==='compounder' ? 'Compounder' : 'Momentum') : '') + ' · your notes and the AI thesis are unchanged'); }catch(e){}
     return;
   }
   if(!it){
@@ -30464,7 +30471,7 @@ function hw1FactsHtml(it){
     if(biz) rows.push(hw1FRow('Business', e(biz)));
     ltArr(th && th.kpi).slice(0, 3).forEach(k=>{ if(k && k.name) rows.push(hw1FRow('KPI', e(String(k.name) + (k.base ? ' · ' + k.base : '')))); });
     ltNextCats(it).slice(0, 2).forEach(c=>rows.push(hw1FRow('Catalyst', e(wl1ArchDate(c.date) + ' · ' + ltShort(c.event, 70)))));
-    return `<div class="hw1-facts" data-hw1-facts="fallback"><div class="hw1-fh"><span class="lbl">Facts</span></div>${rows.join('') || ''}<div class="hw1-mut hw1-steps" data-hw1-nofacts><b>No Fact Sheet yet</b><div data-hw1-step="1">1. Copy the command and run it in Claude: <button type="button" class="hw1-cmd" data-hw1-copycmd data-cmd="living-thesis facts ${e(wl1Bare(it.ticker))}" onclick="hw1CopyCmd(this)">living-thesis facts ${e(wl1Bare(it.ticker))} ⧉</button></div><div data-hw1-step="2">2. Paste the JSON it gives you: <button type="button" class="hw1-lnk" data-hw1-import-link data-sym="${e(it.ticker)}" onclick="ltImportOpen(this.dataset.sym)">Import JSON ›</button></div></div></div>`;
+    return `<div class="hw1-facts" data-hw1-facts="fallback"><div class="hw1-fh"><span class="lbl">Facts</span></div>${rows.join('') || ''}<div class="hw1-mut hw1-steps" data-hw1-nofacts><b>No Fact Sheet yet</b><div data-hw1-step="1">1. Copy the command and run it in Claude: <button type="button" class="hw1-cmd" data-hw1-copycmd data-cmd="living-thesis facts ${e(wl1Bare(it.ticker))} ${wl1TrkOf(it)==='ladder' ? 'compounder' : 'momentum'}" onclick="hw1CopyCmd(this)">living-thesis facts ${e(wl1Bare(it.ticker))} ${wl1TrkOf(it)==='ladder' ? 'compounder' : 'momentum'} ⧉</button></div><div data-hw1-step="2">2. Paste the JSON it gives you: <button type="button" class="hw1-lnk" data-hw1-import-link data-sym="${e(it.ticker)}" onclick="ltImportOpen(this.dataset.sym)">Import JSON ›</button></div></div></div>`;
   }
   const rows = [];
   rows.push(hw1FRow('Business', e(f.biz)));
