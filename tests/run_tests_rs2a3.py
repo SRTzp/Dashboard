@@ -190,7 +190,7 @@ def hwpage(pw):
     b, page, pe = H.open_hw(pw, 1440, 480)
     try:
         H.go(page, "AAPL", "winner")
-        POS = "()=>({sel:wlSel, on:hw1On(), pg:!!document.querySelector('[data-hw1-page=AAPL]'), y:Math.round(window.scrollY + [...document.querySelectorAll('.hw1-pg, .lr5.hw .wlDet.lr5-det, .hw1-body')].reduce((a, el)=>a + el.scrollTop, 0))})"
+        POS = "()=>({sel:wlSel, on:hw1On(), pg:!!document.querySelector('[data-hw1-page=AAPL]'), y:Math.round(window.scrollY + [...document.querySelectorAll('.hw1-pg, .lr5.hw .wlDet.lr5-det, .hw1-body, .hw1-facts')].reduce((a, el)=>a + el.scrollTop, 0))})"
         a = js(page, POS)
         check(f"{tag} 11 Homework page open on AAPL", a["sel"] == "AAPL" and a["on"] and a["pg"], a)
         js(page, "()=>document.activeElement && document.activeElement.blur()")

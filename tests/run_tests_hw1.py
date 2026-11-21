@@ -104,27 +104,32 @@ def run(pw, w, h):
 
         # ---- Fact Sheet (Compounder COST, facts)
         H.go(page, "COST", "ladder")
-        check(f"{tag} COST page: Fact Sheet legend line", "rpt from filing · calc calculated, tap for formula · mgmt management says" in (js(page, TXT, "[data-hw1-legend]") or ""), js(page, TXT, "[data-hw1-legend]"))
-        check(f"{tag} Fact Sheet table: Inter + tabular-nums, mono only on tags", js(page, "()=>{ const t = document.querySelector('.hw1-q'), td = t.querySelector('td.n'); const f = e=>getComputedStyle(e).fontFamily; return f(t).includes('Inter') && !f(td).includes('Mono') && getComputedStyle(td).fontVariantNumeric.includes('tabular-nums') && getComputedStyle(document.querySelector('.hw1-k')).fontFamily.includes('Mono'); }"))
-        facts = js(page, TXT, "[data-hw1-facts]") or ""
-        check(f"{tag} Fact Sheet: Business · Revenue mix (seg pct% (+yoy)) · table trend words · Mgmt says · Missing", all(x in facts for x in ["Membership warehouse stores", "Food 40% (+7%)", "Fees 2% (+11%)", "Revenue y/y", "→ steady", "Mgmt says", "Renewal dip from new online sign-ups", "Missing", "Timing of next fee increase"]), facts[:600])
-        check(f"{tag} trend words: ↗ accel. / ↘ slipping coloured", js(page, "()=>{ const t = k=>document.querySelector('[data-hw1-q=\"'+k+'\"] td.t'); const e = t('eps_yoy'), r = t('kpi_renewal'); return e.innerText.includes('↗ accel.') && e.classList.contains('up') && r.innerText.includes('↘ slipping') && r.classList.contains('dn'); }"))
+        check(f"{tag} COST page: no legend and no rpt/calc/mgmt tags (FS2)", js(page, "()=>!document.querySelector('[data-hw1-legend], .hw1-k')"))
+        js(page, "()=>hw1SegSet(hwSym,'results')"); page.wait_for_timeout(100)
+        check(f"{tag} Fact Sheet tiles: Inter + tabular-nums, no mono", js(page, "()=>{ const t = document.querySelector('.hw2-t .ans b'); const f = e=>getComputedStyle(e).fontFamily; return f(t).includes('Inter') && !f(t).includes('Mono') && getComputedStyle(t).fontVariantNumeric.includes('tabular-nums'); }"))
+        js(page, "()=>hw1SegSet(hwSym,'business')"); page.wait_for_timeout(100)
+        fb = js(page, TXT, "[data-hw2-pane=business]") or ""
+        js(page, "()=>hw1SegSet(hwSym,'results')"); page.wait_for_timeout(100)
+        fr = js(page, TXT, "[data-hw2-pane=results]") or ""
+        facts = fb + " " + fr
+        check(f"{tag} Fact Sheet: Business · Revenue mix (seg pct% · +yoy%) · Mgmt · Not disclosed", all(x in facts for x in ["Membership warehouse stores", "Food 40% · +7%", "Fees 2% · +11%", "Is revenue growing?", "steady", "What does management say?", "Renewal dip from new online sign-ups", "Not disclosed", "Timing of next fee increase"]), facts[:600])
+        check(f"{tag} trend words: accelerating (green) / slipping (amber)", js(page, "()=>{ const t = k=>document.querySelector('[data-hw1-q=\"'+k+'\"] .hw2-tw'); const e = t('eps_yoy'), r = t('kpi_renewal'); return e.innerText === 'accelerating' && e.classList.contains('g') && r.innerText === 'slipping' && r.classList.contains('a') && e.dataset.hw1Trend === 'accel' && r.dataset.hw1Trend === 'falling'; }"))
         check(f"{tag} More facts folded by default, lists the 'more' items grouped", js(page, "()=>{ const d = document.querySelector('[data-hw1-more]'); return !!d && !d.open && d.innerText.includes('More facts') ; }") )
         js(page, "()=>{ document.querySelector('[data-hw1-more]').open = true; }")
         check(f"{tag} More facts open: 'Competition' group + Peer op. margin", all(x.lower() in (js(page, TXT, "[data-hw1-more]") or "").lower() for x in ["Competition", "Peer op. margin"]))
         sec = js(page, SEC)
-        pagetxt = js(page, "()=>document.querySelector('[data-hw1-page]').textContent")
-        check(f"{tag} page never shows summary.thesis / next / breaker text (even hidden)", sec and not any(x in pagetxt for x in sec), sec)
+        pagetxt = js(page, "()=>document.querySelector('[data-hw1-page]').innerText")
+        check(f"{tag} thesis / next / breaker text is not shown outside the AI thesis tab", sec and not any(x in pagetxt for x in sec), sec)
         # popover
-        js(page, "()=>{ document.querySelectorAll('.hw1-fr.tap').forEach(x=>{ if(x.innerText.includes('Fees vs profit')) x.click(); }); }"); page.wait_for_timeout(150)
+        js(page, "()=>{ document.querySelectorAll('.hw2-lr.tap').forEach(x=>{ if(x.innerText.includes('Fees vs profit')) x.click(); }); }"); page.wait_for_timeout(150)
         pop = js(page, "()=>{ const p = [...document.querySelectorAll('.hw1-pop')].find(x=>x.offsetParent && x.innerText.includes('Formula')); return p ? p.innerText.replace(/\\s+/g,' ') : null; }")
         check(f"{tag} tap a row -> popover with Formula · Period · Source", pop and "Formula" in pop and "Fee revenue $1.3B ÷ Operating income $2.6B" in pop and "Period Q3 FY26" in pop and "Source 10-Q p.14" in pop, pop)
         check(f"{tag} popover shows the note", "Shows size only; does not prove half the profit comes from fees" in (pop or ""), pop)
         check(f"{tag} popover note in the warn colour", js(page, "()=>{ const n = [...document.querySelectorAll('[data-hw1-pop-note]')].find(x=>x.offsetParent); return !!n && getComputedStyle(n).color === 'rgb(154, 91, 0)'; }"))
-        js(page, "()=>{ document.querySelectorAll('.hw1-fr.tap.sel').forEach(x=>x.click()); }"); page.wait_for_timeout(100)
+        js(page, "()=>{ document.querySelectorAll('.hw2-lr.tap.sel').forEach(x=>x.click()); }"); page.wait_for_timeout(100)
         check(f"{tag} tap again closes it", not js(page, "()=>[...document.querySelectorAll('.hw1-pop')].some(x=>x.offsetParent && x.innerText.includes('Formula'))"))
         js(page, "()=>document.querySelector('[data-hw1-q=\"kpi_renewal\"]').click()"); page.wait_for_timeout(120)
-        check(f"{tag} table row popover shows the source", "8-K ×3" in (js(page, "()=>{ const p = [...document.querySelectorAll('.hw1-poptr .hw1-pop')].find(x=>x.offsetParent); return p ? p.innerText : ''; }") or ""))
+        check(f"{tag} tile popover shows the source", "8-K ×3" in (js(page, "()=>{ const p = [...document.querySelectorAll('.hw1-pop')].find(x=>x.offsetParent); return p ? p.innerText : ''; }") or ""))
         # Compare
         if phone: js(page, "()=>hw1SegSet('COST','mine')")
         check(f"{tag} Compare hidden while empty", not js(page, VIS, '[data-hw1-cmp-btn="why"]'))
