@@ -423,7 +423,7 @@ def fix_checks(pw, w, h):
     try:
         hw(page, "AVGO", False)
         a = card(page, "mA")
-        same = js(page, "()=>{ const c = document.querySelector('[data-bd-card=\"mA\"] .pc2-nx'); const h = c.querySelector('.pc2-hw'), b = c.querySelector('.pc2-b'); return {hw:h.innerText, same: Math.abs(h.getBoundingClientRect().top - b.getBoundingClientRect().top) < 24}; }")
+        same = js(page, "()=>{ const c = document.querySelector('[data-bd-card=\"mA\"] .pc2-nx'); const h = c.querySelector('.pc2-hw'), b = c.querySelector('.pc2-b'); return {hw:h.innerText, same: Math.abs(h.getBoundingClientRect().top - b.getBoundingClientRect().top) <= 4, dy: Math.round(b.getBoundingClientRect().top - h.getBoundingClientRect().top)}; }")
         check(f"{tag} fix2 Momentum next step is the short form 'Homework 0/2 · #n when done ›'" + (" and Place stays on the same line" if w >= 1280 else " (may wrap on the phone)"), re.match(r"^Homework 0/2 · #\d+ when done ›$", same["hw"]) and (w < 1280 or same["same"]), same)
         x = card(page, "xp")
         check(f"{tag} fix3 no blocked reason is cut with '…' (XAU: 'Another Sat setup open in XAU · close or edit it')", "…" not in js(page, "()=>document.querySelector('#bdBoard').innerText") and "Another Sat setup open in XAU · close or edit it" in x["nx"], x["nx"])
