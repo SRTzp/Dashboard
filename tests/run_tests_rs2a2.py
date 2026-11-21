@@ -104,12 +104,12 @@ def desk(pw, w, h):
         seq = []
         for _ in range(5):
             page.keyboard.press("Tab"); page.wait_for_timeout(250); seq.append(js(page, SEG))
-        check(f"{tag} 3 Tab cycles Momentum → Compounder → Ideas → Screen → Momentum → Compounder", seq == ["ladder", "idea", "screen", "winner", "ladder"], seq)
+        check(f"{tag} 3 Tab cycles (NT1 order) Momentum → Compounder → Screen → Ideas → Momentum → Compounder", seq == ["ladder", "screen", "idea", "winner", "ladder"], seq)
         seq = []
         for _ in range(3):
             page.keyboard.press("Shift+Tab"); page.wait_for_timeout(250); seq.append(js(page, SEG))
-        check(f"{tag} 3 Shift+Tab goes back (Compounder → Momentum → Screen → Ideas)", seq == ["winner", "screen", "idea"], seq)
-        check(f"{tag} 3 the segmented control follows (Ideas selected)", js(page, "()=>[...document.querySelectorAll('[data-wl1-segs] [role=tab]')].map(t=>t.getAttribute('aria-selected'))") == ["false", "false", "true", "false"])
+        check(f"{tag} 3 Shift+Tab goes back (Compounder → Momentum → Ideas → Screen)", seq == ["winner", "idea", "screen"], seq)
+        check(f"{tag} 3 the segmented control follows (Screen selected)", js(page, "()=>[...document.querySelectorAll('[data-wl1-segs] [role=tab]')].map(t=>t.getAttribute('aria-selected'))") == ["false", "false", "false", "true"])
         js(page, "()=>{ wlSetView('screen'); }"); page.wait_for_timeout(300)
         page.focus("[data-rs2-q]"); page.keyboard.press("Tab"); page.wait_for_timeout(250)
         check(f"{tag} 3 Tab while typing in the search box does NOT switch segment", js(page, SEG) == "screen", js(page, SEG))
@@ -185,11 +185,11 @@ def phone(pw, w, h):
         seq = []
         for dx in (120, 120, 120, 120):
             swipe(page, dx, 5); seq.append(js(page, SEG))
-        check(f"{tag} 8 swipe right ×4: Screen → Ideas → Compounder → Momentum → stays (no wrap)", seq == ["idea", "ladder", "winner", "winner"], seq)
+        check(f"{tag} 8 swipe right ×4: Screen → Compounder → Momentum → Ideas → stays (no wrap)", seq == ["ladder", "winner", "idea", "idea"], seq)
         seq = []
         for dx in (-120, -120, -120, -120):
             swipe(page, dx, 5); seq.append(js(page, SEG))
-        check(f"{tag} 8 swipe left ×4: Momentum → Compounder → Ideas → Screen → stays", seq == ["ladder", "idea", "screen", "screen"], seq)
+        check(f"{tag} 8 swipe left ×4: Ideas → Momentum → Compounder → Screen → stays", seq == ["winner", "ladder", "screen", "screen"], seq)
         check(f"{tag} 8 the segmented control follows (Screen selected)", js(page, "()=>[...document.querySelectorAll('[data-wl1-segs] [role=tab]')].map(t=>t.getAttribute('aria-selected'))") == ["false", "false", "false", "true"])
         swipe(page, 40, 0); swipe(page, 120, 120)
         check(f"{tag} 8 short (< 60px) or mostly-vertical swipes do nothing", js(page, SEG) == "screen", js(page, SEG))

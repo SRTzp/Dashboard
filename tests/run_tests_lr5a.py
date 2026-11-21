@@ -28,7 +28,7 @@ def run(pw, w, h):
         js(page, "()=>{ switchTab('watch'); wlSetView('wl'); renderWatchlist(); }"); page.wait_for_timeout(500)
         # ---- header
         hd = js(page, "()=>({h1:document.querySelector('.lr5-h1').innerText, segs:[...document.querySelectorAll('[data-wl1-segs] button')].map(b=>b.innerText.replace(/\\s+/g,' ').trim()), sum:document.querySelector('[data-wl1-sum]').innerText.replace(/\\s+/g,' ').trim(), find:!!document.querySelector('[data-lr5-q]') && getComputedStyle(document.querySelector('[data-lr5-q]').closest('label')).display !== 'none', add:document.querySelector('[data-wl1-import]').innerText.trim()})")
-        check(f"{tag} A: header = Watch · Momentum 5 · Compounder 1 · Ideas 2", hd["h1"] == "Watch" and hd["segs"] in (["Momentum 5", "Compounder 1", "Ideas 2", "Screen"], ["Mom 5", "Comp 1", "Ideas 2", "Screen"]), hd)   # RS2a: 4th segment Screen · phone short labels (ScreenRSPhone mockup)
+        check(f"{tag} A: header = Watch · Ideas · Momentum 5 · Compounder 1 · Screen", hd["h1"] == "Watch" and hd["segs"] in (["Ideas", "Momentum 5", "Compounder 1", "Screen"], ["Ideas", "Mom 5", "Comp 1", "Screen"]), hd)   # RS2a: 4th segment Screen · phone short labels (ScreenRSPhone mockup)
         check(f"{tag} A: summary line '5 stocks · 3 need homework'" + (" · shared by Main and Family" if desk else ""), hd["sum"].startswith("5 stocks · 3 need homework") and (("shared by Main and Family" in hd["sum"]) if desk else True), hd["sum"])
         check(f"{tag} A: desktop has Find ticker + '+ Add stock'; phone has '+ Add' only", (hd["find"] and hd["add"] == "+ Add stock") if desk else (not hd["find"] and hd["add"] == "+ Add"), hd)
         # ---- rows + statuses
@@ -154,10 +154,10 @@ def run(pw, w, h):
         js(page, "()=>wl1TrkSet('winner')"); page.wait_for_timeout(200)
         # ---- Ideas
         js(page, "()=>wlSetView('idea')"); page.wait_for_timeout(500)
-        ir = js(page, "()=>({on:document.querySelector('[data-wl1-ideas]').classList.contains('on'), hdr:[...document.querySelectorAll('.lr5-ith .lbl')].map(x=>x.innerText), rows:[...document.querySelectorAll('.lr5-ir')].map(r=>r.innerText.replace(/\\s+/g,' ').trim()), rs:[...document.querySelectorAll('.lr5-ir .c-rs')].map(e=>e.innerText.trim()), sum:document.querySelector('[data-wl1-sum]').innerText.replace(/\\s+/g,' ').trim(), btns:[!!document.querySelector('[data-idea-new-top]'), !!document.querySelector('[data-idea-import-top]')]})")
-        check(f"{tag} F: Ideas tab — same table style, 2 idea rows, no RS column (ID1), '+ Idea' and Import in the header", ir["on"] and len(ir["rows"]) == 2 and (ir["rs"] == [] if desk else True) and ir["btns"] == [True, True] and ir["sum"].startswith("2 ideas"), ir)
-        ov_ = js(page, "()=>[...document.querySelectorAll('.lr5-ir')].map(r=>{ const c = r.querySelector('.lr5-id .ltChip').getBoundingClientRect(), n = r.querySelector('.c-sec').getBoundingClientRect(), vis = getComputedStyle(r.querySelector('.c-sec')).display !== 'none'; const ch = r.querySelector('.lr5-id .ltChip'); return {right:Math.round(c.right), secLeft:Math.round(n.left), vis, nowrap:getComputedStyle(ch).whiteSpace, w:Math.round(c.width)}; })")
-        check(f"{tag} F: Ideas status chip never overlaps the Scope column (nowrap · ellipsis · fixed Status width)", all(x["nowrap"] == "nowrap" and ((x["right"] <= x["secLeft"]) if x["vis"] else True) for x in ov_), ov_)
+        ir = js(page, "()=>({on:document.querySelector('[data-wl1-ideas]').classList.contains('on'), rows:[...document.querySelectorAll('.nt1-ai')].map(r=>r.innerText.replace(/\\s+/g,' ').trim()), btns:[!!document.querySelector('[data-idea-new-top]'), !!document.querySelector('[data-idea-import-top]')]})")
+        check(f"{tag} F: Ideas tab (NT1) — AI generated list with 2 idea rows, Import JSON in the header, no '+ Idea' there (it lives in My ideas)", ir["on"] and len(ir["rows"]) == 2 and ir["btns"] == [False, True], ir)
+        ov_ = js(page, "()=>[...document.querySelectorAll('.nt1-ai')].map(r=>{ const c = r.querySelector('.nst'); return {nowrap:getComputedStyle(c).whiteSpace, fits:r.scrollWidth <= r.clientWidth + 1}; })")
+        check(f"{tag} F: Ideas status chip never wraps · rows are not cut off", all(x["nowrap"] == "nowrap" and x["fits"] for x in ov_), ov_)
         check(f"{tag} F: no Thai in the Ideas list (English data fixture)", js(page, THAI) == [], js(page, THAI))
         js(page, "()=>ideaOpen('en-idea-1')"); page.wait_for_timeout(500)
         for sub in ("sum", "mech", "evd", "vc", "co"):

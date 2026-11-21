@@ -194,7 +194,7 @@ def keys_swipe(pw, w, h):
             page.keyboard.press("Tab"); settle(page, 300)
             check(f"{tag} 2 Tab → Compounder; first row selected (AVGO)", trk() == "ladder" and js(page, "()=>wlSel") == "AVGO", [trk(), js(page, "()=>wlSel")])
             page.keyboard.press("Shift+Tab"); settle(page, 300)
-            check(f"{tag} 2 Shift+Tab goes back to Momentum (RS2a2: Tab now cycles Momentum → Compounder → Ideas → Screen)", trk() == "winner" and js(page, "()=>wlView") == "wl", trk())
+            check(f"{tag} 2 Shift+Tab goes back to Momentum (RS2a2: Tab cycles Ideas → Momentum → Compounder → Screen)", trk() == "winner" and js(page, "()=>wlView") == "wl", trk())
             js(page, "()=>hwOpen('ADBE')"); settle(page, 400)   # HW1: the Trigger box is on the Homework page
             page.focus("[data-wl1-trigger]"); page.keyboard.press("Tab"); settle(page, 200)
             check(f"{tag} 2 Tab while typing in a field is ignored", trk() == "winner", trk())
@@ -215,10 +215,11 @@ def keys_swipe(pw, w, h):
             check(f"{tag} 2 switching list keeps nothing stale: selected stock not in the new list → first row", sel == "AVGO" and js(page, "()=>wlSel") == "ADBE", [sel, js(page, "()=>wlSel")])
             check(f"{tag} 2 choice remembered per device", js(page, "()=>localStorage.getItem('dash.wl1Trk')") == "winner", "")
         else:
+            js(page, "()=>wl1SegGo('winner')"); settle(page, 300)   # NT1: Watch opens on Ideas · these swipes start from Momentum
             check(f"{tag} 2 iPhone: middle swipe left → Compounder (+ one-time hint)", swipe(page, -120, 5) == "ok" and trk() == "ladder" and js(page, "()=>!!localStorage.getItem('dash.sw2Hint.watch')"), trk())
             swipe(page, -120, 5)
-            check(f"{tag} 2 iPhone: swipe left again → Ideas (RS2a2: 4 segments, no wrap at the ends)", js(page, "()=>wlView") == "idea", js(page, "()=>wlView"))
-            swipe(page, 120, -5)
+            check(f"{tag} 2 iPhone: swipe left again → Screen (NT1: Ideas · Momentum · Compounder · Screen)", js(page, "()=>wlView") == "screen", js(page, "()=>wlView"))
+            js(page, "()=>wl1SegGo('ladder')"); settle(page, 300)   # NT1: the Screen list is a horizontal scroller — step back from Compounder
             swipe(page, 120, -5)
             check(f"{tag} 2 iPhone: middle swipe right → Momentum", trk() == "winner", trk())
             check(f"{tag} 2 iPhone: choice remembered", js(page, "()=>localStorage.getItem('dash.wl1Trk')") == "winner", "")
