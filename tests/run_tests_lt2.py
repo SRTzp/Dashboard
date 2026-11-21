@@ -36,8 +36,6 @@ def run(pw, w, h):
         # ---- each validation failure → rest imported + one warning, facts dropped
         bad = {
             "track enum": (comp, lambda f: f.update(track="swing")),
-            "biz > 90": (comp, lambda f: f.update(biz="x" * 91)),
-            "text > 80": (comp, lambda f: f["lines"][0].update(text="y" * 81)),
             "mix > 4": (comp, lambda f: f["mix"].append({"seg": "Other", "pct": 1})),
             "cols != 4": (comp, lambda f: f["q"].update(cols=["a", "b", "c"])),
             "row v != 4": (comp, lambda f: f["q"]["rows"][0].update(v=[1, 2, 3])),
@@ -52,8 +50,6 @@ def run(pw, w, h):
             "more > 14": (comp, lambda f: f.update(more=f["more"] * 15)),
             "mgmt > 2": (comp, lambda f: f.update(mgmt=f["mgmt"] * 3)),
             "missing > 3": (comp, lambda f: f.update(missing=["a", "b", "c", "d"])),
-            "momentum without lastq": (mom, lambda f: f.update(lines=[x for x in f["lines"] if x["g"] != "lastq"])),
-            "compounder without cash": (comp, lambda f: f.update(lines=[x for x in f["lines"] if x["g"] != "cash"])),
             "unknown row key": (comp, lambda f: f["q"]["rows"][0].update(k="foo")),
             "facts not an object": (comp, lambda f: None),
         }
@@ -63,8 +59,13 @@ def run(pw, w, h):
             r = parse(page, d)
             ok = r["err"] is None and r["facts"] is None and r["warn"].startswith("Fact Sheet not imported — ") and r["sym"] == d["sym"] and r["summ"] == d["summary"]["status"]
             check(f"{tag} invalid ({nm}): rest imported, facts dropped, warning names the problem", ok, r)
-        r = parse(page, mut(comp, lambda f: f.update(biz="x" * 91)))
+        r = parse(page, mut(comp, lambda f: f.update(biz=91)))
         check(f"{tag} warning is ONE line naming the first problem", "\n" not in r["warn"] and "biz" in r["warn"], r["warn"])
+        # HW1d — over-limit text is trimmed; a missing required group imports with a "missing" entry (no warning)
+        r = parse(page, mut(comp, lambda f: f.update(biz="x" * 91)))
+        check(f"{tag} biz > 90 is trimmed to 90, not an error", r["err"] is None and r["warn"] == "" and r["facts"] and len(r["facts"]["biz"]) == 90, r["warn"])
+        r = parse(page, mut(mom, lambda f: f.update(lines=[x for x in f["lines"] if x["g"] != "lastq"])))
+        check(f"{tag} momentum without lastq: imports, missing entry added", r["err"] is None and r["warn"] == "" and r["facts"] and any("Lastq" in m for m in r["facts"]["missing"]), r["warn"])
         # ---- ltTrend
         T = lambda k, v: js(page, "([k,v])=>ltTrend({k:k,v:v})", [k, v])
         cases = [("rev_yoy", [7, 8, 10, 13], "accel"), ("rev_yoy", [20, 18, 15, 11], "slow"), ("op_margin", [3.1, 3.3, 3.5, 3.7], "rising"), ("op_margin", [4, 3.9, 3.7, 3.4], "falling"),
