@@ -3919,7 +3919,7 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
 .pc2-card .pv-r1 .bd-sp{display:none}
 .pc2-chips{display:flex;gap:6px;flex-wrap:wrap}.pc2-e{font-size:12px;border-radius:8px;padding:3px 8px}.pc2-e.f{background:var(--surface2,#F4F5F7)}.pc2-e.p{border:1.3px dashed #C9CDD4}
 .pc2-nx{display:flex;align-items:center;gap:8px;font-size:12.5px;border-top:1px solid var(--border,#F0F1F4);padding-top:8px;flex-wrap:wrap;min-width:0}
-.pc2-nx>span{min-width:0;overflow-wrap:anywhere}.pc2-nx .w{color:#9A5B00;font-weight:600}.pc2-nx .g{color:var(--green);font-weight:600}.pc2-nx .mut{color:var(--muted)}
+.pc2-nx>span{min-width:0;overflow-wrap:anywhere}.pc2-nx .w{color:#9A5B00;font-weight:600}.pc2-nx .g{color:var(--green);font-weight:600}.pc2-nx [data-pc2-ready]:before{content:"✓ "}.pc2-nx .pc2-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.pc2-nx .pc2-sr:before{content:none!important}.pc2-nx .mut{color:var(--muted)}
 .pc2-nx .pc2-b{margin-left:auto;height:30px;min-height:30px;border-radius:9px;padding:0 12px;font:600 12px var(--sans);white-space:nowrap;border:1px solid var(--border);background:var(--surface);color:var(--text)}
 .pc2-nx .pc2-b.pri{background:#14161A;color:#fff;border-color:#14161A}.pc2-nx .pc2-b[disabled]{opacity:.5}
 .pc2-hw{border:0;background:none;color:#9A5B00;font:600 12.5px var(--sans);padding:0;cursor:pointer;text-align:left}
@@ -27952,6 +27952,7 @@ function pc2Gate(it){
     const f = m.fit, row = rows[lv], sl = +(c.plan || {}).stop, newRisk = row && sl > 0 ? saved * Math.abs(row.px - sl) * (f.uv || 1) : 0, room = f.budgetMoney - newRisk, cur = +it.sl;
     if(room > 0 && f.held > 0 && f.avg > 0 && f.uv > 0){ const need = f.avg - room / (f.held * f.uv); if(need > cur + 1e-9){ out.short = `Add needs stop ≥ ${td3Num(Math.ceil(need * 100) / 100)} (now ${td3Num(cur)})`; out.fix = {t:'Move stop ›', fn:`coreStopOpen('${td3E(it.id).replace(/'/g, "\\'")}')`, k:'stop'}; out.why = out.short; return out; } }
   }
+  if(m && m.blocked && m.reasons.length && m.reasonTexts && m.reasonTexts[0]){ out.short = lr3ShortWhy(m.reasonTexts[0], it); out.why = g.msg || m.reasonTexts[0]; return out; }   /* a rule (not just size) blocks: name the rule */
   if(out.allowed != null && saved > 0 && saved > out.allowed){ out.short = `Allowed now #${fmt0(out.allowed)} (plan has #${fmt0(saved)})`; out.why = out.short; return out; }
   out.short = lr3ShortWhy(out.why, it); return out;
 }
@@ -27966,7 +27967,7 @@ function pc2TopUpInfo(it){
 }
 function pc2Btn(label, fn, o){
   o = o || {}; const k = o.k || 'place';
-  return `<button type="button" class="go pc2-b${o.pri ? ' p pri' : ''}" data-bd-pill="${k}"${k === 'fix' ? ' data-pv-fixbtn="fix"' : ''}${o.dis ? ` disabled title="${bdE(o.title || '')}" data-bd-blocked="1"` : ''} onclick="event.stopPropagation();${fn}">${bdE(label)}</button>`;
+  return `<button type="button" class="go pc2-b${o.pri ? ' p pri' : ''}" data-bd-pill="${k}"${k === 'fix' ? ` data-pv-fixbtn="${bdE(o.fixk || 'fix')}"` : ''}${o.dis ? ` disabled title="${bdE(o.title || '')}" data-bd-blocked="1"` : ''} onclick="event.stopPropagation();${fn}">${bdE(label)}</button>`;
 }
 function pc2Menu(id){ pc2MenuId = pc2MenuId === id ? null : id; try{ bdRender(); }catch(e){} }
 function pc2MenuHtml(it){
@@ -28045,22 +28046,23 @@ function pc2CardHtml(it){
   const placeLab = lvLab ? 'Place ' + lvLab : 'Place order';
   const wlHw = c ? `td3HwGo('${td3E(c.ticker).replace(/'/g, "\\'")}','W','')` : '';
   if(plan){
-    if(sat && blk){ nx = `<span class="w" data-pv-warn data-pc2-warn>⚠ ${e(lr3ShortWhy(blk.why, it))}</span>${blk.btn ? pc2Btn(blk.btn, `bdFix('${qid}','${e(blk.k)}')`, {k:'fix'}) : ''}`; nxCls = ' blk'; }
+    if(sat && blk){ nx = `<span class="w" data-pv-warn data-pc2-warn data-bd-blockedtag>⚠ ${e(lr3ShortWhy(blk.why, it))}</span>${blk.btn ? pc2Btn(blk.btn, `bdFix('${qid}','${e(blk.k)}')`, {k:'fix', fixk:blk.k}) : pc2Btn('Place order', '', {dis:true, title: blk.k === 'trend' ? 'Blocked by trend rule' : blk.why})}`; nxCls = ' blk'; }
     else if(blk){
       const fixBtn = p.k === 'fix' ? pc2Btn(p.t, p.fn, {k:'fix'}) : (gate && gate.fix ? pc2Btn(gate.fix.t, gate.fix.fn, {k:'fix'}) : '');
       nx = `<span class="w" data-pv-warn data-pc2-warn title="${e(blk.why)}">⚠ ${e(gate && gate.short ? gate.short : lr3ShortWhy(blk.why, it))}</span>${fixBtn || pc2Btn(placeLab, '', {dis:true, title:blk.why})}`; nxCls = ' blk'; }
     else if(p.k === 'place'){
       const pri = near || it.pct == null;
-      if(sat){ let ok = ''; try{ const V = ln4VerifyOf(it.ref); ok = V && V.ema === true && V.st === true ? '<span class="mut">· EMA50 + structure ✓</span>' : ''; }catch(x){} nx = `<span class="g" data-pc2-ready>✓ Ready</span>${ok}${pc2Btn('Place order', p.fn, {pri})}`; }
-      else if(mom && hw && !hw.done){ const full = pc2FullQty(c); nx = `<button type="button" class="pc2-hw" data-pc2-hw onclick="event.stopPropagation();${wlHw}">Homework ${hw.n} of ${hw.tot}${full > 0 ? ' · full size #' + fmt0(full) + ' when done' : ''} ›</button>${pc2Btn(placeLab, p.fn, {pri})}`; nxCls = ' hw'; }
-      else nx = `<span class="g" data-pc2-ready>✓ Ready</span>${gate && gate.totalPct != null && (it.k || 0) > 0 ? `<span class="mut num">· total risk ${pc2Pct2(gate.totalPct)} of ${pc2Pct2(gate.capPct)} today</span>` : ''}${pc2Btn(placeLab, p.fn, {pri})}`;
+      if(sat){ let ok = ''; try{ const V = ln4VerifyOf(it.ref); ok = V && V.ema === true && V.st === true ? '<span class="mut">· EMA50 + structure ✓</span>' : ''; }catch(x){} nx = `<span class="g" data-pc2-ready data-re2-ready="1" data-ef-ready>Ready</span>${ok}${pc2Btn('Place order', p.fn, {pri})}`; }
+      else if(mom && hw && !hw.done){ const full = pc2FullQty(c); nx = `<span class="pc2-sr" data-pc2-ready data-re2-ready="1" data-ef-ready>Ready</span><button type="button" class="pc2-hw" data-pc2-hw onclick="event.stopPropagation();${wlHw}">Homework ${hw.n} of ${hw.tot}${full > 0 ? ' · full size #' + fmt0(full) + ' when done' : ''} ›</button>${pc2Btn(placeLab, p.fn, {pri})}`; nxCls = ' hw'; }
+      else nx = `<span class="g" data-pc2-ready data-re2-ready="1" data-ef-ready>Ready</span>${gate && gate.totalPct != null && (it.k || 0) > 0 ? `<span class="mut num">· total risk ${pc2Pct2(gate.totalPct)} of ${pc2Pct2(gate.capPct)} today</span>` : ''}${pc2Btn(placeLab, p.fn, {pri})}`;
     }else if(p.dis){ nx = `<span class="w" data-pv-warn data-pc2-warn title="${e(p.title || '')}">⚠ ${e(gate && gate.short ? gate.short : lr3ShortWhy(p.title, it))}</span>${gate && gate.fix ? pc2Btn(gate.fix.t, gate.fix.fn, {k:'fix'}) : pc2Btn(placeLab, '', {dis:true, title:p.title})}`; nxCls = ' blk'; }
     else nx = `<span class="mut">${e(p.t)}</span>`;
   }else if(ord){
     const away = it.pct != null ? Math.abs(it.pct).toFixed(1) + '% away' : ''; nx = `<span class="mut num">${it.px > 0 ? 'Price ' + N(it.px) + (away ? ' · ' + away : '') : 'Waiting at the broker'}</span>${pc2Btn('Filled', p.fn, {pri:true, k:'fill'})}`;
   }else{
     const tu = c ? pc2TopUpInfo(it) : null;
-    if(tu){ nx = `<span class="g">✓ Homework done</span><span class="mut">· ${tu.left} day${tu.left === 1 ? '' : 's'} left</span>${pc2Btn('Top up to full · #' + fmt0(tu.qty), `pc2TopUpGo('${qid}')`, {k:'topup'})}`; }
+    if(p.k === 'fill'){ nx = `<span class="mut">${lvLab ? lvLab + ' ordered' : 'Ordered'} · waiting at the broker</span>${pc2Btn('Filled', p.fn, {pri:true, k:'fill'})}`; }
+    else if(tu){ nx = `<span class="g">✓ Homework done</span><span class="mut">· ${tu.left} day${tu.left === 1 ? '' : 's'} left</span>${pc2Btn('Top up to full · #' + fmt0(tu.qty), `pc2TopUpGo('${qid}')`, {k:'topup'})}`; }
     else if(c && gate && !gate.ok && it.nl > it.k && (it.k || 0) < it.nl){ nx = `<span class="w" data-pc2-warn title="${e(gate.why)}">⚠ Can’t add today</span><span class="mut">· ${e(gate.short)}</span>${pc2Btn('Why ›', `bdOpen('${qid}')`, {k:'why'})}`; nxCls = ' blk'; }
     else if(c && gate && it.nl > 1 && it.k < it.nl && p.k === 'place'){ nx = `<span class="g">✓ ${lvLab} fits</span>${gate.totalPct != null ? `<span class="mut num">· total risk ${pc2Pct2(gate.totalPct)} of ${pc2Pct2(gate.capPct)} today</span>` : ''}${pc2Btn('Place ' + lvLab, p.fn, {pri:near})}`; }
     else if(comp && hw && !hw.done){ nx = `<span class="mut" data-pc2-hwlink>Homework → unlocks adds &amp; risk above 1%</span>${pc2Btn('Homework ›', wlHw, {k:'hw'})}`; }

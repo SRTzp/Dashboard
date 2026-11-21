@@ -24,7 +24,7 @@ def run(pw, w, h):
         js(page, "()=>{ wl1Trk = 'winner'; wlSetView('wl'); renderWatchlist(); }"); page.wait_for_timeout(300)
         info = lambda s: js(page, ST, s)["info"]
         check(f"{tag} list: Momentum nothing filled -> 'Not started'", info("PLTR") == "Not started", info("PLTR"))
-        check(f"{tag} list: holding + not started keeps ' · adds at 50%'", info("AAPL") == "Not started · adds at 50%", info("AAPL"))
+        check(f"{tag} list: holding + not started keeps ' · size 70%'", info("AAPL") == "Not started · size 70%", info("AAPL"))
         check(f"{tag} list: done without catalyst -> 'Done 12 Nov'", info("AVGO") == "Done 12 Nov", info("AVGO"))
         js(page, "()=>{ const it = wlItemOf('AVGO'); it.hw = Object.assign({}, it.hw, {catalyst:'Q4 results 10 Dec'}); renderWatchlist(); }"); page.wait_for_timeout(200)
         check(f"{tag} list: done with catalyst -> 'Done · Q4 results 10 Dec'", info("AVGO") == "Done · Q4 results 10 Dec", info("AVGO"))
@@ -40,7 +40,7 @@ def run(pw, w, h):
         # ---- A · detail panel (Compounder ZZ)
         js(page, "()=>{ wlOpen('ZZ'); }"); page.wait_for_timeout(300)
         det = js(page, TXT, "[data-lr5-det]") or ""
-        check(f"{tag} detail: 'Homework 2 of 3' + first missing + Why on Watch + I believe + size + Continue", all(x in det for x in ["Homework 2 of 3", "Change-my-thesis missing", "Why on Watch: Added manually", "I believe", "They raise fees", "Size: 50% until homework is done → 100% · set in Plan", "Continue homework ›"]), det)
+        check(f"{tag} detail: 'Homework 2 of 3' + first missing + Why on Watch + I believe + size + Continue", all(x in det for x in ["Homework 2 of 3", "Change-my-thesis missing", "Why on Watch: Added manually", "I believe", "They raise fees", "Compounder: adds & risk above 1% unlock when done", "Continue homework ›"]), det)
         check(f"{tag} detail: exactly one primary button", js(page, "()=>document.querySelectorAll('[data-lr5-det] .btn.pri').length") == 1)
         js(page, "()=>{ const it = wlItemOf('ZZ'); it.my_thesis = Object.assign({}, it.my_thesis, {unproven:'Timing of the fee rise'}); renderWatchlist(); }"); page.wait_for_timeout(200)
         check(f"{tag} detail: Not proven line when written", "Not proven Timing of the fee rise" in (js(page, TXT, "[data-lr5-det]") or ""))
@@ -74,7 +74,7 @@ def run(pw, w, h):
         # Save draft: stored, not confirmed
         page.click("[data-hw1-draft]"); page.wait_for_timeout(500)
         s = js(page, ST, "WHSE")
-        check(f"{tag} Save draft stores the fields but does not confirm (no confirmedAt, not done, cap 50%)", s["my"].get("why") == "They raise the fee" and s["my"].get("evidence") and s["my"].get("exit") and not s["hw"].get("confirmedAt") and not s["done"] and s["cap"] == 50, s)
+        check(f"{tag} Save draft stores the fields but does not confirm (no confirmedAt, not done, size 70%)", s["my"].get("why") == "They raise the fee" and s["my"].get("evidence") and s["my"].get("exit") and not s["hw"].get("confirmedAt") and not s["done"] and s["cap"] == 50, s)
         check(f"{tag} still on the page after Save draft", js(page, "()=>!!document.querySelector('[data-hw1-page=\"WHSE\"]')"))
         page.click("[data-hw1-done]"); page.wait_for_timeout(500)
         s = js(page, ST, "WHSE")

@@ -25,7 +25,7 @@ def sat_case(pw, w, h, bias, sl, tp, want_to, want_line):
         check(f"{tag} Today row Blocked: '{want_line}' + 'Switch to {want_to} ›'", r and r["chip"] == "Blocked" and r["line"].startswith("Blocked · " + want_line) and r["btn"] == f"Switch to {want_to} ›", r)
         check(f"{tag} stored plan unchanged before the tap", before == bias, before)
         card = js(page, "()=>{ switchTab('plan'); bdRender(); const c = document.querySelector('[data-bd-card=\"sdX\"]'); return c ? {t: c.innerText.replace(/\\s+/g,' '), f: !!c.querySelector('[data-pv-fixbtn=\"side\"]')} : null; }")
-        check(f"{tag} Plan board card: Blocked + fix button", card and want_line in card["t"] and "Blocked" in card["t"] and card["f"], card)
+        check(f"{tag} Plan board card: amber warning + fix button", card and want_line in card["t"] and "⚠" in card["t"] and card["f"], card)
         dr = js(page, "()=>{ bdOpen('sdX'); const d = document.querySelector('.bd-df [data-sd-fix]'); return {btn: d ? d.innerText.trim() : null, dis: d ? d.disabled : null, txt: document.body.innerText.includes('" + want_line + "')}; }")
         check(f"{tag} drawer: enabled fix button + reason", dr and dr["btn"] == f"Switch to {want_to} ›" and dr["dis"] is False and dr["txt"], dr)
         js(page, "()=>{ bdClose(); pb2PlaceOpen('sdX'); }"); page.wait_for_timeout(300)

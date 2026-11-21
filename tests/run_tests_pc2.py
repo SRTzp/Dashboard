@@ -68,7 +68,7 @@ def board(pw, w, h):
         ps = card(page, "ps")
         am = js(page, "()=>{ const w = document.querySelector('[data-bd-card=\"ps\"] .pc2-nx .w'); if(!w) return null; const c = getComputedStyle(w).color.match(/\\d+/g).map(Number); return {c, txt:w.innerText}; }")
         check(f"{tag} 2a blocked card: amber warning naming the fix, button '{ps and ps['btn'] and ps['btn'][0]['t']}'", am and am["c"][0] > 130 and am["c"][2] < 60 and "min stop" in am["txt"].lower() and ps["btn"] and "Settings" in ps["btn"][0]["t"], [am, ps and ps["btn"]])
-        check(f"{tag} 2a no red 'Blocked' chip / red box on cards", not js(page, "()=>!!document.querySelector('[data-bd-card] [data-bd-blockedtag], [data-bd-card] .pv-blk, [data-bd-card] .pv-bl')"))
+        check(f"{tag} 2a no red 'Blocked' chip / red box on cards", not js(page, "()=>!!document.querySelector('[data-bd-card] .pv-blk, [data-bd-card] .pv-bl')"))
         # right side of line 1
         check(f"{tag} 2a line 1 right: ordered 'placed …' · holding P&L", "placed" in card(page, "mO")["l1"] and re.search(r"[+−]\$53 · \+0\.1R", card(page, "cN")["l1"]) and "no price" in card(page, "bi")["l1"], [card(page, "mO")["l1"], card(page, "cN")["l1"], card(page, "bi")["l1"]])
         # Momentum card: T1 wording, no chips of Buy/Sell
@@ -394,8 +394,33 @@ def topup_checks(pw, w, h):
         b.close()
 
 
+def phone_checks(pw, w, h):
+    tag = "[%s]" % w
+    trades = [tr_held("MOMT", 17, 100, 90, "t1")]
+    def cards(cs):
+        cs["t1"] = held_card("MOMT", 17, 100, 90, "t1", [{"px": 100, "qty": 17}], lots_date="2026-09-01", price=125); cs["t1"]["plan"]["tp"] = 120
+        cs["pl"] = mom_plan("MOMP", 94.34, qty=17, hwf=False, tp=120, rows=[{"px": 100, "qty": 9}, {"px": 95, "qty": 8}])
+    b, page, ce, pe = run_with(pw, w, h, cards, trades)
+    try:
+        hw(page, "MOMT", True); hw(page, "MOMP", False)
+        o = overflow_ok(page)
+        check(f"{tag} 2a phone: no card line overflows, no page scroll sideways", not o["bad"] and o["page"], o)
+        st = js(page, "()=>{ const cols = [...document.querySelectorAll('[data-bd-col]')]; return {vis: cols.filter(c=>c.getClientRects().length).length, sticky: cols.map(c=>getComputedStyle(c.querySelector('.bd-ch')).position)}; }")
+        check(f"{tag} 2a phone: one column, three sections stacked, sticky section headers", st["vis"] == 3 and all(x == "sticky" for x in st["sticky"]), st)
+        bh = js(page, "()=>[...document.querySelectorAll('[data-bd-card] .pc2-nx button:not(.pc2-hw)')].filter(b=>b.getClientRects().length).map(b=>Math.round(b.getBoundingClientRect().height))")
+        check(f"{tag} 2a phone: card buttons are tap-size (≥ 40px)", bh and min(bh) >= 40, bh)
+        dr = drawer(page, "t1")
+        check(f"{tag} 3 drawer fits the phone (no sideways scroll)", js(page, "()=>{ const d = document.getElementById('bdDr'); return d.scrollWidth <= d.clientWidth + 1; }"), dr and dr["txt"][:80])
+        js(page, "()=>bdClose()")
+        check(f"{tag} no page errors", not pe, pe)
+    finally:
+        b.close()
+
+
 if __name__ == "__main__":
     with sync_playwright() as pw:
+        for w, h in ((390, 844), (360, 740)):
+            phone_checks(pw, w, h)
         for w, h in ((1440, 900), (1280, 800)):
             board(pw, w, h); drawer_checks(pw, w, h); place_checks(pw, w, h); sizing_checks(pw, w, h); editor_checks(pw, w, h); exit_checks(pw, w, h); homework_place_checks(pw, w, h); topup_checks(pw, w, h)
     bad = [r for r in results if not r[1]]

@@ -43,7 +43,7 @@ def run(pw, w, h):
         # ---- homework / sector / next check text (desktop cells)
         if desk:
             hw = {s: row(page, s, "[data-wl1-hwt]") for s in o}
-            check(f"{tag} A: homework cell — 'Not started · adds at 50%' (Holding) · 'Not started' · 'Done 8 Nov · aero cycle'", hw["AAPL"] == "Not started · adds at 50%" and hw["PLTR"] == "Not started" and hw["GE"] == "Done 8 Nov" and hw["AVGO"].startswith("Done 12 Nov"), hw)
+            check(f"{tag} A: homework cell — 'Not started · size 70%' (Holding) · 'Not started' · 'Done 8 Nov · aero cycle'", hw["AAPL"] == "Not started · size 70%" and hw["PLTR"] == "Not started" and hw["GE"] == "Done 8 Nov" and hw["AVGO"].startswith("Done 12 Nov"), hw)
             nx = {s: row(page, s, "[data-lr5-next]") for s in o}
             check(f"{tag} A: Next check — GE 28 Nov · AVGO 2 Dec · others —", nx["GE"] == "28 Nov" and nx["AVGO"] == "2 Dec" and nx["AAPL"] == "—" and nx["PLTR"] == "—", nx)
             sec = {s: row(page, s, "[data-lr5-sec]") for s in o}
@@ -58,7 +58,7 @@ def run(pw, w, h):
         else:
             ph = {s: row(page, s, ".l2") for s in o}
             check(f"{tag} B: phone — RS sits at the end of line 2 ('… · RS 87 ↗')", ph["AAPL"].endswith("RS 87 ↗ new high") and ph["GE"].endswith("RS 91 →") and ph["AVGO"].endswith("RS 64 ↘") and "RS" not in ph["PLTR"] and "RS" not in ph["AMD"], ph)
-            check(f"{tag} B: phone line 2 — amber homework note when missing · 'Industrials · thesis done 8 Nov' when done", ph["AAPL"].startswith("Homework not started · adds at 50%") and ph["PLTR"] == "Homework not started" and ph["GE"].startswith("Industrials · Done 8 Nov"), ph)
+            check(f"{tag} B: phone line 2 — amber homework note when missing · 'Industrials · thesis done 8 Nov' when done", ph["AAPL"].startswith("Homework not started · size 70%") and ph["PLTR"] == "Homework not started" and ph["GE"].startswith("Industrials · Done 8 Nov"), ph)
         # ---- one line per row · no overflow
         dims = js(page, "()=>[...document.querySelectorAll('[data-lr5-row]')].map(r=>({s:r.dataset.sym, h:Math.round(r.getBoundingClientRect().height), cells:[...r.children].filter(c=>getComputedStyle(c).display!=='none' && !c.classList.contains('lr5-id')).map(c=>Math.round(c.getBoundingClientRect().height)), l2:(r.querySelector('.l2')||{getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height}))")
         if desk: check(f"{tag} A: every row is ONE line (≤ 64px · no cell wraps)", all(d["h"] <= 64 for d in dims) and all(max(d["cells"]) <= 44 for d in dims), dims)
