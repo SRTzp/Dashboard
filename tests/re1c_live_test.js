@@ -36,7 +36,7 @@ const spec = { mult: 1, fx: 35, lotStep: 1, minLot: 1 };
   ok('Starter ¼ = half of the Pilot → 0.50 × 80% × 50% and STARTER_25 named', near(m3.effPct, 0.2) && m3.factors.indexOf('STARTER_25') >= 0 && /starter 25%/.test(m3.formula), m3.factors);
   // Momentum keeps the homework factor (it is a multiplier there)
   const mm = A.sizeMomentum(L, Object.assign({ homeworkDone: false, side: 'long', entry: 180, stop: 170 }, spec));
-  ok('Momentum homework 50%: 0.40 × 50% × regime 80% = 0.16 (RM1: Momentum takes the modifier · RK1 0.40)', near(mm.effPct, 0.16) && /0\.4% × homework 50% × regime 80% = $/.test(mm.formula), mm.formula);
+  ok('Momentum homework 70%: 0.40 × 70% × regime 80% = 0.224 (PC2 2e)', near(mm.effPct, 0.224) && /0\.4% × homework 70% × regime 80% = $/.test(mm.formula), mm.formula);
   const mf = A.sizeMomentum(L, Object.assign({ homeworkDone: true, side: 'long', entry: 180, stop: 170 }, spec));
   ok('Momentum thesis done: 0.40% × regime 80% = 0.32, no homework text', near(mf.effPct, 0.32) && !/homework/.test(mf.formula));
 }
