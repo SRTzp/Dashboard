@@ -54,7 +54,7 @@ def override(page, body):
 
 
 def plan_card(sym, entry, stop, px=None, ready=False, **kw):
-    c = {"acct": "main", "ticker": sym, "market": "US", "strategy": "W", "status": "plan", "plan": {"entry": entry, "stop": stop, "ps1": {"rows": [{"px": entry, "qty": 40}]}}}
+    c = {"acct": "main", "ticker": sym, "market": "US", "strategy": "W", "status": "plan", "plan": {"entry": entry, "stop": stop, "ps1": {"rows": [{"px": entry, "qty": 36}]}}}
     if px is not None: c["px"] = px; c["pxDate"] = "2026-10-02"
     if ready: c["plan"]["ready"] = True
     c.update(kw); return c

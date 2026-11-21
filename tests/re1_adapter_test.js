@@ -59,7 +59,7 @@ ok(aapl && aapl.status === 'holding', 'AAPL holding'); eq(aapl.old.qtyHeldNow, 6
 eq(aapl.old.initialStop, 190, 'initial stop from sl0'); near(aapl.old.principalRiskAtCurrentStop, 6 * 5 * 35, 'risk at current stop in THB (fx 35)'); near(aapl.old.riskAtInitialStop, 10 * 10 * 35, 'risk at initial stop for the whole idea');
 eq(aapl.costUnknown, true, 'costs missing → costUnknown'); eq(aapl.projectedNet, null, 'projected net is Unknown (null), not 0');
 // engine size fields
-ok(aapl.engine.rptPct === 0.45 && aapl.engine.qty > 0, 'Momentum engine RPT 0.45% and a quantity'); ok(aapl.whyDifferent.includes('EQUITY_PROXY'), 'difference list says equity is a proxy');
+ok(aapl.engine.rptPct === 0.40 && aapl.engine.qty > 0, 'Momentum engine RPT 0.40% and a quantity'); ok(aapl.whyDifferent.includes('EQUITY_PROXY'), 'difference list says equity is a proxy');
 eq(M.equity.basisKind.startsWith('PROXY'), true, 'no snapshots → proxy basis flagged'); ok(M.missing.some(m => m.code === 'EQUITY_SNAPSHOT'), 'missing snapshot listed'); eq(M.emergency.state, 'n/a', 'Emergency not evaluable without snapshots');
 near(M.equity.proxyEquity, 1000000, 'proxy equity = entered capital');
 
@@ -82,7 +82,7 @@ eq(A.build(Object.assign({}, src, { ff: { as_of: '2026-11-17', ratios: FFR('gree
 
 // Satellite from history: ordered XAU in queue, BTC loser this week → Step 2; costs unknown
 eq(M.satellite.step, 2, 'Satellite Step 2 after one loss this week'); eq(M.satellite.queue.length, 1, 'queue has the ordered XAUUSD setup'); eq(M.satellite.queue[0].status, 'ordered', 'status ordered');
-const xau = M.positions.find(p => p.sym === 'XAUUSD'); ok(xau && xau.status === 'ordered', 'ordered Sat order listed'); eq(xau.engine.variants.length, 2, 'Satellite shows 100% and 65% variants (Condition unknown)'); near(xau.engine.variants[1].rptPct, 0.3 * 0.65, 'Step 2 × 65%');
+const xau = M.positions.find(p => p.sym === 'XAUUSD'); ok(xau && xau.status === 'ordered', 'ordered Sat order listed'); eq(xau.engine.variants.length, 2, 'Satellite shows 100% and 65% variants (Condition unknown)'); near(xau.engine.variants[1].rptPct, 0.2 * 0.65, 'Step 2 (fixed 0.20) × 65%');
 near(xau.old.workingOrderRisk, 0.1 * 10 * 100 * 35, 'working order risk in THB');
 
 // would-be-blocked: NVDA planned/ordered momentum order evaluated; Sat none blocked unless limits

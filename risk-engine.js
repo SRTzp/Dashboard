@@ -4,7 +4,7 @@
    Conventions
    - Every function takes plain data (time `now` = epoch ms and all state are passed in) and returns plain data. Never throws on bad input:
      missing / invalid data -> reasons[] with an UNKNOWN-style code, never a silent 0.
-   - Percentages are plain numbers (0.45 = 0.45 %). Money is one account base currency; FX is fixed per snapshot and passed per tranche.
+   - Percentages are plain numbers (0.40 = 0.40 %). Money is one account base currency; FX is fixed per snapshot and passed per tranche.
    - Strategy keys = the dashboard's keys: winner = Momentum · sat = Satellite · ladder = Compounder.
    - Result shape of every check: {allowed, reasons:[code], flags:[code], ...detail}. reasons = block a NEW risk-increasing order;
      flags = information / breach markers. Fills, reductions, exits and stop updates are never blocked (see actionPolicy / asFill).
@@ -20,9 +20,9 @@
 
   /* ── Policy constants (RE1-decisions.md §1-§5). Overridable per call via cfg. ── */
   var POLICY = {
-    mom: { rptPct: 0.45, weeklyPct: 1.80, monthlyPct: 7.20, ammo: 4, homeworkCap: 0.5, starter: 0.25, releaseR: 1.5 },
-    sat: { stepRpt: [0.20, 0.30, 0.30, 0.40], weeklyPct: 1.20, monthlyPct: 4.80, condReduced: 0.65, minRR: 1.5, staleOrderMs: DAY },
-    comp: { pilotPct: 0.50, addonPct: 0.50, totalCapPct: 1.25, valueCapPct: 12.5, heatCapPct: 6.0, starter: 0.25, lockLosses: 6, unlockDays: 7, homeworkCap: 0.5 },
+    mom: { rptPct: 0.40, weeklyPct: 1.60, monthlyPct: 6.40, ammo: 4, homeworkCap: 0.5, starter: 0.25, releaseR: 1.5 },
+    sat: { stepRpt: [0.20, 0.20, 0.20, 0.20], weeklyPct: 0.80, monthlyPct: 3.20, condReduced: 0.65, minRR: 1.5, staleOrderMs: DAY },
+    comp: { pilotPct: 0.50, addonPct: 0.50, totalCapPct: 1.00, valueCapPct: 12.5, heatCapPct: 6.0, starter: 0.25, lockLosses: 6, unlockDays: 7, homeworkCap: 0.5 },
     /* RM1 — shared new-entry budget modifier ("initial settings to test"). One signal result feeds sizing AND every view.
        table[equity][credit]: green/red of ACWI/BIL (SMA 20/50) x HYG/IEI (SMA 20/50). Neutral / unavailable / stale -> fallback (never 100 %). All values + SMA periods are settings (rev 4: 100/80/80/60, fallback 80). */
     regime: { table: { green: { green: 1.0, red: 0.80 }, red: { green: 0.80, red: 0.60 } }, fallback: 0.80, freshDays: 4, smaFast: 20, smaSlow: 50 },
@@ -30,6 +30,29 @@
     emergency: { triggerPct: 10, recoverPct: 5, factor: 0.5, stopPct: 20, stopRecoverPct: 15 },   /* AU2: DD_STOP vs the confirmed-equity PEAK (ddStopStep) — stops at 20 %, lifts within 15 %; the 10 % half-size rule keeps its month-start basis */
     snapshot: { blockAfterDays: 14 }
   };
+  /* RK1 — risk per idea (Settings). One set for both accounts. New plans only: saved plans / holdings keep their stored risk and qty.
+     weekly = 4 x per-idea · monthly = 4 x weekly (so the money check and the 4-loss count stop at the same point). Sat: every step = the fixed value (the step machine + lock after the 4th loss stay). */
+  var RISK_DEFAULTS = { compTotal: 1.00, compFirst: 0.50, mom: 0.40, sat: 0.20 };
+  var RISK_BOUNDS = { compTotal: [0.50, 1.50], mom: [0.20, 0.60], sat: [0.10, 0.40] };
+  function r6(x) { return Math.round(x * 1e6) / 1e6; }
+  function riskValidate(c) {
+    c = c || {}; var e = [], D = RISK_DEFAULTS;
+    var v = { compTotal: c.compTotal == null ? D.compTotal : Number(c.compTotal), compFirst: c.compFirst == null ? D.compFirst : Number(c.compFirst),
+      mom: c.mom == null ? D.mom : Number(c.mom), sat: c.sat == null ? D.sat : Number(c.sat) };
+    ['compTotal', 'mom', 'sat'].forEach(function (k) { var b = RISK_BOUNDS[k]; if (!num(v[k]) || v[k] < b[0] - EPS || v[k] > b[1] + EPS) e.push({ key: k, code: 'OUT_OF_BOUNDS', min: b[0], max: b[1] }); });
+    if (!num(v.compFirst) || v.compFirst <= 0) e.push({ key: 'compFirst', code: 'OUT_OF_BOUNDS', min: 0.01, max: v.compTotal });
+    else if (num(v.compTotal) && v.compFirst > v.compTotal + EPS) e.push({ key: 'compFirst', code: 'FIRST_ABOVE_TOTAL', min: 0.01, max: v.compTotal });
+    return { ok: e.length === 0, errors: e, values: v };
+  }
+  /* applyRisk(cfg) — sets POLICY from the settings values (invalid -> nothing changes, errors returned). applyRisk() / applyRisk(null) = defaults. */
+  function applyRisk(c) {
+    var v = riskValidate(c); if (!v.ok) return v; var x = v.values;
+    POLICY.comp.totalCapPct = r6(x.compTotal); POLICY.comp.pilotPct = r6(x.compFirst); POLICY.comp.addonPct = r6(x.compFirst);
+    POLICY.mom.rptPct = r6(x.mom); POLICY.mom.weeklyPct = r6(4 * x.mom); POLICY.mom.monthlyPct = r6(16 * x.mom);
+    POLICY.sat.stepRpt = [r6(x.sat), r6(x.sat), r6(x.sat), r6(x.sat)]; POLICY.sat.weeklyPct = r6(4 * x.sat); POLICY.sat.monthlyPct = r6(16 * x.sat);
+    return v;
+  }
+  function riskDerived() { return { momWeekly: POLICY.mom.weeklyPct, momMonthly: POLICY.mom.monthlyPct, satWeekly: POLICY.sat.weeklyPct, satMonthly: POLICY.sat.monthlyPct }; }
   var STRATS = { winner: 'winner', mom: 'winner', momentum: 'winner', sat: 'sat', satellite: 'sat', ladder: 'ladder', comp: 'ladder', compounder: 'ladder' };
 
   /* ── Reason codes (every block / flag the engine can emit). kind: block = refuses a NEW risk-increasing order · flag = marker / warning. ── */
@@ -586,7 +609,7 @@
   }
   /* kind: 'pilot' | 'topup' | 'addon' · o = {kind, starterOn, thesisDone, side, entryPx?, avgEntry?, factor? (= min(Regime, Emergency)), requestedPct (new order, % of week-start equity), usedPct (the ticker's existing tranches at their CURRENT stop + working orders, same basis)}
      Pilot: first 0.50 % (Starter ON: 0.25 %). Add-on / further buys (answers-A #16 · owner amendment): TOTAL-RISK rule only —
-       thesis done AND used + new <= 1.25 % x factor (0.50 % without thesis; a Starter top-up may use that 0.50 % without thesis) AND new order alone <= 0.50 % x factor.
+       thesis done AND used + new <= total (Settings, default 1.00 %) x factor (0.50 % without thesis; a Starter top-up may use that 0.50 % without thesis) AND new order alone <= 0.50 % x factor.
        Entry may be above OR below the average entry; below only raises the warning ADDON_BELOW_ENTRY_WARN (never a block). No +1.5R, no breakeven-stop condition. */
   function compEntryCheck(o) {
     var P = pol(o.cfg).comp, reasons = [], flags = [], used = num(o.usedPct) ? o.usedPct : 0, req = num(o.requestedPct) ? o.requestedPct : 0, cap;
@@ -597,7 +620,7 @@
     } else if (o.kind === 'topup' || o.kind === 'addon') {
       if (o.kind === 'addon' && o.thesisDone !== true) reasons.push('ADDON_THESIS');
       var fz = num(o.factor) ? o.factor : 1;
-      cap = o.thesisDone === true ? P.totalCapPct * fz : P.pilotPct;   /* RM1: total-risk cap 1.25 % x effective modifier with thesis · 0.50 % without */
+      cap = o.thesisDone === true ? P.totalCapPct * fz : P.pilotPct;   /* RM1: total-risk cap (Settings, RK1 default 1.00 %) x effective modifier with thesis · 0.50 % without */
       var alone = P.addonPct * fz;
       if (used + req > cap + EPS || req > alone + EPS) reasons.push('ADDON_TOTAL_RISK');
       if (pos(o.entryPx) && pos(o.avgEntry) && (dirOf(o.side) === 1 ? o.entryPx < o.avgEntry - EPS : o.entryPx > o.avgEntry + EPS)) flags.push('ADDON_BELOW_ENTRY_WARN');
@@ -684,7 +707,7 @@
   }
 
   return {
-    POLICY: POLICY, REASONS: REASONS, EPS: EPS,
+    POLICY: POLICY, RISK_DEFAULTS: RISK_DEFAULTS, RISK_BOUNDS: RISK_BOUNDS, riskValidate: riskValidate, applyRisk: applyRisk, riskDerived: riskDerived, REASONS: REASONS, EPS: EPS,
     bkk: bkk, outcome: outcome,
     resolveCosts: resolveCosts, exitCost: exitCost,
     ideaResult: ideaResult, ideaRealizedNet: ideaRealizedNet, realizedEvents: realizedEvents, netBreakevenStop: netBreakevenStop, ammoReleased: ammoReleased, rMultiple: rMultiple,

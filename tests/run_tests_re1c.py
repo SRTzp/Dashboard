@@ -72,7 +72,7 @@ def run_viewport(pw, w, h):
         check(("[" + tag + "] basis = confirmed snapshot (5,000,000)"), L(page)["ok"] and L(page)["week"] == 5000000 and not L(page)["prov"], L(page))
         plan_form(page, "AMD", 182.5, 170)
         t = box(page)
-        check(("[" + tag + "] Momentum result box: formula '0.45% × homework 50% = 0.225%'"), "0.45% × homework 50% =" in t and "0.225%" in t, t)
+        check(("[" + tag + "] Momentum result box: formula '0.4% × homework 50% = 0.2%' (RK1)"), "0.4% × homework 50% =" in t and "0.2%" in t, t)
         check(("[" + tag + "] result box: quantity + amount + room line + chip"), "#" in t and "฿" in t and "Week room" in t and "homework 50%" in t, t)
         check(("[" + tag + "] editable 'Risk per idea' is gone (hidden, read-only)"), js(page, "()=>{ const r=document.querySelector('.ps1RiskC'); return !r || getComputedStyle(r).display==='none' }") and js(page, "()=>document.getElementById('cnRisk').readOnly"))
         check(("[" + tag + "] form has no horizontal overflow"), no_overflow(page))
@@ -117,7 +117,7 @@ def run_viewport(pw, w, h):
     try:
         SAT = """(a)=>{ const i={id:'gi',v3:true,v2:true,asset:'XAUUSD',bias:'Long',entry:2642,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[]}; sat7dWrite('satIdeas','gi',i); satIdeasList.push(i); switchTab('plan'); pb2={step:2,id:'gi',a:'XAUUSD',dir:'Buy',acct:'main',entry:'2642',sl:'2628',tp:a[0],ema:true,str:true,mss:null}; pb2Render(); const el=document.getElementById('pb2C'); return el? el.innerText : 'NOPOP' }"""
         t = js(page, SAT, ["2684"]); page.wait_for_timeout(400); page.add_style_tag(content=NOANIM)
-        check(("[" + tag + "] Satellite form allowed: result box present"), "Step" in t and "queue" in t, t[:200])
+        check(("[" + tag + "] Satellite form allowed: result box present"), "0.2%" in t and "queue" in t, t[:200])
         layout_check(page, tag, "Satellite allowed", "#pb2C")
         if w == 390: shot(page, "form-satellite-390")
         t = js(page, SAT, ["2650"]); page.wait_for_timeout(300)
@@ -306,7 +306,7 @@ def run_logic(pw):
         check("Satellite: a stopped-out loss moves to Step 2", st["step"] == 2, st)
         m = js(page, """()=>{ const L=re1L('main'); const f={entry:2642,stop:2628,tp:2684,side:'long',cond:{ema50:false,structure:true},product:'EURUSD',mult:100,fx:1,lotStep:0.01,minLot:0.01};
            const m=Re1Adapter.sizeSat(L,f); return {formula:m.formula, eff:m.effPct, chip:m.chip.t, room:m.roomLine, reasons:m.reasons} }""")
-        check("Sat result: 'Step 2 · 0.3% × 65% = 0.195%' and Reduced chip", "Step 2 · 0.3% × 65% =" in m["formula"] and abs(m["eff"] - 0.195) < 1e-9 and m["chip"] == "Reduced 65%", m)
+        check("Sat result: '0.2% × 65% = 0.13%' (RK1: fixed 0.20, no Step label) and Reduced chip", "0.2% × 65% =" in m["formula"] and abs(m["eff"] - 0.13) < 1e-9 and m["chip"] == "Reduced 65%", m)
         check("Sat room line: R:R · queue free · setup count · week room", "R:R 3" in m["room"] and "queue free" in m["room"] and "week room" in m["room"], m["room"])
         m2 = js(page, """()=>{ const L=re1L('main'); return Re1Adapter.sizeSat(L,{entry:2642,stop:2628,tp:2684,side:'long',cond:{ema50:true,structure:true},product:'XAUUSD',mult:100,fx:1,lotStep:0.01,minLot:0.01}).reasons }""")
         check("same product, same day after a stop-out: re-entry needs the one-tap confirm", "SAT_REENTRY_COND" in m2, m2)
@@ -316,7 +316,7 @@ def run_logic(pw):
         js(page, """()=>{ sat7dWrite('satIdeas','gi',{id:'gi',v3:true,v2:true,asset:'XAUUSD',bias:'Long',entry:2642,sl:2628,tp:2684,ema50_ok:true,structure_ok:true,status:'active',accts:{},week:wpWeekKey(),tf:'4H',setups:[]}); }"""); page.wait_for_timeout(500)
         js(page, "()=>{ switchTab('plan'); setPlanScope('future'); }"); page.wait_for_timeout(500)
         txt = js(page, """()=>{ const i=sat7dIdea('gi'); if(!i) return 'NOIDEA'; pb2={step:2,id:'gi',a:'XAUUSD',dir:'Buy',acct:'main',entry:'2642',sl:'2628',tp:'2684',ema:true,str:true,mss:null}; try{ pb2Render(); }catch(e){ return 'ERR '+e.message } const el=document.getElementById('pb2C'); return el? el.innerText : 'NOPOP' }""")
-        check("Sat form shows the engine result box (formula, no editable risk)", "Step 2" in txt and "queue" in txt, txt[:300])
+        check("Sat form shows the engine result box (formula, no editable risk)", "0.2%" in txt and "queue" in txt, txt[:300])
         js(page, "()=>{ pb2Hd && 0; pb2PlaceOpen('gi'); }"); page.wait_for_timeout(400)
         pl = js(page, "()=>document.body.innerText")
         check("Place order step shows the Re-entry one-tap confirm and 'Yes' is disabled until ticked", "Re-entry" in pl and js(page, "()=>document.querySelector('[data-pb2-yes]').disabled") is True, pl[-300:])

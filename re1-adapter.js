@@ -651,7 +651,7 @@
     var nf = (f.newsPct > 0 && f.newsPct < 100) ? f.newsPct / 100 : null, newsCut = false;
     if (nf != null && cf > 0 && nf < cf) { cf = nf; newsCut = true; } else if (nf != null && cf > 0 && nf === cf) { newsCut = true; }
     m.newsCut = newsCut; if (newsCut) m.chip = { t: 'News ' + Math.round(cf * 100) + '%', c: 'a' };
-    m.factors = ['STEP_' + st.step]; var parts = ['Step ' + st.step + ' · ' + f2(base, 2) + '%'];
+    m.factors = ['STEP_' + st.step]; var parts = [f2(base, 2) + '%'];
     if (newsCut) { parts.push('news ' + Math.round(cf * 100) + '%'); m.factors.push('NEWS_' + Math.round(cf * 100)); }
     else if (cond.status === 'reduced') { parts.push('65%'); m.factors.push('CONDITION_65'); }
     if (ef < 1) { parts.push('emergency 50%'); m.factors.push('EMERGENCY_50'); }
@@ -682,7 +682,7 @@
     m.chip = null;   /* RM1: the modifier is shown once, in the size line ("limited by regime 50%") and the Flow line — no second chip */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
     var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true, emOnly = L.eF < rg.factor;
-    var multi = !!(f.levels && f.levels.length > 1), planCap = thesis ? RP.comp.totalCapPct : RP.comp.pilotPct;   /* RM1: whole-plan budget 1.25 % with thesis (was 1.00 %) */
+    var multi = !!(f.levels && f.levels.length > 1), planCap = thesis ? RP.comp.totalCapPct : RP.comp.pilotPct;   /* RM1: whole-plan budget = Settings total (RK1 default 1.00 %) with thesis */
     var base = multi ? planCap : (kind === 'pilot' ? RP.comp.pilotPct : RP.comp.addonPct);
     var fraction = (kind === 'pilot' && f.starterOn === true && !multi) ? RP.comp.starter * 2 : 1;
     var label = multi ? 'Plan ' : kind === 'pilot' ? 'Pilot ' : 'Add-on ';

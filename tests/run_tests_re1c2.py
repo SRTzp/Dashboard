@@ -54,7 +54,7 @@ def override(page, body):
 
 
 def plan_card(sym, entry, stop, px=None, ready=False, **kw):
-    c = {"acct": "main", "ticker": sym, "market": "US", "strategy": "W", "status": "plan", "plan": {"entry": entry, "stop": stop, "ps1": {"rows": [{"px": entry, "qty": 40}]}}}
+    c = {"acct": "main", "ticker": sym, "market": "US", "strategy": "W", "status": "plan", "plan": {"entry": entry, "stop": stop, "ps1": {"rows": [{"px": entry, "qty": 36}]}}}
     if px is not None: c["px"] = px; c["pxDate"] = "2026-10-02"
     if ready: c["plan"]["ready"] = True
     c.update(kw); return c
@@ -189,9 +189,12 @@ def run_pair(pw, w, h):
     tag = str(w)
     d = doc_c()
     # NFP Fri 2026-10-02 19:30 (harness clock is Fri 2026-10-02) and a later CPI
-    for a in d["books"].values():
-        a["settings"]["newsEvents"] = [{"date": "2026-10-02", "kind": "NFP", "time": "23:30"}, {"date": "2026-10-13", "kind": "CPI", "time": "19:30"}]
+    # RK1: the news calendar is Weekly Impact (HIGH CPI / NFP), not the hidden hand-entered list
     b, page, ce, pe = launch(pw, w, h, d)
+    js(page, """()=>{ const ev = (id, t, at)=>({title:t, kind:'release', scheduled_at:at, time_status:'confirmed', status:'scheduled'});
+      const mon = wiCurMon(), nxt = Calc.wiAddDays(mon, 7);
+      wiDocs = {}; wiDocs[mon] = {events:{nfp:ev('nfp','US NFP','2026-10-02T23:30:00+07:00')}, assets:{XAUUSD:{impact:'HIGH', event_refs:['nfp']}}};
+      wiDocs[nxt] = {events:{cpi:ev('cpi','US CPI','2026-10-13T19:30:00+07:00')}, assets:{XAUUSD:{impact:'HIGH', event_refs:['cpi']}}}; re1Cache = {}; todayRefresh(true); }"""); page.wait_for_timeout(500)
     try:
         ev = txt(page, "[data-re2-events]")
         check("[%s] Next events: HIGH events in Thai time + impact chip" % tag, "NFP" in ev and "23:30" in ev or w <= 560 and "NFP" in ev, ev)

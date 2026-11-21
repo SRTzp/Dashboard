@@ -50,15 +50,15 @@ const costsOf = () => C;
   s = R.satStepState(A([-0.2, -0.3, +0.1]), NOW); eq(s.step, 3, 'G1 win with net<0 → stay at current');
 }
 
-// ═══ G2 · Satellite full path 0.20+0.30+0.30+0.40 = 1.20 % → budget and lock agree; cancel → no step change; re-entry after Step 1 loss sizes at Step 2 ═══
+// ═══ G2 · Satellite full path 4 × 0.20 = 0.80 % (RK1: fixed 0.20 every step) → budget and lock agree; cancel → no step change; re-entry after Step 1 loss sizes at Step 2 ═══
 {
-  const losses = [2000, 3000, 3000, 4000].map((L, i) => loser(L, { id: 's' + i, strategy: 'sat', exitAt: T('2026-11-16T' + String(9 + i).padStart(2, '0') + ':00:00'), reason: 'stop' }));
+  const losses = [2000, 2000, 2000, 2000].map((L, i) => loser(L, { id: 's' + i, strategy: 'sat', exitAt: T('2026-11-16T' + String(9 + i).padStart(2, '0') + ':00:00'), reason: 'stop' }));
   const attempts = losses.map(i => ({ id: i.id, closeAt: i.closedAt, net: R.ideaRealizedNet(i) }));
   const st = R.satStepState(attempts, NOW);
-  ok(st.locked, 'G2 locked after 4th loss'); near(st.weeklyNet, -12000, 'G2 net −12,000 = 1.20% of 1,000,000');
+  ok(st.locked, 'G2 locked after 4th loss'); near(st.weeklyNet, -8000, 'G2 net −8,000 = 0.80% of 1,000,000');
   const b = basis();
   const bc0 = R.satBudgetCheck({ basis: b, now: NOW, account: 'main', ideas: losses, candidateRisk: 0 });
-  ok(bc0.allowed, 'G2 budget exactly 1.20% used still "allowed" with nothing new'); near(bc0.weekUsed, 12000, 'G2 used 12,000'); near(bc0.weekCap, 12000, 'G2 cap 12,000');
+  ok(bc0.allowed, 'G2 budget exactly 0.80% used still "allowed" with nothing new'); near(bc0.weekUsed, 8000, 'G2 used 8,000'); near(bc0.weekCap, 8000, 'G2 cap 8,000');
   const bc1 = R.satBudgetCheck({ basis: b, now: NOW, account: 'main', ideas: losses, candidateRisk: 1 });
   has(bc1, 'MONEY_WEEK', 'G2 any new risk blocked at the limit');
   const gate = R.satCheck({ now: NOW, account: 'main', ideas: losses, attempts, basis: b, condition: { ema50: true, structure: true }, order: { side: 'long', entry: 100, stop: 99, tp: 102 }, product: 'XAU', dayAttempts: [], candidateRisk: 1 });
@@ -69,12 +69,12 @@ const costsOf = () => C;
   eq(ev[0].status, 'cancelled', 'G2 cancel before fill → cancelled'); eq(R.satStepState([], NOW).step, 1, 'G2 no result → Step 1'); eq(R.satQueueCheck(ev, 'main', 'zz').allowed, true, 'G2 cancel releases the queue');
   // re-entry after a Step 1 loss sizes at Step 2 (not capped at the first attempt)
   const a1 = [{ id: 'r1', closeAt: T('2026-11-17T09:00:00'), net: -2000 }], s2 = R.satStepState(a1, NOW);
-  eq(s2.step, 2, 'G2 Step 1 loss → Step 2'); near(R.satEffectiveRpt(s2, 1, 1), 0.30, 'G2 re-entry full condition = 0.30%'); near(R.satEffectiveRpt(s2, 0.65, 1), 0.195, 'G2 re-entry reduced = 0.195%');
+  eq(s2.step, 2, 'G2 Step 1 loss → Step 2'); near(R.satEffectiveRpt(s2, 1, 1), 0.20, 'G2 re-entry full condition = 0.20% (every step the same)'); near(R.satEffectiveRpt(s2, 0.65, 1), 0.13, 'G2 re-entry reduced = 0.13%');
   const day = [{ id: 'r1', product: 'XAU', startAt: T('2026-11-18T01:00:00'), status: 'closed', net: -2000, exitReason: 'stop' }];
   const good = { confirmed: true, setupValid: true, sameDirectionZone: true, trendUnchanged: true, candleClosedSince: true };
   const re = R.satDailyCheck({ now: NOW, product: 'XAU', attempts: day, reentry: good });
   ok(re.allowed, 'G2 re-entry allowed'); has(re, 'SAT_REENTRY_TAG', 'G2 re-entry tagged'); eq(re.originalAttemptId, 'r1', 'G2 original attempt linked');
-  const sz = R.sizeOrder({ equity: E, rptPct: R.satEffectiveRpt(s2, 1, 1), entry: 100, stop: 99, side: 'long', mult: 1, fx: 1, lotStep: 1, minLot: 1 }); eq(sz.qty, 3000, 'G2 re-entry qty at 0.30% (3,000)');
+  const sz = R.sizeOrder({ equity: E, rptPct: R.satEffectiveRpt(s2, 1, 1), entry: 100, stop: 99, side: 'long', mult: 1, fx: 1, lotStep: 1, minLot: 1 }); eq(sz.qty, 2000, 'G2 re-entry qty at 0.20% (2,000)');
   for (const k of Object.keys(good)) { const bad = Object.assign({}, good, { [k]: false }); has(R.satDailyCheck({ now: NOW, product: 'XAU', attempts: day, reentry: bad }), 'SAT_REENTRY_COND', 'G2 re-entry needs ' + k); }
   has(R.satDailyCheck({ now: NOW, product: 'XAU', attempts: [day[0], { id: 'r2', product: 'XAU', startAt: NOW, status: 'closed', net: -1, exitReason: 'stop', reentry: true }], reentry: good }), 'SAT_REENTRY_USED', 'G2 third attempt refused');
   has(R.satDailyCheck({ now: NOW, product: 'XAU', attempts: [Object.assign({}, day[0], { exitReason: 'target', net: 5 })], reentry: good }), 'SAT_DAILY_LIMIT', 'G2 no re-entry after a win / non-stop exit');
@@ -85,17 +85,17 @@ const costsOf = () => C;
 // ═══ G3 · Momentum ═══
 {
   const b = basis(), ask = (ideas, risk, extra) => R.momentumCheck(Object.assign({ now: NOW, account: 'main', basis: b, ideas, costsFor: costsNone, candidate: { ideaId: 'new', riskMoney: risk } }, extra || {}));
-  // realized 1.35 % (3 losses x 0.45 %) → at most 0.45 % combined open + pending + new
-  const three = [loser(4500), loser(4500), loser(4500)];
-  ok(ask(three, 4500).allowed, 'G3 0.45% new allowed with 1.35% realized');
-  has(ask(three, 4501), 'MONEY_WEEK', 'G3 0.45%+1 blocked'); near(ask(three, 4500).money.weekCap, 18000, 'G3 weekly cap 1.80% = 18,000');
+  // realized 1.20 % (3 losses x 0.40 %) → at most 0.40 % combined open + pending + new
+  const three = [loser(4000), loser(4000), loser(4000)];
+  ok(ask(three, 4000).allowed, 'G3 0.40% new allowed with 1.20% realized');
+  has(ask(three, 4001), 'MONEY_WEEK', 'G3 0.40%+1 blocked'); near(ask(three, 4000).money.weekCap, 16000, 'G3 weekly cap 1.60% = 16,000');
   const open = idea({ id: 'open1', entry: 100, stop: 95, qty: 400, status: 'holding' });   // open principal risk 2,000
-  no(ask(three.concat([open]), 2500), 'MONEY_WEEK', 'G3 open 2,000 + new 2,500 = 0.45% fits the money check'); has(ask(three.concat([open]), 2501), 'MONEY_WEEK', 'G3 combined over 0.45% blocked');
+  no(ask(three.concat([open]), 2000), 'MONEY_WEEK', 'G3 open 2,000 + new 2,000 = 0.40% fits the money check'); has(ask(three.concat([open]), 2001), 'MONEY_WEEK', 'G3 combined over 0.40% blocked');
   const wk = idea({ id: 'wk1', entry: 100, stop: 95, qty: 500, status: 'ordered', working: [{ id: 'w', qty: 500, entry: 100, stop: 95, mult: 1, fx: 1, at: NOW }] });  // working order reserves 2,500
-  has(ask(three.concat([wk]), 2500), 'MONEY_WEEK', 'G3 pending order reservation counts');
+  has(ask(three.concat([wk]), 2000), 'MONEY_WEEK', 'G3 pending order reservation counts');
   // wins never offset
   const win = idea({ entry: 100, stop: 95, qty: 2000, exitPrice: 110, exitAt: T('2026-11-17T09:00:00'), reason: 'target' });   // +20,000
-  has(ask(three.concat([win]), 4501), 'MONEY_WEEK', 'G3 a win does not offset realized losses');
+  has(ask(three.concat([win]), 4001), 'MONEY_WEEK', 'G3 a win does not offset realized losses');
   // four half-size losses (≈0.90 %) → locked by ammunition (count), not money
   const half = [1, 2, 3, 4].map(() => loser(2250)), r4 = ask(half, 2250);
   has(r4, 'AMMO_EXHAUSTED', 'G3 four half-size losses lock'); no(r4, 'MONEY_WEEK', 'G3 ... although money is fine'); near(r4.money.weekGross, 9000, 'G3 gross 0.90%');
@@ -111,11 +111,11 @@ const costsOf = () => C;
   // Monday with four carried full-risk positions → no new entry until one stop is confirmed at net breakeven
   const carried = [1, 2, 3, 4].map(k => idea({ id: 'c' + k, entry: 100, stop: 95, qty: 880, status: 'holding' }));   // ≈4,484 each incl. est. exit cost ≈ 1.80 % open
   const mon = (ideas, risk) => R.momentumCheck({ now: MON + 3600000, account: 'main', basis: R.snapshotBasis(snaps(E, T('2026-11-16T00:30:00')), MON + 3600000), ideas, costsFor: costsOf, candidate: { ideaId: 'new', riskMoney: risk } });
-  let rm = mon(carried, 4500); has(rm, 'AMMO_EXHAUSTED', 'G3 Monday: 4 carried ideas reserve 4 allowances'); has(rm, 'MONEY_WEEK', 'G3 Monday: carried open risk fills the cap');
+  let rm = mon(carried, 2500); has(rm, 'AMMO_EXHAUSTED', 'G3 Monday: 4 carried ideas reserve 4 allowances'); has(rm, 'MONEY_WEEK', 'G3 Monday: carried open risk fills the cap');
   carried.forEach(c => { c.entryFees = 0; });
   const be = R.netBreakevenStop(carried[0], C); ok(be > 100, 'G3 net-breakeven stop is above entry (costs) ' + be);
   carried[0].tranches[0].stop = be; carried[0].tranches[0].stopConfirmed = true;
-  rm = mon(carried, 4500); no(rm, 'AMMO_EXHAUSTED', 'G3 confirmed net-breakeven stop releases one allowance'); no(rm, 'MONEY_WEEK', 'G3 ... and its money'); ok(rm.allowed, 'G3 entry allowed after release ' + rm.reasons);
+  rm = mon(carried, 2500); no(rm, 'AMMO_EXHAUSTED', 'G3 confirmed net-breakeven stop releases one allowance'); no(rm, 'MONEY_WEEK', 'G3 ... and its money'); ok(rm.allowed, 'G3 entry allowed after release ' + rm.reasons);
 }
 
 // ═══ G4 · Momentum Option C ═══
@@ -182,7 +182,7 @@ const costsOf = () => C;
   ok(below.allowed && below.flags.indexOf('ADDON_BELOW_ENTRY_WARN') >= 0, 'G6 adding below the average entry: allowed + warning only');
   ok(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.5, requestedPct: 0.3, entryPx: 103, avgEntry: 100 }).flags.indexOf('ADDON_BELOW_ENTRY_WARN') < 0, 'G6 above entry: no warning');
   ok(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'short', usedPct: 0.5, requestedPct: 0.3, entryPx: 102, avgEntry: 100 }).flags.indexOf('ADDON_BELOW_ENTRY_WARN') >= 0, 'G6 short: adverse side warns');
-  ok(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.25, requestedPct: 0.75 }).capPct === 1.25, 'G6 whole plan = 1.25% (RM1: was 1.00%)');
+  ok(R.compEntryCheck({ kind: 'addon', thesisDone: true, side: 'long', usedPct: 0.25, requestedPct: 0.75 }).capPct === 1.00, 'G6 whole plan = 1.00% (RK1 default; was 1.25%)');
   eq(R.compEntryCheck({ kind: 'pilot', starterOn: true, thesisDone: false, requestedPct: 0.25 }).allowed, true, 'G6 Starter first entry 0.25%');
   has(R.compEntryCheck({ kind: 'pilot', starterOn: true, thesisDone: false, requestedPct: 0.3 }), 'COMP_PHASE_CAP', 'G6 Starter first entry above 0.25 blocked');
   has(R.compEntryCheck({ kind: 'pilot', thesisDone: false, requestedPct: 0.6 }), 'COMP_PHASE_CAP', 'G6 thesis incomplete → Pilot only (0.50%)');
@@ -237,8 +237,8 @@ const costsOf = () => C;
   ok(s.active, 'G7 a deposit does not hide a −10% performance drop');
   s = R.emergencyStep(null, { at: T('2026-11-12T20:00:00'), equity: 900000, confirmed: true }, mref, [{ at: T('2026-11-10T09:00:00'), amount: -100000 }]);
   ok(!s.active, 'G7 a withdrawal is not a loss'); near(s.declinePct, 0, 'G7 adjusted decline 0');
-  // factor feeds sizing: Satellite Step 3 × 65% × 0.5 = 0.0975%
-  near(R.satEffectiveRpt({ stepIndex: 2 }, 0.65, 0.5), 0.0975, 'G7 Step 3 × 65% × Emergency 0.5 = 0.0975% (no old 0.6 multiplier)');
+  // factor feeds sizing: Satellite 0.20 × 65% × 0.5 = 0.065%
+  near(R.satEffectiveRpt({ stepIndex: 2 }, 0.65, 0.5), 0.065, 'G7 Sat 0.20 × 65% × Emergency 0.5 = 0.065% (RK1 fixed Sat; no old 0.6 multiplier)');
   near(R.emergencyFactor(true), 0.5, 'G7 factor 0.5'); near(R.emergencyFactor(false), 1, 'G7 factor 1');
   eq(R.emergencyStep(null, null, mref, []).active, false, 'G7 no snapshot → unchanged');
 }
@@ -295,14 +295,14 @@ const costsOf = () => C;
 // ═══ B · boundary cases ═══
 {
   const b = basis(), ask = (ideas, risk, now = NOW, bs = b) => R.momentumCheck({ now, account: 'main', basis: bs, ideas, costsFor: costsNone, candidate: { ideaId: 'n', riskMoney: risk } });
-  ok(ask([], 18000).allowed, 'B exactly at the weekly limit allowed'); has(ask([], 18000.01), 'MONEY_WEEK', 'B one cent over blocked');
-  ok(ask([loser(9000), loser(9000)], 0).allowed, 'B exactly 1.80% realized, nothing new → allowed'); eq(R.satBudgetCheck({ basis: b, now: NOW, account: 'main', ideas: [], candidateRisk: 12000 }).allowed, true, 'B Satellite exactly 1.20% allowed');
-  has(R.satBudgetCheck({ basis: b, now: NOW, account: 'main', ideas: [], candidateRisk: 12000.01 }), 'MONEY_WEEK', 'B Satellite over 1.20% blocked');
+  ok(ask([], 16000).allowed, 'B exactly at the weekly limit allowed'); has(ask([], 16000.01), 'MONEY_WEEK', 'B one cent over blocked');
+  ok(ask([loser(8000), loser(8000)], 0).allowed, 'B exactly 1.60% realized, nothing new → allowed'); eq(R.satBudgetCheck({ basis: b, now: NOW, account: 'main', ideas: [], candidateRisk: 8000 }).allowed, true, 'B Satellite exactly 0.80% allowed');
+  has(R.satBudgetCheck({ basis: b, now: NOW, account: 'main', ideas: [], candidateRisk: 8000.01 }), 'MONEY_WEEK', 'B Satellite over 0.80% blocked');
   // Monday reset with carried risk: last week's losses fall out, carried open risk stays
-  const lastWeek = loser(18000, { exitAt: T('2026-11-13T15:00:00') }), carriedOpen = idea({ id: 'co', entry: 100, stop: 95, qty: 900, status: 'holding' });
+  const lastWeek = loser(16000, { exitAt: T('2026-11-13T15:00:00') }), carriedOpen = idea({ id: 'co', entry: 100, stop: 95, qty: 900, status: 'holding' });
   const monNow = MON + 3600000, bm = R.snapshotBasis(snaps(E, T('2026-11-16T00:30:00')), monNow);
-  const r = ask([lastWeek, carriedOpen], 4500, monNow, bm); ok(r.allowed, 'B Monday: last week’s 1.80% losses no longer count, 0.45% carried + 0.45% new fits'); near(r.money.weekGross, 0, 'B Monday gross 0'); near(r.money.open, 4500, 'B carried open risk still counts');
-  has(ask([lastWeek, carriedOpen], 13501.01, monNow, bm), 'MONEY_WEEK', 'B carried risk is never erased by a reset');
+  const r = ask([lastWeek, carriedOpen], 4000, monNow, bm); ok(r.allowed, 'B Monday: last week’s 1.60% losses no longer count, 0.45% carried + 0.40% new fits'); near(r.money.weekGross, 0, 'B Monday gross 0'); near(r.money.open, 4500, 'B carried open risk still counts');
+  has(ask([lastWeek, carriedOpen], 11500.01, monNow, bm), 'MONEY_WEEK', 'B carried risk is never erased by a reset');
   eq(r.ammo.completedLosses, 0, 'B Monday: weekly count reset');
   // Sunday 23:59:59 vs Monday 00:00:00 (Bangkok)
   const sun = T('2026-11-15T23:59:59'), mon0 = T('2026-11-16T00:00:00');
@@ -318,7 +318,7 @@ const costsOf = () => C;
   has(mm2, 'MONEY_MONTH', 'B monthly 7.20% (72,000) reached → blocked even though the week is fresh');
   eq(R.momentumState({ now: T('2026-11-30T12:00:00'), account: 'main', ideas: [loser(72000, { exitAt: T('2026-11-30T10:00:00') })], costsFor: costsNone }).completedLosses, 1, 'B a single huge loss uses one allowance only (count ≠ money)');
   // month-start basis for monthly cap, week-start basis for weekly
-  const twoBasis = { ok: true, flags: [], weekEquity: 1000000, monthEquity: 500000 }; near(ask([], 0, NOW, twoBasis).money.monthCap, 36000, 'B monthly cap from month-start equity'); near(ask([], 0, NOW, twoBasis).money.weekCap, 18000, 'B weekly cap from week-start equity');
+  const twoBasis = { ok: true, flags: [], weekEquity: 1000000, monthEquity: 500000 }; near(ask([], 0, NOW, twoBasis).money.monthCap, 32000, 'B monthly cap from month-start equity'); near(ask([], 0, NOW, twoBasis).money.weekCap, 16000, 'B weekly cap from week-start equity');
   // results belong to the week of the close time; ideas opened last week, closed this week count this week
   const crossing = loser(4500, { exitAt: T('2026-11-17T09:00:00') }); crossing.openedAt = T('2026-11-10T09:00:00'); near(ask([crossing], 0).money.weekGross, 4500, 'B result belongs to the close week');
   // partial exits count immediately toward the budget, but ammunition only at completion
@@ -451,6 +451,42 @@ const costsOf = () => C;
   const blk = { reasons: ['DD_STOP'], flags: [] };
   ['order', 'addon', 'topup', 'edit_increase'].forEach(a => ok(R.actionPolicy(a, blk).accepted === false, 'AU2 ' + a + ' refused'));
   ['fill', 'close', 'reduce', 'partial_close', 'stop_update', 'cancel'].forEach(a => ok(R.actionPolicy(a, blk).accepted === true, 'AU2 ' + a + ' always allowed'));
+}
+
+// ═══ RK1 · new risk per idea (defaults, derived limits, loss-streak agreement, override via settings, bounds, old plans untouched) ═══
+{
+  const P = R.POLICY;
+  near(P.mom.rptPct, 0.40, 'RK1 Momentum default 0.40'); near(P.comp.pilotPct, 0.50, 'RK1 Compounder first entry 0.50'); near(P.comp.totalCapPct, 1.00, 'RK1 Compounder total 1.00');
+  ok(P.sat.stepRpt.length === 4 && P.sat.stepRpt.every(v => v === 0.20), 'RK1 Sat every step = 0.20');
+  near(P.mom.weeklyPct, 1.60, 'RK1 Momentum weekly = 4 × 0.40'); near(P.mom.monthlyPct, 6.40, 'RK1 Momentum monthly = 4 × weekly'); near(P.sat.weeklyPct, 0.80, 'RK1 Sat weekly 0.80'); near(P.sat.monthlyPct, 3.20, 'RK1 Sat monthly 3.20');
+  eq(P.mom.ammo, 4, 'RK1 ammo 4 unchanged'); eq(P.comp.lockLosses, 6, 'RK1 Compounder lock after 6 unchanged'); near(P.comp.heatCapPct, 6, 'RK1 heat 6'); near(P.comp.valueCapPct, 12.5, 'RK1 value cap 12.5');
+  // Momentum: the 4th losing idea blocks at 0.40 — count and 1.60 % budget agree (4 × 4,000 = 16,000 = the weekly cap)
+  const b = basis(), ask = (ideas, risk) => R.momentumCheck({ now: NOW, account: 'main', basis: b, ideas, costsFor: costsNone, candidate: { ideaId: 'new', riskMoney: risk } });
+  const l3 = [loser(4000), loser(4000), loser(4000)];
+  ok(ask(l3, 4000).allowed, 'RK1 Mom: 4th idea allowed after 3 full losses'); const l4 = l3.concat([loser(4000)]);
+  has(ask(l4, 1), 'AMMO_EXHAUSTED', 'RK1 Mom: 5th idea blocked by the count'); has(ask(l4, 1), 'MONEY_WEEK', 'RK1 Mom: ... and by the 1.60% budget at the same point'); near(ask(l4, 0).money.weekCap, 16000, 'RK1 Mom weekly cap 16,000');
+  // Sat: lock after the 4th loss at 0.20, 0.80 % budget
+  const sl = [2000, 2000, 2000, 2000].map((L, i) => loser(L, { id: 'rs' + i, strategy: 'sat', exitAt: T('2026-11-16T' + String(9 + i).padStart(2, '0') + ':00:00') })), sa = sl.map(i => ({ id: i.id, closeAt: i.closedAt, net: R.ideaRealizedNet(i) }));
+  ok(R.satStepState(sa, NOW).locked, 'RK1 Sat locked after 4 losses'); ok(!R.satStepState(sa.slice(0, 3), NOW).locked, 'RK1 Sat not locked after 3');
+  [0, 1, 2, 3].forEach(k => near(R.satStepState(sa.slice(0, k), NOW).baseRptPct, 0.20, 'RK1 Sat step ' + (k + 1) + ' = 0.20'));
+  has(R.satBudgetCheck({ basis: b, now: NOW, account: 'main', ideas: sl, candidateRisk: 1 }), 'MONEY_WEEK', 'RK1 Sat 0.80% budget used at the lock');
+  // Compounder: 6-loss lock unchanged
+  const cyc = n => Array.from({ length: n }, (_, i) => ({ id: 'cc' + i, flatAt: T('2026-11-01T10:00:00') + i * D, net: -100 }));
+  ok(R.compStreak(cyc(6), []).locked && !R.compStreak(cyc(5), []).locked, 'RK1 Compounder locks at the 6th loss, not before (unchanged)');
+  // old saved plan unchanged: plan-stored qty/risk are plain numbers; engine only sizes NEW orders
+  const old = idea({ id: 'oldplan', entry: 100, stop: 95, qty: 900, status: 'holding' }); eq(old.tranches[0].qty, 900, 'RK1 saved qty untouched (900 @ 0.45% era)');
+  ok(R.momentumCheck({ now: NOW, account: 'main', basis: b, ideas: [old], costsFor: costsNone, candidate: { ideaId: 'new', riskMoney: 1 } }).money.open >= 4500 - 1e-6, 'RK1 old holding still counts with its stored 4,500 risk');
+  // override via settings + bounds
+  const D0 = R.riskValidate(null); ok(D0.ok && D0.values.mom === 0.40 && D0.values.sat === 0.20 && D0.values.compTotal === 1 && D0.values.compFirst === 0.5, 'RK1 defaults validate');
+  const ap = R.applyRisk({ compTotal: 1.2, compFirst: 0.6, mom: 0.5, sat: 0.25 });
+  ok(ap.ok, 'RK1 override accepted'); near(P.mom.rptPct, 0.5, 'RK1 override Mom'); near(P.mom.weeklyPct, 2.0, 'RK1 override weekly = 4 × 0.50'); near(P.mom.monthlyPct, 8.0, 'RK1 override monthly = 4 × weekly');
+  near(P.sat.stepRpt[3], 0.25, 'RK1 override Sat every step'); near(P.sat.weeklyPct, 1.0, 'RK1 override Sat weekly'); near(P.comp.totalCapPct, 1.2, 'RK1 override Comp total'); near(P.comp.pilotPct, 0.6, 'RK1 override Comp first');
+  near(R.satEffectiveRpt({ stepIndex: 3 }, 1, 1), 0.25, 'RK1 satEffectiveRpt follows the override');
+  const bad = [{ mom: 0.19 }, { mom: 0.61 }, { sat: 0.09 }, { sat: 0.41 }, { compTotal: 0.49 }, { compTotal: 1.51 }, { compTotal: 0.8, compFirst: 0.9 }, { mom: 'x' }, { compFirst: 0 }];
+  bad.forEach(c => { const v = R.applyRisk(c); ok(!v.ok && v.errors.length > 0, 'RK1 out of bounds refused ' + JSON.stringify(c)); });
+  near(P.mom.rptPct, 0.5, 'RK1 refused values change nothing');
+  [{ mom: 0.20 }, { mom: 0.60 }, { sat: 0.10 }, { sat: 0.40 }, { compTotal: 0.5, compFirst: 0.5 }, { compTotal: 1.5, compFirst: 1.5 }].forEach(c => ok(R.riskValidate(c).ok, 'RK1 bound edge accepted ' + JSON.stringify(c)));
+  R.applyRisk(null); near(P.mom.rptPct, 0.40, 'RK1 Reset → defaults'); near(P.sat.stepRpt[0], 0.20, 'RK1 Reset Sat'); near(P.comp.totalCapPct, 1.0, 'RK1 Reset total'); near(P.comp.pilotPct, 0.5, 'RK1 Reset first'); near(P.mom.weeklyPct, 1.6, 'RK1 Reset weekly');
 }
 
 console.log((f ? 'FAIL ' : 'PASS ') + (n - f) + '/' + n + ' risk-engine assertions');
