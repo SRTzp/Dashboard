@@ -1,0 +1,50 @@
+# FS2 · Fact Sheet “answer-first” (Homework page, left column / phone Facts tab)
+
+Approved by SRTp 21 Nov 2026 (“easy to understand — don’t drop important details”). Spec: mockups `docs/briefs/lr/FactSheetV2.html` (A Momentum · B Compounder with the tap popover open · C phone) , `docs/briefs/lr/FactSheetTabs.html` (Facts | AI thesis switch) `docs/briefs/lr/HomeworkFull.html` (content reference) and **`docs/briefs/lr/HomeworkFit.html` (sizes, Results tiles)** and **`docs/briefs/lr/Business6.html` (final: left tabs + Business tab — wins over the others)**. Replaces the current Fact Sheet rendering (legend + tagged rows + 4-quarter table). Data stays LT2 `facts` (plus the optional fields below). git fetch and branch from fresh origin/main (`claude/fs2`), after RK1 is merged.
+Lean UI: no new panel (same column), light only, English UI, colour only for direction, numbers tabular, phone tap areas 44px. Facts only — no opinion words except the computed trend words.
+
+## Left tabs (final, 21 Nov — supersedes “Facts | AI thesis” below)
+- Switch: **Business | Results | AI thesis** (badge Lite/Deep/none). **←/→** move between them (stop at the ends; not while typing; ↑/↓ scroll; Esc/Backspace back). Default: Compounder → Business, Momentum → Results; remember per stock. Phone: `Business | Results | AI | Mine` (44px; if too tight, `Facts ▾` holds Business/Results).
+- **Business tab** = `facts.business[]`, fixed order, 2-column boxes: 1 What it sells & how it gets paid (with the mix bar) · 2 Who pays · how concentrated · 3 Costs · margin · does profit grow faster? · 4 Do customers stay? · 5 Cash cycle · debts coming due · 6 What it can’t control. Momentum shows 1, 2, 3, 6 (2 × 2). Box = number + question · rule flag label (top right: `ok` green / `watch` amber / `info` grey, text from the data) · answer (key number first) · one supporting line · source. `watch` boxes get the amber tint. Missing box → `Not disclosed` (amber) instead of the box content. Under the boxes: `Not disclosed:` line, then a one-line **Latest results** strip (revenue · EPS · the KPI with trend words) with `Results ›`.
+- **Results tab** = the 2 × 2 tiles + compact rows from “Final layout” below (lastq, expected, exposure, management, not disclosed, More facts).
+- The `profile` rows are dropped (replaced by Business box 1–2); if an old JSON has only `profile`/`biz`, show them as box 1.
+
+## Final layout (21 Nov · from `HomeworkFit.html`) — no page scroll at 1440 × 900
+- Columns 7 : 5 (Facts/AI left, Your thesis right), each card fills the viewport height under the top bar; **the page never scrolls** at 1440 × 900. At smaller heights (e.g. 1280 × 800) the left card scrolls inside itself; the right card keeps the buttons visible (sticky footer). Measure in the test: no document scroll at 1440×900; left/right cards' content fits (Momentum and Compounder fixtures).
+- Left card order: switch + period + `Update ›` on one row → **The business** (rows `Sells · Customers · Earns by · Where` from `facts.profile`, each one line that may wrap to 2; fallback: `biz` as one `Sells` row) + revenue mix bar & legend → **Results · last 4 quarters** as **2 × 2 tiles** (question · answer + trend word · short reason · mini bars with values) — max 4 tiles: revenue, EPS, then margin / the business KPI (Compounder: KPI first, then margin) → **compact rows** (`question label · answer · source`) for lastq (Momentum shows it as the 4th tile when there is no KPI) / expected / profit lines / cash / balance sheet / exposure / management / not disclosed → `More facts ▸` (opens in place; the card may scroll only then).
+- Type: answer 14px, labels 11px, reason 11px; `note` stays inline in amber in the same row.
+- Right card: fields with textareas ~2 lines tall (grow on focus), Optional fold, footer (Save draft · Save · mark done · Copy for AI challenge ›), size line.
+
+## Block anatomy (every block)
+Grey question (12px) → **one answer line** (15px, key number bold) → one short reason **or** source line (12px). Optional mini chart on the right (desktop) / under the answer (phone) when the block has a 4-quarter row. The whole block is the tap target → popover (desktop) / inline expand (phone): Formula · Period (calendar months + fiscal quarter) · Source (link) · Type (Reported / Calculated / Management / Quote site) · `note`.
+
+## Header
+`Fact Sheet` · `latest quarter Aug–Oct 2026 (Q3 FY27) · reported 19 Nov` (from `q.ends` + `q.cols` + `facts.date`; without `ends` → `latest quarter Q3 FY27`) · secondary `Update ›` (HW1c).
+
+## Blocks and fixed order
+- **What does it sell?** `summary.biz`/`facts.biz` in full (wraps, no ellipsis) + a stacked mix bar + legend `Segment pct% · +yoy%` (all segments in `mix`, max 4 + Other; neutral greys, the fastest-growing segment may use gain green).
+- **4-quarter rows** (`q.rows`) each become a block: question from the row (`ask` if given, else defaults: rev_yoy “Is revenue growing?”, eps_yoy “Is profit per share growing?”, gm/op_margin “Is it keeping its margin?”, shares_yoy “Is the share count shrinking?”, kpi_* → `ask` or the label as a question). Answer = latest value + trend word (`ltTrend`): accelerating/rising **green**, slowing/slipping/falling **amber**, a negative growth value **red**, steady grey. Reason = last 3 values with arrows (`+214% → +128% → +108%`) or the 4-quarter range for level rows. Mini chart = 4 bars (last dark) with the values under it (min–max scaled; negative values below a baseline).
+- **Lines by group**, one block per line (question = `ask` if given, else by group): `lastq` “Did it beat expectations last quarter?” · `expected` “What does the market expect next?” · `cash` “Is it turning profit into cash?” · `profit` (e.g. fees vs profit) “`ask`” · `exposure` “What could hurt it?” · `growth` merges into the revenue block’s reason line when it’s a single line (e.g. stores, same-store). Answer = `text`; source line = `src` (+ `date` for `web`). **A `note` is shown inline in amber under the answer (never only in the popover).**
+- **What does management say?** `mgmt[]` as quote + `— src`.
+- **Not disclosed:** `missing[]` in amber, one line each.
+- **More facts ▾** (Compounder; folded): `more[]` grouped, same block anatomy.
+- Order — Momentum: sell → revenue → EPS → margin → lastq → expected → exposure → management → not disclosed. Compounder: sell → revenue (+growth lines) → business KPIs → profit lines → cash → balance sheet (`exposure` debt/cash + shares) → management → not disclosed → More facts. Blocks with no data are skipped.
+- No legend, no rpt/calc/mgmt tags on screen. No data lost: every field shown today must appear in a block, a reason line or the popover (list the mapping in the summary).
+
+## Facts | AI thesis switch (left column; phone: Facts | AI | Mine)
+- One segmented switch at the top of the left column: **Facts** (default) · **AI thesis** with a badge `Lite` / `Deep` / `none` (from `thesis.mode`; a facts-only thesis = `none`). Not three tabs: a stock keeps one AI thesis (Deep builds on and replaces Lite).
+- **AI thesis tab:** header `Lite · 12 Nov · based on <basis>` + `Update ›`; summary rows (Thesis · Risk · Next · Breaks if — from `summary.thesis[0]`, `risk`, `next`, `breaker`; plus Price/Status lines if present); then the 4 parts `sections.s1–s4` as fold-out sections (first open, no tabs inside tabs; `[[terms]]` tappable as in the Full thesis view). If Lite: a muted line `Want more depth before buying? Run living-thesis deep TICKER track ⧉ — it builds on this Lite, then Import JSON`.
+- **Empty (none):** `No AI thesis yet` + copy chips `living-thesis lite TICKER track ⧉` (≈ 55k tokens) and `living-thesis deep TICKER track ⧉` (≈ 110k tokens, before buying) + `Import JSON ›` + muted tip `Write your own thesis first, then read this to compare.`
+- Remember the last tab per stock (localStorage); default Facts. Desktop ←/→ switch tabs on the Homework page (not while typing; ↑/↓ still scroll; Backspace/Esc still go back).
+- Phone: the Homework sheet's switch becomes 3-way `Facts | AI | Mine` (44px); default as today (Facts when nothing is written, else Mine).
+- The AI thesis tab never fills the user's fields; Compare with thesis stays on the right. ⋯ › Full thesis on Watch stays unchanged (it also holds news, history and terms).
+
+## Data additions (optional, validator accepts; skill update proposed separately)
+- `q.ends`: 4 × `YYYY-MM` (calendar end month per column).
+- `ask` (≤ 40 chars) on `q.rows[]`, `lines[]`, `more[]`: the plain question for that block.
+- `business[]`: `{k: product|customers|economics|retention|cash|outside, answer (≤ 120), line (≤ 140), flag: ok|watch|info, flagText (≤ 22), kind, src, period, formula?, note?, mix?}`; missing box → `{k, missing:true, line:'why'}`. Old `profile` accepted as fallback.
+- AI thesis is one per stock: importing Deep replaces Lite (badge shows the current `mode`).
+
+## Proof
+- `tests/run_tests_fs2.py`: no page scroll at 1440×900 (both fixtures), inner scroll at 1280×800, 3 tabs + ←/→ + defaults per track, Business boxes in order (6 Compounder / 4 Momentum), flag colours, missing box, Latest results strip → Results, Results tiles; Facts/AI switch (badge Lite/Deep/none from mode, facts-only = none, summary + fold-outs, Lite upsell line, empty state chips with the right track, remember per stock, ←/→ desktop, phone 3-way 44px, never fills fields); both track fixtures render the blocks in the fixed order; every LT2 field reachable (block, reason or popover); trend word + colour per case (accel, slow, negative, steady, level rising/falling); `note` visible inline; web source + date visible; header dates with and without `ends`; biz not truncated; popover content; More facts fold; fallback (no facts) unchanged from HW1c; phone layout (chart under answer, 44px); 360/390/1440 no overflow.
+- Update hw1/hw1c/hw1d/lt2 tests that read the old table/legend. Side-by-side vs the mockup (`tests/screenshots/fs2/`, `git add -f`) · hooks superset PASS · one clean `JOBS=2 bash tests/run_regression.sh` · `docs/reports/FS2-summary.md`. No unrelated PNGs.
