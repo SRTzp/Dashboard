@@ -3920,6 +3920,7 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
 .pc2-chips{display:flex;gap:6px;flex-wrap:wrap}.pc2-e{font-size:12px;border-radius:8px;padding:3px 8px}.pc2-e.f{background:var(--surface2,#F4F5F7)}.pc2-e.p{border:1.3px dashed #C9CDD4}
 .pc2-nx{display:flex;align-items:center;gap:8px;font-size:12.5px;border-top:1px solid var(--border,#F0F1F4);padding-top:8px;flex-wrap:wrap;min-width:0}
 .pc2-nx>span{min-width:0;overflow-wrap:anywhere}.pc2-nx .w{color:#9A5B00;font-weight:600}.pc2-nx .g{color:var(--green);font-weight:600}.pc2-nx [data-pc2-ready]:before{content:"✓ "}.pc2-nx .pc2-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.pc2-nx .pc2-sr:before{content:none!important}.pc2-nx .mut{color:var(--muted)}
+.go.pc2-b.pri,.go.pc2-b.p.pri{background:#14161A!important;color:#fff!important;border-color:#14161A!important}
 .pc2-nx .pc2-b{margin-left:auto;height:30px;min-height:30px;border-radius:9px;padding:0 12px;font:600 12px var(--sans);white-space:nowrap;border:1px solid var(--border);background:var(--surface);color:var(--text)}
 .pc2-nx .pc2-b.pri{background:#14161A;color:#fff;border-color:#14161A}.pc2-nx .pc2-b[disabled]{opacity:.5}
 .pc2-hw{border:0;background:none;color:#9A5B00;font:600 12.5px var(--sans);padding:0;cursor:pointer;text-align:left}
@@ -24110,7 +24111,8 @@ function satV2NewPlan(asset, sleeve, extra){
   return id;
 }
 const satV2Money2 = (v, cur) => cur==='USD' ? `$${fmt0(Math.round(v))}` : `฿${fmt0(Math.round(v))}`;
-const satV2Lot = x => x==null ? '—' : String(Math.round(x*10000)/10000);   /* SET1 — BTC/ETH qty step 0.0001 */
+const satV2Lot = x => x==null ? '—' : String(Math.round(x*10000)/10000);
+const satLot2 = x => { if(x == null || !isFinite(x)) return '—'; const r = Math.round(x * 100) / 100; return String(r > 0 ? r : Math.round(x * 10000) / 10000); };   /* PC2 — Sat lots are SHOWN with 2 decimals; data keeps full precision */   /* SET1 — BTC/ETH qty step 0.0001 */
 /* ตารางขนาดไม้ของบัญชีหนึ่ง (อยู่ในแถวบัญชีของการ์ด) */
 function satV2SizeLine(model, a){
   const idea = model._idea, c = satV3PlanAcctCalc(idea, a.id);
@@ -27952,9 +27954,9 @@ function pc2Gate(it){
     const f = m.fit, row = rows[lv], sl = +(c.plan || {}).stop, newRisk = row && sl > 0 ? saved * Math.abs(row.px - sl) * (f.uv || 1) : 0, room = f.budgetMoney - newRisk, cur = +it.sl;
     if(room > 0 && f.held > 0 && f.avg > 0 && f.uv > 0){ const need = f.avg - room / (f.held * f.uv); if(need > cur + 1e-9){ out.short = `Add needs stop ≥ ${td3Num(Math.ceil(need * 100) / 100)} (now ${td3Num(cur)})`; out.fix = {t:'Move stop ›', fn:`coreStopOpen('${td3E(it.id).replace(/'/g, "\\'")}')`, k:'stop'}; out.why = out.short; return out; } }
   }
-  if(m && m.blocked && m.reasons.length && m.reasonTexts && m.reasonTexts[0]){ out.short = lr3ShortWhy(m.reasonTexts[0], it); out.why = g.msg || m.reasonTexts[0]; return out; }   /* a rule (not just size) blocks: name the rule */
+  if(m && m.blocked && m.reasons.length && m.reasonTexts && m.reasonTexts[0]){ out.short = pc2Why(m.reasonTexts[0], it); out.why = g.msg || m.reasonTexts[0]; return out; }   /* a rule (not just size) blocks: name the rule */
   if(out.allowed != null && saved > 0 && saved > out.allowed){ out.short = `Allowed now #${fmt0(out.allowed)} (plan has #${fmt0(saved)})`; out.why = out.short; return out; }
-  out.short = lr3ShortWhy(out.why, it); return out;
+  out.short = pc2Why(out.why, it); return out;
 }
 /* Momentum top-up (2f): hw done within 5 trading days after the first fill and room under the FULL budget */
 function pc2TopUpInfo(it){
@@ -27968,6 +27970,13 @@ function pc2TopUpInfo(it){
 function pc2Btn(label, fn, o){
   o = o || {}; const k = o.k || 'place';
   return `<button type="button" class="go pc2-b${o.pri ? ' p pri' : ''}" data-bd-pill="${k}"${k === 'fix' ? ` data-pv-fixbtn="${bdE(o.fixk || 'fix')}"` : ''}${o.dis ? ` disabled title="${bdE(o.title || '')}" data-bd-blocked="1"` : ''} onclick="event.stopPropagation();${fn}">${bdE(label)}</button>`;
+}
+function pc2Why(why, it){   /* a reason is never cut with '…' — short named form, the full text is the tooltip / drawer */
+  const w = String(why || '').trim();
+  if(/^Another Satellite setup is active/i.test(w)) return `Another Sat setup open in ${it && it.sym ? it.sym : 'this account'} · close or edit it`;
+  const m = /^(.*?)(?: — | · |: |\. )/.exec(w); let t = (m ? m[1] : w).replace(/\s*\(.*$/, '').trim();
+  const q = lr3ShortWhy(w, it); if(/weekly limit/.test(q) || /^Wrong side:/.test(w)) return q;
+  return t || q || 'Blocked';
 }
 function pc2Menu(id){ pc2MenuId = pc2MenuId === id ? null : id; try{ bdRender(); }catch(e){} }
 function pc2MenuHtml(it){
@@ -28046,16 +28055,16 @@ function pc2CardHtml(it){
   const placeLab = lvLab ? 'Place ' + lvLab : 'Place order';
   const wlHw = c ? `td3HwGo('${td3E(c.ticker).replace(/'/g, "\\'")}','W','')` : '';
   if(plan){
-    if(sat && blk){ nx = `<span class="w" data-pv-warn data-pc2-warn data-bd-blockedtag>⚠ ${e(lr3ShortWhy(blk.why, it))}</span>${blk.btn ? pc2Btn(blk.btn, `bdFix('${qid}','${e(blk.k)}')`, {k:'fix', fixk:blk.k}) : pc2Btn('Place order', '', {dis:true, title: blk.k === 'trend' ? 'Blocked by trend rule' : blk.why})}`; nxCls = ' blk'; }
+    if(sat && blk){ nx = `<span class="w" data-pv-warn data-pc2-warn data-bd-blockedtag>⚠ ${e(pc2Why(blk.why, it))}</span>${blk.btn ? pc2Btn(blk.btn, `bdFix('${qid}','${e(blk.k)}')`, {k:'fix', fixk:blk.k}) : pc2Btn('Place order', '', {dis:true, title: blk.k === 'trend' ? 'Blocked by trend rule' : blk.why})}`; nxCls = ' blk'; }
     else if(blk){
       const fixBtn = p.k === 'fix' ? pc2Btn(p.t, p.fn, {k:'fix'}) : (gate && gate.fix ? pc2Btn(gate.fix.t, gate.fix.fn, {k:'fix'}) : '');
-      nx = `<span class="w" data-pv-warn data-pc2-warn title="${e(blk.why)}">⚠ ${e(gate && gate.short ? gate.short : lr3ShortWhy(blk.why, it))}</span>${fixBtn || pc2Btn(placeLab, '', {dis:true, title:blk.why})}`; nxCls = ' blk'; }
+      nx = `<span class="w" data-pv-warn data-pc2-warn title="${e(blk.why)}">⚠ ${e(gate && gate.short ? gate.short : pc2Why(blk.why, it))}</span>${fixBtn || pc2Btn(placeLab, '', {dis:true, title:blk.why})}`; nxCls = ' blk'; }
     else if(p.k === 'place'){
       const pri = near || it.pct == null;
       if(sat){ let ok = ''; try{ const V = ln4VerifyOf(it.ref); ok = V && V.ema === true && V.st === true ? '<span class="mut">· EMA50 + structure ✓</span>' : ''; }catch(x){} nx = `<span class="g" data-pc2-ready data-re2-ready="1" data-ef-ready>Ready</span>${ok}${pc2Btn('Place order', p.fn, {pri})}`; }
-      else if(mom && hw && !hw.done){ const full = pc2FullQty(c); nx = `<span class="pc2-sr" data-pc2-ready data-re2-ready="1" data-ef-ready>Ready</span><button type="button" class="pc2-hw" data-pc2-hw onclick="event.stopPropagation();${wlHw}">Homework ${hw.n} of ${hw.tot}${full > 0 ? ' · full size #' + fmt0(full) + ' when done' : ''} ›</button>${pc2Btn(placeLab, p.fn, {pri})}`; nxCls = ' hw'; }
+      else if(mom && hw && !hw.done){ const full = pc2FullQty(c); nx = `<span class="pc2-sr" data-pc2-ready data-re2-ready="1" data-ef-ready>Ready</span><button type="button" class="pc2-hw" data-pc2-hw onclick="event.stopPropagation();${wlHw}">Homework ${hw.n}/${hw.tot}${full > 0 ? ' · #' + fmt0(full) + ' when done' : ''} ›</button>${pc2Btn(placeLab, p.fn, {pri})}`; nxCls = ' hw'; }
       else nx = `<span class="g" data-pc2-ready data-re2-ready="1" data-ef-ready>Ready</span>${gate && gate.totalPct != null && (it.k || 0) > 0 ? `<span class="mut num">· total risk ${pc2Pct2(gate.totalPct)} of ${pc2Pct2(gate.capPct)} today</span>` : ''}${pc2Btn(placeLab, p.fn, {pri})}`;
-    }else if(p.dis){ nx = `<span class="w" data-pv-warn data-pc2-warn title="${e(p.title || '')}">⚠ ${e(gate && gate.short ? gate.short : lr3ShortWhy(p.title, it))}</span>${gate && gate.fix ? pc2Btn(gate.fix.t, gate.fix.fn, {k:'fix'}) : pc2Btn(placeLab, '', {dis:true, title:p.title})}`; nxCls = ' blk'; }
+    }else if(p.dis){ nx = `<span class="w" data-pv-warn data-pc2-warn title="${e(p.title || '')}">⚠ ${e(gate && gate.short ? gate.short : pc2Why(p.title, it))}</span>${gate && gate.fix ? pc2Btn(gate.fix.t, gate.fix.fn, {k:'fix'}) : pc2Btn(placeLab, '', {dis:true, title:p.title})}`; nxCls = ' blk'; }
     else nx = `<span class="mut">${e(p.t)}</span>`;
   }else if(ord){
     const away = it.pct != null ? Math.abs(it.pct).toFixed(1) + '% away' : ''; nx = `<span class="mut num">${it.px > 0 ? 'Price ' + N(it.px) + (away ? ' · ' + away : '') : 'Waiting at the broker'}</span>${pc2Btn('Filled', p.fn, {pri:true, k:'fill'})}`;
@@ -28544,8 +28553,8 @@ function bdDrawerHtml(it){
   let foot = (it.status === 'plan' ? re2ReadyBtn(it) + re4CancelBtn(it, false) : '') + `<button type="button" class="go" data-bd-update onclick="bdEditLv('${id}')">${it.status === 'plan' ? 'Edit plan' : 'Update levels'}</button>`;
   if(it.status === 'ord' || (it.status === 'hold' && it.lvOrdered)) foot += `<button type="button" class="go" data-bd-cancel onclick="bdCancelOrder('${id}')">Cancel order</button>`;
   if(it.status === 'hold' && it.kind === 'sat') foot += `<button type="button" class="go" data-bd-satstop onclick="re1SatStopOpen('${id}')">Move stop</button>`;   /* RE-D §2 */
-  if(it.status === 'hold' && p.k === 'edit') foot += `<button type="button" class="go" data-bd-close onclick="bdClosePos('${id}')">Close trade</button>`;
-  else foot += prim;
+  if(it.status === 'hold') foot += `<button type="button" class="go" data-bd-close onclick="bdClosePos('${id}')">Close trade</button>`;
+  if(!(it.kind === 'core' && p.k === 'place') && p.k !== 'edit') foot += prim;   /* PC2 — ONE Place: the Entries row owns it (Sat has no entries table, so its footer keeps it) */
   if(it.status === 'hold') foot += `<button type="button" class="go" data-pc2-editplan-foot onclick="bdEditLv('${id}')">Edit plan</button>`;
   if(it.status === 'hold' && it.kind === 'core' && it.tag !== 'COMP'){ try{ if(pc2T1Info(it)) foot += `<button type="button" class="go" data-pc2-t1place onclick="pc2T1Open('${id}')">${it.ref.ln4 && it.ref.ln4.t1PlacedAt ? 'T1 sell placed ✓' : 'Place T1 sell'}</button>`; }catch(e){} }
   return `<div class="bd-dh"><span class="bd-grab" aria-hidden="true"></span><div class="bd-dh1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${it.fam ? '<span class="bd-fam">Family</span>' : ''}<span class="bd-stp" data-bd-spill>${pill}</span><span class="bd-sp"></span><button type="button" class="bd-x" data-bd-x aria-label="Close" onclick="bdClose()">✕</button></div></div>
@@ -28740,7 +28749,7 @@ function posView(it){
 function pvMoneyN(v, ex){ v = Math.abs(+v); return v < (ex ? 1e4 : 1e3) ? Math.round(v).toLocaleString('en-US') : ps1M(v); }   /* LR-F — cards and the sheet follow the mockups: −$294 · −฿5.4k · +$3.7k; the More tables keep the exact figure under 10k */   /* EF1b — under 10k: the exact figure (฿2,836); above: 36.1k */
 function pvMoney(pv, v, ex){ if(v == null || !isFinite(v)) return null; const c = pv.dcur || pv.cur, f = pv.dfx || pv.fx; return c === '$' && f > 0 ? '$' + pvMoneyN(v / f, ex) : '฿' + pvMoneyN(v, ex); }
 function pvPct(v, d){ return v == null || !isFinite(v) ? null : (+v).toFixed(d == null ? (Math.abs(v) < 0.1 && v !== 0 ? 2 : 1) : d) + '%'; }
-function pvQtyTxt(v, pv){ return pv.unit === 'lot' ? satV2Lot(v) : fmt0(v); }
+function pvQtyTxt(v, pv){ return pv.unit === 'lot' ? satLot2(v) : fmt0(v); }
 /* A2 — the row text. Holding: #held/#planned · value · % of account · open risk. Planned / Ordered: plan #size · risk · %. Returns null when there is nothing stored to show (old cards) → caller keeps the old text */
 function pvRowParts(it){
   const pv = posView(it); if(!pv) return null; const sat = it.kind === 'sat';

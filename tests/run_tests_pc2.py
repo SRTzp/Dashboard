@@ -214,7 +214,7 @@ def sizing_checks(pw, w, h):
         check(f"{tag} 2e Compounder without homework is sized at the FULL default (plan 1.00% × regime)", abs(sz["comp"] - 1.0 * sz["ef"]) < 1e-6, sz)
         check(f"{tag} 2e Momentum without homework = 70% of full (0.40% → 0.28% × regime)", abs(sz["mom"] - 0.28 * sz["ef"]) < 1e-6 and abs(sz["momFull"] - 0.40 * sz["ef"]) < 1e-6 and sz["hwf"] == {"comp": 1, "mom": 0.7}, sz)
         m1 = card(page, "mom1")
-        check(f"{tag} 2e Momentum card: 'Homework 0 of 2 · full size #n when done ›' + Place order", m1 and re.search(r"Homework 0 of 2 · full size #\d+ when done", m1["nx"]) and m1["btn"][-1]["t"] == "Place order", m1 and m1["nx"])
+        check(f"{tag} 2e Momentum card: 'Homework 0/2 · #n when done ›' + Place order", m1 and re.search(r"Homework 0/2 · #\d+ when done", m1["nx"]) and m1["btn"][-1]["t"] == "Place order", m1 and m1["nx"])
         ch = card(page, "cmh")
         check(f"{tag} 2e Compounder holding card: neutral 'Homework → unlocks adds & risk above 1%'", ch and "Homework → unlocks adds & risk above 1%" in ch["nx"] and js(page, "()=>!document.querySelector('[data-bd-card=\"cmh\"] [data-pc2-hwlink]').classList.contains('w')"), ch and ch["nx"])
         # Momentum add: blocked without homework, then stop rule, then allowed
@@ -417,12 +417,36 @@ def phone_checks(pw, w, h):
         b.close()
 
 
+def fix_checks(pw, w, h):
+    tag = "[%s]" % w
+    b, page, ce, pe = boot(pw, w, h)
+    try:
+        hw(page, "AVGO", False)
+        a = card(page, "mA")
+        same = js(page, "()=>{ const c = document.querySelector('[data-bd-card=\"mA\"] .pc2-nx'); const h = c.querySelector('.pc2-hw'), b = c.querySelector('.pc2-b'); return {hw:h.innerText, same: Math.abs(h.getBoundingClientRect().top - b.getBoundingClientRect().top) < 24}; }")
+        check(f"{tag} fix2 Momentum next step is the short form 'Homework 0/2 · #n when done ›'" + (" and Place stays on the same line" if w >= 1280 else " (may wrap on the phone)"), re.match(r"^Homework 0/2 · #\d+ when done ›$", same["hw"]) and (w < 1280 or same["same"]), same)
+        x = card(page, "xp")
+        check(f"{tag} fix3 no blocked reason is cut with '…' (XAU: 'Another Sat setup open in XAU · close or edit it')", "…" not in js(page, "()=>document.querySelector('#bdBoard').innerText") and "Another Sat setup open in XAU · close or edit it" in x["nx"], x["nx"])
+        check(f"{tag} fix4 Sat lots show 2 decimals (#0.99), data keeps full precision", "#0.99 " in (card(page, "ps")["l2"] + " ") and "#0.9911" not in js(page, "()=>document.querySelector('#bdBoard').innerText") and js(page, "()=>{ const p = posView(bdById('ps')); return p.plannedQty > 0.99 && p.plannedQty < 0.9912 && String(p.plannedQty).length > 4; }"))
+        for cid in ("cN", "xp", "mA"):
+            drawer(page, cid)
+            r = js(page, "()=>{ const d = document.getElementById('bdDr'); const places = [...d.querySelectorAll('button')].filter(b=>/^Place\\b/.test(b.innerText.trim())).map(b=>({t:b.innerText.trim(), inFoot: !!b.closest('.bd-df')})); const foot = [...d.querySelectorAll('.bd-df button')].map(b=>b.innerText.trim()); const pri = d.querySelector('[data-bd-lvact=\"place\"].pri'); return {places, foot, bg: pri ? getComputedStyle(pri).backgroundColor : null}; }")
+            if cid == "cN":
+                check(f"{tag} fix5 drawer: ONE Place (in the Entries row, black), footer = Update levels · Close trade · Edit plan", len(r["places"]) == 1 and not r["places"][0]["inFoot"] and r["bg"] == "rgb(20, 22, 26)" and r["foot"][:3] == ["Update levels", "Close trade", "Edit plan"], r)
+            else:
+                check(f"{tag} fix5 drawer {cid}: at most one Place and none duplicated in the footer", len(r["places"]) <= 1, r)
+            js(page, "()=>bdClose()")
+        check(f"{tag} no page errors", not pe, pe)
+    finally:
+        b.close()
+
+
 if __name__ == "__main__":
     with sync_playwright() as pw:
         for w, h in ((390, 844), (360, 740)):
-            phone_checks(pw, w, h)
+            phone_checks(pw, w, h); fix_checks(pw, w, h)
         for w, h in ((1440, 900), (1280, 800)):
-            board(pw, w, h); drawer_checks(pw, w, h); place_checks(pw, w, h); sizing_checks(pw, w, h); editor_checks(pw, w, h); exit_checks(pw, w, h); homework_place_checks(pw, w, h); topup_checks(pw, w, h)
+            board(pw, w, h); drawer_checks(pw, w, h); place_checks(pw, w, h); sizing_checks(pw, w, h); editor_checks(pw, w, h); exit_checks(pw, w, h); homework_place_checks(pw, w, h); topup_checks(pw, w, h); fix_checks(pw, w, h)
     bad = [r for r in results if not r[1]]
     print("SUMMARY pc2: %d checks, %d failing" % (len(results), len(bad)))
     for r in bad: print("FAIL", r[0])
