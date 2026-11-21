@@ -114,8 +114,8 @@ def run_desktop(pw, w, h):
         check(f"{tag} C trade idea shows Asset XAU", "Asset XAU" in by["gold-cpi"]["t"], by["gold-cpi"]["t"])
         check(f"{tag} C Parked is in All, faded", by["nt1-idea-4"]["faded"] and "Parked" in by["nt1-idea-4"]["t"])
         check(f"{tag} C no Open button on the rows · row opens the idea", not js(page, "()=>[...document.querySelectorAll('.nt1-ai button')].some(b=>/open/i.test(b.innerText))") and js(page, "()=>{ document.querySelector('[data-idea=\"nt1-idea-3\"]').click(); return ideaSel; }") == "nt1-idea-3")
-        hd = js(page, "()=>document.querySelector('[data-lr5-head]').innerText.replace(/\\s+/g,' ')")
-        check(f"{tag} C header: chips + Import JSON, no + Idea / + Trade idea", "Import JSON" in hd and "Needs evidence" in hd and "+ Idea" not in hd and "+ Trade idea" not in hd, hd)
+        hd = js(page, "()=>document.querySelector('[data-nt1-lt]').innerText.replace(/\\s+/g,' ')")   # NT1c: chips + Import JSON are the top row of the list card
+        check(f"{tag} C list-card top row: chips + Import JSON, no + Idea / + Trade idea", "Import JSON" in hd and "Needs evidence" in hd and "+ Idea" not in hd and "+ Trade idea" not in hd, hd)
         for chip, want in (("theme", {"nt1-idea-3", "en-idea-1", "en-idea-2"}), ("trade", {"gold-cpi"}), ("need", {"nt1-idea-3", "en-idea-1", "en-idea-2", "gold-cpi"}), ("ready", set())):
             js(page, "(k)=>nt1AiSet(k)", chip); page.wait_for_timeout(120)
             got = set(js(page, "()=>[...document.querySelectorAll('.nt1-ai')].map(r=>r.dataset.idea)"))
