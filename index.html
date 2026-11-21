@@ -4390,6 +4390,18 @@ html body .topbar.topbar.topbar .hbtns>#hdrMoreBtn:hover{border-color:var(--lr-m
 .lr2-th{display:flex;align-items:center;gap:8px;margin-bottom:4px}.lr2-th b{font:700 16px/1.2 var(--lr-sans)}.lr2-th .num{font-size:12px;color:var(--lr-muted)}.lr2-th .sp{flex:1}
 .lr2-tg{font-size:12px!important}html body .lr2-main .lr-acc,html body .lr2-act .lr-acc{font-size:12px}.lr2-todo{min-width:0;max-width:100%;box-sizing:border-box}.lr2-ti{min-width:0;max-width:100%;display:flex;align-items:center;gap:10px;border-top:1px solid var(--lr-line);min-height:44px}.lr2-ti:first-of-type{border-top:0}
 .lr2-tg{flex:none;min-width:46px;text-align:center}.lr2-tg.comp{color:var(--lr-comp);background:var(--lr-comp-bg)}.lr2-tg.mmt{color:var(--lr-mmt);background:var(--lr-mmt-bg)}.lr2-tg.sat{color:var(--lr-sat);background:var(--lr-sat-bg)}.lr2-tg.flow{color:var(--lr-warn);background:var(--lr-warn-bg)}.lr2-tg.watch{color:var(--lr-text2);background:var(--lr-seg)}
+.rk1{border-bottom:1px solid var(--line,#E1E4E9);padding-bottom:10px;margin-bottom:10px}
+.rk1-h{display:flex;align-items:center;gap:8px;font-size:.95rem}.rk1-sp{flex:1}
+.rk1-m{color:var(--muted);font-size:.8rem;font-weight:400}
+.rk1-r{display:grid;grid-template-columns:minmax(0,1fr) 92px 92px;gap:10px;align-items:center;padding:6px 0}
+.rk1-r label{margin:0;font-weight:500}
+.rk1-r input{width:100%;box-sizing:border-box;text-align:right;font-variant-numeric:tabular-nums;min-width:0}
+.rk1-r input.dis{background:transparent;border-color:transparent;color:var(--muted);text-align:right}
+.rk1-c{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:2px 0 0}.rk1-c span{text-align:right}
+.rk1-reset{all:unset;cursor:pointer;color:var(--muted);font-size:.8rem;padding:6px 8px;border-radius:8px;min-height:20px}
+.rk1-reset:hover{background:rgba(127,127,127,.12)}
+.rk1-der{font-size:.78rem;color:var(--muted);background:rgba(127,127,127,.08);border-radius:8px;padding:8px 10px;margin-top:6px;line-height:1.6}
+@media(max-width:600px){.rk1-r{grid-template-columns:minmax(0,1fr) 84px 84px}.rk1-r input{font-size:16px}}
 .lr2-tb{all:unset;box-sizing:border-box;cursor:pointer;flex:1;min-width:0;min-height:44px;display:flex;align-items:center;gap:10px;font:400 var(--lr-fs-4)/1.25 var(--lr-sans);color:var(--lr-ink)}
 .lr2-tb .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lr2-tb .lk{flex:none;font-weight:600;font-size:var(--lr-fs-5);color:var(--lr-ink)}
 .lr2-tb.lr2-c-r .t{color:var(--lr-loss-ink)}.lr2-tb.lr2-c-a .t{color:var(--lr-warn)}.lr2-tb:focus-visible{outline:2px solid var(--lr-mmt);outline-offset:2px}
@@ -5863,9 +5875,20 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
     <div class="set1row"><span>Accounts &amp; sign-out</span><a href="#" class="setgo" data-set1-link="accounts" onclick="event.preventDefault();set1OpenSys('accounts')">Edit ›</a></div>
     <div class="set1row"><span>Goals &amp; sub-portfolios</span><a href="#" class="setgo" data-set1-link="goals" onclick="event.preventDefault();set1OpenSys('goals')">Edit ›</a></div>
   </div></details>
-  <details class="setsec set1card" id="ps1Sec" data-set1-card="ps1" data-ps1-card><summary class="divlbl">Portfolio &amp; Risk<span class="set1sm">min stop (risk limits now come from the engine)</span></summary>
+  <details class="setsec set1card" id="ps1Sec" data-set1-card="ps1" data-ps1-card><summary class="divlbl">Portfolio &amp; Risk<span class="set1sm">risk per idea · min stop</span></summary>
   <div class="secbody">
-    <div class="ps1Row" data-re1-keep><b>Min stop (stocks)</b><span class="ps1Rg">distance from each entry to SL1 · empty = off</span></div>
+    <div class="rk1" data-rk1 data-re1-keep>
+      <div class="rk1-h"><b>Risk per idea</b><span class="rk1-m">· % of account equity · both accounts</span><span class="rk1-sp"></span><button type="button" class="rk1-reset" data-rk1-reset onclick="rk1Reset()">Reset</button></div>
+      <div class="rk1-r rk1-c"><span></span><span>Risk</span><span>First entry</span></div>
+      <div class="rk1-r"><label for="rkComp">Compounder <span class="rk1-m">· total per stock</span></label><input type="number" step="0.01" inputmode="decimal" id="rkComp" data-rk1-in="compTotal" oninput="crOnInput()" aria-label="Compounder total risk %"><input type="number" step="0.01" inputmode="decimal" id="rkCompFirst" data-rk1-in="compFirst" oninput="crOnInput()" aria-label="Compounder first entry risk %"></div>
+      <div class="crErr" data-err-for="rkComp"></div><div class="crErr" data-err-for="rkCompFirst"></div>
+      <div class="rk1-r"><label for="rkMom">Momentum <span class="rk1-m">· per idea</span></label><input type="number" step="0.01" inputmode="decimal" id="rkMom" data-rk1-in="mom" oninput="crOnInput()" aria-label="Momentum risk % per idea"><input type="text" class="dis" value="—" disabled aria-hidden="true" tabindex="-1"></div>
+      <div class="crErr" data-err-for="rkMom"></div>
+      <div class="rk1-r"><label for="rkSat">Sat <span class="rk1-m">· per idea, fixed</span></label><input type="number" step="0.01" inputmode="decimal" id="rkSat" data-rk1-in="sat" oninput="crOnInput()" aria-label="Sat risk % per idea"><input type="text" class="dis" value="—" disabled aria-hidden="true" tabindex="-1"></div>
+      <div class="crErr" data-err-for="rkSat"></div>
+      <div class="rk1-der" data-rk1-der></div>
+    </div>
+    <div class="ps1Row rk1-ms" data-re1-keep><b>Min stop (stocks)</b><span class="ps1Rg">distance from each entry to SL1 · empty = off</span></div>
     <div class="fgrid" data-ps1-minstock data-re1-keep>
       <div class="f"><label>Momentum <span class="crUnit">% of entry</span></label><input type="number" step="any" inputmode="decimal" id="sPsMinW" oninput="crOnInput()"><div class="crErr" data-err-for="sPsMinW"></div></div>
       <div class="f"><label>Compounder <span class="crUnit">% of entry</span></label><input type="number" step="any" inputmode="decimal" id="sPsMinL" oninput="crOnInput()"><div class="crErr" data-err-for="sPsMinL"></div></div>
@@ -5877,7 +5900,8 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
   </div></details>
   <details class="setsec set1card" id="satV2Sec" data-set1-card="sat"><summary class="divlbl">Sat rules<span class="set1sm"></span></summary>
   <div class="secbody">
-<details class="setsec set1adv" data-set1-adv="sat"><summary class="set1advs">Advanced ▸ <span class="set1sm">TP1 / TP2 exit split</span></summary>
+<div class="set1row" data-rk1-satrow><span>Min stop per asset</span><a href="#" class="setgo" onclick="event.preventDefault();var e=document.getElementById('ps1Sec');if(e){e.open=true;try{e.scrollIntoView({block:'start'});}catch(x){}}">Open ›</a></div>
+<details class="setsec set1adv" hidden data-rk1-hidden="tactical" data-set1-adv="sat"><summary class="set1advs">Advanced ▸ <span class="set1sm">TP1 / TP2 exit split</span></summary>
   <div class="secbody">
     <div class="fgrid">
       <div class="f"><label>Tactical exit TP1 <span class="crUnit">R</span></label><input type="number" step="any" inputmode="decimal" id="sV2Tp1R" oninput="crOnInput()"><div class="crErr" data-err-for="sV2Tp1R"></div><div class="hint" data-v2-hint="sV2Tp1R" style="margin-top:4px"></div></div>
@@ -5977,13 +6001,13 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
     <div class="hint" style="margin:0 0 10px">Reasons you can pick when adding a candidate · rename or deactivate any time (never deleted — old records keep their reason)</div>
     <div id="crsSet"></div>
   </div></details>
-  <details class="setsec" id="tdSetSec"><summary class="divlbl">Daily routine</summary>
+  <details class="setsec" id="tdSetSec"><summary class="divlbl">Reminders</summary>
   <div class="secbody">
-    <div class="hint" style="margin:0 0 10px">Daily time windows Mon–Fri (Thai time) shown on the Today tab · windows must not overlap · save with this section's button</div>
-    <div id="tdRtSet"></div>
+    <div hidden data-rk1-hidden="routine"><div class="hint" style="margin:0 0 10px">Daily time windows Mon–Fri (Thai time) shown on the Today tab · windows must not overlap · save with this section's button</div>
+    <div id="tdRtSet"></div></div>
     <div class="btns" style="justify-content:flex-start;margin-top:10px;align-items:center;gap:8px;flex-wrap:wrap" data-td4-remset><button type="button" class="small" id="td4RemBtn" data-td4-remenable onclick="td4RemEnable()">Enable reminders</button><span class="hint" id="td4RemSt" style="margin:0"></span></div>
   </div></details>
-  <details class="setsec" id="newsSetSec"><summary class="divlbl">Key news days (Sat)</summary>
+  <details class="setsec" id="newsSetSec" hidden data-rk1-hidden="news"><summary class="divlbl">Key news days (Sat)</summary>
   <div class="secbody">
     <div class="hint" style="margin:0 0 10px">CPI / NFP / FOMC — enter by hand once a quarter (dates on the Thai calendar) · CPI / NFP: from 1 h before the release until the 30-minute bar after it closes a Sat plan stays placeable at a reduced size (below) · all types: pre-news checklist on the Today tab · times follow US daylight saving, editable · add/edit/delete save immediately</div>
     <div id="newsSet"></div>
@@ -6607,7 +6631,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
    Conventions
    - Every function takes plain data (time `now` = epoch ms and all state are passed in) and returns plain data. Never throws on bad input:
      missing / invalid data -> reasons[] with an UNKNOWN-style code, never a silent 0.
-   - Percentages are plain numbers (0.45 = 0.45 %). Money is one account base currency; FX is fixed per snapshot and passed per tranche.
+   - Percentages are plain numbers (0.40 = 0.40 %). Money is one account base currency; FX is fixed per snapshot and passed per tranche.
    - Strategy keys = the dashboard's keys: winner = Momentum · sat = Satellite · ladder = Compounder.
    - Result shape of every check: {allowed, reasons:[code], flags:[code], ...detail}. reasons = block a NEW risk-increasing order;
      flags = information / breach markers. Fills, reductions, exits and stop updates are never blocked (see actionPolicy / asFill).
@@ -6623,9 +6647,9 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
 
   /* ── Policy constants (RE1-decisions.md §1-§5). Overridable per call via cfg. ── */
   var POLICY = {
-    mom: { rptPct: 0.45, weeklyPct: 1.80, monthlyPct: 7.20, ammo: 4, homeworkCap: 0.5, starter: 0.25, releaseR: 1.5 },
-    sat: { stepRpt: [0.20, 0.30, 0.30, 0.40], weeklyPct: 1.20, monthlyPct: 4.80, condReduced: 0.65, minRR: 1.5, staleOrderMs: DAY },
-    comp: { pilotPct: 0.50, addonPct: 0.50, totalCapPct: 1.25, valueCapPct: 12.5, heatCapPct: 6.0, starter: 0.25, lockLosses: 6, unlockDays: 7, homeworkCap: 0.5 },
+    mom: { rptPct: 0.40, weeklyPct: 1.60, monthlyPct: 6.40, ammo: 4, homeworkCap: 0.5, starter: 0.25, releaseR: 1.5 },
+    sat: { stepRpt: [0.20, 0.20, 0.20, 0.20], weeklyPct: 0.80, monthlyPct: 3.20, condReduced: 0.65, minRR: 1.5, staleOrderMs: DAY },
+    comp: { pilotPct: 0.50, addonPct: 0.50, totalCapPct: 1.00, valueCapPct: 12.5, heatCapPct: 6.0, starter: 0.25, lockLosses: 6, unlockDays: 7, homeworkCap: 0.5 },
     /* RM1 — shared new-entry budget modifier ("initial settings to test"). One signal result feeds sizing AND every view.
        table[equity][credit]: green/red of ACWI/BIL (SMA 20/50) x HYG/IEI (SMA 20/50). Neutral / unavailable / stale -> fallback (never 100 %). All values + SMA periods are settings (rev 4: 100/80/80/60, fallback 80). */
     regime: { table: { green: { green: 1.0, red: 0.80 }, red: { green: 0.80, red: 0.60 } }, fallback: 0.80, freshDays: 4, smaFast: 20, smaSlow: 50 },
@@ -6633,6 +6657,29 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
     emergency: { triggerPct: 10, recoverPct: 5, factor: 0.5, stopPct: 20, stopRecoverPct: 15 },   /* AU2: DD_STOP vs the confirmed-equity PEAK (ddStopStep) — stops at 20 %, lifts within 15 %; the 10 % half-size rule keeps its month-start basis */
     snapshot: { blockAfterDays: 14 }
   };
+  /* RK1 — risk per idea (Settings). One set for both accounts. New plans only: saved plans / holdings keep their stored risk and qty.
+     weekly = 4 x per-idea · monthly = 4 x weekly (so the money check and the 4-loss count stop at the same point). Sat: every step = the fixed value (the step machine + lock after the 4th loss stay). */
+  var RISK_DEFAULTS = { compTotal: 1.00, compFirst: 0.50, mom: 0.40, sat: 0.20 };
+  var RISK_BOUNDS = { compTotal: [0.50, 1.50], mom: [0.20, 0.60], sat: [0.10, 0.40] };
+  function r6(x) { return Math.round(x * 1e6) / 1e6; }
+  function riskValidate(c) {
+    c = c || {}; var e = [], D = RISK_DEFAULTS;
+    var v = { compTotal: c.compTotal == null ? D.compTotal : Number(c.compTotal), compFirst: c.compFirst == null ? D.compFirst : Number(c.compFirst),
+      mom: c.mom == null ? D.mom : Number(c.mom), sat: c.sat == null ? D.sat : Number(c.sat) };
+    ['compTotal', 'mom', 'sat'].forEach(function (k) { var b = RISK_BOUNDS[k]; if (!num(v[k]) || v[k] < b[0] - EPS || v[k] > b[1] + EPS) e.push({ key: k, code: 'OUT_OF_BOUNDS', min: b[0], max: b[1] }); });
+    if (!num(v.compFirst) || v.compFirst <= 0) e.push({ key: 'compFirst', code: 'OUT_OF_BOUNDS', min: 0.01, max: v.compTotal });
+    else if (num(v.compTotal) && v.compFirst > v.compTotal + EPS) e.push({ key: 'compFirst', code: 'FIRST_ABOVE_TOTAL', min: 0.01, max: v.compTotal });
+    return { ok: e.length === 0, errors: e, values: v };
+  }
+  /* applyRisk(cfg) — sets POLICY from the settings values (invalid -> nothing changes, errors returned). applyRisk() / applyRisk(null) = defaults. */
+  function applyRisk(c) {
+    var v = riskValidate(c); if (!v.ok) return v; var x = v.values;
+    POLICY.comp.totalCapPct = r6(x.compTotal); POLICY.comp.pilotPct = r6(x.compFirst); POLICY.comp.addonPct = r6(x.compFirst);
+    POLICY.mom.rptPct = r6(x.mom); POLICY.mom.weeklyPct = r6(4 * x.mom); POLICY.mom.monthlyPct = r6(16 * x.mom);
+    POLICY.sat.stepRpt = [r6(x.sat), r6(x.sat), r6(x.sat), r6(x.sat)]; POLICY.sat.weeklyPct = r6(4 * x.sat); POLICY.sat.monthlyPct = r6(16 * x.sat);
+    return v;
+  }
+  function riskDerived() { return { momWeekly: POLICY.mom.weeklyPct, momMonthly: POLICY.mom.monthlyPct, satWeekly: POLICY.sat.weeklyPct, satMonthly: POLICY.sat.monthlyPct }; }
   var STRATS = { winner: 'winner', mom: 'winner', momentum: 'winner', sat: 'sat', satellite: 'sat', ladder: 'ladder', comp: 'ladder', compounder: 'ladder' };
 
   /* ── Reason codes (every block / flag the engine can emit). kind: block = refuses a NEW risk-increasing order · flag = marker / warning. ── */
@@ -7189,7 +7236,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
   }
   /* kind: 'pilot' | 'topup' | 'addon' · o = {kind, starterOn, thesisDone, side, entryPx?, avgEntry?, factor? (= min(Regime, Emergency)), requestedPct (new order, % of week-start equity), usedPct (the ticker's existing tranches at their CURRENT stop + working orders, same basis)}
      Pilot: first 0.50 % (Starter ON: 0.25 %). Add-on / further buys (answers-A #16 · owner amendment): TOTAL-RISK rule only —
-       thesis done AND used + new <= 1.25 % x factor (0.50 % without thesis; a Starter top-up may use that 0.50 % without thesis) AND new order alone <= 0.50 % x factor.
+       thesis done AND used + new <= total (Settings, default 1.00 %) x factor (0.50 % without thesis; a Starter top-up may use that 0.50 % without thesis) AND new order alone <= 0.50 % x factor.
        Entry may be above OR below the average entry; below only raises the warning ADDON_BELOW_ENTRY_WARN (never a block). No +1.5R, no breakeven-stop condition. */
   function compEntryCheck(o) {
     var P = pol(o.cfg).comp, reasons = [], flags = [], used = num(o.usedPct) ? o.usedPct : 0, req = num(o.requestedPct) ? o.requestedPct : 0, cap;
@@ -7200,7 +7247,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
     } else if (o.kind === 'topup' || o.kind === 'addon') {
       if (o.kind === 'addon' && o.thesisDone !== true) reasons.push('ADDON_THESIS');
       var fz = num(o.factor) ? o.factor : 1;
-      cap = o.thesisDone === true ? P.totalCapPct * fz : P.pilotPct;   /* RM1: total-risk cap 1.25 % x effective modifier with thesis · 0.50 % without */
+      cap = o.thesisDone === true ? P.totalCapPct * fz : P.pilotPct;   /* RM1: total-risk cap (Settings, RK1 default 1.00 %) x effective modifier with thesis · 0.50 % without */
       var alone = P.addonPct * fz;
       if (used + req > cap + EPS || req > alone + EPS) reasons.push('ADDON_TOTAL_RISK');
       if (pos(o.entryPx) && pos(o.avgEntry) && (dirOf(o.side) === 1 ? o.entryPx < o.avgEntry - EPS : o.entryPx > o.avgEntry + EPS)) flags.push('ADDON_BELOW_ENTRY_WARN');
@@ -7287,7 +7334,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
   }
 
   return {
-    POLICY: POLICY, REASONS: REASONS, EPS: EPS,
+    POLICY: POLICY, RISK_DEFAULTS: RISK_DEFAULTS, RISK_BOUNDS: RISK_BOUNDS, riskValidate: riskValidate, applyRisk: applyRisk, riskDerived: riskDerived, REASONS: REASONS, EPS: EPS,
     bkk: bkk, outcome: outcome,
     resolveCosts: resolveCosts, exitCost: exitCost,
     ideaResult: ideaResult, ideaRealizedNet: ideaRealizedNet, realizedEvents: realizedEvents, netBreakevenStop: netBreakevenStop, ammoReleased: ammoReleased, rMultiple: rMultiple,
@@ -7956,7 +8003,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
     var nf = (f.newsPct > 0 && f.newsPct < 100) ? f.newsPct / 100 : null, newsCut = false;
     if (nf != null && cf > 0 && nf < cf) { cf = nf; newsCut = true; } else if (nf != null && cf > 0 && nf === cf) { newsCut = true; }
     m.newsCut = newsCut; if (newsCut) m.chip = { t: 'News ' + Math.round(cf * 100) + '%', c: 'a' };
-    m.factors = ['STEP_' + st.step]; var parts = ['Step ' + st.step + ' · ' + f2(base, 2) + '%'];
+    m.factors = ['STEP_' + st.step]; var parts = [f2(base, 2) + '%'];
     if (newsCut) { parts.push('news ' + Math.round(cf * 100) + '%'); m.factors.push('NEWS_' + Math.round(cf * 100)); }
     else if (cond.status === 'reduced') { parts.push('65%'); m.factors.push('CONDITION_65'); }
     if (ef < 1) { parts.push('emergency 50%'); m.factors.push('EMERGENCY_50'); }
@@ -7987,7 +8034,7 @@ html body .lr5 .ideaMain.pri{background:var(--lr-ink,#16191e);color:#fff;border-
     m.chip = null;   /* RM1: the modifier is shown once, in the size line ("limited by regime 50%") and the Flow line — no second chip */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
     var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true, emOnly = L.eF < rg.factor;
-    var multi = !!(f.levels && f.levels.length > 1), planCap = thesis ? RP.comp.totalCapPct : RP.comp.pilotPct;   /* RM1: whole-plan budget 1.25 % with thesis (was 1.00 %) */
+    var multi = !!(f.levels && f.levels.length > 1), planCap = thesis ? RP.comp.totalCapPct : RP.comp.pilotPct;   /* RM1: whole-plan budget = Settings total (RK1 default 1.00 %) with thesis */
     var base = multi ? planCap : (kind === 'pilot' ? RP.comp.pilotPct : RP.comp.addonPct);
     var fraction = (kind === 'pilot' && f.starterOn === true && !multi) ? RP.comp.starter * 2 : 1;
     var label = multi ? 'Plan ' : kind === 'pilot' ? 'Pilot ' : 'Add-on ';
@@ -8108,7 +8155,7 @@ function re1DryMount(h){
    ═══════════════════════════════════════════════════════════════════════════════════════════════ */
 function re1Src(){ const s = re1DrySrc(); s.now = Date.now(); return s; }
 let re1Cache = {};
-function re1L(acct){ const t = Date.now(), c = re1Cache[acct]; if(c && t - c.t < 300) return c.L; try{ const L = Re1Adapter.live(re1Src(), acct); re1Cache[acct] = {t, L}; return L; }catch(e){ console.warn('re1 live:', e); return null; } }
+function re1L(acct){ try{ rk1Sync(); }catch(e){} const t = Date.now(), c = re1Cache[acct]; if(c && t - c.t < 300) return c.L; try{ const L = Re1Adapter.live(re1Src(), acct); re1Cache[acct] = {t, L}; return L; }catch(e){ console.warn('re1 live:', e); return null; } }
 function re1Accts(){ return (acctList || []).map(a=>a.id); }
 function re1Name(id){ const a = (acctList || []).find(x=>x.id === id); try{ return a ? td3AcctName(a) : id; }catch(e){ return a ? a.name : id; } }
 function re1K(v){ v = +v; if(!isFinite(v)) return '—'; const a = Math.abs(v); return a >= 1e6 ? (v/1e6).toFixed(2).replace(/\.?0+$/, '') + 'M' : a >= 1e3 ? (v/1e3).toFixed(1).replace(/\.0$/, '') + 'k' : String(Math.round(v)); }
@@ -8355,7 +8402,7 @@ function re1PortBlock(id){
   const dec = L.emergency.declinePct, mDec = b.monthEquity > 0 && b.currentEquity ? (b.monthEquity - b.currentEquity) / b.monthEquity * 100 : null, shown = dec != null ? dec : mDec;
   return `<div class="re1-pc" data-re1-port="${e(id)}">${head}
     ${row('Momentum', `week ${re1Pct(mU)} of ${re1Pct(mCap)} · ideas ${ms.ammoUsed} of ${P.mom.ammo} used`, mU, mCap, rm(mCap, mU))}
-    ${row('Satellite', `week ${re1Pct(sU)} of ${re1Pct(sCap)} · step ${st.step}${st.locked ? ' · LOCKED' : ''} · ${q ? 'queue busy' : 'queue free'}`, sU, sCap, st.locked ? 'locked' : rm(sCap, sU), st.locked ? 'r' : '')}
+    ${row('Satellite', `week ${re1Pct(sU)} of ${re1Pct(sCap)} · ${re1Pct(RiskEngine.POLICY.sat.stepRpt[st.stepIndex], 2)}${st.locked ? ' · LOCKED' : ''} · ${q ? 'queue busy' : 'queue free'}`, sU, sCap, st.locked ? 'locked' : rm(sCap, sU), st.locked ? 'r' : '')}
     ${row('Compounder', `heat ${re1Pct(hh.pct, 1)} of ${cap6}% · regime ${Math.round(rg.factor * 100)}%${rg.stale ? ' (stale)' : ''} · streak ${L.comp.streak.streak} of ${P.comp.lockLosses}${L.comp.streak.locked ? ' · LOCKED' : ''}`, hh.pct, cap6, L.comp.streak.locked ? 'locked' : rm(cap6, hh.pct), L.comp.streak.locked ? 'r' : '')}
     <div class="re1-pr" data-re1-row="Active total"><b>Active total</b><div><small>week ${re1Pct(pc(ac.weekUsed))} of ${P.active.weeklyPct}% · month ${re1Pct(b.monthEquity > 0 ? (ac.monthUsed / b.monthEquity * 100) : null, 1)} of ${P.active.monthlyPct}%</small></div><span class="re1-chip n">summary</span></div>
     <div class="re1-pr" data-re1-row="Emergency"><b>Emergency</b><div><small>${shown != null ? (shown > 0 ? '−' : '+') + Math.abs(shown).toFixed(1) + '% from month start' : 'no snapshot comparison yet'} · half size at −${P.emergency.triggerPct}%</small></div><span class="re1-chip ${L.emergency.active ? 'r' : ''}">${L.emergency.active ? 'ON' : 'off'}</span></div>
@@ -9233,7 +9280,7 @@ const LR_SAT_LBL = {XAUUSD:'XAU', BTCUSD:'BTC', BTC:'BTC', S50:'S50', BRENT:'Bre
 function lrNewAcct0(){ return (pb2 && pb2.nacct && acctList.some(a=>a.id === pb2.nacct)) ? pb2.nacct : acctActive; }   /* account the New-plan chooser is set to (default = active) */
 function lrBdNew(acc){   /* New-plan options of that account: its acctDefaults ports; the Satellite line lists its products */
   acc = acc || lrNewAcct0();
-  return BD_NEW.filter(o=>{ try{ return lrPortOn(acc, o[2]); }catch(e){ return true; } }).map(o=>{
+  return bdNew().filter(o=>{ try{ return lrPortOn(acc, o[2]); }catch(e){ return true; } }).map(o=>{
     if(o[2] !== 'SAT') return o;
     try{ const pr = lrDef(acc).satProducts.map(k=>LR_SAT_LBL[k] || k).join(' · '), tail = String(o[3]).split(' · ').pop(); return [o[0], o[1], o[2], (pr ? pr + ' · ' : '') + tail]; }catch(e){ return o; }
   });
@@ -9951,6 +9998,8 @@ function td4HwNextWl(mk){
 }
 function td4HwSetMk(mk){ td4HwMk = mk==='TH' ? 'TH' : 'US'; try{ localStorage.setItem('dash.td4HwMk', td4HwMk); }catch(e){} todayRefresh(true); }
 const TD_FOCUS_MAX = 2;   /* TD2-fix — Focus (✓) ได้วันละไม่เกิน 2 ตลาด */
+/* RK1 — unused settings hidden in the UI (their stored data is kept untouched): Daily routine (time slots · Sat daily check · other daily tasks · weekly tasks) · sub-port goals · Key news days · Sat Tactical TP1 / TP2. One switch; readers below check it. */
+const RK1_HIDE = true;
 let tdLast = null, tdDraft = null, tdTimer = null, tdNumOpen = false, tdPastOpen = false, tdSatEdit = null;   /* tdSatEdit = วัน (ISO) ที่กด 'แก้' เปิดแถวเช็กแผน Sat ค้างไว้ · หน่วยความจำของหน้า */
 
 /* ── ที่เก็บ: settings ของบัญชีแรก (คงที่เมื่อสลับบัญชี) ── */
@@ -9960,6 +10009,7 @@ const tdTimeOk = v => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(v||''));
 const tdMin = v => (+String(v).slice(0,2))*60 + (+String(v).slice(3,5));
 function tdRoutine(raw){   /* raw=true → ไม่กรองตาม pick สัปดาห์ (ใช้กับหน้าตั้งค่า เพื่อไม่ทำให้ตลาดที่ไม่ได้เลือกสัปดาห์นี้หลุดจากค่าที่บันทึก) */
   const r = tdSettings().routine;
+  if(RK1_HIDE && !raw) return {slots:[], satDaily:[]};   /* RK1 — Daily routine hidden: Today shows no routine slots / Sat daily check (raw = the stored settings, kept) */
   let slots = TD_DEF_SLOTS.map(x=>({...x})), sat = tdSatDef().slice();
   if(r && typeof r==='object'){
     if(Array.isArray(r.slots)){
@@ -10018,10 +10068,24 @@ function newsDefTime(kind, iso){
   const dst = newsUsDst(iso);
   return kind==='FOMC' ? (dst ? '01:00' : '02:00') : (dst ? '19:30' : '20:30');
 }
+/* RK1 — the news calendar is Weekly Impact (wiDocs): confirmed-time, not cancelled, HIGH-impact CPI / NFP / FOMC events. The hand-entered "Key news days" list (settings.newsEvents) is hidden and no longer read (data kept). → [{date, kind, time}] · ICT */
+const NEWS_MATCH = [['CPI', /\bCPI\b|consumer price index/i], ['NFP', /\bNFP\b|non-?farm/i], ['FOMC', /\bFOMC\b|fed(eral)? funds rate|fed(eral)? rate decision|interest rate decision/i]];
 function newsEvents(){
-  const raw = tdSettings().newsEvents;
-  return (Array.isArray(raw) ? raw : []).filter(e=>e && newsDateOk(e.date) && NEWS_KINDS.includes(e.kind) && tdTimeOk(e.time))
-    .map(e=>({date:e.date, kind:e.kind, time:e.time})).sort((a,b)=>(a.date + a.time).localeCompare(b.date + b.time));
+  const out = [], seen = {};
+  try{
+    Object.keys(wiDocs || {}).forEach(mon=>{
+      const doc = wiDocs[mon]; if(!doc || !doc.events) return;
+      const high = {}; Object.keys(doc.assets || {}).forEach(a=>{ const en = doc.assets[a] || {}; if(en.impact === 'HIGH') (en.event_refs || []).forEach(id=>{ high[id] = 1; }); });
+      Object.keys(doc.events).forEach(id=>{
+        const ev = doc.events[id]; if(!ev || ev.status === 'cancelled' || ev.kind === 'carryover' || ev.time_status !== 'confirmed' || !high[id]) return;
+        const m = NEWS_MATCH.find(r=>r[1].test([ev.title, ev.metric, ev.label_th, id].join(' '))); if(!m) return;
+        const ts = Calc.wiTs(ev.scheduled_at); if(ts == null) return;
+        const date = Calc.wiIctDate(ts), time = Calc.wiIctHM(ts), key = m[0] + date + time; if(seen[key]) return; seen[key] = 1;
+        out.push({date, kind:m[0], time});
+      });
+    });
+  }catch(e){ console.warn('news events:', e); }
+  return out.sort((a, b)=>(a.date + a.time).localeCompare(b.date + b.time));
 }
 const newsEvMs = e => Date.parse(`${e.date}T${e.time}:00+07:00`);
 function newsHM(ms){ return new Intl.DateTimeFormat('en-GB', {timeZone:'Asia/Bangkok', hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).format(new Date(ms)).slice(0,5); }
@@ -10161,12 +10225,14 @@ function tdBuild(){
   const rt = tdRoutine(), dow = tdDow(today), weekday = dow>=1 && dow<=5, log = tdLogDay(today);
   /* PF2 — การ์ดเดียว: A = ยังไม่เลือก Strategic Asset · B = มี Asset ที่ยังไม่มีแผนใช้งาน · C = ครบ (กติกาเดิม) · ที่มา = Asset ที่เลือกใน Strategy สัปดาห์นี้ (satAssets) */
   guard('satplan', ()=>{
+    if(RK1_HIDE) return;   /* RK1 — Sat daily check hidden */
     const P = pf2SatPlanState(); T._pf2 = P;
     if(!P || P.state==='C') return;
     const tags = P.state==='A' ? ['planUS'] : P.missing.map(k=>k==='S50' ? 'planTH' : 'planUS').filter((v,i,a)=>a.indexOf(v)===i);
     add('a', mkTask({kind:'sat-daily', ico:'📋', special:'satdaily', pf2:P, html:`<b>เช็กแผน Sat วันนี้</b>`, sub:'✓ มีแผน = Focus วันนี้ (สูงสุด 2 ตัว) · ✕ วันนี้ไม่มีแผน · กดซ้ำ = ยกเลิก · กดชื่อ = ไปการ์ด Strategy', tags}));
   });
   guard('satdaily', ()=>{
+    if(RK1_HIDE) return;   /* RK1 — Sat daily check hidden */
     if(T._pf2 && T._pf2.state!=='C') return;   /* PF2 — A/B ใช้การ์ดด้านบนแล้ว */
     if(!weekday || !rt.satDaily.length) return;
     const left = rt.satDaily.filter(id=>!log.satState[id]), nOk = rt.satDaily.filter(id=>log.satState[id]==='ok').length;
@@ -11404,7 +11470,7 @@ function td3GoalsHtml(M){
       const p = g.now != null ? Math.round((g.now - g.start) / (g.target - g.start) * 100) : null;
       return `<div class="td3-sub" data-td3-sub="${k}"><span class="k">${TD3_SUB_LBL[k] || k}</span>${td3BarHtml(p == null ? 0 : p)}<b>${p == null ? '—' : String(p).replace('-', '−') + '%'}</b><span class="m rg">${glMoney(g.start, g.cur, true)}→${glMoney(g.target, g.cur, true)}</span></div>`;
     }).join('');
-    return `<details class="td3-acct" data-td3-acct="${s(a.id)}"${open ? ' open' : ''} ontoggle="td3GoalTog('${s(a.id)}', this.open)"><summary>${sum}</summary><div class="td3-subs"><details class="td3-sg" data-td3-subgoals><summary>Sub-port goals ›</summary>${subs}</details><button type="button" class="td3-lk td3-gv" data-gl-valopen onclick="glValOpen()">＋ Enter account value</button></div></details>`;   /* TD4a — ปุ่มกรอกค่าอยู่ในบัญชีที่กางแล้ว */
+    return `<details class="td3-acct" data-td3-acct="${s(a.id)}"${open ? ' open' : ''} ontoggle="td3GoalTog('${s(a.id)}', this.open)"><summary>${sum}</summary><div class="td3-subs">${RK1_HIDE ? '' : `<details class="td3-sg" data-td3-subgoals><summary>Sub-port goals ›</summary>${subs}</details>`}<button type="button" class="td3-lk td3-gv" data-gl-valopen onclick="glValOpen()">＋ Enter account value</button></div></details>`;   /* TD4a — ปุ่มกรอกค่าอยู่ในบัญชีที่กางแล้ว */
   }).join('') + `</div>`;
 }
 
@@ -11632,6 +11698,7 @@ function td3OtherToggle(on){
   todayRefresh(true);
 }
 function td3OtherBody(M){
+  if(RK1_HIDE) return '';   /* RK1 — the daily / weekly routine % panel is hidden */
   let head = '', panel = '';
   try{
     const dayOk = tdDow(M.today) >= 1 && tdDow(M.today) <= 5, S = glDayStat(M.today, M), W = glWeekStat(M), wc = ln3TdWeekCount(M);
@@ -12945,7 +13012,7 @@ function tdGo(el){
 }
 
 /* ── ตั้งค่า Daily routine (ใน ตั้งค่าระบบ) ── */
-function tdSetOpen(){ const r = tdRoutine(true); tdDraft = {slots: r.slots.map(x=>({...x})), sat: r.satDaily.slice(), extra: glExtraList().map(x=>({...x})), week: glWeekTasks().map(x=>({...x})), msg:''}; tdSetRender(); }
+function tdSetOpen(){ const r = tdRoutine(true); tdDraft = {slots: r.slots.map(x=>({...x})), sat: r.satDaily.slice(), extra: glExtraList(true).map(x=>({...x})), week: glWeekTasks(true).map(x=>({...x})), msg:''}; tdSetRender(); }
 function tdSetErrors(d){
   const errs = d.slots.map(()=>[]);
   d.slots.forEach((s,i)=>{
@@ -13059,12 +13126,14 @@ function glLog(id){
   return Array.isArray(a) ? a.filter(x=>x && newsDateOk(x.d) && Number.isFinite(+x.v) && +x.v > 0).map(x=>({d:x.d, v:+x.v})).sort((p,q)=>p.d.localeCompare(q.d)) : [];
 }
 function glAccts(){ return acctList.map(a=>({a, g:glGoalOf(a.id)})).filter(x=>x.g); }   /* บัญชีที่ถูกลบ = ข้าม (ไม่ลบข้อมูล) */
-function glExtraList(){
+function glExtraList(raw){
+  if(RK1_HIDE && !raw) return [];   /* RK1 — other daily tasks hidden (stored list kept) */
   const r = tdSettings().dailyExtra, out = [], seen = new Set();
   if(Array.isArray(r)) r.forEach(x=>{ const nm = String(x && x.name || '').trim().slice(0, GL_NAME_MAX); if(x && x.id && nm && !seen.has(String(x.id)) && out.length < GL_EXTRA_MAX){ seen.add(String(x.id)); out.push({id:String(x.id), name:nm}); } });
   return out;
 }
-function glWeekTasks(){
+function glWeekTasks(raw){
+  if(RK1_HIDE && !raw) return [];   /* RK1 — weekly tasks hidden (stored list kept) */
   const r = tdSettings().weekTasks;
   if(!Array.isArray(r)) return GL_WEEK_DEF.map(x=>({...x}));
   const out = [], seen = new Set();
@@ -13259,7 +13328,7 @@ function glSetRender(){
     + `<div class="hint" style="margin:14px 0 4px"><b>ประวัติค่าพอร์ต ${escHtml(a.name)}</b> (${sym}) · ล่าสุดก่อน</div>`
     + (shown.length ? shown.map(e=>`<div class="glHist" data-gl-hist="${e.d}"><span>${glThaiDate(e.d)}</span><span class="v">${e.v.toLocaleString('en-US', {maximumFractionDigits:2})}</span><button type="button" class="small" data-gl-histdel="${e.d}" aria-label="ลบ ${e.d}" onclick="glHistDel('${e.d}')">×</button></div>`).join('') : `<div class="hint">ยังไม่มีประวัติ</div>`)
     + (rev.length > GL_HIST_ROWS ? `<button type="button" class="small" data-gl-histall onclick="glHistToggle()">${glHistAll ? 'ย่อ' : `ดูทั้งหมด (${rev.length})`}</button>` : '');
-  host.insertAdjacentHTML('beforeend', glSubHtml(a));
+  if(!RK1_HIDE) host.insertAdjacentHTML('beforeend', glSubHtml(a));   /* RK1 — sub-port goal fields hidden (stored subGoals kept) */
   glSetMsgTxt = '';
 }
 
@@ -14410,6 +14479,60 @@ function ps1FormErrs(){
   [['sPsMinW'],['sPsMinL']].forEach(([id])=>{ const el = document.getElementById(id); if(el && el.value!=='' && !(parseFloat(el.value)>0 && parseFloat(el.value)<=50)) e[id] = 'Use 0–50%'; });
   document.querySelectorAll('[data-ps1-ms]').forEach(el=>{ if(el.value!=='' && !(parseFloat(el.value)>0 && parseFloat(el.value)<=50)) e[el.id] = 'Use 0–50%'; });
   return e;
+}
+/* ═══ RK1 — Risk per idea (Settings › Portfolio & Risk). One set for both accounts, stored in the shared settings (settings.shared.riskPerIdea = {compTotal, compFirst, mom, sat}, plain % numbers).
+   The engine POLICY is set from it (RiskEngine.applyRisk) → every view that shows risk % reads the same values. New plans only: a saved plan / holding keeps its stored risk and qty (nothing here rewrites them). ═══ */
+const RK1_DEF = RiskEngine.RISK_DEFAULTS;
+let rk1Sig = '';
+function rk1Raw(S){ try{ if(!S){ const h = tdHome(); const B = h ? getBook(h) : null; S = B && B.settings && B.settings.shared; }   /* read-only: never creates / migrates the shared store */
+    const r = S && S.riskPerIdea; return (r && typeof r === 'object' && !Array.isArray(r)) ? r : null; }catch(e){ return null; } }
+/* apply the stored values to the engine · idempotent · a stored set that fails the bounds falls back to the defaults (never throws) */
+function rk1Sync(S){
+  try{
+    const raw = rk1Raw(S), sig = JSON.stringify(raw || null); if(sig === rk1Sig) return; rk1Sig = sig;
+    const r = RiskEngine.applyRisk(raw); if(!r.ok) RiskEngine.applyRisk(null);
+    try{ re1Cache = {}; if(typeof re1ModelCache !== 'undefined') re1ModelCache = {}; }catch(e){}
+  }catch(e){ console.warn('rk1 sync:', e); }
+}
+function rk1Vals(){ const raw = rk1Raw() || {}, r = RiskEngine.riskValidate(raw); return r.ok ? r.values : Object.assign({}, RK1_DEF); }
+const rk1Fmt = v => (+v).toFixed(2);
+function rk1FormRead(){
+  const g = id => document.getElementById(id), n = id => { const v = g(id) ? g(id).value : ''; return v === '' ? NaN : parseFloat(v); };
+  return {compTotal:n('rkComp'), compFirst:n('rkCompFirst'), mom:n('rkMom'), sat:n('rkSat')};
+}
+let rk1Snap = null;
+function rk1FormDirty(){ if(rk1Snap == null) return false; try{ return JSON.stringify(rk1FormRead()) !== rk1Snap; }catch(e){ return false; } }
+function rk1FormFill(vals){
+  const g = id => document.getElementById(id); if(!g('rkComp')) return;
+  const v = vals || rk1Vals();
+  g('rkComp').value = rk1Fmt(v.compTotal); g('rkCompFirst').value = rk1Fmt(v.compFirst); g('rkMom').value = rk1Fmt(v.mom); g('rkSat').value = rk1Fmt(v.sat);
+  if(!vals){ try{ rk1Snap = JSON.stringify(rk1FormRead()); }catch(e){ rk1Snap = null; } }
+  rk1Derived();
+}
+/* → {errs:{inputId:text}} · out of bounds = inline message, the Save button stays off */
+function rk1FormErrs(){
+  const e = {}; if(!document.getElementById('rkComp')) return e;
+  const r = RiskEngine.riskValidate(rk1FormRead()), B = RiskEngine.RISK_BOUNDS, id = {compTotal:'rkComp', compFirst:'rkCompFirst', mom:'rkMom', sat:'rkSat'}, pc = v=>v.toFixed(2) + '%';
+  r.errors.forEach(x=>{
+    const el = id[x.key]; if(!el) return;
+    e[el] = x.code === 'FIRST_ABOVE_TOTAL' ? 'First entry can’t be above the total' : x.key === 'compFirst' ? 'Enter a first entry above 0' : `Use ${pc(B[x.key][0])}–${pc(B[x.key][1])}`;
+  });
+  return e;
+}
+function rk1Derived(){
+  const el = document.querySelector('[data-rk1-der]'); if(!el) return;
+  const r = RiskEngine.riskValidate(rk1FormRead()), v = r.ok ? r.values : rk1Vals(), f = x=>(4 * x).toFixed(2);
+  el.innerHTML = `Weekly loss limit: Momentum <b>${f(v.mom)} %</b> · Sat <b>${f(v.sat)} %</b> (4 losing ideas)<br>Applies to new plans · saved plans and holdings keep their size<br>Still applied by the engine: regime 100 / 80 / 60 % · half size from −10 % · stop new entries at −20 %`;
+}
+function rk1Reset(){ rk1FormFill(RK1_DEF); try{ crOnInput(); }catch(e){} }
+/* Save: write shared.riskPerIdea only when a field changed (an untouched save keeps the stored value, or leaves it absent) */
+function rk1Save(){
+  try{
+    if(!document.getElementById('rkComp') || !rk1FormDirty()) return;
+    const r = RiskEngine.riskValidate(rk1FormRead()); if(!r.ok) return;
+    const S = sh(), v = r.values; S.riskPerIdea = {compTotal:+v.compTotal.toFixed(2), compFirst:+v.compFirst.toFixed(2), mom:+v.mom.toFixed(2), sat:+v.sat.toFixed(2)};
+    rk1Snap = JSON.stringify(rk1FormRead()); rk1Sync(S);
+  }catch(e){ console.warn('rk1 save:', e); }
 }
 /* ═══ PS1b — Sat min stop · Loss limits ═══ */
 /* PS1b §7e — stock min stop (% of entry) per bucket · Momentum 4% · Compounder 7% unless the user changed it · saved empty = off */
@@ -21003,6 +21126,7 @@ function openSettings(){
   document.getElementById('sTdKey').value = s.tdKey || '';
   satV2FormFill();   /* PV2a */
   try{ ps1FormFill(); }catch(e){ console.warn('ps1 fill:', e); }
+  try{ rk1FormFill(); }catch(e){ console.warn('rk1 fill:', e); }
   try{ document.getElementById('rs2AlertSet').innerHTML = rs2AlertSetHtml(); }catch(e){ console.warn('rs2 alerts:', e); }   /* RS2a3 */
   updTotal();
   updFxUpdatedHint(s.fxUpdatedAt);
@@ -21037,6 +21161,7 @@ function crOnInput(src){
     const vv = satV2FormRead(), ve = satV2Errs(vv); SAT_V2_FIELDS.forEach(([id,k])=>{ if(ve[k]) errs[id] = ve[k]; });   /* PV2a — TP1 / TP2 */
   }
   try{ if(g('sPsMinW')) Object.assign(errs, ps1FormErrs()); }catch(e){ console.warn('ps1 errs:', e); }
+  try{ Object.assign(errs, rk1FormErrs()); rk1Derived(); }catch(e){ console.warn('rk1 errs:', e); }
   document.querySelectorAll('.crErr[data-err-for]').forEach(d=>{ d.textContent = errs[d.dataset.errFor] || ''; });
   const bad = Object.keys(errs).length > 0, btn = g('setSaveBtn');
   if(btn) btn.disabled = bad;
@@ -21164,6 +21289,7 @@ function saveSettings(){
   if(state.settings.psRisk == null) delete state.settings.psRisk;
   if(state.settings.satV2 == null) delete state.settings.satV2;
   try{ shFxPush(); }catch(e){ console.warn('shFxPush:', e); }   /* SH2 */
+  rk1Save();   /* RK1 */
   document.getElementById('setOverlay').classList.remove('show');
   render();
   schedulePersist();
@@ -23944,6 +24070,7 @@ function shStore(){
     shApplyFxAll(S);
   } else shTransient = null;
   if(S !== shObj){ shObj = S; shSig = JSON.stringify(S); }
+  try{ rk1Sync(S); }catch(e){}
   return S;
 }
 function sh(){
@@ -28038,7 +28165,7 @@ function re2StripHtml(acct, label){
   let h = `<div class="h re2-strip${S.c === 'g' && !(()=>{ try{ return re4Due(acct); }catch(x){ return false; } })() ? ' lr2-calm' : ''}" data-re2-strip="${e(acct)}"><b>${label ? e(label) + ' · ' : ''}Act</b><span class="dot ${S.c}"></span><b class="nm re2-st ${S.c}" data-re2-state${aw1SnapAttr(S)}>${e(S.t)}</b>`;
   if(R){
     if((()=>{ try{ return lrPortOn(acct, 'MMT'); }catch(x){ return true; } })()) h += chip('mmt', `MMT <b>${R.mom.left}</b> idea${R.mom.left === 1 ? '' : 's'} · ${re1Pct(R.mom.room)}`);
-    h += chip('sat', `SAT step <b>${R.sat.step}</b> · ${re1Pct(R.sat.rpt)}`);
+    h += chip('sat', `SAT <b>${re1Pct(R.sat.rpt, 2)}</b>${R.sat.locked ? ' · locked' : ''}`);
     h += `<button type="button" class="rk${ab.comp ? ' ' + ab.comp + ' ab' : ' m'} re2-comp" data-re2-chip="comp" data-tw1-status title="Regime details" aria-label="COMP — open Regime details in Flow" onclick="tw1RegimeGo()">${ab.comp === 'r' ? 'COMP locked' : `COMP <b>${re1Pct(R.comp.room, 1)}</b>`}</button>`;
   }
   try{ if(re4Due(acct)) h += `<button type="button" class="rk r ab" data-re2-chip="exec" data-re4-chip title="Execution review due" onclick="re4ReviewOpen('${e(acct)}')">${re4Counted(acct).length} not taken</button>`; }catch(x){}
@@ -28201,13 +28328,13 @@ function re2RoomCard(acct){
   const R = re2Room(acct), S = re2State(acct), acc = acctList.find(x=>x.id === acct), pill = acc && acctList.length > 1 ? lrAcctPill(acc) : '', e = td3E;
   const mm = (()=>{ try{ return lrPortOn(acct, 'MMT'); }catch(x){ return true; } })(), ab = S.ab || {};
   const chip = k=>ab[k] === 'r' ? '<span class="lr2-ab r">locked</span>' : ab[k] === 'a' ? '<span class="lr2-ab a">reduced</span>' : '';
-  /* LR-F2 wrap-up — desktop: one line per port (long text) · phone ≤600px: ONE line per account ('M MMT 3/4 · SAT step 1 · COMP 0.6/1.25%'), a locked / reduced port's segment coloured red / amber. Same spans + hooks, CSS decides. */
+  /* LR-F2 wrap-up — desktop: one line per port (long text) · phone ≤600px: ONE line per account ('M MMT 3/4 · SAT 0.20% · COMP 0.6/1.00%'), a locked / reduced port's segment coloured red / amber. Same spans + hooks, CSS decides. */
   const ln = (k, attr, tag, cls, txt, short)=>`<span class="lr2-rl${ab[k] === 'r' ? ' st-r' : ab[k] === 'a' ? ' st-a' : ''}" ${attr} data-lr2-rl="${k}">${pill}<span class="lr-tag ${cls}">${tag}</span><span class="t"><span class="rw">${txt}</span><span class="rp">${short}</span></span>${chip(k)}</span>`;
   const strip = re2StripHtml(acct, acc && acctList.length > 1 ? lrAcctShortPlain(acc) : '').replace(/<button /g, '<button tabindex="-1" ');   /* hooks kept, visually hidden: the header already carries state / cause / N not taken */
   if(!R) return `<div class="lr2-rrw" data-re2-room data-lr2-room="${e(acct)}"><div class="lr2-rl">${pill}<span class="t"><span class="rw">Risk room — ${e(S.t)} · confirm a snapshot in Settings</span><span class="rp">Risk room — confirm a snapshot in Settings</span></span></div><div class="lr2-vh" aria-hidden="true">${strip}</div></div>`;
   return `<div class="lr2-rrw" data-re2-room data-lr2-room="${e(acct)}" data-lr2-state-c="${S.c}">`
     + (mm ? ln('mom', 'data-re2-rr="mom"', 'MMT', 'mmt', `${R.mom.left} of ${R.mom.max} ideas · room ${re1Pct(R.mom.room)} / ${re1Pct(R.mom.cap)}`, `${R.mom.left}/${R.mom.max}`) : '')
-    + ln('sat', 'data-re2-rr="sat"', 'SAT', 'sat', `step ${R.sat.step} · ${re1Pct(R.sat.room).replace('%', '')}/${re1Pct(R.sat.cap)}${R.sat.busy ? ' · busy' : ''}`, `step ${R.sat.step}`)
+    + ln('sat', 'data-re2-rr="sat"', 'SAT', 'sat', `${re1Pct(R.sat.rpt, 2)} · ${re1Pct(R.sat.room).replace('%', '')}/${re1Pct(R.sat.cap)}${R.sat.busy ? ' · busy' : ''}`, `${re1Pct(R.sat.rpt, 2)}`)
     + ln('comp', 'data-re2-rr="comp"', 'COMP', 'comp', `room ${re1Pct(R.comp.room, 1)} / ${R.comp.cap}% · regime ${R.comp.regime}%`, `${re1Pct(R.comp.room, 1).replace('%', '')}/${R.comp.cap}%`)
     + `<span class="chip ${S.c} lr2-rs"${aw1SnapAttr(S, true)} hidden>${e(S.t)}</span><div class="lr2-vh" aria-hidden="true">${strip}</div></div>`;
 }
@@ -28459,7 +28586,8 @@ function re4JournalHtml(){
 
 (function(){ const cni = coreNewIn; coreNewIn = function(){ const r = cni.apply(this, arguments); try{ re4CoreLock(); }catch(e){} return r; }; const pr = pb2Refresh; pb2Refresh = function(){ const r = pr.apply(this, arguments); try{ re4SatLock(); }catch(e){} return r; }; })();
 /* ── PB1 §9 — New plan popup (existing ＋ button / key N · from ANY tab) ── */
-const BD_NEW = [['S', 'Momentum (Stock)', 'MMT', RiskEngine.POLICY.mom.rptPct.toFixed(2) + '% · stop ≥ 4%'], ['D', 'Compounder', 'COMP', (()=>{ const c = RiskEngine.POLICY.comp; return c.pilotPct.toFixed(2) + '–' + c.totalCapPct.toFixed(2) + '% · stop ≥ 7%'; })()], ['F', 'Satellite (Future)', 'SAT', 'XAU · BTC · S50 · Brent · 0.10–0.25%']];
+/* RK1 — read at render time (the risk values are Settings now) */
+function bdNew(){ const P = RiskEngine.POLICY; return [['S', 'Momentum (Stock)', 'MMT', P.mom.rptPct.toFixed(2) + '% · stop ≥ 4%'], ['D', 'Compounder', 'COMP', P.comp.pilotPct.toFixed(2) + '–' + P.comp.totalCapPct.toFixed(2) + '% · stop ≥ 7%'], ['F', 'Satellite (Future)', 'SAT', 'XAU · BTC · S50 · Brent · ' + P.sat.stepRpt[0].toFixed(2) + '%']]; }
 let bdPopSel = 0;
 function bdPopOpen(){ return !!document.getElementById('bdPop'); }
 function bdSheetsOpen(){ return !!document.querySelector('.ui-sheet-backdrop:not(.bd-pop), .overlay.show, .core-sheet, #bdDrawer, .cp-sheet'); }
@@ -28733,6 +28861,7 @@ function pb2Refresh(){
   if(V.warn) h += `<div class="pb2-wn" data-pb2-warn>${e(SAT_NEAR_WARN)}</div>`;
   if(pb2.err) h += `<div class="pb2-bad" data-pb2-err>${e(pb2.err)}</div>`;
   h += `<div class="pb2-rem" data-pb2-rem>ⓘ Setup in TradingView: ${PB2_SETUP_LINE}</div>`;
+  if(!wiCurDoc()) h += `<div class="pb2-rem" data-rk1-nonews>No news calendar this week</div>`;   /* RK1 — no Weekly Impact this week = no news window */
   const ml = bdMacroLine(pb2.a);   /* PB1c §5 — asset bias + next event (Macro: Bull · ⚠️ CPI Tue 19:30) */
   h += `<div class="pb2-mac" data-pb2-mac>Macro: <b>${e(ml.bias)}</b>${ml.ev ? ` · ⚠️ ${e(ml.ev)}` : ''}</div>`;
   c.innerHTML = h;

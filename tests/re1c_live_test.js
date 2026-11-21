@@ -36,9 +36,9 @@ const spec = { mult: 1, fx: 35, lotStep: 1, minLot: 1 };
   ok('Starter ¼ = half of the Pilot → 0.50 × 80% × 50% and STARTER_25 named', near(m3.effPct, 0.2) && m3.factors.indexOf('STARTER_25') >= 0 && /starter 25%/.test(m3.formula), m3.factors);
   // Momentum keeps the homework factor (it is a multiplier there)
   const mm = A.sizeMomentum(L, Object.assign({ homeworkDone: false, side: 'long', entry: 180, stop: 170 }, spec));
-  ok('Momentum homework 50%: 0.45 × 50% × regime 80% = 0.18 (RM1: Momentum takes the modifier)', near(mm.effPct, 0.18) && /0\.45% × homework 50% × regime 80% = $/.test(mm.formula), mm.formula);
+  ok('Momentum homework 50%: 0.40 × 50% × regime 80% = 0.16 (RM1: Momentum takes the modifier · RK1 0.40)', near(mm.effPct, 0.16) && /0\.4% × homework 50% × regime 80% = $/.test(mm.formula), mm.formula);
   const mf = A.sizeMomentum(L, Object.assign({ homeworkDone: true, side: 'long', entry: 180, stop: 170 }, spec));
-  ok('Momentum thesis done: 0.45% × regime 80% = 0.36, no homework text', near(mf.effPct, 0.36) && !/homework/.test(mf.formula));
+  ok('Momentum thesis done: 0.40% × regime 80% = 0.32, no homework text', near(mf.effPct, 0.32) && !/homework/.test(mf.formula));
 }
 /* basis: provisional · stale · withdrawals · mid-week manual snapshot keeps week-start basis */
 {
@@ -104,7 +104,7 @@ const spec = { mult: 1, fx: 35, lotStep: 1, minLot: 1 };
   const L = A.live(s, 'main');
   ok('−11% at a confirmed snapshot → Emergency on (factor 0.5)', L.emergency.active && L.eF === 0.5, L.emergency);
   const m = A.sizeMomentum(L, Object.assign({ homeworkDone: true, side: 'long', entry: 100, stop: 95 }, spec));
-  ok('Momentum shows emergency in the formula', near(m.effPct, 0.225) && /emergency 50%/.test(m.formula), m.formula);
+  ok('Momentum shows emergency in the formula', near(m.effPct, 0.2) && /emergency 50%/.test(m.formula), m.formula);
   const c = A.sizeComp(L, Object.assign({ kind: 'pilot', side: 'long', entry: 100, stop: 95 }, spec));
   ok('Compounder = min(Regime 75%, Emergency 50%) = 50% (not multiplied)', near(c.effPct, 0.25) && c.factors.join() === 'PILOT_0.5,EMERGENCY_50', [c.effPct, c.factors]);
   const s2 = src(); s2.books.main.settings.equitySnapshots = [{ id: 'a', bkkDate: '2026-11-02', equity: 5000000, confirmed: true }, { id: 'b', bkkDate: '2026-11-16', equity: 4900000, confirmed: true }];
@@ -117,7 +117,7 @@ const spec = { mult: 1, fx: 35, lotStep: 1, minLot: 1 };
   const s = src(); s.fxSet = 1; s.books.main.settings.fx = 1; s.books.main.settings.equitySnapshots = [{ id: 's1', bkkDate: '2026-11-16', equity: 100000, confirmed: true }]; s.books.main.settings.capital = {};
   s.books.main.settings.costSettings = { sat: { perUnit: 7, swapDay: 3 } };
   let L = A.live(s, 'main'); let m = A.sizeSat(L, gold());
-  ok('Satellite Step 1 full: 0.20% × 100%', m.step === 1 && near(m.effPct, 0.2) && /^Step 1 · 0\.2% = $/.test(m.formula), m.formula);
+  ok('Satellite Step 1 full: 0.20% × 100%', m.step === 1 && near(m.effPct, 0.2) && /^0\.2% = $/.test(m.formula), m.formula);
   ok('lot = floor(100000 × 0.2% / (14 × 100)) = 0.14', near(m.qty, 0.14, 1e-9), m.qty);
   ok('R:R 3.0 in the room line', /R:R 3/.test(m.roomLine) && /queue free/.test(m.roomLine) && /1st setup today/.test(m.roomLine), m.roomLine);
   const mr = A.sizeSat(L, gold({ cond: { ema50: false, structure: true } }));
@@ -129,7 +129,7 @@ const spec = { mult: 1, fx: 35, lotStep: 1, minLot: 1 };
   const sat = (id, ent, ex, closed) => tr({ id, sym: 'XAUUSD', port: 'satB', cur: 'USD', qty: 0.1, entry: ent, sl: ent - 10, status: 'closed', exitPrice: ex, exitDate: closed, closedAt: closed + 'T03:00:00.000Z', posGroup: id, sl0: ent - 10, exitReason: 'stop', mult: 100, openedAt: closed + 'T01:00:00.000Z' });
   const s2 = JSON.parse(JSON.stringify(s)); s2.books.main.trades = [sat('g1', 2600, 2590, '2026-11-16')]; s2.ideas = [{ id: 'g1i', asset: 'XAUUSD', accts: { main: { trade_id: 'g1' } } }];
   L = A.live(s2, 'main'); m = A.sizeSat(L, gold({ product: 'EURUSD', entry: 1.1, stop: 1.09, tp: 1.13, mult: 100000, lotStep: 0.01, minLot: 0.01 }));
-  ok('after a stopped loss → Step 2 (0.30%)', m.step === 2 && /^Step 2 · 0\.3% = $/.test(m.formula), [m.step, m.formula]);
+  ok('after a stopped loss → Step 2 machine state, value stays 0.20% (RK1: label is just the value)', m.step === 2 && /^0\.2% = $/.test(m.formula), [m.step, m.formula]);
   const mq = A.sizeSat(L, gold());
   ok('same product same day after a stop loss → re-entry needs the confirm', mq.reasons.indexOf('SAT_REENTRY_COND') >= 0 && mq.reentryNeedsConfirm === true, mq.reasons);
   const mc = A.sizeSat(L, gold({ reentry: { confirmed: true, setupValid: true, sameDirectionZone: true, trendUnchanged: true, candleClosedSince: true } }));
@@ -160,14 +160,14 @@ const spec = { mult: 1, fx: 35, lotStep: 1, minLot: 1 };
   const m3 = A.sizeComp(L, Object.assign({ kind: 'addon', ideaId: idea.id, thesisDone: true, side: 'long', entry: 98, stop: 92 }, spec));
   ok('Adding below the average entry: allowed + warning line (never a block)', !m3.blocked && m3.flags.indexOf('ADDON_BELOW_ENTRY_WARN') >= 0, [m3.reasons, m3.flags]);
   ok('above the average entry: no warning', m2.flags.indexOf('ADDON_BELOW_ENTRY_WARN') < 0);
-  // existing tranche already carries 0.9% → total-risk room = 1.25% × 80% − 0.896% = 0.104% → qty is cut to that room (RM1: limited by total risk) instead of blocked
-  const big = src(); big.books.main.trades = [tr({ id: 'b1', sym: 'BIGC', qty: 128, entry: 100, sl: 90, posGroup: 'b1', sl0: 90 })]; big.cards = [{ id: 'cB', acct: 'main', ticker: 'BIGC', market: 'US', strategy: 'L', status: 'open', trade_id: 'b1', lots: [{ n: 1, px: 100, qty: 128 }] }];
+  // existing tranche already carries 0.9% → total-risk room = 1.00% × 80% − 0.49% = 0.31% → qty is cut to that room (RM1: limited by total risk) instead of blocked
+  const big = src(); big.books.main.trades = [tr({ id: 'b1', sym: 'BIGC', qty: 70, entry: 100, sl: 90, posGroup: 'b1', sl0: 90 })]; big.cards = [{ id: 'cB', acct: 'main', ticker: 'BIGC', market: 'US', strategy: 'L', status: 'open', trade_id: 'b1', lots: [{ n: 1, px: 100, qty: 70 }] }];
   const LB = A.live(big, 'main'), ib = LB.ideas[0], mb = A.sizeComp(LB, Object.assign({ kind: 'addon', ideaId: ib.id, thesisDone: true, side: 'long', entry: 100, stop: 90 }, spec));
-  ok('total-risk rule: existing 0.9% + new 0.40% > 1.25% × 80% → qty cut to the room, limited by total risk', mb.limit && mb.limit.code === 'total_risk' && mb.qty > 0 && mb.qty < mb.limits.riskQty && /^limited by total risk 1(\.0+)?%$/.test(mb.limit.text), [mb.reasons, mb.usedPct, mb.limit, mb.limits]);
+  ok('total-risk rule: existing 0.49% + new 0.40% > 1.00% × 80% → qty cut to the room, limited by total risk', mb.limit && mb.limit.code === 'total_risk' && mb.qty > 0 && mb.qty < mb.limits.riskQty && /^limited by total risk 0\.8(0+)?%$/.test(mb.limit.text), [mb.reasons, mb.usedPct, mb.limit, mb.limits]);
   const mp = A.sizeComp(L, Object.assign({ kind: 'pilot', thesisDone: false, side: 'long', entry: 100, stop: 95, levels: [{ price: 100, splitPct: 50 }, { price: 96, splitPct: 50 }] }, spec));
   ok('planned multi-entry without thesis: all levels together within 0.50% × regime', near(mp.effPct, 0.4) && mp.levels.length === 2 && mp.money / 5000000 * 100 <= 0.4 + 1e-9, [mp.effPct, mp.money]);
   const mpt = A.sizeComp(L, Object.assign({ kind: 'pilot', thesisDone: true, side: 'long', entry: 100, stop: 95, levels: [{ price: 100, splitPct: 50 }, { price: 96, splitPct: 50 }] }, spec));
-  ok('planned multi-entry with thesis: cap in force 1.25% × regime (RM1)', near(mpt.effPct, 1.0) && mpt.money / 5000000 * 100 <= 1.0 + 1e-9, [mpt.effPct, mpt.money]);
+  ok('planned multi-entry with thesis: cap in force 1.00% × regime (RK1)', near(mpt.effPct, 0.8) && mpt.money / 5000000 * 100 <= 0.8 + 1e-9, [mpt.effPct, mpt.money]);
   const heatLarge = src(); heatLarge.books.main.trades = Array.from({ length: 6 }, (_, k) => tr({ id: 'c' + k, sym: 'C' + k, qty: 1000, entry: 100, sl: 96, posGroup: 'c' + k, sl0: 96 }));
   heatLarge.cards = heatLarge.books.main.trades.map((t, k) => ({ id: 'cc' + k, acct: 'main', ticker: 'C' + k, market: 'US', strategy: 'L', status: 'open', trade_id: t.id, lots: [{ n: 1, px: 100, qty: 1000 }] }));
   L = A.live(heatLarge, 'main'); const mh = A.sizeComp(L, Object.assign({ kind: 'pilot', thesisDone: true, side: 'long', entry: 100, stop: 90 }, spec));

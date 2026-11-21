@@ -275,7 +275,7 @@ def run(pw, w, h):
         js(page, "()=>document.getElementById('bdIn').remove()")
         page.keyboard.press("n"); settle(page, 300)
         keys = js(page, "()=>[...document.querySelectorAll('#bdPop .bd-opt')].map(e=>e.dataset.bdOpt+':'+e.innerText.replace(/\\s+/g,' '))")
-        check(f"{tag} 10 popup: S Momentum · D Compounder · F Satellite, each with its key badge and rule hint", len(keys) == 3 and keys[0].startswith("S:") and "0.45%" in keys[0] and keys[1].startswith("D:") and "stop ≥ 7%" in keys[1] and keys[2].startswith("F:") and "XAU" in keys[2], keys)
+        check(f"{tag} 10 popup: S Momentum · D Compounder · F Satellite, each with its key badge and rule hint", len(keys) == 3 and keys[0].startswith("S:") and "0.40%" in keys[0] and keys[1].startswith("D:") and "stop ≥ 7%" in keys[1] and keys[2].startswith("F:") and "XAU" in keys[2], keys)
         page.keyboard.press("ArrowDown"); page.keyboard.press("Enter"); settle(page, 700)
         check(f"{tag} 10 ↓ + Enter picks Compounder → existing core form (Compounder) on top of the tab", cnt(page, "#cnTicker") == 1 and js(page, "()=>coreNew && coreNew.track") == "ladder" and js(page, "()=>activeTab") == "plan", js(page, "()=>coreNew && coreNew.track"))
         js(page, "()=>coreSheetClose()")

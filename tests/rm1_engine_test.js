@@ -89,9 +89,9 @@ const pilot = (L, o) => A.sizeComp(L, Object.assign({ kind: 'pilot', thesisDone:
   // (a) risk-limited: small holding, wide room → qty = risk budget (0.50% × 80%), no room limit text except regime
   const La = hold(10, 100, 95), a = add(La);
   ok('(a) risk qty is the smallest → regime text', a.limits.finalQty === a.limits.riskQty && a.limit && a.limit.code === 'regime' && a.qty === a.limits.riskQty, a.limits);
-  // (b) total-risk room: existing ≈0.9% risk → room = 1.25% × 80% − used
-  const Lb = hold(128, 100, 90), b = add(Lb);
-  ok('(b) total-risk room is the smallest → "limited by total risk" (1.25% × 80% = 1.00%)', b.limit && b.limit.code === 'total_risk' && b.limit.text === 'limited by total risk 1%' && b.qty > 0 && b.qty < b.limits.riskQty && b.qty === b.limits.totalRoomQty, [b.limit, b.limits]);
+  // (b) total-risk room: existing ≈0.5% risk → room = 1.00% × 80% − used
+  const Lb = hold(70, 100, 90), b = add(Lb);
+  ok('(b) total-risk room is the smallest → "limited by total risk" (1.00% × 80% = 0.80%)', b.limit && b.limit.code === 'total_risk' && b.limit.text === 'limited by total risk 0.8%' && b.qty > 0 && b.qty < b.limits.riskQty && b.qty === b.limits.totalRoomQty, [b.limit, b.limits]);
   ok('(b) the cut order is allowed (not blocked)', !b.blocked && b.reasons.length === 0, b.reasons);
   // (c) value-cap room: tight stop → risk qty huge, value room smaller. 12.5% of 5,000,000 = 625,000 THB; existing value 10×100×35 = 35,000
   const Lc = hold(10, 100, 95), c = add(Lc, { entry: 100, stop: 99.5 });
@@ -102,21 +102,21 @@ const pilot = (L, o) => A.sizeComp(L, Object.assign({ kind: 'pilot', thesisDone:
   // (d) value cap already full → blocked with its own code
   const Ld = hold(178, 100, 99), d = add(Ld, { stop: 99 });
   ok('(d) value room below one share → COMP_VALUE_CAP blocks', d.reasons.indexOf('COMP_VALUE_CAP') >= 0 && d.blocked, d.reasons);
-  // total cap with thesis = 1.25% (was 1.00%): pilot+addon allowed up to it at 100%
+  // total cap with thesis = 1.00% (RK1; was 1.25%): pilot+addon allowed up to it at 100%
   const L100 = (() => { const s = src(green); s.books.main.trades = [tr({ id: 'k1', sym: 'KKK', qty: 100, entry: 100, sl: 90, posGroup: 'k1', sl0: 90 })]; s.cards = [{ id: 'cK', acct: 'main', ticker: 'KKK', market: 'US', strategy: 'L', status: 'open', trade_id: 'k1', lots: [{ n: 1, px: 100, qty: 100 }] }]; return A.live(s, 'main'); })();
-  const k = add(L100); ok('policy: totalCapPct 1.25 · valueCapPct 12.5 · pilot/add-on 0.50', R.POLICY.comp.totalCapPct === 1.25 && R.POLICY.comp.valueCapPct === 12.5 && R.POLICY.comp.pilotPct === 0.5 && k.limits.totalCapPct === 1.25, k.limits);
+  const k = add(L100); ok('policy: totalCapPct 1.00 · valueCapPct 12.5 · pilot/add-on 0.50', R.POLICY.comp.totalCapPct === 1.00 && R.POLICY.comp.valueCapPct === 12.5 && R.POLICY.comp.pilotPct === 0.5 && k.limits.totalCapPct === 1.00, k.limits);
 }
 
 /* 7 — Momentum: budget × modifier, multiplier ≠ 1 and FX, round down */
 {
   const mom = (ff, o) => { const L = A.live(src(ff), 'main'); return A.sizeMomentum(L, Object.assign({ entry: 2600, stop: 2590, side: 'long', homeworkDone: true, isFirstEntry: true, mult: 100, fx: 35, lotStep: 0.01, minLot: 0.01 }, o || {})); };
   const m1 = mom(green), m2 = mom(rr);
-  const exp = (mod_) => Math.floor(EQ * 0.0045 * mod_ / (10 * 100 * 35) / 0.01 + 1e-9) * 0.01;
+  const exp = (mod_) => Math.floor(EQ * 0.0040 * mod_ / (10 * 100 * 35) / 0.01 + 1e-9) * 0.01;
   ok('Momentum qty = budget × modifier ÷ (|entry−stop| × multiplier × FX), rounded down to the lot step', near(m1.qty, exp(1), 1e-9) && near(m2.qty, exp(0.6), 1e-9) && m2.qty < m1.qty, [m1.qty, m2.qty, exp(1), exp(0.6)]);
   ok('Momentum text: limited by regime 60%', m2.limit && m2.limit.text === 'limited by regime 60%', m2.limit);
-  ok('Momentum never rounds up: risk ≤ budget', m2.money <= EQ * 0.0045 * 0.6 + 1e-6, m2.money);
+  ok('Momentum never rounds up: risk ≤ budget', m2.money <= EQ * 0.0040 * 0.6 + 1e-6, m2.money);
   const m3 = mom(green, { stop: 2597, lotStep: 1, minLot: 1, mult: 7, fx: 33 });
-  ok('Momentum with an odd multiplier + FX, integer lots', m3.qty === Math.floor(EQ * 0.0045 / (3 * 7 * 33)), m3.qty);
+  ok('Momentum with an odd multiplier + FX, integer lots', m3.qty === Math.floor(EQ * 0.0040 / (3 * 7 * 33)), m3.qty);
 }
 
 console.log((fail ? 'FAIL ' : 'PASS ') + pass + '/' + (pass + fail) + ' RM1 engine assertions');

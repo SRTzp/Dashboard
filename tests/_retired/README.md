@@ -131,3 +131,4 @@ How the reason was decided: the suite was run on the base commit (origin/main 27
 
 
 Old copies `run_tests_phase21.backup-pre-PY1.py`, `run_tests_phase36.backup-pre-DD1.py`, `core_size_test.backup-pre-DD1.js` (saved before a change, loaded by nothing) were deleted in TS1 §3; they stay in git history.
+| run_tests_phase51 (RK1) | SAT | Not run any more but the file stays in `tests/` because `lib_phase54/100/106` import it as a helper. RK1 hid Settings › Key news days (Sat) and Sat Tactical TP1/TP2; the news window now reads Weekly Impact CPI / NFP / FOMC (covered by run_tests_rk1). | `fill("2026-10-14")` — element not visible |
