@@ -220,6 +220,7 @@ def tests(pw, w, h, label):
         chk("6 ข้อ 2 = Cannot find (จาก AI) · แสดงเหตุผล + ใช้แทน · noneปุ่มReopen", R["2"]["st"] == "unanswerable" and "use instead: ผลตอบแทน SOX รายเดือน" in R["2"]["txt"] and not R["2"]["reopen"], json.dumps(R["2"], ensure_ascii=False)[:300])
         dr = drafts(page) or {}
         chk("6 ร่าง localStorage: ข้อ 1 (not open แล้ว) ถูกล้าง · ข้อ 3 (ยัง open) ยังอยู่", f"{IID}|1" not in dr and dr.get(f"{IID}|3") == "ร่างข้อ 3 ที่ยังเปิด", json.dumps(dr, ensure_ascii=False))
+        js(page, "()=>ideaSetTab('evd')"); page.wait_for_timeout(200)   # NT1: the Evidence fold-out is a toggle — make sure it is open
         chk("6 ป้าย U ในตารางEvidenceแสดง '(user)' · มีคำอธิบายป้าย", page.locator("[data-tag-u]").count() == 1 and "(user)" in (txt_of(page, "[data-tag-u]") or "") and page.locator("[data-idea-taglegend]").count() == 1, str(page.locator("[data-tag-u]").count()))
         snap = copy.deepcopy(P44.idb(page, IID))
         err2, prev2 = P44.import_text(page, json.dumps(new, ensure_ascii=False))

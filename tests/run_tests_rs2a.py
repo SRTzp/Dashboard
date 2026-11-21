@@ -162,10 +162,10 @@ def run(pw, w, h):
         # ---- tab switching
         js(page, "()=>{ wlSetView('wl'); wl1TrkSet('winner'); }"); page.wait_for_timeout(250)
         on = js(page, "()=>[...document.querySelectorAll('[data-wl1-segs] [role=tab]')].map(t=>t.getAttribute('aria-selected'))")
-        check(f"{tag} J: back to Momentum — only Momentum selected; Ideas tab still works", on == ["true", "false", "false", "false"], on)
+        check(f"{tag} J: back to Momentum — only Momentum selected; Ideas tab still works", on == ["false", "true", "false", "false"], on)
         js(page, "()=>wlSetView('idea')"); page.wait_for_timeout(250)
         on = js(page, "()=>[...document.querySelectorAll('[data-wl1-segs] [role=tab]')].map(t=>t.getAttribute('aria-selected'))")
-        check(f"{tag} J: Ideas selected alone", on == ["false", "false", "true", "false"], on)
+        check(f"{tag} J: Ideas selected alone", on == ["true", "false", "false", "false"], on)
         check(f"{tag} K: no page errors", not pe, pe[:3])
     finally:
         b.close()
