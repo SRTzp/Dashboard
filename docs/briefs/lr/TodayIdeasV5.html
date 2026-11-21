@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Today v5 — current Today + Ideas card on the right (NT1b)</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#EEF0F4;font:14px/1.45 Inter,system-ui,sans-serif;color:#14161A;width:1440px}
+.mut{color:#8A919C}.g{color:#0E6B4C;font-weight:600}.l{color:#A62D27;font-weight:600}.w{color:#9A5B00}
+.num{font-variant-numeric:tabular-nums}
+.wrap{padding:0 80px}
+header{display:flex;align-items:center;gap:16px;height:84px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px}.logo{width:28px;height:28px;border-radius:8px;background:#14161A}
+.dot{width:7px;height:7px;border-radius:50%;background:#22A06B}
+.nav{display:flex;gap:2px;background:#E6E8EC;border-radius:12px;padding:4px}
+.nav span{padding:6px 12px;border-radius:9px;color:#5F6672;font-size:15px}.nav span.on{background:#fff;color:#14161A;font-weight:600}
+.cnt{display:inline-block;font:600 11px/17px Inter;color:#9A5B00;background:#FFF4E0;border-radius:999px;padding:0 6px;margin-left:5px;vertical-align:1px}
+.acct{display:flex;gap:4px;background:#E6E8EC;border-radius:12px;padding:4px}
+.acct span{padding:5px 12px;border-radius:9px;font-weight:600;font-size:14px}.acct span.on{background:#fff}
+.av{display:inline-flex;width:22px;height:22px;border-radius:50%;align-items:center;justify-content:center;font:700 11px Inter;color:#fff;background:#14161A;margin-right:6px}
+.av.f{background:#B2457E}
+.np{margin-left:auto;background:#14161A;color:#fff;border-radius:12px;padding:9px 16px;font-weight:600}
+.more{border:1px solid #DDE0E5;background:#fff;border-radius:12px;padding:8px 12px}
+.title{display:flex;align-items:baseline;gap:12px;margin:8px 0 18px}
+.title h1{font-size:30px;margin:0}
+.dw{margin-left:auto;display:flex;background:#E6E8EC;border-radius:12px;padding:4px}.dw span{padding:6px 12px;border-radius:9px;color:#5F6672}.dw span.on{background:#fff;color:#14161A}
+.top{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+.mood{background:#FFF4E0;border-radius:18px;padding:16px 18px}
+.k{font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:#5F6672}
+.card{background:#fff;border:1px solid #E3E6EA;border-radius:18px;padding:16px 18px}
+.chip{display:inline-block;color:#0E6B4C;background:#E6F4EE;border-radius:8px;padding:3px 9px;font-weight:600;margin-right:4px}
+.grid{display:grid;grid-template-columns:1fr 440px;gap:20px;align-items:start}
+.tag{justify-self:start;font:600 11px "JetBrains Mono",monospace;border-radius:5px;padding:2px 6px;white-space:nowrap}
+.mmt{color:#3B4FC4;background:#E8ECFB}.comp{color:#0F766E;background:#E3F3F1}.sat{color:#7A3FB8;background:#F1E9FB}.grey{color:#5F6672;background:#F0F1F4}.news{color:#9A5B00;background:#FFF4E0}
+.btn{display:inline-flex;align-items:center;height:34px;padding:0 13px;border:1px solid #DDE0E5;border-radius:10px;background:#fff;font-weight:500;white-space:nowrap;font-size:13.5px}
+.btn.pri{background:#14161A;color:#fff;border-color:#14161A;font-weight:600}
+.sec{font:600 11px Inter;letter-spacing:.08em;color:#5F6672;margin:18px 0 8px}.sec span{font-weight:400;letter-spacing:0;color:#8A919C;margin-left:6px}
+.pc{border:1px solid #E3E6EA;border-left:3px solid #3B4FC4;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.pc.s{border-left-color:#7A3FB8}.pc.c{border-left-color:#0F766E}
+.pc .tk{font-weight:600;font-size:16px}
+.pc .d{color:#5F6672;margin-top:4px}
+.right{display:flex;flex-direction:column;gap:14px}
+.rh{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rh b{font-size:17px}
+.pill{font:600 11.5px Inter;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.p-b{color:#3B4FC4;background:#E8ECFB}.p-a{color:#9A5B00;background:#FFF4E0}.p-n{color:#5F6672;background:#F0F1F4}.p-g{color:#0E6B4C;background:#E6F4EE}
+.it{display:grid;grid-template-columns:62px 1fr auto;gap:0 10px;align-items:center;padding:8px 0;border-top:1px solid #F0F1F4}
+.it .t{font-weight:600}
+.it .n{grid-column:2/3;color:#5F6672;font-size:13px}
+.dots{width:34px;height:34px;border:1px solid #DDE0E5;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:#8A919C}
+.td{display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid #F0F1F4}
+.ring{width:20px;height:20px;border:1.5px solid #8A919C;border-radius:50%;margin-left:12px}
+.x{color:#8A919C}
+.new{}
+.lbl{font:600 10.5px Inter;color:#0E6B4C;background:#E6F4EE;border-radius:6px;padding:1px 6px}
+.rr{display:grid;grid-template-columns:30px 62px 1fr;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #F0F1F4;font-size:13.5px}
+.left{display:flex;flex-direction:column;gap:14px}
+.status{display:grid;grid-template-columns:62px 1fr;gap:9px 12px;padding:16px 22px;align-items:center}
+.blk{display:grid;grid-template-columns:62px 1fr;gap:12px 12px;align-content:start}
+.sc{align-items:start;display:grid;grid-template-columns:62px 1fr 62px 354px;gap:0 12px;align-items:center;min-height:28px}
+.sk{font:600 11px Inter;letter-spacing:.08em;color:#8A919C}
+.mood-pill{display:inline-block;font-weight:700;color:#9A5B00;background:#FFF4E0;border-radius:8px;padding:2px 10px;margin-right:6px}
+.lk{color:#3B4FC4;font-weight:600;font-size:13px}
+.dot2{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}.dot2.r{background:#A62D27}.dot2.a{background:#9A5B00}
+.bar{display:inline-block;width:140px;height:6px;background:#EEF0F3;border-radius:3px;vertical-align:middle;margin-left:8px;overflow:hidden}.bar i{display:block;height:100%;background:#0E6B4C}
+.new2{box-shadow:0 0 0 2px #3B4FC4}
+.rr2{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:center;padding:8px 0;border-top:1px solid #F0F1F4;font-size:13.5px}
+.fx{position:relative}.fx::after{content:attr(data-n);position:absolute;top:-10px;left:-10px;width:22px;height:22px;border-radius:50%;background:#3B4FC4;color:#fff;font:700 12px/22px Inter;text-align:center}
+.note{margin:20px 80px 30px;font-size:12.5px;color:#5F6672;background:#FFF4E0;border-radius:10px;padding:10px 12px;line-height:1.6}
+</style></head><body>
+<div class="wrap">
+<header>
+  <div class="brand"><span class="logo"></span>Trading<span class="dot"></span></div>
+  <div class="nav"><span class="on">Today</span><span>Plan</span><span>Flow</span><span>Watch<span class="cnt">3</span></span><span>Journal</span><span>Port</span></div>
+  <div class="acct"><span class="on"><span class="av">M</span>MAIN</span><span style="color:#5F6672"><span class="av f">F</span>FAM</span></div>
+  <span class="np">+ New plan</span><span class="more">⋯</span>
+</header>
+
+<div class="title"><h1>Today</h1><span class="mut">Sat 21 Nov · US market opens 21:30 ICT</span><div class="dw"><span class="on">Daily</span><span>Weekend <span class="l" style="font-weight:500">1/8</span></span></div></div>
+
+<div class="grid">
+<div class="left">
+  <div class="card status">
+    <div class="sk fx" data-n="5">MOOD</div><div><span class="mood-pill">Risk-off</span> new entries at <b>60%</b> size <span class="mut num" style="margin-left:14px">Goal · Main +4.2% of 15%</span> <span class="bar" style="width:90px"><i style="width:28%"></i></span></div>
+    <div class="sk">TODAY</div><div class="num"><span class="dot2 r"></span>20:30 US CPI · XAU, US500 <span class="pill p-a">in 6h 48m</span> &nbsp;&nbsp; <span class="dot2 a"></span>22:00 Fed Waller · XAU</div>
+    <div class="sk">HOT</div><div><span class="chip">↗ Staples</span><span class="chip">↗ Utilities</span><span class="chip">↗ Comm</span><span class="mut" style="font-size:13px;margin-left:6px"><span style="color:#3B4FC4">↥</span> Robotics · <span class="l">↘</span> Semis · <span class="l">↘</span> Tech</span></div>
+    <div class="sk">MACRO</div><div><span class="l">▼</span> Growth slowing, rates on hold — cautious on high beta <a class="lk">Playbook ›</a></div>
+  </div>
+<!-- Act -->
+<div class="card" style="padding:18px 22px">
+  <div style="display:flex;align-items:center;gap:10px"><b style="font-size:18px">Act</b><span class="pill p-n" style="font-size:12.5px">Main + Family</span><span class="g">● Normal</span>
+    <span class="mut num" style="margin-left:auto;font-size:13.5px">Open risk <span class="av" style="width:18px;height:18px;font-size:9px">M</span><b style="color:#14161A">0%</b> · <span class="av f" style="width:18px;height:18px;font-size:9px">F</span><b style="color:#14161A">0%</b> / 3% <span class="w">· Placed 1/3 · goal 100%</span></span></div>
+  <div class="sec">ENTER<span>2 ready · both accounts · closest first</span><u style="float:right;font-weight:400;letter-spacing:0;color:#14161A">All 2 planned</u></div>
+  <div class="pc"><div style="flex:1"><span class="tk">CRWD</span> <span class="tag mmt">MMT</span> <span class="av">M</span><span class="g">Long</span> <span class="w">passed entry · missed?</span><div class="d num">Buy #17 @ 100 · SL 90 · TP 120 · Risk −$170</div></div><span class="btn">Update levels ›</span><span class="btn">Placed</span><span class="btn">Not taken ›</span></div>
+  <div class="pc s"><div style="flex:1"><span class="tk">XAU</span> <span class="tag sat">SAT</span> <span class="av">M</span><span class="g">Long</span><div class="d num">Buy #0.29 @ 100 · SL 90 · TP 120 · Risk −$290</div></div><span class="btn pri fx" data-n="1">Place</span></div>
+  <div class="sec">MANAGE<span>2 holding</span></div>
+  <div class="pc c"><div style="flex:1"><span class="tk">GOOGL</span> <span class="tag comp">COMP</span> <span class="av">M</span><span class="g">Long</span> <div class="d num">Held #15 · Stop 250 · If stopped −$435</div></div><span class="mut fx" data-n="3" style="font-size:13px">Homework → unlocks adds ›</span></div>
+  <div class="pc c" style="margin:0"><div style="flex:1"><span class="tk">NVDA</span> <span class="tag comp">COMP</span> <span class="av">M</span><span class="g">Long</span> <div class="d num">Held #11 · Stop 110 · If stopped −$528 · Next ② #7 @ 140</div></div><span class="btn">Place ②</span></div>
+</div>
+</div>
+
+<div class="right">
+  <!-- NEW: Ideas -->
+  <div class="card new">
+    <div class="rh"><b>Ideas</b><span class="w num" style="font-size:13px">3 due</span><span class="mut" style="margin-left:auto;font-size:13px">8 open · All ›</span><span class="dots" style="width:28px;height:28px;margin-left:4px">⋯</span></div>
+    <div class="it"><span class="tag grey">AVGO</span><span><span class="t">Breakout over 190</span> <span class="pill p-b num fx" data-n="6">1.8% to level</span></span><span class="btn">Make plan ›</span>
+      <span class="n">Next: close above 190 on volume</span></div>
+    <div class="it"><span class="tag grey">US MKT</span><span><span class="t">Risk-off until CPI</span> <span class="pill p-a">today</span></span><span class="btn">Open ›</span>
+      <span class="n">Next: read CPI → still bear?</span></div>
+    <div class="it"><span class="tag grey">THEME</span><span><span class="t">AI power: grid</span> <span class="pill p-n">evidence 2/4</span></span><span class="btn">Add evidence ›</span>
+      <span class="n">AI generated · next check today</span></div>
+  </div>
+
+  <!-- To do: unchanged pattern, cap 4 -->
+  <div class="card">
+    <div class="rh"><b>To do</b><span class="mut">10</span><span class="btn" style="margin-left:auto;height:30px;padding:0 10px">+</span><span class="pill p-g" style="font-size:13px;padding:4px 10px">Exec 0/1</span></div>
+    <div class="td"><span class="tag comp">COMP</span><span class="w fx" data-n="2" style="font-weight:600">homework · 3 stocks</span><b>Open ›</b></div>
+    <div class="td"><span class="ring"></span><span>เก็บทอง Zone 3450</span><span class="x">×</span></div>
+    <div class="td"><span class="ring"></span><span>วางแผนเก็บหุ้น US ไม้แรก</span><span class="x">×</span></div>
+    <div class="td"><span class="tag news">NEWS</span><span>Weekly News · 1 unread</span><b>Read ›</b></div>
+    <div style="padding-top:8px;font-weight:600;font-size:13px">+6 ›</div>
+  </div>
+
+  <!-- Risk room: compact -->
+  <div class="card">
+    <div class="rh" style="margin-bottom:2px"><b class="fx" data-n="4">Risk room</b><span class="mut" style="font-size:13px">this week · room left</span></div>
+    <div class="rr2"><span class="av">M</span><span class="num"><span class="tag mmt">MMT</span> 1.6% &nbsp;<span class="tag sat">SAT</span> 0.8% &nbsp;<span class="tag comp">COMP</span> 5.4/6%</span></div>
+    <div class="rr2"><span class="av f">F</span><span class="num"><span class="tag sat">SAT</span> 0.8% &nbsp;<span class="tag comp">COMP</span> 6/6%</span></div>
+  </div>
+</div>
+</div>
+</div>
+<div class="note"><b>V5 = V4 + the 6 fixes</b> (numbers on the page): ① one black button on screen — Act <i>Place</i>; Ideas buttons are plain · ② <i>homework · 3 stocks</i> amber, not red · ③ Act: no “size limited to 50%”; GOOGL shows <i>Homework → unlocks adds ›</i> (muted), NVDA shows <i>Place ②</i> (PC2) · ④ Risk room = one line per account → the whole page fits 1440×900 · ⑤ status card 4 rows: MOOD (+ goal) · TODAY · HOT · MACRO · ⑥ every Ideas row has one real button; wording <i>1.8% to level</i> like Act’s <i>to entry</i>. Phone order: status → Act → Ideas → To do → Risk room.</div>
+</body></html>

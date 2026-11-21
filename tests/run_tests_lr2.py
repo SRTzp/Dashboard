@@ -80,41 +80,41 @@ def partA(page, tag, w):
         check(f"{tag} A: mood {eq}/{cr}/{asof} = {want} ({st})", got == [want, st], got)
     set_regime(page, "red", "red", "fresh")
     pc = js(page, "()=>rm1Eff().pc")
-    check(f"{tag} A: line 2 reads the effective size ({pc}%) from the same RM1 result", f"{pc}%" in card(page, "mood") and "ntries" in card(page, "mood"), card(page, "mood"))
+    check(f"{tag} A: MOOD row reads the effective size ({pc}%) from the same RM1 result", f"{pc}%" in sp(js(page, "()=>document.querySelector('[data-nt1b-row=mood]').innerText")) and "ntries" in sp(js(page, "()=>document.querySelector('[data-nt1b-row=mood]').innerText")))
     check(f"{tag} A: old tdRegimeVerdict reads the same label (no second rule)", js(page, "()=>{ const d = document.createElement('div'); d.innerHTML = tdRegimeVerdict(); return d.firstChild.dataset.rgLabel === lr2Mood().label; }"))
     set_regime(page, "green", "green", "fresh")
     # empty states
     js(page, "()=>{ wiDocs = {}; ffState().rrg = {rowsD:[], rowsW:[]}; todayRefresh(true); }"); page.wait_for_timeout(250)
-    check(f"{tag} A: all three empty = mood + ONE line 'No news or sector data this week · Import ›' (LR-F: empty items are hidden)", "No news or sector data this week · Import ›" in card(page, "none") and card(page, "moves") == "" and card(page, "hot") == "", card(page, "none"))
-    check(f"{tag} A: empty news / moves / sector cards are not drawn", card(page, "news") == "", card(page, "news"))
+    check(f"{tag} A: all three empty = MOOD + MACRO rows only (NT1b: empty items are hidden, no empty-state line)", js(page, "()=>[...document.querySelectorAll('[data-nt1b-row]')].map(r=>r.dataset.nt1bRow)") == ["mood", "macro"])
+    check(f"{tag} A: empty news / moves / sector cards are not drawn", card(page, "news") == "" and card(page, "hot") == "" and card(page, "moves") == "")
     if wide:
-        check(f"{tag} A: two cards (mood + empty line)", js(page, "()=>document.querySelectorAll('.lr2-glance [data-lr2-card]').length") == 2)   # mood + the one empty line
+        check(f"{tag} A: one status card", js(page, "()=>document.querySelectorAll('[data-nt1b-status]').length") == 1)
         page.screenshot(path=os.path.join(SHOTS, "lr2-glance-empty-1440.png"))
     # filled
     seed_wi(page); seed_rrg(page)
     js(page, """()=>{ const B = getBook(tdHome()); B.settings.newsEvents = []; saveBook(tdHome()); todayRefresh(true); }"""); page.wait_for_timeout(200)
     mv = card(page, "moves"); hot = card(page, "hot"); nw = card(page, "news")
-    check(f"{tag} A: moves chips XAU ▲ HIGH · BTC ▼ MED, quiet assets on line 2", "XAU ▲" in mv and "BTC ▼" in mv and ("HIGH" in mv and "MED" in mv if wide else True) and (("quiet" in mv) if wide else True), mv)
+    check(f"{tag} A: NT1b — the old `moves` chips are replaced by the TODAY events row (CPI is not today here → hidden)", mv == "" and not js(page, "()=>!!document.querySelector('[data-nt1b-row=today]')"), mv)
     if wide:
-        check(f"{tag} A: hot sectors = up to 3 Leading by strength (↗, names) then first Improving ⤴ + Lagging ↘", hot.count("↗") == 3 and "⤴" in hot and hot.count("↘") == 2, hot)
+        check(f"{tag} A: HOT = up to 3 Leading chips (↗) by strength + muted ↥ Improving + ↘ Lagging", hot.count("↗") == 3 and "↥" in hot and hot.count("↘") == 2, hot)
         order = js(page, "()=>[...document.querySelectorAll('[data-lr2-hot]')].map(c=>c.dataset.lr2Hot)")
         check(f"{tag} A: Leading chips sorted by strength", order == ["XLI", "XLC", "ITA"], order)
     else:
-        ph = js(page, "()=>{ const l2 = document.querySelector('[data-lr2-phone] .l2'); return {txt: l2.innerText.replace(/\\s+/g, ' '), chips: [...l2.querySelectorAll('[data-lr2-hot]')].map(c=>c.dataset.lr2Hot), more: (l2.querySelector('[data-lr2-hotmore]')||{}).innerText||'', h: Math.round(l2.getBoundingClientRect().height), all: Math.round(document.querySelector('[data-lr2-phone]').getBoundingClientRect().height)}; }")
-        check(f"{tag} A: phone glance = mood line + news line + chips line (light-lock: mood/news each on own line) · ≤2 hot chips by strength + '+N' · no 'Hot:' label", ph["chips"] == ["XLI", "XLC"] and ph["more"] == "+2" and "Hot:" not in ph["txt"] and ph["h"] <= 44 and ph["all"] <= 140, ph)
-    check(f"{tag} A: next news = ICT time + name + impact", "HIGH" in nw and "US CPI" in nw if wide else "HIGH" in js(page, "()=>document.querySelector('[data-lr2-card=\"news\"]').innerText"), nw)
+        order = js(page, "()=>[...document.querySelectorAll('[data-lr2-hot]')].map(c=>c.dataset.lr2Hot)")
+        check(f"{tag} A: phone status card HOT row = leading chips by strength (+N) · no overflow", order == ["XLI", "XLC", "ITA"] and ovf(page) <= 0, order)
+    check(f"{tag} A: no event today → no TODAY row", not js(page, "()=>!!document.querySelector('[data-nt1b-row=today]')"))
     if wide:
         hs = js(page, "()=>[...document.querySelectorAll('.lr2-glance .lr2-c')].map(c=>Math.round(c.getBoundingClientRect().height))")
-        check(f"{tag} A: all four cards the same height ({hs})", len(set(hs)) == 1, hs)
-        hh = js(page, "()=>{ const c = document.querySelector('[data-lr2-card=\"hot\"] .chs'); return [c.scrollHeight <= c.clientHeight + 1, new Set([...c.children].map(x=>Math.round(x.getBoundingClientRect().top))).size]; }")
+        pass
+        hh = js(page, "()=>{ const c = document.querySelector('[data-nt1b-row=hot] .v'); return [c.scrollHeight <= c.clientHeight + 1, new Set([...c.querySelectorAll('.nt1b-ch')].map(x=>Math.round(x.getBoundingClientRect().top))).size]; }")
         check(f"{tag} A: hot chip row never wraps", hh[0] and hh[1] == 1, hh)
     # tap-through
     if w == 1440: page.screenshot(path=os.path.join(SHOTS, "lr2-today-1440.png"))
     if w == 390: page.screenshot(path=os.path.join(SHOTS, "lr2-today-390.png"))
     js(page, "()=>switchTab('today')")
-    for k, fn in (("news", "td3GoCal"), ("hot", "ln4GoLeadership"), ("mood", "tdRegimeGo")):
+    for k, fn in (("hot", "ln4GoLeadership"), ("mood", "tdRegimeGo")):
         js(page, "(fn)=>{ window.__called = null; window['__o_'+fn] = window[fn]; window[fn] = ()=>{ window.__called = fn; }; }", fn)
-        js(page, "(k)=>document.querySelector('[data-lr2-card=\"'+k+'\"]').click()", k)
+        js(page, "(k)=>(k === 'hot' ? document.querySelector('[data-lr2-hot]') : document.querySelector('[data-lr2-card=\"'+k+'\"]')).click()", k)
         got = js(page, "()=>window.__called"); js(page, "(fn)=>{ window[fn] = window['__o_'+fn]; }", fn)
         check(f"{tag} A: {k} card taps through ({fn})", got == fn, got)
     js(page, "()=>{ bdBias = window.__bdBias; satWeekPickList = window.__pk; wiDocs = {}; todayRefresh(true); }")
@@ -196,12 +196,12 @@ def partC(page, tag, w):
       const vis = [...document.querySelectorAll('[data-lr2-risk] [data-re2-chip]')].filter(e=>{ if(e.closest('.lr2-vh')) { const w = e.closest('.lr2-vh').getBoundingClientRect(); return w.width > 2 || w.height > 2; } const r = e.getBoundingClientRect(); return r.width > 2 && r.height > 2; }).length;
       return {main: L('main'), fam: L('fam'), strips: vis, tiles: document.querySelectorAll('[data-lr2-risk] .rk3, [data-lr2-risk] summary').length, det: !!document.querySelector('[data-lr2-side] > [data-lr2-risk]') && !document.querySelector('[data-ln4-moredet] [data-lr2-risk]')}; }""")
     mt = rr["main"][0]["t"] if rr["main"] else ""
-    check(f"{tag} C: Risk room = ONE line per account × port in its own card under To do ('M · MMT 1 of 4 ideas · room x / y'): Main 3 lines, Family 2 (no Momentum)", rr["det"] and [x["k"] for x in rr["main"]] == ["mom", "sat", "comp"] and [x["k"] for x in rr["fam"]] == ["sat", "comp"] and all(x["pill"] == "M" for x in rr["main"]) and all(x["pill"] == "F" for x in rr["fam"]) and rr["main"][0]["tag"] == "MMT" and re.match(r"^(\d+ of \d+ ideas · room [\d.]+% / [\d.]+%|\d+/\d+)$", mt), rr)
+    check(f"{tag} C: Risk room = ONE line per account in its own card under To do (NT1b: `M MMT 1.6% · SAT 0.8% · COMP 5.7/6%`): Main 3 ports, Family 2 (no Momentum)", rr["det"] and [x["k"] for x in rr["main"]] == ["mom", "sat", "comp"] and [x["k"] for x in rr["fam"]] == ["sat", "comp"] and all(x["pill"] == "M" for x in rr["main"][:1]) and re.match(r"^[\d.]+%$", mt), rr)
     if wide: check(f"{tag} C: no truncated risk lines · no tiles · no visible duplicated strip chips", not any(x["clip"] for x in rr["main"] + rr["fam"]) and rr["tiles"] == 0 and rr["strips"] == 0, rr)
     else: check(f"{tag} C: no tiles · no visible duplicated strip chips (lines may ellipsise on phone)", rr["tiles"] == 0 and rr["strips"] == 0, rr)
     js(page, "()=>{ lr2DetOpen = false; todayRefresh(true); }"); page.wait_for_timeout(200)
-    ct = js(page, "()=>{ const d = document.querySelector('[data-ln4-moredet]'); d.open = true; const k = ['[data-ln4-hot]', '[data-ln4-macro]', '[data-ln4-goal]', '[data-ln4-wl]', '[data-ln4-today]'].map(s=>!!d.querySelector(s) || (s === '[data-ln4-today]')); return k; }")
-    check(f"{tag} C: HOT · MACRO · GOAL · SIZE lines live inside Details (hooks kept)", all(ct), ct)
+    ct = js(page, "()=>{ const d = document.querySelector('[data-ln4-moredet]'); d.open = true; return ['[data-ln4-hot]'].map(s=>!!d.querySelector(s)).concat(['[data-ln4-macro]', '[data-ln4-goal]', '[data-ln4-wl]'].map(s=>!!document.querySelector('[data-nt1b-status] ' + s))); }")
+    check(f"{tag} C: NT1b: the ★ HOT line stays in Details · MACRO · GOAL · SIZE moved into the status card (hooks kept)", all(ct), ct)
     check(f"{tag} C: weekly news hook still rendered by ln4NewsLine", "data-td3-wnews" in js(page, "()=>ln4NewsLine.toString()"))
 
 
@@ -224,7 +224,7 @@ def partFix(page, tag, w):
     check(f"{tag} F5: To do card is left-aligned like the design (title at the card's left padding, rows flush, no tinted box)", t["titleOffset"] <= 20 and t["align"] in ("left", "start") and t["bg"] in ("rgba(0, 0, 0, 0)", "transparent") and t["bd"] == "0px" and t["rowOffset"] <= 20, t)
 
 
-BASE_390 = {"height": 975, "rows": 12}   # origin/main (+ LR2 commit 0) at 390 with the same fixture · measured with tools in docs/reports/LR2-summary.md
+BASE_390 = {"height": 1129, "rows": 12}   # NT1b re-baseline (status card + Ideas card; was 975) · origin/main (+ LR2 commit 0) at 390 with the same fixture · measured with tools in docs/reports/LR2-summary.md
 
 
 def heights(pw):

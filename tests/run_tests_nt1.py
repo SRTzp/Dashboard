@@ -14,6 +14,7 @@ ALLT = "(s)=>[...document.querySelectorAll(s)].map(e=>e.innerText.replace(/\\s+/
 OVER = "()=>{ const w = document.documentElement.clientWidth; return document.documentElement.scrollWidth <= w + 1 && document.body.scrollWidth <= w + 1; }"
 SEGS = "()=>[...document.querySelectorAll('[data-wl1-segs] button')].map(b=>b.innerText.replace(/\\s+/g,' ').trim())"
 VIEW = "()=>[wlView, nt1Seg]"
+ROW12 = "(i)=>{ const r = document.querySelector('[data-nt1-my=\"' + i + '\"]'); return [...r.querySelectorAll('.t1,.t2')].map(e=>e.innerText.replace(/\\s+/g,' ').trim()).join(' '); }"
 DOC = lambda d: "(i)=>window.firebase.__mockDb.__getDoc(['users','testuid','ideas_my',i])"
 
 
@@ -163,8 +164,8 @@ def run_desktop(pw, w, h):
         # ================= F · My ideas
         to_my(page)
         check(f"{tag} F My ideas list newest first (incl. old notes)", js(page, "()=>[...document.querySelectorAll('[data-nt1-my]')].map(r=>r.dataset.nt1My).slice(0,3)") == ["m1", "m2", "m3"], js(page, "()=>[...document.querySelectorAll('[data-nt1-my]')].map(r=>r.dataset.nt1My)"))
-        check(f"{tag} F row: subject tag · title · view chip · date · summary (Plan text first)", "US market Rally narrowing to AI names Neutral 18 Nov · plan: Leaders only, half size" == js(page, TXT, "[data-nt1-my=\"m1\"]"), js(page, TXT, "[data-nt1-my=\"m1\"]"))
-        check(f"{tag} F row summary: first filled angle when there is no plan", js(page, TXT, "[data-nt1-my=\"m2\"]").endswith("Gap above 182 held 3 days"))
+        check(f"{tag} F row: subject tag · title · view chip · date · summary (Plan text first)", "US market Rally narrowing to AI names Neutral 18 Nov · plan: Leaders only, half size" == js(page, ROW12, "m1"), js(page, ROW12, "m1"))   # NT1b adds Next · trail lines below (.t3 / trail)
+        check(f"{tag} F row summary: first filled angle when there is no plan", js(page, ROW12, "m2").endswith("Gap above 182 held 3 days"))
         check(f"{tag} F list scrolls inside its card (page does not)", js(page, "()=>{ const l = document.querySelector('.nt1-lb'); return l.scrollHeight >= l.clientHeight && document.scrollingElement.scrollHeight <= innerHeight + 1; }"))
         # detail
         d = js(page, "()=>document.querySelector('.nt1-det').innerText.replace(/\\s+/g,' ')")
@@ -224,7 +225,7 @@ def run_desktop(pw, w, h):
         check(f"{tag} F limits: 4 angles ≤ 600 · plan ≤ 600 · title ≤ 80", lim == [600, 600, 600, 600, 600, 80], lim)
         page.click("[data-nt1-save]"); page.wait_for_timeout(600)
         nid = js(page, "()=>mySel"); doc = js(page, DOC(0), nid)
-        check(f"{tag} F saved to users/{{uid}}/ideas_my: subject · title · view · chart · plan · review null", doc and doc["subject"] == {"type": "tag", "key": "Copper"} and doc["title"] == "My new idea" and doc["view"] == "bear" and doc["chart"].endswith("NeW42/") and doc["plan"] == "Buy dips" and doc["review"] is None and doc["checkOn"] is None and doc["builtOn"] is None, doc)
+        check(f"{tag} F saved to users/{{uid}}/ideas_my: subject · title · view · chart · plan · review null", doc and doc["subject"] == {"type": "tag", "key": "Copper"} and doc["title"] == "My new idea" and doc["view"] == "bear" and doc["chart"].endswith("NeW42/") and doc["plan"] == "Buy dips" and doc["review"] is None and doc["checkOn"] == "2026-11-24" and doc["builtOn"] is None, doc)   # NT1b: new ideas get +3 trading days
         check(f"{tag} F new idea is first (newest) and selected", js(page, "()=>document.querySelector('[data-nt1-my]').dataset.nt1My") == nid)
         # edit
         page.click("[data-nt1-edit]"); page.wait_for_timeout(150); page.fill("#nt1fTitle", "My edited idea"); page.click("[data-nt1-save]"); page.wait_for_timeout(500)
@@ -287,9 +288,10 @@ def run_desktop(pw, w, h):
         # ================= H · Today check line · review
         js(page, "()=>{ switchTab('today'); ln4TodoAll = true; todayRefresh(true); }"); page.wait_for_timeout(500)
         tl = js(page, "()=>[...document.querySelectorAll('[data-lr2-ti]')].map(r=>r.innerText.replace(/\\s+/g,' ').trim())")
-        line = [x for x in tl if "Check:" in x]
-        check(f"{tag} H Today › To do: IDEA tag · Check: <title> — right? · Open › (only the due one)", line == ["IDEA Check: Range before CPI — right? Open ›"], tl)
-        js(page, "()=>document.querySelector('[data-ln4-todo=\"idea:m3\"]').click()"); page.wait_for_timeout(350)
+        check(f"{tag} H NT1b: the old To do line `IDEA · Check: … — right?` is gone (the Ideas card shows it)", not any("Check:" in x for x in tl), tl)
+        ic = js(page, "()=>[...document.querySelectorAll('[data-nt1b-it=\"my:m3\"]')].map(r=>r.innerText.replace(/\\s+/g,' ').trim())")
+        check(f"{tag} H Today › Ideas card lists the due idea once (XAU · Range before CPI · 2 days late · Open ›)", len(ic) == 1 and "Range before CPI" in ic[0] and "2 days late" in ic[0] and "Open ›" in ic[0], ic)
+        js(page, "()=>document.querySelector('[data-nt1b-it=\"my:m3\"] [data-nt1b-btn]').click()"); page.wait_for_timeout(350)
         check(f"{tag} H Open › goes to that idea in My ideas", js(page, "()=>[activeTab, nt1Seg, mySel]") == ["watch", "my", "m3"], js(page, "()=>[activeTab, nt1Seg, mySel]"))
         rv = js(page, "()=>document.querySelector('[data-nt1-review]').dataset.nt1Review")
         check(f"{tag} H on/after the check date: Right · Partly · Wrong + one-line field (≤ 140)", rv == "due" and js(page, "()=>[...document.querySelectorAll('[data-nt1-rv]')].map(b=>b.innerText)") == ["Right", "Partly", "Wrong"] and js(page, "()=>document.querySelector('[data-nt1-rv-text]').maxLength") == 140)
@@ -301,7 +303,7 @@ def run_desktop(pw, w, h):
         check(f"{tag} H save sets review {{result, text, at}}", d3["review"]["result"] == "partly" and d3["review"]["text"] == "Broke up after FOMC" and d3["review"]["at"], d3["review"])
         at1 = d3["review"]["at"]
         js(page, "()=>{ switchTab('today'); ln4TodoAll = true; todayRefresh(true); }"); page.wait_for_timeout(400)
-        check(f"{tag} H the Today line is gone after the review", not any("Check:" in x for x in js(page, "()=>[...document.querySelectorAll('[data-lr2-ti]')].map(r=>r.innerText)")))
+        check(f"{tag} H the Today idea row is gone after the review", js(page, "()=>document.querySelectorAll('[data-nt1b-it=\"my:m3\"]').length") == 0)
         js(page, "()=>nt1OpenMy('m3')"); page.wait_for_timeout(300); page.wait_for_timeout(1100)
         page.click('[data-nt1-rv="wrong"]'); page.wait_for_timeout(500)
         d3 = js(page, DOC(0), "m3")

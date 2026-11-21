@@ -44,13 +44,14 @@ def run(pw, w, h):
         check(f"{tag} C2: blocked row = 'Blocked' chip + short reason (MMT weekly limit 4/4), no visible Place button", blk and blk["chip"] == "Blocked" and "MMT weekly limit 4/4" in blk["line"] and not blk["btnShown"], blk)
         if w > 600: check(f"{tag} C2: desktop blocked line reads 'Blocked · MMT weekly limit 4/4'", blk and blk["line"].replace("\n", " ").startswith("Blocked · MMT weekly limit 4/4"), blk)
         nw = js(page, "()=>[...document.querySelectorAll('.lr2-mood b, .lr2-c .big' + (innerWidth <= 600 ? ', .re2-main .num' : ''))].filter(e=>e.getClientRects().length).map(e=>({t:e.innerText.slice(0,20), ws:getComputedStyle(e).whiteSpace, h:Math.round(e.getBoundingClientRect().height)}))")
+        nw = js(page, "()=>[...document.querySelectorAll('.nt1b-mood .pill' + (innerWidth <= 600 ? ', .re2-main .num' : ''))].filter(e=>e.getClientRects().length).map(e=>({t:e.innerText.slice(0,20), ws:getComputedStyle(e).whiteSpace, h:Math.round(e.getBoundingClientRect().height)}))")
         check(f"{tag} C2: 'Risk-off' and the Risk numbers do not wrap", nw and all(x["ws"] == "nowrap" for x in nw), nw)
         gl = js(page, "()=>({cards:[...document.querySelectorAll('[data-lr2-card]')].map(c=>c.dataset.lr2Card), txt:(document.querySelector('[data-lr2-glance]')||{innerText:''}).innerText.replace(/\\s+/g,' ')})")
-        check(f"{tag} C2: glance with no news / moves / sector data = mood + ONE line 'No news or sector data this week · Import ›'", "mood" in gl["cards"] and "none" in gl["cards"] and not ({"moves", "hot", "news"} & set(gl["cards"])) and "No news or sector data this week · Import ›" in gl["txt"], gl)
+        check(f"{tag} C2: NT1b status card with no news / sector data = MOOD + MACRO rows only (no empty-state line, no hot / news cards)", gl["cards"] == ["mood"] and "Import ›" not in gl["txt"], gl)
         import run_tests_lr2 as L2
         L2.seed_wi(page); page.wait_for_timeout(300)
         gl = js(page, "()=>[...document.querySelectorAll('[data-lr2-card]')].map(c=>c.dataset.lr2Card)")
-        check(f"{tag} C2: with Weekly Impact data the empty sector item stays hidden (no 'No sector data')", "moves" in gl and "hot" not in gl and "none" not in gl, gl)
+        check(f"{tag} C2: with Weekly Impact data (event not today) the empty sector item stays hidden (no 'No sector data')", "hot" not in gl and "none" not in gl, gl)
         ov = js(page, "()=>document.documentElement.scrollWidth - innerWidth")
         check(f"{tag} C2: no overflow · no page errors", ov <= 0 and not pe, [ov, pe])
     finally:
