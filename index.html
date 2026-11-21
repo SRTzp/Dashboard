@@ -3913,8 +3913,8 @@ html body :is(.wiTx,.wiTierP,.td3-lk,.ln4-all,.td3-nt1){font-size:12.5px!importa
 /* ═══ PC2 — one card pattern ═══ */
 .pc2-card{padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
 .pc2-card .pc2-l1{margin:0}.pc2-card .pv-r2.pc2-l2{margin:0;display:block;font-size:13.5px;color:var(--text);line-height:1.45;overflow-wrap:anywhere}
-.pc2-l2 .pc2-d{font-style:normal;color:var(--faint,#9AA0A9);margin:0 6px}.pc2-l2 span{white-space:normal}
-.pc2-l3{font-size:13px;color:#3D434C;line-height:1.45;overflow-wrap:anywhere}.pc2-l3 .pc2-d{font-style:normal;color:var(--faint,#9AA0A9);margin:0 6px}.pc2-l3 b.dn{color:var(--red)}.pc2-l3 b.up{color:var(--green)}.pc2-l3 .pc2-tag,.pc2-tag{font:600 11px var(--sans);color:var(--muted);background:var(--surface2,#EEF0F3);border-radius:999px;padding:1px 8px;margin-left:6px}
+.pc2-l2 .pc2-d{font-style:normal;color:var(--faint,#9AA0A9);margin:0 1px}.pc2-l2 span{white-space:normal}
+.pc2-l3{font-size:13px;color:#3D434C;line-height:1.45;overflow-wrap:anywhere}.pc2-l3 .pc2-d{font-style:normal;color:var(--faint,#9AA0A9);margin:0 1px}.pc2-l3 b.dn{color:var(--red)}.pc2-l3 b.up{color:var(--green)}.pc2-l3 .pc2-tag,.pc2-tag{font:600 11px var(--sans);color:var(--muted);background:var(--surface2,#EEF0F3);border-radius:999px;padding:1px 8px;margin-left:6px}
 .pc2-rt{margin-left:auto;font-size:12px;white-space:nowrap}.pc2-rt.mut{color:var(--muted)}.pc2-rt.up{color:var(--green);font-weight:600}.pc2-rt.dn{color:var(--red);font-weight:600}.pc2-rt.near{color:var(--teal,#0F766E);font-weight:600}
 .pc2-card .pv-r1 .bd-sp{display:none}
 .pc2-chips{display:flex;gap:6px;flex-wrap:wrap}.pc2-e{font-size:12px;border-radius:8px;padding:3px 8px}.pc2-e.f{background:var(--surface2,#F4F5F7)}.pc2-e.p{border:1.3px dashed #C9CDD4}
@@ -5209,7 +5209,7 @@ html body .lr5 .hw2-seg{display:flex;gap:2px;background:var(--lr-seg,#EEF0F3);bo
 html body .lr5 .hw2-seg button{flex:1;text-align:center;font:600 12px var(--lr-sans);color:var(--lr-muted);padding:5px 0;border-radius:7px;border:0;background:transparent;cursor:pointer;box-shadow:none;min-height:0;height:auto;white-space:nowrap}
 html body .lr5 .hw2-seg button.on{background:#fff;color:var(--lr-ink)}
 html body .lr5 .hw2-seg .badge{font:500 10px var(--lr-mono);background:#E1E4E9;color:var(--lr-text2);border-radius:4px;padding:1px 4px;margin-left:4px}
-html body .lr5 .hw2-per{font-size:12px;color:var(--lr-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+html body .lr5 .hw2-per{font-size:12px;color:var(--lr-muted);white-space:normal;overflow:visible;text-overflow:clip;min-width:0;flex:1 1 auto}   /* PC2 nit (a) — 'reported <date>' is never cut */
 html body .lr5 .hw2-hdr .hw2-per[data-hw2-period]{margin-left:auto}
 html body .lr5 .hw2-hdr .hw1-imp{flex:none}
 html body .lr5 .hw1-pg[data-hw2-tab=ai] .hw2-hdr .hw2-per[data-hw2-period],html body .lr5 .hw1-pg[data-hw2-tab=ai] .hw2-hdr>.hw1-imp{display:none}
@@ -11221,7 +11221,7 @@ function wlReadyMsg(sym){
 const FT_DAYS = 3;
 function ftToday(){ return posThaiToday(); }
 function ftDayDiff(a, b){ return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000); }
-function ftHwDone(sym){ const it = wlItemOf(sym); return !!(it && it.archived !== true && wlReady(sym) && it.onboarding); }
+function ftHwDone(sym){ const it = wlItemOf(sym); return !!(it && it.archived !== true && ((wlReady(sym) && it.onboarding) || wl1HwDone(it))); }   /* PC2 — a Homework-page / Place-sheet 'done' counts too */
 /* pending state for a ticker: null (no fast-track / done / old mode) or {due, left, over} — left = days until due · over = days past due */
 function ftState(sym){
   if(!sym) return null;
@@ -15407,7 +15407,7 @@ function lfFormHtml(o){
         <div class="pc2-exit num"><label>Target 1<input type="text" inputmode="decimal" id="cnTp" data-pv-tp autocomplete="off" placeholder="price" oninput="coreNewIn()"></label>
           <label>Sell at T1<span class="pc2-seg" role="group" aria-label="Sell at T1 as"><button type="button" id="cnT1mP" data-pc2-t1m="pct" class="on" aria-pressed="true" onclick="pc2T1Mode('pct')">%</button><button type="button" id="cnT1mQ" data-pc2-t1m="qty" aria-pressed="false" onclick="pc2T1Mode('qty')">#</button></span><input type="text" inputmode="decimal" id="cnT1v" data-pc2-t1v autocomplete="off" value="50" oninput="coreNewIn()" aria-label="Sell at T1"></label>
           <span class="mut" id="cnT1hint" data-pc2-t1hint>· rest: trail stop</span></div>
-        <div class="mut pc2-exh">Used for reward/R and the T1 sell. Rest exits by your trailing stop.</div></div>
+        <div class="mut pc2-exh">Used for reward/R and the T1 sell. Rest exits by your trailing stop.</div><input type="hidden" id="cnTp2" aria-hidden="true"><input type="hidden" id="cnTp1Qty" aria-hidden="true"></div>
       <div class="ps1Bk pc2-risk" id="cnCompRisk" data-pc2-riskbox style="grid-column:1/-1${coreNew && coreNew.track === 'ladder' ? '' : ';display:none'}"></div>
       <div id="cnRe1" data-re1-host style="grid-column:1/-1;width:100%;min-width:0;clear:both"></div><div id="cnSplit" data-ps1-split></div>
       <div class="ccFfWarn ccStat warn" id="cnFwarn" data-cn-ffwarn style="display:none;margin:6px 0"></div>
@@ -27934,6 +27934,11 @@ function pc2Gate(it){
   let g = null; try{ g = re1PlanGate(c, lv); }catch(e){ return out; }
   const m = g && g.model; out.m = m || null;
   if(m){ const lim = m.blocked ? m.allowedQty : m.qty; out.allowed = lim; }
+  if(m && m.fit && m.fit.capPct > 0){   /* total risk with the SAVED row (never today's re-sized one): held at their current stop + this row at the plan stop */
+    const f = m.fit, eq = f.budgetMoney / f.capPct * 100, row = rows[lv], sl = +(c.plan || {}).stop;
+    out.capPct = f.capPct; out.usedPct = f.usedPct;
+    out.totalPct = saved > 0 && row && sl > 0 && eq > 0 ? f.usedPct + saved * Math.abs(row.px - sl) * (f.uv || 1) / eq * 100 : f.totalPct;
+  }
   if(g && g.ok) return out;
   out.ok = false; out.why = g ? g.msg : '';
   const R = m ? m.reasons : [], hw = pc2Hw(c);
@@ -27943,6 +27948,10 @@ function pc2Gate(it){
     if(add){ const room = f.budgetMoney - f.newRisk; const need = f.avg - Math.max(0, room) / (f.held * f.uv), cur = +it.sl; if(room > 0 && need > cur + 1e-9){ out.short = `Add needs stop ≥ ${td3Num(Math.ceil(need * 100) / 100)} (now ${td3Num(cur)})`; out.fix = {t:'Move stop ›', fn:`coreStopOpen('${td3E(it.id).replace(/'/g, "\\'")}')`, k:'stop'}; out.why = out.short; return out; } }
     out.short = `${pc2Pct2(f.totalPct)} over ${pc2Pct2(f.capPct)}`; out.why = (m.reasonTexts && m.reasonTexts[0]) || out.short; return out;
   }
+  if(m && m.fit && saved > 0 && saved > (out.allowed || 0) && (c.lots || []).length && !pc2RowPlanned(c, lv)){   /* add-on rule: the SAVED row + what is held (at its current stop) must fit today's budget → raise the stop first */
+    const f = m.fit, row = rows[lv], sl = +(c.plan || {}).stop, newRisk = row && sl > 0 ? saved * Math.abs(row.px - sl) * (f.uv || 1) : 0, room = f.budgetMoney - newRisk, cur = +it.sl;
+    if(room > 0 && f.held > 0 && f.avg > 0 && f.uv > 0){ const need = f.avg - room / (f.held * f.uv); if(need > cur + 1e-9){ out.short = `Add needs stop ≥ ${td3Num(Math.ceil(need * 100) / 100)} (now ${td3Num(cur)})`; out.fix = {t:'Move stop ›', fn:`coreStopOpen('${td3E(it.id).replace(/'/g, "\\'")}')`, k:'stop'}; out.why = out.short; return out; } }
+  }
   if(out.allowed != null && saved > 0 && saved > out.allowed){ out.short = `Allowed now #${fmt0(out.allowed)} (plan has #${fmt0(saved)})`; out.why = out.short; return out; }
   out.short = lr3ShortWhy(out.why, it); return out;
 }
@@ -27951,13 +27960,13 @@ function pc2TopUpInfo(it){
   try{
     const c = it.ref; if(it.kind !== 'core' || it.tag === 'COMP' || it.status !== 'hold' || !pc2Hw(c).done) return null;
     const d = pc2TradingDays(pc2FirstFill(c)); if(d == null || d > MOM_TOPUP_DAYS) return null;
-    const r = re1CardModel(c, null, +it.entry, +it.sl, null, 'topup'); if(!r || !r.m || r.m.blocked) return null;
-    const q = r.m.qty; if(!(q > 0)) return null; return {qty:q, left:Math.max(0, MOM_TOPUP_DAYS - d)};
+    const px = +c.px > 0 ? +c.px : +it.entry, r = re1CardModel(c, null, px, +((c.plan || {}).stop) || +it.sl, null, 'topup'); if(!r || !r.m || r.m.blocked) return null;
+    const q = r.m.qty; if(!(q > 0)) return null; return {qty:q, px, left:Math.max(0, MOM_TOPUP_DAYS - d)};
   }catch(e){ return null; }
 }
 function pc2Btn(label, fn, o){
   o = o || {}; const k = o.k || 'place';
-  return `<button type="button" class="go pc2-b${o.pri ? ' p pri' : ''}" data-bd-pill="${k}"${o.dis ? ` disabled title="${bdE(o.title || '')}" data-bd-blocked="1"` : ''} onclick="event.stopPropagation();${fn}">${bdE(label)}</button>`;
+  return `<button type="button" class="go pc2-b${o.pri ? ' p pri' : ''}" data-bd-pill="${k}"${k === 'fix' ? ' data-pv-fixbtn="fix"' : ''}${o.dis ? ` disabled title="${bdE(o.title || '')}" data-bd-blocked="1"` : ''} onclick="event.stopPropagation();${fn}">${bdE(label)}</button>`;
 }
 function pc2Menu(id){ pc2MenuId = pc2MenuId === id ? null : id; try{ bdRender(); }catch(e){} }
 function pc2MenuHtml(it){
@@ -28018,7 +28027,7 @@ function pc2CardHtml(it){
     if(sat){ const tp = it.tp > 0 && pv.avgEntry != null && pv.fx != null ? (pv.dir === 'short' ? -1 : 1) * (it.tp - pv.avgEntry) * pv.heldQty * (pv.mult || 1) * pv.fx : null; if(tp != null){ parts.push(`<span>at target <b class="up">+${m(tp)}</b></span>`); if(pv.stopPnl < -0.5) parts.push(`<b data-pv-r>${(tp / -pv.stopPnl).toFixed(1)}R</b>`); } }
     else parts.push(pv.value != null ? `<span data-pv-value>value ${m(pv.value)}${pv.weightAcct != null ? ' (' + pvPct(pv.weightAcct) + ')' : ''}</span>` : `<em class="na">${e(pv.why.value || 'no live price')}</em>`);
   }
-  const money = parts.join('<i class="pc2-d">·</i>');
+  const money = parts.join(' <i class="pc2-d">·</i> ');
   /* ── entry chips (multi-entry plans only) ── */
   let chips = '';
   if(c && it.nl > 1){
@@ -28044,7 +28053,7 @@ function pc2CardHtml(it){
       const pri = near || it.pct == null;
       if(sat){ let ok = ''; try{ const V = ln4VerifyOf(it.ref); ok = V && V.ema === true && V.st === true ? '<span class="mut">· EMA50 + structure ✓</span>' : ''; }catch(x){} nx = `<span class="g" data-pc2-ready>✓ Ready</span>${ok}${pc2Btn('Place order', p.fn, {pri})}`; }
       else if(mom && hw && !hw.done){ const full = pc2FullQty(c); nx = `<button type="button" class="pc2-hw" data-pc2-hw onclick="event.stopPropagation();${wlHw}">Homework ${hw.n} of ${hw.tot}${full > 0 ? ' · full size #' + fmt0(full) + ' when done' : ''} ›</button>${pc2Btn(placeLab, p.fn, {pri})}`; nxCls = ' hw'; }
-      else nx = `<span class="g" data-pc2-ready>✓ Ready</span>${gate && gate.m && gate.m.fit ? `<span class="mut num">· total risk ${pc2Pct2(gate.m.fit.totalPct)} of ${pc2Pct2(gate.m.fit.capPct)} today</span>` : ''}${pc2Btn(placeLab, p.fn, {pri})}`;
+      else nx = `<span class="g" data-pc2-ready>✓ Ready</span>${gate && gate.totalPct != null && (it.k || 0) > 0 ? `<span class="mut num">· total risk ${pc2Pct2(gate.totalPct)} of ${pc2Pct2(gate.capPct)} today</span>` : ''}${pc2Btn(placeLab, p.fn, {pri})}`;
     }else if(p.dis){ nx = `<span class="w" data-pv-warn data-pc2-warn title="${e(p.title || '')}">⚠ ${e(gate && gate.short ? gate.short : lr3ShortWhy(p.title, it))}</span>${gate && gate.fix ? pc2Btn(gate.fix.t, gate.fix.fn, {k:'fix'}) : pc2Btn(placeLab, '', {dis:true, title:p.title})}`; nxCls = ' blk'; }
     else nx = `<span class="mut">${e(p.t)}</span>`;
   }else if(ord){
@@ -28053,7 +28062,7 @@ function pc2CardHtml(it){
     const tu = c ? pc2TopUpInfo(it) : null;
     if(tu){ nx = `<span class="g">✓ Homework done</span><span class="mut">· ${tu.left} day${tu.left === 1 ? '' : 's'} left</span>${pc2Btn('Top up to full · #' + fmt0(tu.qty), `pc2TopUpGo('${qid}')`, {k:'topup'})}`; }
     else if(c && gate && !gate.ok && it.nl > it.k && (it.k || 0) < it.nl){ nx = `<span class="w" data-pc2-warn title="${e(gate.why)}">⚠ Can’t add today</span><span class="mut">· ${e(gate.short)}</span>${pc2Btn('Why ›', `bdOpen('${qid}')`, {k:'why'})}`; nxCls = ' blk'; }
-    else if(c && gate && it.nl > 1 && it.k < it.nl && p.k === 'place'){ nx = `<span class="g">✓ ${lvLab} fits</span>${gate.m && gate.m.fit ? `<span class="mut num">· total risk ${pc2Pct2(gate.m.fit.totalPct)} of ${pc2Pct2(gate.m.fit.capPct)} today</span>` : ''}${pc2Btn('Place ' + lvLab, p.fn, {pri:near})}`; }
+    else if(c && gate && it.nl > 1 && it.k < it.nl && p.k === 'place'){ nx = `<span class="g">✓ ${lvLab} fits</span>${gate.totalPct != null ? `<span class="mut num">· total risk ${pc2Pct2(gate.totalPct)} of ${pc2Pct2(gate.capPct)} today</span>` : ''}${pc2Btn('Place ' + lvLab, p.fn, {pri:near})}`; }
     else if(comp && hw && !hw.done){ nx = `<span class="mut" data-pc2-hwlink>Homework → unlocks adds &amp; risk above 1%</span>${pc2Btn('Homework ›', wlHw, {k:'hw'})}`; }
     else if(mom && t1 && hold && pv.legs.some(l=>l.out && l.done) && pv.avgEntry != null && pv.stop < pv.avgEntry){ nx = `<span class="mut">Suggested: stop to breakeven</span>${pc2Btn('Move stop to ' + N(pv.avgEntry), c ? `coreStopOpen('${qid}')` : '', {k:'stop'})}`; }
     else if(sat && pv.price == null){ nx = `<span class="mut">Add a last price to see P&amp;L</span>${pc2Btn('Last price', `bdOpen('${qid}')`, {k:'lastpx'})}`; }
@@ -28065,9 +28074,9 @@ function pc2CardHtml(it){
   const tg = sat && it.pb && !it.inc && !hold && !(blk && blk.k === 'trend') && it.pb.vf.tag ? `<span class="bd-st a" data-bd-trendtag>${bdE(it.pb.vf.tag)}</span>` : '';
   let efMac = '', efNews = '';
   if(sat && plan && !it.inc){ try{ const F = satV3F2c(it.ref); if(F.align === 'against') efMac = `<span class="bd-st a" data-ef-macro>Against Macro</span>`; }catch(x){} try{ const nw = newsWarnLine(); if(nw) efNews = `<div class="ef-news" data-ef-news>${bdE(nw)}</div>`; }catch(x){} }
-  const html = `<div class="bd-card pv-card pc2-card${blk ? ' pc2-blk' : ''}" role="button" tabindex="0" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${blk ? ' data-pv-blk="1"' : ''} onclick="bdOpen('${qid}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();bdOpen('${qid}')}">
+  const html = `<div class="bd-card pv-card pc2-card${blk ? ' pc2-blk' : ''}" role="button" tabindex="0" data-bd-card="${id}" data-bd-status="${it.status}" data-bd-kind="${it.kind}"${blk ? ' data-pv-blk="1"' : ''} onclick="pvCardTap('${qid}')" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();pvCardTap('${qid}')}">
     <div class="pc2-l1 pv-r1"><b class="bd-tk">${e(it.sym)}</b>${bdTagHtml(it)}${hot}${fam}<span class="pv-dir ${dirTxt === 'Short' ? 's' : 'l'}" data-pv-dir="${dirTxt}">${dirTxt}</span>${bdAlsoHtml(it)}${tg}${wn}${efMac}<span class="bd-sp"></span>${rt}${x}</div>
-    <div class="pc2-l2 num pv-r2" data-pv-money data-pc2-l2>${lvl.join('<i class="pc2-d">·</i>')}</div>
+    <div class="pc2-l2 num pv-r2" data-pv-money data-pc2-l2>${lvl.join(' <i class="pc2-d">·</i> ')}</div>
     <div class="pc2-l3 num" data-pc2-l3>${money}</div>${chips}${efNews}
     <div class="pc2-nx${nxCls}" data-pc2-next>${nx}</div></div>`;
   return {html, pv, blk};
@@ -28076,6 +28085,7 @@ function rowsAvg(c){ const r = pc2Rows(c).filter(x=>x.qty > 0 && x.px > 0), q = 
 /* the FULL-size quantity the engine would give once homework is done (Momentum card line + Place sheet) */
 function pc2FullQty(c){
   const rows = pc2Rows(c), tot = rows.reduce((a, r)=>a + (r.qty || 0), 0); if(!(tot > 0)) return 0;
+  if(rows.length === 1){ try{ const r = re1CardModel(c, null, rows[0].px, +((c.plan || {}).stop), 0, 'full'); if(r && r.m){ const q = r.m.blocked ? r.m.allowedQty : r.m.qty; if(q > 0) return q; } }catch(e){} }   /* one row: the engine's own full size */
   let f = RiskEngine.POLICY.hwFactor.mom; try{ const fa = c.plan && c.plan.ps1 && c.plan.ps1.engine && c.plan.ps1.engine.factors; const h = (fa || []).map(x=>/^HOMEWORK_(\d+)$/.exec(x)).filter(Boolean)[0]; if(h) f = +h[1] / 100; else if(fa && fa.length) f = 1; }catch(e){}
   const lot = (c.market || coreMarketOf(c.ticker)) === 'TH' ? 100 : 1;
   return Math.floor(tot / f / lot + 1e-9) * lot;
@@ -28116,7 +28126,8 @@ function pc2HwResize(c){
     const pl = c.plan || {}, rows = pc2Rows(c), k = (c.lots || []).length; if(!rows.length || !rows.some(r=>r.qty > 0)) return;
     let f = RiskEngine.POLICY.hwFactor.mom; const fa = pl.ps1 && pl.ps1.engine && pl.ps1.engine.factors; const h = (fa || []).map(x=>/^HOMEWORK_(\d+)$/.exec(x)).filter(Boolean)[0]; if(h) f = +h[1] / 100; else if(fa && fa.length) return;
     const lot = (c.market || coreMarketOf(c.ticker)) === 'TH' ? 100 : 1;
-    const nr = (pl.ps1.rows || []).map((r, i)=>i >= k && +r.qty > 0 ? Object.assign({}, r, {qty: Math.floor(+r.qty / f / lot + 1e-9) * lot}) : r);
+    const one = (pl.ps1.rows || []).length === 1 && k === 0 ? pc2FullQty(Object.assign({}, c, {plan: pl})) : 0;
+    const nr = (pl.ps1.rows || []).map((r, i)=>i >= k && +r.qty > 0 ? Object.assign({}, r, {qty: one > 0 ? one : Math.floor(+r.qty / f / lot + 1e-9) * lot}) : r);
     const eng = Object.assign({}, pl.ps1.engine || {}, {factors:(fa || []).filter(x=>!/^HOMEWORK_/.test(x))});
     coreWrite(c.id, {plan: Object.assign({}, pl, {ps1: Object.assign({}, pl.ps1, {rows:nr, engine:eng})})});
     try{ const it = (coreCardsList || []).find(x=>x.id === c.id); if(it) it.plan = Object.assign({}, pl, {ps1: Object.assign({}, pl.ps1, {rows:nr, engine:eng})}); }catch(e){}
@@ -28127,7 +28138,7 @@ function pc2TopUpGo(id){
   const it = bdById(id); if(!it) return; const tu = pc2TopUpInfo(it); if(!tu) return;
   const c = it.ref, pl = c.plan || {}, rows = pc2Rows(c).map(r=>Object.assign({px:r.px, qty:r.qty}, r.createdAt ? {createdAt:r.createdAt} : {})), lots = c.lots || [];
   while(rows.length < lots.length) rows.push({px:+lots[rows.length].px, qty:+lots[rows.length].qty});
-  const ff = pc2FirstFill(c), px = +c.px > 0 ? +c.px : +it.entry;
+  const ff = pc2FirstFill(c), px = tu.px;
   rows.push({px, qty:tu.qty, createdAt: ff ? ff + 'T00:00:00.000Z' : new Date().toISOString()});
   const ps1 = Object.assign({}, pl.ps1 || {}, {rows});
   coreWrite(c.id, {plan: Object.assign({}, pl, {ps1})});
@@ -28149,7 +28160,7 @@ function pc2T1Yes(it){
   try{ ln4Toast(`${it.sym}: T1 sell order working ✓`); }catch(e){}
 }
 function pc2T1Open(id){ efCorePlaceOpen(id, null, {t1:true}); }
-function pvCardTap(id){ if(pvMoreOpen.has(id)) pvMoreOpen.delete(id); else pvMoreOpen.add(id); try{ bdRender(); }catch(e){} }
+function pvCardTap(id){ try{ bdOpen(id); }catch(e){} }   /* PC2 — a card tap opens the drawer (no inline More any more) */
 function bdCardHtml(it){
   const p = bdPill(it), e = bdE, id = e(it.id);
   const fam = it.fam ? `<span class="bd-fam" data-bd-fam>Family</span>` : '';
@@ -28449,7 +28460,7 @@ function pc2RiskHtml(it, pv, gate){
     return `<div class="bd-sec" data-pc2-grp="risk"><div class="bd-k">RISK TODAY</div><div class="pc2-sent num" data-pc2-risk>${r != null ? `If stopped: <b class="dn">−${pvMoney(pv, r, true)}</b>${pc != null ? ' · ' + pvPct(pc, 2) + ' of account' : ''}` : e(pv.why.plannedRisk || 'not sized')}</div></div>`;
   }
   const m = gate && gate.m; let now = 0, nxt = 0, cap = 0, formula = '';
-  if(m){ if(m.fit){ now = m.fit.usedPct; nxt = m.fit.totalPct; cap = m.fit.capPct; formula = m.budget ? m.budget.text + ' = ' + pc2Pct2(cap) : ''; } else { now = 0; nxt = m.moneyPct || 0; cap = m.effPct || 0; formula = (m.formula || '') + (m.effPct != null ? pc2Pct2(m.effPct) : ''); } }
+  if(m){ if(m.fit){ now = m.fit.usedPct; nxt = gate.totalPct != null ? gate.totalPct : m.fit.totalPct; cap = m.fit.capPct; formula = m.budget ? m.budget.text + ' = ' + pc2Pct2(cap) : ''; } else { now = 0; nxt = m.moneyPct || 0; cap = m.effPct || 0; formula = (m.formula || '') + (m.effPct != null ? pc2Pct2(m.effPct) : ''); } }
   if(!m || !(cap > 0)) return `<div class="bd-sec" data-pc2-grp="risk"><div class="bd-k">RISK TODAY</div><div class="pc2-sent num" data-pc2-risk>${pv.openRiskPct != null ? 'Open risk ' + pc2Pct2(pv.openRiskPct) : 'Not sized yet'}</div></div>`;
   const fits = nxt <= cap + 1e-9, nextLab = it.nl > 1 && it.k < it.nl ? 'with ' + ('①②③④'[it.k] || '') : 'with this entry';
   const rk = it.tag === 'COMP' && Math.abs(pc2PlanRisk(it.ref) - RiskEngine.POLICY.comp.totalCapPct) > 1e-9 ? ` <span class="pc2-tag">Risk ${pc2RiskTxt(pc2PlanRisk(it.ref))}%</span>` : '';
@@ -28467,7 +28478,7 @@ function pc2EntriesHtml(it, pv, gate){
     else if(i === (it.k || 0)){
       const g = gate; const near = it.pct != null && nearEntry(it.pct) && it.pctLv === i;
       if(g && !g.ok) st = `<button type="button" class="go pc2-b" data-bd-lvact="place" disabled title="${e(g.why)}" data-bd-blocked="1">Place ${ci}</button><div class="pc2-why w" data-pc2-lvwhy>${e(g.short || g.why)}</div>`;
-      else st = `<button type="button" class="go pc2-b${near || it.pct == null ? ' p pri' : ''}" data-bd-lvact="place" onclick="${it.status === 'plan' ? `ln4Place('core','${id}')` : `bdPlaceLv('${id}',${i})`}">Place ${ci}</button>`;
+      else st = `<button type="button" class="go pc2-b p pri" data-bd-lvact="place" onclick="${it.status === 'plan' ? `ln4Place('core','${id}')` : `bdPlaceLv('${id}',${i})`}">Place ${ci}</button>`;
     }else st = `<span class="mut" data-bd-lvst="planned">planned</span>`;
     return `<tr data-bd-lv="${i + 1}" data-bd-lvst="${f ? 'filled' : ordered ? 'ordered' : 'planned'}"><td><b>${ci}</b></td><td class="num">${N(px)}</td><td class="num">#${qty > 0 ? fmt0(qty) : '—'}</td><td class="num">${loss(qty, px)}</td><td>${st}</td></tr>`;
   }).join('');
@@ -28863,7 +28874,8 @@ function re2StripHtml(acct, label){
 }
 /* ── groups ── */
 /* EF1 B4 — Ready is automatic: a plan with no blocking item. Stored plan.ready / idea.ready flags are ignored (not deleted). */
-function re2ReadyOf(it){ try{ if(!it || it.status !== 'plan' || it.inc || it.blocked) return false; if(pvBlock(it)) return false; const p = bdPill(it, true); if(p.dis || p.k !== 'place') return false; if(it.kind === 'sat'){ const c = pb2Calc(it.ref, pb2AcctOf(it.ref)); if(c.lot == null || !(c.c && c.c.ready)) return false; } return true; }catch(e){ return false; } }
+function re2ReadyOf(it){ try{ if(!it || it.status !== 'plan' || it.inc || it.blocked) return false; if(pvBlock(it)) return false; const p = bdPill(it, true); if(p.dis || p.k !== 'place') return false; if(it.kind === 'core' && it.pct != null && !nearEntry(it.pct)) return false;   /* PC2 2c — Place is always offered, but only plans within 3% of entry count as Ready for Today › Enter */
+  if(it.kind === 'sat'){ const c = pb2Calc(it.ref, pb2AcctOf(it.ref)); if(c.lot == null || !(c.c && c.c.ready)) return false; } return true; }catch(e){ return false; } }
 function re2Age(it, now){
   const r = it.ref || {}, ln = r.ln4 || {}, ts = [];
   if(ln.placedAt) ts.push(Date.parse(ln.placedAt));
@@ -30426,7 +30438,7 @@ function wl5Note(it){
   return w.length > 70 ? w.slice(0, 69) + '…' : w;
 }
 function wl5HwInfo(it){   /* {done, txt, short} — text of the homework cell + the phone variant (HW1) */
-  const done = wl1HwDone(it), miss = wl1HwMissing(it), req = wl1HwReq(it), k = wl1Status(it).k, adds = (k === 'hold' || k === 'addon') ? (wl1TrkOf(it) === 'ladder' ? ' · adds locked' : ' · adds at 70%') : '';
+  const done = wl1HwDone(it), miss = wl1HwMissing(it), req = wl1HwReq(it), k = wl1Status(it).k, adds = (k === 'hold' || k === 'addon') ? (wl1TrkOf(it) === 'ladder' ? ' · adds locked' : ' · size 70%') : '';
   if(done){ const cat = String((it.hw && it.hw.catalyst) || '').replace(/\s+/g, ' ').trim(), d = hw1DateOf(it.hw && it.hw.doneAt); return {done:true, txt:cat ? 'Done · ' + cat : 'Done' + (d ? ' ' + d : ''), short:'Done' + (cat ? ' · ' + cat : d ? ' ' + d : '')}; }
   if(miss.length === req.length) return {done:false, txt:'Not started' + adds, short:'Homework not started' + adds};
   const n = req.length - miss.length;
@@ -32012,7 +32024,7 @@ function hw2AiHtml(it){
     const row = (k, v)=>String(v == null ? '' : v).trim() ? `<dt>${k}</dt><dd>${v}</dd>` : '';
     const first = Array.isArray(s.thesis) ? s.thesis[0] : s.thesis;
     const sums = row('Thesis', ltInl(first)) + row('Risk', ltInl(s.risk)) + row('Next', ltInl(s.next)) + row('Breaks if', ltInl(s.breaker)) + row('Price', ltInl(s.price)) + (st && s.status ? row('Status', e(st[0])) : '');
-    const SEC = [['s1', 'The business'], ['s2', 'Why buy'], ['s3', 'What to track'], ['s4', 'Exit when']];
+    const SEC = [['s1', '1 · The business'], ['s2', '2 · Why it could be worth buying'], ['s3', '3 · What’s next'], ['s4', '4 · When to exit']];   /* PC2 nit (b) */
     const secs = SEC.filter(a=>th.sections && th.sections[a[0]] && String(th.sections[a[0]].md || '').trim()).map((a, i)=>`<details class="hw2-sec" data-hw2-sec="${a[0]}" ${i === 0 ? 'open' : ''}><summary>${a[1]}</summary><div class="ltMd" data-lt-md="${a[0]}">${ltMd(th.sections[a[0]].md)}</div></details>`).join('');
     return `<div class="hw2-ai-h" data-hw2-ai-h><span><b>${mode}</b> · ${e(wlThDate(th.date))}${th.basis ? ' · based on ' + e(th.basis) : ''}</span><button type="button" class="btn sm hw1-imp" data-hw2-ai-update data-sym="${e(it.ticker)}" onclick="ltImportOpen(this.dataset.sym)">Update ›</button></div>
       <dl class="hw2-sum" data-hw2-sum>${sums}</dl>${secs}${mode === 'Lite' ? `<div class="hw1-mut hw2-up" data-hw2-upsell>Want more depth before buying? Run ${chip(cmd('deep'))} — it builds on this Lite, then Import JSON</div>` : ''}`;
@@ -32216,7 +32228,8 @@ function wl1TodoItems(){
 function wl1Lot(mk){ return mk === 'TH' ? 100 : 1; }
 function wl1FullQty(c){
   const pl = c.plan || {}, rows = wl1PlanRows(c);
-  if(pl.ps1 && pl.ps1.re1 && +pl.ps1.qtyFull > 0) return +pl.ps1.qtyFull;   /* RE-C1 — engine plans store the FULL-size quantity (Momentum: before the 50% homework fraction · Compounder: whole plan = 2 × Pilot) */
+  if(pl.ps1 && pl.ps1.re1 && +pl.ps1.qtyFull > 0) return +pl.ps1.qtyFull;
+  if(pl.ps1 && pl.ps1.re1 && pl.ps1.rows && coreTrackOfCard(c) !== 'ladder'){ const fq = pc2FullQty(c); if(fq > 0) return fq; }   /* PC2 — saved at 70 %: the full size is what the engine gives once homework is done */   /* RE-C1 — engine plans store the FULL-size quantity (Momentum: before the 50% homework fraction · Compounder: whole plan = 2 × Pilot) */
   let q = 0;
   if(rows){
     q = rows.reduce((a, x)=>a + (+x.qty || 0), 0);
