@@ -159,7 +159,7 @@ def part_today(pw, w, h):
         rows = js(page, ROWS)
         check(f"{tag} T after 3 snoozes: today + AI idea fill the box", rows == ["my:today", "ai:ai-need"], rows)
         it = js(page, INFO, "my:today"); ia = js(page, INFO, "ai:ai-need")
-        check(f"{tag} T check date today → amber `check today` · Open ›", it["pill"] == "check today" and "p-a" in it["cls"] and it["btn"] == ["Open ›"] and it["tag"] == "US MKT", it)
+        check(f"{tag} T check date today → amber `check today` · Open ›", it["pill"] == "check today" and "p-a" in it["cls"] and it["btn"] == ["Open ›"] and it["tag"].replace("\u00a0", " ") == "US MKT", it)
         check(f"{tag} T AI idea: grey status pill `evidence n/4` · `Add evidence ›` · `AI generated · next check today`", ia["tag"] == "THEME" and ia["pill"].startswith("evidence ") and ia["pill"].endswith("/4") and "p-n" in ia["cls"] and ia["btn"] == ["Add evidence ›"] and ia["next"] == "AI generated · next check today", ia)
         for k in ("my:near", "my:late2", "my:late5"):
             js(page, "(k)=>nt1bAct(k.replace('my:','my:'),'snooze3')", k) if False else None
