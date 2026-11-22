@@ -142,7 +142,9 @@ MIN_DL_RATIO = 0.80           # fewer than 80% of the requested symbols download
 R1_WIN, R3_WIN = 21, 63       # 1-month / 3-month return windows (sessions)
 EARN_CAP = 300                # weekly earnings lookups: names matching a preset, best RS first
 EARN_BUDGET_S = 240
-# Preset thresholds — keep in sync with RS2_PRESETS in index.html (the Screen tab) · used here only to choose whose earnings date to look up
+EARN_RS, EARN_M3 = 70, 80      # RS2d — earnings envelope (looser than every default preset)
+PV_MAX_BYTES = 600000         # RS2d — changes.pv (yesterday's raw values) is dropped when it would not fit comfortably in one doc
+# Default preset thresholds (the app's live in RS2_PRESET_DEFAULTS in index.html; users can edit them there) · used here only for the fallback change alerts b / d / e when the user has no custom rules
 PRESETS = {
     'leaders': lambda r: r['r'] >= 80 and r['o'] is not None and r['o'] >= -0.15,
     'emerging': lambda r: r.get('m3') is not None and r.get('m1') is not None and r['m3'] >= 90 and r['m1'] >= 90 and r['r'] < 85,
@@ -262,10 +264,11 @@ def compact(x, rows, a, rs, m3=None, m1=None):
 
 
 def earn_candidates(rows, cap=EARN_CAP):
-    """tickers matching any preset, best RS first, at most `cap`"""
+    """RS2d — tickers inside a loose envelope (RS ≥ 70 or 3M ≥ 80), best RS first, at most `cap`: wide enough that presets edited in the app
+    (default numbers live in RS2_PRESET_DEFAULTS in index.html) still find earnings dates"""
     out = []
     for r in rows:
-        if any(f(r) for f in PRESETS.values()):
+        if r['r'] >= EARN_RS or (r.get('m3') is not None and r['m3'] >= EARN_M3):
             out.append(r['t'])
             if len(out) >= cap:
                 break
@@ -437,6 +440,10 @@ def changes_diff(prev_rows, rows, watch, as_of, prev_as_of):
     doc = {'asOf': as_of, 'prevAsOf': prev_as_of or '', 'items': []}
     if not prev_rows:
         return doc
+    # RS2d — yesterday's raw values so the app can re-run b / d / e with the user's own presets: {sym: [r, o, m1, m3]}
+    pv = {r['t']: [r['r'], r.get('o'), r.get('m1'), r.get('m3')] for r in prev_rows if r.get('r') is not None}
+    if len(json.dumps(pv, separators=(',', ':')).encode('utf-8')) <= PV_MAX_BYTES:
+        doc['pv'] = pv
     prev = {r['t']: r for r in prev_rows}
     wl = watch_syms(watch)
     lead, emer = PRESETS['leaders'], PRESETS['emerging']

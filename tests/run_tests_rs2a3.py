@@ -222,7 +222,7 @@ def phone(pw, w, h):
         check(f"{tag} 8 phone: no tick boxes", js(page, "()=>[...document.querySelectorAll('[data-rs2-tick]')].every(c=>c.offsetParent === null)") and js(page, "()=>!document.querySelector('[data-rs2-selbar]')"))
         page.click("[data-rs2-dots]"); page.wait_for_timeout(300)
         mi = js(page, "()=>[...document.querySelectorAll('[data-rs2-pmenu] .mi')].map(b=>b.innerText.replace(/\\s+/g,' ').trim())")
-        check(f"{tag} 8 ⋯ menu: Download shown list (.txt) 87 · Filter · Reset", mi == ["⤓ Download shown list (.txt) 87", "Filter", "Reset"], mi)
+        check(f"{tag} 8 ⋯ menu: Download shown list (.txt) 87 · Filter · Reset · Edit rules (RS2d)", mi == ["⤓ Download shown list (.txt) 87", "Filter", "Reset", "Edit rules"], mi)
         name, txt = dl(page, "[data-rs2-dl-shown]")
         parts = txt.split(",")
         check(f"{tag} 8 downloads ALL rows of the current preset/filter (87 — not just the 50 loaded) · NYSE:BRK.B inside", len(parts) == 87 and "NYSE:BRK.B" in parts and parts[0] == "NASDAQ:NVDA" and name == "screen-leaders-2026-11-19.txt", [len(parts), name])

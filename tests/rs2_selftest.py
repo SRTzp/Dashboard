@@ -185,7 +185,10 @@ t('rows rated from a STORED table (daily path) equal rows rated from a fresh one
 # 8 · earnings cache
 t('parse_earn: date / datetime / list / string / junk', b.parse_earn(dt.date(2026, 12, 3)) == '2026-12-03' and b.parse_earn([dt.date(2026, 12, 5), dt.date(2026, 12, 3)]) == '2026-12-03' and b.parse_earn('2026-12-03 00:00:00') == '2026-12-03' and b.parse_earn(None) == '' and b.parse_earn('soon') == '')
 pr = [{'t': 'A', 'r': 90, 'o': -0.05, 'm3': 80, 'm1': 70}, {'t': 'B', 'r': 60, 'o': -0.5, 'm3': 50, 'm1': 50}, {'t': 'C', 'r': 80, 'o': -0.4, 'm3': 95, 'm1': 92}, {'t': 'D', 'r': 90, 'o': -0.05, 'm3': 85, 'm1': 40}, {'t': 'E', 'r': 99, 'o': 0.0, 'm3': None, 'm1': None}]
-t('earnings candidates = names matching Leaders / Emerging / Pullback only (A leaders · C emerging · D pullback · E leaders), capped', b.earn_candidates(pr) == ['A', 'C', 'D', 'E'] and b.earn_candidates(pr, 2) == ['A', 'C'])
+pr.append({'t': 'F', 'r': 72, 'o': -0.4, 'm3': 50, 'm1': 50})   # RS2d — looser envelope: RS ≥ 70 or 3M ≥ 80 (best RS first) so edited presets still get earnings dates
+pr.append({'t': 'G', 'r': 50, 'o': -0.4, 'm3': 85, 'm1': 50})
+t('RS2d earnings candidates = loose envelope RS ≥ 70 or 3M ≥ 80 (A · C · D · E · F · G; B excluded), capped', b.earn_candidates(pr) == ['A', 'C', 'D', 'E', 'F', 'G'] and b.earn_candidates(pr, 2) == ['A', 'C'])
+t('RS2d envelope is looser than every default preset', all(r['t'] in b.earn_candidates(pr) for r in pr if any(f(r) for f in b.PRESETS.values())))
 ec = {'A': '2026-12-01', 'C': '2026-01-01'}
 asked = []
 nl = b.fill_earnings(['A', 'C', 'D'], ec, '2026-11-20', getter=lambda y: (asked.append(y), dt.date(2026, 12, 9))[1])
@@ -233,6 +236,11 @@ t('changes c: Watch RS down ≥ 15 vs 4 weeks ago (AMD 90→70) · e: new Emergi
 t('changes: priority order is b, a, d, c, e', [x['k'] for x in d['items']] == sorted([x['k'] for x in d['items']], key=lambda k: b.CHG_ORDER.index(k)))
 t('changes: a Thai (.BK) Watch ticker is ignored', 'HANA' not in {x['sym'] for x in d['items']} and b.watch_syms(WL) == {'PLTR', 'GE', 'BRK-B', 'NVDA', 'AMD'})
 e0 = b.changes_diff([], cur, WL, '2026-11-19', '')
+t('RS2d changes.pv = yesterday raw values [r, o, m1, m3] for every previous row', d['pv']['PLTR'] == [84, -0.05, 70, 70] and set(d['pv']) == {x['t'] for x in prev})
+t('RS2d changes.pv absent without a previous run', 'pv' not in b.changes_diff([], cur, WL, '2026-11-19', ''))
+_m = b.PV_MAX_BYTES; b.PV_MAX_BYTES = 10
+t('RS2d changes.pv dropped when too big (items still written)', 'pv' not in b.changes_diff(prev, cur, WL, '2026-11-19', '2026-11-18') and b.changes_diff(prev, cur, WL, '2026-11-19', '2026-11-18')['items'])
+b.PV_MAX_BYTES = _m
 t('changes: no previous run → empty list (still has asOf)', e0['items'] == [] and e0['asOf'] == '2026-11-19' and e0['prevAsOf'] == '')
 big_prev = [R('N%03d' % i, 99, o=-0.05) for i in range(60)] + [R('X%02d' % i, 70) for i in range(10)]
 big_cur = [R('N%03d' % i, 70) for i in range(60)] + [R('X%02d' % i, 95) for i in range(10)]
