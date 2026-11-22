@@ -14,6 +14,7 @@ def day(n):
 
 def my(i, subj, title, view=None, chart=None, ang=None, plan="", check=None, built=None, review=None, created=None, **x):
     a = {"tech": "", "sent": "", "fund": "", "macro": ""}; a.update(ang or {})
+    x.setdefault("next", "Look again")   # NT1d: no Next step = due on Today (“no next step”); fixtures carry one unless a test wants it empty
     return dict({"subject": {"type": subj[0], "key": subj[1]}, "title": title, "view": view, "chart": chart, "ang": a, "plan": plan, "checkOn": check, "builtOn": built, "review": review,
                  "created_at": (created or day(-i)) + "T05:00:00.000Z", "updated_at": (created or day(-i)) + "T05:00:00.000Z"}, **x)
 

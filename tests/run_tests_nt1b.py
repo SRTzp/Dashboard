@@ -58,7 +58,8 @@ def to_today(page):
 
 
 def mkmy(i, subj, title, created, check_on=None, **x):
-    return N.my(i, subj, title, x.pop("view", None), None, x.pop("ang", {"tech": "x"}), "", check=check_on, created=created, **x)
+    x.setdefault("next", "Look again")   # NT1d: an idea without a Next step is due on Today (“no next step”) — fixtures that are not meant to be due carry one
+    return N.my(i, subj, title, x.pop("view", None), x.pop("chart", None), x.pop("ang", {"tech": "x"}), x.pop("plan", ""), check=check_on, created=created, **x)
 
 
 # ───────────────────────────────────────────── sheet · fields · defaults
@@ -69,33 +70,30 @@ def part_sheet(pw, w, h):
         t0 = td(page)
         check(f"{tag} S trading-day maths: Thu +3 = Tue · Fri +3 = Wed · Sat +1 = Mon", js(page, "()=>[nt1bTD('2026-11-19', 3), nt1bTD('2026-11-20', 3), nt1bTD('2026-11-21', 1)]") == ["2026-11-24", "2026-11-25", "2026-11-23"])
         T.to_my(page); js(page, "()=>nt1SheetOpen({})"); page.wait_for_timeout(250)
-        g = js(page, "()=>{ const q = s=>document.querySelector(s); const n = q('[data-nt1b-next-in]'), c = q('#nt1fCheck'), l = q('#nt1fLevel'), grp = q('[data-nt1b-grp]'); const sv = q('[data-nt1-save]');"
-                     " return {grp:!!grp, order: grp && sv ? !!(grp.compareDocumentPosition(sv) & Node.DOCUMENT_POSITION_FOLLOWING) : false, nmax:n && n.maxLength, check:c && c.value, lvType:l && l.type, lvVis:!!(l && l.offsetParent), bg:grp && getComputedStyle(grp).backgroundColor, txt:grp && grp.innerText.replace(/\\s+/g,' ')}; }")
-        check(f"{tag} S New idea sheet: one green-tinted group (Next step · Check again on · Price level) right before Save", g["grp"] and g["order"] and g["bg"] not in ("rgba(0, 0, 0, 0)", "rgb(255, 255, 255)"), g)
+        g = js(page, "()=>{ const q = s=>document.querySelector(s); const n = q('[data-nt1b-next-in]'), c = q('#nt1fCheck'), l = q('#nt1fLevel'), sv = q('[data-nt1-save]'), sec = q('.nt1d-sec');"
+                     " return {sec:!!sec, nmax:n && n.maxLength, check:c && c.value, lvType:l && l.type, lvVis:!!(l && l.offsetParent), lastVis:!!q('[data-nt1d-lastwrap]').offsetParent}; }")
+        check(f"{tag} S New idea sheet: FOLLOW-UP section (Next step · Check again on · Alert level · Last price)", g["sec"] and g["lvVis"] and g["lvType"] == "number", g)   # NT1d: replaces the green group
         check(f"{tag} S Next step ≤ 120 chars (optional)", g["nmax"] == 120)
         check(f"{tag} S Check again on is pre-filled +3 trading days (not empty)", g["check"] == js(page, "()=>nt1bTD(thaiToday(), 3)") and g["check"] > t0, g)
-        check(f"{tag} S Price level hidden for US market (not a stock / Sat asset)", not g["lvVis"] and g["lvType"] == "number", g)
-        for subj, vis in (("stock:AVGO", True), ("sat:XAU", True), ("plan:plan", False), ("market:TH", False), ("tag:", False)):
+        for subj, vis in (("stock:AVGO", False), ("sat:XAU", True), ("plan:plan", True), ("market:TH", True), ("tag:", True)):
             page.select_option("#nt1fSubj", subj); page.wait_for_timeout(60)
-            check(f"{tag} S Price level visible only for stock / Sat: {subj} → {vis}", js(page, VIS, "[data-nt1b-lvwrap]") == vis)
+            check(f"{tag} S Alert level shown for every subject; Last price hidden only for a stock: {subj} → {vis}", js(page, VIS, "[data-nt1d-lastwrap]") == vis and js(page, VIS, "#nt1fLevel"))
         page.select_option("#nt1fSubj", "stock:AVGO")
-        check(f"{tag} S hint `remind within 3%`", "remind within 3%" in (js(page, TXT, "[data-nt1b-lvwrap]") or ""))
         # validation
-        page.fill("#nt1fTitle", "AVGO breakout"); page.fill("#nt1f-tech", "tight base"); page.fill("#nt1fCheck", ""); page.click("[data-nt1-save]"); page.wait_for_timeout(120)
-        check(f"{tag} S empty check date → asked (never empty)", "check date" in (js(page, TXT, "#nt1Err") or "").lower(), js(page, TXT, "#nt1Err"))
-        page.fill("#nt1fCheck", add(t0, 5)); page.fill("#nt1fLevel", "-4"); page.click("[data-nt1-save]"); page.wait_for_timeout(120)
+        page.evaluate("()=>{ document.querySelector('[data-nt1d-more]').open = true; }")
+        page.fill("#nt1fTitle", "AVGO breakout"); page.fill("#nt1f-tech", "tight base"); page.fill("#nt1fCheck", ""); page.fill("#nt1fLevel", "-4"); page.click("[data-nt1-save]"); page.wait_for_timeout(120)
         check(f"{tag} S level must be above 0", "level" in (js(page, TXT, "#nt1Err") or "").lower(), js(page, TXT, "#nt1Err"))
         page.fill("#nt1fLevel", "190"); page.fill("#nt1fNext", "x" * 150); ln = js(page, "()=>document.getElementById('nt1fNext').value.length")
         check(f"{tag} S next step typed past 120 is cut at 120", ln == 120, ln)
-        page.fill("#nt1fNext", "Close above 190 on volume → plan Momentum"); page.click("[data-nt1-save]"); page.wait_for_timeout(600)
+        page.fill("#nt1fCheck", add(t0, 5)); page.fill("#nt1fNext", "Close above 190 on volume → plan Momentum"); page.click("[data-nt1-save]"); page.wait_for_timeout(600)
         nid = js(page, "()=>mySel"); d = js(page, DOC, nid)
         check(f"{tag} S saved: next · level · checkOn · snoozeTo null · planId null · dropped false", d["next"] == "Close above 190 on volume → plan Momentum" and d["level"] == 190 and d["checkOn"] == add(t0, 5) and d["snoozeTo"] is None and d["planId"] is None and d["dropped"] is False, d)
-        # level is not stored for a market subject even if typed first
+        # NT1d: the level is stored for any subject (a market idea too)
         js(page, "()=>nt1SheetOpen({})"); page.wait_for_timeout(200)
-        page.select_option("#nt1fSubj", "stock:AVGO"); page.fill("#nt1fLevel", "55"); page.select_option("#nt1fSubj", "market:US")
-        page.fill("#nt1fTitle", "Market idea"); page.fill("#nt1f-tech", "x"); page.click("[data-nt1-save]"); page.wait_for_timeout(500)
+        page.select_option("#nt1fSubj", "market:US"); page.fill("#nt1fLevel", "55")
+        page.fill("#nt1fTitle", "Market idea"); page.click("[data-nt1-save]"); page.wait_for_timeout(500)
         d2 = js(page, DOC, js(page, "()=>mySel"))
-        check(f"{tag} S level only for stock / Sat: a market idea stores level null", d2["level"] is None and d2["checkOn"] == js(page, "()=>nt1bTD(thaiToday(), 3)"), d2)
+        check(f"{tag} S level is kept for a market idea (NT1d) · check date defaults to +3 trading days", d2["level"] == 55 and d2["checkOn"] == js(page, "()=>nt1bTD(thaiToday(), 3)"), d2)
         # old idea without a check date: computed, not written
         seed_my(page, {"old1": mkmy(4, ("stock", "AAPL"), "Old idea", add(t0, -5))})
         m = js(page, "()=>{ const m = myList.find(x=>x.id==='old1'); return [m.checkOn, nt1bEff(m), nt1bTD(nt1DayOf(m), 3)]; }")
@@ -122,7 +120,7 @@ def part_today(pw, w, h):
             "far": mkmy(2, ("stock", "AAPL"), "Far from level", add(t0, -1), add(t0, 6), next="n/a", level=104),                                     # 4% → not near, not due
             "today": mkmy(3, ("market", "US"), "Risk-off until CPI", add(t0, -2), t0, next="Read CPI → still bear?", view="bear"),
             "late2": mkmy(4, ("sat", "XAU"), "Range before CPI", add(t0, -4), add(t0, -2), next="Wait for the break"),
-            "late5": mkmy(5, ("market", "TH"), "SET below 200-day", add(t0, -9), add(t0, -5), next=""),
+            "late5": mkmy(5, ("market", "TH"), "SET below 200-day", add(t0, -9), add(t0, -5), next="Check the 200-day"),
             "snz": mkmy(6, ("stock", "COST"), "Snoozed", add(t0, -3), add(t0, -3), snoozeTo=add(t0, 2)),
             "rev": mkmy(7, ("market", "US"), "Reviewed", add(t0, -3), add(t0, -3), review=N.rev("right")),
             "drp": mkmy(8, ("market", "US"), "Dropped", add(t0, -3), add(t0, -3), dropped=True),
@@ -150,7 +148,7 @@ def part_today(pw, w, h):
         i2 = js(page, INFO, "my:late2")
         check(f"{tag} T overdue: amber `2 days late` · Open ›", i2["pill"] == "2 days late" and "p-a" in i2["cls"] and i2["btn"] == ["Open ›"] and i2["tag"] == "XAU", i2)
         i3 = js(page, INFO, "my:late5")
-        check(f"{tag} T 5 days late · no next step → `Next: not set`", i3["pill"] == "5 days late" and i3["next"] == "Next: not set", i3)
+        check(f"{tag} T 5 days late · next step shown", i3["pill"] == "5 days late" and i3["next"] == "Next: Check the 200-day", i3)
         check(f"{tag} T `to level` wording (never `away`)", "to level" in card and "away" not in card, card)
         # reasons: today + AI
         js(page, "()=>{ ln4TodoAll = true; }")
@@ -321,7 +319,7 @@ def part_watch(pw, w, h):
         # detail: Next step block above the chart
         T.to_my(page, "avgo"); page.wait_for_timeout(250)
         blk = js(page, "()=>{ const d = document.querySelector('[data-nt1-detail]'); const b = d.querySelector('[data-nt1b-block]'); const a = d.querySelector('.nt1-ang'); return {at:!!b, above:!!(b && a && (b.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING)), txt:b && b.innerText.replace(/\\s+/g,' '), plan:b && (b.querySelector('[data-nt1b-mkplan]')||{}).className, trail:!!(b && b.querySelector('[data-nt1b-trail]'))}; }")
-        check(f"{tag} W detail: green Next step block above the chart/angles with check date · level · now · `% to level` · trail", blk["at"] and blk["above"] and "Close above 190 on volume → plan Momentum" in blk["txt"] and "level 102" in blk["txt"] and "now 100" in blk["txt"] and "2.0% to level" in blk["txt"] and blk["trail"], blk)
+        check(f"{tag} W detail: green Next step block above the chart/angles with check date · level · now · `% to level` · trail", blk["at"] and blk["above"] and "Close above 190 on volume → plan Momentum" in blk["txt"] and "Level 102" in blk["txt"] and "now 100" in blk["txt"] and "2.0% to level" in blk["txt"] and blk["trail"], blk)
         check(f"{tag} W detail: `Make plan ›` is the primary when the price is near", "Make plan ›" in blk["txt"] and "pri" in (blk["plan"] or ""), blk)
         js(page, "()=>document.querySelector('[data-nt1b-d-snooze]').click()"); page.wait_for_timeout(400)
         check(f"{tag} W detail Snooze 3 days writes snoozeTo", js(page, DOC, "avgo")["snoozeTo"] == add(t0, 3))
@@ -522,7 +520,7 @@ def part_phone_watch(pw, w, h):
         js(page, "()=>document.querySelector('[data-nt1-my=a]').click()"); page.wait_for_timeout(300)
         check(f"{tag} P detail: Next step block · no overflow", js(page, VIS, "[data-nt1b-block]") and js(page, OVER))
         js(page, "()=>{ wlBack(); nt1SheetOpen({}); }"); page.wait_for_timeout(300)
-        check(f"{tag} P New idea sheet with the green group · no overflow", js(page, VIS, "[data-nt1b-grp]") and js(page, OVER) and js(page, "()=>document.getElementById('ltModal').scrollWidth <= document.getElementById('ltModal').clientWidth + 1"))
+        check(f"{tag} P New idea sheet with the FOLLOW-UP section · no overflow", js(page, VIS, ".nt1d-sec") and js(page, OVER) and js(page, "()=>document.getElementById('ltModal').scrollWidth <= document.getElementById('ltModal').clientWidth + 1"))
         js(page, "()=>nt1SheetClose()")
         check(f"{tag} no page errors", not pe, pe[:3])
     finally:
