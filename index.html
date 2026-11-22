@@ -5483,6 +5483,22 @@ html body .lr5 .rs2-fr.chk{justify-content:flex-start;min-height:36px;cursor:poi
 html body .lr5 .rs2-fr.chk input{width:18px;height:18px;margin:0}
 html body .lr5 .rs2-dl b.amb{color:var(--lr-warn)}html body .lr5 .rs2-dl b.dn{color:#A62D27}
 html body .lr5 .rs2-note{font-size:12px;color:var(--lr-muted)}
+html body .lr5 .rs2-ct,.rs2ed-b .rs2-ct{font:600 10.5px var(--lr-sans,Inter,sans-serif);padding:1px 5px;color:#5F6672;background:#F0F1F4;border-radius:5px;margin-left:5px;vertical-align:1px}
+html body .lr5 .rs2-edit{border:0;background:transparent;box-shadow:none;padding:0;min-height:0;height:auto;font:600 12px var(--lr-sans);color:#3B4FC4;text-decoration:underline;cursor:pointer}
+.rs2ed-b{background:#fff;color:#14161A;border-radius:18px;width:100%;max-width:500px;max-height:90vh;overflow:auto;padding:20px 22px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(20,22,26,.25)}
+.rs2ed-hd{display:flex;align-items:center;justify-content:space-between}.rs2ed-hd b{font-size:18px}
+.rs2ed-x{width:44px;height:44px;border:0!important;box-shadow:none!important;background:transparent!important;font-size:18px;color:#8A919C;cursor:pointer;margin:-10px -12px -10px 0}
+.rs2ed-chips{display:flex;gap:6px;flex-wrap:wrap}
+.rs2ed-chip{padding:0 12px;height:36px;border-radius:999px;border:1px solid #DDE0E5;background:#fff;font:500 13px inherit;cursor:pointer}.rs2ed-chip.on{background:#14161A;color:#fff;border-color:#14161A}.rs2ed-chip.on .rs2-ct{background:rgba(255,255,255,.18);color:#fff}
+.rs2ed-pr{display:grid;grid-template-columns:1fr 80px 110px;gap:10px;align-items:center;font-size:13.5px}
+.rs2ed-in{height:40px;border:1px solid #DDE0E5;border-radius:9px;padding:0 10px;font:500 14px inherit;width:100%;box-sizing:border-box;background:#fff;color:#14161A}.rs2ed-in.bad{border-color:#C98A1B;background:#FFF9EE}
+.rs2ed-h{font-size:12px;color:#8A919C}.rs2ed-h.bad{color:#9A5B00}
+.rs2ed-d{font-size:12px;color:#8A919C}.rs2ed-n{font-size:13px}
+.rs2ed-ft{display:flex;align-items:center;gap:8px}.rs2ed-ft .sp{flex:1}
+.rs2ed-rs{border:0;background:transparent;font:600 13px inherit;color:#5F6672;text-decoration:underline;cursor:pointer;min-height:44px;padding:0}.rs2ed-rs:disabled{opacity:.4;cursor:default}
+.rs2ed-save{background:#14161A!important;color:#fff!important;border-color:#14161A!important}.rs2ed-save:disabled{opacity:.4;cursor:default}
+@media (max-width:600px){.rs2ed-b{border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}.rs2ed-pr{grid-template-columns:1fr 72px}.rs2ed-h{grid-column:1/-1;margin-top:-6px}}
+
 html body .lr5 .rs2-tbl{min-width:800px}
 html body .lr5 .rs2-x3 .rs2-tbl{min-width:880px}
 html body .lr5 .rs2-x3 .rs2r{grid-template-columns:minmax(120px,220px) 108px 112px 80px 76px 76px 80px minmax(96px,1fr)}
@@ -21881,6 +21897,7 @@ function escCloseTop(){
   if(pops.length){ pops.forEach(p=>p.classList.remove('show')); return true; }
   const cm = document.querySelectorAll('.ccMenu.on');
   if(cm.length){ cm.forEach(x=>x.classList.remove('on')); return true; }
+  if(document.getElementById('rs2Edit')){ rs2EditClose(); return true; }   /* RS2d */
   if(typeof rs2 !== 'undefined' && (rs2.menu || rs2.pmenu) && wlView === 'screen'){ rs2MenuClose(); return true; }   /* RS2a3 */
   if(typeof rs2 !== 'undefined' && rs2.sheet && wlView === 'screen'){ rs2Sheet(false); return true; }   /* RS2a2 */
   if(wlMenu){ wlMenu = ''; wlMenuMsg = ''; renderWatchlist(); return true; }
@@ -31892,8 +31909,22 @@ const RS2_PRESET_DEFAULTS = {
   emerging:{name:'Emerging', m3Min:90, m1Min:90, rs12Max:85},
   pullback:{name:'Pullback', rs12Min:85, m3Min:80, m1Max:60, near:15}
 };
+/* RS2d — Edit rules: overrides live in the user's settings (settings.rs2Presets · same path as myTodos, syncs across devices · no new collection / rule) and are mirrored to localStorage 'dash.rs2Presets'.
+   A settings object (even {}) wins over the mirror, so a Reset on one device is not undone by a stale mirror on another. Only values that differ from RS2_PRESET_DEFAULTS are stored. */
+const RS2_RULES = {   /* field → [label, min, max] in the order shown in the sheet */
+  leaders:{rs12Min:['12M RS at least', 0, 99], near:['Within this % of the 52-week high', 1, 50]},
+  emerging:{m3Min:['3M RS at least', 0, 99], m1Min:['1M RS at least', 0, 99], rs12Max:['12M RS under', 0, 99]},
+  pullback:{rs12Min:['12M RS at least', 0, 99], m3Min:['3M RS at least', 0, 99], m1Max:['1M RS under', 0, 99], near:['Within this % of the 52-week high', 1, 50]}
+};
+function rs2RawOv(){
+  try{ const s0 = tdSettings().rs2Presets; if(s0 && typeof s0 === 'object') return s0; }catch(e){}
+  try{ return JSON.parse(localStorage.getItem('dash.rs2Presets') || '{}') || {}; }catch(e){ return {}; }
+}
+let rs2PO = null;   /* RS2d — preset used instead of the active one while the Edit sheet counts matches */
+function rs2Custom(k){ const p = rs2Presets()[k], d = RS2_PRESET_DEFAULTS[k]; return Object.keys(RS2_RULES[k] || {}).some(f=>p[f] !== d[f]); }
+function rs2AnyCustom(){ return Object.keys(RS2_PRESET_DEFAULTS).some(rs2Custom); }
 function rs2Presets(){
-  let o = {}; try{ o = JSON.parse(localStorage.getItem('dash.rs2Presets') || '{}') || {}; }catch(e){}
+  const o = rs2RawOv();
   const out = {}; Object.keys(RS2_PRESET_DEFAULTS).forEach(k=>{ out[k] = Object.assign({}, RS2_PRESET_DEFAULTS[k], (o && typeof o[k] === 'object') ? o[k] : {}); });
   return out;
 }
@@ -31941,7 +31972,7 @@ function rs2Load(force){
     }
     rs2.rows = Array.isArray(lat.rows) ? lat.rows : []; rs2.asOf = lat.asOf; rs2.state = rs2.rows.length ? 'ok' : 'empty'; rs2.at = Date.now();
   }).catch(e=>{ console.warn('rs2 load:', e); rs2.state = 'error'; rs2.err = String((e && (e.code || e.message)) || e); rs2.at = Date.now(); })
-    .then(()=>{ try{ if(activeTab === 'watch' && wlView === 'screen') renderWatchlist(); }catch(e){} });
+    .then(()=>{ try{ if(activeTab === 'watch' && wlView === 'screen') renderWatchlist(); else if(activeTab === 'today' && rs2AnyCustom()) todayRefresh(true); }catch(e){} });
 }
 function rs2Item(sym){ try{ return wlItemOf(sym) || null; }catch(e){ return null; } }
 function rs2Has(sym){ const it = rs2Item(sym); return !!(it && it.archived !== true) || !!rs2.added[sym]; }
@@ -31959,7 +31990,7 @@ function rs2Earn(r){   /* weekly cached date from the data job (names matching a
   return {txt:d <= 7 ? (d === 0 ? 'today' : 'in ' + d + 'd') : lr5Day(nx), soon:d <= 7, d};
 }
 function rs2PresetOk(r){
-  const p = rs2Presets()[rs2.preset], num = v=>typeof v === 'number';
+  const p = rs2PO || rs2Presets()[rs2.preset], num = v=>typeof v === 'number';
   if(p.rs12Min != null && !(r.r >= p.rs12Min)) return false;
   if(p.rs12Max != null && !(r.r < p.rs12Max)) return false;
   if(p.m3Min != null && !(num(r.m3) && r.m3 >= p.m3Min)) return false;
@@ -32215,18 +32246,38 @@ function rs2ChgLoad(){
 }
 function rs2ChgSeen(asOf){ try{ if(asOf && localStorage.getItem('dash.rs2ChgSeen') !== String(asOf)){ localStorage.setItem('dash.rs2ChgSeen', String(asOf)); todayRefresh(false); } }catch(e){} }
 function rs2ChgSeenIs(asOf){ try{ return localStorage.getItem('dash.rs2ChgSeen') === String(asOf); }catch(e){ return false; } }
+/* RS2d — b / d / e follow the user's own Leaders / Emerging rules: the job writes yesterday's raw values per row (changes.pv = {sym: [r, o, m1, m3]}) and the app re-runs the same diff with rs2Presets().
+   No custom rule (or no pv / rows not loaded yet) → the job's own b / d / e items are used as they are (a · c always come from the job) */
+function rs2ChgWatch(){ const out = new Set(); try{ (wlItems || []).forEach(w=>{ if(!w || w.archived === true || w.market === 'TH') return; const t = String(w.ticker || '').trim().toUpperCase(); if(t && !t.endsWith('.BK')) out.add(t.split(':').pop().replace('.', '-')); }); }catch(e){} return out; }
+function rs2ChgItems(d){
+  const items = Array.isArray(d.items) ? d.items : [];
+  if(!rs2AnyCustom() || !d.pv || typeof d.pv !== 'object') return items;
+  if(!(rs2.rows || []).length) return items.filter(x=>x.k !== 'b' && x.k !== 'd' && x.k !== 'e');
+  const P = rs2Presets(), keep = rs2PO, num = v=>typeof v === 'number';
+  const ok = (r, p)=>{ if(p.rs12Min != null && !(r.r >= p.rs12Min)) return false; if(p.rs12Max != null && !(r.r < p.rs12Max)) return false; if(p.m3Min != null && !(num(r.m3) && r.m3 >= p.m3Min)) return false; if(p.m1Min != null && !(num(r.m1) && r.m1 >= p.m1Min)) return false; if(p.m1Max != null && !(num(r.m1) && r.m1 < p.m1Max)) return false; if(p.near != null && !(r.o != null && r.o >= -p.near / 100 - 1e-9)) return false; return true; };
+  const wl = rs2ChgWatch(), by = {b:[], d:[], e:[]};
+  (rs2.rows || []).forEach(r=>{
+    const pr = d.pv[r.t], p = Array.isArray(pr) ? {r:pr[0], o:pr[1], m1:pr[2], m3:pr[3]} : null, w = wl.has(r.t);
+    if(!p && (w || r.r < 90)) return;
+    if(w){ if(p && ok(p, P.leaders) && !ok(r, P.leaders)) by.b.push([r.r, {sym:r.t, k:'b', from:p.r, to:r.r}]); return; }
+    if(ok(r, P.leaders) && r.r >= 90 && !(p && ok(p, P.leaders))) by.d.push([r.r, {sym:r.t, k:'d', from:p ? p.r : null, to:r.r}]);
+    if(p && ok(r, P.emerging) && !ok(p, P.emerging)) by.e.push([r.r, {sym:r.t, k:'e', from:p.r, to:r.r}]);
+  });
+  const top = (L, n)=>{ const s = L.sort((x, y)=>y[0] - x[0] || (x[1].sym < y[1].sym ? -1 : 1)).map(x=>x[1]); return n ? s.slice(0, n) : s; };
+  return items.filter(x=>x.k !== 'b' && x.k !== 'd' && x.k !== 'e').concat(top(by.b), top(by.d, 3), top(by.e, 3));
+}
 function rs2ChgLines(){   /* up to 3 · priority b → a → d (then c · e when switched on) · hidden once viewed for that asOf */
   const d = rs2Chg.doc;
-  if(!d || !Array.isArray(d.items) || !d.items.length || !d.prevAsOf || rs2ChgSeenIs(d.asOf)) return [];
+  if(!d || !Array.isArray(d.items) || !d.prevAsOf || rs2ChgSeenIs(d.asOf)) return [];
   const rank = {b:0, a:1, d:2, c:3, e:4};
-  return d.items.filter(x=>x && rank[x.k] != null && rs2AlertOn(x.k)).map((x, i)=>({x, i})).sort((p, q)=>rank[p.x.k] - rank[q.x.k] || p.i - q.i).slice(0, 3).map(o=>o.x);
+  return rs2ChgItems(d).filter(x=>x && rank[x.k] != null && rs2AlertOn(x.k)).map((x, i)=>({x, i})).sort((p, q)=>rank[p.x.k] - rank[q.x.k] || p.i - q.i).slice(0, 3).map(o=>o.x);
 }
 function rs2ChgText(x){
   const t = x.sym;
   return x.k === 'b' ? `${t} left Leaders · RS ${x.to}` : x.k === 'a' ? `${t} new 52w high` : x.k === 'd' ? `New Leader: ${t} RS ${x.to}` : x.k === 'c' ? `${t} RS down to ${x.to} (was ${x.from} four weeks ago)` : `New Emerging: ${t}`;
 }
 function rs2TodoItems(){   /* rows for Today's To do list · amber for 'left Leaders', calm for the rest · tap → Watch › Screen on that row */
-  try{ rs2ChgLoad(); }catch(e){}
+  try{ rs2ChgLoad(); if(rs2AnyCustom()) rs2Load(); }catch(e){}
   return rs2ChgLines().map(x=>({c:x.k === 'b' || x.k === 'c' ? 'a' : 'g', scr:x.k, id:'scr:' + x.k + ':' + x.sym, t:rs2ChgText(x), fn:`rs2OpenFrom('${String(x.sym).replace(/[^A-Za-z0-9.\-]/g, '')}','${x.k}')`}));
 }
 function rs2OpenFrom(sym, k){   /* Today → Watch › Screen with that row selected (whatever the preset says) */
@@ -32381,10 +32432,62 @@ function rs2AddTicked(){
   rs2.tk.at = '';
   rs2ToastShow(rs2ToastHtml(), 8000); renderWatchlist();
 }
+/* ═══ RS2d — Edit rules sheet (Screen › rule line › Edit rules) ═══ */
+let rs2Ed = null;   /* {k: preset being shown, v: {preset: {field: string}}} — drafts until Save */
+function rs2EditLink(){ return ` · ${rs2Custom(rs2.preset) ? '<span class="rs2-ct" data-rs2-ctag-rule>custom</span> ' : ''}<button type="button" class="rs2-edit" data-rs2-edit onclick="rs2EditOpen()">Edit rules</button>`; }
+function rs2EdVal(k, f){ const s0 = (rs2Ed.v[k] || {})[f], R = RS2_RULES[k][f]; if(s0 == null || String(s0).trim() === '') return {ok:true, n:RS2_PRESET_DEFAULTS[k][f], empty:true}; const t = String(s0).trim(); if(!/^\d+$/.test(t)) return {ok:false, n:null}; const n = +t; return n >= R[1] && n <= R[2] ? {ok:true, n, empty:false} : {ok:false, n:null}; }
+function rs2EdPreset(k){ const o = Object.assign({}, RS2_PRESET_DEFAULTS[k]); Object.keys(RS2_RULES[k]).forEach(f=>{ const v = rs2EdVal(k, f); if(v.ok) o[f] = v.n; }); return o; }
+function rs2EdCount(p){ const keep = rs2PO; rs2PO = p; try{ return (rs2.rows || []).filter(r=>rs2Match(r)).length; }finally{ rs2PO = keep; } }
+function rs2EdPresetText(k, o){ return (function(){ const a = []; if(k === 'leaders'){ a.push('12M ≥ ' + o.rs12Min); } else { if(o.rs12Min != null) a.push('12M ≥ ' + o.rs12Min); if(o.m3Min != null) a.push('3M ≥ ' + o.m3Min); if(o.m1Min != null) a.push('1M ≥ ' + o.m1Min); if(o.rs12Max != null) a.push('12M under ' + o.rs12Max); if(o.m1Max != null) a.push('1M under ' + o.m1Max); } if(o.near != null) a.push('within ' + o.near + '% of high'); return a.join(' · '); })(); }
+function rs2EdAllOk(){ return Object.keys(RS2_RULES).every(k=>Object.keys(RS2_RULES[k]).every(f=>rs2EdVal(k, f).ok)); }
+function rs2EdIsDefault(k){ const p = rs2EdPreset(k), d = RS2_PRESET_DEFAULTS[k]; return Object.keys(RS2_RULES[k]).every(f=>p[f] === d[f]); }
+function rs2EditOpen(k){
+  const P = rs2Presets(), v = {};
+  Object.keys(RS2_RULES).forEach(pk=>{ v[pk] = {}; Object.keys(RS2_RULES[pk]).forEach(f=>{ v[pk][f] = String(P[pk][f]); }); });
+  rs2Ed = {k:RS2_RULES[k] ? k : (RS2_RULES[rs2.preset] ? rs2.preset : 'leaders'), v};
+  rs2.pmenu = false; rs2.menu = null; rs2EditDraw(true);
+}
+function rs2EditClose(){ rs2Ed = null; const h = document.getElementById('rs2Edit'); if(h) h.remove(); }
+function rs2EditTab(k){ if(!rs2Ed || !RS2_RULES[k]) return; rs2Ed.k = k; rs2EditDraw(false); }
+function rs2EditIn(k, f, val){ if(!rs2Ed) return; rs2Ed.v[k][f] = val; rs2EditLive(); }
+function rs2EditReset(){ if(!rs2Ed) return; const k = rs2Ed.k; Object.keys(RS2_RULES[k]).forEach(f=>{ rs2Ed.v[k][f] = String(RS2_PRESET_DEFAULTS[k][f]); }); rs2EditDraw(false); }
+function rs2EditLive(){   /* no re-render while typing (keeps focus): only hints · count · buttons */
+  const h = document.getElementById('rs2Edit'); if(!h || !rs2Ed) return;
+  const k = rs2Ed.k, E = (q)=>h.querySelector(q);
+  Object.keys(RS2_RULES[k]).forEach(f=>{ const v = rs2EdVal(k, f), R = RS2_RULES[k][f], inp = E(`[data-rs2ed-in="${f}"]`), hint = E(`[data-rs2ed-hint="${f}"]`); if(inp) inp.classList.toggle('bad', !v.ok); if(hint){ hint.textContent = v.ok ? R[1] + '–' + R[2] : 'Whole number ' + R[1] + '–' + R[2]; hint.classList.toggle('bad', !v.ok); } });
+  const okK = Object.keys(RS2_RULES[k]).every(f=>rs2EdVal(k, f).ok), n = E('[data-rs2ed-count]');
+  if(n) n.innerHTML = okK ? rs2EdCountHtml(k) : '<span class="mut">Fix the highlighted value to see the count</span>';
+  const sv = E('[data-rs2ed-save]'); if(sv) sv.disabled = !rs2EdAllOk();
+  const rs = E('[data-rs2ed-reset]'); if(rs) rs.disabled = rs2EdIsDefault(k);
+  const dt = E('[data-rs2ed-default]'); if(dt) dt.textContent = 'Default: ' + rs2EdPresetText(k, RS2_PRESET_DEFAULTS[k]);
+}
+function rs2EdCountHtml(k){ const a = rs2EdCount(rs2EdPreset(k)), b = rs2EdCount(RS2_PRESET_DEFAULTS[k]); return `Now: <b>${a} match</b>${a !== b ? ` <span class="mut">· was ${b} with the default</span>` : ''}`; }
+function rs2EditDraw(fresh){
+  if(!rs2Ed) return;
+  let h = document.getElementById('rs2Edit');
+  if(!h){ h = document.createElement('div'); h.id = 'rs2Edit'; h.className = 'ui-sheet-backdrop rs2ed-bd'; h.setAttribute('role', 'dialog'); h.setAttribute('aria-modal', 'true'); h.setAttribute('aria-label', 'Edit rules'); h.setAttribute('data-rs2-edit-sheet', ''); h.onclick = e=>{ if(e.target === h) rs2EditClose(); }; document.body.appendChild(h); }
+  const k = rs2Ed.k, e = escHtml;
+  const tabs = Object.keys(RS2_RULES).map(pk=>`<button type="button" class="rs2ed-chip${pk === k ? ' on' : ''}" data-rs2ed-chip="${pk}" onclick="rs2EditTab('${pk}')">${RS2_PRESET_DEFAULTS[pk].name}${rs2EdIsDefault(pk) ? '' : '<span class="rs2-ct">custom</span>'}</button>`).join('');
+  const rows = Object.keys(RS2_RULES[k]).map(f=>{ const R = RS2_RULES[k][f], v = rs2EdVal(k, f), id = 'rs2ed_' + k + '_' + f;
+    return `<div class="rs2ed-pr"><label for="${id}">${e(R[0])}</label><input id="${id}" class="rs2ed-in${v.ok ? '' : ' bad'}" data-rs2ed-in="${f}" inputmode="numeric" autocomplete="off" value="${e(rs2Ed.v[k][f])}" placeholder="${RS2_PRESET_DEFAULTS[k][f]}" oninput="rs2EditIn('${k}','${f}',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();rs2EditSave()}"><span class="rs2ed-h${v.ok ? '' : ' bad'}" data-rs2ed-hint="${f}">${v.ok ? R[1] + '–' + R[2] : 'Whole number ' + R[1] + '–' + R[2]}</span></div>`; }).join('');
+  h.innerHTML = `<div class="rs2ed-b" role="document"><div class="rs2ed-hd"><b>Edit rules</b><button type="button" class="rs2ed-x" data-rs2ed-close aria-label="Close" onclick="rs2EditClose()">✕</button></div><div class="rs2ed-chips" role="tablist" aria-label="Preset">${tabs}</div>${rows}<div class="rs2ed-d" data-rs2ed-default>Default: ${e(rs2EdPresetText(k, RS2_PRESET_DEFAULTS[k]))}</div><div class="rs2ed-n" data-rs2ed-count>${rs2EdCountHtml(k)}</div><div class="rs2ed-ft"><button type="button" class="rs2ed-rs" data-rs2ed-reset onclick="rs2EditReset()"${rs2EdIsDefault(k) ? ' disabled' : ''}>Reset to default</button><span class="sp"></span><button type="button" class="btn" data-rs2ed-cancel onclick="rs2EditClose()">Cancel</button><button type="button" class="btn rs2ed-save" data-rs2ed-save onclick="rs2EditSave()"${rs2EdAllOkSafe() ? '' : ' disabled'}>Save</button></div></div>`;
+  if(fresh){ const i = h.querySelector('.rs2ed-in'); if(i) try{ i.focus(); i.select(); }catch(x){} }
+}
+function rs2EdAllOkSafe(){ try{ return rs2EdAllOk(); }catch(e){ return false; } }
+function rs2EditSave(){
+  if(!rs2Ed || !rs2EdAllOk()) return;
+  const o = {};
+  Object.keys(RS2_RULES).forEach(k=>{ const p = rs2EdPreset(k), d = RS2_PRESET_DEFAULTS[k], x = {}; Object.keys(RS2_RULES[k]).forEach(f=>{ if(p[f] !== d[f]) x[f] = p[f]; }); if(Object.keys(x).length) o[k] = x; });
+  try{ localStorage.setItem('dash.rs2Presets', JSON.stringify(o)); }catch(e){}
+  try{ glWrite(S=>{ S.rs2Presets = o; }); }catch(e){}
+  rs2EditClose(); rs2.shown = RS2_PAGE; rs2.sel = ''; rs2.tick = {}; rs2.last = '';
+  try{ renderWatchlist(); }catch(e){}
+  try{ todayRefresh(true); }catch(e){}
+}
 function rs2Pmenu(){ rs2.pmenu = !rs2.pmenu; rs2.menu = null; renderWatchlist(); }
 function rs2PmenuHtml(){
   const n = rs2View().length;
-  return `<div class="rs2-pmw"><div class="rs2-menu rs2-pm" data-rs2-pmenu role="menu"><button type="button" role="menuitem" class="mi" data-rs2-dl-shown onclick="rs2DlShown()">⤓ Download shown list (.txt) <span class="mut">${n}</span></button><button type="button" role="menuitem" class="mi" data-rs2-pm-filter onclick="rs2.pmenu=false;rs2FilterToggle()">Filter</button><button type="button" role="menuitem" class="mi" data-rs2-pm-reset onclick="rs2Reset()">Reset</button></div></div>`;
+  return `<div class="rs2-pmw"><div class="rs2-menu rs2-pm" data-rs2-pmenu role="menu"><button type="button" role="menuitem" class="mi" data-rs2-dl-shown onclick="rs2DlShown()">⤓ Download shown list (.txt) <span class="mut">${n}</span></button><button type="button" role="menuitem" class="mi" data-rs2-pm-filter onclick="rs2.pmenu=false;rs2FilterToggle()">Filter</button><button type="button" role="menuitem" class="mi" data-rs2-pm-reset onclick="rs2Reset()">Reset</button><button type="button" role="menuitem" class="mi" data-rs2-pm-edit onclick="rs2.pmenu=false;rs2EditOpen()">Edit rules${rs2Custom(rs2.preset) ? ' <span class="mut">custom</span>' : ''}</button></div></div>`;
 }
 document.addEventListener('click', e=>{
   try{
@@ -32412,14 +32515,14 @@ function rs2FilterPanel(){
 }
 function rs2Controls(){
   const P = rs2Presets(), n = rs2Nf(), IND = rs2.view === 'ind', nTk = IND ? 0 : rs2TkN(), dflt = rs2.preset === 'leaders' && !n && !String(rs2.q).trim() && rs2.sort === 'nearhigh' && !rs2.rev && rs2.view === 'stocks' && rs2.isort === 'm' && !rs2.irev;
-  const seg = Object.keys(P).map(k=>`<button type="button" class="tab${rs2.preset === k ? ' on' : ''}" role="tab" aria-selected="${rs2.preset === k}" data-rs2-preset="${k}" title="${escHtml(rs2PresetText(k))}" onclick="rs2Set('preset','${k}')">${P[k].name}</button>`).join('');
+  const seg = Object.keys(P).map(k=>`<button type="button" class="tab${rs2.preset === k ? ' on' : ''}" role="tab" aria-selected="${rs2.preset === k}" data-rs2-preset="${k}" title="${escHtml(rs2PresetText(k))}" onclick="rs2Set('preset','${k}')">${P[k].name}${rs2Custom(k) ? '<span class="rs2-ct" data-rs2-ctag>custom</span>' : ''}</button>`).join('');
   const vw = [['stocks', 'Stocks'], ['ind', 'Industries']].map(([k, t])=>`<button type="button" class="${rs2.view === k ? 'on' : ''}" role="tab" aria-selected="${rs2.view === k}" data-rs2-view="${k}" onclick="rs2ViewSet('${k}')">${t}</button>`).join('');
   const chip = !IND && rs2.ind ? `<span class="rs2-chip" data-rs2-indchip>Industry: ${escHtml(rs2.ind)} <button type="button" class="rs2-chipx" data-rs2-indchip-x aria-label="Clear the industry filter" onclick="rs2IndClear()">×</button></span>` : '';
   return `<div class="rs2-fl" data-rs2-filters><div class="rs2-seg" role="tablist" aria-label="Preset" data-rs2-presets>${seg}</div><div class="rs2-seg" role="tablist" aria-label="View" data-rs2-views>${vw}</div>${chip}
     <span class="rs2-fw"><button type="button" class="btn rs2-fbtn${n ? ' on' : ''}" data-rs2-filter-btn aria-expanded="${rs2.fOpen}" onclick="rs2FilterToggle()">Filter${n ? ' · ' + n : ''} ▾</button></span>
     <button type="button" class="btn rs2-reset" data-rs2-reset onclick="rs2Reset()"${dflt ? ' disabled' : ''}>Reset</button>
     ${nTk ? `<span class="rs2-sel" data-rs2-selbar><b data-rs2-selcount>${nTk} selected</b><span class="sep">·</span><button type="button" class="rs2-tlink" data-rs2-dl onclick="rs2DlTicked()">⤓ Download for TradingView (.txt)</button><span class="sep">·</span><button type="button" class="rs2-tlink" data-rs2-addsel onclick="rs2AddTicked()">Add to Watch</button><span class="sep">·</span><button type="button" class="rs2-tlink" data-rs2-clrsel onclick="rs2TkClear()">Clear</button></span>` : ''}
-    <span class="rs2-sp"></span>${nTk ? '' : IND ? `<span class="rs2-note" data-rs2-note>Industries with ≥ 5 liquid stocks · ${escHtml(P[rs2.preset].name)} = ${escHtml(rs2PresetText(rs2.preset))}</span>` : `<span class="rs2-note" data-rs2-note>${escHtml(P[rs2.preset].name)} = ${escHtml(rs2PresetText(rs2.preset))} · liquid = price ≥ $10 · avg $vol ≥ $10M</span>`}</div>${rs2.fOpen ? rs2FilterPanel() : ''}`;
+    <span class="rs2-sp"></span>${nTk ? '' : IND ? `<span class="rs2-note" data-rs2-note>Industries with ≥ 5 liquid stocks · ${escHtml(P[rs2.preset].name)} = ${escHtml(rs2PresetText(rs2.preset))}${rs2EditLink()}</span>` : `<span class="rs2-note" data-rs2-note>${escHtml(P[rs2.preset].name)} = ${escHtml(rs2PresetText(rs2.preset))} · liquid = price ≥ $10 · avg $vol ≥ $10M${rs2EditLink()}</span>`}</div>${rs2.fOpen ? rs2FilterPanel() : ''}`;
 }
 function rs2Body(){
   if(rs2.state === 'loading' || rs2.state === 'idle') return '<div class="empty" data-rs2-state="loading">Loading the ranked list…</div>';
