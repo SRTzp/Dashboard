@@ -5033,6 +5033,7 @@ html body .nt1-ai .nt2c-sum{display:-webkit-box;-webkit-box-orient:vertical;-web
 html body .nt2c-more{align-self:flex-start;font:600 12px var(--lr-sans,Inter,sans-serif);color:var(--lr-muted,#5F6672);text-decoration:underline}html body .nt2c-more[hidden]{display:none}
 html body .nt1-ai .nt2c-ch{flex-wrap:nowrap;gap:5px;overflow:visible;white-space:nowrap}html body .nt1-ai .nt2c-ch [hidden]{display:none}html body .nt1-ai .nt2c-ch .nt1-lo{margin-left:0}
 html body .nt1-s-ai .nt1-lt .nt1-chips{flex:1 1 0;min-width:0}html body .nt1-s-ai .nt1-lt .nt1-lr{align-self:flex-start}   /* NT2c — chips wrap beside the Import icon, never push it to a row of its own */
+html body .nt1-ai .nt2c-lab{flex:none;width:38px}   /* Gains / Loses labels share one column */
 html body .nt2c-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 html body .nt1-lt .btn.ic{position:relative}
 html body .nt1-li .t3{display:flex;gap:8px;align-items:center;margin-top:3px;color:#8A919C;white-space:normal;overflow:visible;text-overflow:clip}html body .nt1-li .t3 .w{color:#9A5B00;font-weight:600}
@@ -30945,7 +30946,7 @@ function nt1HdIdea(){
   const right = my
     ? ((myFindOpen || myQ) ? `<label class="lr5-find nt1-find"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><input type="search" data-nt1-q placeholder="Find in ideas" aria-label="Find in ideas" value="${e(myQ)}" autocomplete="off" spellcheck="false" oninput="nt1FindSet(this.value)"></label>`
         : `<button type="button" class="btn ic" data-nt1-find aria-label="Find" title="Find" onclick="nt1FindOpen()">⌕</button>`)
-    : `<button type="button" class="btn ic lr5-imp" data-idea-import-top data-nt1-import onclick="ideaImportOpen()" title="Import JSON (idea@1 / trade@1)" aria-label="Import JSON"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg><span class="nt2c-sr">Import JSON</span></button>`;
+    : `<button type="button" class="btn ic lr5-imp" data-idea-import-top data-nt1-import onclick="ideaImportOpen()" title="Import JSON" aria-label="Import JSON"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 8.5l5-5 5 5M5 20h14"/></svg><span class="nt2c-sr">Import JSON</span></button>`;
   /* NT1c — chips + Find + Idea / Import JSON live in the top row of the list card (WatchIdeasFull.html) · the page header keeps only the segments → it never wraps */
   return {mid:seg, right:my ? `<button type="button" class="btn pri nt1-new" data-nt1-new onclick="nt1SheetOpen({})">+ Idea</button>` : '', top:`<div class="nt1-lt" data-nt1-lt><div class="nt1-chips" role="group" aria-label="Filter" data-nt1-chips>${chips}${bt}</div><span class="nt1-lsp"></span><span class="nt1-lr" data-nt1-ltools>${right}</span></div>`};
 }
@@ -31496,17 +31497,24 @@ function nt1bOpenCount(){
   return n;
 }
 function nt1bIsDueMy(m){ return !!nt1bDueMy(m, thaiToday()); }
+function nt2cWatchHtml(wat){
+  const e = escHtml;
+  const wrow = x=>`<div class="nt1b-it nt2c-w" data-nt2c-watch="${e(x.key)}" data-nt2c-kind="${x.kind}">
+    <span class="lr-tag lr2-tg watch" data-nt1b-tag title="${e(x.tag)}">${e(x.tag).replace(/ /g, '\u00a0')}</span><span class="nt1b-tt"><b class="t">${e(x.title)}</b></span>
+    <button type="button" class="nt1b-btn" data-nt1b-btn onclick="${x.btn[1]}">${e(x.btn[0])}</button><span class="n" data-nt1b-next><span data-nt1b-sub>${e(x.sub)}</span> <span class="pill ${x.cls} nt1b-pill" data-nt1b-pill>${e(x.pill)}</span></span></div>`;
+  return wat.length ? `<div class="nt2c-wl" data-nt2c-wlabel>WATCHING</div>${wat.map(wrow).join('')}` : '';
+}
 /* ── Today › Ideas card ── */
 function nt1bTodayHtml(){
   let L = [], open = 0; try{ L = nt1bDueAll(); open = nt1bOpenCount(); }catch(e){ console.warn('nt1b due:', e); }
   const e = escHtml, all = `<button type="button" class="nt1b-all" data-nt1b-all onclick="nt1bAll()">All ›</button>`;
-  if(!L.length) return `<section class="lr2-todo nt1b-card" data-nt1b-ideas data-nt1b-state="none" aria-label="Ideas"><div class="lr2-th"><b>Ideas</b><span class="nt1b-no" data-nt1b-none>· none due · ${open} open</span><span class="sp"></span>${all}</div></section>`;
+  if(!L.length){
+    let w0 = []; try{ w0 = nt2cWatching(NT1B_MAXROWS); }catch(er){ console.warn('nt2c watching:', er); }
+    return `<section class="lr2-todo nt1b-card" data-nt1b-ideas data-nt1b-state="none" aria-label="Ideas"><div class="lr2-th"><b>Ideas</b><span class="nt1b-no" data-nt1b-none>· none due · ${open} open</span><span class="sp"></span>${all}</div>${nt2cWatchHtml(w0)}</section>`;   /* NT2c — nothing due still fills to 3 with WATCHING */
+  }
   const vis = L.slice(0, NT1B_MAXROWS), cur = vis.find(x=>x.key === nt1bSel) || vis[0];
   let wat = []; try{ wat = nt2cWatching(NT1B_MAXROWS - vis.length); }catch(er){ console.warn('nt2c watching:', er); }
-  const wrow = x=>`<div class="nt1b-it nt2c-w" data-nt2c-watch="${e(x.key)}" data-nt2c-kind="${x.kind}">
-    <span class="lr-tag lr2-tg watch" data-nt1b-tag title="${e(x.tag)}">${e(x.tag).replace(/ /g, '\u00a0')}</span><span class="nt1b-tt"><b class="t">${e(x.title)}</b></span>
-    <button type="button" class="nt1b-btn" data-nt1b-btn onclick="${x.btn[1]}">${e(x.btn[0])}</button><span class="n" data-nt1b-next><span data-nt1b-sub>${e(x.sub)}</span> <span class="pill ${x.cls} nt1b-pill" data-nt1b-pill>${e(x.pill)}</span></span></div>`;
-  const watHtml = wat.length ? `<div class="nt2c-wl" data-nt2c-wlabel>WATCHING</div>${wat.map(wrow).join('')}` : '';
+  const watHtml = nt2cWatchHtml(wat);
   const row = x=>`<div class="nt1b-it" data-nt1b-it="${e(x.key)}" data-nt1b-kind="${x.kind}" data-nt1b-rank="${x.rank}" onmouseenter="nt1bSel='${e(x.key)}'" onfocusin="nt1bSel='${e(x.key)}'" oncontextmenu="return nt1bMenuOpen('${e(x.key)}', event)" ontouchstart="nt1bLong('${e(x.key)}')" ontouchend="nt1bLongX()" ontouchmove="nt1bLongX()">
     <span class="lr-tag lr2-tg watch" data-nt1b-tag title="${e(x.tag)}">${e(x.tag).replace(/ /g, '\u00a0')}</span><span class="nt1b-tt"><b class="t">${e(x.title)}</b><button type="button" class="nt1b-dots nt1b-rd" data-nt1b-rowdots aria-label="Snooze, done, drop" aria-haspopup="menu" onclick="event.stopPropagation();nt1bMenuOpen('${e(x.key)}')">⋯</button></span>
     <button type="button" class="nt1b-btn" data-nt1b-btn onclick="${x.btn[1]}">${e(x.btn[0])}</button><span class="n" data-nt1b-next><span data-nt1b-sub>${e(x.sub)}</span> <span class="pill ${x.cls} nt1b-pill" data-nt1b-pill>${e(x.pill)}</span></span></div>`;
@@ -31795,15 +31803,15 @@ function nt1AiRowHtml(v){
   let nx = '', what = '', l3 = '';
   if(trade){
     nx = v.exp && st.key !== 'parked' ? 'until ' + wlThDate(v.exp) : ''; what = v.one || '';
-    const a = ideaS(v.me.asset_hint) || ideaS(v.ai.asset_hint); l3 = `<span class="nmu">Asset</span>${a ? `<span class="nt1-tk" data-nt1-asset>${e(a)}</span>` : '<span class="nmu">—</span>'}`;
+    const a = ideaS(v.me.asset_hint) || ideaS(v.ai.asset_hint); l3 = a ? `<div class="t3"><span class="nmu nt2c-lab">Asset</span><span class="nt1-tk" data-nt1-asset>${e(a)}</span></div>` : '';
   } else {
     const rc = ideaObj(v.I.recheck); nx = rc && rc.date && st.key !== 'parked' ? 'check ' + wlThDate(rc.date) : '';
     const inn = v.inner, ol = Array.isArray(inn.one_liner) ? inn.one_liner : [], un = ideaObj(v.I.user_notes) || {};
     what = ideaS(inn.change) || (v.status === 'draft' ? ideaS(un.idea) : '') || (ol.length >= 4 ? 'When ' + ol.join(' → ') : '');
     const g = v.cands.filter(c=>c.state !== 'park'), lo = ltArr(v.I.losers).filter(l=>ideaS(l.sym));
     const lst = a=>a.slice(0, 12).map(x=>nt1TkS(x.sym)).join('') + `<span class="nmu nt2c-more-n" data-nt2c-n hidden></span>`;   /* NT2c — chips that do not fit collapse into +n (nt2cAiFit) */
-    const ln = (lab, a, cls)=>`<div class="t3 nt2c-ch${cls}" data-nt2c-ch><span class="nmu">${lab}</span>${a.length ? lst(a) : '<span class="nt1-tk">—</span>'}</div>`;
-    l3 = (g.length || lo.length || v.status !== 'draft') ? ln('Gains', g, '') + ln('Loses', lo, ' nt1-lo') : '';
+    const ln = (lab, a, cls)=>`<div class="t3 nt2c-ch${cls}" data-nt2c-ch><span class="nmu nt2c-lab">${lab}</span>${lst(a)}</div>`;   /* no tickers → no line (never a `—` row) */
+    l3 = (g.length ? ln('Gains', g, '') : '') + (lo.length ? ln('Loses', lo, ' nt1-lo') : '');
   }
   return `<div class="nt1-li nt1-ai${ideaSel === v.id ? ' on' : ''}${st.key === 'parked' ? ' faded' : ''}${trade ? ' trdR' : ''}" data-idea="${e(v.id)}"${trade ? ` data-trade="${e(v.id)}"` : ''} tabindex="-1" onclick="ideaOpen(this.dataset.idea)">
     <div class="t1"><i class="ideaDot ${dot}" data-idea-dot="${dot}"${trade ? ` data-trade-dot="${dot}"` : ''} hidden></i><span class="ntyp" data-nt1-type="${trade ? 'trade' : 'theme'}">${trade ? 'TRADE' : 'THEME'}</span><b class="ideaRN">${e(title)}</b></div>
