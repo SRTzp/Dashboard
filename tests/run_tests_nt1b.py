@@ -63,38 +63,22 @@ def mkmy(i, subj, title, created, check_on=None, **x):
 
 
 # ───────────────────────────────────────────── sheet · fields · defaults
-def part_sheet(pw, w, h):
+def part_sheet(pw, w, h):   # NT2: the sheet lost Next step / Alert level / More notes (see run_tests_nt2.py for the Scenarios sheet) — what is left here is the check-date + validation behaviour that did not change
     tag = "[%s]" % w
     b, page, pe = N.open_nt1(pw, w, h, my_docs=False, notes=False)
     try:
         t0 = td(page)
         check(f"{tag} S trading-day maths: Thu +3 = Tue · Fri +3 = Wed · Sat +1 = Mon", js(page, "()=>[nt1bTD('2026-11-19', 3), nt1bTD('2026-11-20', 3), nt1bTD('2026-11-21', 1)]") == ["2026-11-24", "2026-11-25", "2026-11-23"])
         T.to_my(page); js(page, "()=>nt1SheetOpen({})"); page.wait_for_timeout(250)
-        g = js(page, "()=>{ const q = s=>document.querySelector(s); const n = q('[data-nt1b-next-in]'), c = q('#nt1fCheck'), l = q('#nt1fLevel'), sv = q('[data-nt1-save]'), sec = q('.nt1d-sec');"
-                     " return {sec:!!sec, nmax:n && n.maxLength, check:c && c.value, lvType:l && l.type, lvVis:!!(l && l.offsetParent), lastVis:!!q('[data-nt1d-lastwrap]').offsetParent}; }")
-        check(f"{tag} S New idea sheet: FOLLOW-UP section (Next step · Check again on · Alert level · Last price)", g["sec"] and g["lvVis"] and g["lvType"] == "number", g)   # NT1d: replaces the green group
-        check(f"{tag} S Next step ≤ 120 chars (optional)", g["nmax"] == 120)
+        g = js(page, "()=>{ const q = s=>document.querySelector(s); const c = q('#nt1fCheck'); return {check:c && c.value, next:!!q('[data-nt1b-next-in]'), blk:!!q('[data-nt1s-blk]')}; }")
+        check(f"{tag} S New idea sheet (NT2): Scenarios block + Check again on · no Next step field", g["blk"] and not g["next"], g)
         check(f"{tag} S Check again on is pre-filled +3 trading days (not empty)", g["check"] == js(page, "()=>nt1bTD(thaiToday(), 3)") and g["check"] > t0, g)
-        for subj, vis in (("stock:AVGO", False), ("sat:XAU", True), ("plan:plan", True), ("market:TH", True), ("tag:", True)):
-            page.select_option("#nt1fSubj", subj); page.wait_for_timeout(60)
-            check(f"{tag} S Alert level shown for every subject; Last price hidden only for a stock: {subj} → {vis}", js(page, VIS, "[data-nt1d-lastwrap]") == vis and js(page, VIS, "#nt1fLevel"))
-        page.select_option("#nt1fSubj", "stock:AVGO")
-        # validation
-        page.evaluate("()=>{ document.querySelector('[data-nt1d-more]').open = true; }")
-        page.fill("#nt1fTitle", "AVGO breakout"); page.fill("#nt1f-tech", "tight base"); page.fill("#nt1fCheck", ""); page.fill("#nt1fLevel", "-4"); page.click("[data-nt1-save]"); page.wait_for_timeout(120)
-        check(f"{tag} S level must be above 0", "level" in (js(page, TXT, "#nt1Err") or "").lower(), js(page, TXT, "#nt1Err"))
-        page.fill("#nt1fLevel", "190"); page.fill("#nt1fNext", "x" * 150); ln = js(page, "()=>document.getElementById('nt1fNext').value.length")
-        check(f"{tag} S next step typed past 120 is cut at 120", ln == 120, ln)
-        page.fill("#nt1fCheck", add(t0, 5)); page.fill("#nt1fNext", "Close above 190 on volume → plan Momentum"); page.click("[data-nt1-save]"); page.wait_for_timeout(600)
+        page.select_option("#nt1fSubj", "stock:AVGO"); page.fill("#nt1fTitle", "AVGO breakout"); page.fill("#nt1fCheck", add(t0, 5))
+        page.click('[data-nt1s-r="0"] [data-nt1s-kind="breakout"]'); page.fill('[data-nt1s-r="0"] [data-nt1s-f="level"]', "-4"); page.click("[data-nt1-save]"); page.wait_for_timeout(300)
+        check(f"{tag} S a scenario level must be above 0", "level" in (js(page, TXT, "#nt1Err") or "").lower(), js(page, TXT, "#nt1Err"))
+        page.fill('[data-nt1s-r="0"] [data-nt1s-f="level"]', "190"); page.click("[data-nt1-save]"); page.wait_for_timeout(600)
         nid = js(page, "()=>mySel"); d = js(page, DOC, nid)
-        check(f"{tag} S saved: next · level · checkOn · snoozeTo null · planId null · dropped false", d["next"] == "Close above 190 on volume → plan Momentum" and d["level"] == 190 and d["checkOn"] == add(t0, 5) and d["snoozeTo"] is None and d["planId"] is None and d["dropped"] is False, d)
-        # NT1d: the level is stored for any subject (a market idea too)
-        js(page, "()=>nt1SheetOpen({})"); page.wait_for_timeout(200)
-        page.select_option("#nt1fSubj", "market:US"); page.fill("#nt1fLevel", "55")
-        page.fill("#nt1fTitle", "Market idea"); page.click("[data-nt1-save]"); page.wait_for_timeout(500)
-        d2 = js(page, DOC, js(page, "()=>mySel"))
-        check(f"{tag} S level is kept for a market idea (NT1d) · check date defaults to +3 trading days", d2["level"] == 55 and d2["checkOn"] == js(page, "()=>nt1bTD(thaiToday(), 3)"), d2)
-        # old idea without a check date: computed, not written
+        check(f"{tag} S saved: scenarios · checkOn · snoozeTo null · planId null · dropped false", d["scenarios"][0]["level"] == 190 and d["checkOn"] == add(t0, 5) and d["snoozeTo"] is None and d["planId"] is None and d["dropped"] is False, d)
         seed_my(page, {"old1": mkmy(4, ("stock", "AAPL"), "Old idea", add(t0, -5))})
         m = js(page, "()=>{ const m = myList.find(x=>x.id==='old1'); return [m.checkOn, nt1bEff(m), nt1bTD(nt1DayOf(m), 3)]; }")
         check(f"{tag} S old idea without a check date: effective = created + 3 trading days (computed)", m[0] is None and m[1] == m[2], m)
@@ -116,8 +100,8 @@ def part_today(pw, w, h):
         t0 = td(page); wide = w >= 900
         quiet_fixture_ai(page)
         seed_my(page, {
-            "near": mkmy(1, ("stock", "AVGO"), "Breakout over 190", add(t0, -1), add(t0, 6), next="Close above 190 on volume", level=102),          # 2.0% from the close 100 → near
-            "far": mkmy(2, ("stock", "AAPL"), "Far from level", add(t0, -1), add(t0, 6), next="n/a", level=104),                                     # 4% → not near, not due
+            "near": mkmy(1, ("stock", "AVGO"), "Breakout over 190", add(t0, -1), add(t0, 6), next="Close above 190 on volume", level=102, levelDir="up"),          # 2.0% from the close 100 → near
+            "far": mkmy(2, ("stock", "AAPL"), "Far from level", add(t0, -1), add(t0, 6), next="n/a", level=104, levelDir="up"),                                     # 4% → not near, not due
             "today": mkmy(3, ("market", "US"), "Risk-off until CPI", add(t0, -2), t0, next="Read CPI → still bear?", view="bear"),
             "late2": mkmy(4, ("sat", "XAU"), "Range before CPI", add(t0, -4), add(t0, -2), next="Wait for the break"),
             "late5": mkmy(5, ("market", "TH"), "SET below 200-day", add(t0, -9), add(t0, -5), next="Check the 200-day"),
@@ -144,12 +128,12 @@ def part_today(pw, w, h):
         check(f"{tag} T `n due` is amber", dc not in ("rgb(20, 22, 26)",) and dc.startswith(("rgb(169, 110, 6)", "rgb(154, 91, 0)")), dc)
         check(f"{tag} T open count = My ideas not reviewed / dropped + AI not parked", n_open == 7 + 5, n_open)   # near far today late2 late5 snz fut (7) + ai-need + ai-fut + 2 quiet fixture themes + the fixture trade idea
         i1 = js(page, INFO, "my:near")
-        check(f"{tag} T row 1: subject tag · title · blue `2.0% to level` · one button `Make plan ›` · `Next: …` under it", i1 == {"tag": "AVGO", "title": "Breakout over 190", "pill": "2.0% to level", "cls": i1["cls"], "btn": ["Make plan ›"], "next": "Alert 102"} and "p-b" in i1["cls"], i1)
+        check(f"{tag} T row 1: subject tag · title · blue `2.0% to A` · one button `Open ›` (NT2: Make plan › only once a scenario has fired) · the scenario line under it", i1 == {"tag": "AVGO", "title": "Breakout over 190", "pill": "2.0% to A", "cls": i1["cls"], "btn": ["Open ›"], "next": "A breakout 102"} and "p-b" in i1["cls"], i1)
         i2 = js(page, INFO, "my:late2")
         check(f"{tag} T overdue: amber `2 days late` · Open ›", i2["pill"] == "2 days late" and "p-a" in i2["cls"] and i2["btn"] == ["Open ›"] and i2["tag"] == "XAU", i2)
         i3 = js(page, INFO, "my:late5")
-        check(f"{tag} T 5 days late · next step shown", i3["pill"] == "5 days late" and i3["next"] == "Next: Check the 200-day", i3)
-        check(f"{tag} T `to level` wording (never `away`)", "to level" in card and "away" not in card, card)
+        check(f"{tag} T 5 days late · a Draft shows `Draft · no scenario yet` (NT2: no Next step line)", i3["pill"] == "5 days late" and i3["next"] == "Draft · no scenario yet", i3)
+        check(f"{tag} T NT2 wording `2.0% to A` (never `away`)", "to A" in card and "away" not in card, card)
         # reasons: today + AI
         js(page, "()=>{ ln4TodoAll = true; }")
         js(page, "()=>nt1bAct('my:near','snooze7')"); page.wait_for_timeout(300)
@@ -255,11 +239,11 @@ def part_near_edges(pw):
     b, page, pe = N.open_nt1(pw, 1440, 900, my_docs=False, notes=False)
     try:
         t0 = td(page); quiet_fixture_ai(page)
-        seed_my(page, {"e3": mkmy(1, ("stock", "AVGO"), "Within 3%", add(t0, -1), add(t0, 6), level=103), "e4": mkmy(2, ("stock", "AAPL"), "Over 3%", add(t0, -1), add(t0, 6), level=104),
-                       "sat": mkmy(3, ("sat", "XAU"), "Sat level", add(t0, -1), add(t0, 6), level=2600), "dated": mkmy(4, ("stock", "COST"), "Near and late", add(t0, -1), add(t0, -3), level=101)})
+        seed_my(page, {"e3": mkmy(1, ("stock", "AVGO"), "Within 3%", add(t0, -1), add(t0, 6), level=103, levelDir="up"), "e4": mkmy(2, ("stock", "AAPL"), "Over 3%", add(t0, -1), add(t0, 6), level=104, levelDir="up"),
+                       "sat": mkmy(3, ("sat", "XAU"), "Sat level", add(t0, -1), add(t0, 6), level=2600, levelDir="up"), "dated": mkmy(4, ("stock", "COST"), "Near and late", add(t0, -1), add(t0, -3), level=101, levelDir="up")})
         for s in ("AVGO", "AAPL", "COST"): px(page, s, 100.0)
         due = js(page, "()=>nt1bDueAll().map(x=>[x.key, x.pill])")
-        check(f"{tag} T near level = within 3%: 2.9% yes · 4% no · Sat (no price) no · a late idea near its level shows `to level` first", sorted(due) == [["my:dated", "1.0% to level"], ["my:e3", "2.9% to level"]], due)
+        check(f"{tag} T near level = within 3% of the price: 3.0% yes (NT2 measures distance from the price) · 4% no · Sat (no price) no · a late idea near its level shows `to A` first", sorted(due) == [["my:dated", "1.0% to A"], ["my:e3", "3.0% to A"]], due)
         js(page, "()=>{ const m = myList.find(x=>x.id==='dated'); m.subject.type = 'sat'; todayRefresh(true); }"); page.wait_for_timeout(200)
         d2 = js(page, "()=>nt1bDueAll().map(x=>[x.key, x.pill, x.btn[0]])")
         check(f"{tag} T `Make plan ›` only for a stock (a Sat idea near its date shows Open ›)", ["my:dated", "3 days late", "Open ›"] in d2, d2)
@@ -275,7 +259,7 @@ def part_watch(pw, w, h):
     try:
         t0 = td(page); quiet_fixture_ai(page)
         seed_my(page, {
-            "avgo": mkmy(1, ("stock", "AVGO"), "Breakout over 190 with volume", add(t0, -1), add(t0, 6), next="Close above 190 on volume → plan Momentum", level=102, view="bull"),
+            "avgo": mkmy(1, ("stock", "AVGO"), "Breakout over 190 with volume", add(t0, -1), add(t0, 6), next="Close above 190 on volume → plan Momentum", level=102, levelDir="up", view="bull"),
             "usm": mkmy(2, ("market", "US"), "Risk-off until CPI cools", add(t0, -2), t0, next="Read CPI tonight → still bear?", view="bear"),
             "nvda": mkmy(3, ("stock", "AAPL"), "Pullback = add zone", add(t0, -5), add(t0, 9), next="Wait for the add", planId="aapl"),
             "plan": mkmy(4, ("stock", "AVGO"), "Plan linked, no fill", add(t0, -6), add(t0, 8), planId="avgo"),
@@ -286,8 +270,8 @@ def part_watch(pw, w, h):
         px(page, "AVGO", 100.0)
         T.to_my(page, "avgo"); page.wait_for_timeout(300)
         row = js(page, "()=>{ const r = document.querySelector('[data-nt1-my=\"avgo\"]'); return {nx:r.querySelector('[data-nt1b-nx]').innerText.replace(/\\s+/g,' '), trail:!!r.querySelector('[data-nt1b-trail]'), pill:(r.querySelector('[data-nt1b-pill]')||{}).innerText}; }")
-        check(f"{tag} W list row (NT1d v6): line 2 = the Next step text in full · no trail in the row (it moved to the detail footer)", row["nx"] == "Close above 190 on volume → plan Momentum" and not row["trail"], row)
-        check(f"{tag} W near its level: `2.0% to level` pill on the row", row["pill"] == "2.0% to level", row)
+        check(f"{tag} W list row (NT2): line 2 = the scenarios in full · no trail in the row (it moved to the detail footer)", row["nx"] == "A breakout 102" and not row["trail"], row)
+        check(f"{tag} W near its level: `2.0% to A` pill on the row", row["pill"] == "2.0% to A", row)
         def trail(i):
             T.to_my(page, i); page.wait_for_timeout(120)
             return js(page, "()=>{ const t = document.querySelector('[data-nt1-foot] [data-nt1b-trail]'); return t ? [t.innerText.replace(/\\s+/g,' '), t.querySelector('[data-nt1b-step=plan]') ? t.querySelector('[data-nt1b-step=plan]').classList.contains('on') : null, t.querySelector('[data-nt1b-step=hold]') ? t.querySelector('[data-nt1b-step=hold]').classList.contains('on') : null] : null; }")
@@ -320,8 +304,8 @@ def part_watch(pw, w, h):
         # detail: Next step block above the chart
         T.to_my(page, "avgo"); page.wait_for_timeout(250)
         blk = js(page, "()=>{ const d = document.querySelector('[data-nt1-detail]'); const b = d.querySelector('[data-nt1b-block]'); return {at:!!b, txt:b && b.innerText.replace(/\\s+/g,' '), plan:b && (b.querySelector('[data-nt1b-mkplan]')||{}).className, trail:!!d.querySelector('[data-nt1-foot] [data-nt1b-trail]')}; }")
-        check(f"{tag} W detail (NT1d v6): green Next step card with check date · Alert · now · `% to level` · ruler · trail in the footer", blk["at"] and "Close above 190 on volume → plan Momentum" in blk["txt"] and "Alert 102" in blk["txt"] and "Now 100" in blk["txt"] and "2.0% to level" in blk["txt"] and blk["trail"], blk)
-        check(f"{tag} W detail: `Make plan ›` is there but plain — the watching card has no dark button (NT1d v6)", "Make plan ›" in blk["txt"] and "pri" not in (blk["plan"] or ""), blk)
+        check(f"{tag} W detail (NT2): green Scenarios card with check date · ruler `A 102` · `now 100` · `2.0% away` · trail in the footer", blk["at"] and "SCENARIOS · WATCHING" in blk["txt"] and "A 102" in blk["txt"] and "now 100" in blk["txt"] and "2.0% away" in blk["txt"] and blk["trail"], blk)
+        check(f"{tag} W detail (NT2): the watching card has no dark button and no `Make plan ›` until a scenario fires", "pri" not in (blk["plan"] or "") and "Make plan" not in blk["txt"], blk)
         js(page, "()=>document.querySelector('[data-nt1b-d-snooze]').click()"); page.wait_for_timeout(400)
         check(f"{tag} W detail Snooze 3 days writes snoozeTo", js(page, DOC, "avgo")["snoozeTo"] == add(t0, 3))
         js(page, "()=>nt1bUndoDo()"); page.wait_for_timeout(300)
@@ -390,7 +374,7 @@ def lrf_page(pw, w, h, working=True, extra_cards=None):
 
 def seed_today_ideas(page):
     t0 = td(page)
-    seed_my(page, {"a": mkmy(1, ("stock", "AVGO"), "Breakout over 190", add(t0, -1), add(t0, 6), next="Close above 190 on volume", level=102),
+    seed_my(page, {"a": mkmy(1, ("stock", "AVGO"), "Breakout over 190", add(t0, -1), add(t0, 6), next="Close above 190 on volume", level=102, levelDir="up"),
                    "b": mkmy(2, ("market", "US"), "Risk-off until CPI", add(t0, -2), t0, next="Read CPI → still bear?", view="bear"),
                    "c": mkmy(3, ("sat", "XAU"), "Range before CPI", add(t0, -4), add(t0, -2), next="Wait for the break")})
     seed_ai(page, "ai-1", "AI power: grid", "need_evidence", recheck=t0)
