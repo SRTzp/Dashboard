@@ -43,8 +43,9 @@ def fill_sheet(page, subj="market:US", title="T", tech="x", **kw):
     page.select_option("#nt1fSubj", subj)
     if subj == "tag:": page.fill("#nt1fTag", kw.get("tag", "mytag"))
     page.fill("#nt1fTitle", title)
-    if tech is not None: page.fill("#nt1f-tech", tech)
-    for k, sel in (("plan", "#nt1f-plan"), ("chart", "#nt1fChart"), ("check", "#nt1fCheck")):
+    if tech is not None:
+        page.evaluate("()=>{ document.querySelector('[data-nt1d-more]').open = true; }"); page.fill("#nt1f-tech", tech)   # NT1d: notes live in the “More notes” fold
+    for k, sel in (("chart", "#nt1fChart"), ("check", "#nt1fCheck")):
         if kw.get(k) is not None: page.fill(sel, kw[k])
     if kw.get("view"): page.click('[data-nt1-fv="%s"]' % kw["view"])
     if kw.get("built"): page.select_option("#nt1fBuilt", kw["built"])
@@ -164,8 +165,8 @@ def run_desktop(pw, w, h):
         # ================= F · My ideas
         to_my(page)
         check(f"{tag} F My ideas list newest first (incl. old notes)", js(page, "()=>[...document.querySelectorAll('[data-nt1-my]')].map(r=>r.dataset.nt1My).slice(0,3)") == ["m1", "m2", "m3"], js(page, "()=>[...document.querySelectorAll('[data-nt1-my]')].map(r=>r.dataset.nt1My)"))
-        check(f"{tag} F row: subject tag · title · view chip · date · summary (Plan text first)", "US market Rally narrowing to AI names Neutral 18 Nov · plan: Leaders only, half size" == js(page, ROW12, "m1"), js(page, ROW12, "m1"))   # NT1b adds Next · trail lines below (.t3 / trail)
-        check(f"{tag} F row summary: first filled angle when there is no plan", js(page, ROW12, "m2").endswith("Gap above 182 held 3 days"))
+        check(f"{tag} F row (NT1d v6): subject tag · title · view chip · Next step text · date — no summary of the notes in the row", js(page, ROW12, "m1").startswith("US market Rally narrowing to AI names Neutral Look again") and "Leaders only" not in js(page, ROW12, "m1"), js(page, ROW12, "m1"))
+        check(f"{tag} F row: the long note summary is not repeated in the row (nothing twice)", "Gap above 182" not in js(page, ROW12, "m2"), js(page, ROW12, "m2"))
         check(f"{tag} F list scrolls inside its card (page does not)", js(page, "()=>{ const l = document.querySelector('.nt1-lb'); return l.scrollHeight >= l.clientHeight && document.scrollingElement.scrollHeight <= innerHeight + 1; }"))
         # detail
         d = js(page, "()=>document.querySelector('.nt1-det').innerText.replace(/\\s+/g,' ')")
@@ -209,23 +210,21 @@ def run_desktop(pw, w, h):
         page.click("[data-nt1-save]"); page.wait_for_timeout(100)
         e1 = js(page, TXT, "#nt1Err")
         check(f"{tag} F required: nothing filled → asks for the title", "title" in (e1 or "").lower(), e1)
-        page.fill("#nt1fTitle", "My new idea"); page.click("[data-nt1-save]"); page.wait_for_timeout(100)
-        e2 = js(page, TXT, "#nt1Err")
-        check(f"{tag} F required: title only → at least one angle or the plan", "angle" in (e2 or "").lower(), e2)
+        page.fill("#nt1fTitle", "My new idea")   # NT1d: About + Title are enough to save (angles / plan no longer required)
         page.select_option("#nt1fSubj", "tag:"); page.click("[data-nt1-save]"); page.wait_for_timeout(100)
         check(f"{tag} F required: free tag empty → asked", "tag" in (js(page, TXT, "#nt1Err") or "").lower())
         page.fill("#nt1fTag", "x" * 30); tl = js(page, "()=>document.getElementById('nt1fTag').value.length")
         check(f"{tag} F free tag ≤ 20 chars", tl == 20, tl)
-        page.fill("#nt1fTag", "Copper"); page.fill("#nt1f-plan", "Buy dips"); page.fill("#nt1fChart", "not a link"); page.click("[data-nt1-save]"); page.wait_for_timeout(100)
+        page.fill("#nt1fTag", "Copper"); page.evaluate("()=>{ document.querySelector('[data-nt1d-more]').open = true; }"); page.fill("#nt1f-tech", "Buy dips"); page.fill("#nt1fChart", "not a link"); page.click("[data-nt1-save]"); page.wait_for_timeout(100)
         check(f"{tag} F bad chart text → asked for a web link", "link" in (js(page, TXT, "#nt1Err") or "").lower())
         page.fill("#nt1fChart", "https://www.tradingview.com/x/NeW42/"); page.click('[data-nt1-fv="bear"]')
         pv = js(page, "()=>document.querySelector('#nt1Prev [data-nt1-chart]').dataset.url")
         check(f"{tag} F sheet shows the picture as soon as the link is pasted", pv == "https://s3.tradingview.com/snapshots/n/NeW42.png", pv)
-        lim = js(page, "()=>[...document.querySelectorAll('[data-nt1-fa],#nt1f-plan')].map(e=>e.maxLength).concat([document.getElementById('nt1fTitle').maxLength])")
-        check(f"{tag} F limits: 4 angles ≤ 600 · plan ≤ 600 · title ≤ 80", lim == [600, 600, 600, 600, 600, 80], lim)
+        lim = js(page, "()=>[...document.querySelectorAll('[data-nt1-fa]')].map(e=>e.maxLength).concat([document.getElementById('nt1fTitle').maxLength])")
+        check(f"{tag} F limits: 4 angles ≤ 600 · title ≤ 80", lim == [600, 600, 600, 600, 80], lim)
         page.click("[data-nt1-save]"); page.wait_for_timeout(600)
         nid = js(page, "()=>mySel"); doc = js(page, DOC(0), nid)
-        check(f"{tag} F saved to users/{{uid}}/ideas_my: subject · title · view · chart · plan · review null", doc and doc["subject"] == {"type": "tag", "key": "Copper"} and doc["title"] == "My new idea" and doc["view"] == "bear" and doc["chart"].endswith("NeW42/") and doc["plan"] == "Buy dips" and doc["review"] is None and doc["checkOn"] == "2026-11-24" and doc["builtOn"] is None, doc)   # NT1b: new ideas get +3 trading days
+        check(f"{tag} F saved to users/{{uid}}/ideas_my: subject · title · view · chart · plan · review null", doc and doc["subject"] == {"type": "tag", "key": "Copper"} and doc["title"] == "My new idea" and doc["view"] == "bear" and doc["chart"].endswith("NeW42/") and doc["ang"]["tech"] == "Buy dips" and doc["plan"] == "" and doc["review"] is None and doc["checkOn"] == "2026-11-24" and doc["builtOn"] is None, doc)   # NT1b: new ideas get +3 trading days
         check(f"{tag} F new idea is first (newest) and selected", js(page, "()=>document.querySelector('[data-nt1-my]').dataset.nt1My") == nid)
         # edit
         page.click("[data-nt1-edit]"); page.wait_for_timeout(150); page.fill("#nt1fTitle", "My edited idea"); page.click("[data-nt1-save]"); page.wait_for_timeout(500)
@@ -246,7 +245,7 @@ def run_desktop(pw, w, h):
         check(f"{tag} F Undo restores it", js(page, DOC(0), nid) is not None and js(page, "(i)=>!!document.querySelector('[data-nt1-my=\"'+i+'\"]')", nid))
         page.click("[data-nt1-menu]"); page.click("[data-nt1-copy]"); page.wait_for_timeout(300)
         ct = js(page, "()=>window.__nt1LastCopy")
-        check(f"{tag} F ⋯ › Copy text", "My edited idea" in ct and "Plan: Buy dips" in ct, ct)
+        check(f"{tag} F ⋯ › Copy text", "My edited idea" in ct and "Technical: Buy dips" in ct, ct)
         # built on both ways
         js(page, "()=>nt1MySelect('m1')"); page.wait_for_timeout(150)
         js(page, "()=>document.querySelector('[data-nt1-built-link]').click()"); page.wait_for_timeout(250)
