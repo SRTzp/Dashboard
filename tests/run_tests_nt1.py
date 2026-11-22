@@ -110,7 +110,7 @@ def run_desktop(pw, w, h):
         check(f"{tag} C status in plain words with evidence count", "Needs evidence · 2/4" in by["nt1-idea-3"]["t"] or "Needs evidence ·" in by["nt1-idea-3"]["t"], by["nt1-idea-3"]["t"])
         check(f"{tag} C no old wording (Waiting for evidence / Ready to hand off / Chain)", not any(s in js(page, "()=>document.body.innerText") for s in ("Waiting for evidence", "Ready to hand off")))
         check(f"{tag} C THEME / TRADE tags", "THEME" in by["nt1-idea-3"]["t"] and "TRADE" in by["gold-cpi"]["t"])
-        check(f"{tag} C Gains tickers max 3 + “+n”, Loses tickers", "Gains" in by["nt1-idea-3"]["t"] and "+1" in by["nt1-idea-3"]["t"] and "Loses ZZZZ" in by["nt1-idea-3"]["t"], by["nt1-idea-3"]["t"])
+        check(f"{tag} C Gains tickers fit the row (NT2c: chips that do not fit collapse into “+n”), Loses tickers", "Gains" in by["nt1-idea-3"]["t"] and ("+1" in by["nt1-idea-3"]["t"] or "VST" in by["nt1-idea-3"]["t"]) and "Loses ZZZZ" in by["nt1-idea-3"]["t"], by["nt1-idea-3"]["t"])
         check(f"{tag} C Gains tickers show RS when known (AVGO)", js(page, "()=>{ const t = document.querySelector('[data-idea=\"nt1-idea-3\"] [data-nt1-tk-s=\"AVGO\"]'); return t ? t.innerText.trim() : ''; }") == "AVGO 64", js(page, "()=>{ const t = document.querySelector('[data-idea=\"nt1-idea-3\"] [data-nt1-tk-s=\"AVGO\"]'); return t ? t.innerText : null; }"))
         check(f"{tag} C trade idea shows Asset XAU", "Asset XAU" in by["gold-cpi"]["t"], by["gold-cpi"]["t"])
         check(f"{tag} C Parked is in All, faded", by["nt1-idea-4"]["faded"] and "Parked" in by["nt1-idea-4"]["t"])
