@@ -5041,9 +5041,9 @@ html body .nt1-lt .btn.ic{width:34px;height:34px;padding:0}
 }
 /* NT2 — pills · scenario rows · reasons grid · edit sheet · resize handle */
 .nt1-pl{display:inline-block;font:600 11.5px/1.5 var(--lr-sans,Inter,sans-serif);border-radius:999px;padding:1px 8px;white-space:nowrap;flex:none}
-.nt1-pl.a{color:#9A5B00;background:#FFF4E0}.nt1-pl.b{color:#3B4FC4;background:#E8ECFB}.nt1-pl.g{color:#0E6B4C;background:#E6F4EE}.nt1-pl.n{color:#5F6672;background:#F0F1F4}
+.nt1-pl.pa{color:#9A5B00;background:#FFF4E0}.nt1-pl.pb{color:#3B4FC4;background:#E8ECFB}.nt1-pl.pg{color:#0E6B4C;background:#E6F4EE}.nt1-pl.pn{color:#5F6672;background:#F0F1F4}
 .nt1-sl{color:#3B4FC4;font-weight:700}
-.nt1b-next .nt1-pl.a{background:#fff;box-shadow:0 0 0 1px #EBD3A0}
+
 .nt1b-next .nx{margin:6px 0 2px}
 .nt1b-next .hd{flex-wrap:wrap;row-gap:2px}.nt1b-next .hd .g{white-space:nowrap}.nt1b-next .hd .d{margin-left:auto}
 .nt1s-rows{margin-top:6px}
@@ -31530,7 +31530,7 @@ function nt1bStaleDays(m){
 function nt1bKeep(id){ const m = myList.find(x=>x.id === id); if(!m) return; nt1bPatchMy(m, {snoozeTo:posAddDaysISO(thaiToday(), 7)}); nt1bToast('Kept: check in 1 week'); nt1Refresh(); }
 function nt1bSnoozeMy(id, act){ nt1bAct('my:' + id, act); }
 /* list row extras: line 2 = the scenarios (wraps, never cut) · line 3 = date + ONE status pill */
-const nt1Pl = (cls, t, attr)=>`<span class="nt1-pl ${cls}" ${attr || 'data-nt1b-pill'}>${escHtml(t)}</span>`;
+const nt1Pl = (cls, t, attr)=>`<span class="nt1-pl p${cls}" ${attr || 'data-nt1b-pill'}>${escHtml(t)}</span>`;
 function nt1bRowExtra(m){
   if(m.old) return '';
   const e = escHtml, today = thaiToday(), scs = nt1Scs(m), side = nt1Side(m), ls = nt1bLevelState(m), eff = nt1bEff(m), st = nt1bStaleDays(m), plan = nt1bInPlan(m);
@@ -31557,7 +31557,7 @@ function nt1bDetailBlock(m){
   const hdr = st === 'plan' ? 'IN PLAN' : st === 'wrong' ? 'IDEA WRONG' + stp(m.invHitAt) : st === 'hit' ? e(nt1HitTx(ls.sc.s, side).toUpperCase()) + stp(ls.sc.s.hitAt) : st === 'none' ? 'SCENARIOS' : 'SCENARIOS · WATCHING';
   const lk = (a, t, x)=>`<button type="button" class="nt1-lnk" ${a} onclick="${x}">${t}</button>`;
   const rows = ls.list.map(x=>{
-    const pill = x.hit ? nt1Pl('a', nt1HitArrow(x.s, side) + ' ' + (x.s.kind === 'pullback' ? 'in zone' : side === 'sell' ? 'broke down' : 'broke out'), 'data-nt1s-pill') : x.dist != null ? nt1Pl('b', x.dist < 0.05 ? 'at level' : nt1DistTx(x.dist) + ' away', 'data-nt1s-pill') : '';
+    const pill = st === 'wrong' ? '' : x.hit && st === 'plan' ? nt1Pl('n', 'reached', 'data-nt1s-pill') : x.hit ? nt1Pl('a', nt1HitArrow(x.s, side) + ' ' + (x.s.kind === 'pullback' ? 'in zone' : side === 'sell' ? 'broke down' : 'broke out'), 'data-nt1s-pill') : x.dist != null ? nt1Pl('b', x.dist < 0.05 ? 'at level' : nt1DistTx(x.dist) + ' away', 'data-nt1s-pill') : '';
     return `<div class="nt1s-sr" data-nt1s-row="${x.id}" data-nt1s-kind="${x.s.kind}"><span class="nt1s-lt">${x.id}</span><span class="nt1s-tx"><b>${x.s.kind === 'pullback' ? 'Pullback' : 'Breakout'}</b>${x.s.note ? ` <span class="m">· ${e(x.s.note)}</span>` : ''}</span>${pill}</div>`;
   }).join('');
   const wrongTx = st === 'wrong' ? `<div class="nx" data-nt1b-next-t>${e(nt1WrongTx(m))}</div>` : '';
