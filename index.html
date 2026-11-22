@@ -5859,6 +5859,40 @@ button.nt1-tk{cursor:pointer}button.nt1-tk:hover{border-color:var(--lr-muted)}
   .nt1-ctx{flex-wrap:wrap}.nt1-ctx .nt1-cln,.nt1-ctx .nt1-cadd{min-height:44px;display:inline-flex;align-items:center}
   .nt1-fold>summary{min-height:48px}
 }
+/* NT2c · phone (≤760px) — status card labels inline · Manage rows wrap · Ideas chips = one scrollable row · short sub-tab labels */
+html body .nt2c-sh{display:none}
+@media (max-width:760px){
+  html body .nt1b-st .nt1b-sr,html body .nt1b-st .line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-height:0;padding:3px 0;min-width:0;max-width:100%}
+  html body .nt1b-st .nt1b-sr>.k,html body .nt1b-st .line>.k{flex:none;display:inline-block;font-size:11px!important;letter-spacing:.08em}
+  html body .nt1b-st .nt1b-sr>.v{display:contents}
+  html body .nt1b-st .nt1b-sr .nt1b-sub{flex:1 1 100%}
+  html body .nt1b-st .line>.m,html body .nt1b-st .line>[data-ln4-macro-t]{flex:1 1 0;min-width:0;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}
+  html body .nt1b-st .line>.rd{margin-left:auto}
+  html body .nt1b-st,html body .nt1b-st *{overflow-wrap:anywhere}
+  html body .nt1b-st .nt1b-wrap{min-width:0;max-width:100%}
+  html body .nt1b-st .ln4-today .r{flex-wrap:wrap;overflow:visible}
+  html body .nt1b-st .ln4-today .ev{white-space:normal}
+  html body .lr2-act .re2-row{flex-wrap:wrap;gap:6px 10px}
+  html body .lr2-act .re2-row .re2-main{flex:1 1 100%;min-width:0}
+  html body .lr2-act .re2-row .num{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  html body .lr2-act .re2-row .l1{flex-wrap:wrap}
+  html body .lr2-todo .lr2-ti .t,html body .lr2-todo .lr2-ti [class*="tx"]{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  html body .lr5 .nt1-lt{flex-wrap:nowrap;align-items:center;gap:6px}
+  html body .lr5 .nt1-lt .nt1-chips{flex:1 1 0;min-width:0;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:0}
+  html body .lr5 .nt1-lt .nt1-chips::-webkit-scrollbar{display:none}
+  html body .lr5 .nt1-lt .nt1-chip{flex:none;white-space:nowrap}
+  html body .lr5 .nt1-lt .nt1-lr{flex:none;margin-left:0;align-self:center}
+  html body .lr5 .nt1-lt .nt1-lsp{display:none}
+  html body .lr5 .nt1-seg2{flex:1 1 100%;width:100%}html body .lr5 .nt1-seg2 button{flex:1 1 0}html body .lr5 .nt1-k{display:none}
+  html body .lr5.open .wlDet.lr5-det.ideaAside .wlDPanel.ideaP.nt1-dp{padding:14px 16px 28px}   /* AI idea / trade detail had no side padding on the phone (text touched the screen edge) */
+  html body .nt1b-st .nt1b-ch{min-height:0;height:auto;line-height:1.25;padding:3px 9px}
+  html body .lr5 .lr5-hd .nt1-new{order:3;margin-left:auto;height:36px;padding:0 12px;background:var(--lr-card,#fff);color:var(--lr-ink,#14161A);border:1px solid var(--lr-line2,#DDE0E5);font-weight:500;min-height:0}   /* + Idea: outline, right end of the title row (like + Add) */
+  html body .lr5 .nt1-dp .nt1-dh{position:relative}
+  html body .lr5 .nt1-dp .nt1-dh .ideaX{position:absolute;top:-4px;right:0;margin:0}   /* AI idea / trade: ✕ in the top-right corner */
+  html body .lr5 .nt1-dp .nt1-dh .ideaX ~ *{}html body .lr5 .nt1-dp .nt1-dh .nt1-dt{padding-right:46px}
+  html body .nt1b-st .nt1b-mood{min-height:0;height:auto;padding:0;align-items:center}html body .nt1b-st .nt1b-mood .pill{display:inline-block;line-height:1.25}
+  html body .lr5 .nt1-seg2 .nt2c-f{display:none}html body .lr5 .nt1-seg2 .nt2c-sh{display:inline}
+}
 </style>
 </head>
 <body>
@@ -28023,7 +28057,7 @@ function lr3ShortWhy(why, it){
   let m = /Weekly Momentum ammunition \((\d+)\)/i.exec(w); if(m) return `MMT weekly limit ${m[1]}/${m[1]}`;
   m = /Weekly (Satellite|Sat)[^(]*\((\d+)\)/i.exec(w); if(m) return `SAT weekly limit ${m[2]}/${m[2]}`;
   m = /^(.*?)(?: — | · |: |\. )/.exec(w); let t = (m ? m[1] : w).replace(/\s*\(.*$/, '').trim();
-  if(t.length > 44) t = t.slice(0, 43).replace(/\s+\S*$/, '') + '…';
+   /* NT2c — never cut with “…”: the line wraps instead */
   return t || 'Blocked';
 }
 let pvMoreOpen = new Set();
@@ -30937,7 +30971,7 @@ const nt1TkS = (sym)=>{ const rs = nt1Rs(sym), e = escHtml; return `<span class=
 /* ── header pieces for Watch › Ideas (called by wl5Header) ── */
 function nt1HdIdea(){
   const e = escHtml, my = nt1Seg === 'my', nAi = (ideaList || []).length + (tradeList || []).length, nMy = myList.length + nt1OldNotes().length;
-  const sg = (k, t, n)=>`<button type="button" role="tab" class="${nt1Seg === k ? 'on' : ''}" aria-selected="${nt1Seg === k}" data-nt1-seg="${k}" onclick="nt1SegSet('${k}')">${t} <span>${n}</span></button>`;
+  const sg = (k, t, n)=>`<button type="button" role="tab" class="${nt1Seg === k ? 'on' : ''}" aria-selected="${nt1Seg === k}" data-nt1-seg="${k}" onclick="nt1SegSet('${k}')">${t === 'AI generated' ? '<span class="nt2c-f" style="color:inherit;font-weight:inherit">AI generated</span><span class="nt2c-sh" style="color:inherit;font-weight:inherit">AI</span>' : t} <span>${n}</span></button>`;
   const seg = `<div class="lr5-seg nt1-seg2" role="tablist" aria-label="Ideas" data-nt1-segs>${sg('ai', 'AI generated', nAi)}${sg('my', 'My ideas', nMy)}</div><span class="nt1-k" data-nt1-kbd>← →</span>`;
   const nDue = myList.filter(nt1bIsDueMy).length;
   const chip = (cls, k, t, on, fn)=>`<button type="button" class="nt1-chip${on ? ' on' : ''}" ${cls}="${k}" aria-pressed="${on}" onclick="${fn}('${k}')">${t}</button>`;
@@ -32539,6 +32573,8 @@ function rs2EditOpen(k){
   const P = rs2Presets(), v = {};
   Object.keys(RS2_RULES).forEach(pk=>{ v[pk] = {}; Object.keys(RS2_RULES[pk]).forEach(f=>{ v[pk][f] = String(P[pk][f]); }); });
   rs2Ed = {k:RS2_RULES[k] ? k : (RS2_RULES[rs2.preset] ? rs2.preset : 'leaders'), v};
+  const menuUp = !!document.querySelector('[data-rs2-pmenu]') || !!rs2.menu;
+  rs2.pmenu = false; rs2.menu = null; if(menuUp){ try{ renderWatchlist(); }catch(er){} }   /* NT2c — the ⋯ menu closes before the sheet opens */
   rs2.pmenu = false; rs2.menu = null; rs2EditDraw(true);
 }
 function rs2EditClose(){ rs2Ed = null; const h = document.getElementById('rs2Edit'); if(h) h.remove(); }
