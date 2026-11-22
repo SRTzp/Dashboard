@@ -19,7 +19,7 @@ DOC = "(i)=>window.firebase.__mockDb.__getDoc(['users','testuid','ideas_my',i])"
 AIDOC = "(i)=>window.firebase.__mockDb.__getDoc(['users','testuid','ideas',i])"
 ROWS = "()=>[...document.querySelectorAll('[data-nt1b-it]')].map(r=>r.dataset.nt1bIt)"
 ROWTX = "(k)=>{ const r = document.querySelector('[data-nt1b-it=\"' + k + '\"]'); return r ? r.innerText.replace(/\\s+/g,' ').trim() : null; }"
-INFO = "(k)=>{ const r = document.querySelector('[data-nt1b-it=\"' + k + '\"]'); if(!r) return null; const p = r.querySelector('[data-nt1b-pill]'); return {tag:r.querySelector('[data-nt1b-tag]').innerText.trim(), title:r.querySelector('.t').innerText.trim(), pill:p.innerText.trim(), cls:p.className, btn:[...r.querySelectorAll('[data-nt1b-btn]')].map(b=>b.innerText.trim()), next:r.querySelector('[data-nt1b-next]').innerText.trim()}; }"
+INFO = "(k)=>{ const r = document.querySelector('[data-nt1b-it=\"' + k + '\"]'); if(!r) return null; const p = r.querySelector('[data-nt1b-pill]'); return {tag:r.querySelector('[data-nt1b-tag]').innerText.trim(), title:r.querySelector('.t').innerText.trim(), pill:p.innerText.trim(), cls:p.className, btn:[...r.querySelectorAll('[data-nt1b-btn]')].map(b=>b.innerText.trim()), next:r.querySelector('[data-nt1b-sub]').innerText.trim()}; }"
 
 
 def add(iso, n): return (datetime.date.fromisoformat(iso) + datetime.timedelta(days=n)).isoformat()
@@ -144,7 +144,7 @@ def part_today(pw, w, h):
         check(f"{tag} T `n due` is amber", dc not in ("rgb(20, 22, 26)",) and dc.startswith(("rgb(169, 110, 6)", "rgb(154, 91, 0)")), dc)
         check(f"{tag} T open count = My ideas not reviewed / dropped + AI not parked", n_open == 7 + 5, n_open)   # near far today late2 late5 snz fut (7) + ai-need + ai-fut + 2 quiet fixture themes + the fixture trade idea
         i1 = js(page, INFO, "my:near")
-        check(f"{tag} T row 1: subject tag · title · blue `2.0% to level` · one button `Make plan ›` · `Next: …` under it", i1 == {"tag": "AVGO", "title": "Breakout over 190", "pill": "2.0% to level", "cls": i1["cls"], "btn": ["Make plan ›"], "next": "Next: Close above 190 on volume"} and "p-b" in i1["cls"], i1)
+        check(f"{tag} T row 1: subject tag · title · blue `2.0% to level` · one button `Make plan ›` · `Next: …` under it", i1 == {"tag": "AVGO", "title": "Breakout over 190", "pill": "2.0% to level", "cls": i1["cls"], "btn": ["Make plan ›"], "next": "Alert 102"} and "p-b" in i1["cls"], i1)
         i2 = js(page, INFO, "my:late2")
         check(f"{tag} T overdue: amber `2 days late` · Open ›", i2["pill"] == "2 days late" and "p-a" in i2["cls"] and i2["btn"] == ["Open ›"] and i2["tag"] == "XAU", i2)
         i3 = js(page, INFO, "my:late5")
@@ -285,16 +285,17 @@ def part_watch(pw, w, h):
         })
         px(page, "AVGO", 100.0)
         T.to_my(page, "avgo"); page.wait_for_timeout(300)
-        row = js(page, "()=>{ const r = document.querySelector('[data-nt1-my=\"avgo\"]'); return {nx:r.querySelector('[data-nt1b-nx]').innerText.replace(/\\s+/g,' '), trail:r.querySelector('[data-nt1b-trail]').innerText.replace(/\\s+/g,' '), pill:(r.querySelector('[data-nt1b-pill]')||{}).innerText}; }")
-        check(f"{tag} W list row: `Next: … · due <date>` + trail Idea → Plan → Holding", row["nx"].startswith("Next: Close above 190 on volume → plan Momentum · due ") and row["trail"] == "Idea → Plan → Holding", row)
+        row = js(page, "()=>{ const r = document.querySelector('[data-nt1-my=\"avgo\"]'); return {nx:r.querySelector('[data-nt1b-nx]').innerText.replace(/\\s+/g,' '), trail:!!r.querySelector('[data-nt1b-trail]'), pill:(r.querySelector('[data-nt1b-pill]')||{}).innerText}; }")
+        check(f"{tag} W list row (NT1d v6): line 2 = the Next step text in full · no trail in the row (it moved to the detail footer)", row["nx"] == "Close above 190 on volume → plan Momentum" and not row["trail"], row)
         check(f"{tag} W near its level: `2.0% to level` pill on the row", row["pill"] == "2.0% to level", row)
-        due_col = js(page, "()=>{ const r = document.querySelector('[data-nt1-my=\"usm\"] [data-nt1b-due-t]'); return [r.innerText, getComputedStyle(r).color, r.classList.contains('w')]; }")
-        far_col = js(page, "()=>{ const r = document.querySelector('[data-nt1-my=\"nvda\"] [data-nt1b-due-t]'); return [r.innerText, r.classList.contains('w')]; }")
-        check(f"{tag} W `due …` is amber only when due", due_col[2] and not far_col[1] and due_col[0].startswith("due "), [due_col, far_col])
-        tr = js(page, "()=>['avgo','plan','nvda','usm'].map(i=>{ const t = document.querySelector('[data-nt1-my=\"'+i+'\"] [data-nt1b-trail]'); return t ? [t.innerText.replace(/\\s+/g,' '), t.querySelector('[data-nt1b-step=plan]') ? t.querySelector('[data-nt1b-step=plan]').classList.contains('on') : null, t.querySelector('[data-nt1b-step=hold]') ? t.querySelector('[data-nt1b-step=hold]').classList.contains('on') : null] : null; })")
-        check(f"{tag} W trail: unlinked → none ticked · linked plan → Plan ✓ · plan with a fill → Plan ✓ Holding ✓ · market idea → `Market view · no plan`",
+        def trail(i):
+            T.to_my(page, i); page.wait_for_timeout(120)
+            return js(page, "()=>{ const t = document.querySelector('[data-nt1-foot] [data-nt1b-trail]'); return t ? [t.innerText.replace(/\\s+/g,' '), t.querySelector('[data-nt1b-step=plan]') ? t.querySelector('[data-nt1b-step=plan]').classList.contains('on') : null, t.querySelector('[data-nt1b-step=hold]') ? t.querySelector('[data-nt1b-step=hold]').classList.contains('on') : null] : null; }")
+        tr = [trail(i) for i in ("avgo", "plan", "nvda", "usm")]
+        check(f"{tag} W trail (detail footer): unlinked → none ticked · linked plan → Plan ✓ · plan with a fill → Plan ✓ Holding ✓ · market idea → `Market view · no plan`",
               tr[0] == ["Idea → Plan → Holding", False, False] and tr[1] == ["Idea → Plan ✓ → Holding", True, False] and tr[2] == ["Idea → Plan ✓ → Holding ✓", True, True] and tr[3][0] == "Market view · no plan", tr)
-        tc = js(page, "()=>getComputedStyle(document.querySelector('[data-nt1-my=\"nvda\"] [data-nt1b-step=hold]')).color")
+        T.to_my(page, "nvda"); page.wait_for_timeout(120)
+        tc = js(page, "()=>getComputedStyle(document.querySelector('[data-nt1-foot] [data-nt1b-step=hold]')).color")
         check(f"{tag} W a reached step is green", tc.startswith("rgb(18, 128, 92)"), tc)
         # stale
         st = js(page, "()=>[...document.querySelectorAll('[data-nt1b-stale]')].map(e=>e.closest('[data-nt1-my]').dataset.nt1My)")
@@ -318,9 +319,9 @@ def part_watch(pw, w, h):
         js(page, "()=>nt1FSet('all')")
         # detail: Next step block above the chart
         T.to_my(page, "avgo"); page.wait_for_timeout(250)
-        blk = js(page, "()=>{ const d = document.querySelector('[data-nt1-detail]'); const b = d.querySelector('[data-nt1b-block]'); const a = d.querySelector('.nt1-ang'); return {at:!!b, above:!!(b && a && (b.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING)), txt:b && b.innerText.replace(/\\s+/g,' '), plan:b && (b.querySelector('[data-nt1b-mkplan]')||{}).className, trail:!!(b && b.querySelector('[data-nt1b-trail]'))}; }")
-        check(f"{tag} W detail: green Next step block above the chart/angles with check date · level · now · `% to level` · trail", blk["at"] and blk["above"] and "Close above 190 on volume → plan Momentum" in blk["txt"] and "Level 102" in blk["txt"] and "now 100" in blk["txt"] and "2.0% to level" in blk["txt"] and blk["trail"], blk)
-        check(f"{tag} W detail: `Make plan ›` is the primary when the price is near", "Make plan ›" in blk["txt"] and "pri" in (blk["plan"] or ""), blk)
+        blk = js(page, "()=>{ const d = document.querySelector('[data-nt1-detail]'); const b = d.querySelector('[data-nt1b-block]'); return {at:!!b, txt:b && b.innerText.replace(/\\s+/g,' '), plan:b && (b.querySelector('[data-nt1b-mkplan]')||{}).className, trail:!!d.querySelector('[data-nt1-foot] [data-nt1b-trail]')}; }")
+        check(f"{tag} W detail (NT1d v6): green Next step card with check date · Alert · now · `% to level` · ruler · trail in the footer", blk["at"] and "Close above 190 on volume → plan Momentum" in blk["txt"] and "Alert 102" in blk["txt"] and "Now 100" in blk["txt"] and "2.0% to level" in blk["txt"] and blk["trail"], blk)
+        check(f"{tag} W detail: `Make plan ›` is there but plain — the watching card has no dark button (NT1d v6)", "Make plan ›" in blk["txt"] and "pri" not in (blk["plan"] or ""), blk)
         js(page, "()=>document.querySelector('[data-nt1b-d-snooze]').click()"); page.wait_for_timeout(400)
         check(f"{tag} W detail Snooze 3 days writes snoozeTo", js(page, DOC, "avgo")["snoozeTo"] == add(t0, 3))
         js(page, "()=>nt1bUndoDo()"); page.wait_for_timeout(300)
@@ -358,10 +359,10 @@ def part_plan(pw):
         pid = js(page, DOC, "avgo")["planId"]
         check(f"{tag} M saving the plan stores planId on the idea (id of the new card)", pid == "ccnew1" and pid in after, [after, pid])
         T.to_my(page, "avgo"); page.wait_for_timeout(300)
-        tr = js(page, "()=>document.querySelector('[data-nt1-my=\"avgo\"] [data-nt1b-trail]').innerText.replace(/\\s+/g,' ')")
+        tr = js(page, "()=>document.querySelector('[data-nt1-foot] [data-nt1b-trail]').innerText.replace(/\\s+/g,' ')")
         check(f"{tag} M the trail turns green by itself: Idea → Plan ✓ → Holding", tr == "Idea → Plan ✓ → Holding", tr)
         js(page, "(p)=>{ const c = coreCardsList.find(x=>x.id===p); c.status = 'open'; c.lots = [{n:1, date:thaiToday(), px:100, qty:1}]; renderWatchlist(); }", pid); page.wait_for_timeout(200)
-        tr = js(page, "()=>document.querySelector('[data-nt1-my=\"avgo\"] [data-nt1b-trail]').innerText.replace(/\\s+/g,' ')")
+        tr = js(page, "()=>document.querySelector('[data-nt1-foot] [data-nt1b-trail]').innerText.replace(/\\s+/g,' ')")
         check(f"{tag} M …and Holding ✓ once the plan has a fill", tr == "Idea → Plan ✓ → Holding ✓", tr)
         # a plan saved for another ticker is not linked
         js(page, "()=>{ nt1bPend = {id:'avgo', ticker:'ZZZZ', at:Date.now()}; nt1bLinkPlan('cc999', 'AMD'); }")
@@ -514,7 +515,7 @@ def part_phone_watch(pw, w, h):
         seed_my(page, {"a": mkmy(1, ("stock", "AVGO"), "Breakout over 190", add(t0, -1), t0, next="Close above 190", level=102), "s": mkmy(2, ("market", "TH"), "Stale one", add(t0, -50), add(t0, 5), updated_at=add(t0, -45) + "T05:00:00.000Z")})
         px(page, "AVGO", 100.0)
         N.goto_watch(page); T.to_my(page); page.wait_for_timeout(300)
-        check(f"{tag} P My ideas list with next step · trail · stale · no overflow", js(page, OVER) and js(page, VIS, "[data-nt1-my=a] [data-nt1b-trail]") and js(page, VIS, "[data-nt1b-stale]"))
+        check(f"{tag} P My ideas list with next step · stale · no overflow", js(page, OVER) and js(page, VIS, "[data-nt1-my=a] [data-nt1b-nx]") and js(page, VIS, "[data-nt1b-stale]"))
         sz = js(page, "()=>[...document.querySelectorAll('[data-nt1b-stale] button')].map(b=>Math.round(b.getBoundingClientRect().height))")
         check(f"{tag} P stale buttons are 44px tall on a phone", sz and all(x >= 44 for x in sz), sz)
         js(page, "()=>document.querySelector('[data-nt1-my=a]').click()"); page.wait_for_timeout(300)

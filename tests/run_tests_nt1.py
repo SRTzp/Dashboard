@@ -165,8 +165,8 @@ def run_desktop(pw, w, h):
         # ================= F · My ideas
         to_my(page)
         check(f"{tag} F My ideas list newest first (incl. old notes)", js(page, "()=>[...document.querySelectorAll('[data-nt1-my]')].map(r=>r.dataset.nt1My).slice(0,3)") == ["m1", "m2", "m3"], js(page, "()=>[...document.querySelectorAll('[data-nt1-my]')].map(r=>r.dataset.nt1My)"))
-        check(f"{tag} F row: subject tag · title · view chip · date · summary (Plan text first)", "US market Rally narrowing to AI names Neutral 18 Nov · plan: Leaders only, half size" == js(page, ROW12, "m1"), js(page, ROW12, "m1"))   # NT1b adds Next · trail lines below (.t3 / trail)
-        check(f"{tag} F row summary: first filled angle when there is no plan", js(page, ROW12, "m2").endswith("Gap above 182 held 3 days"))
+        check(f"{tag} F row (NT1d v6): subject tag · title · view chip · Next step text · date — no summary of the notes in the row", js(page, ROW12, "m1").startswith("US market Rally narrowing to AI names Neutral Look again") and "Leaders only" not in js(page, ROW12, "m1"), js(page, ROW12, "m1"))
+        check(f"{tag} F row: the long note summary is not repeated in the row (nothing twice)", "Gap above 182" not in js(page, ROW12, "m2"), js(page, ROW12, "m2"))
         check(f"{tag} F list scrolls inside its card (page does not)", js(page, "()=>{ const l = document.querySelector('.nt1-lb'); return l.scrollHeight >= l.clientHeight && document.scrollingElement.scrollHeight <= innerHeight + 1; }"))
         # detail
         d = js(page, "()=>document.querySelector('.nt1-det').innerText.replace(/\\s+/g,' ')")
