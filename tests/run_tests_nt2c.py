@@ -90,7 +90,15 @@ def part_today(pw, w=1440):
         ai = js(page, "(s)=>{ const r = document.querySelector(s); return {tag:r.querySelector('[data-nt1b-tag]').innerText, sub:r.querySelector('[data-nt1b-sub]').innerText, pill:r.querySelector('[data-nt1b-pill]').innerText, cls:r.querySelector('[data-nt1b-pill]').className, txt:r.innerText.replace(/\\s+/g, ' ')}; }", "[data-nt1b-it='ai:ai-late']")
         check(f"{tag} overdue AI row: line 2 = `check <date>` + amber `16 days late` (no `AI generated` text)", ai["pill"] == "16 days late" and "p-a" in ai["cls"] and ai["sub"].startswith("check ") and "AI generated" not in ai["txt"], ai)
         shot(page, "today-fill")
+        # 0 due → still fills to 3 with WATCHING, header keeps `none due · N open`
+        js(page, "()=>{ ideaList.concat(tradeList).forEach(d=>{ d.user = d.user || {}; d.user.snoozeTo = null; }); }")
+        page.evaluate("()=>firebase.firestore().collection('users').doc('testuid').collection('ideas').doc('ai-late').set({idea:{recheck:{date:'2099-01-01'}}}, {merge:true})"); page.wait_for_timeout(300)
+        B.to_today(page)
+        z = js(page, "()=>({st:document.querySelector('[data-nt1b-ideas]').dataset.nt1bState, hdr:document.querySelector('[data-nt1b-none]').innerText, due:document.querySelectorAll('[data-nt1b-it]').length, w:document.querySelectorAll('[data-nt2c-watch]').length, lab:document.querySelectorAll('[data-nt2c-wlabel]').length})")
+        check(f"{tag} 0 due → header keeps `none due · N open` and the card still fills to 3 WATCHING rows", z["st"] == "none" and z["hdr"].startswith("· none due") and z["due"] == 0 and z["w"] == 3 and z["lab"] == 1, z)
+        shot(page, "today-fill-0due")
         # 3 due → no WATCHING label
+        page.evaluate("([d])=>firebase.firestore().collection('users').doc('testuid').collection('ideas').doc('ai-late').set({idea:{recheck:{date:d}}}, {merge:true})", [B.add(t0, -16)]); page.wait_for_timeout(300)
         B.seed_my(page, {"d1": P2.idea(11, ("sat", "XAU"), "Due one", B.add(t0, -5), B.add(t0, -3), scs=[P2.sc("pullback", 3290, 3340)], view="bull"),
                          "d2": P2.idea(12, ("sat", "BTC"), "Due two", B.add(t0, -5), B.add(t0, -2), scs=[P2.sc("pullback", 80000, 82000)], view="bull")})
         B.to_today(page)
@@ -195,6 +203,10 @@ def part_ai(pw):
             if lw in (300, 500):
                 js(page, "()=>{ const l = document.querySelector('#wlListBody'); const r = document.querySelector('[data-idea=ai-a]'); l.scrollTop = r.offsetTop - 4; }"); page.wait_for_timeout(120)
                 shot(page, "ai-list-%d" % lw)
+        rows = js(page, """()=>[...document.querySelectorAll('.nt1-ai')].map(r=>({id:r.dataset.idea, dash:[...r.querySelectorAll('.nt2c-ch .nt1-tk')].filter(x=>x.innerText.trim() === '—').length, labs:[...r.querySelectorAll('.nt2c-lab')].map(x=>Math.round(x.getBoundingClientRect().left)), chipsw:[...r.querySelectorAll('.t3 .nt1-tk')].every(x=>x.getBoundingClientRect().width < 120)}))""")
+        check(f"{tag} no `—` rows (a Gains / Loses / Asset line without tickers is not drawn) · labels share one left edge · no stretched chip", all(x["dash"] == 0 and len(set(x["labs"])) <= 1 and x["chipsw"] for x in rows) and any(len(x["labs"]) == 2 for x in rows), rows)
+        imp = js(page, "()=>{ const b = document.querySelector('[data-nt1-import]'); return {t:b.title, a:b.getAttribute('aria-label'), d:b.querySelector('path').getAttribute('d')}; }")
+        check(f"{tag} Import icon is an up-arrow (upload) with title + aria-label `Import JSON`", imp["t"] == "Import JSON" and imp["a"] == "Import JSON" and imp["d"].startswith("M12 16V4"), imp)
         sm = js(page, "()=>[...document.querySelectorAll('.nt1-ai')].map(r=>{ const t = r.querySelector('.nt2c-sum'), m = r.querySelector('[data-nt2c-more]'); return {id:r.dataset.idea, clamped:t.scrollHeight > t.clientHeight + 1, more:!!m && !m.hidden, lh:Math.round(t.getBoundingClientRect().height / parseFloat(getComputedStyle(t).lineHeight))}; })")
         check(f"{tag} long summary: max 3 lines and a visible `more` link; short summary: no `more`", any(x["clamped"] and x["more"] and x["lh"] <= 3 for x in sm) and all(x["clamped"] == x["more"] for x in sm), sm)
         check(f"{tag} no page errors", not pe, pe[:3])

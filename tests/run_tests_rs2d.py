@@ -75,7 +75,7 @@ def edit(pw, w, h):
         pr = js(page, PR)
         check(f"{tag} 5 saved: only Leaders changed; localStorage mirror holds just the override", pr["leaders"]["rs12Min"] == 90 and pr["leaders"]["near"] == 15 and pr["emerging"] == DEF["emerging"] and pr["pullback"] == DEF["pullback"] and js(page, "()=>localStorage.getItem('dash.rs2Presets')") == '{"leaders":{"rs12Min":90}}', js(page, "()=>localStorage.getItem('dash.rs2Presets')"))
         check(f"{tag} 5 also written to the user's settings (settings.rs2Presets → syncs)", js(page, "()=>JSON.stringify(tdSettings().rs2Presets)") == '{"leaders":{"rs12Min":90}}', js(page, "()=>JSON.stringify(tdSettings().rs2Presets)"))
-        check(f"{tag} 5 'custom' tag on the Leaders chip and on the rule line; Emerging has none", js(page, "()=>!!document.querySelector('[data-rs2-preset=leaders] [data-rs2-ctag]') && !!document.querySelector('[data-rs2-ctag-rule]') && !document.querySelector('[data-rs2-preset=emerging] [data-rs2-ctag]')") or w < 600)
+        check(f"{tag} 5 'custom' appears once — on the rule line only, never on the preset chips", js(page, "()=>!!document.querySelector('[data-rs2-ctag-rule]') && !document.querySelector('[data-rs2-preset] [data-rs2-ctag]')") or w < 600)
         if w >= 600: check(f"{tag} 5 rule line reads the new numbers", "RS ≥ 90" in js(page, "()=>document.querySelector('[data-rs2-note]').innerText") and "custom" in js(page, "()=>document.querySelector('[data-rs2-note]').innerText"), js(page, "()=>document.querySelector('[data-rs2-note]').innerText"))
         shot(page, "custom-tag")
         # other device cleared in settings ({}) beats a stale mirror
