@@ -26,7 +26,7 @@ def run(pw, w, h):
         # 1 MANAGE line 2
         ml = js(page, "()=>{ const r = document.querySelector('.re2-row[data-re2-grp=\"manage\"] [data-re2-cardline]'); return r ? {t: r.innerText.replace(/\\s+/g, ' ').trim(), ws: getComputedStyle(r).whiteSpace, ov: getComputedStyle(r).textOverflow} : null; }")
         check(f"{tag} 1 MANAGE line 2 = 'Held #n · Stop x · If stopped −$y · Next Buy #m @ p'", ml and re.match(r"^Held #[\d.]+ · Stop [\d,.]+ · If stopped [−+±]\$[\d.,k]+ · Next Buy #[\d.]+ @ [\d,.]+$", ml["t"]) is not None, ml)
-        if w <= 600: check(f"{tag} 1 line-2 nowrap + ellipsis kept", ml and ml["ws"] == "nowrap" and ml["ov"] == "ellipsis", ml)
+        if w <= 600: check(f"{tag} 1 line-2 wraps on the phone (NT2c) — no ellipsis", ml and ml["ws"] == "normal" and ml["ov"] != "ellipsis", ml)
         # 2 emoji
         e = js(page, "()=>[lr2NoEmoji('🔥 NVDA homework'), lr2NoEmoji('⚠️ Playbook missing'), lr2NoEmoji('👨‍👩‍👧 x'), lr2NoEmoji('Plain text'), lr2NoEmoji('3 items')]")
         check(f"{tag} 2 leading emoji stripped from stored text (plain text and digits untouched)", e == ["NVDA homework", "Playbook missing", "x", "Plain text", "3 items"], e)

@@ -36,7 +36,7 @@ def today(pw, w, h):
         js(page, "()=>{ window.__g = re1PlanGate; re1PlanGate = function(c, lv){ const g = window.__g(c, lv); return Object.assign({}, g, {model: Object.assign({}, g.model || {}, {allowedQty: 12})}); }; todayRefresh(true); }"); page.wait_for_timeout(400)
         l = ln()
         check(f"{tag} 2 with engine allowedQty 12 -> 'Blocked · MMT weekly limit 4/4 · allowed #12'", l and l["t"] == "Blocked · MMT weekly limit 4/4 · allowed #12", l)
-        if w <= 600: check(f"{tag} 2 phone: still ONE line (nowrap)", l and l["ws"] == "nowrap", l)
+        if w <= 600: check(f"{tag} 2 phone: wraps (NT2c — never cut with “…”)", l and l["ws"] == "normal", l)
         check(f"{tag} 2 no page errors", not pe, pe)
     finally:
         b.close()
