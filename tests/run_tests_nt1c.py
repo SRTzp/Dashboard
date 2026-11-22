@@ -19,7 +19,7 @@ def part_today(pw, w, h):
     try:
         t0 = B.td(page); B.quiet_fixture_ai(page)
         B.seed_my(page, {
-            "a": B.mkmy(1, ("stock", "AVGO"), LONG, B.add(t0, -1), B.add(t0, 6), next="Close above 190 on volume and then write the plan with the stop under the base, sized for the week", level=102),
+            "a": B.mkmy(1, ("stock", "AVGO"), LONG, B.add(t0, -1), B.add(t0, 6), next="Close above 190 on volume and then write the plan with the stop under the base, sized for the week", level=102, levelDir="up"),
             "b": B.mkmy(2, ("tag", "Free tag of twenty"), "Risk-off until CPI", B.add(t0, -2), B.add(t0, -2), next="Read CPI → still bear?")})
         B.seed_ai(page, "ai-x", "AI power: grid equipment and the long chain behind it", "need_evidence", recheck=t0)
         B.px(page, "AVGO", 100.0); B.to_today(page)
@@ -32,12 +32,12 @@ def part_today(pw, w, h):
         r = js(page, """()=>{ const row = document.querySelector('[data-nt1b-it="my:a"]'), t = row.querySelector('.t'), p = row.querySelector('[data-nt1b-pill]'), btn = row.querySelector('[data-nt1b-btn]'), n = row.querySelector('.n');
           const rr = x=>x.getBoundingClientRect(); const lh = parseFloat(getComputedStyle(t).lineHeight) || 18;
           return {titleLines: Math.round(rr(t).height / lh), titleFull: t.innerText === arguments0, pill: p.innerText, btnRight: Math.round(rr(btn).right), rowRight: Math.round(rr(row).right), btnAfterTitle: rr(btn).left >= rr(t).right - 1, nextFull: n.innerText.length}; }""".replace("arguments0", repr(LONG)))
-        check(f"{tag} 1 long title is shown in full (wraps, never cut) · pill short `2.0% to level`", r["titleFull"] and r["pill"] == "2.0% to level" and (r["titleLines"] <= 2 or w < 600), r)  # noqa, r)
+        check(f"{tag} 1 long title is shown in full (wraps, never cut) · pill short `2.0% to A`", r["titleFull"] and r["pill"] == "2.0% to A" and (r["titleLines"] <= 2 or w < 600), r)  # noqa, r)
         check(f"{tag} 1 the button stays on the right edge of the row", abs(r["btnRight"] - r["rowRight"]) <= 2 and r["btnAfterTitle"], r)
         nx = js(page, "()=>document.querySelector('[data-nt1b-it=\"my:b\"] .n').innerText")
-        check(f"{tag} 1 the Next line is shown in full", nx.startswith("Next: Read CPI → still bear?"), nx)   # NT1d v6: a level row shows `Alert …` + pill; the Next text is on the others
+        check(f"{tag} 1 the scenario line is shown in full (a Draft says `Draft · no scenario yet`)", nx.startswith("Draft · no scenario yet"), nx)   # NT1d v6: a level row shows `Alert …` + pill; the Next text is on the others
         pills = js(page, "()=>[...document.querySelectorAll('[data-nt1b-pill]')].map(p=>p.innerText)")
-        check(f"{tag} 1 short pills: `2.0% to level` · `2 days late` · AI `evidence n/4`", "2.0% to level" in pills and "2 days late" in pills and any(x.startswith("evidence ") and x.endswith("/4") for x in pills), pills)
+        check(f"{tag} 1 short pills: `2.0% to A` · `2 days late` · AI `evidence n/4`", "2.0% to A" in pills and "2 days late" in pills and any(x.startswith("evidence ") and x.endswith("/4") for x in pills), pills)
         check(f"{tag} 1 no page overflow · no page errors", js(page, B.OVER) and not pe, pe[:3])
     finally:
         b.close()

@@ -44,11 +44,11 @@ def fill_sheet(page, subj="market:US", title="T", tech="x", **kw):
     if subj == "tag:": page.fill("#nt1fTag", kw.get("tag", "mytag"))
     page.fill("#nt1fTitle", title)
     if tech is not None:
-        page.evaluate("()=>{ document.querySelector('[data-nt1d-more]').open = true; }"); page.fill("#nt1f-tech", tech)   # NT1d: notes live in the “More notes” fold
+        page.fill("#nt1f-tech", tech)   # NT1d: notes live in the “More notes” fold
     for k, sel in (("chart", "#nt1fChart"), ("check", "#nt1fCheck")):
         if kw.get(k) is not None: page.fill(sel, kw[k])
     if kw.get("view"): page.click('[data-nt1-fv="%s"]' % kw["view"])
-    if kw.get("built"): page.select_option("#nt1fBuilt", kw["built"])
+    if kw.get("built"): page.evaluate("(b)=>{ nt1Form.built = b; }", kw["built"])
 
 
 def run_desktop(pw, w, h):
@@ -165,12 +165,12 @@ def run_desktop(pw, w, h):
         # ================= F · My ideas
         to_my(page)
         check(f"{tag} F My ideas list newest first (incl. old notes)", js(page, "()=>[...document.querySelectorAll('[data-nt1-my]')].map(r=>r.dataset.nt1My).slice(0,3)") == ["m1", "m2", "m3"], js(page, "()=>[...document.querySelectorAll('[data-nt1-my]')].map(r=>r.dataset.nt1My)"))
-        check(f"{tag} F row (NT1d v6): subject tag · title · view chip · Next step text · date — no summary of the notes in the row", js(page, ROW12, "m1").startswith("US market Rally narrowing to AI names Neutral Look again") and "Leaders only" not in js(page, ROW12, "m1"), js(page, ROW12, "m1"))
+        check(f"{tag} F row (NT2): subject tag · title · view chip · scenarios (or `No scenario yet`) · date — no summary of the notes in the row", js(page, ROW12, "m1").startswith("US market Rally narrowing to AI names Neutral No scenario yet") and "Leaders only" not in js(page, ROW12, "m1"), js(page, ROW12, "m1"))
         check(f"{tag} F row: the long note summary is not repeated in the row (nothing twice)", "Gap above 182" not in js(page, ROW12, "m2"), js(page, ROW12, "m2"))
         check(f"{tag} F list scrolls inside its card (page does not)", js(page, "()=>{ const l = document.querySelector('.nt1-lb'); return l.scrollHeight >= l.clientHeight && document.scrollingElement.scrollHeight <= innerHeight + 1; }"))
         # detail
         d = js(page, "()=>document.querySelector('.nt1-det').innerText.replace(/\\s+/g,' ')")
-        check(f"{tag} F detail: subject · title · view · date · Edit · ⋯ · angle boxes (filled only) · Plan · Built on", all(s in d.lower() for s in ("us market", "rally narrowing", "neutral", "18 nov 2026", "edit", "technical", "sentiment", "plan", "built on: memory chips stay tight")) and "fundamental" not in d.lower(), d[:300])
+        check(f"{tag} F detail (NT2): subject · title · view · date · Edit · ⋯ · reasons (filled only: TECH · SENT) · Scenarios card · Built on", all(s in d.lower() for s in ("us market", "rally narrowing", "neutral", "18 nov 2026", "edit", "tech", "sent", "scenario", "built on: memory chips stay tight")) and "fund" not in d.lower(), d[:300])
         # chart
         cm1 = js(page, "()=>{ const c = document.querySelector('[data-nt1-chart]'); return c && [c.dataset.nt1Chart, c.dataset.url, c.dataset.href]; }")
         # network is stubbed → the image errors → Chart ↗ link; the URL it tried is kept on the row thumbnail
@@ -215,7 +215,7 @@ def run_desktop(pw, w, h):
         check(f"{tag} F required: free tag empty → asked", "tag" in (js(page, TXT, "#nt1Err") or "").lower())
         page.fill("#nt1fTag", "x" * 30); tl = js(page, "()=>document.getElementById('nt1fTag').value.length")
         check(f"{tag} F free tag ≤ 20 chars", tl == 20, tl)
-        page.fill("#nt1fTag", "Copper"); page.evaluate("()=>{ document.querySelector('[data-nt1d-more]').open = true; }"); page.fill("#nt1f-tech", "Buy dips"); page.fill("#nt1fChart", "not a link"); page.click("[data-nt1-save]"); page.wait_for_timeout(100)
+        page.fill("#nt1fTag", "Copper"); page.fill("#nt1f-tech", "Buy dips"); page.fill("#nt1fChart", "not a link"); page.click("[data-nt1-save]"); page.wait_for_timeout(100)
         check(f"{tag} F bad chart text → asked for a web link", "link" in (js(page, TXT, "#nt1Err") or "").lower())
         page.fill("#nt1fChart", "https://www.tradingview.com/x/NeW42/"); page.click('[data-nt1-fv="bear"]')
         pv = js(page, "()=>document.querySelector('#nt1Prev [data-nt1-chart]').dataset.url")
@@ -256,7 +256,7 @@ def run_desktop(pw, w, h):
         js(page, "()=>nt1OpenBuilt('')")
         # + My idea on this
         to_ai(page); js(page, "()=>ideaOpen('en-idea-2')"); page.wait_for_timeout(150); page.click("[data-nt1-myidea]"); page.wait_for_timeout(200)
-        check(f"{tag} F + My idea on this → sheet with Built on preset", js(page, "()=>document.getElementById('nt1fBuilt').value") == "en-idea-2")
+        check(f"{tag} F + My idea on this → sheet with Built on preset", js(page, "()=>nt1Form.built") == "en-idea-2")
         js(page, "()=>nt1SheetClose()")
         # keyboard
         to_my(page, "m1"); page.mouse.click(5, 5)
