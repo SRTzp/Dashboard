@@ -5686,7 +5686,7 @@ button.nt1-tk{cursor:pointer}button.nt1-tk:hover{border-color:var(--lr-muted)}
 .nt1-rows .co{display:flex;flex-wrap:wrap;gap:6px}.nt1-rows .ng,.ng{color:#0E6B4C;font-weight:600}.nt1-rows .amb{color:#9A5B00}
 .nt1-fold{border-top:1px solid #ECEEF1}.nt1-fold>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:44px;font-size:13.5px}
 .nt1-fold>summary::-webkit-details-marker{display:none}.nt1-fold>summary>span:first-child::after{content:' ▸'}.nt1-fold[open]>summary>span:first-child::after{content:' ▾'}
-.nt1-fb{padding:2px 0 12px}.nt1-fb .panel.wlOv{background:transparent;border:0;box-shadow:none;padding:0;margin:0 0 8px}.nt1-x{font-size:13px;margin:6px 0}
+.nt1-fb{padding:2px 0 12px}.nt1-fb .panel.wlOv{background:transparent;border:0;box-shadow:none;padding:0;margin:0 0 8px}.nt1-note{font-size:13px;margin:6px 0}
 .nt1-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .nt1-ang{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .nt1-ang .a{border:1px solid var(--lr-line);border-radius:10px;padding:10px 12px;min-width:0}.nt1-ang .a.plan{grid-column:1/-1;background:#F7F8FA}
@@ -31327,10 +31327,10 @@ function ideaDetailHtml(v){
     const gate = `<details class="ideaGateD" data-idea-gatefold><summary>Ready <span class="ideaGateN">${st.n} of ${st.tot}</span></summary><div class="ideaGate" data-idea-gate>${rd.items.map(([t, ok])=>`<div class="${ok ? 'ok' : 'no'}"><span>${ok ? '✓' : '✗'}</span> ${e(t)}</div>`).join('')}</div></details>`;
     const rc = ideaObj(v.I.recheck), un = ideaObj(v.I.user_notes) || {}, chk = ltArr(v.I.user_notes_check);
     const mine = (String(un.idea || '').trim() || chk.length) ? `<div class="ideaMy">${un.idea ? `<div>${ideaTxt(un.idea)}</div>` : ''}${chk.map(c=>`<div class="ideaChk">${e(c.dir === 'support' ? '＋' : c.dir === 'against' ? '−' : '?')} ${ideaTxt(c.finding)}</div>`).join('')}</div>` : '';
-    const evd = gate + (rc && rc.date ? `<div class="nt1-x">Recheck ${e(wlThDate(rc.date))} — ${ideaTxt(rc.what)}</div>` : '') + mine + ideaTabEvd(v);
-    const call = ideaObj(v.I.call), callTx = call ? `<div class="nt1-x"><b>${e(IDEA_CALL[call.action] || call.action || '—')}</b>${call.why ? ' — ' + ideaTxt(call.why) : ''} <span class="ltCr">(AI suggestion)</span></div>` : '';
+    const evd = gate + (rc && rc.date ? `<div class="nt1-note">Recheck ${e(wlThDate(rc.date))} — ${ideaTxt(rc.what)}</div>` : '') + mine + ideaTabEvd(v);
+    const call = ideaObj(v.I.call), callTx = call ? `<div class="nt1-note"><b>${e(IDEA_CALL[call.action] || call.action || '—')}</b>${call.why ? ' — ' + ideaTxt(call.why) : ''} <span class="ltCr">(AI suggestion)</span></div>` : '';
     const order = v.cands.filter(c=>c.state !== 'park').map(c=>e(c.sym)).join(' → '), assets = ideaAssetsHtml(v);
-    const co = callTx + (order ? `<div class="nt1-x">Study order: ${order}</div>` : '') + (assets ? `<div class="nt1-x">${assets}</div>` : '') + ideaTabCo(v);
+    const co = callTx + (order ? `<div class="nt1-note">Study order: ${order}</div>` : '') + (assets ? `<div class="nt1-note">${assets}</div>` : '') + ideaTabCo(v);
     const folds = nt1Fold(v, 'mech', 'How it works', `${(ideaObj(v.I.mechanism) || {}).chain ? ltArr(v.I.mechanism.chain).length + ' steps' : (v.segs.length + ' parts')}${nOurs ? ' · ' + nOurs + ' of ours' : ''}`, how, 'mech')
       + nt1Fold(v, 'evd', 'Evidence', `${v.ev.filter(x=>x.dir !== 'against').length} for · ${v.ev.filter(x=>x.dir === 'against').length} against${nHot ? ' · ' + nHot + ' signal' + (nHot > 1 ? 's' : '') : ''}`, evd, 'evd')
       + nt1Fold(v, 'co', 'Companies', `${gains.length} gain · ${lose.length} lose`, co, 'co');
