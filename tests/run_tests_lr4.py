@@ -45,8 +45,8 @@ def run(pw, w, h):
         check(f"{tag} A: mood = Risk-off + 60%; why shows Equity / Credit red + days (desktop); next news lists the coming events", "Risk-off" in g["mood"] and "60%" in g["mood"] and (w <= 600 or ("32d" in g["why"] and "24d" in g["why"])) and (g["news"] >= 2 if w > 600 else "CPI" in g["nl"]), g)
         tl = js(page, "()=>[...document.querySelectorAll('[data-lr4-tile]')].map(t=>({k:t.dataset.lr4Tile, t:t.innerText.replace(/\\s+/g,' ').slice(0,60), h:Math.round(t.getBoundingClientRect().height)}))")
         check(f"{tag} A: one tile per Weekly Impact asset, impact order (XAU HIGH first)", len(tl) >= 4 and tl[0]["k"] == "XAUUSD" and "HIGH" in tl[0]["t"] and "Bull" in tl[0]["t"], tl)
-        nw = js(page, "()=>[...document.querySelectorAll('[data-lr4-tile] .r2')].every(e=>getComputedStyle(e).whiteSpace === 'nowrap' && getComputedStyle(e).textOverflow === 'ellipsis')")
-        check(f"{tag} A: tile reason = one line (nowrap + ellipsis)", nw)
+        nw = js(page, "()=>[...document.querySelectorAll('[data-lr4-tile] .r2')].every(e=>innerWidth <= 760 ? getComputedStyle(e).whiteSpace === 'normal' : getComputedStyle(e).whiteSpace === 'nowrap' && getComputedStyle(e).textOverflow === 'ellipsis')")   # PH1: phone wraps to 2 lines
+        check(f"{tag} A: tile reason = one line (nowrap + ellipsis); phone ≤760 wraps (PH1)", nw)
         js(page, "()=>document.querySelector('[data-lr4-tile=\"XAUUSD\"]').click()"); page.wait_for_timeout(250)
         check(f"{tag} A: tapping a tile opens the existing Weekly Impact detail panel", js(page, "()=>!!document.querySelector('[data-pv-panel]')"))
         js(page, "()=>document.querySelector('[data-lr4-tile=\"XAUUSD\"]').click()"); page.wait_for_timeout(150)

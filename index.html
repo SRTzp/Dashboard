@@ -5900,6 +5900,21 @@ html body .nt2c-sh{display:none}
   html body .lr2-act .re2-row .re2-btns{flex:1 1 100%;justify-content:flex-end;border-top:1px solid #ECEEF1;padding-top:10px;margin:0;min-width:0}
   html body .lr2-act .re2-row .re2-btns:empty,html body .lr2-act .re2-row .re2-btns:not(:has(>:not([data-re2-btn="update"]):not(.lrf-hb))){display:none}
 }
+
+/* PH1 — iPhone pass (390): ≤760 only, desktop unchanged */
+html body .pc2-menu .pc2-mi-cx{display:none}
+html body .pc2-none .pc2-np{display:none}
+@media (max-width:760px){
+  html body .pc2-card .bd-cx.bd-cxx[data-re4-card]{display:none}
+  html body .pc2-card .pc2-rt[data-bd-pct="na"]{display:none}
+  html body .pc2-menu .pc2-mi-cx{display:block}
+  html body .pc2-none .pc2-nd{display:none}html body .pc2-none .pc2-np{display:block}
+  html body .lr4-as .r2{white-space:normal;overflow:hidden;text-overflow:clip;line-height:1.35;max-height:calc(2 * 1.35em)}
+  html body .lr5-det>summary small,html body .lr4-det[data-lr4-det]>summary small{white-space:normal;overflow:visible;text-overflow:clip}
+  html body .au2-ex[data-au2-none]{display:none}
+}
+.lr4-wkb{display:inline-grid;align-items:center}.lr4-wkb>*{grid-area:1/1}.lr4-wkg{visibility:hidden;white-space:nowrap;padding:6px 0 6px 0;pointer-events:none}.lr4-wkb .lr4-wksel{width:100%;min-width:0}
+@media (max-width:560px) and (orientation:portrait){ #tabWatch{touch-action:pan-y pinch-zoom} }   /* PH1 — the swipe area keeps vertical scroll only; sideways-scrolling children are their own scroll container */
 </style>
 </head>
 <body>
@@ -12733,8 +12748,8 @@ function au2Streak(accts){   /* consecutive weeks meeting the goal, newest first
 }
 function au2ChipHtml(accts){
   au2Sync(); let e; try{ e = au2WeekExec(accts); }catch(err){ return ''; }
-  const full = e.y ? `Placed ${e.x}/${e.y} · goal ${e.goal}%${e.met ? ' ✓' : ''}` : 'Placed — · goal ' + e.goal + '%', short = e.y ? (e.met ? `${e.x}/${e.y} ✓` : `${e.x}/${e.y} → ${e.need}/${e.y}`) : '—';
-  return `<button type="button" class="au2-ex ${e.tone}" data-au2-exec data-au2-tone="${e.tone}" data-au2-x="${e.x}" data-au2-y="${e.y}" data-au2-goal="${e.goal}" title="${td3E(e.tip)}" aria-label="${td3E(e.tip)}" onclick="au2ExecGo()"><span class="au2-sep">·</span> <span class="au2-d">${full}</span><span class="au2-p">${short}</span></button>`;
+  const full = e.y ? `Placed ${e.x}/${e.y} · goal ${e.goal}%${e.met ? ' ✓' : ''}` : 'Placed — · goal ' + e.goal + '%', short = e.y ? (e.met ? `${e.x}/${e.y} ✓` : `${e.x}/${e.y} → ${e.need}/${e.y}`) : '';   /* PH1 — nothing to count yet: no stray '· —' on the phone */
+  return `<button type="button" class="au2-ex ${e.tone}" data-au2-exec data-au2-tone="${e.tone}" data-au2-x="${e.x}" data-au2-y="${e.y}" data-au2-goal="${e.goal}"${e.y ? '' : ' data-au2-none'} title="${td3E(e.tip)}" aria-label="${td3E(e.tip)}" onclick="au2ExecGo()"><span class="au2-sep">·</span> <span class="au2-d">${full}</span><span class="au2-p">${short}</span></button>`;
 }
 function au2Placed(id){   /* AU2 C — answer "Placed" on a passed-entry plan: the existing record-fill flow (Core: Record buy #1 · Sat: filled) */
   try{ ln4RecordFill(id); }catch(e){ console.warn('au2 placed:', e); }
@@ -14133,7 +14148,7 @@ function swipeStartOk(e, t){
   function phone(){ try{ return window.innerWidth <= 560 && window.matchMedia('(orientation: portrait)').matches; }catch(e){ return false; } }
   function hScroll(el){
     for(let n=el; n && n !== document.body; n=n.parentElement){
-      if(n.scrollWidth > n.clientWidth + 1){ const ox = getComputedStyle(n).overflowX; if(ox === 'auto' || ox === 'scroll') return true; }
+      if(n.scrollWidth > n.clientWidth + 1){ const ox = getComputedStyle(n).overflowX; if(ox === 'auto' || ox === 'scroll' || ox === 'overlay') return true; }   /* PH1 — a swipe that STARTS in a sideways-scrolling element (chip row · table) belongs to that element */
     }
     return false;
   }
@@ -28255,7 +28270,7 @@ function pc2Why(why, it){   /* a reason is never cut with '…' — short named 
 function pc2Menu(id){ pc2MenuId = pc2MenuId === id ? null : id; try{ bdRender(); }catch(e){} }
 function pc2MenuHtml(it){
   const id = bdE(it.id).replace(/'/g, "\\'");
-  return `<span class="pc2-mw"><button type="button" class="pc2-mb" data-pc2-menu aria-label="More" onclick="event.stopPropagation();pc2Menu('${id}')">⋯</button>${pc2MenuId === it.id ? `<span class="pc2-menu" data-pc2-menupop role="menu"><button type="button" role="menuitem" data-pc2-edit onclick="event.stopPropagation();pc2MenuId=null;bdEditLv('${id}')">Edit plan</button></span>` : ''}</span>`;
+  return `<span class="pc2-mw"><button type="button" class="pc2-mb" data-pc2-menu aria-label="More" onclick="event.stopPropagation();pc2Menu('${id}')">⋯</button>${pc2MenuId === it.id ? `<span class="pc2-menu" data-pc2-menupop role="menu"><button type="button" role="menuitem" data-pc2-edit onclick="event.stopPropagation();pc2MenuId=null;bdEditLv('${id}')">Edit plan</button><button type="button" role="menuitem" class="pc2-mi-cx" data-pc2-cancel onclick="event.stopPropagation();pc2MenuId=null;re4Open('${id}','plan')">Cancel plan</button></span>` : ''}</span>`;
 }
 function pc2CardHtml(it){
   let pv; try{ pv = posView(it); }catch(x){ return null; } if(!pv) return null;
@@ -28480,7 +28495,7 @@ function bdWaitHtml(wait){
 let bdWaitOpen = false;
 function bdColHtml(seg, list){
   let body;
-  if(!list.length) body = seg === 'ord' ? `<div class="pc2-none" data-pc2-empty>Nothing waiting at the broker.<br>Placed orders show here until they fill.</div>` : `<div class="bd-none">Nothing here</div>`;
+  if(!list.length) body = seg === 'ord' ? `<div class="pc2-none" data-pc2-empty><span class="pc2-nd">Nothing waiting at the broker.<br>Placed orders show here until they fill.</span><span class="pc2-np bd-k">AT BROKER · NONE</span></div>` : `<div class="bd-none">Nothing here</div>`;
   else if(seg === 'plan'){
     const ready = list.filter(x=>!x.inc), wait = list.filter(x=>x.inc);
     body = ready.map(bdCardHtml).join('') + (wait.length ? bdWaitHtml(wait) : '');
@@ -30304,7 +30319,8 @@ function lr4WeekRange(key){
 function lr4HeadHtml(){
   const ph = lr4Phone();
   const wks = [-1, 0, 1].map(n=>{ return `<option value="${n}"${n === bdMacroWk ? ' selected' : ''}>${bdE((ph ? '' : 'Week ') + lr4WeekRange(Calc.wiAddDays(wiCurMon(), 7 * n)))}</option>`; }).join('');
-  return `<div class="lr4-head" data-lr4-head><div class="lr4-ht"><h1>Flow</h1><label class="lr4-wk" data-lr4-week><select class="lr4-wksel" data-bd-wk aria-label="Week" onchange="bdMacroWkSet(this.value)">${wks}</select><i aria-hidden="true">▾</i></label></div><span class="sp"></span><span class="lr4-same" data-lr4-same>Same in Main and Family</span><button type="button" class="lr4-btn" data-lr4-import onclick="wiOpenPaste()">Import JSON</button></div>`;
+  const wkSel = (ph ? '' : 'Week ') + lr4WeekRange(Calc.wiAddDays(wiCurMon(), 7 * bdMacroWk));
+  return `<div class="lr4-head" data-lr4-head><div class="lr4-ht"><h1>Flow</h1><label class="lr4-wk" data-lr4-week><span class="lr4-wkb"><span class="lr4-wkg" aria-hidden="true">${bdE(wkSel)}</span><select class="lr4-wksel" data-bd-wk aria-label="Week" onchange="bdMacroWkSet(this.value)">${wks}</select></span><i aria-hidden="true">▾</i></label></div><span class="sp"></span><span class="lr4-same" data-lr4-same>Same in Main and Family</span><button type="button" class="lr4-btn" data-lr4-import onclick="wiOpenPaste()">Import JSON</button></div>`;
 }
 /* 2 · glance: Market mood (RM1 · same rule as Today) · Why (SMA state of the two ratios) · Next news (re2EvData — Weekly Impact + Settings key news) */
 function lr4Next(n){
