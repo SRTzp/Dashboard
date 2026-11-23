@@ -224,7 +224,7 @@ def partFix(page, tag, w):
     check(f"{tag} F5: To do card is left-aligned like the design (title at the card's left padding, rows flush, no tinted box)", t["titleOffset"] <= 20 and t["align"] in ("left", "start") and t["bg"] in ("rgba(0, 0, 0, 0)", "transparent") and t["bd"] == "0px" and t["rowOffset"] <= 20, t)
 
 
-BASE_390 = {"height": 1129, "rows": 12}   # NT1b re-baseline (status card + Ideas card; was 975) · origin/main (+ LR2 commit 0) at 390 with the same fixture · measured with tools in docs/reports/LR2-summary.md
+BASE_390 = {"height": 1218, "rows": 10}   # HF1 re-baseline (the Act action moved INSIDE the card on its own line: 3 cards +~45 px each; was 1129) · NT1b re-baseline (status card + Ideas card; was 975) · origin/main (+ LR2 commit 0) at 390 with the same fixture · measured with tools in docs/reports/LR2-summary.md
 
 
 def heights(pw):
