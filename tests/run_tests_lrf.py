@@ -30,8 +30,10 @@ def run(pw, w, h):
         g = js(page, "()=>[...document.querySelectorAll('[data-re2-col]')].map(c=>({k:c.dataset.re2Col, rows:[...c.querySelectorAll('.re2-row')].filter(r=>r.getClientRects().length).length, more:(c.querySelector('[data-re2-more]')||{}).innerText||''}))")
         if w <= 600:
             check(f"{tag} C2: every Act group shows at most 2 rows, then '+N more ›'", all(x["rows"] <= 2 for x in g) and any(x["k"] == "enter" and re.match(r"^\+\d+ more ›$", x["more"].strip()) for x in g), g)
-            hs = js(page, "()=>[...document.querySelectorAll('.re2-row')].filter(r=>r.getClientRects().length).map(r=>({s:r.dataset.re2Row, h:Math.round(r.getBoundingClientRect().height), grp:r.dataset.re2Grp}))")
-            check(f"{tag} C2: every Act row is the same height (±2 px) = exactly 2 lines", len(hs) >= 3 and max(x["h"] for x in hs) - min(x["h"] for x in hs) <= 2, hs)
+            hs = js(page, "()=>[...document.querySelectorAll('.re2-row')].filter(r=>r.getClientRects().length).map(r=>({s:r.dataset.re2Row, h:Math.round(r.getBoundingClientRect().height), grp:r.dataset.re2Grp, act:[...r.querySelectorAll('.re2-btns button')].some(b=>b.getClientRects().length)}))")
+            # HF1: a row with an action = text (2 lines) + a bottom action line inside the card; a row without one stays 2 lines. Same kind = same height.
+            same = all(max(x["h"] for x in g) - min(x["h"] for x in g) <= 2 for g in ([x for x in hs if x["act"]], [x for x in hs if not x["act"]]) if g)
+            check(f"{tag} C2 (HF1): rows of the same kind are the same height (±2 px): text-only = 2 lines; with an action = 2 lines + the action line inside the card", len(hs) >= 3 and same, hs)
             ln = js(page, "()=>[...document.querySelectorAll('.re2-row .num')].filter(r=>r.getClientRects().length).map(n=>{ const cs = getComputedStyle(n); return {ws:cs.whiteSpace, ov:cs.textOverflow, one: n.getBoundingClientRect().height < 22}; })")
             check(f"{tag} C2 (NT2c phone): line 2 wraps (max 2 lines), never cut with an ellipsis", ln and all(x["ws"] == "normal" and x["ov"] != "ellipsis" for x in ln), ln)
             l2 = js(page, "()=>[...document.querySelectorAll('.re2-row:not(.x) [data-re2-cardline]')].filter(n=>n.getClientRects().length && !n.classList.contains('lrf-blkline')).map(n=>n.innerText.replace(/\\s+/g,' '))")
