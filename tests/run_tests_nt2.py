@@ -353,7 +353,7 @@ def part_desktop(pw):
         T.to_my(page, gid); page.wait_for_timeout(200)
         page.click("[data-nt1d-tvset]"); page.wait_for_timeout(250)
         one = js(page, "()=>({tv:document.querySelector('[data-nt1d-tv]').innerText.replace(/\\s+/g,' '), chips:document.querySelectorAll('[data-nt1d-tv] .cp').length, doc:window.firebase.__mockDb.__getDoc(['users','testuid','ideas_my',mySel]).tvAlert})")
-        check(f"{tag} T one tick covers every scenario + Wrong: `TV alerts set ✓`, chips hidden, stored", one["tv"] == "TV alerts set ✓" and one["chips"] == 0 and one["doc"] is True, one)
+        check(f"{tag} T one tick covers every scenario + Wrong: `TV alerts set ✓`, chips hidden, stored", one["tv"] == "TV alerts set ✓ Undo" and one["chips"] == 0 and one["doc"] is True, one)
         js(page, "()=>{ window.__clip = ''; }"); clip(page, "deny"); edit(page, gid); page.fill('[data-nt1s-r="0"] [data-nt1s-f="hi"]', "3345"); save(page)
         fb = js(page, TXT, "#nt1Toast")
         check(f"{tag} T clipboard denied → never silent: `Saved · could not copy the alert text:` + the line + Copy", fb.startswith("Saved · could not copy the alert text: XAU ≤ 3,345") and js(page, "()=>!!document.querySelector('[data-nt1-toast-copy]')"), fb)
