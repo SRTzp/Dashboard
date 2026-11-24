@@ -99,6 +99,17 @@
 
   let autoId = 1;
 
+  /* HF4 — like the real SDK: set()/update() THROW on an `undefined` value (nested too) unless db.settings({ignoreUndefinedProperties:true}) was called.
+     Every offender is also listed in window.__undefWrites ({path, field}) so a run can name the writes that would fail without the setting. */
+  let ignoreUndef = false;
+  function findUndef(v, p){ if(v === undefined) return p; if(v && typeof v === 'object' && !(v instanceof Date)){ for(const k of Object.keys(v)){ const r = findUndef(v[k], p ? p + '.' + k : k); if(r) return r; } } return null; }
+  function checkUndef(fn, path, data){
+    const f = findUndef(data, ''); if(f === null) return;
+    try{ (window.__undefWrites = window.__undefWrites || []).push({path:pathKey(path), field:f, fn}); }catch(e){}
+    if(ignoreUndef) { try{ console.warn('HF4-UNDEF ' + fn + ' ' + pathKey(path) + ' :: ' + f); }catch(e){} }
+    if(!ignoreUndef) throw new Error('Function DocumentReference.' + fn + '() called with invalid data. Unsupported field value: undefined (found in field ' + f + ' in document ' + pathKey(path) + ')');
+  }
+
   /* ══════════════════════════════════════════════════════════════════════════
      ★ 7D.3 Phase 3 — test-only helper: simulate a Firestore security-rules denial
      (e.g. satConfig rules not deployed yet) on an exact doc or collection path.
@@ -124,6 +135,7 @@
       collection(name){ return makeColRef([...path, name]); },
       get(opts){ return isDenied(path) ? Promise.reject(denyErr()) : Promise.resolve(makeDocSnap(path)); },
       set(data, opts){
+        checkUndef('set', path, data);
         if (isDenied(path)) return Promise.reject(denyErr());
         const key = pathKey(path);
         let cur = store.get(key);
@@ -140,6 +152,7 @@
         return Promise.resolve();
       },
       update(data){
+        checkUndef('update', path, data);
         if (isDenied(path)) return Promise.reject(denyErr());
         const key = pathKey(path);
         let cur = store.get(key);
@@ -204,7 +217,7 @@
 
   const db = {
     collection(name){ return makeColRef([name]); },
-    settings(){ /* no-op — real SDK config knobs (long polling etc), irrelevant to the mock */ },
+    settings(o){ if(o && o.ignoreUndefinedProperties) ignoreUndef = true; /* the other SDK knobs (long polling etc) are irrelevant to the mock */ },
     enablePersistence(){ return Promise.resolve(); },
     // test-only helpers, not part of the real SDK
     __seedDoc(path, data){ store.set(pathKey(path), deepClone(data)); },

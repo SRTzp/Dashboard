@@ -9178,7 +9178,7 @@ const db = firebase.firestore();
    ทำให้ Listen/Write channel ค้างไม่เคยสำเร็จเลย (badge ค้าง "กำลังบันทึก" ตลอด แม้ไม่มี error โผล่ตรงๆ)
    บังคับใช้ long-polling แทน (ช้ากว่าเล็กน้อยแต่เข้ากันได้กับ Safari) แก้ปัญหานี้โดยตรง
    SDK นี้ตั้ง experimentalAutoDetectLongPolling:true เป็นค่าเริ่มต้นเองอยู่แล้ว — ต้องปิดทิ้งด้วย ไม่งั้นชนกับ forceLongPolling จน settings() throw error */
-db.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false, merge: true });
+db.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false, merge: true, ignoreUndefinedProperties: true });   /* HF4 — an undefined field is dropped, never a rejected write */
 /* ทดสอบ: เอา synchronizeTabs ออก — สงสัยว่า multi-tab leader-election lock (IndexedDB) เป็นตัวที่ทำให้
    reconnect รอบ 2 (refresh) ค้าง "กำลังบันทึก" ทันทีตั้งแต่ยังไม่ได้แตะอะไร (เกิดเหมือนกันทั้ง Safari/Chrome/เน็ตต่างกัน — ไม่ใช่ browser/network)
    ผลข้างเคียงถ้าเปิดหลายแท็บพร้อมกัน: แท็บที่ 2 จะไม่มี offline cache (แต่ยังใช้งาน/บันทึกได้ปกติ ไม่กระทบความปลอดภัยข้อมูล) */
@@ -30448,7 +30448,9 @@ function pb2PlaceYes0(s){
     efCarryAdopt(id); }   /* EF1 — admin steps, no block */
   const isRe = !!(c.c && c.c.re1 && c.c.re1.reentry);
   let mac = ''; try{ mac = waMacroLabel(i.asset).state || ''; }catch(e){}
-  const snap = {t:at, entry:+i.entry, sl:+i.sl, tp:+i.tp, dir:pb2Side(i), acct:acc, ema:V.ema, structure:V.st, mss:V.st === false ? V.mss : null, label:c.label, mult:V.fac, lot:c.lot, riskPct:(c.c && c.c.ps1 && c.c.ps1.def != null) ? c.c.ps1.def : null, riskAmt:c.risk == null ? null : Math.round(c.risk * 100) / 100, macro:mac, setupOk:true, reentry:isRe || undefined, re1:c.model ? {formula:c.model.formula, effPct:c.model.effPct, step:c.model.step, factors:c.model.factors} : undefined};
+  const snap = {t:at, entry:+i.entry, sl:+i.sl, tp:+i.tp, dir:pb2Side(i), acct:acc, ema:V.ema, structure:V.st, mss:V.st === false ? V.mss : null, label:c.label, mult:V.fac, lot:c.lot, riskPct:(c.c && c.c.ps1 && c.c.ps1.def != null) ? c.c.ps1.def : null, riskAmt:c.risk == null ? null : Math.round(c.risk * 100) / 100, macro:mac, setupOk:true};
+  if(isRe) snap.reentry = true;   /* HF4 — only keys that have a value (Firestore rejects undefined) */
+  if(c.model) snap.re1 = {formula:c.model.formula, effPct:c.model.effPct, step:c.model.step, factors:c.model.factors};
   bdPopClose(); re1ReTap = null;
   bdWriteWithLog(it, {ln4:Object.assign({placedAt:at, snap:{'0':snap}}, isRe ? {reentry:true} : {})}, 'order', 'Order placed · Entry ' + (it.entry > 0 ? td3Num(it.entry) : '—'));   /* snapshot is written once, with the order — plan edits never touch ln4.snap */
   try{ ln4Valid(id, it.sym || '', 'working'); ln4Toast(`${it.sym || ''}: Order working ✓`); }catch(e){}
