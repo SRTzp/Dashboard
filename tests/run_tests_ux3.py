@@ -73,7 +73,7 @@ def part_a(pw):
             check(f"{tag} Enter resets to the default width and clears the saved value", abs(pane()["w"] - d0) <= 1 and js(page, "(k)=>localStorage.getItem(k)", P["key"]) is None, [pane()["w"], d0])
             # drag
             hb = geom(page, hs); y = hb["h"] // 2 if which != "rs" else 300
-            page.mouse.move(hb["l"] + 4, 400); page.mouse.down(); page.mouse.move(hb["l"] + 4 - 30 * P["dir"] * -1, 400, steps=4); page.mouse.up(); page.wait_for_timeout(200)
+            page.mouse.move(hb["l"] + 4, 400); page.mouse.down(); page.mouse.move(hb["l"] + 4 + 30, 400, steps=4); page.mouse.up(); page.wait_for_timeout(200)
             dd = pane()["w"]
             check(f"{tag} dragging the handle changes the pane width (and saves it)", abs(dd - d0) >= 20 and js(page, "(k)=>localStorage.getItem(k)", P["key"]) is not None, [d0, dd])
             page.dblclick(hs); page.wait_for_timeout(200)
