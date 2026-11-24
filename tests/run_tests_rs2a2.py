@@ -37,7 +37,7 @@ def desk(pw, w, h):
         # ---- 1 M.Cap
         check(f"{tag} 1 rs2Cap: $1.3T · $4.2B · $860M · missing → —", js(page, "()=>[rs2Cap(1.3e12), rs2Cap(4.2e9), rs2Cap(860e6), rs2Cap(null), rs2Cap(0), rs2Cap(undefined)]") == ["$1.3T", "$4.2B", "$860M", "—", "—", "—"])
         hdr = js(page, "()=>[...document.querySelectorAll('.rs2-th .lbl')].map(x=>x.innerText.trim().toLowerCase())")
-        check(f"{tag} 1 desktop column M.Cap sits where Price was (no Price column)", hdr == ["stock", "sector vs spy", "rs · from high", "m.cap", "avg $vol", "earnings"], hdr)
+        check(f"{tag} 1 desktop column M.Cap sits where Price was (no Price column)", hdr == ["ticker", "sector vs spy", "rs · from high", "m.cap", "avg $vol", "earnings"], hdr)
         t = js(page, TXT, "NVDA"); z = js(page, TXT, "ZETA")
         check(f"{tag} 1 NVDA $4.4T · ZETA $860M · no price in the row", "$4.4T" in t and "$860M" in z and "182.40" not in t and "24.80" not in z, [t, z])
         js(page, "()=>rs2Find('F000')"); page.wait_for_timeout(200)

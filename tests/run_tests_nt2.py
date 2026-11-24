@@ -235,7 +235,7 @@ def part_desktop(pw):
         check(f"{tag} S wrong card: NO status pill on the scenario rows (the header already says why)", js(page, "()=>document.querySelectorAll('[data-nt1b-block] [data-nt1s-pill]').length") == 0 and js(page, "()=>document.querySelectorAll('[data-nt1b-block] [data-nt1s-row]').length") == 1)
         shot(page, "wrong")
         p = card("plan")
-        check(f"{tag} S in plan: green card `IN PLAN` + `Open plan ›` · ruler/rows visible · no snooze/done/mark", p["st"] == "plan" and p["hdr"] == "IN PLAN" and p["bg"] not in ("rgb(255, 244, 224)", "rgb(243, 244, 247)") and p["bg"].startswith("rgb(2") and p["btns"] == [["Open plan ›", True]] and p["ruler"] and p["rows"] == 1 and not p["links"] and not p["mark"], p)
+        check(f"{tag} S in plan: green card `IN PLAN` + `Open plan ›` · ruler/rows visible · no snooze/done/mark", p["st"] == "plan" and p["hdr"] == "IN PLAN" and p["bg"] not in ("rgb(255, 244, 224)", "rgb(243, 244, 247)") and p["bg"].startswith("rgb(2") and p["btns"] == [["Open plan ›", False]] and p["ruler"] and p["rows"] == 1 and not p["links"] and not p["mark"], p)
         ip = js(page, "()=>[...document.querySelectorAll('[data-nt1b-block] [data-nt1s-pill]')].map(p=>[p.innerText, getComputedStyle(p).backgroundColor, getComputedStyle(p).color])")
         check(f"{tag} S in-plan card: a fired scenario shows a plain grey `reached` pill — no amber", ip == [["reached", "rgb(240, 241, 244)", "rgb(95, 102, 114)"]], ip)
         mix = idea(14, ("stock", "AMD"), "In plan mixed", t0, B.add(t0, 5), scs=[sc("pullback", 95, 100, hit=now), sc("breakout", 130, i="B")], view="bull", next=None, planId="ccp1")

@@ -41,7 +41,7 @@ def run(pw, w, h):
         js(page, "()=>{ wlOpen('ZZ'); }"); page.wait_for_timeout(300)
         det = js(page, TXT, "[data-lr5-det]") or ""
         check(f"{tag} detail: 'Homework 2 of 3' + first missing + Why on Watch + I believe + size + Continue", all(x in det for x in ["Homework 2 of 3", "Change-my-thesis missing", "Why on Watch: Added manually", "I believe", "They raise fees", "Compounder: adds & risk above 1% unlock when done", "Continue homework ›"]), det)
-        check(f"{tag} detail: exactly one primary button", js(page, "()=>document.querySelectorAll('[data-lr5-det] .btn.pri').length") == 1)
+        check(f"{tag} detail: no dark button while homework is open (MV1 C: Homework › is white)", js(page, "()=>document.querySelectorAll('[data-lr5-det] .btn.pri').length") == 0)
         js(page, "()=>{ const it = wlItemOf('ZZ'); it.my_thesis = Object.assign({}, it.my_thesis, {unproven:'Timing of the fee rise'}); renderWatchlist(); }"); page.wait_for_timeout(200)
         check(f"{tag} detail: Not proven line when written", "Not proven Timing of the fee rise" in (js(page, TXT, "[data-lr5-det]") or ""))
         js(page, "()=>{ wl1Trk = 'winner'; wlOpen('SRC1'); }"); page.wait_for_timeout(300)
