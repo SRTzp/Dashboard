@@ -5210,6 +5210,18 @@ html body .lr5 .lr5-main{height:44px;width:100%}
 html body .lr5 .lr5-hint{font-size:12px;color:var(--lr-muted)}
 html body .lr5 .ltMenuWrap{position:relative;display:inline-block}
 html body .lr5 .ltMenu{right:0;left:auto;z-index:30}
+/* MV1 A — Move item (second line grey) · divider · phone: the ⋯ menu is a bottom sheet with 44px rows */
+.ltMenu .mv1-it{display:block;font-size:.86rem;text-align:left;padding:9px 12px;border-radius:8px;color:var(--text);min-height:40px;box-sizing:border-box}
+.ltMenu .mv1-it.off{opacity:1;color:var(--muted);cursor:default}.ltMenu .mv1-it.off .why{opacity:1}
+.ltMenu .mv1-it .why{color:var(--muted)}.ltMenu .mv1-lnk{color:var(--lr-ink,var(--text));font-weight:600;text-decoration:underline;cursor:pointer;display:inline;padding:0;min-height:0}
+.ltMenu .mv1-sep{height:1px;background:var(--border);margin:4px 6px;flex:none}
+@media (max-width:1023px){
+  html body .lr5 .ltMenu.mv1-menu{position:fixed;left:0;right:0;top:auto;bottom:0;z-index:320;border-radius:16px 16px 0 0;padding:14px 10px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 32px rgba(20,22,26,.2);max-height:70vh;overflow:auto}
+  html body .lr5 .ltMenu.mv1-menu::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:#D5D8DE;margin:0 auto 8px;flex:none}
+  html body .lr5 .ltMenu.mv1-menu button,html body .lr5 .ltMenu.mv1-menu .mv1-it{min-height:48px;font-size:15px;padding:12px 10px;display:block}
+  html body .lr5 .ltMenu.mv1-menu .mv1-it .why{font-size:12px}
+  html body .lr5 .ltMenu.mv1-menu .mv1-lnk{min-height:0;padding:0;display:inline}
+}
 html body .lr5 .lr5-dim{display:none}
 /* full thesis (desktop: the list steps aside) */
 html body .lr5.full .wlList.panel.lr5-list,html body .lr5.hw .wlList.panel.lr5-list{display:none}   /* HW1-fix: beats `.wlList.panel.lr5-list{display:block}` (the phone rule below shows it again) */
@@ -9426,6 +9438,7 @@ function wlStart(){
               fasttrack:(x.fasttrack && typeof x.fasttrack==='object') ? x.fasttrack : null, promoted_by:td4PromBy(x.promoted_by), promoted_at:typeof x.promoted_at==='string' ? x.promoted_at : null, promote_reason:(typeof x.promote_reason==='string' && x.promote_reason.trim()) ? x.promote_reason : null, stars:(x.stars===1||x.stars===2||x.stars===3) ? x.stars : 0, reasons:Array.isArray(x.reasons) ? x.reasons.filter(r=>typeof r==='string') : [], link:typeof x.link==='string' ? x.link : '', cand_added_at:typeof x.cand_added_at==='string' ? x.cand_added_at : '', onboarding:(x.onboarding && typeof x.onboarding==='object' && !Array.isArray(x.onboarding)) ? x.onboarding : null, my_thesis:(x.my_thesis && typeof x.my_thesis==='object' && !Array.isArray(x.my_thesis)) ? x.my_thesis : null, archived:x.archived===true, archived_reason:typeof x.archived_reason==='string' ? x.archived_reason : '', archived_at:typeof x.archived_at==='string' ? x.archived_at : '', next_check_date:/^\d{4}-\d{2}-\d{2}$/.test(String(x.next_check_date||'')) ? x.next_check_date : '', next_check_note:typeof x.next_check_note==='string' ? x.next_check_note : '', thesis_imported_at:typeof x.thesis_imported_at==='string' ? x.thesis_imported_at : '',   /* PL1·A2/A5/A6 */
               rs_stars:(x.rs_stars===0||x.rs_stars===1||x.rs_stars===2||x.rs_stars===3) ? x.rs_stars : null, rs_rated_at:/^\d{4}-\d{2}-\d{2}$/.test(String(x.rs_rated_at||'')) ? x.rs_rated_at : null,   /* PL1·A3 — RS manual: null=Unrated ≠ 0 · `stars` เดิมเก็บไว้ ไม่แสดงเป็น RS */    /* TD3a · TD4a: promoted_by = array tier/rs (string เดิมอ่านได้) · promote_reason · stars 0–3 */
               my_notes:wlNormNotes(x.my_notes),   /* WL1 */
+              movedAt:typeof x.movedAt === 'string' ? x.movedAt : '',   /* MV1 A — when it last moved between Momentum and Compounder */
               focus:x.focus === true,   /* UX3 F — Focus star on a Watching row */
               src:(x.src && typeof x.src==='object' && !Array.isArray(x.src)) ? x.src : null,   /* RS2a — {from:'screen', preset, r12, r3, r1, at} written by + Watch on the Screen tab · read by the next Homework job */
               exch:(typeof x.exch==='string' ? x.exch.trim().toUpperCase() : ''), hw:(x.hw && typeof x.hw==='object' && !Array.isArray(x.hw)) ? x.hw : {},   /* WL1 (2026-11) — exchange + homework record {trigger, doneAt, confirmedAt} */
@@ -33078,16 +33091,60 @@ function wl2UseThesis(sym){
   it.my_thesis = Object.assign({}, it.my_thesis || {}, my2); it.hw = hw;
   return Promise.resolve(col.doc(it.ticker).update({my_thesis:my2, hw})).then(()=>{ try{ renderWatchlist(); todayRefresh(true); }catch(e){} return true; }).catch(e=>{ console.warn('wl2 use thesis:', e); return false; });
 }
+/* ══ MV1 A — Move to Compounder / Move to Momentum (stock ⋯ menu) · one field: ladder_watch (+ movedAt) · Watching / Focus only · one tap, Undo toast 6 s ══ */
+function mv1TargetOf(it){ return wl1TrkOf(it) === 'ladder' ? 'winner' : 'ladder'; }
+function mv1State(it){   /* → {ok, to, why:'plan'|'dup'|''} */
+  const to = mv1TargetOf(it);
+  if(wl1Status(it).k !== 'none') return {ok:false, to, why:'plan'};
+  const k = wlSymCmp(it.ticker);
+  if(wlItems.some(x=>x !== it && x.archived !== true && wlSymCmp(x.ticker) === k && wl1TrkOf(x) === to)) return {ok:false, to, why:'dup'};
+  return {ok:true, to, why:''};
+}
+function mv1MenuItem(it){
+  if(!it || it.archived === true) return '';
+  const e = escHtml, st = mv1State(it), lbl = 'Move to ' + WL1_TRK_L[st.to], sym = e(it.ticker);
+  if(st.ok) return `<button type="button" role="menuitem" class="mv1-it" data-mv1-move="${st.to}" data-sym="${sym}" onclick="wlMenu='';mv1Move(this.dataset.sym)">${lbl}<span class="why">Keeps notes, homework and alerts</span></button>`;
+  const why = st.why === 'dup' ? 'Already in ' + WL1_TRK_L[st.to] : `Has a plan · change it in <a href="#" role="link" class="mv1-lnk" data-mv1-plan data-sym="${sym}" onclick="event.preventDefault();event.stopPropagation();wlMenu='';wl5OpenPlan(this.dataset.sym)">Plan ›</a>`;
+  return `<div role="menuitem" aria-disabled="true" class="mv1-it off" data-mv1-move="${st.to}" data-mv1-off="${st.why}" data-sym="${sym}">${lbl}<span class="why">${why}</span></div>`;
+}
+function mv1Set(it, trk, movedAt){
+  it.ladder_watch = trk === 'ladder'; it.ladder_watch_set = true; it.movedAt = movedAt || '';
+}
+function mv1Move(sym){
+  const it = wlItemOf(sym), col = wlCol(); if(!it || !col) return;
+  const st = mv1State(it); if(!st.ok) return;
+  const from = wl1TrkOf(it), to = st.to, prevAt = it.movedAt || '', at = new Date().toISOString(), t = it.ticker;
+  let nextSym = '';   /* stay on the current list · select the next row (the one below, else the one above) */
+  try{ const rows = wlRowsView().rows, i = rows.findIndex(r=>r.item === it), nx = i >= 0 ? (rows[i + 1] || rows[i - 1]) : null; nextSym = nx ? nx.sym : ''; }catch(x){}
+  mv1Set(it, to, at);
+  if(wlSel === t){ wlSel = nextSym; wlSub = ''; if(wl5FullSym === t) wl5FullSym = ''; if(!nextSym) wlMobOpen = false; }
+  wlMenu = ''; wlMenuMsg = '';
+  try{ renderWatchlist(); }catch(x){ console.warn(x); }
+  Promise.resolve(col.doc(t).update({ladder_watch:to === 'ladder', movedAt:at})).then(()=>{
+    ux3Toast('Moved ' + wl1Bare(t) + ' to ' + WL1_TRK_L[to], ()=>mv1Undo(t, from, prevAt), 6000);
+  }).catch(err=>{
+    mv1Set(it, from, prevAt); try{ renderWatchlist(); }catch(x){}
+    alert('Could not move — nothing changed (' + ((err && (err.code || err.message)) || err) + ')');
+  });
+}
+function mv1Undo(t, from, prevAt){
+  const it = wlItemOf(t), col = wlCol(); if(!it || !col) return;
+  mv1Set(it, from, prevAt);
+  try{ renderWatchlist(); }catch(x){}
+  Promise.resolve(col.doc(t).update({ladder_watch:from === 'ladder', movedAt:prevAt || null})).catch(err=>{ alert('Could not undo: ' + ((err && (err.code || err.message)) || err)); });
+}
 function wl5Menu(r){
   const e = escHtml, it = r.item, sym = e(r.sym), th = wlThesisOf(it), open = wlMenu === r.sym, items = [];
   if(th) items.push(`<button type="button" role="menuitem" data-lr5-full onclick="wlMenu='';wl5Full(this.dataset.sym,'sum')" data-sym="${sym}">Full thesis</button>`);
   items.push(`<button type="button" role="menuitem" data-lr5-news onclick="wlMenu='';wl5Full(this.dataset.sym,'${th ? 'trk' : 'view'}')" data-sym="${sym}">News &amp; catalysts</button>`);
   items.push(`<button type="button" role="menuitem" data-ln3-edit data-sym="${sym}" onclick="wlMenu='';wlOpenEdit(this.dataset.sym)">Edit</button>`);
+  items.push(mv1MenuItem(it));
   items.push(`<button type="button" role="menuitem" data-lt-import data-sym="${sym}" onclick="wlMenu='';ltImportOpen(this.dataset.sym)">Import JSON</button>`);
   if(th) items.push(`<button type="button" role="menuitem" data-lt-export data-sym="${sym}" onclick="ltExport(this.dataset.sym)">Export JSON</button><button type="button" role="menuitem" data-lt-history data-sym="${sym}" onclick="ltHistoryOpen(this.dataset.sym)">History (${(it.thesis_history || []).length})</button>`);
+  items.push('<div class="mv1-sep" role="separator"></div>');
   items.push(`<button type="button" role="menuitem" data-wl-archive-m data-sym="${sym}" onclick="wlMenu='';wlArchiveOpen(this.dataset.sym)">Archive…</button>`);
   if(wlCanDelete(it)) items.push(`<button type="button" role="menuitem" class="danger" data-ln3-del data-sym="${sym}" onclick="wlMenu='';wlDeleteItem(this.dataset.sym)">Delete</button>`);
-  return `<span class="ltMenuWrap" data-lt-menuwrap><button type="button" class="btn lr5-more" data-lt-menu aria-haspopup="true" aria-expanded="${open}" aria-label="More actions" data-sym="${sym}" onclick="ltMenuToggle(this.dataset.sym)">⋯</button>${open ? `<div class="ltMenu" role="menu">${items.join('')}${wlMenuMsg ? `<div class="ltMenuMsg" role="status" data-lt-menumsg>${e(wlMenuMsg)}</div>` : ''}</div>` : ''}</span>`;
+  return `<span class="ltMenuWrap" data-lt-menuwrap><button type="button" class="btn lr5-more" data-lt-menu aria-haspopup="true" aria-expanded="${open}" aria-label="More actions" data-sym="${sym}" onclick="ltMenuToggle(this.dataset.sym)">⋯</button>${open ? `<div class="ltMenu mv1-menu" role="menu">${items.join('')}${wlMenuMsg ? `<div class="ltMenuMsg" role="status" data-lt-menumsg>${e(wlMenuMsg)}</div>` : ''}</div>` : ''}</span>`;
 }
 function wl5TvRs(it){
   const b = wl1Bare(it.ticker), th = it.market === 'TH' || /\.BK$/i.test(it.ticker), ex = wl1Exch(it) || 'NASDAQ';
