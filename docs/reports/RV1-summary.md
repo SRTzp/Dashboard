@@ -1,11 +1,11 @@
-# RV1 — verify the RRG calculation, symbol by symbol (generated 2026-11-18)
+# RV1 — verify the RRG calculation, symbol by symbol (generated 2026-11-24)
 
 Research + tests only. **No app behaviour changed, no data written, no API key.** Method: the app's own `rrgBuildRows → rrgCompute / rrgToWeekly` (extracted from `index.html` into node by `tools/rrg_app_run.js`, not re-typed) is compared with an independent pandas implementation written from the brief (`tools/rrg_verify.py`). Guard: `tests/rrg_verify_test.py` (in `tests/run_regression.sh`).
 
 ## Verdict
 
 - **Code correctness (A): the app computes what the formula says.** 74 cases (46 symbol×end-date runs + 28 edge cases) × Daily and Weekly → **0 mismatches** in state, days, prevDays, date, raw, momRaw, ratio, mom, ε, δ (tolerance 1e-9).
-- **Real data (B), as of 2026-11-17:** same comparison on Yahoo raw closes, 23 symbols × D/W → **0 mismatches**.
+- **Real data (B), as of 2026-11-23:** same comparison on Yahoo raw closes, 23 symbols × D/W → **0 mismatches**.
 
 ## A · Independent check (synthetic fixed set, 1,200 sessions, two end dates)
 
@@ -82,8 +82,8 @@ Why synthetic: the check is about code, so the price set must be fixed and repro
 | SMH | W | Out ↗ | Out ↗ | ✓ | 2.482 | 100.77 | 100.45 | 2 | n/a (synthetic: no dividends) | — |
 | ARKX | D | Out ↘ | Out ↘ | ✓ | 0.922 | 99.83 | 99.95 | 1 | n/a (synthetic: no dividends) | — |
 | ARKX | W | Out ↗ | Out ↗ | ✓ | 3.267 | 99.77 | 99.85 | 7 | n/a (synthetic: no dividends) | — |
-| IRBO | D | Under ↗ | Under ↗ | ✓ | -0.014 | 100.72 | 101.42 | 4 | n/a (synthetic: no dividends) | — |
-| IRBO | W | Under ↗ | Under ↗ | ✓ | -3.817 | 99.96 | 100.81 | 7 | n/a (synthetic: no dividends) | — |
+| ROBO | D | Under ↗ | Under ↗ | ✓ | -0.014 | 100.72 | 101.42 | 4 | n/a (synthetic: no dividends) | — |
+| ROBO | W | Under ↗ | Under ↗ | ✓ | -3.817 | 99.96 | 100.81 | 7 | n/a (synthetic: no dividends) | — |
 | XLK | D | Out ↗ | Out ↗ | ✓ | 2.169 | 101.14 | 101.11 | 7 | n/a (synthetic: no dividends) | — |
 | XLK | W | Out ↗ | Out ↗ | ✓ | 0.380 | 100.23 | 100.94 | 1 | n/a (synthetic: no dividends) | — |
 | XLI | D | Under ↘ | Under ↘ | ✓ | -3.772 | 98.58 | 99.85 | 10 | n/a (synthetic: no dividends) | — |
@@ -97,58 +97,58 @@ Why synthetic: the check is about code, so the price set must be fixed and repro
 
 ## B · Data checks (real prices)
 
-### Per symbol — Yahoo raw closes (split-adjusted, no dividends = what Twelve Data sends), as of 2026-11-17
+### Per symbol — Yahoo raw closes (split-adjusted, no dividends = what Twelve Data sends), as of 2026-11-23
 
 | Symbol | TF | app state | independent | match | raw (EMA spread %) | ratio | mom | days | adjusted-close state | changes with adjusted? |
 |---|---|---|---|---|---|---|---|---|---|---|
-| XLU | D | Out ↘ | Out ↘ | ✓ | 2.055 | 101.73 | 99.89 | 4 | Out ↘ | no |
-| XLU | W | Under ↗ | Under ↗ | ✓ | -2.466 | 99.63 | 101.90 | 4 | Under ↗ | no |
-| PAVE | D | Out ↘ | Out ↘ | ✓ | 0.408 | 100.44 | 99.91 | 1 | Out ↘ | no |
-| PAVE | W | Under ↗ | Under ↗ | ✓ | -2.360 | 98.25 | 100.45 | 1 | Under ↗ | no |
-| XHB | D | Out ↘ | Out ↘ | ✓ | 1.720 | 101.43 | 98.94 | 4 | Out ↘ | no |
-| XHB | W | Under ↗ | Under ↗ | ✓ | -3.122 | 99.63 | 101.65 | 3 | Under ↗ | no |
-| XLB | D | Out ↘ | Out ↘ | ✓ | 1.315 | 100.96 | 98.72 | 4 | Out ↘ | no |
-| XLB | W | Under ↗ | Under ↗ | ✓ | -0.629 | 99.93 | 101.14 | 3 | Under ↗ | no |
-| XLC | D | Out ↗ | Out ↗ | ✓ | 0.365 | 101.17 | 101.89 | 2 | Out ↗ | no |
-| XLC | W | Under ↘ | Under ↘ | ✓ | -2.921 | 99.31 | 100.28 | 4 | Under ↘ | no |
-| XBI | D | Out ↘ | Out ↘ | ✓ | 0.018 | 99.59 | 98.95 | 3 | Out ↘ | no |
-| XBI | W | Out ↘ | Out ↘ | ✓ | 1.432 | 98.35 | 99.92 | 9 | Out ↘ | no |
-| JETS | D | Out ↘ | Out ↘ | ✓ | 2.406 | 101.22 | 99.78 | 1 | Out ↘ | no |
-| JETS | W | Under ↗ | Under ↗ | ✓ | -2.132 | 98.84 | 100.51 | 1 | Under ↗ | no |
-| IGV | D | Under ↘ | Under ↘ | ✓ | -1.452 | 99.57 | 99.61 | 10 | Under ↘ | no |
-| IGV | W | Out ↘ | Out ↘ | ✓ | 1.452 | 101.48 | 99.70 | 2 | Out ↘ | no |
-| XRT | D | Out ↘ | Out ↘ | ✓ | 2.114 | 101.88 | 98.80 | 3 | Out ↘ | no |
-| XRT | W | Under ↗ | Under ↗ | ✓ | -0.352 | 101.01 | 102.24 | 4 | Under ↗ | no |
-| HACK | D | Under ↘ | Under ↘ | ✓ | -1.069 | 99.07 | 99.70 | 8 | Under ↘ | no |
-| HACK | W | Out ↘ | Out ↘ | ✓ | 5.210 | 101.09 | 99.03 | 2 | Out ↘ | no |
-| XLF | D | Out ↘ | Out ↘ | ✓ | 1.966 | 102.10 | 99.78 | 3 | Out ↘ | no |
-| XLF | W | Out ↗ | Out ↗ | ✓ | 0.319 | 101.87 | 101.61 | 1 | Out ↗ | no |
-| KRE | D | Out ↘ | Out ↘ | ✓ | 1.100 | 100.83 | 99.37 | 4 | Out ↘ | no |
-| KRE | W | Under ↗ | Under ↗ | ✓ | -0.809 | 99.28 | 100.78 | 2 | Under ↗ | no |
-| XLE | D | Under ↗ | Under ↗ | ✓ | -0.174 | 99.54 | 100.15 | 1 | Under ↗ | no |
-| XLE | W | Out ↗ | Out ↗ | ✓ | 3.231 | 100.54 | 100.06 | 13 | Out ↗ | no |
-| XLV | D | Out ↘ | Out ↘ | ✓ | 2.744 | 101.92 | 99.39 | 4 | Out ↘ | no |
-| XLV | W | Out ↗ | Out ↗ | ✓ | 3.333 | 102.40 | 101.71 | 5 | Out ↗ | no |
-| ITA | D | Out ↗ | Out ↗ | ✓ | 1.064 | 100.84 | 100.08 | 11 | Out ↗ | no |
-| ITA | W | Under ↗ | Under ↗ | ✓ | -3.914 | 98.38 | 100.68 | 1 | Under ↗ | no |
-| SMH | D | Under ↗ | Under ↗ | ✓ | -4.075 | 97.76 | 100.29 | 3 | Under ↗ | no |
-| SMH | W | Under ↘ | Under ↘ | ✓ | -0.973 | 97.51 | 98.21 | 1 | Under ↘ | no |
-| ARKX | D | Under ↘ | Under ↘ | ✓ | -1.449 | 99.25 | 99.92 | 1 | Under ↘ | no |
-| ARKX | W | Under ↘ | Under ↘ | ✓ | -3.494 | 98.16 | 99.69 | 11 | Under ↘ | no |
-| XLK | D | Under ↘ | Under ↘ | ✓ | -2.568 | 97.78 | 100.15 | 12 | Under ↘ | no |
-| XLK | W | Out ↘ | Out ↘ | ✓ | 0.380 | 98.99 | 98.13 | 4 | Out ↘ | no |
-| XLI | D | Out ↗ | Out ↗ | ✓ | 0.483 | 100.55 | 100.23 | 11 | Out ↗ | no |
-| XLI | W | Under ↗ | Under ↗ | ✓ | -2.303 | 98.46 | 100.24 | 1 | Under ↗ | no |
-| XLY | D | Out ↘ | Out ↘ | ✓ | 2.110 | 103.23 | 99.06 | 2 | Out ↘ | no |
-| XLY | W | Under ↗ | Under ↗ | ✓ | -1.318 | 100.55 | 103.92 | 4 | Under ↗ | no |
-| XLP | D | Out ↘ | Out ↘ | ✓ | 2.730 | 102.22 | 99.88 | 4 | Out ↘ | no |
-| XLP | W | Out ↗ | Out ↗ | ✓ | 0.488 | 101.45 | 101.95 | 1 | Out ↗ | no |
-| XLRE | D | Out ↘ | Out ↘ | ✓ | 2.000 | 102.31 | 99.48 | 3 | Out ↘ | no |
-| XLRE | W | Under ↗ | Under ↗ | ✓ | -1.555 | 100.20 | 101.88 | 3 | Under ↗ | no |
-| ARTY | D | Under ↗ | Under ↗ | ✓ | -3.287 | 98.01 | 100.71 | 4 | Under ↗ | no |
-| ARTY | W | Out ↘ | Out ↘ | ✓ | 0.554 | 98.35 | 98.01 | 5 | Out ↘ | no |
-| ROBO | D | Under ↘ | Under ↘ | ✓ | -2.013 | 98.22 | 99.68 | 2 | Under ↘ | no |
-| ROBO | W | Under ↘ | Under ↘ | ✓ | -2.979 | 97.56 | 98.72 | 12 | Under ↘ | no |
+| XLU | D | Out ↗ | Out ↗ | ✓ | 2.393 | 101.88 | 100.48 | 4 | Out ↗ | no |
+| XLU | W | Under ↗ | Under ↗ | ✓ | -1.536 | 100.15 | 102.14 | 5 | Under ↗ | no |
+| PAVE | D | Out ↗ | Out ↗ | ✓ | 0.523 | 100.54 | 100.14 | 1 | Out ↗ | no |
+| PAVE | W | Under ↗ | Under ↗ | ✓ | -2.137 | 98.45 | 100.93 | 2 | Under ↗ | no |
+| XHB | D | Out ↘ | Out ↘ | ✓ | 1.710 | 101.38 | 99.75 | 8 | Out ↘ | no |
+| XHB | W | Under ↗ | Under ↗ | ✓ | -2.472 | 100.11 | 101.84 | 4 | Under ↗ | no |
+| XLB | D | Out ↘ | Out ↘ | ✓ | 0.927 | 100.64 | 99.08 | 8 | Out ↘ | no |
+| XLB | W | Under ↗ | Under ↗ | ✓ | -0.327 | 100.06 | 101.11 | 4 | Under ↗ | no |
+| XLC | D | Out ↗ | Out ↗ | ✓ | 0.620 | 101.45 | 100.73 | 6 | Out ↗ | no |
+| XLC | W | Under ↗ | Under ↗ | ✓ | -2.590 | 99.54 | 101.03 | 1 | Under ↗ | no |
+| XBI | D | Neutral | Neutral | ✓ | 0.088 | 99.66 | 99.94 | 4 | Neutral | no |
+| XBI | W | Out ↘ | Out ↘ | ✓ | 1.390 | 98.40 | 100.13 | 10 | Out ↘ | no |
+| JETS | D | Out ↘ | Out ↘ | ✓ | 2.334 | 101.15 | 99.79 | 5 | Out ↘ | no |
+| JETS | W | Under ↗ | Under ↗ | ✓ | -1.531 | 99.17 | 101.08 | 2 | Under ↗ | no |
+| IGV | D | Under ↘ | Under ↘ | ✓ | -1.405 | 99.59 | 99.84 | 14 | Under ↘ | no |
+| IGV | W | Out ↘ | Out ↘ | ✓ | 1.125 | 101.35 | 99.26 | 3 | Out ↘ | no |
+| XRT | D | Out ↘ | Out ↘ | ✓ | 2.064 | 101.76 | 99.58 | 7 | Out ↘ | no |
+| XRT | W | Out ↗ | Out ↗ | ✓ | 0.357 | 101.63 | 102.37 | 1 | Out ↗ | no |
+| HACK | D | Out ↗ | Out ↗ | ✓ | 0.816 | 100.14 | 101.92 | 2 | Out ↗ | no |
+| HACK | W | Out ↘ | Out ↘ | ✓ | 5.440 | 101.10 | 98.93 | 3 | Out ↘ | no |
+| XLF | D | Out ↘ | Out ↘ | ✓ | 1.658 | 101.71 | 99.22 | 7 | Out ↘ | no |
+| XLF | W | Out ↗ | Out ↗ | ✓ | 0.787 | 102.18 | 101.89 | 2 | Out ↗ | no |
+| KRE | D | Out ↘ | Out ↘ | ✓ | 0.967 | 100.69 | 99.67 | 8 | Out ↘ | no |
+| KRE | W | Under ↗ | Under ↗ | ✓ | -0.455 | 99.57 | 100.92 | 3 | Under ↗ | no |
+| XLE | D | Under ↘ | Under ↘ | ✓ | -0.338 | 99.47 | 99.97 | 1 | Under ↘ | no |
+| XLE | W | Out ↘ | Out ↘ | ✓ | 3.218 | 100.51 | 99.75 | 1 | Out ↘ | no |
+| XLV | D | Out ↘ | Out ↘ | ✓ | 2.194 | 101.47 | 98.98 | 8 | Out ↘ | no |
+| XLV | W | Out ↗ | Out ↗ | ✓ | 3.887 | 102.54 | 101.73 | 6 | Out ↗ | no |
+| ITA | D | Out ↘ | Out ↘ | ✓ | 1.013 | 100.79 | 99.88 | 4 | Out ↘ | no |
+| ITA | W | Under ↗ | Under ↗ | ✓ | -3.518 | 98.59 | 101.16 | 2 | Under ↗ | no |
+| SMH | D | Under ↘ | Under ↘ | ✓ | -4.286 | 97.79 | 99.79 | 4 | Under ↘ | no |
+| SMH | W | Under ↘ | Under ↘ | ✓ | -2.384 | 97.27 | 98.05 | 2 | Under ↘ | no |
+| ARKX | D | Under ↘ | Under ↘ | ✓ | -2.283 | 98.68 | 98.86 | 5 | Under ↘ | no |
+| ARKX | W | Under ↘ | Under ↘ | ✓ | -4.131 | 98.02 | 99.41 | 12 | Under ↘ | no |
+| ROBO | D | Under ↘ | Under ↘ | ✓ | -2.373 | 97.98 | 99.26 | 6 | Under ↘ | no |
+| ROBO | W | Under ↘ | Under ↘ | ✓ | -3.582 | 97.43 | 98.52 | 13 | Under ↘ | no |
+| XLK | D | Under ↘ | Under ↘ | ✓ | -2.504 | 97.93 | 100.12 | 16 | Under ↘ | no |
+| XLK | W | Under ↘ | Under ↘ | ✓ | -0.424 | 98.55 | 97.90 | 1 | Under ↘ | no |
+| XLI | D | Out ↗ | Out ↗ | ✓ | 0.577 | 100.63 | 100.25 | 15 | Out ↗ | no |
+| XLI | W | Under ↗ | Under ↗ | ✓ | -2.041 | 98.67 | 100.69 | 2 | Under ↗ | no |
+| XLY | D | Out ↘ | Out ↘ | ✓ | 2.129 | 102.96 | 99.74 | 6 | Out ↘ | no |
+| XLY | W | Under ↗ | Under ↗ | ✓ | -0.654 | 101.19 | 103.86 | 5 | Under ↗ | no |
+| XLP | D | Out ↗ | Out ↗ | ✓ | 2.987 | 102.29 | 100.43 | 4 | Out ↗ | no |
+| XLP | W | Out ↗ | Out ↗ | ✓ | 1.551 | 102.06 | 102.19 | 2 | Out ↗ | no |
+| XLRE | D | Out ↘ | Out ↘ | ✓ | 2.009 | 102.19 | 99.88 | 1 | Out ↘ | no |
+| XLRE | W | Under ↗ | Under ↗ | ✓ | -0.834 | 100.80 | 102.32 | 4 | Under ↗ | no |
+| ARTY | D | Under ↘ | Under ↘ | ✓ | -3.663 | 97.91 | 99.60 | 3 | Under ↘ | no |
+| ARTY | W | Under ↘ | Under ↘ | ✓ | -0.749 | 97.88 | 97.90 | 1 | Under ↘ | no |
 
 Full B1–B4 tables (5-year % of days the state differs, partial-bar simulation, benchmark sanity): `docs/reports/RV1-data.md`.
 
