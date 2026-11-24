@@ -5387,6 +5387,17 @@ html body .lr5 .lr5-grp{font:600 11px/1 var(--lr-sans);letter-spacing:.06em;text
 html body .lr5 .wlRows>.lr5-grp:first-child{border-top:0}
 html body .lr5 .lr5-grp+.lr5r{border-top:0}
 @media (max-width:1023px){html body .lr5 .lr5-grp{padding:12px 12px 4px}}
+/* UX3 F — Focus star: sits at the right end of the Status cell (Watching rows only) — no extra column, so nothing else gets narrower · 44px tap target */
+html body .lr5 .lr5r.wl1-row{position:relative}
+html body .lr5 .c-fs{position:absolute;left:238px;top:50%;margin-top:-22px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;z-index:1}
+html body .lr5 .lr5-fs{width:44px;height:44px;margin:0;padding:0;border:0;background:transparent;box-shadow:none;border-radius:10px;font:400 20px/1 var(--lr-sans);color:#C4C8D0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-height:0}
+html body .lr5 .lr5-fs.on{color:#14161A}
+html body .lr5 .lr5-fs:hover{color:#5F6672}html body .lr5 .lr5-fs.on:hover{color:#14161A}
+html body .lr5 .lr5-fs:focus-visible{outline:2px solid #14161A;outline-offset:-2px}
+@media (max-width:1023px){
+  html body .lr5 .c-fs{position:static;grid-area:id;justify-self:end;align-self:center;margin:0}
+  html body .lr5 .c-fs:empty{display:none}
+}
 /* UX3 D — stale data line (Today) + `stale` note (Screen header): amber, wraps, never cut */
 .ux3-stale{color:var(--amber);font-size:13px;line-height:1.4;white-space:normal;overflow:visible;padding:2px 0}
 .ux3-stale a{color:inherit;text-decoration:underline;font-weight:600;white-space:nowrap}
@@ -9352,6 +9363,7 @@ function wlStart(){
               fasttrack:(x.fasttrack && typeof x.fasttrack==='object') ? x.fasttrack : null, promoted_by:td4PromBy(x.promoted_by), promoted_at:typeof x.promoted_at==='string' ? x.promoted_at : null, promote_reason:(typeof x.promote_reason==='string' && x.promote_reason.trim()) ? x.promote_reason : null, stars:(x.stars===1||x.stars===2||x.stars===3) ? x.stars : 0, reasons:Array.isArray(x.reasons) ? x.reasons.filter(r=>typeof r==='string') : [], link:typeof x.link==='string' ? x.link : '', cand_added_at:typeof x.cand_added_at==='string' ? x.cand_added_at : '', onboarding:(x.onboarding && typeof x.onboarding==='object' && !Array.isArray(x.onboarding)) ? x.onboarding : null, my_thesis:(x.my_thesis && typeof x.my_thesis==='object' && !Array.isArray(x.my_thesis)) ? x.my_thesis : null, archived:x.archived===true, archived_reason:typeof x.archived_reason==='string' ? x.archived_reason : '', archived_at:typeof x.archived_at==='string' ? x.archived_at : '', next_check_date:/^\d{4}-\d{2}-\d{2}$/.test(String(x.next_check_date||'')) ? x.next_check_date : '', next_check_note:typeof x.next_check_note==='string' ? x.next_check_note : '', thesis_imported_at:typeof x.thesis_imported_at==='string' ? x.thesis_imported_at : '',   /* PL1·A2/A5/A6 */
               rs_stars:(x.rs_stars===0||x.rs_stars===1||x.rs_stars===2||x.rs_stars===3) ? x.rs_stars : null, rs_rated_at:/^\d{4}-\d{2}-\d{2}$/.test(String(x.rs_rated_at||'')) ? x.rs_rated_at : null,   /* PL1·A3 — RS manual: null=Unrated ≠ 0 · `stars` เดิมเก็บไว้ ไม่แสดงเป็น RS */    /* TD3a · TD4a: promoted_by = array tier/rs (string เดิมอ่านได้) · promote_reason · stars 0–3 */
               my_notes:wlNormNotes(x.my_notes),   /* WL1 */
+              focus:x.focus === true,   /* UX3 F — Focus star on a Watching row */
               src:(x.src && typeof x.src==='object' && !Array.isArray(x.src)) ? x.src : null,   /* RS2a — {from:'screen', preset, r12, r3, r1, at} written by + Watch on the Screen tab · read by the next Homework job */
               exch:(typeof x.exch==='string' ? x.exch.trim().toUpperCase() : ''), hw:(x.hw && typeof x.hw==='object' && !Array.isArray(x.hw)) ? x.hw : {},   /* WL1 (2026-11) — exchange + homework record {trigger, doneAt, confirmedAt} */
               thesis:(x.thesis && typeof x.thesis==='object' && !Array.isArray(x.thesis)) ? x.thesis : null,   /* WL2 · living-thesis@1 (ไม่มี log) · ≠ tier_inputs ของ WT1 */
@@ -30802,8 +30814,8 @@ function wl1HwHtml(r){   /* HW1 — one muted line at the bottom of the Full the
 
 /* ── list: rows · sort · header · notice ── */
 /* UX3 E — groups: HOLDING (hold/addon) → PLANNED (plan) → WATCHING (none) → other · inside a group homework-not-done first, then A–Z (a finished homework no longer drops a Holding / Planned row below Watching) */
-const WL1_GRPS = ['hold', 'plan', 'watch', 'other'], WL1_GRP_L = {hold:'HOLDING', plan:'PLANNED', watch:'WATCHING', other:'OTHER'};
-function wl1GrpOf(it){ const k = wl1Status(it).k; return k === 'hold' || k === 'addon' ? 'hold' : k === 'plan' ? 'plan' : k === 'none' ? 'watch' : 'other'; }
+const WL1_GRPS = ['hold', 'plan', 'focus', 'watch', 'other'], WL1_GRP_L = {hold:'HOLDING', plan:'PLANNED', focus:'FOCUS', watch:'WATCHING', other:'OTHER'};
+function wl1GrpOf(it){ const k = wl1Status(it).k; return k === 'hold' || k === 'addon' ? 'hold' : k === 'plan' ? 'plan' : k === 'none' ? (it.focus === true ? 'focus' : 'watch') : 'other'; }   /* UX3 F — FOCUS = watching + focus:true · a plan / holding wins (the flag is kept, ignored) */
 function wl1Sort(rows){
   const rk = r=>WL1_GRPS.indexOf(wl1GrpOf(r.item)) * 2 + (wl1HwDone(r.item) ? 1 : 0);
   return rows.map(r=>[r, rk(r)]).sort((a, b)=>a[1] - b[1] || a[0].sym.localeCompare(b[0].sym)).map(x=>x[0]);
@@ -30824,7 +30836,7 @@ function wl1ArchDate(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso 
    One table row per stock (Stock · Status · Sector vs SPY · RS · Thesis · homework · Next check · one action) + detail panel (bottom sheet on phone).
    Display only: RS never gates anything. Sort / filter are remembered per device. Old list/row/head functions stay (hooks) but are no longer drawn. */
 const WL5_SORTS = [['default', 'Default'], ['rs', 'RS high first'], ['nearhigh', 'Near high + RS'], ['next', 'Next check soonest'], ['hw', 'Homework first']];
-const WL5_FILTERS = [['all', 'All'], ['hold', 'Holding'], ['plan', 'Plan ready'], ['none', 'No plan'], ['need', 'Needs homework']];
+const WL5_FILTERS = [['all', 'All'], ['hold', 'Holding'], ['plan', 'Plan ready'], ['focus', 'Focus'], ['none', 'No plan'], ['need', 'Needs homework']];
 let wl5Sort = 'default', wl5Filter = 'all', wl5Q = '', wl5FullSym = '';
 try{ const s = localStorage.getItem('dash.wl5Sort'), f = localStorage.getItem('dash.wl5Filter'); if(WL5_SORTS.some(x=>x[0] === s)) wl5Sort = s; if(WL5_FILTERS.some(x=>x[0] === f)) wl5Filter = f; }catch(e){}
 function wl5Status(it){
@@ -30841,6 +30853,7 @@ function wl5Match(it, f){
   const k = wl1Status(it).k;
   if(f === 'hold') return k === 'hold' || k === 'addon';
   if(f === 'plan') return k === 'plan';
+  if(f === 'focus') return k === 'none' && it.focus === true;
   if(f === 'none') return k === 'none';
   if(f === 'need') return !wl1HwDone(it);
   return true;
@@ -30928,9 +30941,20 @@ function wl5RowHtml(r){
     <span class="c-hw wl1-hwt hw${hw.done ? ' ok' : ' no'}" data-wl1-hwt title="${e(hw.txt)}">${e(hw.txt)}</span>
     <span class="c-nx num" data-lr5-next>${nx ? e(wl1ArchDate(nx)) : '—'}</span>
     <button type="button" class="btn lr5-act${act.pri ? ' pri' : ''}" data-wl1-act data-lr5-act onclick="event.stopPropagation();${act.fn}">${act.t}</button>
+    <span class="c-fs">${st.k === 'none' ? wl5FocusBtn(it) : ''}</span>
     <div class="l2"><span class="t${hw.done ? '' : ' hw'}" title="${e(phone)}">${e(phone)}</span>${wl5RsPhone(it)}</div></div>`;
 }
-function wl5TableHead(){ return `<div class="lr5r lr5-th" aria-hidden="true"><span class="lbl">Stock</span><span class="lbl">Status</span><span class="lbl">Sector vs SPY</span><span class="lbl">RS · from high</span><span class="lbl">Thesis · homework</span><span class="lbl">Next check</span><span></span></div>`; }
+/* UX3 F — ☆ → ★ (dark) on a Watching row only · 44px tap target · keyboard (Enter / Space) · stored as focus:true on the watchlist item */
+function wl5FocusBtn(it){
+  const on = it.focus === true, t = wl1Bare(it.ticker), e = escHtml;
+  return `<button type="button" class="lr5-fs${on ? ' on' : ''}" data-wl-focus="${e(it.ticker)}" aria-pressed="${on}" aria-label="${on ? 'Remove ' + e(t) + ' from Focus' : 'Focus ' + e(t)}" title="${on ? 'In Focus — tap to remove' : 'Add to Focus'}" onclick="event.stopPropagation();wlFocusToggle(this.dataset.wlFocus)">${on ? '★' : '☆'}</button>`;
+}
+function wlFocusToggle(sym){
+  const it = wlItemOf(sym), col = wlCol(); if(!it || !col) return;
+  const next = it.focus !== true; it.focus = next; renderWatchlist();
+  Promise.resolve(col.doc(it.ticker).update({focus:next})).catch(e=>{ console.warn('focus:', e); it.focus = !next; try{ renderWatchlist(); }catch(x){} try{ alert('Could not save Focus: ' + ((e && (e.code || e.message)) || e)); }catch(x){} });
+}
+function wl5TableHead(){ return `<div class="lr5r lr5-th wl5-th" aria-hidden="true"><span class="lbl">Stock</span><span class="lbl">Status</span><span class="lbl">Sector vs SPY</span><span class="lbl">RS · from high</span><span class="lbl">Thesis · homework</span><span class="lbl">Next check</span><span></span></div>`; }
 function wl5Apply(rows){
   const q = String(wl5Q || '').trim().toUpperCase().replace(/\.BK$/, '');
   let L = rows.map((r, i)=>({r, i}));

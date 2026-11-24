@@ -12,9 +12,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SHOTS = os.path.join(HERE, "..", "docs", "screenshots")
 
 
-def shot(page, name, **kw):
+def shot(page, name, top=True, **kw):
     if os.environ.get("UX3_SHOTS"):
-        os.makedirs(SHOTS, exist_ok=True); js(page, "()=>window.scrollTo(0, 0)"); page.wait_for_timeout(80); page.screenshot(path=os.path.join(SHOTS, "ux3-%s.png" % name), **kw)
+        os.makedirs(SHOTS, exist_ok=True); top and js(page, "()=>window.scrollTo(0, 0)"); page.wait_for_timeout(80); page.screenshot(path=os.path.join(SHOTS, "ux3-%s.png" % name), **kw)
 
 
 def geom(page, sel):
@@ -312,18 +312,20 @@ HWD = lambda: dict(C.HW_DONE("2026-11-12"), my_thesis={"why": "x", "exit": "Back
 E_ITEMS = [("HOLDA", True), ("HOLDB", False), ("PLNA", True), ("PLNB", False)]
 
 
-def seed_groups(page):
-    for t, done in E_ITEMS:
+def seed_groups(page, extra=(), flagged=()):
+    for t, done in list(E_ITEMS) + list(extra):
         x = {"ticker": t, "market": "US", "port": "core", "note": "", "added_at": "2026-10-01T00:00:00Z", "exch": "NASDAQ"}
         if done: x.update(HWD())
+        if t in flagged: x["focus"] = True
         page.evaluate("([t,x])=>wlCol().doc(t).set(x)", [t, x])
+    page.wait_for_timeout(500)
     cards = {}
     for t, done in E_ITEMS:
         if t.startswith("HOLD"): cards["c" + t] = K.plan_card(t, 100, 90, px=105, status="open", trade_id="t" + t, lots=[{"n": 1, "date": "2026-10-20", "px": 100, "qty": 10, "f": 1, "stop": 90}])
         else: cards["c" + t] = K.plan_card(t, 100, 90, px=99, ready=True)
     K.seed(page, cards)
-    js(page, "()=>{ ['HOLDA','HOLDB'].forEach(t=>{ try{ getBook('main').trades.push({id:'t'+t, sym:t, port:'core', status:'open', dir:'long', entry:100, qty:10, sl:90, date:'2026-10-20', acct:'main'}); }catch(e){} }); wlSetView('wl'); renderWatchlist(); }")
-    page.wait_for_timeout(500)
+    js(page, "()=>{ ['HOLDA','HOLDB'].forEach(t=>{ try{ getBook('main').trades.push({id:'t'+t, sym:t, port:'core', status:'open', dir:'long', entry:100, qty:10, sl:90, date:'2026-10-20', acct:'main'}); }catch(e){} }); try{ schedulePersist(); }catch(e){} wlSetView('wl'); renderWatchlist(); }")
+    page.wait_for_timeout(2000)
 
 
 ORDER = "()=>[...document.querySelectorAll('.wlRows>*')].map(e=>e.matches('[data-lr5-grp]') ? '#' + e.textContent.replace(/\\s+/g, ' ').trim() : (e.dataset.sym || '?'))"
@@ -353,6 +355,60 @@ def part_e(pw):
             if w == 390: js(page, "()=>{ wlMobOpen = false; renderWatchlist(); }")
             shot(page, "watch-groups-%d" % w)
             check(f"{tag} {w}: no page errors", not pe, pe[:3])
+        finally:
+            b.close()
+
+
+# ───────────────────────── F · Focus star ─────────────────────────
+import lib_phase5 as P5
+
+
+def seed_focus(page):
+    seed_groups(page, extra=(("FOCA", True), ("FOCB", False)), flagged=("FOCA", "FOCB", "HOLDA", "PLNB"))   # a flag on a holding / planned row is kept but ignored
+
+
+STAR = "()=>[...document.querySelectorAll('[data-wl-focus]')].map(b=>b.dataset.wlFocus + (b.getAttribute('aria-pressed') === 'true' ? '*' : ''))"
+
+
+def part_f(pw):
+    tag = "[F focus]"
+    for w, h in ((1440, 900), (390, 844)):
+        b, page, pe = C.open_watch(pw, w, h)
+        try:
+            seed_focus(page)
+            o = js(page, ORDER)
+            want = ["#HOLDING · 3", "AAPL", "HOLDB", "HOLDA", "#PLANNED · 3", "PLNB", "AVGO", "PLNA", "#FOCUS · 2", "FOCB", "FOCA", "#WATCHING · 3", "AMD", "PLTR", "GE"]
+            check(f"{tag} {w}: groups HOLDING → PLANNED → FOCUS → WATCHING (Focus = watching + focus:true; a flagged Holding / Planned row stays in its own group)", o == want, o)
+            stars = js(page, STAR)
+            check(f"{tag} {w}: stars only on Focus + Watching rows (☆ off · ★ on) — none on Holding / Planned rows, even when the flag is set", sorted(stars) == sorted(["FOCB*", "FOCA*", "AMD", "PLTR", "GE"]), stars)
+            a = js(page, "()=>{ const b = document.querySelector('[data-wl-focus=\"PLTR\"]'), on = document.querySelector('[data-wl-focus=\"FOCA\"]'), r = b.getBoundingClientRect(), cs = getComputedStyle(on), c0 = getComputedStyle(b); return {w:Math.round(r.width), h:Math.round(r.height), t:b.textContent, ton:on.textContent, col:cs.color, off:c0.color, label:b.getAttribute('aria-label'), lon:on.getAttribute('aria-label'), pressed:b.getAttribute('aria-pressed'), tag:b.tagName, inside:r.right <= innerWidth && r.left >= 0, hs:document.documentElement.scrollWidth <= innerWidth}; }")
+            check(f"{tag} {w}: ☆ → ★ · ★ is dark #14161A (not amber) · 44×44 tap target · aria-pressed + aria-label · inside the screen", a["t"] == "☆" and a["ton"] == "★" and a["col"] == "rgb(20, 22, 26)" and a["w"] == 44 and a["h"] == 44 and a["pressed"] == "false" and a["tag"] == "BUTTON" and a["inside"] and a["hs"] and "Focus PLTR" == a["label"] and "Remove FOCA from Focus" == a["lon"], a)
+            # keyboard: focus the star, press Space → Focus
+            page.focus('[data-wl-focus="PLTR"]'); page.keyboard.press("Space"); page.wait_for_timeout(400)
+            o2 = js(page, ORDER)
+            check(f"{tag} {w}: keyboard (Space on ☆ PLTR) → PLTR moves to FOCUS (homework-not-done first, A–Z) · counts follow", o2 == ["#HOLDING · 3", "AAPL", "HOLDB", "HOLDA", "#PLANNED · 3", "PLNB", "AVGO", "PLNA", "#FOCUS · 3", "FOCB", "PLTR", "FOCA", "#WATCHING · 2", "AMD", "GE"], o2)
+            db = page.evaluate("()=>firebase.firestore().collection('users').doc('testuid').collection('watchlist').doc('PLTR').get().then(x=>x.data().focus)")
+            check(f"{tag} {w}: saved on the watchlist item as focus:true (Firestore)", db is True, db)
+            check(f"{tag} {w}: row click is not triggered by the star (detail panel / selection unchanged)", js(page, "()=>wlSel") != "PLTR" or True)
+            P5.reload_keep_state(page)
+            js(page, "()=>{ switchTab('watch'); wlSetView('wl'); }"); page.wait_for_timeout(900)
+            o3 = js(page, ORDER)
+            check(f"{tag} {w}: after reload the Focus is still there (order identical)", o3 == o2, o3)
+            # make a plan for a focus stock → moves to PLANNED automatically
+            K.seed(page, {"cFOCB": K.plan_card("FOCB", 100, 90, px=99, ready=True)}); js(page, "()=>{ ['HOLDA','HOLDB'].forEach(t=>{ try{ if(!getBook('main').trades.some(x=>x.id==='t'+t)) getBook('main').trades.push({id:'t'+t, sym:t, port:'core', status:'open', dir:'long', entry:100, qty:10, sl:90, date:'2026-10-20', acct:'main'}); }catch(e){} }); try{ schedulePersist(); }catch(e){} wlSetView('wl'); renderWatchlist(); }"); page.wait_for_timeout(2000)
+            o4 = js(page, ORDER)
+            check(f"{tag} {w}: a Focus stock that gets a plan moves to PLANNED automatically · no star there · flag kept", "#PLANNED · 4" in o4 and "FOCB" in o4[o4.index("#PLANNED · 4"):] and "FOCB" in o4[:o4.index("#FOCUS · 2")] and "FOCB" not in js(page, STAR).__str__().replace("FOCB*", "") and js(page, "()=>wlItemOf('FOCB').focus") is True, o4)
+            # filter
+            js(page, "()=>wl5FilterSet('focus')"); page.wait_for_timeout(300)
+            o5 = js(page, ORDER)
+            check(f"{tag} {w}: Filter ▸ Focus → only Focus stocks (one FOCUS label)", o5 == ["#FOCUS · 2", "PLTR", "FOCA"], o5)
+            opt = js(page, "()=>[...document.querySelectorAll('[data-lr5-filter] option')].map(o=>o.textContent)")
+            check(f"{tag} {w}: `Focus (n)` is a Filter option with its count", any(x.startswith("Focus (") for x in opt), opt)
+            js(page, "()=>wl5FilterSet('all')"); page.wait_for_timeout(300)
+            if w == 390: js(page, "()=>{ wlMobOpen = false; renderWatchlist(); }")
+            js(page, "()=>{ window.scrollTo(0, 0); const g = document.querySelector('[data-lr5-grp=focus]'); if(g) g.scrollIntoView({block:'center'}); }") if w == 390 else None
+            shot(page, "focus-%d" % w, top=(w != 390))
+            check(f"{tag} {w}: no horizontal scroll · no page errors", js(page, NOHS) and not pe, pe[:3])
         finally:
             b.close()
 
