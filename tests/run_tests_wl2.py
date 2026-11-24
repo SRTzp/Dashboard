@@ -47,7 +47,7 @@ def run(pw, w, h):
             got = {s: cell(s) for s in exp}
             check(f"{tag} D: phone line 2 ends with 'RS 98 ↘ −42%' (new high chip · old doc → rating only)", all(got[s].endswith(exp[s]) for s in exp), got)
             pos = js(page, "()=>[...document.querySelectorAll('[data-lr5-row]')].filter(r=>r.querySelector('[data-lr5-rs-phone]')).map(r=>{ const l = r.querySelector('.l2').getBoundingClientRect(), p = r.querySelector('[data-lr5-rs-phone]').getBoundingClientRect(), t = r.querySelector('.l2 .t').getBoundingClientRect(); return {s:r.dataset.sym, pin:Math.abs(l.right - p.right) <= 1, noOverlap:t.right <= p.left + 1, h:Math.round(l.height)} })")
-            check(f"{tag} D: RS pinned right on line 2, left text ellipsizes, never overlaps, one line", all(x["pin"] and x["noOverlap"] and x["h"] <= 22 for x in pos), pos)
+            check(f"{tag} D: RS pinned right on line 2, left text wraps (UX3 H), never overlaps, ≤ 4 lines", all(x["pin"] and x["noOverlap"] and x["h"] <= 72 for x in pos), pos)
         if desk:
             hd = js(page, "()=>{ const h = document.querySelector('.lr5-hd'); const k = [...h.children].filter(c=>getComputedStyle(c).display !== 'none'); const tops = k.map(c=>Math.round(c.getBoundingClientRect().top + c.getBoundingClientRect().height / 2)); return {rows:Math.max(...tops) - Math.min(...tops), add:document.querySelector('.lr5-add').getBoundingClientRect().right <= innerWidth, h:h.getBoundingClientRect().height, sw:document.documentElement.scrollWidth - innerWidth} }")
             check(f"{tag} H: header is ONE row (nothing wraps · '+ Add stock' on the same line · no overflow)", hd["rows"] <= 6 and hd["add"] and hd["sw"] <= 0 and hd["h"] <= 50, hd)

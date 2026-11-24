@@ -62,7 +62,7 @@ def run(pw, w, h):
         # ---- one line per row · no overflow
         dims = js(page, "()=>[...document.querySelectorAll('[data-lr5-row]')].map(r=>({s:r.dataset.sym, h:Math.round(r.getBoundingClientRect().height), cells:[...r.children].filter(c=>getComputedStyle(c).display!=='none' && !c.classList.contains('lr5-id')).map(c=>Math.round(c.getBoundingClientRect().height)), l2:(r.querySelector('.l2')||{getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height}))")
         if desk: check(f"{tag} A: every row is ONE line (≤ 64px · no cell wraps)", all(d["h"] <= 64 for d in dims) and all(max(d["cells"]) <= 44 for d in dims), dims)
-        else: check(f"{tag} C: every phone row is TWO lines (≤ 72px · line 2 one line ≤ 22px)", all(d["h"] <= 72 and d["l2"] <= 22 for d in dims), dims)
+        else: check(f"{tag} C: every phone row is two lines, a 3rd/4th line only when a long note wraps beside the RS + button (UX3 H: ≤ 120px · line 2 ≤ 72px)", all(d["h"] <= 120 and d["l2"] <= 72 for d in dims), dims)
         check(f"{tag} A: no horizontal page overflow", ov(page) <= 0, ov(page))
         # ---- hooks kept
         hk = js(page, "()=>['[data-wl1-row]','[data-wl1-chip]','[data-wl1-act]','[data-wl1-sum]','[data-wl1-seg]','[data-wl1-ideas]','[data-wl1-import]','[data-wl1-arch]','[data-wl1-arch-toggle]','[data-wl-restore]','[data-wl1-hwt]'].filter(s=>!document.querySelector(s))")
