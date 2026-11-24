@@ -82,4 +82,42 @@ for c in fx['last_done']:
     t('last completed session · %s · %s' % (c['now'], c['why']), str(us.last_completed_session(utc(c['now']))) == c['last'], str(us.last_completed_session(utc(c['now']))))
 for c in fx['behind']:
     t('sessions behind · now %s as-of %s' % (c['now'], c['asof']), us.sessions_behind(c['asof'], utc(c['now'])) == c['n'], us.sessions_behind(c['asof'], utc(c['now'])))
+
+# 4 · CR1 — "already fresh" rule of build_prices.py
+import build_prices as bp
+N = utc('2026-11-24T05:30:00Z')      # Tue 00:30 ET → latest completed session = Mon 23 Nov
+t('fresh: rs2 + rrg both on the latest completed session', bp.is_fresh('2026-11-23', '2026-11-23', N))
+t('not fresh: rrg/bars one session behind', not bp.is_fresh('2026-11-23', '2026-11-20', N))
+t('not fresh: rs2 behind', not bp.is_fresh('2026-11-20', '2026-11-23', N))
+t('not fresh: a missing doc (empty asOf) → run normally', not bp.is_fresh('', '2026-11-23', N) and not bp.is_fresh('2026-11-23', None, N))
+t('weekend: Friday data is fresh on Sat/Sun', bp.is_fresh('2026-11-20', '2026-11-20', utc('2026-11-22T06:00:00Z')))
+t('holiday: Wed data is fresh over Thanksgiving Thursday', bp.is_fresh('2026-11-25', '2026-11-25', utc('2026-11-26T23:00:00Z')))
+t('before the 16:15 ET cut the previous session is the target', bp.is_fresh('2026-11-20', '2026-11-20', utc('2026-11-23T20:00:00Z')) and not bp.is_fresh('2026-11-20', '2026-11-20', utc('2026-11-23T21:30:00Z')))
+
+
+class _Doc:
+    def __init__(self, d): self.exists, self._d = d is not None, d
+    def to_dict(self): return self._d
+
+
+class _Base:
+    def __init__(self, docs, boom=False): self.docs, self.boom = docs, boom
+    def collection(self, c): self.c = c; return self
+    def document(self, d):
+        self.k = self.c + '/' + d; return self
+    def get(self):
+        if self.boom: raise RuntimeError('offline')
+        return _Doc(self.docs.get(self.k))
+
+
+t('read_asofs reads rs2/_meta.asOf and rrg/bars.asOf', bp.read_asofs(_Base({'rs2/_meta': {'asOf': '2026-11-23'}, 'rrg/bars': {'asOf': '2026-11-23'}})) == ('2026-11-23', '2026-11-23'))
+t('read_asofs: missing docs → empty strings (not fresh)', bp.read_asofs(_Base({})) == ('', ''))
+t('read_asofs: read error → empty strings (run normally)', bp.read_asofs(_Base({}, boom=True)) == ('', ''))
+# the workflow
+wf = open(os.path.join(HERE, '..', '.github', 'workflows', 'prices.yml'), encoding='utf-8').read()
+crons = re.findall(r"- cron: '([^']+)'", wf)
+t('workflow: no cron on minute :00 or :30', crons and all(c.split()[0] not in ('0', '30') for c in crons), crons)
+t('workflow: a backup run every day about an hour after the main run (00:13 UTC)', '13 0 * * *' in crons)
+t('workflow: main runs 22:17 UTC Mon–Thu · 23:17 UTC Fri / Sat', '17 22 * * 1-4' in crons and '17 23 * * 5' in crons and '17 23 * * 6' in crons)
+t('workflow: manual run is forced (never skipped as fresh) · rr4 selftest runs in the workflow', "PRICES_FORCE: ${{ github.event_name == 'workflow_dispatch'" in wf and 'tests/rr4_selftest.py' in wf)
 print('PASS %d checks' % ok)

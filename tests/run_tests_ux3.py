@@ -241,6 +241,71 @@ def part_c(pw):
         b.close()
 
 
+# ───────────────────────── D · CR1 ─────────────────────────
+SEED_META = "(a)=>{ firebase.__mockDb.__seedDoc(['users','testuid','rs2','_meta'], {asOf:a, n:1943, nRated:130, runAt:a + 'T22:40:00Z', error:null}); ux3Data.at = 0; ux3Data.asOf = ''; if(typeof rs2 !== 'undefined'){ rs2.meta = null; rs2.asOf = ''; } td3Mode = 'd'; todayRefresh(true); }"
+STALE = "()=>{ const e = document.querySelector('[data-ux3-stale]'); if(!e) return null; const r = e.getBoundingClientRect(), a = e.querySelector('a'); return {txt:e.textContent.replace(/\\s+/g, ' ').trim(), href:a && a.href, target:a && a.target, rel:a && a.rel, right:Math.round(r.right), w:innerWidth, hs:document.documentElement.scrollWidth, color:getComputedStyle(e).color, ell:/…/.test(e.textContent) || getComputedStyle(e).textOverflow === 'ellipsis'}; }"
+ACT_URL = "https://github.com/SRTzp/Dashboard/actions/workflows/prices.yml"
+
+
+def part_d(pw):
+    tag = "[D CR1]"
+    # (clock, as-of of the data, expect stale?, why) — the harness clock is fixed per launch
+    cases = [("2026-11-19T12:00:00+07:00", "2026-11-18", False, "Thu 00:00 ET · newest = Wed → fresh"),
+             ("2026-11-19T12:00:00+07:00", "2026-11-17", False, "1 session behind → not stale (only MORE than 1)"),
+             ("2026-11-19T12:00:00+07:00", "2026-11-16", True, "2 sessions behind → stale"),
+             ("2026-11-21T12:00:00+07:00", "2026-11-19", False, "Saturday: Thursday is 1 behind the Friday close → not stale"),
+             ("2026-11-22T12:00:00+07:00", "2026-11-20", False, "Sunday: Friday data → not stale"),
+             ("2026-11-27T12:00:00+07:00", "2026-11-24", False, "Black Friday 00:00 ET: Thanksgiving closed, Wed 25 is the last session → Tue is 1 behind"),
+             ("2026-11-27T12:00:00+07:00", "2026-11-23", True, "…Monday is 2 behind → stale"),
+             ("2026-04-06T12:00:00+07:00", "2026-04-02", False, "Good Friday weekend: Thursday 2 Apr is the last session → fresh"),
+             ("2026-07-06T12:00:00+07:00", "2026-07-02", False, "4 July observed Friday 3 July → Thursday is the last session → fresh")]
+    for iso, asof, want, why in cases:
+        b, page, pe = C.open_watch(pw, 1440, 900, plan_cards=False, iso=iso)
+        try:
+            js(page, "()=>switchTab('today')"); page.wait_for_timeout(300)
+            js(page, SEED_META, asof); page.wait_for_timeout(900)
+            r = js(page, STALE)
+            check(f"{tag} {iso[:10]} data {asof}: {'⚠ line shown' if want else 'no line'} · {why}", (r is not None) == want, r)
+            if want:
+                check(f"{tag} line text `⚠ Screen data from <date> · Refresh ›` · amber · Refresh opens the prices workflow page in a new tab", r["txt"] == "⚠ Screen data from %s · Refresh ›" % (str(int(asof[8:])) + " " + ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][int(asof[5:7]) - 1]) and r["href"] == ACT_URL and r["target"] == "_blank" and "noopener" in r["rel"] and r["color"] != "rgb(20, 22, 26)", r)
+            check(f"{tag} no page errors", not pe, pe[:3])
+        finally:
+            b.close()
+    # Daily view only + the line is gone once fresh data arrives + phone
+    b, page, pe = C.open_watch(pw, 1440, 900, plan_cards=False)
+    try:
+        js(page, "()=>switchTab('today')"); page.wait_for_timeout(300)
+        js(page, SEED_META, "2026-11-16"); page.wait_for_timeout(900)
+        shot(page, "stale-1440")
+        js(page, "()=>{ td3Mode = 'w'; todayRefresh(true); }"); page.wait_for_timeout(500)
+        check(f"{tag} Weekly view: no stale line (Daily view only)", js(page, STALE) is None)
+        js(page, "()=>{ td3Mode = 'd'; todayRefresh(true); }"); page.wait_for_timeout(500)
+        js(page, SEED_META, "2026-11-18"); page.wait_for_timeout(900)
+        check(f"{tag} fresh data arrives → the line goes away", js(page, STALE) is None)
+    finally:
+        b.close()
+    b, page, pe = C.open_watch(pw, 390, 844, plan_cards=False)
+    try:
+        js(page, "()=>switchTab('today')"); page.wait_for_timeout(300)
+        js(page, SEED_META, "2026-11-16"); page.wait_for_timeout(900)
+        r = js(page, STALE)
+        check(f"{tag} 390: line shown, wraps inside the screen, no `…`, no horizontal scroll", r is not None and r["right"] <= r["w"] and r["hs"] <= r["w"] and not r["ell"], r)
+        js(page, "()=>{ const e = document.querySelector('[data-ux3-stale]'); if(e) e.scrollIntoView({block:'center'}); }"); page.wait_for_timeout(200)
+        shot(page, "stale-390")
+    finally:
+        b.close()
+    # Screen header reuses the same check
+    for asof, want in (("2026-11-18", False), ("2026-11-16", True)):
+        b, page, pe, ce = R.open_screen(pw, 1440, 900, meta_=dict(R.meta(), asOf=asof))
+        try:
+            js(page, "([a])=>{ rs2.asOf = a; rs2.meta.asOf = a; renderWatchlist(); }", [asof]); page.wait_for_timeout(400)
+            n = js(page, "()=>{ const e = document.querySelector('[data-rs2-stale]'); const s = document.querySelector('[data-rs2-sum] .lg'); return {has:!!e && e.getBoundingClientRect().width > 0, txt:s ? s.textContent.replace(/\\s+/g, ' ') : ''}; }")
+            check(f"{tag} Screen header with data {asof}: {'`stale` note shown' if want else 'no stale note'}", n["has"] == want, n)
+            if want: shot(page, "stale-screen-1440")
+        finally:
+            b.close()
+
+
 if __name__ == "__main__":
     only = os.environ.get("UX3_PARTS", "a b c d").split()
     with sync_playwright() as pw:

@@ -400,6 +400,26 @@ def _yf_sector(ysym):
     return {'sector': str(info.get('sector') or ''), 'industry': str(info.get('industry') or '')}
 
 
+def is_fresh(rs2_asof, rrg_asof, now_utc):
+    """CR1 — True when rs2/_meta.asOf AND rrg/bars.asOf are both the latest completed US session (then the run has nothing to do)"""
+    import us_sessions
+    last = us_sessions.last_completed_session(now_utc).isoformat()
+    return str(rs2_asof or '')[:10] == last and str(rrg_asof or '')[:10] == last
+
+
+def read_asofs(base):
+    """(rs2/_meta.asOf, rrg/bars.asOf) · a missing doc / read error = '' (→ not fresh → run normally)"""
+    out = []
+    for coll, doc in (('rs2', '_meta'), ('rrg', 'bars')):
+        try:
+            d = base.collection(coll).document(doc).get()
+            out.append(str((d.to_dict() or {}).get('asOf') or '') if d.exists else '')
+        except Exception as ex:
+            print('asOf read failed', coll, str(ex)[:80])
+            out.append('')
+    return tuple(out)
+
+
 def main():
     import firebase_admin
     from firebase_admin import credentials, firestore
@@ -411,6 +431,12 @@ def main():
     firebase_admin.initialize_app(credentials.Certificate(json.loads(sa)))
     db = firestore.client()
     base = db.collection('users').document(uid)
+    now = dt.datetime.now(dt.timezone.utc)
+    if os.environ.get('PRICES_FORCE', '').strip() not in ('', '0'):          # a manual 'Run workflow' always runs
+        print('forced run')
+    elif is_fresh(*read_asofs(base), now):                                  # CR1 — the backup run (and any repeat) ends here in seconds
+        print('already fresh — nothing to do')
+        return 0
     cards = [d.to_dict() or {} for d in base.collection('coreCards').stream()]
 
     def write(doc_id, data):
@@ -421,7 +447,6 @@ def main():
             data['at'] = firestore.SERVER_TIMESTAMP
         base.collection('prices').document(doc_id).set(data, merge=True)   # RS1 — merge: คงฟิลด์เดิม (rs ↔ ราคารายสัปดาห์)
 
-    now = dt.datetime.now(dt.timezone.utc)
     code = run(cards, _yf_fetch, write, now)
     try:        # RS1 — ล้มแล้วไม่ทำให้งานราคารายสัปดาห์เดิมล้ม
         watch = [d.to_dict() or {} for d in base.collection('watchlist').stream()]

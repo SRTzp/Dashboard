@@ -5382,6 +5382,10 @@ html body .lr5 .hw1-size .hw1-lnk{display:inline;font-size:12px}
   html body .lr5 .hw1-nc{grid-template-columns:1fr}
 }
 
+/* UX3 D — stale data line (Today) + `stale` note (Screen header): amber, wraps, never cut */
+.ux3-stale{color:var(--amber);font-size:13px;line-height:1.4;white-space:normal;overflow:visible;padding:2px 0}
+.ux3-stale a{color:inherit;text-decoration:underline;font-weight:600;white-space:nowrap}
+.ux3-st{color:var(--amber);font-weight:600}
 /* UX3 A — draggable splits: Watch detail panel · Homework Fact Sheet · Screen stock panel (≥ 1100px; same handle look as Today / My ideas) */
 .ux3-rz{display:none}
 @media (min-width:1100px){
@@ -13135,8 +13139,9 @@ function nt1bStatusHtml(M){
     rowHot = `<div class="nt1b-sr" data-nt1b-row="hot" data-lr2-card="hot"><span class="k">HOT</span><span class="v">${hot.lead.length ? chips : '<span class="mut">No leading sectors</span>'}${sub ? `<span class="mut nt1b-sub">${sub}</span>` : ''}</span></div>`;
   }
   let rowMac = ''; try{ rowMac = `<div class="nt1b-wrap" data-nt1b-row="macro">${ln4MacroLine(M)}</div>`; }catch(err){}
+  let rowStale = ''; try{ if(td3Mode !== 'w') rowStale = ux3StaleHtml(); }catch(err){}   /* UX3 D — Daily view only, only when stale */
   const det = ln4GoalOpen ? `<div class="ln4-det" data-ln4-goaldet>${td3GoalsHtml(M)}</div>` : '';
-  return `<section class="card ln4-card nt1b-st" data-nt1b-status data-lr2-glance aria-label="Market at a glance">${rowMood}${rowToday}${rowHot}${rowMac}${det}</section>`;
+  return `<section class="card ln4-card nt1b-st" data-nt1b-status data-lr2-glance aria-label="Market at a glance">${rowMood}${rowToday}${rowHot}${rowMac}${rowStale}${det}</section>`;
 }
 function ln4Html(M, W, wk){
   const status = ln4StatusHtml(M, W, wk);
@@ -25312,6 +25317,26 @@ function ux3Behind(asOf, nowMs){
   const a = String(asOf == null ? '' : asOf).slice(0, 10); if(!/^\d{4}-\d{2}-\d{2}$/.test(a)) return null;
   let d = ux3LastDone(nowMs), n = 0; while(d > a && n < 400){ n++; d = ux3PrevSession(d); } return n;
 }
+/* ── UX3 D · CR1 — a price run that does not silently miss: Today says so when the Screen data is more than 1 completed US session old ── */
+const UX3_ACTIONS_URL = 'https://github.com/SRTzp/Dashboard/actions/workflows/prices.yml';
+const ux3Data = {asOf:'', at:0, busy:false};
+function ux3DataAsOf(){ return String((typeof rs2 !== 'undefined' && (rs2.asOf || (rs2.meta && rs2.meta.asOf))) || ux3Data.asOf || ''); }
+function ux3Stale(nowMs){   /* → {asOf, behind} when the newest data is > 1 completed US session old · null = fresh or unknown (never a false alarm) */
+  const a = ux3DataAsOf().slice(0, 10), b = ux3Behind(a, nowMs);
+  return b !== null && b > 1 ? {asOf:a, behind:b} : null;
+}
+function ux3DataLoad(){   /* the small rs2/_meta doc only (Today does not need the 1,900-row list) */
+  if(ux3Data.busy || Date.now() - ux3Data.at < 600000) return;
+  if(typeof db === 'undefined' || !db || typeof uid === 'undefined' || !uid) return;
+  ux3Data.busy = true; const before = ux3DataAsOf();
+  Promise.resolve(db.collection('users').doc(uid).collection('rs2').doc('_meta').get()).then(m=>{ ux3Data.asOf = m && m.exists ? String((m.data() || {}).asOf || '') : ''; })
+    .catch(e=>{ console.warn('ux3 data meta:', e); })
+    .then(()=>{ ux3Data.busy = false; ux3Data.at = Date.now(); try{ if(ux3DataAsOf() !== before && activeTab === 'today') todayRefresh(true); }catch(e){} });
+}
+function ux3StaleHtml(){
+  ux3DataLoad(); const st = ux3Stale(); if(!st) return '';
+  return `<div class="nt1b-wrap ux3-stale" data-ux3-stale role="status">⚠ Screen data from ${escHtml(lr5Day(st.asOf))} · <a href="${UX3_ACTIONS_URL}" target="_blank" rel="noopener" data-ux3-refresh>Refresh ›</a></div>`;
+}
 /* ── UX3 C · RR4 — RRG bars written by the prices job (users/{uid}/rrg/bars) → the same rrgBuildRows/rrgCompute path, no Twelve Data call ── */
 const RRG_JOB_MAXBEHIND = 1;   /* ≤ 1 trading day old */
 function rrgJobGot(doc){   /* → {SYM: [{datetime, close, high}] newest first} — the shape rrgUnpack gives for a Twelve Data answer */
@@ -30931,8 +30956,8 @@ function wl5Header(mode, nMatch){
   const screen = `<button type="button" role="tab" class="${scr ? 'on' : ''}" aria-selected="${scr}" data-rs2-tab data-wl-view="screen" aria-pressed="${scr}" onclick="wlSetView('screen')">Screen</button>`;
   const nAll = rs2.meta && rs2.meta.n ? rs2.meta.n : (rs2.rows || []).length;
   const sum = on ? `<span class="lr5-sum" data-wl1-sum>${trkRows.length} stock${trkRows.length === 1 ? '' : 's'}${need ? ` · <b>${need} need${need === 1 ? 's' : ''} homework</b>` : ''}<span class="lr5-shared"> · shared by Main and Family</span></span>`
-    : scr && rs2.view === 'ind' && (rs2.rows || []).length ? `<span class="lr5-sum" data-rs2-sum><span class="lg">${nAll.toLocaleString('en-US')} liquid US stocks · <b>${(nMatch || 0).toLocaleString('en-US')} match</b> in ${rs2.indK || 0} ${rs2.indK === 1 ? 'industry' : 'industries'} · as of ${escHtml(rs2Dat())} close</span><span class="sm"><b>${(nMatch || 0).toLocaleString('en-US')}</b> in ${rs2.indK || 0} ${rs2.indK === 1 ? 'industry' : 'industries'} · ${escHtml(rs2Dat())}</span></span>`
-    : scr ? ((rs2.rows || []).length ? `<span class="lr5-sum" data-rs2-sum><span class="lg">${nAll.toLocaleString('en-US')} liquid US stocks · <b>${(nMatch || 0).toLocaleString('en-US')} match</b> · as of ${escHtml(rs2Dat())} close</span><span class="sm"><b>${(nMatch || 0).toLocaleString('en-US')}</b> of ${nAll.toLocaleString('en-US')} · ${escHtml(rs2Dat())}</span></span>` : '<span class="lr5-sum" data-rs2-sum>US stocks ranked by RS</span>')
+    : scr && rs2.view === 'ind' && (rs2.rows || []).length ? `<span class="lr5-sum" data-rs2-sum><span class="lg">${nAll.toLocaleString('en-US')} liquid US stocks · <b>${(nMatch || 0).toLocaleString('en-US')} match</b> in ${rs2.indK || 0} ${rs2.indK === 1 ? 'industry' : 'industries'} · as of ${escHtml(rs2Dat())} close${ux3Stale() ? ' · <b class="ux3-st" data-rs2-stale>stale</b>' : ''}</span><span class="sm"><b>${(nMatch || 0).toLocaleString('en-US')}</b> in ${rs2.indK || 0} ${rs2.indK === 1 ? 'industry' : 'industries'} · ${escHtml(rs2Dat())}${ux3Stale() ? ' · <b class="ux3-st">stale</b>' : ''}</span></span>`
+    : scr ? ((rs2.rows || []).length ? `<span class="lr5-sum" data-rs2-sum><span class="lg">${nAll.toLocaleString('en-US')} liquid US stocks · <b>${(nMatch || 0).toLocaleString('en-US')} match</b> · as of ${escHtml(rs2Dat())} close${ux3Stale() ? ' · <b class="ux3-st" data-rs2-stale>stale</b>' : ''}</span><span class="sm"><b>${(nMatch || 0).toLocaleString('en-US')}</b> of ${nAll.toLocaleString('en-US')} · ${escHtml(rs2Dat())}${ux3Stale() ? ' · <b class="ux3-st">stale</b>' : ''}</span></span>` : '<span class="lr5-sum" data-rs2-sum>US stocks ranked by RS</span>')
     : `<span class="lr5-sum" data-wl1-sum>${nI} idea${nI === 1 ? '' : 's'}<span class="lr5-shared"> · shared by Main and Family</span></span>`;
   const search = on ? `<label class="lr5-find"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><input type="search" data-lr5-q placeholder="Find ticker" aria-label="Find ticker" value="${escHtml(wl5Q)}" autocomplete="off" spellcheck="false" oninput="wl5Find(this.value)"></label>`
     : scr ? `<label class="lr5-find"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><input type="search" data-rs2-q placeholder="Find ticker" aria-label="Find ticker" value="${escHtml(rs2.q)}" autocomplete="off" spellcheck="false" oninput="rs2Find(this.value)"></label>` : '';
