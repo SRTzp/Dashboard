@@ -50,15 +50,24 @@ def sessions(n, end='2026-11-23'):
 ds = sessions(900)
 data = {s: [(d, 100 + i * 0.01 + k, 101 + i * 0.01 + k) for i, d in enumerate(ds)] for k, s in enumerate([rb.RRG_BENCH] + rb.RRG_SYMS)}
 doc = rb.build_doc(data, NOW)
-t('doc: asOf = last SPY session · bars = BARS · every symbol present', doc['asOf'] == '2026-11-23' and doc['bars'] == rb.BARS and len(doc['dates']) == rb.BARS and set(doc['syms']) == {rb.RRG_BENCH, *rb.RRG_SYMS} and doc['missing'] == [])
-t('doc: arrays aligned to dates (len c == len h == bars) · dates ascending', all(len(v['c']) == len(v['h']) == doc['bars'] for v in doc['syms'].values()) and doc['dates'] == sorted(doc['dates']))
+U = rb.unpack(doc)
+t('doc: asOf = last SPY session · bars = BARS · every symbol present', doc['asOf'] == '2026-11-23' and doc['bars'] == rb.BARS and len(U['dates']) == rb.BARS and set(U['syms']) == {rb.RRG_BENCH, *rb.RRG_SYMS} and doc['missing'] == [])
+t('doc: arrays aligned to dates (len c == len h == bars) · dates ascending', all(len(v['c']) == len(v['h']) == doc['bars'] for v in U['syms'].values()) and U['dates'] == sorted(U['dates']))
 t('doc: size well under Firestore 1 MB (< 500 KB for 24 symbols × close+high)', rb.doc_bytes(doc) < 500_000, rb.doc_bytes(doc))
+# HF3 C — the REAL size: every symbol, the real bar count. The old array shape needed ~41k index entries (> 40,000 → the write failed every run, never selftested)
+t('HF3 C: real bar count (800) × every symbol', rb.BARS == 800 and doc['bars'] == 800 and len(U['syms']) == len(rb.RRG_SYMS) + 1 and all(len(v['c']) == 800 for v in U['syms'].values()))
+t('HF3 C: the bulk is two JSON strings (datesJ · symsJ), no array / map field', isinstance(doc['datesJ'], str) and isinstance(doc['symsJ'], str) and not any(isinstance(v, (list, dict)) and k != 'missing' for k, v in doc.items()), list(doc))
+t('HF3 C: estimated index entries < 2,000 (limit 40,000)', rb.index_entries(doc) < 2000, rb.index_entries(doc))
+old_shape = {'v': 1, 'asOf': doc['asOf'], 'bench': 'SPY', 'bars': 800, 'dates': U['dates'], 'syms': U['syms'], 'missing': []}
+t('HF3 C: guard — the OLD array shape is the same order as the 40,000 limit (the estimator sees it: ~39k by our count, Firestore rejected it)', rb.index_entries(old_shape) > 30_000, rb.index_entries(old_shape))
+t('HF3 C: JSON size < 900 KB', rb.doc_bytes(doc) < 900_000, rb.doc_bytes(doc))
+t('HF3 C: round trip unpack == what went in (dates · closes · highs · nulls)', U['dates'] == [str(d) for d in sessions(900)[-800:]] and all(len(v['h']) == 800 for v in U['syms'].values()))
 d2 = dict(data); d2['XLU'] = [r for r in data['XLU'] if str(r[0]) != '2026-11-12']
-doc2 = rb.build_doc(d2, NOW); i = doc2['dates'].index('2026-11-12')
-t('a symbol missing one day → null at that index (other symbols keep the day)', doc2['syms']['XLU']['c'][i] is None and doc2['syms']['XLE']['c'][i] is not None)
+doc2 = rb.build_doc(d2, NOW); U2 = rb.unpack(doc2); i = U2['dates'].index('2026-11-12')
+t('a symbol missing one day → null at that index (other symbols keep the day)', U2['syms']['XLU']['c'][i] is None and U2['syms']['XLE']['c'][i] is not None)
 d3 = dict(data); d3.pop('XLF'); d3['XLE'] = None
 doc3 = rb.build_doc(d3, NOW)
-t('symbols that failed to download are listed in `missing` and left out', doc3['missing'] == ['XLF', 'XLE'] and 'XLF' not in doc3['syms'])
+t('symbols that failed to download are listed in `missing` and left out', doc3['missing'] == ['XLF', 'XLE'] and 'XLF' not in rb.unpack(doc3)['syms'])
 d4 = dict(data); d4.pop(rb.RRG_BENCH)
 t('no SPY → no doc (nothing is written)', rb.build_doc(d4, NOW) is None)
 wrote = {}

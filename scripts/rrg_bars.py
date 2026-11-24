@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """RR4 · daily bars (close + high) of the RRG ETFs + SPY → Firestore users/{uid}/rrg/bars
 The app builds the Flow RRG tails from this doc (existing rrgCompute) when it is ≤ 1 trading day old — no Twelve Data call.
-One doc: {v, asOf, bench, bars, dates:[…], syms:{XLU:{c:[…], h:[…]}, …}} · arrays are aligned to `dates` (null = no bar that day).
+One doc: {v, asOf, bench, bars, missing, datesJ:"[…]", symsJ:"{XLU:{c:[…], h:[…]}, …}"} · the bulk is two JSON STRINGS (HF3):
+Firestore indexes every array element and every map key — 24 symbols × 800 bars × (close + high) + dates ≈ 40k entries went over the
+40,000 per-document INDEX_ENTRIES_COUNT_LIMIT and the write failed every run. A string field is one index entry.
+Inside the JSON the arrays are aligned to the dates (null = no bar that day). unpack(doc) gives {dates, syms} back.
 RRG_SYMS mirrors RRG_SYMS / RRG_BENCH in index.html — tests/rr4_selftest.py fails if they differ.
 Pure functions (no network) + _yf_bars()."""
 import datetime as dt
@@ -11,9 +14,11 @@ import us_sessions
 RRG_BENCH = 'SPY'
 RRG_SYMS = ['XLU', 'PAVE', 'XHB', 'XLB', 'XLC', 'XBI', 'JETS', 'IGV', 'XRT', 'HACK', 'XLF', 'KRE', 'XLE', 'XLV', 'ITA',
             'SMH', 'ARKX', 'ROBO', 'XLK', 'XLI', 'XLY', 'XLP', 'XLRE']
-BARS = 800                  # sessions kept · weekly needs ~82 weeks (≈ 410 sessions) + EMA warm-up · ~330 KB, well under Firestore's 1 MB doc limit
+BARS = 800                  # sessions kept · weekly needs ~82 weeks (≈ 410 sessions) + EMA warm-up · ~300 KB, well under Firestore's 1 MB doc limit
+INDEX_LIMIT = 40_000        # Firestore: index entries per document
+INDEX_BUDGET = 2_000        # what this doc may use (selftest asserts it)
 DOC_LIMIT = 700_000         # bytes (JSON estimate) · over this → fewer bars
-VER = 1
+VER = 2                     # 2 = datesJ / symsJ strings (1 = arrays, never written: INDEX_ENTRIES_COUNT_LIMIT_EXCEEDED)
 
 
 def clean(rows):
@@ -67,8 +72,33 @@ def build_doc(data, now_utc, bars=BARS):
             if i is not None:
                 c[i], h[i] = cc, hh
         syms[s] = {'c': c, 'h': h}
-    return {'v': VER, 'asOf': bench[-1][0], 'bench': RRG_BENCH, 'bars': len(dates), 'dates': dates, 'syms': syms,
+    return {'v': VER, 'asOf': bench[-1][0], 'bench': RRG_BENCH, 'bars': len(dates), 'datesJ': _j(dates), 'symsJ': _j(syms),
             'missing': [s for s in RRG_SYMS if s not in syms]}
+
+
+def _j(x):
+    import json
+    return json.dumps(x, separators=(',', ':'))
+
+
+def unpack(doc):
+    """stored doc → {'dates': [...], 'syms': {SYM: {'c': [...], 'h': [...]}}} (also reads the old array shape)"""
+    import json
+    dates = json.loads(doc['datesJ']) if isinstance(doc.get('datesJ'), str) else doc.get('dates')
+    syms = json.loads(doc['symsJ']) if isinstance(doc.get('symsJ'), str) else doc.get('syms')
+    return {'dates': dates, 'syms': syms}
+
+
+def index_entries(doc):
+    """estimate of Firestore index entries for the doc: every array element and every map key of a non-string field counts
+    (strings, numbers, booleans = 1 each · the SERVER_TIMESTAMP `at` = 1)"""
+    def n(v):
+        if isinstance(v, dict):
+            return sum(1 + n(x) for x in v.values())
+        if isinstance(v, (list, tuple)):
+            return sum(1 + n(x) for x in v)
+        return 0
+    return sum(1 + n(v) for v in doc.values())
 
 
 def doc_bytes(doc):
@@ -104,11 +134,11 @@ def run(fetch, write, now_utc, bars=BARS):
     data = fetch([RRG_BENCH] + RRG_SYMS)
     doc = build_doc(data, now_utc, bars)
     if doc is None:
-        print('rrg bars: SPY missing or too short — not written')
+        print('rrg bars FAILED: SPY missing or too short — not written')
         return None
     while doc_bytes(doc) > DOC_LIMIT and doc['bars'] > 300:
         doc = build_doc(data, now_utc, doc['bars'] - 100)
     write('bars', doc)
-    print('rrg bars: %d symbols · %d bars · asOf %s · %d KB%s' % (len(doc['syms']), doc['bars'], doc['asOf'], doc_bytes(doc) // 1024,
+    print('rrg bars: %d symbols · %d bars · asOf %s · %d KB%s' % (len(unpack(doc)['syms']), doc['bars'], doc['asOf'], doc_bytes(doc) // 1024,
                                                                   ' · missing ' + ','.join(doc['missing']) if doc['missing'] else ''))
     return doc

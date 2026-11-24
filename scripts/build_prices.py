@@ -472,7 +472,7 @@ def main():
 
         rrg_bars.run(rrg_bars._yf_bars, write_rrg, now)
     except Exception as ex:
-        print('rrg bars failed:', str(ex)[:200])
+        print('rrg bars FAILED:', str(ex)[:300])   # the job stays green (prices matter more) — but this line is easy to spot
     return code
 
 
