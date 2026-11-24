@@ -94,6 +94,43 @@ def part_a(pw):
                 b.close()
 
 
+FIX = os.path.join(HERE, "fixtures", "googl-facts-null-asof.json")
+PARSE = "(t)=>{ const r = ltParse(t, null); return {err:r.err||null, factsOnly:!!r.factsOnly, asOf:r.th ? (r.th.asOf === undefined ? '(unset)' : r.th.asOf) : undefined, fAsOf:r.th&&r.th.facts&&r.th.facts.asOf, fDate:r.th&&r.th.facts&&r.th.facts.date}; }"
+
+
+def part_b(pw):
+    tag = "[B null optional]"
+    d = json.load(open(FIX))
+    b, page, pe = C.open_watch(pw, 1440, 900)
+    try:
+        P = lambda o: js(page, PARSE, json.dumps(o))
+        r = P(d)
+        check(f"{tag} GOOGL facts file with `asOf: null` parses (no error, facts-only)", r["err"] is None and r["factsOnly"] and r["fAsOf"] == "Q3 2026" and r["fDate"] == "2026-10-28", r)
+        for k in ("name", "market", "mode", "date", "basis", "audit"):
+            o = dict(d); o[k] = None; r = P(o)
+            check(f"{tag} top-level `{k}: null` is accepted", r["err"] is None, r)
+        o = dict(d); o["asOf"] = 5; r = P(o)
+        check(f"{tag} `asOf: 5` still rejected, same message", r["err"] == "Field asOf must be string (this file has number) — nothing saved", r)
+        o = dict(d); o["basis"] = ["x"]; r = P(o)
+        check(f"{tag} `basis: [..]` still rejected", r["err"] == "Field basis must be string (this file has array) — nothing saved", r)
+        o = dict(d); o["sym"] = None; r = P(o)
+        check(f"{tag} required `sym: null` stays strict", r["err"] is not None, r)
+        o = dict(d); o["facts"] = dict(d["facts"], asOf=None); r = P(o)
+        check(f"{tag} required facts.asOf stays strict", r["err"] is not None and "facts.asOf" in r["err"], r)
+        # real import through the Import sheet → Fact Sheet date line as before
+        js(page, "()=>wlCol().doc('GOOGL').set({ticker:'GOOGL', market:'US', port:'core', note:'', added_at:'2026-10-01T00:00:00Z'})"); page.wait_for_timeout(500)
+        js(page, "(t)=>{ ltImportOpen('GOOGL'); document.getElementById('ltJson').value = t; ltImpCheck(); }", json.dumps(d)); page.wait_for_timeout(250)
+        err = js(page, "()=>document.getElementById('ltErr') ? document.getElementById('ltErr').innerText : ''")
+        js(page, "()=>ltImpSave()"); page.wait_for_timeout(600)
+        st = js(page, "()=>{ const it = wlItemOf('GOOGL'); return {f: ltFacts(it) && ltFacts(it).date}; }")
+        js(page, "()=>{ wlOpen('GOOGL'); wl5Full('GOOGL','sum'); }"); page.wait_for_timeout(300)
+        ln = js(page, "()=>{ const e = document.querySelector('[data-lt-facts-line]'); return e ? e.innerText.trim() : null }")
+        check(f"{tag} Import sheet: no error · saved · Full thesis line shows the Fact Sheet date (`Fact Sheet · Q3 2026 · 28 Oct`)", not err.strip() and st["f"] == "2026-10-28" and ln == "Fact Sheet · Q3 2026 · 28 Oct", [err, st, ln])
+        check(f"{tag} no page errors", not pe, pe[:3])
+    finally:
+        b.close()
+
+
 if __name__ == "__main__":
     only = os.environ.get("UX3_PARTS", "a b c d").split()
     with sync_playwright() as pw:

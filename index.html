@@ -19156,6 +19156,7 @@ function impTypeErr(o, spec, ctx){
   const bad = (k, want, v) => 'Field ' + (ctx ? ctx + '.' : '') + k + ' must be ' + want + ' (this file has ' + impTypeName(v) + ') — nothing saved';
   const isObj = v => v!==null && typeof v==='object' && !Array.isArray(v);
   for(const k of (spec.s||[])) if(o[k]!==undefined && typeof o[k]!=='string') return bad(k, 'string', o[k]);
+  for(const k of (spec.sn||[])) if(o[k]!==undefined && o[k]!==null && typeof o[k]!=='string') return bad(k, 'string', o[k]);   /* UX3 B — optional text: null = no value */
   for(const k of (spec.n||[])) if(o[k]!==undefined && !(typeof o[k]==='number' && isFinite(o[k]))) return bad(k, 'number', o[k]);
   for(const k of (spec.a||[])) if(o[k]!==undefined && !Array.isArray(o[k])) return bad(k, 'list (array)', o[k]);
   for(const k of (spec.o||[])) if(o[k]!==undefined && !isObj(o[k])) return bad(k, 'object', o[k]);
@@ -19168,7 +19169,7 @@ function impTypeErr(o, spec, ctx){
 }
 const IMP_IDEA_SPEC = {s:['id','name','date','mode','status','audit'], a:['scope','origin','alt_explanations','assets','sources'], o:['user_notes','recheck','idea','mechanism','chain','call'], ao:['user_notes_check','evidence','kill','gaps','losers','candidates','log']};
 const IMP_LT_SUM_SPEC = {s:['status','biz','cycle','power','engine','price','risk','unknown','next','breaker','tier_note'], o:['call']};
-const IMP_LT_SPEC = {s:['sym','name','market','mode','date','asOf','basis','audit'], a:['sources'], o:['summary','sections','tier_inputs'], ao:['gaps','kpi','tripwires','catalysts','evidence','log']};   /* LT2: `facts` is validated on its own (ltFactsCheck) — a bad one never blocks the import */
+const IMP_LT_SPEC = {s:['sym'], sn:['name','market','mode','date','asOf','basis','audit'], a:['sources'], o:['summary','sections','tier_inputs'], ao:['gaps','kpi','tripwires','catalysts','evidence','log']};   /* LT2: `facts` is validated on its own (ltFactsCheck) — a bad one never blocks the import */
 function ideaParse(text){   /* → {err} | {idea, log, id} */
   if(!String(text==null?'':text).trim()) return {err:'Paste the JSON first'};
   const raw = ltTrimJson(text);
@@ -20587,7 +20588,7 @@ function ltParse(text, bound){   /* → {err} | {th, log} */
   let o; try{ o = JSON.parse(raw); }catch(e){ return {err:'Cannot read the JSON — check that you pasted all of it (starts with { and ends with })'}; }
   if(!o || typeof o!=='object' || Array.isArray(o)) return {err:'The JSON must be a single object'};
   if(o.schema !== 'living-thesis@1') return {err:'schema must be "living-thesis@1" (this file has ' + (o.schema==null ? 'not given' : JSON.stringify(String(o.schema)).slice(0,60)) + ')'};
-  { const te = impTypeErr(o, IMP_LT_SPEC) || (o.summary && typeof o.summary==='object' && !Array.isArray(o.summary) ? impTypeErr(o.summary, IMP_LT_SUM_SPEC, 'summary') : ''); if(te) return {err:te}; if(o.sections!==undefined && o.sections!==null && typeof o.summary==='object' && o.summary && o.summary.thesis!==undefined && !Array.isArray(o.summary.thesis)) return {err:'Field summary.thesis must be a list (array) (this file has ' + impTypeName(o.summary.thesis) + ') — nothing saved'}; }
+  { const te = impTypeErr(o, IMP_LT_SPEC) || (o.summary && typeof o.summary==='object' && !Array.isArray(o.summary) ? impTypeErr(o.summary, IMP_LT_SUM_SPEC, 'summary') : ''); if(te) return {err:te}; ['name','market','mode','date','asOf','basis','audit'].forEach(k=>{ if(o[k]===null) delete o[k]; }); if(o.sections!==undefined && o.sections!==null && typeof o.summary==='object' && o.summary && o.summary.thesis!==undefined && !Array.isArray(o.summary.thesis)) return {err:'Field summary.thesis must be a list (array) (this file has ' + impTypeName(o.summary.thesis) + ') — nothing saved'}; }
   const sym = String(o.sym==null?'':o.sym).trim();
   if(!sym) return {err:'The JSON has no sym (stock name)'};
   const noSec = !(o.sections && typeof o.sections==='object' && !Array.isArray(o.sections));
