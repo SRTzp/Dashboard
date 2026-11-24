@@ -5382,6 +5382,22 @@ html body .lr5 .hw1-size .hw1-lnk{display:inline;font-size:12px}
   html body .lr5 .hw1-nc{grid-template-columns:1fr}
 }
 
+/* UX3 A — draggable splits: Watch detail panel · Homework Fact Sheet · Screen stock panel (≥ 1100px; same handle look as Today / My ideas) */
+.ux3-rz{display:none}
+@media (min-width:1100px){
+  html body .ux3-rz{display:block;position:absolute;top:0;bottom:0;width:8px;left:0;cursor:col-resize;z-index:6;touch-action:none;outline:0}
+  html body .ux3-rz[data-off]{display:none}
+  html body .ux3-rz::after{content:"";display:block;position:sticky;top:45vh;margin-left:2.5px;height:44px;width:3px;border-radius:2px;background:#B9BEC7;opacity:0;transition:opacity .12s}
+  html body .ux3-rz:hover::after,html body .ux3-rz:focus-visible::after,html body .ux3-rz.drag::after{opacity:1}
+  html body .lr5 .wlm.wl1,html body .lr5 .lr5-screen .wlm,html body .lr5.lr5-screen .wlm,html body .lr5 .hw1-body{position:relative}
+  html body .lr5 .wlm.wl1>.wlDet.lr5-det{flex:1 1 var(--wl-det,340px)}
+  html body .lr5.lr5-screen .wlm>.wlDet.lr5-det,html body .lr5 .lr5-screen .wlm>.wlDet.lr5-det{flex:1 1 var(--rs-side,340px)}
+  html body .lr5 .hw1-pg .hw1-body{grid-template-columns:var(--hw-facts,minmax(0,7fr)) minmax(0,5fr)}
+  /* nothing is cut with '…' at any width the handle allows — the text wraps instead */
+  html body .lr5 .wlm.wl1 .lr5-dx,html body .lr5 .wlm.wl1 .lr5r .c-hw{white-space:normal;overflow:visible;text-overflow:clip}
+  html body .lr5 .hw1-pg .hw1-fr .v{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  html body .lr5.lr5-screen .rs2r .c-stock .nm{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+}
 /* ═══ FS2 — Fact Sheet answer-first (docs/briefs/lr/Business6.html · HomeworkFit.html) ═══ */
 html body .lr5 .hw2-hdr{display:flex;align-items:center;gap:10px;min-width:0}
 html body .lr5 .hw2-seg{display:flex;gap:2px;background:var(--lr-seg,#EEF0F3);border-radius:9px;padding:3px;width:300px;flex:none}
@@ -18247,8 +18263,9 @@ function renderWatchlist(){
   const detKey = wlSel + '|' + wlSub + '|' + wlDeep + '|' + wlView + '|' + full + '|' + hw1On();
   const keepDet = (oldDet && host.dataset.detKey === detKey) ? oldDet.scrollTop : 0;
   ltTermClose();
-  host.innerHTML = `<div class="lr5 lr5-w${open?' open':''}${full?' full':''}${hw1On()?' hw':''}" data-lr5>${wl5Header('wl')}<div class="wlm wl1 lr5m${open?' open':''}">${list}${det}</div><div class="lr5-dim" data-lr5-dim onclick="wlBack()"></div></div>`;
+  host.innerHTML = `<div class="lr5 lr5-w${open?' open':''}${full?' full':''}${hw1On()?' hw':''}" data-lr5>${wl5Header('wl')}<div class="wlm wl1 lr5m${open?' open':''}">${list}${det}${!full && !hw1On() && wlSel ? ux3RzHtml(WL_SPLIT) : ''}</div><div class="lr5-dim" data-lr5-dim onclick="wlBack()"></div></div>`;
   host.dataset.detKey = detKey;
+  try{ splitFit(WL_SPLIT); splitFit(HW_SPLIT); }catch(e){}
   initReadExpanders(host);
   wlFit();
   { /* WL2 — แท็บที่เลือกต้องอยู่ในจอ: เลื่อนเฉพาะแถบแท็บ (ไม่ใช้ scrollIntoView · มันดันทั้งหน้า) */
@@ -31749,7 +31766,13 @@ function nt1bNavPill(){
 const SPLITS = {};
 const splitRoot = ()=>document.documentElement;
 function splitDef(o){ o.gap = o.gap == null ? 20 : o.gap; o.dir = o.dir || 1; o.fitDefault = o.fitDefault !== false; if(!o.get){ o.get = ()=>o.val == null ? null : o.val; o.set = v=>{ o.val = v; }; } return o; }
-function splitMax(o){ const b = document.querySelector(o.box), W = b ? b.getBoundingClientRect().width : 1280; return Math.max(o.min, Math.min(o.max, Math.floor(W - o.gap - o.minOther))); }
+const splitMinOther = o=>typeof o.minOther === 'function' ? o.minOther() : o.minOther;
+function splitMax(o){ const b = document.querySelector(o.box), W = b ? b.getBoundingClientRect().width : 1280; return Math.max(o.min, Math.min(o.max, Math.floor(W - o.gap - splitMinOther(o)))); }
+/* UX3 — o.off = ()=>true when the two columns cannot sit side by side at the saved/default width (handle hidden, CSS default untouched) · o.place(h, o) puts the handle in the gap from the real column rects */
+function splitOff(o){ try{ return !!(o.off && o.off(o)); }catch(e){ return false; } }
+function splitSync(o){ const h = splitHandle(o); if(!h) return; if(splitOff(o)) h.setAttribute('data-off', '1'); else { h.removeAttribute('data-off'); try{ if(o.place) o.place(h, o); }catch(e){} } }
+function splitFits(o){ const b = document.querySelector(o.box); if(!b) return false; const eff = Math.max(o.min, Math.min(o.max, o.get() || o.def)); return b.getBoundingClientRect().width >= eff + o.gap + splitMinOther(o); }
+function splitPlace(h, o){ const b = document.querySelector(o.box), p = document.querySelector(o.pane); if(!b || !p) return; const br = b.getBoundingClientRect(), pr = p.getBoundingClientRect(); h.style.left = Math.round((o.dir === 1 ? pr.right - br.left + o.gap / 2 : pr.left - br.left - o.gap / 2) - 4) + 'px'; }
 function splitHandle(o){ return document.querySelector('[data-split="' + o.id + '"]'); }
 function splitLoad(o){   /* saved width (try/catch — blocked storage → the default) */
   let n = null; try{ n = parseInt(localStorage.getItem(o.key), 10); if(!(n >= o.min && n <= o.max)) n = null; }catch(e){ n = null; }
@@ -31757,15 +31780,17 @@ function splitLoad(o){   /* saved width (try/catch — blocked storage → the d
   try{ if(n) splitRoot().style.setProperty(o.cssVar, n + 'px'); else splitRoot().style.removeProperty(o.cssVar); }catch(e){}
 }
 function splitApply(o, w, save){
+  if(splitOff(o)){ try{ splitRoot().style.removeProperty(o.cssVar); }catch(e){} splitSync(o); return 0; }
   const mx = splitMax(o), c = Math.max(o.min, Math.min(mx, Math.round(w)));
   splitRoot().style.setProperty(o.cssVar, c + 'px');
   const h = splitHandle(o); if(h){ h.setAttribute('aria-valuenow', c); h.setAttribute('aria-valuemax', mx); }
   if(save){ o.set(c); try{ localStorage.setItem(o.key, String(c)); }catch(e){} }
   try{ nt2cAiFit(); }catch(e){}
+  splitSync(o);
   return c;
 }
-function splitReset(o){ o.set(null); try{ localStorage.removeItem(o.key); }catch(e){} if(o.fitDefault) splitApply(o, o.def, false); else { try{ splitRoot().style.removeProperty(o.cssVar); }catch(e){} const h = splitHandle(o); if(h) h.setAttribute('aria-valuenow', o.def); } }
-function splitFit(o){ const v = o.get(); if(v) splitApply(o, v, false); else if(o.fitDefault) splitApply(o, o.def, false); else { try{ splitRoot().style.removeProperty(o.cssVar); }catch(e){} } }
+function splitReset(o){ o.set(null); try{ localStorage.removeItem(o.key); }catch(e){} if(o.fitDefault) splitApply(o, o.def, false); else { try{ splitRoot().style.removeProperty(o.cssVar); }catch(e){} const h = splitHandle(o); if(h) h.setAttribute('aria-valuenow', o.def); } splitSync(o); }
+function splitFit(o){ const v = o.get(); if(v) splitApply(o, v, false); else if(o.fitDefault) splitApply(o, o.def, false); else { try{ splitRoot().style.removeProperty(o.cssVar); }catch(e){} } splitSync(o); }
 function splitHtml(o){ return `<div class="split-rz ${o.cls}" data-split="${o.id}" ${o.attr} role="separator" aria-orientation="vertical" aria-label="${o.label}" aria-valuemin="${o.min}" aria-valuemax="${o.max}" aria-valuenow="${o.get() || o.def}" tabindex="0"></div>`; }
 function splitInit(h, o){ if(!o.id) o.id = o.key; splitDef(o); SPLITS[o.id] = o; splitFit(o); return o; }
 (function(){
@@ -31807,7 +31832,14 @@ const nt1RzLoad = ()=>splitLoad(NT1_SPLIT), nt1RzMax = ()=>splitMax(NT1_SPLIT), 
 const TD_SPLIT = splitDef({id:'td', key:'td.rightW', def:440, min:340, max:600, minOther:640, box:'.lr2-main', pane:'.lr2-side', cssVar:'--td-right', dir:-1, cls:'td-rz', attr:'data-td-rz', label:'Resize the right column', fitDefault:false});
 SPLITS.td = TD_SPLIT;
 const tdRzHtml = ()=>splitHtml(TD_SPLIT);
-nt1RzLoad(); splitLoad(TD_SPLIT);
+/* UX3 A — Watch › Momentum/Compounder (detail panel) · Watch › Homework (Fact Sheet) · Watch › Screen (stock panel). Handles only ≥ 1100px and only while the two columns really sit side by side. */
+const UX3_SPLIT_COM = {fitDefault:false, off:o=>!splitFits(o), place:splitPlace};
+const WL_SPLIT = splitDef(Object.assign({id:'wl', key:'wl.detW', def:340, min:300, max:520, minOther:904, gap:16, box:'#watchGroups .wlm.wl1', pane:'#watchGroups .wlm.wl1>.wlDet', cssVar:'--wl-det', dir:-1, cls:'ux3-rz', attr:'data-ux3-rz="wl"', label:'Resize the stock panel'}, UX3_SPLIT_COM));
+const HW_SPLIT = splitDef(Object.assign({id:'hw', key:'hw.factsW', def:740, min:420, max:1200, minOther:420, gap:14, box:'.hw1-body', pane:'.hw1-body>.hw1-facts', cssVar:'--hw-facts', dir:1, cls:'ux3-rz', attr:'data-ux3-rz="hw"', label:'Resize the Fact Sheet'}, UX3_SPLIT_COM, {off:o=>{ const b = document.querySelector(o.box); return !b || b.getBoundingClientRect().width < o.min + o.gap + splitMinOther(o); }}));
+const RS_SPLIT = splitDef(Object.assign({id:'rs', key:'rs2.sideW', def:340, min:260, max:420, minOther:()=>{ try{ return rs2.preset !== 'leaders' ? 880 : 800; }catch(e){ return 880; } }, gap:16, box:'#watchGroups .lr5-screen .wlm', pane:'#watchGroups .lr5-screen .wlm>.wlDet', cssVar:'--rs-side', dir:-1, cls:'ux3-rz', attr:'data-ux3-rz="rs"', label:'Resize the stock panel'}, UX3_SPLIT_COM));
+Object.assign(SPLITS, {wl:WL_SPLIT, hw:HW_SPLIT, rs:RS_SPLIT});
+const ux3RzHtml = o=>splitHtml(o);
+nt1RzLoad(); splitLoad(TD_SPLIT); splitLoad(WL_SPLIT); splitLoad(HW_SPLIT); splitLoad(RS_SPLIT);
 function nt1ChartLoad(img){ try{ const w = img.naturalWidth, h = img.naturalHeight, b = img.closest('[data-nt1-chartw]'); if(b && w > 0 && h > 0) b.style.aspectRatio = w + ' / ' + h; }catch(e){} }
 function nt1BuiltOpen(id){
   const m = myList.find(x=>x.id === id), ov = document.getElementById('ltOverlay'), md = document.getElementById('ltModal'); if(!m || !ov || !md) return;
@@ -32703,7 +32735,8 @@ function rs2Render(host){
     <div class="wlm lr5m"><section class="panel wlList lr5-list" aria-label="Screen results"><div class="wlListBody"><div class="lr5-tbl rs2-tbl">
       <div class="rs2r rs2-th" data-rs2-th-row><span class="c-tk"><input type="checkbox" data-rs2-tick-all aria-label="Select all shown" onclick="rs2TkAll(this.checked)"></span><span class="lbl">Stock</span><span class="lbl">Sector vs SPY</span><span class="lbl">${rs2ThBtn('rs', 'RS')} · ${rs2ThBtn('high', 'from high')}</span>${x3 ? '<span class="lbl">3M · 1M</span>' : ''}<span class="lbl r">${rs2ThBtn('mc', 'M.Cap')}</span><span class="lbl r">${rs2ThBtn('vol', 'Avg $vol')}</span><span class="lbl r">${rs2ThBtn('earn', 'Earnings')}</span><span></span></div>
       ${rowsHtml}${foot}</div></div></section>
-      <aside class="wlDet lr5-det" aria-label="${sel ? escHtml(sel.t) + ' detail' : 'Detail'}">${ok && !rs2Phone() ? rs2DetHtml(sel) : ''}</aside></div>${ok && rs2Phone() && rs2.sheet && sel ? `<div class="ui-sheet-backdrop rs2-sheetbd" data-rs2-sheet role="dialog" aria-modal="true" aria-label="${escHtml(sel.t)} detail" onclick="if(event.target===this)rs2Sheet(false)"><div class="rs2-sheetb"><button type="button" class="btn rs2-sheetx" data-rs2-sheet-close aria-label="Close" onclick="rs2Sheet(false)">×</button>${rs2DetHtml(sel)}</div></div>` : ''}${ok && rs2.menu && rs2Phone() ? rs2MenuHtml(rs2.menu.sym) : ''}</div>`;
+      <aside class="wlDet lr5-det" aria-label="${sel ? escHtml(sel.t) + ' detail' : 'Detail'}">${ok && !rs2Phone() ? rs2DetHtml(sel) : ''}</aside>${ok && !rs2Phone() ? ux3RzHtml(RS_SPLIT) : ''}</div>${ok && rs2Phone() && rs2.sheet && sel ? `<div class="ui-sheet-backdrop rs2-sheetbd" data-rs2-sheet role="dialog" aria-modal="true" aria-label="${escHtml(sel.t)} detail" onclick="if(event.target===this)rs2Sheet(false)"><div class="rs2-sheetb"><button type="button" class="btn rs2-sheetx" data-rs2-sheet-close aria-label="Close" onclick="rs2Sheet(false)">×</button>${rs2DetHtml(sel)}</div></div>` : ''}${ok && rs2.menu && rs2Phone() ? rs2MenuHtml(rs2.menu.sym) : ''}</div>`;
+  try{ splitFit(RS_SPLIT); }catch(e){}
   try{ const ha = host.querySelector('[data-rs2-tick-all]'); if(ha){ const k = shown.filter(r=>rs2.tick[r.t]).length; ha.checked = shown.length > 0 && k === shown.length; ha.indeterminate = k > 0 && k < shown.length; } }catch(e){}
   const nl = host.querySelector('.wlListBody'); if(nl) nl.scrollTop = keep;
 }
@@ -33180,7 +33213,7 @@ function hw1PageHtml(r){
     <div class="hw1-top"><button type="button" class="btn sm hw1-back" data-hw1-back title="Back (Esc or Backspace)" onclick="hwBack()"><span class="lg">‹ Watch</span><span class="sm" aria-label="Back to Watch">‹</span></button><b class="hw1-t">${e(wl1Bare(t))} · Homework</b><span class="st ${st.cls} hw1-st" data-hw1-chip-st>${e(st.label)}</span><span class="hw1-ctx" data-hw1-ctx>${hw1CtxLine(it)}</span>${nt1CtxHtml('stock', it.ticker)}
       <span class="hw1-pr"><b data-hw1-prog>${done ? '✓ Done' : p.n + ' of ' + p.tot}</b><span class="bar"><i data-hw1-bar style="width:${Math.round(100 * p.n / p.tot)}%"></i></span></span></div>
     <div class="hw1-segw" role="tablist">${[['business', 'Business'], ['results', 'Results'], ['ai', 'AI'], ['mine', 'Mine']].map(a=>{ const on = seg === 'mine' ? a[0] === 'mine' : a[0] === tab; return `<button type="button" role="tab" data-hw1-seg="${a[0]}" class="${on ? 'on' : ''}" aria-selected="${on}" onclick="hw1SegSet('${e(t)}','${a[0]}')">${a[1]}</button>`; }).join('')}</div>
-    <div class="hw1-body">${hw1FactsHtml(it)}${hw1MineHtml(it)}</div></div>`;
+    <div class="hw1-body">${hw1FactsHtml(it)}${hw1MineHtml(it)}${ux3RzHtml(HW_SPLIT)}</div></div>`;
 }
 function hw1WhyLine(it){
   const x = it.src; if(!x || typeof x !== 'object' || x.from !== 'screen') return 'Added manually';
