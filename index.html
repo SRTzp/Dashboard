@@ -5382,6 +5382,11 @@ html body .lr5 .hw1-size .hw1-lnk{display:inline;font-size:12px}
   html body .lr5 .hw1-nc{grid-template-columns:1fr}
 }
 
+/* UX3 E — group labels in the Watch list (same label style as the table head) */
+html body .lr5 .lr5-grp{font:600 11px/1 var(--lr-sans);letter-spacing:.06em;text-transform:uppercase;color:var(--lr-muted);padding:14px 16px 6px;border-top:1px solid #F0F1F4}
+html body .lr5 .wlRows>.lr5-grp:first-child{border-top:0}
+html body .lr5 .lr5-grp+.lr5r{border-top:0}
+@media (max-width:1023px){html body .lr5 .lr5-grp{padding:12px 12px 4px}}
 /* UX3 D — stale data line (Today) + `stale` note (Screen header): amber, wraps, never cut */
 .ux3-stale{color:var(--amber);font-size:13px;line-height:1.4;white-space:normal;overflow:visible;padding:2px 0}
 .ux3-stale a{color:inherit;text-decoration:underline;font-weight:600;white-space:nowrap}
@@ -18260,7 +18265,7 @@ function renderWatchlist(){
   const legend = rows.some(r=>ideaRels(r.sym).length) ? '<div class="ideaLegend" data-idea-legend>▲ benefits · ▼ loses · ? to check</div>' : '';
   const rsLegend = rows.some(r=>{ const v = wl5RsOf(r.item); return v.ok && v.off != null; }) ? '<div class="lr5-lg" data-wl2-legend><span><span class="mut">−6%</span> 0 to −10%</span><span class="ink">−21% −10 to −25%</span><span class="amb">−42% beyond −25%</span><span><span class="lr5-nh">new high</span> takes the % slot</span></div>' : '';
   const list = `<section class="panel wlList lr5-list" aria-label="${wl1Trk==='ladder' ? 'Compounder' : 'Momentum'} watchlist"><div class="wlListHead">${wl1NoticeHtml()}${status}</div>
-    <div class="wlListBody" id="wlListBody"><div class="lr5-tbl">${wl5TableHead()}<div class="wlRows">${rows.map(r=>wl5RowHtml(r)).join('') || `<div class="empty">${empty}</div>`}</div></div>${rsLegend}${wl5ArchHtml(A)}${legend}</div></section>`;
+    <div class="wlListBody" id="wlListBody"><div class="lr5-tbl">${wl5TableHead()}<div class="wlRows">${wl5RowsHtml(rows) || `<div class="empty">${empty}</div>`}</div></div>${rsLegend}${wl5ArchHtml(A)}${legend}</div></section>`;
 
   const det = `<aside class="wlDet lr5-det" aria-label="${wlSel ? escHtml(wl1Bare(wlSel)) + ' detail' : 'Detail'}">${wlSel ? (hw1On() ? hw1PageHtml(wlFind(wlSel)) : full ? wl5FullHtml(wlFind(wlSel)) : wl5DetHtml(wlFind(wlSel))) : '<div class="panel"><div class="empty">Pick a stock from the list</div></div>'}</aside>`;
   const oldList = host.querySelector('.wlListBody'), oldDet = host.querySelector('.wlDBody');
@@ -30796,9 +30801,20 @@ function wl1HwHtml(r){   /* HW1 — one muted line at the bottom of the Full the
 }
 
 /* ── list: rows · sort · header · notice ── */
+/* UX3 E — groups: HOLDING (hold/addon) → PLANNED (plan) → WATCHING (none) → other · inside a group homework-not-done first, then A–Z (a finished homework no longer drops a Holding / Planned row below Watching) */
+const WL1_GRPS = ['hold', 'plan', 'watch', 'other'], WL1_GRP_L = {hold:'HOLDING', plan:'PLANNED', watch:'WATCHING', other:'OTHER'};
+function wl1GrpOf(it){ const k = wl1Status(it).k; return k === 'hold' || k === 'addon' ? 'hold' : k === 'plan' ? 'plan' : k === 'none' ? 'watch' : 'other'; }
 function wl1Sort(rows){
-  const rk = r=>{ const st = wl1Status(r.item).k, done = wl1HwDone(r.item); if(!done && (st === 'hold' || st === 'addon')) return 0; if(!done && st === 'plan') return 1; if(st === 'none') return 2; return 3; };
+  const rk = r=>WL1_GRPS.indexOf(wl1GrpOf(r.item)) * 2 + (wl1HwDone(r.item) ? 1 : 0);
   return rows.map(r=>[r, rk(r)]).sort((a, b)=>a[1] - b[1] || a[0].sym.localeCompare(b[0].sym)).map(x=>x[0]);
+}
+/* the list rows with a small section label per non-empty group — only while the order is the group order (Sort = Default) */
+function wl5RowsHtml(rows){
+  if(wl5Sort !== 'default') return rows.map(r=>wl5RowHtml(r)).join('');
+  const n = {}; rows.forEach(r=>{ const g = wl1GrpOf(r.item); n[g] = (n[g] || 0) + 1; });
+  let cur = '', out = '';
+  rows.forEach(r=>{ const g = wl1GrpOf(r.item); if(g !== cur){ cur = g; out += `<div class="lr5-grp" data-lr5-grp="${g}" role="presentation">${WL1_GRP_L[g]} · ${n[g]}</div>`; } out += wl5RowHtml(r); });
+  return out;
 }
 /* TS1b C — "Archived (n) ›" at the bottom of each Watch list · expands in place: ticker · archived date · reason · Restore (wlRestore) */
 function wl1ArchRows(A){ return (A.wl || []).filter(r=>r.item && r.item.archived === true && wl1TrkOf(r.item) === wl1Trk).sort((a, b)=>String(b.item.archived_at || '').localeCompare(String(a.item.archived_at || ''))); }

@@ -306,6 +306,57 @@ def part_d(pw):
             b.close()
 
 
+# ───────────────────────── E · list groups ─────────────────────────
+import re1d_common as K
+HWD = lambda: dict(C.HW_DONE("2026-11-12"), my_thesis={"why": "x", "exit": "Backlog falls"})
+E_ITEMS = [("HOLDA", True), ("HOLDB", False), ("PLNA", True), ("PLNB", False)]
+
+
+def seed_groups(page):
+    for t, done in E_ITEMS:
+        x = {"ticker": t, "market": "US", "port": "core", "note": "", "added_at": "2026-10-01T00:00:00Z", "exch": "NASDAQ"}
+        if done: x.update(HWD())
+        page.evaluate("([t,x])=>wlCol().doc(t).set(x)", [t, x])
+    cards = {}
+    for t, done in E_ITEMS:
+        if t.startswith("HOLD"): cards["c" + t] = K.plan_card(t, 100, 90, px=105, status="open", trade_id="t" + t, lots=[{"n": 1, "date": "2026-10-20", "px": 100, "qty": 10, "f": 1, "stop": 90}])
+        else: cards["c" + t] = K.plan_card(t, 100, 90, px=99, ready=True)
+    K.seed(page, cards)
+    js(page, "()=>{ ['HOLDA','HOLDB'].forEach(t=>{ try{ getBook('main').trades.push({id:'t'+t, sym:t, port:'core', status:'open', dir:'long', entry:100, qty:10, sl:90, date:'2026-10-20', acct:'main'}); }catch(e){} }); wlSetView('wl'); renderWatchlist(); }")
+    page.wait_for_timeout(500)
+
+
+ORDER = "()=>[...document.querySelectorAll('.wlRows>*')].map(e=>e.matches('[data-lr5-grp]') ? '#' + e.textContent.replace(/\\s+/g, ' ').trim() : (e.dataset.sym || '?'))"
+
+
+def part_e(pw):
+    tag = "[E groups]"
+    for w, h in ((1440, 900), (390, 844)):
+        b, page, pe = C.open_watch(pw, w, h)
+        try:
+            seed_groups(page)
+            st = js(page, "()=>Object.fromEntries(['AAPL','AVGO','GE','PLTR','AMD','HOLDA','HOLDB','PLNA','PLNB'].map(t=>[t, [wl1Status(wlItemOf(t)).k, wl1HwDone(wlItemOf(t))]]))")
+            check(f"{tag} {w}: fixtures are what the test says (hold+done · hold+not done · plan+done · none)", st["HOLDA"] == ["hold", True] and st["HOLDB"] == ["hold", False] and st["PLNA"] == ["plan", True] and st["PLNB"] == ["plan", False] and st["GE"][0] == "none" and st["GE"][1] is True and st["PLTR"] == ["none", False], st)
+            o = js(page, ORDER)
+            want = ["#HOLDING · 3", "AAPL", "HOLDB", "HOLDA", "#PLANNED · 3", "PLNB", "AVGO", "PLNA", "#WATCHING · 3", "AMD", "PLTR", "GE"]
+            check(f"{tag} {w}: HOLDING → PLANNED → WATCHING · inside a group homework-not-done first, then A–Z · done Holding/Planned rows stay above Watching", o == want, o)
+            lab = js(page, "()=>{ const g = document.querySelector('[data-lr5-grp]'), cs = getComputedStyle(g), ref = document.querySelector('.lr5 .lbl') ? getComputedStyle(document.querySelector('.lr5 .lbl')) : null; return {fs:cs.fontSize, ls:cs.letterSpacing, up:cs.textTransform, col:cs.color, rfs:ref && ref.fontSize, rcol:ref && ref.color, h:Math.round(g.getBoundingClientRect().height), right:Math.round(g.getBoundingClientRect().right), w:innerWidth, hs:document.documentElement.scrollWidth}; }")
+            check(f"{tag} {w}: label in the existing section-label style (11px · uppercase · spaced · muted), inside the screen", lab["fs"] == lab["rfs"] and lab["up"] == "uppercase" and lab["col"] == lab["rcol"] and lab["right"] <= lab["w"] and lab["hs"] <= lab["w"], lab)
+            js(page, "()=>wl5SortSet('rs')"); page.wait_for_timeout(200)
+            check(f"{tag} {w}: Sort ≠ Default → no group labels (order is not the group order)", js(page, "()=>document.querySelectorAll('[data-lr5-grp]').length") == 0)
+            js(page, "()=>wl5SortSet('default')"); page.wait_for_timeout(200)
+            js(page, "()=>wl5FilterSet('hold')"); page.wait_for_timeout(200)
+            o2 = js(page, ORDER)
+            check(f"{tag} {w}: filter Holding → only the HOLDING label with its own count", o2 == ["#HOLDING · 3", "AAPL", "HOLDB", "HOLDA"], o2)
+            js(page, "()=>wl5FilterSet('all')"); page.wait_for_timeout(200)
+            js(page, "()=>{ const l = document.querySelector('.wlRows'); window.scrollTo(0, 0); }")
+            if w == 390: js(page, "()=>{ wlMobOpen = false; renderWatchlist(); }")
+            shot(page, "watch-groups-%d" % w)
+            check(f"{tag} {w}: no page errors", not pe, pe[:3])
+        finally:
+            b.close()
+
+
 if __name__ == "__main__":
     only = os.environ.get("UX3_PARTS", "a b c d").split()
     with sync_playwright() as pw:
