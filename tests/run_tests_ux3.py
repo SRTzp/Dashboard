@@ -599,7 +599,7 @@ def part_g(pw):
 
 
 if __name__ == "__main__":
-    only = os.environ.get("UX3_PARTS", "a b c d").split()
+    only = os.environ.get("UX3_PARTS", "a b c d e f g").split()
     with sync_playwright() as pw:
         for k in only:
             globals().get("part_" + k, lambda pw: None)(pw)
