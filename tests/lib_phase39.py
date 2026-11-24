@@ -76,6 +76,7 @@ def launch(pw, w, h, doc=None, cards=None, iso=CLK, clean=False, ff=None, extra=
     ce, pe, dialogs = [], [], []
     page.on("console", lambda m: ce.append(m.text) if m.type == "error" else None)
     page.on("pageerror", lambda e: pe.append(str(e)))
+    if os.environ.get("HF4_LOG"): page.on("console", lambda m: open(os.environ["HF4_LOG"], "a").write(m.text + "\n") if m.text.startswith("HF4-UNDEF") else None)   # HF4 — which writes carried undefined (dropped by ignoreUndefinedProperties)
     page.on("dialog", lambda d: (dialogs.append(d.message), d.accept()))
     page.route(re.compile(r"gstatic\.com/firebasejs"), lambda r: r.fulfill(status=200, content_type="application/javascript", body=base.MOCK_FB))
     page.route(re.compile(r"fonts\.(googleapis|gstatic)\.com"), lambda r: r.fulfill(status=200, content_type="text/css", body=""))
