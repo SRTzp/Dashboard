@@ -12,7 +12,7 @@ const code = block('const RRG_BUILD', '/* ---------- ดึงราคาจา
 let NOW = Date.UTC(2030, 0, 15, 12, 0);
 class FakeDate extends Date { constructor(...a) { a.length ? super(...a) : super(NOW); } static now() { return NOW; } }
 const ctx = vm.createContext({ Math, Date: FakeDate, Intl, Map, Set, Array, Object, JSON, String, Number, console, parseInt });
-vm.runInContext(code + '\nthis.__api = {RRG_SYMS, RRG_BENCH, rrgSeries, rrgBuildRows, rrgJobGot, rrgJobOk, rrgJobRows, setRef:(r)=>{REF=r;}, ux3Holidays, ux3LastDone, ux3Behind, ux3IsSession, ux3PrevSession};', ctx);
+vm.runInContext(code + '\nthis.__api = {RRG_SYMS, RRG_BENCH, rrgSeries, rrgBuildRows, rrgJobGot, rrgJobOk, rrgJobCheck, rrgJobRows, setRef:(r)=>{REF=r;}, ux3Holidays, ux3LastDone, ux3Behind, ux3IsSession, ux3PrevSession};', ctx);
 const A = ctx.__api;
 let ok = 0, fail = 0;
 const t = (name, cond, extra) => { if (cond) ok++; else { fail++; console.log('FAIL', name, extra === undefined ? '' : JSON.stringify(extra).slice(0, 400)); } };
@@ -56,6 +56,14 @@ t('fresh: asOf == last completed session', A.rrgJobOk(Object.assign({}, doc), at
 t('fresh: 1 session old (job missed one night)', A.rrgJobOk(Object.assign({}, doc), at('2030-01-16T12:00:00Z')));
 t('stale: 2 sessions old → Twelve Data', !A.rrgJobOk(Object.assign({}, doc), at('2030-01-17T12:00:00Z')));
 t('weekend is not stale (Fri bars on Saturday)', A.rrgJobOk(Object.assign({}, doc, { asOf: '2030-01-11' }), at('2030-01-12T12:00:00Z')));
-t('missing symbol → not usable', !A.rrgJobOk(Object.assign({}, doc, { syms: Object.assign({}, doc.syms, { XLE: undefined }) }), at('2030-01-15T12:00:00Z')));
+t('HF3 B: one missing symbol → still usable (SPY + ≥ 80% of the symbols) and named', A.rrgJobOk(Object.assign({}, doc, { syms: Object.assign({}, doc.syms, { XLE: undefined }) }), at('2030-01-15T12:00:00Z')));
+{ const all = Object.assign({}, doc.syms); A.RRG_SYMS.slice(0, 6).forEach(x => { delete all[x.s]; });
+  t('HF3 B: 6 of 23 missing (< 80%) → not usable', !A.rrgJobOk(Object.assign({}, doc, { syms: all }), at('2030-01-15T12:00:00Z'))); }
 t('no doc / no SPY → not usable', !A.rrgJobOk(null, at('2030-01-15T12:00:00Z')) && !A.rrgJobOk(Object.assign({}, doc, { syms: {} }), at('2030-01-15T12:00:00Z')));
+// HF3 C — the job writes datesJ / symsJ (JSON strings): the app reads them to the same rows as the old array shape
+{ const docJ = { v: 2, asOf: doc.asOf, bench: 'SPY', bars: doc.bars, missing: [], datesJ: JSON.stringify(doc.dates), symsJ: JSON.stringify(doc.syms) };
+  t('HF3 C: datesJ / symsJ doc → same rows as the array doc (D + W, every field)', JSON.stringify(A.rrgJobRows(docJ)) === JSON.stringify(A.rrgJobRows(doc)) && A.rrgJobRows(docJ).rowsD.length === 23);
+  t('HF3 C: datesJ / symsJ doc is usable', A.rrgJobOk(docJ, at('2030-01-15T12:00:00Z')));
+  t('HF3 C: bad JSON → not usable (= doc missing)', !A.rrgJobOk(Object.assign({}, docJ, { symsJ: '{nope' }), at('2030-01-15T12:00:00Z')) && !A.rrgJobOk(Object.assign({}, docJ, { datesJ: '[1' }), at('2030-01-15T12:00:00Z')));
+  t('HF3 B: check() names the missing symbols', JSON.stringify(A.rrgJobCheck(Object.assign({}, doc, { syms: Object.assign({}, doc.syms, { XHB: undefined, JETS: undefined }) }), at('2030-01-15T12:00:00Z')).miss) === '["XHB","JETS"]'); }
 console.log(fail ? `FAIL ${fail}/${ok + fail}` : `PASS ${ok}/${ok}`); process.exit(fail ? 1 : 0);
