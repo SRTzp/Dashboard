@@ -421,6 +421,16 @@ def part_f(pw):
             js(page, "()=>wl5FilterSet('all')"); page.wait_for_timeout(300)
             if w == 390: js(page, "()=>{ wlMobOpen = false; renderWatchlist(); }")
             js(page, "()=>{ window.scrollTo(0, 0); const g = document.querySelector('[data-lr5-grp=focus]'); if(g) g.scrollIntoView({block:'center'}); }") if w == 390 else None
+            if w == 390:
+                js(page, "()=>{ wlMobOpen = false; renderWatchlist(); }"); page.wait_for_timeout(300)
+                g = js(page, """()=>{ const r = [...document.querySelectorAll('.lr5 .wl1-row')].find(x=>x.querySelector('.lr5-fs')); if(!r) return null;
+                  const f = r.querySelector('.lr5-fs').getBoundingClientRect(), pills = [...r.querySelectorAll('.c-st .wl1-st, .c-st .lr5-ll')].map(x=>x.getBoundingClientRect()), a = r.querySelector('.lr5-act').getBoundingClientRect();
+                  const lastR = Math.max(...pills.map(x=>x.right)); return {gap: f.left - lastR, toAct: a.left - f.right, same: Math.abs((f.top+f.height/2) - (pills[0].top+pills[0].height/2)) < 8}; }""")
+                check(f"{tag} 390: Focus chip sits inline right after the status / left Leaders pills (gap ≤ 12px), not pushed to the Homework button", g and g["gap"] <= 12 and g["gap"] >= 0 and g["toAct"] > 20 and g["same"], g)
+                t2 = js(page, """()=>{ const t = document.querySelector('.lr5 .wl1-row .l2 .t'); t.textContent = 'Homework 2 of 4 — thesis, valuation and risk notes still missing before the plan can be written down properly'; const cs = getComputedStyle(t), r = t.closest('.wl1-row').getBoundingClientRect();
+                  return {to: cs.textOverflow, ws: cs.whiteSpace, ov: cs.overflow, lines: Math.round(t.getBoundingClientRect().height / parseFloat(cs.lineHeight)), clip: t.scrollWidth > t.clientWidth + 1, inside: t.getBoundingClientRect().right <= r.right}; }""")
+                check(f"{tag} 390: 2nd line wraps (no ellipsis, no clipping) — long note takes 2–3 lines", t2["to"] != "ellipsis" and t2["ws"] != "nowrap" and t2["ov"] != "hidden" and t2["lines"] >= 2 and not t2["clip"] and t2["inside"], t2)
+                js(page, "()=>renderWatchlist()"); page.wait_for_timeout(300)
             shot(page, "focus-%d" % w, top=(w != 390))
             check(f"{tag} {w}: no horizontal scroll · no page errors", js(page, NOHS) and not pe, pe[:3])
         finally:
