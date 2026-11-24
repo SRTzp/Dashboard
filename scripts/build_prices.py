@@ -437,6 +437,17 @@ def main():
         run_rs(pick_rs_tickers(cards, watch), uni, _yf_fetch_many, write, now, _yf_sector, have, us_table)
     except Exception as ex:
         print('rs failed:', str(ex)[:200])
+    try:        # RR4 — RRG daily bars for the Flow tails (own try: a failure keeps yesterday's rrg/bars and the app falls back to Twelve Data)
+        import rrg_bars
+
+        def write_rrg(doc_id, data):
+            data = dict(data)
+            data['at'] = firestore.SERVER_TIMESTAMP
+            base.collection('rrg').document(doc_id).set(data)
+
+        rrg_bars.run(rrg_bars._yf_bars, write_rrg, now)
+    except Exception as ex:
+        print('rrg bars failed:', str(ex)[:200])
     return code
 
 

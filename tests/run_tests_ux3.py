@@ -131,6 +131,116 @@ def part_b(pw):
         b.close()
 
 
+# ───────────────────────── C · RR4 ─────────────────────────
+import re, random, datetime as dt
+sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
+import us_sessions as US
+import rrg_bars as RB
+
+RR_END = "2026-11-18"       # harness clock 19 Nov 2026 12:00 +07 = 00:00 ET → the last completed US session is Wed 18 Nov
+
+
+def rr_bars(end=RR_END, n=900, skip=0):
+    d, ds = dt.date.fromisoformat(end), []
+    while len(ds) < n:
+        if US.is_session(d): ds.append(d)
+        d -= dt.timedelta(days=1)
+    ds.reverse()
+    out = {}
+    for k, s_ in enumerate([RB.RRG_BENCH] + RB.RRG_SYMS):
+        r = random.Random(11 + k); p = 100.0; drift = (k - 12) / 6000.0; rows = []
+        for d in ds:
+            p *= 1 + drift + (r.random() - 0.5) * 0.02; c = round(p, 4); rows.append((d, c, round(c * (1 + r.random() * 0.01), 4)))
+        out[s_] = rows
+    return out
+
+
+def rr_doc(end=RR_END):
+    return RB.build_doc(rr_bars(end), dt.datetime(2026, 11, 19, 5, 0, tzinfo=dt.timezone.utc), 800)
+
+
+def rr_td_handler(bars_by_sym, calls):
+    def h(route):
+        url = route.request.url; calls.append(url)
+        m = re.search(r"symbol=([^&]+)", url); syms = re.sub(r"%2C", ",", m.group(1)).split(",") if m else []
+        def vals(s_):
+            return [{"datetime": str(d), "close": str(c), "high": str(hh)} for d, c, hh in reversed(bars_by_sym[s_])]
+        body = {"values": vals(syms[0])} if len(syms) == 1 else {s_: {"values": vals(s_)} for s_ in syms}
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
+    return h
+
+
+def rr_prep(page, doc, key=""):
+    page.evaluate("([d])=>firebase.firestore().collection('users').doc('testuid').collection('rrg').doc('bars').set(d)", [doc]) if doc else None
+    js(page, "(k)=>{ RRG_CFG.cooldownMs = 0; state.settings.tdKey = k; try{ getBook(tdHome()).settings.tdKey = k; }catch(e){} const f = ffState(); f.rrg = {}; rrgAutoDone = false; rrgJobTried = false; try{ localStorage.removeItem('rrgAutoAttemptAt'); localStorage.removeItem('rrgLastBatchAt'); }catch(e){} }", key)
+    page.wait_for_timeout(300)
+
+
+STATUS = "()=>{ const e = document.querySelector('[data-lr4-rrg] .lr4-rh .nt'); return e ? e.textContent.replace(/\\s+/g, ' ').trim() : null; }"
+
+
+def part_c(pw):
+    tag = "[C RR4]"
+    full = rr_bars(); full800 = {s_: r[-800:] for s_, r in full.items()}
+    b, page, pe = C.open_watch(pw, 1440, 900, plan_cards=False)
+    try:
+        reqs = []
+        page.on("request", lambda r: reqs.append(r.url) if "twelvedata" in r.url else None)
+        tdcalls = []
+        page.route(re.compile(r"api\.twelvedata\.com"), rr_td_handler(full800, tdcalls))
+        # 1 · fresh job doc, NO Twelve Data key → tails straight from the job
+        rr_prep(page, rr_doc(), key="")
+        js(page, "()=>{ switchTab('flow'); const f = ffState(); f.themesCol = false; f.themesColUser = true; ffRenderThemes(); }"); page.wait_for_timeout(1500)
+        st = js(page, STATUS)
+        n = js(page, "()=>{ const r = ffState().rrg; return {src:r.src, d:(r.rowsD||[]).length, w:(r.rowsW||[]).length, tails:(r.rowsD||[]).filter(x=>x.tail && x.tail.length === 5).length, err:r.err||''}; }")
+        check(f"{tag} fresh rrg/bars (even with no Twelve Data key): 23 rows with 5-point tails, src job, no Twelve Data call", n["src"] == "job" and n["d"] == 23 and n["w"] == 23 and n["tails"] == 23 and not reqs and not n["err"], [n, reqs[:2]])
+        check(f"{tag} status line (Flow › Sectors vs SPY): `Daily · Data as of 18 Nov · from the 05:30 job`", st == "Daily · Data as of 18 Nov · from the 05:30 job", st)
+        shot(page, "rrg-instant-1440-stat") if False else None
+        job_rows = js(page, "()=>JSON.stringify({d:ffState().rrg.rowsD, w:ffState().rrg.rowsW})")
+        page.evaluate("()=>{ const el = document.querySelector('[data-lr4-rrg]'); if(el) el.scrollIntoView({block:'start'}); }"); page.wait_for_timeout(300)
+        shot(page, "rrg-instant-1440")
+        # 2 · Refresh = Twelve Data path (same bars → same rows)
+        rr_prep(page, None, key="k")
+        js(page, "()=>{ const f = ffState(); f.rrg = {}; rrgRefresh(false); }"); page.wait_for_timeout(1200)
+        again = js(page, "()=>ffState().rrg.src"); reqs.clear()
+        js(page, "()=>rrgManualRefresh()"); page.wait_for_timeout(2500)
+        td_rows = js(page, "()=>JSON.stringify({d:ffState().rrg.rowsD, w:ffState().rrg.rowsW, src:ffState().rrg.src, pend:ffState().rrg.pending||null})")
+        tdr = json.loads(td_rows)
+        check(f"{tag} Refresh button → Twelve Data path (requests made · src cleared · status no longer says `from the 05:30 job`)", len(reqs) >= 3 and tdr["src"] == "" and tdr["pend"] is None, [len(reqs), tdr["src"], tdr["pend"]])
+        jr = json.loads(job_rows)
+        same = tdr["d"] == jr["d"] and tdr["w"] == jr["w"]
+        check(f"{tag} guard: identical bars through the job path and the Twelve Data path → identical rows (quadrant + tail points + numbers, D and W)", same and len(jr["d"]) == 23, [len(jr["d"]), len(tdr["d"])])
+        # 3 · stale doc (3 sessions behind) → Twelve Data path
+        reqs.clear()
+        rr_prep(page, rr_doc("2026-11-13"), key="k")
+        js(page, "()=>{ switchTab('today'); switchTab('flow'); }"); page.wait_for_timeout(2500)
+        st3 = js(page, "()=>ffState().rrg.src")
+        check(f"{tag} rrg/bars 3 sessions old → Twelve Data path used (requests made · src not job)", len(reqs) >= 1 and st3 != "job", [len(reqs), st3])
+        # 4 · missing doc → Twelve Data path (and no key → nothing, as before)
+        reqs.clear()
+        page.evaluate("()=>firebase.firestore().collection('users').doc('testuid').collection('rrg').doc('bars').delete()"); page.wait_for_timeout(200)
+        rr_prep(page, None, key="k")
+        js(page, "()=>{ switchTab('today'); switchTab('flow'); }"); page.wait_for_timeout(2500)
+        check(f"{tag} no rrg/bars doc → Twelve Data path", len(reqs) >= 1, len(reqs))
+        reqs.clear(); rr_prep(page, None, key="")
+        js(page, "()=>{ switchTab('today'); switchTab('flow'); }"); page.wait_for_timeout(1200)
+        check(f"{tag} no doc and no key → no request, no error banner (as before)", not reqs and js(page, "()=>(ffState().rrg.err||'')") == "", [reqs[:1], js(page, "()=>ffState().rrg.err")])
+        check(f"{tag} no page errors", not pe, pe[:3])
+    finally:
+        b.close()
+    b, page, pe = C.open_watch(pw, 390, 844, plan_cards=False)
+    try:
+        rr_prep(page, rr_doc(), key="")
+        js(page, "()=>{ switchTab('flow'); const f = ffState(); f.themesCol = false; f.themesColUser = true; ffRenderThemes(); }"); page.wait_for_timeout(1500)
+        n = js(page, "()=>{ const r = ffState().rrg; return {src:r.src, d:(r.rowsD||[]).length}; }")
+        ok_ = js(page, "()=>{ const e = document.querySelector('[data-lr4-rrg]'); if(!e) return false; const r = e.getBoundingClientRect(); return r.right <= innerWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1; }")
+        check(f"{tag} 390: tails from the job, RRG card inside the screen, no horizontal scroll", n["src"] == "job" and n["d"] == 23 and ok_, [n, ok_])
+        page.evaluate("()=>{ const el = document.querySelector('[data-lr4-rrg]'); if(el) el.scrollIntoView({block:'start'}); }"); page.wait_for_timeout(300)
+        shot(page, "rrg-instant-390")
+    finally:
+        b.close()
+
+
 if __name__ == "__main__":
     only = os.environ.get("UX3_PARTS", "a b c d").split()
     with sync_playwright() as pw:
