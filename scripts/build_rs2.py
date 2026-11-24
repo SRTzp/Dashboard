@@ -227,6 +227,18 @@ def table_for(liquid, other, bench_asof=None, seed='0', sample_n=SAMPLE_N):
     return build_table(packs, asof, {'sample': len(keep), 'seed': str(seed)}), len(keep)
 
 
+def data_as_of(spy, data=None):
+    """HF2 — 'YYYY-MM-DD' of the latest bar fetched this run: SPY's last close (same rule as rrg/bars.asOf); fallback = newest last date among the downloaded series"""
+    if spy:
+        return spy[-1][0].isoformat()
+    ds = []
+    for v in (data or {}).values():
+        r = bp._rows(v.get('close') or [])
+        if r:
+            ds.append(r[-1][0].isoformat())
+    return max(ds) if ds else ''
+
+
 def rs2_rows(info, data, bench_rows, table=None, seed='0'):
     """info [{'t','n','e'}] · data {sym: {'close':[(date,c)], 'vol':[v]}} · bench_rows [(date,c)] (SPY) · table = stored whole-market table (None → build one from liquid + sample)
     → (rows, table, liquid_info, n_rated) · rows only for liquid + rated stocks, best RS first"""
@@ -667,7 +679,9 @@ def build(base, now, seed_sectors=None, watch=None):
         dl_ratio = len(data) / float(len(syms) or 1)
         if dl_ratio < 0.5:
             raise RuntimeError('only %d of %d symbols downloaded' % (len(data), len(syms)))
-        last = {k: meta[k] for k in ('asOf', 'n', 'cuts', 'cuts4w', 'cuts3m', 'cuts1m', 'sample', 'seed') if k in meta} if meta.get('cuts') else None
+        last = {k: meta[k] for k in ('n', 'cuts', 'cuts4w', 'cuts3m', 'cuts1m', 'sample', 'seed') if k in meta} if meta.get('cuts') else None
+        if last:        # HF2 — meta.asOf is the BAR date; the stored weekly table's own date is tableAsOf (older metas: asOf)
+            last['asOf'] = meta.get('tableAsOf') or meta.get('asOf')
         liquid, other = classify(info, data)
         if full:
             new, _ = table_for(liquid, other, seed=week_seed(now))
@@ -710,7 +724,7 @@ def build(base, now, seed_sectors=None, watch=None):
         if fill_mcaps([r['t'] for r in rows], mcache, today, refresh=full):
             mref.set({'m': mcache, 'at': now.isoformat()})
         with_mcaps(rows, mcache)
-        as_of = table['asOf']
+        as_of = data_as_of(spy, data)       # HF2 — the newest bar fetched this run, NOT the weekly table's date
         prev_rows, prev_as_of = load_rows(col)      # RS2a3 — read BEFORE latest is overwritten
         docs = split_docs(as_of, rows)
         for k, v in docs.items():
@@ -722,7 +736,7 @@ def build(base, now, seed_sectors=None, watch=None):
                 col.document('changes').set(changes_diff(prev_rows, rows, watch, as_of, prev_as_of))
         except Exception as ex:
             print('rs2 changes failed:', str(ex)[:120])
-        m = {'asOf': as_of, 'n': n_liq, 'nRated': n_rated, 'runAt': now.isoformat(), 'runSecs': round(time.time() - t0),
+        m = {'asOf': as_of, 'tableAsOf': table.get('asOf'), 'n': n_liq, 'nRated': n_rated, 'runAt': now.isoformat(), 'runSecs': round(time.time() - t0),
              'universeAt': now.isoformat() if full else meta.get('universeAt'), 'failedChunks': bad, 'dlRatio': round(dl_ratio, 3),
              'parts': len(docs) - 1 if 'parts' in docs['latest'] else 0, 'bytes': {k: doc_bytes(v) for k, v in docs.items()},
              'cuts': table['cuts'], 'cuts4w': table['cuts4w'], 'cuts3m': table.get('cuts3m'), 'cuts1m': table.get('cuts1m'),

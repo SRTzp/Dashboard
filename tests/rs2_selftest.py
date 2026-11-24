@@ -269,4 +269,64 @@ t('avg is rounded to 0.1 before ranking (91.04 and 91.0 tie)', [g['rank'] for g 
 n_, c_ = b.ind_coverage(gr)
 t('coverage counter: indN = rows with an industry · indCov = indN ÷ rows', n_ == 25 and c_ == round(25 / 28.0, 3) and b.ind_coverage([]) == (0, 0.0))
 t('catch-up budget is bigger than the normal one and the run stays < 15 min', b.SECTOR_BUDGET_CATCHUP_S > b.SECTOR_BUDGET_S and b.SECTOR_BUDGET_CATCHUP_S + b.EARN_BUDGET_S + b.MC_BUDGET_S <= 900)
+
+# 12 · HF2 — daily run: asOf = newest bar fetched, tableAsOf = the stored weekly table's date; changes diff + freshness check follow the bar date
+class _Doc:
+    def __init__(self, st, k): self.st, self.k = st, k
+    def get(self):
+        d = self; v = d.st.get(d.k)
+        return type('S', (), {'exists': v is not None, 'to_dict': lambda self_: dict(v) if v is not None else None})()
+    def set(self, v, merge=False): self.st[self.k] = {**self.st.get(self.k, {}), **v} if merge else dict(v)
+class _Col:
+    def __init__(self, st): self.st = st
+    def document(self, k): return _Doc(self.st, k)
+class _Base:
+    def __init__(self): self.cols = {}
+    def collection(self, n): return _Col(self.cols.setdefault(n, {}))
+
+
+def hf2_series(end, n=300, step=0.02, price=50):
+    days = [end - dt.timedelta(days=n - 1 - i) for i in range(n)]
+    return {'close': [(d, price + step * i) for i, d in enumerate(days)], 'vol': [400_000] * n}
+
+
+def hf2_run(base, end, now):
+    ginfo = [{'t': 'H%02d' % i, 'n': 'H%02d' % i, 'e': 'NYSE'} for i in range(40)]
+    fdata = {x['t']: hf2_series(end, step=0.02 + 0.01 * i) for i, x in enumerate(ginfo)}
+    fdata['SPY'] = hf2_series(end, step=0.01, price=100)
+    keep = (b.fetch_chunked, b.fill_sectors, b.fill_mcaps, b.fill_earnings)
+    b.fetch_chunked = lambda syms, fn, **k: ({s: fdata[s] for s in syms if s in fdata}, 0)
+    b.fill_sectors = lambda *a, **k: 0
+    b.fill_mcaps = lambda *a, **k: False
+    b.fill_earnings = lambda *a, **k: 0
+    try:
+        return b.build(base, now, watch=[])
+    finally:
+        b.fetch_chunked, b.fill_sectors, b.fill_mcaps, b.fill_earnings = keep
+
+
+base = _Base()
+rc = base.collection('rs2')
+hinfo = [{'t': 'H%02d' % i, 'n': 'H%02d' % i, 'e': 'NYSE'} for i in range(40)]
+fri, mon = dt.date(2025, 11, 21), dt.date(2025, 11, 24)
+now0 = dt.datetime(2025, 11, 24, 16, 0, tzinfo=dt.timezone.utc)        # Mon before the US close → last completed session = Fri 21 Nov
+weekly_tbl = {'asOf': '2025-11-19', 'n': 5000, 'cuts': [i / 100.0 for i in range(1, 100)], 'cuts4w': [i / 100.0 for i in range(1, 100)],
+              'cuts3m': [i / 100.0 for i in range(1, 100)], 'cuts1m': [i / 100.0 for i in range(1, 100)], 'sample': 10, 'seed': 'x'}
+rc.document('_universe').set({'liquid': hinfo, 'at': '2025-11-19T00:00:00+00:00'})
+rc.document('_meta').set({**weekly_tbl, 'universeAt': now0.isoformat(), 'cutsStale': False, 'asOf': '2025-11-19'})   # old-style meta: asOf = the table's date
+tbl = hf2_run(base, fri, now0)
+m1 = rc.document('_meta').get().to_dict()
+t('daily run: _meta.asOf = newest bar date (Fri 21 Nov), not the weekly table date', tbl and m1['asOf'] == '2025-11-21')
+t('daily run: _meta.tableAsOf = the stored weekly table date · cuts unchanged · not stale', m1['tableAsOf'] == '2025-11-19' and m1['cuts'] == weekly_tbl['cuts'] and m1['cutsStale'] is False)
+t('daily run: rs2/latest.asOf = bar date', rc.document('latest').get().to_dict()['asOf'] == '2025-11-21')
+t('daily run: first run on the new bar date writes rs2/changes (asOf = bar date, prevAsOf = old)', rc.document('changes').get().to_dict()['asOf'] == '2025-11-21')
+t('freshness check: fresh after the daily run (rs2 + rrg both on the last session)', bp.is_fresh(m1['asOf'], '2025-11-21', now0) and not bp.is_fresh('2025-11-19', '2025-11-21', now0))
+rc.document('changes').set({'asOf': 'KEEP', 'items': []})
+hf2_run(base, fri, now0)
+t('same bar date again (backup run) keeps the diff already written', rc.document('changes').get().to_dict()['asOf'] == 'KEEP')
+m2 = rc.document('_meta').get().to_dict()
+t('2nd daily run: tableAsOf still the weekly table date (read from tableAsOf, not asOf)', m2['tableAsOf'] == '2025-11-19' and m2['asOf'] == '2025-11-21')
+hf2_run(base, mon, dt.datetime(2025, 11, 25, 16, 0, tzinfo=dt.timezone.utc))
+t('bar date advances → changes diff runs again and carries prevAsOf', rc.document('changes').get().to_dict()['asOf'] == '2025-11-24' and rc.document('changes').get().to_dict()['prevAsOf'] == '2025-11-21')
+t('data_as_of fallback = newest last date among downloaded series when SPY is empty', b.data_as_of([], {'A': {'close': [(fri, 1.0)]}, 'B': {'close': [(mon, 1.0)]}}) == '2025-11-24')
 print('PASS %d checks' % ok)
