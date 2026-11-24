@@ -97,6 +97,72 @@ def part_a(pw, w):
         b.close()
 
 
+def imp_state(page):
+    return js(page, "()=>{ const q = s=>{ const e = document.querySelector(s); return e ? e.innerText.replace(/\\s+/g, ' ').trim() : ''; }; return {n:q('[data-wl1-n-new]'), inn:q('[data-wl1-n-in]'), skip:q('[data-wl1-n-skip]'), list:q('[data-wl1-imp-list]'), err:q('[data-wl1-imp-err]'), btn:q('[data-wl1-imp-add]'), dis:!!(document.getElementById('wl1ImpAdd') || {}).disabled}; }")
+
+
+def part_d(pw, w):
+    tag = "[D %d]" % w
+    b, page, pe = watch(pw, w)
+    try:
+        js(page, "()=>window.firebase.__mockDb.__seedDoc(['users','testuid','rs2','latest'], {asOf:'2026-11-18', n:3, rows:[{t:'NVDA', r:99},{t:'AMD', r:90},{t:'TSLA', r:80}]})"); page.wait_for_timeout(100)
+        js(page, "()=>{ rs2.rows = [{t:'NVDA'},{t:'AMD'},{t:'TSLA'},{t:'PLTR'}]; rs2.at = Date.now(); rs2.state = 'ok'; wl1ImpOpen(); }"); page.wait_for_timeout(300)
+        ph = js(page, "()=>document.querySelector('[data-wl1-imp-text]').placeholder + ' | ' + document.querySelector('.wl1-up').innerText + ' | ' + document.querySelector('[data-wl1-imp-file]').accept")
+        check(f"{tag} 1 placeholder + upload label + accept .txt/.csv", ph.startswith("NVDA, PTT.BK — or paste the TradingView export | upload .txt / .csv") and ".csv" in ph, ph)
+
+        def typed(txt):
+            page.fill("[data-wl1-imp-text]", txt); page.wait_for_timeout(150); return imp_state(page)
+        r = typed("NVDA")
+        check(f"{tag} 2 'NVDA' -> 1 new US · button 'Add 1 to Momentum'", r["n"] == "1" and "NVDA" in r["list"] and r["btn"] == "Add 1 to Momentum" and "not in the US list" not in r["list"], r)
+        r = typed("PTT.BK")
+        mk = js(page, "()=>{ const R = wl1ParseTv('PTT.BK', 'winner'); return [R.items[0].market, R.items[0].ticker, R.items[0].exch]; }")
+        check(f"{tag} 2 'PTT.BK' -> TH (SET)", r["n"] == "1" and mk == ["TH", "PTT.BK", "SET"], [r, mk])
+        r = typed("nvda, amd\nNASDAQ:TSLA")
+        check(f"{tag} 2 'nvda, amd + NASDAQ:TSLA' -> 3 (AMD already in Watch -> 2 new + 1 already in)", r["n"] == "2" and r["inn"] == "1" and "AMD" in r["list"] and "already in" in r["list"], r)
+        r = typed("SET:PTT nasdaq:nvda")
+        check(f"{tag} 2 'SET:PTT nasdaq:nvda' (space split, EX:SYM) -> 2 new", r["n"] == "2" and "SET:PTT" in r["list"], r)
+        r = typed("GE")
+        check(f"{tag} 2 existing ticker -> 'already in', Add disabled", r["inn"] == "1" and r["n"] == "0" and r["dis"], r)
+        r = typed("$$$")
+        check(f"{tag} 2 '$$$' -> skipped with a reason", r["skip"] == "1" and "skipped" in r["list"] and r["dis"], r)
+        r = typed("ZZZ")
+        check(f"{tag} 3 plain US ticker not in the Screen list: amber hint, still addable", "not in the US list · check spelling" in r["list"] and r["n"] == "1" and not r["dis"], r)
+        r = typed("NVDA")
+        check(f"{tag} 3 a ticker that is in the Screen list has no hint", "check spelling" not in r["list"], r)
+        # old format unchanged
+        old = "###CANDIDATE,NASDAQ:AAPL,###WATCHLIST,SET:HANA,NASDAQ:NVDA,NASDAQ:AMD,LSE:VOD,NASDAQ:NVDA"
+        r = typed(old)
+        check(f"{tag} 4 old ###WATCHLIST text: same result (HANA + NVDA new, AMD in, LSE skipped, 1 ignored)", r["n"] == "2" and r["inn"] == "1" and r["skip"] == "1" and "ignored" in r["list"] and "exchange not supported" in r["list"], r)
+        r = typed("###WATCHLIST,AAPLX")
+        check(f"{tag} 4 old text without EX: still 'needs EXCHANGE:SYMBOL' (skipped, not a US ticker)", "no exchange" in r["list"], r)
+        r = typed("###OTHER,NASDAQ:AAPL")
+        check(f"{tag} 4 old text without a WATCHLIST section: 'No WATCHLIST section found'", r["err"] == "No WATCHLIST section found", r)
+        # CSV
+        js(page, "()=>wl1ImpTrk('ladder')"); page.wait_for_timeout(100)
+        page.set_input_files("[data-wl1-imp-file]", os.path.join(HERE, "fixtures", "tv-screener.csv")); page.wait_for_timeout(500)
+        r = imp_state(page)
+        check(f"{tag} 5 CSV fixture: 7 new + 1 already in (AMD) · quoted commas OK · button 'Add 7 to Compounder'", r["n"] == "7" and r["inn"] == "1" and r["btn"] == "Add 7 to Compounder" and "ADI" in r["list"] and "Analog" not in r["list"], r)
+        if w > 600: shot(page, "add-csv", full_page=False)
+        else: shot(page, "add-csv-390", full_page=False)
+        cases = js(page, r"""()=>{ const g = (t)=>{ const R = wl1ParseCsv(t, 'winner'); return R.err || R.items.map(x=>x.tok + '/' + x.market).join(',') + '|' + R.skipped.length; };
+          return [g('\ufeffSymbol,Exchange,Name\r\n"NVDA","NASDAQ",x\r\n'), g('Ticker\nNASDAQ:TSLA\nPTT.BK\n'), g('symbol,exchange\nHANA,SET\n'), g('Name,Price\nfoo,1\n'), g('Description,Symbol\n"A, B",ZZ9\n')]; }""")
+        check(f"{tag} 5 CSV: BOM + quotes + Exchange column · Ticker header · EX:SYM value · SET exchange · missing column -> error",
+              cases == ["NASDAQ:NVDA/US|0", "NASDAQ:TSLA/US,PTT.BK/TH|0", "SET:HANA/TH|0", "No Symbol column found in this CSV", "ZZ9/US|0"], cases)
+        page.set_input_files("[data-wl1-imp-file]", {"name": "bad.csv", "mimeType": "text/csv", "buffer": b"Name,Price\nfoo,1\n"}); page.wait_for_timeout(400)
+        r = imp_state(page)
+        check(f"{tag} 5 CSV without Symbol column: error 'No Symbol column found in this CSV' · Add disabled", r["err"] == "No Symbol column found in this CSV" and r["dis"], r)
+        # typed shot + apply
+        js(page, "()=>wl1ImpOpen()"); page.wait_for_timeout(300)
+        page.fill("[data-wl1-imp-text]", "NVDA, ptt.bk\nnasdaq:tsla, zzz"); page.wait_for_timeout(200)
+        shot(page, "add-typed" + ("-390" if w <= 600 else ""), full_page=False)
+        page.click("[data-wl1-imp-add]"); page.wait_for_timeout(600)
+        have = js(page, "()=>['NVDA','PTT.BK','TSLA','ZZZ'].map(t=>{ const i = wlItemOf(t); return i ? [i.market, i.exch, i.ladder_watch] : null; })")
+        check(f"{tag} 6 Add writes the typed tickers (US / TH / EX:SYM / unknown-list ticker), Momentum, no plan", have == [["US", "", False], ["TH", "SET", False], ["US", "NASDAQ", False], ["US", "", False]], have)
+        check(f"{tag} no page errors", not pe, pe)
+    finally:
+        b.close()
+
+
 def long_rows():
     rows = R.rows()
     nm = {"APP": "AppLovin Corporation Class A Common Stock", "CRDO": "Credo Technology Group Holding Ltd Ordinary Shares", "HOOD": "Robinhood Markets, Inc. Class A Common Stock", "GE": "GE Aerospace Common Stock"}
@@ -111,9 +177,9 @@ def part_b(pw):
     tag = "[B 1440]"
     b, page, pe, ce = R.open_screen(pw, 1440, 900, data=long_rows())
     try:
-        names = js(page, "()=>[['AppLovin Corporation Class A Common Stock'],['Celestica Inc. Common Shares'],['Robinhood Markets, Inc. Class A Common Stock'],['Taiwan Semiconductor Manufacturing Company Ltd. American Depositary Shares'],['Credo Technology Group Holding Ltd Ordinary Shares'],['GE Aerospace Common Stock'],['NVIDIA'],['']].map(a=>rs2ShortName(a[0]))")
+        names = js(page, "()=>[['AppLovin Corporation Class A Common Stock'],['Celestica Inc. Common Shares'],['Robinhood Markets, Inc. Class A Common Stock'],['Taiwan Semiconductor Manufacturing Company Ltd. American Depositary Shares'],['Credo Technology Group Holding Ltd Ordinary Shares'],['GE Aerospace Common Stock'],['NVIDIA'],[''],['Vodafone Group PLC'],['Acme Group Holdings, Inc.'],['Inc.']].map(a=>rs2ShortName(a[0]))")
         check(f"{tag} 1 short names: APP · CLS · HOOD · an ADR · an 'Ordinary Shares' name · 'Common Stock' · plain · empty",
-              names == ["AppLovin Corporation", "Celestica Inc.", "Robinhood Markets", "Taiwan Semiconductor Manufacturing Company Ltd.", "Credo Technology Group Holding Ltd", "GE Aerospace", "NVIDIA", ""], names)
+              names == ["AppLovin", "Celestica", "Robinhood Markets", "Taiwan Semiconductor Manufacturing Company", "Credo Technology Group Holding", "GE Aerospace", "NVIDIA", "", "Vodafone", "Acme", "Inc."], names)
         js(page, "()=>{ rs2.q = ''; renderWatchlist(); }"); page.wait_for_timeout(300)
         cols = js(page, "()=>{ const r = document.querySelector('[data-rs2-row]'), h = document.querySelector('[data-rs2-th-row]'); const n = e=>getComputedStyle(e).gridTemplateColumns.split(' ').length; return {row:n(r), head:n(h), nm:getComputedStyle(r.querySelector('.c-stock .nm')).display, th:[...h.children].map(c=>c.innerText.trim())}; }")
         check(f"{tag} 2 no Company column: Ticker header, name hidden, columns match header", cols["nm"] == "none" and cols["th"][1].lower() == "ticker" and cols["row"] == cols["head"], cols)
@@ -122,7 +188,7 @@ def part_b(pw):
         cut = js(page, "()=>[...document.querySelectorAll('[data-rs2-row] .c-sec .sec .nm')].filter(e=>e.scrollWidth > e.clientWidth + 1).length")
         check(f"{tag} 2 sector text is not cut with '…' in any row", cut == 0, cut)
         # tooltip on hover
-        for sym, exp in (("HOOD", "Robinhood Markets"), ("CLS", "Celestica Inc."), ("APP", "AppLovin Corporation")):
+        for sym, exp in (("HOOD", "Robinhood Markets"), ("CLS", "Celestica"), ("APP", "AppLovin")):
             js(page, "(q)=>{ rs2.q = q; renderWatchlist(); }", sym); page.wait_for_timeout(250)
             row = page.locator('[data-rs2-row][data-sym="%s"]' % sym).first
             row.hover(); page.wait_for_timeout(150)
@@ -193,6 +259,7 @@ if __name__ == "__main__":
     with sync_playwright() as pw:
         part_a(pw, 1440); part_a(pw, 390)
         part_b(pw)
+        part_d(pw, 1440); part_d(pw, 390)
         for w in (1440, 390): pri_audit(pw, w)
     bad = [r for r in results if not r[1]]
     print("\n%d checks, %d failed" % (len(results), len(bad)))

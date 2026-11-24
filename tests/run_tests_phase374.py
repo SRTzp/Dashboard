@@ -283,7 +283,7 @@ def imports(pw, w, h):
         page.locator("#wl1ImpAdd").evaluate("e=>e.disabled") ; page.locator("[data-wl1-imp-cancel]").click(); settle(page, 300)
         check(f"{tag} 3 re-import of a file without an item never removes it", sorted(wl_ids(page)) == ids_, wl_ids(page))
         page.locator("[data-wl1-import]").click(); settle(page, 300)
-        page.locator("[data-wl1-imp-text]").fill("SET:AAA,NASDAQ:BBB"); settle(page, 300)
+        page.locator("[data-wl1-imp-text]").fill("###CANDIDATE,SET:AAA,NASDAQ:BBB"); settle(page, 300)   # MV1 D: text with no ### section is now read as typed tickers
         check(f"{tag} 3 file without ###WATCHLIST → message 'No WATCHLIST section found', 0 added", "No WATCHLIST section found" in (txt(page, "[data-wl1-imp-err]") or "") and js(page, "()=>document.getElementById('wl1ImpAdd').disabled"), txt(page, "[data-wl1-imp-err]"))
         import tempfile, os
         fn = os.path.join(tempfile.mkdtemp(), "wl.txt"); open(fn, "w").write("###WATCHLIST,SET:UPL,NASDAQ:UPQ\n###CANDIDATE,SET:NOPE")

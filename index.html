@@ -4278,7 +4278,7 @@ html body .sc.sc.sc[data-port="COMP"]{background:var(--port-comp-bg);color:var(-
 .wl1-imp textarea{width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--border,#E3E6EA);border-radius:10px;padding:8px;font:.78rem var(--mono,monospace);resize:none}
 .wl1-tiny{font-size:.78rem;color:var(--muted,#7B818C);margin-top:6px}.wl1-up{text-decoration:underline;cursor:pointer}.wl1-up input{display:none}.wl1-err{color:#C93B37;font-size:.8rem;min-height:1em;margin-top:4px}
 .wl1-k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}.wl1-k div{background:var(--hover,#F4F5F7);border-radius:10px;padding:7px;text-align:center}.wl1-k b{display:block;font:800 1.05rem var(--mono,monospace)}.wl1-k b.g{color:#0E8F6F}.wl1-k b.a{color:#A96E06}.wl1-k small{color:var(--muted,#7B818C);font-size:.78rem}
-.wl1-li{font-size:.8rem;margin-top:8px;line-height:1.8;max-height:140px;overflow:auto;overflow-wrap:anywhere}.wl1-li code{font:600 .78rem var(--mono,monospace);background:var(--hover,#F4F5F7);border-radius:5px;padding:1px 5px}.wl1-li .mut{color:var(--muted,#7B818C)}
+.wl1-li{font-size:.8rem;margin-top:8px;line-height:1.8;max-height:140px;overflow:auto;overflow-wrap:anywhere}.wl1-li code{font:600 .78rem var(--mono,monospace);background:var(--hover,#F4F5F7);border-radius:5px;padding:1px 5px}.wl1-li .mut{color:var(--muted,#7B818C)}.wl1-li .a{color:#9A5B00}
 .wl1-ft{display:flex;gap:8px;margin-top:12px}.wl1-ft button{flex:1;border-radius:12px;padding:10px;font-weight:700;border:1px solid var(--border,#E3E6EA);background:var(--surface,#fff);cursor:pointer;min-height:40px}.wl1-ft .p{background:#0E8F6F;border-color:#0E8F6F;color:#fff}.wl1-ft .p:disabled{opacity:.45;cursor:not-allowed}
 .todo .pill[data-ln4-todo]{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box}
 
@@ -32655,8 +32655,10 @@ function rs2ShortName(n){
   let t = String(n == null ? '' : n).trim(); if(!t) return '';
   const cut = t.indexOf(','); if(cut > 0) t = t.slice(0, cut);
   const tail = /\s*(?:[-–]\s*)?\b(?:Class\s+[A-Z0-9]+\b|Series\s+[A-Z0-9]+\b|(?:Common|Ordinary|Subordinate Voting|Limited Voting)\s+(?:Stock|Shares?)\b|American Depositary\s+(?:Shares?|Receipts?)\b|Depositary\s+Shares?\b|ADSs?\b|ADRs?\b)[\s\S]*$/;
-  const out = t.replace(tail, '').replace(/[\s,\-–]+$/, '').trim();
-  return out || t;
+  let out = t.replace(tail, '').replace(/[\s,\-–]+$/, '').trim() || t;
+  const corp = /[\s,]+(?:Inc\.?|Corp\.?|Corporation|Ltd\.?|Holdings|Group|PLC|N\.V\.|S\.A\.)$/i;   /* MV1 D — trailing company-form words go too (never down to nothing) */
+  for(let k = 0; k < 4 && corp.test(out); k++){ const n = out.replace(corp, '').trim(); if(!n) break; out = n; }
+  return out;
 }
 function rs2RowHtml(r){
   const e = escHtml, ea = rs2Earn(r), s = rs2Sec(r), x3 = rs2.preset !== 'leaders';
@@ -33782,33 +33784,78 @@ function wl1CapBoxDraw(n){
 }
 
 /* ── Import from TradingView (WATCHLIST section only) ── */
+function wl1TokAdd(res, seen, tok, trk, ex0){   /* one token → items / skipped · EX:SYM · SYM.BK → TH · plain SYM → US (MV1 D) · ex0 = Exchange column of a CSV */
+  tok = String(tok).trim(); if(!tok) return;
+  let u = tok.toUpperCase(); if(ex0 && u.indexOf(':') < 0 && !/\.BK$/.test(u)) u = String(ex0).trim().toUpperCase() + ':' + u;
+  const m = /^([A-Z0-9_.!-]+):([A-Z0-9_.!&-]+)$/.exec(u);
+  let ex = '', sy = '', ticker = '', isSet = false;
+  if(m){
+    ex = m[1] === 'NASDAQ_DLY' ? 'NASDAQ' : m[1] === 'NYSE ARCA' ? 'ARCA' : m[1]; sy = m[2];
+    isSet = ex === 'SET'; const isUs = WL1_US_EX.indexOf(ex) >= 0;
+    if(!isSet && !isUs){ res.skipped.push({tok, reason:'exchange not supported (SET / US stocks only)'}); return; }
+    ticker = isSet ? sy + '.BK' : sy;
+  } else if(res.typed){
+    if(/[\/+*^()]/.test(tok)){ res.skipped.push({tok, reason:'formula / spread — not a single stock'}); return; }
+    if(u.indexOf(':') >= 0){ res.skipped.push({tok, reason:'not EXCHANGE:SYMBOL'}); return; }
+    ticker = u; sy = u.replace(/\.BK$/, ''); isSet = /\.BK$/.test(u);
+    if(isSet) ex = 'SET';
+  } else {
+    res.skipped.push({tok, reason: /[\/+*^()]|\s/.test(tok) ? 'formula / spread — not a single stock' : (u.indexOf(':') < 0 ? 'no exchange (needs EXCHANGE:SYMBOL)' : 'not EXCHANGE:SYMBOL')}); return;
+  }
+  if(/[!&]/.test(sy) || !wlValidTicker(ticker)){ res.skipped.push({tok, reason: res.typed ? 'not a valid ticker' : 'symbol not supported'}); return; }
+  if(seen[ticker]) return; seen[ticker] = 1;
+  const ex2 = wlItemOf(ticker), it = {tok:u, ticker, exch:ex, market:isSet ? 'TH' : 'US', state: ex2 ? 'in' : 'new', otherTrk: ex2 && wlTrackOf(ex2) !== trk ? wlTrackOf(ex2) : ''};
+  if(!isSet && !ex2 && !m){   /* plain US ticker not in the Screen list (small caps are not) — a hint, still addable */
+    try{ if(rs2.rows && rs2.rows.length && !rs2.rows.some(r=>r.t === ticker)) it.hint = 'not in the US list · check spelling'; }catch(e){}
+  }
+  res.items.push(it);
+}
+function wl1CsvRows(text){   /* RFC-4180-ish: quotes, "" escapes, BOM, CRLF */
+  const rows = []; let row = [], f = '', q = false; text = String(text == null ? '' : text).replace(/^﻿/, '');
+  for(let i = 0; i < text.length; i++){
+    const c = text[i];
+    if(q){ if(c === '"'){ if(text[i + 1] === '"'){ f += '"'; i++; } else q = false; } else f += c; }
+    else if(c === '"') q = true;
+    else if(c === ','){ row.push(f); f = ''; }
+    else if(c === '\n' || c === '\r'){ if(c === '\r' && text[i + 1] === '\n') i++; row.push(f); f = ''; if(row.some(x=>x.trim())) rows.push(row); row = []; }
+    else f += c;
+  }
+  row.push(f); if(row.some(x=>x.trim())) rows.push(row);
+  return rows;
+}
+function wl1ParseCsv(text, trk){
+  const res = {found:false, items:[], skipped:[], ignored:0, trk, typed:true, csv:true}, rows = wl1CsvRows(text);
+  const h = (rows[0] || []).map(x=>x.trim().toLowerCase()), ci = h.findIndex(x=>x === 'symbol' || x === 'ticker'), ei = h.indexOf('exchange');
+  if(ci < 0){ res.err = 'No Symbol column found in this CSV'; return res; }
+  res.found = true; const seen = {};
+  rows.slice(1).forEach(r=>{ const v = (r[ci] || '').trim(); if(v) wl1TokAdd(res, seen, v, trk, ei >= 0 ? (r[ei] || '').trim() : ''); });
+  return res;
+}
 function wl1ParseTv(text, trk){
-  const toks = String(text == null ? '' : text).replace(/^﻿/, '').split(/[,\r\n]+/).map(x=>x.trim()).filter(Boolean);
+  text = String(text == null ? '' : text).replace(/^﻿/, '');
+  const toks = text.split(/[,\r\n]+/).map(x=>x.trim()).filter(Boolean);
   const res = {found:false, items:[], skipped:[], ignored:0, trk};
+  if(!toks.some(t=>t.slice(0, 3) === '###')){   /* MV1 D — typed tickers: comma / space / new line */
+    res.typed = true; const seen = {};
+    text.split(/[,\s]+/).map(x=>x.trim()).filter(Boolean).forEach(t=>wl1TokAdd(res, seen, t, trk));
+    res.found = res.items.length + res.skipped.length > 0; return res;
+  }
   let sec = null; const seen = {};
   toks.forEach(tok=>{
     if(tok.slice(0, 3) === '###'){ sec = tok.slice(3).trim().toUpperCase(); if(sec === 'WATCHLIST') res.found = true; return; }
     if(sec !== 'WATCHLIST'){ res.ignored++; return; }   /* before the first section · CANDIDATE · any other section */
-    const u = tok.toUpperCase(), m = /^([A-Z0-9_.!-]+):([A-Z0-9_.!&-]+)$/.exec(u);
-    if(!m){ res.skipped.push({tok, reason: /[\/+*^()]|\s/.test(tok) ? 'formula / spread — not a single stock' : (u.indexOf(':') < 0 ? 'no exchange (needs EXCHANGE:SYMBOL)' : 'not EXCHANGE:SYMBOL')}); return; }
-    let ex = m[1] === 'NASDAQ_DLY' ? 'NASDAQ' : m[1] === 'NYSE ARCA' ? 'ARCA' : m[1], sy = m[2];
-    const isSet = ex === 'SET', isUs = WL1_US_EX.indexOf(ex) >= 0;
-    if(!isSet && !isUs){ res.skipped.push({tok, reason:'exchange not supported (SET / US stocks only)'}); return; }
-    const ticker = isSet ? sy + '.BK' : sy;
-    if(/[!&]/.test(sy) || !wlValidTicker(ticker)){ res.skipped.push({tok, reason:'symbol not supported'}); return; }
-    if(seen[ticker]) return; seen[ticker] = 1;
-    const ex2 = wlItemOf(ticker);
-    res.items.push({tok:u, ticker, exch:ex, market:isSet ? 'TH' : 'US', state: ex2 ? 'in' : 'new', otherTrk: ex2 && wlTrackOf(ex2) !== trk ? wlTrackOf(ex2) : ''});
+    wl1TokAdd(res, seen, tok, trk);
   });
   return res;
 }
 function wl1ImpOpen(){
   wl1ImpClose();
-  wl1ImpSt = {trk:wl1Trk, text:'', res:null};
+  wl1ImpSt = {trk:wl1Trk, text:'', res:null, csv:false};
+  try{ rs2Load(); setTimeout(()=>{ if(wl1ImpSt && wl1ImpSt.text) wl1ImpIn(wl1ImpSt.text, true); }, 1500); }catch(e){}   /* MV1 D — the Screen list feeds the 'check spelling' hint */
   const html = `<div class="wl1-imp" data-wl1-imp><div class="wl1-imph"><b>Import from TradingView</b><button type="button" class="x" data-wl1-imp-x aria-label="Close" onclick="wl1ImpClose()">✕</button></div>
     <div class="wl1-seg" data-wl1-imp-segs></div>
-    <textarea id="wl1ImpText" data-wl1-imp-text rows="3" spellcheck="false" placeholder="Paste the export — e.g. ###WATCHLIST,SET:HANA,NASDAQ:NVDA" oninput="wl1ImpIn(this.value)"></textarea>
-    <div class="wl1-tiny">Paste the export or <label class="wl1-up">upload .txt<input type="file" accept=".txt,text/plain" data-wl1-imp-file onchange="wl1ImpFile(this)"></label></div>
+    <textarea id="wl1ImpText" data-wl1-imp-text rows="3" spellcheck="false" placeholder="NVDA, PTT.BK — or paste the TradingView export" oninput="wl1ImpIn(this.value)"></textarea>
+    <div class="wl1-tiny">Paste the export or <label class="wl1-up">upload .txt / .csv<input type="file" accept=".txt,.csv,text/plain,text/csv" data-wl1-imp-file onchange="wl1ImpFile(this)"></label></div>
     <div class="wl1-err" data-wl1-imp-err role="alert"></div><div data-wl1-imp-prev></div>
     <div class="wl1-ft"><button type="button" data-wl1-imp-cancel onclick="wl1ImpClose()">Cancel</button><button type="button" class="p" id="wl1ImpAdd" data-wl1-imp-add disabled onclick="wl1ImpApply()">Add</button></div>
     <div class="wl1-tiny">Adds to Watch only — no plan, order or size change. Nothing is overwritten or removed.</div></div>`;
@@ -33817,12 +33864,12 @@ function wl1ImpOpen(){
 }
 function wl1ImpClose(){ document.querySelectorAll('.wl1-sheet').forEach(n=>n.remove()); wl1ImpSt = null; }
 function wl1ImpTrk(t){ if(!wl1ImpSt) return; wl1ImpSt.trk = t; wl1ImpIn(wl1ImpSt.text, true); }
-function wl1ImpIn(v, keep){ if(!wl1ImpSt) return; wl1ImpSt.text = String(v == null ? '' : v); wl1ImpSt.res = wl1ImpSt.text.trim() ? wl1ParseTv(wl1ImpSt.text, wl1ImpSt.trk) : null; wl1ImpRender(); }
+function wl1ImpIn(v, keep, csv){ if(!wl1ImpSt) return; if(csv != null) wl1ImpSt.csv = !!csv; else if(!keep) wl1ImpSt.csv = false; wl1ImpSt.text = String(v == null ? '' : v); wl1ImpSt.res = wl1ImpSt.text.trim() ? (wl1ImpSt.csv ? wl1ParseCsv(wl1ImpSt.text, wl1ImpSt.trk) : wl1ParseTv(wl1ImpSt.text, wl1ImpSt.trk)) : null; wl1ImpRender(); }
 function wl1ImpFile(inp){
   const f = inp && inp.files && inp.files[0]; if(!f || !wl1ImpSt) return;
   if(f.size > 1024 * 1024){ wl1ImpSt.text = ''; wl1ImpSt.res = null; wl1ImpRender('File is over 1 MB — not read'); return; }
   const rd = new FileReader();
-  rd.onload = ()=>{ if(!wl1ImpSt) return; const ta = document.getElementById('wl1ImpText'); if(ta) ta.value = String(rd.result || ''); wl1ImpIn(String(rd.result || '')); };
+  rd.onload = ()=>{ if(!wl1ImpSt) return; const ta = document.getElementById('wl1ImpText'); if(ta) ta.value = String(rd.result || ''); wl1ImpIn(String(rd.result || ''), false, /\.csv$/i.test(f.name)); };
   rd.readAsText(f);
 }
 function wl1ImpRender(errMsg){
@@ -33833,9 +33880,9 @@ function wl1ImpRender(errMsg){
   if(!R){ if(prev) prev.innerHTML = ''; if(er) er.textContent = errMsg || ''; if(add){ add.disabled = true; add.textContent = 'Add'; } return; }
   nNew = R.items.filter(x=>x.state === 'new').length;
   const nIn = R.items.length - nNew;
-  if(er) er.textContent = R.found ? '' : 'No WATCHLIST section found';
+  if(er) er.textContent = R.found ? '' : (R.err || (R.typed ? 'Nothing to add' : 'No WATCHLIST section found'));
   if(prev) prev.innerHTML = R.found ? `<div class="wl1-k" data-wl1-imp-counts><div><b class="g" data-wl1-n-new>${nNew}</b><small>new</small></div><div><b data-wl1-n-in>${nIn}</b><small>already in</small></div><div><b class="a" data-wl1-n-skip>${R.skipped.length}</b><small>skipped</small></div></div>
-    <div class="wl1-li" data-wl1-imp-list>${R.items.map(x=>x.state === 'new' ? `＋ <code>${e(x.tok)}</code> new<br>` : `= <code>${e(x.tok)}</code> already in Watch${x.otherTrk ? ' (' + WL1_TRK_L[x.otherTrk] + ')' : ''}<br>`).join('')}${R.skipped.map(x=>`⚠ <code>${e(x.tok)}</code> ${e(x.reason)} · skipped<br>`).join('')}${R.ignored ? `<span class="mut">${R.ignored} other item${R.ignored === 1 ? '' : 's'} ignored (not in WATCHLIST)</span>` : ''}</div>` : '';
+    <div class="wl1-li" data-wl1-imp-list>${R.items.map(x=>x.state === 'new' ? `＋ <code>${e(x.tok)}</code> new${x.hint ? ` <span class="a" data-wl1-hint>· ${e(x.hint)}</span>` : ''}<br>` : `= <code>${e(x.tok)}</code> already in Watch${x.otherTrk ? ' (' + WL1_TRK_L[x.otherTrk] + ')' : ''}<br>`).join('')}${R.skipped.map(x=>`⚠ <code>${e(x.tok)}</code> ${e(x.reason)} · skipped<br>`).join('')}${R.ignored ? `<span class="mut">${R.ignored} other item${R.ignored === 1 ? '' : 's'} ignored (not in WATCHLIST)</span>` : ''}</div>` : '';
   if(add){ add.disabled = !(R.found && nNew > 0); add.textContent = R.found && nNew > 0 ? `Add ${nNew} to ${WL1_TRK_L[S.trk]}` : 'Add'; }
 }
 function wl1ImpApply(){
