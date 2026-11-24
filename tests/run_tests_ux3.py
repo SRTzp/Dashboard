@@ -312,12 +312,16 @@ HWD = lambda: dict(C.HW_DONE("2026-11-12"), my_thesis={"why": "x", "exit": "Back
 E_ITEMS = [("HOLDA", True), ("HOLDB", False), ("PLNA", True), ("PLNB", False)]
 
 
-def seed_groups(page, extra=(), flagged=()):
+def seed_groups(page, extra=(), flagged=(), fields=None):
+    fields = fields or {}
     for t, done in list(E_ITEMS) + list(extra):
         x = {"ticker": t, "market": "US", "port": "core", "note": "", "added_at": "2026-10-01T00:00:00Z", "exch": "NASDAQ"}
         if done: x.update(HWD())
         if t in flagged: x["focus"] = True
+        x.update(fields.get(t, {}))
         page.evaluate("([t,x])=>wlCol().doc(t).set(x)", [t, x])
+    for t, x in fields.items():
+        if t not in [e[0] for e in list(E_ITEMS) + list(extra)]: page.evaluate("([t,x])=>wlCol().doc(t).update(x)", [t, x])
     page.wait_for_timeout(500)
     cards = {}
     for t, done in E_ITEMS:
@@ -381,8 +385,18 @@ def part_f(pw):
             check(f"{tag} {w}: groups HOLDING → PLANNED → FOCUS → WATCHING (Focus = watching + focus:true; a flagged Holding / Planned row stays in its own group)", o == want, o)
             stars = js(page, STAR)
             check(f"{tag} {w}: stars only on Focus + Watching rows (☆ off · ★ on) — none on Holding / Planned rows, even when the flag is set", sorted(stars) == sorted(["FOCB*", "FOCA*", "AMD", "PLTR", "GE"]), stars)
-            a = js(page, "()=>{ const b = document.querySelector('[data-wl-focus=\"PLTR\"]'), on = document.querySelector('[data-wl-focus=\"FOCA\"]'), r = b.getBoundingClientRect(), cs = getComputedStyle(on), c0 = getComputedStyle(b); return {w:Math.round(r.width), h:Math.round(r.height), t:b.textContent, ton:on.textContent, col:cs.color, off:c0.color, label:b.getAttribute('aria-label'), lon:on.getAttribute('aria-label'), pressed:b.getAttribute('aria-pressed'), tag:b.tagName, inside:r.right <= innerWidth && r.left >= 0, hs:document.documentElement.scrollWidth <= innerWidth}; }")
-            check(f"{tag} {w}: ☆ → ★ · ★ is dark #14161A (not amber) · 44×44 tap target · aria-pressed + aria-label · inside the screen", a["t"] == "☆" and a["ton"] == "★" and a["col"] == "rgb(20, 22, 26)" and a["w"] == 44 and a["h"] == 44 and a["pressed"] == "false" and a["tag"] == "BUTTON" and a["inside"] and a["hs"] and "Focus PLTR" == a["label"] and "Remove FOCA from Focus" == a["lon"], a)
+            js(page, "()=>document.querySelector('[data-sym=\"PLTR\"]').scrollIntoView({block:'center'})"); page.wait_for_timeout(100)
+            if w >= 1100: page.hover('[data-sym="PLTR"]'); page.wait_for_timeout(150)
+            a = js(page, """()=>{ const row = document.querySelector('[data-sym="PLTR"]'), b = row.querySelector('[data-wl-focus]'), on = document.querySelector('[data-wl-focus="FOCA"]'), pill = row.querySelector('[data-wl1-chip]'), r = b.getBoundingClientRect(), pr = pill.getBoundingClientRect(), cs = getComputedStyle(on), c0 = getComputedStyle(b);
+              const hit = (x, y)=>{ const e = document.elementFromPoint(x, y); return !!e && e.closest('[data-wl-focus]') === b; }, cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+              return {w:Math.round(r.width), h:Math.round(r.height), ph:Math.round(pr.height), t:b.textContent, ton:on.textContent, bg:c0.backgroundColor, bgOn:cs.backgroundColor, colOn:cs.color, label:b.getAttribute('aria-label'), lon:on.getAttribute('aria-label'), pressed:b.getAttribute('aria-pressed'), tag:b.tagName,
+                after:Math.abs((r.top + r.height / 2) - (pr.top + pr.height / 2)) < 2 && r.left >= pr.right - 1 && r.left - pr.right < 12, op:c0.opacity,
+                hitL:hit(r.left - 8, cy), hitR:hit(r.right + 8, cy), hitT:hit(cx, r.top - 10), hitB:hit(cx, r.bottom + 10), inside:r.right <= innerWidth && r.left >= 0, hs:document.documentElement.scrollWidth <= innerWidth}; }""")
+            check(f"{tag} {w}: chip right after the `No plan` pill (iPhone: at the end of the ticker line) , same height as the pill · ☆ grey #F0F1F4 · ★ dark #14161A with white star · aria-pressed + aria-label", a["t"] == "☆" and a["ton"] == "★" and a["h"] == a["ph"] and (a["after"] or w < 1100) and a["bg"] == "rgb(240, 241, 244)" and a["bgOn"] == "rgb(20, 22, 26)" and a["colOn"] == "rgb(255, 255, 255)" and a["pressed"] == "false" and a["tag"] == "BUTTON" and a["label"] == "Focus PLTR" and a["lon"] == "Remove FOCA from Focus", a)
+            check(f"{tag} {w}: invisible hit area ≥ 44px around the chip (8 px left/right · 10 px above/below still hit it) · inside the screen", a["hitL"] and a["hitR"] and a["hitT"] and a["hitB"] and a["inside"] and a["hs"], a)
+            op = js(page, "()=>({off:getComputedStyle(document.querySelector('[data-sym=\"AMD\"] [data-wl-focus]')).opacity, on:getComputedStyle(document.querySelector('[data-wl-focus=\"FOCA\"]')).opacity})")
+            if w >= 1100: check(f"{tag} {w}: desktop — ☆ only on the hovered row (AMD ☆ hidden · PLTR ☆ shown) · ★ always visible", float(a["op"]) == 1 and float(op["off"]) == 0 and float(op["on"]) == 1, [a["op"], op])
+            else: check(f"{tag} {w}: iPhone — ☆ always visible", float(op["off"]) == 1 and float(op["on"]) == 1, op)
             # keyboard: focus the star, press Space → Focus
             page.focus('[data-wl-focus="PLTR"]'); page.keyboard.press("Space"); page.wait_for_timeout(400)
             o2 = js(page, ORDER)
@@ -409,6 +423,167 @@ def part_f(pw):
             js(page, "()=>{ window.scrollTo(0, 0); const g = document.querySelector('[data-lr5-grp=focus]'); if(g) g.scrollIntoView({block:'center'}); }") if w == 390 else None
             shot(page, "focus-%d" % w, top=(w != 390))
             check(f"{tag} {w}: no horizontal scroll · no page errors", js(page, NOHS) and not pe, pe[:3])
+        finally:
+            b.close()
+
+
+# ───────────────────────── G · Clean up ─────────────────────────
+RS_MAP = {"PLTR": (38, -0.35), "GE": (55, -0.10), "AMD": (90, -0.05), "FOCB": (40, -0.40)}      # PLTR + GE left Leaders · AMD still a Leader · FOCB is a Focus row · ZETA/others: no RS data
+RS_JS = "(m)=>{ Object.keys(m).forEach(t=>{ pxAuto[pxYSym({ticker:t, market:'US'})] = {rs:{rating:m[t][0], offHigh:m[t][1], line:'flat', bench:'SPY', asOf:'2026-11-18'}}; }); renderWatchlist(); }"
+LAD = {"ladder_watch": True, "ladder_watch_set": True}
+
+
+def seed_g(page):
+    seed_groups(page, extra=(("FOCA", True), ("FOCB", False), ("LADA", False), ("LADB", False)), flagged=("FOCA", "FOCB"),
+                fields={"PLTR": {"my_thesis": {"why": "AI platform", "exit": "Growth stalls"}}, "LADA": LAD, "LADB": LAD})
+    js(page, RS_JS, RS_MAP); page.wait_for_timeout(300)
+
+
+def doc(page, t):
+    return page.evaluate("(t)=>firebase.firestore().collection('users').doc('testuid').collection('watchlist').doc(t).get().then(x=>x.exists ? x.data() : null)", t)
+
+
+HDR = """()=>{ const h = document.querySelector('.lr5-hd'), r = h.getBoundingClientRect(), sum = h.querySelector('.lr5-sum'), cl = document.querySelector('[data-wl-clean]'), so = document.querySelector('[data-lr5-sort-wrap]'), fi = document.querySelector('[data-lr5-filter-wrap]'), i = h.querySelector('[data-wl-shared]'), cr = cl.getBoundingClientRect();
+  return {h:Math.round(r.height), cut:sum.scrollWidth > sum.clientWidth + 1, shared:/shared by/i.test(h.innerText), info:!!i && i.title === 'Shared by Main and Family', clH:Math.round(cr.height), soH:Math.round(so.getBoundingClientRect().height), fiH:Math.round(fi.getBoundingClientRect().height), clIn:cr.right <= innerWidth && cr.left >= 0, hs:document.documentElement.scrollWidth <= innerWidth, txt:sum.innerText.replace(/\\s+/g, ' ')}; }"""
+TBL = """()=>{ const rows = [...document.querySelectorAll('[data-wl1-row]')], bad = []; rows.forEach(r=>{ const rr = r.getBoundingClientRect(); const a = r.querySelector('[data-wl1-act]'); if(a){ const ar = a.getBoundingClientRect(); if(ar.right > rr.right + 0.5 || ar.left < rr.left - 0.5 || a.scrollWidth > a.clientWidth + 1) bad.push('act:' + r.dataset.sym); }
+  r.querySelectorAll('*').forEach(e=>{ const cs = getComputedStyle(e); if(cs.textOverflow === 'ellipsis' && e.scrollWidth > e.clientWidth + 1 && e.clientWidth) bad.push(r.dataset.sym + ':' + e.className); }); });
+  const hd = document.querySelector('.lr5-th'); if(hd) hd.querySelectorAll('.lbl').forEach(l=>{ if(l.getBoundingClientRect().height > 16) bad.push('head wraps:' + l.textContent); });
+  const lb = document.querySelector('#wlListBody'); return {bad, n:rows.length, sx: lb ? lb.scrollWidth - lb.clientWidth : -1, hs:document.documentElement.scrollWidth <= innerWidth}; }"""
+
+
+def part_g(pw):
+    tag = "[G clean]"
+    for w, h in ((1440, 900), (390, 844)):
+        b, page, pe = C.open_watch(pw, w, h)
+        dlgs = []
+        try:
+            seed_g(page)
+            t = "%s %d:" % (tag, w)
+            # header
+            hd = js(page, HDR)
+            check(f"{t} header: no visible `shared by Main…` text · ⓘ tooltip `Shared by Main and Family` on the count · `Clean up` same height as Sort / Filter · summary not cut", not hd["shared"] and (hd["info"]) and hd["clH"] == hd["soH"] == hd["fiH"] and not hd["cut"] and hd["clIn"] and hd["hs"], hd)
+            if w >= 1100: check(f"{t} header stays on ONE line (no wrap)", hd["h"] <= 64, hd["h"])
+            # left Leaders pill
+            pills = js(page, "()=>[...document.querySelectorAll('[data-wl-ll]')].map(p=>p.closest('[data-sym]').dataset.sym)")
+            check(f"{t} `left Leaders` pill only on Watching rows that fail the Leaders rule (PLTR, GE) — not AMD (RS 90), not Focus / Holding / Planned, no RS data → none", sorted(pills) == ["GE", "PLTR"], pills)
+            g = js(page, "()=>{ const r = document.querySelector('[data-sym=\"PLTR\"]'), p = r.querySelector('[data-wl-ll]').getBoundingClientRect(), c = r.querySelector('[data-wl1-chip]').getBoundingClientRect(), k = r.querySelector('.wlRn').getBoundingClientRect(); return {below:p.top >= c.bottom - 1 && Math.abs(p.left - c.left) < 3, sameLine:Math.abs((p.top + p.height / 2) - (k.top + k.height / 2)) < 8, cell:r.querySelector('.c-st').contains(r.querySelector('[data-wl-ll]'))}; }")
+            check(f"{t} pill placement: " + ("2nd line inside the STATUS cell" if w >= 1100 else "after the pills on the ticker line"), (g["below"] and g["cell"]) if w >= 1100 else g["sameLine"], g)
+            # ✕ (desktop only, hover)
+            if w >= 1100:
+                page.hover('[data-sym="AMD"]'); page.wait_for_timeout(150)
+                x = js(page, "()=>({amd:getComputedStyle(document.querySelector('[data-sym=\"AMD\"] [data-wl-rm]')).opacity, pltr:getComputedStyle(document.querySelector('[data-sym=\"PLTR\"] [data-wl-rm]')).opacity, n:[...document.querySelectorAll('[data-wl-rm]')].map(b=>b.closest('[data-sym]').dataset.sym), w:Math.round(document.querySelector('[data-sym=\"AMD\"] .c-rm').getBoundingClientRect().width)})")
+                check(f"{t} ✕ only on Watching rows (AMD, PLTR, GE — none on Holding / Planned / Focus) · visible only on the hovered row · last column 34px", sorted(x["n"]) == ["AMD", "GE", "PLTR"] and float(x["amd"]) == 1 and float(x["pltr"]) == 0 and x["w"] == 34, x)
+                shot(page, "desk-1440", top=False)
+            else:
+                check(f"{t} iPhone: no ✕ in normal mode", js(page, "()=>[...document.querySelectorAll('[data-wl-rm]')].every(b=>b.getBoundingClientRect().width === 0)"))
+                js(page, "()=>{ const g = document.querySelector('[data-lr5-grp=\"watch\"]'); if(g) window.scrollTo(0, g.getBoundingClientRect().top + scrollY - 190); }"); page.wait_for_timeout(150); shot(page, "clean-390-normal", top=False)
+            tb = js(page, TBL)
+            check(f"{t} table: no `…`, Homework / action buttons never clipped, header labels on one line, no sideways scroll", not tb["bad"] and tb["sx"] <= 1 and tb["hs"], tb)
+            # Clean up mode
+            page.click("[data-wl-clean]"); page.wait_for_timeout(300)
+            c = js(page, "()=>({bar:document.querySelector('[data-wl-cbar]').innerText.replace(/\\s+/g, ' '), tk:[...document.querySelectorAll('[data-wl-tk]')].map(b=>b.closest('[data-sym]').dataset.sym), acts:[...document.querySelectorAll('[data-wl1-row]')].filter(r=>r.querySelector('[data-wl1-act]')).map(r=>r.dataset.sym), rm:document.querySelector('[data-wl-crm]').textContent.trim(), rmDis:document.querySelector('[data-wl-crm]').disabled, rmW:Math.round(document.querySelector('[data-wl-crm]').getBoundingClientRect().width), foot:Math.round(document.querySelector('.wl-cfoot').getBoundingClientRect().width), x:document.querySelectorAll('[data-wl-rm]').length, fs:document.querySelectorAll('.wlRows .lr5-fs:not(.on)').length})")
+            check(f"{t} Clean up: bar `0 selected · Select left Leaders (2) · Done` · tick boxes only on WATCHING rows (AMD, PLTR, GE) · Homework button replaced there · Holding / Planned / Focus keep theirs, no tick", c["bar"].startswith("0 selected") and "Select left Leaders (2)" in c["bar"] and "Done" in c["bar"] and sorted(c["tk"]) == ["AMD", "GE", "PLTR"] and not any(t_ in c["acts"] for t_ in ("AMD", "GE", "PLTR")) and all(t_ in c["acts"] for t_ in ("AAPL", "PLNB", "FOCA")) and c["x"] == 0, c)
+            check(f"{t} bottom bar: full-width dark `Remove 0`, disabled at 0 · no ☆ chips while cleaning", c["rm"] == "Remove 0" and c["rmDis"] and abs(c["rmW"] - c["foot"]) < 40 and c["fs"] == 0, c)
+            page.click("[data-wl-cll]"); page.wait_for_timeout(300)
+            c2 = js(page, "()=>({sel:[...document.querySelectorAll('[data-wl-tk][aria-checked=true]')].map(b=>b.closest('[data-sym]').dataset.sym), bar:document.querySelector('[data-wl-csel]').textContent, rm:document.querySelector('[data-wl-crm]').textContent.trim(), dis:document.querySelector('[data-wl-crm]').disabled})")
+            check(f"{t} `Select left Leaders` ticks exactly PLTR + GE → `2 selected` · `Remove 2` enabled", sorted(c2["sel"]) == ["GE", "PLTR"] and c2["bar"] == "2 selected" and c2["rm"] == "Remove 2" and not c2["dis"], c2)
+            page.click('[data-sym="AMD"]'); page.wait_for_timeout(250)
+            check(f"{t} tapping a Watching row (anywhere) ticks it → 3 selected", js(page, "()=>document.querySelector('[data-wl-csel]').textContent") == "3 selected")
+            js(page, "()=>ux3ClTog('AMD')"); page.wait_for_timeout(200)
+            js(page, "()=>ux3RemoveAsk(['AAPL','PLNB','FOCA','HOLDA'])")
+            check(f"{t} Holding / Planned / Focus rows can never be removed from here (no dialog)", js(page, "()=>!document.querySelector('[data-ux3-dlg]')"))
+            if w == 390: js(page, "()=>{ const g = document.querySelector('[data-lr5-grp=\"watch\"]'); if(g) window.scrollTo(0, g.getBoundingClientRect().top + scrollY - 190); }"); page.wait_for_timeout(150); shot(page, "clean-390-cleanup", top=False)
+            # confirm: Esc / Cancel / Enter
+            page.click("[data-wl-crm]"); page.wait_for_timeout(250)
+            d = js(page, "()=>({t:document.querySelector('[data-ux3-dlg-t]').textContent, p:document.querySelector('[data-ux3-dlg-p]').textContent, focus:document.activeElement.dataset.ux3Ok !== undefined, ok:document.querySelector('[data-ux3-ok]').textContent, reason:!!document.querySelector('[data-ux3-reason]'), bh:Math.round(document.querySelector('[data-ux3-ok]').getBoundingClientRect().height)})")
+            check(f"{t} confirm: `Remove 2 stocks from Momentum?` · names · `move to Archived — thesis, notes and homework are kept. You can restore them any time.` · Cancel / `Remove 2` focused · no reason field on Momentum", d["t"] == "Remove 2 stocks from Momentum?" and "GE" in d["p"] and "PLTR" in d["p"] and "move to Archived — thesis, notes and homework are kept. You can restore them any time." in d["p"] and d["focus"] and d["ok"] == "Remove 2" and not d["reason"], d)
+            if w == 390: check(f"{t} confirm: large buttons on the phone (≥ 48px)", d["bh"] >= 48, d["bh"]); shot(page, "clean-390-confirm", top=False)
+            page.keyboard.press("Escape"); page.wait_for_timeout(200)
+            check(f"{t} Esc = Cancel: dialog gone, nothing archived", js(page, "()=>!document.querySelector('[data-ux3-dlg]')") and (doc(page, "PLTR") or {}).get("archived") is not True and js(page, "()=>document.querySelector('[data-wl-csel]').textContent") == "2 selected")
+            page.click("[data-wl-crm]"); page.wait_for_timeout(200); page.click("[data-ux3-cancel]"); page.wait_for_timeout(200)
+            check(f"{t} Cancel button closes it too", js(page, "()=>!document.querySelector('[data-ux3-dlg]')"))
+            page.click("[data-wl-crm]"); page.wait_for_timeout(200); page.keyboard.press("Enter"); page.wait_for_timeout(700)
+            p1, g1 = doc(page, "PLTR"), doc(page, "GE")
+            check(f"{t} Enter = Remove: PLTR + GE archived (archived:true · reason `Rotated out` · archived_at) — even though PLTR has a written thesis (wlCanDelete false)", p1["archived"] is True and g1["archived"] is True and p1["archived_reason"] == "Rotated out" and re.match(r"\d{4}-\d{2}-\d{2}T", p1["archived_at"] or ""), [p1.get("archived"), p1.get("archived_reason"), p1.get("archived_at")])
+            check(f"{t} thesis · notes · homework kept on the archived doc", p1.get("my_thesis", {}).get("why") == "AI platform" and "hw" in g1 and g1.get("hw", {}).get("doneAt"), [p1.get("my_thesis"), g1.get("hw")])
+            gone = js(page, "()=>[...document.querySelectorAll('[data-wl1-row]')].map(r=>r.dataset.sym)")
+            tt = js(page, "()=>{ const t = document.querySelector('[data-ux3-toast]'); return t ? t.textContent.replace(/\\s+/g, ' ') : null; }")
+            check(f"{t} rows leave the list · toast `Removed 2 · kept in Archived Undo`", "PLTR" not in gone and "GE" not in gone and "AMD" in gone and tt is not None and tt.startswith("Removed 2") and "Undo" in tt, [gone, tt])
+            arch = js(page, "()=>[...document.querySelectorAll('[data-wl1-arch-row]')].map(r=>[r.dataset.wl1ArchRow, !!r.querySelector('[data-wl-restore]'), !!r.querySelector('[data-wl-delforever]')])")
+            check(f"{t} Archived list has Restore + `Delete forever` on the removed rows", any(a_[0] == "PLTR" and a_[1] and a_[2] for a_ in arch) or not arch, arch)
+            page.click("[data-ux3-undo]"); page.wait_for_timeout(700)
+            p2 = doc(page, "PLTR"); back = js(page, "()=>[...document.querySelectorAll('[data-wl1-row]')].map(r=>r.dataset.sym)")
+            check(f"{t} Undo restores both (archived:false · reason cleared) and the rows come back", p2["archived"] is False and (doc(page, "GE") or {}).get("archived") is False and "PLTR" in back and "GE" in back and p2.get("my_thesis"), [p2.get("archived"), back])
+            # Done leaves the mode
+            page.click("[data-wl-cdone]"); page.wait_for_timeout(300)
+            check(f"{t} Done → normal list again (no bar · action buttons back)", js(page, "()=>!document.querySelector('[data-wl-cbar]') && !!document.querySelector('[data-sym=\"AMD\"] [data-wl1-act]')"))
+            if w >= 1100:
+                # single ✕ + Enter, then wait for the 8 s toast to end
+                page.hover('[data-sym="AMD"]'); page.wait_for_timeout(120); page.click('[data-sym="AMD"] [data-wl-rm]'); page.wait_for_timeout(250)
+                d1 = js(page, "()=>document.querySelector('[data-ux3-dlg-t]').textContent")
+                page.keyboard.press("Enter"); page.wait_for_timeout(700)
+                a_ = doc(page, "AMD")
+                check(f"{t} single ✕ → `Remove 1 stock from Momentum?` → Enter → archived + toast", d1 == "Remove 1 stock from Momentum?" and a_["archived"] is True and js(page, "()=>!!document.querySelector('[data-ux3-toast]')"), [d1, a_.get("archived")])
+                page.wait_for_timeout(6300)
+                check(f"{t} toast stays ~8 s (still there at ~7 s)", js(page, "()=>!!document.querySelector('[data-ux3-toast]')"))
+                page.wait_for_timeout(1800)
+                check(f"{t} …and is gone afterwards", js(page, "()=>!document.querySelector('[data-ux3-toast]')"))
+                js(page, "()=>wlRestore('AMD')"); page.wait_for_timeout(500)
+            check(f"{t} no page errors", not pe, pe[:3])
+        finally:
+            b.close()
+    # Compounder
+    for w, h in ((1440, 900), (390, 844)):
+        b, page, pe = C.open_watch(pw, w, h)
+        try:
+            seed_g(page); t = "%s Compounder %d:" % (tag, w)
+            js(page, "()=>{ wl1TrkSet('ladder'); wlSetView('wl'); renderWatchlist(); }"); page.wait_for_timeout(400)
+            n = js(page, "()=>({pills:document.querySelectorAll('[data-wl-ll]').length, rows:[...document.querySelectorAll('[data-wl1-row]')].map(r=>r.dataset.sym), clean:!!document.querySelector('[data-wl-clean]')})")
+            check(f"{t} same Clean up button · NO `left Leaders` pill", n["clean"] and n["pills"] == 0 and "LADA" in n["rows"], n)
+            page.click("[data-wl-clean]"); page.wait_for_timeout(300)
+            bar = js(page, "()=>document.querySelector('[data-wl-cbar]').innerText.replace(/\\s+/g, ' ')")
+            tk = js(page, "()=>[...document.querySelectorAll('[data-wl-tk]')].map(b=>b.closest('[data-sym]').dataset.sym)")
+            check(f"{t} Clean up bar has NO `Select left Leaders` · tick boxes on Watching rows", "Select left Leaders" not in bar and bar.startswith("0 selected") and "LADA" in tk and "LADB" in tk, [bar, tk])
+            page.click('[data-sym="LADA"]'); page.click('[data-sym="LADB"]'); page.wait_for_timeout(250); page.click("[data-wl-crm]"); page.wait_for_timeout(250)
+            d = js(page, "()=>({t:document.querySelector('[data-ux3-dlg-t]').textContent, r:!!document.querySelector('[data-ux3-reason]'), lab:document.querySelector('.ux3-rs') ? document.querySelector('.ux3-rs').textContent : ''})")
+            check(f"{t} confirm: `Remove 2 stocks from Compounder?` + ONE optional reason line", d["t"] == "Remove 2 stocks from Compounder?" and d["r"] and "optional" in d["lab"], d)
+            page.keyboard.press("Enter"); page.wait_for_timeout(700)
+            a1, b1 = doc(page, "LADA"), doc(page, "LADB")
+            check(f"{t} empty reason + Enter still confirms → archived with reason `Removed`", a1["archived"] is True and b1["archived"] is True and a1["archived_reason"] == "Removed", [a1.get("archived_reason")])
+            page.click("[data-ux3-undo]"); page.wait_for_timeout(600)
+            check(f"{t} Undo restores", (doc(page, "LADA") or {}).get("archived") is False)
+            js(page, "()=>wlArchiveOpen('LADB')"); page.wait_for_timeout(250)
+            old = js(page, "()=>({old:!!document.querySelector('[data-wla-sheet]'), dlg:!!document.querySelector('[data-ux3-dlg]'), r:!!document.querySelector('[data-ux3-reason]')})")
+            page.fill("[data-ux3-reason]", "too slow"); page.keyboard.press("Enter"); page.wait_for_timeout(700)
+            lb = doc(page, "LADB")
+            check(f"{t} ⋯ › Archive… on Compounder = the new confirm (no more reason-required sheet) · typed reason kept", not old["old"] and old["dlg"] and old["r"] and lb["archived"] is True and lb["archived_reason"] == "too slow", [old, lb.get("archived_reason")])
+            if w == 1440:
+                page.click("[data-wl-cdone]"); page.wait_for_timeout(250)
+                page.hover('[data-sym="LADA"]'); page.wait_for_timeout(120)
+                check(f"{t} desktop ✕ on hover for Compounder Watching rows too", js(page, "()=>!!document.querySelector('[data-sym=\"LADA\"] [data-wl-rm]')"))
+            # Delete forever
+            before = doc(page, "LADB")
+            js(page, "()=>{ wlArchOpen = true; renderWatchlist(); }"); page.wait_for_timeout(300)
+            has = js(page, "()=>!!document.querySelector('[data-wl1-arch-row=\"LADB\"] [data-wl-delforever]')")
+            if has:
+                page.click('[data-wl1-arch-row="LADB"] [data-wl-delforever]'); page.wait_for_timeout(600)
+            check(f"{t} Archived › `Delete forever` (asks first) is the only permanent delete", has and doc(page, "LADB") is None and before is not None, [has, doc(page, "LADB")])
+            check(f"{t} no page errors", not pe, pe[:3])
+        finally:
+            b.close()
+    # 1280 + the narrowest list the splitter allows
+    for w in (1280, 1440):
+        b, page, pe = C.open_watch(pw, w, 900)
+        try:
+            seed_g(page); t = "%s %d%s:" % (tag, w, " (list at its narrowest)" if w == 1440 else "")
+            if w == 1440:
+                page.focus('[data-split="wl"]'); page.keyboard.press("End"); page.wait_for_timeout(300)
+            js(page, "()=>{ window.scrollTo(0, 0); }")
+            hd = js(page, HDR); tb = js(page, TBL)
+            check(f"{t} header on one line · no `…` · Homework / action buttons never clipped · no sideways scroll", hd["h"] <= 64 and not hd["cut"] and hd["hs"] and not tb["bad"] and tb["sx"] <= 1 and tb["hs"], [hd, tb])
+            page.click("[data-wl-clean]"); page.wait_for_timeout(300)
+            tb2 = js(page, TBL)
+            check(f"{t} in Clean up mode too", not tb2["bad"] and tb2["sx"] <= 1 and tb2["hs"], tb2)
         finally:
             b.close()
 
