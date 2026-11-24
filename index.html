@@ -5715,6 +5715,18 @@ html body .lr5 .lr5-screen .wlDet.lr5-det{align-self:flex-start;position:sticky;
 html body .lr5 .rs2r{grid-template-columns:28px minmax(130px,220px) 112px 112px 80px 80px 84px minmax(100px,1fr)}
 html body .lr5 .rs2-x3 .rs2r{grid-template-columns:28px minmax(120px,220px) 108px 112px 80px 76px 76px 80px minmax(96px,1fr)}
 html body .lr5.rs2-x3 .rs2r{grid-template-columns:28px minmax(120px,220px) 108px 112px 80px 76px 76px 80px minmax(96px,1fr)}
+/* MV1 B — desktop (>=1100): no Company column · the name shows in a small dark tooltip on row hover / keyboard focus · the space goes to the sector column */
+html body .lr5 .rs2-ht{display:none}
+@media (min-width:1100px){
+  html body .lr5 .rs2r{grid-template-columns:28px 84px minmax(112px,1.4fr) 112px 80px 80px 84px minmax(100px,1fr)}
+  html body .lr5 .rs2-x3 .rs2r,html body .lr5.rs2-x3 .rs2r{grid-template-columns:28px 84px minmax(108px,1.4fr) 112px 80px 76px 76px 80px minmax(96px,1fr)}
+  html body .lr5 .rs2-tbl{min-width:794px}html body .lr5 .rs2-x3 .rs2-tbl{min-width:874px}
+  html body .lr5 .rs2r .c-stock{overflow:visible;position:relative}
+  html body .lr5 .rs2r .c-stock .nm{display:none}
+  html body .lr5 .rs2-th .rs2-hs{display:none}html body .lr5 .rs2-th .rs2-ht{display:inline}
+  html body .lr5 .rs2r:hover .c-stock::after,html body .lr5 .rs2r:focus-within .c-stock::after{content:attr(data-rs2-short);position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:2px;z-index:8;background:#14161A;color:#fff;font:500 12px/1.3 var(--lr-sans,inherit);border-radius:7px;padding:4px 8px;white-space:nowrap;pointer-events:none;box-shadow:0 4px 12px rgba(20,22,26,.2)}
+  html body .lr5 .rs2r{position:relative}html body .lr5 .rs2r:hover{z-index:2}
+}
 html body .lr5 .rs2-tbl{min-width:840px}
 html body .lr5 .rs2-x3 .rs2-tbl{min-width:920px}
 html body .lr5 .rs2r .c-tk{display:flex;align-items:center;justify-content:center}
@@ -32635,13 +32647,21 @@ function rs2AddBtn(r, big){
   if(rs2Has(r.t)) return `<button type="button" class="rs2-add done${big ? ' big' : ''}" data-rs2-add="done" aria-haspopup="menu" aria-expanded="${!!(rs2.menu && rs2.menu.sym === r.t && rs2.menu.at === 'row')}" title="On Watch — change" aria-label="${e(r.t)} is on Watch — change" onclick="event.stopPropagation();rs2MenuOpen('${e(r.t)}','row')"><span class="sm">✓</span></button>`;
   return `<button type="button" class="rs2-add${big ? ' big' : ''}" data-rs2-add="new" title="Add to Momentum" aria-label="Add ${e(r.t)} to Watch (Momentum)" onclick="event.stopPropagation();rs2Add('${e(r.t)}')"><span class="sm">+</span></button>`;
 }
+/* MV1 B — short company name for the Screen tooltip + stock panel header: cut at the first comma, then drop share-class tails (Class A · Common Stock · Common Shares · Ordinary Shares · American Depositary Shares …) */
+function rs2ShortName(n){
+  let t = String(n == null ? '' : n).trim(); if(!t) return '';
+  const cut = t.indexOf(','); if(cut > 0) t = t.slice(0, cut);
+  const tail = /\s*(?:[-–]\s*)?\b(?:Class\s+[A-Z0-9]+\b|Series\s+[A-Z0-9]+\b|(?:Common|Ordinary|Subordinate Voting|Limited Voting)\s+(?:Stock|Shares?)\b|American Depositary\s+(?:Shares?|Receipts?)\b|Depositary\s+Shares?\b|ADSs?\b|ADRs?\b)[\s\S]*$/i;
+  const out = t.replace(tail, '').replace(/[\s,\-–]+$/, '').trim();
+  return out || t;
+}
 function rs2RowHtml(r){
   const e = escHtml, ea = rs2Earn(r), s = rs2Sec(r), x3 = rs2.preset !== 'leaders';
   const m3 = typeof r.m3 === 'number' ? r.m3 : '—', m1 = typeof r.m1 === 'number' ? r.m1 : '—';
   const l2 = [e(r.n || ''), e(s.short), ea && ea.soon ? `<span class="amb">earnings ${ea.txt === 'today' ? 'today' : ea.txt}</span>` : ''].filter(Boolean).join(' · ');
   return `<div class="rs2r${rs2.sel === r.t ? ' on' : ''}${rs2.tick[r.t] ? ' tk' : ''}" data-rs2-row data-sym="${e(r.t)}" onclick="rs2Pick(this.dataset.sym)">
     <span class="c-tk"><input type="checkbox" data-rs2-tick="${e(r.t)}" aria-label="Select ${e(r.t)}"${rs2.tick[r.t] ? ' checked' : ''} onclick="rs2Tk('${e(r.t)}', event)"></span>
-    <span class="rs2-id"><span class="c-stock"><b>${e(r.t)}</b><span class="nm">${e(r.n || '')}</span></span>${rs2RsPhone(r)}</span>
+    <span class="rs2-id"><span class="c-stock" data-rs2-short="${e(rs2ShortName(r.n))}"><b>${e(r.t)}</b><span class="nm">${e(r.n || '')}</span></span>${rs2RsPhone(r)}</span>
     <span class="c-sec">${rs2SecCell(r)}</span><span class="c-rs">${rs2RsCell(r)}</span>${x3 ? `<span class="c-m num" data-rs2-m>${m3} · ${m1}</span>` : ''}
     <span class="c-mc num" data-rs2-mc>${rs2Cap(r.mc)}</span><span class="c-v num">${rs2Usd(r.v)}</span>
     <span class="c-e num${ea && ea.soon ? ' amb' : ''}">${ea ? e(ea.txt) : '<span class="mut">—</span>'}</span>
@@ -32671,7 +32691,7 @@ function rs2DetHtml(r){
   const three = typeof r.m3 === 'number' || typeof r.m1 === 'number'
     ? `<div class="rs2-dl" data-rs2-3m>12M <b>${r.r}</b> · 3M <b class="${rs2Fall(r.r, r.m3).trim()}">${typeof r.m3 === 'number' ? r.m3 : '—'}</b> · 1M <b class="${rs2Fall(r.m3, r.m1).trim()}">${typeof r.m1 === 'number' ? r.m1 : '—'}</b></div>` : '';
   return `<div class="lr5-dp panel" data-rs2-det="${e(r.t)}">
-    <div class="rs2-dh"><b class="rs2-dt">${e(r.t)}</b><span class="mut">${e(r.n || '')} · ${e(r.e || '')}</span></div>
+    <div class="rs2-dh"><b class="rs2-dt">${e(r.t)}</b><span class="mut" data-rs2-dname>${e(rs2ShortName(r.n))} · ${e(r.e || '')}</span></div>
     <div class="lr5-rsb num" data-rs2-rsb><span class="lbl">RS · from high</span>
       <div class="rs2-dl">RS <b>${r.r}</b>${r.l ? ' · line ' + wl5Arrow(RS2_LN[r.l]) : ''}${r.h >= 1 ? ' · <span class="lr5-nh">new high</span>' : ''}</div>
       ${three}
@@ -33053,7 +33073,7 @@ function rs2Render(host){
   const oldList = host.querySelector('.wlListBody'), keep = oldList ? oldList.scrollTop : 0;
   host.innerHTML = `<div class="lr5 lr5-w lr5-screen${x3 ? ' rs2-x3' : ''}" data-lr5 data-rs2 data-rs2-view-on="stocks">${wl5Header('screen', V.length)}${ok && rs2.pmenu && rs2Phone() ? rs2PmenuHtml() : ''}${ok ? rs2Controls() : ''}
     <div class="wlm lr5m"><section class="panel wlList lr5-list" aria-label="Screen results"><div class="wlListBody"><div class="lr5-tbl rs2-tbl">
-      <div class="rs2r rs2-th" data-rs2-th-row><span class="c-tk"><input type="checkbox" data-rs2-tick-all aria-label="Select all shown" onclick="rs2TkAll(this.checked)"></span><span class="lbl">Stock</span><span class="lbl">Sector vs SPY</span><span class="lbl">${rs2ThBtn('rs', 'RS')} · ${rs2ThBtn('high', 'from high')}</span>${x3 ? '<span class="lbl">3M · 1M</span>' : ''}<span class="lbl r">${rs2ThBtn('mc', 'M.Cap')}</span><span class="lbl r">${rs2ThBtn('vol', 'Avg $vol')}</span><span class="lbl r">${rs2ThBtn('earn', 'Earnings')}</span><span></span></div>
+      <div class="rs2r rs2-th" data-rs2-th-row><span class="c-tk"><input type="checkbox" data-rs2-tick-all aria-label="Select all shown" onclick="rs2TkAll(this.checked)"></span><span class="lbl"><span class="rs2-hs">Stock</span><span class="rs2-ht">Ticker</span></span><span class="lbl">Sector vs SPY</span><span class="lbl">${rs2ThBtn('rs', 'RS')} · ${rs2ThBtn('high', 'from high')}</span>${x3 ? '<span class="lbl">3M · 1M</span>' : ''}<span class="lbl r">${rs2ThBtn('mc', 'M.Cap')}</span><span class="lbl r">${rs2ThBtn('vol', 'Avg $vol')}</span><span class="lbl r">${rs2ThBtn('earn', 'Earnings')}</span><span></span></div>
       ${rowsHtml}${foot}</div></div></section>
       <aside class="wlDet lr5-det" aria-label="${sel ? escHtml(sel.t) + ' detail' : 'Detail'}">${ok && !rs2Phone() ? rs2DetHtml(sel) : ''}</aside>${ok && !rs2Phone() ? ux3RzHtml(RS_SPLIT) : ''}</div>${ok && rs2Phone() && rs2.sheet && sel ? `<div class="ui-sheet-backdrop rs2-sheetbd" data-rs2-sheet role="dialog" aria-modal="true" aria-label="${escHtml(sel.t)} detail" onclick="if(event.target===this)rs2Sheet(false)"><div class="rs2-sheetb"><button type="button" class="btn rs2-sheetx" data-rs2-sheet-close aria-label="Close" onclick="rs2Sheet(false)">×</button>${rs2DetHtml(sel)}</div></div>` : ''}${ok && rs2.menu && rs2Phone() ? rs2MenuHtml(rs2.menu.sym) : ''}</div>`;
   try{ splitFit(RS_SPLIT); }catch(e){}
