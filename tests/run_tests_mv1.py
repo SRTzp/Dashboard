@@ -108,6 +108,8 @@ def part_d(pw, w):
         js(page, "()=>window.firebase.__mockDb.__seedDoc(['users','testuid','rs2','latest'], {asOf:'2026-11-18', n:3, rows:[{t:'NVDA', r:99},{t:'AMD', r:90},{t:'TSLA', r:80}]})"); page.wait_for_timeout(100)
         js(page, "()=>{ rs2.rows = [{t:'NVDA'},{t:'AMD'},{t:'TSLA'},{t:'PLTR'}]; rs2.at = Date.now(); rs2.state = 'ok'; wl1ImpOpen(); }"); page.wait_for_timeout(300)
         ph = js(page, "()=>document.querySelector('[data-wl1-imp-text]').placeholder + ' | ' + document.querySelector('.wl1-up').innerText + ' | ' + document.querySelector('[data-wl1-imp-file]').accept")
+        hd = js(page, "()=>[document.querySelector('.wl1-imph b').innerText, getComputedStyle(document.getElementById('wl1ImpAdd')).backgroundColor]")
+        check(f"{tag} 0 sheet title 'Add stocks' · Add button is dark (same as .pri)", hd[0] == "Add stocks" and hd[1] == "rgb(20, 22, 26)", hd)
         check(f"{tag} 1 placeholder + upload label + accept .txt/.csv", ph.startswith("NVDA, PTT.BK — or paste the TradingView export | upload .txt / .csv") and ".csv" in ph, ph)
 
         def typed(txt):
