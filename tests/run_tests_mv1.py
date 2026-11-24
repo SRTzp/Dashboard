@@ -157,8 +157,8 @@ def part_b(pw):
     tag = "[B 390]"
     b, page, pe, ce = R.open_screen(pw, 390, 844, data=long_rows())
     try:
-        r = js(page, "()=>{ const r = document.querySelector('[data-rs2-row][data-sym=\"HOOD\"]') || document.querySelector('[data-rs2-row]'); const l2 = r.querySelector('.l2 .t'); return {cols:getComputedStyle(r).gridTemplateColumns.split(' ').length, l2:l2.innerText, after:getComputedStyle(r.querySelector('.c-stock'), '::after').content, nm:getComputedStyle(r.querySelector('.c-stock .nm')).display, th:getComputedStyle(document.querySelector('[data-rs2-th-row]')).display}; }")
-        check(f"{tag} phone unchanged: 2-column row, name + industry line kept, no tooltip, header hidden", r["cols"] == 2 and "Class A" in r["l2"] and r["after"] in ("none", "normal") and r["nm"] == "none" and r["th"] == "none", r)
+        r = js(page, "()=>{ const r = document.querySelector('[data-rs2-row][data-sym=\"HOOD\"]') || document.querySelector('[data-rs2-row]'); const l2 = r.querySelector('.l2 .t'); return {cols:getComputedStyle(r).gridTemplateColumns.split(' ').length, l2:l2.innerText, ws:getComputedStyle(l2).whiteSpace, after:getComputedStyle(r.querySelector('.c-stock'), '::after').content, nm:getComputedStyle(r.querySelector('.c-stock .nm')).display, th:getComputedStyle(document.querySelector('[data-rs2-th-row]')).display}; }")
+        check(f"{tag} phone: same 2-column row, line 2 = short name · sector (wraps, no '…'), no tooltip, header hidden", r["cols"] == 2 and "Class A" not in r["l2"] and r["l2"].startswith("Robinhood Markets") and r["ws"] == "normal" and r["after"] in ("none", "normal") and r["nm"] == "none" and r["th"] == "none", r)
         check(f"{tag} no horizontal scroll", js(page, "()=>document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1"))
         shot(page, "screen-390", full_page=False)
     finally:
@@ -168,7 +168,7 @@ def part_b(pw):
 def pri_audit(pw, w):
     """C — visible dark buttons per area, on the main stock screens."""
     tag = "[C %d]" % w
-    COUNT = "()=>{ const vis = e=>{ const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; }; return [...document.querySelectorAll('.pri, .ui-btn-pri')].filter(vis).map(e=>(e.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 28) + '|' + (e.closest('[data-lr5-det]') ? 'detail' : e.closest('.wlList, .wlListBody') ? 'list' : 'page')); }"
+    COUNT = "()=>{ const vis = e=>{ const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && cs.backgroundColor === 'rgb(20, 22, 26)'; }; return [...document.querySelectorAll('.pri, .ui-btn-pri')].filter(vis).map(e=>(e.innerText || '').replace(/\\s+/g, ' ').trim().slice(0, 28) + '|' + (e.closest('[data-lr5-det]') ? 'detail' : e.closest('.wlList, .wlListBody') ? 'list' : 'page')); }"
     out = {}
     b, page, pe = watch(pw, w)
     try:
@@ -177,7 +177,9 @@ def pri_audit(pw, w):
             out["Watch detail " + s] = js(page, COUNT)
             det = [x for x in out["Watch detail " + s] if x.endswith("|detail")]
             check(f"{tag} Watch detail {s}: dark button in the panel is only 'Make plan ›' (Homework ›, Open plan › are white)", all(x.startswith("Make plan") for x in det), det)
-            if s == "PLTR": shot(page, "dark-watch" + ("-390" if w <= 600 else ""), full_page=False)
+            lst = [x for x in out["Watch detail " + s] if x.endswith("|list")]
+            check(f"{tag} Watch detail {s}: list row Make plan › is {'dark (phone: no panel)' if w <= 600 else 'white (panel visible)'}", (len(lst) == 1) if w <= 600 else (len(lst) == 0), lst)
+            if s == "GE": shot(page, "dark-watch" + ("-390" if w <= 600 else ""), full_page=False)
         js(page, "()=>wlOpen('PLTR','')"); page.wait_for_timeout(200)
         js(page, "()=>{ wl5Full('PLTR','sum'); }"); page.wait_for_timeout(300)
         out["Watch full thesis PLTR"] = js(page, COUNT)

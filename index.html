@@ -5126,6 +5126,8 @@ html body .lr5 .btn{font:600 13px/1 var(--lr-sans);border-radius:10px;padding:0 
 html body .lr5 .btn:hover{border-color:var(--lr-muted);background:#fff}
 html body .lr5 .btn.pri{background:var(--lr-ink);border-color:var(--lr-ink);color:#fff}
 html body .lr5 .btn.pri:hover{background:var(--lr-ink);opacity:.9}
+/* MV1b — desktop (>=1100, the detail panel is on screen): the list row Make plan › is white · the dark one lives in the panel · phone list keeps it dark */
+@media (min-width:1100px){html body .lr5 .wlList .lr5-act.btn.pri,html body .lr5 .wlListBody .lr5-act.btn.pri{background:#fff;border-color:var(--lr-line2);color:var(--lr-ink)}html body .lr5 .wlList .lr5-act.btn.pri:hover,html body .lr5 .wlListBody .lr5-act.btn.pri:hover{border-color:var(--lr-muted);background:#fff;opacity:1}}
 html body .lr5 .btn.sm{height:32px}
 html body .lr5 .lr5-add .sm,html body .lr5 .lr5-act .sm{display:none}
 html body .lr5 .lr5-find{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--lr-line2);border-radius:10px;background:#fff;font-size:13px;color:var(--lr-muted);box-sizing:border-box}
@@ -5702,7 +5704,8 @@ html body .lr5 .lr5-screen .wlDet.lr5-det{align-self:flex-start;position:sticky;
   html body .lr5 .rs2r .rs2-rsp .p.mut{color:var(--lr-muted)}html body .lr5 .rs2r .rs2-rsp .p.ink{color:var(--lr-ink)}html body .lr5 .rs2r .rs2-rsp .p.amb{color:var(--lr-warn)}
   html body .lr5 .rs2r .l2{display:flex;grid-area:l2;min-width:0;font-size:12px;color:var(--lr-muted);white-space:nowrap}
   html body .lr5 .rs2r .l2{gap:8px}
-  html body .lr5 .rs2r .l2 .t{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  html body .lr5 .rs2r .l2{white-space:normal;align-items:flex-start}
+  html body .lr5 .rs2r .l2 .t{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:anywhere;min-width:0}   /* MV1b — short name · sector wraps, never '…' */
   html body .lr5 .rs2r .l2 .m{flex:none;margin-left:auto;color:var(--lr-text2);font-weight:600}
   html body .lr5 .rs2r .c-act{grid-area:act;align-self:center}
   html body .lr5 .rs2-add{width:44px;height:44px;padding:0;font-size:18px;border-radius:10px}
@@ -32658,7 +32661,7 @@ function rs2ShortName(n){
 function rs2RowHtml(r){
   const e = escHtml, ea = rs2Earn(r), s = rs2Sec(r), x3 = rs2.preset !== 'leaders';
   const m3 = typeof r.m3 === 'number' ? r.m3 : '—', m1 = typeof r.m1 === 'number' ? r.m1 : '—';
-  const l2 = [e(r.n || ''), e(s.short), ea && ea.soon ? `<span class="amb">earnings ${ea.txt === 'today' ? 'today' : ea.txt}</span>` : ''].filter(Boolean).join(' · ');
+  const l2 = [e(rs2ShortName(r.n)), e(s.short), ea && ea.soon ? `<span class="amb">earnings ${ea.txt === 'today' ? 'today' : ea.txt}</span>` : ''].filter(Boolean).join(' · ');
   return `<div class="rs2r${rs2.sel === r.t ? ' on' : ''}${rs2.tick[r.t] ? ' tk' : ''}" data-rs2-row data-sym="${e(r.t)}" onclick="rs2Pick(this.dataset.sym)">
     <span class="c-tk"><input type="checkbox" data-rs2-tick="${e(r.t)}" aria-label="Select ${e(r.t)}"${rs2.tick[r.t] ? ' checked' : ''} onclick="rs2Tk('${e(r.t)}', event)"></span>
     <span class="rs2-id"><span class="c-stock" data-rs2-short="${e(rs2ShortName(r.n))}"><b>${e(r.t)}</b><span class="nm">${e(r.n || '')}</span></span>${rs2RsPhone(r)}</span>
