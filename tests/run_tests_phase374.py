@@ -139,14 +139,14 @@ def watch_list(pw, w, h):
     try:
         seed_main(page); go_watch(page)
         r = rows(page)
-        check(f"{tag} 1 Momentum list: ADBE (Holding, homework missing) → AMD (Planned) → HANA (No plan) → MSFT (done); no Compounder rows", r == ["ADBE", "AMD", "HANA.BK", "MSFT"], r)
-        check(f"{tag} 1 status chips: Holding · Planned · No plan · Holding", [chip(page, s) for s in r] == ["Holding", "Plan ready", "No plan", "Holding"], [chip(page, s) for s in r])
+        check(f"{tag} 1 Momentum list: ADBE (Holding, homework missing) → MSFT (Holding, done) → AMD (Planned) → HANA (No plan); no Compounder rows", r == ["ADBE", "MSFT", "AMD", "HANA.BK"], r)   # UX3 E: HOLDING (not done first) → PLANNED → WATCHING
+        check(f"{tag} 1 status chips: Holding · Holding · Planned · No plan", [chip(page, s) for s in r] == ["Holding", "Holding", "Plan ready", "No plan"], [chip(page, s) for s in r])
         check(f"{tag} 1 cap tags: not done = 50% · done = 100%; homework text names what is missing", "size 70%" in rowtxt(page, "ADBE") and ("Done" in rowtxt(page, "MSFT") or "thesis done" in rowtxt(page, "MSFT")) and ("Missing trigger" in rowtxt(page, "AMD") or "trigger missing" in rowtxt(page, "AMD") or "1 of 2 · Trigger missing" in rowtxt(page, "AMD")), [rowtxt(page, s) for s in r])
         check(f"{tag} 1 summary line: 4 stocks · 3 need homework", re.search(r"4 stocks.*3 need homework", txt(page, "[data-wl1-sum]") or "") is not None, txt(page, "[data-wl1-sum]"))
         check(f"{tag} 1 segmented control shows counts Momentum 4 | Compounder 2", re.search(r"Mom(entum)? 4", txt(page, "[data-wl1-segs]") or "") is not None and re.search(r"Comp(ounder)? 2", txt(page, "[data-wl1-segs]") or "") is not None, txt(page, "[data-wl1-segs]"))
         js(page, "()=>wl1TrkSet('ladder')"); settle(page, 400)
         r2 = rows(page)
-        check(f"{tag} 1 Compounder list: AVGO (No plan) before NVDA (done) · NVDA = 'Holding · Add-on planned' (2nd plan on the same key)", r2 == ["AVGO", "NVDA"] and chip(page, "NVDA") == "Add-on planned" and chip(page, "AVGO") == "No plan", [r2, chip(page, "NVDA")])
+        check(f"{tag} 1 Compounder list: NVDA (Holding, done) before AVGO (No plan) · NVDA = 'Holding · Add-on planned' (2nd plan on the same key)", r2 == ["NVDA", "AVGO"] and chip(page, "NVDA") == "Add-on planned" and chip(page, "AVGO") == "No plan", [r2, chip(page, "NVDA")])
         check(f"{tag} 1 all 4 states reachable: No plan / Planned / Holding / Holding · Add-on planned", {chip(page, "NVDA"), chip(page, "AVGO")} == {"Add-on planned", "No plan"}, "")
         check(f"{tag} 1 key = exchange + symbol + strategy", js(page, "()=>wl1KeyOf(wlItemOf('NVDA'))") == "NASDAQ:NVDA|ladder" and js(page, "()=>wl1KeyOf(wlItemOf('HANA.BK'))") == "SET:HANA|winner", js(page, "()=>wl1KeyOf(wlItemOf('NVDA'))"))
         js(page, "()=>wl1TrkSet('winner')"); settle(page, 400)
@@ -192,7 +192,7 @@ def keys_swipe(pw, w, h):
         if w >= 1024:
             js(page, "()=>{ document.activeElement && document.activeElement.blur(); }")
             page.keyboard.press("Tab"); settle(page, 300)
-            check(f"{tag} 2 Tab → Compounder; first row selected (AVGO)", trk() == "ladder" and js(page, "()=>wlSel") == "AVGO", [trk(), js(page, "()=>wlSel")])
+            check(f"{tag} 2 Tab → Compounder; first row selected (NVDA — Holding group first)", trk() == "ladder" and js(page, "()=>wlSel") == "NVDA", [trk(), js(page, "()=>wlSel")])
             page.keyboard.press("Shift+Tab"); settle(page, 300)
             check(f"{tag} 2 Shift+Tab goes back to Momentum (RS2a2: Tab cycles Ideas → Momentum → Compounder → Screen)", trk() == "winner" and js(page, "()=>wlView") == "wl", trk())
             js(page, "()=>hwOpen('ADBE')"); settle(page, 400)   # HW1: the Trigger box is on the Homework page
@@ -212,7 +212,7 @@ def keys_swipe(pw, w, h):
             js(page, "()=>wl1TrkSet('ladder')"); settle(page, 300)
             sel = js(page, "()=>wlSel")
             js(page, "()=>wl1TrkSet('winner')"); settle(page, 300)
-            check(f"{tag} 2 switching list keeps nothing stale: selected stock not in the new list → first row", sel == "AVGO" and js(page, "()=>wlSel") == "ADBE", [sel, js(page, "()=>wlSel")])
+            check(f"{tag} 2 switching list keeps nothing stale: selected stock not in the new list → first row", sel == "NVDA" and js(page, "()=>wlSel") == "ADBE", [sel, js(page, "()=>wlSel")])
             check(f"{tag} 2 choice remembered per device", js(page, "()=>localStorage.getItem('dash.wl1Trk')") == "winner", "")
         else:
             js(page, "()=>wl1SegGo('winner')"); settle(page, 300)   # NT1: Watch opens on Ideas · these swipes start from Momentum

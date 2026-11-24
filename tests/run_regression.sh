@@ -32,12 +32,14 @@ FAST=(
   "node ps1b_size|node tests/ps1b_size_test.js"
   "node pv1_posview|node tests/pv1_posview_test.js"
   "rs2 selftest (offline)|python3 tests/rs2_selftest.py"
+  "rr4 selftest (offline · RRG bars doc + US calendar)|python3 tests/rr4_selftest.py"
+  "node rr4_job (job bars == Twelve Data rows · JS calendar)|node tests/rr4_job_test.js"
   "hooks superset (LR1 A0)|python3 tests/hooks_test.py"
   "node aw1 (wrapper → run_tests_aw1.py)|node tests/aw1_test.js"
 )
 # ---- browser suites (python): the core set, then the rest
 CORE="run_tests_pv1 run_tests_re1d run_tests_re1c run_tests_re1c2 run_tests_re1b run_tests_ts1 run_tests_ts1b run_tests_phase364 run_tests_phase374 run_tests_phase375 run_tests_phase372 run_tests_phase370"
-REST="run_tests run_tests_phase1 run_tests_phase2 run_tests_phase10 run_tests_phase19 run_tests_phase20 run_tests_phase35 run_tests_phase49 run_tests_phase50 run_tests_phase57 run_tests_phase363 run_tests_phase_sw2 run_tests_phase122 run_tests_phase365 run_tests_phase366 run_tests_phase367 run_tests_phase373 run_tests_phase_cg1 run_tests_phase_ht1 run_tests_sh1 run_tests_sh2 run_tests_lr1 run_tests_lr2 run_tests_lr3 run_tests_lrf run_tests_lrf2 run_tests_ef1b run_tests_lr4 run_tests_lr5a run_tests_lr5b run_tests_wl2 run_tests_lr5c run_tests_clean1 run_tests_en1 run_tests_sd1 run_tests_au2 run_tests_rs2a run_tests_rs2a2 run_tests_lt2 run_tests_hw1 run_tests_rs2a3 run_tests_td5 run_tests_rs2b run_tests_hw1c run_tests_hw1b run_tests_hw1d run_tests_rk1 run_tests_fs2 run_tests_nt1 run_tests_pc2 run_tests_nt1b run_tests_nt1c run_tests_nt1d run_tests_nt2 run_tests_rs2d run_tests_nt2c run_tests_hf1 run_tests_ph1"
+REST="run_tests run_tests_phase1 run_tests_phase2 run_tests_phase10 run_tests_phase19 run_tests_phase20 run_tests_phase35 run_tests_phase49 run_tests_phase50 run_tests_phase57 run_tests_phase363 run_tests_phase_sw2 run_tests_phase122 run_tests_phase365 run_tests_phase366 run_tests_phase367 run_tests_phase373 run_tests_phase_cg1 run_tests_phase_ht1 run_tests_sh1 run_tests_sh2 run_tests_lr1 run_tests_lr2 run_tests_lr3 run_tests_lrf run_tests_lrf2 run_tests_ef1b run_tests_lr4 run_tests_lr5a run_tests_lr5b run_tests_wl2 run_tests_lr5c run_tests_clean1 run_tests_en1 run_tests_sd1 run_tests_au2 run_tests_rs2a run_tests_rs2a2 run_tests_lt2 run_tests_hw1 run_tests_rs2a3 run_tests_td5 run_tests_rs2b run_tests_hw1c run_tests_hw1b run_tests_hw1d run_tests_rk1 run_tests_fs2 run_tests_nt1 run_tests_pc2 run_tests_nt1b run_tests_nt1c run_tests_nt1d run_tests_nt2 run_tests_rs2d run_tests_nt2c run_tests_hf1 run_tests_ph1 run_tests_ux3"
 if [ $QUICK = 1 ]; then BROWSER="$CORE"; else BROWSER="$CORE $REST"; fi
 
 line() { # name rc seconds log

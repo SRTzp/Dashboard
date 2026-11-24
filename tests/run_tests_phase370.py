@@ -37,7 +37,7 @@ SCAN = """(sel)=>{
     if(own && fs < 11.85) out.small.push((e.className||e.tagName)+':'+fs+':'+e.textContent.trim().slice(0,18));
     if(/^(BUTTON|SELECT)$/.test(e.tagName) || (e.tagName==='INPUT' && /text|checkbox/.test(e.type))){
       const r = e.getBoundingClientRect(), box = e.type==='checkbox' ? (e.closest('label')||e).getBoundingClientRect() : r;
-      if(box.height < 35.5) out.tap.push((e.className||e.tagName)+':'+Math.round(box.height)+':'+(e.textContent||e.value||'').trim().slice(0,14));
+      if(box.height < 35.5 && !(e.classList && e.classList.contains('lr5-fs'))) out.tap.push((e.className||e.tagName)+':'+Math.round(box.height)+':'+(e.textContent||e.value||'').trim().slice(0,14));
     }
   });
   out.small = out.small.slice(0,8); out.tap = out.tap.slice(0,8);

@@ -29,7 +29,7 @@ def run(pw, w, h):
         # ---- header
         hd = js(page, "()=>({h1:document.querySelector('.lr5-h1').innerText, segs:[...document.querySelectorAll('[data-wl1-segs] button')].map(b=>b.innerText.replace(/\\s+/g,' ').trim()), sum:document.querySelector('[data-wl1-sum]').innerText.replace(/\\s+/g,' ').trim(), find:!!document.querySelector('[data-lr5-q]') && getComputedStyle(document.querySelector('[data-lr5-q]').closest('label')).display !== 'none', add:document.querySelector('[data-wl1-import]').innerText.trim()})")
         check(f"{tag} A: header = Watch · Ideas · Momentum 5 · Compounder 1 · Screen", hd["h1"] == "Watch" and hd["segs"] in (["Ideas", "Momentum 5", "Compounder 1", "Screen"], ["Ideas", "Mom 5", "Comp 1", "Screen"]), hd)   # RS2a: 4th segment Screen · phone short labels (ScreenRSPhone mockup)
-        check(f"{tag} A: summary line '5 stocks · 3 need homework'" + (" · shared by Main and Family" if desk else ""), hd["sum"].startswith("5 stocks · 3 need homework") and (("shared by Main and Family" in hd["sum"]) if desk else True), hd["sum"])
+        check(f"{tag} A: summary line '5 stocks · 3 need homework'" + (" · ⓘ (shared by Main and Family in the tooltip)" if desk else ""), hd["sum"].startswith("5 stocks · 3 need homework") and (("shared by" not in hd["sum"] and "ⓘ" in hd["sum"]) if desk else True), hd["sum"])
         check(f"{tag} A: desktop has Find ticker + '+ Add stock'; phone has '+ Add' only", (hd["find"] and hd["add"] == "+ Add stock") if desk else (not hd["find"] and hd["add"] == "+ Add"), hd)
         # ---- rows + statuses
         o = order(page)
@@ -62,7 +62,7 @@ def run(pw, w, h):
         # ---- one line per row · no overflow
         dims = js(page, "()=>[...document.querySelectorAll('[data-lr5-row]')].map(r=>({s:r.dataset.sym, h:Math.round(r.getBoundingClientRect().height), cells:[...r.children].filter(c=>getComputedStyle(c).display!=='none' && !c.classList.contains('lr5-id')).map(c=>Math.round(c.getBoundingClientRect().height)), l2:(r.querySelector('.l2')||{getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height}))")
         if desk: check(f"{tag} A: every row is ONE line (≤ 64px · no cell wraps)", all(d["h"] <= 64 for d in dims) and all(max(d["cells"]) <= 44 for d in dims), dims)
-        else: check(f"{tag} C: every phone row is TWO lines (≤ 72px · line 2 one line ≤ 22px)", all(d["h"] <= 72 and d["l2"] <= 22 for d in dims), dims)
+        else: check(f"{tag} C: every phone row is two lines, a 3rd/4th line only when a long note wraps beside the RS + button (UX3 H: ≤ 120px · line 2 ≤ 72px)", all(d["h"] <= 120 and d["l2"] <= 72 for d in dims), dims)
         check(f"{tag} A: no horizontal page overflow", ov(page) <= 0, ov(page))
         # ---- hooks kept
         hk = js(page, "()=>['[data-wl1-row]','[data-wl1-chip]','[data-wl1-act]','[data-wl1-sum]','[data-wl1-seg]','[data-wl1-ideas]','[data-wl1-import]','[data-wl1-arch]','[data-wl1-arch-toggle]','[data-wl-restore]','[data-wl1-hwt]'].filter(s=>!document.querySelector(s))")
@@ -83,7 +83,7 @@ def run(pw, w, h):
         check(f"{tag} B: Sort › Default restores the original order", order(page) == base, order(page))
         # ---- filter
         opts = js(page, "()=>[...document.querySelectorAll('[data-lr5-filter] option')].map(o=>o.textContent)")
-        check(f"{tag} B: Filter counts — All (5) · Holding (1) · Plan ready (1) · No plan (3) · Needs homework (3)", opts == ["All (5)", "Holding (1)", "Plan ready (1)", "No plan (3)", "Needs homework (3)"], opts)
+        check(f"{tag} B: Filter counts — All (5) · Holding (1) · Plan ready (1) · Focus (0) · No plan (3) · Needs homework (3)", opts == ["All (5)", "Holding (1)", "Plan ready (1)", "Focus (0)", "No plan (3)", "Needs homework (3)"], opts)
         for val, want in (("hold", ["AAPL"]), ("plan", ["AVGO"]), ("none", ["GE", "AMD", "PLTR"]), ("need", ["AAPL", "AMD", "PLTR"])):
             page.select_option("[data-lr5-filter]", val); page.wait_for_timeout(250)
             check(f"{tag} B: Filter › {val} shows exactly {want}", sorted(order(page)) == sorted(want), order(page))
@@ -143,7 +143,7 @@ def run(pw, w, h):
         js(page, "()=>{ document.querySelector('[data-wl1-arch]').open = true; }"); page.wait_for_timeout(200)
         ar = js(page, "()=>{ const d = document.querySelector('[data-wl1-arch]'); return {tag:d.tagName, open:d.open, sum:d.querySelector('summary').innerText.trim(), rows:[...d.querySelectorAll('[data-wl1-arch-row]')].map(r=>r.innerText.replace(/\\s+/g,' ').trim()), hint:d.querySelector('.lr5-archhint').innerText}; }")
         check(f"{tag} A: 'Archived (2)' is a <details> at the bottom; hint says what Archive means", ar["tag"] == "DETAILS" and ar["sum"] == "Archived (2)" and "stopped watching" in ar["hint"] and "notes" in ar["hint"], ar)
-        check(f"{tag} A: archived rows = ticker · date · reason · Restore (newest first)", ar["rows"] == ["ARY 12 Nov too slow Restore", "ARX 10 Nov thesis broke after earnings Restore"], ar["rows"])
+        check(f"{tag} A: archived rows = ticker · date · reason · Restore · Delete forever (newest first)", ar["rows"] == ["ARY 12 Nov too slow Restore Delete forever", "ARX 10 Nov thesis broke after earnings Restore Delete forever"], ar["rows"])
         js(page, "()=>{ document.querySelector('[data-wl1-arch]').open = true; }"); page.wait_for_timeout(200)
         check(f"{tag} A: archived rows fit the width (one line each)", js(page, "()=>[...document.querySelectorAll('[data-wl1-arch-row]')].every(r=>r.getBoundingClientRect().height <= 52 && r.scrollWidth <= r.clientWidth + 1)") and ov(page) <= 0)
         js(page, "()=>document.querySelector('[data-wl1-arch-row=ARX] [data-wl-restore]').click()"); page.wait_for_timeout(700)

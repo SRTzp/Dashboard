@@ -5,10 +5,12 @@ name: prices
 
 on:
   schedule:
-    - cron: '30 22 * * 1-4'  # RS1 · จันทร์–พฤหัส 22:30 UTC = หลังตลาด US ปิด (ทั้ง EST/EDT) · 05:30 น. ไทยวันถัดไป
-    - cron: '30 23 * * 5'   # เสาร์ 06:30 น. ไทย (ศุกร์ 23:30 UTC)
-    - cron: '30 23 * * 6'   # อาทิตย์ 06:30 น. ไทย
-  workflow_dispatch: {}      # กดรันเองได้ที่แท็บ Actions → prices → Run workflow
+    # CR1 — GitHub delays or drops cron at busy minutes (:00 / :30) → off-peak minutes + a backup run an hour later
+    - cron: '17 22 * * 1-4'  # จันทร์–พฤหัส 22:17 UTC = หลังตลาด US ปิด (ทั้ง EST/EDT) · 05:17 น. ไทยวันถัดไป
+    - cron: '17 23 * * 5'    # ศุกร์ 23:17 UTC (เสาร์ 06:17 น. ไทย)
+    - cron: '17 23 * * 6'    # เสาร์ 23:17 UTC (อาทิตย์ 06:17 น. ไทย)
+    - cron: '13 0 * * *'     # backup ทุกวัน 00:13 UTC — ถ้ารอบหลักรันแล้ว build_prices.py เห็น "already fresh" แล้วจบใน ไม่กี่วินาที
+  workflow_dispatch: {}      # กดรันเองได้ที่แท็บ Actions → prices → Run workflow (รันเต็มเสมอ ไม่ข้าม)
 
 permissions:
   contents: read
@@ -30,10 +32,13 @@ jobs:
         run: python tests/rs1_selftest.py
       - name: RS2a selftest (ไม่แตะเน็ต)
         run: python tests/rs2_selftest.py
+      - name: RR4 / CR1 selftest (ไม่แตะเน็ต · RRG bars + ปฏิทิน US)
+        run: python tests/rr4_selftest.py
       - name: ติดตั้งแพ็กเกจ
         run: pip install --quiet yfinance pandas firebase-admin
       - name: ดึงราคา + เขียน Firestore
         env:
           FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
           FIREBASE_UID: ${{ secrets.FIREBASE_UID }}
+          PRICES_FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
         run: python scripts/build_prices.py

@@ -46,7 +46,7 @@ def run(pw, w, h):
         if w == 390: K.shot(page, "ts1b-watch-390") if False else page.screenshot(path=os.path.join(SHOTS, "ts1b-watch-390.png"))
         js(page, "()=>{ document.querySelector('[data-wl1-arch]').open = true; }"); page.wait_for_timeout(300)
         rows = js(page, "()=>[...document.querySelectorAll('[data-wl1-arch-row]')].map(r=>r.innerText.replace(/\\s+/g,' ').trim())")
-        check(f"{tag} C: open shows: ticker · date · reason · Restore", len(rows) == 2 and rows[0].startswith("ARY") and "12 Nov" in rows[0] and "too slow" in rows[0] and rows[0].endswith("Restore") and "thesis broke" in rows[1], rows)
+        check(f"{tag} C: open shows: ticker · date · reason · Restore · Delete forever", len(rows) == 2 and rows[0].startswith("ARY") and "12 Nov" in rows[0] and "too slow" in rows[0] and rows[0].endswith("Delete forever") and "thesis broke" in rows[1], rows)
         check(f"{tag} C: archived rows fit the width (no overflow)", ovf(page) <= 0 and js(page, "()=>[...document.querySelectorAll('[data-wl1-arch-row]')].every(r=>r.scrollWidth<=r.clientWidth+1)"))
         if w == 390: page.screenshot(path=os.path.join(SHOTS, "ts1b-archived-open-390.png"))
         js(page, "()=>document.querySelector('[data-wl1-arch-row=ARX] [data-wl-restore]').click()"); page.wait_for_timeout(700)
