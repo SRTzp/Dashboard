@@ -321,7 +321,12 @@ def workflow(pw, w, h):
         js(page, "()=>{ln4Place('core','cFF'); {const b=document.querySelector('[data-pb2-yes]'); if(b) b.click();}}"); settle(page, 400)
         js(page, "()=>coreBuy1Open('cFF')"); settle(page, 400)
         info = js(page, "()=>({qty:document.getElementById('cbQty').value, err:document.getElementById('cbErr').innerText, dis:document.getElementById('cbSave').disabled})")
-        check(f"{tag} 4 Filled ✓ form: default qty clamped to the homework cap (40 → 28 = 70%) and Save enabled", info["qty"] == "28" and info["dis"] is False, info)
+        check(f"{tag} 4 Filled ✓ form, plan without engine data (older plan, the card shows its own #40): default = the plan's own qty, not cut a second time (HF5) and Save enabled", info["qty"] == "40" and info["dis"] is False, info)
+        js(page, "()=>coreSheetClose()")
+        js(page, "()=>{ const c = coreCardsList.find(x=>x.id==='cFF'); c.plan.ps1.re1 = {}; c.plan.ps1.qtyFull = 40; c.plan.ps1.rows[0].qty = 28; coreBuy1Open('cFF'); }"); settle(page, 400)   # E2E1: an engine-sized plan is stored at 70% (28) with qtyFull 40 → default = the card's 28
+        info = js(page, "()=>({qty:document.getElementById('cbQty').value, err:document.getElementById('cbErr').innerText, dis:document.getElementById('cbSave').disabled})")
+        check(f"{tag} 4 Filled ✓ form, engine-sized plan (70% = 28 of full 40): default qty 28 = the card, Save enabled", info["qty"] == "28" and info["dis"] is False, info)
+        js(page, "()=>{ const c = coreCardsList.find(x=>x.id==='cFF'); delete c.plan.ps1.re1; delete c.plan.ps1.qtyFull; c.plan.ps1.rows[0].qty = 40; coreSheetClose(); coreBuy1Open('cFF'); }"); settle(page, 400)
         page.fill("#cbQty", "10"); page.dispatch_event("#cbQty", "input"); page.click("#cbSave"); settle(page, 900)
         check(f"{tag} 4 first (partial) fill → Watch item added once (Momentum, no duplicate)", wl_ids(page).count("FFIL") == 1 and js(page, "()=>wlTrackOf('FFIL')") == "winner", wl_ids(page))
         check(f"{tag} 4 …and Port has the position once", js(page, "()=>getBook('main').trades.filter(t=>t.sym==='FFIL').length") == 1, "")
