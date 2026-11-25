@@ -6055,6 +6055,7 @@ html body .pc2-none .pc2-np{display:none}
 }
 .lr4-wkb{display:inline-grid;align-items:center}.lr4-wkb>*{grid-area:1/1}.lr4-wkg{visibility:hidden;white-space:nowrap;padding:6px 0 6px 0;pointer-events:none}.lr4-wkb .lr4-wksel{width:100%;min-width:0}
 @media (max-width:560px) and (orientation:portrait){ #tabWatch{touch-action:pan-y pinch-zoom} }   /* PH1 — the swipe area keeps vertical scroll only; sideways-scrolling children are their own scroll container */
+#hf6SaveBar{position:fixed;top:0;left:0;right:0;z-index:100000;background:#FFF4D6;color:#7A5200;border-bottom:1px solid #E8C777;padding:8px 14px;font-size:13px;font-weight:600;text-align:center}#hf6SaveBar button{background:none;border:0;color:#7A5200;font-weight:700;text-decoration:underline;cursor:pointer;font-size:13px;min-height:28px}
 </style>
 </head>
 <body>
@@ -9813,6 +9814,63 @@ function withAccount(id, fn){
     state = savedState; acctActive = savedActive; acctCtx = null;
   }
 }
+/* ═══ HF6 — fsSafe: one check before every Firestore write · save-failure bar ═══ */
+const hf6Caught = [];   /* {where, path, why} — every field the guard dropped */
+function fsSafe(obj, where){
+  const seen = new Set();
+  const plain = v=>v && typeof v === 'object' && (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
+  const bad = (path, why)=>{ const k = (where || '') + '|' + path + '|' + why; try{ console.error('fsSafe [' + (where || '?') + '] ' + why + ' at ' + path + ' — field dropped'); if(!seen.has(k)){ seen.add(k); hf6Caught.push({where:where || '', path, why}); } }catch(e){} };
+  const fix = (v, path)=>{
+    if(v === undefined) return {drop:true, why:'undefined'};
+    if(typeof v === 'number' && !isFinite(v)) return {drop:true, why:'NaN/Infinity'};
+    if(Array.isArray(v)){
+      const out = [];
+      for(let i = 0; i < v.length; i++){
+        if(Array.isArray(v[i])){ bad(path + '[' + i + ']', 'nested array'); return {drop:true, why:'nested array', quiet:true}; }
+        const r = fix(v[i], path + '[' + i + ']'); if(r.drop){ if(!r.quiet) bad(path + '[' + i + ']', r.why); if(r.quiet) return r; continue; }
+        out.push(r.v === undefined ? v[i] : r.v);
+      }
+      return {v:out};
+    }
+    if(plain(v)){
+      let out = null;
+      for(const k of Object.keys(v)){
+        const r = fix(v[k], path ? path + '.' + k : k);
+        if(r.drop){ if(!r.quiet) bad(path ? path + '.' + k : k, r.why); if(!out) out = Object.assign({}, v); delete out[k]; }
+        else if(r.v !== undefined && r.v !== v[k]){ if(!out) out = Object.assign({}, v); out[k] = r.v; }
+      }
+      return {v:out || v};
+    }
+    return {v};
+  };
+  try{ const r = fix(obj, ''); return r.drop ? {} : r.v; }catch(e){ console.warn('fsSafe', e); return obj; }
+}
+const hf6Fails = new Map();   /* key → {why, retry} */
+function hf6Why(e){ const m = String((e && (e.code || e.message)) || e || 'error').replace(/^FirebaseError:?\s*/, '').replace(/\s+/g, ' '); return m.length > 70 ? m.slice(0, 67) + '…' : m; }
+function hf6Fail(key, e, retry){ hf6Fails.set(key, {why:hf6Why(e), retry}); hf6Bar(); }
+function hf6Ok(key){ if(hf6Fails.delete(key)) hf6Bar(); }
+function hf6Bar(){
+  try{
+    let b = document.getElementById('hf6SaveBar');
+    if(!hf6Fails.size){ if(b) b.remove(); return; }
+    if(!b){ b = document.createElement('div'); b.id = 'hf6SaveBar'; b.setAttribute('data-hf6-savebar', ''); b.setAttribute('role', 'alert'); document.body.appendChild(b); }
+    const first = [...hf6Fails.values()][0];
+    b.innerHTML = '<span>⚠ Not saved · ' + escHtml(first.why) + ' · </span><button type="button" data-hf6-retry onclick="hf6Retry()">Retry ›</button>';
+  }catch(e){}
+}
+function hf6Retry(){ [...hf6Fails.values()].forEach(f=>{ try{ if(f.retry) f.retry(); }catch(e){ console.warn('hf6 retry', e); } }); }
+/* HF6 — on load: a Sat slot whose trade_id is not in its (already built) book is treated as having no trade · local only, lot / snapshot kept */
+function hf6RepairSlots(){
+  (satIdeasList || []).forEach(i=>{
+    Object.keys(i.accts || {}).forEach(acc=>{
+      const sl = i.accts[acc]; if(!sl || !sl.trade_id || !acctList.some(a=>a.id === acc)) return;
+      const bk = acc === acctActive ? state : (acctBooks[acc] && acctBooks[acc].__built ? acctBooks[acc] : null);
+      if(!bk || !Array.isArray(bk.trades)) return;
+      if(!bk.trades.some(t=>t && t.id === sl.trade_id)){ const ns = Object.assign({}, sl); delete ns.trade_id; i.accts = Object.assign({}, i.accts, {[acc]: ns}); }
+    });
+  });
+}
+function hf6BookHasTrade(accId, tid){ try{ return !!getBook(accId).trades.some(t=>t && t.id === tid); }catch(e){ return true; } }
 function saveBook(id){
   if(acctCtx !== null) throw new Error('saveBook ห้ามเรียกใน withAccount — เขียนต้องทำนอก withAccount');
   getBook(id);                                 /* ตรวจว่ามีบัญชีนี้จริง */
@@ -10543,7 +10601,7 @@ async function doPersistImpl(){
        (เช่น key เก่าใน object ซ้อนที่เลิกใช้) ไม่ถูกลบออกจาก server ตาม — ค่าเก่าโผล่กลับมาผสมกับของใหม่ได้
        mergeFields บอก Firestore ตรง ๆ ว่า "แทนที่ทั้งก้อน" ที่ path 'books.<acctActive>' เท่านั้น (ไม่ recurse ลงไปข้างในอีก)
        เหมือน update({['books.'+acctActive]: toSave}) แต่ยังสร้าง doc ใหม่ได้ถ้ายังไม่มี (update() ธรรมดาทำไม่ได้) */
-    const payload = {...acctExtra, _v:2, accounts:acctList, activeAccount:acctActive, books:{[acctActive]: wlBookForWrite(toSave)}};   /* 7W: ไม่เขียนสำเนา watchlist ใหม่ลง books · ใส่ watchlist เดิมกลับตามเดิม */
+    const payload = {...acctExtra, _v:2, accounts:acctList, activeAccount:acctActive, books:{[acctActive]: fsSafe(wlBookForWrite(toSave), 'book.' + acctActive)}};   /* 7W: ไม่เขียนสำเนา watchlist ใหม่ลง books · ใส่ watchlist เดิมกลับตามเดิม */
     const mergeFields = ['_v', 'accounts', 'activeAccount', 'books.'+acctActive, ...Object.keys(acctExtra)];
     delIds.forEach(delId=>{
       payload.books[delId] = firebase.firestore.FieldValue.delete();   /* ลบบัญชีที่ถูกลบจริงออกจาก server ด้วย ไม่ใช่แค่ในเครื่อง */
@@ -10553,9 +10611,10 @@ async function doPersistImpl(){
        หลักเดียวกับ 7B: mergeFields เฉพาะ books.<id> ที่แก้จริง · บัญชีที่ไม่ได้แก้ไม่ถูกแตะ */
     dirtySnap.forEach((rev, id)=>{
       if(id === acctActive || !acctList.some(a=>a.id===id) || !acctBooks[id]) return;
-      payload.books[id] = wlBookForWrite(acctBooks[id]);
+      payload.books[id] = fsSafe(wlBookForWrite(acctBooks[id]), 'book.' + id);
       mergeFields.push('books.'+id);
     });
+    payload.accounts = fsSafe(payload.accounts, 'accounts'); Object.keys(acctExtra).forEach(k=>{ payload[k] = fsSafe(payload[k], 'extra.' + k); });
     await db.collection('users').doc(uid).set(payload, {mergeFields});
     dirtySnap.forEach((rev, id)=>{ if(dirtyBooks.get(id) === rev) dirtyBooks.delete(id); });   /* แก้ซ้ำระหว่างรอ → revision ต่างกัน → ยังค้างไว้เขียนรอบหน้า */
     pendingDeletedBookIds = pendingDeletedBookIds.filter(x=>delIds.indexOf(x)===-1);
@@ -10563,9 +10622,11 @@ async function doPersistImpl(){
        เปลี่ยนมาใช้ .get({source:'server'}) แทน — เป็น request ธรรมดาที่พิสูจน์แล้วว่าเชื่อถือได้จริงในสภาพแวดล้อมนี้
        (ใช้เช็คข้อมูลบน server ได้เร็ว/นิ่งตลอดการดีบักที่ผ่านมา ต่างจาก long-lived channel ที่บางทีค้าง) */
     await db.collection('users').doc(uid).get({source:'server'});
+    hf6Ok('book');
     if(!pendingLocalWrite && toSave===state) setSyncBadge('saved');   /* กันทับ badge ถ้ามีการแก้ไขใหม่แทรกเข้ามาระหว่างรอ */
   }catch(e){
     console.error('firestore set error:', e);
+    hf6Fail('book', e, ()=>doPersist());
     pendingLocalWrite = true;  /* ส่งไม่สำเร็จ — ถือว่า state ในเครื่องยังไม่ตรงกับ server กันไม่ให้ snapshot มาทับ */
     setSyncBadge('error');
   }
@@ -15182,9 +15243,9 @@ function coreRefresh(){
 function coreWrite(id, patch){
   const c = coreCol();
   if(!c) return Promise.resolve(false);
-  patch = Object.assign({}, patch, {updated_at: new Date().toISOString()});
-  return c.doc(id).set(patch, {merge:true}).then(()=>true).catch(e=>{
-    console.warn('core write', e); coreErr = coreErrText(e); coreRefresh(); return false;
+  patch = fsSafe(Object.assign({}, patch, {updated_at: new Date().toISOString()}), 'core.' + id);
+  return c.doc(id).set(patch, {merge:true}).then(()=>{ hf6Ok('core.' + id); return true; }).catch(e=>{
+    console.warn('core write', e); hf6Fail('core.' + id, e, ()=>coreWrite(id, patch)); coreErr = coreErrText(e); coreRefresh(); return false;
   });
 }
 function coreNewId(){ return 'cc' + Date.now().toString(36) + Math.floor(Math.random()*1296).toString(36); }
@@ -23047,6 +23108,7 @@ function sat7dStart(){
   try{
     satUnsubs.push(c1.onSnapshot(snap=>{
       satIdeasList = snap.docs.map(d=>({...(d.data()||{}), id:d.id}));
+      try{ hf6RepairSlots(); }catch(e){ console.warn('hf6 repair', e); }
       satErr = null; sat7dRefresh();
       try{ renderJournalCond(); }catch(e){ console.warn('journal cond:', e); }   /* 7F — พาเนลCancelled conditions (อ่านอย่างเดียว) */
     }, err=>{ console.warn('satIdeas listener:', err); satErr = sat7dErrText(err); sat7dRefresh(); }));
@@ -23101,8 +23163,9 @@ function sat7dTypingGuard(panel){
 function sat7dWrite(col, docId, patch){
   const c = sat7dCol(col);
   if(!c){ return Promise.resolve(); }
-  return c.doc(docId).set(patch, {merge:true}).catch(e=>{
-    console.warn('sat7d write', col, e);
+  patch = fsSafe(patch, col + '.' + docId);
+  return c.doc(docId).set(patch, {merge:true}).then(r=>{ hf6Ok(col + '.' + docId); return r; }).catch(e=>{
+    console.warn('sat7d write', col, e); hf6Fail(col + '.' + docId, e, ()=>sat7dWrite(col, docId, patch));
     if(col==='satIdeas') satErr = sat7dErrText(e); else satWeekErr = sat7dErrText(e);
     sat7dRefresh();
   });
@@ -23260,9 +23323,10 @@ function sat7dAcctBase(accId){
 /* [เข้าแล้ว] plan → open · ราคาเข้าแก้ได้ (ค่าเริ่มต้น = Entry เดิม) · openedAt = วันนี้ */
 function sat7dMarkOpen(id, accId){
   const idea = sat7dIdea(id); if(!idea) return;
-  const s = (idea.accts||{})[accId] || {}; if(!s.trade_id) return;
+  const s = (idea.accts||{})[accId] || {}; if(!s.trade_id){ ln4Toast('Cannot mark filled — no order recorded for this account'); return; }
   const B = getBook(accId), t = B.trades.find(x=>x.id===s.trade_id);
-  if(!t || t.status!=='plan') return;
+  if(!t){ ln4Toast('Cannot mark filled — the order record is missing'); return; }
+  if(t.status!=='plan') return;
   const p = prompt('ราคาเข้าจริง', t.entry);
   if(p===null) return;
   const price = parseFloat(p);
@@ -25007,6 +25071,8 @@ function ffState(){
      หมายเหตุ: rrgRefresh ต้องเขียน build กลับลงไปด้วย ไม่งั้นจะดึงใหม่ทุกครั้งที่เปิดหน้า */
   /* LR4 tail — IRBO is gone (→ ROBO): drop stale IRBO rows, and any duplicate sym, so nothing ever draws it */
   ['rowsD','rowsW'].forEach(k=>{ const seen = {}; f.rrg[k] = f.rrg[k].filter(r=>{ const y = r && r.sym === 'IRBO' ? 'ROBO' : (r && r.sym); if(!y || seen[y]) return false; seen[y] = 1; if(r.sym === 'IRBO') r.sym = 'ROBO'; return true; }); });
+  /* HF6 — old rows carry tail=[[r,m]…] (a nested array: every save of this book was rejected) → convert to the flat tailF */
+  ['rowsD','rowsW'].forEach(k=>f.rrg[k].forEach(r=>{ if(r && typeof r === 'object' && Object.prototype.hasOwnProperty.call(r, 'tail')){ if(!Array.isArray(r.tailF) && Array.isArray(r.tail)){ const F = []; r.tail.forEach(p=>{ if(Array.isArray(p) && isFinite(p[0]) && isFinite(p[1])) F.push(+p[0], +p[1]); }); if(F.length >= 4) r.tailF = F; } delete r.tail; } }));
   if(f.rrg.build !== RRG_BUILD){ f.rrg.build = RRG_BUILD; f.rrg.day = ''; }
   if(f.rrgTf !== 'D' && f.rrgTf !== 'W') f.rrgTf = 'D';
   /* err/loading ถูกเซฟลง Firestore ไปด้วย — ถ้าไม่ล้างตอนโหลด จะค้างโชว์ error เก่าข้ามวัน
@@ -25284,8 +25350,8 @@ function rrgCompute(closes, highs, bench, tfKey, opt){
   const pt = (pAbove && pRise) ? 'up' : (pBelow && pFall) ? 'down' : 'mixed';
   /* rsTrend = raw (EMA12−EMA26 ของ RS, %) · rawChg = raw − raw[lag] · rel/momUp = ทิศหลัง hysteresis */
   /* LR4 B — tail = [ratio, mom] of the last 5 bars, SAME zAt path as ratio / mom above (the last pair IS ratio / mom). Additive: no existing number changes. */
-  const tail = []; for(let i = Math.max(0, last - 4); i <= last; i++){ const a = zAt(raw, i), b = zAt(momRaw, i); if(a !== null && b !== null) tail.push([a, b]); }
-  return {ratio, mom, tail, quad, prevQuad, days, prevDays, dRatio, dMom, rsTrend:raw[last], rawChg:momRaw[last],
+  const tailF = []; for(let i = Math.max(0, last - 4); i <= last; i++){ const a = zAt(raw, i), b = zAt(momRaw, i); if(a !== null && b !== null) tailF.push(a, b); }   /* HF6 — flat [r1,m1,r2,m2…] · Firestore rejects nested arrays */
+  return {ratio, mom, tailF, quad, prevQuad, days, prevDays, dRatio, dMom, rsTrend:raw[last], rawChg:momRaw[last],
           rel:S.rel[last], momUp:S.up[last], eps, delta, lag:TF.momLag, model:RRG_MODEL, flips:rrgFlips(S.key.slice(-TF.zWin)), flatBars:S.key.slice(-TF.zWin).filter(k=>k==='flat').length,
           off52: hi52>0 ? (closes[last]/hi52-1)*100 : 0, close:closes[last], benchClose:bench[last], bars:n,
           pt, ptEma, ptEmaPrev, ptN:PN, ptLag:PL, lastObs:opt.lastObs || null};
@@ -30590,9 +30656,15 @@ function pb2PlaceYes0(s){
 }
 /* Filled ✓ (Sat): plan trade is created now from the plan (existing sizing/blocks) and marked open (existing price prompt) */
 function pb2Filled(id){
-  const i = sat7dIdea(id); if(!i) return;
+  const i = sat7dIdea(id); if(!i){ ln4Toast('Cannot record the fill — setup not found'); return; }
   const acc = pb2AcctOf(i); if(!acc){ pb2OpenEdit(id, '', true); return; }
-  const slot = (i.accts || {})[acc] || {};
+  let slot = (i.accts || {})[acc] || {};
+  /* HF6 — dangling slot: trade_id points at a trade that is not in this account's book → treat as no trade (keep lot / snapshot) */
+  if(slot.trade_id && !hf6BookHasTrade(acc, slot.trade_id)){
+    console.warn('HF6 dangling trade_id', id, acc, slot.trade_id);
+    const ns = Object.assign({}, slot); delete ns.trade_id; slot = ns;
+    i.accts = Object.assign({}, i.accts || {}, {[acc]: ns});
+  }
   if(!slot.trade_id){
     const B = getBook(acc), n0 = B.trades.length;
     try{ satV3SaveSlot(id, acc); }catch(e){ console.warn('pb2 slot:', e); }
@@ -30840,7 +30912,12 @@ function lr4ChipFor(x){
   if(x.quad === 'lead' || x.quad === 'imp') return sp.fast && sp.dir > 0 ? {t:'speeding up', c:'up'} : {t:d + 'd', c:'up'};
   return {t:d + 'd', c:'n'};
 }
-function lr4Pts(x){ return Array.isArray(x.tail) && x.tail.length >= 2 ? x.tail : [[+x.ratio, +x.mom]]; }
+function lr4Pts(x){   /* HF6 — tails are stored flat (tailF); a legacy nested tail is still read */
+  const F = Array.isArray(x.tailF) ? x.tailF : null, out = [];
+  if(F){ for(let i = 0; i + 1 < F.length; i += 2) out.push([+F[i], +F[i + 1]]); }
+  else if(Array.isArray(x.tail)) x.tail.forEach(p=>{ if(Array.isArray(p)) out.push([+p[0], +p[1]]); });
+  return out.length >= 2 ? out : [[+x.ratio, +x.mom]];
+}
 function lr4ChartHtml(rows, ph){
   const W = ph ? 340 : 560, H = ph ? 220 : 380, pad = ph ? 8 : 14;
   let dx = 2.5, dy = 2.5;

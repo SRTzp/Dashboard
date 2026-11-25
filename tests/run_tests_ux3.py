@@ -192,7 +192,7 @@ def part_c(pw):
         rr_prep(page, rr_doc(), key="")
         js(page, "()=>{ switchTab('flow'); const f = ffState(); f.themesCol = false; f.themesColUser = true; ffRenderThemes(); }"); page.wait_for_timeout(1500)
         st = js(page, STATUS)
-        n = js(page, "()=>{ const r = ffState().rrg; return {src:r.src, d:(r.rowsD||[]).length, w:(r.rowsW||[]).length, tails:(r.rowsD||[]).filter(x=>x.tail && x.tail.length === 5).length, err:r.err||''}; }")
+        n = js(page, "()=>{ const r = ffState().rrg; return {src:r.src, d:(r.rowsD||[]).length, w:(r.rowsW||[]).length, tails:(r.rowsD||[]).filter(x=>x.tailF && x.tailF.length === 10).length, err:r.err||''}; }")
         check(f"{tag} fresh rrg/bars (even with no Twelve Data key): 23 rows with 5-point tails, src job, no Twelve Data call", n["src"] == "job" and n["d"] == 23 and n["w"] == 23 and n["tails"] == 23 and not reqs and not n["err"], [n, reqs[:2]])
         check(f"{tag} status line (Flow › Sectors vs SPY): `Daily · Data as of 18 Nov · from the 05:30 job`", st == "Daily · Data as of 18 Nov · from the 05:30 job", st)
         shot(page, "rrg-instant-1440-stat") if False else None
