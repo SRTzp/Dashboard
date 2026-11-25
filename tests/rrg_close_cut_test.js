@@ -43,7 +43,7 @@ class FD extends Date { constructor(...a) { a.length ? super(...a) : super(NOW2)
 const ctx = vm.createContext({ Date: FD, Intl, Math, parseInt, Map, Array, Object, String, console, ffState: () => F });
 vm.runInContext(['const RRG_MODEL=2,RRG_MAXAGE=4;', 'let rrgTrimDate="";', 'function rrgToday(){ return new Date(Date.now()).toISOString().slice(0,10); }', fn('rrgDayDiff'), fn('rrgBarsFresh'), fn('rrgEtNow'), fn('rrgProvCut'), fn('rrgCacheFresh'), fn('rrgOutdated'), fn('rrgFreshTxt'),
   'this.api={rrgCacheFresh,rrgFreshTxt};'].join('\n'), ctx);
-const rrg = (prov) => ({ rrg: { day: '2026-11-18', rowsD: [{ sym: 'X' }], model: 2, lastBar: '2026-11-17', prov } });
+const rrg = (prov) => ({ rrg: { day: '2026-11-18', rowsD: [{ sym: 'X', tailF: [1, 2, 3, 4] }], model: 2, lastBar: '2026-11-17', prov } });
 NOW2 = utc(2026, 11, 18, 20, 0); F = rrg('2026-11-18');   // Wed 15:00 ET, fetched mid-session
 t('mid-session cache is fresh while still open', ctx.api.rrgCacheFresh(F) === true);
 t('header says "as of <date> close"', /as of 2026-11-17 close/.test(ctx.api.rrgFreshTxt(F.rrg)), ctx.api.rrgFreshTxt(F.rrg));
