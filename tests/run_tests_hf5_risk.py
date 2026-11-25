@@ -87,6 +87,22 @@ def sat_walk(pw):
         b.close()
 
 
+def legacy_fill(pw):
+    cs = dict(LF.L3.cards_board()); cs["mL"] = plan_card("LLL", 100, 92, px=100.5, ready=True)   # rows-only ps1 (qty 36), no re1 / qtyFull
+    b, page, ce, pe = launch(pw, 1440, 900, c=cs)
+    try:
+        LF.today(page)
+        card_q = js(page, "()=>{ const e=document.querySelector('[data-bd-card=mL] [data-pv-qty]'); return e && e.innerText; }")
+        js(page, "()=>coreBuy1Open('mL')"); page.wait_for_timeout(300)
+        r = js(page, "()=>{ const e=document.getElementById('cbQty'); return [e.value, /suggested (\\d+)/.exec(e.parentElement.innerText)[1]]; }")
+        check("[legacy] plan without re1/qtyFull: card %s = Filled default %s = label %s (no second 70%%)" % (card_q, r[0], r[1]), card_q == "#36" and r[0] == "36" and r[1] == "36", [card_q, r])
+        err = js(page, "()=>{ const e=document.getElementById('cbErr'); return e && e.style.display !== 'none' ? e.innerText : '' }"); dis = js(page, "()=>document.getElementById('cbSave').disabled")
+        check("[legacy] Save is not blocked at the default qty", not dis and "homework" not in err, [err, dis])
+        check("[legacy] no console errors", not ce and not pe, (ce + pe)[:2])
+    finally:
+        b.close()
+
+
 def mom_walk(pw):
     cs = LF.L3.cards_board() if hasattr(LF.L3, "cards_board") else {}
     cs = dict(cs)
@@ -129,6 +145,7 @@ if __name__ == "__main__":
     with sync_playwright() as pw:
         sat_walk(pw)
         mom_walk(pw)
+        legacy_fill(pw)
     print("\nSTEP × PLACE (% of week equity)")
     print("%-38s %9s %9s %9s %9s %9s %9s" % ("step", "expected", "RiskRoom", "OpenToday", "Board", "Card", "Engine"))
     for r in TABLE:
