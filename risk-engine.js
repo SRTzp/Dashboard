@@ -21,7 +21,7 @@
   /* ── Policy constants (RE1-decisions.md §1-§5). Overridable per call via cfg. ── */
   var POLICY = {
     mom: { rptPct: 0.40, weeklyPct: 1.60, monthlyPct: 6.40, ammo: 4, homeworkCap: 0.7, starter: 0.25, releaseR: 1.5 },
-    sat: { stepRpt: [0.20, 0.20, 0.20, 0.20], weeklyPct: 0.80, monthlyPct: 3.20, condReduced: 0.65, minRR: 1.5, staleOrderMs: DAY },
+    sat: { stepRpt: [0.20, 0.20, 0.20, 0.20], weeklyPct: 0.80, monthlyPct: 3.20, condReduced: 0.65, minRR: 1.5, staleOrderMs: DAY, maxActive: 3, newSetupRiskCut: 0.50 },   /* HF5 — queue: max live Sat setups per account · a new one needs every live setup's risk cut >= this share */
     comp: { pilotPct: 0.50, addonPct: 0.50, totalCapPct: 1.00, valueCapPct: 12.5, heatCapPct: 6.0, starter: 0.25, lockLosses: 6, unlockDays: 7, homeworkCap: 1.0 },
     /* PC2 2e — homework factor per strategy track when homework is NOT done (done = 100 %). Compounder: full size (homework unlocks adds + risk above 1 %). Momentum: 70 %. */
     hwFactor: { comp: 1.00, mom: 0.70 },
@@ -81,7 +81,8 @@
     ACTIVE_MONTH:       { kind: 'block', text: 'Active (Momentum + Satellite) monthly 12% summary check exceeded' },
     COMP_VALUE_CAP:     { kind: 'block', text: 'Position value would exceed the 12.5% of account value cap' },
     SAT_LOCKED:         { kind: 'block', text: 'Satellite locked after a loss at Step 4 until the weekly reset' },
-    SAT_QUEUE_BUSY:     { kind: 'block', text: 'Another Satellite setup is active in this account' },
+    SAT_QUEUE_BUSY:     { kind: 'block', text: 'Another Satellite setup still has most of its risk in this account' },
+    SAT_QUEUE_MAX:      { kind: 'block', text: 'Maximum Satellite setups are open in this account' },
     SAT_DAILY_LIMIT:    { kind: 'block', text: 'One setup per product per day already used' },
     SAT_REENTRY_USED:   { kind: 'block', text: 'Re-entry already used today for this product' },
     SAT_REENTRY_COND:   { kind: 'block', text: 'Re-entry conditions not met' },
@@ -470,10 +471,29 @@
     var P = pol(cfg).sat; if (!(num(condFactor) && condFactor > 0)) return null;
     return P.stepRpt[step.stepIndex] * condFactor * (num(emergencyF) ? emergencyF : 1);   /* Condition applied once */
   }
-  /* queue: one active setup (working orders included) per account across ALL products; others stay Planned. */
-  function satQueueCheck(ideas, account, candidateId) {
-    var busy = ideasOf(ideas, account, 'sat').filter(function (i) { return isLive(i) && i.id !== candidateId; });
-    return busy.length ? res(['SAT_QUEUE_BUSY'], [], { busyWith: busy.map(function (x) { return x.id; }) }) : res([], [], {});
+  /* HF5 — risk cut of ONE live Sat setup: 1 − (risk at the current stop ÷ risk at the initial stop), 0..1. A working (unfilled) order = full risk = 0.
+     Risk = Σ live tranches max(0, (entry − stop) × dir × qty × mult × fx). Initial stop unknown → 0 (never assume a cut). stopOverride = what-if current stop (Move stop preview). */
+  function satRiskNow(idea, stopOverride) {
+    var dir = dirOf(idea.side), ini = 0, cur = 0, unknown = false, live = idea.status === 'holding' ? liveTranches(idea) : [];
+    if (!live.length) return { initial: 0, current: 0, cut: 0, full: true };
+    live.forEach(function (x) {
+      var t = x.t, uv = trancheUV(t), st = num(stopOverride) && stopOverride > 0 ? stopOverride : t.stop, is = pos(t.initialStop) ? t.initialStop : null;
+      if (!pos(st)) { unknown = true; return; }
+      cur += Math.max(0, (t.entry - st) * dir * x.q * uv);
+      if (is === null) unknown = true; else ini += Math.max(0, (t.entry - is) * dir * x.q * uv);
+    });
+    var cut = unknown ? 0 : (ini > EPS ? Math.min(1, Math.max(0, 1 - cur / ini)) : (cur <= EPS ? 1 : 0));
+    return { initial: ini, current: cur, cut: cut, full: false };
+  }
+  function satRiskCutPct(idea) { return satRiskNow(idea).cut; }
+  /* queue (HF5, replaces "one active setup"): a new Sat setup needs (1) fewer than POLICY.sat.maxActive live Sat setups (working orders + holdings) in the account AND
+     (2) every live setup's risk cut >= POLICY.sat.newSetupRiskCut. detail: open = [{id, cut}] of every live setup · blockers = those under the cut. */
+  function satQueueCheck(ideas, account, candidateId, cfg) {
+    var P = pol(cfg).sat, live = ideasOf(ideas, account, 'sat').filter(function (i) { return isLive(i) && i.id !== candidateId; });
+    var open = live.map(function (i) { return { id: i.id, cut: satRiskCutPct(i), working: i.status !== 'holding' }; });
+    if (live.length >= P.maxActive) return res(['SAT_QUEUE_MAX'], [], { busyWith: live.map(function (x) { return x.id; }), open: open, max: P.maxActive });
+    var blockers = open.filter(function (o) { return o.cut + EPS < P.newSetupRiskCut; });
+    return blockers.length ? res(['SAT_QUEUE_BUSY'], [], { busyWith: blockers.map(function (x) { return x.id; }), open: open, blockers: blockers, need: P.newSetupRiskCut }) : res([], [], { open: open });
   }
   function satStaleOrders(ideas, now, cfg) {   /* Today reminder only — never an auto-cancel */
     var lim = pol(cfg).sat.staleOrderMs, out = [];
@@ -725,7 +745,7 @@
     sizeOrder: sizeOrder, entryFraction: entryFraction, floorLot: floorLot,
     realizedPeriod: realizedPeriod, exposures: exposures,
     momentumState: momentumState, momentumCheck: momentumCheck,
-    satCondition: satCondition, satEntryOrder: satEntryOrder, satStepState: satStepState, satEffectiveRpt: satEffectiveRpt, satQueueCheck: satQueueCheck,
+    satCondition: satCondition, satEntryOrder: satEntryOrder, satStepState: satStepState, satEffectiveRpt: satEffectiveRpt, satQueueCheck: satQueueCheck, satRiskCutPct: satRiskCutPct, satRiskNow: satRiskNow,
     satStaleOrders: satStaleOrders, satDailyCheck: satDailyCheck, satBudgetCheck: satBudgetCheck, satCheck: satCheck,
     regimeState: regimeState, regimeModifier: regimeModifier, regimeFromFundflow: regimeFromFundflow, regimeText: regimeText, smaLabel: smaLabel, fundflowSignals: fundflowSignals, asOfMs: asOfMs, compLegacyShape: compLegacyShape, sizeAttempt: sizeAttempt, compFactor: compFactor, compHeat: compHeat, compStreak: compStreak, compUnlockCheck: compUnlockCheck, compEntryCheck: compEntryCheck, compCheck: compCheck,
     activeSummary: activeSummary, actionPolicy: actionPolicy, asFill: asFill, foldEvents: foldEvents

@@ -489,5 +489,40 @@ const costsOf = () => C;
   R.applyRisk(null); near(P.mom.rptPct, 0.40, 'RK1 Reset → defaults'); near(P.sat.stepRpt[0], 0.20, 'RK1 Reset Sat'); near(P.comp.totalCapPct, 1.0, 'RK1 Reset total'); near(P.comp.pilotPct, 0.5, 'RK1 Reset first'); near(P.mom.weeklyPct, 1.6, 'RK1 Reset weekly');
 }
 
+// ═══ HF5 — Sat queue: a new setup needs every live Sat setup's risk cut >= 50% and fewer than 3 live ═══
+{
+  const sat = (id, side, entry, ini, stop, o = {}) => idea(Object.assign({ id, strategy: 'sat', side, entry, initialStop: ini, stop, qty: 1 }, o));
+  const q = (list, cand = 'new') => R.satQueueCheck(list, 'main', cand);
+  const blocked = (r) => r.reasons.indexOf('SAT_QUEUE_BUSY') >= 0, maxed = (r) => r.reasons.indexOf('SAT_QUEUE_MAX') >= 0;
+  ok(R.POLICY.sat.maxActive === 3 && R.POLICY.sat.newSetupRiskCut === 0.5, 'HF5 constants live in POLICY.sat (maxActive 3 · newSetupRiskCut 0.50)');
+  [['short', 2643, 2660, 2650, 2651.5, 2651.67, 2643, 2640], ['long', 2643, 2626, 2636, 2634.5, 2634.33, 2643, 2646]].forEach(([side, e, ini, s59, s50, s49, sBE, sThru]) => {
+    const L = side === 'long' ? 'Long' : 'Short';
+    const x = (stop, o) => sat('xau', side, e, ini, stop, o);
+    const wo = sat('xau', side, e, ini, ini, { status: 'ordered', working: [{ id: 'w', qty: 1, entry: e, stop: ini, mult: 1, fx: 1, at: NOW }] }); wo.tranches = [];
+    ok(blocked(q([wo])), 'HF5 ' + L + ' XAU working order → BTC blocked (full risk)');
+    eq(R.satRiskCutPct(wo), 0, 'HF5 ' + L + ' working order cut = 0');
+    eq(R.satRiskCutPct(x(ini)), 0, 'HF5 ' + L + ' filled, stop unmoved → cut 0');
+    ok(blocked(q([x(ini)])), 'HF5 ' + L + ' filled, stop unmoved → blocked (0%)');
+    ok(blocked(q([x(s49)])), 'HF5 ' + L + ' stop moved to cut 49% → blocked');
+    near(R.satRiskCutPct(x(s49)), 0.49, 'HF5 ' + L + ' cut value 49%');
+    ok(!blocked(q([x(s50)])) && R.satRiskCutPct(x(s50)) >= 0.5 - 1e-9, 'HF5 ' + L + ' stop moved to cut exactly 50% → allowed');
+    ok(!blocked(q([x(s59)])), 'HF5 ' + L + ' cut 59% → allowed');
+    ok(!blocked(q([x(sBE)])) && R.satRiskCutPct(x(sBE)) === 1, 'HF5 ' + L + ' stop at entry → allowed (cut 100%)');
+    ok(!blocked(q([x(sThru)])) && R.satRiskCutPct(x(sThru)) === 1, 'HF5 ' + L + ' stop through entry → allowed (cut 100%)');
+    const btc = (stop) => sat('btc', side, 100, side === 'long' ? 90 : 110, stop);
+    ok(!blocked(q([x(sBE), btc(side === 'long' ? 95 : 105)]), 's50'), 'HF5 ' + L + ' XAU at entry + BTC cut 50% → S50 allowed');
+    ok(blocked(q([x(sBE), btc(side === 'long' ? 94 : 106)]), 's50'), 'HF5 ' + L + ' XAU at entry + BTC cut 40% → blocked');
+    const r3 = q([x(sBE), btc(side === 'long' ? 100 : 100), sat('s50', side, 100, side === 'long' ? 90 : 110, 100)], 'brent');
+    ok(maxed(r3) && !blocked(r3), 'HF5 ' + L + ' 3 open → 4th blocked even if all at entry (SAT_QUEUE_MAX)');
+    ok(!maxed(q([x(sBE), btc(100)]), 's50'), 'HF5 ' + L + ' 2 open → a 3rd is not a max block');
+    eq(R.satQueueCheck([x(ini)], 'fam', 'btc').allowed, true, 'HF5 ' + L + ' queue is per account');
+    const closed = x(ini); closed.status = 'closed'; eq(q([closed]).allowed, true, 'HF5 ' + L + ' closed releases the queue');
+  });
+  // the budget check is a separate gate and still blocks (money): weekly 1.20 % of 100k = 1200, open 1100 + candidate 200
+  const bud = R.satBudgetCheck({ basis: { ok: true, weekEquity: 100000, monthEquity: 100000, flags: [] }, now: NOW, account: 'main', ideas: [sat('a', 'long', 100, 89, 89, { qty: 100 })], costsFor: () => null, candidateRisk: 200 });
+  ok(bud.reasons.indexOf('MONEY_WEEK') >= 0, 'HF5 weekly budget check still blocks (1100 open + 200 > 1200)');
+  eq(q([sat('p', 'long', 100, 90, 95, { qty: 2 })]).allowed, true, 'HF5 partial: half the risk cut with 2 shares → allowed');
+}
+
 console.log((f ? 'FAIL ' : 'PASS ') + (n - f) + '/' + n + ' risk-engine assertions');
 process.exit(f ? 1 : 0);

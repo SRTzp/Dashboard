@@ -426,7 +426,7 @@ def fix_checks(pw, w, h):
         same = js(page, "()=>{ const c = document.querySelector('[data-bd-card=\"mA\"] .pc2-nx'); const h = c.querySelector('.pc2-hw'), b = c.querySelector('.pc2-b'); return {hw:h.innerText, same: Math.abs(h.getBoundingClientRect().top - b.getBoundingClientRect().top) <= 4, dy: Math.round(b.getBoundingClientRect().top - h.getBoundingClientRect().top)}; }")
         check(f"{tag} fix2 Momentum next step is the short form 'Homework 0/2 · #n when done ›'" + (" and Place stays on the same line" if w >= 1280 else " (may wrap on the phone)"), re.match(r"^Homework 0/2 · #\d+ when done ›$", same["hw"]) and (w < 1280 or same["same"]), same)
         x = card(page, "xp")
-        check(f"{tag} fix3 no blocked reason is cut with '…' (XAU: 'Another Sat setup open in XAU · close or edit it')", "…" not in js(page, "()=>document.querySelector('#bdBoard').innerText") and "Another Sat setup open in XAU · close or edit it" in x["nx"], x["nx"])
+        check(f"{tag} fix3 no blocked reason is cut with '…' (HF5: names the open setup)", "…" not in js(page, "()=>document.querySelector('#bdBoard').innerText") and "BTC is open with full risk · move its stop to cut risk ≥ 50% (now 0%) to open another Sat" in x["nx"], x["nx"])
         check(f"{tag} fix4 Sat lots show 2 decimals (#0.99), data keeps full precision", "#0.99 " in (card(page, "ps")["l2"] + " ") and "#0.9911" not in js(page, "()=>document.querySelector('#bdBoard').innerText") and js(page, "()=>{ const p = posView(bdById('ps')); return p.plannedQty > 0.99 && p.plannedQty < 0.9912 && String(p.plannedQty).length > 4; }"))
         for cid in ("cN", "xp", "mA"):
             drawer(page, cid)
