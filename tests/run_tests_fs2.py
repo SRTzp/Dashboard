@@ -252,7 +252,7 @@ def run(pw, w, h):
                 if h >= 900:
                     check(f"{tag} {sym}/{tab}: the page does not scroll at 1440x900", d[0] <= d[1] + 1, d)
                     check(f"{tag} {sym}/{tab}: left card content fits (no inner scroll)", c["facts"][0] <= c["facts"][1] + 1, c)
-                    check(f"{tag} {sym}/{tab}: right card fields + footer fit", c["mine"][0] <= c["mine"][1] + 1, c)
+                    check(f"{tag} {sym}/{tab}: right card — footer buttons stay visible (HW2: the 3 answers + chips scroll inside the card)", js(page, "()=>{ const m = document.querySelector('[data-hw1-mine]').getBoundingClientRect(), b = document.querySelector('.hw1-btns').getBoundingClientRect(); return b.bottom <= m.bottom + 1 && b.top >= m.top; }"), c)
                 else:
                     check(f"{tag} {sym}/{tab}: page still does not scroll at {w}x{h}", d[0] <= d[1] + 1, d)
         if not phone:
@@ -265,7 +265,7 @@ def run(pw, w, h):
             ov = js(page, "()=>{ const ta = document.querySelector('[data-hw1-ta=why]'); const a = ta.getBoundingClientRect().height; ta.focus(); return [a, ta.getBoundingClientRect().height]; }")
             page.wait_for_timeout(100)
             ov[1] = js(page, "()=>document.querySelector('[data-hw1-ta=why]').getBoundingClientRect().height")
-            check(f"{tag} textareas ~2 lines tall and grow on focus", 40 <= ov[0] <= 70 and ov[1] > ov[0], ov)
+            check(f"{tag} textareas ~2 lines tall and do not jump on focus (HW2: chips below must not move)", 40 <= ov[0] <= 70 and ov[1] == ov[0], ov)
         else:
             F.go(page, "COST", "ladder", "results")
             ch = js(page, "()=>{ const t = document.querySelector('[data-hw1-q=rev_yoy]'), a = t.querySelector('.ans').getBoundingClientRect(), c = t.querySelector('.ch').getBoundingClientRect(); return [Math.round(a.bottom), Math.round(c.top)]; }")
