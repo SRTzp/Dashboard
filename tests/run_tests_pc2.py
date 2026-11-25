@@ -187,9 +187,9 @@ def place_checks(pw, w, h):
         t = js(page, "()=>{ const t = document.getElementById('td3Toast'); return t ? t.innerText : ''; }")
         check(f"{tag} 2c remembered choice 'Later' → toast 'Saved · Place order anytime from the card'", "Saved · Place order anytime from the card" in t, t)
         # blocked planned card keeps a disabled Place with the reason
-        js(page, "()=>{ window.__g = re1PlanGate; re1PlanGate = function(c, lv){ return {ok:false, msg:'Risk 0.36% is over today’s limit 0.24% (0.40% × homework 100% × risk-off 60%)', model:{reasons:['PLAN_TOTAL_RISK'], blocked:true, allowedQty:0}}; }; re1Cache = {}; bdRender(); }"); page.wait_for_timeout(300)
+        js(page, "()=>{ window.__g = re1PlanGate; re1PlanGate = function(c, lv){ return {ok:false, msg:'Risk 0.36% is over the limit for this plan 0.24% (0.40% × homework 100% × risk-off 60%)', model:{reasons:['PLAN_TOTAL_RISK'], blocked:true, allowedQty:0}}; }; re1Cache = {}; bdRender(); }"); page.wait_for_timeout(300)
         c = card(page, "pA")
-        check(f"{tag} 4 blocked planned card: amber reason + disabled Place with the reason as tooltip", c and c["btn"] and c["btn"][0]["dis"] and "over today’s limit 0.24%" in c["btn"][0]["title"] and "⚠" in c["nx"], c and [c["nx"], c["btn"]])
+        check(f"{tag} 4 blocked planned card: amber reason + disabled Place with the reason as tooltip", c and c["btn"] and c["btn"][0]["dis"] and "over the limit for this plan 0.24%" in c["btn"][0]["title"] and "⚠" in c["nx"], c and [c["nx"], c["btn"]])
         o = overflow_ok(page)
         check(f"{tag} 2a no overflow with the long reason", not o["bad"] and o["page"], o)
         check(f"{tag} no page errors", not pe, pe)

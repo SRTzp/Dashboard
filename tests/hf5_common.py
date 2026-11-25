@@ -41,6 +41,7 @@ def place(page, id):
 
 def fill(page, id):
     js(page, "(id)=>{ pb2Filled(id); }", id); page.wait_for_timeout(500)
+    if js(page, "()=>!!document.getElementById('cl2FillPx')"): js(page, "()=>cl2FillSave()"); page.wait_for_timeout(400)   # CL2: the entry-price sheet (prefilled with the planned entry)
     return js(page, "(id)=>{ const i=sat7dIdea(id); const a=pb2AcctOf(i); const t=(getBook(a).trades||[]).filter(x=>x.id===((i.accts||{})[a]||{}).trade_id)[0]; return t?{status:t.status,sl:t.sl,sl0:t.sl0,qty:t.qty,entry:t.entry}:null; }", id)
 
 

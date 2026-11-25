@@ -66,7 +66,7 @@ def run(pw, w, h):
         check(f"{tag} WHSE: Homework shows the Fact Sheet (full), no 'No sections'", js(page, "()=>document.querySelector('[data-hw1-facts]').dataset.hw1Facts") == "full" and "No sections" not in body)
         js(page, "()=>{ wlMtIn('WHSE','why','I believe this', null); }")
         check(f"{tag} WHSE: Compare with thesis hidden", not js(page, VIS, "[data-hw1-cmp-btn]"))
-        js(page, "()=>{ hwBack(); wlOpen('WHSE'); wlMenu = 'WHSE'; renderWatchlist(); }"); page.wait_for_timeout(250)
+        js(page, "()=>{ hwBack(true); wlOpen('WHSE'); wlMenu = 'WHSE'; renderWatchlist(); }"); page.wait_for_timeout(250)
         menu = js(page, TXT, ".ltMenu") or ""
         check(f"{tag} WHSE: ⋯ menu has no 'Full thesis', keeps Import/Edit/Archive", "Full thesis" not in menu and "Import JSON" in menu and "Import thesis" not in menu and "Edit" in menu, menu)
         check(f"{tag} WHSE: Today reminder treats it as missing", js(page, "()=>wlThesisOf(wlItemOf('WHSE')) === null && !(wlItems.filter(x=>wlThesisOf(x)).some(x=>x.ticker==='WHSE'))"))

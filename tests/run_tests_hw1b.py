@@ -23,7 +23,7 @@ def run(pw, w, h):
     tag = "[%s]" % w
     b, page, pe = H.open_hw(pw, w, h)
     try:
-        js(page, "()=>{ window.confirm = ()=>true; }")
+        js(page, "()=>{ cl2Ask = (o)=>{ if(o.onOk) o.onOk(); }; }")
         # ---- Backspace / Esc go back, stock stays selected
         for k in ("Backspace", "Escape"):
             H.go(page, "COST", "ladder"); blur(page)
@@ -42,12 +42,12 @@ def run(pw, w, h):
         check(f"{tag} first Esc in a field only blurs it", js(page, ON) and not js(page, "()=>!!document.activeElement && document.activeElement.tagName === 'TEXTAREA'"))
         # dirty draft -> confirm guard: dismiss = stay
         check(f"{tag} the draft is dirty", js(page, "()=>wlMtDirty('COST')"))
-        js(page, "()=>{ window.__c = 0; window.confirm = ()=>{ window.__c++; return false; }; }")
+        js(page, "()=>{ window.__c = 0; cl2Ask = (o)=>{ window.__c++; }; }")
         key(page, "Escape")
         check(f"{tag} dirty draft: second Esc asks to confirm, dismiss = stay", js(page, "()=>window.__c") == 1 and js(page, ON))
         key(page, "Backspace")
         check(f"{tag} dirty draft: Backspace asks too, dismiss = stay", js(page, "()=>window.__c") == 2 and js(page, ON))
-        js(page, "()=>{ window.confirm = ()=>true; }")
+        js(page, "()=>{ cl2Ask = (o)=>{ if(o.onOk) o.onOk(); }; }")
         key(page, "Escape")
         check(f"{tag} confirm accepted -> back to the list, stock selected", js(page, LIST) and js(page, "()=>wlSel") == "COST")
         # ---- Fact Sheet popover: Esc closes it first

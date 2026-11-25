@@ -18,6 +18,26 @@ INSTALL = """()=>{ if(window.__e2){ return; } window.__e2 = {mut:0, warns:[]};
 STATE = "()=>({mut:window.__e2.mut, warns:window.__e2.warns.length, ov:document.querySelectorAll('#bdPop,.core-sheet,#closePosOverlay.show,.ui-sheet-backdrop').length, toast:(document.getElementById('sdToast')||{}).innerText||''})"
 
 
+# CL2 — permanent: no visible Thai on any screen / sheet the e2e1 crawl visits (text the user typed — account names — is data and is exempt)
+THAI = """()=>{ const TH=/[\\u0E00-\\u0E3E\\u0E40-\\u0E7F]/; const user=[]; try{ (acctList||[]).forEach(a=>{ if(a && a.name && a.name!=='บัญชีหลัก'){ const n=String(a.name); user.push(n); user.push(n.trim().charAt(0).toUpperCase()); } }); }catch(e){}
+  try{ const f=ffState(); [].concat(f.l1||[], f.l2||[]).forEach(x=>{ if(x && x.f) user.push(String(x.f)); }); if(f.ctx && f.ctx.f) user.push(String(f.ctx.f)); }catch(e){}   /* fund-flow flip dates the user typed */
+  const strip=t=>{ user.forEach(u=>{ if(u) t=t.split(u).join(''); }); return t; };
+  const vis=e=>{ if(!e||!e.getClientRects().length) return false; const cs=getComputedStyle(e); return cs.visibility!=='hidden'&&cs.display!=='none'&&+cs.opacity>0; };
+  const out=[]; const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n;
+  while(n=w.nextNode()){ const p=n.parentElement; if(!p||/^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE)$/.test(p.tagName)) continue; const t=n.nodeValue.replace(/\\s+/g,' ').trim(); if(t && TH.test(strip(t)) && vis(p)) out.push(t); }
+  document.querySelectorAll('[placeholder],[title],[aria-label]').forEach(e=>{ if(!vis(e)) return; ['placeholder','title','aria-label'].forEach(a=>{ const v=e.getAttribute(a); if(v && TH.test(strip(v))) out.push(a+': '+v); }); });
+  return out; }"""
+THAI_SEEN = []       # (where, text)
+
+
+def thai_scan(page, where):
+    try: items = js(page, THAI)
+    except Exception: return []
+    for t in items:
+        if (where, t) not in THAI_SEEN: THAI_SEEN.append((where, t))
+    return items
+
+
 def start(pw, w, h=None):
     h = h or (900 if w >= 900 else 844)
     b, page, ce, pe = launch(pw, w, h, c={})
@@ -104,6 +124,8 @@ def place_from_today(page, sym, j):
 def filled_from_today(page, sym, j):
     ok = click(page, enter_btn(page, sym, "check"), f"{sym} Check row · Filled", j)[0]
     page.wait_for_timeout(300)
+    if page.locator("#cl2FillPx").count():   # CL2: Filled opens the entry-price sheet (prefilled with the planned entry) — Save keeps it
+        ok &= click(page, "[data-cl2-fillsave]", f"{sym} Filled · Save price", j)[0]; page.wait_for_timeout(300)
     return ok
 
 

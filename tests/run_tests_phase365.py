@@ -25,15 +25,16 @@ def settle(page, ms=400): page.wait_for_timeout(ms)
 
 
 DLG = {"mode": "accept", "seen": []}
-CONFIRM_STUB = "window.__cf=[]; window.__cfAns=true; window.confirm=(m)=>{ window.__cf.push(m); return window.__cfAns; };"
+CONFIRM_STUB = "window.__cf=[]; window.__cfAns=true;"
+CL2_STUB = "()=>{ cl2Ask=(o)=>{ window.__cf.push(o.title); if(window.__cfAns && o.onOk) o.onOk(); }; }"   # CL2: the in-app confirm sheet replaced window.confirm
 
 
 def confirms(page): return js(page, "()=>window.__cf.slice()")
-def cf_reset(page, ans=True): js(page, "(a)=>{ window.__cf=[]; window.__cfAns=a; }", ans)
+def cf_reset(page, ans=True): js(page, "(a)=>{ window.__cf=[]; window.__cfAns=a; cl2Ask=(o)=>{ window.__cf.push(o.title); if(window.__cfAns && o.onOk) o.onOk(); }; }", ans)   # CL2: re-installed each time (a reload drops it)
 
 
 def seed(page):
-    page.add_init_script(CONFIRM_STUB); page.evaluate(CONFIRM_STUB)
+    page.add_init_script(CONFIRM_STUB); page.evaluate("()=>{" + CONFIRM_STUB + "}"); page.evaluate(CL2_STUB)
     page.on("dialog", lambda d: DLG["seen"].append((d.type, d.message)))   # P39.launch already accepts every dialog · here we only record
     js(page, "()=>{ window.__READY_REAL = true; }")
     js(page, "()=>wlCol().doc('TXA').set({ticker:'TXA', market:'US', port:'core', note:'', added_at:'2026-10-01T00:00:00Z'})")   # ไม่มีข้อความ → Edit
