@@ -464,6 +464,7 @@ def part_layout(pw, w, h):
         if w == 1440:
             # sample data: 3 ideas, 4 To do rows, 2 Enter + 2 Manage rows, Check orders hidden
             js(page, "()=>{ ln4TodoItems = function(M){ return [{c:'a', g:'ft', gl:'homework', id:'ft:A', t:'A homework due', fn:'void 0'},{c:'a', g:'ft', gl:'homework', id:'ft:B', t:'B homework due', fn:'void 0'},{c:'a', g:'ft', gl:'homework', id:'ft:C', t:'C homework due', fn:'void 0'},{c:'g', id:'t:z', t:'Weekly News', fn:'void 0'},{c:'g', id:'t:y', t:'Another', fn:'void 0'},{c:'g', id:'t:x', t:'Third', fn:'void 0'}]; }; todayRefresh(true); }"); page.wait_for_timeout(300)
+            js(page, "()=>{ window.hf5QueueOnly = ()=>false; todayRefresh(true); }"); page.wait_for_timeout(300)   # E2E1: queue-blocked Sat plans now also list in Enter (reason + fix link) — this sample counts 2 Enter rows, so the fixture's two blocked Sat plans stay out
             sc = js(page, "()=>[document.documentElement.scrollHeight, innerHeight, document.scrollingElement.scrollHeight]")
             check(f"{tag} L ④ whole Today fits 1440 × 900 without page scroll (sample data, Check orders hidden)", sc[0] <= sc[1] + 1, sc)
         check(f"{tag} L no overflow · no page errors", js(page, OVER) and not pe, pe[:3])
