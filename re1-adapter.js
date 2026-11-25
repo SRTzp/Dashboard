@@ -168,14 +168,14 @@
     });
     // Sat ideas of this account with no trade yet (drafts / planned)
     ideasDocs.forEach(function (i) {
-      var sl = i && i.accts && i.accts[acc.id]; if (!i || !sl || sl.skip) return;
+      var sl = i && ((i.accts && i.accts[acc.id]) || (i.pb_acct === acc.id && i.ln4 && i.ln4.placedAt ? {} : null)); if (!i || !sl || sl.skip) return;   /* HF5 — a Place-order plan (pb_acct, no account slot until Filled) is a live working order */
       var has = Object.keys(info).some(function (k) { return info[k].satIdea === i.id; });
       if (has || i.status === 'closed' || i.status === 'cancelled') return;
       var placed = i.ln4 && i.ln4.placedAt, id = 's:' + i.id;
       var cur = (src.specs && src.specs[symKey(i.asset)] && src.specs[symKey(i.asset)].cur) || 'USD';
       var efx = cur === 'USD' ? fx : 1; if (efx === null) { miss.add('FX', i.id); return; }
       var mult = (src.specs && src.specs[symKey(i.asset)] && pos(n(src.specs[symKey(i.asset)].contract))) ? n(src.specs[symKey(i.asset)].contract) : null;
-      var qty = pos(n(sl.lot)) ? n(sl.lot) : null, wo = [];
+      var snap0 = i.ln4 && i.ln4.snap && i.ln4.snap['0'], qty = pos(n(sl.lot)) ? n(sl.lot) : (snap0 && pos(n(snap0.lot)) ? n(snap0.lot) : null), wo = [];   /* HF5 — no slot lot yet: the lot stored with the order snapshot */
       if (placed && qty !== null && mult !== null) wo.push({ id: 'w:' + i.id, qty: qty, entry: n(i.entry), stop: n(i.sl), mult: mult, fx: efx, at: isoMs(placed) });
       if (placed && (qty === null || mult === null)) miss.add('ORDER_QTY', i.id);
       out.push({ id: id, account: acc.id, strategy: 'sat', side: i.bias === 'Short' ? 'short' : 'long', status: placed ? 'ordered' : 'planned', product: symKey(i.asset), sym: i.asset, tranches: [], exits: [], entryFees: 0, workingOrders: wo,
@@ -553,9 +553,24 @@
       mom: { state: momState, chk: momChk }, sat: { step: step, attempts: attempts, dayAtt: dayAtt, budget: satBud, stale: R.satStaleOrders(ideas, now) }, comp: { streak: streak, cycles: cycles, unlocks: unlocks, heat: heat }, active: active, rowsById: rowsById, ideasW: ideasW, ideasM: ideasM };
   }
   /* ── reason text (engine text + the concrete numbers) ── */
+  /* HF5 — the Sat queue names the OPEN setup (not the candidate): queue = {kind:'max'|'busy', open:[{id, satId, sym, cut, working}], blocker:{...}} */
+  function queueInfo(L, q) {
+    if (!q.reasons.length) return null;
+    var rows = (q.open || []).map(function (o) { var inf = L.info[o.id] || {}; return { id: o.id, satId: inf.satIdea || null, sym: String(inf.sym || o.id).replace(/USDT$|USD$/, '') || inf.sym, cut: o.cut, working: o.working }; });
+    if (q.reasons[0] === 'SAT_QUEUE_MAX') return { kind: 'max', max: q.max, open: rows };
+    var ids = q.busyWith || [], bl = rows.filter(function (r) { return ids.indexOf(r.id) >= 0; }).sort(function (a, b) { return a.cut - b.cut; })[0];
+    return { kind: 'busy', open: rows, blocker: bl, need: q.need };
+  }
+  function queueText(code, q) {
+    if (q.kind === 'max') return q.open.length + ' Sat setups open (' + q.open.map(function (r) { return r.sym; }).join(', ') + ') · max ' + q.max;
+    var b = q.blocker, now = Math.round(b.cut * 100), need = Math.round(q.need * 100);
+    if (b.working) return b.sym + ' order is working with full risk · fill it and cut its risk ≥ ' + need + '% (or cancel it) to open another Sat';
+    return b.sym + ' is open with ' + (now === 0 ? 'full risk' : (100 - now) + '% of its risk left') + ' · move its stop to cut risk ≥ ' + need + '% (now ' + now + '%) to open another Sat';
+  }
   function rtext(code, d) {
     var T = R.REASONS[code] ? R.REASONS[code].text : code; d = d || {};
     if ((code === 'MONEY_WEEK') && d.roomPct != null) return T + ' — room ' + f2(d.roomPct, 2) + '%';
+    if ((code === 'SAT_QUEUE_BUSY' || code === 'SAT_QUEUE_MAX') && d.queue) return queueText(code, d.queue);
     if (code === 'COMP_HEAT' && d.heat && d.heat.pct != null) return 'Heat cap: ' + f2(d.heat.pct, 1) + '% of 6% — room ' + f2(Math.max(0, 6 - d.heat.pct), 1) + '%';
     return T;
   }
@@ -666,7 +681,7 @@
     var rs = cond.reasons.slice(), ord = R.satEntryOrder({ side: f.side, entry: f.entry, stop: f.stop, tp: f.tp });
     rs = rs.concat(ord.reasons); m.rr = ord.rr == null ? null : ord.rr;
     if (st.locked) rs.push('SAT_LOCKED');
-    rs = rs.concat(R.satQueueCheck(L.ideas, L.acct, f.ideaId).reasons);
+    var q0 = R.satQueueCheck(L.ideas, L.acct, f.ideaId); rs = rs.concat(q0.reasons); m.queue = queueInfo(L, q0);
     var others = L.sat.dayAtt.filter(function (a) { return a.id !== f.ideaId; }), dc = R.satDailyCheck({ now: L.now, product: f.product, attempts: others, reentry: f.reentry || {} });
     rs = rs.concat(dc.reasons); m.flags = m.flags.concat(dc.flags, cond.flags); m.reentry = dc.reentry === true; m.reentryNeedsConfirm = dc.reasons.indexOf('SAT_REENTRY_COND') >= 0;
     var todayN = others.filter(function (a) { return a.product === f.product && R.bkk.dayKey(a.startAt) === R.bkk.dayKey(L.now) && a.status !== 'cancelled'; }).length;
@@ -693,9 +708,9 @@
     var wRoom = bud.weekCap - (bud.weekUsed - m.money), room = Math.min(wRoom, bud.monthCap - (bud.monthUsed - m.money));
     m.room = { weekPct: Math.max(0, wRoom) / L.basis.weekEquity * 100 }; m.roomPct = m.room.weekPct;
     var uv = f.mult * f.fx; m.allowedQty = (z.actualDistance > 0 && uv > 0 && m.qty > 0) ? allowedQty(room, z.actualDistance * uv, f.lotStep, f.minLot, m.qty) : 0;
-    var q = R.satQueueCheck(L.ideas, L.acct, f.ideaId);
+    var q = q0;
     m.roomLine = (m.rr != null ? 'R:R ' + f2(m.rr, 1) + ' · ' : '') + (q.reasons.length ? 'queue busy' : 'queue free') + ' · ' + (m.reentry ? 're-entry' : todayN === 0 ? '1st setup today' : 'setup ' + (todayN + 1) + ' today') + ' · week room ' + pctTxt(m.room.weekPct);
-    return finish(m, { roomPct: m.room.weekPct });
+    return finish(m, { roomPct: m.room.weekPct, queue: m.queue });
   }
   /* ── Compounder ──
      f = {kind:'pilot'|'topup'|'addon', ideaId (existing idea of this ticker), thesisDone, starterOn, entry, stop, side, mult, fx, lotStep, minLot, minStopDist, legacy, levels?}
