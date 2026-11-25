@@ -5373,6 +5373,36 @@ html body .lr5 .hw1-hint{font-size:12px;color:var(--lr-muted)}
 html body .lr5 .hw1-fld textarea,html body .lr5 .hw1-fld input[type=text],html body .lr5 .hw1-fld input[type=date]{font:15px/1.4 var(--lr-sans);border:1px solid var(--lr-line2);border-radius:10px;padding:10px 12px;background:#fff;color:var(--lr-ink);width:100%;box-sizing:border-box;resize:none;min-height:40px;box-shadow:none}
 html body .lr5 .hw1-fld textarea:focus,html body .lr5 .hw1-fld input:focus{outline:2px solid var(--lr-mmt);outline-offset:-1px}
 html body .lr5 .hw1-fld.hw2-hl{outline:2px solid #D9921A;outline-offset:4px;border-radius:10px;transition:outline-color .6s}   /* HW2 A — landing on the first missing field */
+/* HW2 B — header · pills · numbered answers · chips */
+html body .lr5 .hw2-tag{font:600 11px var(--lr-mono);border-radius:5px;padding:2px 6px;flex:none}
+html body .lr5 .hw2-tag.comp{color:#0E6B4C;background:#E6F4EE}html body .lr5 .hw2-tag.mmt{color:#3B4FC4;background:#E8ECFB}
+html body .lr5 .hw1-pr{width:auto;gap:8px;flex-wrap:nowrap;white-space:nowrap;color:var(--lr-muted)}html body .lr5 .hw1-pr .bar{width:120px;flex:none}
+html body .lr5 .hw1-pr b{color:var(--lr-ink);font-weight:600}html body .lr5 .hw2-sz,html body .lr5 .hw2-line .amb{color:var(--lr-warn);font-weight:600}
+html body .lr5 .hw2-line{font-size:12.5px;color:var(--lr-muted);display:none}
+html body .lr5 .hw2-ctx{display:flex;gap:6px;flex-wrap:wrap}
+html body .lr5 .hw2-pill{font:600 11.5px var(--lr-sans);border-radius:999px;padding:3px 9px;white-space:nowrap}
+html body .lr5 .hw2-pill.pb{color:#3B4FC4;background:#E8ECFB}html body .lr5 .hw2-pill.pa{color:#9A5B00;background:#FFF4E0}html body .lr5 .hw2-pill.pg{color:#0E6B4C;background:#E6F4EE}html body .lr5 .hw2-pill.pn{color:#5F6672;background:#F0F1F4}
+html body .lr5 .hw2-f{border:1px solid var(--lr-line);border-radius:12px;padding:10px 12px;background:#fff}
+html body .lr5 .hw2-f.no{border-color:#F1C982}html body .lr5 .hw2-n{color:var(--lr-muted);font-weight:600}
+html body .lr5 .hw1-c.add{color:var(--lr-warn);background:#FBF1E1}
+html body .lr5 .hw1-fld.hw2-f textarea,html body .lr5 .hw1-fld.hw2-f textarea:focus{min-height:64px}   /* no height jump on focus/blur — a chip under a just-blurred box must not move between mouse-down and mouse-up */
+html body .lr5 .hw2-chips{display:flex;flex-direction:column;gap:6px}html body .lr5 .hw2-chips:empty{display:none}
+html body .lr5 .hw2-grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+html body .lr5 .hw2-grp .gl{font:700 10px var(--lr-sans);letter-spacing:.07em;color:var(--lr-muted);margin-right:2px}
+html body .lr5 .hw2-chip,html body .lr5 .hw2-more{font:500 12.5px var(--lr-sans);border:1px solid #DDE0E5;border-radius:999px;padding:4px 10px;background:#fff;color:var(--lr-ink);cursor:pointer;text-align:left;white-space:normal}
+html body .lr5 .hw2-chip.fact{border-style:dashed}
+html body .lr5 .hw2-chip.on{background:#E8ECFB;color:#3B4FC4;border-color:#C9D3F6;font-weight:600}
+html body .lr5 .hw2-more{display:none;color:var(--lr-muted)}
+html body .lr5 .hw2-nofacts{font-size:12.5px;color:var(--lr-muted)}
+html body .lr5 .hw1-btns .hw2-edit{margin-left:auto}
+@media (max-width:1023px){
+  html body .lr5 .hw1-pr .bar,html body .lr5 .hw2-hold,html body .lr5 .hw2-nx,html body .lr5 .hw2-sz{display:none}
+  html body .lr5 .hw2-line{display:block}
+  html body .lr5 .hw1-top .hw1-pr{order:2;margin-left:auto}html body .lr5 .hw1-top .nt1-ctx{order:3}
+  html body .lr5 .hw2-grp:not(.open) .hw2-chip:nth-of-type(n+3):not(.on){display:none}
+  html body .lr5 .hw2-grp:not(.open) .hw2-more{display:inline-block;min-height:32px}
+  html body .lr5 .hw2-chip{min-height:32px}
+}
 html body .lr5 .hw1-nc{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px}
 html body .lr5 .hw1-ask{font-size:13px;color:var(--lr-text2);background:#F7F8FA;border-radius:8px;padding:8px 10px}
 html body .lr5 .hw1-cmp,html body .lr5 .hw1-lnk{border:0;background:none;color:var(--lr-mmt);font:600 12px var(--lr-sans);padding:0;cursor:pointer;align-self:flex-start;text-decoration:none;box-shadow:none;min-height:0}
@@ -28833,7 +28863,7 @@ function pc2PlaceExtras(it, pv){
     h += `<button type="button" class="bd-link pc2-fill" data-pc2-hwfill aria-expanded="${!!pb2.hwOpen}" onclick="pc2HwToggle()">Fill ${miss} line${miss === 1 ? '' : 's'} → full size${full > 0 ? ' #' + fmt0(full) : ''} ›</button>`;
     if(pb2.hwOpen){
       const fld = k=>{ const L = HW1_L[k]; return `<label class="pc2-hf"><span>${e(L.n)}${L.hint ? ` <i>${e(L.hint)}</i>` : ''}</span><textarea rows="2" data-pc2-hwin="${k}" maxlength="${k === 'trigger' ? 1000 : 2000}" placeholder="${e(L.ph)}" oninput="pc2HwIn('${id}','${k}',this.value)">${e(v[k] || '')}</textarea></label>`; };
-      h += `<div class="pc2-hwbox" data-pc2-hwbox><div class="pc2-hwh" data-pc2-hwprog>Homework · ${hw.n} of ${hw.tot}</div>${fld('exit')}${fld('trigger')}</div>`;
+      h += `<div class="pc2-hwbox" data-pc2-hwbox><div class="pc2-hwh" data-pc2-hwprog>Homework · ${hw.n} of ${hw.tot}</div>${(it0 ? hw1ReqKeys(it0) : ['catalyst', 'trigger', 'exit']).map(fld).join('')}</div>`;
     }
   }
   const lv = pb2.lv != null ? pb2.lv : (it.k || 0), rows = pc2Rows(c), q = rows[lv] && rows[lv].qty > 0 ? rows[lv].qty : (pv ? pv.plannedQty : null), t1 = q > 0 ? pc2T1(c, rows.reduce((a, r)=>a + (r.qty || 0), 0) || q) : null;
@@ -31177,9 +31207,11 @@ function wl1Status(it){
 }
 
 /* ── homework: existing checklist + "I've reviewed this" ── */
-function wl1HwReq(it){   /* HW1 — Momentum: exit + trigger · Compounder: why (I believe) + evidence + exit */
+function hw2Legacy(it){ const hw = (it && it.hw) || {}; return wl1TrkOf(it) !== 'ladder' && !!(hw.confirmedAt && hw.doneAt && !hw.catReq); }   /* HW2 B — a Momentum stock marked done before HW2 (no Catalyst required then) stays done */
+function wl1HwReq(it){   /* HW2 — Momentum: catalyst + trigger + exit (catalyst not asked of stocks already done) · Compounder: why (I believe) + evidence + exit */
   const m = wlMyThesis(it), hw = (it && it.hw) || {}, f = (k, v)=>({k, n:HW1_L[k].n, s:HW1_L[k].h, h:HW1_L[k].h, v});
-  return wl1TrkOf(it) === 'ladder' ? [f('why', m.why), f('evidence', m.evidence), f('exit', m.exit)] : [f('exit', m.exit), f('trigger', hw.trigger)];
+  if(wl1TrkOf(it) === 'ladder') return [f('why', m.why), f('evidence', m.evidence), f('exit', m.exit)];
+  return (hw2Legacy(it) ? [] : [f('catalyst', hw.catalyst)]).concat([f('trigger', hw.trigger), f('exit', m.exit)]);
 }
 function wl1HwMissing(it){ return wl1HwReq(it).filter(x=>wlBlank(x.v)); }
 function wl1HwDone(it){ return !!(it && it.hw && it.hw.confirmedAt && it.hw.doneAt && wl1HwMissing(it).length === 0); }   /* text alone is not enough; a required field emptied later = not done */
@@ -33516,12 +33548,12 @@ function wl5DetLegacyHtml(r){   /* HW1 — the old detail panel (Why · Trigger 
    Fields: Momentum = exit (what would change my thesis) + trigger · Compounder = why (I believe) + evidence + exit. Stored in my_thesis.{why,exit,evidence,unproven} · hw.{trigger,catalyst,confirmedAt,doneAt} · next_check_*.
    Old editors (wlMtLegacyHtml · wl1HwLegacyHtml · wl5DetLegacyHtml) stay in the file as unrendered hooks. */
 const HW1_L = {
-  why:{n:'I believe…', h:'I-believe', hint:'What will happen in the business?', ph:'e.g. They will raise the membership fee next year, and operating profit will jump.'},
-  evidence:{n:'My evidence is…', h:'Evidence', hint:'Which facts on the left support it, and why?', ph:'e.g. Fee revenue is large vs operating income · margin rising 4 quarters · renewals above 92%.'},
+  why:{n:'I believe…', h:'I-believe', hint:'What will happen in the business over the next 1–3 years?', ph:'e.g. They will raise the membership fee next year, and operating profit will jump.'},
+  evidence:{n:'My evidence is…', h:'Evidence', hint:'Facts from the left that support it — tap to add', ph:'e.g. Fee income ≈ half of operating profit · renewals steady 90%'},
   unproven:{n:'Not proven yet', h:'Not-proven', hint:'', ph:'e.g. Timing of the fee increase · how much profit a fee rise adds'},
-  exit:{n:'What would change my thesis?', h:'Change-my-thesis', hint:'A business result, not a price · number + threshold + by when', ph:'e.g. Renewal rate below 91% for 2 quarters'},
-  trigger:{n:'Trigger', h:'Trigger', hint:'Price/RS condition + confirmation', ph:'e.g. Close above the 4-week base high on 1.5× volume, RS ≥ 80'},
-  catalyst:{n:'Catalyst', h:'Catalyst', hint:'', ph:'e.g. Q3 earnings 28 Jan'}
+  exit:{n:'What would change my thesis?', h:'Change-my-thesis', hint:'A business result, not a price · number + within how many quarters (checked each earnings)', ph:'e.g. Renewal below 88% for 2 quarters'},
+  trigger:{n:'Trigger', h:'Trigger', hint:'When do you buy? One line', ph:'e.g. Close above 142 with volume ≥ 1.5×'},
+  catalyst:{n:'Catalyst & setup', h:'Catalyst', hint:'Why should it move in the next few weeks? Chart and/or news', ph:'e.g. Beat & raise 20 Nov · tight 4-wk base above EMA50'}
 };
 let hwSym = '', hw1Seg = {}, hw1Opt = {};
 function hw1Scroll(dir){   /* the Homework page scrolls inside its own box when it has one, else the window */
@@ -33529,9 +33561,14 @@ function hw1Scroll(dir){   /* the Homework page scrolls inside its own box when 
   if(box) box.scrollBy({top: dir * 60}); else window.scrollBy({top: dir * 60});
 }
 function hw1On(){ return !!hwSym && hwSym === wlSel && wl5FullSym === wlSel && wlView === 'wl'; }
-function hw1Lbl(it, k){ return (k === 'why' && wl1TrkOf(it) !== 'ladder') ? Object.assign({}, HW1_L.why, {n:'Why buy', h:'Why-buy', hint:'What is improving and not yet priced in?', ph:'e.g. Revenue growth is speeding up and the stock is near its high'}) : HW1_L[k]; }
+function hw1Lbl(it, k){
+  if(wl1TrkOf(it) === 'ladder') return HW1_L[k];
+  if(k === 'why') return Object.assign({}, HW1_L.why, {n:'Why buy', h:'Why-buy', hint:'What is improving and not yet priced in?', ph:'e.g. Revenue growth is speeding up and the stock is near its high'});
+  if(k === 'exit') return Object.assign({}, HW1_L.exit, {hint:'Not the stop (that\'s in the plan) — what makes the idea wrong', ph:'e.g. RS below 70 or closes back inside the base'});
+  return HW1_L[k];
+}
 function hw1Vals(it){ const t = it.ticker; wlMtLoadDrafts(t); const d = wlMtDraft[t] || {}, s = wlMtSaved(it), o = {}; WL_MT_FIELDS.forEach(k=>{ o[k] = d[k] != null ? String(d[k]) : s[k]; }); return o; }
-function hw1ReqKeys(it){ return wl1TrkOf(it) === 'ladder' ? ['why', 'evidence', 'exit'] : ['exit', 'trigger']; }
+function hw1ReqKeys(it){ return wl1HwReq(it).map(x=>x.k); }
 function hw1Prog(it, v){ const keys = hw1ReqKeys(it), miss = keys.filter(k=>wlBlank(v[k])); return {n:keys.length - miss.length, tot:keys.length, miss, first:miss.length ? HW1_L[miss[0]].h : ''}; }
 function hw1DateOf(iso){ const d = String(iso || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(d) ? wl1ArchDate(d) : ''; }
 
@@ -33544,7 +33581,7 @@ function hwOpen(sym){
   hw1Seg[it.ticker] = 'mine';   /* HW2 A — phone always opens on My thesis · Facts is one tap */
   renderWatchlist();
   try{ const sc = document.querySelector('[data-hw1-page]'); if(sc && !wlNarrow()) window.scrollTo(0, 0); }catch(e){}
-  hw2Land(it.ticker);
+  hw2Land(it.ticker); hw2EnsureData(it.ticker);
 }
 /* HW2 A — the ONE way into Homework: Today rows · Today list · Plan card fix · Place order fix · Watch row / detail */
 function hwGo(sym){
@@ -33559,6 +33596,7 @@ function hw2Land(t){   /* first missing required field: scrolled into view + sho
   const go = ()=>{
     try{
       const it = wlItemOf(t), pg = document.querySelector('[data-hw1-page]'); if(!it || !pg) return;
+      try{ hw2ChipSync(pg, it); }catch(e){}
       const k = hw1Prog(it, hw1Vals(it)).miss[0]; if(!k) return;
       const f = pg.querySelector('[data-hw1-f="' + k + '"]'); if(!f) return;
       f.classList.add('hw2-hl'); setTimeout(()=>f.classList.remove('hw2-hl'), 2200);
@@ -33602,8 +33640,8 @@ function hw1Save(sym, done){
   if(done && p.miss.length) return Promise.resolve(false);
   const now = new Date().toISOString(), wasDone = wl1HwDone(it);
   const my = Object.assign({}, it.my_thesis || {}, {why:cl('why', 2000), exit:cl('exit', 2000), evidence:cl('evidence', 2000), unproven:cl('unproven', 2000), updated_at:now});
-  const hw = Object.assign({}, it.hw || {}, {trigger:cl('trigger', 1000), catalyst:cl('catalyst', 40)});
-  if(done && !wasDone){ hw.confirmedAt = now; hw.doneAt = now; }
+  const hw = Object.assign({}, it.hw || {}, {trigger:cl('trigger', 1000), catalyst:cl('catalyst', 400)});
+  if(done && !wasDone){ hw.confirmedAt = now; hw.doneAt = now; if(wl1TrkOf(it) !== 'ladder') hw.catReq = true; }   /* HW2 — from now on a done Momentum stock needs its Catalyst */
   const ncDate = /^\d{4}-\d{2}-\d{2}$/.test(String(v.nc_date)) ? v.nc_date : '', ncNote = cl('nc_note', 120);
   wlMtMsg[t] = '';
   return Promise.resolve(col.doc(t).update({my_thesis:my, hw, next_check_date:ncDate, next_check_note:ncNote})).then(()=>{
@@ -33619,18 +33657,22 @@ function hw1Done(sym){ return hw1Save(sym, true); }
 /* ── live refresh while typing (no re-render: the caret stays) ── */
 function hw1Refresh(t){
   const root = document.querySelector('[data-hw1-page="' + t + '"]'), it = wlItemOf(t); if(!root || !it) return;
-  const v = hw1Vals(it), p = hw1Prog(it, v), done = wl1HwDone(it) && !p.miss.length;
+  const v = hw1Vals(it), p = hw1Prog(it, v), done = wl1HwDone(it) && !p.miss.length, req = hw1ReqKeys(it);
   root.querySelectorAll('[data-hw1-prog]').forEach(x=>{ x.textContent = done ? '✓ Done' : p.n + ' of ' + p.tot; });
   root.querySelectorAll('[data-hw1-bar]').forEach(x=>{ x.style.width = Math.round(100 * p.n / p.tot) + '%'; });
+  root.querySelectorAll('[data-hw2-size]').forEach(x=>{ x.hidden = done; });
   const dn = root.querySelector('[data-hw1-done]'); if(dn) dn.disabled = p.miss.length > 0;
-  hw1ReqKeys(it).forEach(k=>{
-    const ok = !wlBlank(v[k]), c = root.querySelector('[data-hw1-chip="' + k + '"]'); if(c){ c.textContent = ok ? 'filled' : 'required'; c.className = 'hw1-c ' + (ok ? 'ok' : 'req'); }
-    const f = root.querySelector('[data-hw1-f="' + k + '"]'); if(f){ f.classList.toggle('ok', ok); f.classList.toggle('no', !ok); }
+  ['catalyst', 'trigger', 'exit', 'why', 'evidence'].forEach(k=>{
+    const c = root.querySelector('[data-hw1-chip="' + k + '"]'), f = root.querySelector('[data-hw1-f="' + k + '"]'); if(!c && !f) return;
+    const ok = !wlBlank(v[k]), isReq = req.includes(k);
+    if(c){ c.textContent = ok ? 'done' : (isReq ? 'required' : 'add'); c.className = 'hw1-c ' + (ok ? 'ok' : (isReq ? 'req' : 'add')); }
+    if(f && isReq){ f.classList.toggle('ok', ok); f.classList.toggle('no', !ok); }
   });
   ['why', 'exit', 'trigger'].forEach(k=>{
     const b = root.querySelector('[data-hw1-cmp-btn="' + k + '"]'); if(b) b.hidden = wlBlank(v[k]) || ltFactsOnly(wlThesisRaw(it));
     const m = root.querySelector('[data-hw1-cmp="' + k + '"] [data-hw1-cmp-mine]'); if(m) m.textContent = v[k];
   });
+  hw2ChipSync(root, it);
 }
 
 /* ── Fact Sheet ── */
@@ -33856,34 +33898,104 @@ function hw1FactsHtml(it){
     ltArr(th && th.kpi).slice(0, 3).forEach(k=>{ if(k && k.name) rows.push(hw1FRow('KPI', e(String(k.name) + (k.base ? ' · ' + k.base : '')))); });
     ltNextCats(it).slice(0, 2).forEach(c=>rows.push(hw1FRow('Catalyst', e(wl1ArchDate(c.date) + ' · ' + ltShort(c.event, 70)))));
     const fb = `<div class="hw1-fh"><span class="lbl">Facts</span></div>${rows.join('') || ''}<div class="hw1-mut hw1-steps" data-hw1-nofacts><b>No Fact Sheet yet</b><div data-hw1-step="1">1. Copy the command and run it in Claude: <button type="button" class="hw1-cmd" data-hw1-copycmd data-cmd="living-thesis facts ${e(wl1Bare(it.ticker))} ${trk}" onclick="hw1CopyCmd(this)">living-thesis facts ${e(wl1Bare(it.ticker))} ${trk} ⧉</button></div><div data-hw1-step="2">2. Paste the JSON it gives you: <button type="button" class="hw1-lnk" data-hw1-import-link data-sym="${e(it.ticker)}" onclick="ltImportOpen(this.dataset.sym)">Import JSON ›</button></div></div>`;
-    return `<div class="hw1-facts" data-hw1-facts="fallback"><div class="hw2-hdr">${seg}</div>${pane('business results', fb)}${ai}</div>`;
+    return `<div class="hw1-facts" data-hw1-facts="fallback">${hw2PillsHtml(it)}<div class="hw2-hdr">${seg}</div>${pane('business results', fb)}${ai}</div>`;
   }
   const mo = hw2QMonths(f, 3, 3), per = `latest quarter ${mo ? mo + ' (' + f.asOf + ')' : f.asOf}${/^\d{4}-\d{2}-\d{2}$/.test(f.date) ? ' · reported ' + wl1ArchDate(f.date) : ''}`;
-  return `<div class="hw1-facts" data-hw1-facts="full"><div class="hw2-hdr">${seg}<span class="hw2-per mut" data-hw2-period>${e(per)}</span><button type="button" class="btn sm hw1-imp" data-hw1-import data-sym="${e(it.ticker)}" title="Paste a newer living-thesis JSON" onclick="ltImportOpen(this.dataset.sym)">Update ›</button></div>
+  return `<div class="hw1-facts" data-hw1-facts="full">${hw2PillsHtml(it)}<div class="hw2-hdr">${seg}<span class="hw2-per mut" data-hw2-period>${e(per)}</span><button type="button" class="btn sm hw1-imp" data-hw1-import data-sym="${e(it.ticker)}" title="Paste a newer living-thesis JSON" onclick="ltImportOpen(this.dataset.sym)">Update ›</button></div>
     ${pane('business', hw2BusinessHtml(it, f, trk))}${pane('results', hw2ResultsHtml(it, f, trk))}${ai}</div>`;
 }
 
 /* ── Your thesis ── */
+/* HW2 B/C — chips: defaults here · replaced per type by settings.hwChips = {mmt:{chart,news,trigger,exit}, comp:{why,exit}} (empty list → that row is hidden) */
+const HW2_CHIPS_DEF = {
+  mmt:{chart:['Base breakout', 'Pullback to EMA50', 'New high', 'Sector leading'], news:['Earnings beat', 'Guide raised', 'New product / deal', 'Analyst upgrade'], trigger:['Close above base high', '+ volume ≥ 1.5×', 'Bounce off EMA50'], exit:['RS below 70', 'Close below EMA50', 'Sector turns lagging', 'Earnings miss', 'No progress in 3 weeks']},
+  comp:{why:['Pricing power', 'Earnings growth speeding up', 'New product / segment ramp', 'Margin expansion', 'Market share gains', 'Recurring revenue'], exit:['Growth below X% for 2 qtrs', 'Key milestone missed', 'Margin falls 2 qtrs', 'Lose key customer / renewal drops', 'Management changes course', 'Share count rises']}
+};
+function hw2ChipsClean(arr){ const seen = {}, o = []; (Array.isArray(arr) ? arr : []).forEach(x=>{ const t = String(x == null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, 60); if(t && !seen[t.toLowerCase()]){ seen[t.toLowerCase()] = 1; o.push(t); } }); return o.slice(0, 20); }
+function hw2ChipList(type, key){
+  let c = null; try{ c = (tdSettings().hwChips || {})[type]; }catch(e){}
+  return c && typeof c === 'object' && Array.isArray(c[key]) ? hw2ChipsClean(c[key]) : HW2_CHIPS_DEF[type][key].slice();
+}
+const HW2_FIELD = {   /* per type: field key → numbered label rows */
+  mmt:{catalyst:{rows:[['CHART', 'chart'], ['NEWS · BUSINESS', 'news']]}, trigger:{rows:[['', 'trigger']]}, exit:{rows:[['', 'exit']]}},
+  comp:{why:{rows:[['', 'why']]}, evidence:{rows:[]}, exit:{rows:[['', 'exit']]}}
+};
+function hw2Type(it){ return wl1TrkOf(it) === 'ladder' ? 'comp' : 'mmt'; }
+function hw2Parts(v){ return String(v == null ? '' : v).split(' · ').map(x=>x.trim()).filter(Boolean); }
+function hw2Quarters(row){ const v = (row.v || []).filter(x=>typeof x === 'number'); let n = 1, dir = 0; for(let i = v.length - 1; i > 0; i--){ const d = v[i] - v[i - 1], g = d > 0 ? 1 : d < 0 ? -1 : 0; if(!g || (dir && g !== dir)) break; dir = g; n++; } return {n:dir ? n : 1, dir}; }
+function hw2FactChips(it){   /* evidence chips built from this stock's Fact Sheet (same numbers the Fact Sheet shows) · max 4 */
+  const f = ltFacts(it); if(!f || !f.q || !Array.isArray(f.q.rows)) return [];
+  const rowOf = k=>f.q.rows.find(r=>r.k === k), val = r=>{ const l = hw2Latest(r); return l ? l.x : null; }, fm = (r, x)=>hw1QVal(r, x), out = [];
+  const rev = rowOf('rev_yoy'), eps = rowOf('eps_yoy'), op = rowOf('op_margin') || rowOf('gm'), sh = rowOf('shares_yoy');
+  if(rev && val(rev) != null) out.push('Revenue ' + fm(rev, val(rev)) + ' YoY');
+  if(eps && val(eps) != null) out.push(rev && val(rev) != null ? 'EPS ' + fm(eps, val(eps)) + ' vs revenue ' + fm(rev, val(rev)) : 'EPS ' + fm(eps, val(eps)) + ' YoY');
+  if(op && val(op) != null){ const q = hw2Quarters(op); out.push((op.k === 'gm' ? 'Gross margin' : 'Op margin') + (q.dir && q.n >= 2 ? ' ' + (q.dir > 0 ? '↗' : '↘') + ' ' + q.n + ' qtrs' : ' ' + fm(op, val(op)))); }
+  if(sh && val(sh) != null) out.push('Shares ' + fm(sh, val(sh)) + ' YoY');
+  f.q.rows.filter(r=>/^kpi_/.test(r.k)).forEach(r=>{ if(out.length < 4 && val(r) != null) out.push(String(r.label || r.k).replace(/\s+y\/y$/, '') + ' ' + fm(r, val(r))); });
+  return out.slice(0, 4);
+}
+function hw2ChipHtml(it, k, txt, fact, on){ const e = escHtml; return `<button type="button" class="hw2-chip${fact ? ' fact' : ''}${on ? ' on' : ''}" data-hw2-chip="${k}" data-txt="${e(txt)}" aria-pressed="${!!on}" onclick="hw2Chip('${e(it.ticker)}','${k}',this)">${e(txt)}</button>`; }
+function hw2ChipsHtml(it, k, v){
+  const type = hw2Type(it), spec = HW2_FIELD[type][k], parts = hw2Parts(v).map(x=>x.toLowerCase()), e = escHtml; let h = '';
+  const row = (gl, arr, fact)=>{ if(!arr.length) return ''; const hid = arr.length > 2 ? `<button type="button" class="hw2-more" data-hw2-more onclick="hw2More(this)">+${arr.length - 2}</button>` : ''; return `<div class="hw2-grp" data-hw2-grp="${k}">${gl ? `<span class="gl">${e(gl)}</span>` : ''}${arr.map(t=>hw2ChipHtml(it, k, t, fact, parts.includes(t.toLowerCase()))).join('')}${hid}</div>`; };
+  if(type === 'comp' && k === 'evidence'){
+    const fc = hw2FactChips(it);
+    return fc.length ? row('FROM FACT SHEET', fc, true) : `<div class="hw2-nofacts" data-hw2-nofacts>No Fact Sheet yet · <button type="button" class="hw1-lnk" data-hw2-import data-sym="${e(it.ticker)}" onclick="ltImportOpen(this.dataset.sym)">Import ›</button></div>`;
+  }
+  (spec.rows || []).forEach(r=>{ h += row(r[0], hw2ChipList(type, r[1]), false); });
+  return h;
+}
+function hw2More(btn){ const g = btn.closest('.hw2-grp'); if(g){ g.classList.add('open'); } }
+function hw2Chip(sym, k, el){
+  const t = wlNormTicker(sym), it = wlItemOf(t), ta = document.querySelector('[data-hw1-page="' + t + '"] [data-hw1-ta="' + k + '"]'); if(!it || !ta || !el) return;
+  const txt = el.dataset.txt, parts = hw2Parts(ta.value), i = parts.findIndex(x=>x.toLowerCase() === txt.toLowerCase());
+  if(i >= 0) parts.splice(i, 1); else parts.push(txt);
+  ta.value = parts.join(' · ');
+  wlMtIn(t, k, ta.value, ta);
+}
+function hw2ChipSync(root, it){
+  const v = hw1Vals(it);
+  root.querySelectorAll('[data-hw2-grp]').forEach(g=>{
+    const k = g.dataset.hw2Grp, parts = hw2Parts(v[k]).map(x=>x.toLowerCase()); let hidden = 0;
+    g.querySelectorAll('.hw2-chip').forEach((c, i)=>{ const on = parts.includes(String(c.dataset.txt).toLowerCase()); c.classList.toggle('on', on); c.setAttribute('aria-pressed', on); if(i >= 2 && !on) hidden++; });
+    const m = g.querySelector('[data-hw2-more]'); if(m){ m.textContent = '+' + hidden; m.hidden = !hidden || g.classList.contains('open'); }
+  });
+}
 function hw1Fld(it, k, req){
   const e = escHtml, t = it.ticker, v = hw1Vals(it)[k], L = hw1Lbl(it, k), ok = !wlBlank(v);
   const at = k === 'why' ? 'data-wl-mt-why ' : k === 'exit' ? 'data-wl-mt-exit ' : k === 'trigger' ? 'data-wl1-trigger ' : '';
-  const chip = req ? `<span class="hw1-c ${ok ? 'ok' : 'req'}" data-hw1-chip="${k}">${ok ? 'filled' : 'required'}</span>` : '<span class="hw1-c opt">optional</span>';
+  const chip = req ? `<span class="hw1-c ${ok ? 'ok' : 'req'}" data-hw1-chip="${k}">${ok ? 'done' : 'required'}</span>` : '<span class="hw1-c opt">optional</span>';
   const cmp = (k === 'why' || k === 'exit' || k === 'trigger') ? `<button type="button" class="hw1-cmp" data-hw1-cmp-btn="${k}" ${ok && !ltFactsOnly(wlThesisRaw(it)) ? '' : 'hidden'} onclick="hw1CmpToggle('${e(t)}','${k}')">Compare with thesis ›</button><div class="hw1-cmpb" data-hw1-cmp="${k}" hidden></div>` : '';
   return `<div class="hw1-fld ${req ? (ok ? 'ok' : 'no') : 'opt'}" data-hw1-f="${k}"${req ? ` data-wl1-hwi="${k}"` : ''}><label class="hw1-fl${req ? '' : ' o'}" for="hw1-${k}">${e(L.n)} ${chip}</label>${L.hint ? `<div class="hw1-hint">${e(L.hint)}</div>` : ''}<textarea id="hw1-${k}" ${at}data-wl-mt-ta data-hw1-ta="${k}" rows="${req ? 2 : 1}" maxlength="${k === 'trigger' ? 1000 : 2000}" spellcheck="false" placeholder="${e(L.ph)}" oninput="wlMtIn('${e(t)}','${k}',this.value,this)">${e(v)}</textarea>${cmp}</div>`;
 }
+/* HW2 B — a numbered required answer with its chips (same anatomy for both types) */
+function hw2Fld(it, k, n){
+  const e = escHtml, t = it.ticker, v = hw1Vals(it)[k], L = hw1Lbl(it, k), ok = !wlBlank(v), req = hw1ReqKeys(it).includes(k), legacy = !req;
+  const lbl = L.n.replace(/…$/, '…');
+  const chip = req ? `<span class="hw1-c ${ok ? 'ok' : 'req'}" data-hw1-chip="${k}">${ok ? 'done' : 'required'}</span>` : `<span class="hw1-c ${ok ? 'ok' : 'add'}" data-hw1-chip="${k}" data-hw2-add>${ok ? 'done' : 'add'}</span>`;
+  const cmp = (k === 'why' || k === 'exit' || k === 'trigger') ? `<button type="button" class="hw1-cmp" data-hw1-cmp-btn="${k}" ${ok && !ltFactsOnly(wlThesisRaw(it)) ? '' : 'hidden'} onclick="hw1CmpToggle('${e(t)}','${k}')">Compare with thesis ›</button><div class="hw1-cmpb" data-hw1-cmp="${k}" hidden></div>` : '';
+  const at = k === 'why' ? 'data-wl-mt-why ' : k === 'exit' ? 'data-wl-mt-exit ' : k === 'trigger' ? 'data-wl1-trigger ' : '';
+  return `<div class="hw1-fld hw2-f ${ok ? 'ok' : 'no'}${legacy ? ' legacy' : ''}" data-hw1-f="${k}"${req ? ` data-wl1-hwi="${k}"` : ''}><label class="hw1-fl" for="hw1-${k}"><span class="hw2-n">${n} ·</span> ${e(lbl)} ${chip}</label>${L.hint ? `<div class="hw1-hint">${e(L.hint)}</div>` : ''}<div class="hw2-chips" data-hw2-chips="${k}">${hw2ChipsHtml(it, k, v)}</div><textarea id="hw1-${k}" ${at}data-wl-mt-ta data-hw1-ta="${k}" rows="2" maxlength="${k === 'trigger' ? 1000 : k === 'catalyst' ? 400 : 2000}" spellcheck="false" placeholder="${e(L.ph)}" oninput="wlMtIn('${e(t)}','${k}',this.value,this)">${e(v)}</textarea>${cmp}</div>`;
+}
 function hw1PlanFn(it){ const s = escHtml(it.ticker).replace(/'/g, '&#39;'); return wl1Status(it).k === 'none' ? `wlOpenCorePlan('${s}')` : `wl5OpenPlan('${s}')`; }
+function hw2Hold(it){ return wl1TrkOf(it) === 'ladder' ? 'Hold 6 m – 3 y' : 'Hold 2 wk – 3 m'; }
+function hw2SizePct(it){ return wl1TrkOf(it) === 'ladder' ? 50 : Math.round(100 * RiskEngine.POLICY.hwFactor.mom); }   /* the engine's real homework cap: Momentum 70% (hwFactor.mom) · Compounder Pilot 50% */
+function hw2SizeTxt(it, done){ return done ? '' : 'size ' + hw2SizePct(it) + '% until done'; }
+function hw2NextTxt(it){ const d = String(it.next_check_date || ''); if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return ''; const n = String(it.next_check_note || '').trim(); return 'next check ' + lr5Day(d) + (n ? ' (' + n + ')' : ''); }
 function hw1MineHtml(it){
   const e = escHtml, t = it.ticker, ladder = wl1TrkOf(it) === 'ladder', v = hw1Vals(it), p = hw1Prog(it, v), done = wl1HwDone(it), msg = wlMtMsg[t] || '', dirty = wlMtDirty(t);
   const planLbl = wl1Status(it).k === 'none' ? 'Make plan ›' : 'Open plan ›';
-  const main = ladder ? hw1Fld(it, 'why', true) + hw1Fld(it, 'evidence', true) + `<div class="hw1-ask" data-hw1-ask>Which part of your belief has no evidence yet?</div>` + hw1Fld(it, 'unproven', false) + hw1Fld(it, 'exit', true)
-    : hw1Fld(it, 'exit', true) + hw1Fld(it, 'trigger', true);
-  const cat = `<div class="hw1-fld opt" data-hw1-f="catalyst"><label class="hw1-fl o" for="hw1-catalyst">Catalyst <span class="hw1-c opt">optional</span></label><input id="hw1-catalyst" type="text" maxlength="40" data-hw1-ta="catalyst" placeholder="${e(HW1_L.catalyst.ph)}" value="${e(v.catalyst)}" oninput="wlMtIn('${e(t)}','catalyst',this.value,this)"></div>`;
+  const keys = ladder ? ['why', 'evidence', 'exit'] : ['catalyst', 'trigger', 'exit'];
+  const main = keys.map((k, i)=>hw2Fld(it, k, i + 1)).join('');
   const nc = `<div class="hw1-fld opt" data-hw1-f="next"><label class="hw1-fl o">Next check <span class="hw1-c opt">optional</span></label><div class="hw1-nc"><input type="date" data-wl-nc-date aria-label="Next check date" value="${e(v.nc_date)}" oninput="wlMtIn('${e(t)}','nc_date',this.value)"><input type="text" maxlength="120" data-wl-nc-note aria-label="What to check" value="${e(v.nc_note)}" placeholder="e.g. Q3 earnings, 200d MA" oninput="wlMtIn('${e(t)}','nc_note',this.value)"></div></div>`;
-  const optName = ladder ? 'Catalyst · Next check' : 'Why buy · Catalyst · Next check';
-  const opt = `<details class="hw1-opt" data-hw1-opt ${hw1Opt[t] ? 'open' : ''} ontoggle="hw1OptToggle('${e(t)}',this)"><summary>Optional · ${optName}</summary>${ladder ? '' : hw1Fld(it, 'why', false)}${cat}${nc}</details>`;
+  const cat = ladder ? `<div class="hw1-fld opt" data-hw1-f="catalyst"><label class="hw1-fl o" for="hw1-catalyst">Catalyst <span class="hw1-c opt">optional</span></label><input id="hw1-catalyst" type="text" maxlength="400" data-hw1-ta="catalyst" placeholder="e.g. Q3 earnings 28 Jan" value="${e(v.catalyst)}" oninput="wlMtIn('${e(t)}','catalyst',this.value,this)"></div>` : '';
+  const optIn = ladder ? hw1Fld(it, 'unproven', false) + cat + nc : hw1Fld(it, 'why', false) + nc;
+  const opt = `<details class="hw1-opt" data-hw1-opt ${hw1Opt[t] ? 'open' : ''} ontoggle="hw1OptToggle('${e(t)}',this)"><summary>${ladder ? '+ Not proven yet (optional)' : '+ Why buy · Next check (optional)'}</summary>${ladder ? `<div class="hw1-ask" data-hw1-ask>Which part of your belief has no evidence yet?</div>` : ''}${optIn}</details>`;
   const size = done ? `<div class="hw1-size" data-hw1-size>Done · size cap 100% (next step: <button type="button" class="hw1-lnk" onclick="${hw1PlanFn(it)}">${planLbl}</button>)</div>`
-    : `<div class="hw1-size" data-hw1-size>After done: ${wl1TrkOf(it) === 'ladder' ? 'adds &amp; risk above 1% unlock' : 'size 70% → 100%'} (next step: <button type="button" class="hw1-lnk" onclick="${hw1PlanFn(it)}">${planLbl}</button>)</div>`;
-  return `<div class="hw1-mine" data-hw1-mine data-wl-mt="${e(t)}" data-wl-mt-mode="edit"><div class="hw1-mh"><span class="lbl">Your thesis</span><span class="wlMtDraft" data-wl-mt-draft ${dirty ? '' : 'hidden'}>Unsaved draft · <button type="button" class="hw1-lnk" data-wl-mt-ddisc onclick="wlMtDiscard('${e(t)}')">Discard</button></span></div>
+    : `<div class="hw1-size" data-hw1-size>After done: ${ladder ? 'adds &amp; risk above 1% unlock' : 'size 70% → 100%'} (next step: <button type="button" class="hw1-lnk" onclick="${hw1PlanFn(it)}">${planLbl}</button>)</div>`;
+  const line = [hw2Hold(it), ladder ? hw2NextTxt(it) : ''].filter(Boolean).map(e).join(' · ') + (done ? '' : ` · <span class="amb" data-hw2-size>${e(hw2SizeTxt(it, done))}</span>`);
+  return `<div class="hw1-mine" data-hw1-mine data-hw2-type="${hw2Type(it)}" data-wl-mt="${e(t)}" data-wl-mt-mode="edit"><div class="hw1-mh"><span class="lbl">Your thesis</span><span class="wlMtDraft" data-wl-mt-draft ${dirty ? '' : 'hidden'}>Unsaved draft · <button type="button" class="hw1-lnk" data-wl-mt-ddisc onclick="wlMtDiscard('${e(t)}')">Discard</button></span></div>
+    <div class="hw2-line" data-hw2-line>${line}</div>
     <div class="hw1-mscroll">${main}<div class="hw1-mut" data-hw1-plan-note>Price rules (stop, exit) live in the Plan card, not here.</div>${opt}</div>
     <div class="hw1-mfoot"><div class="hw1-btns"><button type="button" class="btn" data-hw1-draft data-wl-mt-save onclick="hw1Save('${e(t)}',false)">Save draft</button><button type="button" class="btn pri" data-hw1-done data-wl1-confirm ${p.miss.length ? 'disabled' : ''} onclick="hw1Done('${e(t)}')"><span class="lg">Save · mark done</span><span class="sm">Mark done</span></button><button type="button" class="hw1-lnk hw1-copy" data-hw1-copy onclick="hw1Copy('${e(t)}')">Copy for AI challenge ›</button></div>
     <div class="hw1-mut" data-wl-mt-msg role="status">${e(msg)}</div>${size}</div></div>`;
@@ -33920,8 +34032,8 @@ function hw1CopyText(it){
     L.push('(no Fact Sheet imported)');
   }
   L.push('', 'My thesis:');
-  const mine = wl1TrkOf(it) === 'ladder' ? [['why', 'I believe'], ['evidence', 'My evidence'], ['unproven', 'Not proven yet'], ['exit', 'What would change my thesis']] : [['why', 'Why buy'], ['exit', 'What would change my thesis'], ['trigger', 'Trigger']];
-  mine.concat([['catalyst', 'Catalyst']]).forEach(a=>{ if(!wlBlank(v[a[0]])) L.push(a[1] + ': ' + String(v[a[0]]).trim()); });
+  const mine = wl1TrkOf(it) === 'ladder' ? [['why', 'I believe'], ['evidence', 'My evidence'], ['unproven', 'Not proven yet'], ['exit', 'What would change my thesis'], ['catalyst', 'Catalyst']] : [['catalyst', 'Catalyst & setup'], ['trigger', 'Trigger'], ['exit', 'What would change my thesis'], ['why', 'Why buy']];
+  mine.forEach(a=>{ if(!wlBlank(v[a[0]])) L.push(a[1] + ': ' + String(v[a[0]]).trim()); });
   return L.join('\n');
 }
 function hw1Copy(sym){
@@ -33933,20 +34045,62 @@ function hw1Copy(sym){
 }
 
 /* ── the page ── */
-function hw1CtxLine(it){
-  const e = escHtml, s = wl5Sec(it), q = s && WL5_QUAD[s.quad], x = wl5RsOf(it), a = [];
-  a.push(wl1TrkOf(it) === 'ladder' ? 'Compounder' : 'Momentum');
-  if(s) a.push(e(WL2_SHORT[s.etf] || s.name) + (q ? ` <span class="${q[1]}">${q[0]}</span>` : ''));
-  if(x.ok) a.push('RS ' + x.rating + (x.line ? ' ' + wl5Arrow(x.line) : ''));
-  if(x.ok && x.off != null) a.push(wl2Pct(x.off) + ' from high');
-  return a.join(' · ');
+/* HW2 B — Momentum context pills on the LEFT (from the Screen row · not in the Fact Sheet, so shown once): RS · sector · earnings · from high. Stock not in Screen → no pills. */
+function hw2ScreenRow(it){ try{ const k = wl1Bare(it.ticker).toUpperCase(); return (rs2.rows || []).find(x=>x && String(x.t).toUpperCase() === k) || null; }catch(e){ return null; } }
+function hw2EarnOf(it, r){   /* next earnings date: Screen row (data job) → Fact Sheet / thesis catalysts that look like earnings → none */
+  const today = thaiToday(), ok = d=>/^\d{4}-\d{2}-\d{2}$/.test(String(d || '')) && String(d) >= today;
+  let nx = r && ok(r.nx) ? r.nx : '';
+  if(!nx){ try{ const c = ltNextCats(it).find(x=>/earn|result|Q[1-4]\b|quarter/i.test(String(x.event || ''))); if(c && ok(c.date)) nx = c.date; }catch(e){} }
+  if(!nx) return null;
+  return {nx, d:Math.round((lr5Utc(nx) - lr5Utc(today)) / 86400000)};
+}
+function hw2PillsHtml(it){
+  if(wl1TrkOf(it) === 'ladder') return '';
+  const r = hw2ScreenRow(it); if(!r) return '';
+  const e = escHtml, x = wl5RsOf(it), s = wl5Sec(it) || (r.s ? {etf:r.s, name:r.s, quad:''} : null), q = s && WL5_QUAD[s.quad], pills = [];
+  const rs = typeof r.r === 'number' ? Math.round(r.r) : (x.ok ? x.rating : null);
+  if(rs != null) pills.push(`<span class="hw2-pill ${rs >= 80 ? 'pg' : 'pn'}" data-hw2-pill="rs">RS ${rs}${x.ok && x.line ? ' ' + wl5Arrow(x.line) : ''}</span>`);
+  if(s) pills.push(`<span class="hw2-pill ${q ? (q[1] === 'up' || q[1] === 'imp' ? 'pb' : q[1] === 'dn' ? 'pa' : 'pn') : 'pn'}" data-hw2-pill="sector">${e(WL2_SHORT[s.etf] || s.name)}${q ? ' ' + q[0] : ''}${s.etf !== 'TH' ? ' vs SPY' : ''}</span>`);
+  const en = hw2EarnOf(it, r);
+  if(en){ const inside = en.d <= 30; pills.push(`<span class="hw2-pill ${inside ? 'pa' : 'pn'}" data-hw2-pill="earn" data-hw2-inside="${inside}">Earnings ${e(lr5Day(en.nx))} · ${en.d === 0 ? 'today' : 'in ' + en.d + 'd'}${inside ? ' · inside your hold' : ''}</span>`); }
+  if(typeof r.o === 'number') pills.push(`<span class="hw2-pill pn" data-hw2-pill="high">${e(wl2Pct(r.o))} from high</span>`);
+  return pills.length ? `<div class="hw2-ctx" data-hw2-ctx>${pills.join('')}</div>` : '';
+}
+function hw2PillsRefresh(t){
+  const pg = document.querySelector('[data-hw1-page="' + t + '"]'), it = wlItemOf(t); if(!pg || !it) return;
+  const old = pg.querySelector('[data-hw2-ctx]'), h = hw2PillsHtml(it);
+  if(!h){ if(old) old.remove(); return; }
+  const tmp = document.createElement('div'); tmp.innerHTML = h; const nu = tmp.firstChild;
+  if(old) old.replaceWith(nu); else { const f = pg.querySelector('.hw1-facts'); if(f) f.insertBefore(nu, f.firstChild); }
+}
+function hw2EnsureData(t){   /* Screen list → pills · earnings date → Compounder next check (auto-filled once) */
+  const it = wlItemOf(t); if(!it) return;
+  const done = ()=>{ try{ hw2PillsRefresh(t); hw2AutoNext(t); }catch(e){} };
+  if(rs2.state === 'idle'){ try{ rs2Load(); }catch(e){} }
+  if(rs2.state === 'loading'){ let n = 0; const iv = setInterval(()=>{ if(rs2.state !== 'loading' || ++n > 40){ clearInterval(iv); done(); } }, 250); }
+  done();
+}
+function hw2AutoNext(t){   /* Compounder · next check = next earnings date (filled automatically · stored in the existing next-check field · only when empty) */
+  const it = wlItemOf(t), col = wlCol(); if(!it || !col || wl1TrkOf(it) !== 'ladder') return;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(String(it.next_check_date || '')) || wlMtDirty(t) || (wlMtDraft[t] && wlMtDraft[t].nc_date)) return;
+  const en = hw2EarnOf(it, hw2ScreenRow(it)); if(!en || it.__hw2Nc) return; it.__hw2Nc = 1;
+  const note = String(it.next_check_note || '').trim() || 'Q results';
+  Promise.resolve(col.doc(it.ticker).update({next_check_date:en.nx, next_check_note:note})).then(()=>{
+    it.next_check_date = en.nx; it.next_check_note = note;
+    const pg = document.querySelector('[data-hw1-page="' + t + '"]'); if(!pg) return;
+    pg.querySelectorAll('[data-hw2-next]').forEach(x=>{ x.textContent = hw2NextTxt(it); x.hidden = false; });
+    const d = pg.querySelector('[data-wl-nc-date]'); if(d && !d.value) d.value = en.nx;
+    const n = pg.querySelector('[data-wl-nc-note]'); if(n && !n.value) n.value = note;
+    const ln = pg.querySelector('[data-hw2-line]'); if(ln && !ln.querySelector('[data-hw2-next]')){ const sp = document.createElement('span'); sp.dataset.hw2Next = ''; sp.textContent = hw2NextTxt(it); const sz = ln.querySelector('[data-hw2-size]'); ln.insertBefore(sp, sz); ln.insertBefore(document.createTextNode(' · '), sz); }
+  }).catch(err=>{ it.__hw2Nc = 0; console.warn('hw2 next check:', err); });
 }
 function hw1PageHtml(r){
   const it = r && r.item; if(!it) return '<div class="panel"><div class="empty">Stock not found</div></div>';
-  const e = escHtml, t = it.ticker, st = wl5Status(it), v = hw1Vals(it), p = hw1Prog(it, v), done = wl1HwDone(it) && !p.miss.length, seg = hw1Seg[t] || (p.n === 0 ? 'facts' : 'mine'), tab = hw2TabOf(it);
-  return `<div class="hw1-pg" data-hw1-page="${e(t)}" data-hw1-show="${seg}" data-hw2-tab="${tab}" data-hw1-track="${wl1TrkOf(it) === 'ladder' ? 'compounder' : 'momentum'}">
-    <div class="hw1-top"><button type="button" class="btn sm hw1-back" data-hw1-back title="Back (Esc or Backspace)" onclick="hwBack()"><span class="lg">‹ Watch</span><span class="sm" aria-label="Back to Watch">‹</span></button><b class="hw1-t">${e(wl1Bare(t))} · Homework</b><span class="st ${st.cls} hw1-st" data-hw1-chip-st>${e(st.label)}</span><span class="hw1-ctx" data-hw1-ctx>${hw1CtxLine(it)}</span>${nt1CtxHtml('stock', it.ticker)}
-      <span class="hw1-pr"><b data-hw1-prog>${done ? '✓ Done' : p.n + ' of ' + p.tot}</b><span class="bar"><i data-hw1-bar style="width:${Math.round(100 * p.n / p.tot)}%"></i></span></span></div>
+  const e = escHtml, t = it.ticker, v = hw1Vals(it), p = hw1Prog(it, v), done = wl1HwDone(it) && !p.miss.length, seg = hw1Seg[t] || 'mine', tab = hw2TabOf(it), ladder = wl1TrkOf(it) === 'ladder';
+  const nx = ladder ? hw2NextTxt(it) : '';
+  return `<div class="hw1-pg" data-hw1-page="${e(t)}" data-hw1-show="${seg}" data-hw2-tab="${tab}" data-hw1-track="${ladder ? 'compounder' : 'momentum'}">
+    <div class="hw1-top"><button type="button" class="btn sm hw1-back" data-hw1-back title="Back (Esc or Backspace)" onclick="hwBack()"><span class="lg">‹ Back</span><span class="sm" aria-label="Back">‹</span></button><b class="hw1-t">${e(wl1Bare(t))}</b><span class="hw2-tag ${ladder ? 'comp' : 'mmt'}" data-hw2-tag>${ladder ? 'COMP' : 'MMT'}</span>${nt1CtxHtml('stock', it.ticker)}
+      <span class="hw1-pr"><span class="bar"><i data-hw1-bar style="width:${Math.round(100 * p.n / p.tot)}%"></i></span><span class="hw2-hold" data-hw2-hold>${e(hw2Hold(it))}</span>${ladder ? `<span class="hw2-nx" data-hw2-next ${nx ? '' : 'hidden'}>${e(nx)}</span>` : ''}<b data-hw1-prog>${done ? '✓ Done' : p.n + ' of ' + p.tot}</b>${done ? '' : `<span class="amb hw2-sz" data-hw2-size>${e(hw2SizeTxt(it, done))}</span>`}</span></div>
     <div class="hw1-segw" role="tablist">${[['business', 'Business'], ['results', 'Results'], ['ai', 'AI'], ['mine', 'Mine']].map(a=>{ const on = seg === 'mine' ? a[0] === 'mine' : a[0] === tab; return `<button type="button" role="tab" data-hw1-seg="${a[0]}" class="${on ? 'on' : ''}" aria-selected="${on}" onclick="hw1SegSet('${e(t)}','${a[0]}')">${a[1]}</button>`; }).join('')}</div>
     <div class="hw1-body">${hw1FactsHtml(it)}${hw1MineHtml(it)}${ux3RzHtml(HW_SPLIT)}</div></div>`;
 }

@@ -141,7 +141,7 @@ def watch_list(pw, w, h):
         r = rows(page)
         check(f"{tag} 1 Momentum list: ADBE (Holding, homework missing) → MSFT (Holding, done) → AMD (Planned) → HANA (No plan); no Compounder rows", r == ["ADBE", "MSFT", "AMD", "HANA.BK"], r)   # UX3 E: HOLDING (not done first) → PLANNED → WATCHING
         check(f"{tag} 1 status chips: Holding · Holding · Planned · No plan", [chip(page, s) for s in r] == ["Holding", "Holding", "Plan ready", "No plan"], [chip(page, s) for s in r])
-        check(f"{tag} 1 cap tags: not done = 50% · done = 100%; homework text names what is missing", "size 70%" in rowtxt(page, "ADBE") and ("Done" in rowtxt(page, "MSFT") or "thesis done" in rowtxt(page, "MSFT")) and ("Missing trigger" in rowtxt(page, "AMD") or "trigger missing" in rowtxt(page, "AMD") or "1 of 2 · Trigger missing" in rowtxt(page, "AMD")), [rowtxt(page, s) for s in r])
+        check(f"{tag} 1 cap tags: not done = 50% · done = 100%; homework text names what is missing", "size 70%" in rowtxt(page, "ADBE") and ("Done" in rowtxt(page, "MSFT") or "thesis done" in rowtxt(page, "MSFT")) and ("Missing trigger" in rowtxt(page, "AMD") or "trigger missing" in rowtxt(page, "AMD") or "1 of 2 · Trigger missing" in rowtxt(page, "AMD") or "1 of 3 · Catalyst missing" in rowtxt(page, "AMD")), [rowtxt(page, s) for s in r])
         check(f"{tag} 1 summary line: 4 stocks · 3 need homework", re.search(r"4 stocks.*3 need homework", txt(page, "[data-wl1-sum]") or "") is not None, txt(page, "[data-wl1-sum]"))
         check(f"{tag} 1 segmented control shows counts Momentum 4 | Compounder 2", re.search(r"Mom(entum)? 4", txt(page, "[data-wl1-segs]") or "") is not None and re.search(r"Comp(ounder)? 2", txt(page, "[data-wl1-segs]") or "") is not None, txt(page, "[data-wl1-segs]"))
         js(page, "()=>wl1TrkSet('ladder')"); settle(page, 400)
@@ -343,7 +343,7 @@ def workflow(pw, w, h):
         # homework: fields + confirm
         js(page, "()=>hwOpen('FFIL')"); settle(page, 500)   # HW1: confirm = Save · mark done on the Homework page
         check(f"{tag} 4 homework needs fields AND confirm: confirm disabled while ④ / trigger empty", js(page, "()=>document.querySelector('[data-wl1-confirm]').disabled"), "")
-        page.evaluate("()=>wlCol().doc('FFIL').update({my_thesis:{why:'',exit:'Loses 90',updated_at:new Date().toISOString()}, hw:{trigger:'Close > 101'}})"); settle(page, 700)
+        page.evaluate("()=>wlCol().doc('FFIL').update({my_thesis:{why:'',exit:'Loses 90',updated_at:new Date().toISOString()}, hw:{trigger:'Close > 101', catalyst:'Beat and raise'}})"); settle(page, 700)
         js(page, "()=>hwOpen('FFIL')"); settle(page, 400)
         check(f"{tag} 4 text alone is not 'done': fields filled but not reviewed → still 50% / task stays", js(page, "()=>wl1HwDone(wlItemOf('FFIL'))") is False and js(page, "()=>!document.querySelector('[data-wl1-confirm]').disabled") and js(page, "()=>wl1CapPct(wlItemOf('FFIL'))") == 50, "")
         page.locator("[data-wl1-confirm]").click(); settle(page, 900)

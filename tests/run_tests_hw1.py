@@ -29,7 +29,7 @@ def run(pw, w, h):
         js(page, "()=>{ const it = wlItemOf('AVGO'); it.hw = Object.assign({}, it.hw, {catalyst:'Q4 results 10 Dec'}); renderWatchlist(); }"); page.wait_for_timeout(200)
         check(f"{tag} list: done with catalyst -> 'Done · Q4 results 10 Dec'", info("AVGO") == "Done · Q4 results 10 Dec", info("AVGO"))
         js(page, "()=>{ const it = wlItemOf('PLTR'); it.my_thesis = {exit:'Growth under 20% two quarters'}; renderWatchlist(); }"); page.wait_for_timeout(200)
-        check(f"{tag} list: 1 of 2 · first missing named", info("PLTR") == "1 of 2 · Trigger missing", info("PLTR"))
+        check(f"{tag} list: 1 of 2 · first missing named", info("PLTR") == "1 of 3 · Catalyst missing", info("PLTR"))   # HW2 B: Momentum = catalyst + trigger + exit
         js(page, "()=>{ const it = wlItemOf('PLTR'); it.my_thesis = {}; renderWatchlist(); }")
         js(page, "()=>{ wl1Trk = 'ladder'; renderWatchlist(); }"); page.wait_for_timeout(250)
         check(f"{tag} list: Compounder 2 of 3 · Change-my-thesis missing", info("ZZ") == "2 of 3 · Change-my-thesis missing", info("ZZ"))
@@ -56,12 +56,12 @@ def run(pw, w, h):
         if not phone: check(f"{tag} desktop: the Watch list is NOT visible on the Homework page (display/size)", js(page, LST) is False, js(page, "()=>getComputedStyle(document.querySelector('.lr5-list')).display"))
         check(f"{tag} page opens: list hidden", js(page, "()=>!!document.querySelector('[data-hw1-page=\"WHSE\"]') && document.querySelector('.lr5.full')!==null"))
         top = js(page, TXT, ".hw1-top") or ""
-        check(f"{tag} top bar: title + progress 0 of 3", "WHSE · Homework" in top and "0 of 3" in top, top)
+        check(f"{tag} top bar: title + progress 0 of 3", top.startswith("‹") and "WHSE" in top and "COMP" in top and "0 of 3" in top and (phone or ("Hold 6 m – 3 y" in top and "size 50% until done" in top)), top)   # HW2 B header
         keys = js(page, "()=>[...document.querySelectorAll('[data-hw1-f]')].map(x=>x.dataset.hw1F+':'+(x.querySelector('.hw1-c')||{}).innerText)")
-        check(f"{tag} Compounder fields: why/evidence/unproven/exit; required vs optional chips", keys[:4] == ["why:required", "evidence:required", "unproven:optional", "exit:required"], keys)
-        check(f"{tag} Compounder: Catalyst + Next check live under the ▸ Optional fold", js(page, "()=>{ const d = document.querySelector('[data-hw1-opt]'); return !!d && !!d.querySelector('[data-hw1-ta=catalyst]') && !!d.querySelector('[data-wl-nc-date]') && d.innerText.includes('Optional'); }"))
-        check(f"{tag} prompt line + hints + price-rules line", all(x in js(page, "()=>document.querySelector('[data-hw1-mine]').innerText") for x in ["Which part of your belief has no evidence yet?", "What will happen in the business?", "Which facts on the left support it, and why?", "A business result, not a price · number + threshold + by when", "Price rules (stop, exit) live in the Plan card, not here."]))
-        check(f"{tag} placeholder 'e.g. Renewal rate below 91% for 2 quarters'", js(page, "()=>document.querySelector('[data-hw1-ta=exit]').placeholder") == "e.g. Renewal rate below 91% for 2 quarters")
+        check(f"{tag} Compounder fields: why/evidence/unproven/exit; required vs optional chips", keys[:3] == ["why:required", "evidence:required", "exit:required"] and [k.split(":")[0] for k in keys[3:]] == ["unproven", "catalyst", "next"], keys)   # HW2 B: 3 numbered answers, Not proven yet folded
+        check(f"{tag} Compounder: Catalyst + Next check live under the ▸ Optional fold", js(page, "()=>{ const d = document.querySelector('[data-hw1-opt]'); return !!d && !!d.querySelector('[data-hw1-ta=catalyst]') && !!d.querySelector('[data-wl-nc-date]') && d.innerText.includes('Not proven yet'); }"))
+        check(f"{tag} prompt line + hints + price-rules line", all(x in js(page, "()=>document.querySelector('[data-hw1-mine]').textContent") for x in ["Which part of your belief has no evidence yet?", "What will happen in the business over the next 1–3 years?", "Facts from the left that support it — tap to add", "A business result, not a price · number + within how many quarters (checked each earnings)", "Price rules (stop, exit) live in the Plan card, not here."]))
+        check(f"{tag} placeholder 'e.g. Renewal rate below 91% for 2 quarters'", js(page, "()=>document.querySelector('[data-hw1-ta=exit]').placeholder") == "e.g. Renewal below 88% for 2 quarters")
         dn = lambda: js(page, "()=>document.querySelector('[data-hw1-done]').disabled")
         check(f"{tag} Save · mark done disabled while required are empty", dn() is True)
         check(f"{tag} Compare hidden while the fields are empty", not any(js(page, VIS, '[data-hw1-cmp-btn="%s"]' % k) for k in ("why", "exit")))
@@ -87,13 +87,15 @@ def run(pw, w, h):
         # ---- Momentum fields
         H.go(page, "PLTR", "winner")
         keys = js(page, "()=>[...document.querySelectorAll('[data-hw1-mine] [data-hw1-f]')].map(x=>x.dataset.hw1F+':'+(x.querySelector('.hw1-c')||{}).innerText)")
-        check(f"{tag} Momentum: exit + trigger required; Why buy · Catalyst · Next check optional (in the fold)", keys[:2] == ["exit:required", "trigger:required"] and [k.split(":")[0] for k in keys[2:]] == ["why", "catalyst", "next"], keys)
+        check(f"{tag} Momentum: catalyst + trigger + exit required (HW2); Why buy · Next check optional (in the fold)", keys[:3] == ["catalyst:required", "trigger:required", "exit:required"] and [k.split(":")[0] for k in keys[3:]] == ["why", "next"], keys)
         check(f"{tag} Momentum has no evidence / not-proven field", not js(page, "()=>!!document.querySelector('[data-hw1-ta=evidence],[data-hw1-ta=unproven]')"))
-        check(f"{tag} Trigger hint", "Price/RS condition + confirmation" in js(page, "()=>document.querySelector('[data-hw1-mine]').innerText"))
+        check(f"{tag} Trigger hint", "When do you buy? One line" in js(page, "()=>document.querySelector('[data-hw1-mine]').innerText"))
         H.fill(page, "exit", "Growth under 20% two quarters in a row")
-        check(f"{tag} Momentum: one of two filled -> still disabled", dn() is True)
+        check(f"{tag} Momentum: one of three filled -> still disabled", dn() is True)
         H.fill(page, "trigger", "Close above 150 on 1.5x volume")
-        check(f"{tag} Momentum: both filled -> enabled", dn() is False)
+        check(f"{tag} Momentum: two of three filled -> still disabled", dn() is True)
+        H.fill(page, "catalyst", "Beat and raise, tight base")
+        check(f"{tag} Momentum: all three filled -> enabled", dn() is False)
         # dirty guard
         js(page, "()=>{ window.__asked = 0; window.confirm = ()=>{ window.__asked++; return false; }; }")
         js(page, "()=>hwBack()"); page.wait_for_timeout(200)
