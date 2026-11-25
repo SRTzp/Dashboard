@@ -5372,6 +5372,7 @@ html body .lr5 .hw1-c.req{color:var(--lr-warn);background:#FBF1E1}html body .lr5
 html body .lr5 .hw1-hint{font-size:12px;color:var(--lr-muted)}
 html body .lr5 .hw1-fld textarea,html body .lr5 .hw1-fld input[type=text],html body .lr5 .hw1-fld input[type=date]{font:15px/1.4 var(--lr-sans);border:1px solid var(--lr-line2);border-radius:10px;padding:10px 12px;background:#fff;color:var(--lr-ink);width:100%;box-sizing:border-box;resize:none;min-height:40px;box-shadow:none}
 html body .lr5 .hw1-fld textarea:focus,html body .lr5 .hw1-fld input:focus{outline:2px solid var(--lr-mmt);outline-offset:-1px}
+html body .lr5 .hw1-fld.hw2-hl{outline:2px solid #D9921A;outline-offset:4px;border-radius:10px;transition:outline-color .6s}   /* HW2 A — landing on the first missing field */
 html body .lr5 .hw1-nc{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px}
 html body .lr5 .hw1-ask{font-size:13px;color:var(--lr-text2);background:#F7F8FA;border-radius:8px;padding:8px 10px}
 html body .lr5 .hw1-cmp,html body .lr5 .hw1-lnk{border:0;background:none;color:var(--lr-mmt);font:600 12px var(--lr-sans);padding:0;cursor:pointer;align-self:flex-start;text-decoration:none;box-shadow:none;min-height:0}
@@ -11765,7 +11766,7 @@ function indentFt(t, indent){ return indent ? '' : ftTradeTag(t); }
 function ftGo(sym){
   try{
     switchTab('watch'); const it = wlItemOf(sym);
-    if(it && (wlBlank(wlMyThesis(it).why) || wlBlank(wlMyThesis(it).exit))) wlOpen(sym, 'why');
+    if(it && (wlBlank(wlMyThesis(it).why) || wlBlank(wlMyThesis(it).exit))) hwGo(sym);   /* HW2 A */
     else if(it) scrOpen(sym);
     else wlOpen(sym);
   }catch(e){ try{ sdToast("Couldn't open " + sym); }catch(_){} }
@@ -12052,11 +12053,7 @@ function td3PlanCore(sym, market){
   try{ coreNewOpen(A ? A.id : null, {ticker:sym}); }catch(e){ console.warn('td3 plan core:', e); }
 }
 function td3Screen(sym){ switchTab('watch'); try{ wlSetView('cand'); }catch(e){} wlOpen(sym); }
-function td3HwGo(t, src, sub){
-  switchTab('watch');
-  if(src==='C'){ try{ wlSetView('cand'); }catch(e){} }
-  wlOpen(t, sub || '');
-}
+function td3HwGo(t, src, sub){ hwGo(t); }   /* HW2 A — thin wrapper: every homework entry is hwGo(sym) (no wlOpen(sym, sub), no old full-thesis view) */
 
 /* ── Weekend ── */
 function td3NtList(wk){ const r = tdSettings().satWeekNoTrade, a = (r && typeof r==='object' && !Array.isArray(r)) ? r[wk || wpWeekKey()] : null; return Array.isArray(a) ? a.filter(x=>typeof x==='string' && x) : []; }
@@ -12340,7 +12337,7 @@ function td3CoreDaily(M){
     const parts = hw.parts || [], miss = TD_HW_SHOW.filter(x=>!parts.includes(x.id)), first = miss[0];
     hwDone = !!hw.done;
     t1 = hw.done ? `<div class="td3-it done" data-td3-hw="done">✓ <b>${s(hw.t)}</b> · Thesis ${parts.length}/${TD_HW_IDS.length}</div>`
-      : `<div class="td3-it" data-td3-hw="open"><b>${s(hw.t)}</b> · Thesis ${parts.length}/${TD_HW_IDS.length} · <span data-td4-hwmiss>Missing: ${miss.map(x=>TD3_HW_N[x.id]).join(' · ')}</span><span class="td3-acts"><button type="button" class="td3-lk" data-td3-hwgo onclick="td3HwGo('${s(hw.t)}','${s(hw.src || 'W')}','${first ? (TD3_HW_SUB[first.id] || '') : ''}')">Continue ›</button><button type="button" class="td3-lk" data-td3-hwnext onclick="tdHwNext()">Change</button></span></div>`;
+      : `<div class="td3-it" data-td3-hw="open"><b>${s(hw.t)}</b> · Thesis ${parts.length}/${TD_HW_IDS.length} · <span data-td4-hwmiss>Missing: ${miss.map(x=>TD3_HW_N[x.id]).join(' · ')}</span><span class="td3-acts"><button type="button" class="td3-lk" data-td3-hwgo onclick="td3HwGo('${s(hw.t)}','${s(hw.src || 'W')}','')">Continue ›</button><button type="button" class="td3-lk" data-td3-hwnext onclick="tdHwNext()">Change</button></span></div>`;
   } else t1 = `<div class="m" data-td3-hw="none">No stock to deep-dive today</div>`;
   const nxW = by[effMk] && nOf(effMk) >= 1 ? td4HwNextWlPick(effMk) : null;
   const nextBtn = nxW ? `<div class="m td4-nx" data-td4-hwnx>${effMk} done · <button type="button" class="td3-lk" data-td4-hwnext-wl onclick="td4HwNextWl('${effMk}')">Next from Watchlist ›</button></div>` : '';
@@ -13605,7 +13602,7 @@ function td4RemGo(sec, mk){
       const x = M.hwm && M.hwm[mk || td4HwMk];
       if(!x || !x.t) return fail('Deep dive ' + (mk || td4HwMk));
       const miss = TD_HW_SHOW.filter(p=>!(x.parts || []).includes(p.id))[0];
-      td3HwGo(x.t, x.src || 'W', miss ? (TD3_HW_SUB[miss.id] || '') : '');
+      hwGo(x.t);   /* HW2 A */
       return true;
     }
     if(sec === 'sat'){
@@ -28665,7 +28662,7 @@ function pc2Gate(it){
   if(g && g.ok) return out;
   out.ok = false; out.why = g ? g.msg : '';
   const R = m ? m.reasons : [], hw = pc2Hw(c);
-  if(R.indexOf('ADDON_THESIS') >= 0){ out.short = `Add needs homework (${hw.n} of ${hw.tot})`; out.fix = {t:'Homework ›', fn:`td3HwGo('${td3E(c.ticker).replace(/'/g, "\\'")}','W','')`, k:'hw'}; out.why = out.short; return out; }
+  if(R.indexOf('ADDON_THESIS') >= 0){ out.short = `Add needs homework (${hw.n} of ${hw.tot})`; out.fix = {t:'Homework ›', fn:`hwGo('${td3E(c.ticker).replace(/'/g, "\\'")}')`, k:'hw'}; out.why = out.short; return out; }
   if(m && m.fit && (R.indexOf('ADDON_TOTAL_RISK') >= 0 || R.indexOf('PLAN_TOTAL_RISK') >= 0)){
     const f = m.fit, add = R.indexOf('ADDON_TOTAL_RISK') >= 0 && f.held > 0 && f.avg > 0 && f.uv > 0;
     if(add){ const room = f.budgetMoney - f.newRisk; const need = f.avg - Math.max(0, room) / (f.held * f.uv), cur = +it.sl; if(room > 0 && need > cur + 1e-9){ out.short = `Add needs stop ≥ ${td3Num(Math.ceil(need * 100) / 100)} (now ${td3Num(cur)})`; out.fix = {t:'Move stop ›', fn:`coreStopOpen('${td3E(it.id).replace(/'/g, "\\'")}')`, k:'stop'}; out.why = out.short; return out; } }
@@ -28776,7 +28773,7 @@ function pc2CardHtml(it){
   const near = it.pct != null && nearEntry(it.pct);
   const CI = '①②③④', lvLab = it.nl > 1 ? (CI[Math.min(it.k || 0, 3)] || '') : '';
   const placeLab = lvLab ? 'Place ' + lvLab : 'Place order';
-  const wlHw = c ? `td3HwGo('${td3E(c.ticker).replace(/'/g, "\\'")}','W','')` : '';
+  const wlHw = c ? `hwGo('${td3E(c.ticker).replace(/'/g, "\\'")}')` : '';
   if(plan){
     if(sat && blk){ nx = `<span class="w" data-pv-warn data-pc2-warn data-bd-blockedtag>⚠ ${e(pc2Why(blk.why, it))}</span>${blk.btn ? pc2Btn(blk.btn, `bdFix('${qid}','${e(blk.k)}')`, {k:'fix', fixk:blk.k}) : pc2Btn('Place order', '', {dis:true, title: blk.k === 'trend' ? 'Blocked by trend rule' : blk.why})}`; nxCls = ' blk'; }
     else if(blk){
@@ -29115,7 +29112,7 @@ function bdThesisHtml(it){
   const hide = it.tag === 'MMT' && wlBlank(m.why) && !wlBlank(m.exit);
   return `<div class="bd-sec"><div class="bd-k">THESIS</div><div class="bd-read" data-bd-thesis>${hide ? '' : row('① Why buy', m.why)}${row('④ Wrong if', m.exit)}</div></div>`;
 }
-function bdAddThesis(sym){ bdClose(); switchTab('watch'); try{ wlSetView('wl'); }catch(e){} try{ wlOpen(sym); }catch(e){} }
+function bdAddThesis(sym){ bdClose(); hwGo(sym); }   /* HW2 A */
 function bdLevelsHtml(it){
   const e = bdE, hold = it.status === 'hold';
   const right = hold ? (it.R == null ? '— R' : `${it.R >= 0 ? '+' : '−'}${Math.abs(it.R).toFixed(1)}R`) : (it.pct == null ? '— to entry' : `${it.pct < 0 ? '−' : '+'}${Math.abs(it.pct).toFixed(1)}% to entry`);
@@ -29240,7 +29237,7 @@ function pc2HomeworkHtml(it){
   if(it.kind !== 'core') return '';
   const c = it.ref, hw = pc2Hw(c), comp = it.tag === 'COMP', e = bdE;
   const txt = hw.done ? 'done' : (comp ? 'adds locked until done' : `size ${Math.round(RiskEngine.POLICY.hwFactor.mom * 100)}% until done`);
-  return `<div class="bd-sec" data-pc2-grp="homework"><div class="bd-k">HOMEWORK</div><div class="pc2-hw2" data-pc2-hwbox><div class="r"><b class="num">${hw.n} of ${hw.tot}</b><span class="${hw.done ? 'g' : 'w'}">${e(txt)}</span><button type="button" class="bd-link" data-pc2-hwopen onclick="td3HwGo('${e(c.ticker).replace(/'/g, "\\'")}','W','')">Open ›</button></div><div class="bar"><i style="width:${Math.round(100 * hw.n / Math.max(1, hw.tot))}%"></i></div></div></div>`;
+  return `<div class="bd-sec" data-pc2-grp="homework"><div class="bd-k">HOMEWORK</div><div class="pc2-hw2" data-pc2-hwbox><div class="r"><b class="num">${hw.n} of ${hw.tot}</b><span class="${hw.done ? 'g' : 'w'}">${e(txt)}</span><button type="button" class="bd-link" data-pc2-hwopen onclick="hwGo('${e(c.ticker).replace(/'/g, "\\'")}')">Open ›</button></div><div class="bar"><i style="width:${Math.round(100 * hw.n / Math.max(1, hw.tot))}%"></i></div></div></div>`;
 }
 function pc2SetupHtml(it){ return it.kind === 'sat' ? bdChecksHtml(it).replace('>CHECKS<', '>SETUP CHECK<') : ''; }
 function pc2BlockedBox(it, gate, pv){
@@ -29250,7 +29247,7 @@ function pc2BlockedBox(it, gate, pv){
   if(it.kind === 'core'){
     if(!gate || gate.ok) return '';
     why = gate.why; const f = gate.fix;
-    const hw = f && f.k === 'hw' ? `<button type="button" class="go p pri" data-pc2-fix="hw" onclick="${f.fn}">Do homework ›</button>` : (f ? `<button type="button" class="go p pri" data-pc2-fix="${f.k}" onclick="${f.fn}">${bdE(f.t)}</button>` : (pc2Hw(it.ref).done ? '' : `<button type="button" class="go" data-pc2-fix="hw" onclick="td3HwGo('${bdE(it.ref.ticker).replace(/'/g, "\\'")}','W','')">Do homework ›</button>`));
+    const hw = f && f.k === 'hw' ? `<button type="button" class="go p pri" data-pc2-fix="hw" onclick="${f.fn}">Do homework ›</button>` : (f ? `<button type="button" class="go p pri" data-pc2-fix="${f.k}" onclick="${f.fn}">${bdE(f.t)}</button>` : (pc2Hw(it.ref).done ? '' : `<button type="button" class="go" data-pc2-fix="hw" onclick="hwGo('${bdE(it.ref.ticker).replace(/'/g, "\\'")}')">Do homework ›</button>`));
     const how = f && f.k === 'hw' ? 'Homework unlocks adds.' : f && f.k === 'stop' ? 'Raise the stop first, then the add fits.' : 'Today’s limit comes from the regime and what is already at risk.';
     return `<div class="pc2-amber" data-pc2-blocked role="alert"><div class="t">⚠ ${bdE(why)}</div><div class="s">${bdE(how)}</div><div class="a">${hw}<button type="button" class="go" data-pc2-editplan onclick="bdEditLv('${id}')">Edit plan</button></div></div>`;
   }
@@ -29798,7 +29795,7 @@ function re2Model(acct){
       if(ok) o = {g:'manage', chip:'Holding', cc:'', k:'addon', btn:'Add-on ›', fn:`bdAddon('${td3E(it.id)}')`, why:'add-on allowed', warn:true, lv:''};
     }
     if(!o && it.kind === 'core' && it.tag === 'COMP'){ try{ if(ftHwDone(it.sym)){ const cx = coreCtxC(it.ref), ar = coreAddRe1(it.ref, coreView(it.ref, cx), cx), rs = (ar.model && ar.model.reasons) || [], i = rs.indexOf('ADDON_TOTAL_RISK'); if(i >= 0){ const tx = (ar.model.reasonTexts || [])[i] || 'Ticker total risk would exceed the plan limit'; o = {g:'manage', chip:'Holding', cc:'', k:'addon', btn:'Add-on ›', dis:true, title:tx, why:'Add-on blocked · ' + tx, warn:true, lv:''}; } } }catch(x){} }   /* E2E1 — thesis done but the total-risk rule blocks the add-on: the reason is on the row (ADDON_TOTAL_RISK) */
-    if(!o && it.kind === 'core' && it.tag === 'COMP'){ let hw = true; try{ hw = !!ftHwDone(it.sym); }catch(x){} if(!hw) o = {g:'manage', chip:'Holding', cc:'', k:'hw', btn:'Homework → unlocks adds ›', mute:true, fn:`td3HwGo('${td3E(it.sym)}','W','')`, why:'', warn:false, lv:''}; }   /* NT1b §6.3 — the homework message lives in To do; the Act row shows only the muted way in */
+    if(!o && it.kind === 'core' && it.tag === 'COMP'){ let hw = true; try{ hw = !!ftHwDone(it.sym); }catch(x){} if(!hw) o = {g:'manage', chip:'Holding', cc:'', k:'hw', btn:'Homework → unlocks adds ›', mute:true, fn:`hwGo('${td3E(it.sym)}')`, why:'', warn:false, lv:''}; }   /* NT1b §6.3 — the homework message lives in To do; the Act row shows only the muted way in */
     if(!o && it.kind === 'core'){ try{ const tw = ltTws(wlItemOf(it.sym)).filter(w=>w.level === 'broken' || w.level === 'review')[0]; if(tw) o = {g:'manage', chip:'Holding', cc:'', k:'review', btn:'Review ›', fn:`td3Screen('${td3E(it.sym)}')`, why:'tripwire ' + (tw.level === 'broken' ? 'hit' : 'review') + ' · ' + ltShort(tw.sig, 28), warn:true, lv:''}; }catch(x){} }
     if(o) manage.push({it, o}); else if(it.kind === 'sat') satHold.push({it, o:{g:'manage', k:'satmgr', chip:'Holding', cc:'', why:'', warn:false, lv:''}}); else nothing++;   /* HF5 — every open Sat position gets a row (Price › · Move stop ›) */
   });
@@ -31195,7 +31192,7 @@ function wl1HwWrite(sym, patch){
 }
 function wl1HwTrigger(sym, v){ wl1HwWrite(sym, {trigger: String(v || '').trim().slice(0, 1000)}).then(()=>{ try{ renderWatchlist(); }catch(e){} }); }
 function wl1HwConfirm(sym){ hw1Save(sym, true); }   /* HW1 — "Save · mark done" on the Homework page */
-function wl1Fill(sym){ hwOpen(sym); }   /* HW1 — old "Fill ① ›" now opens the Homework page */
+function wl1Fill(sym){ hwGo(sym); }   /* HW1 — old "Fill ① ›" now opens the Homework page */
 function wl1Go(sym){
   try{ if(typeof bdClose === 'function') bdClose(); }catch(e){}
   try{ coreSheetClose(); }catch(e){}
@@ -31218,7 +31215,7 @@ function wl1HwLegacyHtml(r){   /* HW1 — old Homework checklist panel (kept for
 function wl1HwHtml(r){   /* HW1 — one muted line at the bottom of the Full thesis view: Homework n of m · Continue › */
   const it = r && r.item; if(!it) return '';
   const e = escHtml, req = wl1HwReq(it), miss = wl1HwMissing(it), done = wl1HwDone(it), t = it.ticker;
-  return `<div class="panel wl1-hw ${done ? 'done' : 'todo'}" data-wl1-hw data-wl1-hw-state="${done ? 'done' : 'todo'}"><div class="wl1-hwh"><b>Homework ${req.length - miss.length} of ${req.length}</b><span class="wl1-hws">${done ? '✓ done' + (it.hw.doneAt ? ' ' + e(hw1DateOf(it.hw.doneAt)) : '') : e(miss.length ? miss[0].h + ' missing' : 'not confirmed')}</span><button type="button" class="small ${done ? '' : 'primary'}" data-wl1-fill onclick="hwOpen('${e(t)}')">${done ? 'Open homework ›' : 'Continue homework ›'}</button></div></div>`;
+  return `<div class="panel wl1-hw ${done ? 'done' : 'todo'}" data-wl1-hw data-wl1-hw-state="${done ? 'done' : 'todo'}"><div class="wl1-hwh"><b>Homework ${req.length - miss.length} of ${req.length}</b><span class="wl1-hws">${done ? '✓ done' + (it.hw.doneAt ? ' ' + e(hw1DateOf(it.hw.doneAt)) : '') : e(miss.length ? miss[0].h + ' missing' : 'not confirmed')}</span><button type="button" class="small ${done ? '' : 'primary'}" data-wl1-fill onclick="hwGo('${e(t)}')">${done ? 'Open homework ›' : 'Continue homework ›'}</button></div></div>`;
 }
 
 /* ── list: rows · sort · header · notice ── */
@@ -31337,7 +31334,7 @@ function wl5OpenPlan(sym){
   if(cs.length){ try{ return td3PlanRowGo(cs[0].id); }catch(e){} }
   wlOpenCorePlan(sym);
 }
-function wl5Hw(sym){ hwOpen(sym); }   /* HW1 — "Homework ›" opens the Homework page */
+function wl5Hw(sym){ hwGo(sym); }   /* HW1 — "Homework ›" opens the Homework page */
 function wl5Full(sym, sub){ wlOpen(sym, sub || 'sum'); wl5FullSym = wlSel; hwSym = ''; wlMenu = ''; renderWatchlist(); }
 function wl5FullOff(){ wl5FullSym = ''; hwSym = ''; renderWatchlist(); }
 function wl5RowHtml(r){
@@ -33539,12 +33536,37 @@ function hw1Prog(it, v){ const keys = hw1ReqKeys(it), miss = keys.filter(k=>wlBl
 function hw1DateOf(iso){ const d = String(iso || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(d) ? wl1ArchDate(d) : ''; }
 
 /* ── open / close ── */
+let hwFrom = null;   /* HW2 A — where the user came from: {tab, y} when it was not Watch */
 function hwOpen(sym){
   const it = wlItemOf(sym); if(!it) return;
+  hwFrom = null;
   wlOpen(String(it.ticker).toUpperCase(), ''); hwSym = wlSel; wl5FullSym = wlSel; wlMenu = ''; wlMenuMsg = '';
-  const v = hw1Vals(it); hw1Seg[it.ticker] = hw1Prog(it, v).n === 0 ? 'facts' : 'mine';
+  hw1Seg[it.ticker] = 'mine';   /* HW2 A — phone always opens on My thesis · Facts is one tap */
   renderWatchlist();
   try{ const sc = document.querySelector('[data-hw1-page]'); if(sc && !wlNarrow()) window.scrollTo(0, 0); }catch(e){}
+  hw2Land(it.ticker);
+}
+/* HW2 A — the ONE way into Homework: Today rows · Today list · Plan card fix · Place order fix · Watch row / detail */
+function hwGo(sym){
+  const from = activeTab !== 'watch' ? {tab:activeTab, y:window.scrollY || 0} : null;
+  try{ switchTab('watch'); }catch(e){}
+  const it = wlItemOf(sym);
+  if(!it){ try{ if(wlView !== 'wl') wlSetView('wl'); wlOpen(sym); }catch(e){} return; }   /* not on Watch (nothing to do homework on) → just show it */
+  try{ wl1SegGo(wl1TrkOf(it)); }catch(e){}   /* the Momentum / Compounder tab the stock lives in */
+  hwOpen(sym); hwFrom = from;
+}
+function hw2Land(t){   /* first missing required field: scrolled into view + short amber outline (desktop also focuses it) */
+  const go = ()=>{
+    try{
+      const it = wlItemOf(t), pg = document.querySelector('[data-hw1-page]'); if(!it || !pg) return;
+      const k = hw1Prog(it, hw1Vals(it)).miss[0]; if(!k) return;
+      const f = pg.querySelector('[data-hw1-f="' + k + '"]'); if(!f) return;
+      f.classList.add('hw2-hl'); setTimeout(()=>f.classList.remove('hw2-hl'), 2200);
+      f.scrollIntoView({block:'center'});
+      if(!wlNarrow()){ const ta = f.querySelector('[data-hw1-ta]'); if(ta) ta.focus({preventScroll:true}); }
+    }catch(e){}
+  };
+  go(); requestAnimationFrame(go);
 }
 function hwBack(){
   const it = wlItemOf(hwSym);
@@ -33552,7 +33574,14 @@ function hwBack(){
     if(!confirm('You have unsaved changes. They stay as a draft on this device. Leave?')) return;
     wlMtFlush(it.ticker);
   }
+  const from = hwFrom; hwFrom = null;
   hwSym = ''; wl5FullSym = ''; wlMobOpen = false; wlFullOff();
+  if(from && from.tab && from.tab !== 'watch'){   /* HW2 A — back to where it started (Today: same tab + scroll) */
+    try{ switchTab(from.tab); }catch(e){}
+    const y = from.y, sc = ()=>{ try{ window.scrollTo(0, y); }catch(e){} };
+    requestAnimationFrame(sc); setTimeout(sc, 60); setTimeout(sc, 250);
+    return;
+  }
   renderWatchlist();
   const y = wlScroll; requestAnimationFrame(()=>{ try{ window.scrollTo(0, y); }catch(e){} });
 }
@@ -33936,7 +33965,7 @@ function wl5DetHtml(r){   /* HW1 — A: header · context · Why on Watch · Hom
   const line = (lb, v, k)=>`<div class="lr5-sl" data-lr5-f="${k}"><span class="lbl">${lb}</span>${wlBlank(v) ? '<span class="amb" data-lr5-empty>Not written yet</span>' : `<span class="v" title="${e(String(v).replace(/\s+/g, ' ').trim())}">${e(String(v).replace(/\s+/g, ' ').trim())}</span>`}</div>`;
   const l2 = ladder ? line('I believe', m.why, 'why') + (wlBlank(m.unproven) ? '' : line('Not proven', m.unproven, 'unproven')) : line('Trigger', hw.trigger, 'trigger') + line('Changes if', m.exit, 'exit');
   const dd = done ? hw1DateOf(hw.doneAt) : '';
-  const mainBtn = act.hw ? `<button type="button" class="btn lr5-main" data-lr5-main data-sym="${e(it.ticker)}" onclick="hwOpen(this.dataset.sym)">Continue homework ›</button>`
+  const mainBtn = act.hw ? `<button type="button" class="btn lr5-main" data-lr5-main data-sym="${e(it.ticker)}" onclick="hwGo(this.dataset.sym)">Continue homework ›</button>`
     : `<button type="button" class="btn${act.pri ? ' pri' : ''} lr5-main" data-lr5-main data-c-open-plan data-sym="${e(it.ticker)}" onclick="${act.fn}">${act.txt || act.t}</button>`;
   return `<div class="panel lr5-dp" data-lr5-det="${e(r.sym)}"><div class="lr5-dh"><b class="tk">${e(wl1Bare(r.sym))}</b><span class="st ${st.cls}" data-lr5-det-chip>${e(st.label)}</span><span class="lr5-dx">${[ex, wl1TrkOf(it) === 'ladder' ? 'Compounder' : 'Momentum'].filter(Boolean).map(e).join(' · ')}</span><span class="lr5-sp"></span>${wl5Menu(r)}<button type="button" class="btn lr5-close" data-lr5-close aria-label="Close" onclick="wlBack()">×</button></div>
     ${nt1CtxHtml('stock', it.ticker)}<div class="lr5-ctx num" data-lr5-ctx>${ctx}</div><div class="lr5-why" data-lr5-why>Why on Watch: ${e(hw1WhyLine(it))}</div>
