@@ -29955,6 +29955,7 @@ function re4Open(id, scope, lv, pre){
   const it = bdById(id); if(!it) return; scope = scope === 'order' ? 'order' : 'plan';
   if(scope === 'plan' && it.status !== 'plan') return;
   const e = bdE, opts = RE4_REASONS.map(([k, t])=>`<option value="${k}"${pre === k ? ' selected' : ''}>${e(t)}</option>`).join('');
+  try{ bdClose(); }catch(x){}   /* E2E1 — Cancel order from the drawer: the drawer (z 210) sat over this sheet (z 200) and its dim swallowed every click on Cancel order / Keep; re4Go reopens the drawer */
   coreDlg = {kind:'cxplan', id, scope, lv: lv == null ? null : lv};
   coreSheet('cxplan', `<h3>${scope === 'order' ? 'Cancel order' : 'Cancel plan'} · ${e(it.sym)}</h3>
     <div class="ccF"><label for="cxReason">Reason</label><select id="cxReason" data-re4-reason onchange="re4In()"><option value="">Choose a reason</option>${opts}</select></div>
