@@ -138,7 +138,14 @@ def j3(pw, w):
         ok, blk = place_from_today(page, "XAU", J); step(J, w, "XAU full risk placed", ok and not blk, blk)
         c = card_info(page, bid)
         step(J, w, "XAU working → BTC plan blocked, ⚠ line names XAU", c and c["warn"] and "XAU order is working" in c["warn"], c)
+        er = js(page, "()=>{ const r=document.querySelector('[data-re2-row=\"BTC\"][data-re2-grp=\"enter\"]'); return r ? {txt:r.innerText.replace(/\\s+/g,' '), fix:[...r.querySelectorAll('button')].map(b=>b.innerText.trim()), placeDis:[...r.querySelectorAll('[data-re2-btn=\"place\"]')].every(b=>b.disabled)} : null; }")
+        step(J, w, "Today › Enter keeps the blocked BTC plan: ⚠ reason + 'Open XAU ›' link, Place disabled", er and "XAU order is working" in er["txt"] and "Open XAU ›" in er["fix"] and er["placeDis"], er)
+        ok = click(page, '[data-re2-row="BTC"][data-re2-grp="enter"] [data-re2-btn="keep"]', "Enter row fix link", J)[0]
+        step(J, w, "the fix link opens XAU (drawer)", ok and js(page, "()=>!!document.getElementById('bdDrawer')"), "")
+        js(page, "()=>{ try{ bdClose(); }catch(e){} }")
         filled_from_today(page, "XAU", J)
+        er = js(page, "()=>{ const r=document.querySelector('[data-re2-row=\"BTC\"][data-re2-grp=\"enter\"]'); return r ? {txt:r.innerText.replace(/\\s+/g,' '), fix:[...r.querySelectorAll('button')].map(b=>b.innerText.trim())} : null; }")
+        step(J, w, "XAU open unmoved: Enter row shows 'XAU is open with full risk … (now 0%)' + Move stop ›", er and "XAU is open with full risk" in er["txt"] and "Move stop ›" in er["fix"], er)
         c = card_info(page, bid)
         step(J, w, "XAU open, stop unmoved → 'XAU is open with full risk … (now 0%)' + Move stop ›", c and c["warn"] and "XAU is open with full risk" in c["warn"] and "now 0%" in c["warn"] and c["fix"] == "Move stop ›", c)
         js(page, "()=>{ switchTab('plan'); bdSetSeg('plan'); bdRender(); }"); page.wait_for_timeout(300)
@@ -275,32 +282,51 @@ def j4(pw, w):
 def j5(pw, w):
     J = "J5"; b, page, ce, pe = start(pw, w); page.set_default_timeout(6000)
     try:
+        import run_tests_phase374 as P4
+        roomM0 = js(page, ROOM)
         ok = click(page, "#hdrPlanBtn", "＋ New plan", J)[0]
         ok &= click(page, "#bdPop [onclick=\"lrNewAcct('fam')\"]", "Family", J)[0]
         ok &= click(page, "#bdPop [onclick=\"bdNewPick('D')\"]", "Compounder", J)[0]; page.wait_for_timeout(500)
         ok &= click(page, ".core-sheet button:has-text('TH · THB')", "TH market", J)[0]
-        page.locator("#cnTicker").fill("CPALL"); page.locator("#cnEntry").fill("60"); page.locator("#cnStop").fill("55"); page.wait_for_timeout(300)
-        acct_flip = js(page, "()=>coreEl('cnAcct').value")   # the app flips the account to Main when a ticker is typed — pick Family again
-        page.select_option("#cnAcct", "fam"); page.wait_for_timeout(500)
+        page.locator("#cnTicker").fill("CPALL"); page.locator("#cnEntry").fill("60"); page.locator("#cnStop").fill("55"); page.wait_for_timeout(500)
+        acct = js(page, "()=>coreEl('cnAcct').value")
         f = js(page, "()=>(document.querySelector('.core-sheet')||{innerText:''}).innerText.replace(/\\s+/g,' ')")
-        step(J, w, "Compounder plan form, Family: Pilot size shown (#20,000 · ฿100k)", ok and "Pilot" in f and "#20000" in f.replace(",", ""), f[:260])
+        step(J, w, "Family form: typing the ticker keeps the account Family (no flip to Main) · Pilot #20,000", ok and acct == "fam" and "Pilot" in f and "#20000" in f.replace(",", ""), [acct, f[:200]])
         ok = click(page, "[onclick*=coreNewSave]", "Save plan", J)[0]; page.wait_for_timeout(900)
+        sv = js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='CPALL.BK'); return c && c.acct; }")
+        step(J, w, "saved plan belongs to Family", ok and sv == "fam", sv)
         js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)
         row = sel_text(page, '[data-re2-row="CPALL.BK"][data-re2-grp="enter"]')
         step(J, w, "Today Enter row CPALL.BK (F) · Pilot #20,000", ok and row and "COMP F" in row and "#20,000" in row, row)
         ok, blk = place_from_today(page, "CPALL.BK", J)
-        step(J, w, "Place › → Confirm → Check orders", ok and not blk and page.locator('[data-re2-row="CPALL.BK"][data-re2-grp="check"]').count() == 1, blk)
+        step(J, w, "Place › → Confirm → Check orders (still Family)", ok and not blk and page.locator('[data-re2-row="CPALL.BK"][data-re2-grp="check"]').count() == 1 and "COMP F" in (sel_text(page, '[data-re2-row="CPALL.BK"][data-re2-grp="check"]') or ""), blk)
         ok = click(page, enter_btn(page, "CPALL.BK", "check"), "Pilot Filled", J)[0]; page.wait_for_timeout(500)
         q = js(page, "()=>(coreEl('cbQty')||{}).value")
         ok &= click(page, "[onclick*=coreBuy1Save]", "Save buy", J)[0]; page.wait_for_timeout(700)
+        where = js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='CPALL.BK'); return {acct:c.acct, fam:(getBook('fam').trades||[]).some(t=>t.id===c.trade_id), main:(getBook('main').trades||[]).some(t=>t.id===c.trade_id)}; }")
+        js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)
+        step(J, w, "Pilot Filled (qty = card 20,000): trade is in the Family book, none in Main, Main risk room unchanged", ok and q == "20000" and where["acct"] == "fam" and where["fam"] and not where["main"] and js(page, ROOM) == roomM0, [q, where])
+        rowF = js(page, "()=>{ const r=document.querySelector('[data-re2-row=\"CPALL.BK\"][data-re2-grp=\"manage\"]'); return r ? {txt:r.innerText.replace(/\\s+/g,' '), btns:[...r.querySelectorAll('button')].map(b=>b.innerText.trim())} : null; }")
+        step(J, w, "add-on locked: Manage row offers 'Homework → unlocks adds ›', no Add-on ›", rowF and any("Homework" in x for x in rowF["btns"]) and not any("Add-on" in x for x in rowF["btns"]), rowF)
+        # thesis done (seeded) → still no add-on until the engine allows; then it shows 'add-on allowed · Add-on ›'
+        P4.put_wl(page, {"CPALL.BK": P4.wl_doc("CPALL.BK", exit_="e", why="w", trigger="t", confirmed=True)})
+        js(page, "()=>{ coreWrite(coreCardsList.find(x=>x.ticker==='CPALL.BK').id, {px:68, pxDate:thaiToday()}); re1Cache={}; todayRefresh(true); }"); page.wait_for_timeout(500)
         click(page, "[onclick=\"acctSwitch('fam')\"]", "Family", J)
-        js(page, "()=>{ switchTab('plan'); bdSetSeg('hold'); bdRender(); }"); page.wait_for_timeout(500)
-        card = sel_text(page, "[data-bd-card]") or ""
-        step(J, w, "Pilot Filled (qty = card 20,000) → Holding card; add-on locked with the reason shown", ok and q == "20000" and "#20,000 @ 60" in card and "unlocks adds" in card, [q, card[:200]])
+        js(page, "()=>{ switchTab('plan'); bdSetSeg('hold'); bdRender(); }"); page.wait_for_timeout(400)
+        ok = click(page, "[data-bd-card] [onclick*=coreStopOpen]", "Move stop", J)[0]
+        page.locator("#csStop").fill("60"); page.wait_for_timeout(500)
+        ok &= click(page, "[onclick*=coreStopSave]", "Save stop", J)[0]; page.wait_for_timeout(700)
+        js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)
+        rowF = js(page, "()=>{ const r=document.querySelector('[data-re2-row=\"CPALL.BK\"][data-re2-grp=\"manage\"]'); return r ? {txt:r.innerText.replace(/\\s+/g,' '), btns:[...r.querySelectorAll('button')].map(b=>b.innerText.trim())} : null; }")
+        step(J, w, "thesis done · +1.6R · stop at breakeven 60 → 'add-on allowed' + Add-on › (the engine's rule: thesis + risk room)", ok and rowF and "add-on allowed" in rowF["txt"] and "Add-on ›" in rowF["btns"], rowF)
+        ok = click(page, '[data-re2-row="CPALL.BK"][data-re2-grp="manage"] button:has-text("Add-on")', "Add-on ›", J)[0]; page.wait_for_timeout(400)
+        sh = sel_text(page, ".core-sheet") or ""
+        ok &= click(page, "[onclick*=coreBuyAddSave]", "Save add-on", J)[0]; page.wait_for_timeout(700)
+        held = js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='CPALL.BK'); const v=coreView(c, coreCtx(c.acct)); return {lots:(c.lots||[]).length, qty:v.qty||v.heldQty||null}; }")
+        step(J, w, "Add-on › → 'Record add-on buy' sheet (English) → Save → second lot recorded", ok and "Record add-on buy" in sh and held["lots"] == 2, [sh[:120], held])
+        js(page, "()=>{ switchTab('plan'); bdSetSeg('hold'); bdRender(); }"); page.wait_for_timeout(400)
         ok = click(page, "[data-bd-card] .bd-tk, [data-bd-card]", "open card", J)[0]
-        dr = sel_text(page, "#bdDr") or ""
-        step(J, w, "drawer: no Add-on › offered, 'adds locked until done' (homework 0 of 3)", ok and "adds locked until done" in dr and "Add-on" not in " ".join(js(page, "()=>[...document.querySelectorAll('#bdDr button')].map(b=>b.innerText)")), dr[:200])
-        ok = click(page, "[data-bd-close]", "Close trade", J)[0]
+        ok &= click(page, "[data-bd-close]", "Close trade", J)[0]
         page.locator("#cpExitPrice").fill("70"); page.wait_for_timeout(150)
         ok &= click(page, "#cpConfirmBtn", "Confirm close", J)[0]; page.wait_for_timeout(600)
         js(page, "()=>{ try{ bdClose(); }catch(e){} }")
@@ -379,9 +405,10 @@ def j_bar(pw, w):
     try:
         top0 = js(page, "()=>({h:document.querySelector('header').getBoundingClientRect().top, t:document.getElementById('tabsMain').getBoundingClientRect().top})")
         js(page, "()=>{ window.__forceSaveFail = true; dirtyBooks.set(acctActive,(dirtyBooks.get(acctActive)||0)+1); pendingLocalWrite = true; doPersist(); }"); page.wait_for_timeout(900)
-        r = js(page, "()=>{ const b=document.getElementById('hf6SaveBar'); if(!b) return null; const br=b.getBoundingClientRect(), h=document.querySelector('header').getBoundingClientRect(), t=document.getElementById('tabsMain').getBoundingClientRect(); return {txt:b.innerText.replace(/\\s+/g,' ').trim(), barBottom:br.bottom, barTop:br.top, headTop:h.top, tabsTop:t.top, ovf:document.documentElement.scrollWidth-innerWidth, wide:br.width}; }")
+        r = js(page, "()=>{ const b=document.getElementById('hf6SaveBar'); if(!b) return null; const br=b.getBoundingClientRect(), h=document.querySelector('header').getBoundingClientRect(), t=document.getElementById('tabsMain').getBoundingClientRect(); return {txt:b.innerText.replace(/\\s+/g,' ').trim(), barBottom:br.bottom, barTop:br.top, headTop:h.top, tabsTop:t.top, ovf:document.documentElement.scrollWidth-innerWidth, wide:br.width, font:getComputedStyle(b).fontFamily, bodyFont:getComputedStyle(document.body).fontFamily}; }")
         step(J, w, "forced save failure → '⚠ Not saved · Server unreachable · Retry ›' (plain words)", r and r["txt"] == "⚠ Not saved · Server unreachable · Retry ›", r)
         step(J, w, "bar sits above the header (header + tabs pushed down, nothing overlapped)", r and r["barTop"] <= 1 and r["headTop"] >= r["barBottom"] - 1 and r["tabsTop"] >= r["barBottom"] - 1 and r["ovf"] <= 0, r)
+        step(J, w, "bar uses the app font (not serif)", r and r["font"] == r["bodyFont"] and "serif" not in r["font"].split(",")[0].lower(), [r and r["font"], r and r["bodyFont"]])
         js(page, "()=>window.scrollTo(0, 400)"); page.wait_for_timeout(300)
         r2 = js(page, "()=>{ const b=document.getElementById('hf6SaveBar').getBoundingClientRect(), t=document.getElementById('tabsMain').getBoundingClientRect(); return {barTop:b.top, barBottom:b.bottom, tabsTop:t.top}; }")
         step(J, w, "scrolled: the bar stays on top and the sticky tabs sit under it", r2["barTop"] <= 1 and r2["tabsTop"] >= r2["barBottom"] - 1, r2)

@@ -337,7 +337,7 @@ def buy_pyramid_checks(pw, w, h, label, mk="TH"):
         # pyramid: เลื่อน Stop 100
         ex(page, "c1"); page.click('[data-core-card="c1"] [data-c-stop-btn]'); page.wait_for_timeout(200)
         page.fill("#csStop", "85")
-        check(f"{tag} เลื่อน Stop ลง (85 < 90) → ข้อความแดง บันทึกไม่ได้", "ต่ำกว่า Stop เดิม" in (txt(page, "#csErr") or "") and page.is_disabled("#csSave"))
+        check(f"{tag} เลื่อน Stop ลง (85 < 90) → ข้อความแดง บันทึกไม่ได้", "below the current stop" in (txt(page, "#csErr") or "") and page.is_disabled("#csSave"))
         page.fill("#csStop", "100"); page.click("#csSave"); page.wait_for_timeout(500)
         t = book_trades(page)[0]; cid, c = one_card(page, tk)
         check(f"{tag} เลื่อน Stop ขึ้น 100 → trade.sl = 100 · การ์ด stop 100 · stopHistory [{{from 90 to 100}}]",
