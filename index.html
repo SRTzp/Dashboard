@@ -5377,7 +5377,7 @@ html body .lr5 .hw1-fld.hw2-hl{outline:2px solid #D9921A;outline-offset:4px;bord
 html body .lr5 .hw2-tag{font:600 11px var(--lr-mono);border-radius:5px;padding:2px 6px;flex:none}
 html body .lr5 .hw2-tag.comp{color:#0E6B4C;background:#E6F4EE}html body .lr5 .hw2-tag.mmt{color:#3B4FC4;background:#E8ECFB}
 html body .lr5 .hw1-pr{width:auto;gap:8px;flex-wrap:nowrap;white-space:nowrap;color:var(--lr-muted)}html body .lr5 .hw1-pr .bar{width:120px;flex:none}
-html body .lr5 .hw1-pr b{color:var(--lr-ink);font-weight:600}html body .lr5 .hw2-sz,html body .lr5 .hw2-line .amb{color:var(--lr-warn);font-weight:600}
+html body .lr5 .hw1-pr b{color:var(--lr-ink);font-weight:600}html body .lr5 .hw2-sz.amb,html body .lr5 .hw2-line .amb{color:var(--lr-warn);font-weight:600}html body .lr5 .hw2-sz.ok,html body .lr5 .hw2-line .ok{color:var(--lr-gain-ink);font-weight:600}
 html body .lr5 .hw2-line{font-size:12.5px;color:var(--lr-muted);display:none}
 html body .lr5 .hw2-ctx{display:flex;gap:6px;flex-wrap:wrap}
 html body .lr5 .hw2-pill{font:600 11.5px var(--lr-sans);border-radius:999px;padding:3px 9px;white-space:nowrap}
@@ -5442,7 +5442,8 @@ html body .lr5 .hw1-size .hw1-lnk{display:inline;font-size:12px}
   html body .lr5 .hw1-btns{position:sticky;bottom:0;background:var(--lr-ground);padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));flex-wrap:wrap;z-index:2}
   html body .lr5 .hw1-btns .btn{height:44px;flex:1 1 0;justify-content:center}
   html body .lr5 .hw1-btns .lg{display:none}html body .lr5 .hw1-btns .sm{display:inline}
-  html body .lr5 .hw1-copy{order:-1;flex:1 1 100%;margin:0;min-height:44px;display:flex;align-items:center;font-size:13px}
+  html body .lr5 .hw1-copy{order:-1;flex:1 1 auto;margin:0;min-height:44px;display:flex;align-items:center;font-size:13px}
+  html body .lr5 .hw1-btns .hw2-edit{order:-1;flex:none;min-height:44px;display:inline-flex;align-items:center;margin-left:auto}
   html body .lr5 .hw1-cmp,html body .lr5 .hw1-size .hw1-lnk{min-height:44px;display:inline-flex;align-items:center}
   html body .lr5 .hw1-opt>summary{min-height:44px}html body .lr5 .hw1-more>summary{min-height:44px}
   html body .lr5 .hw1-fr.tap,html body .lr5 .hw1-q tr.tap td{min-height:44px}
@@ -33663,10 +33664,13 @@ function hw1Done(sym){ return hw1Save(sym, true); }
 /* ── live refresh while typing (no re-render: the caret stays) ── */
 function hw1Refresh(t){
   const root = document.querySelector('[data-hw1-page="' + t + '"]'), it = wlItemOf(t); if(!root || !it) return;
-  const v = hw1Vals(it), p = hw1Prog(it, v), done = wl1HwDone(it) && !p.miss.length, req = hw1ReqKeys(it);
+  const v = hw1Vals(it), p = hw1Prog(it, v), done = hw2Done(it), req = hw1ReqKeys(it);
   root.querySelectorAll('[data-hw1-prog]').forEach(x=>{ x.textContent = done ? '✓ Done' : p.n + ' of ' + p.tot; });
   root.querySelectorAll('[data-hw1-bar]').forEach(x=>{ x.style.width = Math.round(100 * p.n / p.tot) + '%'; });
-  root.querySelectorAll('[data-hw2-size]').forEach(x=>{ x.hidden = done; });
+  root.querySelectorAll('[data-hw2-size]').forEach(x=>{ x.textContent = hw2SizeTxt(it, done); x.classList.toggle('ok', done); x.classList.toggle('amb', !done); });
+  const sz = root.querySelector('[data-hw1-size]'); if(sz) sz.innerHTML = hw2SizeLine(it, done);
+  const mg = root.querySelector('[data-wl-mt-msg]'); if(mg && !done && mg.textContent === 'Homework done') mg.textContent = '';
+  root.querySelectorAll('.hw2-hl').forEach(f=>{ if(!wlBlank(v[f.dataset.hw1F])) f.classList.remove('hw2-hl'); });   /* the landing outline leaves a field as soon as it is filled */
   const dn = root.querySelector('[data-hw1-done]'); if(dn) dn.disabled = p.miss.length > 0;
   ['catalyst', 'trigger', 'exit', 'why', 'evidence'].forEach(k=>{
     const c = root.querySelector('[data-hw1-chip="' + k + '"]'), f = root.querySelector('[data-hw1-f="' + k + '"]'); if(!c && !f) return;
@@ -34019,10 +34023,16 @@ function hw2EditReset(type){
 function hw1PlanFn(it){ const s = escHtml(it.ticker).replace(/'/g, '&#39;'); return wl1Status(it).k === 'none' ? `wlOpenCorePlan('${s}')` : `wl5OpenPlan('${s}')`; }
 function hw2Hold(it){ return wl1TrkOf(it) === 'ladder' ? 'Hold 6 m – 3 y' : 'Hold 2 wk – 3 m'; }
 function hw2SizePct(it){ return wl1TrkOf(it) === 'ladder' ? 50 : Math.round(100 * RiskEngine.POLICY.hwFactor.mom); }   /* the engine's real homework cap: Momentum 70% (hwFactor.mom) · Compounder Pilot 50% */
-function hw2SizeTxt(it, done){ return done ? '' : 'size ' + hw2SizePct(it) + '% until done'; }
+function hw2SizeTxt(it, done){ return done ? 'full size' : 'size ' + hw2SizePct(it) + '% until done'; }
+function hw2Done(it){ return !!it && wl1HwDone(it) && !hw1Prog(it, hw1Vals(it)).miss.length; }   /* HW2 — ONE source of truth for "done" on the Homework page: header · size line · status text · Mark done */
+function hw2SizeLine(it, done){
+  const ladder = wl1TrkOf(it) === 'ladder', planLbl = wl1Status(it).k === 'none' ? 'Make plan ›' : 'Open plan ›';
+  return done ? `Done · size cap 100% (next step: <button type="button" class="hw1-lnk" onclick="${hw1PlanFn(it)}">${planLbl}</button>)`
+    : `After done: ${ladder ? 'adds &amp; risk above 1% unlock' : 'size 70% → 100%'} (next step: <button type="button" class="hw1-lnk" onclick="${hw1PlanFn(it)}">${planLbl}</button>)`;
+}
 function hw2NextTxt(it){ const d = String(it.next_check_date || ''); if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return ''; const n = String(it.next_check_note || '').trim(); return 'next check ' + lr5Day(d) + (n ? ' (' + n + ')' : ''); }
 function hw1MineHtml(it){
-  const e = escHtml, t = it.ticker, ladder = wl1TrkOf(it) === 'ladder', v = hw1Vals(it), p = hw1Prog(it, v), done = wl1HwDone(it), msg = wlMtMsg[t] || '', dirty = wlMtDirty(t);
+  const e = escHtml, t = it.ticker, ladder = wl1TrkOf(it) === 'ladder', v = hw1Vals(it), p = hw1Prog(it, v), done = hw2Done(it), msg = (wlMtMsg[t] === 'Homework done' && !done) ? '' : (wlMtMsg[t] || ''), dirty = wlMtDirty(t);
   const planLbl = wl1Status(it).k === 'none' ? 'Make plan ›' : 'Open plan ›';
   const keys = ladder ? ['why', 'evidence', 'exit'] : ['catalyst', 'trigger', 'exit'];
   const main = keys.map((k, i)=>hw2Fld(it, k, i + 1)).join('');
@@ -34030,9 +34040,8 @@ function hw1MineHtml(it){
   const cat = ladder ? `<div class="hw1-fld opt" data-hw1-f="catalyst"><label class="hw1-fl o" for="hw1-catalyst">Catalyst <span class="hw1-c opt">optional</span></label><input id="hw1-catalyst" type="text" maxlength="400" data-hw1-ta="catalyst" placeholder="e.g. Q3 earnings 28 Jan" value="${e(v.catalyst)}" oninput="wlMtIn('${e(t)}','catalyst',this.value,this)"></div>` : '';
   const optIn = ladder ? hw1Fld(it, 'unproven', false) + cat + nc : hw1Fld(it, 'why', false) + nc;
   const opt = `<details class="hw1-opt" data-hw1-opt ${hw1Opt[t] ? 'open' : ''} ontoggle="hw1OptToggle('${e(t)}',this)"><summary>${ladder ? '+ Not proven yet (optional)' : '+ Why buy · Next check (optional)'}</summary>${ladder ? `<div class="hw1-ask" data-hw1-ask>Which part of your belief has no evidence yet?</div>` : ''}${optIn}</details>`;
-  const size = done ? `<div class="hw1-size" data-hw1-size>Done · size cap 100% (next step: <button type="button" class="hw1-lnk" onclick="${hw1PlanFn(it)}">${planLbl}</button>)</div>`
-    : `<div class="hw1-size" data-hw1-size>After done: ${ladder ? 'adds &amp; risk above 1% unlock' : 'size 70% → 100%'} (next step: <button type="button" class="hw1-lnk" onclick="${hw1PlanFn(it)}">${planLbl}</button>)</div>`;
-  const line = [hw2Hold(it), ladder ? hw2NextTxt(it) : ''].filter(Boolean).map(e).join(' · ') + (done ? '' : ` · <span class="amb" data-hw2-size>${e(hw2SizeTxt(it, done))}</span>`);
+  const size = `<div class="hw1-size" data-hw1-size>${hw2SizeLine(it, done)}</div>`;
+  const line = [hw2Hold(it), ladder ? hw2NextTxt(it) : ''].filter(Boolean).map(e).join(' · ') + ` · <span class="${done ? 'ok' : 'amb'}" data-hw2-size>${e(hw2SizeTxt(it, done))}</span>`;
   return `<div class="hw1-mine" data-hw1-mine data-hw2-type="${hw2Type(it)}" data-wl-mt="${e(t)}" data-wl-mt-mode="edit"><div class="hw1-mh"><span class="lbl">Your thesis</span><span class="wlMtDraft" data-wl-mt-draft ${dirty ? '' : 'hidden'}>Unsaved draft · <button type="button" class="hw1-lnk" data-wl-mt-ddisc onclick="wlMtDiscard('${e(t)}')">Discard</button></span></div>
     <div class="hw2-line" data-hw2-line>${line}</div>
     <div class="hw1-mscroll">${main}<div class="hw1-mut" data-hw1-plan-note>Price rules (stop, exit) live in the Plan card, not here.</div>${opt}</div>
@@ -34135,11 +34144,11 @@ function hw2AutoNext(t){   /* Compounder · next check = next earnings date (fil
 }
 function hw1PageHtml(r){
   const it = r && r.item; if(!it) return '<div class="panel"><div class="empty">Stock not found</div></div>';
-  const e = escHtml, t = it.ticker, v = hw1Vals(it), p = hw1Prog(it, v), done = wl1HwDone(it) && !p.miss.length, seg = hw1Seg[t] || 'mine', tab = hw2TabOf(it), ladder = wl1TrkOf(it) === 'ladder';
+  const e = escHtml, t = it.ticker, v = hw1Vals(it), p = hw1Prog(it, v), done = hw2Done(it), seg = hw1Seg[t] || 'mine', tab = hw2TabOf(it), ladder = wl1TrkOf(it) === 'ladder';
   const nx = ladder ? hw2NextTxt(it) : '';
   return `<div class="hw1-pg" data-hw1-page="${e(t)}" data-hw1-show="${seg}" data-hw2-tab="${tab}" data-hw1-track="${ladder ? 'compounder' : 'momentum'}">
     <div class="hw1-top"><button type="button" class="btn sm hw1-back" data-hw1-back title="Back (Esc or Backspace)" onclick="hwBack()"><span class="lg">‹ Back</span><span class="sm" aria-label="Back">‹</span></button><b class="hw1-t">${e(wl1Bare(t))}</b><span class="hw2-tag ${ladder ? 'comp' : 'mmt'}" data-hw2-tag>${ladder ? 'COMP' : 'MMT'}</span>${nt1CtxHtml('stock', it.ticker)}
-      <span class="hw1-pr"><span class="bar"><i data-hw1-bar style="width:${Math.round(100 * p.n / p.tot)}%"></i></span><span class="hw2-hold" data-hw2-hold>${e(hw2Hold(it))}</span>${ladder ? `<span class="hw2-nx" data-hw2-next ${nx ? '' : 'hidden'}>${e(nx)}</span>` : ''}<b data-hw1-prog>${done ? '✓ Done' : p.n + ' of ' + p.tot}</b>${done ? '' : `<span class="amb hw2-sz" data-hw2-size>${e(hw2SizeTxt(it, done))}</span>`}</span></div>
+      <span class="hw1-pr"><span class="bar"><i data-hw1-bar style="width:${Math.round(100 * p.n / p.tot)}%"></i></span><span class="hw2-hold" data-hw2-hold>${e(hw2Hold(it))}</span>${ladder ? `<span class="hw2-nx" data-hw2-next ${nx ? '' : 'hidden'}>${e(nx)}</span>` : ''}<b data-hw1-prog>${done ? '✓ Done' : p.n + ' of ' + p.tot}</b><span class="hw2-sz ${done ? 'ok' : 'amb'}" data-hw2-size>${e(hw2SizeTxt(it, done))}</span></span></div>
     <div class="hw1-segw" role="tablist">${[['business', 'Business'], ['results', 'Results'], ['ai', 'AI'], ['mine', 'Mine']].map(a=>{ const on = seg === 'mine' ? a[0] === 'mine' : a[0] === tab; return `<button type="button" role="tab" data-hw1-seg="${a[0]}" class="${on ? 'on' : ''}" aria-selected="${on}" onclick="hw1SegSet('${e(t)}','${a[0]}')">${a[1]}</button>`; }).join('')}</div>
     <div class="hw1-body">${hw1FactsHtml(it)}${hw1MineHtml(it)}${ux3RzHtml(HW_SPLIT)}</div></div>`;
 }
