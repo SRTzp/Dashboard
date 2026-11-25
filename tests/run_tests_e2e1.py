@@ -308,22 +308,12 @@ def j5(pw, w):
         step(J, w, "Pilot Filled (qty = card 20,000): trade is in the Family book, none in Main, Main risk room unchanged", ok and q == "20000" and where["acct"] == "fam" and where["fam"] and not where["main"] and js(page, ROOM) == roomM0, [q, where])
         rowF = js(page, "()=>{ const r=document.querySelector('[data-re2-row=\"CPALL.BK\"][data-re2-grp=\"manage\"]'); return r ? {txt:r.innerText.replace(/\\s+/g,' '), btns:[...r.querySelectorAll('button')].map(b=>b.innerText.trim())} : null; }")
         step(J, w, "add-on locked: Manage row offers 'Homework → unlocks adds ›', no Add-on ›", rowF and any("Homework" in x for x in rowF["btns"]) and not any("Add-on" in x for x in rowF["btns"]), rowF)
-        # thesis done (seeded) → still no add-on until the engine allows; then it shows 'add-on allowed · Add-on ›'
+        # thesis done (seeded): Pilot was 1.0% → existing risk already at the 1.00% limit → the add-on is blocked (ADDON_TOTAL_RISK), reason on the row
         P4.put_wl(page, {"CPALL.BK": P4.wl_doc("CPALL.BK", exit_="e", why="w", trigger="t", confirmed=True)})
-        js(page, "()=>{ coreWrite(coreCardsList.find(x=>x.ticker==='CPALL.BK').id, {px:68, pxDate:thaiToday()}); re1Cache={}; todayRefresh(true); }"); page.wait_for_timeout(500)
-        click(page, "[onclick=\"acctSwitch('fam')\"]", "Family", J)
-        js(page, "()=>{ switchTab('plan'); bdSetSeg('hold'); bdRender(); }"); page.wait_for_timeout(400)
-        ok = click(page, "[data-bd-card] [onclick*=coreStopOpen]", "Move stop", J)[0]
-        page.locator("#csStop").fill("60"); page.wait_for_timeout(500)
-        ok &= click(page, "[onclick*=coreStopSave]", "Save stop", J)[0]; page.wait_for_timeout(700)
-        js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)
-        rowF = js(page, "()=>{ const r=document.querySelector('[data-re2-row=\"CPALL.BK\"][data-re2-grp=\"manage\"]'); return r ? {txt:r.innerText.replace(/\\s+/g,' '), btns:[...r.querySelectorAll('button')].map(b=>b.innerText.trim())} : null; }")
-        step(J, w, "thesis done · +1.6R · stop at breakeven 60 → 'add-on allowed' + Add-on › (the engine's rule: thesis + risk room)", ok and rowF and "add-on allowed" in rowF["txt"] and "Add-on ›" in rowF["btns"], rowF)
-        ok = click(page, '[data-re2-row="CPALL.BK"][data-re2-grp="manage"] button:has-text("Add-on")', "Add-on ›", J)[0]; page.wait_for_timeout(400)
-        sh = sel_text(page, ".core-sheet") or ""
-        ok &= click(page, "[onclick*=coreBuyAddSave]", "Save add-on", J)[0]; page.wait_for_timeout(700)
-        held = js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='CPALL.BK'); const v=coreView(c, coreCtx(c.acct)); return {lots:(c.lots||[]).length, qty:v.qty||v.heldQty||null}; }")
-        step(J, w, "Add-on › → 'Record add-on buy' sheet (English) → Save → second lot recorded", ok and "Record add-on buy" in sh and held["lots"] == 2, [sh[:120], held])
+        js(page, "()=>{ coreWrite(coreCardsList.find(x=>x.ticker==='CPALL.BK').id, {px:60, pxDate:thaiToday()}); re1Cache={}; switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)
+        click(page, "[onclick=\"acctSwitch('fam')\"]", "Family", J); js(page, "()=>{ switchTab('today'); re1Cache={}; todayRefresh(true); }"); page.wait_for_timeout(500)
+        rowF = js(page, "()=>{ const r=document.querySelector('[data-re2-row=\"CPALL.BK\"][data-re2-grp=\"manage\"]'); return r ? {txt:r.innerText.replace(/\\s+/g,' '), btns:[...r.querySelectorAll('button')].map(b=>({t:b.innerText.trim(), dis:b.disabled}))} : null; }")
+        step(J, w, "(b) thesis done, Pilot risk 1.0% + new order > 1.00% → Add-on blocked, ADDON_TOTAL_RISK reason on the row, button disabled", rowF and "Add-on blocked" in rowF["txt"] and "over today's limit 1%" in rowF["txt"] and all(x["dis"] for x in rowF["btns"] if "Add-on" in x["t"]) and js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='CPALL.BK'); const cx=coreCtxC(c); return coreAddRe1(c, coreView(c,cx), cx).model.reasons.includes('ADDON_TOTAL_RISK'); }"), rowF)
         js(page, "()=>{ switchTab('plan'); bdSetSeg('hold'); bdRender(); }"); page.wait_for_timeout(400)
         ok = click(page, "[data-bd-card] .bd-tk, [data-bd-card]", "open card", J)[0]
         ok &= click(page, "[data-bd-close]", "Close trade", J)[0]
@@ -442,7 +432,48 @@ def j_rrg(pw, w):
         b.close()
 
 
-JOURNEYS_FN = [("J1", j1), ("J2", j2), ("J3", j3), ("J6", j6), ("J7", j7), ("J4", j4), ("J5", j5), ("CRAWL", j_crawl), ("BAR", j_bar), ("RRG", j_rrg)]
+def j5b(pw, w):
+    """Compounder add-on rule (RE1-answers-A 16): thesis complete + existing tranches' risk at the current stop + new order ≤ 1.00%, order ≤ 0.50%; no +1.5R / breakeven condition; below the Pilot entry = a warning line only."""
+    J = "J5b"; b, page, ce, pe = start(pw, w); page.set_default_timeout(6000)
+    try:
+        import run_tests_phase374 as P4
+        ok = click(page, "#hdrPlanBtn", "＋ New plan", J)[0]
+        ok &= click(page, "#bdPop [onclick=\"lrNewAcct('fam')\"]", "Family", J)[0]
+        ok &= click(page, "#bdPop [onclick=\"bdNewPick('D')\"]", "Compounder", J)[0]; page.wait_for_timeout(500)
+        ok &= click(page, ".core-sheet button:has-text('TH · THB')", "TH market", J)[0]
+        page.locator("#cnTicker").fill("CPALL"); page.locator("#cnEntry").fill("60"); page.locator("#cnStop").fill("55")
+        page.select_option("#cnRiskSel", index=0); page.wait_for_timeout(500)   # Pilot risk 0.5%
+        ok &= click(page, "[onclick*=coreNewSave]", "Save plan", J)[0]; page.wait_for_timeout(900)
+        js(page, "()=>{ switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)
+        ok2, blk = place_from_today(page, "CPALL.BK", J); ok2 &= click(page, enter_btn(page, "CPALL.BK", "check"), "Pilot Filled", J)[0]; page.wait_for_timeout(400)
+        ok2 &= click(page, "[onclick*=coreBuy1Save]", "Save buy", J)[0]; page.wait_for_timeout(700)
+        step(J, w, "Pilot 0.5% (#10,000 @ 60, stop 55) filled", ok and ok2 and not blk, blk)
+        P4.put_wl(page, {"CPALL.BK": P4.wl_doc("CPALL.BK", exit_="e", why="w", trigger="t", confirmed=True)})
+        js(page, "()=>{ coreWrite(coreCardsList.find(x=>x.ticker==='CPALL.BK').id, {px:60, pxDate:thaiToday()}); re1Cache={}; }")
+        click(page, "[onclick=\"acctSwitch('fam')\"]", "Family", J); js(page, "()=>{ switchTab('today'); re1Cache={}; todayRefresh(true); }"); page.wait_for_timeout(500)
+        ROW = "()=>{ const r=document.querySelector('[data-re2-row=\"CPALL.BK\"][data-re2-grp=\"manage\"]'); return r ? {txt:r.innerText.replace(/\\s+/g,' '), btns:[...r.querySelectorAll('button')].map(b=>({t:b.innerText.trim(), dis:b.disabled}))} : null; }"
+        r = js(page, ROW)
+        step(J, w, "(a) thesis done · Pilot at ~0R (price 60 = entry) · total ≤ 1% → 'add-on allowed' + Add-on › (no +1.5R / breakeven needed)", r and "add-on allowed" in r["txt"] and any(x["t"] == "Add-on ›" and not x["dis"] for x in r["btns"]), r)
+        ok = click(page, '[data-re2-row="CPALL.BK"][data-re2-grp="manage"] button:has-text("Add-on")', "Add-on ›", J)[0]; page.wait_for_timeout(400)
+        sh = js(page, "()=>({txt:(document.querySelector('.core-sheet')||{innerText:''}).innerText.replace(/\\s+/g,' '), warn:!!document.querySelector('[data-ca-warn]'), qty:(coreEl('caQty')||{}).value, dis:(coreEl('caSave')||{}).disabled})")
+        step(J, w, "(a) the add-on sheet opens: no warning line (price = entry), qty ≤ the 0.5% order, Save enabled", ok and "Record add-on buy" in sh["txt"] and not sh["warn"] and sh["dis"] is False and int(sh["qty"] or 0) > 0, sh)
+        click(page, ".core-sheet button:has-text('Cancel')", "Cancel add-on", J)
+        # (c) price below the Pilot entry → warning line, still allowed
+        js(page, "()=>{ coreWrite(coreCardsList.find(x=>x.ticker==='CPALL.BK').id, {px:58, pxDate:thaiToday()}); re1Cache={}; todayRefresh(true); }"); page.wait_for_timeout(500)
+        r = js(page, ROW)
+        ok = click(page, '[data-re2-row="CPALL.BK"][data-re2-grp="manage"] button:has-text("Add-on")', "Add-on ›", J)[0]; page.wait_for_timeout(400)
+        sh = js(page, "()=>({warn:(document.querySelector('[data-ca-warn]')||{innerText:''}).innerText.replace(/\\s+/g,' '), dis:(coreEl('caSave')||{}).disabled, qty:(coreEl('caQty')||{}).value})")
+        step(J, w, "(c) add-on price 58 below the Pilot entry 60 → '⚠ Adding below entry — re-check ④ Wrong if' in the sheet, still allowed (Save enabled)", ok and r and any(x["t"] == "Add-on ›" and not x["dis"] for x in r["btns"]) and "Adding below entry" in sh["warn"] and sh["dis"] is False, [r, sh])
+        ok = click(page, "[onclick*=coreBuyAddSave]", "Save add-on", J)[0]; page.wait_for_timeout(700)
+        lots = js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='CPALL.BK'); return (c.lots||[]).length; }")
+        step(J, w, "(c) Save → second lot recorded", ok and lots == 2, lots)
+        # (b) ADDON_TOTAL_RISK (total would exceed 1.00%) is driven in J5 with a 1.0% Pilot
+        step(J, w, "no console errors / page errors · strict mock · no Not-saved bar", not ce and not pe and not strict(page), [(ce + pe)[:2], strict(page)])
+    finally:
+        b.close()
+
+
+JOURNEYS_FN = [("J1", j1), ("J2", j2), ("J3", j3), ("J6", j6), ("J7", j7), ("J4", j4), ("J5", j5), ("J5b", j5b), ("CRAWL", j_crawl), ("BAR", j_bar), ("RRG", j_rrg)]
 
 if __name__ == "__main__":
     with sync_playwright() as pw:

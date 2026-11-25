@@ -13062,8 +13062,10 @@ function ln4CoreRows(){
         const stop = +v.stop, avg = +v.avg, below = stop < avg - 1e-9;
         row.state = 'open'; row.status = 'Open';
         row.det = below ? `Stop ${stop.toFixed(2)} below avg ${avg.toFixed(2)}` : `Stop ${stop.toFixed(2)} ≥ avg ${avg.toFixed(2)}`;
-        if(below) row.btn = {t:'Raise stop ›', fn:`ln4RaiseStop('${c.id}')`};
-        else if(trk === 'ladder'){ try{ const cx = coreCtxC(c), ar = coreAddRe1(c, v, cx); if(ar && ar.ok && !ar.blocked.length) row.btn = {t:'Add-on ›', fn:`bdAddon('${c.id}')`, p:true}; }catch(e){} }   /* E2E1 — the engine (thesis done · Pilot ≥ +1.5R · stop at net breakeven) allows an add-on → the Add-on › button (nothing set it since AU1 B3) */
+        let addOk = false;
+        if(trk === 'ladder'){ try{ const cx = coreCtxC(c), ar = coreAddRe1(c, v, cx); addOk = !!(ar && ar.ok && !ar.blocked.length); }catch(e){} }   /* E2E1 — RE1-answers-A 16: thesis complete + tranches at current stop + new order ≤ 1.00% (order ≤ 0.50%); no +1.5R / breakeven condition → Add-on › whenever the engine allows (nothing set it since AU1 B3) */
+        if(addOk) row.btn = {t:'Add-on ›', fn:`bdAddon('${c.id}')`, p:true};
+        else if(below) row.btn = {t:'Raise stop ›', fn:`ln4RaiseStop('${c.id}')`};
       } else if(c.ln4 && c.ln4.placedAt){
         row.state = 'working'; row.status = 'Order working';
         row.det = `${+(c.px) > 0 && +pl.entry < +c.px ? 'Buy Limit' : 'Buy Stop'} ${(+pl.entry).toFixed(2)}`;
@@ -16486,7 +16488,7 @@ function coreBuy1Save(){
 function coreAddRe1(c, v, cx){
   const px = +v.px > 0 ? +v.px : +v.avg, out = {blocked:[], warns:[], why:[], r:null};
   try{ ps1AddCalc(c, {px, sl:+v.stop, acc:false}, cx, v, out); }catch(e){ console.warn('add-on re1:', e); }
-  return {ok: !!(out.r && out.r.qty > 0), r: out.r, px, stop: +v.stop, blocked: out.blocked, model: out.model};
+  return {ok: !!(out.r && out.r.qty > 0), r: out.r, px, stop: +v.stop, blocked: out.blocked, model: out.model, warns: out.warns || [], why: out.why || []};
 }
 function coreBuyAddOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
@@ -16499,6 +16501,7 @@ function coreBuyAddOpen(id){
     <div class="ccF"><label>Quantity (suggested ${fmt0(s.r.qty)} · rounded down to the market lot)</label><input type="text" inputmode="decimal" id="caQty" value="${s.r.qty}" oninput="coreBuyAddIn()"></div>
     <div class="ccF"><label>Date</label><input type="date" id="caDate" value="${posThaiToday()}" oninput="coreBuyAddIn()"></div>
     <div class="ccSub">New stop = <b>${fmt2(s.stop)}</b> (was ${fmt2(v.stop)})</div>
+    ${(s.warns || []).map(w=>`<div class="ccSub" data-ca-warn style="color:var(--amber)">⚠ ${escHtml(w)}</div>`).join('')}
     <div class="ccErr" id="caErr" style="display:none"></div>
     <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">Cancel</button><button data-enter-primary type="button" class="ccBtn pri" id="caSave" data-ca-save onclick="coreBuyAddSave()">Save</button></div>`);
   coreBuyAddIn();
@@ -29794,6 +29797,7 @@ function re2Model(acct){
       let ok = true; try{ const g = re1PlanGate(it.ref, 0); const m = g && g.model; ok = !(m && m.blocked && m.reasons.some(x=>['COMP_LOCKED', 'ADDON_THESIS', 'NO_SNAPSHOT', 'SNAPSHOT_STALE'].indexOf(x) >= 0)); }catch(x){}
       if(ok) o = {g:'manage', chip:'Holding', cc:'', k:'addon', btn:'Add-on ›', fn:`bdAddon('${td3E(it.id)}')`, why:'add-on allowed', warn:true, lv:''};
     }
+    if(!o && it.kind === 'core' && it.tag === 'COMP'){ try{ if(ftHwDone(it.sym)){ const cx = coreCtxC(it.ref), ar = coreAddRe1(it.ref, coreView(it.ref, cx), cx), rs = (ar.model && ar.model.reasons) || [], i = rs.indexOf('ADDON_TOTAL_RISK'); if(i >= 0){ const tx = (ar.model.reasonTexts || [])[i] || 'Ticker total risk would exceed the plan limit'; o = {g:'manage', chip:'Holding', cc:'', k:'addon', btn:'Add-on ›', dis:true, title:tx, why:'Add-on blocked · ' + tx, warn:true, lv:''}; } } }catch(x){} }   /* E2E1 — thesis done but the total-risk rule blocks the add-on: the reason is on the row (ADDON_TOTAL_RISK) */
     if(!o && it.kind === 'core' && it.tag === 'COMP'){ let hw = true; try{ hw = !!ftHwDone(it.sym); }catch(x){} if(!hw) o = {g:'manage', chip:'Holding', cc:'', k:'hw', btn:'Homework → unlocks adds ›', mute:true, fn:`td3HwGo('${td3E(it.sym)}','W','')`, why:'', warn:false, lv:''}; }   /* NT1b §6.3 — the homework message lives in To do; the Act row shows only the muted way in */
     if(!o && it.kind === 'core'){ try{ const tw = ltTws(wlItemOf(it.sym)).filter(w=>w.level === 'broken' || w.level === 'review')[0]; if(tw) o = {g:'manage', chip:'Holding', cc:'', k:'review', btn:'Review ›', fn:`td3Screen('${td3E(it.sym)}')`, why:'tripwire ' + (tw.level === 'broken' ? 'hit' : 'review') + ' · ' + ltShort(tw.sig, 28), warn:true, lv:''}; }catch(x){} }
     if(o) manage.push({it, o}); else if(it.kind === 'sat') satHold.push({it, o:{g:'manage', k:'satmgr', chip:'Holding', cc:'', why:'', warn:false, lv:''}}); else nothing++;   /* HF5 — every open Sat position gets a row (Price › · Move stop ›) */
