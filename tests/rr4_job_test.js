@@ -46,7 +46,7 @@ t('no row is an error (both paths)', tdD.every(r => !r.err) && job.rowsD.every(r
 const J = x => JSON.stringify(x);
 let same = 0; A.RRG_SYMS.forEach((def, i) => { if (J(tdD[i]) === J(job.rowsD[i]) && J(tdW[i]) === J(job.rowsW[i])) same++; else console.log('differs', def.s); });
 t('every symbol: Daily + Weekly row identical (quadrant · tail · numbers)', same === 23, same);
-t('quadrants + tails match explicitly (Daily)', tdD.every((r, i) => r.quad === job.rowsD[i].quad && J(r.tail) === J(job.rowsD[i].tail)) && tdD.every(r => Array.isArray(r.tail) && r.tail.length === 5));
+t('quadrants + tails match explicitly (Daily)', tdD.every((r, i) => r.quad === job.rowsD[i].quad && J(r.tailF) === J(job.rowsD[i].tailF)) && tdD.every(r => Array.isArray(r.tailF) && r.tailF.length === 10));
 t('more than one quadrant in the data (the test is not trivially equal)', new Set(tdD.map(r => r.quad)).size >= 2, tdD.map(r => r.quad));
 t('lastBar = END', job.lastBar === END);
 

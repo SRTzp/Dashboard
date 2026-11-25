@@ -12,8 +12,8 @@ TAIL_JS = """()=>{
   const out = {};
   [['up', i=>0.004 * Math.sin(i / 9) + 0.0015], ['wavy', i=>0.012 * Math.sin(i / 5)], ['down', i=>-0.002 + 0.003 * Math.cos(i / 11)]].forEach(([k, f])=>{
     const s = mk(1500, f), d = rrgCompute(s.c, s.c, s.b, 'D'), w = rrgCompute(s.c.filter((_, i)=>i % 5 === 4), s.c.filter((_, i)=>i % 5 === 4), s.b.filter((_, i)=>i % 5 === 4), 'W');
-    out[k] = {d:{n:d.tail && d.tail.length, ok: !!d.tail && d.tail[d.tail.length - 1][0] === d.ratio && d.tail[d.tail.length - 1][1] === d.mom, err:d.err},
-              w:{n:w.tail && w.tail.length, ok: !!w.tail && w.tail[w.tail.length - 1][0] === w.ratio && w.tail[w.tail.length - 1][1] === w.mom, err:w.err}};
+    const T = r=>{ const F = r.tailF; return {n:F && F.length / 2, ok: !!F && F[F.length - 2] === r.ratio && F[F.length - 1] === r.mom, err:r.err}; };   /* HF6: flat tailF */
+    out[k] = {d:T(d), w:T(w)};
   });
   return out; }"""
 
@@ -51,7 +51,7 @@ def run(pw, w, h):
         check(f"{tag} A: tapping a tile opens the existing Weekly Impact detail panel", js(page, "()=>!!document.querySelector('[data-pv-panel]')"))
         js(page, "()=>document.querySelector('[data-lr4-tile=\"XAUUSD\"]').click()"); page.wait_for_timeout(150)
         # --- Daily / Weekly toggle
-        w2 = [dict(r, tail=[[a + 0.5, m] for a, m in r["tail"]], ratio=r["ratio"] + 0.5) for r in rows[:6]]
+        w2 = [dict(r, tailF=[v + (0.5 if i % 2 == 0 else 0) for i, v in enumerate(r["tailF"])], ratio=r["ratio"] + 0.5) for r in rows[:6]]
         js(page, "(r)=>{ const f = ffState(); f.rrg.rowsW = r.map(x=>Object.assign({model:RRG_MODEL}, x)); bdFlowTopRender(); }", w2)
         cap_d = js(page, "()=>(document.querySelector('.lr4-fig figcaption')||{innerText:''}).innerText")
         n_d = js(page, "()=>document.querySelectorAll('[data-lr4-sec]').length")
@@ -61,7 +61,7 @@ def run(pw, w, h):
         check(f"{tag} B: Weekly toggle switches the rows (16 → 6) and the tail note ('last 5 days' → 'last 5 weeks')", tf == "W" and n_d == 16 and n_w == 6 and (w <= 600 or ("5 days" in cap_d and "5 weeks" in cap_w)), [tf, n_d, n_w, cap_d, cap_w])
         js(page, "()=>rrgSetTf('D')"); page.wait_for_timeout(200)
         # --- row without a tail = dot only
-        js(page, "()=>{ const f = ffState(); delete f.rrg.rowsD[0].tail; bdFlowTopRender(); }")
+        js(page, "()=>{ const f = ffState(); delete f.rrg.rowsD[0].tail; delete f.rrg.rowsD[0].tailF; bdFlowTopRender(); }")
         dot = js(page, "(s)=>{ const g = document.querySelector('[data-lr4-sec=\"'+s+'\"]'); return g ? [g.querySelectorAll('polyline').length, g.querySelectorAll('circle').length] : null; }", rows[0]["sym"])
         check(f"{tag} B: a cached row without a tail draws the dot only", dot == [0, 1], dot)
         # --- speed list (desktop) + phone arrows

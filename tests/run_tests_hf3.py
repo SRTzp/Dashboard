@@ -153,7 +153,7 @@ DENY = """()=>{ const orig = db.collection.bind(db);
 FLOWST = "()=>{ const e = document.querySelector('[data-lr4-rrg] [data-rrg-note]'); return e ? e.innerText.replace(/\\s+/g, ' ').trim() : null; }"
 PANEL = "()=>{ const e = document.querySelector('[data-rrg-status]'); return e ? e.textContent.replace(/\\s+/g, ' ').trim() : null; }"
 CARDST = U.STATUS
-STATE = "()=>{ const r = ffState().rrg; return {src:r.src, d:(r.rowsD||[]).length, tails:(r.rowsD||[]).filter(x=>x.tail && x.tail.length === 5).length, miss:r.jobMiss||[], pend:r.pending||null, err:r.err||''}; }"
+STATE = "()=>{ const r = ffState().rrg; return {src:r.src, d:(r.rowsD||[]).length, tails:(r.rowsD||[]).filter(x=>x.tailF && x.tailF.length === 10).length, miss:r.jobMiss||[], pend:r.pending||null, err:r.err||''}; }"
 
 
 def flow(page):

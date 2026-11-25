@@ -70,7 +70,7 @@ RS = {
 SECT = {}   # WL2 — optional {ySym: {sector, industry}} on the price docs
 
 FIX_JS = """([px])=>{
-  const mk = (sym, quad, days)=>Object.assign({model:RRG_MODEL}, {sym, name:sym, quad, ratio:100, mom:100, dMom:0.1, days, prevDays:3, err:null, tail:[[100, 100]]});
+  const mk = (sym, quad, days)=>Object.assign({model:RRG_MODEL}, {sym, name:sym, quad, ratio:100, mom:100, dMom:0.1, days, prevDays:3, err:null, tailF:[100, 100]});
   const rows = [mk('XLK', 'lag', 12), mk('SMH', 'imp', 4), mk('XLI', 'lead', 11), mk('IGV', 'lag', 10)];
   const f = ffState(); f.rrg = {rowsD: rows, rowsW: rows, build:RRG_BUILD, model:RRG_MODEL, lastBar:rrgToday(), day:rrgToday()};
   try{ getBook('main').trades.push({id:'tAAPL', sym:'AAPL', port:'core', status:'open', dir:'long', entry:100, qty:10, sl:90, date:'2026-10-20', acct:'main'}); }catch(e){ console.warn(e); }

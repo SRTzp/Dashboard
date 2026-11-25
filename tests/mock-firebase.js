@@ -103,6 +103,14 @@
      Every offender is also listed in window.__undefWrites ({path, field}) so a run can name the writes that would fail without the setting. */
   let ignoreUndef = false;
   function findUndef(v, p){ if(v === undefined) return p; if(v && typeof v === 'object' && !(v instanceof Date)){ for(const k of Object.keys(v)){ const r = findUndef(v[k], p ? p + '.' + k : k); if(r) return r; } } return null; }
+  /* HF6 — like the real SDK: a nested array (array directly inside an array) is rejected; listed in window.__nestedWrites */
+  function findNested(v, p){ if(Array.isArray(v)){ for(let i=0;i<v.length;i++){ if(Array.isArray(v[i])) return p + '[' + i + ']'; const r = findNested(v[i], p + '[' + i + ']'); if(r) return r; } return null; } if(v && typeof v === 'object' && !(v instanceof Date)){ for(const k of Object.keys(v)){ const r = findNested(v[k], p ? p + '.' + k : k); if(r) return r; } } return null; }
+  function checkNested(fn, path, data){
+    if(window.__forceSaveFail){ throw Object.assign(new Error('forced failure (test)'), {code:'unavailable'}); }
+    const f = findNested(data, ''); if(f === null) return;
+    try{ (window.__nestedWrites = window.__nestedWrites || []).push({path:pathKey(path), field:f, fn}); }catch(e){}
+    throw new Error('Function DocumentReference.' + fn + '() called with invalid data. Nested arrays are not supported (found in document ' + pathKey(path) + ')');
+  }
   function checkUndef(fn, path, data){
     const f = findUndef(data, ''); if(f === null) return;
     try{ (window.__undefWrites = window.__undefWrites || []).push({path:pathKey(path), field:f, fn}); }catch(e){}
@@ -135,7 +143,7 @@
       collection(name){ return makeColRef([...path, name]); },
       get(opts){ return isDenied(path) ? Promise.reject(denyErr()) : Promise.resolve(makeDocSnap(path)); },
       set(data, opts){
-        checkUndef('set', path, data);
+        checkUndef('set', path, data); checkNested('set', path, data);
         if (isDenied(path)) return Promise.reject(denyErr());
         const key = pathKey(path);
         let cur = store.get(key);
@@ -152,7 +160,7 @@
         return Promise.resolve();
       },
       update(data){
-        checkUndef('update', path, data);
+        checkUndef('update', path, data); checkNested('update', path, data);
         if (isDenied(path)) return Promise.reject(denyErr());
         const key = pathKey(path);
         let cur = store.get(key);

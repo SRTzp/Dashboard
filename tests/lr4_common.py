@@ -21,7 +21,7 @@ def mock_sectors():
     for n, (pts, col) in zip(names, polys):
         p = [tuple(map(float, a.split(","))) for a in pts.split()]
         tail = [[100 + (x - 240) / 240 * 3, 100 - (y - 237) / 237 * 3] for x, y in p]
-        rows.append({"sym": n, "name": n, "quad": quad[col], "ratio": tail[-1][0], "mom": tail[-1][1], "tail": tail, "dMom": spd.get(n, 0.1 if quad[col] != "lag" else -0.1),
+        rows.append({"sym": n, "name": n, "quad": quad[col], "ratio": tail[-1][0], "mom": tail[-1][1], "tailF": [v for pt in tail for v in pt], "dMom": spd.get(n, 0.1 if quad[col] != "lag" else -0.1),
                      "days": days.get(n, 5), "prevDays": 3, "err": None})
     return rows
 
