@@ -71,7 +71,7 @@
   --sh-2:0 1px 2px rgba(16,20,28,.05);
   --sh-3:0 12px 32px rgba(16,20,28,.14);
 
-  --tabs-safe:calc(env(safe-area-inset-top, 0px) + var(--tabs-offset, 0px));
+  --tabs-safe:calc(env(safe-area-inset-top, 0px) + var(--tabs-offset, 0px) + var(--hf6-bar, 0px));
   --wlnote-size:.84rem;
   /* คอลัมน์ INDUSTRY ใน Watchlist — แคบไว้เพื่อยกที่ให้ FUNDAMENTAL */
   --ind-w:120px;
@@ -6055,7 +6055,7 @@ html body .pc2-none .pc2-np{display:none}
 }
 .lr4-wkb{display:inline-grid;align-items:center}.lr4-wkb>*{grid-area:1/1}.lr4-wkg{visibility:hidden;white-space:nowrap;padding:6px 0 6px 0;pointer-events:none}.lr4-wkb .lr4-wksel{width:100%;min-width:0}
 @media (max-width:560px) and (orientation:portrait){ #tabWatch{touch-action:pan-y pinch-zoom} }   /* PH1 — the swipe area keeps vertical scroll only; sideways-scrolling children are their own scroll container */
-#hf6SaveBar{position:fixed;top:0;left:0;right:0;z-index:100000;background:#FFF4D6;color:#7A5200;border-bottom:1px solid #E8C777;padding:8px 14px;font-size:13px;font-weight:600;text-align:center}#hf6SaveBar button{background:none;border:0;color:#7A5200;font-weight:700;text-decoration:underline;cursor:pointer;font-size:13px;min-height:28px}
+#hf6SaveBar{position:sticky;top:0;width:100%;box-sizing:border-box;z-index:100000;background:#FFF4D6;color:#7A5200;border-bottom:1px solid #E8C777;padding:8px 14px;font-size:13px;font-weight:600;text-align:center}#hf6SaveBar button{background:none;border:0;color:#7A5200;font-weight:700;text-decoration:underline;cursor:pointer;font-size:13px;min-height:28px}
 </style>
 </head>
 <body>
@@ -9846,16 +9846,24 @@ function fsSafe(obj, where){
   try{ const r = fix(obj, ''); return r.drop ? {} : r.v; }catch(e){ console.warn('fsSafe', e); return obj; }
 }
 const hf6Fails = new Map();   /* key → {why, retry} */
-function hf6Why(e){ const m = String((e && (e.code || e.message)) || e || 'error').replace(/^FirebaseError:?\s*/, '').replace(/\s+/g, ' '); return m.length > 70 ? m.slice(0, 67) + '…' : m; }
+function hf6Why(e){   /* E2E1 — plain words, never a raw Firebase code */
+  const code = String((e && e.code) || '').replace(/^firestore\//, ''), msg = String((e && e.message) || e || '').replace(/^FirebaseError:?\s*/, '').replace(/\s+/g, ' ');
+  const M = {unavailable:'Server unreachable', 'deadline-exceeded':'Server too slow', 'permission-denied':'No permission to save', unauthenticated:'Signed out · sign in again', 'resource-exhausted':'Save limit reached · try later', 'invalid-argument':'Some data cannot be saved', 'failed-precondition':'Save refused · reload the page', aborted:'Save interrupted', cancelled:'Save cancelled', 'not-found':'Saved item missing · reload', 'already-exists':'Already saved', 'data-loss':'Data problem · reload', internal:'Server error', 'out-of-range':'Some data cannot be saved'};
+  if(M[code]) return M[code];
+  if(/offline|failed to fetch|network|unreachable|could not reach/i.test(msg)) return 'Server unreachable';
+  if(/nested arrays|unsupported field value|invalid data|undefined/i.test(msg)) return 'Some data cannot be saved';
+  return msg.length > 50 ? msg.slice(0, 47) + '…' : (msg || 'Save failed');
+}
 function hf6Fail(key, e, retry){ hf6Fails.set(key, {why:hf6Why(e), retry}); hf6Bar(); }
 function hf6Ok(key){ if(hf6Fails.delete(key)) hf6Bar(); }
 function hf6Bar(){
   try{
     let b = document.getElementById('hf6SaveBar');
-    if(!hf6Fails.size){ if(b) b.remove(); return; }
-    if(!b){ b = document.createElement('div'); b.id = 'hf6SaveBar'; b.setAttribute('data-hf6-savebar', ''); b.setAttribute('role', 'alert'); document.body.appendChild(b); }
+    if(!hf6Fails.size){ if(b) b.remove(); document.documentElement.style.removeProperty('--hf6-bar'); return; }
+    if(!b){ b = document.createElement('div'); b.id = 'hf6SaveBar'; b.setAttribute('data-hf6-savebar', ''); b.setAttribute('role', 'alert'); document.documentElement.insertBefore(b, document.body); }   /* E2E1 — in the page flow (sticky), so the header is pushed down, never covered */
     const first = [...hf6Fails.values()][0];
     b.innerHTML = '<span>⚠ Not saved · ' + escHtml(first.why) + ' · </span><button type="button" data-hf6-retry onclick="hf6Retry()">Retry ›</button>';
+    document.documentElement.style.setProperty('--hf6-bar', Math.ceil(b.getBoundingClientRect().height) + 'px');
   }catch(e){}
 }
 function hf6Retry(){ [...hf6Fails.values()].forEach(f=>{ try{ if(f.retry) f.retry(); }catch(e){ console.warn('hf6 retry', e); } }); }
@@ -25382,7 +25390,7 @@ function rrgOutdated(r){ return !!(r && ((r.rowsD||[]).length || (r.rowsW||[]).l
 /* RRG1b — แถวที่มีแต่ผลโมเดลเก่า: ห้ามใส่กล่อง/ป้ายสถานะใหม่ (Leading เก่า ≠ Outperforming) */
 function rrgWaiting(x){ return !!(x && !x.err && x.model !== RRG_MODEL); }
 function rrgCacheFresh(f){
-  return !!(f && f.rrg && f.rrg.day === rrgToday() && (f.rrg.rowsD||[]).length && f.rrg.model === RRG_MODEL && rrgBarsFresh(f.rrg)
+  return !!(f && f.rrg && f.rrg.day === rrgToday() && (f.rrg.rowsD||[]).length && (f.rrg.rowsD||[]).some(r=>r && (r.tailF || r.tail)) && f.rrg.model === RRG_MODEL && rrgBarsFresh(f.rrg)
     && !(f.rrg.prov && rrgProvCut() !== f.rrg.prov));   /* RV1b — ดึงตอนตลาดยังเปิด (ทิ้งแท่งวันนี้) → หลังปิดถือว่าเก่า ดึงใหม่ */
 }
 function rrgTf(){ return ffState().rrgTf === 'W' ? 'W' : 'D'; }

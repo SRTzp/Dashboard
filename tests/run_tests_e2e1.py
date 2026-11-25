@@ -12,6 +12,10 @@ ROOM = "()=>{ const e=document.querySelector('[data-lr2-room=\"main\"]'); return
 MANAGE = "()=>[...document.querySelectorAll('[data-hf5-row]')].map(r=>r.innerText.replace(/\\s+/g,' ').trim())"
 
 
+def strict(page):
+    return js(page, "()=>(window.__nestedWrites||[]).concat(window.__undefWrites||[]).map(x=>x.path+' :: '+x.field).concat(document.getElementById('hf6SaveBar') ? ['Not saved bar'] : [])")
+
+
 def want(j): return not ONLY or j in ONLY
 
 
@@ -67,7 +71,7 @@ def j1(pw, w):
         goto(page, "today", J); page.wait_for_timeout(500)
         step(J, w, "Risk room back to the start (no reserved Sat risk)", js(page, ROOM) == room0, [room0, js(page, ROOM)])
         chk = js(page, "(id)=>{ const i=sat7dIdea(id); const c=pb2Calc(i,'main'); return null; }", id)
-        step(J, w, "no console errors / page errors", not ce and not pe, (ce + pe)[:2])
+        step(J, w, "no console errors / page errors · strict mock saw no nested-array / undefined write · no Not-saved bar", not ce and not pe and not strict(page), [(ce + pe)[:2], strict(page)])
     finally:
         b.close()
 
@@ -113,7 +117,7 @@ def j2(pw, w):
         ok = new_sat_plan(page, w, J, 1, True, "main", 90000, 88500, 94000); ok &= save_plan(page, J)
         id3 = newest_idea(page, "BTCUSD"); s2 = js(page, STEP); card = plan_card_text(page, id3) or ""
         step(J, w, "second re-entry blocked (SAT_REENTRY_USED) with the reason on the plan card", ok and "SAT_REENTRY_USED" in s2["reasons"] and "Re-entry already used" in card, [s2, card[:160]])
-        step(J, w, "no console errors / page errors", not ce and not pe, (ce + pe)[:2])
+        step(J, w, "no console errors / page errors · strict mock saw no nested-array / undefined write · no Not-saved bar", not ce and not pe and not strict(page), [(ce + pe)[:2], strict(page)])
     finally:
         b.close()
 
@@ -153,7 +157,7 @@ def j3(pw, w):
         ok = new_sat_plan(page, w, J, 3, False, "main", 80, 82, 75); ok &= save_plan(page, J); rid = newest_idea(page, "BRENT")
         c = card_info(page, rid)
         step(J, w, "3 open → 4th blocked '3 Sat setups open (XAU, BTC, S50) · max 3'", ok and c and c["warn"] and "3 Sat setups open (XAU, BTC, S50) · max 3" in c["warn"], c)
-        step(J, w, "no console errors / page errors", not ce and not pe, (ce + pe)[:2])
+        step(J, w, "no console errors / page errors · strict mock saw no nested-array / undefined write · no Not-saved bar", not ce and not pe and not strict(page), [(ce + pe)[:2], strict(page)])
     finally:
         b.close()
 
@@ -188,7 +192,7 @@ def j6(pw, w):
         page.wait_for_timeout(200); ok &= click(page, "[data-re4-go]", "Cancel plan (confirm)", J)[0]; page.wait_for_timeout(500)
         gone = page.locator(f'[data-bd-card="{bid}"]').count()
         step(J, w, "cancel a plan → card leaves the Plan board", ok and gone == 0, gone)
-        step(J, w, "no console errors / page errors", not ce and not pe, (ce + pe)[:2])
+        step(J, w, "no console errors / page errors · strict mock saw no nested-array / undefined write · no Not-saved bar", not ce and not pe and not strict(page), [(ce + pe)[:2], strict(page)])
     finally:
         b.close()
 
@@ -216,7 +220,7 @@ def j7(pw, w):
         step(J, w, "Save plan → Today Enter row AAPL", ok and has == 1, has)
         ok, blk = place_from_today(page, "AAPL", J)
         step(J, w, "continue to Place › → Confirm → Check orders row", ok and not blk and page.locator('[data-re2-row="AAPL"][data-re2-grp="check"]').count() == 1, blk)
-        step(J, w, "no console errors / page errors", not ce and not pe, (ce + pe)[:2])
+        step(J, w, "no console errors / page errors · strict mock saw no nested-array / undefined write · no Not-saved bar", not ce and not pe and not strict(page), [(ce + pe)[:2], strict(page)])
     finally:
         b.close()
 
@@ -263,7 +267,7 @@ def j4(pw, w):
         import re
         m = re.search(r"AAPL.{0,70}?\+([\d.]+)R.{0,12}\+\$([\d,]+)", jt)
         step(J, w, "Close (win) → Journal shows AAPL with R and $", ok and m is not None, jt[jt.find("AAPL"):][:200])
-        step(J, w, "no console errors / page errors", not ce and not pe, (ce + pe)[:2])
+        step(J, w, "no console errors / page errors · strict mock saw no nested-array / undefined write · no Not-saved bar", not ce and not pe and not strict(page), [(ce + pe)[:2], strict(page)])
     finally:
         b.close()
 
@@ -305,7 +309,7 @@ def j5(pw, w):
         import re
         m = re.search(r"CPALL.{0,70}?\+([\d.]+)R", jt)
         step(J, w, "Close (win) → Journal shows CPALL.BK with R", ok and m is not None, jt[jt.find("CPALL"):][:200])
-        step(J, w, "no console errors / page errors", not ce and not pe, (ce + pe)[:2])
+        step(J, w, "no console errors / page errors · strict mock saw no nested-array / undefined write · no Not-saved bar", not ce and not pe and not strict(page), [(ce + pe)[:2], strict(page)])
     finally:
         b.close()
 
@@ -369,7 +373,49 @@ def j_crawl(pw, w):
         b.close()
 
 
-JOURNEYS_FN = [("J1", j1), ("J2", j2), ("J3", j3), ("J6", j6), ("J7", j7), ("J4", j4), ("J5", j5), ("CRAWL", j_crawl)]
+def j_bar(pw, w):
+    """HF6 'Not saved' bar: pushes the page down (never covers the header / tabs), reason in plain words, Retry clears it."""
+    J = "BAR"; b, page, ce, pe = start(pw, w); page.set_default_timeout(6000)
+    try:
+        top0 = js(page, "()=>({h:document.querySelector('header').getBoundingClientRect().top, t:document.getElementById('tabsMain').getBoundingClientRect().top})")
+        js(page, "()=>{ window.__forceSaveFail = true; dirtyBooks.set(acctActive,(dirtyBooks.get(acctActive)||0)+1); pendingLocalWrite = true; doPersist(); }"); page.wait_for_timeout(900)
+        r = js(page, "()=>{ const b=document.getElementById('hf6SaveBar'); if(!b) return null; const br=b.getBoundingClientRect(), h=document.querySelector('header').getBoundingClientRect(), t=document.getElementById('tabsMain').getBoundingClientRect(); return {txt:b.innerText.replace(/\\s+/g,' ').trim(), barBottom:br.bottom, barTop:br.top, headTop:h.top, tabsTop:t.top, ovf:document.documentElement.scrollWidth-innerWidth, wide:br.width}; }")
+        step(J, w, "forced save failure → '⚠ Not saved · Server unreachable · Retry ›' (plain words)", r and r["txt"] == "⚠ Not saved · Server unreachable · Retry ›", r)
+        step(J, w, "bar sits above the header (header + tabs pushed down, nothing overlapped)", r and r["barTop"] <= 1 and r["headTop"] >= r["barBottom"] - 1 and r["tabsTop"] >= r["barBottom"] - 1 and r["ovf"] <= 0, r)
+        js(page, "()=>window.scrollTo(0, 400)"); page.wait_for_timeout(300)
+        r2 = js(page, "()=>{ const b=document.getElementById('hf6SaveBar').getBoundingClientRect(), t=document.getElementById('tabsMain').getBoundingClientRect(); return {barTop:b.top, barBottom:b.bottom, tabsTop:t.top}; }")
+        step(J, w, "scrolled: the bar stays on top and the sticky tabs sit under it", r2["barTop"] <= 1 and r2["tabsTop"] >= r2["barBottom"] - 1, r2)
+        js(page, "()=>window.scrollTo(0, 0)")
+        if SHOTS_ON: shot(page, "notsaved-%d" % w)
+        js(page, "()=>{ window.__forceSaveFail = false; }")
+        ok = click(page, "[data-hf6-retry]", "Retry ›", J)[0]; page.wait_for_timeout(900)
+        gone = js(page, "()=>!document.getElementById('hf6SaveBar')")
+        back = js(page, "()=>document.querySelector('header').getBoundingClientRect().top")
+        step(J, w, "Retry after the fix → bar gone, header back to the top", ok and gone and abs(back - top0["h"]) <= 1, [gone, back, top0])
+        step(J, w, "no console errors / page errors (besides the forced save failure)", not [x for x in (ce + pe) if 'forced failure' not in x], (ce + pe)[:2])
+    finally:
+        b.close()
+
+
+def j_rrg(pw, w):
+    """rrgCacheFresh: today's cached rows with neither tail nor tailF are NOT fresh (rebuilt from the job bars) — rows saved without tails never block tails for the rest of the day."""
+    J = "RRG"; b, page, ce, pe = start(pw, w)
+    try:
+        r = js(page, """()=>{ const f = ffState(); const today = rrgToday(); const base = {day:today, model:RRG_MODEL, build:RRG_BUILD, bars:f.rrg && f.rrg.bars, barsAt:f.rrg && f.rrg.barsAt};
+          const row = x=>Object.assign({sym:'XLK', quad:'lead', ratio:101, mom:100.5}, x);
+          const mk = rows=>({rrg:Object.assign({}, f.rrg, {day:today, model:RRG_MODEL, rowsD:rows, rowsW:rows})});
+          const keep = f.rrg; const out = {};
+          const fresh = rows=>{ try{ const g = mk(rows); const orig = rrgBarsFresh; window.rrgBarsFresh = ()=>true; try{ return rrgCacheFresh(g); } finally { window.rrgBarsFresh = orig; } }catch(e){ return 'ERR ' + e.message; } };
+          out.none = fresh([row({}), row({sym:'XLE'})]); out.tailF = fresh([row({tailF:[1,2,3,4]})]); out.tail = fresh([row({tail:[[1,2],[3,4]]})]); out.mixed = fresh([row({}), row({tailF:[1,2,3,4]})]); out.empty = fresh([]);
+          return out; }""")
+        step(J, w, "cached rows with neither tail nor tailF → not fresh (rebuild)", r["none"] is False, r)
+        step(J, w, "rows with tailF / tail (or at least one) → still fresh; empty → not fresh", r["tailF"] is True and r["tail"] is True and r["mixed"] is True and r["empty"] is False, r)
+        step(J, w, "no console errors / page errors · strict mock saw no nested-array / undefined write · no Not-saved bar", not ce and not pe and not strict(page), [(ce + pe)[:2], strict(page)])
+    finally:
+        b.close()
+
+
+JOURNEYS_FN = [("J1", j1), ("J2", j2), ("J3", j3), ("J6", j6), ("J7", j7), ("J4", j4), ("J5", j5), ("CRAWL", j_crawl), ("BAR", j_bar), ("RRG", j_rrg)]
 
 if __name__ == "__main__":
     with sync_playwright() as pw:
