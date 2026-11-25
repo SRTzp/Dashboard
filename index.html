@@ -2623,7 +2623,7 @@ body.lf-lean .lfOld{display:none}body:not(.lf-lean) .lfNew{display:none}
 .cgToast.cgErr{background:var(--red,#b3261e)}
 @media (max-width:430px){.cgToast{width:calc(100vw - 32px);max-width:none}}
 @media (prefers-reduced-motion:reduce){.cgToast,.cgToast:not(.show){transition:opacity .18s;transform:translate(-50%,0)}}
-.sd-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink,#16191e);color:#fff;border-radius:99px;padding:7px 16px;font-size:.84rem;z-index:10050;opacity:0;pointer-events:none;transition:opacity .15s}.sd-toast.show{opacity:.95}
+.sd-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink,#16191e);color:#fff;border-radius:99px;padding:7px 16px;font-size:.84rem;z-index:10050;opacity:0;pointer-events:none;transition:opacity .15s}.sd-toast.show{opacity:.95}.sd-toast.top,body:has(.ui-sheet-backdrop,.core-sheet:not(.lf-sheet-side),#bdPop,[aria-modal="true"]) .sd-toast{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 12px)}   /* HF5 — over an open sheet the toast sits at the top, never on its buttons */
 .sd-today .sd-th{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}.sd-today .sub{color:var(--muted);font-size:.74rem}
 .sd-tr{border-top:1px solid var(--hair);padding:7px 0;cursor:pointer;min-width:0;font-size:.84rem}.sd-tr:hover{background:var(--surface2)}.sd-tr:focus-visible,.sd-tempty:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
 .sd-tr .l1{display:flex;justify-content:space-between;gap:4px 8px;flex-wrap:wrap;align-items:baseline}.sd-tr .sd-nm{min-width:0;overflow-wrap:anywhere}.sd-tr .sd-rt{margin-left:auto;text-align:right;min-width:0;max-width:100%}.sd-tr .sd-fl{margin-top:2px}.sd-tr .sd-open{font-size:.74rem}.sd-today .sd-th{justify-content:flex-start;gap:8px}.td3-p .sd-today{margin-top:10px}.td3-p .sd-today.sd-slim{margin-top:10px}
@@ -4799,7 +4799,7 @@ html body #bdBoard .bd-wait>summary,html body #bdBoard .bd-hid>summary{border-ra
 #pb2Body [data-pb2-step="place"] .pb2-more{margin:0;font-size:13px;color:var(--muted)}.pb2-more summary{min-height:32px;display:list-item}
 #pb2Body .lrf-q{margin:0 0 -6px;text-transform:none;letter-spacing:0;font:600 13px var(--sans);color:var(--text,#14161A)}
 #pb2Body [data-pb2-step="place"] .pb2-chk{margin:0}
-#pb2Body [data-pb2-step="place"] .lr3-foot{margin:0;box-shadow:none;padding:0}
+#pb2Body [data-pb2-step="place"] .lr3-foot{margin:0;box-shadow:0 -1px 0 var(--border,#E3E6EA);padding:10px 0 0;background:var(--surface,#fff)}   /* HF5 — solid footer: the list scrolls above it, a ⚠ line never sits on a setup item */
 #pb2Body .lr3-foot .pb2-ft{gap:10px;margin:0}
 #pb2Body .lr3-foot .pb2-ft .go{height:48px;min-height:48px;border-radius:12px;font:600 15px/1 var(--sans)}
 #pb2Body .lr3-foot [data-pb2-no]{flex:1}
@@ -25980,7 +25980,7 @@ function sdPrompt(sym){
 function sdToast(msg){
   let t = document.getElementById('sdToast');
   if(!t){ t = document.createElement('div'); t.id = 'sdToast'; t.className = 'sd-toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
-  t.textContent = msg; t.classList.add('show'); clearTimeout(sdToastT); sdToastT = setTimeout(()=>t.classList.remove('show'), 2200);
+  t.textContent = msg; t.classList.toggle('top', !!document.querySelector('.ui-sheet-backdrop, .core-sheet:not(.lf-sheet-side), #bdPop, [aria-modal="true"]')); t.classList.add('show'); clearTimeout(sdToastT); sdToastT = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 function sdCopyPrompt(sym, ev){
   if(ev) ev.stopPropagation();
@@ -28658,6 +28658,7 @@ function pc2CardHtml(it){
     const exQ = hold ? pv.legs.filter(l=>l.out && l.done).reduce((a, l)=>a + (+l.qty || 0), 0) : 0;
     if(mom){ t1 = pc2T1(c, plan || ord ? pv.plannedQty : pv.heldQty); }
     if(plan || ord) lvl.push(`<span data-pv-qty>#${pv.plannedQty != null ? q(pv.plannedQty) : '—'}</span>`);
+    if((plan || ord) && mom && !pc2Hw(it.ref).done) lvl.push(`<span class="mut" data-pc2-cap>${Math.round(RiskEngine.POLICY.hwFactor.mom * 100)}% until homework done</span>`);   /* HF5 — the card says why the size is cut, same as the Place sheet */
     else lvl.push(`<span data-pv-held>#${pv.heldQty > 0 ? q(pv.heldQty - exQ) : '—'}${exQ > 0 ? ' left' : ''} @ ${pv.avgEntry != null ? N(pv.avgEntry) : '—'}</span>`);
     if(plan || ord){ const ex = rows[0] ? rows[0].px : +it.entry, px = ord && it.firstPlaced != null && rows[it.firstPlaced] ? rows[it.firstPlaced].px : ex; lvl.push(`<span data-pv-entry>${ord ? (it.px > 0 && px < it.px ? 'limit' : 'buy stop') + ' ' + N(px) : 'entry ' + N(px)}</span>`); }
     lvl.push(`<span data-pv-stop>stop ${pv.stop ? N(pv.stop) : '—'}${hold && pv.stop && pv.avgEntry && pv.stop > pv.avgEntry ? ' <b class="up">(above entry)</b>' : ''}</span>`);
@@ -30551,7 +30552,7 @@ function hf3Block(msg, fix, kind){
   pb2.blk = {msg:String(msg == null ? '' : msg), fix:fix || '', kind:kind || ''};
   try{ pb2Render(); const b = document.querySelector('[data-hf3-block]'); if(b && b.scrollIntoView) b.scrollIntoView({block:'nearest'}); }catch(e){ console.error('hf3Block', e); }
 }
-function hf3BlockHtml(){ const b = pb2 && pb2.blk; return b ? `<div class="bd-m hf3-blk" data-hf3-block data-hf3-kind="${bdE(b.kind)}" role="alert"><span>⚠ ${bdE(b.msg)}${b.fix && b.kind !== 'full' ? ' ·' : ''}</span>${b.fix ? `<span class="hf3-fix">${b.fix}</span>` : ''}</div>` : ''; }
+function hf3BlockHtml(){ const b = pb2 && pb2.blk; return b ? `<div class="bd-m hf3-blk" data-hf3-block data-hf3-kind="${bdE(b.kind)}" role="alert"><span>⚠ ${bdE(b.msg)}${b.fix && b.kind !== 'full' && b.kind !== 'queue' ? ' ·' : ''}</span>${b.fix ? `<span class="hf3-fix">${b.fix}</span>` : ''}</div>` : ''; }
 function hf3Err(err){ return String((err && err.message) || err || 'error').replace(/\s+/g, ' ').slice(0, 80); }
 function hf3Guard(s, name, fn){   /* an exception is never a silent stop: line in the sheet + full error in the console */
   try{ return fn(); }catch(err){

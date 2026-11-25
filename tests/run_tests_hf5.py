@@ -42,6 +42,8 @@ def part_a(pw):
             js(page, "()=>pb2PlaceOpen('b1')"); page.wait_for_timeout(300)
             s = js(page, "()=>{ const l = document.querySelector('[data-hf3-block]'); const y = document.querySelector('[data-pb2-yes]'); return {open: !!document.getElementById('bdPop'), line: l && l.innerText.replace(/\\s+/g,' ').trim(), kind: l && l.dataset.hf3Kind, dis: y && y.disabled, fix: [...document.querySelectorAll('[data-hf5-fix]')].map(x=>x.innerText.trim())}; }")
             check(f"{t} Place order sheet opens with the ⚠ line + Move stop › + Confirm disabled", s["open"] and s["line"] and s["line"].startswith("⚠ XAU is open with full risk") and s["fix"] == ["Move stop ›"] and s["dis"] is True, s)
+            ov = js(page, "()=>{ const l=document.querySelector('[data-hf3-block]'), f=l.closest('.lr3-foot'); l.scrollIntoView({block:'nearest'}); const r=l.getBoundingClientRect(); const mid=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2); const bg=getComputedStyle(f).backgroundColor; return {inFoot: !!f, covered: !(mid && l.contains(mid)), solid: bg!=='rgba(0, 0, 0, 0)' && bg!=='transparent', trail: /·\\s*$/.test(l.innerText.replace(/\\s+/g,' ').trim().replace(/Move stop ›$/,'').trim())}; }")
+            check(f"{t} queue ⚠ line sits in a solid footer, nothing covers it, no trailing '·'", ov["inFoot"] and ov["solid"] and not ov["covered"] and not ov["trail"], ov)
             if SHOTS_ON and bias == "Short":
                 js(page, "()=>{ const b=document.querySelector('[data-hf3-block]'); if(b) b.scrollIntoView({block:'nearest'}); }")
             js(page, "()=>bdPopClose()")
@@ -105,6 +107,9 @@ def part_b(pw):
             js(page, "()=>document.querySelector('[data-hf5-btn=\"price\"]').click()"); page.wait_for_timeout(300)
             sh = js(page, "()=>{ const i=document.getElementById('hf5Px'); return i ? {fs:getComputedStyle(i).fontSize, mode:i.inputMode, sheet:!!document.querySelector('.core-sheet')} : null; }")
             check(f"{t} Price › opens a small sheet with one decimal field, 16px", sh and sh["sheet"] and sh["mode"] == "decimal" and sh["fs"] == "16px", sh)
+            js(page, "()=>sdToast('BTC: Order working ✓')"); page.wait_for_timeout(250)   # raised while the sheet is already open
+            ov = js(page, "()=>{ const t=document.getElementById('sdToast').getBoundingClientRect(), b=document.getElementById('csSave').getBoundingClientRect(); return {top:t.top, bottom:t.bottom, over: !(t.right<=b.left||t.left>=b.right||t.bottom<=b.top||t.top>=b.bottom), isTop: 0}; }")
+            check(f"{t} toast while the Price sheet is open sits at the top and does not overlap Save", not ov["over"] and ov["top"] < 60, ov)
             if SHOTS_ON and w == 390: H.shot(page, "price-sheet")
             js(page, "()=>{ const i=document.getElementById('hf5Px'); i.value='abc'; hf5PriceIn(); }")
             check(f"{t} bad number: Save disabled", js(page, "()=>document.getElementById('csSave').disabled"))

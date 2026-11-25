@@ -73,7 +73,7 @@ def board(pw, w, h):
         check(f"{tag} 2a line 1 right: ordered 'placed …' · holding P&L", "placed" in card(page, "mO")["l1"] and re.search(r"[+−]\$53 · \+0\.1R", card(page, "cN")["l1"]) and "no price" in card(page, "bi")["l1"], [card(page, "mO")["l1"], card(page, "cN")["l1"], card(page, "bi")["l1"]])
         # Momentum card: T1 wording, no chips of Buy/Sell
         a = card(page, "mA")
-        check(f"{tag} 2g Momentum card: '#40 · entry 158 · stop 150 · T1 175 (sell #20)' + 'reward at T1'", a and re.search(r"#40 · entry 158 · stop 150 · T1 175 \(sell #20\)", a["l2"]) and "reward at T1" in a["l3"], a and [a["l2"], a["l3"]])
+        check(f"{tag} 2g Momentum card: '#40 · 70% until homework done · entry 158 · stop 150 · T1 175 (sell #20)' + 'reward at T1'", a and re.search(r"#40 · 70% until homework done · entry 158 · stop 150 · T1 175 \(sell #20\)", a["l2"]) and "reward at T1" in a["l3"], a and [a["l2"], a["l3"]])
         # share counts: #n and ①② everywhere, never 'sh' / 'Buy #'
         allt = js(page, "()=>document.querySelector('#bdBoard').innerText")
         check(f"{tag} 2 share counts are '#n' (no ' sh', no 'Buy #') on the whole board", not re.search(r"\d\s?sh\b", allt) and "Buy #" not in allt, re.findall(r".{12}\bsh\b.{5}", allt)[:3])
