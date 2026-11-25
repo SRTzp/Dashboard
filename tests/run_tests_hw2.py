@@ -262,12 +262,82 @@ def part_b(pw, w, h):
         b.close()
 
 
+def part_c(pw, w, h):
+    import lib_phase44 as P44
+    tag = "[%s]" % w; narrow = w < 1024
+    b, page, pe = H.open_hw(pw, w, h)
+    texts = lambda k: js(page, "(k)=>[...document.querySelectorAll('[data-hw1-page] [data-hw2-chips=\"'+k+'\"] .hw2-chip')].map(c=>c.dataset.txt)", k)
+    rowsN = lambda k: js(page, "(k)=>document.querySelectorAll('[data-hw1-page] [data-hw1-f=\"'+k+'\"] .hw2-grp').length", k)
+    def to_mine(sym):
+        if narrow: js(page, "(s)=>hw1SegSet(s,'mine')", sym)
+        page.wait_for_timeout(120)
+    try:
+        # ---- the sheet: Momentum = 4 lists · Compounder = 2 lists (evidence chips are not editable)
+        H.go(page, "AAPL", "winner"); to_mine("AAPL")
+        check(f"{tag} C `Edit chips` link in the footer (small, right)", js(page, "()=>{ const b = document.querySelector('[data-hw2-editchips]'); return !!b && b.offsetParent !== null && b.innerText.trim() === 'Edit chips'; }"))
+        page.click("[data-hw2-editchips]"); page.wait_for_timeout(250)
+        labs = js(page, "()=>[...document.querySelectorAll('.hw2-sheet .hw2-ek')].map(x=>x.textContent.trim())")
+        check(f"{tag} C Momentum sheet: 4 lists (Catalyst · chart, Catalyst · news / business, Trigger, Change my thesis)", labs == ["Catalyst · chart", "Catalyst · news / business", "Trigger", "Change my thesis"], labs)
+        shot(page, "hw2-edit-chips-%d" % w) if narrow else None
+        check(f"{tag} C each list = one chip per line (defaults prefilled)", js(page, "()=>document.querySelector('[data-hw2-edit-list=trigger]').value") == "Close above base high\n+ volume ≥ 1.5×\nBounce off EMA50")
+        js(page, "()=>hw2EditClose()")
+        H.go(page, "COST", "ladder"); to_mine("COST")
+        page.click("[data-hw2-editchips]"); page.wait_for_timeout(250)
+        labs = js(page, "()=>[...document.querySelectorAll('.hw2-sheet .hw2-ek')].map(x=>x.textContent.trim())")
+        check(f"{tag} C Compounder sheet: 2 lists (I believe, Change my thesis) — no evidence list", labs == ["I believe", "Change my thesis"], labs)
+        page.click("[data-hw2-edit-cancel]"); page.wait_for_timeout(150)
+        check(f"{tag} C Cancel closes without saving", js(page, "()=>!document.querySelector('.hw2-sheet') && !(tdSettings().hwChips)"))
+        # ---- edit Momentum: trigger → 2 own chips (· split + lines), exit → empty (row hidden), chart → 1 chip
+        H.go(page, "AAPL", "winner"); to_mine("AAPL")
+        page.click("[data-hw2-editchips]"); page.wait_for_timeout(250)
+        page.fill('[data-hw2-edit-list="trigger"]', "Alpha break\nBeta retest · Gamma gap\nalpha break")
+        page.fill('[data-hw2-edit-list="exit"]', "")
+        page.fill('[data-hw2-edit-list="chart"]', "Only chart chip")
+        page.click("[data-hw2-edit-save]"); page.wait_for_timeout(500)
+        check(f"{tag} C Save → the Momentum page shows the new chips (de-duplicated, · splits)", texts("trigger") == ["Alpha break", "Beta retest", "Gamma gap"] and texts("catalyst")[:1] == ["Only chart chip"], [texts("trigger"), texts("catalyst")])
+        check(f"{tag} C empty list → that chip row is hidden · the field still works as free text", texts("exit") == [] and js(page, "()=>!!document.querySelector('[data-hw1-ta=exit]')"))
+        page.fill('[data-hw1-ta="exit"]', "my own exit words"); page.wait_for_timeout(100)
+        check(f"{tag} C …free text still counts as done", js(page, TXT, '[data-hw1-chip="exit"]') == "done")
+        st = js(page, "()=>JSON.stringify(tdSettings().hwChips)")
+        check(f"{tag} C stored once in settings.hwChips = {{mmt:{{…}}}}", json.loads(st).get("mmt", {}).get("trigger") == ["Alpha break", "Beta retest", "Gamma gap"] and json.loads(st)["mmt"]["exit"] == [] and "comp" not in json.loads(st), st)
+        H.go(page, "COST", "ladder"); to_mine("COST")
+        check(f"{tag} C the other type is unchanged (Compounder still has its defaults)", texts("why") == ["Pricing power", "Earnings growth speeding up", "New product / segment ramp", "Margin expansion", "Market share gains", "Recurring revenue"])
+        # ---- edit Compounder
+        page.click("[data-hw2-editchips]"); page.wait_for_timeout(250)
+        page.fill('[data-hw2-edit-list="why"]', "Moat widens\nPricing power"); page.click("[data-hw2-edit-save]"); page.wait_for_timeout(400)
+        check(f"{tag} C Compounder chips change on its page", texts("why") == ["Moat widens", "Pricing power"], texts("why"))
+        # ---- reload → both types' pages show the edits (all devices = stored in settings)
+        P44.reload_keep(page)
+        js(page, "()=>{ switchTab('watch'); }"); page.wait_for_timeout(300)
+        H.go(page, "AAPL", "winner"); to_mine("AAPL")
+        check(f"{tag} C after reload: Momentum chips are the edited ones (trigger · chart) and exit row is hidden", texts("trigger") == ["Alpha break", "Beta retest", "Gamma gap"] and texts("catalyst")[:1] == ["Only chart chip"] and texts("exit") == [] and rowsN("exit") == 0, [texts("trigger"), texts("exit")])
+        H.go(page, "COST", "ladder"); to_mine("COST")
+        check(f"{tag} C after reload: Compounder chips are the edited ones", texts("why") == ["Moat widens", "Pricing power"], texts("why"))
+        # ---- Reset to default (per type)
+        H.go(page, "AAPL", "winner"); to_mine("AAPL")
+        page.click("[data-hw2-editchips]"); page.wait_for_timeout(250)
+        page.click("[data-hw2-edit-reset]"); page.wait_for_timeout(400)
+        page.click("[data-hw2-edit-cancel]"); page.wait_for_timeout(200)
+        check(f"{tag} C Reset to default restores Momentum's defaults (exit row is back)", texts("trigger") == ["Close above base high", "+ volume ≥ 1.5×", "Bounce off EMA50"] and texts("exit") == ["RS below 70", "Close below EMA50", "Sector turns lagging", "Earnings miss", "No progress in 3 weeks"] and texts("catalyst")[:1] == ["Base breakout"], [texts("trigger"), texts("exit")])
+        st = js(page, "()=>tdSettings().hwChips")
+        check(f"{tag} C Reset touches only that type (Compounder edit kept)", "mmt" not in (st or {}) and (st or {}).get("comp", {}).get("why") == ["Moat widens", "Pricing power"], st)
+        H.go(page, "COST", "ladder"); to_mine("COST")
+        page.click("[data-hw2-editchips]"); page.wait_for_timeout(250); page.click("[data-hw2-edit-reset]"); page.wait_for_timeout(300); page.click("[data-hw2-edit-save]"); page.wait_for_timeout(300)
+        check(f"{tag} C Reset to default restores Compounder's defaults", texts("why")[:2] == ["Pricing power", "Earnings growth speeding up"] and len(texts("why")) == 6, texts("why"))
+        js(page, "()=>{ document.activeElement && document.activeElement.blur(); }")
+        check(f"{tag} C Esc closes the sheet", (page.click("[data-hw2-editchips]") or True) and (page.wait_for_timeout(200) or True) and (page.keyboard.press("Escape") or True) and (page.wait_for_timeout(200) or True) and js(page, "()=>!document.querySelector('.hw2-sheet')"))
+        check(f"{tag} C no console / page errors", not pe, pe[:2])
+    finally:
+        b.close()
+
+
 def main():
     only = os.environ.get("HW2_ONLY", "")
     with sync_playwright() as pw:
         for w, h in ((1440, 900), (390, 844)):
             if not only or "A" in only: part_a(pw, w, h)
             if not only or "B" in only: part_b(pw, w, h)
+            if not only or "C" in only: part_c(pw, w, h)
     n = len(results); bad = [r for r in results if not r[1]]
     print(f"\nHW2: {n - len(bad)}/{n} passed"); sys.exit(1 if bad else 0)
 

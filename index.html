@@ -5394,7 +5394,12 @@ html body .lr5 .hw2-chip.fact{border-style:dashed}
 html body .lr5 .hw2-chip.on{background:#E8ECFB;color:#3B4FC4;border-color:#C9D3F6;font-weight:600}
 html body .lr5 .hw2-more{display:none;color:var(--lr-muted)}
 html body .lr5 .hw2-nofacts{font-size:12.5px;color:var(--lr-muted)}
-html body .lr5 .hw1-btns .hw2-edit{margin-left:auto}
+html body .lr5 .hw1-btns .hw2-edit{margin-left:0;font-size:12.5px}
+.hw2-esheet h3{margin:0 0 4px;font-size:16px}.hw2-esheet .hint{font:12.5px/1.4 Inter,system-ui,sans-serif;color:var(--mute,#5F6672);margin-bottom:10px}
+.hw2-esheet .hw2-el{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}.hw2-esheet .hw2-ek{font:700 11px Inter,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--mute,#5F6672)}
+.hw2-esheet textarea{width:100%;box-sizing:border-box;font:14px/1.4 Inter,system-ui,sans-serif;border:1px solid #DDE0E5;border-radius:9px;padding:8px 10px;resize:vertical}
+.hw2-esheet .btns{display:flex;gap:8px;align-items:center;margin-top:6px;position:sticky;bottom:-16px;background:var(--card,#fff);padding:8px 0}.hw2-esheet .btns .sp{flex:1}
+@media (max-width:430px){.hw2-esheet .btn{min-height:44px}}
 @media (max-width:1023px){
   html body .lr5 .hw1-pr .bar,html body .lr5 .hw2-hold,html body .lr5 .hw2-nx,html body .lr5 .hw2-sz{display:none}
   html body .lr5 .hw2-line{display:block}
@@ -22281,6 +22286,7 @@ function escCloseTop(){
   if(sh){
     const c = sh.classList;
     if(c.contains('core-sheet')) coreSheetClose();
+    else if(c.contains('hw2-sheet')) hw2EditClose();   /* HW2 C */
     else if(c.contains('cl2a-sheet')) cl2aSheetClose();
     else if(c.contains('s7del-sheet')) satV3ClosedDelClose();
     else if(c.contains('pyr-sheet')) satPyrClose();
@@ -33977,6 +33983,39 @@ function hw2Fld(it, k, n){
   const at = k === 'why' ? 'data-wl-mt-why ' : k === 'exit' ? 'data-wl-mt-exit ' : k === 'trigger' ? 'data-wl1-trigger ' : '';
   return `<div class="hw1-fld hw2-f ${ok ? 'ok' : 'no'}${legacy ? ' legacy' : ''}" data-hw1-f="${k}"${req ? ` data-wl1-hwi="${k}"` : ''}><label class="hw1-fl" for="hw1-${k}"><span class="hw2-n">${n} ·</span> ${e(lbl)} ${chip}</label>${L.hint ? `<div class="hw1-hint">${e(L.hint)}</div>` : ''}<div class="hw2-chips" data-hw2-chips="${k}">${hw2ChipsHtml(it, k, v)}</div><textarea id="hw1-${k}" ${at}data-wl-mt-ta data-hw1-ta="${k}" rows="2" maxlength="${k === 'trigger' ? 1000 : k === 'catalyst' ? 400 : 2000}" spellcheck="false" placeholder="${e(L.ph)}" oninput="wlMtIn('${e(t)}','${k}',this.value,this)">${e(v)}</textarea>${cmp}</div>`;
 }
+/* ── HW2 C · Edit chips — per type · stored once in settings.hwChips = {mmt:{chart,news,trigger,exit}, comp:{why,exit}} (all devices) ── */
+const HW2_EDIT = {
+  mmt:{title:'Momentum', lists:[['chart', 'Catalyst · chart'], ['news', 'Catalyst · news / business'], ['trigger', 'Trigger'], ['exit', 'Change my thesis']]},
+  comp:{title:'Compounder', lists:[['why', 'I believe'], ['exit', 'Change my thesis']]}
+};
+function hw2EditSplit(txt){ return hw2ChipsClean(String(txt || '').split(/\n| · /)); }
+function hw2EditOpen(type){
+  type = type === 'comp' ? 'comp' : 'mmt'; hw2EditClose();
+  const e = escHtml, E = HW2_EDIT[type];
+  const body = E.lists.map(l=>`<label class="hw2-el"><span class="hw2-ek">${e(l[1])}</span><textarea data-hw2-edit-list="${l[0]}" rows="${Math.max(3, Math.min(7, hw2ChipList(type, l[0]).length + 1))}" spellcheck="false" aria-label="${e(l[1])}">${e(hw2ChipList(type, l[0]).join('\n'))}</textarea></label>`).join('');
+  const html = `<div class="hw2-esheet" data-hw2-edit="${type}"><h3>Edit chips · ${e(E.title)}</h3><div class="hint">One chip per line (or split with ·). Empty list = that row is hidden. Saved for all devices.${type === 'comp' ? ' “From Fact Sheet” evidence chips come from the facts, not from here.' : ''}</div>${body}<div class="btns"><button type="button" class="btn" data-hw2-edit-reset onclick="hw2EditReset('${type}')">Reset to default</button><span class="sp"></span><button type="button" class="btn" data-hw2-edit-cancel onclick="hw2EditClose()">Cancel</button><button type="button" class="btn pri" data-hw2-edit-save onclick="hw2EditSave('${type}')">Save</button></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', UI.sheet(html).replace('ui-sheet-backdrop', 'ui-sheet-backdrop hw2-sheet'));
+  try{ document.querySelector('[data-hw2-edit-list]').focus(); }catch(err){}
+}
+function hw2EditClose(){ document.querySelectorAll('.hw2-sheet').forEach(x=>x.remove()); }
+function hw2EditStore(type, lists){   /* lists = {key:[…]} · null = back to defaults */
+  const h = tdHome(); if(!h) return false;
+  const B = getBook(h); const all = Object.assign({}, B.settings.hwChips || {});
+  if(lists) all[type] = lists; else delete all[type];
+  B.settings.hwChips = all; saveBook(h);
+  return true;
+}
+function hw2EditRefresh(){ try{ if(activeTab === 'watch' && hwSym) renderWatchlist(); }catch(e){} }
+function hw2EditSave(type){
+  const lists = {}; document.querySelectorAll('.hw2-sheet [data-hw2-edit-list]').forEach(ta=>{ lists[ta.dataset.hw2EditList] = hw2EditSplit(ta.value); });
+  if(!hw2EditStore(type, lists)){ try{ sdToast('Could not save chips'); }catch(e){} return; }
+  hw2EditClose(); hw2EditRefresh(); try{ sdToast('Chips saved'); }catch(e){}
+}
+function hw2EditReset(type){
+  hw2EditStore(type, null);
+  document.querySelectorAll('.hw2-sheet [data-hw2-edit-list]').forEach(ta=>{ ta.value = HW2_CHIPS_DEF[type][ta.dataset.hw2EditList].join('\n'); });
+  hw2EditRefresh(); try{ sdToast('Chips reset to default'); }catch(e){}
+}
 function hw1PlanFn(it){ const s = escHtml(it.ticker).replace(/'/g, '&#39;'); return wl1Status(it).k === 'none' ? `wlOpenCorePlan('${s}')` : `wl5OpenPlan('${s}')`; }
 function hw2Hold(it){ return wl1TrkOf(it) === 'ladder' ? 'Hold 6 m – 3 y' : 'Hold 2 wk – 3 m'; }
 function hw2SizePct(it){ return wl1TrkOf(it) === 'ladder' ? 50 : Math.round(100 * RiskEngine.POLICY.hwFactor.mom); }   /* the engine's real homework cap: Momentum 70% (hwFactor.mom) · Compounder Pilot 50% */
@@ -33997,7 +34036,7 @@ function hw1MineHtml(it){
   return `<div class="hw1-mine" data-hw1-mine data-hw2-type="${hw2Type(it)}" data-wl-mt="${e(t)}" data-wl-mt-mode="edit"><div class="hw1-mh"><span class="lbl">Your thesis</span><span class="wlMtDraft" data-wl-mt-draft ${dirty ? '' : 'hidden'}>Unsaved draft · <button type="button" class="hw1-lnk" data-wl-mt-ddisc onclick="wlMtDiscard('${e(t)}')">Discard</button></span></div>
     <div class="hw2-line" data-hw2-line>${line}</div>
     <div class="hw1-mscroll">${main}<div class="hw1-mut" data-hw1-plan-note>Price rules (stop, exit) live in the Plan card, not here.</div>${opt}</div>
-    <div class="hw1-mfoot"><div class="hw1-btns"><button type="button" class="btn" data-hw1-draft data-wl-mt-save onclick="hw1Save('${e(t)}',false)">Save draft</button><button type="button" class="btn pri" data-hw1-done data-wl1-confirm ${p.miss.length ? 'disabled' : ''} onclick="hw1Done('${e(t)}')"><span class="lg">Save · mark done</span><span class="sm">Mark done</span></button><button type="button" class="hw1-lnk hw1-copy" data-hw1-copy onclick="hw1Copy('${e(t)}')">Copy for AI challenge ›</button></div>
+    <div class="hw1-mfoot"><div class="hw1-btns"><button type="button" class="btn" data-hw1-draft data-wl-mt-save onclick="hw1Save('${e(t)}',false)">Save draft</button><button type="button" class="btn pri" data-hw1-done data-wl1-confirm ${p.miss.length ? 'disabled' : ''} onclick="hw1Done('${e(t)}')"><span class="lg">Save · mark done</span><span class="sm">Mark done</span></button><button type="button" class="hw1-lnk hw1-copy" data-hw1-copy onclick="hw1Copy('${e(t)}')">Copy for AI challenge ›</button><button type="button" class="hw1-lnk hw2-edit" data-hw2-editchips onclick="hw2EditOpen('${hw2Type(it)}')">Edit chips</button></div>
     <div class="hw1-mut" data-wl-mt-msg role="status">${e(msg)}</div>${size}</div></div>`;
 }
 function wlMtHtml(it){ return it ? hw1MineHtml(it) : ''; }   /* HW1 — the My Thesis tab now shows the same "Your thesis" form (old editor: wlMtLegacyHtml) */
