@@ -71,7 +71,7 @@
   --sh-2:0 1px 2px rgba(16,20,28,.05);
   --sh-3:0 12px 32px rgba(16,20,28,.14);
 
-  --tabs-safe:calc(env(safe-area-inset-top, 0px) + var(--tabs-offset, 0px));
+  --tabs-safe:calc(env(safe-area-inset-top, 0px) + var(--tabs-offset, 0px) + var(--hf6-bar, 0px));
   --wlnote-size:.84rem;
   /* คอลัมน์ INDUSTRY ใน Watchlist — แคบไว้เพื่อยกที่ให้ FUNDAMENTAL */
   --ind-w:120px;
@@ -6055,7 +6055,7 @@ html body .pc2-none .pc2-np{display:none}
 }
 .lr4-wkb{display:inline-grid;align-items:center}.lr4-wkb>*{grid-area:1/1}.lr4-wkg{visibility:hidden;white-space:nowrap;padding:6px 0 6px 0;pointer-events:none}.lr4-wkb .lr4-wksel{width:100%;min-width:0}
 @media (max-width:560px) and (orientation:portrait){ #tabWatch{touch-action:pan-y pinch-zoom} }   /* PH1 — the swipe area keeps vertical scroll only; sideways-scrolling children are their own scroll container */
-#hf6SaveBar{position:fixed;top:0;left:0;right:0;z-index:100000;background:#FFF4D6;color:#7A5200;border-bottom:1px solid #E8C777;padding:8px 14px;font-size:13px;font-weight:600;text-align:center}#hf6SaveBar button{background:none;border:0;color:#7A5200;font-weight:700;text-decoration:underline;cursor:pointer;font-size:13px;min-height:28px}
+#hf6SaveBar{font-family:var(--sans);line-height:1.4;position:sticky;top:0;width:100%;box-sizing:border-box;z-index:100000;background:#FFF4D6;color:#7A5200;border-bottom:1px solid #E8C777;padding:8px 14px;font-size:13px;font-weight:600;text-align:center}#hf6SaveBar button{font-family:var(--sans);background:none;border:0;color:#7A5200;font-weight:700;text-decoration:underline;cursor:pointer;font-size:13px;min-height:28px}
 </style>
 </head>
 <body>
@@ -9846,16 +9846,24 @@ function fsSafe(obj, where){
   try{ const r = fix(obj, ''); return r.drop ? {} : r.v; }catch(e){ console.warn('fsSafe', e); return obj; }
 }
 const hf6Fails = new Map();   /* key → {why, retry} */
-function hf6Why(e){ const m = String((e && (e.code || e.message)) || e || 'error').replace(/^FirebaseError:?\s*/, '').replace(/\s+/g, ' '); return m.length > 70 ? m.slice(0, 67) + '…' : m; }
+function hf6Why(e){   /* E2E1 — plain words, never a raw Firebase code */
+  const code = String((e && e.code) || '').replace(/^firestore\//, ''), msg = String((e && e.message) || e || '').replace(/^FirebaseError:?\s*/, '').replace(/\s+/g, ' ');
+  const M = {unavailable:'Server unreachable', 'deadline-exceeded':'Server too slow', 'permission-denied':'No permission to save', unauthenticated:'Signed out · sign in again', 'resource-exhausted':'Save limit reached · try later', 'invalid-argument':'Some data cannot be saved', 'failed-precondition':'Save refused · reload the page', aborted:'Save interrupted', cancelled:'Save cancelled', 'not-found':'Saved item missing · reload', 'already-exists':'Already saved', 'data-loss':'Data problem · reload', internal:'Server error', 'out-of-range':'Some data cannot be saved'};
+  if(M[code]) return M[code];
+  if(/offline|failed to fetch|network|unreachable|could not reach/i.test(msg)) return 'Server unreachable';
+  if(/nested arrays|unsupported field value|invalid data|undefined/i.test(msg)) return 'Some data cannot be saved';
+  return msg.length > 50 ? msg.slice(0, 47) + '…' : (msg || 'Save failed');
+}
 function hf6Fail(key, e, retry){ hf6Fails.set(key, {why:hf6Why(e), retry}); hf6Bar(); }
 function hf6Ok(key){ if(hf6Fails.delete(key)) hf6Bar(); }
 function hf6Bar(){
   try{
     let b = document.getElementById('hf6SaveBar');
-    if(!hf6Fails.size){ if(b) b.remove(); return; }
-    if(!b){ b = document.createElement('div'); b.id = 'hf6SaveBar'; b.setAttribute('data-hf6-savebar', ''); b.setAttribute('role', 'alert'); document.body.appendChild(b); }
+    if(!hf6Fails.size){ if(b) b.remove(); document.documentElement.style.removeProperty('--hf6-bar'); return; }
+    if(!b){ b = document.createElement('div'); b.id = 'hf6SaveBar'; b.setAttribute('data-hf6-savebar', ''); b.setAttribute('role', 'alert'); document.documentElement.insertBefore(b, document.body); }   /* E2E1 — in the page flow (sticky), so the header is pushed down, never covered */
     const first = [...hf6Fails.values()][0];
     b.innerHTML = '<span>⚠ Not saved · ' + escHtml(first.why) + ' · </span><button type="button" data-hf6-retry onclick="hf6Retry()">Retry ›</button>';
+    document.documentElement.style.setProperty('--hf6-bar', Math.ceil(b.getBoundingClientRect().height) + 'px');
   }catch(e){}
 }
 function hf6Retry(){ [...hf6Fails.values()].forEach(f=>{ try{ if(f.retry) f.retry(); }catch(e){ console.warn('hf6 retry', e); } }); }
@@ -13054,7 +13062,10 @@ function ln4CoreRows(){
         const stop = +v.stop, avg = +v.avg, below = stop < avg - 1e-9;
         row.state = 'open'; row.status = 'Open';
         row.det = below ? `Stop ${stop.toFixed(2)} below avg ${avg.toFixed(2)}` : `Stop ${stop.toFixed(2)} ≥ avg ${avg.toFixed(2)}`;
-        if(below) row.btn = {t:'Raise stop ›', fn:`ln4RaiseStop('${c.id}')`};
+        let addOk = false;
+        if(trk === 'ladder'){ try{ const cx = coreCtxC(c), ar = coreAddRe1(c, v, cx); addOk = !!(ar && ar.ok && !ar.blocked.length); }catch(e){} }   /* E2E1 — RE1-answers-A 16: thesis complete + tranches at current stop + new order ≤ 1.00% (order ≤ 0.50%); no +1.5R / breakeven condition → Add-on › whenever the engine allows (nothing set it since AU1 B3) */
+        if(addOk) row.btn = {t:'Add-on ›', fn:`bdAddon('${c.id}')`, p:true};
+        else if(below) row.btn = {t:'Raise stop ›', fn:`ln4RaiseStop('${c.id}')`};
       } else if(c.ln4 && c.ln4.placedAt){
         row.state = 'working'; row.status = 'Order working';
         row.det = `${+(c.px) > 0 && +pl.entry < +c.px ? 'Buy Limit' : 'Buy Stop'} ${(+pl.entry).toFixed(2)}`;
@@ -15769,13 +15780,13 @@ function lfStopOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
   const v = coreView(c, coreCtxC(c)); if(v.kind!=='open') return;
   coreDlg = {kind:'stop', id, lean:true, layer:'base', cur:v.stop};
-  coreSheet('stop', `<h3>เลื่อน Stop · ${escHtml(c.ticker)}</h3>
-    <div class="ccSub" data-lf-stopcur>SL Base ${fmt2(v.stop)}${v.accT ? ` · SL เร่ง ${fmt2(v.accStop)}` : ''} · เลื่อนขึ้นได้อย่างเดียว</div>
-    ${v.accT ? `<div class="ccF"><div class="ccSeg" data-lf-stoplayer><button type="button" class="on" data-cs-layer="base" onclick="lfStopLayer('base')">Base</button><button type="button" data-cs-layer="acc" onclick="lfStopLayer('acc')">เร่ง</button><button type="button" data-cs-layer="both" onclick="lfStopLayer('both')">ทั้งคู่</button></div></div>` : ''}
-    <div class="ccF"><label>Stop ใหม่</label><input type="text" inputmode="decimal" id="csStop" oninput="coreStopIn()"></div>
+  coreSheet('stop', `<h3>Move stop · ${escHtml(c.ticker)}</h3>
+    <div class="ccSub" data-lf-stopcur>SL Base ${fmt2(v.stop)}${v.accT ? ` · SL accel ${fmt2(v.accStop)}` : ''} · can only move up</div>
+    ${v.accT ? `<div class="ccF"><div class="ccSeg" data-lf-stoplayer><button type="button" class="on" data-cs-layer="base" onclick="lfStopLayer('base')">Base</button><button type="button" data-cs-layer="acc" onclick="lfStopLayer('acc')">Accel</button><button type="button" data-cs-layer="both" onclick="lfStopLayer('both')">Both</button></div></div>` : ''}
+    <div class="ccF"><label>New stop</label><input type="text" inputmode="decimal" id="csStop" oninput="coreStopIn()"></div>
     <div id="csRe1" data-re1-stop></div>
     <div class="ccErr" id="csErr" style="display:none"></div>
-    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button data-enter-primary type="button" class="ccBtn pri" id="csSave" data-cs-save onclick="coreStopSave()" disabled>บันทึก</button></div>`);
+    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">Cancel</button><button data-enter-primary type="button" class="ccBtn pri" id="csSave" data-cs-save onclick="coreStopSave()" disabled>Save</button></div>`);
 }
 function lfStopLayer(l){
   if(!coreDlg || !coreDlg.lean) return;
@@ -15789,9 +15800,9 @@ function lfStopIn(){
   const ns = coreNum(coreEl('csStop').value), er = coreEl('csErr');
   const curs = d.layer==='base' ? [v.stop] : (d.layer==='acc' ? [v.accStop] : [v.stop, v.accStop]);
   let msg = '';
-  if(!(ns>0)) msg = 'กรอก Stop ใหม่';
-  else if(curs.some(x=>ns < x - 1e-9)) msg = 'Stop ใหม่ต่ำกว่า Stop เดิม — เลื่อนลงไม่ได้';
-  else if(curs.every(x=>Math.abs(ns-x) < 1e-9)) msg = 'Stop เท่าเดิม';
+  if(!(ns>0)) msg = 'Enter a new stop';
+  else if(curs.some(x=>ns < x - 1e-9)) msg = 'New stop is below the current stop — it can only move up';
+  else if(curs.every(x=>Math.abs(ns-x) < 1e-9)) msg = 'Same as the current stop';
   else if(coreErr) msg = coreErr;
   er.style.display = msg && (ns>0) ? '' : 'none'; er.textContent = msg;
   coreEl('csSave').disabled = !!msg;
@@ -15975,7 +15986,7 @@ function coreNewOpen(acct, opt){
   const cur = opt.id ? coreCardsList.find(x=>x.id===opt.id) : null;
   const mode = cur ? opt.mode : 'new';
   const a0 = cur ? cur.acct : ((acct && list.some(a=>a.id===acct)) ? acct : (list.some(a=>a.id===acctActive) ? acctActive : list[0].id));
-  coreNew = {acct:a0, strat: (mode==='new' || mode==='editw') ? 'W' : 'L', track: mode==='editw' ? coreTrackOfCard(cur) : mode==='new' ? ((opt.strat==='L' || planScope==='ladder') ? 'ladder' : 'winner') : 'ladder', mode,
+  coreNew = {acct:a0, acctPicked:!!(acct && list.some(a=>a.id===acct)) || (mode==='new' && a0 !== acctActive), strat: (mode==='new' || mode==='editw') ? 'W' : 'L', track: mode==='editw' ? coreTrackOfCard(cur) : mode==='new' ? ((opt.strat==='L' || planScope==='ladder') ? 'ladder' : 'winner') : 'ladder', mode,
    /* RG2b — Winner กับ Ladder แยกหน้า: กลยุทธ์กำหนดจากหน้าที่เปิด (ไม่มีตัวเลือก W/L ในฟอร์ม · ไม่มีโหมดแปลง) */
    id: cur ? cur.id : null, f:null, showAll:false, nlv:2, lv:['','',''], sl:'', budEdited:false, ne:1, ns:1, pxE:['','',''], pxS:['','',''], spE:['','','',''], pcS:['','','',''], ps1Last:null, drafts:{}, wlTrack:null, riskPct: (mode==='editw' && cur && cur.plan && +cur.plan.riskPct > 0) ? +cur.plan.riskPct : null};
   /* LR1·C — account defaults pre-fill the form: market (US/TH) and, when the account hides Momentum, the Compounder track. Not locks. */
@@ -16016,7 +16027,7 @@ function tw1LoadLevels(cur){
   }
 }
 function coreNewRisk(){ if(!coreNew) return; coreNew.riskEdited = true; coreNewIn(); }
-function coreNewPick(id){ if(!coreNew) return; coreNew.acct = id; try{ lrFormAcct(); }catch(e){ console.warn('lrFormAcct:', e); } coreNewIn(); }
+function coreNewPick(id){ if(!coreNew) return; coreNew.acct = id; coreNew.acctPicked = true; try{ lrFormAcct(); }catch(e){ console.warn('lrFormAcct:', e); } coreNewIn(); }
 /* LR1·C — market segment (US · USD | TH · THB) in the new-plan form; switching it adds/removes .BK on a typed ticker (market = .BK suffix everywhere else) */
 function lrMktSegHtml(){
   const m = (coreNew && coreNew.mkt) || 'US';
@@ -16258,7 +16269,7 @@ function coreNewIn(){
   let shown = n.showAll ? all : all.filter(match);
   const hidden = all.length - shown.length;
   if(!shown.length){ shown = all; }
-  if(!shown.some(a=>a.id===n.acct)) n.acct = shown[0].id;
+  if(!shown.some(a=>a.id===n.acct)){ if(n.acctPicked && all.some(a=>a.id===n.acct)) shown = all.filter(a=>shown.some(x=>x.id===a.id) || a.id===n.acct); else n.acct = shown[0].id; }   /* E2E1 — an account the user chose is never swapped by typing a ticker */
   const box = coreEl('cnAcctBox');
   const aObj = all.find(a=>a.id===n.acct) || {id:n.acct, name:n.acct};
   const html = n.mode!=='new' ? `<span class="lrAcctPill" data-lr-acct-pill>${lrAcctPill(aObj)} <b>${lrAcctShort(aObj)}</b></span>`
@@ -16477,7 +16488,7 @@ function coreBuy1Save(){
 function coreAddRe1(c, v, cx){
   const px = +v.px > 0 ? +v.px : +v.avg, out = {blocked:[], warns:[], why:[], r:null};
   try{ ps1AddCalc(c, {px, sl:+v.stop, acc:false}, cx, v, out); }catch(e){ console.warn('add-on re1:', e); }
-  return {ok: !!(out.r && out.r.qty > 0), r: out.r, px, stop: +v.stop, blocked: out.blocked, model: out.model};
+  return {ok: !!(out.r && out.r.qty > 0), r: out.r, px, stop: +v.stop, blocked: out.blocked, model: out.model, warns: out.warns || [], why: out.why || []};
 }
 function coreBuyAddOpen(id){
   const c = coreCardsList.find(x=>x.id===id); if(!c) return;
@@ -16485,13 +16496,14 @@ function coreBuyAddOpen(id){
   const s = coreAddRe1(c, v, cx);   /* AU1 — the add-on is sized by the engine (RE1), not the old addLot calculator */
   if(!s.ok || s.blocked.length){ try{ if(s.blocked.length) showGuideToast([s.blocked[0]]); }catch(e){} return; }
   coreDlg = {kind:'buyadd', id, stop:s.stop, rec:s.r.qty};
-  coreSheet('buyadd', `<h3>บันทึกซื้อไม้เติม · ${escHtml(c.ticker)}</h3>
-    <div class="ccF"><label>ราคาซื้อจริง</label><input type="text" inputmode="decimal" id="caPx" value="${s.px}" oninput="coreBuyAddIn()"></div>
-    <div class="ccF"><label>จำนวน (ระบบแนะนำ ${fmt0(s.r.qty)} · ปัดลงตามตลาด)</label><input type="text" inputmode="decimal" id="caQty" value="${s.r.qty}" oninput="coreBuyAddIn()"></div>
-    <div class="ccF"><label>วันที่</label><input type="date" id="caDate" value="${posThaiToday()}" oninput="coreBuyAddIn()"></div>
-    <div class="ccSub">Stop ใหม่ = <b>${fmt2(s.stop)}</b> (เดิม ${fmt2(v.stop)})</div>
+  coreSheet('buyadd', `<h3>Record add-on buy · ${escHtml(c.ticker)}</h3>
+    <div class="ccF"><label>Actual buy price</label><input type="text" inputmode="decimal" id="caPx" value="${s.px}" oninput="coreBuyAddIn()"></div>
+    <div class="ccF"><label>Quantity (suggested ${fmt0(s.r.qty)} · rounded down to the market lot)</label><input type="text" inputmode="decimal" id="caQty" value="${s.r.qty}" oninput="coreBuyAddIn()"></div>
+    <div class="ccF"><label>Date</label><input type="date" id="caDate" value="${posThaiToday()}" oninput="coreBuyAddIn()"></div>
+    <div class="ccSub">New stop = <b>${fmt2(s.stop)}</b> (was ${fmt2(v.stop)})</div>
+    ${(s.warns || []).map(w=>`<div class="ccSub" data-ca-warn style="color:var(--amber)">⚠ ${escHtml(w)}</div>`).join('')}
     <div class="ccErr" id="caErr" style="display:none"></div>
-    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button data-enter-primary type="button" class="ccBtn pri" id="caSave" data-ca-save onclick="coreBuyAddSave()">บันทึก</button></div>`);
+    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">Cancel</button><button data-enter-primary type="button" class="ccBtn pri" id="caSave" data-ca-save onclick="coreBuyAddSave()">Save</button></div>`);
   coreBuyAddIn();
 }
 function coreBuyAddRead(){
@@ -16502,13 +16514,13 @@ function coreBuyAddRead(){
 function coreBuyAddIn(){
   const d = coreBuyAddRead(); if(!d) return [];
   const errs = [];
-  if(!(d.px>0)) errs.push('ราคาซื้อต้องมากกว่า 0');
-  else if(!(d.px>d.stop)) errs.push('ราคาซื้อต้องมากกว่า Stop ใหม่');
-  if(!(d.qty>0)) errs.push(`จำนวนต้องอย่างน้อย 1 ${d.mk==='TH'?'หลัก (100)':'หุ้น'}`);
-  else if(d.rawQty!==d.qty) errs.push(`จะปัดลงเป็น ${fmt0(d.qty)} ตามตลาด`);
-  if(!d.date) errs.push('กรอกวันที่');
+  if(!(d.px>0)) errs.push('Buy price must be above 0');
+  else if(!(d.px>d.stop)) errs.push('Buy price must be above the new stop');
+  if(!(d.qty>0)) errs.push(`Quantity must be at least 1 ${d.mk==='TH'?'lot (100 shares)':'share'}`);
+  else if(d.rawQty!==d.qty) errs.push(`Rounded down to ${fmt0(d.qty)} for the market lot`);
+  if(!d.date) errs.push('Enter a date');
   if(coreErr) errs.push(coreErr);
-  const hard = errs.filter(e=>!/^จะปัดลง/.test(e));
+  const hard = errs.filter(e=>!/^Rounded down/.test(e));
   const er = coreEl('caErr'); er.style.display = errs.length ? '' : 'none'; er.innerHTML = errs.map(escHtml).join('<br>');
   coreEl('caSave').disabled = hard.length>0;
   return hard;
@@ -16539,20 +16551,20 @@ function coreStopOpen(id){
   if(c.strategy!=='L') return lfStopOpen(id);   /* LN3fix2 */
   const v = coreView(c, coreCtxC(c)); if(v.kind!=='open') return;
   coreDlg = {kind:'stop', id, cur:v.stop};
-  coreSheet('stop', `<h3>เลื่อน Stop · ${escHtml(c.ticker)}</h3><div class="ccSub">Stop ปัจจุบัน ${fmt2(v.stop)} · เลื่อนขึ้นได้อย่างเดียว</div>
-    <div class="ccF"><label>Stop ใหม่</label><input type="text" inputmode="decimal" id="csStop" oninput="coreStopIn()"></div>
+  coreSheet('stop', `<h3>Move stop · ${escHtml(c.ticker)}</h3><div class="ccSub">Current stop ${fmt2(v.stop)} · can only move up</div>
+    <div class="ccF"><label>New stop</label><input type="text" inputmode="decimal" id="csStop" oninput="coreStopIn()"></div>
     <div id="csRe1" data-re1-stop></div>
     <div class="ccErr" id="csErr" style="display:none"></div>
-    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button data-enter-primary type="button" class="ccBtn pri" id="csSave" data-cs-save onclick="coreStopSave()" disabled>บันทึก</button></div>`);
+    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">Cancel</button><button data-enter-primary type="button" class="ccBtn pri" id="csSave" data-cs-save onclick="coreStopSave()" disabled>Save</button></div>`);
 }
 function coreStopIn(){
   if(!coreDlg) return false;
   if(coreDlg.lean) return lfStopIn();
   const ns = coreNum(coreEl('csStop').value), er = coreEl('csErr');
   let msg = '';
-  if(!(ns>0)) msg = 'กรอก Stop ใหม่';
-  else if(ns < coreDlg.cur - 1e-9) msg = 'Stop ใหม่ต่ำกว่า Stop เดิม — เลื่อนลงไม่ได้';
-  else if(Math.abs(ns-coreDlg.cur) < 1e-9) msg = 'Stop เท่าเดิม';
+  if(!(ns>0)) msg = 'Enter a new stop';
+  else if(ns < coreDlg.cur - 1e-9) msg = 'New stop is below the current stop — it can only move up';
+  else if(Math.abs(ns-coreDlg.cur) < 1e-9) msg = 'Same as the current stop';
   else if(coreErr) msg = coreErr;
   er.style.display = msg && (ns>0) ? '' : 'none'; er.textContent = msg;
   coreEl('csSave').disabled = !!msg;
@@ -25382,7 +25394,7 @@ function rrgOutdated(r){ return !!(r && ((r.rowsD||[]).length || (r.rowsW||[]).l
 /* RRG1b — แถวที่มีแต่ผลโมเดลเก่า: ห้ามใส่กล่อง/ป้ายสถานะใหม่ (Leading เก่า ≠ Outperforming) */
 function rrgWaiting(x){ return !!(x && !x.err && x.model !== RRG_MODEL); }
 function rrgCacheFresh(f){
-  return !!(f && f.rrg && f.rrg.day === rrgToday() && (f.rrg.rowsD||[]).length && f.rrg.model === RRG_MODEL && rrgBarsFresh(f.rrg)
+  return !!(f && f.rrg && f.rrg.day === rrgToday() && (f.rrg.rowsD||[]).length && (f.rrg.rowsD||[]).some(r=>r && (r.tailF || r.tail)) && f.rrg.model === RRG_MODEL && rrgBarsFresh(f.rrg)
     && !(f.rrg.prov && rrgProvCut() !== f.rrg.prov));   /* RV1b — ดึงตอนตลาดยังเปิด (ทิ้งแท่งวันนี้) → หลังปิดถือว่าเก่า ดึงใหม่ */
 }
 function rrgTf(){ return ffState().rrgTf === 'W' ? 'W' : 'D'; }
@@ -29760,6 +29772,10 @@ function re2Model(acct){
     if(pastKept && !ready) return;
     if(re4Passed(it) && !pastKept){ enter.push({it, o:{g:'enter', chip:'passed entry · missed?', cc:'a', k:'cancel', btn:'Not taken ›', fn:`re4Open('${td3E(it.id).replace(/'/g, "\\'")}','plan',null,'missed')`, btn2:'Placed', fn2:`au2Placed('${td3E(it.id).replace(/'/g, "\\'")}')`, btn3:'Update levels ›', fn3:`bdEditLv('${td3E(it.id).replace(/'/g, "\\'")}')`, why:'passed entry · missed?', warn:true, lv:tw1Lv(it), d}}); return; }   /* RE-D §6 */
     if(it.sdDraft) return;   /* SD1 — wrong-side drafts stay off Today */
+    if(it.kind === 'sat' && !ready && !it.sd && !it.inc && !it.blocked){   /* E2E1 — a Sat plan held only by the HF5 queue stays in Enter: the ⚠ reason + the fix link (same as other engine-blocked rows) */
+      try{ const qc = pb2Calc(it.ref, pb2AcctOf(it.ref)); const bq = qc && qc.c && qc.c.re1 && qc.c.re1.queue && qc.c.re1.queue.blocker; if(hf5QueueOnly(qc) && !(bq && bq.satId === it.id)){ const f = hf5QueueFix(qc), qid = td3E(it.id).replace(/'/g, "\\'"), qt = hf5QueueText(qc);
+        enter.push({it, o:{g:'enter', chip:'Blocked', cc:'a', k:'place', btn:'Place', fn:'', dis:true, title:qt, why:qt, warn:true, lv:tw1Lv(it), d:null, btn2:f ? f.t : undefined, fn2:f ? `hf5QueueGo('${qid}')` : undefined}}); return; } }catch(e){}
+    }
     if(!ready && !near && !it.sd) return;
     const p = bdPill(it, true), blocked = !!p.dis;
     const why = blocked ? (p.title || 'Blocked') : pastKept ? '+' + d.toFixed(1) + '% past entry' : ready ? (near && d != null ? (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '% to entry' : '') : (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '%';
@@ -29781,6 +29797,7 @@ function re2Model(acct){
       let ok = true; try{ const g = re1PlanGate(it.ref, 0); const m = g && g.model; ok = !(m && m.blocked && m.reasons.some(x=>['COMP_LOCKED', 'ADDON_THESIS', 'NO_SNAPSHOT', 'SNAPSHOT_STALE'].indexOf(x) >= 0)); }catch(x){}
       if(ok) o = {g:'manage', chip:'Holding', cc:'', k:'addon', btn:'Add-on ›', fn:`bdAddon('${td3E(it.id)}')`, why:'add-on allowed', warn:true, lv:''};
     }
+    if(!o && it.kind === 'core' && it.tag === 'COMP'){ try{ if(ftHwDone(it.sym)){ const cx = coreCtxC(it.ref), ar = coreAddRe1(it.ref, coreView(it.ref, cx), cx), rs = (ar.model && ar.model.reasons) || [], i = rs.indexOf('ADDON_TOTAL_RISK'); if(i >= 0){ const tx = (ar.model.reasonTexts || [])[i] || 'Ticker total risk would exceed the plan limit'; o = {g:'manage', chip:'Holding', cc:'', k:'addon', btn:'Add-on ›', dis:true, title:tx, why:'Add-on blocked · ' + tx, warn:true, lv:''}; } } }catch(x){} }   /* E2E1 — thesis done but the total-risk rule blocks the add-on: the reason is on the row (ADDON_TOTAL_RISK) */
     if(!o && it.kind === 'core' && it.tag === 'COMP'){ let hw = true; try{ hw = !!ftHwDone(it.sym); }catch(x){} if(!hw) o = {g:'manage', chip:'Holding', cc:'', k:'hw', btn:'Homework → unlocks adds ›', mute:true, fn:`td3HwGo('${td3E(it.sym)}','W','')`, why:'', warn:false, lv:''}; }   /* NT1b §6.3 — the homework message lives in To do; the Act row shows only the muted way in */
     if(!o && it.kind === 'core'){ try{ const tw = ltTws(wlItemOf(it.sym)).filter(w=>w.level === 'broken' || w.level === 'review')[0]; if(tw) o = {g:'manage', chip:'Holding', cc:'', k:'review', btn:'Review ›', fn:`td3Screen('${td3E(it.sym)}')`, why:'tripwire ' + (tw.level === 'broken' ? 'hit' : 'review') + ' · ' + ltShort(tw.sig, 28), warn:true, lv:''}; }catch(x){} }
     if(o) manage.push({it, o}); else if(it.kind === 'sat') satHold.push({it, o:{g:'manage', k:'satmgr', chip:'Holding', cc:'', why:'', warn:false, lv:''}}); else nothing++;   /* HF5 — every open Sat position gets a row (Price › · Move stop ›) */
@@ -29955,6 +29972,7 @@ function re4Open(id, scope, lv, pre){
   const it = bdById(id); if(!it) return; scope = scope === 'order' ? 'order' : 'plan';
   if(scope === 'plan' && it.status !== 'plan') return;
   const e = bdE, opts = RE4_REASONS.map(([k, t])=>`<option value="${k}"${pre === k ? ' selected' : ''}>${e(t)}</option>`).join('');
+  try{ bdClose(); }catch(x){}   /* E2E1 — Cancel order from the drawer: the drawer (z 210) sat over this sheet (z 200) and its dim swallowed every click on Cancel order / Keep; re4Go reopens the drawer */
   coreDlg = {kind:'cxplan', id, scope, lv: lv == null ? null : lv};
   coreSheet('cxplan', `<h3>${scope === 'order' ? 'Cancel order' : 'Cancel plan'} · ${e(it.sym)}</h3>
     <div class="ccF"><label for="cxReason">Reason</label><select id="cxReason" data-re4-reason onchange="re4In()"><option value="">Choose a reason</option>${opts}</select></div>

@@ -311,7 +311,7 @@ def ladder_checks(pw, w, h, label):
         c = db_card(page, "l1")
         check(f"{tag} A5 → 105: 'ไม่มีระดับที่ถูกยกเลิก' · L1 (bought) ไม่ถูกแตะ (qty 280 fillPx 100) · ladder.sl 105", "ไม่มีระดับที่ถูกยกเลิก" in pv and c["ladder"]["levels"][0]["status"] == "bought" and c["ladder"]["levels"][0]["fillPx"] == 100 and c["ladder"]["sl"] == 105 and len(c["stopHistory"]) == 3, pv + json.dumps(c["ladder"]))
         stop_to(100)
-        check(f"{tag} A5 เลื่อนลง (105 → 100) = ปฏิเสธ · ปุ่มบันทึกปิด · ข้อความเดิม", page.is_disabled("#csSave") and "เลื่อนลงไม่ได้" in (txt(page, "#csErr") or ""), txt(page, "#csErr") or "")
+        check(f"{tag} A5 เลื่อนลง (105 → 100) = ปฏิเสธ · ปุ่มบันทึกปิด · ข้อความเดิม", page.is_disabled("#csSave") and "can only move up" in (txt(page, "#csErr") or ""), txt(page, "#csErr") or "")
     finally:
         browser.close()
 
