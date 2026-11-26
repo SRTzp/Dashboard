@@ -528,7 +528,49 @@ def j5b(pw, w):
         b.close()
 
 
-JOURNEYS_FN = [("J1", j1), ("J2", j2), ("J3", j3), ("J6", j6), ("J7", j7), ("J4", j4), ("J5", j5), ("J5b", j5b), ("CRAWL", j_crawl), ("THAI", j_thai), ("BAR", j_bar), ("RRG", j_rrg)]
+def j8(pw, w):
+    """RX1 — Sat TP1 reminder: XAU Short + BTC Long, real clicks: price past TP1 → amber + Exit 50% → Save → partial in Journal, stop at entry, Runner · lot rounding · untick the stop box · TP2 → close the rest · no browser dialogs"""
+    import math
+    J = "J8"; b, page, ce, pe = start(pw, w); page.set_default_timeout(6000)
+    try:
+        js(page, "()=>{ window.__dlg=[]; window.prompt=()=>{window.__dlg.push('p');return null;}; window.confirm=()=>{window.__dlg.push('c');return false;}; window.alert=()=>{window.__dlg.push('a');}; }")
+        room0 = js(page, ROOM)
+        for (idx, buy, asset, sym, e, sl, tp, lstep, tp2, other) in ((0, False, "XAUUSD", "XAU", 2643, 2660, 2600, 0.01, 2592, 2610), (1, True, "BTCUSD", "BTC", 90000, 88500, 94000, 0.0001, 94500, 93000)):
+            ok = new_sat_plan(page, w, J, idx, buy, "main", e, sl, tp); ok &= save_plan(page, J); id = newest_idea(page, asset)
+            js(page, "(id)=>{ sat7dWrite('satIdeas', id, {sleeve:'tactical'}); const i=sat7dIdea(id); if(i) i.sleeve='tactical'; re1Cache={}; todayRefresh(true); }", id); page.wait_for_timeout(300)
+            ok2, blk = place_from_today(page, sym, J); ok3 = filled_from_today(page, sym, J)
+            step(J, w, f"{sym}: plan → Place → Filled (Holding)", ok and ok2 and ok3 and not blk and "Holding" in (sel_text(page, f'[data-hf5-row="{sym}"]') or ""), blk)
+            held = trade_of(page, id)["qty"]
+            set_price(page, sym, other, J); m0 = sel_text(page, f'[data-hf5-row="{sym}"]')
+            step(J, w, f"{sym}: price {other:,} (before TP1) → no reminder", "TP1 reached" not in m0, m0)
+            past = tp - 1 if not buy else tp + 1
+            ok = set_price(page, sym, past, J); m1 = sel_text(page, f'[data-hf5-row="{sym}"]')
+            step(J, w, f"{sym}: price {past:,} past TP1 {tp:,} → amber 'TP1 reached' + 'Exit 50% ›'", ok and "TP1 reached" in m1 and page.locator(f'[data-hf5-row="{sym}"] [data-hf5-btn="exit50"]').count() == 1, m1)
+            ok = click(page, page.locator(f'[data-hf5-row="{sym}"] [data-hf5-btn="exit50"]'), "Exit 50% ›", J)[0]; page.wait_for_timeout(250)
+            q_exp = math.floor(held / 2 / lstep + 1e-9) * lstep; q0 = js(page, "()=>document.getElementById('rxQty').value")
+            step(J, w, f"{sym}: Exit 50% sheet — lots {q_exp:.4g} = 50% of {held:g} rounded down to the step {lstep:g}", ok and abs(float(q0) - q_exp) < 1e-9, [q0, held])
+            keep_stop = sym == "BTC"
+            if keep_stop: page.locator("#rxStop").uncheck(); page.wait_for_timeout(150)
+            ok = click(page, "[data-rx-save]", "Save", J)[0]; page.wait_for_timeout(600)
+            tr = trade_of(page, id); m2 = sel_text(page, f'[data-hf5-row="{sym}"]') or ""
+            step(J, w, f"{sym}: Save → partial taken ({held - q_exp:.4g} left), stop {'unchanged' if keep_stop else 'at entry'}, Runner row", ok and abs(tr["qty"] - (held - q_exp)) < 1e-9 and tr["sl"] == (sl if keep_stop else e) and "Runner" in m2, [tr, m2])
+            if not keep_stop:
+                step(J, w, "XAU: Risk room back to the start (risk on the runner is 0)", js(page, ROOM) == room0, [room0, js(page, ROOM)])
+            goto(page, "journal", J); page.wait_for_timeout(600)
+            jt = js(page, "()=>document.body.innerText.replace(/\\s+/g,' ')")
+            step(J, w, f"{sym}: Journal shows the partial exit", asset in jt, jt[jt.find(asset):][:120])
+            goto(page, "today", J); page.wait_for_timeout(400)
+            ok = set_price(page, sym, tp2, J); m3 = sel_text(page, f'[data-hf5-row="{sym}"]') or ""
+            step(J, w, f"{sym}: price at TP2 {tp2:,} → '⚠ TP2 … reached · close the rest ›'", ok and "TP2 reached" in m3 and "close the rest ›" in m3, m3)
+            ok = click(page, f'[data-hf5-row="{sym}"] [data-rx-closerest]', "close the rest ›", J)[0]; page.wait_for_timeout(300)
+            ok &= click(page, "#cpConfirmBtn", "Confirm close", J)[0]; page.wait_for_timeout(500)
+            step(J, w, f"{sym}: close the rest → trade closed, row gone", ok and trade_of(page, id)["status"] == "closed" and not js(page, MANAGE), trade_of(page, id))
+        step(J, w, "no browser dialogs · no console errors / page errors · strict mock saw no nested-array / undefined write · no Not-saved bar", js(page, "()=>window.__dlg.slice()") == [] and not ce and not pe and not strict(page), [js(page, "()=>window.__dlg.slice()"), (ce + pe)[:2], strict(page)])
+    finally:
+        b.close()
+
+
+JOURNEYS_FN = [("J1", j1), ("J2", j2), ("J3", j3), ("J6", j6), ("J7", j7), ("J4", j4), ("J5", j5), ("J5b", j5b), ("J8", j8), ("CRAWL", j_crawl), ("THAI", j_thai), ("BAR", j_bar), ("RRG", j_rrg)]
 
 if __name__ == "__main__":
     with sync_playwright() as pw:
