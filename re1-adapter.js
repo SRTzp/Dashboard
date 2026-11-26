@@ -604,10 +604,10 @@
     return mergeDual(f(L.ideasW), f(L.ideasM), 'sat');
   }
   function baseModel(L, strat) { return { ddStop: !!(L.emergency && L.emergency.stopped), strategy: strat, acct: L.acct, ok: false, blocked: true, reasons: [], reasonTexts: [], flags: [], formula: '', effPct: null, qty: 0, money: null, roomLine: '', allowedQty: 0, chip: null, factors: [] }; }
-  /* PC2 §1 — total-risk blocks say the real rule with numbers: "Risk 0.36% is over today's limit 0.24% (0.40% × homework 100% × risk-off 60%)" */
+  /* PC2 §1 — total-risk blocks say the real rule with numbers: "Risk 0.36% is over the limit for this plan 0.24% (0.40% × homework 100% × risk-off 60%)" */
   function numTexts(m) {
     if (!m.fit || !m.budget) return m;
-    m.reasons.forEach(function (c, i) { if (c === 'PLAN_TOTAL_RISK' || c === 'ADDON_TOTAL_RISK') m.reasonTexts[i] = 'Risk ' + f2(m.fit.totalPct, 2) + "% is over today's limit " + f2(m.fit.capPct, 2) + '% (' + m.budget.text + ')'; });
+    m.reasons.forEach(function (c, i) { if (c === 'PLAN_TOTAL_RISK' || c === 'ADDON_TOTAL_RISK') m.reasonTexts[i] = (c === 'ADDON_TOTAL_RISK' ? 'Risk ' + f2(m.fit.totalPct, 2) + '% is over the ' + f2(m.fit.capPct, 2) + '% limit for this stock (all lots at their current stop)' : 'Risk ' + f2(m.fit.totalPct, 2) + '% is over the limit for this plan ' + f2(m.fit.capPct, 2) + '% (' + m.budget.text + ')'); });
     return m;
   }
   function finish(m, d) {

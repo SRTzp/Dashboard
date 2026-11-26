@@ -97,10 +97,10 @@ def run(pw, w, h):
         H.fill(page, "catalyst", "Beat and raise, tight base")
         check(f"{tag} Momentum: all three filled -> enabled", dn() is False)
         # dirty guard
-        js(page, "()=>{ window.__asked = 0; window.confirm = ()=>{ window.__asked++; return false; }; }")
+        js(page, "()=>{ window.__asked = 0; cl2Ask = (o)=>{ window.__asked++; }; }")
         js(page, "()=>hwBack()"); page.wait_for_timeout(200)
         check(f"{tag} leaving with unsaved changes asks, and stays when cancelled", js(page, "()=>window.__asked") == 1 and js(page, "()=>!!document.querySelector('[data-hw1-page]')"))
-        js(page, "()=>{ window.confirm = ()=>true; hwBack(); }"); page.wait_for_timeout(300)
+        js(page, "()=>{ cl2Ask = (o)=>{ if(o.onOk) o.onOk(); }; hwBack(); }"); page.wait_for_timeout(300)
         d = js(page, "()=>wlMtDraft['PLTR']")
         check(f"{tag} leaving keeps the draft (wlMtDirty) and returns to the list", js(page, "()=>wlMtDirty('PLTR')") and (d or {}).get("trigger") and not js(page, "()=>!!document.querySelector('[data-hw1-page]')"), d)
 
@@ -198,7 +198,7 @@ def run(pw, w, h):
             check(f"{tag} desktop: Facts and thesis side by side", js(page, "()=>{ const a = document.querySelector('.hw1-facts').getBoundingClientRect(), b = document.querySelector('.hw1-mine').getBoundingClientRect(); return Math.abs(a.top - b.top) < 4 && a.right <= b.left + 1; }"))
             check(f"{tag} desktop: button label 'Save · mark done'", (js(page, TXT, "[data-hw1-done]") or "") == "Save · mark done")
         # back
-        js(page, "()=>{ window.confirm = ()=>true; hwBack(); }"); page.wait_for_timeout(250)
+        js(page, "()=>{ cl2Ask = (o)=>{ if(o.onOk) o.onOk(); }; hwBack(); }"); page.wait_for_timeout(250)
         check(f"{tag} homework cell has a title tooltip with the full text", js(page, "()=>{ wlBack(); const r = [...document.querySelectorAll('[data-wl1-hwt]')]; return r.length > 0 && r.every(x=>x.title && x.title === x.innerText.trim()); }"))
         check(f"{tag} ‹ Watch brings the list back (visible)", js(page, "()=>{ const l = document.querySelector('.lr5-list'); const r = l.getBoundingClientRect(); return getComputedStyle(l).display !== 'none' && r.width > 0 && r.height > 0; }"))
         check(f"{tag} ‹ Watch returns to the list", js(page, "()=>!document.querySelector('[data-hw1-page]') && !!document.querySelector('[data-lr5-row]')"))

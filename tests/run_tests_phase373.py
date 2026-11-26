@@ -588,6 +588,7 @@ def pb1b(pw, w, h):
         js(page, "()=>bdSetSeg('ord')"); settle(page, 150)
         pf = page.locator(f'[data-bd-card="{i1}"] [data-bd-pill]'); fp = pf.inner_text()
         pf.click(); settle(page, 900)
+        if cnt(page, "#cl2FillPx"): page.locator("[data-cl2-fillsave]").click(); settle(page, 500)   # CL2: Filled opens the entry-price sheet
         tr = js(page, "(i)=>{ const x=satIdeasList.find(y=>y.id===i); const out=[]; sat7dAccts().forEach(a=>{ const s=(x.accts||{})[a.id]; if(s&&s.trade_id){ const t=getBook(a.id).trades.find(q=>q.id===s.trade_id); if(t) out.push({st:t.status, snap:!!t.orderSnap, e:t.entry}); } }); return out; }", i1)
         check(f"{tag} 2b Ordered → Filled ✓ records the trade open (snapshot carried to the trade)", "Filled" in fp and len(tr) >= 1 and tr[0]["st"] == "open" and tr[0]["snap"], [fp, tr])
         # blocked card cannot place

@@ -41,10 +41,10 @@ const sNo = JSON.stringify;
   ok('held ① already 0.49% + row at stop 80 → qty cut to what fits, limited by total risk 0.8%', pb.limit && pb.limit.code === 'total_risk' && /0\.8/.test(pb.limit.text), [pb.limit, pb.qty]);
   const huge = NVDA(100, 80), LH = A.live(huge, 'main'), ih = LH.ideas[0].id;
   const ph = A.sizeComp(LH, Object.assign({ kind: 'plan', ideaId: ih, riskPct: 1.0, side: 'long', entry: 90, stop: 80, thesisDone: false }, spec));
-  ok('①alone over the limit → block text with numbers', ph.reasons.indexOf('PLAN_TOTAL_RISK') >= 0 && /^Risk \d+(\.\d+)?% is over today's limit 0\.8% \(1% × homework 100% × risk-off 80%\)$/.test(ph.reasonTexts[0]), [ph.reasons, ph.reasonTexts]);
+  ok('①alone over the limit → block text with numbers', ph.reasons.indexOf('PLAN_TOTAL_RISK') >= 0 && /^Risk \d+(\.\d+)?% is over the limit for this plan 0\.8% \(1% × homework 100% × risk-off 80%\)$/.test(ph.reasonTexts[0]), [ph.reasons, ph.reasonTexts]);
   // add-on risk rule: stop must come up first
   const ad = A.sizeComp(LH, Object.assign({ kind: 'addon', ideaId: ih, thesisDone: true, riskPct: 1.0, side: 'long', entry: 110, stop: 104 }, spec));
-  ok('add-on blocked while total risk with the new row is over budget (named numbers)', ad.reasons.indexOf('ADDON_TOTAL_RISK') >= 0 && /over today's limit/.test(ad.reasonTexts.join()), [ad.reasons, ad.reasonTexts]);
+  ok('add-on blocked while total risk with the new row is over budget (named numbers)', ad.reasons.indexOf('ADDON_TOTAL_RISK') >= 0 && /^Risk \d+(\.\d+)?% is over the [\d.]+% limit for this stock \(all lots at their current stop\)$/.test(ad.reasonTexts.join()), [ad.reasons, ad.reasonTexts]);
   const up = NVDA(100, 99), LU = A.live(up, 'main'), iu = LU.ideas[0].id;
   const ad2 = A.sizeComp(LU, Object.assign({ kind: 'addon', ideaId: iu, thesisDone: true, riskPct: 1.0, side: 'long', entry: 110, stop: 104 }, spec));
   ok('after the stop moves up (99) the same add-on no longer breaks the total-risk rule', ad2.reasons.indexOf('ADDON_TOTAL_RISK') < 0 && ad2.qty > 0, [ad2.reasons, ad2.fit]);

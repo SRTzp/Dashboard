@@ -140,12 +140,12 @@ def record_buy(pw, w, h):
         js(page, "()=>{ document.getElementById('cbQty').value = '500'; coreBuy1In(); }"); page.wait_for_timeout(250)
         r = js(page, "()=>{ const e = document.getElementById('cbErr'); const m = re1FillInfo(coreCardsList.find(x=>x.id==='mA'), 500, 158, 150); return {t: e.innerText.replace(/\\s+/g, ' '), cls: e.className, dis: document.getElementById('cbSave').disabled, cs: getComputedStyle(e).color, bg: getComputedStyle(e).backgroundColor, info: m && m.budget}; }")
         t = r["t"]
-        check(f"{tag} 10 over-limit fill shows qty, risk $, allowed qty and allowed risk $ (plain numbers)", re.search(r"Over today's limit: 500 sh @ 158 risks \$[\d,.]+k?, limit allows [\d,]+ \(\$[\d,.]+k?\)\. Recorded anyway; new risk is reduced until it fits\.", t) is not None and "FILL_OVER_LIMIT" not in t, r)
+        check(f"{tag} 10 over-limit fill shows qty, risk $, allowed qty and allowed risk $ (plain numbers)", re.search(r"Over the limit for this plan: 500 sh @ 158 risks \$[\d,.]+k?, limit allows [\d,]+ \(\$[\d,.]+k?\)\. Recorded anyway; new risk is reduced until it fits\.", t) is not None and "FILL_OVER_LIMIT" not in t, r)
         check(f"{tag} 10 amber warning style (not the red error) and Save stays enabled", "ccAmber" in r["cls"] and r["dis"] is False and r["cs"] != js(page, "()=>getComputedStyle(document.documentElement).getPropertyValue('--red')"), r)
         # budget cause → the engine reason text
         js(page, """()=>{ window.__m = re1CardModel; re1CardModel = function(c, q, px, st){ const r = window.__m.apply(this, arguments); if(!r) return r; r.m = Object.assign({}, r.m, {blocked: true, reasons: ['MONEY_WEEK'], reasonTexts: ["This week's risk budget is used up"], allowedQty: 0}); return r; }; coreBuy1In(); }"""); page.wait_for_timeout(250)
         bt = js(page, "()=>document.getElementById('cbErr').innerText.replace(/\\s+/g, ' ')")
-        check(f"{tag} 10 budget cause (MONEY_WEEK) shows that reason text instead of the qty sentence", "This week's risk budget is used up" in bt and "Over today's limit" not in bt and "Recorded anyway" in bt, bt)
+        check(f"{tag} 10 budget cause (MONEY_WEEK) shows that reason text instead of the qty sentence", "This week's risk budget is used up" in bt and "Over the limit for this plan" not in bt and "Recorded anyway" in bt, bt)
         js(page, "()=>{ re1CardModel = window.__m; document.getElementById('cbQty').value = '10'; coreBuy1In(); }"); page.wait_for_timeout(200)
         quiet = js(page, "()=>document.getElementById('cbErr').style.display")
         check(f"{tag} 10 a fill within the limit shows no warning", quiet == "none", quiet)

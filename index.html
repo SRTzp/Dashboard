@@ -4252,6 +4252,7 @@ html body :is(.bd .bd-m,.bd-st,.bd-fam,.bd-sub,.bd-n,.bd-link,.bd-stp,.bd-tl,.bd
 .wl1-seg{display:flex;width:100%;box-sizing:border-box;background:var(--surface,#fff);border:1px solid var(--border,#E3E6EA);border-radius:10px;padding:3px;gap:2px}
 .wl1-seg button{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;border:0;background:none;border-radius:8px;padding:6px 4px;font:700 .86rem var(--sans,inherit);color:var(--muted,#7B818C);white-space:nowrap;cursor:pointer;min-height:36px}
 .wl1-seg button span{font-weight:600;opacity:.8}.wl1-seg button.on{background:var(--ink,#141518);color:#fff}
+.wl1-imp .wl1-seg{background:var(--surface2,#EEF0F3)}.wl1-imp .wl1-seg button.on{background:#fff;color:var(--ink,#141518);box-shadow:0 1px 2px rgba(20,21,24,.14)}   /* CL2 C — selected = white segment on grey · Add stays the only dark button */
 .wl1-sumrow{display:flex;align-items:center;gap:8px;min-width:0}.wl1-sum{flex:1;min-width:0;font-size:.82rem;color:var(--muted,#7B818C);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wl1-sum b{color:var(--amber,#A96E06)}
 .wl1-ic{display:inline-flex;gap:6px;flex:none}.wl1-ic .ic{min-width:36px;width:36px;padding:0;min-height:36px;border:1px solid var(--border,#E3E6EA);background:var(--surface,#fff);border-radius:999px;font:700 .86rem var(--sans,inherit);cursor:pointer}
 /* TS1b C2 — port colours: SAT purple · MMT blue · COMP teal. Only the port tag chip and a 3 px left bar on Today › Act rows; numbers/buttons/status words keep their own colours. */
@@ -6133,7 +6134,7 @@ html body .pc2-none .pc2-np{display:none}
 <div class="wrap" id="mainWrap" style="display:none">
 
 <header class="topbar">
-  <div class="brand" title="Trading Dashboard — ความเสี่ยงรวม + Trading Journal · ฐานคำนวณ THB">
+  <div class="brand" title="Trading Dashboard — total risk + trading journal · THB base">
     <span class="brandMark">▮</span><span class="brandName">Trading</span>
     <button type="button" class="brandSync" id="brandSync" onclick="brandSyncTap(event)" title="Sync"><span class="acctDot" id="acctDot"></span><span id="brandSyncTime">—</span></button>
   </div>
@@ -6154,13 +6155,13 @@ html body .pc2-none .pc2-np{display:none}
 
   <div class="hbtns">
     <!-- LR1·B — ＋ New plan (primary) · ⋯ menu holds the tool buttons (moved, ids/handlers unchanged) -->
-    <button id="hdrPlanBtn" class="hdrPlus lr-btn pri" onclick="goPlanTop()" title="ไปหน้าแผน (T)" aria-label="ไปหน้าแผน (T)"><span class="lrPlI" aria-hidden="true">＋</span><span class="lrPlN">New plan</span><span class="lrPlP">Plan</span></button>
-    <button class="iconOnlyMobile" id="hdrMoreBtn" onclick="toggleMoreMenu(event)" title="เพิ่มเติม" aria-label="เพิ่มเติม" aria-haspopup="true" aria-expanded="false"><span class="btnIcon">⋯</span></button>
+    <button id="hdrPlanBtn" class="hdrPlus lr-btn pri" onclick="goPlanTop()" title="Go to Plan (T)" aria-label="Go to Plan (T)"><span class="lrPlI" aria-hidden="true">＋</span><span class="lrPlN">New plan</span><span class="lrPlP">Plan</span></button>
+    <button class="iconOnlyMobile" id="hdrMoreBtn" onclick="toggleMoreMenu(event)" title="More" aria-label="More" aria-haspopup="true" aria-expanded="false"><span class="btnIcon">⋯</span></button>
   </div>
 
 </header>
 
-<div class="moreMenu" id="moreMenu" role="menu" aria-label="เมนูเพิ่มเติม">
+<div class="moreMenu" id="moreMenu" role="menu" aria-label="More menu">
   <div class="mmSec mmSync">
     <div class="syncbadge" id="syncBadge" onclick="retrySync()"><span class="sdot"></span><span id="syncText">—</span> · <span id="authedAs" style="opacity:.7"></span></div>
   </div>
@@ -6415,7 +6416,7 @@ html body .pc2-none .pc2-np{display:none}
 <!-- ===== 7E-1: หน้าต่าง "แก้ไม้" (แทนฟอร์มเพิ่มไม้เดิม) — สร้างไม้ใหม่ไม่ได้ · แก้ไม้ที่มีอยู่เท่านั้น ===== -->
 <div class="overlay" id="teOverlay">
   <div class="modal">
-    <h3 id="teTitle">แก้ไม้</h3>
+    <h3 id="teTitle">Edit trade</h3>
     <div class="teHead" id="teHead"></div>
     <div class="frow3">
       <div class="f"><label>Entry</label><input type="number" step="any" inputmode="decimal" id="tEntry" oninput="teRefresh()"></div>
@@ -6423,71 +6424,71 @@ html body .pc2-none .pc2-np{display:none}
       <div class="f"><label>TP</label><input type="number" step="any" inputmode="decimal" id="tTP" oninput="teRefresh()"></div>
     </div>
     <div class="frow">
-      <div class="f"><label>จำนวน (Qty / สัญญา / Lot)</label><input type="number" step="any" inputmode="decimal" id="tQty" oninput="teRefresh()"></div>
-      <div class="f" id="teOpenDateBox" style="display:none"><label>วันที่เข้า</label><input type="date" id="tOpenDate" oninput="teRefresh()"></div>
+      <div class="f"><label>Size (Qty / contracts / Lot)</label><input type="number" step="any" inputmode="decimal" id="tQty" oninput="teRefresh()"></div>
+      <div class="f" id="teOpenDateBox" style="display:none"><label>Entry date</label><input type="date" id="tOpenDate" oninput="teRefresh()"></div>
     </div>
     <div class="hint" id="teRisk" style="margin-top:-4px"></div>
-    <div class="f" id="teJointBox" style="display:none"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tJointSL" checked> ใช้ SL นี้กับทั้ง 2 ไม้</label></div>
+    <div class="f" id="teJointBox" style="display:none"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="tJointSL" checked> Use this stop for both trades</label></div>
 
-    <div class="f" style="margin-top:12px"><label>Invalidation — อะไรจะบอกว่าไม้นี้ผิดทาง</label>
-      <textarea id="tInvalidation" rows="2" oninput="teRefresh()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น ปิดต่ำกว่า EMA50 รายวัน, volume แห้งติดกัน 3 วัน"></textarea>
+    <div class="f" style="margin-top:12px"><label>Invalidation — what tells you this trade is wrong</label>
+      <textarea id="tInvalidation" rows="2" oninput="teRefresh()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="e.g. closes below the daily EMA50, volume dries up 3 days in a row"></textarea>
     </div>
-    <div class="f"><label>รูปภาพ Chart (ลิงก์ Google Drive, ถ้ามี)</label>
+    <div class="f"><label>Chart image (Google Drive link, optional)</label>
       <input type="url" id="tImageUrl" placeholder="https://drive.google.com/file/d/.../view">
     </div>
 
-    <div class="f" id="teCancelNoteBox" style="display:none"><label>โน้ต</label>
+    <div class="f" id="teCancelNoteBox" style="display:none"><label>Note</label>
       <textarea id="tCancelNote" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)"></textarea>
-      <div class="hint">เหตุผลที่ยกเลิก (แท็ก) แก้ที่ปุ่ม Cancel เดิม</div>
+      <div class="hint">The cancel reason (tag) is edited with the original Cancel button</div>
     </div>
 
     <div class="exitbox" id="exitFields" style="display:none">
-      <div class="divlbl">ข้อมูลตอนปิดไม้ (สำหรับ Trading Journal)</div>
+      <div class="divlbl">Close details (for the Trading Journal)</div>
       <div class="frow">
-        <div class="f"><label>ราคาปิด</label><input type="number" step="any" inputmode="decimal" id="tExitPrice" oninput="teRefresh()"></div>
-        <div class="f"><label>วันปิด</label><input type="date" id="tExitDate" oninput="teRefresh()"></div>
+        <div class="f"><label>Exit price</label><input type="number" step="any" inputmode="decimal" id="tExitPrice" oninput="teRefresh()"></div>
+        <div class="f"><label>Exit date</label><input type="date" id="tExitDate" oninput="teRefresh()"></div>
       </div>
       <div class="hint" id="exitHint"></div>
       <div class="frow">
-        <div class="f"><label>วินัย — ทำตามแผนไหม
-            <button type="button" class="small" onclick="openScoreMgr('disc')" title="แก้ข้อความ 4 ระดับ" style="float:right;padding:0 6px">⚙</button></label>
+        <div class="f"><label>Discipline — did you follow the plan?
+            <button type="button" class="small" onclick="openScoreMgr('disc')" title="Edit the 4 level labels" style="float:right;padding:0 6px">⚙</button></label>
           <select id="tDiscScore">
-            <option value="">— ยังไม่ให้คะแนน —</option>
-            <option value="3">3 · ทำตามแผนครบทุกจุด</option>
-            <option value="2">2 · เบี่ยงเล็กน้อย แต่มีเหตุผลรองรับ</option>
-            <option value="1">1 · เบี่ยงจากแผนชัดเจน</option>
-            <option value="0">0 · ไม่ได้ทำตามแผนเลย</option>
+            <option value="">— not scored —</option>
+            <option value="3">3 · followed the plan at every step</option>
+            <option value="2">2 · small deviation, with a reason</option>
+            <option value="1">1 · clearly off the plan</option>
+            <option value="0">0 · did not follow the plan</option>
           </select></div>
-        <div class="f"><label>Setup — คุณภาพไม้นี้
-            <button type="button" class="small" onclick="openScoreMgr('setup')" title="แก้ข้อความ 4 ระดับ" style="float:right;padding:0 6px">⚙</button></label>
+        <div class="f"><label>Setup — quality of this trade
+            <button type="button" class="small" onclick="openScoreMgr('setup')" title="Edit the 4 level labels" style="float:right;padding:0 6px">⚙</button></label>
           <select id="tSetupScore">
-            <option value="">— ยังไม่ให้คะแนน —</option>
-            <option value="3">3 · ตรงเกณฑ์ครบ ไม้คุณภาพ</option>
-            <option value="2">2 · ดี แต่ขาดบางเงื่อนไข</option>
-            <option value="1">1 · ก้ำกึ่ง ไม่ควรขนาดเต็ม</option>
-            <option value="0">0 · ไม่ควรเข้าตั้งแต่แรก</option>
+            <option value="">— not scored —</option>
+            <option value="3">3 · met every rule — a quality trade</option>
+            <option value="2">2 · good, but missed some conditions</option>
+            <option value="1">1 · borderline — not full size</option>
+            <option value="0">0 · should not have entered</option>
           </select></div>
       </div>
-      <div class="f" id="invalHitField"><label>Invalidation ที่เขียนไว้ — เกิดขึ้นจริงไหม</label>
+      <div class="f" id="invalHitField"><label>The invalidation you wrote — did it happen?</label>
         <div class="hint" id="invalHitEcho" style="margin:-2px 0 6px;border-left:2px solid var(--border);padding-left:8px"></div>
         <select id="tInvalHit">
-          <option value="">— ยังไม่ระบุ —</option>
-          <option value="hit">เกิดขึ้น → ออกตามนั้น</option>
-          <option value="ignored">เกิดขึ้น → แต่ไม่ได้ออก</option>
-          <option value="no">ไม่เกิด — ออกด้วยเหตุอื่น</option>
+          <option value="">— not set —</option>
+          <option value="hit">Happened → exited as planned</option>
+          <option value="ignored">Happened → but did not exit</option>
+          <option value="no">Did not happen — exited for another reason</option>
         </select></div>
-      <div class="f"><label>เหตุผลที่ออก</label>
+      <div class="f"><label>Exit reason</label>
         <div style="display:flex;gap:8px;align-items:center">
           <select id="tExitReason" style="flex:1"></select>
-          <button type="button" class="small" onclick="openReasonManager('exit')" title="เพิ่ม/แก้ไขแท็กเหตุผล" style="flex-shrink:0">⚙</button>
+          <button type="button" class="small" onclick="openReasonManager('exit')" title="Add / edit reason tags" style="flex-shrink:0">⚙</button>
         </div></div>
-      <div class="f"><label>โน้ต (ถ้ามี)</label><textarea id="tExitNote" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น ออกเร็วไป 2 วัน ถ้าถือตามแผนได้ 2.4R"></textarea></div>
+      <div class="f"><label>Note (optional)</label><textarea id="tExitNote" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="e.g. exited 2 days early — holding to the plan would have made 2.4R"></textarea></div>
     </div>
 
     <div class="hint" id="teErr" role="alert" style="color:var(--red);min-height:0;margin-top:8px"></div>
     <div class="btns">
-      <button onclick="closeTradeEdit()">ยกเลิก</button>
-      <button data-enter-primary class="primary" id="teSaveBtn" onclick="saveTradeEdit()">บันทึก</button>
+      <button onclick="closeTradeEdit()">Cancel</button>
+      <button data-enter-primary class="primary" id="teSaveBtn" onclick="saveTradeEdit()">Save</button>
     </div>
   </div>
 </div>
@@ -6495,25 +6496,25 @@ html body .pc2-none .pc2-np{display:none}
 <!-- ===== Close Position (partial / scale-out) modal ===== -->
 <div class="overlay" id="closePosOverlay">
   <div class="modal">
-    <h3>ปิด Position — เลือกจำนวน</h3>
+    <h3>Close position — choose size</h3>
     <div class="hint" id="cpInfo" style="margin-bottom:12px"></div>
     <div class="frow">
       <div class="f"><label>Exit Price</label><input type="number" step="any" inputmode="decimal" id="cpExitPrice" oninput="cpRefresh()"></div>
       <div class="f"><label>Exit Date</label><input type="date" id="cpExitDate"></div>
     </div>
-    <div class="f"><label>Qty ที่จะปิด (สูงสุด <span id="cpMaxQty"></span>)</label>
+    <div class="f"><label>Qty to close (max <span id="cpMaxQty"></span>)</label>
       <input type="number" step="any" inputmode="decimal" id="cpQty" oninput="cpRefresh()">
     </div>
     <div class="seg" style="margin-top:6px">
       <button type="button" onclick="cpSetFraction(0.25)">25%</button>
       <button type="button" onclick="cpSetFraction(0.5)">50%</button>
       <button type="button" onclick="cpSetFraction(0.75)">75%</button>
-      <button type="button" onclick="cpSetFraction(1)">ทั้งหมด</button>
+      <button type="button" onclick="cpSetFraction(1)">All</button>
     </div>
     <div class="hint" id="cpPreview" style="margin-top:12px"></div>
     <div class="btns">
-      <button onclick="document.getElementById('closePosOverlay').classList.remove('show')">ยกเลิก</button>
-      <button data-no-enter class="primary" id="cpConfirmBtn" onclick="confirmClosePos()">ยืนยันปิด</button>
+      <button onclick="document.getElementById('closePosOverlay').classList.remove('show')">Cancel</button>
+      <button data-no-enter class="primary" id="cpConfirmBtn" onclick="confirmClosePos()">Confirm close</button>
     </div>
   </div>
 </div>
@@ -6617,11 +6618,11 @@ html body .pc2-none .pc2-np{display:none}
 <!-- ===== GL1: กรอกค่าพอร์ต ===== -->
 <div class="overlay" id="glValOverlay">
   <div class="modal">
-    <h3>กรอกค่าพอร์ต <span style="font-weight:400;color:var(--muted);font-size:.8rem">(ยอดรวมทุกโบรกของบัญชี)</span></h3>
+    <h3>Enter portfolio value <span style="font-weight:400;color:var(--muted);font-size:.8rem">(total across all brokers of the account)</span></h3>
     <div id="glValBody"></div>
     <div class="hint" id="glValMsg" data-gl-valmsg style="min-height:18px;color:var(--red)"></div>
-    <div class="hint" style="font-family:var(--sans)">ช่องว่าง = ไม่บันทึกบัญชีนั้น · วันเดียวกันกรอกซ้ำ = แทนที่ · ดู/ลบประวัติได้ใน ตั้งค่าระบบ → เป้าหมาย Port</div>
-    <div class="btns"><button type="button" data-gl-valcancel onclick="glValClose()">ยกเลิก</button><button data-enter-primary type="button" class="primary" data-gl-valsave onclick="glValSave()">บันทึก</button></div>
+    <div class="hint" style="font-family:var(--sans)">Blank = that account is not saved · same day again = replaces · see / delete history in System settings → Port goals</div>
+    <div class="btns"><button type="button" data-gl-valcancel onclick="glValClose()">Cancel</button><button data-enter-primary type="button" class="primary" data-gl-valsave onclick="glValSave()">Save</button></div>
   </div>
 </div>
 
@@ -6728,16 +6729,16 @@ html body .pc2-none .pc2-np{display:none}
 <!-- ===== Industry Manager modal ===== -->
 <div class="overlay" id="industryOverlay">
   <div class="modal">
-    <h3>จัดการ Industry</h3>
-    <div class="hint" style="margin-top:-8px;margin-bottom:12px">ใช้เฉพาะ Core Port และ Satellite.A — เพิ่มชื่อ Industry ไว้เป็น selection ตอนเพิ่มหุ้นใน Watchlist<br>
-      ใส่ URL คู่มือของ industry นั้นได้ด้วย แล้วชื่อ industry ในตาราง Watchlist และใน legend ของ pie หน้า Portfolio จะกดเปิดได้</div>
+    <h3>Manage industries</h3>
+    <div class="hint" style="margin-top:-8px;margin-bottom:12px">Used for Core Port and Satellite.A only — add industry names to pick from when adding a stock to the Watchlist<br>
+      You can also add a guide URL for the industry — then the industry name in the Watchlist table and in the Portfolio pie legend becomes tappable.</div>
     <div class="frow" style="gap:8px">
-      <div class="f" style="flex:1"><input type="text" id="newIndustryName" placeholder="ชื่อ Industry ใหม่ เช่น Semiconductor"></div>
-      <button data-enter-primary class="primary" style="flex-shrink:0;align-self:flex-end" onclick="addIndustry()">เพิ่ม</button>
+      <div class="f" style="flex:1"><input type="text" id="newIndustryName" placeholder="New industry name, e.g. Semiconductor"></div>
+      <button data-enter-primary class="primary" style="flex-shrink:0;align-self:flex-end" onclick="addIndustry()">Add</button>
     </div>
     <div id="industryList" style="margin-top:14px;display:flex;flex-direction:column;gap:6px"></div>
     <div class="btns">
-      <button onclick="document.getElementById('industryOverlay').classList.remove('show')">ปิด</button>
+      <button onclick="document.getElementById('industryOverlay').classList.remove('show')">Close</button>
     </div>
   </div>
 </div>
@@ -6745,18 +6746,18 @@ html body .pc2-none .pc2-np{display:none}
 <!-- ===== Reason Tag Manager modal (ใช้ร่วม exit / cancel) ===== -->
 <div class="overlay" id="reasonMgrOverlay">
   <div class="modal">
-    <h3 id="reasonMgrTitle">แท็กเหตุผล</h3>
+    <h3 id="reasonMgrTitle">Reason tags</h3>
     <div class="hint" id="reasonMgrHint" style="margin-top:-8px;margin-bottom:12px"></div>
     <div class="frow" style="gap:8px;align-items:flex-end">
-      <div class="f" style="flex:1"><label>แท็กใหม่</label><input type="text" id="newReasonTag" placeholder="เช่น ปรับพอร์ต, ต้องใช้เงิน"></div>
+      <div class="f" style="flex:1"><label>New tag</label><input type="text" id="newReasonTag" placeholder="e.g. rebalance, needed the cash"></div>
       <label style="display:flex;align-items:center;gap:5px;flex-shrink:0;padding-bottom:9px;font-size:.8rem;color:var(--muted)">
-        <input type="checkbox" id="newReasonOff" style="width:auto"> <span id="newReasonOffLabel">หลุดแผน</span></label>
-      <button data-enter-primary class="primary" style="flex-shrink:0;margin-bottom:2px" onclick="addReasonTag()">เพิ่ม</button>
+        <input type="checkbox" id="newReasonOff" style="width:auto"> <span id="newReasonOffLabel">Off plan</span></label>
+      <button data-enter-primary class="primary" style="flex-shrink:0;margin-bottom:2px" onclick="addReasonTag()">Add</button>
     </div>
     <div id="reasonMgrList" style="margin-top:14px;display:flex;flex-direction:column;gap:6px"></div>
     <div class="btns" style="justify-content:space-between">
-      <button onclick="resetReasonTags()">ค่าเริ่มต้น</button>
-      <button onclick="document.getElementById('reasonMgrOverlay').classList.remove('show')">ปิด</button>
+      <button onclick="resetReasonTags()">Reset to default</button>
+      <button onclick="document.getElementById('reasonMgrOverlay').classList.remove('show')">Close</button>
     </div>
   </div>
 </div>
@@ -6764,12 +6765,12 @@ html body .pc2-none .pc2-np{display:none}
 <!-- ===== แก้ข้อความคะแนน วินัย / Setup (0-3) ===== -->
 <div class="overlay" id="scoreMgrOverlay">
   <div class="modal">
-    <h3 id="scoreMgrTitle">แก้ข้อความคะแนน</h3>
+    <h3 id="scoreMgrTitle">Edit score labels</h3>
     <div class="hint" id="scoreMgrHint" style="margin-top:-8px;margin-bottom:12px"></div>
     <div id="scoreMgrList" style="display:flex;flex-direction:column;gap:8px"></div>
     <div class="btns" style="justify-content:space-between">
-      <button onclick="resetScoreLabels()">ค่าเริ่มต้น</button>
-      <button onclick="document.getElementById('scoreMgrOverlay').classList.remove('show')">ปิด</button>
+      <button onclick="resetScoreLabels()">Reset to default</button>
+      <button onclick="document.getElementById('scoreMgrOverlay').classList.remove('show')">Close</button>
     </div>
   </div>
 </div>
@@ -6777,21 +6778,22 @@ html body .pc2-none .pc2-np{display:none}
 <!-- ===== Cancel Trade modal ===== -->
 <div class="overlay" id="cancelOverlay">
   <div class="modal">
-    <h3 id="cancelTitle">ยกเลิกแผนเทรด</h3>
+    <h3 id="cancelTitle">Cancel plan</h3>
     <div class="hint" id="cancelSymHint" style="margin-top:-8px;margin-bottom:12px"></div>
-    <div class="f"><label>เหตุผลที่ยกเลิก</label>
+    <div class="f"><label>Cancel reason</label>
       <div style="display:flex;gap:8px;align-items:center">
         <select id="cancelTag" style="flex:1"></select>
-        <button type="button" class="small" onclick="openReasonManager('cancel')" title="เพิ่ม/แก้ไขแท็ก" style="flex-shrink:0">⚙</button>
+        <button type="button" class="small" onclick="openReasonManager('cancel')" title="Add / edit tags" style="flex-shrink:0">⚙</button>
       </div></div>
-    <div class="f"><label>บันทึกเพิ่ม (ถ้ามี)</label><textarea id="cancelNote" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="เช่น รอ breakout แต่แท่งปิดต่ำกว่าแนวรับ setup เสียแล้ว"></textarea></div>
-    <div class="f"><label>รูปภาพ Chart (ลิงก์ Google Drive, ถ้ามี)</label>
+    <div class="f"><label>Extra note (optional)</label><textarea id="cancelNote" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:16px;font-family:var(--sans)" placeholder="e.g. waited for the breakout, but the bar closed below support — the setup is gone"></textarea></div>
+    <div class="f"><label>Chart image (Google Drive link, optional)</label>
       <input type="url" id="cancelImageUrl" placeholder="https://drive.google.com/file/d/.../view" oninput="updateCancelImagePreview()">
       <div class="hint" id="cancelImgHint"></div>
     </div>
+    <div class="hint" id="cancelErr" role="alert" style="display:none;color:var(--amber)"></div>
     <div class="btns">
-      <button onclick="document.getElementById('cancelOverlay').classList.remove('show')">ปิด</button>
-      <button class="danger" id="cancelSaveBtn" onclick="confirmCancel()">บันทึก Cancel</button>
+      <button onclick="document.getElementById('cancelOverlay').classList.remove('show')">Close</button>
+      <button class="danger" id="cancelSaveBtn" onclick="confirmCancel()">Save cancel</button>
     </div>
   </div>
 </div>
@@ -8665,10 +8667,10 @@ html body .pc2-none .pc2-np{display:none}
     return mergeDual(f(L.ideasW), f(L.ideasM), 'sat');
   }
   function baseModel(L, strat) { return { ddStop: !!(L.emergency && L.emergency.stopped), strategy: strat, acct: L.acct, ok: false, blocked: true, reasons: [], reasonTexts: [], flags: [], formula: '', effPct: null, qty: 0, money: null, roomLine: '', allowedQty: 0, chip: null, factors: [] }; }
-  /* PC2 §1 — total-risk blocks say the real rule with numbers: "Risk 0.36% is over today's limit 0.24% (0.40% × homework 100% × risk-off 60%)" */
+  /* PC2 §1 — total-risk blocks say the real rule with numbers: "Risk 0.36% is over the limit for this plan 0.24% (0.40% × homework 100% × risk-off 60%)" */
   function numTexts(m) {
     if (!m.fit || !m.budget) return m;
-    m.reasons.forEach(function (c, i) { if (c === 'PLAN_TOTAL_RISK' || c === 'ADDON_TOTAL_RISK') m.reasonTexts[i] = 'Risk ' + f2(m.fit.totalPct, 2) + "% is over today's limit " + f2(m.fit.capPct, 2) + '% (' + m.budget.text + ')'; });
+    m.reasons.forEach(function (c, i) { if (c === 'PLAN_TOTAL_RISK' || c === 'ADDON_TOTAL_RISK') m.reasonTexts[i] = (c === 'ADDON_TOTAL_RISK' ? 'Risk ' + f2(m.fit.totalPct, 2) + '% is over the ' + f2(m.fit.capPct, 2) + '% limit for this stock (all lots at their current stop)' : 'Risk ' + f2(m.fit.totalPct, 2) + '% is over the limit for this plan ' + f2(m.fit.capPct, 2) + '% (' + m.budget.text + ')'); });
     return m;
   }
   function finish(m, d) {
@@ -9075,7 +9077,7 @@ function re1FillInfo(c, qty, px, stop){
     const bi = r.m.reasons.findIndex(x=>BUD.indexOf(x) >= 0);
     if(r.m.blocked && bi >= 0){ const t = String(r.m.reasonTexts[bi] || '').trim(); return {flags:fl, budget:true, text:t + (/[.!?]$/.test(t) ? '' : '.') + tail}; }
     const d = Math.abs(px - stop) * (r.spec.fx || 1), lim = r.m.blocked ? r.m.allowedQty : r.m.qty, money = v=>re1AcctMoney(c.acct, v);
-    return {flags:fl, budget:false, text:`Over today's limit: ${fmt0(qty)} sh @ ${td3Num(px)} risks ${money(qty * d)}, limit allows ${fmt0(lim)} (${money(lim * d)}).` + tail};
+    return {flags:fl, budget:false, text:`Over the limit for this plan: ${fmt0(qty)} sh @ ${td3Num(px)} risks ${money(qty * d)}, limit allows ${fmt0(lim)} (${money(lim * d)}).` + tail};
   }catch(e){ return null; }
 }
 /* engine-only Satellite blocks for Place order (pre-existing form blocks such as min-stop notes stay as before) */
@@ -9351,10 +9353,10 @@ const DEFAULT_TABS_OFFSET = 0;
    ตอนบันทึกจะ snapshot label ติดไปกับ trade ด้วย เผื่อผู้ใช้ลบแท็กทิ้งทีหลัง
    ไม้เก่าจะยังอ่านออกว่าตอนนั้นหมายถึงอะไร                                        */
 const REASON_KINDS = {
-  exit:   {title:'แท็กเหตุผลที่ออก',       offLabel:'หลุดแผน', field:'exitReason',   labelField:'exitReasonLabel',   noteField:'exitNote',
-           offHint:'ติ๊กให้แท็กที่แปลว่าคุณไม่ได้ออกตามแผน'},
-  cancel: {title:'แท็กเหตุผลที่ยกเลิก',    offLabel:'หลุดวินัย', field:'cancelTag',   labelField:'cancelTagLabel',    noteField:'cancelNote',
-           offHint:'ติ๊กให้แท็กที่แปลว่ายกเลิกเพราะตัวเอง ไม่ใช่เพราะเงื่อนไขตลาดเปลี่ยนจริง'}
+  exit:   {title:'Exit reason tags',       offLabel:'Off plan', field:'exitReason',   labelField:'exitReasonLabel',   noteField:'exitNote',
+           offHint:'Tick the tags that mean you did not exit as planned'},
+  cancel: {title:'Cancel reason tags',    offLabel:'Broke discipline', field:'cancelTag',   labelField:'cancelTagLabel',    noteField:'cancelNote',
+           offHint:'Tick the tags that mean you cancelled because of yourself, not because the market conditions really changed'}
 };
 /* CL2-b: ไม่มีหมวด missed ในตัวจัดการแล้ว (REASON_KINDS) — DEFAULT_REASON_TAGS.missed และ state.reasonTags.missed ยังเก็บไว้ ไม่แตะ */
 const DEFAULT_REASON_TAGS = {
@@ -9929,7 +9931,7 @@ function acctSetColor(id, c){
 function acctSetShow(id, on){
   const a = acctList.find(x=>x.id===id); if(!a) return;
   if(!on && acctList.filter(x=>x!==a && x.showInMix !== false).length === 0){
-    alert('ต้องเหลืออย่างน้อย 1 บัญชีที่แสดงในหน้ารวม'); renderAcctMgr(); return;
+    alert('Keep at least 1 account shown in Port'); renderAcctMgr(); return;
   }
   if(on) delete a.showInMix; else a.showInMix = false;
   renderAcctMgr(); render(); schedulePersist();
@@ -10157,7 +10159,7 @@ function aw1Render(){
   if(acctList.length < 2){ h.style.display = 'none'; h.innerHTML = ''; return; }
   h.style.display = '';
   h.innerHTML = acctList.map(a=>{
-    const on = a.id === acctActive, n = on ? 0 : aw1Count(a.id), full = escHtml(a.name || a.id);
+    const on = a.id === acctActive, n = on ? 0 : aw1Count(a.id), full = lrAcctName(a);
     return `<button type="button" class="acSwB${on ? ' on' : ''}" data-acsw="${escHtml(a.id)}" aria-pressed="${on}" title="${full} · . previous · / next" aria-label="${full}${n ? ', ' + n + ' waiting' : ''}" onclick="acctSwitch('${escHtml(a.id).replace(/'/g, "\\'")}')"><i class="acSwD" style="--ac:${acctColor(a)}"></i>${lrAcctPill(a)}<span class="acSwL m">${lrAcctName(a)}</span><span class="acSwL p lr-acc ${lrAcctTag(a) === 'M' ? 'lr-acc-m' : lrAcctTag(a) === 'F' ? 'lr-acc-f' : ''}">${escHtml(lrAcctTag(a))}</span>${n ? `<em class="acSwN" data-acsw-n>${n > 9 ? '9+' : n}</em>` : ''}</button>`;
   }).join('');
 }
@@ -10176,7 +10178,7 @@ function brandSyncTap(e){   /* iPhone: the sync text is hidden — the dot opens
 function acctSwitch(id){
   if(!acctList.some(a=>a.id===id) || id===acctActive){ renderAcctBar(); return; }
   if(!serverConfirmed || !stateFromServer){
-    alert('ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — รอสักครู่แล้วลองสลับอีกครั้ง');
+    alert('Not synced with the server yet — wait a moment and switch again');
     renderAcctBar(); return;
   }
   /* มีงานค้าง (debounce ยังไม่ยิง / รอบก่อนเขียนล้มเหลว) → ต้องมาร์คบัญชีเดิมเป็น dirty ไม่งั้น doPersist หลังสลับจะเขียนแค่บัญชีใหม่ */
@@ -10192,7 +10194,7 @@ function acctSwitch(id){
   schedulePersist();
 }
 function acctAdd(){
-  const name = (prompt('ชื่อบัญชีใหม่', 'บัญชี ' + (acctList.length+1)) || '').trim();
+  const name = (prompt('New account name', 'Account ' + (acctList.length+1)) || '').trim();
   if(!name) return;
   const id = acctNewId();
   acctList.push({id, name, ports:ACCT_PORT_KEYS.slice()});
@@ -10206,16 +10208,16 @@ function acctRename(id, v){
 function acctTogglePort(id, key, on){
   const a = acctList.find(x=>x.id===id); if(!a) return;
   const next = on ? Array.from(new Set([...a.ports, key])) : a.ports.filter(k=>k!==key);
-  if(!next.length){ alert('ต้องเหลืออย่างน้อย 1 พอร์ต'); renderAcctMgr(); return; }
+  if(!next.length){ alert('Keep at least 1 port'); renderAcctMgr(); return; }
   a.ports = ACCT_PORT_KEYS.filter(k=>next.includes(k));
   if(id===acctActive){ render(); }
   renderAcctBar(); renderAcctMgr(); schedulePersist();
 }
 function acctDelete(id){
-  if(acctList.length<=1){ alert('ต้องเหลืออย่างน้อย 1 บัญชี'); return; }
+  if(acctList.length<=1){ alert('Keep at least 1 account'); return; }
   const a = acctList.find(x=>x.id===id); if(!a) return;
-  if(!confirm('ลบบัญชี "'+a.name+'" ?\n\nข้อมูลทั้งหมดของบัญชีนี้ (Trade · Watchlist · Journal · Fund-flow · การตั้งค่าทุน) จะหายถาวร กู้คืนไม่ได้')) return;
-  if(!confirm('ยืนยันอีกครั้ง — ลบ "'+a.name+'" ถาวร?')) return;
+  if(!confirm('Delete account "'+a.name+'"?\n\nAll data of this account (trades · Watchlist · Journal · Fund-flow · capital settings) is deleted for good and cannot be restored.')) return;
+  if(!confirm('Confirm again — delete "'+a.name+'" for good?')) return;
   acctList = acctList.filter(x=>x.id!==id);
   delete acctBooks[id];
   dirtyBooks.delete(id);
@@ -10233,11 +10235,11 @@ function renderAcctMgr(){
   host.innerHTML = acctList.map(a=>`
     <div class="acctRow">
       <input class="nm" type="text" value="${escHtml(a.name)}" onchange="acctRename('${a.id}',this.value)">
-      ${a.id===acctActive?'<span class="acctCur">เปิดอยู่</span>':`<button class="small" onclick="acctSwitch('${a.id}')">สลับไป</button>`}
-      <button class="small danger" onclick="acctDelete('${a.id}')" ${acctList.length<=1?'disabled':''}>ลบ</button>
+      ${a.id===acctActive?'<span class="acctCur">Active</span>':`<button class="small" onclick="acctSwitch('${a.id}')">Switch</button>`}
+      <button class="small danger" onclick="acctDelete('${a.id}')" ${acctList.length<=1?'disabled':''}>Delete</button>
       <div class="acctPorts" style="flex-basis:100%;align-items:center;gap:10px">
-        <span class="acctSw" title="สีประจำบัญชี">${ACCT_PALETTE.map(c=>`<i class="${acctColor(a)===c?'on':''}" style="background:${c}" onclick="acctSetColor('${a.id}','${c}')"></i>`).join('')}</span>
-        <label class="${a.showInMix!==false?'on':''}"><input type="checkbox" ${a.showInMix!==false?'checked':''} onchange="acctSetShow('${a.id}',this.checked)">แสดงในหน้ารวม</label>
+        <span class="acctSw" title="Account colour">${ACCT_PALETTE.map(c=>`<i class="${acctColor(a)===c?'on':''}" style="background:${c}" onclick="acctSetColor('${a.id}','${c}')"></i>`).join('')}</span>
+        <label class="${a.showInMix!==false?'on':''}"><input type="checkbox" ${a.showInMix!==false?'checked':''} onchange="acctSetShow('${a.id}',this.checked)">Show in Port</label>
       </div>
       ${lrDefHtml(a)}
       <div class="acctPorts" style="flex-basis:100%">
@@ -10958,7 +10960,7 @@ function newsSatBlockMsg(){ try{ const b = newsSatBlock(); return b ? b.msg : ''
 let newsDraft = {date:'', kind:'CPI', time:'', timeEdited:false, msg:''};
 function newsRawList(){ const r = tdSettings().newsEvents; return Array.isArray(r) ? r.slice() : []; }
 function newsWrite(list){
-  if(!tdCanWrite()){ newsDraft.msg = 'ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง'; return false; }
+  if(!tdCanWrite()){ newsDraft.msg = 'Not synced with the server yet — try again'; return false; }
   const B = getBook(tdHome());
   B.settings.newsEvents = list;
   saveBook(tdHome());
@@ -11021,7 +11023,7 @@ function newsSetRender(){
 function newsSizeSet(v){   /* EF1 §6 — policy setting newsSizePct (default 65) */
   const n = Math.round(+v);
   if(!(n >= 10 && n <= 100)){ newsDraft.msg = 'Enter 10–100'; return newsSetRender(); }
-  if(!tdCanWrite()){ newsDraft.msg = 'ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง'; return newsSetRender(); }
+  if(!tdCanWrite()){ newsDraft.msg = 'Not synced with the server yet — try again'; return newsSetRender(); }
   const B = getBook(tdHome()); B.settings.newsSizePct = n; saveBook(tdHome());
   newsDraft.msg = 'Saved'; try{ todayRefresh(); }catch(e){} try{ if(activeTab === 'plan') bdRender(); }catch(e){}
   newsSetRender();
@@ -11331,8 +11333,8 @@ function tdRowHtml(t){
     const cells = ids.map(id=>{
       const mk = tdSatMk().find(m=>m.id===id), v = st[id] || '', nm = escHtml(tdLabel(mk.key));
       return `<div class="tdAs${v ? ' '+v : ''}" data-sat-chip="${id}" data-state="${v || 'none'}"><button type="button" class="nm" data-go="strategy" data-args="${tdAttr({key:mk.key})}" onclick="tdGo(this)">${nm}</button>`
-        + `<button type="button" class="b bk" data-sat-ok="${id}" aria-pressed="${v==='ok'}" aria-label="${nm} มีแผน" onclick="tdSatMark('${id}','ok')"${(full && v!=='ok') ? ` disabled title="Focus ได้สูงสุด ${TD_FOCUS_MAX} ตัว/วัน — เอา ✓ ตัวอื่นออกก่อน"` : ''}>✓</button>`
-        + `<button type="button" class="b bx" data-sat-no="${id}" aria-pressed="${v==='no'}" aria-label="${nm} วันนี้ไม่มีแผน" onclick="tdSatMark('${id}','no')">✕</button></div>`;
+        + `<button type="button" class="b bk" data-sat-ok="${id}" aria-pressed="${v==='ok'}" aria-label="${nm} has a plan" onclick="tdSatMark('${id}','ok')"${(full && v!=='ok') ? ` disabled title="Focus ได้สูงสุด ${TD_FOCUS_MAX} ตัว/วัน — เอา ✓ ตัวอื่นออกก่อน"` : ''}>✓</button>`
+        + `<button type="button" class="b bx" data-sat-no="${id}" aria-pressed="${v==='no'}" aria-label="${nm} no plan today" onclick="tdSatMark('${id}','no')">✕</button></div>`;
     }).join('');
     return `<div class="tdRow ${t.g} noGo" data-kind="sat-daily"${P ? ` data-pf2-state="${P.state}"` : ''}><span class="tdIco">${t.ico}</span><span class="tdWhat">${t.html}${tdTagHtml(t.tags)}${P ? pf2SatBoxHtml(P) : ''}${ids.length ? `<span class="tdCntTag${n > TD_FOCUS_MAX ? ' warn' : ''}" data-sat-count>Focus ${n}/${TD_FOCUS_MAX}</span><span class="tdWhere">${escHtml(t.sub)}</span><div class="tdSatGrid">${cells}</div>` : ''}${tdSatEdit === M.today ? `<button type="button" class="tdEditDone" data-sat-edit-done onclick="tdSatEditSet(false)">เสร็จ</button>` : ''}</span><span></span></div>`;
   }
@@ -11636,10 +11638,10 @@ function td4CandDelete(sym, noConfirm){
   const key = wlSymKey(sym), row = wlRowsAll().cand.find(r=>wlSymKey(r.sym)===key); if(!row || !tdCanWrite()) return;
   const idea = (row.cInfo || []).length > 0, t = String(row.sym).toUpperCase();
   if(!idea){
-    if(!noConfirm && !confirm(`Remove ${t} from Candidates?`)) return;
+    if(!noConfirm){ cl2Ask({title:`Remove ${t}?`, body:'It leaves Candidates.', yes:'Remove', onOk:()=>td4CandDelete(sym, true)}); return; }
     glWrite(S=>{ const cm = Object.assign({}, S.candMeta || {}); delete cm[key]; if(Object.keys(cm).length) S.candMeta = cm; else delete S.candMeta; });
   } else {
-    if(!noConfirm && !confirm(`Delete ${t} from Candidates? It stays in the Idea, and you'll be asked again if the Idea changes.`)) return;
+    if(!noConfirm){ cl2Ask({title:`Remove ${t}?`, body:"It leaves Candidates but stays in the Idea. You'll be asked again if the Idea changes.", yes:'Remove', onOk:()=>td4CandDelete(sym, true)}); return; }
     td3MetaWrite(t, {sym:t, market:row.market, dismissed:true, dismissed_at:new Date().toISOString()});
   }
   if(wlSel===row.sym) wlSel = '';
@@ -11879,7 +11881,7 @@ function wlMtDiscard(sym){
 }
 function wlMtCancel(sym){   /* Cancel / Esc — ถามยืนยันเฉพาะเมื่อข้อความเปลี่ยน */
   const t = wlNormTicker(sym);
-  if(wlMtDirty(t) && !confirm('Discard your unsaved changes?')) return;
+  if(wlMtDirty(t)){ cl2Ask({title:'Discard your changes?', body:'Your unsaved changes will be lost.', yes:'Discard', no:'Keep editing', onOk:()=>wlMtDiscard(t)}); return; }
   wlMtDiscard(t);
 }
 function wlMtFmtDate(ds){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ds || '')); return m ? m[3] + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m[2] - 1] + ' ' + m[1] : ''; }
@@ -12015,7 +12017,7 @@ function wlArchSave(){
 }
 function wlRestore(sym){
   const t = wlNormTicker(sym), col = wlCol(); if(!col || !wlItemOf(t)) return;
-  Promise.resolve(col.doc(t).update({archived:false, archived_reason:'', archived_at:''})).then(()=>{ try{ renderWatchlist(); }catch(e){} }).catch(err=>{ alert('Could not restore: ' + ((err && (err.code || err.message)) || err)); });
+  Promise.resolve(col.doc(t).update({archived:false, archived_reason:'', archived_at:''})).then(()=>{ try{ renderWatchlist(); }catch(e){} }).catch(err=>{ ln4Toast('Could not restore: ' + ((err && (err.code || err.message)) || err)); });
 }
 /* Export: ตัวที่แสดงอยู่ตามตัวกรองปัจจุบัน · US = ticker ล้วน · TH = SET:XXX · คริปโต (…USDT/USDC) = BINANCE:… · คั่นด้วย , บรรทัดเดียว */
 /* SET1 — Copy list (แทน Export .txt): ticker ของตัวกรองปัจจุบันตามลำดับที่แสดง "AAA, BBB, CCC" (ไม่มี prefix ตลาด) */
@@ -13181,7 +13183,7 @@ function ln4Place(kind, id){
   const nm = kind === 'core' ? (coreCardsList.find(x=>x.id === id) || {}).ticker : ((satIdeasList || []).find(x=>x.id === id) || {}).asset;
   if(kind === 'core' && !wl1PlaceGate(id)) return;   /* WL1 — homework cap */
   if(kind === 'core'){ efCorePlaceOpen(id); return; }   /* EF1 C — same confirm sheet as Satellite (no native popup) */
-  if(!confirm(`Placed at broker — ${nm || ''}?`)) return;
+  /* CL2 B — unreachable for core/sat (both return above); the old browser confirm is gone */
   const at = new Date().toISOString();
   { const it = bdById(id); if(it) bdWriteWithLog(it, {ln4:{placedAt:at}}, 'order', 'Order placed · Entry ' + (it.entry > 0 ? td3Num(it.entry) : '—')); else if(kind === 'core') coreWrite(id, {ln4:{placedAt:at}}); else sat7dWrite('satIdeas', id, {ln4:{placedAt:at}}); }   /* PB1 — status change appends to log */
   ln4Valid(id, nm || '', 'working');
@@ -13694,7 +13696,7 @@ function todayRefresh(force){
   try{ tdLast = tdBuild(); }catch(e){ console.warn('today build:', e); return; }
   const n = tdLast.counts.r, b = document.getElementById('tabBadgeToday');
   if(b){ b.style.display = n>0 ? '' : 'none'; b.textContent = n>0 ? String(n) : ''; }
-  const btn = document.getElementById('tabBtnToday'); if(btn) btn.setAttribute('aria-label', n>0 ? `วันนี้ · ${n} งานด่วน` : 'วันนี้');
+  const btn = document.getElementById('tabBtnToday'); if(btn) btn.setAttribute('aria-label', n>0 ? `Today · ${n} urgent` : 'Today');
   try{ nt1bNavPill(); }catch(e){}   /* NT1b — Watch pill = ideas due */
   if(force || activeTab==='today'){
     try{ if(activeTab==='today') wiTimerStart(); }catch(e){}   /* WM1 — ตัวจับเวลาตัวเดียว */
@@ -13900,7 +13902,7 @@ function tdSetErrors(d){
     if(!tdTimeOk(s.end)) errs[i].push('เวลาจบต้องเป็น HH:MM');
     if(tdTimeOk(s.start) && tdTimeOk(s.end) && tdMin(s.end) <= tdMin(s.start)) errs[i].push('เวลาจบต้องมากกว่าเวลาเริ่ม');
     const nm = String(s.name||'').trim();
-    if(!nm) errs[i].push('ชื่อห้ามว่าง'); else if(nm.length>30) errs[i].push('ชื่อยาวเกิน 30 ตัว');
+    if(!nm) errs[i].push('Name cannot be empty'); else if(nm.length>30) errs[i].push('ชื่อยาวเกิน 30 ตัว');
   });
   const ok = d.slots.map((s,i)=>({s,i})).filter(x=>tdTimeOk(x.s.start) && tdTimeOk(x.s.end) && tdMin(x.s.end) > tdMin(x.s.start)).sort((p,q)=>tdMin(p.s.start)-tdMin(q.s.start));
   for(let k=1;k<ok.length;k++){ if(tdMin(ok[k].s.start) < tdMin(ok[k-1].s.end)){ errs[ok[k].i].push('ช่วงทับกับ ' + (ok[k-1].s.name||'ช่วงก่อนหน้า')); } }
@@ -13949,7 +13951,7 @@ function tdSetRender(){
 }
 function tdSetSave(){
   if(!tdDraft || !tdSetValidate()) return false;
-  if(!tdCanWrite()){ const m = document.getElementById('tdSetMsg'); if(m) m.textContent = 'ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง'; return false; }
+  if(!tdCanWrite()){ const m = document.getElementById('tdSetMsg'); if(m) m.textContent = 'Not synced with the server yet — try again'; return false; }
   const slots = tdDraft.slots.map(s=>({id:s.id, start:s.start, end:s.end, name:String(s.name).trim(), link:s.link}))
     .sort((p,q)=>tdMin(p.start)-tdMin(q.start));
   const B = getBook(tdHome());
@@ -13984,7 +13986,7 @@ try{ if(localStorage.getItem('dash.glTab') === 'w') glTab = 'w'; }catch(e){}
 
 const glDays = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z'))/86400000);
 function glNum(v){ const s = String(v==null ? '' : v).replace(/[,\s฿$]/g, ''); if(s==='') return null; const n = Number(s); return Number.isFinite(n) ? n : NaN; }
-function glThaiDate(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); return m ? `${+m[3]} ${DD_MONTHS[+m[2]-1]} ${String((+m[1] + 543) % 100).padStart(2, '0')}` : '—'; }
+function glThaiDate(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); return m ? `${+m[3]} ${DD_MONTHS[+m[2]-1]} ${m[1]}` : '—'; }
 function glMoney(v, cur, trim){
   const sym = cur==='THB' ? '฿' : '$', a = Math.abs(v), sg = v < 0 ? '−' : '';
   let s = a >= 1e6 ? (a/1e6).toFixed(2) + 'M' : (a/1e3).toFixed(1) + 'k';
@@ -14069,10 +14071,10 @@ function glWeekStat(M){
   const done = glWeekDone(mon), gl = glAccts(), rows = [];
   glWeekTasks().filter(t=>t.on).forEach(t=>{
     if(t.auto==='value' && !gl.length) return;   /* ไม่มีบัญชีตั้งเป้า = ซ่อนข้อนี้ (ไม่นับ) */
-    let ok = false, right = 'กดเอง';
+    let ok = false, right = 'tap to tick';
     if(t.auto==='value'){
       const n = gl.filter(x=>glLog(x.a.id).some(e=>e.d >= mon && e.d <= sun)).length;
-      ok = n === gl.length; right = `${n}/${gl.length} บัญชี`;
+      ok = n === gl.length; right = `${n}/${gl.length} accounts`;
     } else if(t.auto==='daily'){ ok = nOk >= 4; right = `${nOk}/4`; }
     else { ok = done.includes(t.id); }
     rows.push({t, ok, right});
@@ -14085,13 +14087,13 @@ function glRangeTxt(a, b){
   return pa[1]===pb[1] ? `${+pa[2]}–${+pb[2]} ${em}` : `${+pa[2]} ${sm}–${+pb[2]} ${em}`;
 }
 function glWeeklyPanel(M, W){
-  return `<div class="glPanel" data-gl-pw><div class="glL1"><b>สัปดาห์นี้ ${glRangeTxt(W.mon, W.sun)}</b><span class="glPct" data-gl-wpct>${W.n}/${W.N} · ${W.pct}%</span></div>`
+  return `<div class="glPanel" data-gl-pw><div class="glL1"><b>This week ${glRangeTxt(W.mon, W.sun)}</b><span class="glPct" data-gl-wpct>${W.n}/${W.N} · ${W.pct}%</span></div>`
     + `<div class="glBar"><i style="width:${W.pct}%"></i></div>`
     + (W.rows.length ? W.rows.map(r=>{
         const t = r.t, ck = t.auto ? `<span class="glCk auto${r.ok ? ' on' : ''}" data-gl-wauto="${escHtml(t.id)}">${r.ok ? '✓' : ''}</span>`
-          : `<button type="button" class="glCk${r.ok ? ' on' : ''}" data-gl-wtick="${escHtml(t.id)}" aria-pressed="${r.ok}" aria-label="ติ๊ก ${escHtml(t.name)}" onclick="glTickWeek('${escHtml(t.id)}')">${r.ok ? '✓' : ''}</button>`;
+          : `<button type="button" class="glCk${r.ok ? ' on' : ''}" data-gl-wtick="${escHtml(t.id)}" aria-pressed="${r.ok}" aria-label="Tick ${escHtml(t.name)}" onclick="glTickWeek('${escHtml(t.id)}')">${r.ok ? '✓' : ''}</button>`;
         return `<div class="glRow" data-gl-wrow="${escHtml(t.id)}" data-done="${r.ok}">${ck}<span class="nm">${escHtml(t.name)}</span>${t.id==='wsector' ? `<button type="button" class="glAct" data-sd-wlink onclick="sdGoFlowRrg()">Flow ›</button>` : ''}<span class="r" data-gl-wright>${escHtml(r.right)}</span></div>`; }).join('')
-      : `<div class="glSub">ไม่มีงานรายสัปดาห์ที่เปิดอยู่ · ตั้งได้ที่ ตั้งค่าระบบ → Daily routine</div>`)
+      : `<div class="glSub">No weekly tasks are on · set them in System settings → Daily routine</div>`)
     + `<div class="glDays" data-gl-days>${W.days.map(x=>{ const isT = x.d === M.today, dw = tdDow(x.d), st = x.st;
         const h = st ? Math.min(100, st.pct) : 0, lo = st && !(st.N && st.ratio >= GL_DAILY_OK - 1e-9);
         return `<div class="glDay${isT ? ' today' : ''}" data-gl-day="${x.d}"><div class="col">${st ? `<i class="${lo ? 'lo' : ''}" style="height:${h}%"></i>` : ''}</div>${GL_DAYS_S[dw]}${st ? `<span class="p">${st.pct}%</span>` : ''}</div>`; }).join('')}</div></div>`;
@@ -14125,9 +14127,9 @@ function glGoSettings(){
 function glValOpen(){
   const rows = glAccts(), host = document.getElementById('glValBody'); if(!rows.length || !host) return;
   const today = thaiToday();
-  host.innerHTML = `<div class="f"><label>วันที่</label><input type="date" id="glValDate" data-gl-valdate value="${today}" max="${today}"></div>`
+  host.innerHTML = `<div class="f"><label>Date</label><input type="date" id="glValDate" data-gl-valdate value="${today}" max="${today}"></div>`
     + rows.map(x=>{ const lg = glLog(x.a.id).filter(e=>e.d <= today), lt = lg.length ? lg[lg.length-1] : null, sym = x.g.cur==='THB' ? '฿' : '$';
-      return `<div class="f"><label>${escHtml(x.a.name)} ${sym}</label><input type="text" inputmode="decimal" autocomplete="off" data-gl-valin="${escHtml(x.a.id)}" placeholder="${lt ? 'ล่าสุด ' + lt.v.toLocaleString('en-US', {maximumFractionDigits:2}) : 'ยอดรวมทุกโบรก'}" oninput="glValCmpUpdate(this)"><div class="glCmp" data-gl-valcmp="${escHtml(x.a.id)}"></div></div>`; }).join('');
+      return `<div class="f"><label>${lrAcctName(x.a)} ${sym}</label><input type="text" inputmode="decimal" autocomplete="off" data-gl-valin="${escHtml(x.a.id)}" placeholder="${lt ? 'last ' + lt.v.toLocaleString('en-US', {maximumFractionDigits:2}) : 'total across brokers'}" oninput="glValCmpUpdate(this)"><div class="glCmp" data-gl-valcmp="${escHtml(x.a.id)}"></div></div>`; }).join('');
   const m = document.getElementById('glValMsg'); if(m) m.textContent = '';
   document.getElementById('glValOverlay').classList.add('show');
 }
@@ -14146,13 +14148,13 @@ function glValCmpUpdate(inp){
   const n = glNum(inp.value), g = glGoalOf(id), cap = g ? glCapOf(id, g.cur) : null;
   if(!(n > 0) || !cap){ box.textContent = ''; box.removeAttribute('data-warn'); return; }
   const diff = n / cap - 1, d = Math.round(diff * 1000) / 10, sg = d < 0 ? '−' : '+', pct = sg + Math.abs(d).toFixed(1) + '%';
-  const warn = Math.abs(diff) > GL_CAP_WARN + 1e-9 && Math.abs(d) > GL_CAP_WARN * 100 + 1e-9, base = 'ทุนในตั้งค่า ' + glMoney(cap, g.cur);
+  const warn = Math.abs(diff) > GL_CAP_WARN + 1e-9 && Math.abs(d) > GL_CAP_WARN * 100 + 1e-9, base = 'Capital in settings ' + glMoney(cap, g.cur);
   box.setAttribute('data-warn', warn ? '1' : '0');
-  box.innerHTML = warn ? `${escHtml(base)} · ต่าง ${pct} → พิจารณาปรับทุนใน <a href="#" data-gl-capgo onclick="glCapGo('${escHtml(id)}');return false">ตั้งค่า</a>` : `${escHtml(base)} (ต่าง ${pct})`;
+  box.innerHTML = warn ? `${escHtml(base)} · differs by ${pct} → consider updating the capital in <a href="#" data-gl-capgo onclick="glCapGo('${escHtml(id)}');return false">Settings</a>` : `${escHtml(base)} (differs by ${pct})`;
 }
 function glCapGo(id){
   const dirty = [...document.querySelectorAll('#glValBody [data-gl-valin]')].some(i=>i.value.trim() !== '');
-  if(dirty && !confirm('มีค่าที่ยังไม่ได้บันทึกในช่อง — ไปตั้งค่าแล้วค่าที่กรอกจะหาย ไปต่อไหม?')) return;
+  if(dirty && !confirm('You have unsaved values — if you go to settings they are lost. Continue?')) return;
   glValClose();
   if(id !== acctActive) acctSwitch(id);
   if(id !== acctActive) return;   /* สลับไม่สำเร็จ (ยังซิงก์ไม่เสร็จ) — acctSwitch แจ้งเตือนแล้ว */
@@ -14163,17 +14165,17 @@ function glValClose(){ const o = document.getElementById('glValOverlay'); if(o) 
 function glValSave(){
   const msg = t => { const m = document.getElementById('glValMsg'); if(m) m.textContent = t; return false; };
   const today = thaiToday(), date = (document.getElementById('glValDate') || {}).value || '';
-  if(!newsDateOk(date)) return msg('วันที่ไม่ถูกต้อง');
-  if(date > today) return msg('ห้ามกรอกวันในอนาคต');
+  if(!newsDateOk(date)) return msg('Not a valid date');
+  if(date > today) return msg('The date cannot be in the future');
   const vals = [];
   for(const inp of document.querySelectorAll('#glValBody [data-gl-valin]')){
     const raw = inp.value.trim(); if(raw==='') continue;   /* ช่องว่าง = ไม่บันทึกบัญชีนั้น */
     const n = glNum(raw);
-    if(!(n > 0)) return msg('ค่าต้องเป็นตัวเลขมากกว่า 0');
+    if(!(n > 0)) return msg('Values must be numbers above 0');
     vals.push({id: inp.getAttribute('data-gl-valin'), v:n});
   }
-  if(!vals.length) return msg('ยังไม่ได้กรอกค่า');
-  if(!tdCanWrite()) return msg('ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง');
+  if(!vals.length) return msg('Type at least one value');
+  if(!tdCanWrite()) return msg('Not synced with the server yet — try again');
   glWrite(S=>{
     const lg = (S.goalLog && typeof S.goalLog==='object') ? Object.assign({}, S.goalLog) : {};
     vals.forEach(x=>{
@@ -14196,18 +14198,18 @@ function glSetRender(){
   const f = g ? {cur:g.cur, target:g.target, deadline:g.deadline, start:g.start, startDate:g.startDate}
     : {cur:'USD', target:'', deadline:'', start:last ? last.v : '', startDate:last ? thaiToday() : ''};
   const rev = lg.slice().reverse(), shown = glHistAll ? rev : rev.slice(0, GL_HIST_ROWS), sym = (g ? g.cur : f.cur)==='THB' ? '฿' : '$';
-  host.innerHTML = `<div class="f"><label>บัญชี</label><select data-gl-setacct onchange="glSetPick(this.value)">${acctList.map(x=>`<option value="${escHtml(x.id)}"${x.id===a.id ? ' selected' : ''}>${escHtml(x.name)}${glGoalOf(x.id) ? ' · ตั้งเป้าแล้ว' : ''}</option>`).join('')}</select></div>`
-    + `<div class="frow"><div class="f"><label>สกุลเงิน</label><select id="glSetCur" data-gl-cur><option value="USD"${f.cur==='USD' ? ' selected' : ''}>$ USD</option><option value="THB"${f.cur==='THB' ? ' selected' : ''}>฿ THB</option></select></div>`
-    + `<div class="f"><label>เป้า</label><input type="text" inputmode="decimal" id="glSetTarget" data-gl-target autocomplete="off" value="${f.target==='' ? '' : escHtml(Number(f.target).toLocaleString('en-US', {maximumFractionDigits:2}))}"></div></div>`
-    + `<div class="frow"><div class="f"><label>วันครบกำหนด</label><input type="date" id="glSetDeadline" data-gl-deadline value="${escHtml(f.deadline)}"></div><div class="f"></div></div>`
-    + `<div class="frow"><div class="f"><label>ค่าเริ่มต้น</label><input type="text" inputmode="decimal" id="glSetStart" data-gl-start autocomplete="off" value="${f.start==='' ? '' : escHtml(Number(f.start).toLocaleString('en-US', {maximumFractionDigits:2}))}"></div>`
-    + `<div class="f"><label>วันเริ่ม</label><input type="date" id="glSetStartDate" data-gl-startdate value="${escHtml(f.startDate)}"></div></div>`
-    + `<div class="hint">ค่าเริ่ม = ยอดตอนตั้งเป้า (ใส่ย้อนหลังได้) · ไม่ตั้งเป้า = บัญชีนั้นไม่แสดงแถว · ต้องมี เป้า &gt; ค่าเริ่ม &gt; 0 และ วันครบ &gt; วันเริ่ม</div>`
-    + `<div class="btns" style="justify-content:flex-start;margin-top:10px"><button data-enter-primary type="button" class="primary" data-gl-save onclick="glSetSave()">บันทึกเป้า</button>${g ? `<button type="button" class="small" data-gl-del onclick="glSetDel()">ลบเป้า</button>` : ''}</div>`
+  host.innerHTML = `<div class="f"><label>Account</label><select data-gl-setacct onchange="glSetPick(this.value)">${acctList.map(x=>`<option value="${escHtml(x.id)}"${x.id===a.id ? ' selected' : ''}>${lrAcctName(x)}${glGoalOf(x.id) ? ' · goal set' : ''}</option>`).join('')}</select></div>`
+    + `<div class="frow"><div class="f"><label>Currency</label><select id="glSetCur" data-gl-cur><option value="USD"${f.cur==='USD' ? ' selected' : ''}>$ USD</option><option value="THB"${f.cur==='THB' ? ' selected' : ''}>฿ THB</option></select></div>`
+    + `<div class="f"><label>Goal</label><input type="text" inputmode="decimal" id="glSetTarget" data-gl-target autocomplete="off" value="${f.target==='' ? '' : escHtml(Number(f.target).toLocaleString('en-US', {maximumFractionDigits:2}))}"></div></div>`
+    + `<div class="frow"><div class="f"><label>Deadline</label><input type="date" id="glSetDeadline" data-gl-deadline value="${escHtml(f.deadline)}"></div><div class="f"></div></div>`
+    + `<div class="frow"><div class="f"><label>Start value</label><input type="text" inputmode="decimal" id="glSetStart" data-gl-start autocomplete="off" value="${f.start==='' ? '' : escHtml(Number(f.start).toLocaleString('en-US', {maximumFractionDigits:2}))}"></div>`
+    + `<div class="f"><label>Start date</label><input type="date" id="glSetStartDate" data-gl-startdate value="${escHtml(f.startDate)}"></div></div>`
+    + `<div class="hint">Start value = the value when you set the goal (can be backdated) · no goal = the account shows no row · needs goal &gt; start value &gt; 0 and deadline &gt; start date</div>`
+    + `<div class="btns" style="justify-content:flex-start;margin-top:10px"><button data-enter-primary type="button" class="primary" data-gl-save onclick="glSetSave()">Save goal</button>${g ? `<button type="button" class="small" data-gl-del onclick="glSetDel()">Delete goal</button>` : ''}</div>`
     + `<div class="hint" id="glSetMsg" data-gl-setmsg style="margin-top:6px">${escHtml(glSetMsgTxt)}</div>`
-    + `<div class="hint" style="margin:14px 0 4px"><b>ประวัติค่าพอร์ต ${escHtml(a.name)}</b> (${sym}) · ล่าสุดก่อน</div>`
-    + (shown.length ? shown.map(e=>`<div class="glHist" data-gl-hist="${e.d}"><span>${glThaiDate(e.d)}</span><span class="v">${e.v.toLocaleString('en-US', {maximumFractionDigits:2})}</span><button type="button" class="small" data-gl-histdel="${e.d}" aria-label="ลบ ${e.d}" onclick="glHistDel('${e.d}')">×</button></div>`).join('') : `<div class="hint">ยังไม่มีประวัติ</div>`)
-    + (rev.length > GL_HIST_ROWS ? `<button type="button" class="small" data-gl-histall onclick="glHistToggle()">${glHistAll ? 'ย่อ' : `ดูทั้งหมด (${rev.length})`}</button>` : '');
+    + `<div class="hint" style="margin:14px 0 4px"><b>Portfolio value history · ${lrAcctName(a)}</b> (${sym}) · newest first</div>`
+    + (shown.length ? shown.map(e=>`<div class="glHist" data-gl-hist="${e.d}"><span>${glThaiDate(e.d)}</span><span class="v">${e.v.toLocaleString('en-US', {maximumFractionDigits:2})}</span><button type="button" class="small" data-gl-histdel="${e.d}" aria-label="Delete ${e.d}" onclick="glHistDel('${e.d}')">×</button></div>`).join('') : `<div class="hint">No history yet</div>`)
+    + (rev.length > GL_HIST_ROWS ? `<button type="button" class="small" data-gl-histall onclick="glHistToggle()">${glHistAll ? 'Show less' : `Show all (${rev.length})`}</button>` : '');
   if(!RK1_HIDE) host.insertAdjacentHTML('beforeend', glSubHtml(a));   /* RK1 — sub-port goal fields hidden (stored subGoals kept) */
   glSetMsgTxt = '';
 }
@@ -14250,26 +14252,26 @@ function glSetSave(){
   const msg = t => { const m = document.getElementById('glSetMsg'); if(m) m.textContent = t; return false; };
   const id = glSetAcct, v = i => (document.getElementById(i) || {}).value;
   const target = glNum(v('glSetTarget')), start = glNum(v('glSetStart')), sd = v('glSetStartDate') || '', dl = v('glSetDeadline') || '', cur = v('glSetCur') === 'THB' ? 'THB' : 'USD';
-  if(!(start > 0)) return msg('ค่าเริ่มต้นต้องมากกว่า 0');
-  if(!(target > start)) return msg('เป้าต้องมากกว่าค่าเริ่มต้น');
-  if(!newsDateOk(sd) || !newsDateOk(dl)) return msg('กรอกวันเริ่มและวันครบกำหนด');
-  if(glDays(sd, dl) <= 0) return msg('วันครบกำหนดต้องมากกว่าวันเริ่ม');
-  if(!tdCanWrite()) return msg('ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง');
+  if(!(start > 0)) return msg('Start value must be above 0');
+  if(!(target > start)) return msg('Goal must be above the start value');
+  if(!newsDateOk(sd) || !newsDateOk(dl)) return msg('Type the start date and the deadline');
+  if(glDays(sd, dl) <= 0) return msg('The deadline must be after the start date');
+  if(!tdCanWrite()) return msg('Not synced with the server yet — try again');
   glWrite(S=>{ S.goals = Object.assign({}, (S.goals && typeof S.goals==='object') ? S.goals : {}, {[id]: {cur, start, startDate:sd, target, deadline:dl}}); });
-  glSetMsgTxt = 'บันทึกเป้าแล้ว'; glSetRender();
+  glSetMsgTxt = 'Goal saved'; glSetRender();
   return true;
 }
 function glSetDel(){
   const id = glSetAcct; if(!glGoalOf(id)) return;
-  if(!confirm('ลบเป้าหมายของบัญชีนี้? (ประวัติค่าพอร์ตไม่ถูกลบ)')) return;
-  if(!tdCanWrite()){ glSetMsgTxt = 'ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง'; return glSetRender(); }
+  if(!confirm('Delete the goal of this account? (The value history is kept.)')) return;
+  if(!tdCanWrite()){ glSetMsgTxt = 'Not synced with the server yet — try again'; return glSetRender(); }
   glWrite(S=>{ const g = Object.assign({}, S.goals || {}); delete g[id]; if(Object.keys(g).length) S.goals = g; else delete S.goals; });
-  glSetMsgTxt = 'ลบเป้าแล้ว'; glSetRender();
+  glSetMsgTxt = 'Goal deleted'; glSetRender();
 }
 function glHistDel(d){
   const id = glSetAcct;
-  if(!confirm(`ลบค่าพอร์ตวันที่ ${glThaiDate(d)}?`)) return;
-  if(!tdCanWrite()){ glSetMsgTxt = 'ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง'; return glSetRender(); }
+  if(!confirm(`Delete the portfolio value of ${glThaiDate(d)}?`)) return;
+  if(!tdCanWrite()){ glSetMsgTxt = 'Not synced with the server yet — try again'; return glSetRender(); }
   glWrite(S=>{
     const lg = Object.assign({}, S.goalLog || {}), rest = (Array.isArray(lg[id]) ? lg[id] : []).filter(e=>e && e.d !== d);
     if(rest.length) lg[id] = rest; else delete lg[id];
@@ -14281,7 +14283,7 @@ function glHistDel(d){
 /* ── ตั้งค่า Daily routine › งานรายวันอื่น + งานรายสัปดาห์ (อยู่ใน draft เดียวกับช่วงเวลา · บันทึกด้วยปุ่มเดิม) ── */
 function glNewId(p){ return p + Date.now().toString(36) + Math.floor(Math.random()*1296).toString(36); }
 function glSetErrors(d){
-  const chk = l => l.map(x=>{ const nm = String(x.name||'').trim(); return !nm ? 'ชื่อห้ามว่าง' : (nm.length > GL_NAME_MAX && !GL_WEEK_DEF.some(d=>d.name===nm)) ? `ชื่อยาวเกิน ${GL_NAME_MAX} ตัว` : ''; });
+  const chk = l => l.map(x=>{ const nm = String(x.name||'').trim(); return !nm ? 'Name cannot be empty' : (nm.length > GL_NAME_MAX && !GL_WEEK_DEF.some(d=>d.name===nm)) ? `Name is over ${GL_NAME_MAX} characters` : ''; });
   return {x: chk(d.extra || []), w: chk(d.week || [])};
 }
 function glSetValidate(){
@@ -14680,7 +14682,7 @@ function openKbHelp(){
    rsLoad คงไว้เป็น no-op ให้ switchTab/ตัวเรียกเดิมไม่ error · ตัดSample data (โหมดเดโม) ออกแล้ว */
 async function rsLoad(){ }
 
-const RS_TH_MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const RS_TH_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 /* ==========================================================
    โหมดรีเสิร์ช — ชั้นวาดหน้าจอ
@@ -14801,7 +14803,7 @@ function coreRiskCfg(acctId){
             Sat : ทุนถัง + P&L ไม้ Sat ที่ปิดตั้งแต่ baseAt — ไม้ Sat ที่เปิดอยู่ไม่มีราคาสด จึงไม่นับ (ความเสี่ยงค้างคุมด้วย heat อยู่แล้ว)
    หน่วย equity/peak = สกุลของถัง (Core ฿ · Sat ตาม PORTS.satB.cur) — DD% ของ Sat จึงไม่ขยับตามค่าเงิน */
 /* ค่าตั้ง DD ในค่าตั้งของแต่ละถัง (raw = settings.coreRisk / settings.satRisk) · ผิดกติกา = กลับค่าเริ่มต้น */
-const DD_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const DD_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function ddDateTxt(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); return m ? `${+m[3]} ${DD_MONTHS[+m[2]-1]}` : '—'; }
 /* ท่อเดียว: อ่านข้อมูล → ddStep → คืนผล + state ใหม่ (ยังไม่เขียน) */
 /* RG2b §4.7 — เบรก DD ต่อถัง: 'winner' | 'ladder' (ทุน = ถังของมัน + P&L ที่ปิดแล้ว/ที่ถือของไม้ในถังนั้น · Ladder = ไม้ที่ผูกการ์ด strategy L · ที่เหลือใน Core = Winner) · 'sat' เดิม · 'core' = ชื่อเก่า → winner */
@@ -15888,6 +15890,36 @@ function coreSheet(kind, html){
 }
 function coreSheetClose(){ document.querySelectorAll('.core-sheet').forEach(el=>el.remove()); const sd = document.getElementById('lfCoreSide'); if(sd){ sd.classList.remove('on'); sd.innerHTML = ''; try{ lfSideHint(); }catch(e){} } coreNew = null; coreDlg = null; coreTi = null; }
 function coreEl(id){ return document.getElementById(id); }
+/* CL2 B — in-app replacements for the browser dialogs in the trade flows · Enter = confirm (EN1 data-enter-primary) · Esc = cancel (escCloseTop) · never window.prompt/alert/confirm */
+let cl2AskCb = null;
+function cl2Ask(o){
+  cl2AskCb = o.onOk || null; const e = escHtml;
+  coreSheet('cl2ask', `<h3>${e(o.title || 'Are you sure?')}</h3><div class="ccSub" data-cl2-body>${e(o.body || '')}</div>
+    <div class="ccFoot"><button type="button" class="ccBtn" data-cl2-no onclick="coreSheetClose()">${e(o.no || 'Cancel')}</button><button data-enter-primary type="button" class="ccBtn pri" data-cl2-yes onclick="cl2AskYes()">${e(o.yes || 'Confirm')}</button></div>`);
+  setTimeout(()=>{ try{ const b = document.querySelector('[data-cl2-yes]'); if(b) b.focus(); }catch(x){} }, 50);
+}
+function cl2AskYes(){ const cb = cl2AskCb; cl2AskCb = null; coreSheetClose(); try{ if(cb) cb(); }catch(e){ console.warn('cl2 ask:', e); } }
+/* Filled ✓ — entry price sheet (prefilled with the planned entry) */
+let cl2Fill = null;
+function cl2FillOpen(id, accId, t){
+  cl2Fill = {id, accId, tid:t.id};
+  coreSheet('cl2fill', `<h3>Filled · ${escHtml(t.sym || '')}</h3><div class="ccSub">The entry price you got · planned ${escHtml(td3Num(+t.entry))}</div>
+    <div class="ccF"><label>Entry price</label><input type="text" inputmode="decimal" autocomplete="off" id="cl2FillPx" data-cl2-fillpx style="font-size:16px!important" value="${escHtml(String(t.entry))}" oninput="cl2FillIn()"></div>
+    <div class="ccErr" id="csErr" style="display:none"></div>
+    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">Cancel</button><button data-enter-primary type="button" class="ccBtn pri" id="csSave" data-cl2-fillsave onclick="cl2FillSave()">Save</button></div>`);
+  setTimeout(()=>{ const el = document.getElementById('cl2FillPx'); if(el){ try{ el.focus(); el.select(); }catch(x){} } }, 60);
+}
+function cl2FillIn(){
+  const el = coreEl('cl2FillPx'), er = coreEl('csErr'), v = coreNum(el.value), msg = v > 0 ? '' : '⚠ Type the price you got, a number above 0';
+  er.style.display = msg ? '' : 'none'; er.textContent = msg; coreEl('csSave').disabled = !!msg; return !msg;
+}
+function cl2FillSave(){
+  if(!cl2Fill || !cl2FillIn()) return;
+  const F = cl2Fill, price = coreNum(coreEl('cl2FillPx').value), B = getBook(F.accId), t = B.trades.find(x=>x.id === F.tid);
+  if(!t){ coreSheetClose(); ln4Toast('Cannot mark filled — the order record is missing'); return; }
+  t.entry = price; t.status = 'open'; t.openedAt = thaiToday();
+  cl2Fill = null; coreSheetClose(); saveBook(F.accId); render();
+}
 /* TIER2 · มุมของการ์ด: tier B = null · A มี tierLens = ตามนั้น · A เก่าไม่มี tierLens = 'fortress' (legacy · เกณฑ์ Tier A เดิม = Fortress) */
 function coreLensOf(c){
   if(c && c.cs) return {lens: (c.cs.eval && c.cs.eval.fortress==='passed') ? 'fortress' : null, legacy:false};   /* CS1 — L ได้เมื่อ snapshot ประเมิน Fortress ผ่าน (ไม่ผูก ★) */
@@ -16624,15 +16656,15 @@ function corePxOpen(id){
   const useAuto = c.pxSrc==='auto';   /* NUM2 — การ์ดกำลังใช้ราคาอัตโนมัติ → ช่องเติมค่า auto + วันที่ของ auto (กันค่ากรอกเองเก่าชนะด้วยวันที่ใหม่) */
   const man = useAuto ? {px:c.px, emaW:c.emaW} : (c._pxMan || c), a = pxAuto[pxYSym(c)];
   const fillDate = useAuto ? c.pxDate : coreLastFriday();
-  const autoLine = useAuto ? `<div class="ccSub" data-px-usingauto>ตอนนี้ใช้ราคาอัตโนมัติ — แก้ตัวเลขแล้วบันทึกเพื่อใช้ค่าที่กรอกเองแทน</div>` : a && +a.close>0 ? `<div class="ccSub" data-px-autoline>ราคาอัตโนมัติล่าสุด: ${fmt2(+a.close)}${+a.ema10w>0 ? ` · EMA10 ${fmt2(+a.ema10w)}` : ''} (${escHtml(pxDateTxt(a.closeDate))}) — ที่กรอกเองจะใช้แทนจนกว่าจะมีราคาอัตโนมัติวันที่ใหม่กว่า</div>` : '';
-  const useBtn = (c.pxSrc==='manual' && a && !a.suspect && +a.close>0) ? `<div class="ccBtns"><button type="button" class="ccBtn" data-c-useauto onclick="corePxAutoAsk('${escHtml(id)}')">ใช้ราคาอัตโนมัติแทน</button></div>` : '';
-  coreSheet('px', `<h3>อัปเดตราคาปิดสัปดาห์ · ${escHtml(c.ticker)}</h3>${autoLine}
+  const autoLine = useAuto ? `<div class="ccSub" data-px-usingauto>Using the automatic price now — change the number and save to use your own instead</div>` : a && +a.close>0 ? `<div class="ccSub" data-px-autoline>Latest automatic price: ${fmt2(+a.close)}${+a.ema10w>0 ? ` · EMA10 ${fmt2(+a.ema10w)}` : ''} (${escHtml(pxDateTxt(a.closeDate))}) — yours is used until a newer automatic price arrives</div>` : '';
+  const useBtn = (c.pxSrc==='manual' && a && !a.suspect && +a.close>0) ? `<div class="ccBtns"><button type="button" class="ccBtn" data-c-useauto onclick="corePxAutoAsk('${escHtml(id)}')">Use the automatic price</button></div>` : '';
+  coreSheet('px', `<h3>Weekly close price · ${escHtml(c.ticker)}</h3>${autoLine}
     ${useBtn}
-    <div class="ccF"><label>ราคาปิด</label><input type="text" inputmode="decimal" id="cpxPx" value="${man.px>0?escHtml(String(man.px)):''}" oninput="corePxIn()"></div>
-    <div class="ccF"><label>วันที่ (ศุกร์ล่าสุด)</label><input type="date" id="cpxDate" value="${escHtml(fillDate)}" oninput="corePxIn()"></div>
-    ${c.strategy==='L' ? '' : (c.track==='ladder' ? `<div class="ccF"><label>40W EMA รายสัปดาห์ (ว่างได้ · ว่าง = ใช้ Stop อย่างเดียว)</label><input type="text" inputmode="decimal" id="cpxEma" data-cpx-ema40 value="${c.emaW40>0?escHtml(String(c.emaW40)):''}" oninput="corePxIn()"></div>` : `<div class="ccF"><label>EMA10 รายสัปดาห์ (ว่างได้)</label><input type="text" inputmode="decimal" id="cpxEma" value="${man.emaW>0?escHtml(String(man.emaW)):''}" oninput="corePxIn()"></div>`)}
+    <div class="ccF"><label>Close price</label><input type="text" inputmode="decimal" id="cpxPx" value="${man.px>0?escHtml(String(man.px)):''}" oninput="corePxIn()"></div>
+    <div class="ccF"><label>Date (last Friday)</label><input type="date" id="cpxDate" value="${escHtml(fillDate)}" oninput="corePxIn()"></div>
+    ${c.strategy==='L' ? '' : (c.track==='ladder' ? `<div class="ccF"><label>Weekly 40W EMA (optional · blank = Stop only)</label><input type="text" inputmode="decimal" id="cpxEma" data-cpx-ema40 value="${c.emaW40>0?escHtml(String(c.emaW40)):''}" oninput="corePxIn()"></div>` : `<div class="ccF"><label>Weekly EMA10 (optional)</label><input type="text" inputmode="decimal" id="cpxEma" value="${man.emaW>0?escHtml(String(man.emaW)):''}" oninput="corePxIn()"></div>`)}
     <div class="ccErr" id="cpxErr" style="display:none"></div>
-    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">ยกเลิก</button><button data-enter-primary type="button" class="ccBtn pri" id="cpxSave" data-cpx-save onclick="corePxSave()" disabled>บันทึก</button></div>`);
+    <div class="ccFoot"><button type="button" class="ccBtn" onclick="coreSheetClose()">Cancel</button><button data-enter-primary type="button" class="ccBtn pri" id="cpxSave" data-cpx-save onclick="corePxSave()" disabled>Save</button></div>`);
   corePxIn();
 }
 /* PX2 — ลบราคาที่กรอกเอง → ใช้ auto (ยืนยันในตัว sheet) */
@@ -16641,10 +16673,10 @@ function corePxAutoAsk(id){
   if(!c || c.pxSrc!=='manual' || !a || a.suspect || !(+a.close>0)) return;
   const m = c._pxMan || c;
   coreDlg = {kind:'pxauto', id};
-  coreSheet('pxauto', `<h3>ใช้ราคาอัตโนมัติแทน · ${escHtml(c.ticker)}</h3>
-    <div class="ccSub" data-pxauto-msg>ลบราคาที่กรอกเอง (${fmt2(+m.px)} · ${escHtml(pxDateTxt(m.pxDate))}) แล้วใช้ราคาอัตโนมัติ ${fmt2(+a.close)} · EMA10 ${+a.ema10w>0 ? fmt2(+a.ema10w) : '—'} (${escHtml(pxDateTxt(a.closeDate))})</div>
-    <div class="ccSub warnTxt">ถ้าราคาอัตโนมัติหยุดอัปเดต การ์ดนี้จะขาดราคาจนกว่าจะกรอกใหม่</div>
-    <div class="ccFoot"><button type="button" class="ccBtn" data-pxauto-cancel onclick="coreSheetClose()">ยกเลิก</button><button data-enter-primary type="button" class="ccBtn pri" data-pxauto-ok onclick="corePxAutoGo('${escHtml(id)}')">ตกลง</button></div>`);
+  coreSheet('pxauto', `<h3>Use the automatic price · ${escHtml(c.ticker)}</h3>
+    <div class="ccSub" data-pxauto-msg>Remove your own price (${fmt2(+m.px)} · ${escHtml(pxDateTxt(m.pxDate))}) and use the automatic price ${fmt2(+a.close)} · EMA10 ${+a.ema10w>0 ? fmt2(+a.ema10w) : '—'} (${escHtml(pxDateTxt(a.closeDate))})</div>
+    <div class="ccSub warnTxt">If the automatic price stops updating, this card has no price until you type one again</div>
+    <div class="ccFoot"><button type="button" class="ccBtn" data-pxauto-cancel onclick="coreSheetClose()">Cancel</button><button data-enter-primary type="button" class="ccBtn pri" data-pxauto-ok onclick="corePxAutoGo('${escHtml(id)}')">OK</button></div>`);
 }
 function corePxAutoGo(id){
   const c = coreCardsList.find(x=>x.id===id), a = c && pxAuto[pxYSym(c)];
@@ -16657,9 +16689,9 @@ function corePxIn(){
   const emaEl = coreEl('cpxEma');
   const px = coreNum(coreEl('cpxPx').value), ema = (!emaEl || emaEl.value.trim()==='') ? null : coreNum(emaEl.value), d = coreEl('cpxDate').value;
   let msg = '';
-  if(!(px>0)) msg = 'กรอกราคาปิด';
-  else if(!d) msg = 'กรอกวันที่';
-  else if(ema!==null && !(ema>0)) msg = (coreCardsList.find(x=>x.id===coreDlg.id) || {}).track==='ladder' ? '40W EMA ต้องมากกว่า 0 (หรือเว้นว่าง)' : 'EMA10 ต้องมากกว่า 0 (หรือเว้นว่าง)';
+  if(!(px>0)) msg = 'Type the close price';
+  else if(!d) msg = 'Type the date';
+  else if(ema!==null && !(ema>0)) msg = (coreCardsList.find(x=>x.id===coreDlg.id) || {}).track==='ladder' ? '40W EMA must be above 0 (or leave it blank)' : 'EMA10 must be above 0 (or leave it blank)';
   else if(coreErr) msg = coreErr;
   const er = coreEl('cpxErr'); er.style.display = msg && px>0 ? '' : 'none'; er.textContent = msg;
   coreEl('cpxSave').disabled = !!msg;
@@ -18061,7 +18093,7 @@ function renderPortfolioMix(){
       </div>`;
     }).join('');
     html += `<div class="panel">
-      ${nAcc>1 ? `<div class="mixAcctHead" data-priv="m-acct-${a.id}"><h2>${lrAcctName(a)}${a.id===acctActive?' <span class="acctCur">เปิดอยู่</span>':''}</h2>
+      ${nAcc>1 ? `<div class="mixAcctHead" data-priv="m-acct-${a.id}"><h2>${lrAcctName(a)}${a.id===acctActive?' <span class="acctCur">Active</span>':''}</h2>
         <span class="hint" style="margin:0">ทุน ฿${fmt0(s.cap)} · ถือครอง ${fmt2(pct(s.held,s.cap))}% · Open Risk ${fmt2(pct(s.risk,s.cap))}%</span></div>` : ''}
       ${poolsPortHtml([a.id])}
       <div class="mixgrid" style="gap:14px">${inner}</div>
@@ -18204,7 +18236,7 @@ function ltNxcHtml(it){
 function ln3WlDetHead(r, th, nm, tabs, tierNote){
   const e = escHtml, it = r.item, w = r.w, rawSym = w ? w.sym : r.sym;
   const holders = it ? wlHoldersOf(r.sym) : [];
-  const hold = holders.length ? `Holding: ${holders.map(h=>`<span style="color:${h.color}">${e(h.name)} (${h.n} trades)</span>`).join(' · ')}` : '';
+  const hold = holders.length ? `Holding: ${holders.map(h=>`<span style="color:${h.color}">${lrAcctName({name:h.name})} (${h.n} trades)</span>`).join(' · ')}` : '';
   const s = th && th.summary || {}, st = th ? (LT_STATUS[s.status] || [s.status || '—', '']) : null;
   const meta = [wlIndChip(r), th ? `Thesis ${e(th.mode||'—')} · ${e(wlThDate(th.date))}` : 'No thesis yet', th ? `<span class="ltChip ${st[1]}" data-lt-status="${e(s.status||'')}">${e(st[0])}</span>` : '', hold].filter(Boolean).join(' · ');
   const AB = th ? ltAlertBars(it) : {al:'', sa:''};
@@ -21374,20 +21406,20 @@ function renderIndustryList(){
       <input type="url" class="indRowUrl" placeholder="วาง URL คู่มือ interactive ของ industry นี้ (https://…)"
         value="${escHtml(url)}" onchange="setIndustryLink('${esc}', this.value)">
     </div>`;
-  }).join('') : '<div class="hint" style="margin:0">ยังไม่มี Industry — เพิ่มด้านบนได้เลย</div>';
+  }).join('') : '<div class="hint" style="margin:0">No industries yet — add one above</div>';
 }
 function addIndustry(){
   const input = document.getElementById('newIndustryName');
   const name = input.value.trim();
-  if(!name){ alert('กรอกชื่อ Industry'); return; }
-  if(sh().industries.some(x=>x.toLowerCase()===name.toLowerCase())){ alert('มี Industry นี้อยู่แล้ว'); return; }
+  if(!name){ alert('Type an industry name'); return; }
+  if(sh().industries.some(x=>x.toLowerCase()===name.toLowerCase())){ alert('This industry already exists'); return; }
   sh().industries.push(name);
   input.value = '';
   renderIndustryList();
   schedulePersist();
 }
 function deleteIndustry(name){
-  if(!confirm(`ลบ Industry "${name}"? (หุ้นที่เคยตั้งค่านี้ไว้จะยังคงมีชื่อเดิมติดอยู่ที่ตัวเอง แต่จะไม่มีใน list ให้เลือกอีก)`)) return;
+  if(!confirm(`Delete industry "${name}"? (Stocks that used it keep the name, but it is no longer in the pick list.)`)) return;
   sh().industries = sh().industries.filter(x=>x!==name);
   delete sh().industryLinks[name];
   renderIndustryList();
@@ -21463,9 +21495,9 @@ function afterReasonChange(){
 function addReasonTag(){
   const input = document.getElementById('newReasonTag');
   const label = input.value.trim();
-  if(!label){ alert('กรอกชื่อแท็ก'); return; }
+  if(!label){ alert('Type a tag name'); return; }
   const list = ensureReasonTags(reasonMgrKind);
-  if(list.some(r=>r.label.toLowerCase()===label.toLowerCase())){ alert('มีแท็กชื่อนี้อยู่แล้ว'); return; }
+  if(list.some(r=>r.label.toLowerCase()===label.toLowerCase())){ alert('A tag with this name already exists'); return; }
   /* id ต้องไม่ซ้ำของเดิมและไม่ซ้ำของที่เคยลบไปแล้ว — ใช้ timestamp กันชนถาวร */
   list.push({id:'r'+Date.now().toString(36), label, offPlan: document.getElementById('newReasonOff').checked});
   input.value = ''; document.getElementById('newReasonOff').checked = false;
@@ -21488,12 +21520,12 @@ function deleteReasonTag(i){
   const list = ensureReasonTags(kind); const r = list[i];
   const n = reasonUsedCount(kind, r.id);
   const warn = n ? `\n\nมี ${n} ไม้ใช้แท็กนี้อยู่ — ไม้พวกนั้นจะยังโชว์ชื่อ "${r.label}" ต่อไป แต่จะเลือกแท็กนี้ใหม่ไม่ได้อีก` : '';
-  if(!confirm(`ลบแท็ก "${r.label}"?${warn}`)) return;
+  if(!confirm(`Delete tag "${r.label}"?${warn}`)) return;
   list.splice(i,1); afterReasonChange();
 }
 function resetReasonTags(){
   const kind = reasonMgrKind;
-  if(!confirm(`คืน "${REASON_KINDS[kind].title}" กลับเป็นชุดเริ่มต้น? แท็กที่เพิ่มเองจะหายไป (ไม้เก่ายังเก็บชื่อเดิมไว้)`)) return;
+  if(!confirm(`Reset "${REASON_KINDS[kind].title}" to the default set? Tags you added are removed (old trades keep their names).`)) return;
   ensureReasonTags(); sh().reasonTags[kind] = cloneReasonTags(kind);
   afterReasonChange();
 }
@@ -21537,7 +21569,7 @@ function populateScoreSelect(kind, selected){
   const el = document.getElementById(kind==='disc' ? 'tDiscScore' : 'tSetupScore');
   if(!el) return;
   const m = ensureScoreLabels(kind);
-  el.innerHTML = '<option value="">— ยังไม่ให้คะแนน —</option>' +
+  el.innerHTML = '<option value="">— not scored —</option>' +
     SCORE_LEVELS.map(v=>`<option value="${v}">${v} · ${escHtml(m[v])}</option>`).join('');
   el.value = (selected==null || selected==='') ? '' : String(selected);
 }
@@ -21576,12 +21608,12 @@ function afterScoreLabelChange(){
 }
 function setScoreLabel(v, text){
   const s = (text||'').trim();
-  if(!s){ alert('ข้อความว่างไม่ได้'); renderScoreMgrList(); return; }
+  if(!s){ alert('The label cannot be empty'); renderScoreMgrList(); return; }
   ensureScoreLabels()[scoreMgrKind][v] = s;
   afterScoreLabelChange();
 }
 function resetScoreLabels(){
-  if(!confirm(`คืนค่าข้อความ ${scoreMgrKind==='disc'?'วินัย':'Setup'} เป็นค่าเริ่มต้น?`)) return;
+  if(!confirm(`Reset the ${scoreMgrKind==='disc'?'Discipline':'Setup'} labels to default?`)) return;
   ensureScoreLabels()[scoreMgrKind] = {...DEFAULT_SCORE_LABELS[scoreMgrKind]};
   afterScoreLabelChange();
 }
@@ -21826,7 +21858,7 @@ function saveTradeEdit(){
   if(i < 0){ teEl('teErr').textContent = 'ไม่พบไม้นี้ในบัญชีแล้ว'; return; }
   B.trades[i] = next;
   const jointOn = teEl('teJointBox').style.display!=='none' && teEl('tJointSL').checked;
-  if(jointOn){   /* PY1 — ใช้ SL นี้กับทั้ง 2 ไม้ (ไม้แรก ↔ ไม้เติม) */
+  if(jointOn){   /* PY1 — Use this stop for both trades (ไม้แรก ↔ ไม้เติม) */
     satPyrSiblings(next, A).forEach(sib=>{ sib.sl = next.sl; });
   }
   saveBook(A);
@@ -21840,7 +21872,7 @@ function openClosePos(id,A){
   A = A || acctActive;
   const t = getBook(A).trades.find(x=>x.id===id); if(!t) return;
   closePosId = id; closePosAcct = A;
-  document.getElementById('cpInfo').innerHTML = `<b>${symDisp(t.sym)}</b> · ${PORTS[t.port].name} · <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span> · Entry ${fmt2(t.entry)} · Qty คงเหลือ <b>${fmt2(t.qty)}</b>`;
+  document.getElementById('cpInfo').innerHTML = `<b>${symDisp(t.sym)}</b> · ${PORTS[t.port].name} · <span class="tag ${t.bias==='Long'?'long':'short'}">${t.bias}</span> · Entry ${fmt2(t.entry)} · Qty left <b>${fmt2(t.qty)}</b>`;
   document.getElementById('cpMaxQty').textContent = fmt2(t.qty);
   document.getElementById('cpExitPrice').value = '';
   document.getElementById('cpExitDate').value = thaiToday();
@@ -21861,14 +21893,14 @@ function cpRefresh(){
   const prev = document.getElementById('cpPreview');
   const btn = document.getElementById('cpConfirmBtn');
   let valid = true, msg = '';
-  if(!(q>0) || q>t.qty+1e-9){ valid=false; msg = `<span style="color:var(--amber)">⚠ Qty ต้องอยู่ระหว่าง 0–${fmt2(t.qty)}</span>`; }
-  else if(!(ex>0)){ valid=false; msg = '<span style="color:var(--amber)">⚠ กรอก Exit Price</span>'; }
+  if(!(q>0) || q>t.qty+1e-9){ valid=false; msg = `<span style="color:var(--amber)">⚠ Qty must be between 0 and ${fmt2(t.qty)}</span>`; }
+  else if(!(ex>0)){ valid=false; msg = '<span style="color:var(--amber)">⚠ Type the exit price</span>'; }
   else {
     const dir = t.bias==='Short' ? -1 : 1;
     const pnl = (ex - t.entry) * q * (t.mult||1) * dir;
     const remain = t.qty - q;
     const sym = tradeSym(t);
-    msg = `ปิด <b>${fmt2(q)}</b> @ ${fmt2(ex)} → P&amp;L <b class="${pnlCls(pnl)}">${sym}${fmtPnl0(pnl)}</b> · คงเหลือใน Plan <b>${fmt2(remain)}</b>${remain<=1e-9?' <span style="color:var(--muted)">(ปิดทั้งหมด)</span>':' <span style="color:var(--muted)">(บางส่วน)</span>'}`;
+    msg = `Close <b>${fmt2(q)}</b> @ ${fmt2(ex)} → P&amp;L <b class="${pnlCls(pnl)}">${sym}${fmtPnl0(pnl)}</b> · left in the plan <b>${fmt2(remain)}</b>${remain<=1e-9?' <span style="color:var(--muted)">(closes all)</span>':' <span style="color:var(--muted)">(partial)</span>'}`;
   }
   prev.innerHTML = msg;
   btn.disabled = !valid; btn.style.opacity = valid?'':'.45'; btn.style.cursor = valid?'':'not-allowed';
@@ -21878,8 +21910,8 @@ function confirmClosePos(){
   const ex = parseFloat(document.getElementById('cpExitPrice').value);
   const q = parseFloat(document.getElementById('cpQty').value);
   const exitDate = document.getElementById('cpExitDate').value || thaiToday();
-  if(!(ex>0)){ alert('กรอก Exit Price'); return; }
-  if(!(q>0) || q>t.qty+1e-9){ alert('Qty ที่จะปิดไม่ถูกต้อง'); return; }
+  if(!(ex>0)){ sdToast('Type the exit price first'); return; }
+  if(!(q>0) || q>t.qty+1e-9){ sdToast('Qty must be between 0 and ' + fmt2(t.qty)); return; }
   const full = q >= t.qty - 1e-9, rc = re1CloseCostsRead();
   if(full){
     t.status = 'closed';
@@ -21916,7 +21948,7 @@ function confirmClosePos(){
 /* ── 7E-2b-2 · บันทึกไม้ย้อนหลัง (Journal → Closed Trades) — ไม้ปิดแล้วเท่านั้น · ติด "นอกแผน" เสมอ · ไม่สร้างการ์ด ── */
 function jBackfillOpen(){
   const accts = acctList.filter(a=>(a.ports || ACCT_PORT_KEYS).some(k=>k==='core'||k==='satB'));
-  if(!accts.length){ alert('ไม่มีบัญชีที่เปิด port Core/Sat'); return; }
+  if(!accts.length){ alert('No account has the Core/Sat port on'); return; }
   const a0 = accts.some(a=>a.id===acctActive) ? acctActive : accts[0].id;
   coreSheet('backfill', `<h3>บันทึกไม้ย้อนหลัง</h3><div class="ccSub">ไม้ที่ปิดไปแล้ว · ติดป้าย "นอกแผน" · ไม่สร้างการ์ด Momentum</div>
     <div class="ccPair"><div class="ccF"><label>บัญชี</label><select id="bfAcct" onchange="jBackfillIn(true)">${accts.map(a=>`<option value="${escHtml(a.id)}"${a.id===a0?' selected':''}>${escHtml(a.name)}</option>`).join('')}</select></div>
@@ -21929,7 +21961,7 @@ function jBackfillOpen(){
       <div class="ccF"><label>Qty / Lot</label><input type="text" inputmode="decimal" id="bfQty" oninput="jBackfillIn()"></div></div>
     <div class="ccPair"><div class="ccF"><label>วันเข้า</label><input type="date" id="bfDate" oninput="jBackfillIn()"></div>
       <div class="ccF"><label>ราคาปิด</label><input type="text" inputmode="decimal" id="bfExit" oninput="jBackfillIn()"></div></div>
-    <div class="ccPair"><div class="ccF"><label>วันปิด</label><input type="date" id="bfExitDate" value="${thaiToday()}" oninput="jBackfillIn()"></div>
+    <div class="ccPair"><div class="ccF"><label>Exit date</label><input type="date" id="bfExitDate" value="${thaiToday()}" oninput="jBackfillIn()"></div>
       <div class="ccF"><label>เหตุผลปิด (ไม่บังคับ)</label><select id="bfReason" onchange="jBackfillIn()"></select></div></div>
     <div class="ccSub" id="bfInfo" data-bf-info></div>
     <div class="ccErr" id="bfErr" style="display:none"></div>
@@ -22007,7 +22039,7 @@ function delTrade(id,A){
   A = A || acctActive;
   let t = null; try{ t = getBook(A).trades.find(x=>x.id===id) || null; }catch(e){}
   if(t && coreCardOfTrade(t, A)){ coreLinkAsk('delete', id, A); return; }   /* 7E-2b-2: ไม้ผูกการ์ด → sheet ยืนยันแทน confirm() */
-  if(confirm('ลบรายการนี้?')) delTradeDo(id, A);
+  cl2Ask({title:'Delete this trade?', body:'It is removed from this account.', yes:'Delete', onOk:()=>delTradeDo(id, A)});
 }
 function delTradeDo(id,A){
   A = A || acctActive;
@@ -22047,7 +22079,8 @@ function confirmCancel(){
   const t = cancelAcct ? getBook(cancelAcct).trades.find(x=>x.id===cancelTradeId) : null; if(!t) return;
   const tag = document.getElementById('cancelTag').value;
   const note = document.getElementById('cancelNote').value.trim();
-  if(!tag && !note){ alert('เลือกแท็กหรือพิมพ์เหตุผลอย่างน้อยหนึ่งอย่าง'); return; }
+  if(!tag && !note){ const er = document.getElementById('cancelErr'); if(er){ er.textContent = '⚠ Pick a reason tag or type a note'; er.style.display = ''; } return; }
+  { const er = document.getElementById('cancelErr'); if(er) er.style.display = 'none'; }
   t.status = 'cancelled';
   t.cancelTag = tag || null;
   const meta = withAccount(cancelAcct, ()=>reasonTagById('cancel', tag));
@@ -22063,11 +22096,7 @@ function confirmCancel(){
 function restoreCancelled(id,A){
   A = A || acctActive;
   const t = getBook(A).trades.find(x=>x.id===id); if(!t) return;
-  if(!confirm(`ย้าย ${t.sym} กลับไปที่ Plan เหมือนเดิม?`)) return;
-  t.status = 'plan';
-  t.cancelDate = null;
-  saveBook(A);
-  render();
+  cl2Ask({title:`Move ${t.sym} back to Plan?`, body:'It returns to the plan list as it was.', yes:'Move back', onOk:()=>{ t.status = 'plan'; t.cancelDate = null; saveBook(A); render(); }});
 }
 
 /* ================= settings ================= */
@@ -22128,7 +22157,7 @@ function crOnInput(src){
 function updFxUpdatedHint(iso){
   const h = document.getElementById('fxUpdatedHint');
   if(!h) return;
-  if(!iso){ h.textContent = 'ยังไม่เคยดึงอัตโนมัติ — ใส่เองด้านบน หรือกด "ดึงเรทล่าสุด"'; return; }
+  if(!iso){ h.textContent = 'Never fetched automatically — type it above, or tap "Fetch latest rate"'; return; }
   const d = new Date(iso);
   h.textContent = `ดึงล่าสุด: ${d.toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}`;
 }
@@ -22149,9 +22178,9 @@ async function refreshFxField(ev){
     updTotal();
     updFxUpdatedHint(new Date().toISOString());
   } else {
-    alert('ดึงอัตราแลกเปลี่ยนไม่สำเร็จ ลองใหม่อีกครั้ง หรือกรอกเองได้');
+    alert('Could not fetch the exchange rate — try again, or type it yourself');
   }
-  if(btn){ btn.disabled = false; btn.textContent = '🔄 ดึงเรทล่าสุด'; }
+  if(btn){ btn.disabled = false; btn.textContent = '🔄 Fetch latest rate'; }
 }
 let fxAutoDone = false;
 async function autoFetchFxOnce(){
@@ -22177,7 +22206,7 @@ function updTotal(){
   const strat = parseFloat(document.getElementById('sStrategicCash').value)||0;
   const tot = core + b*fx + strat;
   document.getElementById('totalHint').innerHTML =
-    `ทุนรวม ≈ <b>฿${fmt0(tot)}</b> (฿${fmt0(core)} + $${fmt0(b)} × ${fmt2(fx)} + Strategic Cash ฿${fmt0(strat)})`;
+    `Total capital ≈ <b>฿${fmt0(tot)}</b> (฿${fmt0(core)} + $${fmt0(b)} × ${fmt2(fx)} + Strategic Cash ฿${fmt0(strat)})`;
   try{ poolHintUpd(); }catch(e){}   /* RG2b */
 }
 function poolHintUpd(){
@@ -22443,9 +22472,9 @@ function wpWeekKey(d){
 function wpWeekRangeText(key){
   const s = new Date(key + 'T00:00:00');
   const e = new Date(s); e.setDate(e.getDate()+6);
-  const M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const f = d => `${d.getDate()} ${M[d.getMonth()]}`;
-  return `อา. ${f(s)} – ส. ${f(e)}`;
+  return `Sun ${f(s)} – Sat ${f(e)}`;
 }
 /* วันที่ที่ใช้ตัดสินว่าไม้นี้ "เข้าจริง" ในสัปดาห์ไหน
    openedAt ถูกประทับตอน status เปลี่ยนเป็น open ครั้งแรก · ไม้เก่าที่ไม่มีให้ถอยไปใช้ t.date */
@@ -23373,15 +23402,7 @@ function sat7dMarkOpen(id, accId){
   const B = getBook(accId), t = B.trades.find(x=>x.id===s.trade_id);
   if(!t){ ln4Toast('Cannot mark filled — the order record is missing'); return; }
   if(t.status!=='plan') return;
-  const p = prompt('ราคาเข้าจริง', t.entry);
-  if(p===null) return;
-  const price = parseFloat(p);
-  if(!(price>0)){ alert('ราคาไม่ถูกต้อง'); return; }
-  t.entry = price;
-  t.status = 'open';
-  t.openedAt = thaiToday();
-  saveBook(accId);
-  render();
+  cl2FillOpen(id, accId, t);   /* CL2 B — small in-app sheet (was a browser prompt) */
 }
 
 /* ── แผงตั้งโบรก (ต่อบัญชี · เขียนผ่าน getBook/saveBook) ── */
@@ -23498,7 +23519,7 @@ function brDelAsset(key){
   const c = brDraft.custom.find(x=>x.key===key); if(!c) return;
   const used = brAssetAnyUse(key);
   if(used){ brDraft.warn['as:'+key] = `ลบไม่ได้ — ${used} · เอาออกจากสัปดาห์นี้แทน`; return brRender(); }
-  if(!confirm(`ลบสินค้า "${sat7dLabel(key) || c.label}" (${key})?`)) return;
+  if(!confirm(`Delete asset "${sat7dLabel(key) || c.label}" (${key})?`)) return;
   brDraft.custom = brDraft.custom.filter(x=>x.key!==key);
   delete brDraft.cfg[key];
   Object.keys(brDraft.fields).forEach(a=>Object.keys(brDraft.fields[a]).forEach(b=>{ if(brDraft.fields[a][b].a) delete brDraft.fields[a][b].a[key]; }));
@@ -23577,7 +23598,7 @@ function sat7dBrokerSave(){
     if(use && !confirm(`ปิดใช้งาน "${sat7dLabel(a.key)}" (${a.key})? ${use} · แผน/ไม้/ประวัติเดิมยังอยู่ครบและยังเห็นในรายการไม้ค้าง — แค่ไม่แสดงใน ＋ Asset / Weekly Impact`)) return;
   }
   const home = tdHome();
-  if(!tdCanWrite()){ brDraft.warn = {['as:'+brAll()[0].key]:'ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง'}; return brRender(); }
+  if(!tdCanWrite()){ brDraft.warn = {['as:'+brAll()[0].key]:'Not synced with the server yet — try again'}; return brRender(); }
   const changed = new Set();
   /* SET1 — ไม่เขียน settings.brokers / brokerList อีก (ข้อมูลโบรกเดิมค้างไว้เฉย ๆ) */
   /* ระดับผู้ใช้ (settings ของ acctList[0]): brokerList + satAssetCfg — เขียนเมื่อต่างจากค่าปัจจุบันเท่านั้น */
@@ -23693,13 +23714,13 @@ function satWeekPickAdd(key, wk){
   if(l.includes(key)){ if(satWeekDropList(wk).includes(key)) satWeekDropWrite(wk, satWeekDropList(wk).filter(k=>k!==key)); return {ok:true, msg:''}; }
   if(l.length >= SAT_WEEK_PICK_MAX) return {ok:false, msg:'สัปดาห์นี้ครบ 3 ตัวแล้ว — เอาตัวอื่นออกก่อน'};
   if(satWeekDropList(wk).includes(key)) satWeekDropWrite(wk, satWeekDropList(wk).filter(k=>k!==key));
-  if(!satWeekPickWrite(wk, l.concat([key]))) return {ok:false, msg:'ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง'};
+  if(!satWeekPickWrite(wk, l.concat([key]))) return {ok:false, msg:'Not synced with the server yet — try again'};
   return {ok:true, msg:''};
 }
 function satWeekPickRemove(key, wk){
   wk = wk || wpWeekKey();
   const l = satWeekPickList(wk); if(!l.includes(key)) return {ok:true, msg:''};
-  if(!satWeekPickWrite(wk, l.filter(k=>k!==key))) return {ok:false, msg:'ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง'};
+  if(!satWeekPickWrite(wk, l.filter(k=>k!==key))) return {ok:false, msg:'Not synced with the server yet — try again'};
   return {ok:true, msg:''};
 }
 function satMacroOf(asset, atTime, list){
@@ -23755,7 +23776,7 @@ function satwSetSupport(asset, text){
 /* WM1 §7 — Note · This week: ไม่ carry อัตโนมัติ · Copy last week = Note ของ Asset เดียวกันสัปดาห์ก่อน เฉพาะเมื่อมี (ซ่อนเมื่อไม่มี) · ถามก่อนทับข้อความเดิม · Clear = เฉพาะ Asset นี้ สัปดาห์นี้ */
 function satwCopyFromPrev(asset){
   const wk = wpWeekKey(), pk = satwPrevWeekKey(wk), pw = satWeekMap[pk] && satWeekMap[pk][asset];
-  if(!pw){ alert('ไม่มีข้อมูลสัปดาห์ก่อนของ '+sat7dLabel(asset)); return; }
+  if(!pw){ alert('No data from last week for '+sat7dLabel(asset)); return; }
   const patch = {updated_at:new Date().toISOString()};
   if(pw.comps) patch.comps = pw.comps;
   if(typeof pw.opinion_txt==='string' && pw.opinion_txt.trim()) patch.opinion_txt = pw.opinion_txt;   /* PF1 — คัดลอกความเห็นเท่านั้น (Trend/Zone/Shift ถอดจาก Strategy แล้ว) */
@@ -23796,9 +23817,9 @@ function pbFocusOf(pbKey){ try{ const mv = pbLatestActive(); return !!(mv && mv.
 /* ป้าย Macro ของ Sat Asset (ท่าทีอย่างเดียว · ตาม/สวน ตัดสินตอนทำ Bias) */
 function waMacroLabel(key){
   const pbk = satPbKeyOf(key), m = pbk ? satMacroOf(key) : null;
-  if(!pbk || !m || m.state==='none') return {cls:'w3', txt:'นอก Macro', state:'none'};
+  if(!pbk || !m || m.state==='none') return {cls:'w3', txt:'Outside Macro', state:'none'};
   const star = pbFocusOf(pbk) ? ' ★' : '';
-  const t = ({up:'▲ Macro', up_flat:'▲▬ Macro', flat:'▬ Macro Neutral', down_flat:'▼▬ Macro', down:'▼ Macro'})[m.state] || 'นอก Macro';
+  const t = ({up:'▲ Macro', up_flat:'▲▬ Macro', flat:'▬ Macro Neutral', down_flat:'▼▬ Macro', down:'▼ Macro'})[m.state] || 'Outside Macro';
   return {cls: (m.state==='up' || m.state==='up_flat') ? 'w1' : (m.state==='down' || m.state==='down_flat') ? 'w2' : 'w3', txt: t + star, state: m.state};
 }
 function waMacHtml(key){ const l = waMacroLabel(key); return `<span class="waMac ${l.cls}" data-wa-mac="${escHtml(key)}">${escHtml(l.txt)}</span>`; }
@@ -23815,10 +23836,10 @@ function waRemove(k){
 function waAfterPick(k){ waMsg = ''; satV3Sel = k; satV3Render(); try{ todayRefresh(); }catch(e){} try{ pbRender(); }catch(e){} }
 function waSheetOpen(){
   waSearch = ''; waMsg = '';
-  document.body.insertAdjacentHTML('beforeend', UI.sheet(`<div class="waSh" data-wa-sheet="1"><div class="pbShH"><b>＋ Asset สัปดาห์นี้</b><span class="wiSm">Weekly Impact · เวลา ICT (UTC+7)</span></div>
-    <input type="search" data-wa-search="1" placeholder="ค้นหา Asset…" aria-label="ค้นหา Asset" oninput="waSearchIn(this.value)" autocomplete="off">
+  document.body.insertAdjacentHTML('beforeend', UI.sheet(`<div class="waSh" data-wa-sheet="1"><div class="pbShH"><b>＋ Asset this week</b><span class="wiSm">Weekly Impact · ICT time (UTC+7)</span></div>
+    <input type="search" data-wa-search="1" placeholder="Search assets…" aria-label="Search assets" oninput="waSearchIn(this.value)" autocomplete="off">
     <div class="waMsg" id="waSheetMsg" data-wa-sheet-msg="1"></div><div class="waList" id="waList">${waListHtml()}</div>
-    <div class="pbBtns"><button type="button" class="ui-btn" data-wa-new="1" onclick="waNewAsset()">＋ เพิ่มสินค้าใหม่</button><button type="button" class="ui-btn" onclick="waSheetClose()">ปิด</button></div></div>`).replace('ui-sheet-backdrop','ui-sheet-backdrop wa-sheet'));
+    <div class="pbBtns"><button type="button" class="ui-btn" data-wa-new="1" onclick="waNewAsset()">＋ Add a new asset</button><button type="button" class="ui-btn" onclick="waSheetClose()">Close</button></div></div>`).replace('ui-sheet-backdrop','ui-sheet-backdrop wa-sheet'));
   const el = document.body.lastElementChild;
   el.addEventListener('click', ev=>{ if(ev.target===el) el.remove(); });
   const i = el.querySelector('[data-wa-search]'); if(i) i.focus();
@@ -23830,7 +23851,7 @@ function waListHtml(){
     .filter(a=>wiAssetActive(a.key))   /* WM1b — ปิดใช้งานแล้วไม่แสดงใน ＋ Asset */
     .filter(a=>!q || a.key.toLowerCase().includes(q) || String(sat7dLabel(a.key)).toLowerCase().includes(q))
     .map((a,i)=>({a, i, r: Calc.wiRank(wiTier(a.key))})).sort((x,y)=>(x.r-y.r) || (x.i-y.i)).map(o=>o.a);   /* WM1 — HIGH → MED → LOW → ไม่มีข้อมูล (คงลำดับเดิมในกลุ่ม) */
-  return rows.map(a=>`<div class="waRow" data-wa-row="${escHtml(a.key)}"><b>${escHtml(a.key)}</b><small>${escHtml(sat7dLabel(a.key))}</small>${waMacHtml(a.key)}${wiSheetBadge(a.key)}<button type="button" class="waBtn" data-wa-pick="${escHtml(a.key)}" onclick="waPick('${escHtml(a.key)}')">เลือก</button></div>`).join('')
+  return rows.map(a=>`<div class="waRow" data-wa-row="${escHtml(a.key)}"><b>${escHtml(a.key)}</b><small>${escHtml(sat7dLabel(a.key))}</small>${waMacHtml(a.key)}${wiSheetBadge(a.key)}<button type="button" class="waBtn" data-wa-pick="${escHtml(a.key)}" onclick="waPick('${escHtml(a.key)}')">Pick</button></div>`).join('')
     || `<div class="waHint">ไม่พบ Asset${q?` "${escHtml(waSearch)}"`:''} — กด ＋ เพิ่มสินค้าใหม่</div>`;
 }
 function waSearchIn(v){ waSearch = v; const l = document.getElementById('waList'); if(l) l.innerHTML = waListHtml(); }
@@ -27019,7 +27040,7 @@ function pbLinkSet(satKey, pbKey){
     if(pbKey===auto) delete m[satKey]; else m[satKey] = pbKey;
     if(Object.keys(m).length) st.satPbLink = m; else delete st.satPbLink;
   });
-  if(!ok){ pbMsg = 'ยังซิงก์กับเซิร์ฟเวอร์ไม่เสร็จ — ลองใหม่อีกครั้ง'; }
+  if(!ok){ pbMsg = 'Not synced with the server yet — try again'; }
   else pbMsg = (prev && prev!==pbKey) ? `ย้าย ${sat7dLabel(satKey)} จาก ${prev} มา ${pbKey}` : `ผูก ${sat7dLabel(satKey)} กับ ${pbKey} แล้ว`;
   pbRender(); try{ sat7dRefresh(); }catch(e){}
 }
@@ -27189,7 +27210,7 @@ function pbCheck(){
 async function pbSave(){
   const P = pbPaste; if(!P || pbSaving || !pbPasteCan() || !P.obj) return;
   const col = sat7dCol('macroPlaybook');
-  if(!col){ P.err = 'บันทึกไม่สำเร็จ: ยังไม่ได้เข้าสู่ระบบ'; pbPasteRender(); return; }
+  if(!col){ P.err = 'Not saved: you are not signed in'; pbPasteRender(); return; }
   pbSaving = true; pbPasteSync();
   try{
     const first = pbList.length===0, nx = Calc.pbNextId(pbList, P.obj.quarter);
@@ -27209,7 +27230,7 @@ async function pbSave(){
     pbRender();
   }catch(e){
     pbSaving = false;
-    if(pbPaste){ pbPaste.err = 'บันทึกไม่สำเร็จ: '+sat7dErrText(e)+' — ข้อความในช่องยังอยู่ ลองกดบันทึกอีกครั้ง'; pbPasteRender(); }
+    if(pbPaste){ pbPaste.err = 'บันทึกไม่สำเร็จ: '+sat7dErrText(e)+' — your text is still in the box, try Save again'; pbPasteRender(); }
   }
 }
 
@@ -27398,7 +27419,7 @@ function wiPasteRender(){
     <textarea id="wiText" class="pbTa" rows="7" placeholder='{"schema":"weeklyImpact/v2", ...}' oninput="wiPaste.text=this.value"></textarea>
     <div class="pbBtns"><button data-enter-primary type="button" class="ui-btn ui-btn-pri" data-wi-check="1" onclick="wiCheck()">ตรวจ</button><button type="button" class="ui-btn" data-wi-manifest="1" onclick="wiCopyManifest()">คัดลอก Asset manifest</button>${P.copied ? '<span class="wiSm">คัดลอกแล้ว</span>' : ''}</div>`;
   if(R){
-    if(R.errors.length) h += `<div class="pbErrs" data-wi-errs="1"><b>แก้ก่อนบันทึก (ข้อมูลเดิมไม่ถูกแตะ)</b>${R.errors.slice(0, 12).map(e=>`<div>✕ ${s(e)}</div>`).join('')}${R.errors.length>12 ? `<div>… และอีก ${R.errors.length-12} ข้อ</div>` : ''}</div>`;
+    if(R.errors.length) h += `<div class="pbErrs" data-wi-errs="1"><b>Fix before saving (the saved data is not touched)</b>${R.errors.slice(0, 12).map(e=>`<div>✕ ${s(e)}</div>`).join('')}${R.errors.length>12 ? `<div>… และอีก ${R.errors.length-12} ข้อ</div>` : ''}</div>`;
     if(R.matched.length || R.skipped.length) h += `<div class="wiPrev" data-wi-preview="1"><div class="wiK">ตัวอย่างก่อนบันทึก</div>${R.matched.map(m=>`<div class="wiOkL" data-wi-matched="${s(m.id)}">✓ ${s(m.key)}${m.via ? ' → ' + s(m.id) : ''}${wiAssetActive(m.id) ? '' : ' (ปิดใช้งาน — เก็บไว้ แสดงจาง)'}</div>`).join('')}${R.skipped.map(m=>`<div class="wiSkipL" data-wi-skipped="${s(m.key)}">⊘ ${s(m.key)} — ข้าม: ${s(m.reason)}${/ตั้งตลาดอ้างอิง/.test(m.reason) ? ' <span class="wiChipSet">ตั้งตลาดอ้างอิง</span>' : ''}</div>`).join('')}</div>`;
     if(R.warnings.length) h += `<div class="pbWarns">${R.warnings.slice(0, 8).map(e=>`<div>⚠ ${s(e)}</div>`).join('')}</div>`;
     if(R.doc && wiDocs[R.doc.week]) h += `<div class="wiSm">สัปดาห์ ${s(R.doc.week)} มีข้อมูลอยู่แล้ว → บันทึกจะแทนที่ทั้งหมด (สัปดาห์อื่นไม่แตะ)</div>`;
@@ -27411,7 +27432,7 @@ function wiPasteRender(){
 async function wiSave(){
   const P = wiPaste; if(!P || wiSaving || !P.res || !P.res.doc) return;
   const col = sat7dCol('weeklyImpact');
-  if(!col){ P.err = 'บันทึกไม่สำเร็จ: ยังไม่ได้เข้าสู่ระบบ'; wiPasteRender(); return; }
+  if(!col){ P.err = 'Not saved: you are not signed in'; wiPasteRender(); return; }
   wiSaving = true; wiPasteRender();
   try{
     const body = Object.assign({}, P.res.doc, {saved_at: firebase.firestore.FieldValue.serverTimestamp(), import_report: {skipped: P.res.skipped.map(x=>({key:x.key, reason:x.reason})), mapped: P.res.matched.filter(m=>m.via).map(m=>({from:m.key, to:m.id}))}});
@@ -27423,7 +27444,7 @@ async function wiSave(){
     wiRefreshAll();
   }catch(e){
     wiSaving = false;
-    if(wiPaste){ wiPaste.err = 'บันทึกไม่สำเร็จ: ' + sat7dErrText(e) + (/permission/i.test(String(e && (e.code || e.message))) ? ' — ต้องเพิ่ม Firestore Rules ของ users/{uid}/weeklyImpact ก่อน' : '') + ' — ข้อความในช่องยังอยู่ ลองกดบันทึกอีกครั้ง'; wiPasteRender(); }
+    if(wiPaste){ wiPaste.err = 'บันทึกไม่สำเร็จ: ' + sat7dErrText(e) + (/permission/i.test(String(e && (e.code || e.message))) ? ' — ต้องเพิ่ม Firestore Rules ของ users/{uid}/weeklyImpact ก่อน' : '') + ' — your text is still in the box, try Save again'; wiPasteRender(); }
   }
 }
 
@@ -27609,11 +27630,11 @@ function stkStale(doc){ return !!doc && tdTodayISO() > Calc.wiAddDays(doc.period
 function tdTodayISO(){ return thaiToday(); }
 function stkCardHtml(){
   const s = escHtml, d = stkLatest();
-  if(stkErr) return `<div class="ln3-tdc stkCard" data-stk-card="err"><b>Weekly Stock Summary</b> <span class="wiSm">โหลดไม่สำเร็จ (${s(stkErr)}) — ตรวจ Firestore Rules ของ users/{uid}/stockNews</span></div>`;
-  if(!d) return `<div class="ln3-tdc stkCard" data-stk-card="none"><div class="stkR"><b>Weekly Stock Summary</b></div><div class="wiSm">สรุปสัปดาห์นี้ยังไม่พร้อม <button type="button" class="ln1-link" data-stk-paste="1" onclick="stkOpenPaste()">Paste JSON</button></div></div>`;
+  if(stkErr) return `<div class="ln3-tdc stkCard" data-stk-card="err"><b>Weekly Stock Summary</b> <span class="wiSm">Could not load (${s(stkErr)}) — check the Firestore rules for users/{uid}/stockNews</span></div>`;
+  if(!d) return `<div class="ln3-tdc stkCard" data-stk-card="none"><div class="stkR"><b>Weekly Stock Summary</b></div><div class="wiSm">This week’s summary is not ready <button type="button" class="ln1-link" data-stk-paste="1" onclick="stkOpenPaste()">Paste JSON</button></div></div>`;
   const M = stkModel(d), read = stkIsRead(d.id), stale = stkStale(d);
-  const parts = [s(stkPeriod(d)) + (stale ? ' (ฉบับเก่า · ยังไม่มีฉบับสัปดาห์นี้)' : ''), `${M.news} ตัวมีอัปเดต`, M.review ? `${M.review} Candidate ควรทบทวน` : null].filter(Boolean);
-  return `<div class="ln3-tdc stkCard${read ? ' read' : ''}" data-stk-card="${read ? 'read' : 'new'}" data-stk-edition="${s(d.id)}"><div class="stkR"><b>Weekly Stock Summary</b>${frTag('stk')}${read ? '' : ' <span class="stkNew" data-stk-new="1">New</span>'}<button type="button" class="ln1-link stkGo" data-stk-open="1" onclick="stkOpenView()">อ่าน →</button></div><div class="wiSm" data-stk-line="1">${parts.join(' · ')}</div></div>`;
+  const parts = [s(stkPeriod(d)) + (stale ? ' (old edition · this week’s is not in yet)' : ''), `${M.news} with news`, M.review ? `${M.review} Candidate to review` : null].filter(Boolean);
+  return `<div class="ln3-tdc stkCard${read ? ' read' : ''}" data-stk-card="${read ? 'read' : 'new'}" data-stk-edition="${s(d.id)}"><div class="stkR"><b>Weekly Stock Summary</b>${frTag('stk')}${read ? '' : ' <span class="stkNew" data-stk-new="1">New</span>'}<button type="button" class="ln1-link stkGo" data-stk-open="1" onclick="stkOpenView()">Read →</button></div><div class="wiSm" data-stk-line="1">${parts.join(' · ')}</div></div>`;
 }
 /* ─ แผ่น/แผงอ่าน ─ */
 function stkOpenView(){
@@ -27642,11 +27663,11 @@ function stkRowHtml(o, doc){
   const s = escHtml, x = o.x, open = stkExp.has(o.t), st = x.status;
   const srcs = (x.source_refs||[]).map(i=>(doc.sources||{})[i]).filter(Boolean);
   const body = open ? `<div class="stkB" data-stk-body="${s(o.t)}">
-    ${x.happened_th ? `<div class="stkK">ข้อเท็จจริง</div><div>${s(x.happened_th)}</div>` : ''}
-    ${x.why_th ? `<div class="stkK">การตีความ</div><div>${s(x.why_th)}</div>${x.thesis_ref===true ? '' : '<div class="wiSm">ยังไม่มี Thesis ที่บันทึกไว้ — ไม่ได้ระบุว่าข่าวนี้เปลี่ยน Thesis</div>'}` : ''}
-    ${x.monitor_th ? `<div class="stkK">ติดตามอะไร</div><div>${s(x.monitor_th)}</div>` : ''}
-    ${srcs.length ? `<details class="stkSrc"><summary>แหล่งข่าว (${srcs.length})</summary>${srcs.map(r=>`<div>${s(r.name)}${r.published_at ? ' · ' + s(String(r.published_at).slice(0, 10)) : ''}${r.url && /^https?:\/\//i.test(r.url) ? ` · <a href="${s(r.url)}" target="_blank" rel="noopener">Open ↗</a>` : ''}</div>`).join('')}</details>` : ''}
-    <button type="button" class="ln1-link" data-stk-watch="${s(o.t)}" onclick="stkGoWatch('${s(o.t)}')">ดูหุ้นใน Watch →</button></div>` : '';
+    ${x.happened_th ? `<div class="stkK">What happened</div><div>${s(x.happened_th)}</div>` : ''}
+    ${x.why_th ? `<div class="stkK">What it means</div><div>${s(x.why_th)}</div>${x.thesis_ref===true ? '' : '<div class="wiSm">No thesis saved yet — it is not said whether this news changes the thesis</div>'}` : ''}
+    ${x.monitor_th ? `<div class="stkK">What to watch</div><div>${s(x.monitor_th)}</div>` : ''}
+    ${srcs.length ? `<details class="stkSrc"><summary>Sources (${srcs.length})</summary>${srcs.map(r=>`<div>${s(r.name)}${r.published_at ? ' · ' + s(String(r.published_at).slice(0, 10)) : ''}${r.url && /^https?:\/\//i.test(r.url) ? ` · <a href="${s(r.url)}" target="_blank" rel="noopener">Open ↗</a>` : ''}</div>`).join('')}</details>` : ''}
+    <button type="button" class="ln1-link" data-stk-watch="${s(o.t)}" onclick="stkGoWatch('${s(o.t)}')">See the stock in Watch →</button></div>` : '';
   const rdn = stkItemRead(doc.id, o.t);
   return `<div class="stkRow${open ? ' open' : ''}${rdn ? ' rd' : ''}" data-stk-row="${s(o.t)}" data-stk-read-item="${rdn ? 1 : 0}"><button type="button" class="stkCk${rdn ? ' on' : ''}" data-stk-ck="${s(o.t)}" aria-pressed="${rdn}" aria-label="${rdn ? 'Mark unread' : 'Mark read'}: ${s(o.t)}" onclick="stkToggleItem('${s(doc.id)}','${s(o.t)}')">✓</button><button type="button" class="stkH" data-stk-toggle="${s(o.t)}" aria-expanded="${open}" onclick="stkToggle('${s(o.t)}')"><b>${s(o.t)}</b>${st ? `<span class="stkP stk-${st}" data-stk-pill="${st}">${s(STK_STATUS[st])}</span>` : ''}${o.tags.map(t=>`<span class="wiBdg">${s(t)}</span>`).join('')}<span class="stkHl">${s(x.headline_th || '')}</span></button>${body}</div>`;
 }
@@ -27655,18 +27676,18 @@ function stkGoWatch(t){ stkCloseView(); try{ switchTab('watch'); wlOpen(t); }cat
 function stkRenderView(){
   const host = document.getElementById('stkHost'); if(!host) return;
   const s = escHtml, d = stkLatest();
-  if(!d){ host.innerHTML = `<div class="pbSh"><div class="pbShH"><b>Weekly Stock Summary</b></div><div>สรุปสัปดาห์นี้ยังไม่พร้อม</div><div class="pbBtns"><button type="button" class="ui-btn" data-stk-close="1" onclick="stkCloseView()">ปิด</button></div></div>`; return; }
+  if(!d){ host.innerHTML = `<div class="pbSh"><div class="pbShH"><b>Weekly Stock Summary</b></div><div>This week’s summary is not ready</div><div class="pbBtns"><button type="button" class="ui-btn" data-stk-close="1" onclick="stkCloseView()">Close</button></div></div>`; return; }
   const M = stkModel(d), read = stkIsRead(d.id), stale = stkStale(d);
   const rc = stkReadCount(d), vis = list => stkFilter === 'all' ? list : list.filter(o=>!stkItemRead(d.id, o.t)), allRd = rc[1] > 0 && rc[0] === rc[1];
   const sec = (t, list0) => { const list = vis(list0); return list.length ? `<div class="stkSec" data-stk-sec="${t}"><div class="stkSecH">${t==='cand' ? 'CANDIDATES' : 'WATCHLIST'} · ${list.length}</div>${list.map(o=>stkRowHtml(o, d)).join('')}</div>` : ''; };
   const fold = (k, label, list) => list.length ? `<details class="stkFold" data-stk-fold="${k}"><summary>${label} (${list.length})</summary><div>${list.map(o=>`<div class="stkNo"><b>${s(o.t)}</b> ${o.tags.map(t=>`<span class="wiBdg">${s(t)}</span>`).join('')}</div>`).join('')}</div></details>` : '';
-  host.innerHTML = `<div class="stkTop"><button type="button" class="stkX" data-stk-close="1" aria-label="ปิด" onclick="stkCloseView()"></button></div><div class="pbSh stkBody"><div class="pbShH"><b>Weekly Stock Summary</b>${read ? '' : ' <span class="stkNew">New</span>'}<span class="wiSm stkRc" data-stk-rc>${rc[0]}/${rc[1]} read</span><button type="button" class="ui-btn stkAllBtn" data-stk-read="1" ${read ? 'disabled' : ''} onclick="stkMarkRead('${s(d.id)}')">Mark all read</button></div>
-    <div class="wiSm" data-stk-meta="1">ครอบคลุมข่าว ${s(stkPeriod(d))}${stale ? ' (ฉบับเก่า — ยังไม่มีฉบับสัปดาห์นี้)' : ''} · อัปเดต ${s(wiAsofText(d.asof))}</div>
+  host.innerHTML = `<div class="stkTop"><button type="button" class="stkX" data-stk-close="1" aria-label="Close" onclick="stkCloseView()"></button></div><div class="pbSh stkBody"><div class="pbShH"><b>Weekly Stock Summary</b>${read ? '' : ' <span class="stkNew">New</span>'}<span class="wiSm stkRc" data-stk-rc>${rc[0]}/${rc[1]} read</span><button type="button" class="ui-btn stkAllBtn" data-stk-read="1" ${read ? 'disabled' : ''} onclick="stkMarkRead('${s(d.id)}')">Mark all read</button></div>
+    <div class="wiSm" data-stk-meta="1">Covers news ${s(stkPeriod(d))}${stale ? ' (old edition — this week’s is not in yet)' : ''} · updated ${s(wiAsofText(d.asof))}</div>
     <div class="stkFlt" data-stk-flt role="group" aria-label="Filter"><button type="button" class="${stkFilter === 'unread' ? 'on' : ''}" data-stk-f="unread" aria-pressed="${stkFilter === 'unread'}" onclick="stkSetFilter('unread')">Unread</button><button type="button" class="${stkFilter === 'all' ? 'on' : ''}" data-stk-f="all" aria-pressed="${stkFilter === 'all'}" onclick="stkSetFilter('all')">All</button></div>
-    <div class="pbBtns"><button type="button" class="ln1-link" data-stk-paste="1" onclick="stkOpenPaste()">Paste JSON</button><button type="button" class="ln1-link" data-stk-manifest="1" onclick="stkCopyManifest()">คัดลอกรายชื่อหุ้น</button></div>
+    <div class="pbBtns"><button type="button" class="ln1-link" data-stk-paste="1" onclick="stkOpenPaste()">Paste JSON</button><button type="button" class="ln1-link" data-stk-manifest="1" onclick="stkCopyManifest()">Copy the stock list</button></div>
     ${(stkFilter === 'unread' && allRd) ? `<div class="stkDone" data-stk-allread>All read ✓ · <button type="button" class="ln1-link" data-stk-showall onclick="stkSetFilter('all')">Show all</button></div>` : ''}${sec('cand', M.cand)}${sec('wl', M.wl)}
-    ${fold('none', 'ไม่มีข่าวสำคัญ', M.none)}${fold('incomplete', 'ข้อมูลไม่ครบ', M.incomplete)}${fold('gone', 'ไม่อยู่ในรายการแล้ว', M.gone)}
-    ${(M.cand.length + M.wl.length + M.none.length + M.incomplete.length + M.gone.length) ? '' : '<div class="wiSm">ไม่มีหุ้นในสรุปนี้</div>'}</div>`;
+    ${fold('none', 'No key news', M.none)}${fold('incomplete', 'Incomplete data', M.incomplete)}${fold('gone', 'No longer on the list', M.gone)}
+    ${(M.cand.length + M.wl.length + M.none.length + M.incomplete.length + M.gone.length) ? '' : '<div class="wiSm">No stocks in this summary</div>'}</div>`;
 }
 function stkManifest(){
   const L = stkLists(), seen = new Set(), out = [];
@@ -27676,7 +27697,7 @@ function stkManifest(){
 }
 function stkCopyManifest(){
   const t = JSON.stringify(stkManifest(), null, 1), fb = ()=>{ if(stkPaste){ stkPaste.text = t; stkPasteRender(); } else { stkOpenPaste(); stkPaste.text = t; stkPasteRender(); } };
-  try{ navigator.clipboard.writeText(t).then(()=>{ stkMsg = 'คัดลอกรายชื่อหุ้นแล้ว'; }, fb); }catch(e){ fb(); }
+  try{ navigator.clipboard.writeText(t).then(()=>{ stkMsg = 'Stock list copied'; }, fb); }catch(e){ fb(); }
 }
 let stkMsg = '';
 /* ─ Paste JSON ─ */
@@ -27691,21 +27712,21 @@ function stkCheck(){ const P = stkPaste; if(!P) return; P.err = ''; P.res = Calc
 function stkPasteRender(){
   const host = document.getElementById('stkPasteHost'), P = stkPaste; if(!host || !P) return;
   const s = escHtml, R = P.res;
-  let h = `<div class="pbSh"><div class="pbShH"><b>Weekly Stock Summary · Paste JSON</b></div><div class="wiSm">วางจากสกิล weekly-stock-news (ไม่มีการดึงข่าวอัตโนมัติ)</div>
+  let h = `<div class="pbSh"><div class="pbShH"><b>Weekly Stock Summary · Paste JSON</b></div><div class="wiSm">Paste from the weekly-stock-news skill (news is not fetched automatically)</div>
     <textarea id="stkText" class="pbTa" rows="7" placeholder='{"schema":"stockNews/v1", ...}' oninput="stkPaste.text=this.value"></textarea>
-    <div class="pbBtns"><button data-enter-primary type="button" class="ui-btn ui-btn-pri" data-stk-check="1" onclick="stkCheck()">ตรวจ</button><button type="button" class="ui-btn" onclick="stkCopyManifest()">คัดลอกรายชื่อหุ้น</button></div>`;
+    <div class="pbBtns"><button data-enter-primary type="button" class="ui-btn ui-btn-pri" data-stk-check="1" onclick="stkCheck()">Check</button><button type="button" class="ui-btn" onclick="stkCopyManifest()">Copy the stock list</button></div>`;
   if(R){
-    if(R.errors.length) h += `<div class="pbErrs" data-stk-errs="1"><b>แก้ก่อนบันทึก (ข้อมูลเดิมไม่ถูกแตะ)</b>${R.errors.slice(0, 12).map(e=>`<div>✕ ${s(e)}</div>`).join('')}</div>`;
-    else if(R.doc) h += `<div class="wiOkL" data-stk-ok="1">✓ ${s(R.doc.edition_id)} · ${s(stkPeriod(R.doc))} · ${Object.keys(R.doc.stocks).length} หุ้น${stkDocs[R.doc.edition_id] ? ' · ฉบับนี้มีอยู่แล้ว → อัปเดต' : ''}</div>`;
+    if(R.errors.length) h += `<div class="pbErrs" data-stk-errs="1"><b>Fix before saving (the saved data is not touched)</b>${R.errors.slice(0, 12).map(e=>`<div>✕ ${s(e)}</div>`).join('')}</div>`;
+    else if(R.doc) h += `<div class="wiOkL" data-stk-ok="1">✓ ${s(R.doc.edition_id)} · ${s(stkPeriod(R.doc))} · ${Object.keys(R.doc.stocks).length} stocks${stkDocs[R.doc.edition_id] ? ' · this edition exists → updates it' : ''}</div>`;
     if(R.warnings.length) h += `<div class="pbWarns">${R.warnings.slice(0, 6).map(e=>`<div>⚠ ${s(e)}</div>`).join('')}</div>`;
   }
   if(P.err) h += `<div class="pbErrs" data-stk-saveerr="1">${s(P.err)}</div>`;
-  h += `<div class="pbBtns">${(R && R.doc && !R.errors.length) ? `<button data-enter-primary type="button" class="ui-btn ui-btn-pri" data-stk-save="1" ${stkSaving ? 'disabled' : ''} onclick="stkSave()">บันทึก</button>` : ''}<button type="button" class="ui-btn" onclick="stkPasteClose()">ปิด</button></div></div>`;
+  h += `<div class="pbBtns">${(R && R.doc && !R.errors.length) ? `<button data-enter-primary type="button" class="ui-btn ui-btn-pri" data-stk-save="1" ${stkSaving ? 'disabled' : ''} onclick="stkSave()">Save</button>` : ''}<button type="button" class="ui-btn" onclick="stkPasteClose()">Close</button></div></div>`;
   host.innerHTML = h; const ta = document.getElementById('stkText'); if(ta) ta.value = P.text;
 }
 async function stkSave(){
   const P = stkPaste; if(!P || stkSaving || !P.res || !P.res.doc) return;
-  const col = sat7dCol('stockNews'); if(!col){ P.err = 'บันทึกไม่สำเร็จ: ยังไม่ได้เข้าสู่ระบบ'; stkPasteRender(); return; }
+  const col = sat7dCol('stockNews'); if(!col){ P.err = 'Not saved: you are not signed in'; stkPasteRender(); return; }
   stkSaving = true; stkPasteRender();
   try{
     const body = Object.assign({}, P.res.doc, {saved_at: firebase.firestore.FieldValue.serverTimestamp()});
@@ -27715,7 +27736,7 @@ async function stkSave(){
     stkDocs[id] = Object.assign({}, body, {id}); stkRefresh();
   }catch(e){
     stkSaving = false;
-    if(stkPaste){ stkPaste.err = 'บันทึกไม่สำเร็จ: ' + sat7dErrText(e) + (/permission/i.test(String(e && (e.code || e.message))) ? ' — ต้องเพิ่ม Firestore Rules ของ users/{uid}/stockNews ก่อน' : '') + ' — ข้อความในช่องยังอยู่ ลองกดบันทึกอีกครั้ง'; stkPasteRender(); }
+    if(stkPaste){ stkPaste.err = 'Not saved: ' + sat7dErrText(e) + (/permission/i.test(String(e && (e.code || e.message))) ? ' — add the Firestore rules for users/{uid}/stockNews first' : '') + ' — your text is still in the box, try Save again'; stkPasteRender(); }
   }
 }
 /* ─ Today: เป้าหมาย Port บรรทัดเดียวบน iPhone ─ */
@@ -27730,12 +27751,12 @@ function ffCalFail(){
   clearTimeout(ffCalTimer);
   const fr = body.querySelector('.ffCalScroll'); if(fr) fr.remove();
   if(!body.querySelector('.ffCalFail'))
-    body.insertAdjacentHTML('afterbegin', `<div class="ffCalFail">— <a href="${FF_CAL_FALLBACK}" target="_blank" rel="noopener">เปิด investing.com/economic-calendar ↗</a></div>`);
+    body.insertAdjacentHTML('afterbegin', `<div class="ffCalFail">— <a href="${FF_CAL_FALLBACK}" target="_blank" rel="noopener">Open investing.com/economic-calendar ↗</a></div>`);
 }
 function ffCalBuild(){
   const body = document.getElementById('ffCalBody'); if(!body || ffCalBuilt) return;
   ffCalBuilt = true;
-  body.innerHTML = `<div class="ffCalScroll"><iframe id="ffCalFrame" title="ปฏิทินข่าว US" width="100%" height="467" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" referrerpolicy="no-referrer"></iframe></div>
+  body.innerHTML = `<div class="ffCalScroll"><iframe id="ffCalFrame" title="US news calendar" width="100%" height="467" frameborder="0" allowtransparency="true" marginwidth="0" marginheight="0" referrerpolicy="no-referrer"></iframe></div>
     <div class="ffCalCredit">provided by <a href="https://www.investing.com" target="_blank" rel="noopener">Investing.com</a></div>`;
   const fr = document.getElementById('ffCalFrame');
   if(typeof navigator!=='undefined' && navigator.onLine===false){ ffCalFail(); return; }
@@ -27778,11 +27799,11 @@ function ffRenderQe(){
   document.getElementById('ffQeMode').textContent=q.mode||'—';
   const dd=ffDaysSince(q.date);
   const bits=[];
-  if(q.date) bits.push('ประกาศ '+q.date);
-  if(dd!=null) bits.push(dd.toLocaleString()+' วัน');
+  if(q.date) bits.push('announced '+q.date);
+  if(dd!=null) bits.push(dd.toLocaleString()+' days');
   if(q.note) bits.push(q.note);
   const prev=q.history[0];
-  if(prev) bits.push('· ก่อนหน้า: '+prev.mode+(prev.date?(' '+prev.date):'')+' → '+prev.until);
+  if(prev) bits.push('· before: '+prev.mode+(prev.date?(' '+prev.date):'')+' → '+prev.until);
   document.getElementById('ffQeMeta').textContent = bits.join(' · ') || 'Not set — tap to enter';
 }
 function ffOpenQe(){
@@ -27800,7 +27821,7 @@ function ffSaveQe(){
   if(q.mode && q.mode!==mode){
     q.history.unshift({mode:q.mode, date:q.date||'', until:date||ffToday()});
     if(q.history.length>12) q.history.length=12;
-    ffLog('เปลี่ยนโหมดสภาพคล่อง '+q.mode+' → '+mode);
+    ffLog('Liquidity mode '+q.mode+' → '+mode);
   }
   q.mode=mode; q.date=date; q.note=note;
   document.getElementById('ffQeOverlay').classList.remove('show');
@@ -27814,37 +27835,37 @@ function ffRenderSettings(){
     const rows=f[list].map((s,i)=>
       '<div class="ffSetRow">'
       +'<input class="r" value="'+ffEsc(s.r)+'" oninput="ffEditField(\''+list+'\','+i+',\'r\',this.value)" placeholder="ratio">'
-      +'<input class="n" value="'+ffEsc(s.n||'')+'" oninput="ffEditField(\''+list+'\','+i+',\'n\',this.value)" placeholder="ตีความ — UP แปลว่าอะไร">'
+      +'<input class="n" value="'+ffEsc(s.n||'')+'" oninput="ffEditField(\''+list+'\','+i+',\'n\',this.value)" placeholder="Meaning — what UP means">'
       +'<select onchange="ffEditField(\''+list+'\','+i+',\'w\',+this.value)" style="width:66px">'
         +[1,2,3].map(w=>'<option value="'+w+'"'+(s.w===w?' selected':'')+'>Weight '+w+'</option>').join('')
       +'</select>'
-      +'<button type="button" class="small danger ghost" onclick="ffDelProxy(\''+list+'\','+i+')">ลบ</button>'
+      +'<button type="button" class="small danger ghost" onclick="ffDelProxy(\''+list+'\','+i+')">Delete</button>'
       +'</div>').join('');
     return '<div class="divlbl">'+title+'</div><div class="hint" style="margin:-4px 0 4px">'+hint+'</div>'+rows
-      +'<button type="button" class="small ghost" style="margin-top:8px" onclick="ffAddProxy(\''+list+'\')">＋ เพิ่ม proxy</button>';
+      +'<button type="button" class="small ghost" style="margin-top:8px" onclick="ffAddProxy(\''+list+'\')">＋ Add proxy</button>';
   };
   document.getElementById('ffSetBody').innerHTML=
-     blk('l1','ชั้น 1 — บอร์ดจดเอง: Is money entering capital markets? (weekly)','ใช้บันทึกมุมมองเท่านั้น · ไม่ได้คุมเพดาน')
-    +blk('l2','ชั้น 2 — บอร์ดจดเอง: Is money entering speculative stocks? (daily)','ใช้บันทึกมุมมองเท่านั้น · ไม่ได้คุมเพดาน')
-    +'<div class="divlbl">เพดานลงเงินจริง</div>'
-    +'<div class="hint" style="margin:-4px 0 10px">คำนวณจาก <code>Regime</code> ที่โหลดจาก <code>fundflow.json</code> เท่านั้น · บอร์ดจดเองชั้น 1–2 ด้านบนไม่เปลี่ยนเพดาน</div>'
-    +'<div class="divlbl">แผนที่ธีม (Relative Trend vs SPY)</div>'
-    +'<div class="hint" style="margin:-4px 0 4px">คำนวณอัตโนมัติจากราคาจริง ไม่ต้องตั้งเอง · ติดตาม '
-      + RRG_SYMS.length + ' ตัวเทียบ ' + RRG_BENCH + ' — ' + RRG_SYMS.map(x=>x.s).join(' · ')
+     blk('l1','Layer 1 — your own board: Is money entering capital markets? (weekly)','Notes only · does not control the cap')
+    +blk('l2','Layer 2 — your own board: Is money entering speculative stocks? (daily)','Notes only · does not control the cap')
+    +'<div class="divlbl">Real deployment cap</div>'
+    +'<div class="hint" style="margin:-4px 0 10px">Computed only from the <code>Regime</code> loaded from <code>fundflow.json</code> · your own boards (layers 1–2) above do not change the cap</div>'
+    +'<div class="divlbl">Theme map (Relative Trend vs SPY)</div>'
+    +'<div class="hint" style="margin:-4px 0 4px">Computed automatically from real prices — nothing to set · tracks '
+      + RRG_SYMS.length + ' vs ' + RRG_BENCH + ' — ' + RRG_SYMS.map(x=>x.s).join(' · ')
     +'</div>'
-    +'<div class="divlbl">ประวัติการแก้บอร์ด</div>'
-    +'<div class="hint" style="margin:-4px 0 4px">แก้บ่อย = กำลังจูนเข้าหาความอยาก ไม่ใช่ปรับปรุงระบบ</div>'
-    +(f.log.length ? f.log.slice(0,12).map(l=>'<div class="ffMini" style="padding:2px 0">'+ffEsc(l.d)+' — '+ffEsc(l.m)+'</div>').join('') : '<div class="hint">ยังไม่มี</div>');
+    +'<div class="divlbl">Board edit history</div>'
+    +'<div class="hint" style="margin:-4px 0 4px">Editing often = tuning towards what you want, not improving the system</div>'
+    +(f.log.length ? f.log.slice(0,12).map(l=>'<div class="ffMini" style="padding:2px 0">'+ffEsc(l.d)+' — '+ffEsc(l.m)+'</div>').join('') : '<div class="hint">None yet</div>');
 }
-function ffEditField(list,i,k,v){ ffState()[list][i][k]=v; ffPersist(); if(k==='w'){ ffLog('ปรับน้ำหนัก '+ffState()[list][i].r+' → '+v); renderFundflow(); } }
+function ffEditField(list,i,k,v){ ffState()[list][i][k]=v; ffPersist(); if(k==='w'){ ffLog('Weight '+ffState()[list][i].r+' → '+v); renderFundflow(); } }
 function ffAddProxy(list){
   ffState()[list].push({id:idFF(), r:'', tf:(list==='l1'?'W':'D'), w:2, v:1, n:'', f:''});
-  ffLog('เพิ่ม proxy ใน '+(list==='l1'?'ชั้น 1':'ชั้น 2')); ffRenderSettings(); ffTouch();
+  ffLog('Added proxy to '+(list==='l1'?'layer 1':'layer 2')); ffRenderSettings(); ffTouch();
 }
 function ffDelProxy(list,i){
   const s=ffState()[list][i];
-  if(!confirm('ลบ '+(s.r||'proxy')+' ?')) return;
-  ffState()[list].splice(i,1); ffLog('ลบ '+(s.r||'proxy')); ffRenderSettings(); ffTouch();
+  if(!confirm('Delete '+(s.r||'proxy')+'?')) return;
+  ffState()[list].splice(i,1); ffLog('Deleted '+(s.r||'proxy')); ffRenderSettings(); ffTouch();
 }
 
 </script>
@@ -27852,21 +27873,21 @@ function ffDelProxy(list,i){
 <!-- ===== Fund-flow: แก้โหมด QE/QT ===== -->
 <div class="overlay" id="ffQeOverlay">
   <div class="modal">
-    <h3>สภาพคล่องกลาง (QE / QT)</h3>
-    <div class="f"><label>โหมด</label>
+    <h3>Central-bank liquidity (QE / QT)</h3>
+    <div class="f"><label>Mode</label>
       <select id="ffQeSel">
-        <option value="QE">QE — อัดสภาพคล่องเข้า</option>
-        <option value="Neutral">Neutral — งบดุลนิ่ง</option>
-        <option value="QT">QT — ดูดสภาพคล่องออก</option>
+        <option value="QE">QE — adding liquidity</option>
+        <option value="Neutral">Neutral — balance sheet flat</option>
+        <option value="QT">QT — draining liquidity</option>
       </select>
     </div>
-    <div class="f"><label>วันที่ <b>ประกาศ</b> <span style="font-weight:400;color:var(--muted)">(ไม่ใช่วันเริ่มทำจริง — ตลาด price in ตั้งแต่ประกาศ)</span></label>
+    <div class="f"><label>Date <b>announced</b> <span style="font-weight:400;color:var(--muted)">(not the day it actually starts — the market prices it in from the announcement)</span></label>
       <input type="date" id="ffQeDate"></div>
-    <div class="f"><label>โน้ต</label><input type="text" id="ffQeNote" placeholder="เช่น ชะลอความเร็ว QT"></div>
-    <div class="hint">เปลี่ยนโหมดแล้วระบบจะเก็บของเดิมเป็นประวัติให้อัตโนมัติ · แถบนี้เป็นบริบท ไม่คิดคะแนน</div>
+    <div class="f"><label>Note</label><input type="text" id="ffQeNote" placeholder="e.g. QT pace slowed"></div>
+    <div class="hint">Changing the mode keeps the old one in history automatically · this strip is context only — it adds no score</div>
     <div class="btns">
-      <button type="button" onclick="document.getElementById('ffQeOverlay').classList.remove('show')">ยกเลิก</button>
-      <button data-enter-primary type="button" class="primary" onclick="ffSaveQe()">บันทึก</button>
+      <button type="button" onclick="document.getElementById('ffQeOverlay').classList.remove('show')">Cancel</button>
+      <button data-enter-primary type="button" class="primary" onclick="ffSaveQe()">Save</button>
     </div>
   </div>
 </div>
@@ -27874,25 +27895,25 @@ function ffDelProxy(list,i){
 <!-- ===== Fund-flow: ตั้งค่า proxy / น้ำหนัก ===== -->
 <div class="overlay" id="ffSetOverlay">
   <div class="modal" style="max-width:640px">
-    <h3>ตั้งค่า Fund-flow — proxy &amp; น้ำหนัก</h3>
-    <div class="hint" style="margin-bottom:8px">น้ำหนักแก้ได้เฉพาะที่นี่ เพื่อกันการปรับตอนกำลังอ่านผล · เกณฑ์ Risk-on/off ล็อกไว้ตายตัว</div>
+    <h3>Fund-flow settings — proxies &amp; weights</h3>
+    <div class="hint" style="margin-bottom:8px">Weights are edited only here, so nothing moves while you read results · the Risk-on/off thresholds are fixed</div>
     <div id="ffSetBody"></div>
     <div class="btns">
-      <button type="button" class="primary" onclick="document.getElementById('ffSetOverlay').classList.remove('show')">เสร็จ</button>
+      <button type="button" class="primary" onclick="document.getElementById('ffSetOverlay').classList.remove('show')">Done</button>
     </div>
   </div>
 </div>
 
-<button id="scrollTopBtn" class="scrollTopBtn" onclick="scrollToTop()" title="ขึ้นบนสุด">↑</button>
+<button id="scrollTopBtn" class="scrollTopBtn" onclick="scrollToTop()" title="Back to top">↑</button>
 
 <!-- ===== แถบเตือนสำรองข้อมูลประจำวัน ===== -->
 <div class="bkBanner" id="bkBanner">
   <div class="bkTxt">
-    <b id="bkTitle">ถึงเวลาสำรองข้อมูลประจำสัปดาห์</b>
-    <span class="bkSub" id="bkSub">แตะเพื่อบันทึกไฟล์ backup ลงเครื่อง</span>
+    <b id="bkTitle">Time for the weekly backup</b>
+    <span class="bkSub" id="bkSub">Tap to save a backup file to this device</span>
   </div>
-  <button class="small primary" onclick="exportBackupNow(true)">ดาวน์โหลด</button>
-  <button class="small ghost" onclick="bkDismiss()">ไว้ก่อน</button>
+  <button class="small primary" onclick="exportBackupNow(true)">Download</button>
+  <button class="small ghost" onclick="bkDismiss()">Later</button>
 </div>
 
 <script>
@@ -28037,12 +28058,12 @@ function bkTriggerDownload(json, filename){
    ★ BK1 — async (ดึง collection ย่อยสดก่อนดาวน์โหลด) · คืน Promise<boolean> */
 let bkBusy = false, bkLastResult = null;
 async function exportBackupNow(manual){
-  if(!state){ if(manual) alert('ยังไม่มีข้อมูลให้สำรอง'); return false; }
+  if(!state){ if(manual) alert('There is no data to back up yet'); return false; }
   /* ★ ห้ามสำรองจาก state ที่ยังไม่ได้ยืนยันกับ server
      ถ้าปล่อยให้ backup ข้อมูลจาก cache เก่า จะได้ไฟล์ที่ "ดูเหมือนสำเนาที่ถูกต้อง" แต่เป็นของเก่า
      ซึ่งอันตรายกว่าไม่มี backup เลย เพราะจะเอาไปกู้ทับของจริงในอนาคต */
   if(!stateFromServer){
-    if(manual) alert('ยังซิงก์กับ server ไม่สำเร็จ — ข้อมูลบนจอตอนนี้อาจเป็นของเก่าจาก cache\n\nรอให้สถานะมุมบนขึ้น "ซิงก์แล้ว" ก่อน แล้วค่อยกดใหม่');
+    if(manual) alert('Not synced with the server yet — what is on screen may be old cached data.\n\nWait until the corner status says "Synced", then tap again.');
     return false;
   }
   if(bkBusy) return false;
@@ -28057,7 +28078,7 @@ async function exportBackupNow(manual){
     bkHideBanner();
     bkRenderLastHint();
     bkRenderSummary(b);
-    if(b.partial.length) bkShowBanner('backup ไม่ครบ: '+b.partial.join(', '), 'ดึงข้อมูลชุดนี้ไม่สำเร็จ — ไฟล์ที่ได้ไม่มีข้อมูลส่วนนั้น ลองกดสำรองอีกครั้ง');
+    if(b.partial.length) bkShowBanner('Backup incomplete: '+b.partial.join(', '), 'This data could not be fetched — the file is missing that part. Try the backup again.');
     return true;
   }catch(e){ console.warn('backup download failed:', e); return false; }
   finally{ bkBusy = false; }
@@ -28080,14 +28101,14 @@ const BK_RS_LABEL = {satIdeas:'แผน Sat (satIdeas)', satWeek:'สัปด�
 let bkRs = null, bkRestoreLast = null;
 
 function bkRestoreOpen(){
-  if(!state || !stateFromServer){ alert('ยังซิงก์กับ server ไม่สำเร็จ — รอให้สถานะมุมบนขึ้น "ซิงก์แล้ว" ก่อนแล้วค่อยกู้คืน'); return; }
+  if(!state || !stateFromServer){ alert('Not synced with the server yet — wait until the corner status says "Synced", then restore'); return; }
   const input = document.createElement('input');
   input.type = 'file'; input.accept = 'application/json,.json';
   input.onchange = () => {
     const f = input.files[0]; if(!f) return;
     const r = new FileReader();
     r.onload = () => { bkRestoreLoad(String(r.result), f.name); };
-    r.onerror = () => alert('อ่านไฟล์ไม่สำเร็จ');
+    r.onerror = () => alert('Could not read the file');
     r.readAsText(f);
   };
   input.click();
@@ -28262,12 +28283,12 @@ function bkDismiss(){
 function bkRenderLastHint(){
   const el = document.getElementById('bkLastHint'); if(!el) return;
   const last = parseInt(localStorage.getItem(BK_LAST_KEY) || '0', 10);
-  if(!last){ el.innerHTML = '<b style="color:var(--amber)">ยังไม่เคยสำรองข้อมูลจากเครื่องนี้</b>'; return; }
+  if(!last){ el.innerHTML = '<b style="color:var(--amber)">No backup from this device yet</b>'; return; }
   const d = new Date(last), p = n => String(n).padStart(2,'0');
   const stale = bkDue();
-  el.innerHTML = 'สำรองล่าสุดจากเครื่องนี้: '
-    + `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())} น.`
-    + (stale ? ' · <b style="color:var(--amber)">เลยรอบประจำสัปดาห์แล้ว</b>' : '');
+  el.innerHTML = 'Last backup from this device: '
+    + `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())} `
+    + (stale ? ' · <b style="color:var(--amber)">weekly backup is overdue</b>' : '');
 }
 
 async function bkCheck(){
@@ -28278,10 +28299,10 @@ async function bkCheck(){
     if(bkLastResult && bkLastResult.partial.length) return;   /* backup ไม่ครบ — exportBackupNow แสดงเตือนส้มแล้ว ห้ามทับด้วยข้อความ "สำเร็จ" */
     /* auto สำเร็จในมุมของ JS แล้ว แต่ Safari อาจบล็อกเงียบๆ โดยไม่ throw — ยืนยันกับตาผู้ใช้สักครู่
        เผื่อไฟล์ไม่ลงจริง จะได้กดเองทัน ไม่ปล่อยให้เข้าใจผิดว่ามี backup */
-    bkShowBanner('สำรองข้อมูลประจำสัปดาห์แล้ว', 'ไม่เห็นไฟล์ในโฟลเดอร์ Downloads? แตะ “ดาวน์โหลด” เพื่อบันทึกซ้ำ');
+    bkShowBanner('Weekly backup done', 'No file in your Downloads folder? Tap “Download” to save it again');
     setTimeout(bkHideBanner, 15000);
   } else {
-    bkShowBanner('สำรองอัตโนมัติไม่สำเร็จ', 'แตะ “ดาวน์โหลด” เพื่อบันทึกไฟล์เอง');
+    bkShowBanner('Automatic backup failed', 'Tap “Download” to save the file yourself');
   }
 }
 
@@ -31458,7 +31479,7 @@ document.addEventListener('keydown', ev=>{
 }, true);
 function ux3RemoveDo(){
   const D = ux3Dlg, col = wlCol(); if(!D || D.busy) return;
-  if(!col){ alert('Not synced with the server yet — nothing changed'); return; }
+  if(!col){ ln4Toast('Not synced with the server yet — nothing changed'); return; }
   D.busy = true;
   const inp = document.querySelector('[data-ux3-reason]'), reason = D.trk === 'ladder' ? ((inp && inp.value.trim().slice(0, 120)) || 'Removed') : 'Rotated out', at = new Date().toISOString(), syms = D.syms.slice();
   ux3DlgClose();
@@ -31468,14 +31489,14 @@ function ux3RemoveDo(){
     ux3Toast('Removed ' + syms.length + ' · kept in Archived', ()=>ux3RemoveUndo(syms), 8000);
   }).catch(err=>{
     syms.forEach(t=>{ const it = wlItemOf(t); if(it){ it.archived = false; it.archived_reason = ''; it.archived_at = ''; } }); try{ renderWatchlist(); }catch(x){}
-    alert('Could not remove — nothing changed (' + ((err && (err.code || err.message)) || err) + ')');
+    ln4Toast('Could not remove — nothing changed (' + ((err && (err.code || err.message)) || err) + ')');
   });
 }
 function ux3RemoveUndo(syms){
   const col = wlCol(); if(!col) return;
   syms.forEach(t=>{ const it = wlItemOf(t); if(it){ it.archived = false; it.archived_reason = ''; it.archived_at = ''; } });
   try{ renderWatchlist(); }catch(x){}
-  Promise.all(syms.map(t=>col.doc(t).update({archived:false, archived_reason:'', archived_at:''}))).catch(err=>{ alert('Could not undo: ' + ((err && (err.code || err.message)) || err)); });
+  Promise.all(syms.map(t=>col.doc(t).update({archived:false, archived_reason:'', archived_at:''}))).catch(err=>{ ln4Toast('Could not undo: ' + ((err && (err.code || err.message)) || err)); });
 }
 let ux3ToastT = 0;
 function ux3Toast(msg, undo, ms){
@@ -33613,10 +33634,10 @@ function hw2Land(t){   /* first missing required field: scrolled into view + sho
   };
   go(); requestAnimationFrame(go);
 }
-function hwBack(){
+function hwBack(force){
   const it = wlItemOf(hwSym);
   if(it && wlMtDirty(it.ticker)){
-    if(!confirm('You have unsaved changes. They stay as a draft on this device. Leave?')) return;
+    if(force !== true){ cl2Ask({title:'Leave this page?', body:'You have unsaved changes. They stay as a draft on this device.', yes:'Leave', no:'Stay', onOk:()=>hwBack(true)}); return; }
     wlMtFlush(it.ticker);
   }
   const from = hwFrom; hwFrom = null;

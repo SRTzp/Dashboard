@@ -313,7 +313,7 @@ def j5(pw, w):
         js(page, "()=>{ coreWrite(coreCardsList.find(x=>x.ticker==='CPALL.BK').id, {px:60, pxDate:thaiToday()}); re1Cache={}; switchTab('today'); todayRefresh(true); }"); page.wait_for_timeout(500)
         click(page, "[onclick=\"acctSwitch('fam')\"]", "Family", J); js(page, "()=>{ switchTab('today'); re1Cache={}; todayRefresh(true); }"); page.wait_for_timeout(500)
         rowF = js(page, "()=>{ const r=document.querySelector('[data-re2-row=\"CPALL.BK\"][data-re2-grp=\"manage\"]'); return r ? {txt:r.innerText.replace(/\\s+/g,' '), btns:[...r.querySelectorAll('button')].map(b=>({t:b.innerText.trim(), dis:b.disabled}))} : null; }")
-        step(J, w, "(b) thesis done, Pilot risk 1.0% + new order > 1.00% → Add-on blocked, ADDON_TOTAL_RISK reason on the row, button disabled", rowF and "Add-on blocked" in rowF["txt"] and "over today's limit 1%" in rowF["txt"] and all(x["dis"] for x in rowF["btns"] if "Add-on" in x["t"]) and js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='CPALL.BK'); const cx=coreCtxC(c); return coreAddRe1(c, coreView(c,cx), cx).model.reasons.includes('ADDON_TOTAL_RISK'); }"), rowF)
+        step(J, w, "(b) thesis done, Pilot risk 1.0% + new order > 1.00% → Add-on blocked, ADDON_TOTAL_RISK reason on the row, button disabled", rowF and "Add-on blocked" in rowF["txt"] and "over the 1% limit for this stock (all lots at their current stop)" in rowF["txt"] and all(x["dis"] for x in rowF["btns"] if "Add-on" in x["t"]) and js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='CPALL.BK'); const cx=coreCtxC(c); return coreAddRe1(c, coreView(c,cx), cx).model.reasons.includes('ADDON_TOTAL_RISK'); }"), rowF)
         js(page, "()=>{ switchTab('plan'); bdSetSeg('hold'); bdRender(); }"); page.wait_for_timeout(400)
         ok = click(page, "[data-bd-card] .bd-tk, [data-bd-card]", "open card", J)[0]
         ok &= click(page, "[data-bd-close]", "Close trade", J)[0]
@@ -352,6 +352,7 @@ def crawl(page, name, setup, scope="body", cap=80):
         if not js(page, NTH, [scope, nxt["i"]]): continue
         n += 1
         click(page, "[data-e2crawl=\"1\"]", "%s · %s" % (name, nxt["sig"][:60]), "crawl", wait=1500)
+        E.thai_scan(page, "%s · after %s" % (name, nxt["sig"][:30].strip()))   # CL2 — no visible Thai after any crawled click
         if n >= cap: break
     return n, skipped, len(done)
 
@@ -385,6 +386,60 @@ def j_crawl(pw, w):
             check(f"[CRAWL {w}] {nm}: {n} buttons clicked ({sk} send/delete/external skipped, {seen} distinct)", n > 0, n)
         step(J, w, "crawl: %d buttons clicked once, none dead" % tot, not [d for d in E.DEAD if d[0] == "crawl"], [d for d in E.DEAD if d[0] == "crawl"][:6])
         step(J, w, "no page errors", not pe, pe[:2])
+        step(J, w, "CL2: no visible Thai text on any crawled screen or sheet (user-typed account names exempt)", not [t for t in E.THAI_SEEN if t[0].split(" · ")[0] in ("Today", "Plan", "Watch", "Watch detail", "Manage drawer")], [t for t in E.THAI_SEEN][:6])
+    finally:
+        b.close()
+
+
+# CL2 — every other screen (Flow, Journal, Port, Weekend, Homework, Settings cards, drawers, static sheets forced open): nothing visible in Thai
+THAI_SCREENS = [
+  ("Today · Daily", "()=>{ switchTab('today'); td3SetMode('d'); todayRefresh(true); }"), ("Today · Weekend", "()=>{ switchTab('today'); td3SetMode('w'); todayRefresh(true); }"),
+  ("Plan · Planned", "()=>{ switchTab('plan'); bdSetSeg('plan'); bdRender(); }"), ("Plan · Ordered", "()=>{ switchTab('plan'); bdSetSeg('ord'); bdRender(); }"), ("Plan · Holding", "()=>{ switchTab('plan'); bdSetSeg('hold'); bdRender(); }"),
+  ("Plan · Stocks (Momentum)", "()=>{ switchTab('plan'); setPlanScope('stock'); }"), ("Plan · Stocks (Compounder)", "()=>{ switchTab('plan'); setPlanScope('ladder'); }"), ("Plan · Future", "()=>{ switchTab('plan'); setPlanScope('future'); }"),
+  ("Flow", "()=>{ switchTab('flow'); }"), ("Watch · Ideas", "()=>{ switchTab('watch'); wlSetView('idea'); }"), ("Watch · list", "()=>{ switchTab('watch'); wlSetView('wl'); }"), ("Watch · Screen", "()=>{ switchTab('watch'); wlSetView('screen'); }"),
+  ("Watch · detail", "()=>{ switchTab('watch'); wlSetView('wl'); wlOpen('AAPL'); }"), ("Watch · Homework", "()=>{ switchTab('watch'); wlSetView('wl'); hwOpen('AAPL'); }"),
+  ("Journal", "()=>{ switchTab('journal'); }"), ("Port", "()=>{ switchTab('mix'); }"),
+  ("Settings · Portfolio", "()=>{ switchTab('today'); openSettings(); }"), ("Settings · System", "()=>{ switchTab('today'); openSystemSettings(); }"), ("Settings · Industries", "()=>{ switchTab('today'); openIndustryManager(); }"),
+  ("Core weekly-close price sheet", "()=>{ switchTab('plan'); setPlanScope('stock'); corePxOpen('xAAA'); }"), ("New Core plan sheet", "()=>{ switchTab('plan'); setPlanScope('stock'); coreNewOpen(); }"),
+  ("Manage drawer", "()=>{ switchTab('today'); todayRefresh(true); bdOpen('x1'); }"), ("Plan drawer", "()=>{ switchTab('plan'); bdSetSeg('plan'); bdRender(); bdOpen('b1'); }"),
+]
+THAI_WATCH = [
+  ("Watch (fixture) · Ideas", "()=>{ switchTab('watch'); wlSetView('idea'); }"), ("Watch (fixture) · Momentum list", "()=>{ switchTab('watch'); wl1Trk='winner'; wlSetView('wl'); }"),
+  ("Watch (fixture) · Compounder list", "()=>{ switchTab('watch'); wl1Trk='ladder'; wlSetView('wl'); }"), ("Watch (fixture) · Screen", "()=>{ switchTab('watch'); wlSetView('screen'); }"),
+  ("Watch (fixture) · AAPL detail", "()=>{ switchTab('watch'); wlSetView('wl'); wlOpen('AAPL'); }"), ("Watch (fixture) · AAPL Homework", "()=>{ switchTab('watch'); wl1Trk='winner'; wlSetView('wl'); hwOpen('AAPL'); }"),
+  ("Watch (fixture) · COST Homework", "()=>{ switchTab('watch'); wl1Trk='ladder'; wlSetView('wl'); hwOpen('COST'); }"), ("Watch (fixture) · WHSE Homework", "()=>{ switchTab('watch'); wl1Trk='ladder'; wlSetView('wl'); hwOpen('WHSE'); }"),
+  ("Watch (fixture) · ZZ Homework", "()=>{ switchTab('watch'); wl1Trk='ladder'; wlSetView('wl'); hwOpen('ZZ'); }"), ("Watch (fixture) · Add stocks sheet", "()=>{ switchTab('watch'); wlSetView('wl'); wl1ImpOpen(); }"),
+]
+THAI_OVERLAYS = ["teOverlay", "closePosOverlay", "glValOverlay", "wlAddOverlay", "ltOverlay", "sysOverlay", "reasonMgrOverlay", "scoreMgrOverlay", "cancelOverlay", "ffQeOverlay", "ffSetOverlay", "industryOverlay", "setOverlay"]
+
+
+def j_thai(pw, w):
+    J = "THAI"; b, page, ce, pe = crawl_seed(pw, w); page.set_default_timeout(5000)
+    try:
+        for nm, setup in THAI_SCREENS:
+            js(page, RESET); 
+            try: js(page, setup)
+            except Exception: pass
+            page.wait_for_timeout(250); E.thai_scan(page, "THAI · " + nm)
+        for oid in THAI_OVERLAYS:
+            js(page, RESET); js(page, "(id)=>{ const o=document.getElementById(id); if(o) o.classList.add('show'); }", oid); page.wait_for_timeout(120); E.thai_scan(page, "THAI · overlay " + oid)
+        js(page, RESET); js(page, "()=>{ const b=document.getElementById('bkBanner'); if(b) b.classList.add('show'); }"); page.wait_for_timeout(120); E.thai_scan(page, "THAI · backup banner")
+        bad = [t for t in E.THAI_SEEN if t[0].startswith("THAI") and "Watch (fixture)" not in t[0]]
+        step(J, w, "CL2: no visible Thai text on any tab / segment / Settings card / sheet / forced-open overlay (%d screens)" % (len(THAI_SCREENS) + len(THAI_OVERLAYS) + 1), not bad, bad[:8])
+        step(J, w, "no page errors", not pe, pe[:2])
+    finally:
+        b.close()
+    # the Watch tab needs the Watch fixture (stocks with Fact Sheets / thesis / Screen source) — the crawl seed has no watchlist
+    import hw1_common as HW
+    b, page, pe = HW.open_hw(pw, w, 900 if w >= 900 else 844); page.set_default_timeout(5000)
+    try:
+        for nm, setup in THAI_WATCH:
+            js(page, RESET)
+            try: js(page, setup)
+            except Exception: pass
+            page.wait_for_timeout(300); E.thai_scan(page, "THAI · " + nm)
+        bad = [t for t in E.THAI_SEEN if t[0].startswith("THAI") and "Watch (fixture)" in t[0]]
+        step(J, w, "CL2: no visible Thai text on Watch (Ideas · lists · Screen · detail · Homework × 4 stocks · Add stocks) with the Watch fixture", not bad, bad[:8])
     finally:
         b.close()
 
@@ -473,7 +528,7 @@ def j5b(pw, w):
         b.close()
 
 
-JOURNEYS_FN = [("J1", j1), ("J2", j2), ("J3", j3), ("J6", j6), ("J7", j7), ("J4", j4), ("J5", j5), ("J5b", j5b), ("CRAWL", j_crawl), ("BAR", j_bar), ("RRG", j_rrg)]
+JOURNEYS_FN = [("J1", j1), ("J2", j2), ("J3", j3), ("J6", j6), ("J7", j7), ("J4", j4), ("J5", j5), ("J5b", j5b), ("CRAWL", j_crawl), ("THAI", j_thai), ("BAR", j_bar), ("RRG", j_rrg)]
 
 if __name__ == "__main__":
     with sync_playwright() as pw:
