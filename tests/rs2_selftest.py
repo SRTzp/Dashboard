@@ -329,4 +329,27 @@ t('2nd daily run: tableAsOf still the weekly table date (read from tableAsOf, no
 hf2_run(base, mon, dt.datetime(2025, 11, 25, 16, 0, tzinfo=dt.timezone.utc))
 t('bar date advances → changes diff runs again and carries prevAsOf', rc.document('changes').get().to_dict()['asOf'] == '2025-11-24' and rc.document('changes').get().to_dict()['prevAsOf'] == '2025-11-21')
 t('data_as_of fallback = newest last date among downloaded series when SPY is empty', b.data_as_of([], {'A': {'close': [(fri, 1.0)]}, 'B': {'close': [(mon, 1.0)]}}) == '2025-11-24')
+
+# CP1 A · 200-day average / off-high / market doc
+cp_rows = [(dt.date(2024, 1, 1) + dt.timedelta(days=i), 100.0 + i) for i in range(260)]       # 100 … 359 (rising)
+cm = bp.ma_fields(cp_rows)
+t('CP1 ma200 = mean of the last 200 closes', abs(cm['ma200'] - sum(100.0 + i for i in range(60, 260)) / 200) < 1e-3)
+t('CP1 vsMa = close / ma200 − 1', abs(cm['vsMa'] - (359.0 / cm['ma200'] - 1)) < 1e-3)
+t('CP1 offHi = 0 at a new high', cm['offHi'] == 0.0)
+cp_dn = cp_rows[:-1] + [(cp_rows[-1][0], 323.1)]                                                # 10% under the 52-wk high (258+100=358 is the max of the window)
+t('CP1 offHi falls with the close (−10%)', abs(bp.ma_fields(cp_dn)['offHi'] - (323.1 / 358.0 - 1)) < 1e-3)
+t('CP1 < 200 bars → ma200 / vsMa / offHi omitted (never 0) · last close still there', set(bp.ma_fields(cp_rows[:150])) == {'last', 'lastDate'} and bp.ma_fields(cp_rows[:150])['last'] == 249.0)
+t('CP1 last = newest close', cm['last'] == 359.0 and cm['lastDate'] == cp_rows[-1][0].isoformat())
+c2 = bp.ma_fields(cp_rows[:230])
+t('CP1 200–251 bars → ma200 + vsMa yes, offHi omitted', 'ma200' in c2 and 'vsMa' in c2 and 'offHi' not in c2)
+t('CP1 no rows → {}', bp.ma_fields([]) == {} and bp.ma_fields(None) == {})
+t('CP1 rs_for carries the new fields', bp.rs_for('XYZ', cp_rows, None, None)['ma200'] == cm['ma200'])
+me = bp.market_entry(cp_rows)
+t('CP1 market entry {close, hi52, offHi, asOf}', me['close'] == 359.0 and me['hi52'] == 359.0 and me['offHi'] == 0.0 and me['asOf'] == cp_rows[-1][0].isoformat())
+t('CP1 market entry needs 252 bars', bp.market_entry(cp_rows[:200]) is None and bp.market_entry([]) is None)
+mk_out = {}
+def cp_fetch(syms):
+    return {'SPY': cp_rows, '^SET.BK': cp_rows[:100], 'TDEX.BK': cp_dn, 'AAA': cp_rows}
+bp.run_rs({'AAA': 'AAA'}, [], cp_fetch, lambda d, x: None, now0, write_market=lambda d, x: mk_out.update({d: x}))
+t('CP1 run_rs writes market/index: SPY + SET (short ^SET.BK → TDEX fallback)', set(mk_out['index']) == {'SPY', 'SET'} and mk_out['index']['SET']['sym'] == 'TDEX.BK' and mk_out['index']['SPY']['offHi'] == 0.0)
 print('PASS %d checks' % ok)
