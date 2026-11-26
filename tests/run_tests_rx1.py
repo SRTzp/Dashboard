@@ -127,10 +127,15 @@ def part_form(pw, w):
         page.locator("#cnTicker").fill("BBB"); page.locator("#cnEntry").fill("60"); page.locator("#cnStop").fill("55"); page.wait_for_timeout(500)
         mh = txt(page, "[data-rx-wrap=core] [data-rx-hint]") or ""
         check(f"{tag} Momentum form (Target 1): entry 60 / stop 55 → hint '3R 75 · 5R 85'", "3R 75" in mh and "5R 85" in mh, mh)
+        bx = js(page, "()=>{ const h=document.querySelector('[data-rx-wrap=core] [data-rx-hint]'), i=document.getElementById('cnTp'); const vis=!h.hidden && h.getClientRects().length>0; const w=[...h.querySelectorAll('button')].reduce((a,b)=>a+b.getBoundingClientRect().width,0)+ (h.querySelectorAll('.rx-sep').length*8); return {hintVisible:vis, ph:i.getAttribute('placeholder'), boxW:i.getBoundingClientRect().width, hintW:h.scrollWidth, clip:h.scrollWidth>h.clientWidth+1, oneLine:h.getBoundingClientRect().height<=i.getBoundingClientRect().height+1}; }")
+        check(f"{tag} Momentum Target 1: the hint REPLACES the placeholder (never both) · box wide enough (≥ hint) · one line, nothing clipped", bx["hintVisible"] and bx["ph"] == "" and bx["boxW"] >= bx["hintW"] + 10 and not bx["clip"] and bx["oneLine"], bx)
         if SH and w == 1440: png(page, "rx1-form-tp-hint-mmt")
         ok = click(page, "[data-rx-wrap=core] [data-rx-tap=\"5\"]", "tap 5R", J)[0]
         v = js(page, "()=>coreEl('cnTp').value"); mh2 = txt(page, "[data-rx-wrap=core] [data-rx-hint]") or ""
-        check(f"{tag} tap '5R 85' → Target 1 = 85, hint hidden", ok and v == "85" and mh2 == "", [v, mh2])
+        ph2 = js(page, "()=>document.getElementById('cnTp').getAttribute('placeholder')")
+        check(f"{tag} tap '5R 85' → Target 1 = 85, hint hidden, placeholder back after clearing", ok and v == "85" and mh2 == "", [v, mh2])
+        page.locator("#cnTp").fill(""); page.wait_for_timeout(250)
+        check(f"{tag} Target 1 cleared → the hint is back and the placeholder 'price' is gone again", js(page, "()=>document.getElementById('cnTp').getAttribute('placeholder')") == "" and "3R 75" in (txt(page, "[data-rx-wrap=core] [data-rx-hint]") or ""), ph2)
         check(f"{tag} no console errors / page errors", not ce and not pe, (ce + pe)[:2])
     finally:
         b.close()
@@ -199,8 +204,12 @@ def part_b(pw, w, asset="XAUUSD", sym="XAU", bias="Short"):
             check(f"{tag} log line 'TP1: … closed at … · stop → {e:,}'", any(x.startswith("TP1:") and "closed at" in x and f"stop → {e:,}" in x for x in st["log"]), st["log"])
             check(f"{tag} Runner row: green pill · '50% taken at … (+$…) · rest #… · stop {e:,} (entry · no risk) · TP2 …' · '✓ TP1 done · new Sat setup allowed' · Move stop › is back",
                   "Runner" in m and "50% taken at" in m and f"stop {e:,} (entry · no risk)" in m and f"TP2 {tp2:,.0f}" in m and "✓ TP1 done · new Sat setup allowed" in m and page.locator('[data-hf5-row="%s"] [data-hf5-btn="stop"]' % sym).count() == 1, m)
+            check(f"{tag} stop saved as 'not placed at the broker' → amber reminder '⚠ Move the stop to {e:,} at your broker · Done ›' on the Runner row", f"⚠ Move the stop to {e:,} at your broker · Done ›" in m and js(page, "(id)=>{ const i=sat7dIdea(id), t=(getBook('main').trades||[]).find(x=>x.id===i.accts.main.trade_id); return t.stopConfirmed; }", id) is not True, m)
+            if SH and w == 390: page.locator('[data-hf5-row="%s"]' % sym).screenshot(path=os.path.join(E.SHOTS, "rx1-runner-390.png"))
+            ok = click(page, '[data-hf5-row="%s"] [data-rx-done]' % sym, "Done ›", "RX1")[0]; page.wait_for_timeout(300)
+            m = mrow(page, sym)
+            check(f"{tag} Done › → reminder gone, stop flagged confirmed at the broker (stopConfirmed true), Runner row stays", ok and "at your broker" not in m and "Runner" in m and js(page, "(id)=>{ const i=sat7dIdea(id), t=(getBook('main').trades||[]).find(x=>x.id===i.accts.main.trade_id); return t.stopConfirmed; }", id) is True, m)
             check(f"{tag} Risk room is back to the start (no risk left on the runner) and the queue lets a new Sat setup in", js(page, ROOM) == room0 and js(page, "(id)=>{ const i=sat7dIdea(id); const c=pb2Calc(i,'main'); return hf5QueueOnly(c) ? 'busy' : 'free'; }", id) == "free", [room0, js(page, ROOM)])
-            if SH and w == 390: row = page.locator('[data-hf5-row="%s"]' % sym); row.screenshot(path=os.path.join(E.SHOTS, "rx1-runner-390.png"))
             goto(page, "journal", "RX1"); page.wait_for_timeout(700)
             jt = js(page, "()=>document.body.innerText.replace(/\\s+/g,' ')")
             check(f"{tag} Journal shows the partial exit (XAUUSD, R on the original stop, $)", re.search(r"XAUUSD.{0,90}?[+−-]?[\d.]+R.{0,14}\+\$[\d,]+", jt) is not None, jt[jt.find("XAUUSD"):][:200])
@@ -215,7 +224,7 @@ def part_b(pw, w, asset="XAUUSD", sym="XAU", bias="Short"):
             st = js(page, LEGS, id)
             check(f"{tag} Confirm → trade closed, Manage row gone", ok and st["open"]["status"] == "closed" and not mrow(page, sym), st)
         else:
-            check(f"{tag} stop box unticked → only the partial: stop stays {sl:,}, Runner row shows the stop and its risk", st["open"]["sl"] == sl and "Runner" in m and f"stop {sl:,}" in m and "(entry · no risk)" not in m and "new Sat setup allowed" not in m, [st, m])
+            check(f"{tag} stop box unticked → only the partial: stop stays {sl:,}, Runner row shows the stop and its risk", st["open"]["sl"] == sl and "Runner" in m and f"stop {sl:,}" in m and "(entry · no risk)" not in m and "new Sat setup allowed" not in m and "at your broker" not in m, [st, m])
         check(f"{tag} no browser dialogs (prompt / confirm / alert) · no console errors", js(page, "()=>window.__dlg.slice()") == [] and not ce and not pe, [js(page, "()=>window.__dlg.slice()"), (ce + pe)[:2]])
     finally:
         b.close()

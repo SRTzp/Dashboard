@@ -3965,7 +3965,7 @@ html body .re2-row.hf5-r .hf5-dir{font:600 13px/1 var(--sans);color:var(--text,#
 html body .re2-row.hf5-r .hf5-pill{font:600 11px/1 var(--sans);border-radius:999px;padding:3px 8px;color:#0E6B4C;background:#E6F4EE}
 html body .re2-row.hf5-r[data-hf5-noprice]{border-color:#D9921A}
 html body .re2-main .num.hf5-l{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
-.rx-wrap{position:relative;display:block;min-width:0}.rx-h{position:absolute;left:9px;right:4px;top:50%;transform:translateY(-50%);display:flex;gap:3px;align-items:center;font:500 12px Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;color:#8A919C;white-space:nowrap;pointer-events:none}.pb2-f .rx-h{font-size:12px;color:#8A919C}.rx-h[hidden]{display:none}.rx-sep{font-style:normal}.rx-h button{pointer-events:auto;appearance:none;background:none;border:0;padding:6px 0;margin:-6px 0;font:inherit;color:#5F6672;text-decoration:underline;text-underline-offset:2px;cursor:pointer;min-height:32px;white-space:nowrap}@media (max-width:600px){.rx-h,.pb2-f .rx-h{flex-direction:column;align-items:flex-start;gap:0;line-height:1.1;font-size:11.5px}.rx-sep{display:none}.rx-h button{padding:0;margin:0;min-height:0;position:relative}.rx-h button::after{content:'';position:absolute;inset:-3px -6px}}
+.rx-wrap{position:relative;display:block;min-width:0}.pc2-exit .rx-wrap input{width:176px;max-width:100%}.rx-h{position:absolute;left:9px;right:4px;top:50%;transform:translateY(-50%);display:flex;gap:3px;align-items:center;font:500 12px Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;color:#8A919C;white-space:nowrap;pointer-events:none}.pb2-f .rx-h{font-size:12px;color:#8A919C}.rx-h[hidden]{display:none}.rx-sep{font-style:normal}.rx-h button{pointer-events:auto;appearance:none;background:none;border:0;padding:6px 0;margin:-6px 0;font:inherit;color:#5F6672;text-decoration:underline;text-underline-offset:2px;cursor:pointer;min-height:32px;white-space:nowrap}@media (max-width:600px){.pb2-f .rx-h{flex-direction:column;align-items:flex-start;gap:0;line-height:1.1;font-size:11.5px}.pb2-f .rx-sep{display:none}.pb2-f .rx-h button{padding:0;margin:0;min-height:0;position:relative}.pb2-f .rx-h button::after{content:'';position:absolute;inset:-3px -6px}}
 .rx-m{font-size:12px;color:#8A919C;font-weight:400;font-variant-numeric:tabular-nums}.rx-m b{color:#5F6672;font-weight:600}.rx-m .rx-hit{color:#0E6B4C;font-weight:600}
 .hf5-up{color:#0E6B4C;font-weight:600}
 html body .re2-row.hf5-r.rx-am{border-color:#F1C982;border-left-color:#D9921A;background:#FFFBF2}html body .re2-row.hf5-r .hf5-pill.rx-pa{color:#9A5B00;background:#FFF4E0}
@@ -29505,6 +29505,8 @@ function rxHintFill(host, marks, setFn){
   if(!host) return; const inp = host.querySelector('input'), h = host.querySelector('[data-rx-hint]'); if(!inp || !h) return;
   const empty = !String(inp.value).trim(), html = empty && marks.length ? marks.map(m=>`<button type="button" tabindex="-1" data-rx-tap="${m.n}" data-rx-px="${rxNum(m.px).replace(/,/g, '')}" onclick="rxHintTap(this)">${m.n}R ${rxNum(m.px)}</button>`).join('<i class="rx-sep">·</i>') : '';
   if(h.dataset.h !== html){ h.innerHTML = html; h.dataset.h = html; } h.hidden = !html;
+  if(inp.dataset.rxPh === undefined) inp.dataset.rxPh = inp.getAttribute('placeholder') || '';
+  inp.setAttribute('placeholder', html ? '' : inp.dataset.rxPh);   /* one text only: the hint REPLACES the placeholder*/
 }
 function rxHintTap(b){
   const px = b.getAttribute('data-rx-px'), host = b.closest('[data-rx-wrap]'), inp = host && host.querySelector('input'); if(!inp) return;
@@ -29838,7 +29840,7 @@ function rxSatState(it, pv){
     if(!tp1 || !pv) return {k:'none'};
     const sh = pv.dir === 'short', px = pv.price > 0 ? pv.price : null, hit = v=>px != null && (sh ? px <= v + 1e-9 : px >= v - 1e-9);
     const x = it.ref.tp1x && +it.ref.tp1x.qty > 0 ? it.ref.tp1x : null, eff = (()=>{ try{ return satV3EffectiveTrades(it.ref).filter(e=>e.accId === lr2AcctOf(it) && e.trade.status === 'open')[0]; }catch(e){ return null; } })();
-    if(x && eff && x.tid === eff.trade.id) return {k:tp2 && hit(tp2) ? 'tp2' : 'runner', tp1, tp2, x};
+    if(x && eff && x.tid === eff.trade.id) return {k:tp2 && hit(tp2) ? 'tp2' : 'runner', tp1, tp2, x, t:eff.trade, acct:eff.accId};
     if((pv.legs || []).some(l=>l.out && l.done)) return {k:'none', tp1, tp2};   /* a partial exit already exists (taken by hand) → no reminder */
     return {k:hit(tp1) ? 'tp1' : 'none', tp1, tp2};
   }catch(e){ return {k:'none'}; }
@@ -29895,6 +29897,11 @@ function rxExit50Save(){
   try{ it.ref.tp1x = tp1x; bdWriteWithLog(it, {tp1x, updated_at:now}, 'tp1', `TP1: ${rxQ(q)} closed at ${td3Num(ex)}${mv ? ' · stop → ' + td3Num(d.entry) : ''}`); }catch(e){ console.warn('rx1 tp1 log:', e); }
   re1Cache = {}; try{ render(); }catch(e){} try{ bdRender(); bdDrawerRender(); todayRefresh(true); }catch(e){}
 }
+function rxStopDone(id){   /* 'Done ›' — the stop on the runner is now placed at the broker (same flag as the 'placed at the broker' tick in Move stop) */
+  const it = bdById(id); if(!it) return; const st = rxSatState(it, posView(it)); if(!st.t) return;
+  re1SatStopRows(it.ref).filter(x=>x.accId === st.acct).forEach(x=>re1StopMark(x.trade, +x.trade.sl, true, st.acct, it.ref.id));
+  saveBook(st.acct); re1Cache = {}; try{ render(); }catch(e){} try{ todayRefresh(true); }catch(e){}
+}
 function rxCloseRest(id){   /* TP2 reached → the existing Close sheet, prefilled with the rest + the TP2 price */
   const it = bdById(id); if(!it) return; const st = rxSatState(it, posView(it)); bdClosePos(id);
   try{ const t = cpTrade(); if(t && st.tp2 > 0){ document.getElementById('cpExitPrice').value = rxQ(st.tp2); document.getElementById('cpQty').value = t.qty; cpRefresh(); } }catch(e){}
@@ -29920,6 +29927,7 @@ function hf5SatRow(it){
   const cutOk = rk && rk.cut + 1e-9 >= RiskEngine.POLICY.sat.newSetupRiskCut;
   const rxLine = rs.k === 'tp1' ? `<div class="num hf5-l rx-l" data-rx-line="tp1"><span class="hf5-am"><span class="rx-w">⚠ TP1 ${e(td3Num(rs.tp1))} reached · exit 50% and move the stop on the rest to entry ${e(td3Num(pv.avgEntry))}</span><span class="rx-p">⚠ TP1 reached · exit 50% + stop on the rest to entry</span></span></div>`
     : rs.k === 'tp2' ? `<div class="num hf5-l rx-l" data-rx-line="tp2"><span class="hf5-am">⚠ TP2 ${e(td3Num(rs.tp2))} reached · <button type="button" class="rx-lnk" data-rx-closerest onclick="event.stopPropagation();rxCloseRest('${id}')">close the rest ›</button></span></div>`
+    : rs.k === 'runner' && rs.x.stopTo > 0 && rs.t && rs.t.stopConfirmed !== true && Math.abs(+rs.t.sl - rs.x.stopTo) < 1e-9 ? `<div class="num hf5-l rx-l" data-rx-line="brk"><span class="hf5-am">⚠ Move the stop to ${e(td3Num(rs.x.stopTo))} at your broker · <button type="button" class="rx-lnk" data-rx-done onclick="event.stopPropagation();rxStopDone('${id}')">Done ›</button></span></div><div class="num hf5-l rx-l" data-rx-line="runner"><span class="hf5-up">✓ TP1 done${cutOk ? ' · new Sat setup allowed' : ''}</span></div>`
     : rs.k === 'runner' ? `<div class="num hf5-l rx-l" data-rx-line="runner"><span class="hf5-up">✓ TP1 done${cutOk ? ' · new Sat setup allowed' : ''}</span></div>` : '';
   const ok = rs.k === 'none' && !has && rk && rk.cut + 1e-9 >= RiskEngine.POLICY.sat.newSetupRiskCut ? `<div class="num hf5-l" data-hf5-ok><span class="hf5-up">✓ risk cut ≥ ${Math.round(RiskEngine.POLICY.sat.newSetupRiskCut * 100)}% · new Sat setup allowed</span></div>` : '';
   const pill = rs.k === 'tp1' ? `<span class="hf5-pill rx-pa" data-rx-pill="tp1">TP1 reached</span>` : rs.k === 'tp2' ? `<span class="hf5-pill rx-pa" data-rx-pill="tp2">TP2 reached</span>` : rs.k === 'runner' ? `<span class="hf5-pill" data-rx-pill="runner">Runner</span>` : `<span class="hf5-pill">Holding</span>`;
