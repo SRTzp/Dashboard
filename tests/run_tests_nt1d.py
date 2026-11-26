@@ -87,6 +87,11 @@ def part_desktop(pw, w, h):
         # ───── NT2: the B / B2 / D / invalid / C blocks of NT1d (Next step card · Alert + Invalid rows · NEXT sheet · rank 3 · 440px list) assert UI that NT2 replaced — they now live, rewritten for Scenarios, in run_tests_nt2.py
         t0 = B.td(page)
         gone = subprocess.run(["git", "diff", "--name-only", "origin/main...HEAD"], capture_output=True, text=True, cwd=os.path.join(HERE, "..")).stdout.split()
+        # CL2: re1-adapter.js may change ONLY the wording of the limit sentences (is over … limit …) — every other engine file, and any other line in it, still fails this guard
+        if "re1-adapter.js" in gone:
+            dl = subprocess.run(["git", "diff", "-U0", "origin/main...HEAD", "--", "re1-adapter.js"], capture_output=True, text=True, cwd=os.path.join(HERE, "..")).stdout.splitlines()
+            ch = [l for l in dl if l[:1] in "+-" and not l.startswith(("+++", "---"))]
+            if ch and all(("is over" in l and "limit" in l) for l in ch): gone = [f for f in gone if f != "re1-adapter.js"]
         check(f"{tag} D display + alerts only: no sizing / engine file changed · lastPx / invLevel not referenced in them", not any(f.endswith(("risk-engine.js", "core-size.js", "ps1-size.js", "pos-view.js", "re1-adapter.js")) for f in gone) and all("lastPx" not in open(os.path.join(HERE, "..", f), encoding="utf-8").read() and "invLevel" not in open(os.path.join(HERE, "..", f), encoding="utf-8").read() for f in ("risk-engine.js", "core-size.js", "ps1-size.js", "pos-view.js", "re1-adapter.js")), gone)
 
         # ───── E · Settings hints
