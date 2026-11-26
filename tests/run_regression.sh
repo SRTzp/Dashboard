@@ -26,6 +26,7 @@ FAST=(
   "node risk_engine|node tests/risk_engine_test.js"
   "node re1_adapter|node tests/re1_adapter_test.js"
   "node re1c_live|node tests/re1c_live_test.js"
+  "node cp1_engine (market state + Compounder size rule)|node tests/cp1_engine_test.js"
   "node core_size|node tests/core_size_test.js"
   "node pc2_engine (PC2 selftest)|node tests/pc2_engine_test.js"
   "node ps1_size|node tests/ps1_size_test.js"

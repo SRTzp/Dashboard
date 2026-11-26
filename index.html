@@ -7350,6 +7350,12 @@ html body .pc2-none .pc2-np{display:none}
   };
   /* RK1 — risk per idea (Settings). One set for both accounts. New plans only: saved plans / holdings keep their stored risk and qty.
      weekly = 4 x per-idea · monthly = 4 x weekly (so the money check and the 4-loss count stop at the same point). Sat: every step = the fixed value (the step machine + lock after the 4th loss stay). */
+  /* CP1 — Compounder buys when the market rests. ONE place for both constants.
+     MARKET_PULLBACK_PCT: SPY (US stocks) or SET (Thai stocks) this far below its 52-week high = a pullback (an opportunity, not a reason to fear).
+     COMP_REGIME_FACTOR: Compounder-only size modifier from the two regime signals (green = both green · oneRed · bothRed · fallback = stale / unknown data, never 100 %).
+     CP1: Momentum and Sat keep POLICY.regime (100 / 80 / 60). */
+  var MARKET_PULLBACK_PCT = 7;
+  var COMP_REGIME_FACTOR = { green: 1.00, oneRed: 1.00, bothRed: 0.75, fallback: 0.75 };
   var RISK_DEFAULTS = { compTotal: 1.00, compFirst: 0.50, mom: 0.40, sat: 0.20 };
   var RISK_BOUNDS = { compTotal: [0.50, 1.50], mom: [0.20, 0.60], sat: [0.10, 0.40] };
   function r6(x) { return Math.round(x * 1e6) / 1e6; }
@@ -7880,7 +7886,9 @@ html body .pc2-none .pc2-np{display:none}
     var factor = (known && dateFresh) ? base : Math.min(base, T.fallback);
     var reds = (eq === 'red' ? 1 : 0) + (cr === 'red' ? 1 : 0), missing = (known ? 0 : (eq === 'green' || eq === 'red' ? 0 : 1) + (cr === 'green' || cr === 'red' ? 0 : 1));
     var fallback = !known || !dateFresh;
-    return { reasons: [], factor: factor, modifier: factor, base: base, equity: eq, credit: cr, reds: reds, missing: missing, known: known, fresh: !!fresh, ageDays: age, asOf: typeof s.asOf === 'string' ? s.asOf.slice(0, 10) : null,
+    var cT = COMP_REGIME_FACTOR, cBase = known ? (reds === 0 ? cT.green : reds === 1 ? cT.oneRed : cT.bothRed) : cT.fallback;
+    var compF = (known && dateFresh) ? cBase : Math.min(cBase, cT.fallback);   /* CP1 — Compounder's own modifier (Momentum keeps `factor`) */
+    return { reasons: [], factor: factor, compFactor: compF, modifier: factor, base: base, equity: eq, credit: cr, reds: reds, missing: missing, known: known, fresh: !!fresh, ageDays: age, asOf: typeof s.asOf === 'string' ? s.asOf.slice(0, 10) : null,
       bothGreen: eq === 'green' && cr === 'green', dateFresh: dateFresh, stale: !fresh, fallback: fallback, flags: fallback ? ['COMP_REGIME_STALE'] : [] };
   }
   /* The one reader of fundflow.json: ratios.ACWI_BIL / HYG_IEI {state, inputs_asof:{..}} -> signals -> regimeState. demo / missing file -> both unavailable. */
@@ -7913,7 +7921,17 @@ html body .pc2-none .pc2-np{display:none}
     if (r.fallback) return { head: 'Modifier unavailable · fallback cap ' + pc + '%', short: pc + '% fallback', reason: !r.known ? 'a signal is missing' : 'data is stale' };
     return { head: pc + '% of normal', short: pc + '%', reason: 'equity ' + r.equity + ', credit ' + r.credit };
   }
-  function compFactor(regime, emergencyF) { return Math.min(regime.factor, num(emergencyF) ? emergencyF : 1); }   /* min(Regime, Emergency), never multiplied */
+  function compFactor(regime, emergencyF) { return Math.min(num(regime.compFactor) ? regime.compFactor : regime.factor, num(emergencyF) ? emergencyF : 1); }   /* CP1 — Compounder: min(Compounder regime modifier, Emergency), never multiplied */
+  function momFactor(regime, emergencyF) { return Math.min(regime.factor, num(emergencyF) ? emergencyF : 1); }   /* Momentum (RM1): min(Regime 100/80/60, Emergency) — unchanged by CP1 */
+  /* CP1 — market state. m = {spy: offHi, set: offHi} (fractions, −0.09 = 9 % below the 52-week high; null / missing = unknown) · reds = how many regime signals are red (0..2).
+     Pullback = the stock's index >= MARKET_PULLBACK_PCT below its high, OR exactly one regime signal red. US stocks use SPY, Thai stocks use SET. */
+  function pullback(m, reds) { /* CP1 */
+    var pct = function (v) { return num(v) ? Math.round(-v * 10000) / 100 : null; }; /* CP1 */
+    var spy = pct(m && m.spy), set = pct(m && m.set), one = reds === 1, thr = MARKET_PULLBACK_PCT; /* CP1 */
+    var us = (spy !== null && spy >= thr) || one, th = (set !== null && set >= thr) || one; /* CP1 */
+    return { on: us || th, US: us, TH: th, spyPct: spy, setPct: set, oneRed: one, reds: reds, threshold: thr }; /* CP1 */
+  } /* CP1 */
+
   /* heat = current open principal risk of live Compounder ideas (same idea-level calculation), cap 6 % */
   function compHeat(ideas, account, costsFor, equity, currentEquity) {
     var live = ideasOf(ideas, account, 'ladder').filter(function (i) { return i.status === 'holding'; }), money = 0, unknown = [];
@@ -8061,7 +8079,7 @@ html body .pc2-none .pc2-np{display:none}
     momentumState: momentumState, momentumCheck: momentumCheck,
     satCondition: satCondition, satEntryOrder: satEntryOrder, satStepState: satStepState, satEffectiveRpt: satEffectiveRpt, satQueueCheck: satQueueCheck, satRiskCutPct: satRiskCutPct, satRiskNow: satRiskNow,
     satStaleOrders: satStaleOrders, satDailyCheck: satDailyCheck, satBudgetCheck: satBudgetCheck, satCheck: satCheck,
-    regimeState: regimeState, regimeModifier: regimeModifier, regimeFromFundflow: regimeFromFundflow, regimeText: regimeText, smaLabel: smaLabel, fundflowSignals: fundflowSignals, asOfMs: asOfMs, compLegacyShape: compLegacyShape, sizeAttempt: sizeAttempt, compFactor: compFactor, compHeat: compHeat, compStreak: compStreak, compUnlockCheck: compUnlockCheck, compEntryCheck: compEntryCheck, compCheck: compCheck,
+    regimeState: regimeState, regimeModifier: regimeModifier, regimeFromFundflow: regimeFromFundflow, regimeText: regimeText, smaLabel: smaLabel, fundflowSignals: fundflowSignals, asOfMs: asOfMs, compLegacyShape: compLegacyShape, sizeAttempt: sizeAttempt, compFactor: compFactor, momFactor: momFactor, pullback: pullback, MARKET_PULLBACK_PCT: MARKET_PULLBACK_PCT, COMP_REGIME_FACTOR: COMP_REGIME_FACTOR, compHeat: compHeat, compStreak: compStreak, compUnlockCheck: compUnlockCheck, compEntryCheck: compEntryCheck, compCheck: compCheck,
     activeSummary: activeSummary, actionPolicy: actionPolicy, asFill: asFill, foldEvents: foldEvents
   };
 });
@@ -8279,14 +8297,14 @@ html body .pc2-none .pc2-np{display:none}
     if (i.strategy === 'winner') {
       factors.push('BASE_' + R.POLICY.mom.rptPct);
       if (hw === undefined) notes.push('homework state unknown — shown at 100%'); else if (hw === false) { frac = R.POLICY.hwFactor.mom; notes.push('homework not done → ' + Math.round(frac * 100) + '%'); factors.push('HOMEWORK_' + Math.round(frac * 100)); }
-      if (ctx.regime) { factor = R.compFactor(ctx.regime, ctx.emergencyFactor); var mp = Math.round(factor * 100); if (mp < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < ctx.regime.factor ? 'EMERGENCY_' : 'REGIME_') + mp); }   /* RM1: Momentum also takes min(Regime, Emergency) */
+      if (ctx.regime) { factor = R.momFactor(ctx.regime, ctx.emergencyFactor); var mp = Math.round(factor * 100); if (mp < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < ctx.regime.factor ? 'EMERGENCY_' : 'REGIME_') + mp); }   /* RM1: Momentum also takes min(Regime, Emergency) */
       else if (ctx.emergencyFactor && ctx.emergencyFactor < 1) { factor *= ctx.emergencyFactor; factors.push('EMERGENCY_50'); }
     } else if (i.strategy === 'ladder') {
       /* Compounder: the Pilot (0.50% of the 1% plan) IS the 50% homework phase — the homework cap is a phase cap, never a second multiplier (RE-C1 §0).
          Regime factor applies to NEW entries: min(Regime, Emergency). Starter ¼ (Training ON) = half of the Pilot. */
       factors.push('PILOT_' + R.POLICY.comp.pilotPct);
       if (hw === false) notes.push('thesis not done → Pilot only (no further cut)');
-      if (ctx.regime) { factor = R.compFactor(ctx.regime, ctx.emergencyFactor); var pc = Math.round(factor * 100); if (pc < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < ctx.regime.factor ? 'EMERGENCY_' : 'REGIME_') + pc); if (ctx.regime.stale) factors.push('REGIME_STALE'); }
+      if (ctx.regime) { factor = R.compFactor(ctx.regime, ctx.emergencyFactor); var pc = Math.round(factor * 100); if (pc < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < R.compFactor(ctx.regime, 1) ? 'EMERGENCY_' : 'REGIME_') + pc); if (ctx.regime.stale) factors.push('REGIME_STALE'); }
       if (ctx.starterOn === true) { frac = R.POLICY.comp.starter * 2; factors.push('STARTER_25'); }
     }
     var rpts = base !== null ? [base] : [R.POLICY.sat.stepRpt[ctx.satStepIndex], R.POLICY.sat.stepRpt[ctx.satStepIndex] * R.POLICY.sat.condReduced];
@@ -8702,7 +8720,7 @@ html body .pc2-none .pc2-np{display:none}
     var m = baseModel(L, 'winner'); m.chip = L.emergency.active ? { t: 'Emergency 50%', c: 'r' } : null;   /* the 'Homework not done' state is shown once, by the WL1 cap box under the result */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
     var fr = R.entryFraction({ homeworkDone: f.homeworkDone === true || f.topUp === true, starterOn: f.starterOn === true, isFirstEntry: f.isFirstEntry !== false, usedFraction: f.usedFraction || 0 });   /* PC2 2f: a top-up is sized against the FULL budget */
-    var base = RP.mom.rptPct, rg = L.regime, ef = R.compFactor(rg, L.eF), emOnly = L.eF < rg.factor, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];   /* RM1: effective modifier = min(regime, emergency), applied once to the base budget */
+    var base = RP.mom.rptPct, rg = L.regime, ef = R.momFactor(rg, L.eF), emOnly = L.eF < rg.factor, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];   /* RM1: effective modifier = min(regime, emergency), applied once to the base budget */
     var parts = [f2(base, 2) + '%'], eff = base * ef * fr.fraction;
     if (f.homeworkDone !== true) { var hwp = Math.round(RP.hwFactor.mom * 100); parts.push('homework ' + hwp + '%'); m.factors.push('HOMEWORK_' + hwp); }
     if (f.starterOn === true && f.isFirstEntry !== false) { parts.push('starter 25%'); m.factors.push('STARTER_25'); }
@@ -8789,7 +8807,7 @@ html body .pc2-none .pc2-np{display:none}
     var m = baseModel(L, 'ladder'), kind = f.kind || 'pilot'; m.kind = kind;
     m.chip = null;   /* RM1: the modifier is shown once, in the size line ("limited by regime 50%") and the Flow line — no second chip */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
-    var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true, emOnly = L.eF < rg.factor;
+    var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true, emOnly = L.eF < R.compFactor(rg, 1);
     /* PC2 — new path (f.riskPct given): 'plan' = first build (rows in the plan before the first fill; no thesis) · 'addon' = rows added after it (thesis + total-risk rule). Budget = the plan's risk % (default Settings Compounder total) x homework factor (Compounder 100 %) x regime. */
     var np = f.riskPct > 0, planPct = np ? f.riskPct : RP.comp.totalCapPct, isPlan = kind === 'plan';
     var multi = !!(f.levels && f.levels.length > 1), planCap = (thesis || isPlan) ? planPct : RP.comp.pilotPct;   /* RM1: whole-plan budget = Settings total (RK1 default 1.00 %) with thesis */
