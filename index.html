@@ -9623,6 +9623,7 @@ function wlStart(){
               my_notes:wlNormNotes(x.my_notes),   /* WL1 */
               movedAt:typeof x.movedAt === 'string' ? x.movedAt : '',   /* MV1 A — when it last moved between Momentum and Compounder */
               focus:x.focus === true,   /* UX3 F — Focus star on a Watching row */
+              buyZone:(x.buyZone && typeof x.buyZone === 'object' && +x.buyZone.lo > 0 && +x.buyZone.hi >= +x.buyZone.lo) ? {lo:+x.buyZone.lo, hi:+x.buyZone.hi} : null,   /* CP1 — Compounder buy zone {lo, hi} (Homework page) */
               src:(x.src && typeof x.src==='object' && !Array.isArray(x.src)) ? x.src : null,   /* RS2a — {from:'screen', preset, r12, r3, r1, at} written by + Watch on the Screen tab · read by the next Homework job */
               exch:(typeof x.exch==='string' ? x.exch.trim().toUpperCase() : ''), hw:(x.hw && typeof x.hw==='object' && !Array.isArray(x.hw)) ? x.hw : {},   /* WL1 (2026-11) — exchange + homework record {trigger, doneAt, confirmedAt} */
               thesis:(x.thesis && typeof x.thesis==='object' && !Array.isArray(x.thesis)) ? x.thesis : null,   /* WL2 · living-thesis@1 (ไม่มี log) · ≠ tier_inputs ของ WT1 */
@@ -31786,12 +31787,14 @@ function wl5RowHtml(r){
   const it = r && r.item; if(!it) return '';
   const e = escHtml, st = wl5Status(it), hw = wl5HwInfo(it), ex = wl1Exch(it), act = wl5Act(it), nx = wl5NextOf(it), s = wl5Sec(it);
   let phone = hw.done ? [s ? s.name : '', hw.short].filter(Boolean).join(' · ') : hw.short;
+  if(wl1TrkOf(it) === 'ladder'){ try{ phone = [phone, cp1WatchPhone(it)].filter(Boolean).join(' · '); }catch(x){} }   /* CP1 — line 2 adds "vs 40-wk −1% · in zone" */
   const watch = wl1GrpOf(it) === 'watch', mom = wl1TrkOf(it) === 'winner', cl = ux3ClOn() && watch, sel = cl && ux3Cl.sel[it.ticker] === true;
   const ll = mom && watch && wlLeftLeaders(it);   /* UX3 G — Momentum only: failed the Screen › Leaders rule */
   const tk = `<button type="button" class="wl-tk${sel ? ' on' : ''}" role="checkbox" aria-checked="${sel}" data-wl-tk aria-label="Select ${e(wl1Bare(it.ticker))}" onclick="event.stopPropagation();ux3ClTog(this.closest('[data-sym]').dataset.sym)"></button>`;
-  return `<div class="wlR wl1-row lr5r${wlSel === r.sym ? ' on' : ''}${cl ? ' cl' : ''}${sel ? ' sel' : ''}" data-sym="${e(r.sym)}" data-wl1-row data-wl1-status="${st.k}" data-wl1-key="${e(wl1KeyOf(it))}" data-lr5-row onclick="${cl ? 'ux3ClTog(this.dataset.sym)' : 'wlOpen(this.dataset.sym)'}">
+  const cpc = wl1TrkOf(it) === 'ladder';   /* CP1 — Compounder list: vs 40-wk + Buy zone */
+  return `<div class="wlR wl1-row lr5r${wlSel === r.sym ? ' on' : ''}${cl ? ' cl' : ''}${sel ? ' sel' : ''}${cpc ? ' cp1c' : ''}" data-sym="${e(r.sym)}" data-wl1-row data-wl1-status="${st.k}" data-wl1-key="${e(wl1KeyOf(it))}" data-lr5-row onclick="${cl ? 'ux3ClTog(this.dataset.sym)' : 'wlOpen(this.dataset.sym)'}">
     <div class="lr5-id"><span class="c-stock"><b class="wlRn">${e(wl1Bare(r.sym))}</b>${ex ? '' : wl1ExSelHtml(it)}</span><span class="c-st"><span class="l1"><span class="st ${st.cls} wl1-st" data-wl1-chip title="${e(st.tip)}">${e(st.label)}</span>${st.k === 'none' && !cl ? wl5FocusBtn(it) : ''}</span>${ll ? '<span class="lr5-ll" data-wl-ll title="Below the Screen › Leaders rule (RS or distance from the high)">left Leaders</span>' : ''}</span></div>
-    <span class="c-sec">${wl5SecCell(it)}</span><span class="c-rs">${wl5RsCell(it)}</span>
+    <span class="c-sec">${wl5SecCell(it)}</span><span class="c-rs">${wl5RsCell(it)}</span>${cpc ? cp1WatchCells(it) : ''}
     <span class="c-hw wl1-hwt hw${hw.done ? ' ok' : ' no'}" data-wl1-hwt title="${e(hw.txt)}">${e(hw.txt)}</span>
     <span class="c-nx num" data-lr5-next>${nx ? e(wl1ArchDate(nx)) : '—'}</span>
     ${cl ? tk : `<button type="button" class="btn lr5-act${act.pri ? ' pri' : ''}" data-wl1-act data-lr5-act onclick="event.stopPropagation();${act.fn}">${act.t}</button>`}
@@ -31892,7 +31895,7 @@ function ux3Toast(msg, undo, ms){
   const b = el.querySelector('[data-ux3-undo]'); if(b) b.onclick = ()=>{ clearTimeout(ux3ToastT); el.remove(); try{ undo(); }catch(e){ console.warn(e); } };
   ux3ToastT = setTimeout(()=>el.remove(), ms || 8000);
 }
-function wl5TableHead(){ return `<div class="lr5r lr5-th wl5-th" aria-hidden="true"><span class="lbl">Stock</span><span class="lbl">Status</span><span class="lbl">Sector vs SPY</span><span class="lbl">RS · from high</span><span class="lbl">Thesis · homework</span><span class="lbl">Next check</span><span></span><span></span></div>`; }
+function wl5TableHead(){ const cp = wl1Trk === 'ladder'; return `<div class="lr5r lr5-th wl5-th${cp ? ' cp1c' : ''}" aria-hidden="true"><span class="lbl">Stock</span><span class="lbl">Status</span><span class="lbl">Sector vs SPY</span><span class="lbl">RS · from high</span>${cp ? '<span class="lbl">vs 40-wk</span><span class="lbl">Buy zone</span>' : ''}<span class="lbl">Thesis · homework</span><span class="lbl">Next check</span><span></span><span></span></div>`; }
 function wl5Apply(rows){
   const q = String(wl5Q || '').trim().toUpperCase().replace(/\.BK$/, '');
   let L = rows.map((r, i)=>({r, i}));
@@ -34450,7 +34453,7 @@ function hw1MineHtml(it){
   const line = [hw2Hold(it), ladder ? hw2NextTxt(it) : ''].filter(Boolean).map(e).join(' · ') + ` · <span class="${done ? 'ok' : 'amb'}" data-hw2-size>${e(hw2SizeTxt(it, done))}</span>`;
   return `<div class="hw1-mine" data-hw1-mine data-hw2-type="${hw2Type(it)}" data-wl-mt="${e(t)}" data-wl-mt-mode="edit"><div class="hw1-mh"><span class="lbl">Your thesis</span><span class="wlMtDraft" data-wl-mt-draft ${dirty ? '' : 'hidden'}>Unsaved draft · <button type="button" class="hw1-lnk" data-wl-mt-ddisc onclick="wlMtDiscard('${e(t)}')">Discard</button></span></div>
     <div class="hw2-line" data-hw2-line>${line}</div>
-    <div class="hw1-mscroll">${main}<div class="hw1-mut" data-hw1-plan-note>Price rules (stop, exit) live in the Plan card, not here.</div>${opt}</div>
+    <div class="hw1-mscroll">${main}${cp1ZoneHtml(it)}<div class="hw1-mut" data-hw1-plan-note>Price rules (stop, exit) live in the Plan card, not here.</div>${opt}</div>
     <div class="hw1-mfoot"><div class="hw1-btns"><button type="button" class="btn" data-hw1-draft data-wl-mt-save onclick="hw1Save('${e(t)}',false)">Save draft</button><button type="button" class="btn pri" data-hw1-done data-wl1-confirm ${p.miss.length ? 'disabled' : ''} onclick="hw1Done('${e(t)}')"><span class="lg">Save · mark done</span><span class="sm">Mark done</span></button><button type="button" class="hw1-lnk hw1-copy" data-hw1-copy onclick="hw1Copy('${e(t)}')">Copy for AI challenge ›</button><button type="button" class="hw1-lnk hw2-edit" data-hw2-editchips onclick="hw2EditOpen('${hw2Type(it)}')">Edit chips</button></div>
     <div class="hw1-mut" data-wl-mt-msg role="status">${e(msg)}</div>${size}</div></div>`;
 }
