@@ -210,14 +210,14 @@
     if (i.strategy === 'winner') {
       factors.push('BASE_' + R.POLICY.mom.rptPct);
       if (hw === undefined) notes.push('homework state unknown — shown at 100%'); else if (hw === false) { frac = R.POLICY.hwFactor.mom; notes.push('homework not done → ' + Math.round(frac * 100) + '%'); factors.push('HOMEWORK_' + Math.round(frac * 100)); }
-      if (ctx.regime) { factor = R.compFactor(ctx.regime, ctx.emergencyFactor); var mp = Math.round(factor * 100); if (mp < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < ctx.regime.factor ? 'EMERGENCY_' : 'REGIME_') + mp); }   /* RM1: Momentum also takes min(Regime, Emergency) */
+      if (ctx.regime) { factor = R.momFactor(ctx.regime, ctx.emergencyFactor); var mp = Math.round(factor * 100); if (mp < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < ctx.regime.factor ? 'EMERGENCY_' : 'REGIME_') + mp); }   /* RM1: Momentum also takes min(Regime, Emergency) */
       else if (ctx.emergencyFactor && ctx.emergencyFactor < 1) { factor *= ctx.emergencyFactor; factors.push('EMERGENCY_50'); }
     } else if (i.strategy === 'ladder') {
       /* Compounder: the Pilot (0.50% of the 1% plan) IS the 50% homework phase — the homework cap is a phase cap, never a second multiplier (RE-C1 §0).
          Regime factor applies to NEW entries: min(Regime, Emergency). Starter ¼ (Training ON) = half of the Pilot. */
       factors.push('PILOT_' + R.POLICY.comp.pilotPct);
       if (hw === false) notes.push('thesis not done → Pilot only (no further cut)');
-      if (ctx.regime) { factor = R.compFactor(ctx.regime, ctx.emergencyFactor); var pc = Math.round(factor * 100); if (pc < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < ctx.regime.factor ? 'EMERGENCY_' : 'REGIME_') + pc); if (ctx.regime.stale) factors.push('REGIME_STALE'); }
+      if (ctx.regime) { factor = R.compFactor(ctx.regime, ctx.emergencyFactor); var pc = Math.round(factor * 100); if (pc < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < R.compFactor(ctx.regime, 1) ? 'EMERGENCY_' : 'REGIME_') + pc); if (ctx.regime.stale) factors.push('REGIME_STALE'); }
       if (ctx.starterOn === true) { frac = R.POLICY.comp.starter * 2; factors.push('STARTER_25'); }
     }
     var rpts = base !== null ? [base] : [R.POLICY.sat.stepRpt[ctx.satStepIndex], R.POLICY.sat.stepRpt[ctx.satStepIndex] * R.POLICY.sat.condReduced];
@@ -633,7 +633,7 @@
     var m = baseModel(L, 'winner'); m.chip = L.emergency.active ? { t: 'Emergency 50%', c: 'r' } : null;   /* the 'Homework not done' state is shown once, by the WL1 cap box under the result */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
     var fr = R.entryFraction({ homeworkDone: f.homeworkDone === true || f.topUp === true, starterOn: f.starterOn === true, isFirstEntry: f.isFirstEntry !== false, usedFraction: f.usedFraction || 0 });   /* PC2 2f: a top-up is sized against the FULL budget */
-    var base = RP.mom.rptPct, rg = L.regime, ef = R.compFactor(rg, L.eF), emOnly = L.eF < rg.factor, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];   /* RM1: effective modifier = min(regime, emergency), applied once to the base budget */
+    var base = RP.mom.rptPct, rg = L.regime, ef = R.momFactor(rg, L.eF), emOnly = L.eF < rg.factor, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];   /* RM1: effective modifier = min(regime, emergency), applied once to the base budget */
     var parts = [f2(base, 2) + '%'], eff = base * ef * fr.fraction;
     if (f.homeworkDone !== true) { var hwp = Math.round(RP.hwFactor.mom * 100); parts.push('homework ' + hwp + '%'); m.factors.push('HOMEWORK_' + hwp); }
     if (f.starterOn === true && f.isFirstEntry !== false) { parts.push('starter 25%'); m.factors.push('STARTER_25'); }
@@ -720,7 +720,7 @@
     var m = baseModel(L, 'ladder'), kind = f.kind || 'pilot'; m.kind = kind;
     m.chip = null;   /* RM1: the modifier is shown once, in the size line ("limited by regime 50%") and the Flow line — no second chip */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
-    var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true, emOnly = L.eF < rg.factor;
+    var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true, emOnly = L.eF < R.compFactor(rg, 1);
     /* PC2 — new path (f.riskPct given): 'plan' = first build (rows in the plan before the first fill; no thesis) · 'addon' = rows added after it (thesis + total-risk rule). Budget = the plan's risk % (default Settings Compounder total) x homework factor (Compounder 100 %) x regime. */
     var np = f.riskPct > 0, planPct = np ? f.riskPct : RP.comp.totalCapPct, isPlan = kind === 'plan';
     var multi = !!(f.levels && f.levels.length > 1), planCap = (thesis || isPlan) ? planPct : RP.comp.pilotPct;   /* RM1: whole-plan budget = Settings total (RK1 default 1.00 %) with thesis */

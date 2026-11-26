@@ -21,27 +21,27 @@ function src(over) {
 const spec = { mult: 1, fx: 35, lotStep: 1, minLot: 1 };
 const NVDA = (qty, stop) => { const s = src(); s.books.main.trades = [tr({ id: 'n1', sym: 'NVDA', qty: qty, entry: 100, sl: stop, posGroup: 'n1', sl0: stop })]; s.cards = [{ id: 'cN', acct: 'main', ticker: 'NVDA', market: 'US', strategy: 'L', status: 'open', trade_id: 'n1', lots: [{ n: 1, px: 100, qty: qty }] }]; return s; };
 const sNo = JSON.stringify;
-// fixture: regime factor 0.8 (one red)
+// fixture: one regime signal red → Momentum 80%, Compounder 100% (CP1)
 {
   const s = NVDA(10, 95), before = sNo(s), L = A.live(s, 'main'), id = L.ideas[0].id;
   // §1 planned row after the first fill: no ADDON_THESIS, sized by plan % × homework (comp 100%) × regime
   const p = A.sizeComp(L, Object.assign({ kind: 'plan', ideaId: id, thesisDone: false, riskPct: 1.0, side: 'long', entry: 90, stop: 85 }, spec));
   ok('planned ② after ① fill, homework NOT done → no ADDON_THESIS', p.reasons.indexOf('ADDON_THESIS') < 0 && !p.blocked, p.reasons);
-  ok('planned ② budget = plan 1.00% × homework 100% × regime 80% = 0.80%', near(p.budget.capPct, 0.8) && /^1% × homework 100% × risk-off 80%$/.test(p.budget.text), p.budget);
-  ok('planned ② fits: total = ①'+" at stop + ②"+' ≤ 0.80% (qty cut by room)', p.fit.totalPct <= 0.8 + 1e-9 && p.qty > 0, p.fit);
+  ok('planned ② budget = plan 1.00% × homework 100% × regime 100% (CP1: one red = full) = 1.00%', near(p.budget.capPct, 1.0) && /^1% × homework 100% × risk-on 100%$/.test(p.budget.text), p.budget);
+  ok('planned ② fits: total = ①'+" at stop + ②"+' ≤ 1.00% (qty cut by room)', p.fit.totalPct <= 1.0 + 1e-9 && p.qty > 0, p.fit);
   // row added after the fill = add-on → thesis required as before
   const a = A.sizeComp(L, Object.assign({ kind: 'addon', ideaId: id, thesisDone: false, riskPct: 1.0, side: 'long', entry: 110, stop: 104 }, spec));
   ok('row added after the fill (add-on) → ADDON_THESIS', a.reasons.indexOf('ADDON_THESIS') >= 0 && a.blocked, a.reasons);
   const a2 = A.sizeComp(L, Object.assign({ kind: 'addon', ideaId: id, thesisDone: true, riskPct: 1.0, side: 'long', entry: 110, stop: 104 }, spec));
-  ok('add-on with homework done and stop at 95 (risk of ① 0.07%): fits the plan budget', !a2.blocked && a2.qty > 0 && a2.fit.totalPct <= 0.8 + 1e-9, [a2.reasons, a2.fit]);
+  ok('add-on with homework done and stop at 95 (risk of ① 0.07%): fits the plan budget', !a2.blocked && a2.qty > 0 && a2.fit.totalPct <= 1.0 + 1e-9, [a2.reasons, a2.fit]);
   ok('engine run does not touch saved data', sNo(s) === before);
   // over-limit text with numbers
   const big = NVDA(70, 90), LB = A.live(big, 'main'), ib = LB.ideas[0].id;
   const pb = A.sizeComp(LB, Object.assign({ kind: 'plan', ideaId: ib, riskPct: 1.0, side: 'long', entry: 90, stop: 80, thesisDone: false }, spec));
-  ok('held ① already 0.49% + row at stop 80 → qty cut to what fits, limited by total risk 0.8%', pb.limit && pb.limit.code === 'total_risk' && /0\.8/.test(pb.limit.text), [pb.limit, pb.qty]);
+  ok('held ① already 0.49% + row at stop 80 → qty cut to what fits, limited by total risk 1%', pb.limit && pb.limit.code === 'total_risk' && /risk 1%/.test(pb.limit.text), [pb.limit, pb.qty]);
   const huge = NVDA(100, 80), LH = A.live(huge, 'main'), ih = LH.ideas[0].id;
   const ph = A.sizeComp(LH, Object.assign({ kind: 'plan', ideaId: ih, riskPct: 1.0, side: 'long', entry: 90, stop: 80, thesisDone: false }, spec));
-  ok('①alone over the limit → block text with numbers', ph.reasons.indexOf('PLAN_TOTAL_RISK') >= 0 && /^Risk \d+(\.\d+)?% is over the limit for this plan 0\.8% \(1% × homework 100% × risk-off 80%\)$/.test(ph.reasonTexts[0]), [ph.reasons, ph.reasonTexts]);
+  ok('①alone over the limit → block text with numbers', ph.reasons.indexOf('PLAN_TOTAL_RISK') >= 0 && /^Risk \d+(\.\d+)?% is over the limit for this plan 1% \(1% × homework 100% × risk-on 100%\)$/.test(ph.reasonTexts[0]), [ph.reasons, ph.reasonTexts]);
   // add-on risk rule: stop must come up first
   const ad = A.sizeComp(LH, Object.assign({ kind: 'addon', ideaId: ih, thesisDone: true, riskPct: 1.0, side: 'long', entry: 110, stop: 104 }, spec));
   ok('add-on blocked while total risk with the new row is over budget (named numbers)', ad.reasons.indexOf('ADDON_TOTAL_RISK') >= 0 && /^Risk \d+(\.\d+)?% is over the [\d.]+% limit for this stock \(all lots at their current stop\)$/.test(ad.reasonTexts.join()), [ad.reasons, ad.reasonTexts]);
@@ -54,7 +54,7 @@ const sNo = JSON.stringify;
   const vc = A.sizeComp(L, Object.assign({ kind: 'plan', riskPct: 2.0, side: 'long', entry: 100, stop: 99.5, thesisDone: true }, spec));
   ok('value cap 12.5% still limits a tight stop', vc.limit && vc.limit.code === 'value_cap', vc.limit);
   const old = A.sizeComp(L, Object.assign({ kind: 'pilot', side: 'long', entry: 100, stop: 95 }, spec));
-  ok('legacy pilot kind unchanged (0.50% × regime)', near(old.effPct, 0.4));
+  ok('legacy pilot kind unchanged (0.50% × regime; one red = 100% for Compounder, CP1)', near(old.effPct, 0.5));
 }
 // 2e Momentum
 {

@@ -92,6 +92,14 @@ def part_desktop(pw, w, h):
             dl = subprocess.run(["git", "diff", "-U0", "origin/main...HEAD", "--", "re1-adapter.js"], capture_output=True, text=True, cwd=os.path.join(HERE, "..")).stdout.splitlines()
             ch = [l for l in dl if l[:1] in "+-" and not l.startswith(("+++", "---"))]
             if ch and all(("is over" in l and "limit" in l) for l in ch): gone = [f for f in gone if f != "re1-adapter.js"]
+        # CP1: risk-engine.js / re1-adapter.js may change ONLY for the Compounder size rule + market state (every changed line carries CP1 / compFactor / momFactor / COMP_REGIME_FACTOR / MARKET_PULLBACK_PCT / pullback) — nothing else
+        import re as _re
+        CP1_OK = _re.compile(r"CP1|compFactor|momFactor|COMP_REGIME_FACTOR|MARKET_PULLBACK_PCT|pullback|cBase|compF\b|\bcT\b|return \{ reasons: \[\], factor: factor, modifier: factor|^[+-]\s*$")
+        for _f in ("risk-engine.js", "re1-adapter.js"):
+            if _f in gone:
+                dl = subprocess.run(["git", "diff", "-U0", "origin/main...HEAD", "--", _f], capture_output=True, text=True, cwd=os.path.join(HERE, "..")).stdout.splitlines()
+                ch = [l for l in dl if l[:1] in "+-" and not l.startswith(("+++", "---"))]
+                if ch and all(CP1_OK.search(l) or ("is over" in l and "limit" in l) for l in ch): gone = [x for x in gone if x != _f]
         check(f"{tag} D display + alerts only: no sizing / engine file changed · lastPx / invLevel not referenced in them", not any(f.endswith(("risk-engine.js", "core-size.js", "ps1-size.js", "pos-view.js", "re1-adapter.js")) for f in gone) and all("lastPx" not in open(os.path.join(HERE, "..", f), encoding="utf-8").read() and "invLevel" not in open(os.path.join(HERE, "..", f), encoding="utf-8").read() for f in ("risk-engine.js", "core-size.js", "ps1-size.js", "pos-view.js", "re1-adapter.js")), gone)
 
         # ───── E · Settings hints

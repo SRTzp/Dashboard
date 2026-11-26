@@ -36,6 +36,12 @@
   };
   /* RK1 — risk per idea (Settings). One set for both accounts. New plans only: saved plans / holdings keep their stored risk and qty.
      weekly = 4 x per-idea · monthly = 4 x weekly (so the money check and the 4-loss count stop at the same point). Sat: every step = the fixed value (the step machine + lock after the 4th loss stay). */
+  /* CP1 — Compounder buys when the market rests. ONE place for both constants.
+     MARKET_PULLBACK_PCT: SPY (US stocks) or SET (Thai stocks) this far below its 52-week high = a pullback (an opportunity, not a reason to fear).
+     COMP_REGIME_FACTOR: Compounder-only size modifier from the two regime signals (green = both green · oneRed · bothRed · fallback = stale / unknown data, never 100 %).
+     CP1: Momentum and Sat keep POLICY.regime (100 / 80 / 60). */
+  var MARKET_PULLBACK_PCT = 7;
+  var COMP_REGIME_FACTOR = { green: 1.00, oneRed: 1.00, bothRed: 0.75, fallback: 0.75 };
   var RISK_DEFAULTS = { compTotal: 1.00, compFirst: 0.50, mom: 0.40, sat: 0.20 };
   var RISK_BOUNDS = { compTotal: [0.50, 1.50], mom: [0.20, 0.60], sat: [0.10, 0.40] };
   function r6(x) { return Math.round(x * 1e6) / 1e6; }
@@ -566,7 +572,9 @@
     var factor = (known && dateFresh) ? base : Math.min(base, T.fallback);
     var reds = (eq === 'red' ? 1 : 0) + (cr === 'red' ? 1 : 0), missing = (known ? 0 : (eq === 'green' || eq === 'red' ? 0 : 1) + (cr === 'green' || cr === 'red' ? 0 : 1));
     var fallback = !known || !dateFresh;
-    return { reasons: [], factor: factor, modifier: factor, base: base, equity: eq, credit: cr, reds: reds, missing: missing, known: known, fresh: !!fresh, ageDays: age, asOf: typeof s.asOf === 'string' ? s.asOf.slice(0, 10) : null,
+    var cT = COMP_REGIME_FACTOR, cBase = known ? (reds === 0 ? cT.green : reds === 1 ? cT.oneRed : cT.bothRed) : cT.fallback;
+    var compF = (known && dateFresh) ? cBase : Math.min(cBase, cT.fallback);   /* CP1 — Compounder's own modifier (Momentum keeps `factor`) */
+    return { reasons: [], factor: factor, compFactor: compF, modifier: factor, base: base, equity: eq, credit: cr, reds: reds, missing: missing, known: known, fresh: !!fresh, ageDays: age, asOf: typeof s.asOf === 'string' ? s.asOf.slice(0, 10) : null,
       bothGreen: eq === 'green' && cr === 'green', dateFresh: dateFresh, stale: !fresh, fallback: fallback, flags: fallback ? ['COMP_REGIME_STALE'] : [] };
   }
   /* The one reader of fundflow.json: ratios.ACWI_BIL / HYG_IEI {state, inputs_asof:{..}} -> signals -> regimeState. demo / missing file -> both unavailable. */
@@ -599,7 +607,17 @@
     if (r.fallback) return { head: 'Modifier unavailable · fallback cap ' + pc + '%', short: pc + '% fallback', reason: !r.known ? 'a signal is missing' : 'data is stale' };
     return { head: pc + '% of normal', short: pc + '%', reason: 'equity ' + r.equity + ', credit ' + r.credit };
   }
-  function compFactor(regime, emergencyF) { return Math.min(regime.factor, num(emergencyF) ? emergencyF : 1); }   /* min(Regime, Emergency), never multiplied */
+  function compFactor(regime, emergencyF) { return Math.min(num(regime.compFactor) ? regime.compFactor : regime.factor, num(emergencyF) ? emergencyF : 1); }   /* CP1 — Compounder: min(Compounder regime modifier, Emergency), never multiplied */
+  function momFactor(regime, emergencyF) { return Math.min(regime.factor, num(emergencyF) ? emergencyF : 1); }   /* Momentum (RM1): min(Regime 100/80/60, Emergency) — unchanged by CP1 */
+  /* CP1 — market state. m = {spy: offHi, set: offHi} (fractions, −0.09 = 9 % below the 52-week high; null / missing = unknown) · reds = how many regime signals are red (0..2).
+     Pullback = the stock's index >= MARKET_PULLBACK_PCT below its high, OR exactly one regime signal red. US stocks use SPY, Thai stocks use SET. */
+  function pullback(m, reds) { /* CP1 */
+    var pct = function (v) { return num(v) ? Math.round(-v * 10000) / 100 : null; }; /* CP1 */
+    var spy = pct(m && m.spy), set = pct(m && m.set), one = reds === 1, thr = MARKET_PULLBACK_PCT; /* CP1 */
+    var us = (spy !== null && spy >= thr) || one, th = (set !== null && set >= thr) || one; /* CP1 */
+    return { on: us || th, US: us, TH: th, spyPct: spy, setPct: set, oneRed: one, reds: reds, threshold: thr }; /* CP1 */
+  } /* CP1 */
+
   /* heat = current open principal risk of live Compounder ideas (same idea-level calculation), cap 6 % */
   function compHeat(ideas, account, costsFor, equity, currentEquity) {
     var live = ideasOf(ideas, account, 'ladder').filter(function (i) { return i.status === 'holding'; }), money = 0, unknown = [];
@@ -747,7 +765,7 @@
     momentumState: momentumState, momentumCheck: momentumCheck,
     satCondition: satCondition, satEntryOrder: satEntryOrder, satStepState: satStepState, satEffectiveRpt: satEffectiveRpt, satQueueCheck: satQueueCheck, satRiskCutPct: satRiskCutPct, satRiskNow: satRiskNow,
     satStaleOrders: satStaleOrders, satDailyCheck: satDailyCheck, satBudgetCheck: satBudgetCheck, satCheck: satCheck,
-    regimeState: regimeState, regimeModifier: regimeModifier, regimeFromFundflow: regimeFromFundflow, regimeText: regimeText, smaLabel: smaLabel, fundflowSignals: fundflowSignals, asOfMs: asOfMs, compLegacyShape: compLegacyShape, sizeAttempt: sizeAttempt, compFactor: compFactor, compHeat: compHeat, compStreak: compStreak, compUnlockCheck: compUnlockCheck, compEntryCheck: compEntryCheck, compCheck: compCheck,
+    regimeState: regimeState, regimeModifier: regimeModifier, regimeFromFundflow: regimeFromFundflow, regimeText: regimeText, smaLabel: smaLabel, fundflowSignals: fundflowSignals, asOfMs: asOfMs, compLegacyShape: compLegacyShape, sizeAttempt: sizeAttempt, compFactor: compFactor, momFactor: momFactor, pullback: pullback, MARKET_PULLBACK_PCT: MARKET_PULLBACK_PCT, COMP_REGIME_FACTOR: COMP_REGIME_FACTOR, compHeat: compHeat, compStreak: compStreak, compUnlockCheck: compUnlockCheck, compEntryCheck: compEntryCheck, compCheck: compCheck,
     activeSummary: activeSummary, actionPolicy: actionPolicy, asFill: asFill, foldEvents: foldEvents
   };
 });

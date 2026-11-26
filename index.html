@@ -6100,6 +6100,41 @@ html body .pc2-none .pc2-np{display:none}
 .lr4-wkb{display:inline-grid;align-items:center}.lr4-wkb>*{grid-area:1/1}.lr4-wkg{visibility:hidden;white-space:nowrap;padding:6px 0 6px 0;pointer-events:none}.lr4-wkb .lr4-wksel{width:100%;min-width:0}
 @media (max-width:560px) and (orientation:portrait){ #tabWatch{touch-action:pan-y pinch-zoom} }   /* PH1 — the swipe area keeps vertical scroll only; sideways-scrolling children are their own scroll container */
 #hf6SaveBar{font-family:var(--sans);line-height:1.4;position:sticky;top:0;width:100%;box-sizing:border-box;z-index:100000;background:#FFF4D6;color:#7A5200;border-bottom:1px solid #E8C777;padding:8px 14px;font-size:13px;font-weight:600;text-align:center}#hf6SaveBar button{font-family:var(--sans);background:none;border:0;color:#7A5200;font-weight:700;text-decoration:underline;cursor:pointer;font-size:13px;min-height:28px}
+
+/* CP1 — Compounder first: Act group · Mood MARKET line · Watch columns · Homework buy zone */
+html body .cp1-col{background:none!important;padding:0!important}
+html body .cp1-row[data-cp1-k="addon"]{border-left:3px solid #0E8A5F}
+html body .re2-row .btn[data-re2-btn="cp1plan"]:not(.o){background:var(--text,#14161A);border-color:var(--text,#14161A);color:var(--surface,#fff)!important}
+html body .cp1-row .chip.n{background:#E8ECFB;color:#3B4FC4}
+html body .cp1-row .num .g{color:#0E6B4C;font-weight:600}html body .cp1-row .num .a{color:#9A5B00;font-weight:600}
+html body .cp1-sep{color:#8A919C}
+html body .cp1-more,html body .cp1-sl{font:600 13px var(--sans);color:var(--text,#14161A);background:none;border:0;padding:6px 2px;text-align:left;cursor:pointer;min-height:36px}
+html body .cp1-sum{margin-top:10px;border-top:1px solid #ECEEF1;padding-top:6px;display:flex;flex-direction:column;gap:8px}
+html body .cp1-sum .cp1-sl{font-weight:500;color:var(--muted)}html body .cp1-sum .cp1-sl b{font-weight:700;letter-spacing:.06em;font-size:11px}
+html body .cp1-open{display:flex;flex-direction:column;gap:8px}
+html body .cp1-am{color:#9A5B00;font-weight:700}
+html body [data-ln4-todo="cp1:hw"] .t{white-space:normal;overflow:visible;text-overflow:clip}
+html body .cp1-p{display:none}
+html body .nt1b-st .cp1-mk{color:var(--lr-muted,#8A919C)}
+html body .lr5 .c-vs,html body .lr5 .c-bz{min-width:0;font-size:13px}
+html body .lr5 .c-bz .cp1-bz{display:inline-block;font:600 11.5px/1.4 var(--lr-sans,Inter,sans-serif);border-radius:999px;padding:2px 9px;white-space:nowrap;background:#F0F1F4;color:#5F6672;font-variant-numeric:tabular-nums}
+html body .lr5 .c-bz .cp1-bz.in{background:#E6F4EE;color:#0E6B4C}
+html body .lr5 .lr5r.cp1c .c-hw{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+html body .lr5 .cp1-zone .hw1-mut{margin:0}
+html body .lr5 .hw1-fld .cp1-zr{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
+html body .lr5 .hw1-fld .cp1-zr input{font:16px/1.4 var(--lr-sans);font-variant-numeric:tabular-nums;min-height:44px}
+html body .lr5 .cp1-use{font:inherit;text-decoration:underline;background:none;border:0;padding:0;color:inherit;cursor:pointer;min-height:0}
+@media (min-width:1024px){
+  html body .lr5 .lr5r.wl1-row.cp1c,html body .lr5 .lr5r.wl5-th.cp1c{grid-template-columns:64px 92px minmax(0,.8fr) 84px 58px 112px minmax(0,1.2fr) 64px 100px 28px;gap:8px;padding:12px 12px}
+  html body .lr5 .lr5r.wl5-th.cp1c .lbl{white-space:normal;overflow-wrap:anywhere;line-height:1.2}
+}
+@media (max-width:1023px){html body .lr5 .c-vs,html body .lr5 .c-bz{display:none}}
+@media (max-width:600px){
+  html body .cp1-m{display:none}html body .cp1-p{display:inline}
+  html body .cp1-a,html body .cp1-b{display:block}html body .cp1-sep{display:none}
+  html body .lr2-act .cp1-row .re2-btns{justify-content:stretch}
+  html body .lr2-act .cp1-row .re2-btns .btn{width:100%;height:44px}
+}
 </style>
 </head>
 <body>
@@ -7350,6 +7385,12 @@ html body .pc2-none .pc2-np{display:none}
   };
   /* RK1 — risk per idea (Settings). One set for both accounts. New plans only: saved plans / holdings keep their stored risk and qty.
      weekly = 4 x per-idea · monthly = 4 x weekly (so the money check and the 4-loss count stop at the same point). Sat: every step = the fixed value (the step machine + lock after the 4th loss stay). */
+  /* CP1 — Compounder buys when the market rests. ONE place for both constants.
+     MARKET_PULLBACK_PCT: SPY (US stocks) or SET (Thai stocks) this far below its 52-week high = a pullback (an opportunity, not a reason to fear).
+     COMP_REGIME_FACTOR: Compounder-only size modifier from the two regime signals (green = both green · oneRed · bothRed · fallback = stale / unknown data, never 100 %).
+     CP1: Momentum and Sat keep POLICY.regime (100 / 80 / 60). */
+  var MARKET_PULLBACK_PCT = 7;
+  var COMP_REGIME_FACTOR = { green: 1.00, oneRed: 1.00, bothRed: 0.75, fallback: 0.75 };
   var RISK_DEFAULTS = { compTotal: 1.00, compFirst: 0.50, mom: 0.40, sat: 0.20 };
   var RISK_BOUNDS = { compTotal: [0.50, 1.50], mom: [0.20, 0.60], sat: [0.10, 0.40] };
   function r6(x) { return Math.round(x * 1e6) / 1e6; }
@@ -7880,7 +7921,9 @@ html body .pc2-none .pc2-np{display:none}
     var factor = (known && dateFresh) ? base : Math.min(base, T.fallback);
     var reds = (eq === 'red' ? 1 : 0) + (cr === 'red' ? 1 : 0), missing = (known ? 0 : (eq === 'green' || eq === 'red' ? 0 : 1) + (cr === 'green' || cr === 'red' ? 0 : 1));
     var fallback = !known || !dateFresh;
-    return { reasons: [], factor: factor, modifier: factor, base: base, equity: eq, credit: cr, reds: reds, missing: missing, known: known, fresh: !!fresh, ageDays: age, asOf: typeof s.asOf === 'string' ? s.asOf.slice(0, 10) : null,
+    var cT = COMP_REGIME_FACTOR, cBase = known ? (reds === 0 ? cT.green : reds === 1 ? cT.oneRed : cT.bothRed) : cT.fallback;
+    var compF = (known && dateFresh) ? cBase : Math.min(cBase, cT.fallback);   /* CP1 — Compounder's own modifier (Momentum keeps `factor`) */
+    return { reasons: [], factor: factor, compFactor: compF, modifier: factor, base: base, equity: eq, credit: cr, reds: reds, missing: missing, known: known, fresh: !!fresh, ageDays: age, asOf: typeof s.asOf === 'string' ? s.asOf.slice(0, 10) : null,
       bothGreen: eq === 'green' && cr === 'green', dateFresh: dateFresh, stale: !fresh, fallback: fallback, flags: fallback ? ['COMP_REGIME_STALE'] : [] };
   }
   /* The one reader of fundflow.json: ratios.ACWI_BIL / HYG_IEI {state, inputs_asof:{..}} -> signals -> regimeState. demo / missing file -> both unavailable. */
@@ -7913,7 +7956,17 @@ html body .pc2-none .pc2-np{display:none}
     if (r.fallback) return { head: 'Modifier unavailable · fallback cap ' + pc + '%', short: pc + '% fallback', reason: !r.known ? 'a signal is missing' : 'data is stale' };
     return { head: pc + '% of normal', short: pc + '%', reason: 'equity ' + r.equity + ', credit ' + r.credit };
   }
-  function compFactor(regime, emergencyF) { return Math.min(regime.factor, num(emergencyF) ? emergencyF : 1); }   /* min(Regime, Emergency), never multiplied */
+  function compFactor(regime, emergencyF) { return Math.min(num(regime.compFactor) ? regime.compFactor : regime.factor, num(emergencyF) ? emergencyF : 1); }   /* CP1 — Compounder: min(Compounder regime modifier, Emergency), never multiplied */
+  function momFactor(regime, emergencyF) { return Math.min(regime.factor, num(emergencyF) ? emergencyF : 1); }   /* Momentum (RM1): min(Regime 100/80/60, Emergency) — unchanged by CP1 */
+  /* CP1 — market state. m = {spy: offHi, set: offHi} (fractions, −0.09 = 9 % below the 52-week high; null / missing = unknown) · reds = how many regime signals are red (0..2).
+     Pullback = the stock's index >= MARKET_PULLBACK_PCT below its high, OR exactly one regime signal red. US stocks use SPY, Thai stocks use SET. */
+  function pullback(m, reds) { /* CP1 */
+    var pct = function (v) { return num(v) ? Math.round(-v * 10000) / 100 : null; }; /* CP1 */
+    var spy = pct(m && m.spy), set = pct(m && m.set), one = reds === 1, thr = MARKET_PULLBACK_PCT; /* CP1 */
+    var us = (spy !== null && spy >= thr) || one, th = (set !== null && set >= thr) || one; /* CP1 */
+    return { on: us || th, US: us, TH: th, spyPct: spy, setPct: set, oneRed: one, reds: reds, threshold: thr }; /* CP1 */
+  } /* CP1 */
+
   /* heat = current open principal risk of live Compounder ideas (same idea-level calculation), cap 6 % */
   function compHeat(ideas, account, costsFor, equity, currentEquity) {
     var live = ideasOf(ideas, account, 'ladder').filter(function (i) { return i.status === 'holding'; }), money = 0, unknown = [];
@@ -8061,7 +8114,7 @@ html body .pc2-none .pc2-np{display:none}
     momentumState: momentumState, momentumCheck: momentumCheck,
     satCondition: satCondition, satEntryOrder: satEntryOrder, satStepState: satStepState, satEffectiveRpt: satEffectiveRpt, satQueueCheck: satQueueCheck, satRiskCutPct: satRiskCutPct, satRiskNow: satRiskNow,
     satStaleOrders: satStaleOrders, satDailyCheck: satDailyCheck, satBudgetCheck: satBudgetCheck, satCheck: satCheck,
-    regimeState: regimeState, regimeModifier: regimeModifier, regimeFromFundflow: regimeFromFundflow, regimeText: regimeText, smaLabel: smaLabel, fundflowSignals: fundflowSignals, asOfMs: asOfMs, compLegacyShape: compLegacyShape, sizeAttempt: sizeAttempt, compFactor: compFactor, compHeat: compHeat, compStreak: compStreak, compUnlockCheck: compUnlockCheck, compEntryCheck: compEntryCheck, compCheck: compCheck,
+    regimeState: regimeState, regimeModifier: regimeModifier, regimeFromFundflow: regimeFromFundflow, regimeText: regimeText, smaLabel: smaLabel, fundflowSignals: fundflowSignals, asOfMs: asOfMs, compLegacyShape: compLegacyShape, sizeAttempt: sizeAttempt, compFactor: compFactor, momFactor: momFactor, pullback: pullback, MARKET_PULLBACK_PCT: MARKET_PULLBACK_PCT, COMP_REGIME_FACTOR: COMP_REGIME_FACTOR, compHeat: compHeat, compStreak: compStreak, compUnlockCheck: compUnlockCheck, compEntryCheck: compEntryCheck, compCheck: compCheck,
     activeSummary: activeSummary, actionPolicy: actionPolicy, asFill: asFill, foldEvents: foldEvents
   };
 });
@@ -8279,14 +8332,14 @@ html body .pc2-none .pc2-np{display:none}
     if (i.strategy === 'winner') {
       factors.push('BASE_' + R.POLICY.mom.rptPct);
       if (hw === undefined) notes.push('homework state unknown — shown at 100%'); else if (hw === false) { frac = R.POLICY.hwFactor.mom; notes.push('homework not done → ' + Math.round(frac * 100) + '%'); factors.push('HOMEWORK_' + Math.round(frac * 100)); }
-      if (ctx.regime) { factor = R.compFactor(ctx.regime, ctx.emergencyFactor); var mp = Math.round(factor * 100); if (mp < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < ctx.regime.factor ? 'EMERGENCY_' : 'REGIME_') + mp); }   /* RM1: Momentum also takes min(Regime, Emergency) */
+      if (ctx.regime) { factor = R.momFactor(ctx.regime, ctx.emergencyFactor); var mp = Math.round(factor * 100); if (mp < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < ctx.regime.factor ? 'EMERGENCY_' : 'REGIME_') + mp); }   /* RM1: Momentum also takes min(Regime, Emergency) */
       else if (ctx.emergencyFactor && ctx.emergencyFactor < 1) { factor *= ctx.emergencyFactor; factors.push('EMERGENCY_50'); }
     } else if (i.strategy === 'ladder') {
       /* Compounder: the Pilot (0.50% of the 1% plan) IS the 50% homework phase — the homework cap is a phase cap, never a second multiplier (RE-C1 §0).
          Regime factor applies to NEW entries: min(Regime, Emergency). Starter ¼ (Training ON) = half of the Pilot. */
       factors.push('PILOT_' + R.POLICY.comp.pilotPct);
       if (hw === false) notes.push('thesis not done → Pilot only (no further cut)');
-      if (ctx.regime) { factor = R.compFactor(ctx.regime, ctx.emergencyFactor); var pc = Math.round(factor * 100); if (pc < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < ctx.regime.factor ? 'EMERGENCY_' : 'REGIME_') + pc); if (ctx.regime.stale) factors.push('REGIME_STALE'); }
+      if (ctx.regime) { factor = R.compFactor(ctx.regime, ctx.emergencyFactor); var pc = Math.round(factor * 100); if (pc < 100) factors.push((ctx.emergencyFactor && ctx.emergencyFactor < R.compFactor(ctx.regime, 1) ? 'EMERGENCY_' : 'REGIME_') + pc); if (ctx.regime.stale) factors.push('REGIME_STALE'); }
       if (ctx.starterOn === true) { frac = R.POLICY.comp.starter * 2; factors.push('STARTER_25'); }
     }
     var rpts = base !== null ? [base] : [R.POLICY.sat.stepRpt[ctx.satStepIndex], R.POLICY.sat.stepRpt[ctx.satStepIndex] * R.POLICY.sat.condReduced];
@@ -8702,7 +8755,7 @@ html body .pc2-none .pc2-np{display:none}
     var m = baseModel(L, 'winner'); m.chip = L.emergency.active ? { t: 'Emergency 50%', c: 'r' } : null;   /* the 'Homework not done' state is shown once, by the WL1 cap box under the result */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
     var fr = R.entryFraction({ homeworkDone: f.homeworkDone === true || f.topUp === true, starterOn: f.starterOn === true, isFirstEntry: f.isFirstEntry !== false, usedFraction: f.usedFraction || 0 });   /* PC2 2f: a top-up is sized against the FULL budget */
-    var base = RP.mom.rptPct, rg = L.regime, ef = R.compFactor(rg, L.eF), emOnly = L.eF < rg.factor, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];   /* RM1: effective modifier = min(regime, emergency), applied once to the base budget */
+    var base = RP.mom.rptPct, rg = L.regime, ef = R.momFactor(rg, L.eF), emOnly = L.eF < rg.factor, z = sizeCommon(L, f, base, ef, fr.fraction); m.sizing = z; if (z.levels) m.levels = z.levels; m.factors = ['BASE_' + base];   /* RM1: effective modifier = min(regime, emergency), applied once to the base budget */
     var parts = [f2(base, 2) + '%'], eff = base * ef * fr.fraction;
     if (f.homeworkDone !== true) { var hwp = Math.round(RP.hwFactor.mom * 100); parts.push('homework ' + hwp + '%'); m.factors.push('HOMEWORK_' + hwp); }
     if (f.starterOn === true && f.isFirstEntry !== false) { parts.push('starter 25%'); m.factors.push('STARTER_25'); }
@@ -8789,7 +8842,7 @@ html body .pc2-none .pc2-np{display:none}
     var m = baseModel(L, 'ladder'), kind = f.kind || 'pilot'; m.kind = kind;
     m.chip = null;   /* RM1: the modifier is shown once, in the size line ("limited by regime 50%") and the Flow line — no second chip */
     if (!L.basis.ok) { m.reasons = L.basis.reasons.slice(); return finish(m); }
-    var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true, emOnly = L.eF < rg.factor;
+    var me = L.ideas.filter(function (i) { return i.id === f.ideaId; })[0] || null, rg = L.regime, fac = R.compFactor(rg, L.eF), thesis = f.thesisDone === true, emOnly = L.eF < R.compFactor(rg, 1);
     /* PC2 — new path (f.riskPct given): 'plan' = first build (rows in the plan before the first fill; no thesis) · 'addon' = rows added after it (thesis + total-risk rule). Budget = the plan's risk % (default Settings Compounder total) x homework factor (Compounder 100 %) x regime. */
     var np = f.riskPct > 0, planPct = np ? f.riskPct : RP.comp.totalCapPct, isPlan = kind === 'plan';
     var multi = !!(f.levels && f.levels.length > 1), planCap = (thesis || isPlan) ? planPct : RP.comp.pilotPct;   /* RM1: whole-plan budget = Settings total (RK1 default 1.00 %) with thesis */
@@ -9570,6 +9623,7 @@ function wlStart(){
               my_notes:wlNormNotes(x.my_notes),   /* WL1 */
               movedAt:typeof x.movedAt === 'string' ? x.movedAt : '',   /* MV1 A — when it last moved between Momentum and Compounder */
               focus:x.focus === true,   /* UX3 F — Focus star on a Watching row */
+              buyZone:(x.buyZone && typeof x.buyZone === 'object' && +x.buyZone.lo > 0 && +x.buyZone.hi >= +x.buyZone.lo) ? {lo:+x.buyZone.lo, hi:+x.buyZone.hi} : null,   /* CP1 — Compounder buy zone {lo, hi} (Homework page) */
               src:(x.src && typeof x.src==='object' && !Array.isArray(x.src)) ? x.src : null,   /* RS2a — {from:'screen', preset, r12, r3, r1, at} written by + Watch on the Screen tab · read by the next Homework job */
               exch:(typeof x.exch==='string' ? x.exch.trim().toUpperCase() : ''), hw:(x.hw && typeof x.hw==='object' && !Array.isArray(x.hw)) ? x.hw : {},   /* WL1 (2026-11) — exchange + homework record {trigger, doneAt, confirmedAt} */
               thesis:(x.thesis && typeof x.thesis==='object' && !Array.isArray(x.thesis)) ? x.thesis : null,   /* WL2 · living-thesis@1 (ไม่มี log) · ≠ tier_inputs ของ WT1 */
@@ -13219,6 +13273,7 @@ function ln4TodoItems(M){
   try{ ftList().forEach(x=>{ const c = x.over > 0 ? 'r' : x.left <= 1 ? 'a' : 'g'; out.push({c, g:'ft', gl:'homework', id:'ft:' + x.sym, t:`${x.sym} homework ${x.over > 0 ? 'overdue' : (x.left === 0 ? 'due today' : 'due in ' + x.left + 'd')}`, fn:`ftGo('${td3E(x.sym)}')`}); }); }catch(e){}
   try{ wl1TodoItems().forEach(x=>out.push(x)); }catch(e){ console.warn('wl1 todo:', e); }   /* WL1 */
   try{ nt1TodoItems().forEach(x=>out.push(x)); }catch(e){ console.warn('nt1 todo:', e); }   /* NT1 — check-again date */
+  try{ cp1TodoItems().forEach(x=>out.push(x)); }catch(e){ console.warn('cp1 todo:', e); }   /* CP1 — pullback nudge */
   try{ rs2TodoItems().forEach(x=>out.push(x)); }catch(e){ console.warn('rs2 todo:', e); }   /* RS2a3 — up to 3 Screen-change lines in this same list */
   try{ re1TodoItems().forEach(x=>out.push(x)); }catch(e){ console.warn('re1 todo:', e); }   /* RE-C1 */
   try{
@@ -13415,12 +13470,175 @@ function nt1bGoal(M){
     return `<span class="mut nt1b-goal num" data-ln4-goal>Goal · ${td3E(td3AcctName(a))} <b data-ln4-goalpct>${String(p).replace('-', '−')}%</b> of ${glMoney(raw.target, raw.cur, true)}</span><span class="ln4-gb nt1b-gb" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, p))}%"></i></span><button type="button" class="nt1b-lk" data-ln4-goalmore onclick="ln4GoalToggle()">Accounts ›</button>`;
   }catch(e){ console.warn('nt1b goal:', e); return ''; }
 }
+/* ═══ CP1 — Compounder first when the market pulls back (an opportunity, not a reason to fear) ═══
+   Market doc users/{uid}/market/index = {SPY:{close,hi52,offHi,asOf}, SET:{…}} (written by the daily prices job). Per stock: prices/{ySym}.rs = {last, ma200, vsMa, hi52, offHi} (omitted when the history is too short → "—", never 0).
+   Pullback = RiskEngine.pullback (SPY for US stocks / SET for Thai stocks ≥ MARKET_PULLBACK_PCT below the 52-week high, or exactly one regime signal red). Compounder size = RiskEngine.compFactor (COMP_REGIME_FACTOR). Nothing here sizes an order. */
+let cp1Mk = null, cp1MkUnsub = null, cp1MkUid = null, cp1Open = false, cp1All = false;
+function cp1MkStart(){
+  if(!uid || typeof db === 'undefined' || !db) return;
+  if(cp1MkUnsub && cp1MkUid === uid) return;
+  cp1MkStop(); cp1MkUid = uid;
+  try{
+    cp1MkUnsub = db.collection('users').doc(uid).collection('market').doc('index').onSnapshot(d=>{
+      cp1Mk = d && d.exists ? (d.data() || null) : null;
+      try{ if(typeof todayRefresh === 'function' && activeTab === 'today') todayRefresh(true); }catch(e){}
+    }, err=>{ console.warn('market listener:', err); cp1Mk = null; });
+  }catch(e){ cp1Mk = null; }
+}
+function cp1MkStop(){ if(cp1MkUnsub){ try{ cp1MkUnsub(); }catch(e){} } cp1MkUnsub = null; cp1MkUid = null; cp1Mk = null; }
+const cp1Num = v=>typeof v === 'number' && isFinite(v);
+function cp1Idx(k){ const d = cp1Mk && cp1Mk[k]; return d && cp1Num(d.offHi) ? d.offHi : null; }
+function cp1Mkt(it){ return String((it && it.market) || '').toUpperCase() === 'TH' || /\.BK$/i.test(String((it && it.ticker) || '')) ? 'TH' : 'US'; }
+/* the one market state: engine pullback + the Compounder size the engine would use now */
+function cp1State(){
+  let r = null, eF = 1; try{ r = rm1Regime(); eF = rm1EmergencyF(); }catch(e){}
+  const reds = r && !r.demo ? (r.equity === 'red' ? 1 : 0) + (r.credit === 'red' ? 1 : 0) : 0;
+  const pb = RiskEngine.pullback({spy:cp1Idx('SPY'), set:cp1Idx('SET')}, reds);
+  let pc = 100; try{ if(r) pc = Math.round(RiskEngine.compFactor(r, eF) * 100); }catch(e){}
+  return {pb, r, reds, pc, on:pb.on, both:reds === 2, spy:cp1Idx('SPY'), set:cp1Idx('SET')};
+}
+function cp1On(S, it){ return !!(S && S.pb && S.pb[cp1Mkt(it)]); }
+/* per-stock numbers from the daily job (omitted → null) */
+function cp1Rel(it){
+  let a = null; try{ a = pxAuto[pxYSym({ticker:it.ticker, market:it.market})]; }catch(e){}
+  const rs = a && a.rs && typeof a.rs === 'object' ? a.rs : {};
+  const px = cp1Num(rs.last) && rs.last > 0 ? rs.last : null, ma = cp1Num(rs.ma200) && rs.ma200 > 0 ? rs.ma200 : null, hi = cp1Num(rs.hi52) && rs.hi52 > 0 ? rs.hi52 : null;
+  const vs = cp1Num(rs.vsMa) ? rs.vsMa : (px && ma ? px / ma - 1 : null), off = cp1Num(rs.offHi) ? rs.offHi : (cp1Num(rs.offHigh) ? rs.offHigh : null);
+  const z = cp1Zone(it), zs = z && px ? (px >= z.lo && px <= z.hi ? 'in' : px > z.hi ? 'above' : 'below') : '';
+  return {px, ma, hi, vs, off, zone:z, zs, near:vs != null && vs >= -0.05 && vs <= 0.03};
+}
+function cp1Zone(it){
+  const z = it && it.buyZone; if(!z || typeof z !== 'object') return null;
+  const lo = +z.lo, hi = +z.hi; return lo > 0 && hi >= lo ? {lo, hi} : null;
+}
+const cp1Z = z=>z ? td3Num(z.lo) + '–' + td3Num(z.hi) : '';
+function cp1HwTxt(it){
+  if(wl1HwDone(it)) return `<span class="g">homework ✓</span>`;
+  let n = 0, t = 3; try{ const rq = wl1HwReq(it), ms = wl1HwMissing(it); t = rq.length; n = t - ms.length; }catch(e){}
+  return `<span class="a" data-cp1-hw>homework ${n} of ${t}</span>`;
+}
+/* the Compounder rows: 1 in buy zone · 2 near the 40-week average · 3 holding with add-on room. rows = every Act manage row (Add-on rows come from there) */
+function cp1Build(manage){
+  const S = cp1State(), zone = [], near = [], addon = [], pass = [];
+  (wlItems || []).forEach(it=>{
+    if(!it || it.archived === true || wl1TrkOf(it) !== 'ladder') return;
+    if(wl1Status(it).k !== 'none') return;   /* planned / ordered / holding show their own plan row (no duplicate) */
+    const R = cp1Rel(it), on = cp1On(S, it), done = wl1HwDone(it), o = {k:R.zs === 'in' ? 'zone' : 'near', it, R, done, on};
+    if(R.zs === 'in') (on ? zone : pass).push(o); else if(R.near && on) near.push(o);
+  });
+  zone.sort((a, b)=>Math.abs(a.R.vs == null ? 9 : a.R.vs) - Math.abs(b.R.vs == null ? 9 : b.R.vs));
+  near.sort((a, b)=>Math.abs(a.R.vs) - Math.abs(b.R.vs));
+  (manage || []).forEach(r=>{
+    const it = r && r.it, o = r && r.o; if(!it || !o || o.k !== 'addon' || o.dis || it.tag !== 'COMP' || it.kind !== 'core') return;
+    const w = wlItemOf(it.sym); if(!w || !cp1On(S, w)) return;
+    addon.push({k:'addon', it:w, bd:it, o, R:cp1Rel(w), done:wl1HwDone(w), on:true});
+  });
+  return {S, zone, near, addon, pass, rows:S.on ? zone.concat(near, addon) : []};
+}
+function cp1Line(x){
+  const R = x.R, e = td3E, N = v=>v != null ? td3Num(v) : '—';
+  const now = `Now <b>${N(R.px)}</b>`, zt = R.zone ? `zone ${cp1Z(R.zone)}` : (x.k === 'addon' ? '' : 'no zone set');
+  const avg = R.ma ? `40-wk avg ${N(R.ma)} (<b>${R.vs != null ? wl2Pct(R.vs, true) : '—'}</b>)` : `40-wk avg —`;
+  if(x.k === 'addon') return `<span class="cp1-a">${now}${R.zone ? ` · ${R.zs === 'in' ? 'in zone' : 'zone'} ${cp1Z(R.zone)}` : ''}</span><span class="cp1-sep"> · </span><span class="cp1-b">add-on allowed</span>`;
+  return `<span class="cp1-a">${now}${x.k === 'zone' ? ` · ${zt}` : ''}</span><span class="cp1-sep"> · </span><span class="cp1-b">${avg}${x.k === 'near' && !R.zone ? ' · no zone set' : ''} · ${cp1HwTxt(x.it)}</span>`;
+}
+function cp1RowHtml(x, first){
+  const e = td3E, it = x.it, sym = it.ticker, sq = String(sym).replace(/'/g, "\\'"), R = x.R;
+  const chip = x.k === 'zone' ? `<span class="chip" data-cp1-chip>In buy zone</span>` : x.k === 'near' ? `<span class="chip n" data-cp1-chip>Near 40-wk avg</span>` : `<span class="chip" data-cp1-chip>Holding</span>`;
+  let btn;
+  if(x.k === 'addon') btn = `<button type="button" class="btn o" data-re2-btn="cp1addon" data-cp1-btn="addon" onclick="event.stopPropagation();${x.o.fn || ''}">Add-on ›</button>`;
+  else if(!x.done) btn = `<button type="button" class="btn${first && x.k === 'zone' ? '' : ' o'}" data-re2-btn="cp1plan" data-cp1-btn="hw" onclick="event.stopPropagation();hwGo('${sq}')">Homework ›</button>`;
+  else btn = `<button type="button" class="btn${x.k === 'zone' ? '' : ' o'}" data-re2-btn="cp1plan" data-cp1-btn="plan" onclick="event.stopPropagation();wlOpenCorePlan('${sq}')">Make plan ›</button>`;
+  const pill = x.bd ? lr2RowPill(x.bd) : '';
+  return `<div class="row re2-row cp1-row" data-port="COMP" data-cp1-row="${e(sym)}" data-cp1-k="${x.k}" data-re2-grp="cp1" role="button" tabindex="0" onclick="${x.k === 'addon' && x.bd ? `bdOpen('${e(x.bd.id).replace(/'/g, "\\'")}')` : `td3Screen('${sq}')`}">
+    <div class="re2-main"><div class="l1"><b>${e(wl1Bare(sym))}</b><span class="tag" data-port="COMP">COMP</span>${pill}${chip}</div><div class="num cp1-ln" data-cp1-line>${cp1Line(x)}</div></div><div class="re2-btns">${btn}</div></div>`;
+}
+/* the group above Enter · in a normal market only a one-line summary at the bottom of Act (show › expands the same rows) */
+function cp1GroupHtml(B){
+  if(!B.S.on || !B.rows.length) return '';
+  const MAX = 5, rows = cp1All ? B.rows : B.rows.slice(0, MAX), n = B.rows.length;
+  const more = n > MAX ? `<button type="button" class="cp1-more" data-cp1-more onclick="cp1MoreToggle()">${cp1All ? 'Show less ›' : `+${n - MAX} ›`}</button>` : '';
+  return `<div class="col re2-col cp1-col" data-re2-col="cp1" data-cp1-group><div class="ch"><b>Compounder first</b><span class="mut" data-cp1-n>market pullback · ${n} to look at</span></div>${rows.map((x, i)=>cp1RowHtml(x, i === 0)).join('')}${more}</div>`;
+}
+function cp1SumHtml(B){
+  const z = B.pass.length ? B.pass : (B.S.on ? [] : B.zone);
+  if(!z.length) return '';
+  const rows = cp1Open ? `<div class="cp1-open" data-cp1-open>${z.map((x, i)=>cp1RowHtml(x, false)).join('')}</div>` : '';
+  return `<div class="cp1-sum" data-cp1-sum><button type="button" class="cp1-sl" data-cp1-show aria-expanded="${cp1Open}" onclick="cp1SumToggle()"><b>COMPOUNDER</b> · ${z.length} in buy zone · <u>${cp1Open ? 'hide' : 'show'} ›</u></button>${rows}</div>`;
+}
+function cp1SumToggle(){ cp1Open = !cp1Open; try{ todayRefresh(true); }catch(e){} }
+function cp1MoreToggle(){ cp1All = !cp1All; try{ todayRefresh(true); }catch(e){} }
+/* Mood card: MARKET line + the pullback wording (never "risk-off / danger") */
+function cp1MoodRow(S, E, mood, wl, pc, moodAttrs, goal){
+  const e = escHtml;
+  if(!S.on) return `<div class="nt1b-sr" data-nt1b-row="mood"><span class="k">MOOD</span><span class="v"><button type="button" class="nt1b-mood" data-lr2-card="mood" ${moodAttrs} onclick="tdRegimeGo()"><span class="pill ${pc}">${e(mood.label)}</span></button><span class="num" data-ln4-wl>${mood.old ? `data ${E.r.ageDays}d old · ` : ''}new entries at <b>${E.pc}%</b> size${wl}</span>${goal}</span></div>`;
+  const attrs = moodAttrs.replace(/data-rg-state="[^"]*"/, 'data-rg-state="amber"').replace(/data-rg-label="[^"]*"/, 'data-rg-label="Pullback"');
+  const txt = S.both ? `Compounder size <b>${S.pc}%</b> · buy in steps` : `good time for Compounder · Compounder size <b>${S.pc}%</b>`;
+  return `<div class="nt1b-sr" data-nt1b-row="mood" data-cp1-mood="pullback"><span class="k">MOOD</span><span class="v"><button type="button" class="nt1b-mood" data-lr2-card="mood" ${attrs} onclick="tdRegimeGo()"><span class="pill p-a">Pullback</span></button><span class="num" data-ln4-wl><span class="cp1-m">${txt}</span><span class="cp1-p">Compounder size <b>${S.pc}%</b>${S.both ? ' · in steps' : ''}</span>${wl}</span>${goal}</span></div>`;
+}
+function cp1MarketRow(S){
+  const T = S.pb.threshold, hot = v=>v != null && -v * 100 >= T - 1e-9;
+  const px = (lb, v, long)=>{ const t = v == null ? '—' : wl2Pct(v); return `${lb} ${hot(v) ? `<b class="cp1-am">${t}</b>` : t}${long ? ' from high' : ''}`; };
+  const cr = S.r && !S.r.demo ? S.r.credit : 'unavailable', eq = S.r && !S.r.demo ? S.r.equity : 'unavailable';
+  const sig = `HYG/IEI ${cr === 'green' || cr === 'red' ? cr : 'n/a'}${eq === 'red' ? ' · <b class="cp1-am">ACWI/BIL red</b>' : ''}`;
+  const long = `${px('SPY', S.spy, true)} · ${px('SET', S.set, false)} · ${sig}${S.on ? '' : ' · normal'}`, short = `${px('SPY', S.spy, false)} · ${px('SET', S.set, false)}${S.on ? '' : ' · normal'}`;
+  return `<div class="nt1b-sr" data-nt1b-row="market" data-cp1-market="${S.on ? 'pullback' : 'normal'}"><span class="k">MARKET</span><span class="v"><span class="num mut cp1-mk" data-cp1-mkt><span class="cp1-m">${long}</span><span class="cp1-p">${short}</span></span></span></div>`;
+}
+/* To do: one amber nudge while the market rests (opens Watch › Compounder, homework not done) */
+function cp1TodoItems(){
+  const out = []; try{
+    const S = cp1State(); if(!S.on) return out;
+    const n = (wlItems || []).filter(it=>it && it.archived !== true && wl1TrkOf(it) === 'ladder' && !wl1HwDone(it)).length;
+    if(n > 0) out.push({c:'a', g:'cp1', id:'cp1:hw', t:`Market pullback · finish homework on ${n} Compounder stock${n === 1 ? '' : 's'}`, fn:'cp1HwGo()'});
+  }catch(e){}
+  return out;
+}
+function cp1HwGo(){ try{ switchTab('watch'); }catch(e){} try{ wl1SegGo('ladder'); }catch(e){} try{ wl5FilterSet('need'); }catch(e){} }
+/* Homework page + Watch */
+function cp1ZoneSave(sym){
+  const it = wlItemOf(sym), col = wlCol(); if(!it) return;
+  const g = k=>{ const el = document.querySelector('[data-cp1-zone="' + k + '"]'); const n = parseFloat(String(el ? el.value : '').replace(/,/g, '')); return isFinite(n) && n > 0 ? n : null; };
+  const lo = g('lo'), hi = g('hi'), ok = lo != null && hi != null && hi >= lo, msg = document.querySelector('[data-cp1-zmsg]');
+  if(lo == null && hi == null){ it.buyZone = null; if(msg) msg.textContent = ''; if(col) Promise.resolve(col.doc(it.ticker).update({buyZone:null})).catch(e=>console.warn('buy zone:', e)); return; }
+  if(!ok){ if(msg){ msg.textContent = lo != null && hi != null ? 'To must be at least From' : 'Fill both From and To'; } return; }
+  it.buyZone = {lo, hi}; if(msg) msg.textContent = 'Saved';
+  if(col) Promise.resolve(col.doc(it.ticker).update({buyZone:{lo, hi}})).catch(e=>{ console.warn('buy zone:', e); if(msg) msg.textContent = 'Could not save'; });
+}
+/* saved when the focus leaves the Buy zone box (not between From and To) — so a snapshot re-render never eats what is being typed */
+function cp1ZoneOut(ev, sym){ const box = ev.currentTarget; if(box && ev.relatedTarget && box.contains(ev.relatedTarget)) return; cp1ZoneSave(sym); }
+function cp1ZoneFill(sym){
+  const it = wlItemOf(sym); if(!it) return; const R = cp1Rel(it); if(!R.ma) return;
+  const r2 = v=>Math.round(v * 100) / 100, lo = document.querySelector('[data-cp1-zone="lo"]'), hi = document.querySelector('[data-cp1-zone="hi"]');
+  if(lo) lo.value = r2(R.ma * 0.97); if(hi) hi.value = r2(R.ma * 1.03);
+  cp1ZoneSave(sym);
+}
+function cp1ZoneHtml(it){
+  if(wl1TrkOf(it) !== 'ladder') return '';
+  const e = escHtml, t = it.ticker, R = cp1Rel(it), z = it.buyZone && cp1Zone(it), N = v=>v != null ? td3Num(v) : '—', q = String(t).replace(/'/g, "\\'");
+  const help = `Now ${N(R.px)} · 40-wk avg ${N(R.ma)} · 52-wk high ${N(R.hi)}${R.off != null ? ' (' + wl2Pct(R.off) + ')' : ''}${R.ma ? ` · <button type="button" class="hw1-lnk cp1-use" data-cp1-use onclick="cp1ZoneFill('${e(q)}')">use 40-wk avg ±3%</button>` : ''}`;
+  return `<div class="hw1-fld opt cp1-zone" data-hw1-f="buyzone" data-cp1-zonebox onfocusout="cp1ZoneOut(event,'${e(q)}')"><label class="hw1-fl o">Buy zone <span class="hw1-c opt">optional</span></label><div class="hw1-mut">Where would you happily buy more? Today shows it when the price is inside.</div>
+    <div class="cp1-zr"><input type="text" inputmode="decimal" aria-label="Buy zone from" data-cp1-zone="lo" value="${z ? e(String(z.lo)) : ''}" placeholder="From" onkeydown="if(event.key==='Enter')this.blur()"><span class="mut">to</span><input type="text" inputmode="decimal" aria-label="Buy zone to" data-cp1-zone="hi" value="${z ? e(String(z.hi)) : ''}" placeholder="To" onkeydown="if(event.key==='Enter')this.blur()"></div>
+    <div class="hw1-mut num" data-cp1-help>${help}</div><div class="hw1-mut" data-cp1-zmsg role="status"></div></div>`;
+}
+function cp1WatchCells(it){
+  const R = cp1Rel(it), e = escHtml;
+  const vs = R.vs != null ? `<span class="num" data-cp1-vs>${wl2Pct(R.vs, true)}</span>` : `<span class="mut" data-cp1-vs>—</span>`;
+  let bz = `<span class="mut" data-cp1-bz>—</span>`;
+  if(R.zone) bz = R.zs === 'in' ? `<span class="cp1-bz in" data-cp1-bz="in">in ${cp1Z(R.zone)}</span>` : `<span class="cp1-bz" data-cp1-bz="${R.zs || 'set'}">${R.zs === 'below' ? 'below' : 'above'} ${cp1Z(R.zone)}</span>`;
+  return `<span class="c-vs">${vs}</span><span class="c-bz">${bz}</span>`;
+}
+function cp1WatchPhone(it){
+  const R = cp1Rel(it), p = [`vs 40-wk ${R.vs != null ? wl2Pct(R.vs, true) : '—'}`];
+  if(R.zone) p.push(R.zs === 'in' ? 'in zone' : R.zs === 'below' ? 'below zone' : 'above zone');
+  return p.join(' · ');
+}
 function nt1bStatusHtml(M){
   const e = escHtml, E = rm1Eff(), r = E.r, mood = lr2Mood(r), P = ln4StatusPieces || {};
   const moodAttrs = `data-td3-rg data-rg-state="${mood.st}" data-rg-label="${mood.label}" data-rg-stale="${mood.old ? 1 : 0}" data-rm1-pc="${E.pc}" aria-label="Regime: ${e(mood.label)} · New entries ${E.pc}% size · ${E.sma}${mood.old ? ' · data ' + r.ageDays + 'd old' : ''}"`;
   const pc = mood.st === 'green' ? 'p-g' : mood.st === 'amber' ? 'p-a' : 'p-n';
   let wl = ''; try{ const Lh = re1L(tdHome()); if(Lh && Lh.signals && Lh.signals.asOf) wl = Lh.emergency.active ? ' · emergency brake' : ''; }catch(err){}
-  const rowMood = `<div class="nt1b-sr" data-nt1b-row="mood"><span class="k">MOOD</span><span class="v"><button type="button" class="nt1b-mood" data-lr2-card="mood" ${moodAttrs} onclick="tdRegimeGo()"><span class="pill ${pc}">${e(mood.label)}</span></button><span class="num" data-ln4-wl>${mood.old ? `data ${r.ageDays}d old · ` : ''}new entries at <b>${E.pc}%</b> size${wl}</span>${nt1bGoal(M)}</span></div>`;
+  let S1 = null; try{ S1 = cp1State(); }catch(err){}
+  const rowMood = S1 ? cp1MoodRow(S1, E, mood, wl, pc, moodAttrs, nt1bGoal(M)) + cp1MarketRow(S1) : `<div class="nt1b-sr" data-nt1b-row="mood"><span class="k">MOOD</span><span class="v"><button type="button" class="nt1b-mood" data-lr2-card="mood" ${moodAttrs} onclick="tdRegimeGo()"><span class="pill ${pc}">${e(mood.label)}</span></button><span class="num" data-ln4-wl>${mood.old ? `data ${r.ageDays}d old · ` : ''}new entries at <b>${E.pc}%</b> size${wl}</span>${nt1bGoal(M)}</span></div>`;
   const rowToday = P.ev ? `<div class="nt1b-wrap" data-nt1b-row="today">${P.ev}</div>` : '';
   const hot = lr2Hot(); let rowHot = '';
   if(hot.has){
@@ -14374,7 +14592,7 @@ function switchTab(t){
   if(activeTab==='flow' && t!=='flow'){ try{ sdOpen = {}; }catch(e){} }   /* TD4a — ออกจาก Flow = แถว Sector พับกลับ (ร่างที่พิมพ์ค้างยังอยู่ใน sdDraft) */
   const prevTab = activeTab;
   activeTab = t;
-  if(t==='watch' && prevTab!=='watch'){ wlView = 'idea'; wlMobOpen = false; try{ wlFullOff(); }catch(e){} }   /* NT1 — every time Watch opens it starts on Ideas (deep links set their own view right after) */
+  if(t==='watch' && prevTab!=='watch'){ wlView = 'idea'; wlMobOpen = false; hwSym = ''; wl5FullSym = ''; try{ wlFullOff(); }catch(e){} }   /* CP1 review — a Homework page left open when you changed tab must not come back under / instead of the list (phone: it rendered below the list) · hwGo / wl1Go set their own state right after switchTab */   /* NT1 — every time Watch opens it starts on Ideas (deep links set their own view right after) */
   Object.keys(TAB_MAP).forEach(k=>{
     const el = document.getElementById(TAB_MAP[k]);
     if(el) el.style.display = (k===t ? 'block' : 'none');
@@ -15263,6 +15481,7 @@ function pxStart(){
   if(pxUnsub && pxUnsubUid===uid) return;
   pxStop();
   pxUnsubUid = uid;
+  try{ cp1MkStart(); }catch(e){}
   try{
     pxUnsub = db.collection('users').doc(uid).collection('prices').onSnapshot(snap=>{
       const m = {}; let meta = null;
@@ -15283,6 +15502,7 @@ function coreStop(){
   if(coreUnsub){ try{ coreUnsub(); }catch(e){} }
   coreUnsub = null; coreUnsubUid = null; coreCardsList = []; coreCancelledList = []; coreCardsRaw = []; coreErr = null; coreCardsLoaded = false;
   pxStop();
+  try{ cp1MkStop(); }catch(e){}
 }
 /* วาดใหม่ทั้งหน้า (ตัวเลขชั้น 2 อยู่ทั้งแผง Core และบล็อกสรุป) · กำลังพิมพ์ในแผงนี้ = รอวาดตอนออกจากช่อง */
 function coreRefresh(){
@@ -30131,8 +30351,9 @@ function lr2RiskCard(){
 /* NT1b §6.1 — ONE dark primary on Today: the first Place / Filled / Add-on button in Act keeps it, later ones turn plain (outline) */
 function nt1bOnePri(html){
   let n = 0;
-  return html.replace(/<button type="button" class="btn([^"]*)" data-re2-btn="(place|fill|addon)"([^>]*)>/g, (m, c, k, rest)=>{
+  return html.replace(/<button type="button" class="btn([^"]*)" data-re2-btn="(cp1plan|place|fill|addon)"([^>]*)>/g, (m, c, k, rest)=>{
     if(/\bdisabled\b/.test(rest) || /lrf-hb/.test(c)) return m;
+    if(k === 'cp1plan' && /(^|\s)o(\s|$)/.test(c)) return m;   /* CP1 — a white Compounder button is never "the dark one" */
     return ++n > 1 ? `<button type="button" class="btn${c}" data-re2-btn="${k}" data-nt1b-sec="1"${rest}>` : m;
   });
 }
@@ -30143,9 +30364,11 @@ function ln4ActHtml(){
   try{
     const Ms = accts.map(a=>re2Model(a)), all = k=>[].concat(...Ms.map(M=>M[k])), tot = k=>Ms.reduce((n, M)=>n + M.tot[k], 0), nothing = Ms.reduce((n, M)=>n + M.nothing, 0);
     const foot = nothing > 0 ? `<div class="none" data-re2-nothing>${nothing} holding${nothing === 1 ? ' needs' : 's need'} nothing</div>` : '';
+    let B = null; try{ B = cp1Build(all('manage')); }catch(err){ console.warn('cp1:', err); }   /* CP1 — Compounder first in a pullback; in a normal market one summary line at the bottom */
+    const mgRows = B && B.S.on ? all('manage').filter(r=>!B.addon.some(a=>a.bd === r.it)) : all('manage');   /* an Add-on row shown in the Compounder group is not repeated in Manage */
     const g1 = re2GroupHtml('enter', 'Enter', re2EnterCap(lr2Sort(all('enter'))), tot('plan'), 'plan', 'Nothing to enter'), g2 = re2GroupHtml('check', 'Check orders', all('check'), tot('ord'), 'ord', 'Nothing to check'),
-      g3 = re2GroupHtml('manage', 'Manage', all('manage'), tot('hold'), 'hold', 'Nothing to manage').replace(/<\/div>$/, foot + '</div>');
-    return nt1bOnePri(`<div class="card ln4-card re2-act lr2-act" data-ln4-act data-re2-act="all">${lr2ActHead(accts)}<div class="cols re2-cols lr2-cols">${g1}${g2}${g3}</div></div>`);
+      g3 = re2GroupHtml('manage', 'Manage', mgRows, tot('hold'), 'hold', 'Nothing to manage').replace(/<\/div>$/, foot + '</div>');
+    return nt1bOnePri(`<div class="card ln4-card re2-act lr2-act" data-ln4-act data-re2-act="all">${lr2ActHead(accts)}<div class="cols re2-cols lr2-cols">${B ? cp1GroupHtml(B) : ''}${g1}${g2}${g3}</div>${B ? cp1SumHtml(B) : ''}</div>`);
   }catch(e){ console.warn('lr2 act:', e); return `<div class="card ln4-card" data-ln4-act><div class="h">Act</div><div class="m ln4-empty" data-ln4-actnone>Nothing to act on</div></div>`; }
 }
 /* ⚑ Ready — toggle on the Planned card / drawer (all strategies). Additive data only; cleared by the write wrappers below when the plan is Ordered / Filled / Cancelled. */
@@ -31563,13 +31786,15 @@ function wl5FullOff(){ wl5FullSym = ''; hwSym = ''; renderWatchlist(); }
 function wl5RowHtml(r){
   const it = r && r.item; if(!it) return '';
   const e = escHtml, st = wl5Status(it), hw = wl5HwInfo(it), ex = wl1Exch(it), act = wl5Act(it), nx = wl5NextOf(it), s = wl5Sec(it);
-  const phone = hw.done ? [s ? s.name : '', hw.short].filter(Boolean).join(' · ') : hw.short;
+  let phone = hw.done ? [s ? s.name : '', hw.short].filter(Boolean).join(' · ') : hw.short;
+  if(wl1TrkOf(it) === 'ladder'){ try{ phone = [phone, cp1WatchPhone(it)].filter(Boolean).join(' · '); }catch(x){} }   /* CP1 — line 2 adds "vs 40-wk −1% · in zone" */
   const watch = wl1GrpOf(it) === 'watch', mom = wl1TrkOf(it) === 'winner', cl = ux3ClOn() && watch, sel = cl && ux3Cl.sel[it.ticker] === true;
   const ll = mom && watch && wlLeftLeaders(it);   /* UX3 G — Momentum only: failed the Screen › Leaders rule */
   const tk = `<button type="button" class="wl-tk${sel ? ' on' : ''}" role="checkbox" aria-checked="${sel}" data-wl-tk aria-label="Select ${e(wl1Bare(it.ticker))}" onclick="event.stopPropagation();ux3ClTog(this.closest('[data-sym]').dataset.sym)"></button>`;
-  return `<div class="wlR wl1-row lr5r${wlSel === r.sym ? ' on' : ''}${cl ? ' cl' : ''}${sel ? ' sel' : ''}" data-sym="${e(r.sym)}" data-wl1-row data-wl1-status="${st.k}" data-wl1-key="${e(wl1KeyOf(it))}" data-lr5-row onclick="${cl ? 'ux3ClTog(this.dataset.sym)' : 'wlOpen(this.dataset.sym)'}">
+  const cpc = wl1TrkOf(it) === 'ladder';   /* CP1 — Compounder list: vs 40-wk + Buy zone */
+  return `<div class="wlR wl1-row lr5r${wlSel === r.sym ? ' on' : ''}${cl ? ' cl' : ''}${sel ? ' sel' : ''}${cpc ? ' cp1c' : ''}" data-sym="${e(r.sym)}" data-wl1-row data-wl1-status="${st.k}" data-wl1-key="${e(wl1KeyOf(it))}" data-lr5-row onclick="${cl ? 'ux3ClTog(this.dataset.sym)' : 'wlOpen(this.dataset.sym)'}">
     <div class="lr5-id"><span class="c-stock"><b class="wlRn">${e(wl1Bare(r.sym))}</b>${ex ? '' : wl1ExSelHtml(it)}</span><span class="c-st"><span class="l1"><span class="st ${st.cls} wl1-st" data-wl1-chip title="${e(st.tip)}">${e(st.label)}</span>${st.k === 'none' && !cl ? wl5FocusBtn(it) : ''}</span>${ll ? '<span class="lr5-ll" data-wl-ll title="Below the Screen › Leaders rule (RS or distance from the high)">left Leaders</span>' : ''}</span></div>
-    <span class="c-sec">${wl5SecCell(it)}</span><span class="c-rs">${wl5RsCell(it)}</span>
+    <span class="c-sec">${wl5SecCell(it)}</span><span class="c-rs">${wl5RsCell(it)}</span>${cpc ? cp1WatchCells(it) : ''}
     <span class="c-hw wl1-hwt hw${hw.done ? ' ok' : ' no'}" data-wl1-hwt title="${e(hw.txt)}">${e(hw.txt)}</span>
     <span class="c-nx num" data-lr5-next>${nx ? e(wl1ArchDate(nx)) : '—'}</span>
     ${cl ? tk : `<button type="button" class="btn lr5-act${act.pri ? ' pri' : ''}" data-wl1-act data-lr5-act onclick="event.stopPropagation();${act.fn}">${act.t}</button>`}
@@ -31670,7 +31895,7 @@ function ux3Toast(msg, undo, ms){
   const b = el.querySelector('[data-ux3-undo]'); if(b) b.onclick = ()=>{ clearTimeout(ux3ToastT); el.remove(); try{ undo(); }catch(e){ console.warn(e); } };
   ux3ToastT = setTimeout(()=>el.remove(), ms || 8000);
 }
-function wl5TableHead(){ return `<div class="lr5r lr5-th wl5-th" aria-hidden="true"><span class="lbl">Stock</span><span class="lbl">Status</span><span class="lbl">Sector vs SPY</span><span class="lbl">RS · from high</span><span class="lbl">Thesis · homework</span><span class="lbl">Next check</span><span></span><span></span></div>`; }
+function wl5TableHead(){ const cp = wl1Trk === 'ladder'; return `<div class="lr5r lr5-th wl5-th${cp ? ' cp1c' : ''}" aria-hidden="true"><span class="lbl">Stock</span><span class="lbl">Status</span><span class="lbl">Sector vs SPY</span><span class="lbl">RS · from high</span>${cp ? '<span class="lbl">vs 40-wk</span><span class="lbl">Buy zone</span>' : ''}<span class="lbl">Thesis · homework</span><span class="lbl">Next check</span><span></span><span></span></div>`; }
 function wl5Apply(rows){
   const q = String(wl5Q || '').trim().toUpperCase().replace(/\.BK$/, '');
   let L = rows.map((r, i)=>({r, i}));
@@ -34228,7 +34453,7 @@ function hw1MineHtml(it){
   const line = [hw2Hold(it), ladder ? hw2NextTxt(it) : ''].filter(Boolean).map(e).join(' · ') + ` · <span class="${done ? 'ok' : 'amb'}" data-hw2-size>${e(hw2SizeTxt(it, done))}</span>`;
   return `<div class="hw1-mine" data-hw1-mine data-hw2-type="${hw2Type(it)}" data-wl-mt="${e(t)}" data-wl-mt-mode="edit"><div class="hw1-mh"><span class="lbl">Your thesis</span><span class="wlMtDraft" data-wl-mt-draft ${dirty ? '' : 'hidden'}>Unsaved draft · <button type="button" class="hw1-lnk" data-wl-mt-ddisc onclick="wlMtDiscard('${e(t)}')">Discard</button></span></div>
     <div class="hw2-line" data-hw2-line>${line}</div>
-    <div class="hw1-mscroll">${main}<div class="hw1-mut" data-hw1-plan-note>Price rules (stop, exit) live in the Plan card, not here.</div>${opt}</div>
+    <div class="hw1-mscroll">${main}${cp1ZoneHtml(it)}<div class="hw1-mut" data-hw1-plan-note>Price rules (stop, exit) live in the Plan card, not here.</div>${opt}</div>
     <div class="hw1-mfoot"><div class="hw1-btns"><button type="button" class="btn" data-hw1-draft data-wl-mt-save onclick="hw1Save('${e(t)}',false)">Save draft</button><button type="button" class="btn pri" data-hw1-done data-wl1-confirm ${p.miss.length ? 'disabled' : ''} onclick="hw1Done('${e(t)}')"><span class="lg">Save · mark done</span><span class="sm">Mark done</span></button><button type="button" class="hw1-lnk hw1-copy" data-hw1-copy onclick="hw1Copy('${e(t)}')">Copy for AI challenge ›</button><button type="button" class="hw1-lnk hw2-edit" data-hw2-editchips onclick="hw2EditOpen('${hw2Type(it)}')">Edit chips</button></div>
     <div class="hw1-mut" data-wl-mt-msg role="status">${e(msg)}</div>${size}</div></div>`;
 }

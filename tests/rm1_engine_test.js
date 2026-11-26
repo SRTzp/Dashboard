@@ -55,9 +55,9 @@ const pilot = (L, o) => A.sizeComp(L, Object.assign({ kind: 'pilot', thesisDone:
 {
   const q = ff => pilot(A.live(src(ff), 'main')).qty;
   const q100 = q(green), q80 = q(gr), q60 = q(rr);
-  ok('Compounder pilot qty = floor(equity × 0.50% × modifier ÷ loss/share)', q100 === Math.floor(EQ * 0.005 / DIST) && q80 === Math.floor(EQ * 0.005 * 0.8 / DIST) && q60 === Math.floor(EQ * 0.005 * 0.6 / DIST), [q100, q80, q60]);
+  ok('Compounder pilot qty = floor(equity × 0.50% × modifier ÷ loss/share)', q100 === Math.floor(EQ * 0.005 / DIST) && q80 === Math.floor(EQ * 0.005 * 1.0 / DIST) && q60 === Math.floor(EQ * 0.005 * 0.75 / DIST), [q100, q80, q60]);
   const m60 = pilot(A.live(src(rr), 'main'));
-  ok('size line text names the one limiting rule: regime 60%', m60.limit && m60.limit.code === 'regime' && m60.limit.text === 'limited by regime 60%', m60.limit);
+  ok('size line text names the one limiting rule: regime 75% (CP1 Compounder, both red)', m60.limit && m60.limit.code === 'regime' && m60.limit.text === 'limited by regime 75%', m60.limit);
   ok('no limiting text at 100%', pilot(A.live(src(green), 'main')).limit === null);
   const Lem = A.live(src(rr), 'main'); Lem.eF = 0.5;
   const mem = pilot(Lem);
@@ -84,14 +84,14 @@ const pilot = (L, o) => A.sizeComp(L, Object.assign({ kind: 'pilot', thesisDone:
 
 /* 6 — Compounder: limited by risk / total-risk room / value-cap room in turn (add-on, thesis done) */
 {
-  const hold = (qty, entry, stop) => { const s = src(gr); s.books.main.trades = [tr({ id: 'b1', sym: 'BIGC', qty, entry, sl: stop, posGroup: 'b1', sl0: stop })]; s.cards = [{ id: 'cB', acct: 'main', ticker: 'BIGC', market: 'US', strategy: 'L', status: 'open', trade_id: 'b1', lots: [{ n: 1, px: entry, qty }] }]; return A.live(s, 'main'); };
+  const hold = (qty, entry, stop) => { const s = src(rr); s.books.main.trades = [tr({ id: 'b1', sym: 'BIGC', qty, entry, sl: stop, posGroup: 'b1', sl0: stop })]; s.cards = [{ id: 'cB', acct: 'main', ticker: 'BIGC', market: 'US', strategy: 'L', status: 'open', trade_id: 'b1', lots: [{ n: 1, px: entry, qty }] }]; return A.live(s, 'main'); };
   const add = (L, o) => A.sizeComp(L, Object.assign({ kind: 'addon', ideaId: L.ideas[0].id, thesisDone: true, side: 'long', entry: 100, stop: 90 }, spec, o || {}));
   // (a) risk-limited: small holding, wide room → qty = risk budget (0.50% × 80%), no room limit text except regime
   const La = hold(10, 100, 95), a = add(La);
   ok('(a) risk qty is the smallest → regime text', a.limits.finalQty === a.limits.riskQty && a.limit && a.limit.code === 'regime' && a.qty === a.limits.riskQty, a.limits);
   // (b) total-risk room: existing ≈0.5% risk → room = 1.00% × 80% − used
   const Lb = hold(70, 100, 90), b = add(Lb);
-  ok('(b) total-risk room is the smallest → "limited by total risk" (1.00% × 80% = 0.80%)', b.limit && b.limit.code === 'total_risk' && b.limit.text === 'limited by total risk 0.8%' && b.qty > 0 && b.qty < b.limits.riskQty && b.qty === b.limits.totalRoomQty, [b.limit, b.limits]);
+  ok('(b) total-risk room is the smallest → "limited by total risk" (1.00% × 75% = 0.75%)', b.limit && b.limit.code === 'total_risk' && b.limit.text === 'limited by total risk 0.75%' && b.qty > 0 && b.qty < b.limits.riskQty && b.qty === b.limits.totalRoomQty, [b.limit, b.limits]);
   ok('(b) the cut order is allowed (not blocked)', !b.blocked && b.reasons.length === 0, b.reasons);
   // (c) value-cap room: tight stop → risk qty huge, value room smaller. 12.5% of 5,000,000 = 625,000 THB; existing value 10×100×35 = 35,000
   const Lc = hold(10, 100, 95), c = add(Lc, { entry: 100, stop: 99.5 });

@@ -23,6 +23,7 @@ RS_AGO = 20                  # 4 สัปดาห์ = 20 sessions
 RS_LINE_WIN = 20             # ความชัน RS line
 RS_LINE_BAND = 0.02          # ±2%
 RS_HI_WIN = 252
+MA_WIN = 200                 # CP1 — 200-day simple average of closes = the app's "40-week average"
 RS_BENCH = {'us': 'SPY', 'th': '^SET.BK'}
 RS_BENCH_FALLBACK = {'th': 'TDEX.BK'}   # SET50 ETF · ใช้เมื่อ ^SET.BK มี < 252 แถว (Yahoo ส่ง index มาไม่ครบ)
 RS_MIN_UNIVERSE = 30         # universe ที่ดึงได้น้อยกว่านี้ → ไม่ให้ rating (reason universe<30)
@@ -268,6 +269,38 @@ def rs_hi_ret(rows):
     return out
 
 
+def ma_fields(rows):
+    """CP1 — {last, lastDate, ma200, vsMa, offHi} from the same bars (fractions, like offHigh) · ma200/vsMa need >= 200 bars, offHi needs >= 252 · a field with too little history is OMITTED (the app shows "—", never 0)"""
+    out = {}
+    if not rows:
+        return out
+    cl = [float(c) for _, c in rows]
+    t = cl[-1]
+    if t > 0:       # "Now" on Today / Watch (the Watch stocks have no other daily price)
+        out['last'], out['lastDate'] = round(t, 4), rows[-1][0].isoformat()
+    if len(cl) >= MA_WIN and t > 0:
+        ma = sum(cl[-MA_WIN:]) / MA_WIN
+        if ma > 0:
+            out['ma200'], out['vsMa'] = round(ma, 4), round(t / ma - 1, 4)
+    if len(cl) >= RS_HI_WIN and t > 0:
+        h = max(cl[-RS_HI_WIN:])
+        if h > 0:
+            out['offHi'] = round(t / h - 1, 4)
+    return out
+
+
+def market_entry(rows):
+    """CP1 — {close, hi52, offHi, asOf} of an index (SPY / SET) · None when there are < 252 bars (no guessing)"""
+    if not rows or len(rows) < RS_HI_WIN:
+        return None
+    cl = [float(c) for _, c in rows]
+    t = cl[-1]
+    h = max(cl[-RS_HI_WIN:])
+    if not (t > 0 and h > 0):
+        return None
+    return {'close': round(t, 4), 'hi52': round(h, 4), 'offHi': round(t / h - 1, 4), 'asOf': rows[-1][0].isoformat()}
+
+
 def rs_for(ysym, rows, bench_rows, table, bench_sym=None):
     """สร้าง dict rs ของ 1 ตัว · rows/bench_rows = [(date, adj close)] (None = ดึงไม่ได้) · table = rsTable[mkt] หรือ None
     bench_sym = ชื่อ benchmark ที่ใช้จริง (บันทึกใน 'bench')"""
@@ -278,6 +311,7 @@ def rs_for(ysym, rows, bench_rows, table, bench_sym=None):
         rs['reason'] = 'no-data'
         return rs
     rs.update(rs_hi_ret(rows))      # WL2 — เพิ่มอย่างเดียว
+    rs.update(ma_fields(rows))      # CP1 — ma200 / vsMa / offHi (omitted when the history is too short)
     if len(rows) < RS_MIN_BARS:
         rs['reason'] = 'history<252'
     elif not table or not table.get('cuts'):
@@ -324,7 +358,7 @@ def pick_rs_tickers(cards, watch):
     return seen
 
 
-def run_rs(syms, universe, fetch_many, write, now, sector_fetch=None, have_sector=(), us_table=None):
+def run_rs(syms, universe, fetch_many, write, now, sector_fetch=None, have_sector=(), us_table=None, write_market=None):
     """syms {ySym: ticker} · universe [ySym] · fetch_many(list)->{ySym: [(date, adj close)]} (ตัวที่ดึงไม่ได้ = ไม่มี key)
     เขียน prices/{ySym} {'rs':…} + prices/_meta {'rsTable':…} · คืน (n_rated, failed list)"""
     benches = list(RS_BENCH.values())
@@ -353,6 +387,15 @@ def run_rs(syms, universe, fetch_many, write, now, sector_fetch=None, have_secto
         write(y, doc)
         n += rs['rating'] is not None
     write('_meta', {'rsTable': table, 'rsRunAt': now.isoformat()})
+    if write_market:        # CP1 — users/{uid}/market/index · SPY + SET (a missing index is left out; the app then shows "—" and falls back to the regime signals)
+        mk = {}
+        for key, m in (('SPY', 'us'), ('SET', 'th')):
+            sym, rws = pick_bench(m, clean)
+            e = market_entry(rws)
+            if e:
+                mk[key] = dict(e, sym=sym)
+        if mk:
+            write_market('index', mk)
     print(f'rs: rated {n}/{len(syms)} · universe us {table.get("us", {}).get("n", 0)} th {table.get("th", {}).get("n", 0)}'
           + (' · no-data ' + ','.join(f['ySym'] for f in failed) if failed else ''))
     return n, failed
@@ -459,7 +502,12 @@ def main():
         us_file = [] if us_table else [to_ysym(t) for t in load_universe(os.path.join(ROOT, 'data', 'universe_us.txt'))]
         uni = us_file + [to_ysym(t, 'TH') for t in load_universe(os.path.join(ROOT, 'data', 'universe_th.txt'))]
         have = {d.id for d in base.collection('prices').stream() if (d.to_dict() or {}).get('sector') or (d.to_dict() or {}).get('industry')}
-        run_rs(pick_rs_tickers(cards, watch), uni, _yf_fetch_many, write, now, _yf_sector, have, us_table)
+        def write_market(doc_id, data):
+            data = dict(data)
+            data['at'] = firestore.SERVER_TIMESTAMP
+            base.collection('market').document(doc_id).set(data)
+
+        run_rs(pick_rs_tickers(cards, watch), uni, _yf_fetch_many, write, now, _yf_sector, have, us_table, write_market)
     except Exception as ex:
         print('rs failed:', str(ex)[:200])
     try:        # RR4 — RRG daily bars for the Flow tails (own try: a failure keeps yesterday's rrg/bars and the app falls back to Twelve Data)
