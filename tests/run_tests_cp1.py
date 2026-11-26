@@ -85,6 +85,10 @@ def run(pw, w):
         page.click("[data-cp1-row=\"MSFT\"] [data-cp1-btn=\"hw\"]"); page.wait_for_timeout(600)
         check(f"{tag} C Homework › opens the Homework page", js(page, "()=>!!document.querySelector('[data-hw1-page=\"MSFT\"]')"))
         C.today(page)
+        js(page, "()=>{ switchTab('watch'); wl1SegGo('ladder'); renderWatchlist(); }"); page.wait_for_timeout(500)
+        st = js(page, "()=>({hw:document.querySelectorAll('[data-hw1-page]').length, list:document.querySelectorAll('[data-wl1-row]').length, hwSym:hwSym, vis:[...document.querySelectorAll('[data-hw1-page]')].filter(e=>e.getClientRects().length).length})")
+        check(f"{tag} E leaving a Homework page for Today and coming back to Watch shows the list only (no Homework header under / instead of the list)", st["hw"] == 0 and st["vis"] == 0 and st["list"] >= 4 and st["hwSym"] == "", st)
+        C.today(page)
         # planned stock → its plan row, not a second row
         js(page, "()=>coreWrite('cp1plan', {acct:'main', ticker:'COST', market:'US', strategy:'L', status:'plan', plan:{entry:905, stop:860, ready:true, ps1:{rows:[{px:905, qty:20}]}}})"); page.wait_for_timeout(500); C.today(page)
         r = js(page, ROWS)
@@ -150,9 +154,9 @@ def run(pw, w):
         check(f"{tag} D To smaller than From → message, nothing saved", "To must be at least From" in (js(page, "()=>document.querySelector('[data-cp1-zmsg]').innerText")) and js(page, "()=>wlItemOf('MSFT').buyZone") == {"lo": 386.06, "hi": 409.94})
         page.fill("[data-cp1-zone=\"lo\"]", "395"); page.fill("[data-cp1-zone=\"hi\"]", "405"); page.locator("[data-cp1-zone=\"hi\"]").blur(); page.wait_for_timeout(300)
         shot_zone = True
-        if ph and SH:
+        if SH:
             js(page, "()=>{ const z=document.querySelector('[data-cp1-zonebox]'); z.scrollIntoView({block:'center'}); }"); page.wait_for_timeout(300)
-        shot(page, "buyzone", w) if ph else None
+            shot(page, "buyzone", w)
         mk = js(page, "()=>document.querySelector('[data-hw1-page=\"MSFT\"]') ? 1 : 0")
         # Today alert: MSFT is now inside its zone → first row group 'In buy zone'
         js(page, "()=>{ hwBack(true); }"); page.wait_for_timeout(300)
