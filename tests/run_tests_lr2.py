@@ -73,7 +73,7 @@ def seed_rrg(page):
 def partA(page, tag, w):
     wide = w >= 900
     # mood — one rule on the shared regime result
-    for eq, cr, asof, want, st in (("green", "green", "fresh", "Risk-on", "green"), ("red", "green", "fresh", "Mixed", "amber"), ("green", "red", "fresh", "Mixed", "amber"),
+    for eq, cr, asof, want, st in (("green", "green", "fresh", "Risk-on", "green"), ("red", "green", "fresh", "Pullback", "amber"), ("green", "red", "fresh", "Pullback", "amber"),
                                    ("red", "red", "fresh", "Risk-off", "amber"), ("green", "green", "stale", "Unclear", "grey"), ("neutral", "green", "fresh", "Unclear", "grey")):
         set_regime(page, eq, cr, asof)
         got = js(page, "()=>{ const c = document.querySelector('[data-lr2-card=\"mood\"]'); return c ? [c.dataset.rgLabel, c.dataset.rgState] : null; }")
@@ -85,7 +85,7 @@ def partA(page, tag, w):
     set_regime(page, "green", "green", "fresh")
     # empty states
     js(page, "()=>{ wiDocs = {}; ffState().rrg = {rowsD:[], rowsW:[]}; todayRefresh(true); }"); page.wait_for_timeout(250)
-    check(f"{tag} A: all three empty = MOOD + MACRO rows only (NT1b: empty items are hidden, no empty-state line)", js(page, "()=>[...document.querySelectorAll('[data-nt1b-row]')].map(r=>r.dataset.nt1bRow)") == ["mood", "macro"])
+    check(f"{tag} A: all three empty = MOOD + MACRO rows only (NT1b: empty items are hidden, no empty-state line)", js(page, "()=>[...document.querySelectorAll('[data-nt1b-row]')].map(r=>r.dataset.nt1bRow)") == ["mood", "market", "macro"])
     check(f"{tag} A: empty news / moves / sector cards are not drawn", card(page, "news") == "" and card(page, "hot") == "" and card(page, "moves") == "")
     if wide:
         check(f"{tag} A: one status card", js(page, "()=>document.querySelectorAll('[data-nt1b-status]').length") == 1)

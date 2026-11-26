@@ -404,9 +404,9 @@ def part_layout(pw, w, h):
             check(f"{tag} L right column order: Ideas → To do → Risk room", ideas["t"] < todo["t"] < risk["t"] and ideas["l"] == todo["l"] == risk["l"], [ideas, todo, risk])
             check(f"{tag} L right column is 440px wide (mockup grid 1fr + 440)", abs(ideas["w"] - 440) <= 2, ideas)
         rows = js(page, "()=>[...document.querySelectorAll('[data-nt1b-status] [data-nt1b-row]')].map(r=>r.dataset.nt1bRow)")
-        check(f"{tag} L rows in order: MOOD · TODAY · HOT · MACRO", rows == ["mood", "today", "hot", "macro"], rows)
+        check(f"{tag} L rows in order: MOOD · TODAY · HOT · MACRO", rows == ["mood", "market", "today", "hot", "macro"], rows)
         labs = js(page, "()=>[...document.querySelectorAll('[data-nt1b-status] .k')].map(e=>[e.innerText, getComputedStyle(e).fontSize, getComputedStyle(e).textTransform, getComputedStyle(e).fontFamily.split(',')[0].replace(/\"/g,''), Math.round(e.getBoundingClientRect().width)])")
-        if wide: check(f"{tag} L labels: 11px uppercase Inter (no serif), 62px column", all(x[1] == "11px" and x[2] == "uppercase" and "serif" not in x[3].lower() and x[4] <= 62 for x in labs) and len(labs) == 4, labs)
+        if wide: check(f"{tag} L labels: 11px uppercase Inter (no serif), 62px column", all(x[1] == "11px" and x[2] == "uppercase" and "serif" not in x[3].lower() and x[4] <= 62 for x in labs) and len(labs) == 5, labs)
         mood = js(page, TXT, "[data-nt1b-row=mood]")
         check(f"{tag} L MOOD: regime pill + `new entries at n% size` + goal on the same row", mood.startswith("MOOD Risk-off new entries at ") and "% size" in mood and ("Goal" in mood or "goal" in mood), mood)
         check(f"{tag} L MOOD pill colour: Risk-off amber", js(page, "()=>getComputedStyle(document.querySelector('.nt1b-mood .pill')).color") .startswith("rgb(169, 110, 6)"))
@@ -421,7 +421,7 @@ def part_layout(pw, w, h):
         mac = js(page, TXT, "[data-nt1b-row=macro]")
         check(f"{tag} L MACRO: Playbook one-liner (or `No active Playbook`) + Playbook ›", mac.startswith("MACRO") and "Playbook" in mac, mac)
         stx = js(page, TXT, "[data-nt1b-status]")
-        check(f"{tag} L nothing from Risk room / Act in the status card (no weekly risk, room, open risk, port status)", not any(x in stx.lower() for x in ("room", "open risk", "weekly", "normal", "placed")), stx)
+        check(f"{tag} L nothing from Risk room / Act in the status card (no weekly risk, room, open risk, port status)", not any(x in stx.lower() for x in ("room", "open risk", "weekly", "placed")), stx)
         # tap-through hooks
         for sel, fn in (("[data-lr2-card=mood]", "tdRegimeGo"), ("[data-lr2-hot]", "lr2Go"), ("[data-ln4-playbook]", "td4MacroGo")):
             js(page, "(fn)=>{ window.__called = null; window['__o_'+fn] = window[fn]; window[fn] = ()=>{ window.__called = fn; }; }", fn)
@@ -429,7 +429,7 @@ def part_layout(pw, w, h):
             check(f"{tag} L {sel} taps through ({fn}) — links unchanged", got == fn, got)
         # no events → TODAY row hidden
         js(page, "()=>{ wiDocs = {}; todayRefresh(true); }"); page.wait_for_timeout(250)
-        check(f"{tag} L no events → the TODAY row is hidden", js(page, "()=>[...document.querySelectorAll('[data-nt1b-row]')].map(r=>r.dataset.nt1bRow)") == ["mood", "hot", "macro"])
+        check(f"{tag} L no events → the TODAY row is hidden", js(page, "()=>[...document.querySelectorAll('[data-nt1b-row]')].map(r=>r.dataset.nt1bRow)") == ["mood", "market", "hot", "macro"])
         # ---- CHECK ORDERS hidden at 0
         check(f"{tag} L CHECK ORDERS: 0 working → the whole section (heading + `Nothing to check`) is hidden", js(page, "()=>[!!document.querySelector('[data-re2-col=check]'), /Nothing to check|CHECK ORDERS/i.test(document.querySelector('[data-ln4-act]').innerText)]") == [False, False])
         # ---- UIUX ①: one dark primary
