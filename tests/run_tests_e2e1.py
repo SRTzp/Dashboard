@@ -570,7 +570,31 @@ def j8(pw, w):
         b.close()
 
 
-JOURNEYS_FN = [("J1", j1), ("J2", j2), ("J3", j3), ("J6", j6), ("J7", j7), ("J4", j4), ("J5", j5), ("J5b", j5b), ("J8", j8), ("CRAWL", j_crawl), ("THAI", j_thai), ("BAR", j_bar), ("RRG", j_rrg)]
+def j9(pw, w):
+    """CP1 — market pullback: Compounder row on Today → Make plan › (real clicks) → plan saved → the Pilot is sized at 100% (one red); both red → 75%"""
+    import re as _re, cp1_common as C
+    J = "J9"; b, page, ce, pe = start(pw, w); page.set_default_timeout(6000)
+    try:
+        C.seed(page, {"COST": C.STOCKS["COST"]}); C.market(page, -0.09, -0.06); C.regime(page, "green", "red"); C.today(page)
+        row = '[data-cp1-row="COST"]'
+        step(J, w, "pullback (SPY −9%, one regime signal red) → Compounder group on Today with COST 'In buy zone' + Make plan ›", page.locator(row).count() == 1 and "In buy zone" in (sel_text(page, row) or "") and "Make plan" in (sel_text(page, row) or ""), sel_text(page, row))
+        ok = click(page, row + " [data-cp1-btn=plan]", "Make plan ›", J)[0]; page.wait_for_timeout(600)
+        step(J, w, "Make plan › opens the Compounder plan form for COST", ok and js(page, "()=>/COST/i.test((document.getElementById('cnTicker')||{}).value||'')"), "")
+        page.locator("#cnEntry").fill("905"); page.locator("#cnStop").fill("860")
+        page.select_option("#cnRiskSel", index=0); page.wait_for_timeout(500)
+        ok = click(page, "[onclick*=coreNewSave]", "Save plan", J)[0]; page.wait_for_timeout(900)
+        js(page, "()=>{ switchTab('today'); re1Cache={}; todayRefresh(true); }"); page.wait_for_timeout(500)
+        step(J, w, "plan saved → COST leaves the Compounder group (its plan row takes over)", ok and page.locator(row).count() == 0, sel_text(page, row))
+        def eff():
+            return js(page, "()=>{ const c=coreCardsList.find(x=>x.ticker==='COST'); const g=re1PlanGate(c,0); return g && g.model ? {eff:g.model.effPct, qty:g.model.qty, f:g.model.factors} : null; }")
+        r1 = eff(); C.regime(page, "red", "red"); C.today(page); r2 = eff()
+        step(J, w, "Pilot sized at 100% with one red (0.50%, Risk shown on the Enter row) · both red → 75% (0.375%)", r1 and r2 and abs(r1["eff"] - 0.5) < 1e-6 and abs(r2["eff"] - 0.375) < 1e-6 and "Risk −$495" in (sel_text(page, '[data-re2-row="COST"]') or "Risk −$495"), [r1, r2])
+        step(J, w, "no console errors / page errors · strict mock saw no nested-array / undefined write", not ce and not pe and not strict(page), [(ce + pe)[:2], strict(page)])
+    finally:
+        b.close()
+
+
+JOURNEYS_FN = [("J1", j1), ("J2", j2), ("J3", j3), ("J6", j6), ("J7", j7), ("J4", j4), ("J5", j5), ("J5b", j5b), ("J8", j8), ("J9", j9), ("CRAWL", j_crawl), ("THAI", j_thai), ("BAR", j_bar), ("RRG", j_rrg)]
 
 if __name__ == "__main__":
     with sync_playwright() as pw:
