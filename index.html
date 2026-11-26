@@ -3965,6 +3965,8 @@ html body .re2-row.hf5-r .hf5-dir{font:600 13px/1 var(--sans);color:var(--text,#
 html body .re2-row.hf5-r .hf5-pill{font:600 11px/1 var(--sans);border-radius:999px;padding:3px 8px;color:#0E6B4C;background:#E6F4EE}
 html body .re2-row.hf5-r[data-hf5-noprice]{border-color:#D9921A}
 html body .re2-main .num.hf5-l{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.rx-wrap{position:relative;display:block;min-width:0}.rx-h{position:absolute;left:9px;right:4px;top:50%;transform:translateY(-50%);display:flex;gap:3px;align-items:center;font:500 12px Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;color:#8A919C;white-space:nowrap;pointer-events:none}.pb2-f .rx-h{font-size:12px;color:#8A919C}.rx-h[hidden]{display:none}.rx-sep{font-style:normal}.rx-h button{pointer-events:auto;appearance:none;background:none;border:0;padding:6px 0;margin:-6px 0;font:inherit;color:#5F6672;text-decoration:underline;text-underline-offset:2px;cursor:pointer;min-height:32px;white-space:nowrap}@media (max-width:600px){.rx-h,.pb2-f .rx-h{flex-direction:column;align-items:flex-start;gap:0;line-height:1.1;font-size:11.5px}.rx-sep{display:none}.rx-h button{padding:0;margin:0;min-height:0;position:relative}.rx-h button::after{content:'';position:absolute;inset:-3px -6px}}
+.rx-m{font-size:12px;color:#8A919C;font-weight:400;font-variant-numeric:tabular-nums}.rx-m b{color:#5F6672;font-weight:600}.rx-m .rx-hit{color:#0E6B4C;font-weight:600}
 .hf5-up{color:#0E6B4C;font-weight:600}.hf5-dn{color:#C2362F;font-weight:600}.hf5-am{color:#9A5B00;font-weight:600}
 .hf5-prev{font-size:13px;margin:8px 0;color:var(--text,#14161A)}.hf5-prev:empty{display:none}
 @media (max-width:600px){
@@ -16023,7 +16025,7 @@ function lfFormHtml(o){
         <div class="ps1R" data-ps1-row="s0"><div class="ps1In"><input type="text" inputmode="decimal" id="cnStop" oninput="coreNewIn()"></div><span class="ps1Rx" id="cnS0x"></span></div><div id="cnSx" data-ps1-sx></div><div class="ps1Msg" id="cnSMsg" data-ps1-smsg style="display:none"></div><div class="lr3-ferr" id="cnFerr_stop" data-lr3-ferr="stop" role="alert" style="display:none"></div></div>
       <div class="ps1C ps1RiskC" style="display:none"><div class="ps1RiskIn"><label for="cnRisk"><span id="cnRiskLbl">Risk %</span></label><input type="text" inputmode="decimal" id="cnRisk" oninput="coreNewRisk()"></div><span class="ps1Pill" id="cnRegPill" data-ps1-regpill style="display:none"></span><span class="ccSub" id="cnRiskHint" data-lf-riskhint></span><span id="cnFsrc" hidden></span></div></div>
       <div class="ps1Bk pv-tgt" data-pv-tgt data-pc2-exit style="grid-column:1/-1${coreNew && coreNew.track === 'ladder' ? ';display:none' : ''}"><div class="ps1Hd"><span class="ps1Ht">Exit</span></div>
-        <div class="pc2-exit num"><label>Target 1<input type="text" inputmode="decimal" id="cnTp" data-pv-tp autocomplete="off" placeholder="price" oninput="coreNewIn()"></label>
+        <div class="pc2-exit num"><label>Target 1<span class="rx-wrap" data-rx-wrap="core"><input type="text" inputmode="decimal" id="cnTp" data-pv-tp autocomplete="off" placeholder="price" oninput="coreNewIn()"><span class="rx-h" data-rx-hint hidden></span></span></label>
           <label>Sell at T1<span class="pc2-seg" role="group" aria-label="Sell at T1 as"><button type="button" id="cnT1mP" data-pc2-t1m="pct" class="on" aria-pressed="true" onclick="pc2T1Mode('pct')">%</button><button type="button" id="cnT1mQ" data-pc2-t1m="qty" aria-pressed="false" onclick="pc2T1Mode('qty')">#</button></span><input type="text" inputmode="decimal" id="cnT1v" data-pc2-t1v autocomplete="off" value="50" oninput="coreNewIn()" aria-label="Sell at T1"></label>
           <span class="mut" id="cnT1hint" data-pc2-t1hint>· rest: trail stop</span></div>
         <div class="mut pc2-exh">Used for reward/R and the T1 sell. Rest exits by your trailing stop.</div><input type="hidden" id="cnTp2" aria-hidden="true"><input type="hidden" id="cnTp1Qty" aria-hidden="true"></div>
@@ -16326,6 +16328,7 @@ function ps1FormRun0(n, rd, cx, mk, errs){
 function re1Kind(k){ if(!coreNew) return; coreNew.re1Kind = k; try{ coreNewIn(); }catch(e){} }
 function coreNewIn(){
   const n = coreNew; if(!n || !coreEl('cnTicker')) return;
+  rxCoreHint();
   const cur = n.id ? coreCardsList.find(x=>x.id===n.id) : null;
   const rd = coreNewRead();
   coreTiWlShow(rd.ticker);
@@ -28807,6 +28810,7 @@ function pc2CardHtml(it){
     else if(sat) parts.push(`<span class="mut" data-pv-reward>${e(pv.why.reward || 'no target')}</span>`);
     else if(pv.plannedRiskPct != null) parts.push(`<span class="mut num">${pvPct(pv.plannedRiskPct, 2)}</span>`);
     if(comp && Math.abs(pc2PlanRisk(c) - RiskEngine.POLICY.comp.totalCapPct) > 1e-9) parts.push(`<span class="pc2-tag" data-pc2-risktag>Risk ${pc2RiskTxt(pc2PlanRisk(c))}%</span>`);
+    { const rm = rxHtml(rxItemMarks(it, pv), pv, false); if(rm) parts.push(rm); }   /* RX1 — R marks at the end of the risk line */
   }else{
     if(pv.stopPnl == null) parts.push(sp('If stopped', e(pv.why.stopPnl || 'n/a'), '', 'data-pv-ifstopped'));
     else if(pv.stopPnl > 0.5) parts.push(sp('Locked', '+' + m(pv.stopPnl), 'up', 'data-pv-ifstopped="gain"') + ' if stopped');
@@ -29452,6 +29456,61 @@ function bdActRows(){
   return rows;
 }
 /* ── PV1 — one source for position numbers. posView(it) gathers stored fills / plan / price / FX / equity and hands them to PosView.calc (pos-view.js); engine exposure (risk-engine ideaResult) is reused for open risk. Every surface (Today row · Plan card · drawer) reads this. ── */
+/* RX1 — R marks shown in plans, inline (no new line). ONE constant: edit the numbers here and the plan card, Today Enter / Manage rows and the plan form all follow. */
+const R_MARKS = { sat:[2, 3], mmt:[3, 5], comp:[5, 10] };   /* SRTp 26 Nov — R levels shown in plans; edit here */
+function rxKey(it){ return it && it.kind === 'sat' ? 'sat' : (it && it.tag === 'COMP' ? 'comp' : 'mmt'); }
+function rxNum(v){ return td3Num(Math.round(v * 1e6) / 1e6); }
+/* marks = [{n, px}] — 1R = |entry − stop| (the ORIGINAL stop, same as Journal) · Long: entry + n×R · Short: entry − n×R · [] when entry or stop is missing */
+function rxCalc(key, entry, stop, dir){
+  const e = +entry, s = +stop, d = dir === 'short' || dir === -1 ? -1 : 1, R = Math.abs(e - s);
+  if(!(e > 0) || !(s > 0) || !(R > 0) || d * (e - s) <= 0) return [];
+  return (R_MARKS[key] || []).map(n=>({n, px:e + d * n * R}));
+}
+function rxItemMarks(it, pv){
+  try{
+    pv = pv || posView(it); if(!pv || !(pv.rUnit > 0)) return [];
+    const hold = it.status === 'hold', ent = hold ? pv.avgEntry : ((pv.legs || []).filter(l=>!l.out && !l.done)[0] || (pv.legs || []).filter(l=>!l.out)[0] || {}).px;
+    const st = pv.initialStop > 0 ? pv.initialStop : pv.stop;
+    return rxCalc(rxKey(it), ent, st, pv.dir);
+  }catch(e){ return []; }
+}
+/* text for one mark: "3R 75" · reached (holding, typed price passed it) → "3R ✓" */
+function rxHtml(marks, pv, hold, lead){
+  if(!marks.length) return '';
+  const dir = pv && pv.dir === 'short' ? -1 : 1, px = pv && pv.price > 0 ? pv.price : null;
+  return `<span class="rx-m" data-rx-marks${hold ? '' : ' data-rx-fit'}>${lead ? '· ' : ''}${marks.map(m=>{ const hit = hold && px != null && dir * (px - m.px) >= -1e-9; return hit ? `<span class="rx-hit" data-rx-hit>${m.n}R ✓</span>` : `<span data-rx-lv="${m.n}">${m.n}R <b>${rxNum(m.px)}</b></span>`; }).join(' · ')}</span>`;
+}
+/* RX1 — "no new line": a mark set that would wrap onto an extra line on a narrow row / card is hidden there (it stays on the card in the Plan tab, the Place sheet and the wide layouts). Re-checked after every render and on resize. */
+let rxFitQ = 0;
+function rxFit(){
+  rxFitQ = 0;
+  try{ document.querySelectorAll('.rx-m[data-rx-fit]').forEach(m=>{ const p = m.parentElement; if(!p || !p.getClientRects().length) return; m.hidden = false; const a = p.getBoundingClientRect().height; m.hidden = true; const b = p.getBoundingClientRect().height; m.hidden = a > b + 1.5; }); }catch(e){}
+}
+try{ new MutationObserver(()=>{ if(!rxFitQ) rxFitQ = requestAnimationFrame(rxFit); }).observe(document.documentElement, {childList:true, subtree:true}); window.addEventListener('resize', ()=>{ if(!rxFitQ) rxFitQ = requestAnimationFrame(rxFit); }); }catch(e){}
+/* RX1 — plan form: while TP is empty the TP box shows the strategy's marks as tappable hint text; tap one → TP = that price. host = the wrapper around the TP input. */
+function rxHintFill(host, marks, setFn){
+  if(!host) return; const inp = host.querySelector('input'), h = host.querySelector('[data-rx-hint]'); if(!inp || !h) return;
+  const empty = !String(inp.value).trim(), html = empty && marks.length ? marks.map(m=>`<button type="button" tabindex="-1" data-rx-tap="${m.n}" data-rx-px="${rxNum(m.px).replace(/,/g, '')}" onclick="rxHintTap(this)">${m.n}R ${rxNum(m.px)}</button>`).join('<i class="rx-sep">·</i>') : '';
+  if(h.dataset.h !== html){ h.innerHTML = html; h.dataset.h = html; } h.hidden = !html;
+}
+function rxHintTap(b){
+  const px = b.getAttribute('data-rx-px'), host = b.closest('[data-rx-wrap]'), inp = host && host.querySelector('input'); if(!inp) return;
+  inp.value = px; try{ inp.dispatchEvent(new Event('input', {bubbles:true})); }catch(e){}   /* the field's own oninput does the rest */
+  rxHintFill(host, [], null); try{ inp.focus(); }catch(e){}
+}
+function rxCoreHint(){   /* Momentum plan form (Target 1) */
+  try{
+    const host = document.querySelector('[data-rx-wrap="core"]'); if(!host || !coreNew) return;
+    const e = coreNum((coreEl('cnEntry') || {}).value), s = coreNum((coreEl('cnStop') || {}).value);
+    rxHintFill(host, coreNew.track === 'ladder' ? [] : rxCalc('mmt', e, s, 'long'));
+  }catch(x){}
+}
+function rxSatHint(){   /* Satellite plan form (TP) */
+  try{
+    const host = document.querySelector('[data-rx-wrap="sat"]'); if(!host || !pb2) return;
+    rxHintFill(host, rxCalc('sat', pb2Num(pb2.entry), pb2Num(pb2.sl), pb2.dir === 'Sell' ? 'short' : 'long'));
+  }catch(x){}
+}
 const PV_STALE_MS = 24 * 3600 * 1000;
 function pvEngineIdea(acct, kind, id){
   try{ const L = re1L(acct); if(!L) return null; const key = kind === 'core' ? 'card' : 'satIdea';
@@ -29737,11 +29796,12 @@ function re2Row(it, o){
   const hc = (['Ready', 'Ordered', 'Holding', 'Near'].indexOf(o.chip) >= 0 || (line && o.why && o.chip === o.why)) ? ' lrf-hc' : '';
   const whyL1 = line && o.why && !blkd ? `<i class="lrf-why ${o.warn ? 'a' : ''}" data-re2-why>${e(o.why)}</i>` : '';
   const shortLine = line ? (o.g === 'manage' && re2HoldLine(it) ? line : re2CardLine(it, true)) : '';
+  const rxRow = line && o.g !== 'manage' && it.status !== 'hold' ? (()=>{ const h = rxHtml(rxItemMarks(it), null, false, true); return h ? ' ' + h : ''; })() : '';   /* RX1 — Enter / Check rows: the same marks, at the end of the card line */
   const alN = blkd ? re2AllowedN(it) : null;   /* CLEAN1 — the engine's allowedQty (omitted when null / 0) */
   const blkLine = blkd ? `<div class="num lrf-blkline" data-re2-cardline><span><span class="pv-bp">Blocked · </span>${e(lr3ShortWhy(o.title || o.why || '', it))}${alN > 0 ? `<span data-re2-allowed> · allowed #${fmt0(alN)}</span>` : ''}</span><i class="a" data-re2-why hidden>${e(o.why || '')}</i></div>` : '';
   return `<div class="row re2-row" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}" data-re2-row="${e(it.sym)}" data-re2-grp="${o.g}" data-re2-id="${e(it.id)}" data-lr2-acct="${e(it.acct || tdHome() || '')}" role="button" tabindex="0" onclick="bdOpen('${e(it.id).replace(/'/g, "\\'")}')">
     <div class="re2-main"><div class="l1"><b>${e(it.sym)}</b><span class="tag" data-port="${it.tag === 'SAT' ? 'SAT' : (it.tag === 'COMP' ? 'COMP' : 'MMT')}">${e(it.tag)}</span>${lr2RowPill(it)}${lr2Dir(it)}${same}${blkd ? `<span class="chip r m lrf-blk" data-re2-chip-st>Blocked</span>` : o.chip ? `<span class="chip ${o.cc || ''} m${hc}" data-re2-chip-st>${e(o.chip)}</span>` : ''}${line ? '' : `<span class="q p">${e(q)}</span>`}${whyL1}</div>
-    ${blkd ? blkLine : line ? `<div class="num" data-re2-cardline title="${e(line)}"><span class="lrf-lw">${e(line)}</span><span class="lrf-lp">${e(shortLine)}</span></div>` : `<div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span>${q ? `<span class="p">${e(q)}${o.why ? ' · ' : ''}</span>` : ''}<i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div>`}</div>
+    ${blkd ? blkLine : line ? `<div class="num" data-re2-cardline title="${e(line)}"><span class="lrf-lw">${e(line)}${rxRow}</span><span class="lrf-lp">${e(shortLine)}${rxRow}</span></div>` : `<div class="num"><span class="m">${e([q, o.lv].filter(Boolean).join(' · '))}${o.why && (q || o.lv) ? ' · ' : ''}</span>${q ? `<span class="p">${e(q)}${o.why ? ' · ' : ''}</span>` : ''}<i class="${o.warn ? 'a' : ''}" data-re2-why>${e(o.why || '')}</i><span class="p">${o.lv && o.why ? ' · ' : ''}${e(o.lv || '')}</span></div>`}</div>
     <div class="re2-btns">${btn}</div></div>`;
 }
 function re2AllowedN(it){
@@ -29762,12 +29822,13 @@ function hf5SatRow(it){
   const mn = v=>pvMoney(pv, v) || '—', moved = rk && rk.cut > 0.005, cutPct = rk ? Math.round(rk.cut * 100) : 0;
   const l2 = [`Entry <b>${e(pv.avgEntry != null ? td3Num(pv.avgEntry) : '—')}</b>`, `Stop <b>${e(pv.stop > 0 ? td3Num(pv.stop) : '—')}</b>`].concat(+it.tp > 0 ? [`TP <b>${e(td3Num(+it.tp))}</b>`] : [], pv.heldQty > 0 ? [`#${e(pvQtyTxt(pv.heldQty, pv))}`] : [], rk ? [`risk <b data-hf5-risk>${e(mn(rk.current))}</b>${moved ? ` <span data-hf5-cut>(−${cutPct}%)</span>` : ''}`] : []).join(' · ');
   let l3;
-  if(!has) l3 = `<span class="hf5-am" data-hf5-noprice-line>No price yet · add it to see P&amp;L</span>`;
+  const rxMk = (()=>{ const h = rxHtml(rxItemMarks(it, pv), pv, true, true); return h ? ' ' + h : ''; })();   /* RX1 — 2R ✓ · 3R 2,592 (grey until your typed price passes it) */
+  if(!has) l3 = `<span class="hf5-am" data-hf5-noprice-line>No price yet · add it to see P&amp;L</span>${rxMk}`;
   else{
     const old = !(Date.now() - Date.parse(pv.priceAt) <= PV_STALE_MS), pl = pv.uPnl, R = pv.R, up = pl == null || pl >= 0;
     const when = pv.priceAt ? (old ? ` <span class="hf5-am" data-hf5-old>(price from ${e(bdLogDate(pv.priceAt))})</span>` : ` (${e(hf5When(pv.priceAt))})`) : '';
     const rr = R != null ? (R >= 0 ? '+' : '−') + Math.abs(R).toFixed(1) + 'R' : '', mm = pl != null ? (pl >= 0 ? '+' : '−') + (pvMoney(pv, Math.abs(pl)) || '') : '';
-    l3 = `Last <b>${e(td3Num(pv.price))}</b>${when}${rr || mm ? ` · <b class="${up ? 'hf5-up' : 'hf5-dn'}" data-hf5-pl>${[rr, mm].filter(Boolean).join(' · ')}</b>` : ''}${rk && rk.cut + 1e-9 >= RiskEngine.POLICY.sat.newSetupRiskCut ? ` · <span class="hf5-up" data-hf5-ok>✓ risk cut ≥ ${Math.round(RiskEngine.POLICY.sat.newSetupRiskCut * 100)}% · new Sat setup allowed</span>` : ''}`;
+    l3 = `Last <b>${e(td3Num(pv.price))}</b>${when}${rr || mm ? ` · <b class="${up ? 'hf5-up' : 'hf5-dn'}" data-hf5-pl>${[rr, mm].filter(Boolean).join(' · ')}</b>` : ''}${rxMk}${rk && rk.cut + 1e-9 >= RiskEngine.POLICY.sat.newSetupRiskCut ? ` · <span class="hf5-up" data-hf5-ok>✓ risk cut ≥ ${Math.round(RiskEngine.POLICY.sat.newSetupRiskCut * 100)}% · new Sat setup allowed</span>` : ''}`;
   }
   const ok = !has && rk && rk.cut + 1e-9 >= RiskEngine.POLICY.sat.newSetupRiskCut ? `<div class="num hf5-l" data-hf5-ok><span class="hf5-up">✓ risk cut ≥ ${Math.round(RiskEngine.POLICY.sat.newSetupRiskCut * 100)}% · new Sat setup allowed</span></div>` : '';
   return `<div class="row re2-row hf5-r" data-port="SAT" data-hf5-row="${e(it.sym)}" data-re2-grp="manage" data-re2-id="${e(it.id)}" data-lr2-acct="${e(lr2AcctOf(it))}"${has ? '' : ' data-hf5-noprice'} role="button" tabindex="0" onclick="bdOpen('${id}')">
@@ -30406,7 +30467,7 @@ function pb2Render(focusFirst){
 const pb2Seg = (items, cur, fn, attr)=>`<span class="pb2-seg" role="group">${items.map(x=>`<button type="button" class="${cur === x[0] ? 'on' : ''}" aria-pressed="${cur === x[0]}" data-${attr}="${bdE(x[0])}" onclick="${fn}('${bdE(x[0])}')">${bdE(x[1])}</button>`).join('')}</span>`;
 function pb2InputsHtml(){
   const f = (k, lab)=>`<label class="pb2-f"><span>${lab}</span><input type="text" inputmode="decimal" autocomplete="off" data-pb2-in="${k}" value="${bdE(pb2[k])}" oninput="pb2In('${k}',this.value)"></label>`;
-  return `<div class="pb2-in3" data-pb2-prices>${f('entry', 'Entry')}${f('sl', 'SL')}${f('tp', 'TP')}</div>`;   /* PV1b — manual Last price hidden in the form (stored lastPx untouched) */
+  return `<div class="pb2-in3" data-pb2-prices>${f('entry', 'Entry')}${f('sl', 'SL')}${f('tp', 'TP').replace('<input ', '<span class="rx-wrap" data-rx-wrap="sat"><input ').replace('</label>', '<span class="rx-h" data-rx-hint hidden></span></span></label>')}</div>`;   /* PV1b — manual Last price hidden in the form (stored lastPx untouched) */
 }
 function pb2TmpIdea(){
   const s = pb2, base = s.id ? sat7dIdea(s.id) : null;
@@ -30415,6 +30476,7 @@ function pb2TmpIdea(){
 function box_sd(bad){ document.querySelectorAll('[data-pb2-save]').forEach(b=>{ b.disabled = !!bad; }); }
 function pb2Refresh(){
   if(!pb2 || pb2.step !== 2) return;
+  rxSatHint();
   const a = document.getElementById('pb2A'), c = document.getElementById('pb2C'); if(!a || !c) return;
   const A = sat7dAccts(), i = pb2TmpIdea(), M = pb2Model(i), V = M.vf, e = bdE;
   a.innerHTML = `<div class="pb2-r" data-pb2-seg>${pb2Seg([['Buy', 'Buy'], ['Sell', 'Sell']], pb2.dir, 'pb2Set_dir', 'pb2-dir')}${pb2.auto && !pb2.manual ? '<small class="bd-m" data-pb2-auto title="Side set from Entry and SL">auto</small>' : ''}${A.length > 1 ? pb2Seg(A.map(x=>[x.id, td3AcctName(x)]), pb2.acct, 'pb2Set_acct', 'pb2-acct') : ''}</div>`;
